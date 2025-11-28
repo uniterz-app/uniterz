@@ -49,4 +49,5 @@ export const TEAM_IDS: Record<string, string> = {
   "富山グラウジーズ": "b1-toyama",
   "福島ファイヤーボンズ": "b1-fukushima",
   "越谷アルファーズ": "b1-koshigaya",
+  "滋賀レイクス": "b1-shiga",
 };
