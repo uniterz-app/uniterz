@@ -27,6 +27,7 @@ export const teamNameRules: Record<string, { line1: string; line2: string }> = {
   "福島ファイヤーボンズ": { line1: "福島", line2: "Fボンズ" },
   "越谷アルファーズ": { line1: "越谷", line2: "アルファーズ" },
   "富山グラウジーズ": { line1: "富山", line2: "グラウジーズ" },
+  "アルティーリ千葉": { line1: "アルティーリ", line2: "千葉" },
 };
 // チーム名を「1行目 / 2行目」に分けるヘルパー
 export function splitTeamName(name: string): [string, string] {
