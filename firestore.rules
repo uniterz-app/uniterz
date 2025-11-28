@@ -1,0 +1,120 @@
+// Firestore Security Rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 管理者判定（あなたのUIDのみOK）
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid == "S6r5KyS9XcXds3Pm7koLzzELrvs2";
+    }
+
+    // ---------------------------
+    // users 本体
+    // ---------------------------
+    match /users/{userId} {
+      allow read: if true; // 公開プロフィール
+
+      // 作成は本人のみ
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // 更新は本人のみ（handle/username固定、countsは触らせない）
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && (!('handle' in request.resource.data)   || request.resource.data.handle   == resource.data.handle)
+        && (!('username' in request.resource.data) || request.resource.data.username == resource.data.username)
+        && (!('displayName' in request.resource.data)
+            || (request.resource.data.displayName is string
+                && request.resource.data.displayName.size() <= 50))
+        && (!('bio' in request.resource.data)
+            || (request.resource.data.bio is string
+                && request.resource.data.bio.size() <= 500))
+        && (!('photoURL' in request.resource.data)
+            || request.resource.data.photoURL is string)
+        && !('counts' in request.resource.data); // countsはサーバー更新のみ
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // followers: /users/{userId}/followers/{followerId}
+      match /followers/{followerId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == followerId;
+        allow delete: if request.auth != null && request.auth.uid == followerId;
+        allow update: if false;
+      }
+
+      // following: /users/{userId}/following/{followingId}
+      match /following/{followingId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == userId;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+        allow update: if false;
+      }
+    }
+
+    // slugs (@handle -> uid)
+    match /slugs/{slug} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && !exists(/databases/$(database)/documents/slugs/$(slug))
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // posts（親ドキュメントはクライアント書き込み禁止）
+    match /posts/{postId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if false;
+
+      match /likes/{userId} {
+        allow read: if request.auth != null;
+        allow create, delete: if request.auth != null && request.auth.uid == userId;
+        allow update: if false;
+      }
+
+      match /saves/{userId} {
+        allow read: if request.auth != null;
+        allow create, delete: if request.auth != null && request.auth.uid == userId;
+        allow update: if false;
+      }
+    }
+
+    // games（試合データ）
+    match /games/{gameId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // events_*（原始ログ）— クライアントからの最小限の型チェック
+    // ※login不要にするならこのまま。ログイン必須にするなら先頭に `request.auth != null &&` を足す
+    match /events_game/{eventId} {
+      allow create: if
+        (request.resource.data.type in [
+          "click", "view", "predict",
+          "click_card", "open_predictions", "open_predict"
+        ])
+        && request.resource.data.gameId is string
+        && request.resource.data.gameId.size() > 0
+        && request.resource.data.gameId.size() <= 128
+        && request.resource.data.league in ["B1","J1"]
+        && (!('ts' in request.resource.data) || request.resource.data.ts is number);
+      allow read, update, delete: if false;
+    }
+
+    match /events_profile/{eventId} {
+      allow create: if
+        request.resource.data.type in ["profile_view","follow_click"]
+        && request.resource.data.profileId is string
+        && request.resource.data.profileId.size() > 0
+        && request.resource.data.profileId.size() <= 128
+        && (!('ts' in request.resource.data) || request.resource.data.ts is number);
+      allow read, update, delete: if false;
+    }
+
+    // trend_cache（集計の公開キャッシュ）
+    match /trend_cache/{docId} {
+      allow read: if true;
+      allow write: if false; // サーバー/Admin SDKのみ
+    }
+  }
+}

@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* -------------------------------
+   任意：色のユーティリティ
+-------------------------------- */
+:root {
+  --color-app-bg: #0a3b47;
+  --color-card-bg: #12444D;
+
+  /* 左側（選択部分）の色 — JSで動的に変える */
+  --fill: #3b82f6;        /* default blue */
+
+  /* 右側（未選択部分）常に固定の濃いグレー */
+  --track-bg: #3a3a3c;
+
+  /* 進捗位置（%） */
+  --val: 50%;
+}
+
+.bg-app  { background: var(--color-app-bg); }
+.bg-card { background: var(--color-card-bg); }
+
+/* -------------------------------
+   Pretty Range Slider
+-------------------------------- */
+
+.pretty-range {
+  -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+}
+
+.pretty-range:focus {
+  outline: none;
+}
+
+/* ===== トラック（選択部分 = 左 / 未選択部分 = 右） ===== */
+.pretty-range::-webkit-slider-runnable-track {
+  height: var(--track, 8px);
+  background: linear-gradient(
+    to right,
+    var(--fill) var(--val),
+    var(--track-bg) var(--val)
+  );
+  border-radius: 9999px;
+}
+
+.pretty-range::-moz-range-track {
+  height: var(--track, 8px);
+  background: linear-gradient(
+    to right,
+    var(--fill) var(--val),
+    var(--track-bg) var(--val)
+  );
+  border-radius: 9999px;
+}
+
+/* ===== ノブ（Thumb） ===== */
+.pretty-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb, 24px);
+  height: var(--thumb, 24px);
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-top: calc((var(--track, 8px) - var(--thumb, 24px)) / 2);
+}
+
+.pretty-range::-moz-range-thumb {
+  width: var(--thumb, 24px);
+  height: var(--thumb, 24px);
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* -------------------------------
+   Base Layer
+-------------------------------- */
+@layer base {
+  html, body, #__next, :root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+  }
+}
+
+/* ============================================================
+   ★ ここから追加：スプラッシュ背景（SSR/CSR一致で安全）
+   ============================================================ */
+
+body.splash-bg {
+  background-image: url("/splash/splash-1170x2532.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}

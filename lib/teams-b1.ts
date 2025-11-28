@@ -1,0 +1,31 @@
+// 1行目から全部はる（コピーしてOK）
+export type TeamColors = { primary: string; secondary: string };
+
+export const teamColorsB1: Record<string, TeamColors> = {
+  "レバンガ北海道": { primary: "#B9C42F", secondary: "#2B2B2B" },
+  "秋田ノーザンハピネッツ": { primary: "#EC008C", secondary: "#000000" },
+  "仙台89ERS": { primary: "#FABE00", secondary: "#000000" },
+  "宇都宮ブレックス": { primary: "#FFD700", secondary: "#1A2759" },
+  "群馬クレインサンダーズ": { primary: "#FFD400", secondary: "#000000" },
+  "茨城ロボッツ": { primary: "#3B4C8E", secondary: "#F79526" },
+  "千葉ジェッツ": { primary: "#ED1C24", secondary: "#000000" },
+  "アルバルク東京": { primary: "#E6002F", secondary: "#000000" },
+  "サンロッカーズ渋谷": { primary: "#FFD800", secondary: "#000000" },
+  "川崎ブレイブサンダース": { primary: "#C22047", secondary: "#201A1B" },
+  "横浜ビー・コルセアーズ": { primary: "#010F29", secondary: "#C7152C" },
+  "信州ブレイブウォリアーズ": { primary: "#3D496B", secondary: "#B6C92E" },
+  "三遠ネオフェニックス": { primary: "#F30100", secondary: "#FFD400" },
+  "シーホース三河": { primary: "#0054A6", secondary: "#C9D6EA" },
+  "ファイティングイーグルス名古屋": { primary: "#0B408D", secondary: "#E6C200" },
+  "名古屋ダイヤモンドドルフィンズ": { primary: "#E60012", secondary: "#FFDD00" },
+  "京都ハンナリーズ": { primary: "#0087AA", secondary: "#231815" },
+  "大阪エヴェッサ": { primary: "#ED1C24", secondary: "#1A1A1A" },
+  "島根スサノオマジック": { primary: "#0067C0", secondary: "#C5D8F0" },
+  "広島ドラゴンフライズ": { primary: "#EB6101", secondary: "#004C97" },
+  "佐賀バルーナーズ": { primary: "#36A7CC", secondary: "#0F2A45" },
+  "長崎ヴェルカ": { primary: "#1F2E55", secondary: "#C5A46D" },
+  "琉球ゴールデンキングス": { primary: "#E3A857", secondary: "#00285E" },
+  "富山グラウジーズ": { primary: "#E60012", secondary: "#000000" },
+  "福島ファイヤーボンズ": { primary: "#92358D", secondary: "#C0C0C0" },
+  "越谷アルファーズ": { primary: "#800020", secondary: "#C0C0C0" },
+};
