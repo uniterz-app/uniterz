@@ -17,6 +17,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const isAuthPage =
     pathname === "/mobile/login" || pathname === "/mobile/signup";
 
+  // ★ Web or Mobile 判定（PC → Web とする）
+  const isDesktop =
+    typeof window !== "undefined" && window.innerWidth >= 768;
+
   /* -----------------------------
    * ① Firestore: handle取得
    * ----------------------------- */
@@ -40,39 +44,36 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
     // 未ログイン
     if (status === "guest") {
-      if (isAuthPage) return; // login/signup は表示させてOK
+      if (isAuthPage) return; // login/signup は表示OK
       router.replace("/mobile/login");
       return;
     }
 
-    // ログイン済み
-    if (!handle) return; // Firestore取得待ち → Splash固定
+    // ログイン済み → handle 取得待ち
+    if (!handle) return;
 
-    // login/signup に居る → プロフィールへ
+    // ★ ここだけ変更（ログイン後の遷移先条件にPC判定追加）
     if (isAuthPage) {
-      router.replace(`/mobile/u/${handle}`);
+      if (isDesktop) {
+        router.replace(`/web/u/${handle}`);  // PC → Webへ
+      } else {
+        router.replace(`/mobile/u/${handle}`); // Mobile → Mobileへ
+      }
+      return;
     }
-  }, [status, handle, isAuthPage, router]);
+  }, [status, handle, isAuthPage, router, isDesktop]);
 
   /* -----------------------------
    * ③ 表示制御（白飛びゼロ化）
    * ----------------------------- */
 
-  // Firebase 読み込み中 → 常に Splash（force）
   if (status === "loading") return <SplashWrapper forceSplash />;
-
-  // 未ログイン & login/signup → children は出す（login/signupページ用）
   if (status === "guest" && isAuthPage)
     return <SplashWrapper>{children}</SplashWrapper>;
-
-  // 未ログイン & 他ページ → Splash固定
   if (status === "guest" && !isAuthPage)
     return <SplashWrapper forceSplash />;
-
-  // ログイン済み & handle 未取得 → Splash固定（白飛び防止）
   if (status === "ready" && !handle)
     return <SplashWrapper forceSplash />;
 
-  // ここで初めて children（プロフィールやホーム）描画
   return <SplashWrapper>{children}</SplashWrapper>;
 }
