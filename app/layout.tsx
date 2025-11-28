@@ -16,15 +16,11 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black",
 
-    // --- iPhone 用スプラッシュ画像（現状あなたが持っている2種だけ反映）---
-
-    // iPhone SE（640×1136）
+    // --- iPhone 用スプラッシュ画像 ---
     "apple-touch-startup-image-640x1136": "/splash/splash-640x1136.png",
-
-    // iPhone 12 / 13 / 14 Pro（1170×2532）
     "apple-touch-startup-image-1170x2532": "/splash/splash-1170x2532.png",
 
-    // デフォルト（最後の fallback）
+    // fallback
     "apple-touch-startup-image": "/splash/splash-1170x2532.png",
   },
 };
@@ -41,8 +37,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body>
-        {/* web/mobile スプラッシュ切替 */}
+      <body
+        style={{
+          margin: 0,
+          padding: 0,
+          // ⭐ 白飛び防止：最初からスプラッシュ画像を背景にする
+          backgroundImage: "url('/splash/splash-1170x2532.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {/* web/mobile スプラッシュ切替（ロジックはそのまま） */}
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
 
         <ToastHost />

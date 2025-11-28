@@ -154,9 +154,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </header>
 
       {/* -------- League Tabs -------- */}
-      <div className="flex items-center justify-between mb-2">
-        <LeagueTabs value={league} onChange={setLeague} size={dense ? "md" : "lg"} />
-      </div>
+      <div className="flex items-center justify-between mb-2 mt-3">
+  <LeagueTabs value={league} onChange={setLeague} size={dense ? "md" : "lg"} />
+</div>
 
       {/* -------- Month Header -------- */}
       <MonthHeader
