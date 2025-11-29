@@ -547,78 +547,6 @@ return (
   )} 
             </div>
             </Link> 
-            {/* 本人 & 未ロックのみ：編集/削除 */}
-              {isMine && !locked && (
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  {!editing ? (
-                    <>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          startEdit(e);
-                        }}
-                        disabled={busy}
-                        aria-label="編集"
-                        title="編集"
-                      >
-                        <Pencil size={16} className="md:hidden" />
-                        <Pencil size={18} className="hidden md:block" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          doDelete(e);
-                        }}
-                        disabled={busy}
-                        aria-label="削除"
-                        title="削除"
-                      >
-                        <Trash2 size={16} className="md:hidden" />
-                        <Trash2 size={18} className="hidden md:block" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-emerald-300/40 bg-emerald-300/20 hover:bg-emerald-300/30"
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          submitEdit(e);
-                        }}
-                        disabled={busy}
-                        aria-label="保存"
-                        title="保存"
-                      >
-                        <Check size={16} className="md:hidden" />
-                        <Check size={18} className="hidden md:block" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          cancelEdit(e);
-                        }}
-                        disabled={busy}
-                        aria-label="キャンセル"
-                        title="キャンセル"
-                      >
-                        <X size={16} className="md:hidden" />
-                        <X size={18} className="hidden md:block" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
             {/* ===== レグ ===== */}
             <div className="mt-4 md:mt-5 space-y-2.5 md:space-y-3">
               {post.legs.map((leg) => {
@@ -742,7 +670,61 @@ return (
             </div>
 
             {/* アクション行 */}
-            <div className="mt-3 md:mt-4 flex items-center justify-end gap-3 md:gap-4">
+            <div className="mt-3 md:mt-4 flex items-center justify-between">
+              {/* ← 左：編集 / 削除（今のボタンそのまま） */}
+  <div className="flex items-center gap-1.5 md:gap-2">
+    {isMine && !locked && (
+      !editing ? (
+        <>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEdit(e); }}
+            disabled={busy}
+            aria-label="編集"
+          >
+            <Pencil size={16} className="md:hidden" />
+            <Pencil size={18} className="hidden md:block" />
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); doDelete(e); }}
+            disabled={busy}
+            aria-label="削除"
+          >
+            <Trash2 size={16} className="md:hidden" />
+            <Trash2 size={18} className="hidden md:block" />
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-emerald-300/40 bg-emerald-300/20 hover:bg-emerald-300/30"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); submitEdit(e); }}
+            disabled={busy}
+            aria-label="保存"
+          >
+            <Check size={16} className="md:hidden" />
+            <Check size={18} className="hidden md:block" />
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancelEdit(e); }}
+            disabled={busy}
+            aria-label="キャンセル"
+          >
+            <X size={16} className="md:hidden" />
+            <X size={18} className="hidden md:block" />
+          </button>
+        </>
+      )
+    )}
+  </div>
               <motion.button
                 type="button"
                 whileTap={{ scale: 1.25 }}
