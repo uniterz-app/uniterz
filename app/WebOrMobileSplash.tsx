@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import SplashWrapper from "@/app/SplashWrapper";
-import { useAuth } from "@/app/AuthProvider";
+import AuthGate from "@/app/AuthGate"; // ← ここ重要！
 
 export default function WebOrMobileSplash({
   children,
@@ -11,13 +11,22 @@ export default function WebOrMobileSplash({
 }) {
   const pathname = usePathname();
   const isWeb = pathname?.startsWith("/web");
-  const { status } = useAuth(); // ← 追加（必要なら）
 
-  // PC(Web) → Splash を出さない
+  // PC (Web) → Splash 無し
   if (isWeb) {
-    return <div id="app-root">{children}</div>;
+    return (
+      <AuthGate>
+        <div id="app-root">{children}</div>
+      </AuthGate>
+    );
   }
 
-  // Mobile → 初回だけ SplashWrapper
-  return <SplashWrapper>{children}</SplashWrapper>;
+  // Mobile → SplashWrapper + AuthGate
+  return (
+    <SplashWrapper>
+      <AuthGate>
+        <div id="app-root">{children}</div>
+      </AuthGate>
+    </SplashWrapper>
+  );
 }
