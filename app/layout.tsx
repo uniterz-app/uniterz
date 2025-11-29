@@ -21,11 +21,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      {/* 👇 ここだけ変更：overflow-hidden を追加 */}
-      <body className="bg-black overflow-hidden">
+      <body className="bg-black">
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>
     </html>
   );
 }
+
