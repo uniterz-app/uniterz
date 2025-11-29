@@ -77,6 +77,7 @@ function toUiPost(id: string, x: any): PredictionPost {
     startAtMillis: typeof x?.startAtMillis === "number" ? x.startAtMillis : null,
     likeCount: Number.isFinite(x?.likeCount) ? Number(x.likeCount) : 0,
     saveCount: Number.isFinite(x?.saveCount) ? Number(x.saveCount) : 0,
+     gameId: typeof x?.gameId === "string" ? x.gameId : null,
   };
 }
 
