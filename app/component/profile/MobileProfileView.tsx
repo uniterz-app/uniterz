@@ -178,10 +178,16 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
 
         <div className="flex items-start gap-6">
           <div className="h-16 w-16 rounded-full ring-4 ring-[#0f2d35] bg-[#0f2d35] overflow-hidden">
-            {profile.avatarUrl && (
-              <img src={profile.avatarUrl} className="w-full h-full object-cover" />
-            )}
-          </div>
+  {profile.avatarUrl ? (
+    <img
+      src={profile.avatarUrl}
+      className="w-full h-full object-cover"
+      alt="avatar"
+    />
+  ) : (
+    <div className="w-full h-full bg-white/0" />
+  )}
+</div>
 
           <div className="min-w-0">
             <h1 className="text-[18px] font-extrabold truncate">

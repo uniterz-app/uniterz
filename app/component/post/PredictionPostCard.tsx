@@ -75,6 +75,7 @@ export type PredictionPost = {
   likeCount?: number;
   saveCount?: number;
   createdAtMillis?: number;
+  updatedAtMillis?: number;
 };
 
 /* ===== テーマ色（ノブ共通色） ===== */
@@ -460,18 +461,20 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
 
   return (
   <Wrapper
-    {...(mode === "list"
-      ? { href: `/post/${post.id}` }
-      : {})}
-    className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 rounded-3xl"
-    onClick={(e: React.MouseEvent) => {
-  if (props.onClickBody) {
-    e.preventDefault();
-    e.stopPropagation();
-    props.onClickBody();
-  }
-}}
-  >
+  {...(mode === "list" ? { href: `/post/${post.id}` } : {})}
+  className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 rounded-3xl"
+  onClick={(e: React.MouseEvent) => {
+    // onClickBody がある時だけ発火
+    if (props.onClickBody) {
+      e.preventDefault();
+      e.stopPropagation();
+      props.onClickBody();
+      return;
+    }
+
+    // onClickBody が無ければ通常の Link として投稿詳細へ遷移させる
+  }}
+>
     <div className={cn("relative rounded-3xl p-1", elevate)}>
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">

@@ -103,8 +103,8 @@ useEffect(() => {
   <button
     onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
     className="
-      fixed bottom-20 right-6 z-50
-      w-16 h-16 rounded-full
+      fixed bottom-24 right-6 z-50
+      w-13 h-13 rounded-full
       bg-yellow-400 text-white
       flex items-center justify-center
       shadow-xl
@@ -112,7 +112,7 @@ useEffect(() => {
     "
     aria-label="分析する"
   >
-    <Pencil size={30} strokeWidth={3} />
+    <Pencil size={22} strokeWidth={3} />
   </button>
 )}
     </div>

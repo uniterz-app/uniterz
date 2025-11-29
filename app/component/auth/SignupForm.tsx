@@ -214,31 +214,36 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
 
         {/* === Gradient Button === */}
         <button
-          type="submit"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-            padding: "12px 14px",
-            marginTop: 16,
-            border: "none",
-            borderRadius: 14,
-            color: "white",
-            fontWeight: 700,
-            letterSpacing: 0.4,
-            background:
-              "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #06B6D4 100%)",
-            boxShadow:
-              "0 10px 30px rgba(124,58,237,0.25), 0 12px 34px rgba(6,182,212,0.22)",
-          }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.90)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-        >
-          <span>SIGN UP</span>
-          <span style={{ fontSize: 18 }}>↗</span>
-        </button>
+  type="submit"
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    width: "100%",
+    padding: "12px 14px",
+    marginTop: 16,
+    border: "none",
+    borderRadius: 14,
+    color: "white",
+    fontWeight: 700,
+    letterSpacing: 0.4,
+    background:
+      "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #06B6D4 100%)",
+    boxShadow:
+      "0 10px 30px rgba(124,58,237,0.25), 0 12px 34px rgba(6,182,212,0.22)",
+  }}
+  onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.90)")}
+  onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+
+  onTouchStart={(e) => (e.currentTarget.style.transform = "scale(0.90)")}
+  onTouchEnd={(e) => (e.currentTarget.style.transform = "scale(1)")}
+
+>
+  <span>SIGN UP</span>
+  <span style={{ fontSize: 18 }}>↗</span>
+</button>
+
 
         <p style={{ marginTop: 20, fontSize: "0.85rem" }}>
           すでにアカウントをお持ちの方は{" "}

@@ -103,16 +103,16 @@ useEffect(() => {
   <button
     onClick={() => router.push(`/games/${gameId}/predict`)}
     className="
-      fixed bottom-10 right-10 z-50
-      w-16 h-16 rounded-full
-      bg-yellow-400 text-black
+      fixed bottom-14 right-10 z-50
+      w-14 h-14 rounded-full
+      bg-yellow-400 text-white
       flex items-center justify-center
       shadow-xl
       hover:scale-110 active:scale-95
       transition-transform
     "
   >
-    <Pencil size={34} strokeWidth={3} />
+    <Pencil size={30} strokeWidth={3} />
   </button>
 )}
 

@@ -60,6 +60,8 @@ export function mapRawToPredictionPost(raw: Raw): PredictionPost {
     // ★ createdAt → テキストへ (ここだけ追加)
     createdAtText: formatPostDateShort(d?.createdAt),
 
+    createdAtMillis: d?.createdAt ? d.createdAt.toMillis() : 0,
+
      gameId: d?.game?.gameId ?? d?.gameId ?? null,
 
     game,
