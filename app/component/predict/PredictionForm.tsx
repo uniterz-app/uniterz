@@ -498,7 +498,6 @@ const [showTooltip, setShowTooltip] = useState(false);
           <div className="col-span-1 min-w-0 justify-self-end pr-5 md:pr-0">
             <div className="text-[13px] leading-none mb-1 font-bold">獲得Unit</div>
             <input
-            ref={refs.mainUnits}
               type="text"
               readOnly
               value={calcUnits(main).toFixed(2)}
@@ -629,7 +628,6 @@ const [showTooltip, setShowTooltip] = useState(false);
             <div className="col-span-1 min-w-0">
               <div className="text-[13px] leading-none mb-1 font-bold">穴</div>
               <select
-              ref={refs.tertiaryOption}
                 value={tertiary.optionId ?? ""}
                 onChange={(e) => setTertiary((s) => ({ ...s, optionId: e.target.value || null }))}
                 className={fieldBase + " appearance-none text-[12px]"}
@@ -983,7 +981,6 @@ const [showTooltip, setShowTooltip] = useState(false);
 
         <div className="mt-3">
           <textarea
-          ref={refs.reason}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}

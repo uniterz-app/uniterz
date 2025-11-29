@@ -459,91 +459,95 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
     }
   };
 
-  return (
-  <Wrapper
-  {...(mode === "list" ? { href: `/post/${post.id}` } : {})}
-  className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 rounded-3xl"
-  onClick={(e: React.MouseEvent) => {
-    // onClickBody がある時だけ発火
-    if (props.onClickBody) {
-      e.preventDefault();
-      e.stopPropagation();
-      props.onClickBody();
-      return;
-    }
+return (
+  <div
+    className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 rounded-3xl cursor-pointer"
+    onClick={() => {
+      if (!post.gameId) return;
 
-    // onClickBody が無ければ通常の Link として投稿詳細へ遷移させる
-  }}
->
+      const isMobile =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 768px)").matches;
+
+      // ==========================
+      // 一覧表示（listモード）
+      // 本体クリック → 投稿詳細
+      // ==========================
+      if (mode === "list") {
+        router.push(`/post/${post.id}`);
+        return;
+      }
+
+      // ==========================
+      // 詳細表示（detailモード）
+      // 本体クリック → 試合ページ
+      // ==========================
+      if (mode === "detail") {
+        if (isMobile) {
+          router.push(`/mobile/games/${post.gameId}`);
+        } else {
+          router.push(`/games/${post.gameId}`);
+        }
+      }
+    }}
+  >
     <div className={cn("relative rounded-3xl p-1", elevate)}>
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">
             {/* ヘッダー（ここを押すとプロフィールへ） */}
-            <div
-              className={cn(
-                "flex items-start justify-between gap-3 md:gap-4",
-                profileHref ? "cursor-pointer" : "pointer-events-none"
-              )}
-              onClickCapture={(e: React.MouseEvent) => {
-  e.preventDefault();
-  e.stopPropagation();
-  props.onClickHeader?.() ?? goProfileCapture(e);
-}}
+            <Link
+  href={profileHref ?? "#"}
+  onClick={(e) => e.stopPropagation()}
+  className="flex items-start gap-3 md:gap-4 cursor-pointer"
+>
+  {/* アバター */}
+  <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-full ring-4 ring-[#0f2d35] overflow-hidden">
+    <img
+      src={authorAvatar}
+      alt=""
+      className="w-full h-full object-cover"
+      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+    />
+  </div>
 
-              onKeyDown={onHeaderKeyDown}
-              role={profileHref ? "link" : undefined}
-              tabIndex={profileHref ? 0 : -1}
-            >
-              <div className="flex items-start gap-3 md:gap-4">
-                <img
-                  src={authorAvatar}
-                  alt={authorName}
-                  className="w-12 h-12 md:w-16 md:h-16 shrink-0 flex-none rounded-full object-cover aspect-square ring-4 ring-[#0f2d35]"
-                />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <h3 className="m-0 text-[15px] md:text-[26px] font-extrabold leading-none truncate">
-                      {authorName}
-                    </h3>
-                    <span className="text-xs md:text-sm opacity-70 whitespace-nowrap">
-                      {post.createdAtText}
-                    </span>
-                  </div>
-
-                 {/* HOME vs AWAY */}
-<div
-  className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight cursor-pointer"
-  onClick={(e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // 🔥 試合別タイムラインへ遷移
-    if (post.gameId) {
-      router.push(`/mobile/games/${post.gameId}`);
-    }
-  }}
+  {/* 名前＋日付 */}
+  <div className="min-w-0">
+    <div className="flex items-center gap-2 md:gap-3">
+      <h3 className="text-[15px] md:text-[26px] font-extrabold truncate">
+        {authorName}
+      </h3>
+      <span className="text-xs md:text-sm opacity-70 whitespace-nowrap">
+        {post.createdAtText}
+      </span>
+    </div>
+{/* HOME vs AWAY */}
+<Link
+  href={typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 768px)").matches
+        ? `/mobile/games/${post.gameId}`
+        : `/games/${post.gameId}`}
+  onClick={(e) => e.stopPropagation()}
+  className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight"
 >
   <span className="truncate">{homeShort}</span>
   <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
   <span className="truncate">{awayShort}</span>
-</div>
+</Link>
 
-
-                  {/* スコア行（数値があれば表示） */}
-                  {finalScore &&
-                    Number.isFinite(finalScore.home) &&
-                    Number.isFinite(finalScore.away) && (
-                      <div className="mt-0.5 text-[11px] md:text-sm opacity-90">
-                        {finalScore.home}–{finalScore.away}{" "}
-                        <span className="opacity-90">
-                          {winnerShort ?? "勝者"}勝利
-                        </span>
-                      </div>
-                    )}
-                </div>
-              </div>
-
-              {/* 本人 & 未ロックのみ：編集/削除 */}
+{/* スコア */}
+{finalScore &&
+  Number.isFinite(finalScore.home) &&
+  Number.isFinite(finalScore.away) && (
+    <div className="mt-0.5 text-[11px] md:text-sm opacity-90">
+      {finalScore.home}–{finalScore.away}{" "}
+      <span className="opacity-90">
+        {winnerShort ?? "勝者"}勝利
+      </span>
+    </div>
+  )} 
+            </div>
+            </Link> 
+            {/* 本人 & 未ロックのみ：編集/削除 */}
               {isMine && !locked && (
                 <div className="flex items-center gap-1.5 md:gap-2">
                   {!editing ? (
@@ -615,8 +619,6 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
                   )}
                 </div>
               )}
-            </div>
-
             {/* ===== レグ ===== */}
             <div className="mt-4 md:mt-5 space-y-2.5 md:space-y-3">
               {post.legs.map((leg) => {
@@ -847,7 +849,7 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
           </div>
         </div>
       </div>
-   </Wrapper>
+      </div>
   );
 }
 

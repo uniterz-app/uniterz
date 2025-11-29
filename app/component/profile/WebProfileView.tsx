@@ -211,11 +211,19 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
       {/* Header */}
       <div className="rounded-2xl border border-white/10 bg-card p-10 shadow-lg text-white min-h-[180px]">
         <div className="grid grid-cols-[96px_1fr_auto] gap-6 items-start">
-          <img
-            src={profile.avatarUrl}
-            alt={profile.displayName}
-            className="h-24 w-24 rounded-full object-cover ring-3 ring-[#FFCC00]/40"
-          />
+         <div className="h-24 w-24 rounded-full ring-3 ring-[#FFCC00]/40 overflow-hidden bg-white/0">
+  {profile.avatarUrl ? (
+    <img
+      src={profile.avatarUrl}
+      alt=""
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        const target = e.currentTarget as HTMLImageElement;
+        target.style.display = "none"; // 壊れた画像は非表示
+      }}
+    />
+  ) : null}
+</div>
 
           <div>
             <h1 className="m-0 text-3xl font-extrabold leading-tight">

@@ -112,7 +112,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="mx-auto max-w-2xl p-3 sm:p-4 md:p-6">
-      <PredictionPostCard post={post} />
+      <PredictionPostCard post={post} mode="detail" />
     </div>
   );
 }

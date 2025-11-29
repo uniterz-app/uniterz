@@ -182,11 +182,14 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
     <img
       src={profile.avatarUrl}
       className="w-full h-full object-cover"
-      alt="avatar"
+      alt=""   // ← 文字が絶対出ない
+      onError={(e) => {
+        // 壊れた画像は非表示にして透過丸だけにする
+        const target = e.currentTarget as HTMLImageElement;
+        target.style.display = "none";
+      }}
     />
-  ) : (
-    <div className="w-full h-full bg-white/0" />
-  )}
+  ) : null} 
 </div>
 
           <div className="min-w-0">
