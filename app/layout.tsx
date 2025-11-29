@@ -21,21 +21,8 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      {/* ⭐ 白飛び防止の固定背景は body の外に置く */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: -1,
-          backgroundImage: "url('/splash/splash-1170x2532.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundColor: "black",
-        }}
-      />
-
-      <body className="bg-black">
+      {/* 👇 ここだけ変更：overflow-hidden を追加 */}
+      <body className="bg-black overflow-hidden">
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>
