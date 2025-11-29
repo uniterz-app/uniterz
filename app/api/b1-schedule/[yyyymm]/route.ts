@@ -3,7 +3,9 @@ import * as cheerio from "cheerio";
 import { TEAM_IDS } from "@/lib/team-ids";
 import { NextResponse } from "next/server";
 
+// -------------------------------------
 // HTML取得
+// -------------------------------------
 async function fetchHtml(url: string) {
   const res = await axios.get(url, {
     headers: { "User-Agent": "Mozilla/5.0" },
@@ -11,7 +13,9 @@ async function fetchHtml(url: string) {
   return res.data;
 }
 
+// -------------------------------------
 // 日付一覧を取る
+// -------------------------------------
 function extractDays($: cheerio.CheerioAPI): string[] {
   const days: string[] = [];
   $(".js-schedule-date-slider-item a.js_click_data").each((_, el) => {
@@ -21,18 +25,25 @@ function extractDays($: cheerio.CheerioAPI): string[] {
   return days;
 }
 
+// -------------------------------------
 // 短縮名 → フルネーム（TEAM_IDSキー）
+// -------------------------------------
 function normalizeTeamName(short: string): string {
   const full = Object.keys(TEAM_IDS).find((f) => f.includes(short));
   return full ?? short;
 }
 
+// -------------------------------------
+// ISO形式を組み立てる
+// -------------------------------------
 function toIso(year: string, month: string, day: string, time: string) {
   const [HH, mm] = time.split(":");
   return `${year}-${month}-${day}T${HH}:${mm}:00+09:00`;
 }
 
-// 1日分を取る
+// -------------------------------------
+// 1日分の試合を取得
+// -------------------------------------
 async function fetchGamesForDate(year: string, month: string, day: string) {
   const url = `https://www.bleague.jp/schedule/?year=${year}&month=${month}&day=${day}`;
   const html = await fetchHtml(url);
@@ -74,15 +85,20 @@ async function fetchGamesForDate(year: string, month: string, day: string) {
   return list;
 }
 
+// -------------------------------------
+// GET /api/b1-schedule/[yyyymm]
+// Next.js 15 に完全準拠した型
+// -------------------------------------
 export async function GET(
   req: Request,
-  { params }: { params: { yyyymm: string } }
+  context: { params: { yyyymm: string } }
 ) {
-  const { yyyymm } = params;
+  const { yyyymm } = context.params;
+
   const year = yyyymm.slice(0, 4);
   const month = yyyymm.slice(4, 6);
 
-  // 月ページ
+  // 月ページを取得して日付一覧を抽出
   const monthUrl = `https://www.bleague.jp/schedule/?year=${year}&month=${month}`;
   const html = await fetchHtml(monthUrl);
   const $ = cheerio.load(html);
@@ -90,6 +106,7 @@ export async function GET(
 
   const result: any[] = [];
 
+  // 各日付の試合を取得
   for (const day of days) {
     const games = await fetchGamesForDate(year, month, day);
 
