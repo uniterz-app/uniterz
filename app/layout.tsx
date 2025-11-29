@@ -2,7 +2,6 @@ import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
-import MobileBackground from "@/app/component/common/MobileBackground"; // ← Client Component を呼ぶだけ
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -22,8 +21,21 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      <body className="bg-black">
-        <MobileBackground /> 
+      <body className="bg-black relative overflow-hidden">
+        {/* ⭐ これが“白飛び防止の固定背景”（常に最背面） */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: -1,
+            backgroundImage: "url('/splash/splash-1170x2532.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundColor: "black",
+          }}
+        />
+
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>
