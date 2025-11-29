@@ -522,10 +522,12 @@ return (
     </div>
 {/* HOME vs AWAY */}
 <Link
-  href={typeof window !== "undefined" &&
-        window.matchMedia("(max-width: 768px)").matches
-        ? `/mobile/games/${post.gameId}`
-        : `/games/${post.gameId}`}
+  href={
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 768px)").matches
+      ? `/mobile/games/${post.gameId}/predictions`
+      : `/web/games/${post.gameId}/predictions`
+  }
   onClick={(e) => e.stopPropagation()}
   className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight"
 >
