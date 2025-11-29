@@ -21,21 +21,21 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      <body className="bg-black relative overflow-hidden">
-        {/* ⭐ これが“白飛び防止の固定背景”（常に最背面） */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: -1,
-            backgroundImage: "url('/splash/splash-1170x2532.png')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundColor: "black",
-          }}
-        />
+      {/* ⭐ 白飛び防止の固定背景は body の外に置く */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: -1,
+          backgroundImage: "url('/splash/splash-1170x2532.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundColor: "black",
+        }}
+      />
 
+      <body className="bg-black">
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>
