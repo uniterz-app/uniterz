@@ -41,7 +41,7 @@ export default function FollowButton({
   // ▼ 高さ・角丸・フォントサイズ（両状態で完全一致）
   const clsBase =
     size === "sm"
-      ? "h-9 px-3 rounded-lg text-xs font-bold transition"
+      ? "h-9 px-3 rounded-lg text-xs font-bold active:scale-90 transition-transform"
       : "h-10 px-4 rounded-xl text-sm font-bold transition";
 
   // ▼ 色テーマ（両状態とも border を持たせてサイズを揃える）

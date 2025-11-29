@@ -1,0 +1,886 @@
+[
+  {
+    "id": "b1-20251205-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-05T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251205-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-05T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251206-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-06T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251206-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-06T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251207-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-07T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251207-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-07T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251210-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-10T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251210-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-10T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251213-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-13T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251213-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-13T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251214-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-14T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251214-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-14T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251219-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-19T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251219-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-19T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251220-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-20T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251220-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-20T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251221-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-21T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251221-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-21T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251224-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-24T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251224-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-24T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251226-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-26T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251226-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-26T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251227-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-27T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251227-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-27T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251228-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-28T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251228-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-28T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251205-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-05T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251205-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-05T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251206-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-06T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251206-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-06T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251207-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-07T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251207-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-07T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251210-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-10T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251210-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-10T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251213-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-13T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251213-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-13T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251214-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-14T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251214-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-14T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251219-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-19T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251219-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-19T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251220-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-20T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251220-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-20T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251221-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-21T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251221-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-21T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251224-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-24T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251224-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-24T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251226-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-26T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251226-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-26T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251227-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-27T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251227-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-27T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251228-001",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "第12節",
+    "startAtJstIso": "2025-12-28T19:05:00+09:00",
+    "venue": "WA刈谷",
+    "home": {
+      "name": "シーホース三河",
+      "teamId": "b1-mikawa"
+    },
+    "away": {
+      "name": "滋賀レイクス",
+      "teamId": "b1-shiga"
+    },
+    "status": "scheduled"
+  },
+  {
+    "id": "b1-20251228-002",
+    "league": "b1",
+    "season": "2025-26",
+    "roundLabel": "",
+    "startAtJstIso": "2025-12-28T:undefined:00+09:00",
+    "venue": "",
+    "home": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "away": {
+      "name": "北海道コンサドーレ札幌",
+      "teamId": "j1-hokkaido"
+    },
+    "status": "scheduled"
+  }
+]

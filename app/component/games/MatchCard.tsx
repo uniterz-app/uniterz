@@ -475,7 +475,7 @@ export default function MatchCard({
           <Link
             href={predictionsHref}
             onClick={handleOpenPredictions}
-            className="rounded-lg bg-white/15 hover:bg-white/25 transition text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base"
+            className="rounded-lg bg-white/15 hover:bg-white/25 text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base active:scale-90 transition-transform"
             aria-label="その試合の分析一覧（予想を見る）"
           >
             予想を見る
@@ -485,7 +485,7 @@ export default function MatchCard({
           <Link
             href={predictHref}
             onClick={handleMakePrediction}
-            className="rounded-lg bg-white/15 hover:bg-white/25 transition text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base"
+            className="rounded-lg bg-white/15 hover:bg-white/25 text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base active:scale-90 transition-transform"
             aria-label="予想をする"
           >
             予想をする

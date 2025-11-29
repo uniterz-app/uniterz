@@ -8,13 +8,42 @@ import MatchCard from "@/app/component/games/MatchCard";
 import PredictionListByGame from "@/app/component/post/PredictionListByGame";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { collection, query, where, limit, getDocs } from "firebase/firestore";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+
 
 // toMatchCardProps の入力型に揃える（id 付きの games 生データ）
 type GameDoc = Parameters<typeof toMatchCardProps>[0];
 
 export default function Page() {
+  const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const gameId = String(id);
+
+  const { fUser } = useFirebaseUser();
+const uid = fUser?.uid ?? null;
+
+const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
+
+// 🔍 自分の投稿があるかチェック（1回だけ）
+useEffect(() => {
+  if (!uid || !gameId) return;
+
+  (async () => {
+    const q = query(
+      collection(db, "posts"),
+      where("authorUid", "==", uid),
+      where("gameId", "==", gameId),
+      limit(1)
+    );
+
+    const snap = await getDocs(q);
+    setHasMyPost(!snap.empty); // ← 投稿ありなら true
+  })();
+}, [uid, gameId]);
+
 
   const [rawGame, setRawGame] = useState<GameDoc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +98,23 @@ export default function Page() {
       <div className="mt-2">
         <PredictionListByGame gameId={gameId} />
       </div>
+      {/* 🔥 まだ投稿していない時だけ表示 */}
+{hasMyPost === false && (
+  <button
+    onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
+    className="
+      fixed bottom-20 right-6 z-50
+      w-16 h-16 rounded-full
+      bg-yellow-400 text-white
+      flex items-center justify-center
+      shadow-xl
+      active:scale-90 transition-transform
+    "
+    aria-label="分析する"
+  >
+    <Pencil size={30} strokeWidth={3} />
+  </button>
+)}
     </div>
   );
 }

@@ -67,8 +67,8 @@ export function toUiPost(id: string, x: any): PredictionPost {
       league && (home || away)
         ? ({ league, home, away, status, finalScore } as any)
         : undefined,
-
-    legs,
+        gameId: x?.game?.gameId ?? x?.gameId ?? null,
+        legs,
 
     resultUnits: typeof x?.resultUnits === "number" ? x.resultUnits : null,
     note: typeof x?.note === "string" ? x.note : "",

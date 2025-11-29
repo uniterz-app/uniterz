@@ -172,8 +172,8 @@ export default function LoginForm({ variant = "web" }: LoginFormProps) {
               "0 10px 30px rgba(6,182,212,0.25), 0 12px 34px rgba(124,58,237,0.22)",
             transition: "transform .06s ease, filter .15s ease, box-shadow .15s ease",
           }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "translateY(1px)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.90)")}
+          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
           onMouseEnter={(e) => {
             e.currentTarget.style.filter = "brightness(1.06)";
             e.currentTarget.style.boxShadow =

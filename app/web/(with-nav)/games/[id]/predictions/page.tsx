@@ -8,12 +8,40 @@ import MatchCard from "@/app/component/games/MatchCard";
 import PredictionListByGame from "@/app/component/post/PredictionListByGame";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { collection, query, where, limit, getDocs } from "firebase/firestore";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
+
 
 type GameDoc = Parameters<typeof toMatchCardProps>[0];
 
 export default function Page() {
   const { id } = useParams<{ id: string }>();
   const gameId = String(id);
+
+  const router = useRouter();
+const { fUser } = useFirebaseUser();
+const uid = fUser?.uid ?? null;
+
+const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
+
+// 🔍 自分の投稿があるかチェック（1回だけ）
+useEffect(() => {
+  if (!uid || !gameId) return;
+
+  (async () => {
+    const q = query(
+      collection(db, "posts"),
+      where("authorUid", "==", uid),
+      where("gameId", "==", gameId),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    setHasMyPost(!snap.empty); // ← 投稿があれば true
+  })();
+}, [uid, gameId]);
+
 
   const [rawGame, setRawGame] = useState<GameDoc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +98,24 @@ export default function Page() {
       <div className="mt-3 md:mt-4">
         <PredictionListByGame gameId={gameId} />
       </div>
+      {/* 🔥 自分が投稿していない時だけ表示 */}
+{hasMyPost === false && (
+  <button
+    onClick={() => router.push(`/games/${gameId}/predict`)}
+    className="
+      fixed bottom-10 right-10 z-50
+      w-16 h-16 rounded-full
+      bg-yellow-400 text-black
+      flex items-center justify-center
+      shadow-xl
+      hover:scale-110 active:scale-95
+      transition-transform
+    "
+  >
+    <Pencil size={34} strokeWidth={3} />
+  </button>
+)}
+
     </div>
   );
 }

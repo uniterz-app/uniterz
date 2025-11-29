@@ -55,6 +55,7 @@ export type PredictionPost = {
   id: string;
   author: { name: string; avatarUrl?: string } | undefined;
   createdAtText: string;
+  gameId?: string;
   game?:
     | {
         league: League;
@@ -73,6 +74,7 @@ export type PredictionPost = {
 
   likeCount?: number;
   saveCount?: number;
+  createdAtMillis?: number;
 };
 
 /* ===== テーマ色（ノブ共通色） ===== */
@@ -164,8 +166,10 @@ export default function PredictionPostCard(props: {
   // ★ SearchTab から渡されるクリック挙動
   onClickHeader?: () => void;
   onClickBody?: () => void;
+  mode?: "list" | "detail";
 }) {
-
+  const mode = props.mode ?? "list";
+  const Wrapper: any = mode === "list" ? Link : "div";
   const post = props.post;
   const profileHref = props.profileHref;
   const router = useRouter();
@@ -455,18 +459,20 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
   };
 
   return (
-    <Link
-  href={`/post/${post.id}`}
-  onClick={(e) => {
-    if (props.onClickBody) {
-      e.preventDefault();
-      e.stopPropagation();
-      props.onClickBody();
-    }
-  }}
-  className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 rounded-3xl"
->
-      <div className={cn("relative rounded-3xl p-1", elevate)}>
+  <Wrapper
+    {...(mode === "list"
+      ? { href: `/post/${post.id}` }
+      : {})}
+    className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 rounded-3xl"
+    onClick={(e: React.MouseEvent) => {
+  if (props.onClickBody) {
+    e.preventDefault();
+    e.stopPropagation();
+    props.onClickBody();
+  }
+}}
+  >
+    <div className={cn("relative rounded-3xl p-1", elevate)}>
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">
             {/* ヘッダー（ここを押すとプロフィールへ） */}
@@ -475,14 +481,10 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
                 "flex items-start justify-between gap-3 md:gap-4",
                 profileHref ? "cursor-pointer" : "pointer-events-none"
               )}
-              onClickCapture={(e) => {
-  if (props.onClickHeader) {
-    e.preventDefault();
-    e.stopPropagation();
-    props.onClickHeader();
-  } else {
-    goProfileCapture(e);
-  }
+              onClickCapture={(e: React.MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+  props.onClickHeader?.() ?? goProfileCapture(e);
 }}
 
               onKeyDown={onHeaderKeyDown}
@@ -505,14 +507,24 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
                     </span>
                   </div>
 
-                  {/* HOME vs AWAY */}
-                  <div className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight">
-                    <span className="truncate">{homeShort}</span>
-                    <span className="opacity-70 ml-1 whitespace-nowrap">
-                      vs
-                    </span>
-                    <span className="truncate">{awayShort}</span>
-                  </div>
+                 {/* HOME vs AWAY */}
+<div
+  className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight cursor-pointer"
+  onClick={(e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 🔥 試合別タイムラインへ遷移
+    if (post.gameId) {
+      router.push(`/mobile/games/${post.gameId}`);
+    }
+  }}
+>
+  <span className="truncate">{homeShort}</span>
+  <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
+  <span className="truncate">{awayShort}</span>
+</div>
+
 
                   {/* スコア行（数値があれば表示） */}
                   {finalScore &&
@@ -536,7 +548,7 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
                       <button
                         type="button"
                         className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           e.stopPropagation();
                           startEdit(e);
@@ -551,7 +563,7 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
                       <button
                         type="button"
                         className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           e.stopPropagation();
                           doDelete(e);
@@ -569,7 +581,7 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
                       <button
                         type="button"
                         className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-emerald-300/40 bg-emerald-300/20 hover:bg-emerald-300/30"
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           e.stopPropagation();
                           submitEdit(e);
@@ -584,7 +596,7 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
                       <button
                         type="button"
                         className="inline-flex items-center justify-center h-8 w-8 md:h-9 md:w-9 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15"
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent) => {
                           e.preventDefault();
                           e.stopPropagation();
                           cancelEdit(e);
@@ -832,7 +844,7 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
           </div>
         </div>
       </div>
-    </Link>
+   </Wrapper>
   );
 }
 

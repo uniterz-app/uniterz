@@ -233,6 +233,8 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
             boxShadow:
               "0 10px 30px rgba(124,58,237,0.25), 0 12px 34px rgba(6,182,212,0.22)",
           }}
+          onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.90)")}
+          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
         >
           <span>SIGN UP</span>
           <span style={{ fontSize: 18 }}>↗</span>
