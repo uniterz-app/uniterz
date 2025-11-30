@@ -493,6 +493,8 @@ return (
         {post.createdAtText}
       </span>
     </div>
+    </div>
+            </Link> 
 {/* HOME vs AWAY */}
 <Link
   href={
@@ -520,8 +522,6 @@ return (
       </span>
     </div>
   )} 
-            </div>
-            </Link> 
             {/* ===== レグ ===== */}
 <div
   className="mt-4 md:mt-5 space-y-2.5 md:space-y-3"
