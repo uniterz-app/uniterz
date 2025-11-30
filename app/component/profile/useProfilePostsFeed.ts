@@ -12,6 +12,7 @@ import {
   DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { mapRawToPredictionPost } from "@/lib/map-post";
 import type { PredictionPost } from "@/app/component/post/PredictionPostCard";
 
 const PAGE_SIZE = 10;
@@ -26,13 +27,32 @@ export function useProfilePostsFeed(targetUid: string | null) {
   // ★ 初回 refresh の二重実行を防ぐフラグ
   const hasRefreshedRef = useRef(false);
 
-  /* ===============================
-     最新10件を取得（初回のみ確実に1回だけ）
-  =============================== */
+  // ★ ALL/Following と同じ重複排除用 Map
+  const postsMapRef = useRef<Map<string, PredictionPost>>(new Map());
+
+  /* ======================================================
+     Map に統合して posts を更新（重複なし）
+  ====================================================== */
+  const mergePosts = useCallback((newPosts: PredictionPost[]) => {
+    const map = postsMapRef.current;
+
+    newPosts.forEach((p) => {
+      map.set(p.id, p); // ← 同じ ID の投稿は上書き = 重複排除
+    });
+
+    const sorted = Array.from(map.values()).sort(
+      (a, b) => (b.createdAtMillis ?? 0) - (a.createdAtMillis ?? 0)
+    );
+
+    setPosts(sorted);
+  }, []);
+
+  /* ======================================================
+     refresh（初回のみ）
+  ====================================================== */
   const refresh = useCallback(async () => {
     if (!targetUid) return;
 
-    // ★ 既に refresh 済みなら実行しない（初回スクロール戻り対策）
     if (hasRefreshedRef.current) return;
     hasRefreshedRef.current = true;
 
@@ -49,21 +69,22 @@ export function useProfilePostsFeed(targetUid: string | null) {
       );
 
       const snap = await getDocs(q);
-      const rows = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as any),
-      })) as PredictionPost[];
 
-      setPosts(rows);
+      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+
+      // ★ Profile も ALL と同じ merge
+      postsMapRef.current.clear();
+      mergePosts(newPosts);
+
       lastDocRef.current = snap.docs[snap.docs.length - 1] || null;
     } finally {
       setLoading(false);
     }
-  }, [targetUid]);
+  }, [targetUid, mergePosts]);
 
-  /* ===============================
-     loadMore（さらに10件）
-  =============================== */
+  /* ======================================================
+     loadMore
+  ====================================================== */
   const loadMore = useCallback(async () => {
     if (!targetUid || loading || noMore || !lastDocRef.current) return;
 
@@ -82,18 +103,17 @@ export function useProfilePostsFeed(targetUid: string | null) {
       if (snap.empty) {
         setNoMore(true);
       } else {
-        const rows = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as any),
-        })) as PredictionPost[];
+        const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
 
-        setPosts((prev) => [...prev, ...rows]);
+        // ★ ALL と同じマージ方式
+        mergePosts(newPosts);
+
         lastDocRef.current = snap.docs[snap.docs.length - 1];
       }
     } finally {
       setLoading(false);
     }
-  }, [targetUid, loading, noMore]);
+  }, [targetUid, loading, noMore, mergePosts]);
 
   return {
     posts,
