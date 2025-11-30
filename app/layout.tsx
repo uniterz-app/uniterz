@@ -2,6 +2,7 @@ import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
+import { useSplashBackground } from "@/lib/useSplashBackground";
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -19,9 +20,11 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const showSplashBg = useSplashBackground();
+
   return (
     <html lang="ja">
-      <body className="bg-black">
+      <body className={showSplashBg ? "splash-bg" : "bg-black"}>
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>

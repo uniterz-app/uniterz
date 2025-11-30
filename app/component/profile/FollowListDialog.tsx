@@ -181,11 +181,17 @@ export default function FollowListDialog({
                     className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
                     onClick={onClose}
                   >
-                    <img
-                      src={u.avatarUrl || "/avatar-placeholder.png"}
-                      alt={u.displayName}
-                      className="h-10 w-10 rounded-full object-cover bg-white/10"
-                    />
+                    {u.avatarUrl ? (
+  <img
+    src={u.avatarUrl}
+    alt={u.displayName}
+    className="h-10 w-10 rounded-full object-cover bg-white/10"
+  />
+) : (
+  <div
+    className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center"
+  />
+)}
                     <div className="min-w-0 flex-1">
                       <div className="font-bold truncate text-white">{u.displayName}</div>
                       <div className="text-white/70 text-sm truncate">@{u.handle}</div>
