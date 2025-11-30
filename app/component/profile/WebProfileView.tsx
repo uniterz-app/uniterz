@@ -37,15 +37,22 @@ import BadgeDetailModal from "@/app/web/(no-nav)/badges/BadgeDetailModal";
 
 /* “◯分前 / ◯時間前 / ◯日前” */
 function timeAgoFromTimestamp(ts?: { toDate?: () => Date } | null): string {
-  if (!ts || !ts.toDate) return "たった今";
-  const diff = Date.now() - ts.toDate().getTime();
-  const m = Math.max(0, Math.floor(diff / 60000));
-  if (m < 1) return "たった今";
-  if (m < 60) return `${m}分前`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}時間前`;
-  const d = Math.floor(h / 24);
-  return `${d}日前`;
+  if (!ts || !ts.toDate) return "";
+
+  const d = ts.toDate();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+
+  const nowYear = new Date().getFullYear();
+
+  // 同年なら "12/01 00:02"
+  if (y === nowYear) return `${m}/${day} ${hh}:${mm}`;
+
+  // 年が違えば "2024/12/01 00:02"
+  return `${y}/${m}/${day} ${hh}:${mm}`;
 }
 
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });

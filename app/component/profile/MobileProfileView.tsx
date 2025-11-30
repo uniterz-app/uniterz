@@ -25,14 +25,23 @@ import BadgeDetailModal from "@/app/mobile/(no-nav)/badges/BadgeDetailModal";
 
 /* 時間前表示 */
 function timeAgoFromTimestamp(ts?: { toDate?: () => Date } | null): string {
-  if (!ts || !ts.toDate) return "たった今";
-  const diff = Date.now() - ts.toDate().getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "たった今";
-  if (m < 60) return `${m}分前`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}時間前`;
-  return `${Math.floor(h / 24)}日前`;
+  if (!ts || !ts.toDate) return "";
+
+  const d = ts.toDate();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+
+  // 年が今年なら省略 → "12/01 00:02"
+  const nowYear = new Date().getFullYear();
+  if (y === nowYear) {
+    return `${m}/${day} ${hh}:${mm}`;
+  }
+
+  // 去年以前は年もつける
+  return `${y}/${m}/${day} ${hh}:${mm}`;
 }
 
 function timeAgoFromMillis(ms?: number | null): string {
