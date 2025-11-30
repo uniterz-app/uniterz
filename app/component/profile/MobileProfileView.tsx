@@ -35,6 +35,22 @@ function timeAgoFromTimestamp(ts?: { toDate?: () => Date } | null): string {
   return `${Math.floor(h / 24)}日前`;
 }
 
+function timeAgoFromMillis(ms?: number | null): string {
+  if (!ms) return "たった今";
+
+  const diff = Date.now() - ms;
+  const m = Math.floor(diff / 60000);
+
+  if (m < 1) return "たった今";
+  if (m < 60) return `${m}分前`;
+
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}時間前`;
+
+  return `${Math.floor(h / 24)}日前`;
+}
+
+
 export default function MobileProfileView(
   props: ProfileViewProps & {
     tab: "overview" | "stats";
@@ -334,7 +350,7 @@ useEffect(() => {
                     key={p.id}
                     post={{
                       ...p,
-                      createdAtText: timeAgoFromTimestamp(p.createdAt),
+                      createdAtText: timeAgoFromMillis(p.createdAtMillis),
                     }}
                   />
                 ))}
