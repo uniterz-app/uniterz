@@ -942,19 +942,19 @@ const [showTooltip, setShowTooltip] = useState(false);
       <div className="mt-6 rounded-2xl bg-white/5 border border-white/10 p-4 md:p-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {u.avatarUrl ? (
-  <img
-    src={u.avatarUrl}
-    alt="avatar"
-    className="w-9 h-9 rounded-full object-cover bg-white/10"
-  />
-) : (
-  <div
-    className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
-  >
-    {/* ここは空。アイコンを出したくないので何も入れない */}
-  </div>
-)}
+            <div className="w-9 h-9 rounded-full bg-white/10 overflow-hidden">
+  {u.avatarUrl ? (
+    <img
+      src={u.avatarUrl}
+      alt=""
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        const t = e.currentTarget as HTMLImageElement;
+        t.style.display = "none";   // 壊れた画像は非表示（丸背景のみ）
+      }}
+    />
+  ) : null}
+</div>
             <div className="flex items-center gap-2">
               <span
                 className="font-bold text-[15px] md:text-[16px]"
