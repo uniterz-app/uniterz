@@ -93,11 +93,10 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
 
   const handleTouchStart = (e: React.TouchEvent) => {
   // スクロールが 0 以外 → Pull-to-Refresh 無効
-  if (window.scrollY !== 0) {
-    pullStartY.current = null;
-    return;
-  }
-
+  if (window.scrollY > 5) {
+  pullStartY.current = null;
+  return;
+}
   // タッチ開始の位置だけ記録（この時点では Pull 扱いしない）
   pullStartY.current = e.touches[0].clientY;
   pullDistance.current = 0;
@@ -176,7 +175,7 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
       )}
 
       {/* === ヘッダー === */}
-      <div className="sticky top-0 z-30 mb-4 isolate rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4 shadow-md">
+      <div className="relative isolate rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4 shadow-md">
         {isMe && (
           <button
             type="button"
