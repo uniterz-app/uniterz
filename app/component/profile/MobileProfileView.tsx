@@ -92,37 +92,48 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (window.scrollY !== 0) return;
-    pullStartY.current = e.touches[0].clientY;
-    pullDistance.current = 0;
-  };
+  // スクロールが 0 以外 → Pull-to-Refresh 無効
+  if (window.scrollY !== 0) {
+    pullStartY.current = null;
+    return;
+  }
+
+  // タッチ開始の位置だけ記録（この時点では Pull 扱いしない）
+  pullStartY.current = e.touches[0].clientY;
+  pullDistance.current = 0;
+
+  setIsPulling(false); // ← 初回スクロール誤作動を防ぐ
+};
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (pullStartY.current === null) return;
-    const diff = e.touches[0].clientY - pullStartY.current;
-    if (diff > 0) {
-      pullDistance.current = diff;
-      setIsPulling(true);
-    }
-  };
+  if (pullStartY.current === null) return;
+
+  const diff = e.touches[0].clientY - pullStartY.current;
+
+  // diff > 10px で初めて Pull と認識（誤作動防止）
+  if (diff > 10) {
+    pullDistance.current = diff;
+    setIsPulling(true);
+  }
+};
 
   const handleTouchEnd = async () => {
-    if (!isPulling) {
-      pullStartY.current = null;
-      return;
-    }
-
-    setIsPulling(false);
-
-    if (pullDistance.current > 70) {
-      setRefreshing(true);
-      await refresh();
-      setRefreshing(false);
-    }
-
-    pullDistance.current = 0;
+  if (!isPulling) {
     pullStartY.current = null;
-  };
+    return;
+  }
+
+  setIsPulling(false);
+
+  if (pullDistance.current > 70) {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }
+
+  pullDistance.current = 0;
+  pullStartY.current = null;
+};
 
   /* ===== loadMore（無限スクロール）===== */
   const bottomSentinel = useRef<HTMLDivElement>(null);
@@ -143,11 +154,11 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
 
   return (
     <div
-      className="mx-auto max-w-[640px] px-4 py-4 text-white"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+  className="min-h-screen mx-auto max-w-[640px] px-4 py-4 text-white"
+  onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  onTouchEnd={handleTouchEnd}
+>
       {/* Pull UI */}
       {isPulling && (
         <div
