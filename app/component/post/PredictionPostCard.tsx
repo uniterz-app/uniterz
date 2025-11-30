@@ -176,6 +176,10 @@ export default function PredictionPostCard(props: {
   const router = useRouter();
 
   if (!post) return null;
+  
+  if (!post.game || !post.legs) {
+  return null;
+}
 
   // Auth
   const [uid, setUid] = React.useState<string | null>(
@@ -445,7 +449,11 @@ return (
             {/* ヘッダー（ここを押すとプロフィールへ） */}
 <Link
   href={profileHref ?? "#"}
-  className="flex items-start gap-3 md:gap-4 cursor-pointer"
+  className="flex ..."
+  onClick={(e) => {
+    // 投稿全体のクリックを止めるだけ（Link 自体は止めない）
+    e.stopPropagation(); 
+  }}
 >
   {/* アバター */}
   <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-full ring-4 ring-[#0f2d35] overflow-hidden">
