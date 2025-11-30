@@ -497,7 +497,11 @@ return (
             {/* ヘッダー（ここを押すとプロフィールへ） */}
             <Link
   href={profileHref ?? "#"}
-  onClick={(e) => e.stopPropagation()}
+  onClick={(e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (profileHref) router.push(profileHref);
+  }}
   className="flex items-start gap-3 md:gap-4 cursor-pointer"
 >
   {/* アバター */}

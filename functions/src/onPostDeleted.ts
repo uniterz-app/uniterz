@@ -8,19 +8,18 @@ export const onPostDeleted = onDocumentDeleted(
     region: "asia-northeast1",
   },
   async (event) => {
-    // ★ any キャストで TS の誤推論を回避
-    const data = event.data as any;
-    const beforeSnap = data?.before;
+    const beforeSnap = event.data; // QueryDocumentSnapshot
     if (!beforeSnap) return;
 
-    const before = beforeSnap.data() as any;
+    const before = beforeSnap.data() as any; // ← createdAt / authorUid はここに存在
     if (!before) return;
 
     const uid = before.authorUid;
     const createdAt = before.createdAt as Timestamp;
+
     if (!uid || !createdAt) return;
 
-    // JST YYYY-MM-DD
+    // ===== JST YYYY-MM-DD =====
     const d = createdAt.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const yyyy = j.getUTCFullYear();
@@ -29,9 +28,10 @@ export const onPostDeleted = onDocumentDeleted(
     const dateKey = `${yyyy}-${mm}-${dd}`;
 
     const db = getFirestore();
+
+    // ===== daily 更新 =====
     const dailyRef = db.doc(`user_stats_daily/${uid}_${dateKey}`);
 
-    // 投稿数だけ -1（hit/miss は未確定投稿なので不要）
     await dailyRef.set(
       {
         date: dateKey,
@@ -40,6 +40,24 @@ export const onPostDeleted = onDocumentDeleted(
       },
       { merge: true }
     );
+
+    // ===== stats 更新（postsTotal だけ -1） =====
+    const statsRef = db.doc(`user_stats/${uid}`);
+    const ranges = ["7d", "30d", "all"];
+
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(statsRef);
+      const data = snap.data() || {};
+      const after = { ...data };
+
+      for (const r of ranges) {
+        const bucket = { ...(data[r] || {}) };
+        bucket.postsTotal = Math.max((bucket.postsTotal || 0) - 1, 0);
+        after[r] = bucket;
+      }
+
+      tx.set(statsRef, after, { merge: true });
+    });
 
     await recomputeUserStatsFromDaily(uid);
   }
