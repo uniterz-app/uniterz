@@ -5,65 +5,65 @@ import { useEffect, useMemo, useState } from "react";
 import { db, auth } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 
-// Firestore バケット
+// Firestore の生データ
 export type StatsBucket = {
-  posts?: number;       // 確定投稿数
-  postsTotal?: number;  // 総投稿数
+  posts?: number;        // 確定投稿数
+  postsTotal?: number;   // 総投稿数（確定＋未確定）
+  createdPosts?: number; // Daily から吸い上げた総投稿数
   hit?: number;
   units?: number;
   oddsSum?: number;
   oddsCnt?: number;
 };
 
-export type ByRange = {
-  "7d"?: StatsBucket;
-  "30d"?: StatsBucket;
-  "all"?: StatsBucket;
-};
-
+// SummaryCards に渡すデータ構造
 export type SummaryForCards = {
-  posts: number;
+  posts: number;       // 確定投稿数
+  postsTotal: number;  // 総投稿数
   winRate: number;
   units: number;
   avgOdds: number;
 };
 
-export type SummaryMap = {
-  "7d"?: SummaryForCards;
-  "30d"?: SummaryForCards;
-  "all"?: SummaryForCards;
-};
-
 function toSummary(b?: StatsBucket): SummaryForCards | undefined {
   if (!b) return undefined;
 
-  const postsConfirmed = Number(b.posts ?? 0);
-  const postsTotal     = Number(b.postsTotal ?? b.posts ?? 0);
-  const hit            = Number(b.hit ?? 0);
-  const units          = Number(b.units ?? 0);
-  const oddsSum        = Number(b.oddsSum ?? 0);
-  const oddsCnt        = Number(b.oddsCnt ?? 0);
+  // ★ 総投稿数（両対応）
+  const postsTotal = Number(
+    b.postsTotal ??
+      b.createdPosts ??
+      0
+  );
 
-  const winRate = postsConfirmed > 0 ? hit / postsConfirmed : 0;
+  // ★ 確定投稿数
+  const posts = Number(b.posts ?? 0);
+
+  const hit     = Number(b.hit ?? 0);
+  const units   = Number(b.units ?? 0);
+  const oddsSum = Number(b.oddsSum ?? 0);
+  const oddsCnt = Number(b.oddsCnt ?? 0);
+
+  // ★ 勝率は確定投稿のみ
+  const winRate = posts > 0 ? hit / posts : 0;
+
+  // ★ 平均オッズ
   const avgOdds = oddsCnt > 0 ? oddsSum / oddsCnt : 0;
 
-  return { posts: postsTotal, winRate, units, avgOdds };
+  return { posts, postsTotal, winRate, units, avgOdds };
 }
 
 /** user_stats/{uid} を購読 */
 export function useUserStats(uid?: string | null) {
   const [loading, setLoading] = useState<boolean>(true);
-  const [byRange, setByRange] = useState<ByRange | undefined>(undefined);
+  const [byRange, setByRange] = useState<any | undefined>(undefined);
 
   useEffect(() => {
-    // ★ uid が無い時 → 購読しない
     if (!uid) {
       setByRange(undefined);
       setLoading(false);
       return;
     }
 
-    // ★ 未ログイン状態では購読を開始しない（ログアウト時のエラー防止）
     const me = auth.currentUser;
     if (!me) {
       setByRange(undefined);
@@ -78,7 +78,7 @@ export function useUserStats(uid?: string | null) {
       ref,
       (snap) => {
         const d = snap.data() as any | undefined;
-        const next: ByRange = {
+        const next = {
           "7d": d?.["7d"],
           "30d": d?.["30d"],
           "all": d?.["all"],
@@ -93,11 +93,9 @@ export function useUserStats(uid?: string | null) {
     );
 
     return () => unsub();
-
-    // ★ auth.currentUser を依存に含めて、ログアウト時に再評価・購読解除
   }, [uid, auth.currentUser]);
 
-  const summaries: SummaryMap | undefined = useMemo(() => {
+  const summaries = useMemo(() => {
     if (!byRange) return undefined;
     return {
       "7d": toSummary(byRange["7d"]),

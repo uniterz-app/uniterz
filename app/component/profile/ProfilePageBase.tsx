@@ -12,6 +12,7 @@ type Props = { handle: string; variant?: "web" | "mobile" };
 // SummaryCards に渡す形
 export type SummaryForCards = {
   posts: number;    // ← postsTotal が入る
+  postsTotal: number;
   winRate: number;
   units: number;
   avgOdds: number;
@@ -39,34 +40,45 @@ export default function ProfilePageBase({ handle, variant = "web" }: Props) {
   }, [profile]);
 
   // ★ posts = postsTotal を使う（7d / 30d / all）
-  const computedFromStats = useMemo<SummaryForCards | undefined>(() => {
-    const b = byRange?.[range];
-    if (!b) return undefined;
+ const computedFromStats = useMemo<SummaryForCards | undefined>(() => {
+  const b = byRange?.[range];
+  if (!b) return undefined;
 
-    const posts = Number.isFinite(Number(b.postsTotal))
-      ? Number(b.postsTotal)
-      : Number(b.posts ?? 0);
+  // ★ 総投稿数（確定＋未確定）
+  const postsTotal = Number(b.createdPosts ?? b.postsTotal ?? 0);
 
-    const hit = Number(b.hit ?? 0);
+  // ★ 確定投稿数
+  const posts = Number(b.posts ?? 0);
 
-    const units =
-      typeof b.units === "number" && Number.isFinite(b.units) ? b.units : 0;
+  // ★ 勝率＝確定投稿のみ
+  const hit = Number(b.hit ?? 0);
+  const winRate = posts > 0 ? hit / posts : 0;
 
-    const oddsSum =
-      typeof b.oddsSum === "number" && Number.isFinite(b.oddsSum)
-        ? b.oddsSum
-        : 0;
+  // ★ Units＝確定投稿のみ
+  const units =
+    typeof b.units === "number" && Number.isFinite(b.units) ? b.units : 0;
 
-    const oddsCnt =
-      typeof b.oddsCnt === "number" && Number.isFinite(b.oddsCnt)
-        ? b.oddsCnt
-        : 0;
+  // ★ 平均オッズ＝確定投稿のみ
+  const oddsSum =
+    typeof b.oddsSum === "number" && Number.isFinite(b.oddsSum)
+      ? b.oddsSum
+      : 0;
 
-    const winRate = posts > 0 ? hit / posts : 0;
-    const avgOdds = oddsCnt > 0 ? oddsSum / oddsCnt : 0;
+  const oddsCnt =
+    typeof b.oddsCnt === "number" && Number.isFinite(b.oddsCnt)
+      ? b.oddsCnt
+      : 0;
 
-    return { posts, winRate, units, avgOdds };
-  }, [byRange, range]);
+  const avgOdds = oddsCnt > 0 ? oddsSum / oddsCnt : 0;
+
+  return {
+    posts,       // ← 確定投稿数
+    postsTotal,  // ← 総投稿数（分析数）
+    winRate,
+    units,
+    avgOdds,
+  };
+}, [byRange, range]);
 
   // ★ UI に渡すデータはこれだけ（counts.posts で上書きしない）
   const displaySummary = computedFromStats;
