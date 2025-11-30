@@ -354,15 +354,34 @@ useEffect(() => {
               )}
 
               {!loading &&
-                posts.map((p: any) => (
-                  <PredictionPostCard
-                    key={p.id}
-                    post={{
-                      ...p,
-                      createdAtText: timeAgoFromTimestamp(p.createdAt),
-                    }}
-                  />
-                ))}
+                posts.map((p: any) => {
+  const ts = p.createdAt;
+
+  // Firestore Timestamp → Date
+  const d =
+    ts?.toDate?.() ??
+    (ts instanceof Date ? ts : null);
+
+  let createdAtText = "";
+  if (d) {
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    createdAtText = `${m}/${day} ${hh}:${mm}`;
+  }
+
+  return (
+    <PredictionPostCard
+      key={p.id}
+      post={{
+        ...p,
+        createdAtText,
+      }}
+    />
+  );
+})
+}
 
               <div ref={bottomSentinel} className="h-12" />
             </div>

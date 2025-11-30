@@ -439,18 +439,19 @@ export default function PredictionPostCard(props: {
       : "ring-1 ring-white/10 shadow-md";
 
 return (
-    <div className={cn("relative rounded-3xl p-1", elevate)}>
+  <div
+    className={cn("relative rounded-3xl p-1 block cursor-pointer", elevate)}
+    onClick={() => router.push(`/post/${post.id}`)}
+  >
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">
             {/* ヘッダー（ここを押すとプロフィールへ） */}
 <Link
-  href={profileHref ?? "#"}
-  className="flex ..."
-  onClick={(e) => {
-    // 投稿全体のクリックを止めるだけ（Link 自体は止めない）
-    e.stopPropagation(); 
-  }}
+  href={`/profile/${post.authorUid}`}
+  onClick={(e) => e.stopPropagation()}  // ← 投稿詳細への bubbling を止める
+  className="flex items-start gap-5 md:gap-4"
 >
+
   {/* アバター */}
   <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-full ring-4 ring-[#0f2d35] overflow-hidden">
     <img
@@ -475,15 +476,7 @@ return (
     </div>
 
     {/* HOME vs AWAY（← ここに移動する） */}
-    <div
-  className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight cursor-pointer"
-  onClick={(e) => {
-    e.stopPropagation();
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
-    const base = isMobile ? "/mobile" : "/web";
-    router.push(`${base}/games/${post.gameId}/predictions`);
-  }}
->
+    <div className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight">
   <span className="truncate">{homeShort}</span>
   <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
   <span className="truncate">{awayShort}</span>
