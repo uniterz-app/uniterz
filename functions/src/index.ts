@@ -91,6 +91,7 @@ export const onFollowingRemoved = onDocumentDeleted(
   }
 );
 export { onPostCreated } from "./onPostCreated";
+export { onPostDeleted } from "./onPostDeleted";
 
 /* ============================================================================
  * 🔽 カレンダーベース・ランキング再集計

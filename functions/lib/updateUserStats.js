@@ -148,7 +148,6 @@ async function applyPostToUserStats(opts) {
                 units: firestore_1.FieldValue.increment(resultUnits),
             },
         };
-        baseUpdate.createdPosts = firestore_1.FieldValue.increment(1);
         // ★ 平均オッズは「hit のときだけ」積み上げる
         if (settlement === "hit") {
             baseUpdate.oddsSum = firestore_1.FieldValue.increment(usedOdds);

@@ -299,15 +299,22 @@ useEffect(() => {
         {tab === "overview" ? (
           <>
             {/* ★ サマリーカード（小さく調整） */}
-            <SummaryCards
-  compact   // ← これだけ
+          <SummaryCards
+  compact
   range={range}
   data={{
-    posts: summary?.posts ?? 0,
+    // ★ 投稿数（分析数）は「総投稿数」を渡す
+    posts: summary?.postsTotal ?? 0,
+
+    // ★ 勝率は 0〜1 の値（これは今まで通りでOK）
     winRate: summary?.winRate ?? 0,
+
     units: summary?.units ?? 0,
     odds: summary?.avgOdds ?? 0,
   }}
+
+  // ★ 勝率・平均オッズの分母に使うサンプル数（確定投稿数）
+  sampleCount={summary?.posts ?? 0}
 />
             <div className="mt-6 space-y-4">
               {loading && (

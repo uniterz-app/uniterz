@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rebuildUserStatsDailyCron = exports.onGameFinal = exports.aggregateTrendsUsersCron = exports.aggregateTrendsUsers = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.rebuildCalendarLeaderboardsCronWeek = exports.rebuildCalendarLeaderboardsCronMonth = exports.rebuildCalendarLeaderboardsHttp = exports.onPostDeletedDec = exports.onPostCreatedInc = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = void 0;
+exports.rebuildUserStatsDailyCron = exports.onGameFinal = exports.aggregateTrendsUsersCron = exports.aggregateTrendsUsers = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.rebuildCalendarLeaderboardsCronWeek = exports.rebuildCalendarLeaderboardsCronMonth = exports.rebuildCalendarLeaderboardsHttp = exports.onPostDeleted = exports.onPostCreated = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = void 0;
 // functions/src/index.ts
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
@@ -63,12 +63,10 @@ exports.onFollowingRemoved = (0, firestore_1.onDocumentDeleted)("users/{ownerUid
         console.error("[onFollowingRemoved] failed:", e);
     }
 });
-/* ============================================================================
- * 🔽 投稿数カウントトリガーは triggers/posts.ts に分離
- * ==========================================================================*/
-var posts_1 = require("./triggers/posts");
-Object.defineProperty(exports, "onPostCreatedInc", { enumerable: true, get: function () { return posts_1.onPostCreatedInc; } });
-Object.defineProperty(exports, "onPostDeletedDec", { enumerable: true, get: function () { return posts_1.onPostDeletedDec; } });
+var onPostCreated_1 = require("./onPostCreated");
+Object.defineProperty(exports, "onPostCreated", { enumerable: true, get: function () { return onPostCreated_1.onPostCreated; } });
+var onPostDeleted_1 = require("./onPostDeleted");
+Object.defineProperty(exports, "onPostDeleted", { enumerable: true, get: function () { return onPostDeleted_1.onPostDeleted; } });
 /* ============================================================================
  * 🔽 カレンダーベース・ランキング再集計
  * ==========================================================================*/
