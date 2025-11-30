@@ -438,27 +438,6 @@ export default function PredictionPostCard(props: {
       ? "ring-2 ring-rose-400/40 shadow-[0_0_12px_rgba(255,0,80,0.25)]"
       : "ring-1 ring-white/10 shadow-md";
 
-  // —— ヘッダー押下でプロフィールへ（親<Link>への伝播は先に止める）
-  // —— ヘッダー押下でプロフィールへ（親<Link>への伝播は先に止める）
-const goProfileCapture = (e: React.SyntheticEvent) => {
-  if (!profileHref) return;
-
-  // 🟢 修正版：普通に呼び出せば良い
-  e.preventDefault();
-  e.stopPropagation();
-
-  router.push(profileHref);
-};
-
-  const onHeaderKeyDown = (e: React.KeyboardEvent) => {
-    if (!profileHref) return;
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      e.stopPropagation();
-      router.push(profileHref);
-    }
-  };
-
 return (
     <div className={cn("relative rounded-3xl p-1", elevate)}>
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
@@ -466,11 +445,6 @@ return (
             {/* ヘッダー（ここを押すとプロフィールへ） */}
 <Link
   href={profileHref ?? "#"}
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (profileHref) router.push(profileHref);
-  }}
   className="flex items-start gap-3 md:gap-4 cursor-pointer"
 >
   {/* アバター */}
@@ -497,20 +471,19 @@ return (
     </div>
 
     {/* HOME vs AWAY（← ここに移動する） */}
-    <Link
-      href={
-        typeof window !== "undefined" &&
-        window.matchMedia("(max-width: 768px)").matches
-          ? `/mobile/games/${post.gameId}/predictions`
-          : `/web/games/${post.gameId}/predictions`
-      }
-      onClick={(e) => e.stopPropagation()}
-      className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight"
-    >
-      <span className="truncate">{homeShort}</span>
-      <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
-      <span className="truncate">{awayShort}</span>
-    </Link>
+    <div
+  className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight cursor-pointer"
+  onClick={(e) => {
+    e.stopPropagation();
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    const base = isMobile ? "/mobile" : "/web";
+    router.push(`${base}/games/${post.gameId}/predictions`);
+  }}
+>
+  <span className="truncate">{homeShort}</span>
+  <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
+  <span className="truncate">{awayShort}</span>
+</div>
 
     {/* スコア（← これも同じくここ） */}
     {finalScore &&
@@ -530,11 +503,10 @@ return (
 
             {/* ===== レグ ===== */}
 <div
-  className="mt-4 md:mt-5 space-y-2.5 md:space-y-3"
-  onClick={() => {
-    if (mode === "list") {
-      router.push(`/post/${post.id}`);
-    }
+  className="mt-4 md:mt-5 space-y-2.5 md:space-y-3 cursor-pointer"
+  onClick={(e) => {
+    e.stopPropagation();
+    router.push(`/post/${post.id}`);
   }}
 >
               {post.legs.map((leg) => {
@@ -640,11 +612,10 @@ return (
 
             {/* 根拠（投稿詳細へのクリック領域） */}
 <div
-  className="mt-4 md:mt-5"
-  onClick={() => {
-    if (mode === "list") {
-      router.push(`/post/${post.id}`);
-    }
+  className="mt-4 md:mt-5 cursor-pointer"
+  onClick={(e) => {
+    e.stopPropagation();
+    router.push(`/post/${post.id}`);
   }}
 >
               {!editing ? (
