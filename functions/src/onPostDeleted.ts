@@ -8,16 +8,19 @@ export const onPostDeleted = onDocumentDeleted(
     region: "asia-northeast1",
   },
   async (event) => {
-    // ★ 型を any にキャストして before を正しく読む
-    const before = (event.data as any)?.before?.data();
+    // ★ any キャストで TS の誤推論を回避
+    const data = event.data as any;
+    const beforeSnap = data?.before;
+    if (!beforeSnap) return;
+
+    const before = beforeSnap.data() as any;
     if (!before) return;
 
     const uid = before.authorUid;
     const createdAt = before.createdAt as Timestamp;
-
     if (!uid || !createdAt) return;
 
-    // JST YYYY-MM-DD を生成
+    // JST YYYY-MM-DD
     const d = createdAt.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const yyyy = j.getUTCFullYear();
@@ -28,7 +31,7 @@ export const onPostDeleted = onDocumentDeleted(
     const db = getFirestore();
     const dailyRef = db.doc(`user_stats_daily/${uid}_${dateKey}`);
 
-    // createdPosts -1
+    // 投稿数だけ -1（hit/miss は未確定投稿なので不要）
     await dailyRef.set(
       {
         date: dateKey,

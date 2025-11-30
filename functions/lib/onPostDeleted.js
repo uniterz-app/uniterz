@@ -8,16 +8,19 @@ exports.onPostDeleted = (0, firestore_1.onDocumentDeleted)({
     document: "posts/{postId}",
     region: "asia-northeast1",
 }, async (event) => {
-    var _a, _b;
-    // ★ 型を any にキャストして before を正しく読む
-    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    // ★ any キャストで TS の誤推論を回避
+    const data = event.data;
+    const beforeSnap = data === null || data === void 0 ? void 0 : data.before;
+    if (!beforeSnap)
+        return;
+    const before = beforeSnap.data();
     if (!before)
         return;
     const uid = before.authorUid;
     const createdAt = before.createdAt;
     if (!uid || !createdAt)
         return;
-    // JST YYYY-MM-DD を生成
+    // JST YYYY-MM-DD
     const d = createdAt.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const yyyy = j.getUTCFullYear();
@@ -26,7 +29,7 @@ exports.onPostDeleted = (0, firestore_1.onDocumentDeleted)({
     const dateKey = `${yyyy}-${mm}-${dd}`;
     const db = (0, firestore_2.getFirestore)();
     const dailyRef = db.doc(`user_stats_daily/${uid}_${dateKey}`);
-    // createdPosts -1
+    // 投稿数だけ -1（hit/miss は未確定投稿なので不要）
     await dailyRef.set({
         date: dateKey,
         createdPosts: firestore_2.FieldValue.increment(-1),

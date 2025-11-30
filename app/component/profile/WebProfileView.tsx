@@ -326,16 +326,20 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
             )}
 
             <SummaryCards
+  compact
   range={range}
   data={{
-    // ★ 表示用の投稿数（総投稿数）
-    posts: summary?.posts ?? 0,
+    // ★ 投稿数（分析数）は「総投稿数」
+    posts: summary?.postsTotal ?? 0,
+
+    // ★ 勝率（0〜1）
     winRate: summary?.winRate ?? 0,
+
     units: summary?.units ?? 0,
     odds: summary?.avgOdds ?? 0,
   }}
 
-  // ★ 勝率などの分母に使うサンプル数＝確定投稿数
+  // ★ 勝率・平均オッズの分母（確定投稿数）
   sampleCount={summary?.posts ?? 0}
 />
 
