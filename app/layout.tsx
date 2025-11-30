@@ -21,8 +21,16 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      {/* ← 起動直後は必ず splash-bg（黒とび防止） */}
-      <body className="splash-bg">
+      <body
+        style={{
+          backgroundImage: "url('/splash/splash-1170x2532.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundColor: "#000",
+          margin: 0,
+          padding: 0,
+        }}
+      >
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>
