@@ -21,11 +21,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      <body className="bg-black">
+      {/* ← 起動直後は必ず splash-bg（黒とび防止） */}
+      <body className="splash-bg">
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>
     </html>
   );
 }
+
 
