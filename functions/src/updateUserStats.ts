@@ -194,7 +194,6 @@ export async function applyPostToUserStats(opts: {
         units: FieldValue.increment(resultUnits),
       },
     };
-    baseUpdate.createdPosts = FieldValue.increment(1);
 
     // ★ 平均オッズは「hit のときだけ」積み上げる
     if (settlement === "hit") {
