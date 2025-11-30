@@ -464,7 +464,7 @@ return (
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">
             {/* ヘッダー（ここを押すとプロフィールへ） */}
-            <Link
+<Link
   href={profileHref ?? "#"}
   onClick={(e) => {
     e.preventDefault();
@@ -483,8 +483,10 @@ return (
     />
   </div>
 
-  {/* 名前＋日付 */}
+  {/* 名前＋日付＋HOME vs AWAY＋スコア */}
   <div className="min-w-0">
+
+    {/* 名前＋日付 */}
     <div className="flex items-center gap-2 md:gap-3">
       <h3 className="text-[15px] md:text-[26px] font-extrabold truncate">
         {authorName}
@@ -493,35 +495,39 @@ return (
         {post.createdAtText}
       </span>
     </div>
-    </div>
-            </Link> 
-{/* HOME vs AWAY */}
-<Link
-  href={
-    typeof window !== "undefined" &&
-    window.matchMedia("(max-width: 768px)").matches
-      ? `/mobile/games/${post.gameId}/predictions`
-      : `/web/games/${post.gameId}/predictions`
-  }
-  onClick={(e) => e.stopPropagation()}
-  className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight"
->
-  <span className="truncate">{homeShort}</span>
-  <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
-  <span className="truncate">{awayShort}</span>
+
+    {/* HOME vs AWAY（← ここに移動する） */}
+    <Link
+      href={
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 768px)").matches
+          ? `/mobile/games/${post.gameId}/predictions`
+          : `/web/games/${post.gameId}/predictions`
+      }
+      onClick={(e) => e.stopPropagation()}
+      className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight"
+    >
+      <span className="truncate">{homeShort}</span>
+      <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
+      <span className="truncate">{awayShort}</span>
+    </Link>
+
+    {/* スコア（← これも同じくここ） */}
+    {finalScore &&
+      Number.isFinite(finalScore.home) &&
+      Number.isFinite(finalScore.away) && (
+        <div className="mt-0.5 text-[11px] md:text-sm opacity-90">
+          {finalScore.home}–{finalScore.away}{" "}
+          <span className="opacity-90">
+            {winnerShort ?? "勝者"}勝利
+          </span>
+        </div>
+      )}
+      
+  </div> {/* ← ここで閉じるのが正解 */}
+
 </Link>
 
-{/* スコア */}
-{finalScore &&
-  Number.isFinite(finalScore.home) &&
-  Number.isFinite(finalScore.away) && (
-    <div className="mt-0.5 text-[11px] md:text-sm opacity-90">
-      {finalScore.home}–{finalScore.away}{" "}
-      <span className="opacity-90">
-        {winnerShort ?? "勝者"}勝利
-      </span>
-    </div>
-  )} 
             {/* ===== レグ ===== */}
 <div
   className="mt-4 md:mt-5 space-y-2.5 md:space-y-3"
