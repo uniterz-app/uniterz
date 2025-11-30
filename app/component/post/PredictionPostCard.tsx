@@ -529,14 +529,7 @@ return (
 </Link>
 
             {/* ===== レグ ===== */}
-<div
-  className="mt-4 md:mt-5 space-y-2.5 md:space-y-3"
-  onClick={() => {
-    if (mode === "list") {
-      router.push(`/post/${post.id}`);
-    }
-  }}
->
+<div className="mt-4 md:mt-5 space-y-2.5 md:space-y-3">
               {post.legs.map((leg) => {
                 const style = LEG_STYLE[leg.kind];
                 const rawPct = Number.isFinite(leg.pct) ? leg.pct : 0;
@@ -638,31 +631,27 @@ return (
               })}
             </div>
 
-            {/* 根拠（投稿詳細へのクリック領域） */}
-<div
-  className="mt-4 md:mt-5"
-  onClick={() => {
-    if (mode === "list") {
-      router.push(`/post/${post.id}`);
-    }
-  }}
->
-              {!editing ? (
-                <p className="m-0 text-[14px] md:text-[16px] leading-relaxed">
-                  {post.note || "（ユーザーが書き込んだ根拠…）"}
-                </p>
-              ) : (
-                <textarea
-                  value={draftNote}
-                  onChange={(e) => setDraftNote(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl bg-white/8 border border-white/10 p-3 md:p-4 leading-relaxed text-white focus:outline-none focus:ring-2 focus:ring-white/20"
-                  placeholder="根拠を編集…"
-                  disabled={busy}
-                  onClick={stop}
-                />
-              )}
-            </div>
+            <div className="mt-4 md:mt-5">
+  {!editing ? (
+    <p
+      className="m-0 text-[14px] md:text-[16px] leading-relaxed cursor-pointer"
+      onClick={() => {
+        if (mode === "list") router.push(`/post/${post.id}`);
+      }}
+    >
+      {post.note || "（ユーザーが書き込んだ根拠…）"}
+    </p>
+  ) : (
+    <textarea
+      value={draftNote}
+      onChange={(e) => setDraftNote(e.target.value)}
+      rows={3}
+      className="w-full rounded-xl bg-white/8 border border-white/10 p-3 md:p-4 leading-relaxed text-white"
+      disabled={busy}
+    />
+  )}
+</div>
+
 
             {/* アクション行 */}
             <div className="mt-3 md:mt-4 flex items-center justify-between">
