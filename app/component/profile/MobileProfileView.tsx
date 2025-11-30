@@ -176,7 +176,7 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
       )}
 
       {/* === ヘッダー === */}
-      <div className="relative isolate rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4 shadow-md">
+      <div className="sticky top-0 z-30 mb-4 isolate rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4 shadow-md">
         {isMe && (
           <button
             type="button"
