@@ -304,7 +304,7 @@ useEffect(() => {
   range={range}
   data={{
     // ★ 投稿数（分析数）は「総投稿数」を渡す
-    posts: summary?.postsTotal ?? 0,
+    posts: summary?.posts ?? 0,
 
     // ★ 勝率は 0〜1 の値（これは今まで通りでOK）
     winRate: summary?.winRate ?? 0,

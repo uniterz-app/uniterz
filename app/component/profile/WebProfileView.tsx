@@ -326,14 +326,19 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
             )}
 
             <SummaryCards
-              range={range}
-              data={{
-                posts: summary?.posts ?? 0,
-                winRate: summary?.winRate ?? 0,
-                units: summary?.units ?? 0,
-                odds: summary?.avgOdds ?? 0,
-              }}
-            />
+  range={range}
+  data={{
+    // ★ 表示用の投稿数（総投稿数）
+    posts: summary?.posts ?? 0,
+    winRate: summary?.winRate ?? 0,
+    units: summary?.units ?? 0,
+    odds: summary?.avgOdds ?? 0,
+  }}
+
+  // ★ 勝率などの分母に使うサンプル数＝確定投稿数
+  sampleCount={summary?.posts ?? 0}
+/>
+
 
             <div className="mt-8 space-y-6">
               {loading && (
