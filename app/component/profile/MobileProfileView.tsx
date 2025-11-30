@@ -78,10 +78,16 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
     refresh,
     loadMore,
   } = useProfilePostsFeed(targetUid ?? null);
+  const refreshedOnce = useRef(false);
 
   useEffect(() => {
-    if (targetUid) refresh();
-  }, [targetUid, refresh]);
+  if (!targetUid) return;
+
+  if (!refreshedOnce.current) {
+    refreshedOnce.current = true; // ← 初回だけ実行
+    refresh();
+  }
+}, [targetUid, refresh]);
 
   /* =====================================================
      🍀 Pull-to-Refresh
@@ -135,19 +141,34 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
 };
 
   /* ===== loadMore（無限スクロール）===== */
-  const bottomSentinel = useRef<HTMLDivElement>(null);
+const bottomSentinel = useRef<HTMLDivElement>(null);
+const firstLoad = useRef(true);
 
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) loadMore();
-      },
-      { rootMargin: "120px" }
-    );
+useEffect(() => {
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting) {
+        // 初回だけ loadMore を無効化（スクロール戻り防止）
+        if (firstLoad.current) {
+          firstLoad.current = false;
+          return;
+        }
+        loadMore();
+      }
+    },
+    { rootMargin: "120px" }
+  );
 
-    if (bottomSentinel.current) io.observe(bottomSentinel.current);
-    return () => io.disconnect();
-  }, [loadMore]);
+  if (bottomSentinel.current) io.observe(bottomSentinel.current);
+  return () => io.disconnect();
+}, [loadMore]);
+
+// ★ refresh 完了後も初回発火を抑制する（重要）
+useEffect(() => {
+  if (!loading) {
+    firstLoad.current = false;
+  }
+}, [loading]);
 
   /* ===== UI ===== */
 

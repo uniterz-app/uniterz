@@ -23,11 +23,18 @@ export function useProfilePostsFeed(targetUid: string | null) {
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
+  // ★ 初回 refresh の二重実行を防ぐフラグ
+  const hasRefreshedRef = useRef(false);
+
   /* ===============================
-     最新10件を取得
+     最新10件を取得（初回のみ確実に1回だけ）
   =============================== */
   const refresh = useCallback(async () => {
     if (!targetUid) return;
+
+    // ★ 既に refresh 済みなら実行しない（初回スクロール戻り対策）
+    if (hasRefreshedRef.current) return;
+    hasRefreshedRef.current = true;
 
     setLoading(true);
     setNoMore(false);
@@ -45,10 +52,10 @@ export function useProfilePostsFeed(targetUid: string | null) {
       const rows = snap.docs.map((d) => ({
         id: d.id,
         ...(d.data() as any),
-      })) as any[];
+      })) as PredictionPost[];
 
-      setPosts(rows as any);
-      lastDocRef.current = snap.docs[snap.docs.length - 1];
+      setPosts(rows);
+      lastDocRef.current = snap.docs[snap.docs.length - 1] || null;
     } finally {
       setLoading(false);
     }
@@ -78,7 +85,7 @@ export function useProfilePostsFeed(targetUid: string | null) {
         const rows = snap.docs.map((d) => ({
           id: d.id,
           ...(d.data() as any),
-        })) as any[];
+        })) as PredictionPost[];
 
         setPosts((prev) => [...prev, ...rows]);
         lastDocRef.current = snap.docs[snap.docs.length - 1];
