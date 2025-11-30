@@ -359,7 +359,7 @@ useEffect(() => {
                     key={p.id}
                     post={{
                       ...p,
-                      createdAtText: timeAgoFromMillis(p.createdAtMillis),
+                      createdAtText: timeAgoFromTimestamp(p.createdAt),
                     }}
                   />
                 ))}

@@ -176,10 +176,6 @@ export default function PredictionPostCard(props: {
   const router = useRouter();
 
   if (!post) return null;
-  
-  if (!post.game || !post.legs) {
-  return null;
-}
 
   // Auth
   const [uid, setUid] = React.useState<string | null>(
