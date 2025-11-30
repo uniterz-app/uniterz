@@ -460,37 +460,6 @@ const goProfileCapture = (e: React.SyntheticEvent) => {
   };
 
 return (
-  <div
-    className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 rounded-3xl cursor-pointer"
-    onClick={() => {
-      if (!post.gameId) return;
-
-      const isMobile =
-        typeof window !== "undefined" &&
-        window.matchMedia("(max-width: 768px)").matches;
-
-      // ==========================
-      // 一覧表示（listモード）
-      // 本体クリック → 投稿詳細
-      // ==========================
-      if (mode === "list") {
-        router.push(`/post/${post.id}`);
-        return;
-      }
-
-      // ==========================
-      // 詳細表示（detailモード）
-      // 本体クリック → 試合ページ
-      // ==========================
-      if (mode === "detail") {
-        if (isMobile) {
-          router.push(`/mobile/games/${post.gameId}`);
-        } else {
-          router.push(`/games/${post.gameId}`);
-        }
-      }
-    }}
-  >
     <div className={cn("relative rounded-3xl p-1", elevate)}>
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">
@@ -554,7 +523,14 @@ return (
             </div>
             </Link> 
             {/* ===== レグ ===== */}
-            <div className="mt-4 md:mt-5 space-y-2.5 md:space-y-3">
+<div
+  className="mt-4 md:mt-5 space-y-2.5 md:space-y-3"
+  onClick={() => {
+    if (mode === "list") {
+      router.push(`/post/${post.id}`);
+    }
+  }}
+>
               {post.legs.map((leg) => {
                 const style = LEG_STYLE[leg.kind];
                 const rawPct = Number.isFinite(leg.pct) ? leg.pct : 0;
@@ -656,8 +632,15 @@ return (
               })}
             </div>
 
-            {/* 根拠 */}
-            <div className="mt-4 md:mt-5">
+            {/* 根拠（投稿詳細へのクリック領域） */}
+<div
+  className="mt-4 md:mt-5"
+  onClick={() => {
+    if (mode === "list") {
+      router.push(`/post/${post.id}`);
+    }
+  }}
+>
               {!editing ? (
                 <p className="m-0 text-[14px] md:text-[16px] leading-relaxed">
                   {post.note || "（ユーザーが書き込んだ根拠…）"}
@@ -731,59 +714,64 @@ return (
       )
     )}
   </div>
-              <motion.button
-                type="button"
-                whileTap={{ scale: 1.25 }}
-                transition={{ type: "spring", stiffness: 300, damping: 10 }}
-                onClick={(e) => onToggleLike(e)}
-                className="inline-flex items-center gap-1.5 md:gap-2 opacity-90"
-                aria-pressed={liked}
-                aria-label="いいね"
-              >
-                <Heart
-                  strokeWidth={2}
-                  className={cn(
-                    "w-5 h-5 md:w-[22px] md:h-[22px] transition-colors duration-200",
-                    liked ? "text-pink-400 fill-current" : "text-white"
-                  )}
-                />
-                <motion.span
-                  key={likeCount}
-                  initial={{ scale: 0.9, opacity: 0.8 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-xs md:text-sm tabular-nums"
-                >
-                  {likeCount}
-                </motion.span>
-              </motion.button>
+             {/* -- 中央：いいね＋ブックマーク（固定セット） -- */}
+  <div className="flex items-center gap-3 md:gap-4">
+    {/* いいね */}
+    <motion.button
+      type="button"
+      whileTap={{ scale: 1.25 }}
+      transition={{ type: "spring", stiffness: 300, damping: 10 }}
+      onClick={(e) => onToggleLike(e)}
+      className="inline-flex items-center gap-1.5 md:gap-2 opacity-90"
+      aria-pressed={liked}
+      aria-label="いいね"
+    >
+      <Heart
+        strokeWidth={2}
+        className={cn(
+          "w-5 h-5 md:w-[22px] md:h-[22px] transition-colors duration-200",
+          liked ? "text-pink-400 fill-current" : "text-white"
+        )}
+      />
+      <motion.span
+        key={likeCount}
+        initial={{ scale: 0.9, opacity: 0.8 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="text-xs md:text-sm tabular-nums"
+      >
+        {likeCount}
+      </motion.span>
+    </motion.button>
 
-              <motion.button
-                type="button"
-                whileTap={{ scale: 1.25 }}
-                transition={{ type: "spring", stiffness: 300, damping: 10 }}
-                onClick={(e) => onToggleSave(e)}
-                className="inline-flex items-center gap-1.5 md:gap-2 opacity-90"
-                aria-pressed={saved}
-                aria-label="保存"
-              >
-                <Bookmark
-                  strokeWidth={2}
-                  className={cn(
-                    "w-5 h-5 md:w-[22px] md:h-[22px] transition-colors duration-200",
-                    saved ? "text-emerald-400 fill-current" : "text-white"
-                  )}
-                />
-                <motion.span
-                  key={saveCount}
-                  initial={{ scale: 0.9, opacity: 0.8 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-xs md:text-sm tabular-nums"
-                >
-                  {saveCount}
-                </motion.span>
-              </motion.button>
+    {/* ブックマーク */}
+    <motion.button
+      type="button"
+      whileTap={{ scale: 1.25 }}
+      transition={{ type: "spring", stiffness: 300, damping: 10 }}
+      onClick={(e) => onToggleSave(e)}
+      className="inline-flex items-center gap-1.5 md:gap-2 opacity-90"
+      aria-pressed={saved}
+      aria-label="保存"
+    >
+      <Bookmark
+        strokeWidth={2}
+        className={cn(
+          "w-5 h-5 md:w-[22px] md:h-[22px] transition-colors duration-200",
+          saved ? "text-emerald-400 fill-current" : "text-white"
+        )}
+      />
+      <motion.span
+        key={saveCount}
+        initial={{ scale: 0.9, opacity: 0.8 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="text-xs md:text-sm tabular-nums"
+      >
+        {saveCount}
+      </motion.span>
+    </motion.button>
+  </div>
 
               {typeof post.resultUnits === "number" ? (
   post.resultUnits > 0 ? (
@@ -836,7 +824,6 @@ return (
             </div>
           </div>
         </div>
-      </div>
       </div>
   );
 }
