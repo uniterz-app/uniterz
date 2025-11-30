@@ -439,7 +439,6 @@ export default function PredictionPostCard(props: {
       : "ring-1 ring-white/10 shadow-md";
 
   // —— ヘッダー押下でプロフィールへ（親<Link>への伝播は先に止める）
-  // —— ヘッダー押下でプロフィールへ（親<Link>への伝播は先に止める）
 const goProfileCapture = (e: React.SyntheticEvent) => {
   if (!profileHref) return;
 
@@ -463,40 +462,43 @@ return (
     <div className={cn("relative rounded-3xl p-1", elevate)}>
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">
-            {/* ヘッダー（ここを押すとプロフィールへ） */}
-<Link
-  href={profileHref ?? "#"}
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (profileHref) router.push(profileHref);
-  }}
-  className="flex items-start gap-3 md:gap-4 cursor-pointer"
->
+            {/* === ヘッダー：アバター + 名前/日付 + HOME/AWAY + スコア === */}
+<div className="flex items-start gap-3 md:gap-4">
+  
   {/* アバター */}
-  <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-full ring-4 ring-[#0f2d35] overflow-hidden">
+  <Link
+    href={profileHref ?? "#"}
+    onClick={(e) => e.stopPropagation()}
+    className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-full ring-4 ring-[#0f2d35] overflow-hidden"
+  >
     <img
       src={authorAvatar}
       alt=""
       className="w-full h-full object-cover"
-      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.display = "none";
+      }}
     />
-  </div>
+  </Link>
 
-  {/* 名前＋日付＋HOME vs AWAY＋スコア */}
+  {/* 名前＋日付＋HOME/AWAY＋スコア */}
   <div className="min-w-0">
 
     {/* 名前＋日付 */}
-    <div className="flex items-center gap-2 md:gap-3">
+    <Link
+      href={profileHref ?? "#"}
+      onClick={(e) => e.stopPropagation()}
+      className="flex items-center gap-2 md:gap-3"
+    >
       <h3 className="text-[15px] md:text-[26px] font-extrabold truncate">
         {authorName}
       </h3>
       <span className="text-xs md:text-sm opacity-70 whitespace-nowrap">
         {post.createdAtText}
       </span>
-    </div>
+    </Link>
 
-    {/* HOME vs AWAY（← ここに移動する） */}
+    {/* HOME vs AWAY */}
     <Link
       href={
         typeof window !== "undefined" &&
@@ -512,21 +514,17 @@ return (
       <span className="truncate">{awayShort}</span>
     </Link>
 
-    {/* スコア（← これも同じくここ） */}
+    {/* スコア */}
     {finalScore &&
       Number.isFinite(finalScore.home) &&
       Number.isFinite(finalScore.away) && (
         <div className="mt-0.5 text-[11px] md:text-sm opacity-90">
           {finalScore.home}–{finalScore.away}{" "}
-          <span className="opacity-90">
-            {winnerShort ?? "勝者"}勝利
-          </span>
+          <span className="opacity-90">{winnerShort ?? "勝者"}勝利</span>
         </div>
       )}
-      
-  </div> {/* ← ここで閉じるのが正解 */}
-
-</Link>
+  </div>
+</div>
 
             {/* ===== レグ ===== */}
 <div className="mt-4 md:mt-5 space-y-2.5 md:space-y-3">
@@ -547,7 +545,9 @@ return (
                   <div
                     key={`${leg.kind}-${leg.label}`}
                     className="rounded-2xl border border-white/12 bg-black/15 p-2.5 md:p-3"
-                  >
+                  onClick={() => {
+          if (mode === "list") router.push(`/post/${post.id}`);
+        }}>
                     <div className="grid grid-cols-[44px_1fr_auto] md:grid-cols-[52px_1fr_auto] gap-2.5 md:gap-3 items-center">
                       <div className="relative">
                         <div className="w-10 h-10 md:w-12 md:h-12 rounded-full ring-2 ring-white/15 bg-black/20 grid place-items-center overflow-hidden">
@@ -651,7 +651,7 @@ return (
     />
   )}
 </div>
-
+</div>
 
             {/* アクション行 */}
             <div className="mt-3 md:mt-4 flex items-center justify-between">
@@ -819,7 +819,6 @@ return (
             </div>
           </div>
         </div>
-      </div>
   );
 }
 
