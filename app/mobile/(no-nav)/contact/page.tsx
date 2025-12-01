@@ -12,9 +12,10 @@ export default function MobileContactPage() {
     >
       <section className="space-y-3 text-xs text-slate-100/80 mb-5">
         <p>
-          内容によっては返信までお時間をいただく場合があります。
-          追加で伝えたいことがあれば、同じフォームから複数回送信しても大丈夫です。
-        </p>
+  メールで直接お問い合わせいただく場合は  
+  <span className="text-sky-300 font-semibold">support@uniterz.app</span>  
+  までご連絡ください。
+</p>
       </section>
 
       <ContactForm variant="mobile" />

@@ -12,11 +12,10 @@ export default function WebContactPage() {
     >
       <section className="space-y-4 text-sm md:text-base text-slate-100/80 mb-6">
         <p>
-          内容によっては返信までお時間をいただく場合があります。また、すべてのお問い合わせに個別の回答をお約束するものではありません。
-        </p>
-        <p className="text-xs md:text-sm text-slate-300">
-          緊急性の高い通報（迷惑行為・ルール違反など）は、できるだけ詳しい状況やユーザー名・試合名を記載してください。
-        </p>
+  メールで直接お問い合わせいただく場合は  
+  <span className="text-sky-300 font-semibold">support@uniterz.app</span>  
+  までご連絡ください。
+</p>
       </section>
 
       <ContactForm variant="web" />
