@@ -131,9 +131,9 @@ export default function PredictionForm({ dense = false, game, user, onPostCreate
 
 // 🔥 ここに追加する（①）
   // -------------------------------------------------
-  const hasSeenGlobal = typeof window !== "undefined"
-    ? localStorage.getItem("prediction_onboarding_done") === "1"
-    : false;
+  const hasSeenGlobal =
+  typeof window !== "undefined" &&
+  localStorage.getItem("prediction_onboarding_done") === "1";
   // -------------------------------------------------
 
 const [hasShown, setHasShown] = useState({
@@ -399,10 +399,11 @@ const [showTooltip, setShowTooltip] = useState(false);
             <select
   ref={refs.mainOption}
   onMouseDown={(e) => {
-    if (hasSeenGlobal) return;
+  if (hasSeenGlobal) return;
   if (!running && !hasShown.mainOption) {
-    e.preventDefault();     // ← 一覧を開かせない
-    start("mainOption");    // ← オンボーディングを出す
+    e.preventDefault();
+    start("mainOption");
+    setHasShown((s) => ({ ...s, mainOption: true }));
   }
 }}
   value={main.optionId ?? ""}
@@ -442,12 +443,13 @@ const [showTooltip, setShowTooltip] = useState(false);
   ref={refs.mainOdds}
   value={main.odds}
   onMouseDown={(e) => {
-    if (hasSeenGlobal) return;
-    if (!running && !hasShown.mainOdds) {
-      e.preventDefault();         // ⭐ キーボードを出させない
-      start("mainOdds");          // ⭐ オンボーディング開始
-    }
-  }}
+  if (hasSeenGlobal) return;
+  if (!running && !hasShown.mainOdds) {
+    e.preventDefault();
+    start("mainOdds");
+    setHasShown((s) => ({ ...s, mainOdds: true }));
+  }
+}}
   onChange={(v) => {
     setMain((prev) => ({ ...prev, odds: v }));
   }}
@@ -473,14 +475,14 @@ const [showTooltip, setShowTooltip] = useState(false);
   step={1}
   value={main.pct}
   onChange={(e) => {
-    if (!hasSeenGlobal && !running && !hasShown.mainPct) {
-      start("mainPct");
-      setHasShown((s) => ({ ...s, mainPct: true }));
-    }
+  if (!hasSeenGlobal && !running && !hasShown.mainPct) {
+    start("mainPct");
+    setHasShown((s) => ({ ...s, mainPct: true }));
+  }
 
-    const v = Number(e.target.value);
-    showTertiary ? redistribute3("main", v) : setMainPct(v);
-  }}
+  const v = Number(e.target.value);
+  showTertiary ? redistribute3("main", v) : setMainPct(v);
+}}
   className="pretty-range w-full"
   style={{
     ["--fill" as any]: "#3b82f6",
@@ -516,13 +518,13 @@ const [showTooltip, setShowTooltip] = useState(false);
   ref={refs.secondaryOption}
   value={secondary.optionId ?? ""}
   onMouseDown={(e) => {
-    if (hasSeenGlobal) return;
-    if (!running && !hasShown.secondaryOption) {
-      e.preventDefault(); // ← セレクト展開を止める
-      start("secondaryOption"); 
-      setHasShown((s) => ({ ...s, secondaryOption: true }));
-    }
-  }}
+  if (hasSeenGlobal) return;
+  if (!running && !hasShown.secondaryOption) {
+    e.preventDefault();
+    start("secondaryOption");
+    setHasShown((s) => ({ ...s, secondaryOption: true }));
+  }
+}}
   onChange={(e) =>
     setSecondary((s) => ({ ...s, optionId: e.target.value || null }))
   }
@@ -1008,17 +1010,23 @@ const [showTooltip, setShowTooltip] = useState(false);
     {/* 🔥 Walkthrough Overlay（オンボーディング） */}
 {running && (
   <WalkthroughOverlay
-  targetRect={targetRect}
-  step={step}
-  onClose={() => {
-    localStorage.setItem("prediction_onboarding_done", "1");
-    setHasShown((prev) => {
-      if (prev[step.key]) return prev;
-      return { ...prev, [step.key]: true };
-    });
-    close();
-  }}
-/>
+    targetRect={targetRect}
+    step={step}
+    onClose={() => {
+  close(); // ← 先に必ず閉じる（重要）
+
+  setHasShown((prev) => {
+    const updated = { ...prev, [step.key]: true };
+
+    const allDone = Object.values(updated).every(Boolean);
+    if (allDone) {
+      localStorage.setItem("prediction_onboarding_done", "1");
+    }
+
+    return updated;
+  });
+}}
+  />
 )}
 {/* 🔥 オッズ補足ツールチップ */}
 {showTooltip && tooltipRect && (
