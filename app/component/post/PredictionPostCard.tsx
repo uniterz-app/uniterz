@@ -70,6 +70,7 @@ export type PredictionPost = {
   note?: string;
 
   authorUid?: string | null;
+  authorHandle?: string | null;
   startAtMillis?: number | null;
 
   likeCount?: number;
@@ -438,16 +439,38 @@ export default function PredictionPostCard(props: {
       ? "ring-2 ring-rose-400/40 shadow-[0_0_12px_rgba(255,0,80,0.25)]"
       : "ring-1 ring-white/10 shadow-md";
 
+  const isMobile =
+  typeof window !== "undefined" &&
+  window.matchMedia("(max-width: 768px)").matches;
+
+  const handle = post.authorHandle?.replace(/^@/, "") ?? post.authorUid;
+
+const profileUrl = isMobile
+  ? `/mobile/u/${handle}`
+  : `/web/u/${handle}`;
+
 return (
   <div
     className={cn("relative rounded-3xl p-1 block cursor-pointer", elevate)}
-    onClick={() => router.push(`/post/${post.id}`)}
+    // カード全体クリック
+onClick={() => {
+  if (mode === "list") {
+    // list → 投稿詳細へ
+    router.push(`/post/${post.id}`);
+  } else {
+    // detail → 試合タイムラインへ
+    const path = isMobile
+      ? `/mobile/games/${post.gameId}/predictions`
+      : `/web/games/${post.gameId}/predictions`;
+    router.push(path);
+  }
+}}
   >
         <div className="rounded-2xl bg-gradient-to-b from-black/8 to-black/3">
           <div className="rounded-2xl bg-black/10 border border-white/10 p-3 md:p-6 text-white">
             {/* ヘッダー（ここを押すとプロフィールへ） */}
 <Link
-  href={`/profile/${post.authorUid}`}
+  href={profileUrl}
   onClick={(e) => e.stopPropagation()}  // ← 投稿詳細への bubbling を止める
   className="flex items-start gap-5 md:gap-4"
 >
@@ -476,7 +499,16 @@ return (
     </div>
 
     {/* HOME vs AWAY（← ここに移動する） */}
-    <div className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight">
+    <div
+  className="mt-1 flex flex-wrap items-baseline text-xs md:text-xl font-extrabold tracking-wide leading-tight cursor-pointer"
+  onClick={(e) => {
+    e.stopPropagation();
+    const path = isMobile
+      ? `/mobile/games/${post.gameId}/predictions`
+      : `/web/games/${post.gameId}/predictions`;
+    router.push(path);
+  }}
+>
   <span className="truncate">{homeShort}</span>
   <span className="opacity-70 ml-1 whitespace-nowrap">vs</span>
   <span className="truncate">{awayShort}</span>
@@ -493,18 +525,25 @@ return (
           </span>
         </div>
       )}
-      
-  </div> {/* ← ここで閉じるのが正解 */}
-
-</Link>
-
+      </div>
+      </Link>
             {/* ===== レグ ===== */}
 <div
   className="mt-4 md:mt-5 space-y-2.5 md:space-y-3 cursor-pointer"
   onClick={(e) => {
-    e.stopPropagation();
+  e.stopPropagation();
+
+  if (mode === "list") {
+    // リストでは投稿詳細へ
     router.push(`/post/${post.id}`);
-  }}
+  } else {
+    // 投稿詳細では試合タイムラインへ
+    const path = isMobile
+      ? `/mobile/games/${post.gameId}/predictions`
+      : `/web/games/${post.gameId}/predictions`;
+    router.push(path);
+  }
+}}
 >
               {post.legs.map((leg) => {
                 const style = LEG_STYLE[leg.kind];

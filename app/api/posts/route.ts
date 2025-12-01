@@ -193,12 +193,18 @@ export async function POST(req: Request) {
   // 投稿者表示情報（任意）
   let authorDisplayName = "ユーザー";
   let authorPhotoURL: string | null = null;
+  let authorHandle: string | null = null;
   try {
     const userDoc = await adminDb.collection("users").doc(uid).get();
     if (userDoc.exists) {
       const u = userDoc.data() || {};
       authorDisplayName = u.displayName || authorDisplayName;
       authorPhotoURL = u.photoURL || u.avatarUrl || null;
+      authorHandle =
+      u.handle ||
+      u.username ||
+      u.slug ||
+      null;
     }
   } catch {}
 
@@ -261,6 +267,7 @@ export async function POST(req: Request) {
     authorUid: uid,
     authorDisplayName,
     authorPhotoURL,
+    authorHandle,
 
     // メタ
     createdAt: FieldValue.serverTimestamp(),

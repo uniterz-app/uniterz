@@ -53,8 +53,7 @@ export function useProfilePostsFeed(targetUid: string | null) {
   const refresh = useCallback(async () => {
     if (!targetUid) return;
 
-    if (hasRefreshedRef.current) return;
-    hasRefreshedRef.current = true;
+    if (hasRefreshedRef.current) return; // ← ここは触らない
 
     setLoading(true);
     setNoMore(false);
@@ -72,12 +71,18 @@ export function useProfilePostsFeed(targetUid: string | null) {
 
       const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
 
-      // ★ Profile も ALL と同じ merge
-      postsMapRef.current.clear();
+      // ★★ 初回は clear しない。ここもロジックを変えず、動くだけ修正 ★★
+      // refresh は毎回 “完全クリア” で OK
+postsMapRef.current.clear();
+
       mergePosts(newPosts);
 
-      lastDocRef.current = snap.docs[snap.docs.length - 1] || null;
+      lastDocRef.current =
+        snap.docs[snap.docs.length - 1] || null;
     } finally {
+      // ★ 初回フラグをここで立てる（唯一の修正点）
+      hasRefreshedRef.current = true;
+
       setLoading(false);
     }
   }, [targetUid, mergePosts]);
@@ -103,12 +108,14 @@ export function useProfilePostsFeed(targetUid: string | null) {
       if (snap.empty) {
         setNoMore(true);
       } else {
-        const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+        const newPosts = snap.docs.map((d) =>
+          mapRawToPredictionPost(d)
+        );
 
-        // ★ ALL と同じマージ方式
         mergePosts(newPosts);
 
-        lastDocRef.current = snap.docs[snap.docs.length - 1];
+        lastDocRef.current =
+          snap.docs[snap.docs.length - 1];
       }
     } finally {
       setLoading(false);

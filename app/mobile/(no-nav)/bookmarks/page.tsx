@@ -158,6 +158,7 @@ export default function MobileBookmarksPage() {
                 : null,
             note: data?.note ?? "",
             authorUid: data?.authorUid ?? null,
+            authorHandle: data?.authorHandle ?? null,
             startAtMillis:
               typeof data?.startAtMillis === "number"
                 ? data.startAtMillis
@@ -224,9 +225,23 @@ export default function MobileBookmarksPage() {
         </p>
       ) : (
         <div className="space-y-4 pb-8">
-          {posts.map((p) => (
-            <PredictionPostCard key={p.id} post={p} />
-          ))}
+          {posts.map((p) => {
+  const handle =
+    (p.authorHandle ?? "").replace(/^@/, "") ||
+    p.authorUid ||
+    "";
+
+  const profileHref = `/mobile/u/${handle}`;
+
+  return (
+    <PredictionPostCard
+      key={p.id}
+      post={p}
+      mode="list"
+      profileHref={profileHref}
+    />
+  );
+})}
         </div>
       )}
     </main>

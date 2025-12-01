@@ -81,10 +81,12 @@ function toUiPost(doc: QueryDocumentSnapshot<DocumentData>): PredictionPost {
       league && (home || away)
         ? { league, home, away, status: status as any, finalScore }
         : undefined,
+        gameId: x.gameId ?? x.game?.gameId ?? null,
     legs,
     resultUnits: typeof x.resultUnits === "number" ? x.resultUnits : null,
     note: typeof x.note === "string" ? x.note : "",
     authorUid: x.authorUid ?? null,
+    authorHandle: x.authorHandle ?? null,
     startAtMillis: typeof x.startAtMillis === "number" ? x.startAtMillis : null,
     likeCount: Number.isFinite(x.likeCount) ? Number(x.likeCount) : 0,
     saveCount: Number.isFinite(x.saveCount) ? Number(x.saveCount) : 0,
@@ -185,10 +187,23 @@ export default function PredictionListByGame({
   }
 
   return (
-    <div className="space-y-3 md:space-y-4">
-      {posts.map((p) => (
-        <PredictionPostCard key={p.id} post={p} />
-      ))}
-    </div>
-  );
+  <div className="space-y-3 md:space-y-4">
+    {posts.map((p) => {
+      const handle =
+        (p.authorHandle ?? "").replace(/^@/, "") ||
+        p.authorUid ||
+        "";
+      const profileHref = `/mobile/u/${handle}`;
+
+      return (
+        <PredictionPostCard
+          key={p.id}
+          post={p}
+          mode="list"
+          profileHref={profileHref}
+        />
+      );
+    })}
+  </div>
+);
 }

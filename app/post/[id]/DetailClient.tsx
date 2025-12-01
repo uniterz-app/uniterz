@@ -87,6 +87,8 @@ export default function PostDetailClient() {
           resultUnits: typeof d.resultUnits === "number" ? d.resultUnits : null,
           note: typeof d.note === "string" ? d.note : "",
           authorUid: d.authorUid ?? null,
+          gameId: d.gameId ?? d.game?.gameId ?? null,
+          authorHandle: d.authorHandle ?? null,
           startAtMillis:
             typeof d.startAtMillis === "number" ? d.startAtMillis : null,
           likeCount: Number.isFinite(d.likeCount) ? d.likeCount : 0,
@@ -120,7 +122,11 @@ export default function PostDetailClient() {
 
   return (
     <div className="mx-auto max-w-2xl p-3 sm:p-4 md:p-6">
-      <PredictionPostCard post={post} profileHref={profileHref ?? undefined} />
+      <PredictionPostCard
+  post={post}
+  profileHref={profileHref ?? undefined}
+  mode="detail"         // ★ これを必ず付ける
+/>
     </div>
   );
 }

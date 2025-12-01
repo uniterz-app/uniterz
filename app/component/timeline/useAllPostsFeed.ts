@@ -44,7 +44,7 @@ export function useAllPostsFeed() {
     });
 
     const sorted = Array.from(map.values()).sort(
-      (a, b) => (b.startAtMillis ?? 0) - (a.startAtMillis ?? 0)
+      (a, b) => (b.createdAtMillis ?? 0) - (a.createdAtMillis ?? 0)
     );
 
     setPosts(sorted);

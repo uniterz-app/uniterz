@@ -74,6 +74,7 @@ export function toUiPost(id: string, x: any): PredictionPost {
     note: typeof x?.note === "string" ? x.note : "",
 
     authorUid: x?.authorUid ?? null,
+    authorHandle: x?.authorHandle ?? null,
     startAtMillis: typeof x?.startAtMillis === "number" ? x.startAtMillis : null,
 
     likeCount: Number.isFinite(x?.likeCount) ? Number(x.likeCount) : 0,

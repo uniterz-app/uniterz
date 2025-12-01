@@ -74,6 +74,7 @@ export function mapRawToPredictionPost(raw: Raw): PredictionPost {
     resultUnits: d?.resultUnits ?? null,
     note: d?.note ?? "",
     authorUid: d?.authorUid ?? null,
+    authorHandle: d?.authorHandle ?? null,
     startAtMillis: d?.startAtMillis ?? null,
     likeCount: d?.likeCount ?? 0,
     saveCount: d?.saveCount ?? 0,
