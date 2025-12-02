@@ -5,27 +5,35 @@ import Link from "next/link";
 import PredictionPostCard from "@/app/component/post/PredictionPostCard";
 import SearchTabModal from "@/app/component/timeline/SearchTabModal";
 
-import { useAllPostsFeed } from "./useAllPostsFeed";
 import { useFollowingFeed } from "./useFollowingFeed";
+import { useJLeagueFeed } from "./useJLeagueFeed";
+import { useBLeagueFeed } from "./useBLeagueFeed";
 
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-type Tab = "all" | "following";
+type Tab = "j" | "bj" | "following";
 
 export default function HomeTimeline({
   variant = "mobile",
 }: {
   variant?: "web" | "mobile";
 }) {
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<Tab>("j");
 
   /* ============================
      フィード
   ============================ */
-  const allFeed = useAllPostsFeed();
+  const jFeed = useJLeagueFeed();
+  const bFeed = useBLeagueFeed();
   const followingFeed = useFollowingFeed();
-  const feed = tab === "all" ? allFeed : followingFeed;
+
+  const feed =
+    tab === "j"
+      ? jFeed
+      : tab === "bj"
+      ? bFeed
+      : followingFeed;
 
   /* ============================
      Search モーダル
@@ -174,12 +182,10 @@ export default function HomeTimeline({
             )}
           </Link>
 
-          {/* 中央ロゴ */}
           <div className="absolute left-1/2 -translate-x-1/2">
             <img src="/logo/logo.png" className="w-10 select-none" />
           </div>
 
-          {/* 右側ボタン削除 → スペーサーにする */}
           <div className="h-9 w-9" />
         </div>
 
@@ -206,12 +212,19 @@ export default function HomeTimeline({
           </button>
         </div>
 
+        {/* ★ 3タブ UI（現状デザインそのまま） */}
         <nav className={`mx-auto ${wrapW} ${padX}`}>
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1">
-            <TabButton active={tab === "all"} onClick={() => setTab("all")}>
-              ALL
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1">
+            <TabButton active={tab === "j"} onClick={() => setTab("j")}>
+              Jリーグ
             </TabButton>
-            <TabButton active={tab === "following"} onClick={() => setTab("following")}>
+            <TabButton active={tab === "bj"} onClick={() => setTab("bj")}>
+              Bリーグ
+            </TabButton>
+            <TabButton
+              active={tab === "following"}
+              onClick={() => setTab("following")}
+            >
               フォロー中
             </TabButton>
           </div>
@@ -234,10 +247,6 @@ export default function HomeTimeline({
               投稿はまだありません。
             </div>
           )}
-
-          {feed.posts.map((p) => (
-            <PredictionPostCard key={p.id} post={p} />
-          ))}
 
           <div ref={sentinelRef} className="h-14" />
         </section>
