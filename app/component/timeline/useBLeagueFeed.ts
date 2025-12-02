@@ -25,7 +25,14 @@ export function useBLeagueFeed() {
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
   // ======================
-  // loadMore
+  // 初回ロード（followingと同じ）
+  // ======================
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  // ======================
+  // loadMore（followingと同じ構造）
   // ======================
   const loadMore = useCallback(async () => {
     if (loading || noMore) return;
@@ -60,7 +67,7 @@ export function useBLeagueFeed() {
 
       const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
 
-      // ⭐ Following と同じ重複回避形式
+      // ⭐ Following と同じ重複排除処理
       setPosts((prev) => {
         const ids = new Set(prev.map((p) => p.id));
         return [...prev, ...newPosts.filter((p) => !ids.has(p.id))];
@@ -68,14 +75,14 @@ export function useBLeagueFeed() {
 
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("BLeague feed loadMore error:", err);
+      console.warn("B feed loadMore error:", err);
     }
 
     setLoading(false);
   }, [loading, noMore]);
 
   // ======================
-  // refresh（Pull to refresh）
+  // refresh（followingと同じ構造）
   // ======================
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -91,15 +98,13 @@ export function useBLeagueFeed() {
       );
 
       const snap = await getDocs(q);
-
       const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
 
-      // ⭐ Following と同じ
       setPosts(newPosts);
 
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("BLeague feed refresh error:", err);
+      console.warn("B feed refresh error:", err);
     }
 
     setLoading(false);
