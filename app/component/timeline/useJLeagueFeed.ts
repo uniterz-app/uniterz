@@ -24,11 +24,6 @@ export function useJLeagueFeed() {
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
-  // 初回ロード
-  useEffect(() => {
-    loadMore();
-  }, []);
-
   // ======================
   // loadMore
   // ======================

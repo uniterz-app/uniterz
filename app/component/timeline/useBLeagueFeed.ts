@@ -24,11 +24,6 @@ export function useBLeagueFeed() {
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
-  // 初回ロード
-  useEffect(() => {
-    loadMore();
-  }, []);
-
   // ======================
   // loadMore
   // ======================
