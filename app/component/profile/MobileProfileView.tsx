@@ -241,10 +241,15 @@ export default function MobileProfileView(
       )}
 
       {/* タブ */}
-      <div className="mt-4 flex items-center justify-between">
-        <Tabs value={tab} onChange={setTab} />
-        <PeriodToggle value={range} onChange={setRange} />
-      </div>
+      {/* タブ */}
+<div className="mt-4 flex items-center justify-between">
+  <Tabs
+    value={tab}
+    onChange={setTab}
+    showStats={isMe}   // ★ ここを追加するだけで OK
+  />
+  <PeriodToggle value={range} onChange={setRange} />
+</div>
 
       {/* 内容 */}
       <div className="mt-6">

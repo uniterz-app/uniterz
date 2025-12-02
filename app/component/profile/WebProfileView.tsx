@@ -319,10 +319,15 @@ const { badges: userBadges, loading: badgesLoading } = useUserBadges(targetUid);
       </div>
 
       {/* Tabs */}
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <Tabs value={tab} onChange={setTab} size="lg" />
-        <PeriodToggle value={range} onChange={setRange} size="lg" />
-      </div>
+<div className="mt-4 flex items-center justify-between gap-3">
+  <Tabs
+    value={tab}
+    onChange={setTab}
+    size="lg"
+    showStats={isMe}     // ★ これを追加するだけ
+  />
+  <PeriodToggle value={range} onChange={setRange} size="lg" />
+</div>
 
       {/* Content */}
       <div className="mt-6">

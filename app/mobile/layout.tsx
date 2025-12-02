@@ -1,12 +1,14 @@
-// app/mobile/layout.tsx
 "use client";
+
+import usePageView from "@/app/ga/usePageView";
 
 export default function MobileLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // ★ AuthGate は RootLayout で全体を包んでいるため、
-  //   ここでは children をそのまま返すだけでOK
+  // ★ ページ遷移ごとに GA4 に page_view を送信
+  usePageView();
+
   return <>{children}</>;
 }

@@ -16,13 +16,22 @@ type Tab = "overview" | "stats";
 type Props = {
   value: Tab;
   onChange: (v: Tab) => void;
-  /** ← これを追加： サイズ指定（sm/md/lg）。何も渡さなければ md */
   size?: keyof typeof sizeMap;
   sizeClass?: string;
+
+  /** ★追加：stats を表示するかどうか（デフォルト true） */
+  showStats?: boolean;
 };
 
-export default function Tabs({ value, onChange, size = "md", sizeClass,}: Props) {
-  const items: Tab[] = ["overview", "stats"];
+export default function Tabs({
+  value,
+  onChange,
+  size = "md",
+  sizeClass,
+  showStats = true,
+}: Props) {
+  /** ★ ここだけ変更： stats を隠す場合は overview のみ */
+  const items: Tab[] = showStats ? ["overview", "stats"] : ["overview"];
 
   return (
     <div className={`${lilita.className} flex gap-2`}>

@@ -36,6 +36,10 @@ export default function LoginForm({ variant = "web" }: LoginFormProps) {
       const handle = d?.handle || d?.username;
       const base = variant === "mobile" ? "/mobile/u" : "/web/u";
 
+      if (typeof window !== "undefined" && window.gtag) {
+  window.gtag("event", "login", { method: "email" });
+}
+
       if (handle) {
         router.replace(`${base}/${encodeURIComponent(handle)}`);
       }

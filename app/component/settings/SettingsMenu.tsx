@@ -254,14 +254,6 @@ export default function SettingsMenu({
           <span>加入プラン</span>
         </button>
 
-        {/* === Settings === */}
-        <p className={groupTitleClasses}>設定</p>
-
-        <button type="button" className={itemClasses}>
-          <Bell className="h-4 w-4" />
-          <span>通知設定</span>
-        </button>
-
         {/* !!! プライバシーデータは削除済み !!! */}
 
         {/* === Support === */}
