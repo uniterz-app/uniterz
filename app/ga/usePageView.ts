@@ -10,9 +10,9 @@ export default function usePageView() {
   useEffect(() => {
     if (!pathname) return;
 
-    const url = pathname + (searchParams?.toString() ? `?${searchParams}` : "");
+    const sp = searchParams?.toString() ?? "";
+    const url = sp ? `${pathname}?${sp}` : pathname;
 
-    // GA4 の page_view
     window.gtag?.("event", "page_view", {
       page_path: url,
     });

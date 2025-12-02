@@ -1,14 +1,9 @@
-"use client";
-
-import usePageView from "@/app/ga/usePageView";
+import WebClientWrapper from "./WebClientWrapper";
 
 export default function WebLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // ★ ページ遷移ごとに GA4 page_view を送信
-  usePageView();
-
-  return <>{children}</>;
+  return <WebClientWrapper>{children}</WebClientWrapper>;
 }
