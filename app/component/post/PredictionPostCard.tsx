@@ -367,7 +367,7 @@ export default function PredictionPostCard(props: {
   };
 
   /* ========= 試合情報 ========= */
-  const league: League = post.game?.league ?? "bj";
+  const league: League = (post as any).league ?? post.game?.league ?? "bj";
 
   const rawHome =
     (post as any).game?.home ??
