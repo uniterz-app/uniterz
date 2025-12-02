@@ -95,8 +95,8 @@ export default function HomeTimeline({
 
     io.observe(target);
     return () => io.disconnect();
-  }, [feed, tab]);
-
+  }, [feed.loadMore, tab]);
+  
   /* ============================
      Pull-to-refresh
   ============================ */
