@@ -23,25 +23,20 @@ export function useBLeagueFeed() {
   const [noMore, setNoMore] = useState(false);
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
-  const postsMapRef = useRef<Map<string, PredictionPost>>(new Map());
 
-  const mergePosts = useCallback((newPosts: PredictionPost[]) => {
-    const map = postsMapRef.current;
-    newPosts.forEach((p) => map.set(p.id, p));
-    const sorted = Array.from(map.values()).sort(
-      (a, b) => (b.createdAtMillis ?? 0) - (a.createdAtMillis ?? 0)
-    );
-    setPosts(sorted);
-  }, []);
-
+  // 初回ロード
   useEffect(() => {
     loadMore();
   }, []);
 
+  // ======================
+  // loadMore
+  // ======================
   const loadMore = useCallback(async () => {
     if (loading || noMore) return;
 
     setLoading(true);
+
     try {
       const baseQuery = query(
         collection(db, "posts"),
@@ -61,26 +56,33 @@ export function useBLeagueFeed() {
         : baseQuery;
 
       const snap = await getDocs(q);
+
       if (snap.empty) {
         setNoMore(true);
         setLoading(false);
         return;
       }
 
-      const newPosts = snap.docs.map((doc) => mapRawToPredictionPost(doc));
-      mergePosts(newPosts);
+      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+
+      // ⭐ Following と同じ重複回避形式
+      setPosts((prev) => {
+        const ids = new Set(prev.map((p) => p.id));
+        return [...prev, ...newPosts.filter((p) => !ids.has(p.id))];
+      });
 
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("BJ feed load failed:", err);
+      console.warn("BLeague feed loadMore error:", err);
     }
 
     setLoading(false);
-  }, [loading, noMore, mergePosts]);
+  }, [loading, noMore]);
 
+  // ======================
+  // refresh（Pull to refresh）
+  // ======================
   const refresh = useCallback(async () => {
-    if (loading) return;
-
     setLoading(true);
     setNoMore(false);
     lastDocRef.current = null;
@@ -94,18 +96,19 @@ export function useBLeagueFeed() {
       );
 
       const snap = await getDocs(q);
-      const newPosts = snap.docs.map((doc) => mapRawToPredictionPost(doc));
 
-      postsMapRef.current.clear();
-      mergePosts(newPosts);
+      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+
+      // ⭐ Following と同じ
+      setPosts(newPosts);
 
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("BJ feed refresh failed:", err);
+      console.warn("BLeague feed refresh error:", err);
     }
 
     setLoading(false);
-  }, [loading, mergePosts]);
+  }, []);
 
   return {
     posts,
