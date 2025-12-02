@@ -242,6 +242,13 @@ export default function HomeTimeline({
             </>
           )}
 
+          {/* 🔥 ここに追加する */}
+  {!feed.loading &&
+    feed.posts.length > 0 &&
+    feed.posts.map((post) => (
+      <PredictionPostCard key={post.id} post={post} />
+    ))}
+
           {!feed.loading && feed.posts.length === 0 && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-white/80">
               投稿はまだありません。
