@@ -2,7 +2,6 @@ import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
-import GoogleAnalytics from "./ga/GoogleAnalytics";
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -32,12 +31,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           padding: 0,
         }}
       >
-        <GoogleAnalytics />
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>
     </html>
   );
 }
-
 

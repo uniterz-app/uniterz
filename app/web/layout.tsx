@@ -1,9 +1,11 @@
-import WebClientWrapper from "./WebClientWrapper";
+// app/web/layout.tsx
+"use client";
 
 export default function WebLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <WebClientWrapper>{children}</WebClientWrapper>;
+  // RootLayout の AuthGate / SplashWrapper を再発火させない
+  return <>{children}</>;
 }

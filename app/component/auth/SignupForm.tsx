@@ -62,10 +62,6 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
         { merge: true }
       );
 
-      if (typeof window !== "undefined" && window.gtag) {
-  window.gtag("event", "sign_up", { method: "email" });
-}
-
       // ⑥ プロフィールへ遷移
       const base = variant === "mobile" ? "/mobile/u" : "/web/u";
       router.replace(`${base}/${encodeURIComponent(slug)}`);
