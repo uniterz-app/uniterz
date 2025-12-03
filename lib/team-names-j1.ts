@@ -19,6 +19,9 @@ export const teamNameRulesJ1: Record<string, { line1: string; line2: string }> =
   "アビスパ福岡":   { line1: "アビスパ", line2: "福岡" },        
   "サガン鳥栖":  { line1: "サガン", line2: "鳥栖" },           
   "ジュビロ磐田":     { line1: "ジュビロ", line2: "磐田" },      
-  "FC町田ゼルビア":   { line1: "FC町田", line2: "ゼルビア" },      
+  "FC町田ゼルビア":   { line1: "FC町田", line2: "ゼルビア" },
+  "清水エスパルス": { line1: "清水", line2: "エスパルス" },
+"ファジアーノ岡山": { line1: "ファジアーノ", line2: "岡山" },
+"横浜FC": { line1: "横浜", line2: "FC" },      
 };
   // ...追加していく

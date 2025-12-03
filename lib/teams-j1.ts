@@ -27,4 +27,17 @@ export const teamColorsJ1: TeamColorMap = {
   "サガン鳥栖":             { primary: "#00B2E5", secondary: "#EC6EA7" },     // シアン/ピンク
   "ジュビロ磐田":           { primary: "#6FA8DC", secondary: "#F9E27D" },     // ライトブルー/イエロー
   "FC町田ゼルビア":         { primary: "#1B4EA1", secondary: "#C9AA00" },     // ブルー/ゴールド
+  "清水エスパルス": {
+  primary: "#F6A800",     // オレンジ
+  secondary: "#002855"    // ネイビー
+},
+"ファジアーノ岡山": {
+  primary: "#870042",     // ワインレッド
+  secondary: "#002052"    // ネイビー
+},
+"横浜FC": {
+  primary: "#33A6CC",     // フォックスブルー
+  secondary: "#002B55"    // ネイビー
+},
+
 };

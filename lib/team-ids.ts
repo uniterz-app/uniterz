@@ -21,6 +21,9 @@ export const TEAM_IDS: Record<string, string> = {
   "サガン鳥栖": "j1-tosu",
   "ジュビロ磐田": "j1-iwata",
   "FC町田ゼルビア": "j1-machida",
+  "清水エスパルス": "j1-shimizu",
+"ファジアーノ岡山": "j1-okayama",
+"横浜FC": "j1-yokohamafc",
 
   // ===== B1 =====
   "レバンガ北海道": "b1-levanga",
@@ -50,4 +53,6 @@ export const TEAM_IDS: Record<string, string> = {
   "福島ファイヤーボンズ": "b1-fukushima",
   "越谷アルファーズ": "b1-koshigaya",
   "滋賀レイクス": "b1-shiga",
+  "アルティーリ千葉": "b1-altiri",
+
 };

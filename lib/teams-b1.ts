@@ -28,4 +28,6 @@ export const teamColorsB1: Record<string, TeamColors> = {
   "富山グラウジーズ": { primary: "#E60012", secondary: "#000000" },
   "福島ファイヤーボンズ": { primary: "#92358D", secondary: "#C0C0C0" },
   "越谷アルファーズ": { primary: "#800020", secondary: "#C0C0C0" },
+  "アルティーリ千葉": { primary: "#000000", secondary: "#C9A86A" },
+  "滋賀レイクス": { primary: "#0071CE", secondary: "#FFFFFF" },
 };
