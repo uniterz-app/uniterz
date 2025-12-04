@@ -19,6 +19,9 @@ import {
   Timestamp,
 } from "firebase/firestore";
 
+// ★ 追加：Functions
+import { getFunctions, type Functions } from "firebase/functions";
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
@@ -42,6 +45,9 @@ if (typeof window !== "undefined") {
 
 export const storage: FirebaseStorage = getStorage(app);
 export const db: Firestore = getFirestore(app);
+
+// ★ 追加：Functions 初期化
+export const functions: Functions = getFunctions(app, "asia-northeast1");
 
 export { app };
 
