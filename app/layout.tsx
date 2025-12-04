@@ -2,6 +2,8 @@ import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
+import AppActivityTracker from "@/app/component/common/AppActivityTracker";
+
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -31,6 +33,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           padding: 0,
         }}
       >
+        {/* ★ 追加：アプリ起動時に毎回ログが記録される */}
+        <AppActivityTracker />
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
       </body>

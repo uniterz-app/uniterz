@@ -47,6 +47,11 @@ export default function AdminHomePage() {
           title="プラン管理（準備中）"
           desc="申請承認・公開設定・価格調整など"
         />
+        <Card
+  href="/admin/dashboard"
+  title="ダッシュボード"
+  desc="ユーザー数・投稿数・DAU を確認"
+/>
       </div>
     </AdminGuard>
   );

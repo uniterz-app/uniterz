@@ -181,3 +181,9 @@ export const rebuildUserStatsDailyCron = onSchedule(
     }
   }
 );
+
+export { dailyAnalytics } from "./analytics/daily";
+
+export { logUserActive } from "./analytics/logUserActive";
+
+
