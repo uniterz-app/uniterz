@@ -350,15 +350,6 @@ const [showTooltip, setShowTooltip] = useState(false);
         console.warn("log predict failed", e);
       }
 
-      // 🔥 GA4: 投稿イベント
-if (typeof window !== "undefined" && window.gtag) {
-  window.gtag("event", "post_created", {
-    league: game.league,
-    legs_count: legs.length,
-    has_note: reason.trim() ? 1 : 0,
-  });
-}
-
       // ✅ 成功トースト
       toast.success("分析を投稿しました");
 
@@ -1041,7 +1032,8 @@ if (typeof window !== "undefined" && window.gtag) {
 {showTooltip && tooltipRect && (
   <Tooltip
     anchorRect={tooltipRect}
-    message="オッズはスポーツくじ Winner の公式サイトを参考にしてください"
+    message="オッズは各自で確認の上入力してください 
+    当サービスはオッズ情報の取得 提供はしていません"
     onClose={() => setShowTooltip(false)}
   />
 )}

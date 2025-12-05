@@ -19,7 +19,7 @@ export const predictionWalkthroughSteps: WalkthroughStep[] = [
     key: "mainOdds",
     target: "mainOdds",
     title: "オッズを入力します",
-    body: "<strong>スポーツくじ Winner</strong> を参考に、1.0 以上で手入力できます。",
+    body: "オッズは各自で確認の上入力してください、1.0 以上で手入力できます。",
   },
   {
     key: "mainPct",
