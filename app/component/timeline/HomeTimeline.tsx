@@ -12,28 +12,22 @@ import { useBLeagueFeed } from "./useBLeagueFeed";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-type Tab = "j" | "bj" | "following";
+type Tab = "bj" | "following";
 
 export default function HomeTimeline({
   variant = "mobile",
 }: {
   variant?: "web" | "mobile";
 }) {
-  const [tab, setTab] = useState<Tab>("j");
+  const [tab, setTab] = useState<Tab>("bj");
 
   /* ============================
      フィード
   ============================ */
-  const jFeed = useJLeagueFeed();
   const bFeed = useBLeagueFeed();
   const followingFeed = useFollowingFeed();
 
-  const feed =
-    tab === "j"
-      ? jFeed
-      : tab === "bj"
-      ? bFeed
-      : followingFeed;
+  const feed = tab === "bj" ? bFeed : followingFeed;
 
   /* ============================
      Search モーダル
@@ -96,7 +90,7 @@ export default function HomeTimeline({
     io.observe(target);
     return () => io.disconnect();
   }, [feed.loadMore, tab]);
-  
+
   /* ============================
      Pull-to-refresh
   ============================ */
@@ -214,20 +208,14 @@ export default function HomeTimeline({
 
         {/* ★ 3タブ UI（現状デザインそのまま） */}
         <nav className={`mx-auto ${wrapW} ${padX}`}>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1">
-            <TabButton active={tab === "j"} onClick={() => setTab("j")}>
-              Jリーグ
-            </TabButton>
-            <TabButton active={tab === "bj"} onClick={() => setTab("bj")}>
-              Bリーグ
-            </TabButton>
-            <TabButton
-              active={tab === "following"}
-              onClick={() => setTab("following")}
-            >
-              フォロー中
-            </TabButton>
-          </div>
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1">
+   <TabButton active={tab === "bj"} onClick={() => setTab("bj")}>
+     Bリーグ
+   </TabButton>
+   <TabButton active={tab === "following"} onClick={() => setTab("following")}>
+     フォロー中
+   </TabButton>
+ </div>
         </nav>
       </header>
 
