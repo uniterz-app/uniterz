@@ -4,20 +4,21 @@ import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentCreated, onDocumentDeleted } from "firebase-functions/v2/firestore";
 
-import { initializeApp } from "firebase-admin/app";
+import * as admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { aggregateUsersTrend } from "./trend/users.aggregate";
 import { recomputeUserStatsFromDaily } from "./updateUserStats";
+import { dailyAnalyticsCore } from "./analytics/_core";
 
 // ★★★ onGameFinal を確実に有効化する import
 import { onGameFinal } from "./onGameFinal";
 
 // ====== Global Options / Admin ======
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
-initializeApp();
-const db = getFirestore();
+admin.initializeApp();
+const db = admin.firestore();
 
 /* ============================================================================
  * followers / following のカウント反映
@@ -185,5 +186,23 @@ export const rebuildUserStatsDailyCron = onSchedule(
 export { dailyAnalytics } from "./analytics/daily";
 
 export { logUserActive } from "./analytics/logUserActive";
+
+export { runDailyAnalytics } from "./analytics/runDaily";
+
+// ==========================
+// 手動実行できる Daily Analytics HTTP 関数
+// ==========================
+
+export const runDailyAnalyticsHttp = onRequest(async (req, res) => {
+  try {
+    const result = await dailyAnalyticsCore();
+    res.status(200).json({ ok: true, result });
+  } catch (err: any) {
+    console.error("[runDailyAnalyticsHttp] failed:", err);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
+
 
 

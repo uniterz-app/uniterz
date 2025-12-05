@@ -1,23 +1,57 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logUserActive = exports.dailyAnalytics = exports.rebuildUserStatsDailyCron = exports.onGameFinal = exports.aggregateTrendsUsersCron = exports.aggregateTrendsUsers = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.rebuildCalendarLeaderboardsCronWeek = exports.rebuildCalendarLeaderboardsCronMonth = exports.rebuildCalendarLeaderboardsHttp = exports.onPostDeleted = exports.onPostCreated = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = void 0;
+exports.runDailyAnalyticsHttp = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.rebuildUserStatsDailyCron = exports.onGameFinal = exports.aggregateTrendsUsersCron = exports.aggregateTrendsUsers = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.rebuildCalendarLeaderboardsCronWeek = exports.rebuildCalendarLeaderboardsCronMonth = exports.rebuildCalendarLeaderboardsHttp = exports.onPostDeleted = exports.onPostCreated = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = void 0;
 // functions/src/index.ts
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-functions/v2/firestore");
-const app_1 = require("firebase-admin/app");
+const admin = __importStar(require("firebase-admin"));
 const firestore_2 = require("firebase-admin/firestore");
 const games_aggregate_1 = require("./trend/games.aggregate");
 const users_aggregate_1 = require("./trend/users.aggregate");
 const updateUserStats_1 = require("./updateUserStats");
+const _core_1 = require("./analytics/_core");
 // ★★★ onGameFinal を確実に有効化する import
 const onGameFinal_1 = require("./onGameFinal");
 Object.defineProperty(exports, "onGameFinal", { enumerable: true, get: function () { return onGameFinal_1.onGameFinal; } });
 // ====== Global Options / Admin ======
 (0, options_1.setGlobalOptions)({ region: "asia-northeast1", maxInstances: 10 });
-(0, app_1.initializeApp)();
-const db = (0, firestore_2.getFirestore)();
+admin.initializeApp();
+const db = admin.firestore();
 /* ============================================================================
  * followers / following のカウント反映
  * ==========================================================================*/
@@ -135,4 +169,19 @@ var daily_1 = require("./analytics/daily");
 Object.defineProperty(exports, "dailyAnalytics", { enumerable: true, get: function () { return daily_1.dailyAnalytics; } });
 var logUserActive_1 = require("./analytics/logUserActive");
 Object.defineProperty(exports, "logUserActive", { enumerable: true, get: function () { return logUserActive_1.logUserActive; } });
+var runDaily_1 = require("./analytics/runDaily");
+Object.defineProperty(exports, "runDailyAnalytics", { enumerable: true, get: function () { return runDaily_1.runDailyAnalytics; } });
+// ==========================
+// 手動実行できる Daily Analytics HTTP 関数
+// ==========================
+exports.runDailyAnalyticsHttp = (0, https_1.onRequest)(async (req, res) => {
+    try {
+        const result = await (0, _core_1.dailyAnalyticsCore)();
+        res.status(200).json({ ok: true, result });
+    }
+    catch (err) {
+        console.error("[runDailyAnalyticsHttp] failed:", err);
+        res.status(500).json({ ok: false, error: String(err) });
+    }
+});
 //# sourceMappingURL=index.js.map

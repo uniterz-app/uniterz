@@ -14,9 +14,9 @@ import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard"
 import { toMatchCardProps, type GameDoc } from "@/lib/games/transform";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { Flame } from "lucide-react";
+import { Flame, CheckCircle } from "lucide-react";
 
-import TrendUsersSection from "@/app/component/games/TrendUsersSection";
+import TrendHitPostsSection from "@/app/component/games/TrendHitPostsSection";
 
 export default function TrendPanel() {
   const pathname = usePathname();
@@ -88,13 +88,17 @@ export default function TrendPanel() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-white">次の節の注目カード</h2>
         {cache?.updatedAt && (
-          <span className="text-xs text-white/50">{toDisplayDatetime(cache.updatedAt)}</span>
+          <span className="text-xs text-white/50">
+            {toDisplayDatetime(cache.updatedAt)}
+          </span>
         )}
       </div>
 
       {/* B1 */}
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-white/80">B.LEAGUE (B1)</h3>
+        <h3 className="text-sm font-semibold text-white/80">
+          B.LEAGUE (B1)
+        </h3>
 
         <div className="grid grid-cols-1 gap-4">
           {b1Cards.length === 0 ? (
@@ -111,7 +115,9 @@ export default function TrendPanel() {
 
       {/* J1 */}
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-white/80">J.LEAGUE (J1)</h3>
+        <h3 className="text-sm font-semibold text-white/80">
+          J.LEAGUE (J1)
+        </h3>
 
         <div className="grid grid-cols-1 gap-4">
           {j1Cards.length === 0 ? (
@@ -126,7 +132,15 @@ export default function TrendPanel() {
         </div>
       </section>
 
-      <TrendUsersSection />
+      {/* 🔥 ここから追加：前日の的中投稿 */}
+      <section className="space-y-3 mt-10">
+        <div className="flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-yellow-400" />
+          <h3 className="text-lg font-semibold text-white">前日の的中投稿</h3>
+        </div>
+
+        <TrendHitPostsSection />
+      </section>
     </div>
   );
 }
@@ -140,31 +154,26 @@ function EmptyCard() {
 }
 
 /* =======================================================
-   🔥 HOT バッジ完全コピー（TrendUserCard と同じ UI）
-   - Flame アイコン
-   - HOT テキスト
-   - グラデ / 角丸 / 影 / サイズ 全部一致
+   🔥 HOT バッジ
    ======================================================= */
 function HotBadge({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative">
-      {/* HOT バッジ */}
       <div className="absolute left-2.5 top-2.5 md:left-3 md:top-3 z-10 pointer-events-none">
         <span
-  className="
-    inline-flex items-center gap-1
-    px-2 py-[1px] md:px-2.5 md:py-[2px]
-    rounded-full text-[10px] md:text-[13px]
-    font-bold text-white
-    bg-gradient-to-r from-rose-500 to-orange-400
-    shadow-[0_2px_10px_rgba(255,100,80,0.35)]
-    ring-1 ring-white/30
-  "
->
-  <Flame className="w-3 h-3 md:w-3.5 md:h-3.5" />
-  <span className="relative top-[0.3px] md:top-0">HOT</span>
-</span>
-
+          className="
+            inline-flex items-center gap-1
+            px-2 py-[1px] md:px-2.5 md:py-[2px]
+            rounded-full text-[10px] md:text-[13px]
+            font-bold text-white
+            bg-gradient-to-r from-rose-500 to-orange-400
+            shadow-[0_2px_10px_rgba(255,100,80,0.35)]
+            ring-1 ring-white/30
+          "
+        >
+          <Flame className="w-3 h-3 md:w-3.5 md:h-3.5" />
+          <span className="relative top-[0.3px] md:top-0">HOT</span>
+        </span>
       </div>
 
       {children}
