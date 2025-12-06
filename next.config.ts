@@ -4,16 +4,12 @@ import withPWA from "next-pwa";
 
 const isProd = process.env.NODE_ENV === "production";
 
-// 🔥 元の設定を保持したベース config
+// 🔥 Turbopack を完全 OFF（これが最重要）
 const baseConfig: NextConfig = {
   reactStrictMode: true,
 
-  // 🔥 Turbopック設定（そのまま）
-  experimental: {
-    turbo: {
-      rules: {},
-    },
-  },
+  // ❌ experimental.turbo を全部削除
+  // experimental: {},
 
   images: {
     remotePatterns: [
@@ -30,7 +26,7 @@ const baseConfig: NextConfig = {
     ],
   },
 
-  // SVG loader（そのまま）
+  // SVG loader（そのままOK）
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/i,
