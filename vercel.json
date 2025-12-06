@@ -3,7 +3,7 @@
     {
       "source": "/(.*)",
       "destination": "/maintenance.html",
-      "permanent": false
+      "statusCode": 308
     }
   ]
 }

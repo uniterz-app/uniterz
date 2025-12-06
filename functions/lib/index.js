@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runDailyAnalyticsHttp = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.rebuildUserStatsDailyCron = exports.onGameFinal = exports.aggregateTrendsUsersCron = exports.aggregateTrendsUsers = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.rebuildCalendarLeaderboardsCronWeek = exports.rebuildCalendarLeaderboardsCronMonth = exports.rebuildCalendarLeaderboardsHttp = exports.onPostDeleted = exports.onPostCreated = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = void 0;
+exports.seedTeamsHttp = exports.runDailyAnalyticsHttp = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.rebuildLeaderboardV2Cron = exports.recomputeAllUsersStatsV2Daily = exports.rebuildUserStatsDailyCron = exports.onGameFinalV2 = exports.onGameFinal = exports.aggregateTrendsUsersCron = exports.aggregateTrendsUsers = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.rebuildCalendarLeaderboardsCronWeek = exports.rebuildCalendarLeaderboardsCronMonth = exports.rebuildCalendarLeaderboardsHttp = exports.onPostDeleted = exports.onPostCreated = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = void 0;
 // functions/src/index.ts
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
@@ -45,9 +45,17 @@ const games_aggregate_1 = require("./trend/games.aggregate");
 const users_aggregate_1 = require("./trend/users.aggregate");
 const updateUserStats_1 = require("./updateUserStats");
 const _core_1 = require("./analytics/_core");
+const seedTeams_1 = require("./seed/seedTeams");
 // ★★★ onGameFinal を確実に有効化する import
 const onGameFinal_1 = require("./onGameFinal");
 Object.defineProperty(exports, "onGameFinal", { enumerable: true, get: function () { return onGameFinal_1.onGameFinal; } });
+// ✅ V2 追加
+const onGameFinalV2_1 = require("./onGameFinalV2");
+Object.defineProperty(exports, "onGameFinalV2", { enumerable: true, get: function () { return onGameFinalV2_1.onGameFinalV2; } });
+const updateUserStatsV2_1 = require("./updateUserStatsV2");
+Object.defineProperty(exports, "recomputeAllUsersStatsV2Daily", { enumerable: true, get: function () { return updateUserStatsV2_1.recomputeAllUsersStatsV2Daily; } });
+const leaderboards_calendar_v2_1 = require("./triggers/leaderboards.calendar.v2");
+Object.defineProperty(exports, "rebuildLeaderboardV2Cron", { enumerable: true, get: function () { return leaderboards_calendar_v2_1.rebuildLeaderboardV2Cron; } });
 // ====== Global Options / Admin ======
 (0, options_1.setGlobalOptions)({ region: "asia-northeast1", maxInstances: 10 });
 admin.initializeApp();
@@ -146,6 +154,7 @@ exports.aggregateTrendsUsersCron = (0, scheduler_1.onSchedule)({ schedule: "0 * 
 /* ============================================================================
  * NEW: 毎日1回、user_stats 再集計
  * ==========================================================================*/
+// ✅ V1
 exports.rebuildUserStatsDailyCron = (0, scheduler_1.onSchedule)({ schedule: "10 4 * * *", timeZone: "Asia/Tokyo" }, async () => {
     console.log("[rebuildUserStatsDailyCron] start");
     try {
@@ -165,6 +174,9 @@ exports.rebuildUserStatsDailyCron = (0, scheduler_1.onSchedule)({ schedule: "10 
         console.error("[rebuildUserStatsDailyCron] fatal error", e);
     }
 });
+/* ============================================================================
+ * その他 Analytics
+ * ==========================================================================*/
 var daily_1 = require("./analytics/daily");
 Object.defineProperty(exports, "dailyAnalytics", { enumerable: true, get: function () { return daily_1.dailyAnalytics; } });
 var logUserActive_1 = require("./analytics/logUserActive");
@@ -181,6 +193,19 @@ exports.runDailyAnalyticsHttp = (0, https_1.onRequest)(async (req, res) => {
     }
     catch (err) {
         console.error("[runDailyAnalyticsHttp] failed:", err);
+        res.status(500).json({ ok: false, error: String(err) });
+    }
+});
+/* ============================================================================
+ * 手動 Seed: teams JSON を Firestore に一括投入
+ * ==========================================================================*/
+exports.seedTeamsHttp = (0, https_1.onRequest)(async (_req, res) => {
+    try {
+        await (0, seedTeams_1.seedTeams)();
+        res.status(200).json({ ok: true });
+    }
+    catch (err) {
+        console.error("[seedTeamsHttp] failed:", err);
         res.status(500).json({ ok: false, error: String(err) });
     }
 });

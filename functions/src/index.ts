@@ -11,9 +11,16 @@ import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { aggregateUsersTrend } from "./trend/users.aggregate";
 import { recomputeUserStatsFromDaily } from "./updateUserStats";
 import { dailyAnalyticsCore } from "./analytics/_core";
+import { seedTeams } from "./seed/seedTeams";
+
 
 // ★★★ onGameFinal を確実に有効化する import
 import { onGameFinal } from "./onGameFinal";
+
+// ✅ V2 追加
+import { onGameFinalV2 } from "./onGameFinalV2";
+import { recomputeAllUsersStatsV2Daily } from "./updateUserStatsV2";
+import { rebuildLeaderboardV2Cron } from "./triggers/leaderboards.calendar.v2";
 
 // ====== Global Options / Admin ======
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
@@ -91,6 +98,7 @@ export const onFollowingRemoved = onDocumentDeleted(
     }
   }
 );
+
 export { onPostCreated } from "./onPostCreated";
 export { onPostDeleted } from "./onPostDeleted";
 
@@ -150,13 +158,17 @@ export const aggregateTrendsUsersCron = onSchedule(
  * ゲーム確定トリガー（posts 判定 → 集計反映）
  * ==========================================================================*/
 
-// ★★★ これが重要。export onGameFinal（1行だけでOK）
+// ✅ V1
 export { onGameFinal };
+
+// ✅ V2
+export { onGameFinalV2 };
 
 /* ============================================================================
  * NEW: 毎日1回、user_stats 再集計
  * ==========================================================================*/
 
+// ✅ V1
 export const rebuildUserStatsDailyCron = onSchedule(
   { schedule: "10 4 * * *", timeZone: "Asia/Tokyo" },
   async () => {
@@ -182,11 +194,33 @@ export const rebuildUserStatsDailyCron = onSchedule(
     }
   }
 );
+// ★ チームランキングを毎日 24:00 に更新
+import { updateTeamRankings } from "./ranking/updateTeamRankings";
+
+export const updateTeamRankingsDaily = onSchedule(
+  { schedule: "0 0 * * *", timeZone: "Asia/Tokyo" },
+  async () => {
+    console.log("[updateTeamRankingsDaily] start");
+    await updateTeamRankings();
+    console.log("[updateTeamRankingsDaily] done");
+  }
+);
+
+// ✅ V2
+export { recomputeAllUsersStatsV2Daily };
+
+/* ============================================================================
+ * ✅ V2 リーグ別ランキング Cron
+ * ==========================================================================*/
+
+export { rebuildLeaderboardV2Cron };
+
+/* ============================================================================
+ * その他 Analytics
+ * ==========================================================================*/
 
 export { dailyAnalytics } from "./analytics/daily";
-
 export { logUserActive } from "./analytics/logUserActive";
-
 export { runDailyAnalytics } from "./analytics/runDaily";
 
 // ==========================
@@ -202,6 +236,21 @@ export const runDailyAnalyticsHttp = onRequest(async (req, res) => {
     res.status(500).json({ ok: false, error: String(err) });
   }
 });
+
+/* ============================================================================
+ * 手動 Seed: teams JSON を Firestore に一括投入
+ * ==========================================================================*/
+
+export const seedTeamsHttp = onRequest(async (_req, res) => {
+  try {
+    await seedTeams();
+    res.status(200).json({ ok: true });
+  } catch (err: any) {
+    console.error("[seedTeamsHttp] failed:", err);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+});
+
 
 
 

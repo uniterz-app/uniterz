@@ -12,7 +12,16 @@
     "noImplicitAny": false,
     "strict": false,
     "esModuleInterop": true,
+
+    // ★ JSON を import 可能にする
+    "resolveJsonModule": true,
+
+    // ★ JSON を lib にコピーするため必要
+    "allowJs": true,
+
     "skipLibCheck": true
   },
-  "include": ["src"]
+
+  // ★ 重要：すべてのファイル（JSON含む）をビルド対象にする
+  "include": ["src/**/*"]
 }

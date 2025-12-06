@@ -2,6 +2,7 @@
   "name": "uniterz-functions",
   "scripts": {
     "build": "tsc",
+    "postbuild": "cp -R src/seed/*.json lib/seed/",
     "deploy": "firebase deploy --only functions",
     "serve": "firebase emulators:start --only functions"
   },
