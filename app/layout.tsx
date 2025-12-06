@@ -4,6 +4,8 @@ import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
 
+// 🔥 ここだけ切り替えれば管理できる
+const MAINTENANCE = true;
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -21,6 +23,48 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // ====================================================
+  // 🔥 メンテナンスモードなら強制的にこの画面のみ
+  // ====================================================
+  if (MAINTENANCE) {
+    return (
+      <html lang="ja">
+        <body
+          style={{
+            backgroundColor: "#000",
+            color: "#fff",
+            width: "100vw",
+            height: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+            textAlign: "center",
+          }}
+        >
+          <div>
+            <h1 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "16px" }}>
+              現在、大幅な仕様変更中です
+            </h1>
+            <p style={{ fontSize: "14px", opacity: 0.8, lineHeight: 1.6 }}>
+              ご意見を受けて、より良いアプリにするため作業を進めています。
+              <br />
+              完了まで <strong>1週間ほど</strong> お時間をいただきます。
+            </p>
+            <p style={{ fontSize: "14px", opacity: 0.8, marginTop: "16px", lineHeight: 1.6 }}>
+              せっかく来ていただいたのに申し訳ありません。
+              <br />
+              少しだけ時間をください。
+            </p>
+          </div>
+        </body>
+      </html>
+    );
+  }
+
+  // ====================================================
+  // 🔥 通常モード
+  // ====================================================
   return (
     <html lang="ja">
       <body
@@ -33,7 +77,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           padding: 0,
         }}
       >
-        {/* ★ 追加：アプリ起動時に毎回ログが記録される */}
         <AppActivityTracker />
         <WebOrMobileSplash>{children}</WebOrMobileSplash>
         <ToastHost />
