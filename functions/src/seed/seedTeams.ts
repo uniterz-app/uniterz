@@ -1,19 +1,8 @@
-// functions/src/seed/seedTeams.ts
 import * as admin from "firebase-admin";
-import * as fs from "fs";
-import * as path from "path";
+import teams from "./teams.json"; // ← JSON を直接 import（確実にバンドルされる）
 
 export async function seedTeams() {
   const db = admin.firestore();
-
-  // teams.json の読み込み
-  const filePath = path.join(__dirname, "teams.json");
-  const raw = fs.readFileSync(filePath, "utf-8");
-  const teams = JSON.parse(raw) as Array<{
-    id: string;
-    name: string;
-    league: string;
-  }>;
 
   console.log(`Seeding ${teams.length} teams...`);
 

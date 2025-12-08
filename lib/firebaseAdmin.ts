@@ -7,6 +7,7 @@ const projectId     = process.env.FIREBASE_PROJECT_ID!;
 const clientEmail   = process.env.FIREBASE_CLIENT_EMAIL!;
 const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY!;
 
+
 // 改行エスケープ対応（.env の \n を本物の改行へ）
 const privateKey = privateKeyRaw?.replace(/\\n/g, "\n");
 

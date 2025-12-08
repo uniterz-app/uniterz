@@ -57,9 +57,9 @@ export default function TrendPanel() {
 
         // 🔥 表示順序はここで制御（今は NBA → B1）
         const TARGET_LEAGUES = [
-          { key: "NBA", label: "NBA" },
-          { key: "B1", label: "B.LEAGUE (B1)" },
-        ];
+  { key: "NBA" as const, label: "NBA" },
+  { key: "B1" as const, label: "B.LEAGUE (B1)" },
+];
 
         const cards: Record<string, MatchCardProps[]> = {};
 
