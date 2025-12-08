@@ -11,52 +11,34 @@ import {
   DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { mapRawToPredictionPost } from "@/lib/map-post";
-import type { PredictionPost } from "@/app/component/post/PredictionPostCardV2";
+
+import { toUiPost } from "@/lib/toUiPost"; // ← V2正式変換
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 const PAGE_SIZE = 15;
 
 export function useAllPostsFeed() {
-  const [posts, setPosts] = useState<PredictionPost[]>([]);
+  const [posts, setPosts] = useState<PredictionPostV2[]>([]);
   const [loading, setLoading] = useState(false);
   const [noMore, setNoMore] = useState(false);
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
-  /** 👇 ここが核心：重複排除用の Map */
-  const postsMapRef = useRef<Map<string, PredictionPost>>(new Map());
-
-  /* ======================================================
-     初回ロード
-  ====================================================== */
+  /* -----------------------------
+   * 初回ロード
+   * ----------------------------- */
   useEffect(() => {
-    loadMore();
+    refresh();
   }, []);
 
-  /* ======================================================
-     Map に統合して posts を更新（重複なし）
-  ====================================================== */
-  const mergePosts = useCallback((newPosts: PredictionPost[]) => {
-    const map = postsMapRef.current;
-
-    newPosts.forEach((p) => {
-      map.set(p.id, p);   // ← “同じ id” は上書きされるので重複しない
-    });
-
-    const sorted = Array.from(map.values()).sort(
-      (a, b) => (b.createdAtMillis ?? 0) - (a.createdAtMillis ?? 0)
-    );
-
-    setPosts(sorted);
-  }, []);
-
-  /* ======================================================
-     ページング読み込み loadMore
-  ====================================================== */
+  /* -----------------------------
+   * loadMore
+   * ----------------------------- */
   const loadMore = useCallback(async () => {
     if (loading || noMore) return;
 
     setLoading(true);
+
     try {
       const baseQuery = query(
         collection(db, "posts"),
@@ -81,24 +63,29 @@ export function useAllPostsFeed() {
         return;
       }
 
-      const newPosts = snap.docs.map((doc) => mapRawToPredictionPost(doc));
+      const newPosts = snap.docs.map((doc) =>
+        toUiPost(doc.id, doc.data()) // ← V2統一変換
+      );
 
-      mergePosts(newPosts); // ← 配列 push ではなく Map 統合！
+      // 重複排除して追加
+      setPosts((prev) => {
+        const ids = new Set(prev.map((p) => p.id));
+        const merged = [...prev, ...newPosts.filter((p) => !ids.has(p.id))];
+        return merged;
+      });
 
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("ALL feed load failed:", err);
+      console.warn("ALL feed loadMore error:", err);
     }
 
     setLoading(false);
-  }, [loading, noMore, mergePosts]);
+  }, [loading, noMore]);
 
-  /* ======================================================
-     Pull-to-refresh refresh
-  ====================================================== */
+  /* -----------------------------
+   * refresh（完全リセット）
+   * ----------------------------- */
   const refresh = useCallback(async () => {
-    if (loading) return;
-
     setLoading(true);
     setNoMore(false);
     lastDocRef.current = null;
@@ -112,19 +99,18 @@ export function useAllPostsFeed() {
 
       const snap = await getDocs(q);
 
-      const newPosts = snap.docs.map((doc) => mapRawToPredictionPost(doc));
+      const newPosts = snap.docs.map((doc) =>
+        toUiPost(doc.id, doc.data())
+      );
 
-      // 👇 refresh は完全リセット
-      postsMapRef.current.clear();
-      mergePosts(newPosts);
-
+      setPosts(newPosts);
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("ALL feed refresh failed:", err);
+      console.warn("ALL feed refresh error:", err);
     }
 
     setLoading(false);
-  }, [loading, mergePosts]);
+  }, []);
 
   return {
     posts,
