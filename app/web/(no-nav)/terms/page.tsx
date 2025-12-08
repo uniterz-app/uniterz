@@ -8,162 +8,124 @@ export default function WebTermsPage() {
     <LegalPageLayout
       variant="web"
       title="利用規約（Terms of Service）"
-      description="Uniterz を利用する際の基本的なルールをまとめたページです。ご利用の前に必ずお読みください。"
-      updatedAt="2025-11-17"
+      description="Uniterz V2 におけるご利用条件を定めたページです。ご利用前に必ずお読みください。"
+      updatedAt="2025-12-08"
     >
       <section>
         <h2 className="text-base font-semibold mb-1">1. サービスの概要</h2>
         <p>
-          Uniterz（以下「本サービス」）は、
-          <span className="font-semibold">
-            スポーツの試合に関する予想・分析・成績を共有するコミュニティサービス
-          </span>
-          です。ユーザーは試合の予想投稿や成績の管理、他ユーザーの投稿の閲覧などを行うことができます。
+          Uniterz（以下「本サービス」）は、スポーツの試合に関する予想、結果、各種分析指標を投稿・閲覧できる
+          <span className="font-semibold">分析特化型コミュニティサービス</span>
+          です。
         </p>
         <p className="mt-2">
           本サービス上では、
-          <span className="font-semibold">
-            実際のお金のやり取りやベット（賭け）そのものは行いません
-          </span>
-          。本サービスで使用する「ユニット」は仮想ポイントであり、現金その他の通貨・財産的価値とは直接結びつくものではありません。
+          <span className="font-semibold">金銭の受渡し、賭博、ベット等は一切行いません</span>。
+          表示される数値、スコア、ユニット、ランキング等は
+          <span className="font-semibold">すべて分析・可視化を目的とした指標</span>
+          であり、金銭的価値を有しません。
         </p>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">2. 規約の適用範囲</h2>
+        <h2 className="text-base font-semibold mb-1">2. 用語の定義</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>「予想」：試合結果に対するユーザーの主観的見解を数値・テキストで表現したもの。</li>
+          <li>「分析指標」：勝率、ブライアスコア、スコア精度、アップセット指数、一致度（Calibration）等の統計的指標。</li>
+          <li>「一致度（Calibration）」：予測確率と実結果の乖離から算出される信頼性指標。</li>
+          <li>「Proプラン」：分析指標の一部を高度化・拡張表示する有料プラン。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-base font-semibold mb-1">3. 規約の適用範囲</h2>
         <p>
-          本利用規約（以下「本規約」）は、本サービスに関連する
-          <span className="font-semibold">
-            アプリ版・Web版・その他 Uniterz が提供するすべてのサービス
-          </span>
+          本規約は、本サービスに関連する
+          <span className="font-semibold">アプリ版・Web版・API・その他すべての提供機能</span>
           に適用されます。
         </p>
-        <p className="mt-2">
-          ユーザーは、本サービスを利用することにより、本規約の内容に同意したものとみなされます。
-        </p>
+        <p className="mt-2">ユーザーは利用開始をもって本規約に同意したものとみなされます。</p>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">3. アカウント</h2>
+        <h2 className="text-base font-semibold mb-1">4. アカウント</h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li>
-            ユーザーは、登録時に
-            <span className="font-semibold">正確かつ最新の情報</span>
-            を入力するものとします。
-          </li>
-          <li>
-            アカウント情報（メールアドレス・パスワード等）の管理は、
-            <span className="font-semibold">ユーザー本人の責任</span>
-            で行ってください。
-          </li>
-          <li>
-            アカウントの不正利用・なりすまし等により生じた損害について、
-            運営側は原則として責任を負いません。
-          </li>
+          <li>登録情報は正確かつ最新の内容を維持してください。</li>
+          <li>アカウント管理責任はユーザー本人に帰属します。</li>
+          <li>不正利用により生じた損害について、運営は原則責任を負いません。</li>
         </ul>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">4. 禁止事項</h2>
-        <p className="mb-1">
-          ユーザーは、本サービスの利用にあたり、以下の行為を行ってはなりません。
-        </p>
+        <h2 className="text-base font-semibold mb-1">5. 分析指標・スコアの取り扱い</h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li>他ユーザーや第三者への誹謗中傷、差別的・攻撃的な発言</li>
-          <li>スパム行為、過度な宣伝・勧誘目的の利用</li>
-          <li>著作権・肖像権・その他の権利を侵害する行為</li>
+          <li>表示される指標は統計処理・アルゴリズムに基づく計算結果です。</li>
+          <li>将来の結果を保証するものではありません。</li>
+          <li>計算方法は改善のため予告なく変更されることがあります。</li>
+          <li>無料表示とPro表示で内容・粒度が異なる場合があります。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-base font-semibold mb-1">6. Proプラン</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Proプランは月額・年額等の有料機能を含む場合があります。</li>
+          <li>料金、提供内容、解約条件は別途定める表示に従います。</li>
+          <li>機能内容は変更・追加・削除されることがあります。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-base font-semibold mb-1">7. 禁止事項</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>誹謗中傷、差別的表現、嫌がらせ行為</li>
+          <li>スパム、過度な勧誘、なりすまし</li>
+          <li>著作権等の侵害</li>
           <li>
-            本サービスを通じて
             <span className="font-semibold">
-              外部のブックメーカーやギャンブルへの直接的な勧誘・誘導
-            </span>
-            を行う行為
-          </li>
-          <li>
-            金銭の貸し借り、投資勧誘など、
-            <span className="font-semibold">
-              金銭トラブルに直結しうるやり取り
+              ギャンブル・投資への直接的誘導または斡旋
             </span>
           </li>
+          <li>金銭トラブルに発展するやり取り</li>
         </ul>
         <p className="mt-2 text-xs text-white/70">
-          ※ Uniterz を通じてユーザー間で発生した金銭トラブルについては、
-          当事者同士の自己責任となり、運営側は介入・補償いたしません。
+          ※ ユーザー間で発生したトラブルは当事者間で解決するものとします。
         </p>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">
-          5. サービス内容の変更・停止
-        </h2>
+        <h2 className="text-base font-semibold mb-1">8. サービスの変更・停止</h2>
         <p>
-          運営側は、本サービスの
-          <span className="font-semibold">
-            機能追加・変更・一時停止・終了
-          </span>
-          を行うことがあります。
-        </p>
-        <p className="mt-2">
-          システムメンテナンスや不具合対応等により、
-          <span className="font-semibold">
-            一時的にサービスが利用できなくなる
-          </span>
-          場合があります。あらかじめご了承ください。
+          機能の追加・変更・停止・終了を予告なく行う場合があります。
+          メンテナンスにより一時利用できない場合があります。
         </p>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">6. 免責事項</h2>
+        <h2 className="text-base font-semibold mb-1">9. 免責事項</h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li>
-            本サービスで提供される情報について、
-            <span className="font-semibold">
-              その完全性・正確性を保証するものではありません
-            </span>
-            。
-          </li>
-          <li>
-            本サービスの利用、または利用できなかったことにより生じた損害
-            （外部サービスでの損失を含む）について、
-            運営側は責任を負いません。
-          </li>
+          <li>情報の正確性・完全性を保証しません。</li>
+          <li>利用により生じた損害について、運営は責任を負いません。</li>
         </ul>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">7. 知的財産権</h2>
+        <h2 className="text-base font-semibold mb-1">10. 知的財産権</h2>
         <p>
-          本サービスに関するロゴ・デザイン・UI・プログラム等にかかる知的財産権は、
-          運営者または正当な権利者に帰属します。
-        </p>
-        <p className="mt-2">
-          ユーザーが本サービスに投稿した内容の著作権は原則ユーザーに帰属しますが、
-          運営側は、
-          <span className="font-semibold">
-            サービスの運営・表示・分析等のために必要な範囲で、投稿内容を利用できる
-          </span>
-          ものとします。
+          本サービスに関する権利は運営または権利者に帰属します。
+          投稿内容は運営により表示・分析目的で利用できるものとします。
         </p>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">8. 規約の変更</h2>
-        <p>
-          運営側は、本規約の内容を変更することがあります。重要な変更がある場合は、
-          <span className="font-semibold">
-            アプリ内のお知らせ等で告知
-          </span>
-          を行います。
-        </p>
+        <h2 className="text-base font-semibold mb-1">11. 規約の変更</h2>
+        <p>重要な変更はアプリ内にて告知します。</p>
       </section>
 
       <section>
-        <h2 className="text-base font-semibold mb-1">
-          9. 準拠法・裁判管轄
-        </h2>
+        <h2 className="text-base font-semibold mb-1">12. 準拠法・裁判管轄</h2>
         <p>
-          本規約は、日本法に準拠し解釈されます。本サービスに関連して紛争が生じた場合、
-          運営者の指定する日本国内の裁判所を第一審の専属的合意管轄裁判所とします。
+          日本法に準拠し、紛争は日本国内の裁判所を専属管轄とします。
         </p>
       </section>
     </LegalPageLayout>

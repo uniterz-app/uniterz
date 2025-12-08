@@ -257,11 +257,22 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               )}
             </div>
           </div>
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center">
-            <p className="text-lg font-semibold">Stats（準備中）</p>
-          </div>
-        )}
+        ) : <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center space-y-3">
+  <p className="text-lg font-semibold">Stats（準備中）</p>
+
+  <p className="text-sm text-white/80">
+    この機能は将来的に
+    <span className="font-semibold text-amber-300">
+      Proプラン限定機能
+    </span>
+    として提供予定です。
+  </p>
+
+  <p className="text-sm text-white/60">
+    より詳しい分析指標や成績の可視化を準備中です。
+  </p>
+</div>
+}
       </div>
 
       {/* Dialogs */}

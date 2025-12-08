@@ -8,147 +8,118 @@ export default function WebCommunityGuidelinesPage() {
     <LegalPageLayout
       variant="web"
       title="コミュニティガイドライン"
-      description="Uniterz をみんなで気持ちよく使うためのルールとマナーをまとめたページです。"
-      updatedAt="2025-11-17"
+      description="Uniterz V2 を安心して利用するための行動指針です。"
+      updatedAt="2025-12-08"
     >
+      {/* 1 */}
       <section className="space-y-2">
-        <h2 className="text-base font-semibold mb-1">1. Uniterz の考え方</h2>
+        <h2 className="text-base font-semibold mb-1">1. Uniterz V2 の基本方針</h2>
         <p>
           Uniterz は、
           <span className="font-semibold">
-            「スポーツの予想や分析を共有して楽しむコミュニティ」
+            「スポーツ分析を共有し、互いに成長するためのプラットフォーム」
           </span>
           です。
         </p>
         <p>
-          互いを尊重しながら、試合の見解や数字の見方を共有し、
-          <span className="font-semibold">「うまくなるための場」</span>
-          として育てていきたいと考えています。
+          勝敗の的中だけではなく、スコア予想、戦力評価、確率思考、
+          データの読み方などを共有し、
+          <span className="font-semibold">分析力を高める場</span>
+          として運営されています。
         </p>
       </section>
 
+      {/* 2 */}
       <section className="space-y-2">
-        <h2 className="text-base font-semibold mb-1">2. 投稿・コメントのマナー</h2>
-        <p className="mb-1">次のような姿勢での利用を推奨します。</p>
+        <h2 className="text-base font-semibold mb-1">2. 推奨される行動</h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li>
-            他ユーザーの予想や成績についても、
-            <span className="font-semibold">リスペクトのあるコメント</span>
-            を心がける
-          </li>
-          <li>
-            「当たった / 外れた」で終わらせず、
-            <span className="font-semibold">根拠や振り返りを共有</span>
-            していく
-          </li>
-          <li>
-            特定のチーム / 選手 / ユーザーを
-            <span className="font-semibold">一方的に貶める表現は避ける</span>
-          </li>
+          <li>他ユーザーの視点・意見・分析を尊重する</li>
+          <li>結果だけでなく、根拠や考え方を共有する</li>
+          <li>数値・指標を用いた建設的な議論を行う</li>
+          <li>失敗も学びとして共有する</li>
         </ul>
       </section>
 
+      {/* 3 */}
       <section className="space-y-2">
-        <h2 className="text-base font-semibold mb-1">3. 禁止される行為の例</h2>
+        <h2 className="text-base font-semibold mb-1">3. 禁止行為</h2>
         <p className="mb-1">
-          以下のような行為は、アカウント制限や投稿削除などの対象になる場合があります。
+          以下に該当する行為は禁止されます。
         </p>
         <ul className="list-disc pl-5 space-y-1">
+          <li>誹謗中傷、差別、ハラスメント</li>
+          <li>荒らし行為、過度な煽り、個人攻撃</li>
+          <li>虚偽情報の流布</li>
+          <li>スパム投稿・自動投稿</li>
+          <li>著作権・肖像権侵害</li>
           <li>
-            個人への攻撃・誹謗中傷・差別的な発言、
-            <span className="font-semibold">ハラスメント行為</span>
-          </li>
-          <li>
-            スパム投稿や、明らかに
-            <span className="font-semibold">宣伝のみを目的とした投稿</span>
-          </li>
-          <li>
-            他人の著作物（文章・画像・動画など）を、
-            <span className="font-semibold">無断で転載</span>
-            する行為
-          </li>
-          <li>
-            本サービスを通じて、
             <span className="font-semibold">
-              お金のやり取り・ギャンブルサイトへの勧誘
-            </span>
-            を行う行為
-          </li>
-          <li>
-            その他、利用規約に反する行為や、
-            <span className="font-semibold">
-              運営が不適切と判断した行為
+              ギャンブル・投資サービスへの誘導
             </span>
           </li>
         </ul>
       </section>
 
+      {/* 4 */}
       <section className="space-y-2">
         <h2 className="text-base font-semibold mb-1">
-          4. 予想・ユニットに関する注意点
+          4. 数値・指標の取り扱いについて
         </h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li>
-            Uniterz 内で扱う
-            <span className="font-semibold">「ユニット」は仮想ポイント</span>
-            であり、実際のお金とは直接結びつきません。
-          </li>
-          <li>
-            投稿された予想はあくまで
-            <span className="font-semibold">個人の見解</span>であり、
-            <span className="font-semibold">
-              投資・ギャンブルなどの勧誘や助言を目的としたものではありません
-            </span>
-            。
-          </li>
-          <li>
-            外部サービス（ブックメーカー等）で発生した損失について、
-            <span className="font-semibold">
-              本サービスおよび他ユーザーは責任を負いません
-            </span>
-            。
-          </li>
+          <li>表示される指標は、統計的評価であり将来の結果を保証するものではありません。</li>
+          <li>他ユーザーの指標を批判目的で使用しないでください。</li>
+          <li>指標の定義・計算式は変更される場合があります。</li>
+          <li>無料機能とPro機能には表示項目・精度に差があります。</li>
         </ul>
       </section>
 
+      {/* 5 */}
       <section className="space-y-2">
         <h2 className="text-base font-semibold mb-1">
-          5. ガイドライン違反への対応
+          5. 予想およびユニットに関する注意
         </h2>
-        <p className="mb-1">
-          ガイドラインに反する行為が確認された場合、必要に応じて以下の対応を行うことがあります。
-        </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>投稿内容の修正依頼や削除</li>
-          <li>一時的なアカウント利用制限</li>
-          <li>悪質な場合の、アカウント停止・退会措置</li>
+          <li>ユニットは仮想指標であり、通貨・財産的価値を持ちません。</li>
+          <li>投稿は個人の分析・意見であり、投資助言ではありません。</li>
+          <li>外部サービスでの損失に関して運営は一切の責任を負いません。</li>
         </ul>
-        <p>
-          できるだけ
-          <span className="font-semibold">
-            事前の注意喚起や対話を優先
-          </span>
-          しますが、緊急性が高いと判断した場合には、
-          運営判断で迅速に対応することがあります。
+      </section>
+
+      {/* 6 */}
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold mb-1">
+          6. アカウントに関するルール
+        </h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>なりすまし行為の禁止</li>
+          <li>複数アカウントによる不正利用の禁止</li>
+          <li>不正なランキング操作・集計妨害の禁止</li>
+        </ul>
+      </section>
+
+      {/* 7 */}
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold mb-1">
+          7. 違反時の措置
+        </h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>投稿の削除・編集依頼</li>
+          <li>アカウントの一時停止</li>
+          <li>重大な場合のアカウント凍結</li>
+        </ul>
+        <p className="text-xs opacity-70">
+          サービス秩序を維持するため、運営判断により即時対応する場合があります。
         </p>
       </section>
 
+      {/* 8 */}
       <section className="space-y-2">
         <h2 className="text-base font-semibold mb-1">
-          6. ガイドラインの見直し・更新
+          8. ガイドラインの改定
         </h2>
         <p>
-          本コミュニティガイドラインは、サービスの成長や機能追加に合わせて
-          <span className="font-semibold">内容を変更・追加</span>
-          することがあります。
-        </p>
-        <p>
-          重要な変更がある場合は、
-          <span className="font-semibold">
-            アプリ内のお知らせなどで告知
-          </span>
-          します。最新のガイドラインを確認したうえで、
-          Uniterz をお楽しみください。
+          本ガイドラインは、運営方針・機能追加等に伴い変更することがあります。
+          重要な変更はアプリ内にて告知されます。
         </p>
       </section>
     </LegalPageLayout>

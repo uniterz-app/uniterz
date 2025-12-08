@@ -216,11 +216,16 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           </>
         ) : (
           <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center text-white">
-            <p className="text-base font-semibold">Statsタブの詳細分析機能は後日追加予定です。</p>
-            <p className="mt-2 text-sm text-white/70">
-              リリース後は、勝率・精度・UPSET傾向などをより細かく自己分析できる画面を開発中です。
-            </p>
-          </div>
+  <p className="text-base font-semibold">Stats（準備中）</p>
+
+  <p className="mt-2 text-sm text-white/70">
+    この機能は将来的に Proプラン限定機能として提供予定です。
+  </p>
+
+  <p className="mt-2 text-sm text-white/70">
+    より詳しい分析指標や成績の可視化を準備中です。
+  </p>
+</div>
         )}
       </div>
 
