@@ -15,14 +15,22 @@ export type StatsV2Bucket = {
   brierSum: number;
   upsetScoreSum: number;
   scorePrecisionSum: number;   // ⭐ 追加
-  calibrationErrorSum: number;
+
+  // ✅ Calibration bins（True）
+  calibrationBins: {
+    "50": { total: number; wins: number; sumProb: number };
+    "60": { total: number; wins: number; sumProb: number };
+    "70": { total: number; wins: number; sumProb: number };
+    "80": { total: number; wins: number; sumProb: number };
+    "90": { total: number; wins: number; sumProb: number };
+  };
 
   winRate: number;
   avgScoreError: number;
   avgBrier: number;
   avgUpset: number;
   avgPrecision: number;        // ⭐ 追加
-  calibrationError: number;
+  calibrationError: number;    // ✅ 最終結果（True）
 };
 
 type ApplyOptsV2 = {
@@ -36,7 +44,7 @@ type ApplyOptsV2 = {
   brier: number;
   upsetScore: number;
   scorePrecision: number;      // ⭐ 追加
-  confidence: number;
+  confidence: number;          // 0〜1
 };
 
 const db = () => getFirestore();
@@ -71,6 +79,50 @@ function normalizeLeague(raw?: string | null): string | null {
   return null;
 }
 
+/* ======================
+   Calibration Utils
+====================== */
+
+function emptyBins() {
+  return {
+    "50": { total: 0, wins: 0, sumProb: 0 },
+    "60": { total: 0, wins: 0, sumProb: 0 },
+    "70": { total: 0, wins: 0, sumProb: 0 },
+    "80": { total: 0, wins: 0, sumProb: 0 },
+    "90": { total: 0, wins: 0, sumProb: 0 },
+  };
+}
+
+function getCalibrationBin(p: number) {
+  if (p >= 0.9) return "90";
+  if (p >= 0.8) return "80";
+  if (p >= 0.7) return "70";
+  if (p >= 0.6) return "60";
+  if (p >= 0.5) return "50";
+  return null; // 50%未満は評価対象外
+}
+
+function computeCalibrationError(bins: StatsV2Bucket["calibrationBins"]) {
+  let total = 0;
+  let count = 0;
+
+  for (const k of Object.keys(bins)) {
+    const b = bins[k as keyof typeof bins];
+    if (!b.total) continue;
+
+    const avgProb = b.sumProb / b.total;
+    const winRate = b.wins / b.total;
+    const err = Math.abs(avgProb - winRate);
+
+    total += err * b.total;
+    count += b.total;
+  }
+
+  return count === 0 ? null : total / count;
+}
+
+/* ========================================================= */
+
 function emptyBucket(): StatsV2Bucket {
   return {
     posts: 0,
@@ -79,7 +131,9 @@ function emptyBucket(): StatsV2Bucket {
     brierSum: 0,
     upsetScoreSum: 0,
     scorePrecisionSum: 0,  // ⭐ 追加
-    calibrationErrorSum: 0,
+
+    calibrationBins: emptyBins(),
+
     winRate: 0,
     avgScoreError: 0,
     avgBrier: 0,
@@ -100,7 +154,7 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
     avgBrier: posts ? b.brierSum / posts : 0,
     avgUpset: wins ? b.upsetScoreSum / wins : 0,
     avgPrecision: posts ? b.scorePrecisionSum / posts : 0,  // ⭐ 追加
-    calibrationError: posts ? b.calibrationErrorSum / posts : 0,
+    calibrationError: computeCalibrationError(b.calibrationBins),
   };
 }
 
@@ -110,10 +164,10 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
 
 export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
   const { uid, postId, createdAt, league, isWin, scoreError, brier, upsetScore, scorePrecision, confidence } = opts;
-  const y = isWin ? 1 : 0;
-  const calibrationError = Math.abs(confidence - y);
+
   const dateKey = toDateKeyJST(createdAt);
   const leagueKey = normalizeLeague(league);
+  const bin = getCalibrationBin(confidence);
 
   const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
   const markerRef = dailyRef.collection("applied_posts").doc(postId);
@@ -122,15 +176,20 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     const marker = await tx.get(markerRef);
     if (marker.exists) return;
 
-    const inc = {
+    const inc: any = {
       posts: FieldValue.increment(1),
       wins: FieldValue.increment(isWin ? 1 : 0),
       scoreErrorSum: FieldValue.increment(scoreError),
       brierSum: FieldValue.increment(brier),
       upsetScoreSum: FieldValue.increment(isWin ? upsetScore : 0),
       scorePrecisionSum: FieldValue.increment(scorePrecision),   // ⭐ 追加
-      calibrationErrorSum: FieldValue.increment(calibrationError),
     };
+
+    if (bin) {
+  inc[`calibrationBins.${bin}.total`] = FieldValue.increment(1);
+  inc[`calibrationBins.${bin}.wins`] = FieldValue.increment(isWin ? 1 : 0);
+  inc[`calibrationBins.${bin}.sumProb`] = FieldValue.increment(confidence);
+}
 
     const update: any = {
       date: dateKey,
@@ -139,11 +198,11 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     };
 
     if (leagueKey) {
-  update.leagues = {
-    ...(update.leagues || {}),
-    [leagueKey]: inc,
-  };
-}
+      update.leagues = {
+        ...(update.leagues || {}),
+        [leagueKey]: inc,
+      };
+    }
 
     tx.set(dailyRef, update, { merge: true });
     tx.set(markerRef, { at: FieldValue.serverTimestamp() });
@@ -179,8 +238,17 @@ async function sumRange(uid: string, end: Date, days: number, league: string | n
     b.scoreErrorSum += src.scoreErrorSum || 0;
     b.brierSum += src.brierSum || 0;
     b.upsetScoreSum += src.upsetScoreSum || 0;
-    b.scorePrecisionSum += src.scorePrecisionSum || 0;  // ⭐ 追加
-    b.calibrationErrorSum += src.calibrationErrorSum || 0;
+    b.scorePrecisionSum += src.scorePrecisionSum || 0;
+
+    // ✅ bins 加算
+    for (const k of ["50","60","70","80","90"]) {
+      const sb = src.calibrationBins?.[k];
+      if (!sb) continue;
+
+      b.calibrationBins[k].total += sb.total || 0;
+      b.calibrationBins[k].wins  += sb.wins || 0;
+      b.calibrationBins[k].sumProb += sb.sumProb || 0;
+    }
   }
 
   return recomputeCache(b);
@@ -209,12 +277,22 @@ async function sumAll(uid: string, league: string | null) {
     b.scoreErrorSum += src.scoreErrorSum || 0;
     b.brierSum += src.brierSum || 0;
     b.upsetScoreSum += src.upsetScoreSum || 0;
-    b.scorePrecisionSum += src.scorePrecisionSum || 0;  // ⭐ 追加
-    b.calibrationErrorSum += src.calibrationErrorSum || 0;
+    b.scorePrecisionSum += src.scorePrecisionSum || 0;
+
+    // ✅ bins 加算
+    for (const k of ["50","60","70","80","90"]) {
+      const sb = src.calibrationBins?.[k];
+      if (!sb) continue;
+
+      b.calibrationBins[k].total += sb.total || 0;
+      b.calibrationBins[k].wins  += sb.wins || 0;
+      b.calibrationBins[k].sumProb += sb.sumProb || 0;
+    }
   });
 
   return recomputeCache(b);
 }
+
 /* =========================================================
  * 任意の期間 start〜end を集計（週間・月間ランキング用）
  * =======================================================*/
@@ -247,7 +325,16 @@ export async function getStatsForDateRangeV2(
     b.brierSum += src.brierSum || 0;
     b.upsetScoreSum += src.upsetScoreSum || 0;
     b.scorePrecisionSum += src.scorePrecisionSum || 0;
-    b.calibrationErrorSum += src.calibrationErrorSum || 0;
+
+    // ✅ bins 加算
+    for (const k of ["50","60","70","80","90"]) {
+      const sb = src.calibrationBins?.[k];
+      if (!sb) continue;
+
+      b.calibrationBins[k].total += sb.total || 0;
+      b.calibrationBins[k].wins  += sb.wins || 0;
+      b.calibrationBins[k].sumProb += sb.sumProb || 0;
+    }
   }
 
   return recomputeCache(b);
