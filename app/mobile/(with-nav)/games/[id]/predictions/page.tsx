@@ -3,18 +3,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore";
+
 import MatchCard from "@/app/component/games/MatchCard";
 import PredictionListByGame from "@/app/component/post/PredictionListByGame";
-import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
+
+// ★ 新しい勝敗分布ドーナツ（V2）
+import GamePredictionDistributionV2 from "@/app/component/predict/GamePredictionDistribution";
+
 import { toMatchCardProps } from "@/lib/games/transform";
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, limit, getDocs } from "firebase/firestore";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
+import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { normalizeLeague } from "@/lib/leagues";
 
-// toMatchCardProps の入力型に揃える（id 付きの games 生データ）
+
+// Firestore の games 生ドキュメント型（id 付き）
 type GameDoc = Parameters<typeof toMatchCardProps>[0];
 
 export default function Page() {
@@ -23,34 +29,33 @@ export default function Page() {
   const gameId = String(id);
 
   const { fUser } = useFirebaseUser();
-const uid = fUser?.uid ?? null;
+  const uid = fUser?.uid ?? null;
 
-const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
+  const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
 
-// 🔍 自分の投稿があるかチェック（1回だけ）
-useEffect(() => {
-  if (!uid || !gameId) return;
+  // 🔍 自分の投稿チェック
+  useEffect(() => {
+    if (!uid || !gameId) return;
 
-  (async () => {
-    const q = query(
-      collection(db, "posts"),
-      where("authorUid", "==", uid),
-      where("gameId", "==", gameId),
-      limit(1)
-    );
+    (async () => {
+      const q = query(
+        collection(db, "posts"),
+        where("authorUid", "==", uid),
+        where("gameId", "==", gameId),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      setHasMyPost(!snap.empty);
+    })();
+  }, [uid, gameId]);
 
-    const snap = await getDocs(q);
-    setHasMyPost(!snap.empty); // ← 投稿ありなら true
-  })();
-}, [uid, gameId]);
-
-
+  // 🔍 ゲーム情報の取得
   const [rawGame, setRawGame] = useState<GameDoc | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // games/{id} を取得（id を含めて toMatchCardProps に渡す）
   useEffect(() => {
     let alive = true;
+
     (async () => {
       setLoading(true);
       try {
@@ -61,12 +66,13 @@ useEffect(() => {
         if (alive) setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
   }, [gameId]);
 
-  // MatchCard 用のprops（dense=true・ボタン非表示）
+  // MatchCard 用の props 整形
   const matchProps = useMemo(() => {
     if (!rawGame) return null;
     const base = toMatchCardProps(rawGame, { dense: true });
@@ -75,46 +81,59 @@ useEffect(() => {
 
   const homeName = matchProps?.home.name ?? "";
   const awayName = matchProps?.away.name ?? "";
-  const homeColor = matchProps?.home.colorHex ?? "#0ea5e9";
-  const awayColor = matchProps?.away.colorHex ?? "#f43f5e";
+
+  const leagueNorm = matchProps?.league ? normalizeLeague(matchProps.league) : null;
+
+  const homeColor =
+    leagueNorm && matchProps?.home.teamId
+      ? getTeamPrimaryColor(leagueNorm, matchProps.home.teamId)
+      : "#0ea5e9";
+
+  const awayColor =
+    leagueNorm && matchProps?.away.teamId
+      ? getTeamPrimaryColor(leagueNorm, matchProps.away.teamId)
+      : "#f43f5e";
 
   return (
     <div className="mx-auto max-w-3xl px-3 py-3">
       <h1 className="sr-only">Predictions (Mobile) for {gameId}</h1>
 
+      {/* ゲームカード */}
       {!loading && matchProps && <MatchCard {...matchProps} />}
 
+      {/* 🎯 V2 勝敗ドーナツグラフ */}
       <div className="mt-2">
-        <GamePredictionDistribution
+        <GamePredictionDistributionV2
           gameId={gameId}
           homeName={homeName}
           awayName={awayName}
           homeColor={homeColor}
           awayColor={awayColor}
-          maxLegend={5}
         />
       </div>
 
+      {/* 投稿一覧 */}
       <div className="mt-2">
         <PredictionListByGame gameId={gameId} />
       </div>
-      {/* 🔥 まだ投稿していない時だけ表示 */}
-{hasMyPost === false && (
-  <button
-    onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
-    className="
-      fixed bottom-24 right-6 z-50
-      w-13 h-13 rounded-full
-      bg-yellow-400 text-white
-      flex items-center justify-center
-      shadow-xl
-      active:scale-90 transition-transform
-    "
-    aria-label="分析する"
-  >
-    <Pencil size={22} strokeWidth={3} />
-  </button>
-)}
+
+      {/* 🔥 初投稿ボタン */}
+      {hasMyPost === false && (
+        <button
+          onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
+          className="
+            fixed bottom-24 right-6 z-50
+            w-13 h-13 rounded-full
+            bg-yellow-400 text-white
+            flex items-center justify-center
+            shadow-xl
+            active:scale-90 transition-transform
+          "
+          aria-label="分析する"
+        >
+          <Pencil size={22} strokeWidth={3} />
+        </button>
+      )}
     </div>
   );
 }

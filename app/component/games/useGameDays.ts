@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 
-type League = "bj" | "j";
+type League = "nba" | "bj" | "j1";
 const SEASON = "2025-26";
 
 /** yyyy-mm-dd の文字列化（試合日の uniq 抽出に使う） */

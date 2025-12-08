@@ -163,7 +163,7 @@ export function useProfile(handle: string) {
     const u = user ?? {};
     return {
       displayName: u.displayName || BASE_PROFILE.displayName,
-      handle: `@${u.handle || decodedHandle}`,
+      handle: u.handle || decodedHandle,   // ← @ を付けない
       bio: u.bio ?? "",
       avatarUrl:
         u.photoURL && u.photoURL.trim()

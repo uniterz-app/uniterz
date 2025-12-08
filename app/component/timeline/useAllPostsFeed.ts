@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { mapRawToPredictionPost } from "@/lib/map-post";
-import type { PredictionPost } from "@/app/component/post/PredictionPostCard";
+import type { PredictionPost } from "@/app/component/post/PredictionPostCardV2";
 
 const PAGE_SIZE = 15;
 

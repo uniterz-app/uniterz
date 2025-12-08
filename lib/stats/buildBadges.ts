@@ -1,37 +1,35 @@
-// lib/stats/buildBadges.ts
+// lib/stats/buildBadgesV2.ts
 import {
-  RangeValue,
-  evaluateWinRate,
-  evaluateAvgOdds,
-  evaluateUnits,
-  type Highlight,
-} from "./thresholds";
+  evaluateWinRateV2,
+  evaluatePrecisionV2,
+  evaluateAccuracyV2,
+  evaluateUpsetV2,
+  type HighlightV2,
+} from "./thresholdsV2";
 
-type Input = {
-  period: RangeValue;  // "7d" | "30d" | "all"
-  winRate: number;     // 0..1
-  avgOdds: number;
-  units: number;
-  sampleCount?: number; // posts の件数、無ければ 0 として扱う
+type InputV2 = {
+  winRate: number;        // 0..1
+  avgPrecision: number;   // 0..15
+  avgBrier: number;       // 0..1 → accuracy に変換
+  avgUpset: number;       // 0..10
 };
 
-/** ランキング行のバッジをまとめて作る */
-export function buildBadges(input: Input): {
-  win?: Highlight;
-  odds?: Highlight;
-  units?: Highlight;
+/** V2 仕様：4つのハイライトを返す */
+export function buildBadgesV2(input: InputV2): {
+  win?: HighlightV2;
+  precision?: HighlightV2;
+  accuracy?: HighlightV2;
+  upset?: HighlightV2;
 } {
-  const {
-    period,
-    winRate,
-    avgOdds,
-    units,
-    sampleCount = 0,
-  } = input;
+  const { winRate, avgPrecision, avgBrier, avgUpset } = input;
+
+  // Accuracy = (1 - avgBrier) * 100
+  const accuracyPct = (1 - avgBrier) * 100;
 
   return {
-    win:  evaluateWinRate(period, winRate, sampleCount),
-    odds: evaluateAvgOdds(period, avgOdds, sampleCount),
-    units: evaluateUnits(period, units, sampleCount),
+    win: evaluateWinRateV2(winRate),
+    precision: evaluatePrecisionV2(avgPrecision),
+    accuracy: evaluateAccuracyV2(accuracyPct),
+    upset: evaluateUpsetV2(avgUpset),
   };
 }

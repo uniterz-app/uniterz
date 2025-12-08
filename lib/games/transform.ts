@@ -1,12 +1,9 @@
 // app/lib/games/transform.ts
 import { teamColorsB1 } from "@/lib/teams-b1";
-import { teamColorsJ1 } from "@/lib/teams-j1";
-import type {
-  League,
-  Status,
-  TeamSide,
-  MatchCardProps,
-} from "@/app/component/games/MatchCard";
+import { teamColorsNBA } from "@/lib/teams-nba";
+import type { League } from "@/lib/leagues";
+import { normalizeLeague } from "@/lib/leagues";
+import type { Status, TeamSide, MatchCardProps } from "@/app/component/games/MatchCard";
 
 // --------------------------------------------------------
 // gamePath の参照
@@ -42,12 +39,16 @@ export const toStatus = (s: any): Status => {
 /** リーグ別カラー辞書からカラーを引く */
 export const pickTeamColor = (league: League, name?: string) => {
   if (!name) return undefined;
-  if (league === "j") return teamColorsJ1[name]?.primary;
-  return teamColorsB1[name]?.primary;
-};
 
-/** リーグ値を正規化 */
-export const toLeague = (x: any): League => (x === "j" ? "j" : "bj");
+  if (league === "bj") {
+    return teamColorsB1[name]?.primary;
+  }
+  if (league === "nba") {
+    return teamColorsNBA[name]?.primary; // ★ NBA カラー辞書を使う
+  }
+
+  return undefined;
+};
 
 /** TeamSide 正規化 */
 export const toTeamSide =
@@ -125,7 +126,7 @@ export function toMatchCardProps(
   }
 ): Omit<MatchCardProps, "hideLine" | "hideActions"> {
   const id = String(raw?.id ?? "");
-  const league = toLeague(raw?.league);
+  const league = normalizeLeague(raw?.league);
   const startAtJst = normalizeStartAtJst(raw);
   const status = toStatus(raw?.status);
   const home = toTeamSide(league)(raw?.home);
@@ -156,20 +157,23 @@ export function toMatchCardProps(
     opts?.hrefs?.make ??
     (gamePath ? gamePath.predict : (gid: string) => `/web/games/${gid}/predict`);
 
-  return {
-    id,
-    league,
-    venue: raw?.venue ?? "",
-    roundLabel: raw?.roundLabel ?? "",
-    startAtJst,
-    status,
-    home,
-    away,
-    score,
-    liveMeta,
-    finalMeta,
-    viewPredictionHref: buildView(id),
-    makePredictionHref: buildMake(id),
-    dense: Boolean(opts?.dense),
-  };
+ return {
+  id,
+  league,
+  venue: raw?.venue ?? "",
+  roundLabel: raw?.roundLabel ?? "",
+  startAtJst,
+  status,
+  home,
+  away,
+  score,
+  liveMeta,
+  finalMeta,
+
+  // ★ V2では MatchCard が自前でリンクを生成するため不要
+  viewPredictionHref: "",
+  makePredictionHref: "",
+
+  dense: Boolean(opts?.dense),
+};
 }

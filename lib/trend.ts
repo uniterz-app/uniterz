@@ -31,6 +31,7 @@ export type TrendCacheGames = {
   windowHours: number;       // 集計窓
   B1?: TrendGame[];
   J1?: TrendGame[];
+  NBA?: TrendGame[];
 };
 
 /**
@@ -48,6 +49,7 @@ export async function fetchTrendCacheGames(): Promise<TrendCacheGames | null> {
     windowHours: Number(data?.windowHours ?? 72),
     B1: Array.isArray(data?.B1) ? (data.B1 as TrendGame[]) : [],
     J1: Array.isArray(data?.J1) ? (data.J1 as TrendGame[]) : [],
+    NBA: Array.isArray(data?.NBA) ? data.NBA : [],
   };
 }
 
@@ -69,7 +71,7 @@ export function pickTopPerLeague(cache: TrendCacheGames, n = 1) {
  */
 export type UICardGame = {
   gameId: string;
-  league: "B1" | "J1";
+  league: "NBA" | "B1" | "J1";
   clickCount: number;    // = clicks
   viewCount: number;     // = opens
   predictCount: number;  // = creates
@@ -84,16 +86,17 @@ export type UICardGame = {
  */
 export function selectLeagueGames(
   cache: TrendCacheGames | null,
-  league: "B1" | "J1",
+  league: "NBA" | "B1" | "J1",
   limit = 10
 ): UICardGame[] {
   if (!cache) return [];
+
   const rawArr = (cache[league] ?? []) as TrendGame[];
 
   return rawArr
     .map((g) => ({
       gameId: String(g.gameId ?? ""),
-      league: (league as "B1" | "J1"),
+      league,
       clickCount: Number(g.clicks ?? 0),
       viewCount: Number(g.opens ?? 0),
       predictCount: Number(g.creates ?? 0),

@@ -1,9 +1,18 @@
 // app/lib/games/queries.ts
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  Timestamp,
+} from "firebase/firestore";
 
-type League = "bj" | "j";
+import type { League } from "@/lib/leagues";
+import { normalizeLeague } from "@/lib/leagues";
 
+// JST day range
 const jstDayRange = (d: Date) => {
   const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
   const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0);
@@ -15,7 +24,10 @@ export async function fetchGamesForDay(params: {
   dateJst: Date;
   season: string;
 }) {
-  const { league, dateJst, season } = params;
+  // ★ すべて normalize して League 型に統一
+  const league = normalizeLeague(params.league);
+  const { dateJst, season } = params;
+
   const { start, end } = jstDayRange(dateJst);
 
   const col = collection(db, "games");
@@ -23,7 +35,7 @@ export async function fetchGamesForDay(params: {
     col,
     where("league", "==", league),
     where("season", "==", season),
-    where("startAtJst", ">=", Timestamp.fromDate(start)), // ← Timestampで比較
+    where("startAtJst", ">=", Timestamp.fromDate(start)),
     where("startAtJst", "<", Timestamp.fromDate(end)),
     orderBy("startAtJst", "asc")
   );

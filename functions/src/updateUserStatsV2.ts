@@ -15,12 +15,14 @@ export type StatsV2Bucket = {
   brierSum: number;
   upsetScoreSum: number;
   scorePrecisionSum: number;   // ⭐ 追加
+  calibrationErrorSum: number;
 
   winRate: number;
   avgScoreError: number;
   avgBrier: number;
   avgUpset: number;
   avgPrecision: number;        // ⭐ 追加
+  calibrationError: number;
 };
 
 type ApplyOptsV2 = {
@@ -34,10 +36,11 @@ type ApplyOptsV2 = {
   brier: number;
   upsetScore: number;
   scorePrecision: number;      // ⭐ 追加
+  confidence: number;
 };
 
 const db = () => getFirestore();
-const LEAGUES = ["bj", "nba", "pl"];
+const LEAGUES = ["bj", "j1", "nba"];
 
 /* =========================================================
  * Utils
@@ -53,10 +56,18 @@ function toDateKeyJST(ts: Timestamp) {
 }
 
 function normalizeLeague(raw?: string | null): string | null {
-  const v = String(raw ?? "").toLowerCase();
-  if (v.includes("b1") || v.includes("bj")) return "bj";
-  if (v.includes("nba")) return "nba";
-  if (v.includes("pl") || v.includes("premier")) return "pl";
+  if (!raw) return null;
+  const v = String(raw).trim().toLowerCase();
+
+  // --- B1 / bj / b.league ---
+  if (v === "bj" || v === "b1" || v.includes("b.league")) return "bj";
+
+  // --- J1 ---
+  if (v === "j1" || v === "j") return "j1";
+
+  // --- NBA ---
+  if (v === "nba") return "nba";
+
   return null;
 }
 
@@ -68,11 +79,13 @@ function emptyBucket(): StatsV2Bucket {
     brierSum: 0,
     upsetScoreSum: 0,
     scorePrecisionSum: 0,  // ⭐ 追加
+    calibrationErrorSum: 0,
     winRate: 0,
     avgScoreError: 0,
     avgBrier: 0,
     avgUpset: 0,
     avgPrecision: 0,       // ⭐ 追加
+    calibrationError: 0,
   };
 }
 
@@ -87,6 +100,7 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
     avgBrier: posts ? b.brierSum / posts : 0,
     avgUpset: wins ? b.upsetScoreSum / wins : 0,
     avgPrecision: posts ? b.scorePrecisionSum / posts : 0,  // ⭐ 追加
+    calibrationError: posts ? b.calibrationErrorSum / posts : 0,
   };
 }
 
@@ -95,8 +109,9 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
  * =======================================================*/
 
 export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
-  const { uid, postId, createdAt, league, isWin, scoreError, brier, upsetScore, scorePrecision } = opts;
-
+  const { uid, postId, createdAt, league, isWin, scoreError, brier, upsetScore, scorePrecision, confidence } = opts;
+  const y = isWin ? 1 : 0;
+  const calibrationError = Math.abs(confidence - y);
   const dateKey = toDateKeyJST(createdAt);
   const leagueKey = normalizeLeague(league);
 
@@ -114,6 +129,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       brierSum: FieldValue.increment(brier),
       upsetScoreSum: FieldValue.increment(isWin ? upsetScore : 0),
       scorePrecisionSum: FieldValue.increment(scorePrecision),   // ⭐ 追加
+      calibrationErrorSum: FieldValue.increment(calibrationError),
     };
 
     const update: any = {
@@ -122,7 +138,12 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       all: inc,
     };
 
-    if (leagueKey) update[`leagues.${leagueKey}`] = inc;
+    if (leagueKey) {
+  update.leagues = {
+    ...(update.leagues || {}),
+    [leagueKey]: inc,
+  };
+}
 
     tx.set(dailyRef, update, { merge: true });
     tx.set(markerRef, { at: FieldValue.serverTimestamp() });
@@ -159,6 +180,7 @@ async function sumRange(uid: string, end: Date, days: number, league: string | n
     b.brierSum += src.brierSum || 0;
     b.upsetScoreSum += src.upsetScoreSum || 0;
     b.scorePrecisionSum += src.scorePrecisionSum || 0;  // ⭐ 追加
+    b.calibrationErrorSum += src.calibrationErrorSum || 0;
   }
 
   return recomputeCache(b);
@@ -188,7 +210,45 @@ async function sumAll(uid: string, league: string | null) {
     b.brierSum += src.brierSum || 0;
     b.upsetScoreSum += src.upsetScoreSum || 0;
     b.scorePrecisionSum += src.scorePrecisionSum || 0;  // ⭐ 追加
+    b.calibrationErrorSum += src.calibrationErrorSum || 0;
   });
+
+  return recomputeCache(b);
+}
+/* =========================================================
+ * 任意の期間 start〜end を集計（週間・月間ランキング用）
+ * =======================================================*/
+
+export async function getStatsForDateRangeV2(
+  uid: string,
+  start: Date,
+  end: Date,
+  league: string | null
+) {
+  const coll = db().collection("user_stats_v2_daily");
+  const ONE = 86400000;
+
+  let b = emptyBucket();
+
+  for (let t = start.getTime(); t <= end.getTime(); t += ONE) {
+    const d = new Date(t);
+    const key = `${uid}_${d.toISOString().slice(0, 10)}`;
+
+    const snap = await coll.doc(key).get();
+    if (!snap.exists) continue;
+
+    const v = snap.data()!;
+    const src = league ? v.leagues?.[league] : v.all;
+    if (!src) continue;
+
+    b.posts += src.posts || 0;
+    b.wins += src.wins || 0;
+    b.scoreErrorSum += src.scoreErrorSum || 0;
+    b.brierSum += src.brierSum || 0;
+    b.upsetScoreSum += src.upsetScoreSum || 0;
+    b.scorePrecisionSum += src.scorePrecisionSum || 0;
+    b.calibrationErrorSum += src.calibrationErrorSum || 0;
+  }
 
   return recomputeCache(b);
 }

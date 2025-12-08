@@ -214,6 +214,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             brier,
             upsetScore: upsetIndex, // ★ normalize 済み
             scorePrecision: totalPt,
+            confidence: conf / 100,
         }));
     }
     await batch.commit();
@@ -223,6 +224,52 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         "game.finalScore": { home: game.homeScore, away: game.awayScore },
         resultComputedAtV2: firestore_2.FieldValue.serverTimestamp(),
     }, { merge: true });
+    // ===============================
+    // ★ チーム勝敗の更新（V2版）
+    // ===============================
+    if (game.homeTeamId && game.awayTeamId) {
+        const homeId = game.homeTeamId;
+        const awayId = game.awayTeamId;
+        const homeWon = game.homeScore > game.awayScore;
+        const awayWon = game.awayScore > game.homeScore;
+        const homeRef = db().doc(`teams/${homeId}`);
+        const awayRef = db().doc(`teams/${awayId}`);
+        const [homeSnap, awaySnap] = await Promise.all([
+            homeRef.get(),
+            awayRef.get(),
+        ]);
+        const homeData = homeSnap.data() || {};
+        const awayData = awaySnap.data() || {};
+        const homeWins = Number(homeData.wins || 0);
+        const homeLosses = Number(homeData.losses || 0);
+        const awayWins = Number(awayData.wins || 0);
+        const awayLosses = Number(awayData.losses || 0);
+        // 勝敗の反映
+        const newHomeWins = homeWon ? homeWins + 1 : homeWins;
+        const newHomeLosses = awayWon ? homeLosses + 1 : homeLosses;
+        const newAwayWins = awayWon ? awayWins + 1 : awayWins;
+        const newAwayLosses = homeWon ? awayLosses + 1 : awayLosses;
+        // 勝率
+        const homeWinRate = newHomeWins + newHomeLosses > 0
+            ? newHomeWins / (newHomeWins + newHomeLosses)
+            : 0;
+        const awayWinRate = newAwayWins + newAwayLosses > 0
+            ? newAwayWins / (newAwayWins + newAwayLosses)
+            : 0;
+        // Firestore 反映
+        await Promise.all([
+            homeRef.set({
+                wins: newHomeWins,
+                losses: newHomeLosses,
+                winRate: homeWinRate,
+            }, { merge: true }),
+            awayRef.set({
+                wins: newAwayWins,
+                losses: newAwayLosses,
+                winRate: awayWinRate,
+            }, { merge: true }),
+        ]);
+    }
 });
 // helpers
 function numberOrNull(v) {

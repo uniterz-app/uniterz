@@ -13,8 +13,9 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { mapRawToPredictionPost } from "@/lib/map-post";
-import type { PredictionPost } from "@/app/component/post/PredictionPostCard";
+
+import { toUiPost } from "@/lib/toUiPost"; // ★ V2 正式変換
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 const PAGE_SIZE = 15;
 
@@ -22,41 +23,45 @@ export function useFollowingFeed() {
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
   const [loading, setLoading] = useState(false);
   const [noMore, setNoMore] = useState(false);
-  const [posts, setPosts] = useState<PredictionPost[]>([]);
+  const [posts, setPosts] = useState<PredictionPostV2[]>([]);
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
-  // ======================
-  // 認証監視
-  // ======================
+  /* -----------------------------
+   * 認証監視
+   * ----------------------------- */
   useEffect(() => {
     if (uid) return;
-    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
+    
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUid(u?.uid ?? null);
+    });
+
     return () => unsub();
   }, [uid]);
 
-  // ======================
-  // 初回ロード
-  // ======================
+  /* -----------------------------
+   * 初回ロード
+   * ----------------------------- */
   useEffect(() => {
     if (!uid) return;
     refresh();
   }, [uid]);
 
-  // ======================
-  // loadMore
-  // ======================
+  /* -----------------------------
+   * loadMore
+   * ----------------------------- */
   const loadMore = useCallback(async () => {
     if (!uid || loading || noMore) return;
 
     setLoading(true);
 
     try {
+      // --- フォローしているユーザー ---
       const followingSnap = await getDocs(
         query(collection(db, "users", uid, "following"), limit(50))
       );
 
-      // ⚠ フィルタリングが重要
       const followingUids = followingSnap.docs
         .map((d) => d.id)
         .filter((id) => typeof id === "string" && id.length > 0);
@@ -93,25 +98,27 @@ export function useFollowingFeed() {
         return;
       }
 
-      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+      const newPosts = snap.docs.map((d) =>
+        toUiPost(d.id, d.data()) // ★ V2 変換関数を使用
+      );
 
-      // 重複回避
+      // 重複排除
       setPosts((prev) => {
         const ids = new Set(prev.map((p) => p.id));
         return [...prev, ...newPosts.filter((p) => !ids.has(p.id))];
       });
 
       lastDocRef.current = snap.docs[snap.docs.length - 1];
-    } catch (e) {
-      console.warn("following feed loadMore failed:", e);
+    } catch (err) {
+      console.warn("following feed loadMore error:", err);
     }
 
     setLoading(false);
   }, [uid, loading, noMore]);
 
-  // ======================
-  // refresh（pull-to-refresh）
-  // ======================
+  /* -----------------------------
+   * refresh
+   * ----------------------------- */
   const refresh = useCallback(async () => {
     if (!uid) return;
 
@@ -144,12 +151,14 @@ export function useFollowingFeed() {
 
       const snap = await getDocs(q);
 
-      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
-      setPosts(newPosts);
+      const newPosts = snap.docs.map((d) =>
+        toUiPost(d.id, d.data())
+      );
 
+      setPosts(newPosts);
       lastDocRef.current = snap.docs[snap.docs.length - 1];
-    } catch (e) {
-      console.warn("refresh failed:", e);
+    } catch (err) {
+      console.warn("following feed refresh error:", err);
     }
 
     setLoading(false);

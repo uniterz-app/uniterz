@@ -12,37 +12,36 @@ import {
   DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { mapRawToPredictionPost } from "@/lib/map-post";
-import type { PredictionPost } from "@/app/component/post/PredictionPostCard";
+import { toUiPost } from "@/lib/toUiPost";
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 const PAGE_SIZE = 15;
 
 export function useBLeagueFeed() {
-  const [posts, setPosts] = useState<PredictionPost[]>([]);
+  const [posts, setPosts] = useState<PredictionPostV2[]>([]);
   const [loading, setLoading] = useState(false);
   const [noMore, setNoMore] = useState(false);
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
-  // ======================
-  // 初回ロード（followingと同じ）
-  // ======================
+  /* -------------------------
+   * 初回ロード
+   * ------------------------- */
   useEffect(() => {
     refresh();
   }, []);
 
-  // ======================
-  // loadMore（followingと同じ構造）
-  // ======================
+  /* -------------------------
+   * loadMore
+   * ------------------------- */
   const loadMore = useCallback(async () => {
     if (loading || noMore) return;
-
     setLoading(true);
 
     try {
       const baseQuery = query(
         collection(db, "posts"),
-        where("league", "==", "bj"),
+        where("league", "==", "bj"),     // ← 修正済み
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE)
       );
@@ -50,7 +49,7 @@ export function useBLeagueFeed() {
       const q = lastDocRef.current
         ? query(
             collection(db, "posts"),
-            where("league", "==", "bj"),
+            where("league", "==", "bj"), // ← 修正済み
             orderBy("createdAt", "desc"),
             startAfter(lastDocRef.current),
             limit(PAGE_SIZE)
@@ -65,9 +64,8 @@ export function useBLeagueFeed() {
         return;
       }
 
-      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+      const newPosts = snap.docs.map((d) => toUiPost(d.id, d.data()));
 
-      // ⭐ Following と同じ重複排除処理
       setPosts((prev) => {
         const ids = new Set(prev.map((p) => p.id));
         return [...prev, ...newPosts.filter((p) => !ids.has(p.id))];
@@ -75,15 +73,15 @@ export function useBLeagueFeed() {
 
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("B feed loadMore error:", err);
+      console.warn("BLeagueFeed loadMore error:", err);
     }
 
     setLoading(false);
   }, [loading, noMore]);
 
-  // ======================
-  // refresh（followingと同じ構造）
-  // ======================
+  /* -------------------------
+   * refresh
+   * ------------------------- */
   const refresh = useCallback(async () => {
     setLoading(true);
     setNoMore(false);
@@ -92,19 +90,19 @@ export function useBLeagueFeed() {
     try {
       const q = query(
         collection(db, "posts"),
-        where("league", "==", "bj"),
+        where("league", "==", "bj"),  // ← 修正済み
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE)
       );
 
       const snap = await getDocs(q);
-      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+
+      const newPosts = snap.docs.map((d) => toUiPost(d.id, d.data()));
 
       setPosts(newPosts);
-
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
-      console.warn("B feed refresh error:", err);
+      console.warn("BLeagueFeed refresh error:", err);
     }
 
     setLoading(false);

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useProfile, type Profile } from "./useProfile";
 
 import MobileProfileViewV2 from "./MobileProfileViewV2";
-import WebProfileViewV2 from "./WebProfileViewV2"; // ← まだ無ければ後で作る
+import WebProfileViewV2 from "./WebProfileViewV2";
 
 import { useUserStatsV2 } from "./useUserStatsV2";
 import type { SummaryForCardsV2 } from "./useUserStatsV2";
@@ -19,30 +19,42 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   const [tab, setTab] = useState<"overview" | "stats">("overview");
   const [range, setRange] = useState<"7d" | "30d" | "all">("30d");
 
-  // --------- ★ V2 stats を購読 ----------
+  // ============================
+  // ★ V2 stats を購読
+  // ============================
   const { summaries, loading: statsLoading } = useUserStatsV2(targetUid);
 
-  // --------- avatar 補正 ----------
+  // ============================
+  // avatar の補正
+  // ============================
   const normalizedProfile = useMemo<Profile | undefined>(() => {
     if (!profile) return undefined;
 
     const p = profile as Profile & { photoURL?: string | null };
     const merged =
-      (p.photoURL && p.photoURL.trim().length > 0 ? p.photoURL : p.avatarUrl) ??
-      "";
+      (p.photoURL && p.photoURL.trim().length > 0
+        ? p.photoURL
+        : p.avatarUrl) ?? "";
 
     return { ...p, avatarUrl: merged };
   }, [profile]);
 
-  // --------- ★ SummaryCardsV2 に渡す値 ----------
+  // ============================
+  // SummaryCardsV2 用のデータ
+  // ============================
   const summaryV2: SummaryForCardsV2 | undefined = useMemo(() => {
     return summaries?.[range];
   }, [summaries, range]);
 
+  // ============================
+  // Loading / Not Found
+  // ============================
   if (loading) return <div style={{ padding: 24 }}>Loading...</div>;
   if (!normalizedProfile) return <div style={{ padding: 24 }}>Not found</div>;
 
-  // --------- Mobile/Web 共通の props ----------
+  // ============================
+  // Mobile / Web 共通 props
+  // ============================
   const viewProps = {
     profile: normalizedProfile,
     isFollowing,
@@ -61,8 +73,9 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     : <MobileProfileViewV2 {...viewProps} />;
 }
 
-// 🔽 🔽 🔽 これを ProfilePageBaseV2.tsx の最後に追加する
-
+// ============================
+// ProfileViewPropsV2 型
+// ============================
 export type ProfileViewPropsV2 = {
   profile: Profile;
   isFollowing: boolean;
@@ -74,7 +87,7 @@ export type ProfileViewPropsV2 = {
   range: "7d" | "30d" | "all";
   setRange: (v: "7d" | "30d" | "all") => void;
 
-  summary?: SummaryForCardsV2;   // ← useUserStatsV2 の summary
+  summary?: SummaryForCardsV2; // ← useUserStatsV2 のまとめ値
   statsLoading: boolean;
 
   targetUid: string | null;

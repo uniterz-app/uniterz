@@ -302,6 +302,7 @@ export const onGameFinalV2 = onDocumentWritten(
           brier,
           upsetScore: upsetIndex,   // ★ normalize 済み
           scorePrecision: totalPt,
+          confidence: conf / 100,
         })
       );
     }

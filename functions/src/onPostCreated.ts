@@ -1,16 +1,21 @@
-// functions/src/onPostCreated.ts
+// functions/src/onPostCreatedV2.ts
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { recomputeUserStatsFromDaily } from "./updateUserStats";
+
+import { recomputeUserStatsV2FromDaily } from "./updateUserStatsV2";
 
 const db = getFirestore();
 
 /**
- * posts/{postId} 新規作成時：
- * - user_stats_daily/{uid_YYYY-MM-DD}.createdPosts を +1
- * - 7d/30d/all を再集計
+ * V2: posts/{postId} 新規作成時
+ *
+ * やること：
+ * ① user_stats_v2_daily/{uid_YYYY-MM-DD}.createdPosts を +1
+ * ② user_stats_v2/{uid} の 7d / 30d / all を再計算
+ *
+ * ※勝敗・精度などの stats は onGameFinalV2 が行う
  */
-export const onPostCreated = onDocumentCreated(
+export const onPostCreatedV2 = onDocumentCreated(
   {
     document: "posts/{postId}",
     region: "asia-northeast1",
@@ -23,7 +28,9 @@ export const onPostCreated = onDocumentCreated(
     const createdAt = data.createdAt as Timestamp;
     if (!uid || !createdAt) return;
 
-    // JST YYYY-MM-DD キーを生成
+    // -----------------------------
+    // JST YYYY-MM-DD キー生成
+    // -----------------------------
     const d = createdAt.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const yyyy = j.getUTCFullYear();
@@ -31,9 +38,11 @@ export const onPostCreated = onDocumentCreated(
     const dd = String(j.getUTCDate()).padStart(2, "0");
     const dateKey = `${yyyy}-${mm}-${dd}`;
 
-    const dailyRef = db.doc(`user_stats_daily/${uid}_${dateKey}`);
+    const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
 
-    // createdPosts の増加だけ（hit/miss計算は onGameFinal が行う）
+    // -----------------------------
+    // ① createdPosts を +1
+    // -----------------------------
     await dailyRef.set(
       {
         date: dateKey,
@@ -43,7 +52,9 @@ export const onPostCreated = onDocumentCreated(
       { merge: true }
     );
 
-    // 7d / 30d / all を最新化
-    await recomputeUserStatsFromDaily(uid);
+    // -----------------------------
+    // ② user_stats_v2 再計算
+    // -----------------------------
+    await recomputeUserStatsV2FromDaily(uid);
   }
 );

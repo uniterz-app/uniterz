@@ -33,14 +33,60 @@ function isSnap(x: any): x is DocumentSnapshot<DocumentData> {
 }
 
 /* ============================================
-   ★ V2 投稿データへ安全にマッピングする
+   ★ 修正版: PredictionPostV2 の必須フィールドを返す
 ============================================ */
 export function mapRawToPredictionPostV2(raw: any): PredictionPostV2 {
   const id = isSnap(raw) ? raw.id : raw.id;
   const d: any = isSnap(raw) ? raw.data() : raw;
 
+  /* league の安全処理 */
+  let leagueRaw = d?.league ?? d?.game?.league ?? "bj";
+  if (leagueRaw === "j") leagueRaw = "j1";
+
+  /* ------------------------------
+     home / away を常にオブジェクト化（V2仕様）
+  ------------------------------ */
+  const home = {
+    name: d?.home?.name ?? d?.home ?? d?.game?.home ?? "",
+    teamId: d?.home?.teamId ?? "",
+    number: d?.home?.number,
+    record: d?.home?.record ?? null,
+  };
+
+  const away = {
+    name: d?.away?.name ?? d?.away ?? d?.game?.away ?? "",
+    teamId: d?.away?.teamId ?? "",
+    number: d?.away?.number,
+    record: d?.away?.record ?? null,
+  };
+
+  /* ------------------------------
+     status の決定
+  ------------------------------ */
+  const status = d?.status ?? d?.game?.status ?? "scheduled";
+
+  /* ------------------------------
+     旧 game ブロック（互換用）
+  ------------------------------ */
+  const game = {
+    league: leagueRaw,
+    home: home.name,
+    away: away.name,
+    status,
+    finalScore: d?.finalScore ?? d?.game?.finalScore ?? undefined,
+  };
+
+  /* ------------------------------
+     PredictionPostV2 を返す（★必須をすべて含む）
+  ------------------------------ */
   return {
     id,
+
+    league: leagueRaw,
+    status,
+
+    home,
+    away,
 
     authorUid: d?.authorUid ?? "",
     authorHandle: d?.authorHandle ?? null,
@@ -52,16 +98,7 @@ export function mapRawToPredictionPostV2(raw: any): PredictionPostV2 {
 
     gameId: d?.gameId ?? null,
 
-    /* ← ★ 追加：game を正しく生成 */
-    game: d?.game
-      ? {
-          league: d?.game?.league ?? "bj", // bj / nba のみ
-          home: d?.game?.home ?? "",
-          away: d?.game?.away ?? "",
-          status: d?.game?.status ?? "scheduled",
-          finalScore: d?.game?.finalScore ?? undefined,
-        }
-      : undefined,
+    game, // optional 旧互換ブロック
 
     prediction: {
       winner: d?.prediction?.winner ?? "home",

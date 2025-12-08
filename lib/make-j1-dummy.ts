@@ -1,5 +1,4 @@
 // lib/make-j1-dummy.ts
-import type { League } from "@/app/component/games/MatchCard";
 import { teamColorsJ1 } from "@/lib/teams-j1"; // ← すでに作った色マップ（{ [name]: { primary, secondary } }）
                                                  // ファイル名やexport名はあなたの実装に合わせて調整してOK
 
@@ -12,7 +11,6 @@ type TeamSide = {
 
 type GameItem = {
   id: string;
-  league: League;
   venue?: string;
   roundLabel?: string;
   startAtJst: Date | null;
@@ -44,7 +42,6 @@ export function makeJ1DummyGames(date: Date, count = 4): GameItem[] {
 
     return {
       id: `j-${start.getTime()}-${idx}`,
-      league: "j",
       venue: "サンプルスタジアム",
       roundLabel: "第25節",
       startAtJst: start,

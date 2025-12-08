@@ -49,6 +49,23 @@ export function evaluateAccuracyV2(accPct: number): HighlightV2 {
   if (a >= 70) return { level: "yellow", reason: "accuracy>=70%" };
   return { level: "none" };
 }
+/* =============================
+ * 一致度（Consistency % = (1 - CalibrationError)*100）
+ * ============================= */
+export function evaluateConsistencyV2(consistencyPct: number): HighlightV2 {
+  const c = Number(consistencyPct);
+  if (!Number.isFinite(c) || c <= 0) return { level: "none" };
+
+  // 自信度のズレがほぼない = 本物
+  if (c >= 90)
+    return { level: "strong", icon: "crown", reason: "consistency>=90%" };
+
+  // かなり安定
+  if (c >= 75)
+    return { level: "yellow", reason: "consistency>=75%" };
+
+  return { level: "none" };
+}
 
 /* =============================
  * UPSET（0〜10 正規化版）
@@ -84,3 +101,4 @@ export function pickStrongerV2(a: HighlightV2, b: HighlightV2): HighlightV2 {
 
   return prio(a.icon) >= prio(b.icon) ? a : b;
 }
+

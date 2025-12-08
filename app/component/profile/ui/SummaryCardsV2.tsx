@@ -1,55 +1,107 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   BarChartHorizontal,
   Trophy,
   Gauge,
   Target,
+  CheckCircle,
   Flame,
   Crown,
   Zap,
 } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
 
+// 既存 Tooltip を import
+import Tooltip from "@/app/component/common/Tooltip";
+
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
-/* 新しい V2 ハイライトロジック */
 import {
   evaluateWinRateV2,
   evaluatePrecisionV2,
   evaluateAccuracyV2,
   evaluateUpsetV2,
+  evaluateConsistencyV2,
   type HighlightV2,
 } from "@/lib/stats/thresholdsV2";
 
-/* 受け取るデータ構造 */
 export type SummaryDataV2 = {
   posts: number;
-  winRate: number;       // 0..1
-  avgPrecision: number;  // 0..15 新しい点差精度
-  avgBrier: number;      // 0..1
-  avgUpset: number;      // 0..10
+  fullPosts: number;
+  winRate: number;
+  avgPrecision: number;
+  avgBrier: number;
+  avgUpset: number;
+  calibrationError: number;
 };
 
 type Props = {
   data: SummaryDataV2;
   compact?: boolean;
+  period: "7d" | "30d" | "all";   // ← 追加
 };
 
-export default function SummaryCardsV2({ data, compact = false }: Props) {
-  const postsText = `${data.posts}`;
+const MIN_POSTS = {
+  "7d": 4,
+  "30d": 10,
+  "all": 20,
+} as const;
+
+export default function SummaryCardsV2({ data, compact = false, period }: Props) {
+  /* Tooltip state */
+  const [tooltip, setTooltip] = useState<{
+    rect: DOMRect | null;
+    message: string;
+  } | null>(null);
+
+  const postsText = `${data.fullPosts}`;
   const winRatePct = `${Math.round(data.winRate * 100)}%`;
-  const precisionText = data.avgPrecision.toFixed(1); // ← 差し替え
-  const accuracy = Math.max(0, Math.min(100, Math.round((1 - data.avgBrier) * 100)));
+  const precisionText = data.avgPrecision.toFixed(1);
+  const accuracy =
+    data.posts === 0
+      ? 0
+      : Math.max(0, Math.min(100, Math.round((1 - data.avgBrier) * 100)));
   const accuracyText = `${accuracy}%`;
+
   const upsetText = data.avgUpset.toFixed(1);
 
-  // ── ハイライト判定 ─────────────
-  const hWin = evaluateWinRateV2(data.winRate);
-  const hPrecision = evaluatePrecisionV2(data.avgPrecision); // ← 差し替え
-  const hAcc = evaluateAccuracyV2(accuracy);
-  const hUpset = evaluateUpsetV2(data.avgUpset);
+  const min = MIN_POSTS[period];
+const enoughPosts = data.fullPosts >= min;
+  
+
+  // 一致度（100点満点）
+const hasStats = data.posts > 0 && Number.isFinite(data.calibrationError);
+
+// 一致度の安全処理
+let consistency: number;
+let consistencyText: string;
+
+// calibrationError が number 以外なら NaN 扱いに統一
+const validCalib =
+  typeof data.calibrationError === "number" &&
+  Number.isFinite(data.calibrationError);
+
+if (!validCalib || data.posts === 0) {
+  consistency = NaN;
+  consistencyText = "NaN%";
+} else {
+  consistency = Math.max(
+    0,
+    Math.min(100, Math.round((1 - data.calibrationError) * 100))
+  );
+  consistencyText = `${consistency}%`;
+}
+
+
+ const NONE: HighlightV2 = { level: "none" };
+
+const hWin       = enoughPosts ? evaluateWinRateV2(data.winRate)      : NONE;
+const hPrecision = enoughPosts ? evaluatePrecisionV2(data.avgPrecision) : NONE;
+const hAcc       = enoughPosts ? evaluateAccuracyV2(accuracy)          : NONE;
+const hUpset     = enoughPosts ? evaluateUpsetV2(data.avgUpset)        : NONE;
+const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
 
   const padCls = compact ? "p-2 md:p-3" : "p-4";
   const gapCls = compact ? "gap-2" : "gap-3";
@@ -58,30 +110,172 @@ export default function SummaryCardsV2({ data, compact = false }: Props) {
     compact ? "text-[18px] md:text-[24px]" : "text-[20px] md:text-[28px]";
   const iconSize = compact ? 16 : 20;
 
-  // ── モバイル判定 ─────────────
   const isMobile =
     typeof window !== "undefined" &&
     window.matchMedia("(max-width: 768px)").matches;
 
-  /* モバイルでは 1-2-2 レイアウト */
+  /* -------------------------
+     Tooltip Helper
+  -------------------------- */
+  function openTooltip(e: React.MouseEvent, message: string) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({ rect, message });
+  }
+
+  /* -------------------------
+     Mobile layout
+  -------------------------- */
   if (isMobile) {
     return (
-      <div className={`grid grid-cols-2 ${gapCls} mt-6`}>
-        {/* 1段目：投稿数 */}
-        <div className="col-span-2">
+      <>
+        <div className={`grid grid-cols-2 ${gapCls} mt-6`}>
+          
+            <Card
+              icon={<BarChartHorizontal size={iconSize} />}
+              label="分析数"
+              value={postsText}
+              padCls={padCls}
+              labelCls={labelCls}
+              valueCls={`${alfa.className} ${valueCls}`}
+            />
+
           <Card
-            icon={<BarChartHorizontal size={iconSize} />}
-            label="分析数"
-            value={postsText}
+            icon={<Trophy size={iconSize} />}
+            label="勝率"
+            value={winRatePct}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={`${alfa.className} ${valueCls}`}
+            valueCls={decorate(`${alfa.className} ${valueCls}`, hWin)}
+            afterIcon={highlightIcon(hWin, iconSize)}
+          />
+
+          <Card
+            icon={<Gauge size={iconSize} />}
+            label={
+              <div className="flex items-center gap-1">
+                スコア精度
+                <button
+                  className="opacity-70 text-xs"
+                  onClick={(e) =>
+                    openTooltip(
+                      e,
+                      "予想した得点と実際の得点がどれくらい近かったかの精度。試合展開や実力差を分析できているかを評価します。15が最高値。"
+                    )
+                  }
+                >
+                  ⓘ
+                </button>
+              </div>
+            }
+            value={precisionText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${alfa.className} ${valueCls}`, hPrecision)}
+            afterIcon={highlightIcon(hPrecision, iconSize)}
+          />
+
+          <Card
+            icon={<Target size={iconSize} />}
+            label={
+              <div className="flex items-center gap-1">
+                予測精度
+                <button
+                  className="opacity-70 text-xs"
+                  onClick={(e) =>
+                    openTooltip(
+                      e,
+                      "勝敗をどれだけ正確に当てているかを示します。\n外したときの「ズレの大きさ」も評価に含まれるため、単なる勝率よりも厳密な指標です。"
+                    )
+                  }
+                >
+                  ⓘ
+                </button>
+              </div>
+            }
+            value={accuracyText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${alfa.className} ${valueCls}`, hAcc)}
+            afterIcon={highlightIcon(hAcc, iconSize)}
+          />
+          <Card
+  icon={<CheckCircle size={iconSize} />}
+  label={
+    <div className="flex items-center gap-1">
+      一致度
+      <button
+        className="opacity-70 text-xs"
+        onClick={(e) =>
+          openTooltip(
+            e,
+            "入力した自信度と、実際の結果が長期的にどれくらい一致しているかを示します。\n自信の付け方が正しいかを評価する指標です。"
+          )
+        }
+      >
+        ⓘ
+      </button>
+    </div>
+  }
+  value={consistencyText}
+  padCls={padCls}
+  labelCls={labelCls}
+  valueCls={decorate(`${alfa.className} ${valueCls}`, hCons)}
+  afterIcon={highlightIcon(hCons, iconSize)}
+/>
+
+          <Card
+            icon={<Zap size={iconSize} />}
+            label={
+              <div className="flex items-center gap-1">
+                UPSET指数
+                <button
+                  className="opacity-70 text-xs"
+                  onClick={(e) =>
+                    openTooltip(
+                      e,
+                      "『みんなが予想しなかった勝ち方』を当てたときに高くなる指標。市場の偏りやチーム順位に応じて0〜10で評価されます。"
+                    )
+                  }
+                >
+                  ⓘ
+                </button>
+              </div>
+            }
+            value={upsetText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
+            afterIcon={highlightIcon(hUpset, iconSize)}
           />
         </div>
 
-        {/* 2段目：勝率 / 点差精度 */}
+        {tooltip && (
+          <Tooltip
+            anchorRect={tooltip.rect}
+            message={tooltip.message}
+            onClose={() => setTooltip(null)}
+          />
+        )}
+      </>
+    );
+  }
+
+  /* -------------------------
+    Web Layout
+  -------------------------- */
+
+  return (
+    <>
+      <div className={`grid grid-cols-6 ${gapCls} mt-6`}>
         <Card
-          icon={<Trophy size={iconSize} />}
+          label="分析数"
+          value={postsText}
+          padCls={padCls}
+          labelCls={labelCls}
+          valueCls={`${alfa.className} ${valueCls}`}
+        />
+
+        <Card
           label="勝率"
           value={winRatePct}
           padCls={padCls}
@@ -91,8 +285,22 @@ export default function SummaryCardsV2({ data, compact = false }: Props) {
         />
 
         <Card
-          icon={<Gauge size={iconSize} />}
-          label="点差精度"
+          label={
+            <div className="flex items-center gap-1">
+              スコア精度
+              <button
+                className="opacity-70 text-xs"
+                onClick={(e) =>
+                  openTooltip(
+                    e,
+                    "予想した得点と実際の得点がどれくらい近かったかの精度。試合展開や実力差を分析できているかを評価します。15が最高値。"
+                  )
+                }
+              >
+                ⓘ
+              </button>
+            </div>
+          }
           value={precisionText}
           padCls={padCls}
           labelCls={labelCls}
@@ -100,20 +308,69 @@ export default function SummaryCardsV2({ data, compact = false }: Props) {
           afterIcon={highlightIcon(hPrecision, iconSize)}
         />
 
-        {/* 3段目：自信精度 / UPSET */}
         <Card
-          icon={<Target size={iconSize} />}
-          label="正確性"
+          label={
+            <div className="flex items-center gap-1">
+              予測精度
+              <button
+                className="opacity-70 text-xs"
+                onClick={(e) =>
+                  openTooltip(
+                    e,
+                    "勝敗をどれだけ正確に当てているかを示します。外したときの「ズレの大きさ」も評価に含まれるため、単なる勝率よりも厳密な指標です。"
+                  )
+                }
+              >
+                ⓘ
+              </button>
+            </div>
+          }
           value={accuracyText}
           padCls={padCls}
           labelCls={labelCls}
           valueCls={decorate(`${alfa.className} ${valueCls}`, hAcc)}
           afterIcon={highlightIcon(hAcc, iconSize)}
         />
-
+<Card
+  label={
+    <div className="flex items-center gap-1">
+      一致度
+      <button
+        className="opacity-70 text-xs"
+        onClick={(e) =>
+          openTooltip(
+            e,
+            "入力した自信度と、実際の結果が長期的にどれくらい一致しているかを示します。\n自信の付け方が正しいかを評価する指標です。"
+          )
+        }
+      >
+        ⓘ
+      </button>
+    </div>
+  }
+  value={consistencyText}
+  padCls={padCls}
+  labelCls={labelCls}
+  valueCls={decorate(`${alfa.className} ${valueCls}`, hCons)}
+  afterIcon={highlightIcon(hCons, iconSize)}
+/>
         <Card
-          icon={<Zap size={iconSize} />}
-          label="UPSET指数"
+          label={
+            <div className="flex items-center gap-1">
+              UPSET指数
+              <button
+                className="opacity-70 text-xs"
+                onClick={(e) =>
+                  openTooltip(
+                    e,
+                    "『みんなが予想しなかった勝ち方』を当てたときに高くなる指標。市場の偏りやチーム順位に応じて0〜10で評価されます。"
+                  )
+                }
+              >
+                ⓘ
+              </button>
+            </div>
+          }
           value={upsetText}
           padCls={padCls}
           labelCls={labelCls}
@@ -121,61 +378,15 @@ export default function SummaryCardsV2({ data, compact = false }: Props) {
           afterIcon={highlightIcon(hUpset, iconSize)}
         />
       </div>
-    );
-  }
 
-  /* Web版（5枚横並び） */
-  return (
-    <div className={`grid grid-cols-5 ${gapCls} mt-6`}>
-      <Card
-        icon={<BarChartHorizontal size={iconSize} />}
-        label="分析数"
-        value={postsText}
-        padCls={padCls}
-        labelCls={labelCls}
-        valueCls={`${alfa.className} ${valueCls}`}
-      />
-
-      <Card
-        icon={<Trophy size={iconSize} />}
-        label="勝率"
-        value={winRatePct}
-        padCls={padCls}
-        labelCls={labelCls}
-        valueCls={decorate(`${alfa.className} ${valueCls}`, hWin)}
-        afterIcon={highlightIcon(hWin, iconSize)}
-      />
-
-      <Card
-        icon={<Gauge size={iconSize} />}
-        label="点差精度"
-        value={precisionText}
-        padCls={padCls}
-        labelCls={labelCls}
-        valueCls={decorate(`${alfa.className} ${valueCls}`, hPrecision)}
-        afterIcon={highlightIcon(hPrecision, iconSize)}
-      />
-
-      <Card
-        icon={<Target size={iconSize} />}
-        label="正確性"
-        value={accuracyText}
-        padCls={padCls}
-        labelCls={labelCls}
-        valueCls={decorate(`${alfa.className} ${valueCls}`, hAcc)}
-        afterIcon={highlightIcon(hAcc, iconSize)}
-      />
-
-      <Card
-        icon={<Zap size={iconSize} />}
-        label="UPSET指数"
-        value={upsetText}
-        padCls={padCls}
-        labelCls={labelCls}
-        valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
-        afterIcon={highlightIcon(hUpset, iconSize)}
-      />
-    </div>
+      {tooltip && (
+        <Tooltip
+          anchorRect={tooltip.rect}
+          message={tooltip.message}
+          onClose={() => setTooltip(null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -196,6 +407,7 @@ function highlightIcon(h: HighlightV2, size: number) {
   return null;
 }
 
+/* label を ReactNode に変更 */
 function Card({
   icon,
   label,
@@ -205,8 +417,8 @@ function Card({
   valueCls,
   afterIcon,
 }: {
-  icon: React.ReactNode;
-  label: string;
+  icon?: React.ReactNode;          // ← optional に変更
+  label: React.ReactNode;
   value: string | number;
   padCls: string;
   labelCls: string;
@@ -218,13 +430,17 @@ function Card({
       className={`rounded-xl border border-white/10 bg-white/5 ${padCls} text-center min-w-0`}
     >
       <div className="flex items-center justify-center gap-2 mb-1 text-white/85">
-        <span className="inline-flex">{icon}</span>
+        {/* icon があるときだけ表示 */}
+        {icon && (
+          <span className="inline-flex">
+            {icon}
+          </span>
+        )}
         <span className={`${labelCls} font-semibold tracking-[0.2px]`}>
           {label}
         </span>
       </div>
 
-      {/* ★ ここを修正 */}
       <div className="leading-none truncate flex items-center justify-center">
         <span className={`${valueCls} truncate`}>{value}</span>
         {afterIcon}
@@ -232,4 +448,3 @@ function Card({
     </div>
   );
 }
-

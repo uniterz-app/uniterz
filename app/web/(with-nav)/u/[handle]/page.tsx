@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
-import ProfilePageBase from "@/app/component/profile/ProfilePageBase";
+import ProfilePageBase from "@/app/component/profile/ProfilePageBaseV2";
 
 /* ログ */
 import { logProfileEvent } from "@/lib/analytics/logEvent";

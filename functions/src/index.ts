@@ -2,46 +2,57 @@
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onDocumentCreated, onDocumentDeleted } from "firebase-functions/v2/firestore";
+import {
+  onDocumentCreated,
+  onDocumentDeleted,
+} from "firebase-functions/v2/firestore";
 
 import * as admin from "firebase-admin";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 
 import { aggregateGamesTrend } from "./trend/games.aggregate";
-import { aggregateUsersTrend } from "./trend/users.aggregate";
-import { recomputeUserStatsFromDaily } from "./updateUserStats";
 import { dailyAnalyticsCore } from "./analytics/_core";
 import { seedTeams } from "./seed/seedTeams";
 
+// ===============================
+// V2 Core
+// ===============================
+export { onGameFinalV2 } from "./onGameFinalV2";
+export { recomputeAllUsersStatsV2Daily } from "./updateUserStatsV2";
 
-// ★★★ onGameFinal を確実に有効化する import
-import { onGameFinal } from "./onGameFinal";
+// 🔥 週間・月間ランキング（V2）
+export {
+  rebuildCalendarLeaderboardsHttpV2,
+  rebuildLeaderboardWeekV2,
+  rebuildLeaderboardMonthV2,
+} from "./triggers/leaderboards.calendar.v2";
 
-// ✅ V2 追加
-import { onGameFinalV2 } from "./onGameFinalV2";
-import { recomputeAllUsersStatsV2Daily } from "./updateUserStatsV2";
-import { rebuildLeaderboardV2Cron } from "./triggers/leaderboards.calendar.v2";
+// 🔥 オールタイムランキング（V2）
+export {
+  rebuildLeaderboardAllTimeV2,
+  rebuildLeaderboardAllTimeCron,
+} from "./triggers/leaderboards.alltime.v2";
 
-// ====== Global Options / Admin ======
+// ===============================
+// Global
+// ===============================
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
 admin.initializeApp();
 const db = admin.firestore();
 
 /* ============================================================================
- * followers / following のカウント反映
+ * followers / following
  * ==========================================================================*/
 
 export const onFollowerAdded = onDocumentCreated(
   "users/{uid}/followers/{followerUid}",
   async (event) => {
     const { uid, followerUid } = event.params;
-
     try {
       await db.doc(`users/${uid}`).set(
         { counts: { followers: FieldValue.increment(1) } },
         { merge: true }
       );
-
       await db.collection("events_follow").add({
         targetUid: uid,
         actorUid: followerUid,
@@ -99,20 +110,15 @@ export const onFollowingRemoved = onDocumentDeleted(
   }
 );
 
-export { onPostCreated } from "./onPostCreated";
-export { onPostDeleted } from "./onPostDeleted";
-
 /* ============================================================================
- * 🔽 カレンダーベース・ランキング再集計
+ * posts
  * ==========================================================================*/
-export {
-  rebuildCalendarLeaderboardsHttp,
-  rebuildCalendarLeaderboardsCronMonth,
-  rebuildCalendarLeaderboardsCronWeek,
-} from "./triggers/leaderboards.calendar";
+
+export { onPostCreatedV2 } from "./onPostCreated";
+export { onPostDeletedV2 } from "./onPostDeleted";
 
 /* ============================================================================
- * トレンド集計（Games / HTTP & Cron）
+ * トレンド（Games）
  * ==========================================================================*/
 
 export const aggregateTrendsGames = onRequest(async (_req, res) => {
@@ -120,7 +126,6 @@ export const aggregateTrendsGames = onRequest(async (_req, res) => {
     const result = await aggregateGamesTrend();
     res.status(200).json(result);
   } catch (e: any) {
-    console.error(e);
     res.status(500).json({ ok: false, error: e?.message ?? "failed" });
   }
 });
@@ -128,117 +133,42 @@ export const aggregateTrendsGames = onRequest(async (_req, res) => {
 export const aggregateTrendsGamesCron = onSchedule(
   { schedule: "0 * * * *", timeZone: "Asia/Tokyo" },
   async () => {
-    await aggregateGamesTrend();
+    await aggregateGamesTrend(); // return しない
   }
 );
 
 /* ============================================================================
- * トレンド集計（Users / HTTP & Cron）
+ * Team Rankings (Daily)
  * ==========================================================================*/
 
-export const aggregateTrendsUsers = onRequest(async (req, res) => {
-  try {
-    const windowHours = Number(req.query.windowHours ?? 72);
-    const result = await aggregateUsersTrend(windowHours);
-    res.status(200).json(result);
-  } catch (e: any) {
-    console.error(e);
-    res.status(500).json({ ok: false, error: e?.message ?? "failed" });
-  }
-});
-
-export const aggregateTrendsUsersCron = onSchedule(
-  { schedule: "0 * * * *", timeZone: "Asia/Tokyo" },
-  async () => {
-    await aggregateUsersTrend(72);
-  }
-);
-
-/* ============================================================================
- * ゲーム確定トリガー（posts 判定 → 集計反映）
- * ==========================================================================*/
-
-// ✅ V1
-export { onGameFinal };
-
-// ✅ V2
-export { onGameFinalV2 };
-
-/* ============================================================================
- * NEW: 毎日1回、user_stats 再集計
- * ==========================================================================*/
-
-// ✅ V1
-export const rebuildUserStatsDailyCron = onSchedule(
-  { schedule: "10 4 * * *", timeZone: "Asia/Tokyo" },
-  async () => {
-    console.log("[rebuildUserStatsDailyCron] start");
-
-    try {
-      const snap = await db.collection("users").select().get();
-
-      for (const docSnap of snap.docs) {
-        const uid = docSnap.id;
-        try {
-          await recomputeUserStatsFromDaily(uid);
-        } catch (e) {
-          console.error(`[rebuildUserStatsDailyCron] failed for uid=${uid}`, e);
-        }
-      }
-
-      console.log(
-        `[rebuildUserStatsDailyCron] done. processed users=${snap.size}`
-      );
-    } catch (e) {
-      console.error("[rebuildUserStatsDailyCron] fatal error", e);
-    }
-  }
-);
-// ★ チームランキングを毎日 24:00 に更新
 import { updateTeamRankings } from "./ranking/updateTeamRankings";
 
 export const updateTeamRankingsDaily = onSchedule(
   { schedule: "0 0 * * *", timeZone: "Asia/Tokyo" },
   async () => {
-    console.log("[updateTeamRankingsDaily] start");
     await updateTeamRankings();
-    console.log("[updateTeamRankingsDaily] done");
   }
 );
 
-// ✅ V2
-export { recomputeAllUsersStatsV2Daily };
-
 /* ============================================================================
- * ✅ V2 リーグ別ランキング Cron
- * ==========================================================================*/
-
-export { rebuildLeaderboardV2Cron };
-
-/* ============================================================================
- * その他 Analytics
+ * Analytics
  * ==========================================================================*/
 
 export { dailyAnalytics } from "./analytics/daily";
 export { logUserActive } from "./analytics/logUserActive";
 export { runDailyAnalytics } from "./analytics/runDaily";
 
-// ==========================
-// 手動実行できる Daily Analytics HTTP 関数
-// ==========================
-
-export const runDailyAnalyticsHttp = onRequest(async (req, res) => {
+export const runDailyAnalyticsHttp = onRequest(async (_req, res) => {
   try {
     const result = await dailyAnalyticsCore();
     res.status(200).json({ ok: true, result });
   } catch (err: any) {
-    console.error("[runDailyAnalyticsHttp] failed:", err);
     res.status(500).json({ ok: false, error: String(err) });
   }
 });
 
 /* ============================================================================
- * 手動 Seed: teams JSON を Firestore に一括投入
+ * Seed
  * ==========================================================================*/
 
 export const seedTeamsHttp = onRequest(async (_req, res) => {
@@ -246,7 +176,6 @@ export const seedTeamsHttp = onRequest(async (_req, res) => {
     await seedTeams();
     res.status(200).json({ ok: true });
   } catch (err: any) {
-    console.error("[seedTeamsHttp] failed:", err);
     res.status(500).json({ ok: false, error: String(err) });
   }
 });

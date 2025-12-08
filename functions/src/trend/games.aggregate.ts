@@ -118,7 +118,7 @@ export async function aggregateGamesTrend() {
     const league = (e.league || "").toUpperCase();
 
     if (!gameId || !league) continue;
-    if (league !== "B1" && league !== "J1") continue;
+    if (league !== "B1" && league !== "J1" && league !== "NBA") continue;
 
     // イベント時刻
     let at: Timestamp;

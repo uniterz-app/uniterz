@@ -10,19 +10,18 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import PredictionPostCard, {
-  type PredictionPost,
-} from "@/app/component/post/PredictionPostCard";
+import PredictionPostCard from "@/app/component/post/PredictionPostCardV2";
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
-const LIMIT = 15;
-const MAX_DAYS_BACK = 7; // ← 最大7日遡る
+const LIMIT = 20;          // ← 上位20件
+const MAX_DAYS_BACK = 7;   // ← 最大7日遡る
 
 export default function TrendHitPostsSection() {
-  const [posts, setPosts] = useState<PredictionPost[] | null>(null);
+  const [posts, setPosts] = useState<PredictionPostV2[] | null>(null);
 
   useEffect(() => {
     (async () => {
-      let finalPosts: PredictionPost[] = [];
+      let finalPosts: PredictionPostV2[] = [];
 
       // 今日 0:00（基準）
       const base = new Date();
@@ -35,7 +34,7 @@ export default function TrendHitPostsSection() {
         const end = new Date(base);
         end.setDate(end.getDate() - (i - 1));
 
-        // Firestore クエリ（settledAt の範囲だけ）
+        // settledAt の範囲 → 1日分
         const q = query(
           collectionGroup(db, "posts"),
           where("settledAt", ">=", Timestamp.fromDate(start)),
@@ -45,23 +44,80 @@ export default function TrendHitPostsSection() {
 
         const snap = await getDocs(q);
 
-        // ヒット投稿をフィルタ
+        // PredictionPostV2 として成形
         const filtered = snap.docs
-          .map((d) => ({ id: d.id, ...(d.data() as any) } as PredictionPost))
+          .map((d) => {
+            const raw = d.data() as any;
+
+const post: PredictionPostV2 = {
+  id: d.id,
+
+  // ---- Author ----
+  author: {
+    name: raw.author?.name ?? raw.authorDisplayName ?? "ユーザー",
+    avatarUrl: raw.author?.avatarUrl ?? raw.authorPhotoURL ?? "",
+  },
+  authorUid: raw.authorUid ?? "",
+  authorHandle: raw.authorHandle ?? null,
+
+  createdAtText: raw.createdAtText ?? "",
+  startAtMillis: typeof raw.startAtMillis === "number" ? raw.startAtMillis : null,
+
+  // ---- 必須: league / status ----
+  league: raw.league ?? raw.game?.league ?? "bj",
+  status: raw.status ?? raw.game?.status ?? "final",
+
+  // ---- 必須: home / away (V2仕様に整形) ----
+  home: {
+    name: raw.home?.name ?? raw.game?.home ?? "",
+    teamId: raw.home?.teamId ?? "",
+    number: raw.home?.number,
+    record: raw.home?.record ?? null,
+  },
+  away: {
+    name: raw.away?.name ?? raw.game?.away ?? "",
+    teamId: raw.away?.teamId ?? "",
+    number: raw.away?.number,
+    record: raw.away?.record ?? null,
+  },
+
+  // ---- 旧 game ブロック（互換のため残す）----
+  game: raw.game ?? null,
+
+  gameId: raw.gameId ?? "",
+
+  prediction: raw.prediction ?? {
+    winner: "home",
+    confidence: 50,
+    score: { home: 0, away: 0 },
+  },
+
+  stats: raw.stats ?? null,
+  note: raw.note ?? "",
+
+  likeCount: raw.likeCount ?? 0,
+  saveCount: raw.saveCount ?? 0,
+};
+
+            return post;
+          })
           .filter((p) => {
-            if (p.resultUnits == null || p.resultUnits <= 0) return false;
-            return Array.isArray(p.legs) && p.legs.some((l) => l.outcome === "hit");
+            // 「的中している投稿」を抽出
+            return p.stats?.isWin === true;
           });
 
         if (filtered.length > 0) {
-          // 見つかったらソート → 上位15件 → 採用して終了
+          // ★ スコア精度（scorePrecision）が高い順
           finalPosts = filtered
-            .sort((a, b) => (b.resultUnits ?? 0) - (a.resultUnits ?? 0))
+            .sort(
+              (a, b) =>
+                (b.stats?.scorePrecision ?? 0) -
+                (a.stats?.scorePrecision ?? 0)
+            )
             .slice(0, LIMIT);
+
           break;
         }
-
-        // 見つからなかったら 次の日へ遡る → ループ続行
       }
 
       setPosts(finalPosts);

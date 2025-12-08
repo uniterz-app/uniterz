@@ -25,8 +25,9 @@ export default function TrendPanel() {
   const isMobile = basePath === "/mobile";
 
   const [cache, setCache] = useState<TrendCacheGames | null>(null);
-  const [b1Cards, setB1Cards] = useState<MatchCardProps[]>([]);
-  const [j1Cards, setJ1Cards] = useState<MatchCardProps[]>([]);
+  const [leagueCards, setLeagueCards] = useState<
+    Record<string, MatchCardProps[]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -46,6 +47,7 @@ export default function TrendPanel() {
 
   useEffect(() => {
     let mounted = true;
+
     (async () => {
       try {
         setLoading(true);
@@ -53,27 +55,32 @@ export default function TrendPanel() {
         if (!mounted) return;
         setCache(c);
 
-        const b1Top = selectLeagueGames(c, "B1", 1);
-        const j1Top = selectLeagueGames(c, "J1", 1);
+        // 🔥 表示順序はここで制御（今は NBA → B1）
+        const TARGET_LEAGUES = [
+          { key: "NBA", label: "NBA" },
+          { key: "B1", label: "B.LEAGUE (B1)" },
+        ];
 
-        const [b1Props, j1Props] = await Promise.all([
-          Promise.all(b1Top.map((g) => fetchGameProps(g.gameId))).then((arr) =>
-            arr.filter(Boolean) as MatchCardProps[]
-          ),
-          Promise.all(j1Top.map((g) => fetchGameProps(g.gameId))).then((arr) =>
-            arr.filter(Boolean) as MatchCardProps[]
-          ),
-        ]);
+        const cards: Record<string, MatchCardProps[]> = {};
+
+        // 🔥 各リーグの HOT 試合を取得
+        for (const lg of TARGET_LEAGUES) {
+          const topGames = selectLeagueGames(c, lg.key, 1);
+
+          cards[lg.key] = await Promise.all(
+            topGames.map((g) => fetchGameProps(g.gameId))
+          ).then((arr) => arr.filter(Boolean) as MatchCardProps[]);
+        }
 
         if (!mounted) return;
-        setB1Cards(b1Props);
-        setJ1Cards(j1Props);
+        setLeagueCards(cards);
       } catch (e: any) {
         if (mounted) setErr(e?.message ?? "failed to load trend data");
       } finally {
         if (mounted) setLoading(false);
       }
     })();
+
     return () => {
       mounted = false;
     };
@@ -94,45 +101,28 @@ export default function TrendPanel() {
         )}
       </div>
 
-      {/* B1 */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-white/80">
-          B.LEAGUE (B1)
-        </h3>
+      {/* 🔥 動的表示（NBA → B1） */}
+      {Object.entries(leagueCards).map(([lg, cards]) => (
+        <section key={lg} className="space-y-3">
+          <h3 className="text-sm font-semibold text-white/80">
+            {lg === "NBA" ? "NBA" : lg === "B1" ? "B.LEAGUE (B1)" : lg}
+          </h3>
 
-        <div className="grid grid-cols-1 gap-4">
-          {b1Cards.length === 0 ? (
-            <EmptyCard />
-          ) : (
-            b1Cards.map((p) => (
-              <HotBadge key={`b1:${p.id}`}>
-                <MatchCard {...p} />
-              </HotBadge>
-            ))
-          )}
-        </div>
-      </section>
+          <div className="grid grid-cols-1 gap-4">
+            {cards.length === 0 ? (
+              <EmptyCard />
+            ) : (
+              cards.map((p) => (
+                <HotBadge key={`${lg}:${p.id}`}>
+                  <MatchCard {...p} />
+                </HotBadge>
+              ))
+            )}
+          </div>
+        </section>
+      ))}
 
-      {/* J1 */}
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-white/80">
-          J.LEAGUE (J1)
-        </h3>
-
-        <div className="grid grid-cols-1 gap-4">
-          {j1Cards.length === 0 ? (
-            <EmptyCard />
-          ) : (
-            j1Cards.map((p) => (
-              <HotBadge key={`j1:${p.id}`}>
-                <MatchCard {...p} />
-              </HotBadge>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* 🔥 ここから追加：前日の的中投稿 */}
+      {/* 的中投稿 */}
       <section className="space-y-3 mt-10">
         <div className="flex items-center gap-2">
           <CheckCircle className="w-5 h-5 text-yellow-400" />

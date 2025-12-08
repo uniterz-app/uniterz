@@ -1,9 +1,10 @@
 "use client";
 import React from "react";
+import type { League } from "@/lib/leagues";  // ← これが重要
 
 type Props = {
-  value: "bj" | "j";
-  onChange: (v: "bj" | "j") => void;
+  value: League;                // ← LeagueV2 → League に変更
+  onChange: (v: League) => void;
   className?: string;
   size?: "sm" | "md" | "lg";
 };
@@ -14,14 +15,25 @@ const sizeMap = {
   lg: "text-base px-4 py-2 rounded-xl",
 } as const;
 
-export default function LeagueTabs({ value, onChange, className, size = "md" }: Props) {
-  const items: Array<{ v: "bj" | "j"; label: string }> = [
-    { v: "bj", label: "B.LEAGUE" },
-    { v: "j", label: "J.LEAGUE" },
-  ];
+/**
+ * UI に表示するリーグだけを制御。
+ * League 型は拡張しても、ここを増やすだけで OK。
+ */
+const DISPLAY_ITEMS: Array<{ v: League; label: string }> = [
+  { v: "nba", label: "NBA" },
+  { v: "bj", label: "B.LEAGUE" },
+  // ← 将来 J1 を表示するなら追加：{ v: "j", label: "J1" }
+];
+
+export default function LeagueTabsV2({
+  value,
+  onChange,
+  className,
+  size = "md",
+}: Props) {
   return (
     <div className={`flex gap-2 ${className ?? ""}`}>
-      {items.map(it => {
+      {DISPLAY_ITEMS.map((it) => {
         const active = it.v === value;
         return (
           <button
@@ -42,3 +54,4 @@ export default function LeagueTabs({ value, onChange, className, size = "md" }: 
     </div>
   );
 }
+

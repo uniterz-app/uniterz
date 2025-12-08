@@ -41,8 +41,11 @@ function baseMeta() {
 export async function logGameEvent(payload: {
   type: GameEventType;
   gameId: string;
-  league: "B1" | "J1";
+  league: string;
+  ts?: number;
+  weight?: number;
 }) {
+
   const docData = { ...payload, ...baseMeta() };
 
   if (DRY_RUN) {

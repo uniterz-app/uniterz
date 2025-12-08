@@ -10,7 +10,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 const PredictionForm = dynamic(
-  () => import("@/app/component/predict/PredictionForm"),
+  () => import("@/app/component/predict/PredictionFormV2"),
   { ssr: false }
 );
 

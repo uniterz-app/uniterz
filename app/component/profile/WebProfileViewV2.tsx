@@ -224,14 +224,17 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         {tab === "overview" ? (
           <div>
             <SummaryCardsV2
-              data={{
-                posts: summary?.posts ?? 0,
-                winRate: summary?.winRate ?? 0,
-                avgPrecision: summary?.avgPrecision ?? 0,
-                avgBrier: summary?.avgBrier ?? 0,
-                avgUpset: summary?.avgUpset ?? 0,
-              }}
-            />
+            period={range} 
+  data={{
+    fullPosts: summary?.fullPosts ?? 0,  // ← これが全投稿数！
+    posts: summary?.posts ?? 0,          // ← 確定投稿数
+    winRate: summary?.winRate ?? 0,
+    avgPrecision: summary?.avgPrecision ?? 0,
+    avgBrier: summary?.avgBrier ?? 0,
+    avgUpset: summary?.avgUpset ?? 0,
+    calibrationError: summary?.calibrationError ?? 0,
+  }}
+/>
 
             <div className="mt-8 space-y-6">
               {loading && <div className="opacity-70">読み込み中…</div>}

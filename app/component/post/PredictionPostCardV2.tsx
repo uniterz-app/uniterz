@@ -8,6 +8,7 @@ import { Heart, Bookmark, Pencil, Trash2, X, Check } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { toast } from "sonner";
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { motion } from "framer-motion";
 import {
   doc,
@@ -21,19 +22,22 @@ import {
 
 /* ← これを追加 */
 import Jersey from "@/app/component/games/icons/jersey.svg";
-import { teamColorsB1 } from "@/lib/teams-b1";
+import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { normalizeLeague } from "@/lib/leagues";
+import { usePathname } from "next/navigation";
+import { usePrefix } from "@/app/PrefixContext";
 
-function getPrimaryColor(teamName: string) {
-  return teamColorsB1[teamName]?.primary ?? "#ffffff";
-}
+
 
 
 export default function PredictionPostCardV2({
   post,
   mode = "list",
+  profileHref,
 }: {
   post: PredictionPostV2;
   mode?: "list" | "detail";
+  profileHref?: string;
 }) {
   const router = useRouter();
 
@@ -147,17 +151,34 @@ export default function PredictionPostCardV2({
     frame = "ring-2 ring-red-400/70 border-red-400";
   }
 
-  const profileUrl = `/mobile/u/${post.authorHandle ?? post.authorUid}`;
+  const prefix = usePrefix();
+/* ================================================
+ * C: 修正 → mobile 固定をやめて prefix を使う
+ * ================================================ */
+const profileUrl =
+  profileHref ?? `${prefix}/u/${post.authorHandle ?? post.authorUid}`;
 
   /* ----------------------
    * winner info
    * ---------------------- */
-  const winnerTeamRaw =
-    post.prediction.winner === "home"
-      ? post.game?.home
-      : post.game?.away;
+ const homeName = post.home?.name ?? "HOME";
+const awayName = post.away?.name ?? "AWAY";
 
-  const iconColor = getPrimaryColor(winnerTeamRaw ?? "");
+const winnerTeamRaw =
+  post.prediction.winner === "home" ? homeName : awayName;
+
+const normalizedLeague = normalizeLeague(post.league);
+
+const winnerTeamId =
+  post.prediction.winner === "home"
+    ? post.home?.teamId
+    : post.away?.teamId;
+
+const iconColor = getTeamPrimaryColor(
+  normalizedLeague,
+  winnerTeamId
+);
+
 
   const scoreText = `${post.prediction.score.home} - ${post.prediction.score.away}`;
 
@@ -168,8 +189,12 @@ export default function PredictionPostCardV2({
     <div
       className={cn("rounded-3xl p-1 cursor-pointer", frame)}
       onClick={() => {
-        if (mode === "list") router.push(`/post/${post.id}`);
-      }}
+  if (mode === "list") {
+    router.push(`${prefix}/post/${post.id}`);
+  } else {
+    router.push(`${prefix}/games/${post.gameId}/predictions`);
+  }
+}}
     >
       <div className="rounded-2xl bg-black/10 border border-white/10 p-4 text-white">
         {/* --------------------
@@ -200,12 +225,12 @@ export default function PredictionPostCardV2({
               className="mt-0.5 text-sm md:text-lg font-extrabold tracking-wide cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/mobile/games/${post.gameId}/predictions`);
+                router.push(`${prefix}/games/${post.gameId}/predictions`);
               }}
             >
-              {post.game?.home}{" "}
-              <span className="opacity-70">vs</span>{" "}
-              {post.game?.away}
+              {post.home.name}{" "}
+<span className="opacity-70">vs</span>{" "}
+{post.away.name}
             </div>
           </div>
         </Link>

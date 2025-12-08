@@ -26,29 +26,34 @@ export default function Tooltip({
 
   const top = anchorRect.top - 60;
 
-  // 外側タップで閉じる
+  // 外側クリックで閉じる（capture=true が重要）
   useEffect(() => {
-    const handler = () => onClose();
-    window.addEventListener("click", handler);
-    return () => window.removeEventListener("click", handler);
+    function handler(e: MouseEvent) {
+      const box = document.getElementById("tooltip-box");
+      if (box && box.contains(e.target as Node)) return; // 内側クリックは無視
+      onClose();
+    }
+
+    window.addEventListener("click", handler, true); // ← ★ 重要
+    return () => window.removeEventListener("click", handler, true);
   }, [onClose]);
 
   return (
     <div
       className="fixed z-[9999]"
       style={{ top, left, width }}
-      onClick={(e) => e.stopPropagation()} // ← 外側クリックを吸わない
+      onClick={(e) => e.stopPropagation()} // tooltip 外へのバブリングを防ぐ
     >
-      {/* ⭐ 吹き出し本体に onClick={onClose} を追加 */}
+      {/* 吹き出し本体 */}
       <div
+        id="tooltip-box"
         className="relative bg-gray-800 text-white text-[13px] rounded-lg p-3 shadow-xl"
-        onClick={onClose} // ←🔥 これで吹き出しタップでも閉じる
       >
         <div className="leading-relaxed">{message}</div>
 
         {/* ▼ 三角形 */}
         <div
-          className="absolute left-[80%] -bottom-2 w-0 h-0 -translate-x-1/2"
+          className="absolute left-[50%] -bottom-2 w-0 h-0 -translate-x-1/2"
           style={{
             borderLeft: "7px solid transparent",
             borderRight: "7px solid transparent",

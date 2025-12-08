@@ -1,7 +1,6 @@
 // lib/toUiPost.ts
-import type { PredictionPost, PredictionLeg } from "@/app/component/post/PredictionPostCard";
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
-/* ---- 内部 util ---- */
 const pickName = (v: any) => (typeof v === "string" ? v : v?.name ?? "");
 
 function fmtCreatedAt(ts?: any): string {
@@ -20,64 +19,143 @@ function fmtCreatedAt(ts?: any): string {
   }).format(d);
 }
 
-/* ---- メイン：Firestore → PredictionPost に変換 ---- */
-export function toUiPost(id: string, x: any): PredictionPost {
-  const g = x?.game ?? {};
+const normalizeLeague = (v: any): "bj" | "j1" | "nba" => {
+  const s = String(v ?? "").toLowerCase();
+  if (s === "bj" || s === "b1") return "bj";
+  if (s === "j" || s === "j1") return "j1";
+  if (s === "nba") return "nba";
+  return "bj";
+};
 
-  const league = g.league ?? x.league ?? "bj";
-  const home = pickName(g.home ?? x.home);
-  const away = pickName(g.away ?? x.away);
-  const status = String(g.status ?? x.status ?? "scheduled").toLowerCase();
-  const finalScore = g.finalScore ?? x.finalScore ?? undefined;
+export function toUiPost(id: string, x: any): PredictionPostV2 {
+  const createdAtMillis =
+    x?.createdAt?.toMillis?.() ??
+    (typeof x?.createdAt === "number" ? x.createdAt : null);
 
-  const legs: PredictionLeg[] = Array.isArray(x?.legs)
-    ? x.legs
-        .map((l: any) => ({
-          kind:
-            l?.kind === "secondary"
-              ? "secondary"
-              : l?.kind === "tertiary"
-              ? "tertiary"
-              : "main",
-          label: String(l?.label ?? ""),
-          odds: Number(l?.odds ?? 0),
-          pct: Number(l?.pct ?? 0),
-          outcome:
-            l?.outcome === "hit" ||
-            l?.outcome === "miss" ||
-            l?.outcome === "void"
-              ? l.outcome
-              : "pending",
-        }))
-        .filter((l: PredictionLeg) => l.label && Number.isFinite(l.odds))
-    : [];
+  const createdAtText = fmtCreatedAt(x?.createdAt);
 
-  return {
-    id,
-    author: x?.authorDisplayName
+  /* ----------------------------
+     league / status（literal化）
+  ---------------------------- */
+  const league = normalizeLeague(x?.league ?? "bj");
+
+  const status =
+    x?.status === "live"
+      ? ("live" as const)
+      : x?.status === "final"
+      ? ("final" as const)
+      : ("scheduled" as const);
+
+  /* ----------------------------
+     team objects（絶対オブジェクト化）
+  ---------------------------- */
+  const rawHome = x?.home ?? x?.game?.home ?? {};
+  const rawAway = x?.away ?? x?.game?.away ?? {};
+
+  const home = {
+    name: pickName(rawHome),
+    teamId: rawHome?.teamId ?? "",
+    number: rawHome?.number,
+    record: rawHome?.record ?? null,
+  };
+
+  const away = {
+    name: pickName(rawAway),
+    teamId: rawAway?.teamId ?? "",
+    number: rawAway?.number,
+    record: rawAway?.record ?? null,
+  };
+
+  /* ----------------------------
+     old game block（UI補助用）
+  ---------------------------- */
+  const game = {
+    league,
+    home: home.name,
+    away: away.name,
+    status: status, // ← literal 型のまま
+    finalScore: x?.finalScore ?? x?.game?.finalScore ?? null,
+  };
+
+  /* ----------------------------
+     prediction（literal化）
+  ---------------------------- */
+  /* winner は prediction.winner ではなく score.winner を使う */
+const winner =
+  x?.score?.winner === "home" || x?.score?.winner === "away"
+    ? x.score.winner
+    : null;
+
+  const prediction = {
+  winner,
+  confidence: Number(x?.prediction?.confidence ?? 50),
+
+  // ★ 正しくは x.score から取る
+  score: {
+    home: Number(x?.score?.home ?? 0),
+    away: Number(x?.score?.away ?? 0),
+  },
+};
+
+  /* ----------------------------
+     stats
+  ---------------------------- */
+  const stats =
+    x?.stats
+      ? {
+          isWin:
+            typeof x.stats.isWin === "boolean" ? x.stats.isWin : null,
+          upsetScore:
+            typeof x.stats.upsetScore === "number"
+              ? x.stats.upsetScore
+              : null,
+        }
+      : null;
+
+  /* ----------------------------
+     author
+  ---------------------------- */
+  const author =
+    x?.author
+      ? {
+          name: x.author?.name ?? "ユーザー",
+          avatarUrl: x.author?.avatarUrl ?? undefined,
+        }
+      : x?.authorDisplayName
       ? {
           name: x.authorDisplayName,
           avatarUrl: x.authorPhotoURL ?? undefined,
         }
-      : undefined,
+      : null;
 
-    createdAtText: fmtCreatedAt(x?.createdAt),
+  /* ----------------------------
+     最終的に PredictionPostV2 を返す
+  ---------------------------- */
+  return {
+    id,
 
-    game:
-      league && (home || away)
-        ? ({ league, home, away, status, finalScore } as any)
-        : undefined,
-        gameId: x?.game?.gameId ?? x?.gameId ?? null,
-        legs,
+    league,
+    status,
 
-    resultUnits: typeof x?.resultUnits === "number" ? x.resultUnits : null,
-    note: typeof x?.note === "string" ? x.note : "",
+    home,
+    away,
 
     authorUid: x?.authorUid ?? null,
     authorHandle: x?.authorHandle ?? null,
-    startAtMillis: typeof x?.startAtMillis === "number" ? x.startAtMillis : null,
+    author,
 
-    likeCount: Number.isFinite(x?.likeCount) ? Number(x.likeCount) : 0,
-    saveCount: Number.isFinite(x?.saveCount) ? Number(x.saveCount) : 0,
+    createdAtText,
+    createdAtMillis,
+
+    gameId: x?.gameId ?? null,
+    game,
+
+    prediction,
+    note: typeof x?.note === "string" ? x.note : "",
+
+    likeCount: Number(x?.likeCount ?? 0),
+    saveCount: Number(x?.saveCount ?? 0),
+
+    stats,
   };
 }

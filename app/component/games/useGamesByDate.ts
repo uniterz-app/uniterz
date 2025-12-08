@@ -1,4 +1,3 @@
-// app/component/games/useGamesByDate.ts
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +12,9 @@ import {
   Timestamp,
 } from "firebase/firestore";
 
-type League = "bj" | "j";
+import type { League } from "@/lib/leagues";       // ← ★ 重要：共通 League を使う
+import { normalizeLeague } from "@/lib/leagues";   // ← ★ Firestore の揺れ対策
+
 const SEASON = "2025-26";
 
 // JST の 1 日境界
@@ -26,10 +27,13 @@ const jstDayRange = (d: Date) => {
   };
 };
 
-export function useGamesByDate(league: League, jstDate: Date | null) {
+export function useGamesByDate(rawLeague: League, jstDate: Date | null) {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<string | null>(null);
+
+  // ★ Firestore 内 "B1" や "j1" などの揺れを吸収して League 型に正規化
+  const league = normalizeLeague(rawLeague);
 
   // ★ jstDate が null なら空データを返す
   if (!jstDate) {

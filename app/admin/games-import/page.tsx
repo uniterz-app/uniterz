@@ -3,6 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "@/lib/firebase";
+import { TEAM_IDS } from "@/lib/team-ids";
+import { League, normalizeLeague } from "@/lib/leagues";
 import {
   Timestamp,
   doc,
@@ -16,7 +18,6 @@ const ADMIN_UID =
 /* =========================
    Types
 ========================= */
-type League = "bj" | "j";
 
 type RawSide =
   | string
@@ -89,6 +90,27 @@ function seasonFromDate(d: Date): string {
   const y = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1;
   return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
 }
+function seasonFromDateByLeague(league: League, d: Date): string {
+  // B.LEAGUE（8月〜翌7月）
+  if (league === "bj") {
+    const y = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1;
+    return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+  }
+
+  // J1（シーズンは西暦固定）
+  if (league === "j1") {
+    return String(d.getFullYear());
+  }
+
+  // NBA（10月〜翌6月）
+  if (league === "nba") {
+    const y = d.getMonth() >= 9 ? d.getFullYear() : d.getFullYear() - 1;
+    return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+  }
+
+  return String(d.getFullYear());
+}
+
 
 /**
  * undefined を除去（ネスト対応）。
@@ -121,7 +143,7 @@ function normalizeRow(r: RawGame): Preview {
     const id = String(r?.id ?? "").trim();
     if (!id) return { ok: false, reason: "id が空です" };
 
-    const league: League = r?.league === "j" ? "j" : "bj";
+    const league = normalizeLeague(r?.league);
 
     // --- 時刻ソース（優先順位: startAt → startAtJstIso → startAtJst）---
     const sourceTime = (() => {
@@ -148,9 +170,9 @@ function normalizeRow(r: RawGame): Preview {
     const jsDate = new Date(ts.toMillis());
 
     const season =
-      typeof r.season === "string" && r.season.trim()
-        ? r.season.trim()
-        : seasonFromDate(jsDate);
+  typeof r.season === "string" && r.season.trim()
+    ? r.season.trim()
+    : seasonFromDateByLeague(league, jsDate);
 
     const status = ((): "scheduled" | "live" | "final" => {
       const s = String(r?.status ?? "scheduled").toLowerCase();
@@ -160,16 +182,38 @@ function normalizeRow(r: RawGame): Preview {
     })();
 
     // colorHex / teamId は存在するときのみキーを持たせる
-    const toSide = (x: RawSide) =>
-      typeof x === "string"
-        ? { name: x, record: { w: 0, l: 0 }, number: 8 }
-        : omitUndefined({
-            name: x?.name ?? "",
-            record: x?.record ?? { w: 0, l: 0 },
-            number: x?.number ?? 8,
-            ...(x && (x as any).colorHex ? { colorHex: (x as any).colorHex } : {}),
-            ...(x && (x as any).teamId ? { teamId: (x as any).teamId } : {}),
-          });
+const toSide = (x: RawSide) => {
+  // --- 文字列だけ渡された場合（例: "浦和レッズ"）---
+  if (typeof x === "string") {
+    const mappedId = TEAM_IDS[x];
+    if (!mappedId) {
+      console.warn(`⚠ TEAM_IDS に存在しないチーム名: ${x}`);
+    }
+    return {
+      name: x,
+      record: { w: 0, l: 0 },
+      number: 8,
+      teamId: mappedId,
+    };
+  }
+
+  // --- オブジェクトとして渡された場合 ---
+  const name = x?.name ?? "";
+  const mappedId = x?.teamId ?? TEAM_IDS[name];
+
+  if (!mappedId) {
+    console.warn(`⚠ TEAM_IDS に存在しないチーム名: ${name}`);
+  }
+
+  return omitUndefined({
+    name,
+    record: x?.record ?? { w: 0, l: 0 },
+    number: x?.number ?? 8,
+    teamId: mappedId,
+    ...(x?.colorHex ? { colorHex: x.colorHex } : {}),
+  });
+};
+
 
     return {
       ok: true,

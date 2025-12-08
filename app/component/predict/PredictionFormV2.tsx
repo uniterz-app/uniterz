@@ -29,7 +29,11 @@ export default function PredictionForm({
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = !!winner && !submitting;
+  const canSubmit =
+  !!winner &&
+  scoreHome !== "" &&
+  scoreAway !== "" &&
+  !submitting;
 
   const padX = dense ? "px-3" : "px-6";
   const padY = dense ? "py-3" : "py-6";
@@ -104,17 +108,23 @@ const handleSubmit = async () => {
 
     const json = await res.json();
 
-    // analytics
-    try {
-      const normalizedLeague = (game.league === "bj" ? "B1" : "J1") as
-        | "B1"
-        | "J1";
-      void logGameEvent({
-        type: "predict",
-        gameId: (game as any).id,
-        league: normalizedLeague,
-      });
-    } catch {}
+   // analytics
+try {
+  // 送信用の統一リーグ名
+  const normalizedLeague =
+    game.league === "bj"
+      ? "B1"
+      : game.league === "j1"
+      ? "J1"
+      : game.league.toUpperCase(); // nba → NBA など
+
+  void logGameEvent({
+    type: "predict",
+    gameId: (game as any).id,
+    league: normalizedLeague,
+  });
+} catch {}
+
 
     toast.success("予想を投稿しました");
 

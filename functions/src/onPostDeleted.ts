@@ -1,25 +1,29 @@
+// functions/src/onPostDeletedV2.ts
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { recomputeUserStatsFromDaily } from "./updateUserStats";
+import { recomputeUserStatsV2FromDaily } from "./updateUserStatsV2";
 
-export const onPostDeleted = onDocumentDeleted(
+export const onPostDeletedV2 = onDocumentDeleted(
   {
     document: "posts/{postId}",
     region: "asia-northeast1",
   },
   async (event) => {
-    const beforeSnap = event.data; // QueryDocumentSnapshot
-    if (!beforeSnap) return;
+    const snap = event.data;
+    if (!snap) return;
 
-    const before = beforeSnap.data() as any; // ← createdAt / authorUid はここに存在
+    const before = snap.data() as any;
     if (!before) return;
 
     const uid = before.authorUid;
-    const createdAt = before.createdAt as Timestamp;
+    const createdAt: Timestamp = before.createdAt;
+    const stats = before.stats;
 
-    if (!uid || !createdAt) return;
+    if (!uid || !createdAt || !stats) return;
 
-    // ===== JST YYYY-MM-DD =====
+    const db = getFirestore();
+
+    // ===== JSTの日付キー =====
     const d = createdAt.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const yyyy = j.getUTCFullYear();
@@ -27,38 +31,47 @@ export const onPostDeleted = onDocumentDeleted(
     const dd = String(j.getUTCDate()).padStart(2, "0");
     const dateKey = `${yyyy}-${mm}-${dd}`;
 
-    const db = getFirestore();
+    const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
+    const postMarkerRef = dailyRef.collection("applied_posts").doc(snap.id);
 
-    // ===== daily 更新 =====
-    const dailyRef = db.doc(`user_stats_daily/${uid}_${dateKey}`);
+    const isWin = stats.isWin === true;
+    const scoreError = stats.scoreError ?? 0;
+    const brier = stats.brier ?? 0;
+    const upset = isWin ? (stats.upsetScore ?? 0) : 0;
+    const precision = stats.scorePrecision ?? 0;
 
-    await dailyRef.set(
-      {
-        date: dateKey,
-        createdPosts: FieldValue.increment(-1),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    // ===== stats 更新（postsTotal だけ -1） =====
-    const statsRef = db.doc(`user_stats/${uid}`);
-    const ranges = ["7d", "30d", "all"];
-
+    // ===== daily の逆操作 =====
     await db.runTransaction(async (tx) => {
-      const snap = await tx.get(statsRef);
-      const data = snap.data() || {};
-      const after = { ...data };
+      const dailySnap = await tx.get(dailyRef);
+      if (!dailySnap.exists) return;
 
-      for (const r of ranges) {
-        const bucket = { ...(data[r] || {}) };
-        bucket.postsTotal = Math.max((bucket.postsTotal || 0) - 1, 0);
-        after[r] = bucket;
+      const inc: any = {
+        posts: FieldValue.increment(-1),
+        wins: FieldValue.increment(isWin ? -1 : 0),
+        scoreErrorSum: FieldValue.increment(-scoreError),
+        brierSum: FieldValue.increment(-brier),
+        upsetScoreSum: FieldValue.increment(-upset),
+        scorePrecisionSum: FieldValue.increment(-precision),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      // all に適用
+      tx.set(dailyRef, { all: inc }, { merge: true });
+
+      // leagues に適用
+      const leagueKey = before.game?.league ?? null;
+      if (leagueKey) {
+        tx.set(
+          dailyRef,
+          { leagues: { [leagueKey]: inc } },
+          { merge: true }
+        );
       }
 
-      tx.set(statsRef, after, { merge: true });
+      tx.delete(postMarkerRef);
     });
 
-    await recomputeUserStatsFromDaily(uid);
+    // ===== user_stats_v2 の再計算 =====
+    await recomputeUserStatsV2FromDaily(uid);
   }
 );

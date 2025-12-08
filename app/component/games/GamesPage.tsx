@@ -9,10 +9,13 @@ import usePageSwipe from "./usePageSwipe";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGamesByDate } from "./useGamesByDate";
 import { useGameDays } from "./useGameDays";
-import type { League } from "@/app/component/games/MatchCard";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import type { League } from "@/lib/leagues";
+import { LEAGUES } from "@/lib/leagues";
+
+
 
 // ---- Utils ----
 function isSameDay(a: Date, b: Date) {
@@ -40,15 +43,22 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const search = useSearchParams();
 
   // ---------- League ----------
-  const initLg = (search.get("lg") === "j" ? "j" : "bj") as League;
+  const initLg = "nba" as League;
   const [league, setLeague] = useState<League>(initLg);
 
   useEffect(() => {
-    const current = search.get("lg");
-    if (current !== league) {
-      router.replace(`?lg=${league}`, { scroll: false });
-    }
-  }, [league, search, router]);
+  const current = search.get("lg");
+
+  // 初回で bj だったり lg が存在しない場合 → NBA に強制変更
+  if (!current || current === "bj") {
+    router.replace(`?lg=nba`, { scroll: false });
+    return;
+  }
+
+  if (current !== league) {
+    router.replace(`?lg=${league}`, { scroll: false });
+  }
+}, [league, search, router]);
 
   // ---------- 試合日一覧 ----------
   const { gameDays, loading: loadingDays } = useGameDays(league);

@@ -182,15 +182,18 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         {tab === "overview" ? (
           <>
             <SummaryCardsV2
-              compact
-              data={{
-                posts: summaryV2?.posts ?? 0,
-                winRate: summaryV2?.winRate ?? 0,
-                avgPrecision: summaryV2?.avgPrecision ?? 0,
-                avgBrier: summaryV2?.avgBrier ?? 0,
-                avgUpset: summaryV2?.avgUpset ?? 0,
-              }}
-            />
+  compact
+  period={range} 
+  data={{
+    fullPosts: summaryV2?.fullPosts ?? 0, // ← 追加
+    posts: summaryV2?.posts ?? 0,         // 確定投稿数
+    winRate: summaryV2?.winRate ?? 0,
+    avgPrecision: summaryV2?.avgPrecision ?? 0,
+    avgBrier: summaryV2?.avgBrier ?? 0,
+    avgUpset: summaryV2?.avgUpset ?? 0,
+    calibrationError: summaryV2?.calibrationError ?? 0,
+  }}
+/>
 
             <div className="mt-6 space-y-4">
               {loading && <div className="text-sm text-white/70">読み込み中…</div>}

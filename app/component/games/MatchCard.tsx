@@ -13,8 +13,11 @@ import { logGameEvent } from "@/lib/analytics/logEvent";
 import { GAME_EVENT } from "@/lib/analytics/eventTypes";
 /* ★ 追加: 認証トークン取得用 */
 import { auth } from "@/lib/firebase";
+import type { League } from "@/lib/leagues";
+import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { normalizeLeague } from "@/lib/leagues";
 
-export type League = "bj" | "j";
+
 export type Status = "scheduled" | "live" | "final";
 
 export type TeamSide = {
@@ -48,20 +51,16 @@ export type MatchCardProps = {
 };
 
 const leagueLineColor: Record<League, string> = {
-  bj: "#eab308", // 黄
-  j:  "#60a5fa", // 青
+  bj: "#eab308",   // Bリーグ
+  j1: "#22c55e",    // J1（仮）→今後使わないなら何色でもOK
+  nba: "#60a5fa",  // NBA（色は仮）
 };
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 const fmtKickoff = (d: Date | null) =>
   d ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}` : "--:--";
 const fmtRecord = (league: League, r: TeamSide["record"]) => {
-  if (league === "bj") {
-    // バスケ → 引き分けなし
-    return `(${r.w}-${r.l ?? 0})`;
-  }
-  // サッカー → 引き分けあり
-  return `(${r.w}-${r.d ?? 0}-${r.l ?? 0})`;
+  return `(${r.w}-${r.l ?? 0})`;
 };
 
 /** ルートから Web/Mobile の prefix を決定 */
@@ -94,6 +93,18 @@ export default function MatchCard({
 }: MatchCardProps) {
   const router = useRouter();
 
+    // ▼ 追加：モバイル判定
+  const isMobile =
+    typeof window !== "undefined" && window.innerWidth < 768;
+
+  // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
+  function getDisplayName(league: League, l1: string, l2: string): string {
+    if (league === "nba" && isMobile) {
+      return l2 || l1; // ← NBA mobile → line2 だけ
+    }
+    return `${l1}\n${l2 || ""}`;
+  }
+
   /* ▼▼▼▼▼ ここから追加 ▼▼▼▼▼ */
 
   // record をローカル state にコピー
@@ -112,8 +123,14 @@ export default function MatchCard({
 
   /* ▲▲▲▲▲ 追加ここまで ▲▲▲▲▲ */
 
-  const homeColor = home?.colorHex ?? "#0ea5e9";
-  const awayColor = away?.colorHex ?? "#f43f5e";
+  // ▼ チームカラーを teamId から取得する
+const normalizedLeague = normalizeLeague(league);
+
+const homeColor =
+  getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9";
+
+const awayColor =
+  getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e";
 
   const jerseyCls = dense
     ? "w-8 h-8 md:w-14 md:h-14"
@@ -123,7 +140,7 @@ export default function MatchCard({
   const scoreText = dense ? "text-2xl md:text-5xl" : "text-2xl md:text-6xl";
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
-  const Icon = league === "j" ? SoccerBadge : Jersey;
+  const Icon = Jersey;  // NBA も B1 も同じアイコンで良い
 
   // 現在のルートから /m or /web を決める & lg を引き継ぎ
   const prefix = useSectionPrefix();
@@ -218,7 +235,10 @@ export default function MatchCard({
   /* ★ カード全体タップで click_card を送る（DRY_RUN なので console に出るだけ） */
   const handleClickCard = async () => {
     try {
-      const normalizedLeague = league === "bj" ? "B1" : "J1";
+      const normalizedLeague =
+  league === "bj" ? "B1" :
+  league === "nba" ? "NBA" :
+  league;
       await logGameEvent({
         type: GAME_EVENT.CLICK_CARD,
         gameId: id,
@@ -232,7 +252,10 @@ export default function MatchCard({
   /* ★ 「予想を見る」クリック時の open_predictions を送る（遷移をブロックしない） */
   const handleOpenPredictions = () => {
     try {
-      const normalizedLeague = league === "bj" ? "B1" : "J1";
+      const normalizedLeague =
+  league === "bj" ? "B1" :
+  league === "nba" ? "NBA" :
+  league;
       void logGameEvent({
         type: GAME_EVENT.OPEN_PREDICTIONS,
         gameId: id,
@@ -369,26 +392,17 @@ export default function MatchCard({
   HOME
 </div>
           <Icon className={`${jerseyCls} -mt-4 md:mt-0`} fill={homeColor} stroke="#fff" />
-          <div className="md:hidden mt-1 text-center leading-tight">
-            <div
-              className="text-[12px]"
-              style={{
-                fontFamily:
-                  '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-              }}
-            >
-              {homeL1}
-            </div>
-            <div
-              className="text-[12px]"
-              style={{
-                fontFamily:
-                  '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-              }}
-            >
-              {homeL2 || "\u00A0"}
-            </div>
-          </div>
+          <div className="md:hidden mt-1 text-center leading-tight whitespace-pre-line">
+  <span
+    className="text-[12px]"
+    style={{
+      fontFamily:
+        '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+    }}
+  >
+    {getDisplayName(league, homeL1, homeL2)}
+  </span>
+</div>
 
           {/* Web：1行（HOME） */}
           <div className="hidden md:block mt-2 text-center leading-tight">
@@ -419,26 +433,17 @@ export default function MatchCard({
 </div>
 
           <Icon className={`${jerseyCls} -mt-4 md:mt-0`} fill={awayColor} stroke="#fff" />
-          <div className="md:hidden mt-1 text-center leading-tight">
-            <div
-              className="text-[12px]"
-              style={{
-                fontFamily:
-                  '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-              }}
-            >
-              {awayL1}
-            </div>
-            <div
-              className="text-[12px]"
-              style={{
-                fontFamily:
-                  '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-              }}
-            >
-              {awayL2 || "\u00A0"}
-            </div>
-          </div>
+          <div className="md:hidden mt-1 text-center leading-tight whitespace-pre-line">
+  <span
+    className="text-[12px]"
+    style={{
+      fontFamily:
+        '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+    }}
+  >
+    {getDisplayName(league, awayL1, awayL2)}
+  </span>
+</div>
 
           {/* Web：1行（AWAY） */}
           <div className="hidden md:block mt-2 text-center leading-tight">

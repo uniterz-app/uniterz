@@ -12,33 +12,27 @@ import type {
   RankingResponse,
 } from "@/lib/rankings/types";
 
-/* ====== 固定レイアウト用定数（高さを揃える） ====== */
-const MAX_AVATAR = 70;                 // 1位の直径
-const AVATAR_BOX_H = MAX_AVATAR + 26;  // アバター置き場（全カード共通）
-const CARD_H = 190;                    // カード全体の固定高さ
+/* ====== UI 定数 ====== */
+const MAX_AVATAR = 70;
+const AVATAR_BOX_H = MAX_AVATAR + 26;
+const CARD_H = 190;
 
-/* ====== ★ 追加: エンブレム位置の微調整ノブ ====== */
-// 全バッジ共通の微調整（px）: 右(+) / 下(+)
 const BADGE_GLOBAL_NUDGE = { x: 0, y: 0 };
 
-// ランク別の微調整（px）: 右(+) / 下(+)
 function badgeOffsetByRank(rank: number) {
   const map: Record<number, { x: number; y: number }> = {
-    1: { x: 0,  y: 5 },  // 1位
-    2: { x: -2, y: 2  }, // 2位
-    3: { x: 1,  y: -5 }, // 3位
-    4: { x: 0,  y: 0  },
-    5: { x: 0, y: 0  },
+    1: { x: 0, y: 5 },
+    2: { x: -2, y: 2 },
+    3: { x: 1, y: -5 },
   };
   return map[rank] ?? { x: 0, y: 0 };
 }
 
-/* ====== ★ カラーブロブ背景 ====== */
 function BlobBG({ rank }: { rank: number }) {
   const palette: Record<number, [string, string]> = {
-    1: ["#fef3c7", "#facc15"], // gold
-    2: ["#e0f2fe", "#60a5fa"], // silver-ish
-    3: ["#fed7aa", "#fb923c"], // bronze
+    1: ["#fef3c7", "#facc15"],
+    2: ["#e0f2fe", "#60a5fa"],
+    3: ["#fed7aa", "#fb923c"],
   };
   const [c1, c2] = palette[rank] ?? ["#6ee7b7", "#14b8a6"];
 
@@ -49,25 +43,33 @@ function BlobBG({ rank }: { rank: number }) {
         borderRadius: "1.5rem",
         backgroundImage: `
           radial-gradient(45% 45% at 25% 25%, ${c1} 0%, transparent 60%),
-          radial-gradient(55% 55% at 75% 75%, ${c2} 0%, transparent 70%)
-        `,
+          radial-gradient(55% 55% at 75% 75%, ${c2} 0%, transparent 70%)`,
         filter: "blur(22px)",
-        transform: "translateZ(0)",
       }}
     />
   );
 }
 
-/* ====== ページ本体 ====== */
+/* ============ ページ本体 ============ */
 
 export default function MobileRankingsPage() {
-  const [league, setLeague] = useState<LeagueTab>("all");
-  const [period, setPeriod] = useState<Period>("30d");
+  const [league, setLeague] = useState<LeagueTab>("nba");
+  const [period, setPeriod] = useState<Period>("week");
 
-  const [rowsUnits, setRowsUnits] = useState<RankingRow[]>([]);
-  const [rowsWinRate, setRowsWinRate] = useState<RankingRow[]>([]);
-  const [loadingUnits, setLoadingUnits] = useState(false);
-  const [loadingWin, setLoadingWin] = useState(false);
+  const [rows, setRows] = useState<Record<Metric, RankingRow[]>>({
+    accuracy: [],
+    winRate: [],
+    avgPrecision: [],
+    avgUpset: [],
+  });
+
+  const [loading, setLoading] = useState<Record<Metric, boolean>>({
+    accuracy: false,
+    winRate: false,
+    avgPrecision: false,
+    avgUpset: false,
+  });
+
   const [error, setError] = useState<string | null>(null);
 
   const heroCount = 3;
@@ -75,134 +77,124 @@ export default function MobileRankingsPage() {
 
   const headingStyle: React.CSSProperties = {
     fontFamily:
-      "'Hiragino Kaku Gothic Std','Hiragino Kaku Gothic ProN','Hiragino Sans','ヒラギノ角ゴ ProN W6',system-ui,sans-serif",
+      "'Hiragino Kaku Gothic Std','Hiragino Kaku Gothic ProN','Hiragino Sans',system-ui,sans-serif",
     fontWeight: 800,
     letterSpacing: "0.02em",
   };
 
-  /* ====== API fetch（units / winRate の2本） ====== */
+  /* ====== fetch (V2) ====== */
+  async function fetchMetric(metric: Metric) {
+    try {
+      setLoading((prev) => ({ ...prev, [metric]: true }));
+      const query = `/api/rankings-v2?period=${period}&league=${league}&metric=${metric}&limit=50`;
+
+      const res = await fetch(query);
+      const json: RankingResponse & { error?: string } = await res.json();
+      if (!res.ok) throw new Error(json.error || "load failed");
+
+      setRows((prev) => ({ ...prev, [metric]: json.rows ?? [] }));
+    } catch (e: any) {
+      setError(e?.message ?? "failed to load");
+    } finally {
+      setLoading((prev) => ({ ...prev, [metric]: false }));
+    }
+  }
+
   useEffect(() => {
-    let cancelled = false;
     setError(null);
 
-    const qBase = `period=${encodeURIComponent(period)}&league=${encodeURIComponent(
-      league
-    )}&limit=50`;
+    // 週間 → accuracy, winRate
+    if (period === "week") {
+      fetchMetric("accuracy");
+      fetchMetric("winRate");
+    }
 
-    // units
-    (async () => {
-      try {
-        setLoadingUnits(true);
-        const res = await fetch(`/api/rankings?${qBase}&metric=units`);
-        const json: RankingResponse & { error?: string } = await res.json();
-        if (cancelled) return;
-        if (!res.ok) throw new Error(json.error || "failed to load units ranking");
-        setRowsUnits(json.rows ?? []);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "failed to load units ranking");
-      } finally {
-        if (!cancelled) setLoadingUnits(false);
-      }
-    })();
+    // 月間 → 4 指標
+    if (period === "month") {
+      fetchMetric("accuracy");
+      fetchMetric("winRate");
+      fetchMetric("avgPrecision");
+      fetchMetric("avgUpset");
+    }
+  }, [league, period]);
 
-    // winRate
-    (async () => {
-      try {
-        setLoadingWin(true);
-        const res = await fetch(`/api/rankings?${qBase}&metric=winRate`);
-        const json: RankingResponse & { error?: string } = await res.json();
-        if (cancelled) return;
-        if (!res.ok) throw new Error(json.error || "failed to load winRate ranking");
-        setRowsWinRate(json.rows ?? []);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "failed to load winRate ranking");
-      } finally {
-        if (!cancelled) setLoadingWin(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [period, league]);
-
-  const noData =
-    !loadingUnits &&
-    !loadingWin &&
-    (rowsUnits?.length ?? 0) === 0 &&
-    (rowsWinRate?.length ?? 0) === 0 &&
-    !error;
+  const noData = Object.values(rows).every((arr) => arr.length === 0);
 
   return (
     <>
-      {/* 🟦 追加したヘッダー（Games と同じ h-11） */}
+      {/* ヘッダー */}
       <header className="pt-2 sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md">
-        <div className="relative h-11 flex items-center justify-center px-3 md:px-8">
-          <img
-            src="/logo/logo.png"
-            alt="Uniterz Logo"
-            className="w-10 h-auto select-none"
-          />
+        <div className="relative h-11 flex items-center justify-center px-3">
+          <img src="/logo/logo.png" alt="Uniterz Logo" className="w-10 h-auto" />
         </div>
       </header>
 
-      {/* 元の内容そのまま */}
       <div className="mx-auto w-full px-3 py-6 space-y-6">
         <TabsRow league={league} setLeague={setLeague} period={period} setPeriod={setPeriod} />
 
-        {error && (
-          <p className="mt-4 text-center text-xs text-red-300">
-            ランキングの取得に失敗しました：{error}
-          </p>
-        )}
+        {error && <p className="text-xs text-center text-red-300">{error}</p>}
 
         {noData ? (
-          <p className="mt-8 text-center text-sm text-white/60">
-            対象の期間のランキングデータがまだありません。
-          </p>
+          <p className="text-sm text-center text-white/60">ランキングデータがありません。</p>
         ) : (
           <>
-            {/* 獲得ユニット */}
-            <section className="space-y-4">
-              <h2
-                className="text-white text-[20px] text-center relative -top-5"
-                style={headingStyle}
-              >
-                獲得Unit
-              </h2>
-              <HeroRow
-                rows={rowsUnits}
-                heroCount={heroCount}
-                metric="units"
-                league={league}
-              />
-              <RankingList
-                rows={rowsUnits.slice(heroCount, listCount)}
-                metric="units"
-                baseRank={heroCount}
-              />
-            </section>
+            {/* ======== WEEK（週間） ======== */}
+            {period === "week" && (
+              <>
+                <MobileSection
+                  title="正確性"
+                  metric="accuracy"
+                  rows={rows.accuracy}
+                  league={league}
+                  period={period}
+                />
 
-            {/* 勝率 */}
-            <section className="space-y-4">
-              <h2
-                className="text-white text-[22px] text-center relative -top-5"
-                style={headingStyle}
-              >
-                勝率
-              </h2>
-              <HeroRow
-                rows={rowsWinRate}
-                heroCount={heroCount}
-                metric="winRate"
-                league={league}
-              />
-              <RankingList
-                rows={rowsWinRate.slice(heroCount, listCount)}
-                metric="winRate"
-                baseRank={heroCount}
-              />
-            </section>
+                <MobileSection
+                  title="勝率"
+                  metric="winRate"
+                  rows={rows.winRate}
+                  league={league}
+                  period={period}
+                />
+              </>
+            )}
+
+            {/* ======== MONTH（月間） ======== */}
+            {period === "month" && (
+              <>
+                <MobileSection
+                  title="正確性"
+                  metric="accuracy"
+                  rows={rows.accuracy}
+                  league={league}
+                  period={period}
+                />
+
+                <MobileSection
+                  title="勝率"
+                  metric="winRate"
+                  rows={rows.winRate}
+                  league={league}
+                  period={period}
+                />
+
+                <MobileSection
+                  title="点差精度"
+                  metric="avgPrecision"
+                  rows={rows.avgPrecision}
+                  league={league}
+                  period={period}
+                />
+
+                <MobileSection
+                  title="アップセット指数"
+                  metric="avgUpset"
+                  rows={rows.avgUpset}
+                  league={league}
+                  period={period}
+                />
+              </>
+            )}
           </>
         )}
       </div>
@@ -210,9 +202,49 @@ export default function MobileRankingsPage() {
   );
 }
 
-/* =========================
- * Tabs
- * =======================*/
+/* ============ UI Section ============ */
+
+function MobileSection({
+  title,
+  metric,
+  rows,
+  league,
+  period,
+}: {
+  title: string;
+  metric: Metric;
+  rows: RankingRow[];
+  league: LeagueTab;
+  period: Period;
+}) {
+  const heroCount = 3;
+  const listCount = 20;
+
+  const headingStyle: React.CSSProperties = {
+    fontFamily:
+      "'Hiragino Kaku Gothic Std','Hiragino Kaku Gothic ProN','Hiragino Sans',system-ui,sans-serif",
+    fontWeight: 800,
+  };
+
+  return (
+    <section className="space-y-4">
+      <h2 className="text-white text-[20px] text-center" style={headingStyle}>
+        {title}
+      </h2>
+
+      <HeroRow rows={rows} heroCount={heroCount} metric={metric} league={league} period={period} />
+
+      <RankingList
+        rows={rows.slice(heroCount, listCount)}
+        metric={metric}
+        baseRank={heroCount}
+      />
+    </section>
+  );
+}
+
+/* ============ Tabs ============ */
+
 function TabsRow(props: {
   league: LeagueTab;
   setLeague: (v: LeagueTab) => void;
@@ -242,34 +274,37 @@ function TabsRow(props: {
   return (
     <div className="flex items-center justify-between">
       <div className="flex gap-2">
-        <Tab label="ALL" active={league === "all"} onClick={() => setLeague("all")} />
+        <Tab label="NBA" active={league === "nba"} onClick={() => setLeague("nba")} />
         <Tab label="B1" active={league === "b1"} onClick={() => setLeague("b1")} />
-        <Tab label="J1" active={league === "j1"} onClick={() => setLeague("j1")} />
       </div>
+
       <div className="flex gap-2">
-        <Tab label="7d" active={period === "7d"} onClick={() => setPeriod("7d")} />
-        <Tab label="30d" active={period === "30d"} onClick={() => setPeriod("30d")} />
+        <Tab label="週間" active={period === "week"} onClick={() => setPeriod("week")} />
+        <Tab label="月間" active={period === "month"} onClick={() => setPeriod("month")} />
       </div>
     </div>
   );
 }
 
+
 /* =========================
- * Hero (Top3固定)
+ * Hero (Top3固定) — V2対応版
  * =======================*/
 function HeroRow({
   rows,
   heroCount,
   metric,
   league,
+  period, // ★ 追加: 週間/月間で表示が変わる可能性あり
 }: {
   rows: RankingRow[];
   heroCount: number;
   metric: Metric;
   league: LeagueTab;
+  period: Period;
 }) {
   const base = rows.slice(0, heroCount);
-  const ORDER_3 = [1, 0, 2]; 
+  const ORDER_3 = [1, 0, 2];
   const top = ORDER_3.map((i) => base[i]).filter(Boolean);
 
   return (
@@ -281,15 +316,36 @@ function HeroRow({
         const avatarSize = avatarSizeByRankMobile(rank);
         const { badgeWidth, badgeLift } = badgeDimsByRankMobile(rank, avatarSize);
 
-        const value =
-          metric === "units"
-            ? `${r.units.toFixed(1)} unit`
-            : `${Math.round(r.winRate * 100)}%`;
-        const chip =
-          metric === "units"
-            ? "bg-indigo-600 text-white"
-            : "bg-emerald-500 text-white";
+        /* --------------------------
+         * ★ metricごとの値の表示切替 (V2仕様)
+         * ------------------------ */
+        let value = "-";
 
+        if (metric === "winRate") {
+          value = `${Math.round((r.winRate ?? 0) * 100)}%`;
+        } else if (metric === "accuracy") {
+          value = `${Math.round(r.accuracy ?? 0)}%`;
+        } else if (metric === "avgPrecision") {
+          value = `${(r.avgPrecision ?? 0).toFixed(1)} pt`;
+        } else if (metric === "avgUpset") {
+          value = `${(r.avgUpset ?? 0).toFixed(1)}`;
+        }
+
+        /* --------------------------
+         * ★ metricごとに色変更
+         * ------------------------ */
+        const chip =
+          metric === "winRate"
+            ? "bg-emerald-600 text-white"
+            : metric === "accuracy"
+            ? "bg-blue-600 text-white"
+            : metric === "avgPrecision"
+            ? "bg-purple-600 text-white"
+            : metric === "avgUpset"
+            ? "bg-orange-600 text-white"
+            : "bg-gray-500 text-white";
+
+        // バッジ位置調整
         const nudge = badgeOffsetByRank(rank);
         const topPx = -badgeLift + (BADGE_GLOBAL_NUDGE.y + nudge.y);
         const leftPx = BADGE_GLOBAL_NUDGE.x + nudge.x;
@@ -367,7 +423,15 @@ function HeroRow({
   );
 }
 
-function RankBadge({ rank, size, priority = false, league }: {
+/* =========================
+ * RankBadge (UIは現状維持)
+ * =======================*/
+function RankBadge({
+  rank,
+  size,
+  priority = false,
+  league,
+}: {
   rank: number;
   size: number;
   priority?: boolean;
@@ -377,13 +441,12 @@ function RankBadge({ rank, size, priority = false, league }: {
 
   let src: string;
 
-  // ★ B1 / J1 は 1〜3 だけ専用バッジを使う
+  // B1/NBA で 1〜3 位だけ専用
   if (league === "b1" && rank <= 3) {
     src = `/rankings/emblems/b1rank-${rank}.png`;
-  } else if (league === "j1" && rank <= 3) {
-    src = `/rankings/emblems/j1rank-${rank}.png`;
+  } else if (league === "nba" && rank <= 3) {
+    src = `/rankings/emblems/nbarank-${rank}.png`;
   } else {
-    // ★ 4〜5位（+ ALL）は共通
     src = `/rankings/emblems/rank-${rank}.png`;
   }
 
@@ -400,7 +463,9 @@ function RankBadge({ rank, size, priority = false, league }: {
   );
 }
 
-
+/* =========================
+ * 見た目は変更なし
+ * =======================*/
 function ringByRank(rank: number) {
   if (rank === 1) return { ring: "ring-yellow-300", glow: "bg-yellow-300/25" };
   if (rank === 2) return { ring: "ring-slate-200", glow: "bg-slate-200/20" };
@@ -443,7 +508,9 @@ function badgeDimsByRankMobile(
   return { badgeWidth, badgeLift };
 }
 
-/* リスト (Top20) */
+/* =========================
+ * ★ Listing(Row) の V2対応版
+ * =======================*/
 function RankingList({
   rows,
   metric,
@@ -457,14 +524,35 @@ function RankingList({
     <div className="w-full rounded-2xl border border-white/12 bg-white/[.04] overflow-hidden divide-y divide-white/10">
       {rows.map((r, i) => {
         const rank = baseRank + i + 1;
-        const value =
-          metric === "units"
-            ? `${r.units.toFixed(1)} unit`
-            : `${Math.round(r.winRate * 100)}%`;
+
+        /* ----------------------------
+         * ★ V2仕様の表示値
+         * ----------------------------*/
+        let value = "-";
+
+        if (metric === "winRate") {
+          value = `${Math.round((r.winRate ?? 0) * 100)}%`;
+        } else if (metric === "accuracy") {
+          value = `${Math.round(r.accuracy ?? 0)}%`;
+        } else if (metric === "avgPrecision") {
+          value = `${(r.avgPrecision ?? 0).toFixed(1)} pt`;
+        } else if (metric === "avgUpset") {
+          value = `${(r.avgUpset ?? 0).toFixed(1)}`;
+        }
+
+        /* ----------------------------
+         * ★ metricごとに色を変える
+         * ----------------------------*/
         const chip =
-          metric === "units"
-            ? "bg-indigo-600 text-white"
-            : "bg-emerald-500 text-white";
+          metric === "winRate"
+            ? "bg-emerald-600 text-white"
+            : metric === "accuracy"
+            ? "bg-blue-600 text-white"
+            : metric === "avgPrecision"
+            ? "bg-purple-600 text-white"
+            : metric === "avgUpset"
+            ? "bg-orange-600 text-white"
+            : "bg-gray-500 text-white";
 
         return (
           <a
@@ -479,6 +567,7 @@ function RankingList({
                 {r.displayName}
               </div>
             </div>
+
             <span
               className={[
                 "ml-auto px-3 py-1.5 rounded-2xl text-sm font-black tracking-tight",
@@ -494,6 +583,9 @@ function RankingList({
   );
 }
 
+/* =========================
+ * RankCircle — UIそのまま
+ * =======================*/
 function RankCircle({ rank }: { rank: number }) {
   return (
     <div className="w-8 h-8 rounded-full grid place-items-center text-[12px] font-extrabold border border-amber-300/60 text-amber-300/95">
@@ -502,6 +594,9 @@ function RankCircle({ rank }: { rank: number }) {
   );
 }
 
+/* =========================
+ * Avatar — UIそのまま
+ * =======================*/
 function Avatar({
   name,
   photoURL,

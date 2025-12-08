@@ -12,21 +12,22 @@ import {
   DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { mapRawToPredictionPost } from "@/lib/map-post";
-import type { PredictionPost } from "@/app/component/post/PredictionPostCard";
+
+import { toUiPost } from "@/lib/toUiPost";  // ★ V2 正式変換
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 const PAGE_SIZE = 15;
 
 export function useJLeagueFeed() {
-  const [posts, setPosts] = useState<PredictionPost[]>([]);
+  const [posts, setPosts] = useState<PredictionPostV2[]>([]);
   const [loading, setLoading] = useState(false);
   const [noMore, setNoMore] = useState(false);
 
   const lastDocRef = useRef<DocumentSnapshot | null>(null);
 
-  // ======================
-  // loadMore
-  // ======================
+  /* ---------------------------
+   * loadMore
+   * --------------------------- */
   const loadMore = useCallback(async () => {
     if (loading || noMore) return;
 
@@ -35,7 +36,7 @@ export function useJLeagueFeed() {
     try {
       const baseQuery = query(
         collection(db, "posts"),
-        where("league", "==", "j"),
+        where("league", "==", "j1"),   // ★ V2 の正しいリーグキー
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE)
       );
@@ -43,7 +44,7 @@ export function useJLeagueFeed() {
       const q = lastDocRef.current
         ? query(
             collection(db, "posts"),
-            where("league", "==", "j"),
+            where("league", "==", "j1"),
             orderBy("createdAt", "desc"),
             startAfter(lastDocRef.current),
             limit(PAGE_SIZE)
@@ -58,9 +59,10 @@ export function useJLeagueFeed() {
         return;
       }
 
-      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
+      // ★ V2 正規化
+      const newPosts = snap.docs.map((d) => toUiPost(d.id, d.data()));
 
-      // ⭐ フォロー中と同じ重複回避形式
+      // ★ 重複除去
       setPosts((prev) => {
         const ids = new Set(prev.map((p) => p.id));
         return [...prev, ...newPosts.filter((p) => !ids.has(p.id))];
@@ -74,9 +76,9 @@ export function useJLeagueFeed() {
     setLoading(false);
   }, [loading, noMore]);
 
-  // ======================
-  // refresh（Pull to refresh）
-  // ======================
+  /* ---------------------------
+   * refresh
+   * --------------------------- */
   const refresh = useCallback(async () => {
     setLoading(true);
     setNoMore(false);
@@ -85,17 +87,17 @@ export function useJLeagueFeed() {
     try {
       const q = query(
         collection(db, "posts"),
-        where("league", "==", "j"),
+        where("league", "==", "j1"),  // ★ 修正済み
         orderBy("createdAt", "desc"),
         limit(PAGE_SIZE)
       );
 
       const snap = await getDocs(q);
-      const newPosts = snap.docs.map((d) => mapRawToPredictionPost(d));
 
-      // ⭐ フォロー中と同じ
+      // ★ V2 正規化
+      const newPosts = snap.docs.map((d) => toUiPost(d.id, d.data()));
+
       setPosts(newPosts);
-
       lastDocRef.current = snap.docs[snap.docs.length - 1];
     } catch (err) {
       console.warn("JLeague feed refresh error:", err);
