@@ -44,24 +44,26 @@ export const pickTeamColor = (league: League, name?: string) => {
     return teamColorsB1[name]?.primary;
   }
   if (league === "nba") {
-    return teamColorsNBA[name]?.primary; // ★ NBA カラー辞書を使う
+    return teamColorsNBA[name]?.primary;
   }
 
   return undefined;
 };
 
-/** TeamSide 正規化 */
+/** TeamSide 正規化（record / number を削除） */
 export const toTeamSide =
   (league: League) =>
   (v: any): TeamSide =>
     typeof v === "string"
-      ? { name: v, record: { w: 0, l: 0 }, number: 8, colorHex: pickTeamColor(league, v) }
+      ? {
+          name: v,
+          teamId: undefined,
+          colorHex: pickTeamColor(league, v),
+        }
       : {
           name: v?.name ?? "",
-          record: v?.record ?? { w: 0, l: 0 },
-          number: v?.number ?? 8,
-          colorHex: v?.colorHex ?? pickTeamColor(league, v?.name),
           teamId: v?.teamId,
+          colorHex: pickTeamColor(league, v?.name),
         };
 
 /** スコア正規化 */
@@ -74,17 +76,9 @@ export const toScore = (s: any): { home: number; away: number } | null =>
       : null
     : null;
 
-/** LIVE メタ正規化 */
-export const toLiveMeta = (m: any) =>
-  m
-    ? {
-        period: m.period ?? m.q ?? "",
-        runningTime: m.runningTime ?? m.clock ?? undefined,
-      }
-    : null;
-
-/** FINAL メタ正規化 */
-export const toFinalMeta = (m: any) => (m ? { ot: Boolean(m.ot ?? m.wentOT) } : null);
+/** LIVE / FINAL メタは不要なので常に null にする */
+export const toLiveMeta = (_m: any) => null;
+export const toFinalMeta = (_m: any) => null;
 
 /** startAt を JST Date に寄せる */
 export const normalizeStartAtJst = (g: any): Date | null => {
@@ -133,7 +127,7 @@ export function toMatchCardProps(
   const away = toTeamSide(league)(raw?.away);
 
   // --------------------------------------------------------
-  // ★ スコア補完（最重要）
+  // ★ スコア補完（そのまま維持）
   // --------------------------------------------------------
   let score = toScore(raw?.score);
 
@@ -149,7 +143,7 @@ export function toMatchCardProps(
   const liveMeta = toLiveMeta(raw?.liveMeta);
   const finalMeta = toFinalMeta(raw?.finalMeta);
 
-  // href ビルダー
+  // href ビルダー（そのまま維持）
   const buildView =
     opts?.hrefs?.view ??
     (gamePath ? gamePath.predictions : (gid: string) => `/web/games/${gid}/predictions`);
@@ -157,23 +151,23 @@ export function toMatchCardProps(
     opts?.hrefs?.make ??
     (gamePath ? gamePath.predict : (gid: string) => `/web/games/${gid}/predict`);
 
- return {
-  id,
-  league,
-  venue: raw?.venue ?? "",
-  roundLabel: raw?.roundLabel ?? "",
-  startAtJst,
-  status,
-  home,
-  away,
-  score,
-  liveMeta,
-  finalMeta,
+  return {
+    id,
+    league,
+    venue: raw?.venue ?? "",
+    roundLabel: raw?.roundLabel ?? "",
+    startAtJst,
+    status,
+    home,
+    away,
+    score,
+    liveMeta,
+    finalMeta,
 
-  // ★ V2では MatchCard が自前でリンクを生成するため不要
-  viewPredictionHref: "",
-  makePredictionHref: "",
+    // V2では MatchCard が自前でリンク生成するため不要
+    viewPredictionHref: "",
+    makePredictionHref: "",
 
-  dense: Boolean(opts?.dense),
-};
+    dense: Boolean(opts?.dense),
+  };
 }
