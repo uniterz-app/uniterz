@@ -15,19 +15,17 @@ const MIN_GAMES = 15; // 順位が有効になる試合数
 /* -------------------------
    ★ Upset 用（追加）
 --------------------------*/
-// ランク差ボーナス
-function rankBonus(diff) {
-    if (diff < 5)
-        return 0;
-    if (diff < 10)
-        return 0.5;
-    if (diff < 15)
-        return 1.0;
-    if (diff < 20)
-        return 1.5;
-    if (diff < 25)
-        return 2.0;
-    return 3.0;
+// アップセット用ランク差ボーナス（新 1.3 カーブ, 最大 5点）
+function rankBonus(rankDiff) {
+    const MAX = 30; // 想定最大ランク差
+    const clamped = Math.min(Math.max(rankDiff, 0), MAX);
+    // 0〜1 に正規化
+    const x = clamped / MAX;
+    // 序盤ゆるく、後半で効いてくるカーブ（指数 1.3）
+    const curved = Math.pow(x, 1.3);
+    // 最大 5 点にスケーリングして小数1桁に丸め
+    const bonus = curved * 5;
+    return Math.round(bonus * 10) / 10;
 }
 // raw upset 計算
 function calcRawUpsetScore(sameSideRatio, rankDiff) {

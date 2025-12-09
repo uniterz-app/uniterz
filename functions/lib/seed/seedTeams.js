@@ -32,21 +32,18 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.seedTeams = seedTeams;
-// functions/src/seed/seedTeams.ts
 const admin = __importStar(require("firebase-admin"));
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
+const teams_json_1 = __importDefault(require("./teams.json")); // ← JSON を直接 import（確実にバンドルされる）
 async function seedTeams() {
     const db = admin.firestore();
-    // teams.json の読み込み
-    const filePath = path.join(__dirname, "teams.json");
-    const raw = fs.readFileSync(filePath, "utf-8");
-    const teams = JSON.parse(raw);
-    console.log(`Seeding ${teams.length} teams...`);
+    console.log(`Seeding ${teams_json_1.default.length} teams...`);
     const batch = db.batch();
-    for (const t of teams) {
+    for (const t of teams_json_1.default) {
         const ref = db.collection("teams").doc(t.id);
         batch.set(ref, {
             name: t.name,

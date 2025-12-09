@@ -1,38 +1,31 @@
 // functions/src/calcScorePrecision/scorePrecisionRules.ts
 
-/**
- * バスケ向け 3段階ルール
- * 0〜6 → 5pt
- * 7〜13 → 2pt
- * 14+ → 0pt
- */
-const basketballPoint = (diff: number): number => {
-  if (diff <= 6) return 5;
-  if (diff <= 13) return 2;
-  return 0;
-};
+function curvedScore(diff: number, full: number, zeroAt: number, gamma: number) {
+  if (diff <= full) return 1;
+  if (diff >= zeroAt) return 0;
 
-/**
- * サッカー向け 3段階ルール
- * 0 → 5pt
- * 1 → 2pt
- * 2+ → 0pt
- */
-const footballPoint = (diff: number): number => {
-  if (diff === 0) return 5;
-  if (diff === 1) return 2;
-  return 0;
-};
+  const r = 1 - (diff - full) / (zeroAt - full); // 線形
+  return Math.pow(r, gamma);                     // 厳しく
+}
 
 export const scorePrecisionRules = {
   basketball: {
-    pointByHome: basketballPoint,
-    pointByAway: basketballPoint,
-    pointByDiff: basketballPoint,
-  },
-  football: {
-    pointByHome: footballPoint,
-    pointByAway: footballPoint,
-    pointByDiff: footballPoint,
+    // 点差（最大7点）
+    pointByDiff(diff: number) {
+      const r = curvedScore(diff, 6, 16, 1.6);
+      return Math.round(r * 7 * 10) / 10;
+    },
+
+    // HOME（最大4点）
+    pointByHome(diff: number) {
+      const r = curvedScore(diff, 6, 16, 1.6);
+      return Math.round(r * 4 * 10) / 10;
+    },
+
+    // AWAY（最大4点）
+    pointByAway(diff: number) {
+      const r = curvedScore(diff, 6, 16, 1.6);
+      return Math.round(r * 4 * 10) / 10;
+    },
   },
 } as const;

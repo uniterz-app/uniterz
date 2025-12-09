@@ -2,8 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import Jersey from "@/app/component/games/icons/jersey.svg";
-import SoccerBadge from "@/app/component/games/icons/soccer-badge.svg";
+import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,14 +15,34 @@ import { auth } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+
+function useTeamRecord(teamId?: string) {
+  const [rec, setRec] = useState<{ wins: number; losses: number } | null>(null);
+
+  useEffect(() => {
+    if (!teamId) return;
+
+    const ref = doc(db, "teams", teamId);
+    getDoc(ref).then((snap) => {
+      if (!snap.exists()) return;
+      const d = snap.data();
+      setRec({
+        wins: d.wins ?? 0,
+        losses: d.losses ?? 0,
+      });
+    });
+  }, [teamId]);
+
+  return rec;
+}
 
 
 export type Status = "scheduled" | "live" | "final";
 
 export type TeamSide = {
   name: string;
-  record: { w: number; l?: number; d?: number };
-  number?: number;
   colorHex?: string; // 塗り色（チームカラー）
   teamId?: string;   // 必要なら将来ここからカラー取得
 };
@@ -59,8 +78,9 @@ const leagueLineColor: Record<League, string> = {
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 const fmtKickoff = (d: Date | null) =>
   d ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}` : "--:--";
-const fmtRecord = (league: League, r: TeamSide["record"]) => {
-  return `(${r.w}-${r.l ?? 0})`;
+const fmtRecord = (r: { wins: number; losses: number } | null) => {
+  if (!r) return "(0-0)";
+  return `(${r.wins}-${r.losses})`;
 };
 
 /** ルートから Web/Mobile の prefix を決定 */
@@ -90,7 +110,8 @@ export default function MatchCard({
   dense = false,
   hideLine = false,
   hideActions = false,
-}: MatchCardProps) {
+  className,
+}: MatchCardProps & { className?: string }) {
   const router = useRouter();
 
     // ▼ 追加：モバイル判定
@@ -105,26 +126,13 @@ export default function MatchCard({
     return `${l1}\n${l2 || ""}`;
   }
 
-  /* ▼▼▼▼▼ ここから追加 ▼▼▼▼▼ */
-
-  // record をローカル state にコピー
-  const [homeRecord, setHomeRecord] = useState(home.record);
-  const [awayRecord, setAwayRecord] = useState(away.record);
-
-  // recordLoader が渡された場合 → Firestore の最新成績で上書き
-  useEffect(() => {
-    if ((home as any).recordLoader) {
-      (home as any).recordLoader.then((rec: any) => setHomeRecord(rec));
-    }
-    if ((away as any).recordLoader) {
-      (away as any).recordLoader.then((rec: any) => setAwayRecord(rec));
-    }
-  }, [home, away]);
-
-  /* ▲▲▲▲▲ 追加ここまで ▲▲▲▲▲ */
 
   // ▼ チームカラーを teamId から取得する
 const normalizedLeague = normalizeLeague(league);
+
+// ▼ Firestore からチーム成績（wins/losses）を取得
+const homeRecord = useTeamRecord(home.teamId);
+const awayRecord = useTeamRecord(away.teamId);
 
 const homeColor =
   getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9";
@@ -349,35 +357,18 @@ const awayColor =
           ? "rounded-2xl border border-white/10 bg-white/3 backdrop-blur-sm shadow"
           : "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-md",
         hideLine ? "pb-3 md:pb-4" : "",
+        className || "",
       ].join(" ")}
       onClick={handleClickCard}
     >
-      <div className={`${dense ? "px-3 pt-3" : "px-4 pt-4"}`}>
-        {!!venue && (
-          <>
-            <div className="grid grid-cols-[minmax(64px,1fr)_auto_minmax(64px,1fr)] items-center md:hidden gap-x-6">
-              <div className="text-[10px] uppercase tracking-wide opacity-70 justify-self-end pr-1">
-                HOME
-              </div>
-              <div className={`text-center ${dense ? "text-base" : "text-xl"} font-bold`}>
-                {venue}
-              </div>
-              <div className="text-[10px] uppercase tracking-wide opacity-70 justify-self-start pl-1">
-                AWAY
-              </div>
-            </div>
-
-            <div className="hidden md:block text-center text-xl font-bold">
-              {venue}
-            </div>
-          </>
-        )}
-
+      <div className={`${dense ? "px-3 pt-3 mb-1" : "px-4 pt-4 mb-1"}`}>
         {!!roundLabel && (
-          <div className="text-center text-xs font-semibold opacity-90 mt-1 md:text-sm md:opacity-80 md:mt-0.5">
-            {roundLabel}
-          </div>
-        )}
+  <div className="mc-round text-center font-bold text-l md:text-2xl mb-1">
+    {roundLabel}
+  </div>
+)}
+
+<div className="h-4 md:h-5"></div>
       </div>
 
       <div
@@ -386,92 +377,198 @@ const awayColor =
         }`}
       >
         {/* HOME */}
-        <div className="flex flex-col items-center">
-          {/* ★ Web HOME ラベル（アイコンの上） */}
-<div className="hidden md:block text-sm font-bold uppercase tracking-wide opacity-80 mb-1">
-  HOME
-</div>
-          <Icon className={`${jerseyCls} -mt-4 md:mt-0`} fill={homeColor} stroke="#fff" />
-          <div className="md:hidden mt-1 text-center leading-tight whitespace-pre-line">
-  <span
-    className="text-[12px]"
-    style={{
-      fontFamily:
-        '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-    }}
-  >
-    {getDisplayName(league, homeL1, homeL2)}
-  </span>
-</div>
+<div className="mc-home flex flex-col items-center -mt-5 md:mt-0">
 
-          {/* Web：1行（HOME） */}
-          <div className="hidden md:block mt-2 text-center leading-tight">
-            <div
-              className={teamText}
-              style={{
-                fontFamily:
-                  '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-              }}
-            >
-              {home.name}
-            </div>
-          </div>
+  {/* HOME ラベル：mobile 小 / web 通常 */}
+  <div className="text-[11px] md:text-sm font-bold uppercase tracking-wide opacity-80 mb-1">
+    HOME
+  </div>
 
-          <div className={`${recordText} opacity-70 mt-0.5 leading-none tracking-tight`}>
-  {fmtRecord(league, homeRecord)}
-</div>
+  <Icon
+  className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
+  fill={homeColor}
+  stroke="#fff"
+/>
+
+  {/* チーム名：mobile小さく / webそのまま */}
+  <div className="mc-name mt-1 text-center leading-tight">
+  {isMobile ? (
+    <>
+      {league === "nba" ? (
+        // ★ NBA（mobile）→ nickname(line2) だけ
+        <div
+          className="text-[12px] md:text-base"
+          style={{
+            fontFamily:
+              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+          }}
+        >
+          {homeL2 || homeL1}
         </div>
+      ) : league === "bj" ? (
+        // ★ Bリーグ（mobile）→ 2行表示
+        <>
+          <div
+            className="text-[12px] md:text-base"
+            style={{
+              fontFamily:
+                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+            }}
+          >
+            {homeL1}
+          </div>
+          <div
+            className="text-[12px] md:text-base"
+            style={{
+              fontFamily:
+                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+            }}
+          >
+            {homeL2}
+          </div>
+        </>
+      ) : (
+        // ★ その他リーグ（mobile）
+        <div
+          className="text-[12px] md:text-base"
+          style={{
+            fontFamily:
+              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+          }}
+        >
+          {homeL1} {homeL2}
+        </div>
+      )}
+    </>
+  ) : (
+    // ★ PC(web) → 従来どおり1行表示
+    <div
+      className="text-[12px] md:text-base"
+      style={{
+        fontFamily:
+          '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+      }}
+    >
+      {homeL1} {homeL2}
+    </div>
+  )}
+</div>
+
+
+  {/* 戦績（record）は mobile 小・web 通常でOK） */}
+  <div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
+    {fmtRecord(homeRecord)}
+  </div>
+
+</div>
+
 
         {/* CENTER */}
-        <div className="flex flex-col items-center justify-center">{center}</div>
+        <div className="mc-center flex flex-col items-center justify-center mt-4 md:mt-1">
+  {center}
+</div>
 
         {/* AWAY */}
-        <div className="flex flex-col items-center">
-          {/* ★ Web AWAY ラベル（アイコンの上） */}
-<div className="hidden md:block text-sm font-bold uppercase tracking-wide opacity-80 mb-1">
-  AWAY
-</div>
+<div className="mc-away flex flex-col items-center -mt-5 md:mt-0">
 
-          <Icon className={`${jerseyCls} -mt-4 md:mt-0`} fill={awayColor} stroke="#fff" />
-          <div className="md:hidden mt-1 text-center leading-tight whitespace-pre-line">
-  <span
-    className="text-[12px]"
-    style={{
-      fontFamily:
-        '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-    }}
-  >
-    {getDisplayName(league, awayL1, awayL2)}
-  </span>
-</div>
+  {/* AWAY ラベル：mobile 小 / web 通常 */}
+  <div className="text-[11px] md:text-sm font-bold uppercase tracking-wide opacity-80 mb-1">
+    AWAY
+  </div>
 
-          {/* Web：1行（AWAY） */}
-          <div className="hidden md:block mt-2 text-center leading-tight">
-            <div
-              className={teamText}
-              style={{
-                fontFamily:
-                  '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-              }}
-            >
-              {away.name}
-            </div>
-          </div>
+  {/* アイコン：mobile大きく / webそのまま */}
+  <Icon
+  className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
+  fill={awayColor}
+  stroke="#fff"
+/>
 
-          <div className={`${recordText} opacity-70 mt-0.5 leading-none tracking-tight`}>
-            {fmtRecord(league, awayRecord)}
-          </div>
+  {/* チーム名：mobile小さく / webそのまま */}
+  <div className="mc-name mt-1 text-center leading-tight">
+  {isMobile ? (
+    <>
+      {league === "nba" ? (
+        // ★ NBA（mobile）→ nickname(line2) だけ
+        <div
+          className="text-[12px] md:text-base"
+          style={{
+            fontFamily:
+              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+          }}
+        >
+          {awayL2 || awayL1}
         </div>
+      ) : league === "bj" ? (
+        // ★ Bリーグ（mobile）→ 2行
+        <>
+          <div
+            className="text-[12px] md:text-base"
+            style={{
+              fontFamily:
+                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+            }}
+          >
+            {awayL1}
+          </div>
+          <div
+            className="text-[12px] md:text-base"
+            style={{
+              fontFamily:
+                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+            }}
+          >
+            {awayL2}
+          </div>
+        </>
+      ) : (
+        // ★ その他リーグ（mobile）
+        <div
+          className="text-[12px] md:text-base"
+          style={{
+            fontFamily:
+              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+          }}
+        >
+          {awayL1} {awayL2}
+        </div>
+      )}
+    </>
+  ) : (
+    // ★ PC（web）は従来どおり  
+    <div
+      className="text-[12px] md:text-base"
+      style={{
+        fontFamily:
+          '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
+      }}
+    >
+      {awayL1} {awayL2}
+    </div>
+  )}
+</div>
+
+
+  {/* 戦績（record） */}
+  <div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
+    {fmtRecord(awayRecord)}
+  </div>
+
+</div>
+
       </div>
 
       {/* 仕切り線 */}
-      {!hideLine && (
-        <div
-          className={dense ? "h-[2px] mt-1 w-full" : "h-[3px] mt-2 w-full"}
-          style={{ backgroundColor: leagueLineColor[league] }}
-          aria-hidden={true}
-        />
-      )}
+{!hideLine && (
+  <div
+    className={
+      dense
+        ? "h-[2px] w-full mt-2 md:mt-2" 
+        : "h-[3px] w-full mt-3 md:mt-3" 
+    }
+    style={{ backgroundColor: leagueLineColor[league] }}
+    aria-hidden={true}
+  />
+)}
 
       {/* ボタン行 */}
       {!hideActions && (

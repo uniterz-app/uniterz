@@ -82,8 +82,8 @@ export function toUiPost(id: string, x: any): PredictionPostV2 {
   ---------------------------- */
   /* winner は prediction.winner ではなく score.winner を使う */
 const winner =
-  x?.score?.winner === "home" || x?.score?.winner === "away"
-    ? x.score.winner
+  x?.prediction?.winner === "home" || x?.prediction?.winner === "away"
+    ? x.prediction.winner
     : null;
 
   const prediction = {
@@ -92,9 +92,9 @@ const winner =
 
   // ★ 正しくは x.score から取る
   score: {
-    home: Number(x?.score?.home ?? 0),
-    away: Number(x?.score?.away ?? 0),
-  },
+  home: Number(x?.prediction?.score?.home ?? 0),
+  away: Number(x?.prediction?.score?.away ?? 0),
+},
 };
 
   /* ----------------------------

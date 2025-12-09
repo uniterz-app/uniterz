@@ -6,16 +6,12 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useGamesByDate } from "./useGamesByDate";
 import { useGameDays } from "./useGameDays";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { League } from "@/lib/leagues";
-import { LEAGUES } from "@/lib/leagues";
-
-
 
 // ---- Utils ----
 function isSameDay(a: Date, b: Date) {
@@ -39,26 +35,8 @@ function findMonthFirstGame(gameDays: Date[], baseDate: Date, offset: number) {
 }
 
 export default function GamesPage({ dense = false }: { dense?: boolean }) {
-  const router = useRouter();
-  const search = useSearchParams();
-
   // ---------- League ----------
-  const initLg = "nba" as League;
-  const [league, setLeague] = useState<League>(initLg);
-
-  useEffect(() => {
-  const current = search.get("lg");
-
-  // 初回で bj だったり lg が存在しない場合 → NBA に強制変更
-  if (!current || current === "bj") {
-    router.replace(`?lg=nba`, { scroll: false });
-    return;
-  }
-
-  if (current !== league) {
-    router.replace(`?lg=${league}`, { scroll: false });
-  }
-}, [league, search, router]);
+  const [league, setLeague] = useState<League>("nba");
 
   // ---------- 試合日一覧 ----------
   const { gameDays, loading: loadingDays } = useGameDays(league);
@@ -141,15 +119,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       style={{ touchAction: "pan-y" }}
     >
       {/* ---------------------------------
-          🔥 ヘッダー：MobileTrendPage と完全統一
+          🔥 ヘッダー（MobileTrendPage と統一）
       ---------------------------------- */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md ">
         <div className="relative h-11 flex items-center justify-between px-3 md:px-8">
-
-          {/* 左：プロフィールリンク（中身なしでOK） */}
           <Link href={myProfileHref ?? "#"} className="w-9 h-9" />
-
-          {/* 中央ロゴ */}
           <div className="absolute left-1/2 -translate-x-1/2">
             <img
               src="/logo/logo.png"
@@ -157,16 +131,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               className="w-10 h-auto select-none"
             />
           </div>
-
-          {/* 右：スペース（ロゴ中央維持のため） */}
           <div className="w-9 h-9" />
         </div>
       </header>
 
       {/* -------- League Tabs -------- */}
       <div className="flex items-center justify-between mb-2 mt-3">
-  <LeagueTabs value={league} onChange={setLeague} size={dense ? "md" : "lg"} />
-</div>
+        <LeagueTabs value={league} onChange={setLeague} size={dense ? "md" : "lg"} />
+      </div>
 
       {/* -------- Month Header -------- */}
       <MonthHeader
