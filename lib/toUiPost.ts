@@ -151,7 +151,12 @@ const winner =
     game,
 
     prediction,
-    note: typeof x?.note === "string" ? x.note : "",
+    note:
+  typeof x?.note === "string"
+    ? x.note
+    : typeof x?.comment === "string"
+    ? x.comment
+    : "",
 
     likeCount: Number(x?.likeCount ?? 0),
     saveCount: Number(x?.saveCount ?? 0),
