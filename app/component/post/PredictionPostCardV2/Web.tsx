@@ -83,60 +83,34 @@ export default function PredictionPostCardV2({
   }, [uid, post.id]);
 
   /* ------------------------------
-   * 編集 / 削除
-   * ------------------------------ */
-  const [editing, setEditing] = React.useState(false);
-  const [draftNote, setDraftNote] = React.useState(post.note ?? "");
-  const [busy, setBusy] = React.useState(false);
+ * 削除だけ残す
+ * ------------------------------ */
 
-  const submitEdit = async (e: any) => {
-    e.stopPropagation();
-    if (!isMine) return;
+const doDelete = async (e: any) => {
+  e.stopPropagation();
+  if (!isMine) return;
 
-    const token = await auth.currentUser?.getIdToken();
-    if (!token) return toast.error("ログインが必要です");
+  if (!confirm("削除しますか？")) return;
 
-    try {
-      setBusy(true);
-      const res = await fetch(`/api/posts/${post.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ note: draftNote }),
-      });
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) return;
 
-      if (!res.ok) throw new Error(await res.text());
+  try {
+    const res = await fetch(`/api/posts_v2/${post.id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      toast.success("更新しました");
-      setEditing(false);
-    } catch {
-      toast.error("更新に失敗しました");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const doDelete = async (e: any) => {
-    e.stopPropagation();
-    if (!isMine) return;
-
-    if (!confirm("削除しますか？")) return;
-
-    const token = await auth.currentUser?.getIdToken();
-    if (!token) return;
-
-    try {
-      await fetch(`/api/posts/${post.id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("削除しました");
-    } catch {
+    if (!res.ok) {
       toast.error("削除に失敗しました");
+      return;
     }
-  };
+
+    toast.success("削除しました");
+  } catch {
+    toast.error("削除に失敗しました");
+  }
+};
 
   /* ------------------------------
    * Highlight Frame
@@ -296,68 +270,28 @@ export default function PredictionPostCardV2({
         {/* ----------------------------------
             コメント
         ---------------------------------- */}
-        <div className="mt-4 mr-6"> 
-          {!editing ? (
-            <p className="text-[14px] md:text-[16px] leading-relaxed whitespace-pre-line">
-              {post.note || "（コメントなし）"}
-            </p>
-          ) : (
-            <textarea
-              value={draftNote}
-              onChange={(e) => setDraftNote(e.target.value)}
-              rows={3}
-              className="w-full bg-white/10 rounded-xl p-3 outline-none"
-            />
-          )}
-        </div>
-
+       {/* コメント */}
+<div className="mt-4 mr-6"> 
+  <p className="text-[14px] md:text-[16px] leading-relaxed whitespace-pre-line">
+    {post.note || "（コメントなし）"}
+  </p>
+</div>
         {/* ----------------------------------
     アクション行
 ---------------------------------- */}
 <div className="mt-4 flex items-center justify-between">
 
-  {/* 左ブロック：編集/削除 or 空スペース */}
-  <div className="flex items-center gap-3 w-24">
-    {isMine && !isGameStarted ? (
-      !editing ? (
-        <>
-          <button
-            className="w-10 h-10 flex items-center justify-center"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditing(true);
-            }}
-          >
-            <Pencil size={22} />
-          </button>
-
-          <button
-            className="w-10 h-10 flex items-center justify-center"
-            onClick={doDelete}
-          >
-            <Trash2 size={22} />
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            className="w-10 h-10 flex items-center justify-center"
-            onClick={submitEdit}
-          >
-            <Check size={22} />
-          </button>
-
-          <button
-            className="w-10 h-10 flex items-center justify-center"
-            onClick={() => setEditing(false)}
-          >
-            <X size={22} />
-          </button>
-        </>
-      )
-    ) : null}
-  </div>
-
+  {/* 左ブロック：削除のみ */}
+<div className="flex items-center gap-3 w-24">
+  {isMine && !isGameStarted && (
+    <button
+      className="w-10 h-10 flex items-center justify-center"
+      onClick={doDelete}
+    >
+      <Trash2 size={22} />
+    </button>
+  )}
+</div>
   {/* 右ブロック：いいね + 保存（右端固定・数字付き） */}
   <div className="flex items-center gap-6 ml-auto">
 

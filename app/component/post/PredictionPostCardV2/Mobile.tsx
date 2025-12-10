@@ -82,61 +82,38 @@ export default function Mobile({
     };
   }, [uid, post.id]);
 
-  /* ------------------------------
-   * 編集 / 削除
-   * ------------------------------ */
-  const [editing, setEditing] = React.useState(false);
-  const [draftNote, setDraftNote] = React.useState(post.note ?? "");
-  const [busy, setBusy] = React.useState(false);
+  // --- 編集関連はすべて削除 ---
 
-  const submitEdit = async (e: any) => {
-    e.stopPropagation();
-    if (!isMine) return;
 
-    const token = await auth.currentUser?.getIdToken();
-    if (!token) return toast.error("ログインが必要です");
+// ------------------------------
+// 削除だけ残す（API パスを修正）
+// ------------------------------
+const doDelete = async (e: any) => {
+  e.stopPropagation();
+  if (!isMine) return;
 
-    try {
-      setBusy(true);
-      const res = await fetch(`/api/posts/${post.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ note: draftNote }),
-      });
+  if (!confirm("削除しますか？")) return;
 
-      if (!res.ok) throw new Error(await res.text());
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) return;
 
-      toast.success("更新しました");
-      setEditing(false);
-    } catch {
-      toast.error("更新に失敗しました");
-    } finally {
-      setBusy(false);
-    }
-  };
+  try {
+    const res = await fetch(`/api/posts_v2/${post.id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  const doDelete = async (e: any) => {
-    e.stopPropagation();
-    if (!isMine) return;
-
-    if (!confirm("削除しますか？")) return;
-
-    const token = await auth.currentUser?.getIdToken();
-    if (!token) return;
-
-    try {
-      await fetch(`/api/posts/${post.id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("削除しました");
-    } catch {
+    if (!res.ok) {
       toast.error("削除に失敗しました");
+      return;
     }
-  };
+
+    toast.success("削除しました");
+  } catch {
+    toast.error("削除に失敗しました");
+  }
+};
+
 
   /* ------------------------------
    * Highlight frame
@@ -298,67 +275,33 @@ const winnerTeam =
 </div>
 
         {/* コメント */}
-        <div className="mt-4">
-          {!editing ? (
-            <p className="text-[14px] leading-relaxed whitespace-pre-line">
-              {post.note || "（コメントなし）"}
-            </p>
-          ) : (
-            <textarea
-              value={draftNote}
-              onChange={(e) => setDraftNote(e.target.value)}
-              rows={3}
-              className="w-full bg-white/10 rounded-xl p-3 outline-none"
-            />
-          )}
-        </div>
-
+<div className="mt-4">
+  <p className="text-[14px] leading-relaxed whitespace-pre-line">
+    {post.note || "（コメントなし）"}
+  </p>
+</div>
         {/* ----------------------------------
     アクション行（web と完全統一）
 ---------------------------------- */}
 <div className="mt-4 flex items-center justify-between">
 
-  {/* 左：編集 / 削除（開始後は非表示） */}
+  {/* 左：削除のみ（開始前限定） */}
   <div className="flex items-center gap-3">
     {isMine && !isGameStarted && (
-      !editing ? (
-        <>
-          <button
-            className="w-4 h-4 flex items-center justify-center"
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditing(true);
-            }}
-          >
-            <Pencil size={22} />
-          </button>
-
-          <button
-            className="w-4 h-4 flex items-center justify-center"
-            onClick={doDelete}
-          >
-            <Trash2 size={22} />
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            className="w-4 h-4 flex items-center justify-center"
-            onClick={submitEdit}
-          >
-            <Check size={22} />
-          </button>
-
-          <button
-            className="w-4 h-4 flex items-center justify-center"
-            onClick={() => setEditing(false)}
-          >
-            <X size={22} />
-          </button>
-        </>
-      )
+      <button
+        className="w-4 h-4 flex items-center justify-center"
+        onClick={doDelete}
+      >
+        <Trash2 size={22} />
+      </button>
     )}
   </div>
+
+  {/* 右：いいね / ブックマーク */}
+  <div className="flex items-center gap-6">
+    ...（Like / Save はそのまま）...
+  </div>
+</div>
 
   {/* 右：いいね / ブックマーク（web 同等） */}
   <div className="flex items-center gap-6">
@@ -416,6 +359,5 @@ const winnerTeam =
   </div>
 </div>
       </div>
-    </div>
   );
 }
