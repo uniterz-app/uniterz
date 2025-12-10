@@ -3,6 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Menu } from "lucide-react";
+import { Flame, Trophy } from "lucide-react";
 
 import { auth } from "@/lib/firebase";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
@@ -151,6 +152,36 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             <BecomeMemberButton size="sm" onClick={() => setMemberModalOpen(true)} />
           </div>
         )}
+{/* ▼ 連勝関連の表示（3以上のみ表示） */}
+<div className="mt-3 flex gap-2 flex-wrap">
+
+  {/* ▼現在の連勝（3以上で表示） */}
+  {profile.currentStreak >= 3 && (
+    <div
+      className={`
+        inline-flex items-center px-3 py-1 rounded-full border text-sm
+        ${profile.currentStreak >= 3
+          ? "border-red-500 text-red-400"
+          : "border-white/20 text-white/90"}
+      `}
+    >
+      <Flame className="w-4 h-4 mr-1 text-yellow-400" />
+      <span className="font-bold">{profile.currentStreak}</span> 連勝中
+    </div>
+  )}
+
+  {/* ▼最高連勝（3以上で表示） */}
+  {profile.maxStreak >= 3 && (
+    <div
+      className="inline-flex items-center px-3 py-1 rounded-full border border-white/20 text-sm text-white/90"
+    >
+      <Trophy className="w-4 h-4 mr-1 text-amber-400" />
+      <span className="font-bold">最高連勝: {profile.maxStreak}</span>
+    </div>
+  )}
+
+</div>
+
       </div>
 
       {/* === Badges === */}

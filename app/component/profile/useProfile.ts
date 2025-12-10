@@ -20,6 +20,8 @@ export type Profile = {
   bio: string;
   avatarUrl: string;
   counts: { posts: number; followers: number; following: number };
+  currentStreak: number;
+  maxStreak: number;
 };
 
 const BASE_PROFILE: Omit<Profile, "handle"> & { handle?: string } = {
@@ -28,6 +30,8 @@ const BASE_PROFILE: Omit<Profile, "handle"> & { handle?: string } = {
   avatarUrl:
     "https://images.unsplash.com/photo-1541614101341-1b1c1f1a1c87?q=80&w=400&auto=format&fit=crop",
   counts: { posts: 128, followers: 2450, following: 311 },
+  currentStreak: 0,
+  maxStreak: 0,
 };
 
 export function useProfile(handle: string) {
@@ -39,6 +43,8 @@ export function useProfile(handle: string) {
     handle?: string;
     bio?: string;
     photoURL?: string;
+    currentStreak?: number;
+  maxStreak?: number;
   } | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -87,6 +93,8 @@ export function useProfile(handle: string) {
             handle: d.handle ?? decodedHandle,
             bio: d.bio ?? "",
             photoURL: d.photoURL ?? "",
+            currentStreak: d.currentStreak ?? 0,
+  maxStreak: d.maxStreak ?? 0,
           });
         }
       } finally {
@@ -122,6 +130,8 @@ export function useProfile(handle: string) {
         handle: d.handle ?? decodedHandle,
         bio: d.bio ?? "",
         photoURL: d.photoURL ?? "",
+        currentStreak: d.currentStreak ?? 0,
+  maxStreak: d.maxStreak ?? 0,
       });
 
       if (d.counts) {
@@ -170,6 +180,8 @@ export function useProfile(handle: string) {
           ? u.photoURL
           : BASE_PROFILE.avatarUrl,
       counts,
+      currentStreak: (u as any).currentStreak ?? 0,
+    maxStreak: (u as any).maxStreak ?? 0,
     };
   }, [user, decodedHandle, counts]);
 

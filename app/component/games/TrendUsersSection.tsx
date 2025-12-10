@@ -11,7 +11,8 @@ type Props = { title?: string };
 
 export default function TrendUsersSection({ title = "注目ユーザー" }: Props) {
   const pathname = usePathname();
-  const basePath: "/web" | "/mobile" = pathname?.startsWith("/mobile") ? "/mobile" : "/web";
+  const basePath: "/web" | "/mobile" =
+    pathname?.startsWith("/mobile") ? "/mobile" : "/web";
 
   const [users, setUsers] = React.useState<TrendUser[] | null>(null);
   const listRef = React.useRef<HTMLDivElement | null>(null);
@@ -25,13 +26,17 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
     return () => mq.removeEventListener?.("change", apply);
   }, []);
 
-  // モバイルは 2.6 枚、PC は 4.3 枚くらい見えるイメージ
   const visibleCount = isMdUp ? 4.3 : 2.6;
 
   React.useEffect(() => {
     (async () => {
       const u = await fetchTrendUsers(12);
-      const sorted = [...u].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+      // ★ 連勝中(currentStreak)でソート
+      const sorted = [...u].sort(
+        (a, b) => b.currentStreak - a.currentStreak
+      );
+
       setUsers(sorted.slice(0, 12));
     })();
   }, []);
@@ -45,7 +50,9 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
 
   const [page, setPage] = React.useState(0);
   const totalPages =
-    users && users.length > 0 ? Math.max(1, users.length - Math.floor(visibleCount) + 1) : 1;
+    users && users.length > 0
+      ? Math.max(1, users.length - Math.floor(visibleCount) + 1)
+      : 1;
 
   React.useEffect(() => {
     const el = listRef.current;
@@ -53,19 +60,17 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
     const onScroll = () => {
       const itemW = el.clientWidth / visibleCount;
       const idx = Math.round(el.scrollLeft / itemW);
-      const clamped = Math.min(Math.max(idx, 0), Math.max(0, totalPages - 1));
+      const clamped = Math.min(Math.max(idx, 0), totalPages - 1);
       setPage(clamped);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, [visibleCount, totalPages]);
 
-  const isHot = () => true;
-
   return (
     <section className="mt-8">
       <div className="mb-3 flex items-end justify-between">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
+
         {isMdUp && (
           <div className="flex items-center gap-2">
             <button
@@ -89,8 +94,6 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
       </div>
 
       <div className="relative">
-        {/* ← ここにあった左右の白グラデーションを削除 */}
-
         <div
           ref={listRef}
           role="list"
@@ -104,7 +107,9 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
           style={{ scrollBehavior: "smooth" }}
         >
           {users === null &&
-            Array.from({ length: isMdUp ? 5 : 3 }).map((_, i) => <SkeletonCard key={`sk-${i}`} />)}
+            Array.from({ length: isMdUp ? 5 : 3 }).map((_, i) => (
+              <SkeletonCard key={`sk-${i}`} />
+            ))}
 
           {users !== null && users.length === 0 && <EmptyStrip />}
 
@@ -112,6 +117,7 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
             users.length > 0 &&
             users.map((u) => {
               const href = `${basePath}/u/${u.handle ?? u.uid}`;
+
               return (
                 <div
                   key={u.uid}
@@ -128,9 +134,8 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
                     href={href}
                     photoURL={u.photoURL}
                     displayName={u.displayName}
-                    followers={u.counts?.followers ?? 0}
-                    hot={isHot()}
-                    primaryLeague={(u as any).primaryLeague ?? undefined}
+                    streak={u.currentStreak} // ← ★ V2 正式対応
+                    hot={true}
                   />
                 </div>
               );
@@ -156,8 +161,7 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
   );
 }
 
-/* --- Sub Components --- */
-
+/* --- Skeleton & Empty --- */
 function SkeletonCard() {
   return (
     <div
@@ -167,7 +171,7 @@ function SkeletonCard() {
         snap-start
       "
     >
-      <div className="min-h-[190px] md:min-h-[260px] rounded-2xl border border-white/10 bg-white/5 backdrop-blur">
+      <div className="min-h-[190px] md:minh-[260px] rounded-2xl border border-white/10 bg-white/5 backdrop-blur">
         <div className="space-y-4 p-5 md:p-6">
           <div className="h-4 w-24 rounded bg-white/10" />
           <div className="h-4 w-36 rounded bg-white/10" />
@@ -187,8 +191,8 @@ function EmptyStrip() {
         snap-start
       "
     >
-      <div className="grid min-h-[190px] md:min-h-[260px] place-items-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur text-white/60">
-        直近の注目ユーザーはまだいません
+      <div className="grid min-h-[190px] md:minh-[260px] place-items-center rounded-2xl border border-white/10 bg-white/5 backdrop-blur text-white/60">
+        直近の連勝中ユーザーはまだいません
       </div>
     </div>
   );

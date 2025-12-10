@@ -197,35 +197,24 @@ export default function TrendUserCard(props: TrendUserCardProps) {
             {primaryLeague} specialist
           </div>
         )}
-
-        {/* フォロワー数（シンプルなテキスト） */}
-        <div
-          className="flex items-center justify-center text-[11px] md:text-sm text-white/80 md:text-white/85 tabular-nums font-light md:font-normal"
-          style={{ fontFamily: jpGothicProN }}
-        >
-          {formatCompactNumber(followers)} followers
-        </div>
-
-        {showStats && (
-          <div className="hidden md:flex flex-wrap items-center justify-center gap-2 mt-1 text-[11px] text-white/85">
-            {typeof winRate === "number" && (
-              <span className="px-2 py-0.5 rounded-full bg-white/10 ring-1 ring-white/15">
-                勝率 {winRate.toFixed(1)}%
-              </span>
-            )}
-            {typeof units === "number" && (
-              <span className="px-2 py-0.5 rounded-full bg-white/10 ring-1 ring-white/15">
-                {units >= 0 ? "+" : ""}
-                {units.toFixed(1)}U
-              </span>
-            )}
-            {typeof streak === "number" && streak > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-white/10 ring-1 ring-white/15">
-                直近 {streak} 連的中
-              </span>
-            )}
-          </div>
-        )}
+        {/* ▼ 連勝表示（5連勝以上のみ表示） */}
+{typeof streak === "number" && streak >= 5 && (
+  <div
+    className="
+      flex items-center justify-center
+      text-[12px] md:text-sm
+      font-semibold
+      px-3 py-1
+      rounded-full
+      bg-white/10
+      ring-1 ring-white/20
+      text-amber-300
+    "
+  >
+    <Flame className="w-4 h-4 text-yellow-400 mr-1" />
+    {streak} 連勝中
+  </div>
+)}
 
         {/* フォローボタン（ややコンパクト） */}
 <div className="mt-auto w-full flex items-end justify-center">

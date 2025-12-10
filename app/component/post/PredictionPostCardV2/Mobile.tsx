@@ -147,9 +147,15 @@ export default function Mobile({
     frame = "ring-2 ring-red-400/70 border-red-400";
 
   // ★ ここに badge ロジックを追加
-let badge: "hit" | "upset" | null = null;
-if (post.stats?.isWin) badge = "hit";
-if (post.stats?.upsetScore && post.stats.upsetScore > 5) badge = "upset";
+let badge: "hit" | "upset" | "miss" | null = null;
+
+if (post.stats?.isWin) {
+  badge = "hit";
+} else if (post.stats?.upsetScore && post.stats.upsetScore > 5) {
+  badge = "upset";
+} else if (post.stats && post.stats.isWin === false) {
+  badge = "miss";
+}
 
   /* ------------------------------
    * MatchCard 用に games/{id} を取得

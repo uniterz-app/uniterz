@@ -17,6 +17,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { Flame, CheckCircle } from "lucide-react";
 
 import TrendHitPostsSection from "@/app/component/games/TrendHitPostsSection";
+import TrendUsersSection from "@/app/component/games/TrendUsersSection";
 
 export default function TrendPanel() {
   const pathname = usePathname();
@@ -121,6 +122,16 @@ export default function TrendPanel() {
           </div>
         </section>
       ))}
+      {/* 🔥 連勝中ユーザー */}
+      <section className="space-y-3 mt-10">
+        <div className="flex items-center gap-2">
+          <Flame className="w-5 h-5 text-orange-400" />
+          <h3 className="text-lg font-semibold text-white">連勝中ユーザー</h3>
+        </div>
+
+        {/* 連勝中ユーザーの一覧 */}
+        <TrendUsersSection />
+      </section>
 
       {/* 的中投稿 */}
       <section className="space-y-3 mt-10">
