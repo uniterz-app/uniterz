@@ -1,0 +1,41 @@
+{
+  "venue": "",
+  "homeScore": null,
+  "away": {
+    "number": 8,
+    "teamId": "nba-jazz",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Utah Jazz"
+  },
+  "league": "nba",
+  "liveMeta": null,
+  "resultComputedAt": null,
+  "home": {
+    "number": 8,
+    "teamId": "nba-pelicans",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "New Orleans Pelicans"
+  },
+  "score": null,
+  "finalMeta": null,
+  "awayScore": null,
+  "final": false,
+  "season": "2025-26",
+  "roundLabel": "REGULAR SEASON",
+  "status": "scheduled",
+  "startAtJst": {
+    "_seconds": 1768014000,
+    "_nanoseconds": 0
+  },
+  "startAtJstIso": "2026-01-10T03:00:00.000Z",
+  "startAt": {
+    "_seconds": 1768014000,
+    "_nanoseconds": 0
+  }
+}

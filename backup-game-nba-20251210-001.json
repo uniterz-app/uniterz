@@ -1,0 +1,50 @@
+{
+  "venue": "",
+  "away": {
+    "number": 8,
+    "teamId": "nba-thunder",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Oklahoma City Thunder"
+  },
+  "league": "nba",
+  "liveMeta": null,
+  "resultComputedAt": null,
+  "home": {
+    "number": 8,
+    "teamId": "nba-suns",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Phoenix Suns"
+  },
+  "score": null,
+  "finalMeta": null,
+  "season": "2025-26",
+  "roundLabel": "EMIRATES NBA CUP",
+  "startAtJst": {
+    "_seconds": 1765413000,
+    "_nanoseconds": 0
+  },
+  "startAtJstIso": "2025-12-11T00:30:00.000Z",
+  "startAt": {
+    "_seconds": 1765413000,
+    "_nanoseconds": 0
+  },
+  "game.status": "final",
+  "game.finalScore": {
+    "away": 95,
+    "home": 113
+  },
+  "awayScore": 0,
+  "resultComputedAtV2": {
+    "_seconds": 1765356020,
+    "_nanoseconds": 762000000
+  },
+  "final": false,
+  "homeScore": 0,
+  "status": "scheduled"
+}

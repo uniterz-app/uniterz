@@ -1,0 +1,41 @@
+{
+  "venue": "",
+  "homeScore": null,
+  "away": {
+    "number": 8,
+    "teamId": "nba-thunder",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Oklahoma City Thunder"
+  },
+  "league": "nba",
+  "liveMeta": null,
+  "resultComputedAt": null,
+  "home": {
+    "number": 8,
+    "teamId": "nba-blazers",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Portland Trail Blazers"
+  },
+  "score": null,
+  "finalMeta": null,
+  "awayScore": null,
+  "final": false,
+  "season": "2025-26",
+  "roundLabel": "REGULAR SEASON",
+  "status": "scheduled",
+  "startAtJst": {
+    "_seconds": 1767229200,
+    "_nanoseconds": 0
+  },
+  "startAtJstIso": "2026-01-01T01:00:00.000Z",
+  "startAt": {
+    "_seconds": 1767229200,
+    "_nanoseconds": 0
+  }
+}

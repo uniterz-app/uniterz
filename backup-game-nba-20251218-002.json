@@ -1,0 +1,41 @@
+{
+  "venue": "",
+  "homeScore": null,
+  "away": {
+    "number": 8,
+    "teamId": "nba-pacers",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Indiana Pacers"
+  },
+  "league": "nba",
+  "liveMeta": null,
+  "resultComputedAt": null,
+  "home": {
+    "number": 8,
+    "teamId": "nba-knicks",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "New York Knicks"
+  },
+  "score": null,
+  "finalMeta": null,
+  "awayScore": null,
+  "final": false,
+  "season": "2025-26",
+  "roundLabel": "REGULAR SEASON",
+  "status": "scheduled",
+  "startAtJst": {
+    "_seconds": 1766102400,
+    "_nanoseconds": 0
+  },
+  "startAtJstIso": "2025-12-19T00:00:00.000Z",
+  "startAt": {
+    "_seconds": 1766102400,
+    "_nanoseconds": 0
+  }
+}

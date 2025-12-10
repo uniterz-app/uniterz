@@ -10,7 +10,13 @@
  *   npx ts-node --transpile-only scripts/fix-nba-games.ts
  */
 
-import * as admin from "firebase-admin";
+// ESMで firebase-admin を使う場合は require を使う
+// これが最も安定する
+
+// @ts-ignore
+import adminPkg from "firebase-admin";
+const admin = adminPkg;
+
 import fs from "fs";
 
 const serviceAccount = JSON.parse(

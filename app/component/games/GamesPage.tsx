@@ -54,9 +54,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const [selected, setSelected] = useState<Date | null>(null);
 
-  useEffect(() => {
-    if (initialSelected) setSelected(initialSelected);
-  }, [initialSelected]);
+  // ★ 初期化フラグを追加
+const didInit = useRef(false);
+
+useEffect(() => {
+  if (!didInit.current && initialSelected) {
+    setSelected(initialSelected); // 初回のみ今日 or 最寄りの試合日に設定
+    didInit.current = true;
+  }
+}, [initialSelected]);
 
   // ---------- スワイプ ----------
   const pageRef = useRef<HTMLDivElement>(null);

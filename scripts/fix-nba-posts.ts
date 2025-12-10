@@ -2,23 +2,29 @@
  * NBA 投稿の home / away を反転させるスクリプト（安全版）
  */
 
-import * as admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
-import * as fs from "fs";
+// ---- firebase-admin を ESM で使う安定版 ----
+// @ts-ignore
+import adminPkg from "firebase-admin";
+const admin = adminPkg;
 
-// ==============================
-// Firebase Admin 初期化
-// ==============================
-const serviceAccount = require("../service-account.json");
+import fs from "fs";
+
+const serviceAccount = JSON.parse(
+  fs.readFileSync("service-account.json", "utf8")
+);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-const db = getFirestore();
+const db = admin.firestore();
+
+// dry-run
+const DRY_RUN = process.argv.includes("--dry-run");
 
 (async () => {
   console.log("=== NBA posts: home/away swap START ===");
+  if (DRY_RUN) console.log(">>> DRY RUN モード\n");
 
   const snap = await db
     .collection("posts")
@@ -28,42 +34,41 @@ const db = getFirestore();
 
   console.log(`対象投稿数: ${snap.size}`);
 
-  const batch = db.batch();
   let count = 0;
 
-  snap.forEach((docSnap) => {
+  for (const docSnap of snap.docs) {
     const d = docSnap.data();
     const ref = docSnap.ref;
 
-    if (!d.home || !d.away || !d.prediction) return;
+    if (!d.home || !d.away || !d.prediction) continue;
 
     const oldHomeScore = d.prediction.score?.home ?? null;
     const oldAwayScore = d.prediction.score?.away ?? null;
 
-    // winner の反転
+    // winner 反転
     let newWinner = d.prediction.winner;
     if (newWinner === "home") newWinner = "away";
     else if (newWinner === "away") newWinner = "home";
 
-    batch.update(ref, {
+    const updateData = {
       home: d.away,
       away: d.home,
-
-      // prediction の差分更新（安全）
       "prediction.winner": newWinner,
       "prediction.score.home": oldAwayScore,
       "prediction.score.away": oldHomeScore,
-
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+
+    console.log(`--- ${docSnap.id} 更新内容 ---`);
+    console.log(updateData);
+
+    if (!DRY_RUN) {
+      await ref.update(updateData);
+    }
 
     count++;
-  });
-
-  if (count > 0) {
-    await batch.commit();
   }
 
-  console.log(`=== 完了: ${count} 件を反転しました ===`);
+  console.log(`\n=== 完了: ${count} 件を処理しました ===`);
   process.exit(0);
 })();

@@ -1,0 +1,41 @@
+{
+  "venue": "",
+  "homeScore": null,
+  "away": {
+    "number": 8,
+    "teamId": "nba-pacers",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Indiana Pacers"
+  },
+  "league": "nba",
+  "liveMeta": null,
+  "resultComputedAt": null,
+  "home": {
+    "number": 8,
+    "teamId": "nba-celtics",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Boston Celtics"
+  },
+  "score": null,
+  "finalMeta": null,
+  "awayScore": null,
+  "final": false,
+  "season": "2025-26",
+  "roundLabel": "REGULAR SEASON",
+  "status": "scheduled",
+  "startAtJst": {
+    "_seconds": 1768264200,
+    "_nanoseconds": 0
+  },
+  "startAtJstIso": "2026-01-13T00:30:00.000Z",
+  "startAt": {
+    "_seconds": 1768264200,
+    "_nanoseconds": 0
+  }
+}

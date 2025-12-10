@@ -1,0 +1,41 @@
+{
+  "venue": "",
+  "homeScore": null,
+  "away": {
+    "number": 8,
+    "teamId": "nba-suns",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Phoenix Suns"
+  },
+  "league": "nba",
+  "liveMeta": null,
+  "resultComputedAt": null,
+  "home": {
+    "number": 8,
+    "teamId": "nba-wizards",
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "name": "Washington Wizards"
+  },
+  "score": null,
+  "finalMeta": null,
+  "awayScore": null,
+  "final": false,
+  "season": "2025-26",
+  "roundLabel": "REGULAR SEASON",
+  "status": "scheduled",
+  "startAtJst": {
+    "_seconds": 1768179600,
+    "_nanoseconds": 0
+  },
+  "startAtJstIso": "2026-01-12T01:00:00.000Z",
+  "startAt": {
+    "_seconds": 1768179600,
+    "_nanoseconds": 0
+  }
+}

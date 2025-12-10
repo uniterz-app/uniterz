@@ -1,0 +1,41 @@
+{
+  "venue": "",
+  "homeScore": null,
+  "league": "nba",
+  "liveMeta": null,
+  "resultComputedAt": null,
+  "score": null,
+  "finalMeta": null,
+  "awayScore": null,
+  "final": false,
+  "season": "2025-26",
+  "roundLabel": "REGULAR SEASON",
+  "status": "scheduled",
+  "startAtJstIso": "2025-12-13T00:00:00.000Z",
+  "startAtJst": {
+    "_seconds": 1765501200,
+    "_nanoseconds": 0
+  },
+  "away": {
+    "number": 8,
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "teamId": "nba-blazers",
+    "name": "Portland Trail Blazers"
+  },
+  "startAt": {
+    "_seconds": 1765501200,
+    "_nanoseconds": 0
+  },
+  "home": {
+    "number": 8,
+    "record": {
+      "w": 0,
+      "l": 0
+    },
+    "teamId": "nba-pelicans",
+    "name": "New Orleans Pelicans"
+  }
+}
