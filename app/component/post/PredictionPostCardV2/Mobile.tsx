@@ -289,7 +289,7 @@ const winnerTeam =
   <div className="flex items-center gap-3 w-14">
     {isMine && !isGameStarted ? (
       <button
-        className="w-6 h-6 flex items-center justify-center"
+        className="w-4 h-4 flex items-center justify-center"
         onClick={doDelete}
       >
         <Trash2 size={22} />
@@ -306,7 +306,7 @@ const winnerTeam =
     <div className="flex items-center gap-2">
       <motion.button
         whileTap={{ scale: 1.2 }}
-        className="w-6 h-6 flex items-center justify-center"
+        className="w-4 h-4 flex items-center justify-center"
         onClick={async (e) => {
           e.stopPropagation();
           if (!uid) return toast.error("ログインが必要です");
@@ -345,7 +345,7 @@ const winnerTeam =
       >
         <Bookmark
           className={cn(
-            "w-6 h-6 transition-colors",
+            "w-4 h-4 transition-colors",
             saved ? "text-emerald-400 fill-current" : "text-white"
           )}
         />
