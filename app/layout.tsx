@@ -4,6 +4,8 @@ import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
 
+// ★ 追加：メンテナンス表示コンポーネント
+import MaintenanceOverlay from "@/app/component/common/maintenance";
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -21,6 +23,9 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // ★ 今だけ true にしてメンテナンスモードを強制
+  const maintenance = true;
+
   return (
     <html lang="ja">
       <body
@@ -33,10 +38,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           padding: 0,
         }}
       >
-        {/* ★ 追加：アプリ起動時に毎回ログが記録される */}
-        <AppActivityTracker />
-        <WebOrMobileSplash>{children}</WebOrMobileSplash>
-        <ToastHost />
+        {/* ★ maintenance が true の間はアプリを覆う */}
+        {maintenance ? (
+          <MaintenanceOverlay />
+        ) : (
+          <>
+            <AppActivityTracker />
+            <WebOrMobileSplash>{children}</WebOrMobileSplash>
+            <ToastHost />
+          </>
+        )}
       </body>
     </html>
   );
