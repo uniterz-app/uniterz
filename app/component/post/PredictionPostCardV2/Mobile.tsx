@@ -280,43 +280,41 @@ const winnerTeam =
     {post.note || "（コメントなし）"}
   </p>
 </div>
-        {/* ----------------------------------
-    アクション行（web と完全統一）
+       {/* ----------------------------------
+    アクション行（編集なし・削除のみ）
 ---------------------------------- */}
 <div className="mt-4 flex items-center justify-between">
 
-  {/* 左：削除のみ（開始前限定） */}
-  <div className="flex items-center gap-3">
-    {isMine && !isGameStarted && (
+  {/* 左：削除（開始前のみ）／削除なしでも空スペースを維持 */}
+  <div className="flex items-center gap-3 w-14">
+    {isMine && !isGameStarted ? (
       <button
-        className="w-4 h-4 flex items-center justify-center"
+        className="w-6 h-6 flex items-center justify-center"
         onClick={doDelete}
       >
         <Trash2 size={22} />
       </button>
+    ) : (
+      <div className="w-6 h-6" /> 
     )}
   </div>
 
-  {/* 右：いいね / ブックマーク */}
-  <div className="flex items-center gap-6">
-    ...（Like / Save はそのまま）...
-  </div>
-</div>
-
-  {/* 右：いいね / ブックマーク（web 同等） */}
+  {/* 右：いいね / ブックマーク（常に右端固定） */}
   <div className="flex items-center gap-6">
 
     {/* いいね */}
     <div className="flex items-center gap-2">
       <motion.button
         whileTap={{ scale: 1.2 }}
-        className="w-4 h-4 flex items-center justify-center"
+        className="w-6 h-6 flex items-center justify-center"
         onClick={async (e) => {
           e.stopPropagation();
           if (!uid) return toast.error("ログインが必要です");
           const ref = doc(db, "posts", post.id, "likes", uid);
           const snap = await getDoc(ref);
-          snap.exists() ? deleteDoc(ref) : setDoc(ref, { createdAt: new Date() });
+          snap.exists()
+            ? deleteDoc(ref)
+            : setDoc(ref, { createdAt: new Date() });
         }}
       >
         <Heart
@@ -334,7 +332,7 @@ const winnerTeam =
     <div className="flex items-center gap-2">
       <motion.button
         whileTap={{ scale: 1.2 }}
-        className="w-4 h-4 flex items-center justify-center"
+        className="w-6 h-6 flex items-center justify-center"
         onClick={async (e) => {
           e.stopPropagation();
           if (!uid) return;
@@ -357,6 +355,7 @@ const winnerTeam =
     </div>
 
   </div>
+</div>
 </div>
       </div>
   );
