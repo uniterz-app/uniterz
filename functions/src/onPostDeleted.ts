@@ -50,7 +50,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
         tx.set(dailyRef, { all: dec }, { merge: true });
 
         // league（before.game.league があれば）
-        const leagueKey = before.game?.league ?? null;
+        const leagueKey = before.league ?? null;
         if (leagueKey) {
           tx.set(
             dailyRef,
@@ -89,7 +89,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
       tx.set(dailyRef, { all: inc }, { merge: true });
 
-      const leagueKey = before.game?.league ?? null;
+      const leagueKey = before.league ?? null;
       if (leagueKey) {
         tx.set(
           dailyRef,

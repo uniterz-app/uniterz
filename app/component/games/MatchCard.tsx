@@ -162,7 +162,7 @@ const awayColor =
 
   // ▼ 自分の投稿詳細（あなたのURL仕様に合わせる：/post/[id]）
   const buildMyPostHref = (postId: string) =>
-    `/post/${postId}${lg ? `?lg=${lg}` : ""}`;
+  `${prefix}/post/${postId}${lg ? `?lg=${lg}` : ""}`;
 
   // ▼ 試合が開始済みかどうか（status優先＋開始時刻フォールバック）
   const isGameStarted = (() => {
@@ -287,7 +287,7 @@ const awayColor =
       const token = me ? await me.getIdToken() : null;
 
       const res = await fetch(
-        `/api/posts/byGameMine?gameId=${encodeURIComponent(id)}`,
+        `/api/posts_v2/byGameMine?gameId=${encodeURIComponent(id)}`,
         {
           method: "GET",
           headers: token ? { Authorization: `Bearer ${token}` } : {},

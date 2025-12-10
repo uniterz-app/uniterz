@@ -36,7 +36,8 @@ function isSnap(x: any): x is DocumentSnapshot<DocumentData> {
    ★ 修正版: PredictionPostV2 の必須フィールドを返す
 ============================================ */
 export function mapRawToPredictionPostV2(raw: any): PredictionPostV2 {
-  const id = isSnap(raw) ? raw.id : raw.id;
+  let id = isSnap(raw) ? raw.id : raw?.id;
+if (!id) { id = "(invalid)"; }
   const d: any = isSnap(raw) ? raw.data() : raw;
 
   /* league の安全処理 */

@@ -34,7 +34,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     // ===== ① stats がない（未確定投稿） → 投稿数だけ -1 =====
     if (!stats) {
         await db.runTransaction(async (tx) => {
-            var _a, _b;
+            var _a;
             const dailySnap = await tx.get(dailyRef);
             if (!dailySnap.exists)
                 return;
@@ -46,7 +46,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             // all
             tx.set(dailyRef, { all: dec }, { merge: true });
             // league（before.game.league があれば）
-            const leagueKey = (_b = (_a = before.game) === null || _a === void 0 ? void 0 : _a.league) !== null && _b !== void 0 ? _b : null;
+            const leagueKey = (_a = before.league) !== null && _a !== void 0 ? _a : null;
             if (leagueKey) {
                 tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
             }
@@ -62,7 +62,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const upset = isWin ? ((_c = stats.upsetScore) !== null && _c !== void 0 ? _c : 0) : 0;
     const precision = (_d = stats.scorePrecision) !== null && _d !== void 0 ? _d : 0;
     await db.runTransaction(async (tx) => {
-        var _a, _b;
+        var _a;
         const dailySnap = await tx.get(dailyRef);
         if (!dailySnap.exists)
             return;
@@ -77,7 +77,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         };
         tx.set(dailyRef, { all: inc }, { merge: true });
-        const leagueKey = (_b = (_a = before.game) === null || _a === void 0 ? void 0 : _a.league) !== null && _b !== void 0 ? _b : null;
+        const leagueKey = (_a = before.league) !== null && _a !== void 0 ? _a : null;
         if (leagueKey) {
             tx.set(dailyRef, { leagues: { [leagueKey]: inc } }, { merge: true });
         }

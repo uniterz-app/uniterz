@@ -53,6 +53,12 @@ export default function PredictionPostCardV2({
 
   const isMine = uid && post.authorUid === uid;
 
+  // 不正な ID（"(invalid)" など）を弾く
+const isValidPostId =
+  typeof post.id === "string" &&
+  post.id.trim() !== "" &&
+  !post.id.startsWith("(");
+
   /* ------------------------------
    * Like / Save
    * ------------------------------ */
@@ -88,6 +94,7 @@ export default function PredictionPostCardV2({
 
 const doDelete = async (e: any) => {
   e.stopPropagation();
+  console.log("DELETE TRY id =", post.id); 
   if (!isMine) return;
 
   if (!confirm("削除しますか？")) return;
@@ -278,19 +285,18 @@ const doDelete = async (e: any) => {
 <div className="mt-4 flex items-center justify-between">
 
   {/* 左ブロック：削除（またはダミーでスペース確保） */}
-  <div className="flex items-center gap-3 w-24">
-    {isMine && !isGameStarted ? (
-      <button
-        className="w-10 h-10 flex items-center justify-center"
-        onClick={doDelete}
-      >
-        <Trash2 size={22} />
-      </button>
-    ) : (
-      // ← 削除が無い場合でも w-24 を保つための透明ダミー
-      <div className="w-10 h-10" />
-    )}
-  </div>
+<div className="flex items-center gap-3 w-24">
+  {isMine && isValidPostId && !isGameStarted ? (
+    <button
+      className="w-10 h-10 flex items-center justify-center"
+      onClick={doDelete}
+    >
+      <Trash2 size={22} />
+    </button>
+  ) : (
+    <div className="w-10 h-10" />
+  )}
+</div>
 
   {/* 右ブロック：いいね + 保存（右端固定・数字付き） */}
   <div className="flex items-center gap-6 ml-auto">

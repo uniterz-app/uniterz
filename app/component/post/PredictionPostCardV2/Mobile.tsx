@@ -53,6 +53,13 @@ export default function Mobile({
 
   const isMine = uid && post.authorUid === uid;
 
+  // 不正な ID（"(invalid)" など）を弾く
+const isValidPostId =
+  typeof post.id === "string" &&
+  post.id.trim() !== "" &&
+  !post.id.startsWith("(");
+
+
   /* ------------------------------
    * Like / Save
    * ------------------------------ */
@@ -286,18 +293,19 @@ const winnerTeam =
 <div className="mt-4 flex items-center justify-between">
 
   {/* 左：削除（開始前のみ）／削除なしでも空スペースを維持 */}
-  <div className="flex items-center gap-3 w-14">
-    {isMine && !isGameStarted ? (
-      <button
-        className="w-4 h-4 flex items-center justify-center"
-        onClick={doDelete}
-      >
-        <Trash2 size={22} />
-      </button>
-    ) : (
-      <div className="w-6 h-6" /> 
-    )}
-  </div>
+<div className="flex items-center gap-3 w-14">
+  {isMine && isValidPostId && !isGameStarted ? (
+    <button
+      className="w-4 h-4 flex items-center justify-center"
+      onClick={doDelete}
+    >
+      <Trash2 size={22} />
+    </button>
+  ) : (
+    <div className="w-6 h-6" />
+  )}
+</div>
+
 
   {/* 右：いいね / ブックマーク（常に右端固定） */}
   <div className="flex items-center gap-6">
