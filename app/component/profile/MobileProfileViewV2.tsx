@@ -239,6 +239,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                     key={p.id}
                     post={p}
                     mode="list"
+                    showDelete={true}
                   />
                 ))}
 

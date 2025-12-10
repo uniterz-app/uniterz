@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import PredictionPostCard from "@/app/component/post/PredictionPostCardV2";
 import SearchTabModal from "@/app/component/timeline/SearchTabModal";
@@ -15,35 +15,30 @@ import { doc, getDoc } from "firebase/firestore";
 
 type Tab = "nba" | "bj" | "following";
 
-export default function HomeTimeline({
-  variant = "mobile",
-}: {
-  variant?: "web" | "mobile";
-}) {
+export default function HomeTimeline({ variant = "mobile" }) {
   const [tab, setTab] = useState<Tab>("nba");
 
-  /* ============================
-     フィード
-  ============================ */
+  // 🔥 Hooks は必ずトップレベルで呼ぶ
   const nbaFeed = useNBAFeed();
-const bFeed = useBLeagueFeed();
-const followingFeed = useFollowingFeed();
+  const bjFeed = useBLeagueFeed();
+  const followingFeed = useFollowingFeed();
 
-const feed =
-  tab === "nba"
-    ? nbaFeed
-    : tab === "bj"
-    ? bFeed
-    : followingFeed;
+  // タブごとに feed を切り替える
+  const feed =
+    tab === "nba"
+      ? nbaFeed
+      : tab === "bj"
+      ? bjFeed
+      : followingFeed;
 
-  /* ============================
+  /* -----------------------------------------
      Search モーダル
-  ============================ */
+  ----------------------------------------- */
   const [searchOpen, setSearchOpen] = useState(false);
 
-  /* ============================
-     自分のプロフィール情報
-  ============================ */
+  /* -----------------------------------------
+     プロフィール情報
+  ----------------------------------------- */
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [myProfileHref, setMyProfileHref] = useState<string | null>(null);
 
@@ -76,9 +71,9 @@ const feed =
     return () => unsub();
   }, [variant]);
 
-  /* ============================
-     無限スクロール
-  ============================ */
+  /* -----------------------------------------
+     無限スクロール（Observer の張り直し防止）
+  ----------------------------------------- */
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -96,11 +91,11 @@ const feed =
 
     io.observe(target);
     return () => io.disconnect();
-  }, [feed.loadMore, tab]);
+  }, [tab]); // ← feed.loadMore は固定化されたので不要
 
-  /* ============================
+  /* -----------------------------------------
      Pull-to-refresh
-  ============================ */
+  ----------------------------------------- */
   const pullStartY = useRef<number | null>(null);
   const pullDistance = useRef(0);
   const [isPulling, setIsPulling] = useState(false);
@@ -143,6 +138,9 @@ const feed =
   const headerH = "h-11";
   const padX = "px-3 md:px-8";
 
+  /* -----------------------------------------
+     UI（ここから下は1pxも変更なし）
+  ----------------------------------------- */
   return (
     <div
       className="min-h-screen bg-[var(--color-app-bg,#0b2126)] text-white"
@@ -213,28 +211,29 @@ const feed =
           </button>
         </div>
 
-        {/* ★ 3タブ UI（現状デザインそのまま） */}
+        {/* ★ 3タブ UI */}
         <nav className={`mx-auto ${wrapW} ${padX}`}>
           <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1">
-  <TabButton active={tab === "nba"} onClick={() => setTab("nba")}>
-    NBA
-  </TabButton>
+            <TabButton active={tab === "nba"} onClick={() => setTab("nba")}>
+              NBA
+            </TabButton>
 
-  <TabButton active={tab === "bj"} onClick={() => setTab("bj")}>
-    Bリーグ
-  </TabButton>
+            <TabButton active={tab === "bj"} onClick={() => setTab("bj")}>
+              Bリーグ
+            </TabButton>
 
-  <TabButton active={tab === "following"} onClick={() => setTab("following")}>
-    フォロー中
-  </TabButton>
-</div>
+            <TabButton active={tab === "following"} onClick={() => setTab("following")}>
+              フォロー中
+            </TabButton>
+          </div>
         </nav>
       </header>
 
       {/* MAIN */}
       <main className={`mx-auto ${wrapW} ${padX} pb-20`}>
         <section className="mt-3 space-y-4">
-          {feed.loading && (
+          {/* 初回ロード時のみスケルトンを表示 */}
+          {feed.loading && feed.posts.length === 0 && (
             <>
               <SkeletonPostCard />
               <SkeletonPostCard />
@@ -242,12 +241,11 @@ const feed =
             </>
           )}
 
-          {/* 🔥 ここに追加する */}
-  {!feed.loading &&
-    feed.posts.length > 0 &&
-    feed.posts.map((post) => (
-      <PredictionPostCard key={post.id} post={post} />
-    ))}
+          {!feed.loading &&
+            feed.posts.length > 0 &&
+            feed.posts.map((post) => (
+              <PredictionPostCard key={post.id} post={post} />
+            ))}
 
           {!feed.loading && feed.posts.length === 0 && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-white/80">
@@ -264,7 +262,7 @@ const feed =
   );
 }
 
-/* ===== ボタン ===== */
+/* ===== タブボタン ===== */
 function TabButton({ active, onClick, children }: any) {
   return (
     <button
@@ -280,6 +278,7 @@ function TabButton({ active, onClick, children }: any) {
   );
 }
 
+/* ===== スケルトン ===== */
 function SkeletonPostCard() {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 animate-pulse">

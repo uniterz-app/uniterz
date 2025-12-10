@@ -37,7 +37,6 @@ export default function GamePredictionDistribution({
       snap.docs.forEach((doc) => {
         const data = doc.data() as any;
 
-        // winner 判定（あらゆるパターンを吸収）
         const winner =
           data?.score?.winner ??
           data?.prediction?.winner ??
@@ -71,48 +70,51 @@ export default function GamePredictionDistribution({
   ];
 
   return (
-  <div className="rounded-xl p-4 border border-white/10 text-white">
-    <div
-      className="
-        flex flex-col items-center gap-4
-        md:flex-row md:items-center md:gap-10
-      "
-    >
-      {/* ==== 円グラフ（モバイル小 / Web大） ==== */}
-      <div className="flex-shrink-0">
-        {/* モバイル用（小） */}
-        <div className="md:hidden">
-          <DonutChart segments={segments} size={140} thickness={50} />
+    <div className="rounded-xl p-4 border border-white/10 text-white">
+      <div
+        className="
+          flex flex-col items-center gap-4
+          md:flex-row md:items-center md:gap-10
+        "
+      >
+        {/* ==== 円グラフ ==== */}
+        <div className="flex-shrink-0">
+          <div className="md:hidden">
+            <DonutChart segments={segments} size={140} thickness={50} />
+          </div>
+          <div className="hidden md:block">
+            <DonutChart segments={segments} size={260} thickness={80} />
+          </div>
         </div>
 
-        {/* Web用（大） */}
-        <div className="hidden md:block">
-          <DonutChart segments={segments} size={260} thickness={80} />
-        </div>
-      </div>
+        {/* ==== 凡例 ==== */}
+        <div className="space-y-3 text-sm md:space-y-4 md:text-base">
 
-      {/* ==== 凡例（モバイルは下 / Web は右） ==== */}
-      <div className="space-y-3 text-sm md:space-y-4 md:text-base">
-        {/* HOME */}
-        <div className="flex items-center justify-center gap-3">
-          <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: homeColor }} />
-          <span className="whitespace-nowrap">{homeName}</span>
-          <span className="tabular-nums">
-            {((homeCount / total) * 100).toFixed(1)}%
-          </span>
-        </div>
+          {/* ★★ 追加部分：凡例の上に総分析数を表示 ★★ */}
+          <div className="text-center md:text-left text-white/70 text-xs md:text-sm mb-2">
+            総分析数：<span className="tabular-nums">{total}</span>
+          </div>
 
-        {/* AWAY */}
-        <div className="flex items-center justify-center gap-3">
-          <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: awayColor }} />
-          <span className="whitespace-nowrap">{awayName}</span>
-          <span className="tabular-nums">
-            {((awayCount / total) * 100).toFixed(1)}%
-          </span>
+          {/* HOME */}
+          <div className="flex items-center justify-center gap-3">
+            <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: homeColor }} />
+            <span className="whitespace-nowrap">{homeName}</span>
+            <span className="tabular-nums">
+              {((homeCount / total) * 100).toFixed(1)}%
+            </span>
+          </div>
+
+          {/* AWAY */}
+          <div className="flex items-center justify-center gap-3">
+            <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: awayColor }} />
+            <span className="whitespace-nowrap">{awayName}</span>
+            <span className="tabular-nums">
+              {((awayCount / total) * 100).toFixed(1)}%
+            </span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
 

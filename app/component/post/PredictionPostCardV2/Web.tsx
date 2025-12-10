@@ -31,10 +31,12 @@ export default function PredictionPostCardV2({
   post,
   mode = "list",
   profileHref,
+  showDelete = false,
 }: {
   post: PredictionPostV2;
   mode?: "list" | "detail";
   profileHref?: string;
+  showDelete?: boolean;
 }) {
   const router = useRouter();
   const prefix = usePrefix();
@@ -188,12 +190,15 @@ const doDelete = async (e: any) => {
           onClick={(e) => e.stopPropagation()}
           className="flex items-start gap-3"
         >
-          <div className="w-14 h-14 rounded-full overflow-hidden ring-4 ring-[#0f2d35] shrink-0">
-            <img
-              src={post.author?.avatarUrl ?? "/avatar-placeholder.png"}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <div className="w-14 h-14 rounded-full overflow-hidden ring-4 ring-[#0f2d35] shrink-0 bg-white/10 flex items-center justify-center">
+  {post.author?.avatarUrl ? (
+    <img
+      src={post.author.avatarUrl}
+      className="w-full h-full object-cover"
+      alt="avatar"
+    />
+  ) : null}
+</div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -286,16 +291,16 @@ const doDelete = async (e: any) => {
 
   {/* 左ブロック：削除（またはダミーでスペース確保） */}
 <div className="flex items-center gap-3 w-24">
-  {isMine && isValidPostId && !isGameStarted ? (
-    <button
-      className="w-10 h-10 flex items-center justify-center"
-      onClick={doDelete}
-    >
-      <Trash2 size={22} />
-    </button>
-  ) : (
-    <div className="w-10 h-10" />
-  )}
+  {showDelete && isMine && isValidPostId && !isGameStarted ? (
+  <button
+    className="w-10 h-10 flex items-center justify-center"
+    onClick={doDelete}
+  >
+    <Trash2 size={22} />
+  </button>
+) : (
+  <div className="w-10 h-10" />
+)}
 </div>
 
   {/* 右ブロック：いいね + 保存（右端固定・数字付き） */}

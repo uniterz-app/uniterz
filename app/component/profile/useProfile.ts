@@ -176,9 +176,9 @@ export function useProfile(handle: string) {
       handle: u.handle || decodedHandle,   // ← @ を付けない
       bio: u.bio ?? "",
       avatarUrl:
-        u.photoURL && u.photoURL.trim()
-          ? u.photoURL
-          : BASE_PROFILE.avatarUrl,
+  u.photoURL && u.photoURL.trim()
+    ? u.photoURL
+    : "",
       counts,
       currentStreak: (u as any).currentStreak ?? 0,
     maxStreak: (u as any).maxStreak ?? 0,

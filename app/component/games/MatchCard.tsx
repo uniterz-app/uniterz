@@ -17,6 +17,38 @@ import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  limit,
+  getDocs,
+} from "firebase/firestore";
+
+/* ▼ 自分の投稿があるか確認する Hook */
+function useMyPostId(gameId: string) {
+  const [postId, setPostId] = useState<string | null>(null);
+  const uid = auth.currentUser?.uid ?? null;
+
+  useEffect(() => {
+    if (!uid) return;
+
+    (async () => {
+      const q = query(
+        collection(db, "posts"),
+        where("authorUid", "==", uid),
+        where("gameId", "==", gameId),
+        where("schemaVersion", "==", 2),
+        limit(1)
+      );
+
+      const snap = await getDocs(q);
+      setPostId(!snap.empty ? snap.docs[0].id : null);
+    })();
+  }, [uid, gameId]);
+
+  return postId;
+}
 
 function useTeamRecord(teamId?: string) {
   const [rec, setRec] = useState<{ wins: number; losses: number } | null>(null);
@@ -113,6 +145,9 @@ export default function MatchCard({
   className,
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
+  // ▼ 自分の投稿があるかをチェック
+const myPostId = useMyPostId(id);
+const isPredicted = !!myPostId;
 
     // ▼ 追加：モバイル判定
   const isMobile =
@@ -584,14 +619,22 @@ const awayColor =
           </Link>
 
           {/* ▼ 予想作成ページへ（自分の投稿があれば詳細へ／開始後は未投稿なら“見る”へ） */}
-          <Link
-            href={predictHref}
-            onClick={handleMakePrediction}
-            className="rounded-lg bg-white/15 hover:bg-white/25 text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base active:scale-90 transition-transform"
-            aria-label="予想をする"
-          >
-            予想をする
-          </Link>
+          {/* ▼ 予想をする / 予想済み */}
+<Link
+  href={
+    isPredicted
+      ? buildMyPostHref(myPostId!)
+      : predictHref
+  }
+  onClick={handleMakePrediction}
+  className={
+    isPredicted
+      ? "rounded-lg bg-gray-600/40 text-white grid place-items-center font-bold h-8 text-sm md:h-12 md:text-base active:scale-90 transition-transform"
+      : "rounded-lg bg-blue-600 hover:bg-blue-500 text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base active:scale-90 transition-transform"
+  }
+>
+  {isPredicted ? "予想済み" : "予想をする"}
+</Link>
         </div>
       )}
     </div>

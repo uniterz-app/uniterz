@@ -8,6 +8,7 @@ type PredictionPostCardV2Props = {
   post: any;
   mode?: "list" | "detail";
   profileHref?: string;
+  showDelete?: boolean;
 };
 
 export default function PredictionPostCardV2(props: PredictionPostCardV2Props) {
