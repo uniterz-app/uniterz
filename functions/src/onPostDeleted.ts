@@ -17,9 +17,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
     const uid = before.authorUid;
     const createdAt: Timestamp = before.createdAt;
-    const stats = before.stats;
+    const stats = before.stats; // 確定投稿のみ存在
 
-    if (!uid || !createdAt || !stats) return;
+    if (!uid || !createdAt) return;
 
     const db = getFirestore();
 
@@ -34,19 +34,51 @@ export const onPostDeletedV2 = onDocumentDeleted(
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const postMarkerRef = dailyRef.collection("applied_posts").doc(snap.id);
 
+    // ===== ① stats がない（未確定投稿） → 投稿数だけ -1 =====
+    if (!stats) {
+      await db.runTransaction(async (tx) => {
+        const dailySnap = await tx.get(dailyRef);
+        if (!dailySnap.exists) return;
+
+        const dec = {
+          posts: FieldValue.increment(-1),
+          createdPosts: FieldValue.increment(-1),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+
+        // all
+        tx.set(dailyRef, { all: dec }, { merge: true });
+
+        // league（before.game.league があれば）
+        const leagueKey = before.game?.league ?? null;
+        if (leagueKey) {
+          tx.set(
+            dailyRef,
+            { leagues: { [leagueKey]: dec } },
+            { merge: true }
+          );
+        }
+      });
+
+      // 集計再計算
+      await recomputeUserStatsV2FromDaily(uid);
+      return; // ★ ここで終了
+    }
+
+    // ===== ② stats がある（確定投稿） → 今まで通り精度の逆操作 =====
     const isWin = stats.isWin === true;
     const scoreError = stats.scoreError ?? 0;
     const brier = stats.brier ?? 0;
     const upset = isWin ? (stats.upsetScore ?? 0) : 0;
     const precision = stats.scorePrecision ?? 0;
 
-    // ===== daily の逆操作 =====
     await db.runTransaction(async (tx) => {
       const dailySnap = await tx.get(dailyRef);
       if (!dailySnap.exists) return;
 
-      const inc: any = {
+      const inc = {
         posts: FieldValue.increment(-1),
+        createdPosts: FieldValue.increment(-1),
         wins: FieldValue.increment(isWin ? -1 : 0),
         scoreErrorSum: FieldValue.increment(-scoreError),
         brierSum: FieldValue.increment(-brier),
@@ -55,10 +87,8 @@ export const onPostDeletedV2 = onDocumentDeleted(
         updatedAt: FieldValue.serverTimestamp(),
       };
 
-      // all に適用
       tx.set(dailyRef, { all: inc }, { merge: true });
 
-      // leagues に適用
       const leagueKey = before.game?.league ?? null;
       if (leagueKey) {
         tx.set(
@@ -71,7 +101,6 @@ export const onPostDeletedV2 = onDocumentDeleted(
       tx.delete(postMarkerRef);
     });
 
-    // ===== user_stats_v2 の再計算 =====
     await recomputeUserStatsV2FromDaily(uid);
   }
 );

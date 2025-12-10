@@ -60,26 +60,30 @@ export function useGameDays(league: League) {
   }, [league]);
 
   /** ▼ rows から「試合日のみ」を抽出して昇順に */
-  const gameDays = useMemo(() => {
-    const map = new Map<string, Date>();
+ const gameDays = useMemo(() => {
+  const map = new Map<string, Date>();
 
-    for (const g of rows) {
-      const t = g.startAtJst;
-      if (!t) continue;
-      let d: Date;
+  function toJstDateOnly(d: Date) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
 
-      if (t instanceof Timestamp) d = t.toDate();
-      else if (typeof t?.toDate === "function") d = t.toDate();
-      else if (t instanceof Date) d = t;
-      else continue;
+  for (const g of rows) {
+    const t = g.startAtJst;
+    if (!t) continue;
 
-      const key = toYYYYMMDD(d);
-      if (!map.has(key)) map.set(key, d); // “その日の0:00相当”ではなく実時刻で保持 OK
-    }
+    let d: Date;
 
-    // 昇順ソート
-    return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
-  }, [rows]);
+    if (t instanceof Timestamp) d = toJstDateOnly(t.toDate());
+    else if (typeof t?.toDate === "function") d = toJstDateOnly(t.toDate());
+    else if (t instanceof Date) d = toJstDateOnly(t);
+    else continue;
+
+    const key = toYYYYMMDD(d);
+    if (!map.has(key)) map.set(key, d);
+  }
+
+  return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
+}, [rows]);
 
   return { gameDays, loading, error };
 }

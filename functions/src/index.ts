@@ -12,7 +12,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { dailyAnalyticsCore } from "./analytics/_core";
-import { seedTeams } from "./seed/seedTeams";
+
 
 // ===============================
 // V2 Core
@@ -167,18 +167,9 @@ export const runDailyAnalyticsHttp = onRequest(async (_req, res) => {
   }
 });
 
-/* ============================================================================
- * Seed
- * ==========================================================================*/
 
-export const seedTeamsHttp = onRequest(async (_req, res) => {
-  try {
-    await seedTeams();
-    res.status(200).json({ ok: true });
-  } catch (err: any) {
-    res.status(500).json({ ok: false, error: String(err) });
-  }
-});
+
+
 
 
 

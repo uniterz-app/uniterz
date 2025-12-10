@@ -12,7 +12,7 @@ const db = () => getFirestore();
 // =====================
 // 設定値
 // =====================
-const MIN_MARKET = 5;      // 市場最低人数
+const MIN_MARKET = 10;      // 市場最低人数
 const MIN_GAMES = 15;      // 順位が有効になる試合数
 
 /* -------------------------
@@ -35,11 +35,11 @@ function rankBonus(rankDiff: number): number {
   return Math.round(bonus * 10) / 10;
 }
 
-
+const MARKET_K = 1.4;
 // raw upset 計算
 function calcRawUpsetScore(sameSideRatio: number, rankDiff: number): number {
   const p = Math.max(0.01, Math.min(0.99, sameSideRatio)); 
-  const marketScore = Math.log2(1 / p);
+  const marketScore = MARKET_K * Math.log2(1 / p);
   return marketScore + rankBonus(rankDiff);
 }
 

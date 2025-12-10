@@ -18,8 +18,8 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         return;
     const uid = before.authorUid;
     const createdAt = before.createdAt;
-    const stats = before.stats;
-    if (!uid || !createdAt || !stats)
+    const stats = before.stats; // 確定投稿のみ存在
+    if (!uid || !createdAt)
         return;
     const db = (0, firestore_2.getFirestore)();
     // ===== JSTの日付キー =====
@@ -31,12 +31,36 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const dateKey = `${yyyy}-${mm}-${dd}`;
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const postMarkerRef = dailyRef.collection("applied_posts").doc(snap.id);
+    // ===== ① stats がない（未確定投稿） → 投稿数だけ -1 =====
+    if (!stats) {
+        await db.runTransaction(async (tx) => {
+            var _a, _b;
+            const dailySnap = await tx.get(dailyRef);
+            if (!dailySnap.exists)
+                return;
+            const dec = {
+                posts: firestore_2.FieldValue.increment(-1),
+                createdPosts: firestore_2.FieldValue.increment(-1),
+                updatedAt: firestore_2.FieldValue.serverTimestamp(),
+            };
+            // all
+            tx.set(dailyRef, { all: dec }, { merge: true });
+            // league（before.game.league があれば）
+            const leagueKey = (_b = (_a = before.game) === null || _a === void 0 ? void 0 : _a.league) !== null && _b !== void 0 ? _b : null;
+            if (leagueKey) {
+                tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
+            }
+        });
+        // 集計再計算
+        await (0, updateUserStatsV2_1.recomputeUserStatsV2FromDaily)(uid);
+        return; // ★ ここで終了
+    }
+    // ===== ② stats がある（確定投稿） → 今まで通り精度の逆操作 =====
     const isWin = stats.isWin === true;
     const scoreError = (_a = stats.scoreError) !== null && _a !== void 0 ? _a : 0;
     const brier = (_b = stats.brier) !== null && _b !== void 0 ? _b : 0;
     const upset = isWin ? ((_c = stats.upsetScore) !== null && _c !== void 0 ? _c : 0) : 0;
     const precision = (_d = stats.scorePrecision) !== null && _d !== void 0 ? _d : 0;
-    // ===== daily の逆操作 =====
     await db.runTransaction(async (tx) => {
         var _a, _b;
         const dailySnap = await tx.get(dailyRef);
@@ -44,6 +68,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             return;
         const inc = {
             posts: firestore_2.FieldValue.increment(-1),
+            createdPosts: firestore_2.FieldValue.increment(-1),
             wins: firestore_2.FieldValue.increment(isWin ? -1 : 0),
             scoreErrorSum: firestore_2.FieldValue.increment(-scoreError),
             brierSum: firestore_2.FieldValue.increment(-brier),
@@ -51,16 +76,13 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             scorePrecisionSum: firestore_2.FieldValue.increment(-precision),
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         };
-        // all に適用
         tx.set(dailyRef, { all: inc }, { merge: true });
-        // leagues に適用
         const leagueKey = (_b = (_a = before.game) === null || _a === void 0 ? void 0 : _a.league) !== null && _b !== void 0 ? _b : null;
         if (leagueKey) {
             tx.set(dailyRef, { leagues: { [leagueKey]: inc } }, { merge: true });
         }
         tx.delete(postMarkerRef);
     });
-    // ===== user_stats_v2 の再計算 =====
     await (0, updateUserStatsV2_1.recomputeUserStatsV2FromDaily)(uid);
 });
 //# sourceMappingURL=onPostDeleted.js.map
