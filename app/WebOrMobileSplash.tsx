@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import SplashWrapper from "@/app/SplashWrapper";
 import AuthGate from "@/app/AuthGate";
+import MaintenanceOverlay from "@/app/component/common/maintenance";
 
 export default function WebOrMobileSplash({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,6 +13,8 @@ export default function WebOrMobileSplash({ children }: { children: React.ReactN
   if (isWeb) {
     return (
       <AuthGate>
+        {/* ★ ここに追加 */}
+        <MaintenanceOverlay />
         <div id="app-root">{children}</div>
       </AuthGate>
     );
@@ -21,6 +24,8 @@ export default function WebOrMobileSplash({ children }: { children: React.ReactN
   return (
     <SplashWrapper>
       <AuthGate>
+        {/* ★ ここにも追加 */}
+        <MaintenanceOverlay />
         <div id="app-root">{children}</div>
       </AuthGate>
     </SplashWrapper>

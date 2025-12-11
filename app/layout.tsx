@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // ★ 今だけ true にしてメンテナンスモードを強制
-  const maintenance = false;
+  const maintenance = true;
 
   return (
     <html lang="ja">
