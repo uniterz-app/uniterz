@@ -205,6 +205,12 @@ const winnerTeam =
     UPSET
   </span>
 )}
+{badge === "miss" && (
+  <span className="absolute right-3 top-3 bg-gray-500 text-white text-[11px] px-2 py-0.5 rounded-md font-bold shadow-md">
+    MISS
+  </span>
+)}
+
 
       <div className="rounded-2xl bg-black/10 border border-white/10 p-4 text-white">
 

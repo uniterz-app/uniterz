@@ -3,146 +3,71 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
-
 import { calcScorePrecision } from "./calcScorePrecision";
-import { updateTeamRankings } from "./ranking/updateTeamRankings";
 
 const db = () => getFirestore();
 
-// =====================
-// 設定値
-// =====================
-const MIN_MARKET = 10;      // 市場最低人数
-const MIN_GAMES = 15;      // 順位が有効になる試合数
-
-/* -------------------------
-   ★ Upset 用（追加）
---------------------------*/
-
-// アップセット用ランク差ボーナス（新 1.3 カーブ, 最大 5点）
-function rankBonus(rankDiff: number): number {
-  const MAX = 30; // 想定最大ランク差
-  const clamped = Math.min(Math.max(rankDiff, 0), MAX);
-
-  // 0〜1 に正規化
-  const x = clamped / MAX;
-
-  // 序盤ゆるく、後半で効いてくるカーブ（指数 1.3）
-  const curved = Math.pow(x, 1.3);
-
-  // 最大 5 点にスケーリングして小数1桁に丸め
-  const bonus = curved * 5;
-  return Math.round(bonus * 10) / 10;
-}
+/* =====================================================
+ * Upset Score Utility
+ * ===================================================== */
 
 const MARKET_K = 1.4;
-// raw upset 計算
-function calcRawUpsetScore(sameSideRatio: number, rankDiff: number): number {
-  const p = Math.max(0.01, Math.min(0.99, sameSideRatio)); 
-  const marketScore = MARKET_K * Math.log2(1 / p);
-  return marketScore + rankBonus(rankDiff);
+const MIN_MARKET = 10;
+
+function rankBonus(rankDiff: number): number {
+  const MAX = 30;
+  const x = Math.min(Math.max(rankDiff, 0), MAX) / MAX;
+  const curved = Math.pow(x, 1.3);
+  return Math.round(curved * 50) / 10;
 }
 
-// 0〜10 正規化
-function normalizeUpsetScore(raw: number): number {
-  const MAX_RAW = 8;
-  const v = (raw / MAX_RAW) * 10;
-  return Math.max(0, Math.min(10, v));
+function calcRawUpsetScore(sameSideRatio: number, rankDiff: number) {
+  const p = Math.max(0.01, Math.min(0.99, sameSideRatio));
+  return MARKET_K * Math.log2(1 / p) + rankBonus(rankDiff);
 }
 
-// =====================
-// 型
-// =====================
-
-type GameDoc = {
-  id: string;
-  league?: string;
-  home: string;
-  away: string;
-  final: boolean;
-  homeScore: number | null;
-  awayScore: number | null;
-  homeTeamId?: string;
-  awayTeamId?: string;
-};
-
-type PostStatus = "pending" | "final";
-
-type PostV2 = {
-  schemaVersion: 2;
-  gameId: string;
-  authorUid: string;
-  createdAt: Timestamp;
-  startAtMillis?: number;
-
-  status?: PostStatus;
-
-  prediction: {
-    winner: "home" | "away";
-    confidence: number;
-    score: { home: number; away: number };
-  };
-
-  stats?: {
-    isWin: boolean;
-    scoreError: number;
-    brier: number;
-
-    rankingReady: boolean;
-    rankingFactor: 0 | 1;
-    marketCount: number;
-    marketBias: number | null;
-    upsetScore: number;
-
-    scorePrecision: number;
-    scorePrecisionDetail: {
-      homePt: number;
-      awayPt: number;
-      diffPt: number;
-    };
-  } | null;
-
-  result?: { home: number; away: number } | null;
-  settledAt?: Timestamp | null;
-};
-/* =======================
- * ユーティリティ
- * ======================= */
-
-function toName(v: any) {
-  return typeof v === "string" ? v : (v?.name ?? "");
+function normalizeUpset(raw: number) {
+  return Math.max(0, Math.min(10, (raw / 8) * 10));
 }
 
-function normalizeGame(after: any, gameId: string): GameDoc {
+/* =====================================================
+ * Helpers
+ * ===================================================== */
+
+function normalizeGame(after: any, gameId: string) {
   return {
     id: gameId,
-    league: after?.league ? String(after.league) : undefined,
-    home: toName(after?.home),
-    away: toName(after?.away),
-    final: !!after?.final,
-    homeScore: after?.homeScore ?? null,
-    awayScore: after?.awayScore ?? null,
+    league: after?.league ?? undefined,
     homeTeamId: after?.home?.teamId,
     awayTeamId: after?.away?.teamId,
+    homeScore: after?.homeScore ?? null,
+    awayScore: after?.awayScore ?? null,
+    final: !!after?.final,
+    homeRank: null as number | null,
+    awayRank: null as number | null,
   };
 }
 
-function judgeWin(pred: { winner: "home" | "away" }, result: { home: number; away: number }): boolean {
+function judgeWin(pred: any, result: any) {
   return pred.winner === "home"
     ? result.home > result.away
     : result.away > result.home;
 }
 
-function calcScoreError(pred: { home: number; away: number }, real: { home: number; away: number }): number {
+function calcBrier(isWin: boolean, confidence: number) {
+  const p = Math.min(0.999, Math.max(0.001, confidence / 100));
+  const y = isWin ? 1 : 0;
+  return Math.round((p - y) * (p - y) * 10000) / 10000;
+}
+
+function calcScoreError(pred: any, real: any) {
   return Math.abs(pred.home - real.home) + Math.abs(pred.away - real.away);
 }
 
-function calcBrier(isWin: boolean, confidencePct: number): number {
-  const p = Math.min(0.999, Math.max(0.001, confidencePct / 100));
-  const y = isWin ? 1 : 0;
-  const b = (p - y) * (p - y);
-  return Math.round(b * 10000) / 10000;
-}
+/* =====================================================
+ * Main Trigger
+ * ===================================================== */
+
 export const onGameFinalV2 = onDocumentWritten(
   {
     document: "games/{gameId}",
@@ -150,10 +75,11 @@ export const onGameFinalV2 = onDocumentWritten(
   },
   async (event) => {
     const before = event.data?.before?.data();
-    const after  = event.data?.after?.data();
+    const after = event.data?.after?.data();
     if (!after) return;
 
     const gameId = event.params.gameId;
+
     const becameFinal = !before?.final && !!after?.final;
     const scoreChanged =
       before?.homeScore !== after?.homeScore ||
@@ -162,40 +88,12 @@ export const onGameFinalV2 = onDocumentWritten(
     if (!becameFinal && !scoreChanged) return;
 
     const game = normalizeGame(after, gameId);
-    if (!game.final) return;
-    if (game.homeScore == null || game.awayScore == null) return;
 
-    const postsSnap = await db()
-      .collection("posts")
-      .where("gameId", "==", gameId)
-      .where("schemaVersion", "==", 2)
-      .get();
-
-    if (postsSnap.empty) {
-      await db().doc(`games/${gameId}`).set(
-        { resultComputedAtV2: FieldValue.serverTimestamp() },
-        { merge: true }
-      );
-      return;
-    }
-
-    const totalPosts = postsSnap.size;
-    let homeCnt = 0, awayCnt = 0;
-    postsSnap.forEach(d => {
-      const p = d.data() as PostV2;
-      if (p.prediction?.winner === "home") homeCnt++;
-      if (p.prediction?.winner === "away") awayCnt++;
-    });
-
-    const now = Timestamp.now();
-    const batch = db().batch();
-    const statTasks: Promise<any>[] = [];
-
-    // 順位情報
+    /* -----------------------------
+     * ランク取得（軽量版）
+     * ----------------------------- */
     let homeRank: number | null = null;
     let awayRank: number | null = null;
-    let homeGames = 0;
-    let awayGames = 0;
 
     if (game.homeTeamId && game.awayTeamId) {
       const [hSnap, aSnap] = await Promise.all([
@@ -203,34 +101,52 @@ export const onGameFinalV2 = onDocumentWritten(
         db().doc(`teams/${game.awayTeamId}`).get(),
       ]);
 
-      const h = hSnap.data() || {};
-      const a = aSnap.data() || {};
-      homeRank = numberOrNull(h.rank);
-      awayRank = numberOrNull(a.rank);
-      homeGames = Number(h.gamesPlayed || 0);
-      awayGames = Number(a.gamesPlayed || 0);
+      homeRank = Number(hSnap.data()?.rank ?? null);
+      awayRank = Number(aSnap.data()?.rank ?? null);
     }
 
-    const rankingReady =
-      homeRank != null &&
-      awayRank != null &&
-      homeGames >= MIN_GAMES &&
-      awayGames >= MIN_GAMES;
+    game.homeRank = homeRank;
+    game.awayRank = awayRank;
 
-    const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
+    if (!game.final) return;
+    if (game.homeScore == null || game.awayScore == null) return;
 
-    // -------------------------
-    // 投稿ごとの処理
-    // -------------------------
+    /* -----------------------------
+     * 投稿取得
+     * ----------------------------- */
+    const postsSnap = await db()
+      .collection("posts")
+      .where("gameId", "==", gameId)
+      .where("schemaVersion", "==", 2)
+      .get();
+
+    const totalPosts = postsSnap.size;
+    let homeCnt = 0,
+      awayCnt = 0;
+
+    postsSnap.forEach((d) => {
+      const p = d.data();
+      if (p.prediction.winner === "home") homeCnt++;
+      if (p.prediction.winner === "away") awayCnt++;
+    });
+
+    const now = Timestamp.now();
+    const batch = db().batch();
+    const userUpdateTasks: Promise<any>[] = [];
+
+    /* -----------------------------
+     * 投稿ごとの処理
+     * ----------------------------- */
     for (const doc of postsSnap.docs) {
-      const p = doc.data() as PostV2;
+      const p = doc.data();
       if (p.settledAt) continue;
 
-      const finalScore = { home: game.homeScore!, away: game.awayScore! };
-      const isWin = judgeWin(p.prediction, finalScore);
-      const scoreError = calcScoreError(p.prediction.score, finalScore);
+      const final = { home: game.homeScore!, away: game.awayScore! };
+      const isWin = judgeWin(p.prediction, final);
+      const scoreError = calcScoreError(p.prediction.score, final);
       const conf = Math.min(99, Math.max(1, p.prediction.confidence));
       const brier = calcBrier(isWin, conf);
+      const calibrationError = Math.abs(conf / 100 - (isWin ? 1 : 0));
 
       const { homePt, awayPt, diffPt, totalPt } = calcScorePrecision({
         predictedHome: p.prediction.score.home,
@@ -240,83 +156,96 @@ export const onGameFinalV2 = onDocumentWritten(
         league: game.league ?? "bj",
       });
 
-      // rankingFactor
-      let rankingFactor: 0 | 1 = 0;
-      if (rankingReady && isWin) {
-        const lowerSide = homeRank! > awayRank! ? "home" : "away";
-        rankingFactor = (p.prediction.winner === lowerSide && winnerSide === lowerSide) ? 1 : 0;
+      /* -----------------------------
+       * upsetScore 計算
+       * ----------------------------- */
+      let upset = 0;
+
+      if (totalPosts >= MIN_MARKET && isWin) {
+        const same = p.prediction.winner === "home" ? homeCnt : awayCnt;
+        const ratio = same / totalPosts;
+
+        if (homeRank != null && awayRank != null) {
+          const rankDiff = Math.abs(homeRank - awayRank);
+          const higher = homeRank < awayRank ? "home" : "away";
+          const winnerSide = final.home > final.away ? "home" : "away";
+
+          if (winnerSide === higher) {
+            upset = 0;
+          } else {
+            const raw = calcRawUpsetScore(ratio, rankDiff);
+            upset = normalizeUpset(raw);
+          }
+        } else {
+          const raw = calcRawUpsetScore(ratio, 0);
+          upset = normalizeUpset(raw);
+        }
       }
 
-      // marketBias
-      let marketBias: number | null = null;
-      if (isWin && totalPosts >= MIN_MARKET) {
-        const sameSide =
-          p.prediction.winner === "home" ? homeCnt : awayCnt;
-        marketBias = 1 - (sameSide / totalPosts);
-        marketBias = clamp01(marketBias);
-      }
-
-      // -----------------------------
-      // ★ NEW: UpsetIndex（0〜10）
-      // -----------------------------
-      let upsetIndex = 0;
-
-      if (isWin && totalPosts >= MIN_MARKET) {
-        const sameSide =
-          p.prediction.winner === "home" ? homeCnt : awayCnt;
-
-        const sameSideRatio = sameSide / totalPosts;
-
-        const rankDiff =
-          rankingReady && homeRank != null && awayRank != null
-            ? Math.abs(homeRank - awayRank)
-            : 0;
-
-        const raw = calcRawUpsetScore(sameSideRatio, rankDiff);
-        upsetIndex = normalizeUpsetScore(raw);
-      }
-
-      // 更新
+      /* -----------------------------
+       * 投稿更新バッチ
+       * ----------------------------- */
       batch.update(doc.ref, {
-        result: finalScore,
+        result: final,
         stats: {
           isWin,
           scoreError,
           brier,
-
-          rankingReady,
-          rankingFactor,
-          marketCount: totalPosts,
-          marketBias,
-          upsetScore: upsetIndex,
-
+          upsetScore: upset,
           scorePrecision: totalPt,
           scorePrecisionDetail: { homePt, awayPt, diffPt },
+          marketCount: totalPosts,
         },
-        settledAt: now,
         status: "final",
+        settledAt: now,
         updatedAt: FieldValue.serverTimestamp(),
       });
 
-      statTasks.push(
+      /* -----------------------------
+       * スタッツ更新 (daily)
+       * ----------------------------- */
+      userUpdateTasks.push(
         applyPostToUserStatsV2({
           uid: p.authorUid,
           postId: doc.id,
           createdAt: p.createdAt,
+          startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
           league: game.league,
           isWin,
           scoreError,
           brier,
-          upsetScore: upsetIndex,   // ★ normalize 済み
+          upsetScore: upset,
           scorePrecision: totalPt,
           confidence: conf / 100,
+          calibrationError,
+        })
+      );
+
+      /* -----------------------------
+       * ALL TIME キャッシュ更新
+       * ----------------------------- */
+      userUpdateTasks.push(
+        updateAllTimeCache({
+          uid: p.authorUid,
+          isWin,
+          scoreError,
+          brier,
+          upsetScore: upset,
+          scorePrecision: totalPt,
+          calibrationError,
         })
       );
     }
 
+    /* -----------------------------
+     * Commit & Wait
+     * ----------------------------- */
     await batch.commit();
-    await Promise.all(statTasks);
+    await Promise.all(userUpdateTasks);
 
+    /* -----------------------------
+     * ゲーム情報更新
+     * ----------------------------- */
     await db().doc(`games/${gameId}`).set(
       {
         "game.status": "final",
@@ -325,78 +254,44 @@ export const onGameFinalV2 = onDocumentWritten(
       },
       { merge: true }
     );
-        // ===============================
-    // ★ チーム勝敗の更新（V2版）
-    // ===============================
-    if (game.homeTeamId && game.awayTeamId) {
-      const homeId = game.homeTeamId;
-      const awayId = game.awayTeamId;
-
-      const homeWon = game.homeScore > game.awayScore;
-      const awayWon = game.awayScore > game.homeScore;
-
-      const homeRef = db().doc(`teams/${homeId}`);
-      const awayRef = db().doc(`teams/${awayId}`);
-
-      const [homeSnap, awaySnap] = await Promise.all([
-        homeRef.get(),
-        awayRef.get(),
-      ]);
-
-      const homeData = homeSnap.data() || {};
-      const awayData = awaySnap.data() || {};
-
-      const homeWins = Number(homeData.wins || 0);
-      const homeLosses = Number(homeData.losses || 0);
-      const awayWins = Number(awayData.wins || 0);
-      const awayLosses = Number(awayData.losses || 0);
-
-      // 勝敗の反映
-      const newHomeWins = homeWon ? homeWins + 1 : homeWins;
-      const newHomeLosses = awayWon ? homeLosses + 1 : homeLosses;
-
-      const newAwayWins = awayWon ? awayWins + 1 : awayWins;
-      const newAwayLosses = homeWon ? awayLosses + 1 : awayLosses;
-
-      // 勝率
-      const homeWinRate =
-        newHomeWins + newHomeLosses > 0
-          ? newHomeWins / (newHomeWins + newHomeLosses)
-          : 0;
-
-      const awayWinRate =
-        newAwayWins + newAwayLosses > 0
-          ? newAwayWins / (newAwayWins + newAwayLosses)
-          : 0;
-
-      // Firestore 反映
-      await Promise.all([
-        homeRef.set(
-          {
-            wins: newHomeWins,
-            losses: newHomeLosses,
-            winRate: homeWinRate,
-          },
-          { merge: true }
-        ),
-        awayRef.set(
-          {
-            wins: newAwayWins,
-            losses: newAwayLosses,
-            winRate: awayWinRate,
-          },
-          { merge: true }
-        ),
-      ]);
-    }
   }
 );
 
-// helpers
-function numberOrNull(v: any): number | null {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-function clamp01(x: number) {
-  return Math.max(0, Math.min(1, x));
+/* =====================================================
+ * ALL TIME CACHE（外側に置く）
+ * ===================================================== */
+
+async function updateAllTimeCache({
+  uid,
+  isWin,
+  scoreError,
+  brier,
+  upsetScore,
+  scorePrecision,
+  calibrationError, 
+}: {
+  uid: string;
+  isWin: boolean;
+  scoreError: number;
+  brier: number;
+  upsetScore: number;
+  scorePrecision: number;
+  calibrationError: number;
+}) {
+  const ref = db().doc(`user_stats_v2_all_cache/${uid}`);
+
+  await ref.set(
+    {
+      posts: FieldValue.increment(1),
+      wins: FieldValue.increment(isWin ? 1 : 0),
+      scoreErrorSum: FieldValue.increment(scoreError),
+      brierSum: FieldValue.increment(brier),
+      upsetScoreSum: FieldValue.increment(isWin ? upsetScore : 0),
+      scorePrecisionSum: FieldValue.increment(scorePrecision),
+      calibrationErrorSum: FieldValue.increment(calibrationError),
+      calibrationCount: FieldValue.increment(1),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
 }

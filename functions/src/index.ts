@@ -13,12 +13,10 @@ import { FieldValue } from "firebase-admin/firestore";
 import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { dailyAnalyticsCore } from "./analytics/_core";
 
-
 // ===============================
 // V2 Core
 // ===============================
 export { onGameFinalV2 } from "./onGameFinalV2";
-export { recomputeAllUsersStatsV2Daily } from "./updateUserStatsV2";
 
 // 🔥 週間・月間ランキング（V2）
 export {
@@ -157,6 +155,16 @@ export const updateTeamRankingsDaily = onSchedule(
 export { dailyAnalytics } from "./analytics/daily";
 export { logUserActive } from "./analytics/logUserActive";
 export { runDailyAnalytics } from "./analytics/runDaily";
+
+export { fixUserStats } from "./fixUserStats";
+
+
+// ============================================================
+// Debug: 全ユーザーを一括で再計算する HTTP エンドポイント
+// ============================================================
+
+export { listUserStatsIds } from "./debug/listUserStats";
+
 
 export const runDailyAnalyticsHttp = onRequest(async (_req, res) => {
   try {

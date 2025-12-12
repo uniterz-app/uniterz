@@ -34,7 +34,7 @@ export type SummaryDataV2 = {
   avgPrecision: number;
   avgBrier: number;
   avgUpset: number;
-  calibrationError: number;
+  avgCalibration: number | null;
 };
 
 type Props = {
@@ -69,19 +69,18 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
 
   const min = MIN_POSTS[period];
 const enoughPosts = data.fullPosts >= min;
-  
 
-  // 一致度（100点満点）
-const hasStats = data.posts > 0 && Number.isFinite(data.calibrationError);
 
 // 一致度の安全処理
 let consistency: number;
 let consistencyText: string;
 
-// calibrationError が number 以外なら NaN 扱いに統一
+// まず一時変数に入れる（これが重要）
+const calib = data.avgCalibration;
+
+// null または 非数値なら無効
 const validCalib =
-  typeof data.calibrationError === "number" &&
-  Number.isFinite(data.calibrationError);
+  typeof calib === "number" && Number.isFinite(calib);
 
 if (!validCalib || data.posts === 0) {
   consistency = NaN;
@@ -89,7 +88,7 @@ if (!validCalib || data.posts === 0) {
 } else {
   consistency = Math.max(
     0,
-    Math.min(100, Math.round((1 - data.calibrationError) * 100))
+    Math.min(100, Math.round((1 - calib) * 100))
   );
   consistencyText = `${consistency}%`;
 }
@@ -132,7 +131,7 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
           
             <Card
               icon={<BarChartHorizontal size={iconSize} />}
-              label="分析数"
+              label="確定分析数"
               value={postsText}
               padCls={padCls}
               labelCls={labelCls}
@@ -268,7 +267,7 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
     <>
       <div className={`grid grid-cols-6 ${gapCls} mt-6`}>
         <Card
-          label="分析数"
+          label="確定分析数"
           value={postsText}
           padCls={padCls}
           labelCls={labelCls}

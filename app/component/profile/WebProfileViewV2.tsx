@@ -232,7 +232,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     avgPrecision: summary?.avgPrecision ?? 0,
     avgBrier: summary?.avgBrier ?? 0,
     avgUpset: summary?.avgUpset ?? 0,
-    calibrationError: summary?.calibrationError ?? 0,
+    avgCalibration: summary?.avgCalibration ?? null,
   }}
 />
 
@@ -244,7 +244,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               )}
 
               {posts.map((p) => (
-                <PredictionPostCardV2 key={p.id} post={p} mode="list" />
+                <PredictionPostCardV2 key={p.id} post={p} mode="list" showDelete={true} />
               ))}
 
               {!noMore && (

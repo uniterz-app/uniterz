@@ -2,18 +2,15 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
-import { recomputeUserStatsV2FromDaily } from "./updateUserStatsV2";
-
 const db = getFirestore();
 
 /**
- * V2: posts/{postId} 新規作成時
+ * V2: posts/{postId} 新規作成時（軽量版）
  *
  * やること：
- * ① user_stats_v2_daily/{uid_YYYY-MM-DD}.createdPosts を +1
- * ② user_stats_v2/{uid} の 7d / 30d / all を再計算
+ * ① user_stats_v2_daily/{uid_YYYY-MM-DD}.all.posts を +1
  *
- * ※勝敗・精度などの stats は onGameFinalV2 が行う
+ * ※勝敗・精度などの stats は onGameFinalV2 でのみ処理する。
  */
 export const onPostCreatedV2 = onDocumentCreated(
   {
@@ -28,9 +25,7 @@ export const onPostCreatedV2 = onDocumentCreated(
     const createdAt = data.createdAt as Timestamp;
     if (!uid || !createdAt) return;
 
-    // -----------------------------
-    // JST YYYY-MM-DD キー生成
-    // -----------------------------
+    // JST 日付キー
     const d = createdAt.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const yyyy = j.getUTCFullYear();
@@ -40,21 +35,6 @@ export const onPostCreatedV2 = onDocumentCreated(
 
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
 
-    // -----------------------------
-    // ① createdPosts を +1
-    // -----------------------------
-    await dailyRef.set(
-      {
-        date: dateKey,
-        createdPosts: FieldValue.increment(1),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    // -----------------------------
-    // ② user_stats_v2 再計算
-    // -----------------------------
-    await recomputeUserStatsV2FromDaily(uid);
+    // ※ 再集計は不要（軽量化方針）
   }
 );

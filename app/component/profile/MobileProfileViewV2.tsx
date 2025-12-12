@@ -216,13 +216,13 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   compact
   period={range} 
   data={{
-    fullPosts: summaryV2?.fullPosts ?? 0, // ← 追加
-    posts: summaryV2?.posts ?? 0,         // 確定投稿数
-    winRate: summaryV2?.winRate ?? 0,
-    avgPrecision: summaryV2?.avgPrecision ?? 0,
-    avgBrier: summaryV2?.avgBrier ?? 0,
-    avgUpset: summaryV2?.avgUpset ?? 0,
-    calibrationError: summaryV2?.calibrationError ?? 0,
+    fullPosts: summary?.fullPosts ?? 0,
+posts: summary?.posts ?? 0,
+winRate: summary?.winRate ?? 0,
+avgPrecision: summary?.avgPrecision ?? 0,
+avgBrier: summary?.avgBrier ?? 0,
+avgUpset: summary?.avgUpset ?? 0,
+avgCalibration: summary?.avgCalibration ?? null,
   }}
 />
 

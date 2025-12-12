@@ -2,171 +2,133 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getCountFromServer,
-  Timestamp,
-} from "firebase/firestore";
+import { doc, getDoc, Timestamp } from "firebase/firestore";
 
+/* ========= Bucket 型 ========= */
+type Bucket = {
+  posts: number;
+  wins: number;
+  scoreErrorSum: number;
+  brierSum: number;
+  upsetScoreSum: number;
+  scorePrecisionSum: number;
+  calibrationErrorSum: number;
+  calibrationCount: number;
+};
+// ★ SummaryCardsV2 / ProfilePageBaseV2 が必要とする型
 export type SummaryForCardsV2 = {
   posts: number;
   fullPosts: number;
   winRate: number;
   avgPrecision: number;
-  avgBrier: number;
+ avgBrier: number;
   avgUpset: number;
-  calibrationError: number;
+  avgCalibration: number | null;
 };
 
-/** Firestore の 1 期間分のデータを変換 */
-function toSummaryV2(src: any | undefined): Omit<SummaryForCardsV2, "fullPosts"> {
-  if (!src) {
-    return {
-      posts: 0,
-      winRate: 0,
-      avgPrecision: NaN,
-      avgBrier: NaN,
-      avgUpset: NaN,
-      calibrationError: NaN, 
-    };
-  }
-  const safe = (v: any) =>
-    typeof v === "number" && Number.isFinite(v) ? v : NaN;
 
+/* ========= 初期値 ========= */
+const empty = (): Bucket => ({
+  posts: 0,
+  wins: 0,
+  scoreErrorSum: 0,
+  brierSum: 0,
+  upsetScoreSum: 0,
+  scorePrecisionSum: 0,
+  calibrationErrorSum: 0,  // ← 追加
+    calibrationCount: 0,      // ← 追加
+});
+
+/* ========= 再計算 ========= */
+function compute(b: Bucket) {
   return {
-    posts: Number(src.posts ?? 0),
-    winRate: safe(src.winRate),
-    avgPrecision: safe(src.avgPrecision),
-    avgBrier: safe(src.avgBrier),
-    avgUpset: safe(src.avgUpset),
-    calibrationError: safe(src.calibrationError), // ← null/undefined は NaNになる
+    posts: b.posts,
+    winRate: b.posts ? b.wins / b.posts : 0,
+    avgPrecision: b.posts ? b.scorePrecisionSum / b.posts : NaN,
+    avgBrier: b.posts ? b.brierSum / b.posts : NaN,
+    avgUpset: b.wins ? b.upsetScoreSum / b.wins : NaN,
+    avgCalibration: b.calibrationCount > 0
+  ? b.calibrationErrorSum / b.calibrationCount
+  : null,
   };
 }
 
+function dateKey(d: Date) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/* ========= main hook ========= */
 export function useUserStatsV2(uid?: string | null) {
   const [loading, setLoading] = useState(true);
-  const [raw, setRaw] = useState<any | null>(null);
+  const [summaries, setSummaries] = useState<any>(null);
 
-  // ================================
-  // Firestore を一回だけ読み込む
-  // ================================
   useEffect(() => {
     if (!uid) {
-      setRaw(null);
+      setSummaries(null);
       setLoading(false);
       return;
     }
 
-    async function fetchStats() {
+    async function run() {
       setLoading(true);
-      const ref = doc(db, "user_stats_v2", uid!);
 
-      try {
-        const snap = await getDoc(ref);
+      /* ------------------------------
+         ALL: キャッシュを1回読むだけ
+      ------------------------------ */
+      const allRef = doc(db, "user_stats_v2_all_cache", uid!);
+      const allSnap = await getDoc(allRef);
+      const all = allSnap.exists() ? (allSnap.data() as Bucket) : empty();
+      const allComputed = compute(all);
 
-        if (snap.exists()) {
-          console.log("📄 user_stats_v2 fetched:", snap.data());
-          setRaw(snap.data());
-        } else {
-          console.log("📄 user_stats_v2 not found");
-          setRaw({});
+      /* ------------------------------
+         7d / 30d: daily を合算
+      ------------------------------ */
+      const today = new Date();
+
+      async function loadRange(days: number) {
+        let b: Bucket = empty();
+
+        for (let i = 0; i < days; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+
+          const key = `${uid!}_${dateKey(d)}`;
+const snap = await getDoc(doc(db, "user_stats_v2_daily", key));
+          if (!snap.exists()) continue;
+
+          const v = snap.data().all;
+          if (!v) continue;
+
+          b.posts += v.posts ?? 0;
+          b.wins += v.wins ?? 0;
+          b.scoreErrorSum += v.scoreErrorSum ?? 0;
+          b.brierSum += v.brierSum ?? 0;
+          b.upsetScoreSum += v.upsetScoreSum ?? 0;
+          b.scorePrecisionSum += v.scorePrecisionSum ?? 0;
+          b.calibrationErrorSum += v.calibrationErrorSum ?? 0;
+b.calibrationCount += v.calibrationCount ?? 0;
         }
-      } catch (e) {
-        console.error("❌ Failed to fetch user_stats_v2:", e);
-        setRaw({});
+
+        return compute(b);
       }
+
+      const seven = await loadRange(7);
+      const thirty = await loadRange(30);
+
+      setSummaries({
+        "7d": { fullPosts: seven.posts, ...seven },
+        "30d": { fullPosts: thirty.posts, ...thirty },
+        "all": { fullPosts: all.posts, ...allComputed },
+      });
 
       setLoading(false);
     }
 
-    fetchStats();
+    run();
   }, [uid]);
 
-  // ================================
-  // 投稿数（fullPosts）
-  // ================================
-  const [full, setFull] = useState({
-    "7d": 0,
-    "30d": 0,
-    "all": 0,
-  });
-
-  useEffect(() => {
-    if (!uid) return;
-
-    async function fetchFullCounts() {
-      const now = new Date();
-
-      // --- 7 days ---
-      const d7 = new Date(now);
-      d7.setDate(d7.getDate() - 6);
-
-      const count7 = await getCountFromServer(
-        query(
-          collection(db, "posts"),
-          where("authorUid", "==", uid),
-          where("schemaVersion", "==", 2),
-          where("createdAt", ">=", Timestamp.fromDate(d7))
-        )
-      ).then((r) => r.data().count);
-
-      // --- 30 days ---
-      const d30 = new Date(now);
-      d30.setDate(d30.getDate() - 29);
-
-      const count30 = await getCountFromServer(
-        query(
-          collection(db, "posts"),
-          where("authorUid", "==", uid),
-          where("schemaVersion", "==", 2),
-          where("createdAt", ">=", Timestamp.fromDate(d30))
-        )
-      ).then((r) => r.data().count);
-
-      // --- all posts ---
-      const countAll = await getCountFromServer(
-        query(
-          collection(db, "posts"),
-          where("authorUid", "==", uid),
-          where("schemaVersion", "==", 2)
-        )
-      ).then((r) => r.data().count);
-
-      setFull({
-        "7d": count7,
-        "30d": count30,
-        "all": countAll,
-      });
-    }
-
-    fetchFullCounts();
-  }, [uid]);
-
-  // ================================
-  // UI に渡す summaries を生成
-  // ================================
-  const summaries = useMemo(() => {
-    if (!raw) return undefined;
-
-    return {
-      "7d": {
-        fullPosts: full["7d"],
-        ...toSummaryV2(raw["7d"]?.all),
-      },
-      "30d": {
-        fullPosts: full["30d"],
-        ...toSummaryV2(raw["30d"]?.all),
-      },
-      "all": {
-        fullPosts: full["all"],
-        ...toSummaryV2(raw["all"]?.all),
-      },
-    };
-  }, [raw, full]);
-
-  return { loading, raw, summaries };
+  return { loading, summaries };
 }

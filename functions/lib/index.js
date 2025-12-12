@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runDailyAnalyticsHttp = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.updateTeamRankingsDaily = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildLeaderboardAllTimeCron = exports.rebuildLeaderboardAllTimeV2 = exports.rebuildLeaderboardMonthV2 = exports.rebuildLeaderboardWeekV2 = exports.rebuildCalendarLeaderboardsHttpV2 = exports.recomputeAllUsersStatsV2Daily = exports.onGameFinalV2 = void 0;
+exports.runDailyAnalyticsHttp = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.updateTeamRankingsDaily = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildLeaderboardAllTimeCron = exports.rebuildLeaderboardAllTimeV2 = exports.rebuildLeaderboardMonthV2 = exports.rebuildLeaderboardWeekV2 = exports.rebuildCalendarLeaderboardsHttpV2 = exports.onGameFinalV2 = void 0;
 // functions/src/index.ts
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
@@ -48,8 +48,6 @@ const _core_1 = require("./analytics/_core");
 // ===============================
 var onGameFinalV2_1 = require("./onGameFinalV2");
 Object.defineProperty(exports, "onGameFinalV2", { enumerable: true, get: function () { return onGameFinalV2_1.onGameFinalV2; } });
-var updateUserStatsV2_1 = require("./updateUserStatsV2");
-Object.defineProperty(exports, "recomputeAllUsersStatsV2Daily", { enumerable: true, get: function () { return updateUserStatsV2_1.recomputeAllUsersStatsV2Daily; } });
 // 🔥 週間・月間ランキング（V2）
 var leaderboards_calendar_v2_1 = require("./triggers/leaderboards.calendar.v2");
 Object.defineProperty(exports, "rebuildCalendarLeaderboardsHttpV2", { enumerable: true, get: function () { return leaderboards_calendar_v2_1.rebuildCalendarLeaderboardsHttpV2; } });
@@ -149,6 +147,13 @@ var logUserActive_1 = require("./analytics/logUserActive");
 Object.defineProperty(exports, "logUserActive", { enumerable: true, get: function () { return logUserActive_1.logUserActive; } });
 var runDaily_1 = require("./analytics/runDaily");
 Object.defineProperty(exports, "runDailyAnalytics", { enumerable: true, get: function () { return runDaily_1.runDailyAnalytics; } });
+var fixUserStats_1 = require("./fixUserStats");
+Object.defineProperty(exports, "fixUserStats", { enumerable: true, get: function () { return fixUserStats_1.fixUserStats; } });
+// ============================================================
+// Debug: 全ユーザーを一括で再計算する HTTP エンドポイント
+// ============================================================
+var listUserStats_1 = require("./debug/listUserStats");
+Object.defineProperty(exports, "listUserStatsIds", { enumerable: true, get: function () { return listUserStats_1.listUserStatsIds; } });
 exports.runDailyAnalyticsHttp = (0, https_1.onRequest)(async (_req, res) => {
     try {
         const result = await (0, _core_1.dailyAnalyticsCore)();
