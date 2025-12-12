@@ -143,7 +143,6 @@ try {
     setComment("");
 
     onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
-    router.push(`${prefix}/games/${(game as any).id}`);
   } catch (e: any) {
     alert(e.message ?? "送信に失敗しました");
   } finally {
