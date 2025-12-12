@@ -18,6 +18,7 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
+import { ArrowLeft } from "lucide-react";
 
 
 // Firestore の games 生ドキュメント型（id 付き）
@@ -97,6 +98,21 @@ export default function Page() {
   return (
     <div className="mx-auto max-w-3xl px-3 py-3">
       <h1 className="sr-only">Predictions (Mobile) for {gameId}</h1>
+
+      {/* ← 戻る（アイコンのみ） */}
+<button
+  onClick={() => router.back()}
+  className="
+    mb-2
+    p-1
+    text-gray-500
+    active:scale-95 transition-transform
+  "
+  aria-label="戻る"
+>
+  <ArrowLeft size={28} />
+</button>
+
 
       {/* ゲームカード */}
       {!loading && matchProps && <MatchCard {...matchProps} />}

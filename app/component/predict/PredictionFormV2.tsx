@@ -6,6 +6,8 @@ import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard"
 import { auth } from "@/lib/firebase";
 import { toast } from "@/app/component/ui/toast";
 import { logGameEvent } from "@/lib/analytics/logEvent";
+import { useRouter, usePathname } from "next/navigation";
+
 
 type Props = {
   dense?: boolean;
@@ -20,6 +22,11 @@ export default function PredictionForm({
   user,
   onPostCreated,
 }: Props) {
+
+    const router = useRouter();
+const pathname = usePathname();
+const isMobile = pathname.startsWith("/mobile");
+const prefix = isMobile ? "/mobile" : "/web";
 
   /* ===== State ===== */
   const [winner, setWinner] = useState<"home" | "away" | null>(null);
@@ -136,6 +143,7 @@ try {
     setComment("");
 
     onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
+    router.push(`${prefix}/games/${(game as any).id}`);
   } catch (e: any) {
     alert(e.message ?? "送信に失敗しました");
   } finally {
