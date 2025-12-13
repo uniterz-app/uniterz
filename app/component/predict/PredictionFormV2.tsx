@@ -133,16 +133,21 @@ try {
 } catch {}
 
 
-    toast.success("予想を投稿しました");
+  toast.success("予想を投稿しました");
 
-    // Reset
-    setWinner(null);
-    setConfidence(50);
-    setScoreHome("");
-    setScoreAway("");
-    setComment("");
+// 親に通知（先に）
+onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
 
-    onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
+// 前のページへ戻る
+router.back();
+
+// Reset（戻った後は基本使われないが安全のため残す）
+setWinner(null);
+setConfidence(50);
+setScoreHome("");
+setScoreAway("");
+setComment("");
+
   } catch (e: any) {
     alert(e.message ?? "送信に失敗しました");
   } finally {

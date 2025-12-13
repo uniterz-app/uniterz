@@ -64,6 +64,7 @@ function dateKey(d: Date) {
 export function useUserStatsV2(uid?: string | null) {
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     if (!uid) {
@@ -74,6 +75,10 @@ export function useUserStatsV2(uid?: string | null) {
 
     async function run() {
       setLoading(true);
+
+        const statsRef = doc(db, "user_stats_v2", uid!);
+  const statsSnap = await getDoc(statsRef);
+  setStats(statsSnap.exists() ? statsSnap.data() : null);
 
       /* ------------------------------
          ALL: キャッシュを1回読むだけ
@@ -130,5 +135,5 @@ b.calibrationCount += v.calibrationCount ?? 0;
     run();
   }, [uid]);
 
-  return { loading, summaries };
+  return { loading, summaries, stats };
 }

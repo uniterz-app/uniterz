@@ -17,12 +17,12 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [tab, setTab] = useState<"overview" | "stats">("overview");
-  const [range, setRange] = useState<"7d" | "30d" | "all">("30d");
+  const [range, setRange] = useState<"7d" | "30d" | "all">("7d");
 
   // ============================
   // ★ V2 stats を購読
   // ============================
-  const { summaries, loading: statsLoading } = useUserStatsV2(targetUid);
+  const { stats, summaries, loading: statsLoading } = useUserStatsV2(targetUid);
 
   // ============================
   // avatar の補正
@@ -38,6 +38,12 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
     return { ...p, avatarUrl: merged };
   }, [profile]);
+
+  const mergedProfile = useMemo<Profile>(() => ({
+  ...normalizedProfile!,
+  currentStreak: stats?.currentStreak ?? 0,
+  maxStreak: stats?.maxStreak ?? 0,
+}), [normalizedProfile, stats]);
 
   // ============================
   // SummaryCardsV2 用のデータ
@@ -56,7 +62,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   // Mobile / Web 共通 props
   // ============================
   const viewProps = {
-    profile: normalizedProfile,
+    profile: mergedProfile,
     isFollowing,
     onToggleFollow: () => setIsFollowing((v) => !v),
     tab,

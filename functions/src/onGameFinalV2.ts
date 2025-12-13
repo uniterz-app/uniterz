@@ -49,6 +49,10 @@ function normalizeGame(after: any, gameId: string) {
 }
 
 function judgeWin(pred: any, result: any) {
+  if (pred.winner === "draw") {
+    return result.home === result.away;
+  }
+
   return pred.winner === "home"
     ? result.home > result.away
     : result.away > result.home;
@@ -159,28 +163,34 @@ export const onGameFinalV2 = onDocumentWritten(
       /* -----------------------------
        * upsetScore 計算
        * ----------------------------- */
-      let upset = 0;
+     /* -----------------------------
+ * upsetScore 計算
+ * ----------------------------- */
+let upset = 0;
 
-      if (totalPosts >= MIN_MARKET && isWin) {
-        const same = p.prediction.winner === "home" ? homeCnt : awayCnt;
-        const ratio = same / totalPosts;
+// draw 的中は upset 対象外
+if (
+  totalPosts >= MIN_MARKET &&
+  isWin &&
+  p.prediction.winner !== "draw"
+) {
+  const same = p.prediction.winner === "home" ? homeCnt : awayCnt;
+  const ratio = same / totalPosts;
 
-        if (homeRank != null && awayRank != null) {
-          const rankDiff = Math.abs(homeRank - awayRank);
-          const higher = homeRank < awayRank ? "home" : "away";
-          const winnerSide = final.home > final.away ? "home" : "away";
+  if (homeRank != null && awayRank != null) {
+    const rankDiff = Math.abs(homeRank - awayRank);
+    const higher = homeRank < awayRank ? "home" : "away";
+    const winnerSide = final.home > final.away ? "home" : "away";
 
-          if (winnerSide === higher) {
-            upset = 0;
-          } else {
-            const raw = calcRawUpsetScore(ratio, rankDiff);
-            upset = normalizeUpset(raw);
-          }
-        } else {
-          const raw = calcRawUpsetScore(ratio, 0);
-          upset = normalizeUpset(raw);
-        }
-      }
+    if (winnerSide !== higher) {
+      const raw = calcRawUpsetScore(ratio, rankDiff);
+      upset = normalizeUpset(raw);
+    }
+  } else {
+    const raw = calcRawUpsetScore(ratio, 0);
+    upset = normalizeUpset(raw);
+  }
+}
 
       /* -----------------------------
        * 投稿更新バッチ

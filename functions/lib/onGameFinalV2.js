@@ -43,6 +43,9 @@ function normalizeGame(after, gameId) {
     };
 }
 function judgeWin(pred, result) {
+    if (pred.winner === "draw") {
+        return result.home === result.away;
+    }
     return pred.winner === "home"
         ? result.home > result.away
         : result.away > result.home;
@@ -136,18 +139,21 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         /* -----------------------------
          * upsetScore 計算
          * ----------------------------- */
+        /* -----------------------------
+    * upsetScore 計算
+    * ----------------------------- */
         let upset = 0;
-        if (totalPosts >= MIN_MARKET && isWin) {
+        // draw 的中は upset 対象外
+        if (totalPosts >= MIN_MARKET &&
+            isWin &&
+            p.prediction.winner !== "draw") {
             const same = p.prediction.winner === "home" ? homeCnt : awayCnt;
             const ratio = same / totalPosts;
             if (homeRank != null && awayRank != null) {
                 const rankDiff = Math.abs(homeRank - awayRank);
                 const higher = homeRank < awayRank ? "home" : "away";
                 const winnerSide = final.home > final.away ? "home" : "away";
-                if (winnerSide === higher) {
-                    upset = 0;
-                }
-                else {
+                if (winnerSide !== higher) {
                     const raw = calcRawUpsetScore(ratio, rankDiff);
                     upset = normalizeUpset(raw);
                 }

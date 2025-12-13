@@ -1,24 +1,28 @@
 // functions/src/trend/users.aggregate.ts
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { getApps, initializeApp } from "firebase-admin/app";
-
-if (!getApps().length) initializeApp();
-const db = getFirestore();
 
 // ------------------------------
 // ★ 連勝ランキングだけを作る
 // ------------------------------
 export async function aggregateUsersTrend() {
-  // users 全件取得
-  const snap = await db.collection("users").get();
+  const db = getFirestore(); // ← ★ ここで取得する
 
+  const snap = await db.collection("users").get();
   const rows: any[] = [];
 
-  snap.forEach((doc) => {
+  for (const doc of snap.docs) {
     const d = doc.data();
 
-    const streak = Number(d.currentStreak ?? 0);
-    if (streak < 5) return; // ★ 5連勝未満は除外
+    const statsSnap = await db
+      .collection("user_stats_v2")
+      .doc(doc.id)
+      .get();
+
+    if (!statsSnap.exists) continue;
+
+    const stats = statsSnap.data()!;
+    const streak = Number(stats.currentStreak ?? 0);
+    if (streak < 5) continue;
 
     rows.push({
       uid: doc.id,
@@ -26,14 +30,12 @@ export async function aggregateUsersTrend() {
       handle: d.handle ?? "",
       photoURL: d.photoURL ?? d.avatarUrl ?? "",
       currentStreak: streak,
-      maxStreak: Number(d.maxStreak ?? 0),
+      maxStreak: Number(stats.maxStreak ?? 0),
     });
-  });
+  }
 
-  // ★ 連勝順でソート
   rows.sort((a, b) => b.currentStreak - a.currentStreak);
 
-  // ★ 上位10人を保存
   const top = rows.slice(0, 10);
 
   await db.doc("trend_cache/users").set({

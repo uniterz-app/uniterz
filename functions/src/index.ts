@@ -12,6 +12,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { dailyAnalyticsCore } from "./analytics/_core";
+import { aggregateUsersTrend } from "./trend/users.aggregate";
 
 // ===============================
 // V2 Core
@@ -134,6 +135,14 @@ export const aggregateTrendsGamesCron = onSchedule(
     await aggregateGamesTrend(); // return しない
   }
 );
+
+export const aggregateUsersTrendCron = onSchedule(
+  { schedule: "0 0 * * *", timeZone: "Asia/Tokyo" }, // 毎日24:00
+  async () => {
+    await aggregateUsersTrend();
+  }
+);
+
 
 /* ============================================================================
  * Team Rankings (Daily)
