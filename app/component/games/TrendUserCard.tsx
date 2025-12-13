@@ -53,44 +53,37 @@ export default function TrendUserCard(props: TrendUserCardProps) {
     }
   };
 
-  // 🔹 アバター：赤→オレンジ→白のグラデーションリング付き
   const avatar = (size: "sm" | "md") => {
-    const px = size === "sm" ? 50 : 80; // 少し小さめ
-    const showOn = size === "sm" ? "md:hidden" : "hidden md:block";
+  const px = size === "sm" ? 50 : 80;
+  const showOn = size === "sm" ? "md:hidden" : "hidden md:block";
 
-    return (
-      <div className={showOn} style={{ width: px, height: px }}>
-        {/* グラデーションリング */}
-        <div
-          className="
-            w-full h-full rounded-full p-[2px] md:p-[2.5px]
-            bg-gradient-to-tr from-red-500 via-orange-400 to-white
-            shadow-[0_8px_24px_rgba(0,0,0,0.35)]
-          "
-        >
-          {/* 中身（実際のアイコン） */}
-          <div className="w-full h-full rounded-full overflow-hidden bg-black/40">
-            {photoURL ? (
-              <img
-                src={photoURL}
-                alt={displayName}
-                width={px}
-                height={px}
-                loading="lazy"
-                decoding="async"
-                referrerPolicy="no-referrer"
-                className="block w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full grid place-items-center text-[10px] text-white/70 bg-white/10">
-                No Image
-              </div>
-            )}
-          </div>
-        </div>
+  return (
+    <div className={showOn} style={{ width: px, height: px }}>
+      <div
+        className="
+          w-full h-full rounded-full overflow-hidden
+          bg-white/10
+        "
+      >
+        {photoURL ? (
+          <img
+            src={photoURL}
+            alt={displayName}
+            width={px}
+            height={px}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            className="block w-full h-full object-cover"
+          />
+        ) : (
+          // 何も表示しない（背景だけ）
+          <div className="w-full h-full" />
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   return (
     <div
@@ -109,24 +102,6 @@ export default function TrendUserCard(props: TrendUserCardProps) {
       ].join(" ")}
       style={{ fontFamily: jpGothic }}
     >
-      {/* 背景ブロブ（＋下の方に少し赤い光を追加） */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-16 -left-20 w-44 h-44 md:w-56 md:h-56 rounded-full bg-fuchsia-500/35 blur-3xl" />
-        <div className="absolute -top-12 right-[-60px] w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-orange-500/40 to-pink-500/30 blur-3xl" />
-        <div className="absolute -bottom-16 -left-10 w-52 h-52 md:w-64 md:h-64 rounded-full bg-gradient-to-tr from-cyan-500/35 to-emerald-400/25 blur-3xl" />
-        <div className="hidden md:block absolute -bottom-10 -right-8 w-56 h-56 rounded-full bg-gradient-to-tl from-yellow-400/35 via-amber-400/25 to-orange-300/20 blur-3xl" />
-
-        {/* 下側に赤いグロー */}
-        <div
-          className="
-            absolute -bottom-12 left-1/2 -translate-x-1/2
-            w-64 h-28 md:w-80 md:h-32
-            rounded-full bg-red-500/45 blur-3xl
-          "
-        />
-
-        <div className="absolute inset-0 bg-gradient-to-b from-white/15 md:from-white/20 via-transparent to-transparent" />
-      </div>
 
      {/* HOTバッジ */}
 {hot && (
@@ -199,21 +174,10 @@ export default function TrendUserCard(props: TrendUserCardProps) {
         )}
         {/* ▼ 連勝表示（5連勝以上のみ表示） */}
 {typeof streak === "number" && streak >= 5 && (
-  <div
-    className="
-      flex items-center justify-center
-      text-[12px] md:text-sm
-      font-semibold
-      px-3 py-1
-      rounded-full
-      bg-white/10
-      ring-1 ring-white/20
-      text-amber-300
-    "
-  >
-    <Flame className="w-4 h-4 text-yellow-400 mr-1" />
-    {streak} 連勝中
-  </div>
+  <div className="flex items-center justify-center text-[12px] md:text-sm font-semibold text-amber-300">
+  <Flame className="w-3.5 h-3.5 text-yellow-400 mr-1" />
+  {streak} 連勝中
+</div>
 )}
 
         {/* フォローボタン（ややコンパクト） */}

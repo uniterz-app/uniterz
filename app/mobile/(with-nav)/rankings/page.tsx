@@ -57,23 +57,25 @@ export default function MobileRankingsPage() {
   const [period, setPeriod] = useState<Period>("week");
 
   const [rows, setRows] = useState<Record<Metric, RankingRow[]>>({
-    accuracy: [],
-    winRate: [],
-    avgPrecision: [],
-    avgUpset: [],
-  });
+  winRate: [],
+  avgPrecision: [],
+  accuracy: [],
+  consistency: [],   // ← 一致度（Metric にある前提）
+  avgUpset: [],
+});
 
   const [loading, setLoading] = useState<Record<Metric, boolean>>({
-    accuracy: false,
-    winRate: false,
-    avgPrecision: false,
-    avgUpset: false,
-  });
+  winRate: false,
+  avgPrecision: false,
+  accuracy: false,
+  consistency: false,
+  avgUpset: false,
+});
 
   const [error, setError] = useState<string | null>(null);
 
   const heroCount = 3;
-  const listCount = 20;
+ const listCount = period === "week" ? 10 : 20;
 
   const headingStyle: React.CSSProperties = {
     fontFamily:
@@ -101,22 +103,14 @@ export default function MobileRankingsPage() {
   }
 
   useEffect(() => {
-    setError(null);
+  setError(null);
 
-    // 週間 → accuracy, winRate
-    if (period === "week") {
-      fetchMetric("accuracy");
-      fetchMetric("winRate");
-    }
-
-    // 月間 → 4 指標
-    if (period === "month") {
-      fetchMetric("accuracy");
-      fetchMetric("winRate");
-      fetchMetric("avgPrecision");
-      fetchMetric("avgUpset");
-    }
-  }, [league, period]);
+  fetchMetric("winRate");
+  fetchMetric("avgPrecision");
+  fetchMetric("accuracy");
+  fetchMetric("consistency");
+  fetchMetric("avgUpset");
+}, [league, period]);
 
   const noData = Object.values(rows).every((arr) => arr.length === 0);
 
@@ -138,63 +132,12 @@ export default function MobileRankingsPage() {
           <p className="text-sm text-center text-white/60">ランキングデータがありません。</p>
         ) : (
           <>
-            {/* ======== WEEK（週間） ======== */}
-            {period === "week" && (
-              <>
-                <MobileSection
-                  title="正確性"
-                  metric="accuracy"
-                  rows={rows.accuracy}
-                  league={league}
-                  period={period}
-                />
-
-                <MobileSection
-                  title="勝率"
-                  metric="winRate"
-                  rows={rows.winRate}
-                  league={league}
-                  period={period}
-                />
-              </>
-            )}
-
-            {/* ======== MONTH（月間） ======== */}
-            {period === "month" && (
-              <>
-                <MobileSection
-                  title="正確性"
-                  metric="accuracy"
-                  rows={rows.accuracy}
-                  league={league}
-                  period={period}
-                />
-
-                <MobileSection
-                  title="勝率"
-                  metric="winRate"
-                  rows={rows.winRate}
-                  league={league}
-                  period={period}
-                />
-
-                <MobileSection
-                  title="点差精度"
-                  metric="avgPrecision"
-                  rows={rows.avgPrecision}
-                  league={league}
-                  period={period}
-                />
-
-                <MobileSection
-                  title="アップセット指数"
-                  metric="avgUpset"
-                  rows={rows.avgUpset}
-                  league={league}
-                  period={period}
-                />
-              </>
-            )}
+          <MobileSection title="勝率" metric="winRate" rows={rows.winRate} league={league} period={period} />
+<MobileSection title="スコア精度" metric="avgPrecision" rows={rows.avgPrecision} league={league} period={period} />
+<MobileSection title="予測精度" metric="accuracy" rows={rows.accuracy} league={league} period={period} />
+<MobileSection title="一致度" metric="consistency" rows={rows.consistency} league={league} period={period} />
+<MobileSection title="Upsetスコア" metric="avgUpset" rows={rows.avgUpset} league={league} period={period} />
+                 
           </>
         )}
       </div>
@@ -218,7 +161,7 @@ function MobileSection({
   period: Period;
 }) {
   const heroCount = 3;
-  const listCount = 20;
+const listCount = period === "week" ? 10 : 20;
 
   const headingStyle: React.CSSProperties = {
     fontFamily:
@@ -330,20 +273,26 @@ function HeroRow({
         } else if (metric === "avgUpset") {
           value = `${(r.avgUpset ?? 0).toFixed(1)}`;
         }
+        else if (metric === "consistency") {
+  value = `${Math.round((r.consistency ?? 0) * 100)}%`;
+}
+
 
         /* --------------------------
          * ★ metricごとに色変更
          * ------------------------ */
         const chip =
-          metric === "winRate"
-            ? "bg-emerald-600 text-white"
-            : metric === "accuracy"
-            ? "bg-blue-600 text-white"
-            : metric === "avgPrecision"
-            ? "bg-purple-600 text-white"
-            : metric === "avgUpset"
-            ? "bg-orange-600 text-white"
-            : "bg-gray-500 text-white";
+  metric === "winRate"
+    ? "bg-emerald-600 text-white"
+    : metric === "accuracy"
+    ? "bg-blue-600 text-white"
+    : metric === "avgPrecision"
+    ? "bg-purple-600 text-white"
+    : metric === "consistency"
+    ? "bg-cyan-600 text-white"
+    : metric === "avgUpset"
+    ? "bg-orange-600 text-white"
+    : "bg-gray-500 text-white";
 
         // バッジ位置調整
         const nudge = badgeOffsetByRank(rank);
@@ -539,20 +488,25 @@ function RankingList({
         } else if (metric === "avgUpset") {
           value = `${(r.avgUpset ?? 0).toFixed(1)}`;
         }
+        else if (metric === "consistency") {
+  value = `${Math.round((r.consistency ?? 0) * 100)}%`;
+}
 
         /* ----------------------------
          * ★ metricごとに色を変える
          * ----------------------------*/
         const chip =
-          metric === "winRate"
-            ? "bg-emerald-600 text-white"
-            : metric === "accuracy"
-            ? "bg-blue-600 text-white"
-            : metric === "avgPrecision"
-            ? "bg-purple-600 text-white"
-            : metric === "avgUpset"
-            ? "bg-orange-600 text-white"
-            : "bg-gray-500 text-white";
+  metric === "winRate"
+    ? "bg-emerald-600 text-white"
+    : metric === "accuracy"
+    ? "bg-blue-600 text-white"
+    : metric === "avgPrecision"
+    ? "bg-purple-600 text-white"
+    : metric === "consistency"
+    ? "bg-cyan-600 text-white"
+    : metric === "avgUpset"
+    ? "bg-orange-600 text-white"
+    : "bg-gray-500 text-white";
 
         return (
           <a

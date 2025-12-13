@@ -21,23 +21,10 @@ function periodToKind(period: Period): "week" | "month" {
 /* ---------------------------
  sort function (V2仕様)
 ---------------------------- */
-function sortRows(rows: RankingRow[], metric: Metric, kind: "week" | "month") {
+function sortRows(rows: RankingRow[], metric: Metric) {
   rows.sort((a, b) => {
-    // 週ランキング：勝率 → 正確性
-    if (kind === "week") {
-      return (
-        (b.winRate ?? 0) - (a.winRate ?? 0) ||
-        (b.accuracy ?? 0) - (a.accuracy ?? 0) ||
-        (b.posts ?? 0) - (a.posts ?? 0)
-      );
-    }
-
-    // 月間ランキング：勝率 → 正確性 → 点差精度 → upset
     return (
-      (b.winRate ?? 0) - (a.winRate ?? 0) ||
-      (b.accuracy ?? 0) - (a.accuracy ?? 0) ||
-      (b.avgPrecision ?? 0) - (a.avgPrecision ?? 0) ||
-      (b.avgUpset ?? 0) - (a.avgUpset ?? 0) ||
+      (Number(b[metric] ?? 0) - Number(a[metric] ?? 0)) ||
       (b.posts ?? 0) - (a.posts ?? 0)
     );
   });
@@ -94,22 +81,23 @@ export async function GET(req: Request) {
       const user = userDoc.exists ? userDoc.data() : {};
 
       rows.push({
-        uid,
-        displayName: user?.displayName ?? "user",
-        photoURL: user?.photoURL ?? undefined,
+  uid,
+  displayName: user?.displayName ?? "user",
+  photoURL: user?.photoURL ?? undefined,
 
-        posts: d.posts ?? 0,
-        winRate: d.winRate ?? 0,
-        accuracy: d.accuracy ?? 0,
-        avgPrecision: d.avgPrecision ?? undefined,
-        avgUpset: d.avgUpset ?? undefined,
-      });
+  posts: d.posts ?? 0,
+  winRate: d.winRate ?? 0,
+  accuracy: d.accuracy ?? 0,
+  consistency: d.consistency ?? 0, // ← 追加
+  avgPrecision: d.avgPrecision ?? undefined,
+  avgUpset: d.avgUpset ?? undefined,
+});
     }
 
     /* ---------------------------
       ソート（V2仕様）
     ---------------------------- */
-    sortRows(rows, metric, kind);
+    sortRows(rows, metric);
 
     /* ---------------------------
       limit 件返す

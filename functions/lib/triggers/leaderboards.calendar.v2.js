@@ -48,6 +48,7 @@ function getPreviousMonthRangeJST() {
  * ============================================================================
  */
 async function buildRanking(kind, league) {
+    var _a, _b;
     const usersSnap = await db().collection("users").get();
     const range = kind === "week" ? getFixedWeekRangeJST() : getPreviousMonthRangeJST();
     const minPosts = kind === "week" ? 5 : 10;
@@ -81,18 +82,23 @@ async function buildRanking(kind, league) {
         if (bucket.posts < minPosts)
             continue;
         const accuracy = (1 - bucket.avgBrier) * 100;
+        const avgCalibration = typeof bucket.avgCalibration === "number"
+            ? bucket.avgCalibration
+            : null;
+        const consistency = avgCalibration !== null
+            ? Math.max(0, Math.min(100, (1 - avgCalibration) * 100))
+            : null;
         const payload = {
             uid,
             league,
             posts: bucket.posts,
             winRate: bucket.winRate,
             accuracy,
+            avgPrecision: (_a = bucket.avgPrecision) !== null && _a !== void 0 ? _a : null,
+            avgUpset: (_b = bucket.avgUpset) !== null && _b !== void 0 ? _b : null,
+            consistency, // ✅ 計算結果を保存
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
         };
-        if (kind === "month") {
-            payload.avgPrecision = bucket.avgPrecision;
-            payload.avgUpset = bucket.avgUpset;
-        }
         await ref.collection("users").doc(uid).set(payload, { merge: true });
     }
     return { kind, league, periodId: range.id };

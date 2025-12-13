@@ -9,7 +9,8 @@ export type Metric =
   | "winRate"
   | "accuracy"
   | "avgPrecision"
-  | "avgUpset";
+  | "avgUpset"
+  | "consistency";
 
 // ========== ランキング行 ==========
 export type RankingRow = {
@@ -22,6 +23,7 @@ export type RankingRow = {
   accuracy?: number;  // 0..100
   avgPrecision?: number;
   avgUpset?: number;
+  consistency?: number;
 };
 
 // ========== APIレスポンス ==========

@@ -116,19 +116,29 @@ async function buildRanking(kind: "week" | "month", league: string) {
 
     const accuracy = (1 - bucket.avgBrier) * 100;
 
-    const payload: any = {
-      uid,
-      league,
-      posts: bucket.posts,
-      winRate: bucket.winRate,
-      accuracy,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
+const avgCalibration =
+  typeof bucket.avgCalibration === "number"
+    ? bucket.avgCalibration
+    : null;
 
-    if (kind === "month") {
-      payload.avgPrecision = bucket.avgPrecision;
-      payload.avgUpset = bucket.avgUpset;
-    }
+const consistency =
+  avgCalibration !== null
+    ? Math.max(0, Math.min(100, (1 - avgCalibration) * 100))
+    : null;
+
+const payload: any = {
+  uid,
+  league,
+  posts: bucket.posts,
+
+  winRate: bucket.winRate,
+  accuracy,
+  avgPrecision: bucket.avgPrecision ?? null,
+  avgUpset: bucket.avgUpset ?? null,
+  consistency, // ✅ 計算結果を保存
+
+  updatedAt: FieldValue.serverTimestamp(),
+};
 
     await ref.collection("users").doc(uid).set(payload, { merge: true });
   }

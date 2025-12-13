@@ -97,6 +97,25 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     if (game.homeScore == null || game.awayScore == null)
         return;
     /* -----------------------------
+ * teams 勝敗更新（final 確定時のみ）
+ * ----------------------------- */
+    if (becameFinal && game.homeTeamId && game.awayTeamId) {
+        const homeWin = game.homeScore > game.awayScore;
+        const awayWin = game.awayScore > game.homeScore;
+        const teamBatch = db().batch();
+        teamBatch.update(db().doc(`teams/${game.homeTeamId}`), {
+            wins: firestore_2.FieldValue.increment(homeWin ? 1 : 0),
+            losses: firestore_2.FieldValue.increment(homeWin ? 0 : 1),
+            updatedAt: firestore_2.FieldValue.serverTimestamp(),
+        });
+        teamBatch.update(db().doc(`teams/${game.awayTeamId}`), {
+            wins: firestore_2.FieldValue.increment(awayWin ? 1 : 0),
+            losses: firestore_2.FieldValue.increment(awayWin ? 0 : 1),
+            updatedAt: firestore_2.FieldValue.serverTimestamp(),
+        });
+        await teamBatch.commit();
+    }
+    /* -----------------------------
      * 投稿取得
      * ----------------------------- */
     const postsSnap = await db()

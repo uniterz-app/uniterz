@@ -116,6 +116,84 @@ export const onGameFinalV2 = onDocumentWritten(
     if (game.homeScore == null || game.awayScore == null) return;
 
     /* -----------------------------
+ * ユーザー連勝更新（試合単位・1回のみ）
+ * ----------------------------- */
+if (becameFinal) {
+  // この試合で「勝ったユーザー」を一意に判定する
+  const final = { home: game.homeScore, away: game.awayScore };
+
+  const usersSnap = await db()
+    .collection("posts")
+    .where("gameId", "==", gameId)
+    .where("schemaVersion", "==", 2)
+    .get();
+
+  // uid ごとに「この試合は勝ちか負けか」を確定させる
+  const userResult = new Map<string, boolean>();
+
+  usersSnap.docs.forEach((d) => {
+    const p = d.data();
+    if (userResult.has(p.authorUid)) return; // 同一試合で複数投稿しても1回
+
+    const win = judgeWin(p.prediction, final);
+    userResult.set(p.authorUid, win);
+  });
+
+  // ユーザーごとに streak 更新（1ユーザー = 1回）
+  for (const [uid, didWin] of userResult.entries()) {
+    const ref = db().doc(`user_stats_v2/${uid}`);
+
+    await db().runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+
+      let current = snap.get("currentStreak") ?? 0;
+      let max = snap.get("maxStreak") ?? 0;
+
+      if (didWin) {
+        current += 1;
+        if (current > max) max = current;
+      } else {
+        current = 0;
+      }
+
+      tx.set(
+        ref,
+        {
+          currentStreak: current,
+          maxStreak: max,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    });
+  }
+}
+
+    /* -----------------------------
+ * teams 勝敗更新（final 確定時のみ）
+ * ----------------------------- */
+if (becameFinal && game.homeTeamId && game.awayTeamId) {
+  const homeWin = game.homeScore > game.awayScore;
+  const awayWin = game.awayScore > game.homeScore;
+
+  const teamBatch = db().batch();
+
+  teamBatch.update(db().doc(`teams/${game.homeTeamId}`), {
+    wins: FieldValue.increment(homeWin ? 1 : 0),
+    losses: FieldValue.increment(homeWin ? 0 : 1),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  teamBatch.update(db().doc(`teams/${game.awayTeamId}`), {
+    wins: FieldValue.increment(awayWin ? 1 : 0),
+    losses: FieldValue.increment(awayWin ? 0 : 1),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  await teamBatch.commit();
+}
+
+    /* -----------------------------
      * 投稿取得
      * ----------------------------- */
     const postsSnap = await db()

@@ -24,6 +24,7 @@ export type StatsV2Bucket = {
   avgUpset: number;            // wins で割る
   avgPrecision: number;
   avgCalibration: number;
+  consistency?: number;
 };
 
 type ApplyOptsV2 = {
@@ -133,20 +134,6 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     const marker = await tx.get(markerRef);
     if (marker.exists) return;
 
-    // ---------- streak 更新 ----------
-    const statsRef = db().doc(`user_stats_v2/${uid}`);
-    const statsSnap = await tx.get(statsRef);
-
-    let currentStreak = statsSnap.get("currentStreak") ?? 0;
-    let maxStreak = statsSnap.get("maxStreak") ?? 0;
-
-    if (isWin) {
-      currentStreak += 1;
-      if (currentStreak > maxStreak) maxStreak = currentStreak;
-    } else {
-      currentStreak = 0;
-    }
-
     // ---------- increment data ----------
     const inc: any = {
       posts: FieldValue.increment(1),
@@ -174,12 +161,6 @@ calibrationCount: FieldValue.increment(1),
 
     tx.set(dailyRef, update, { merge: true });
     tx.set(markerRef, { at: FieldValue.serverTimestamp() });
-
-    tx.set(
-      statsRef,
-      { currentStreak, maxStreak, updatedAt: FieldValue.serverTimestamp() },
-      { merge: true }
-    );
   });
 }
 

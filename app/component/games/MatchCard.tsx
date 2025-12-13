@@ -51,7 +51,11 @@ function useMyPostId(gameId: string) {
 }
 
 function useTeamRecord(teamId?: string) {
-  const [rec, setRec] = useState<{ wins: number; losses: number } | null>(null);
+  const [rec, setRec] = useState<{
+    wins: number;
+    losses: number;
+    rank?: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!teamId) return;
@@ -63,6 +67,7 @@ function useTeamRecord(teamId?: string) {
       setRec({
         wins: d.wins ?? 0,
         losses: d.losses ?? 0,
+        rank: d.rank, // ← 追加
       });
     });
   }, [teamId]);
@@ -110,10 +115,24 @@ const leagueLineColor: Record<League, string> = {
 const pad2 = (n: number) => n.toString().padStart(2, "0");
 const fmtKickoff = (d: Date | null) =>
   d ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}` : "--:--";
-const fmtRecord = (r: { wins: number; losses: number } | null) => {
+const fmtRecordWithRank = (
+  r: { wins: number; losses: number; rank?: number } | null
+) => {
   if (!r) return "(0-0)";
-  return `(${r.wins}-${r.losses})`;
+  const record = `(${r.wins}-${r.losses})`;
+  if (!r.rank) return record;
+  return `${record} :${r.rank}${ordinal(r.rank)}`;
 };
+
+function ordinal(n: number) {
+  if (n % 100 >= 11 && n % 100 <= 13) return "th";
+  switch (n % 10) {
+    case 1: return "st";
+    case 2: return "nd";
+    case 3: return "rd";
+    default: return "th";
+  }
+}
 
 /** ルートから Web/Mobile の prefix を決定 */
 function useSectionPrefix() {
@@ -492,8 +511,9 @@ const awayColor =
 
   {/* 戦績（record）は mobile 小・web 通常でOK） */}
   <div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
-    {fmtRecord(homeRecord)}
-  </div>
+  {fmtRecordWithRank(homeRecord)}
+</div>
+
 
 </div>
 
@@ -583,10 +603,9 @@ const awayColor =
 </div>
 
 
-  {/* 戦績（record） */}
   <div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
-    {fmtRecord(awayRecord)}
-  </div>
+  {fmtRecordWithRank(awayRecord)}
+</div>
 
 </div>
 
