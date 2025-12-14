@@ -1,97 +1,114 @@
-// functions/src/triggers/leaderboards.calendar.v2.ts
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-import { getStatsForDateRangeV2 } from "../updateUserStatsV2";
-
-// Firestore はトップレベルで保持しない
+/* ============================================================================
+ * Firestore
+ * ============================================================================
+ */
 function db() {
   return getFirestore();
 }
 
-const LEAGUES = ["bj", "nba", "pl"] as const;
+const LEAGUES = ["bj", "nba"] as const;
 
 /* ============================================================================
- * JST Utilities
+ * JST Date Utils（★ 重要：日付キーはこれだけ使う）
  * ============================================================================
  */
-function getJstDate(d = new Date()): Date {
-  return new Date(d.getTime() + 9 * 60 * 60 * 1000);
+function toDateKeyJst(d: Date): string {
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const y = j.getUTCFullYear();
+  const m = String(j.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(j.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
 }
 
-/** 月曜〜日曜の週レンジを取得（現在日時に依存せず固定週） */
-function getFixedWeekRangeJST() {
-  const now = getJstDate();
+/**
+ * 【前週】月曜〜日曜（JST）
+ * 例：12/15(月) 実行 → 12/08(月)〜12/14(日)
+ */
+function getPreviousWeekRange() {
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
 
-  // JST の曜日 (0: 日, 1: 月, ...)
-  const dow = now.getDay();
+  const base = new Date(jst.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const dow = base.getDay(); // 0: Sun
 
-  // 今週の月曜日
   const monday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() - ((dow + 6) % 7)
+    base.getFullYear(),
+    base.getMonth(),
+    base.getDate() - ((dow + 6) % 7)
   );
   monday.setHours(0, 0, 0, 0);
 
-  // 今週の日曜日
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
   sunday.setHours(23, 59, 59, 999);
 
-  const id = monday.toISOString().slice(0, 10);
-
-  return { start: monday, end: sunday, id };
+  return {
+    start: monday,
+    end: sunday,
+    id: toDateKeyJst(monday), // ★ JSTキー
+  };
 }
 
-/** 前月 1日〜末日レンジ */
-function getPreviousMonthRangeJST() {
-  const now = getJstDate();
+/**
+ * 【前月】1日〜末日（JST）
+ */
+function getPreviousMonthRange() {
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
 
-  const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  const month = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+  const year = jst.getMonth() === 0 ? jst.getFullYear() - 1 : jst.getFullYear();
+  const month = jst.getMonth() === 0 ? 11 : jst.getMonth() - 1;
 
   const start = new Date(year, month, 1, 0, 0, 0, 0);
-  const end = new Date(year, month + 1, 0, 23, 59, 59, 999); // 前月末日
+  const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-  const id = `${year}-${String(month + 1).padStart(2, "0")}`;
-
-  return { start, end, id };
+  return {
+    start,
+    end,
+    id: `${year}-${String(month + 1).padStart(2, "0")}`,
+  };
 }
 
 /* ============================================================================
- * ランキング構築ロジック（週 / 月 共通）
+ * Ranking Core（user_stats_v2_daily 起点）
  * ============================================================================
  */
-async function buildRanking(kind: "week" | "month", league: string) {
-  const usersSnap = await db().collection("users").get();
+type Agg = {
+  posts: number;
+  wins: number;
+  brierSum: number;
+  precisionSum: number;
+  upsetSum: number;
+  calibrationErrorSum: number;
+};
 
+async function buildRanking(kind: "week" | "month", league: string) {
   const range =
-    kind === "week" ? getFixedWeekRangeJST() : getPreviousMonthRangeJST();
+    kind === "week" ? getPreviousWeekRange() : getPreviousMonthRange();
 
   const minPosts = kind === "week" ? 5 : 10;
 
-  // ドキュメント ID 例：
-  //   week_bj_2024-12-02
-  //   month_bj_2024-11
   const docId = `${kind}_${league}_${range.id}`;
   const ref = db().collection("leaderboards_calendar_v2").doc(docId);
 
-  // メタ情報更新
+  /* ---- メタ ---- */
   await ref.set(
     {
       kind,
       league,
       periodId: range.id,
-      startAtJst: range.start.toISOString(),
-      endAtJst: range.end.toISOString(),
+      startAtJst: range.start,
+      endAtJst: range.end,
       rebuiltAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
 
-  // 古いデータ削除
+  /* ---- users 初期化 ---- */
   const old = await ref.collection("users").get();
   if (!old.empty) {
     const batch = db().batch();
@@ -99,63 +116,93 @@ async function buildRanking(kind: "week" | "month", league: string) {
     await batch.commit();
   }
 
-  // -----------------------------
-  // ランキング再集計
-  // -----------------------------
-  for (const user of usersSnap.docs) {
-    const uid = user.id;
+  /* ---- JST 日付キーで範囲取得 ---- */
+  const startDate = toDateKeyJst(range.start);
+  const endDate = toDateKeyJst(range.end);
 
-    const bucket = await getStatsForDateRangeV2(
-      uid,
-      range.start,
-      range.end,
-      league
+  const statsSnap = await db()
+    .collection("user_stats_v2_daily")
+    .where("date", ">=", startDate)
+    .where("date", "<=", endDate)
+    .get();
+
+  console.log("[RANK]", { kind, league, startDate, endDate, size: statsSnap.size });
+
+  const map = new Map<string, Agg>();
+
+  for (const doc of statsSnap.docs) {
+    const d = doc.data();
+    const uid = doc.id.split("_")[0];
+    if (!uid) continue;
+
+    const leagueStats = d.leagues?.[league];
+    if (!leagueStats) continue;
+
+    if (!map.has(uid)) {
+      map.set(uid, {
+        posts: 0,
+        wins: 0,
+        brierSum: 0,
+        precisionSum: 0,
+        upsetSum: 0,
+        calibrationErrorSum: 0,
+      });
+    }
+
+    const agg = map.get(uid)!;
+    agg.posts += leagueStats.posts ?? 0;
+    agg.wins += leagueStats.wins ?? 0;
+    agg.brierSum += leagueStats.brierSum ?? 0;
+    agg.precisionSum += leagueStats.scorePrecisionSum ?? 0;
+    agg.upsetSum += leagueStats.upsetScoreSum ?? 0;
+    agg.calibrationErrorSum += leagueStats.calibrationErrorSum ?? 0;
+  }
+
+  /* ---- 書き込み ---- */
+  for (const [uid, agg] of map.entries()) {
+    if (agg.posts < minPosts) continue;
+
+    const accuracy = (1 - agg.brierSum / agg.posts) * 100;
+    const avgPrecision = agg.precisionSum / agg.posts;
+    const avgUpset = agg.upsetSum / agg.posts;
+    const winRate = agg.wins / agg.posts;
+
+    const consistency =
+      agg.calibrationErrorSum > 0
+        ? Math.max(0, Math.min(100, (1 - agg.calibrationErrorSum / agg.posts) * 100))
+        : null;
+
+    await ref.collection("users").doc(uid).set(
+      {
+        uid,
+        league,
+        posts: agg.posts,
+        wins: agg.wins,
+        winRate,
+        accuracy,
+        avgPrecision,
+        avgUpset,
+        consistency,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
     );
-
-    if (bucket.posts < minPosts) continue;
-
-    const accuracy = (1 - bucket.avgBrier) * 100;
-
-const avgCalibration =
-  typeof bucket.avgCalibration === "number"
-    ? bucket.avgCalibration
-    : null;
-
-const consistency =
-  avgCalibration !== null
-    ? Math.max(0, Math.min(100, (1 - avgCalibration) * 100))
-    : null;
-
-const payload: any = {
-  uid,
-  league,
-  posts: bucket.posts,
-
-  winRate: bucket.winRate,
-  accuracy,
-  avgPrecision: bucket.avgPrecision ?? null,
-  avgUpset: bucket.avgUpset ?? null,
-  consistency, // ✅ 計算結果を保存
-
-  updatedAt: FieldValue.serverTimestamp(),
-};
-
-    await ref.collection("users").doc(uid).set(payload, { merge: true });
   }
 
   return { kind, league, periodId: range.id };
 }
 
 /* ============================================================================
- * HTTP（手動実行）
+ * HTTP
  * ============================================================================
  */
 export const rebuildCalendarLeaderboardsHttpV2 = onRequest(async (req, res) => {
   try {
     const kind = req.query.kind === "week" ? "week" : "month";
-    const league = typeof req.query.league === "string" ? req.query.league : "bj";
+    const league =
+      typeof req.query.league === "string" ? req.query.league : "bj";
 
-    const result = await buildRanking(kind as any, league);
+    const result = await buildRanking(kind, league);
     res.status(200).json({ ok: true, ...result });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message });
@@ -163,7 +210,7 @@ export const rebuildCalendarLeaderboardsHttpV2 = onRequest(async (req, res) => {
 });
 
 /* ============================================================================
- * Cron（毎週：月曜 05:00 JST）
+ * Cron
  * ============================================================================
  */
 export const rebuildLeaderboardWeekV2 = onSchedule(
@@ -175,10 +222,6 @@ export const rebuildLeaderboardWeekV2 = onSchedule(
   }
 );
 
-/* ============================================================================
- * Cron（毎月 1日：05:00 JST）
- * ============================================================================
- */
 export const rebuildLeaderboardMonthV2 = onSchedule(
   { schedule: "0 5 1 * *", timeZone: "Asia/Tokyo" },
   async () => {
@@ -187,4 +230,3 @@ export const rebuildLeaderboardMonthV2 = onSchedule(
     }
   }
 );
-

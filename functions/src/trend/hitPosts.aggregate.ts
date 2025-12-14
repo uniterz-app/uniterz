@@ -55,6 +55,7 @@ export async function aggregateHitPostsTodayNBA() {
       return {
         id: d.id,
         authorUid: v.authorUid,
+        authorHandle: v.authorHandle ?? null, 
         author: {
           name: v.authorDisplayName ?? "ユーザー",
           avatarUrl: v.authorPhotoURL ?? "",

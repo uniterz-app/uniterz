@@ -45,14 +45,15 @@ async function aggregateHitPostsTodayNBA() {
      * ========================= */
     const posts = snap.docs
         .map((d) => {
-        var _a, _b;
+        var _a, _b, _c;
         const v = d.data();
         return {
             id: d.id,
             authorUid: v.authorUid,
+            authorHandle: (_a = v.authorHandle) !== null && _a !== void 0 ? _a : null,
             author: {
-                name: (_a = v.authorDisplayName) !== null && _a !== void 0 ? _a : "ユーザー",
-                avatarUrl: (_b = v.authorPhotoURL) !== null && _b !== void 0 ? _b : "",
+                name: (_b = v.authorDisplayName) !== null && _b !== void 0 ? _b : "ユーザー",
+                avatarUrl: (_c = v.authorPhotoURL) !== null && _c !== void 0 ? _c : "",
             },
             gameId: v.gameId,
             league: "nba",
