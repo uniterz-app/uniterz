@@ -97,6 +97,50 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     if (game.homeScore == null || game.awayScore == null)
         return;
     /* -----------------------------
+ * ユーザー連勝更新（試合単位・1回のみ）
+ * ----------------------------- */
+    if (becameFinal) {
+        // この試合で「勝ったユーザー」を一意に判定する
+        const final = { home: game.homeScore, away: game.awayScore };
+        const usersSnap = await db()
+            .collection("posts")
+            .where("gameId", "==", gameId)
+            .where("schemaVersion", "==", 2)
+            .get();
+        // uid ごとに「この試合は勝ちか負けか」を確定させる
+        const userResult = new Map();
+        usersSnap.docs.forEach((d) => {
+            const p = d.data();
+            if (userResult.has(p.authorUid))
+                return; // 同一試合で複数投稿しても1回
+            const win = judgeWin(p.prediction, final);
+            userResult.set(p.authorUid, win);
+        });
+        // ユーザーごとに streak 更新（1ユーザー = 1回）
+        for (const [uid, didWin] of userResult.entries()) {
+            const ref = db().doc(`user_stats_v2/${uid}`);
+            await db().runTransaction(async (tx) => {
+                var _a, _b;
+                const snap = await tx.get(ref);
+                let current = (_a = snap.get("currentStreak")) !== null && _a !== void 0 ? _a : 0;
+                let max = (_b = snap.get("maxStreak")) !== null && _b !== void 0 ? _b : 0;
+                if (didWin) {
+                    current += 1;
+                    if (current > max)
+                        max = current;
+                }
+                else {
+                    current = 0;
+                }
+                tx.set(ref, {
+                    currentStreak: current,
+                    maxStreak: max,
+                    updatedAt: firestore_2.FieldValue.serverTimestamp(),
+                }, { merge: true });
+            });
+        }
+    }
+    /* -----------------------------
  * teams 勝敗更新（final 確定時のみ）
  * ----------------------------- */
     if (becameFinal && game.homeTeamId && game.awayTeamId) {
@@ -235,6 +279,14 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
      * ----------------------------- */
     await batch.commit();
     await Promise.all(userUpdateTasks);
+    /* ★ ここに「再集計リクエスト」だけ追加する */
+    if (becameFinal) {
+        await db().doc("trend_jobs/users").set({
+            needsRebuild: true,
+            requestedAt: firestore_2.FieldValue.serverTimestamp(),
+            gameId,
+        }, { merge: true });
+    }
     /* -----------------------------
      * ゲーム情報更新
      * ----------------------------- */

@@ -331,6 +331,18 @@ if (
     await batch.commit();
     await Promise.all(userUpdateTasks);
 
+    /* ★ ここに「再集計リクエスト」だけ追加する */
+if (becameFinal) {
+  await db().doc("trend_jobs/users").set(
+    {
+      needsRebuild: true,
+      requestedAt: FieldValue.serverTimestamp(),
+      gameId,
+    },
+    { merge: true }
+  );
+}
+
     /* -----------------------------
      * ゲーム情報更新
      * ----------------------------- */

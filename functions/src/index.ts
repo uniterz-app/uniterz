@@ -13,11 +13,16 @@ import { FieldValue } from "firebase-admin/firestore";
 import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { dailyAnalyticsCore } from "./analytics/_core";
 import { aggregateUsersTrend } from "./trend/users.aggregate";
+import { aggregateHitPostsTodayNBA } from "./trend/hitPosts.aggregate";
+import { rebuildUsersTrend } from "./trend/users.rebuild";
+
 
 // ===============================
 // V2 Core
 // ===============================
 export { onGameFinalV2 } from "./onGameFinalV2";
+
+export { rebuildUsersTrend } from "./trend/users.rebuild";
 
 // 🔥 週間・月間ランキング（V2）
 export {
@@ -140,6 +145,20 @@ export const aggregateUsersTrendCron = onSchedule(
   { schedule: "0 0 * * *", timeZone: "Asia/Tokyo" }, // 毎日24:00
   async () => {
     await aggregateUsersTrend();
+  }
+);
+
+/* ============================================================================
+ * Hit Posts Trend (NBA / Today)
+ * ==========================================================================*/
+
+export const aggregateHitPostsTodayNBACron = onSchedule(
+  {
+    schedule: "30 15 * * *", // ★ 15:30 JST
+    timeZone: "Asia/Tokyo",
+  },
+  async () => {
+    await aggregateHitPostsTodayNBA();
   }
 );
 

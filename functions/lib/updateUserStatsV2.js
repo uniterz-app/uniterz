@@ -67,23 +67,9 @@ async function applyPostToUserStatsV2(opts) {
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
     await db().runTransaction(async (tx) => {
-        var _a, _b;
         const marker = await tx.get(markerRef);
         if (marker.exists)
             return;
-        // ---------- streak 更新 ----------
-        const statsRef = db().doc(`user_stats_v2/${uid}`);
-        const statsSnap = await tx.get(statsRef);
-        let currentStreak = (_a = statsSnap.get("currentStreak")) !== null && _a !== void 0 ? _a : 0;
-        let maxStreak = (_b = statsSnap.get("maxStreak")) !== null && _b !== void 0 ? _b : 0;
-        if (isWin) {
-            currentStreak += 1;
-            if (currentStreak > maxStreak)
-                maxStreak = currentStreak;
-        }
-        else {
-            currentStreak = 0;
-        }
         // ---------- increment data ----------
         const inc = {
             posts: firestore_1.FieldValue.increment(1),
@@ -105,7 +91,6 @@ async function applyPostToUserStatsV2(opts) {
         }
         tx.set(dailyRef, update, { merge: true });
         tx.set(markerRef, { at: firestore_1.FieldValue.serverTimestamp() });
-        tx.set(statsRef, { currentStreak, maxStreak, updatedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
     });
 }
 /* =========================================================

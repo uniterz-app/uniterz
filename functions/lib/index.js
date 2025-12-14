@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runDailyAnalyticsHttp = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.updateTeamRankingsDaily = exports.aggregateUsersTrendCron = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildLeaderboardAllTimeCron = exports.rebuildLeaderboardAllTimeV2 = exports.rebuildLeaderboardMonthV2 = exports.rebuildLeaderboardWeekV2 = exports.rebuildCalendarLeaderboardsHttpV2 = exports.onGameFinalV2 = void 0;
+exports.runDailyAnalyticsHttp = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.updateTeamRankingsDaily = exports.aggregateHitPostsTodayNBACron = exports.aggregateUsersTrendCron = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildLeaderboardAllTimeCron = exports.rebuildLeaderboardAllTimeV2 = exports.rebuildLeaderboardMonthV2 = exports.rebuildLeaderboardWeekV2 = exports.rebuildCalendarLeaderboardsHttpV2 = exports.rebuildUsersTrend = exports.onGameFinalV2 = void 0;
 // functions/src/index.ts
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
@@ -44,11 +44,14 @@ const firestore_2 = require("firebase-admin/firestore");
 const games_aggregate_1 = require("./trend/games.aggregate");
 const _core_1 = require("./analytics/_core");
 const users_aggregate_1 = require("./trend/users.aggregate");
+const hitPosts_aggregate_1 = require("./trend/hitPosts.aggregate");
 // ===============================
 // V2 Core
 // ===============================
 var onGameFinalV2_1 = require("./onGameFinalV2");
 Object.defineProperty(exports, "onGameFinalV2", { enumerable: true, get: function () { return onGameFinalV2_1.onGameFinalV2; } });
+var users_rebuild_1 = require("./trend/users.rebuild");
+Object.defineProperty(exports, "rebuildUsersTrend", { enumerable: true, get: function () { return users_rebuild_1.rebuildUsersTrend; } });
 // 🔥 週間・月間ランキング（V2）
 var leaderboards_calendar_v2_1 = require("./triggers/leaderboards.calendar.v2");
 Object.defineProperty(exports, "rebuildCalendarLeaderboardsHttpV2", { enumerable: true, get: function () { return leaderboards_calendar_v2_1.rebuildCalendarLeaderboardsHttpV2; } });
@@ -135,6 +138,15 @@ exports.aggregateTrendsGamesCron = (0, scheduler_1.onSchedule)({ schedule: "0 * 
 exports.aggregateUsersTrendCron = (0, scheduler_1.onSchedule)({ schedule: "0 0 * * *", timeZone: "Asia/Tokyo" }, // 毎日24:00
 async () => {
     await (0, users_aggregate_1.aggregateUsersTrend)();
+});
+/* ============================================================================
+ * Hit Posts Trend (NBA / Today)
+ * ==========================================================================*/
+exports.aggregateHitPostsTodayNBACron = (0, scheduler_1.onSchedule)({
+    schedule: "30 15 * * *", // ★ 15:30 JST
+    timeZone: "Asia/Tokyo",
+}, async () => {
+    await (0, hitPosts_aggregate_1.aggregateHitPostsTodayNBA)();
 });
 /* ============================================================================
  * Team Rankings (Daily)

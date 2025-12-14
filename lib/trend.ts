@@ -144,3 +144,72 @@ export function formatCompactNumber(n: number): string {
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
   return String(n);
 }
+/* ============================================================
+   ▼▼ Hit Posts Trend（当日NBA・20:00集計）▼▼
+   ============================================================ */
+
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+
+/**
+ * trend_cache/hit_posts_today に保存された
+ * 「当日NBAの的中投稿（scorePrecision順）」を取得
+ */
+export async function fetchTrendHitPosts(
+  limit: number = 10
+): Promise<PredictionPostV2[]> {
+  try {
+    const ref = doc(db, "trend_cache", "hit_posts_today");
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) return [];
+
+    const data = snap.data() as any;
+    const posts = Array.isArray(data.posts) ? data.posts.slice(0, limit) : [];
+
+    return Promise.all(
+      posts.map(async (p: any) => {
+        // --- game join ---
+        const gameSnap = await getDoc(doc(db, "games", p.gameId));
+        const game = gameSnap.exists() ? gameSnap.data() : null;
+
+        return {
+  id: p.id,
+  gameId: p.gameId,
+  league: "nba",
+
+  authorUid: p.authorUid,
+
+  // ★ フラット
+  authorDisplayName: p.author?.name ?? "ユーザー",
+  authorHandle: p.author?.handle ?? "",
+  authorPhotoURL: p.author?.avatarUrl ?? null,
+
+  // ★ author オブジェクトも用意（保険）
+  author: {
+    name: p.author?.name ?? "ユーザー",
+    handle: p.author?.handle ?? "",
+    avatarUrl: p.author?.avatarUrl ?? null,
+  },
+
+  home: game?.home,
+  away: game?.away,
+
+  prediction: p.prediction,
+  stats: p.stats,
+
+  status: "final",
+  createdAt: p.createdAt,
+  settledAt: p.settledAt,
+
+  likeCount: 0,
+  saveCount: 0,
+  comment: "",
+  schemaVersion: 2,
+};
+      })
+    );
+  } catch (e) {
+    console.warn("fetchTrendHitPosts failed", e);
+    return [];
+  }
+}
