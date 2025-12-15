@@ -13,7 +13,7 @@ function db() {
 const LEAGUES = ["bj", "nba"] as const;
 
 /* ============================================================================
- * JST Date Utils（★ 重要：日付キーはこれだけ使う）
+ * JST Date Utils
  * ============================================================================
  */
 function toDateKeyJst(d: Date): string {
@@ -24,16 +24,11 @@ function toDateKeyJst(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-/**
- * 【前週】月曜〜日曜（JST）
- * 例：12/15(月) 実行 → 12/08(月)〜12/14(日)
- */
 function getPreviousWeekRange() {
   const now = new Date();
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-
   const base = new Date(jst.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const dow = base.getDay(); // 0: Sun
+  const dow = base.getDay();
 
   const monday = new Date(
     base.getFullYear(),
@@ -49,13 +44,10 @@ function getPreviousWeekRange() {
   return {
     start: monday,
     end: sunday,
-    id: toDateKeyJst(monday), // ★ JSTキー
+    id: toDateKeyJst(monday),
   };
 }
 
-/**
- * 【前月】1日〜末日（JST）
- */
 function getPreviousMonthRange() {
   const now = new Date();
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -74,7 +66,7 @@ function getPreviousMonthRange() {
 }
 
 /* ============================================================================
- * Ranking Core（user_stats_v2_daily 起点）
+ * Ranking Core
  * ============================================================================
  */
 type Agg = {
@@ -86,16 +78,20 @@ type Agg = {
   calibrationErrorSum: number;
 };
 
+function topN(rows: any[], key: string, n = 10) {
+  return [...rows]
+    .sort((a, b) => Number(b[key] ?? 0) - Number(a[key] ?? 0))
+    .slice(0, n);
+}
+
 async function buildRanking(kind: "week" | "month", league: string) {
   const range =
     kind === "week" ? getPreviousWeekRange() : getPreviousMonthRange();
 
   const minPosts = kind === "week" ? 5 : 10;
-
   const docId = `${kind}_${league}_${range.id}`;
   const ref = db().collection("leaderboards_calendar_v2").doc(docId);
 
-  /* ---- メタ ---- */
   await ref.set(
     {
       kind,
@@ -108,15 +104,6 @@ async function buildRanking(kind: "week" | "month", league: string) {
     { merge: true }
   );
 
-  /* ---- users 初期化 ---- */
-  const old = await ref.collection("users").get();
-  if (!old.empty) {
-    const batch = db().batch();
-    old.docs.forEach((d) => batch.delete(d.ref));
-    await batch.commit();
-  }
-
-  /* ---- JST 日付キーで範囲取得 ---- */
   const startDate = toDateKeyJst(range.start);
   const endDate = toDateKeyJst(range.end);
 
@@ -125,8 +112,6 @@ async function buildRanking(kind: "week" | "month", league: string) {
     .where("date", ">=", startDate)
     .where("date", "<=", endDate)
     .get();
-
-  console.log("[RANK]", { kind, league, startDate, endDate, size: statsSnap.size });
 
   const map = new Map<string, Agg>();
 
@@ -158,7 +143,9 @@ async function buildRanking(kind: "week" | "month", league: string) {
     agg.calibrationErrorSum += leagueStats.calibrationErrorSum ?? 0;
   }
 
-  /* ---- 書き込み ---- */
+  /* ---- rows 作成 ---- */
+  const rows: any[] = [];
+
   for (const [uid, agg] of map.entries()) {
     if (agg.posts < minPosts) continue;
 
@@ -169,25 +156,42 @@ async function buildRanking(kind: "week" | "month", league: string) {
 
     const consistency =
       agg.calibrationErrorSum > 0
-        ? Math.max(0, Math.min(100, (1 - agg.calibrationErrorSum / agg.posts) * 100))
+        ? Math.max(
+            0,
+            Math.min(100, (1 - agg.calibrationErrorSum / agg.posts) * 100)
+          )
         : null;
 
-    await ref.collection("users").doc(uid).set(
-      {
-        uid,
-        league,
-        posts: agg.posts,
-        wins: agg.wins,
-        winRate,
-        accuracy,
-        avgPrecision,
-        avgUpset,
-        consistency,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    const userSnap = await db().collection("users").doc(uid).get();
+const user = userSnap.exists ? userSnap.data() : {};
+
+rows.push({
+  uid,
+  handle: user?.handle ?? null,
+  displayName: user?.displayName ?? "user",
+  photoURL: user?.photoURL ?? null,
+
+  league,
+  posts: agg.posts,
+  wins: agg.wins,
+  winRate,
+  accuracy,
+  avgPrecision,
+  avgUpset,
+  consistency,
+});
   }
+
+  /* ---- Top10 保存（★ 追加部分） ---- */
+  const top10 = {
+    winRate: topN(rows, "winRate"),
+    accuracy: topN(rows, "accuracy"),
+    consistency: topN(rows, "consistency"),
+    avgPrecision: topN(rows, "avgPrecision"),
+    avgUpset: topN(rows, "avgUpset"),
+  };
+
+  await ref.set({ top10 }, { merge: true });
 
   return { kind, league, periodId: range.id };
 }

@@ -13,7 +13,7 @@ function db() {
 }
 const LEAGUES = ["bj", "nba"];
 /* ============================================================================
- * JST Date Utils（★ 重要：日付キーはこれだけ使う）
+ * JST Date Utils
  * ============================================================================
  */
 function toDateKeyJst(d) {
@@ -23,15 +23,11 @@ function toDateKeyJst(d) {
     const dd = String(j.getUTCDate()).padStart(2, "0");
     return `${y}-${m}-${dd}`;
 }
-/**
- * 【前週】月曜〜日曜（JST）
- * 例：12/15(月) 実行 → 12/08(月)〜12/14(日)
- */
 function getPreviousWeekRange() {
     const now = new Date();
     const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
     const base = new Date(jst.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const dow = base.getDay(); // 0: Sun
+    const dow = base.getDay();
     const monday = new Date(base.getFullYear(), base.getMonth(), base.getDate() - ((dow + 6) % 7));
     monday.setHours(0, 0, 0, 0);
     const sunday = new Date(monday);
@@ -40,12 +36,9 @@ function getPreviousWeekRange() {
     return {
         start: monday,
         end: sunday,
-        id: toDateKeyJst(monday), // ★ JSTキー
+        id: toDateKeyJst(monday),
     };
 }
-/**
- * 【前月】1日〜末日（JST）
- */
 function getPreviousMonthRange() {
     const now = new Date();
     const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -59,13 +52,17 @@ function getPreviousMonthRange() {
         id: `${year}-${String(month + 1).padStart(2, "0")}`,
     };
 }
+function topN(rows, key, n = 10) {
+    return [...rows]
+        .sort((a, b) => { var _a, _b; return Number((_a = b[key]) !== null && _a !== void 0 ? _a : 0) - Number((_b = a[key]) !== null && _b !== void 0 ? _b : 0); })
+        .slice(0, n);
+}
 async function buildRanking(kind, league) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     const range = kind === "week" ? getPreviousWeekRange() : getPreviousMonthRange();
     const minPosts = kind === "week" ? 5 : 10;
     const docId = `${kind}_${league}_${range.id}`;
     const ref = db().collection("leaderboards_calendar_v2").doc(docId);
-    /* ---- メタ ---- */
     await ref.set({
         kind,
         league,
@@ -74,14 +71,6 @@ async function buildRanking(kind, league) {
         endAtJst: range.end,
         rebuiltAt: firestore_1.FieldValue.serverTimestamp(),
     }, { merge: true });
-    /* ---- users 初期化 ---- */
-    const old = await ref.collection("users").get();
-    if (!old.empty) {
-        const batch = db().batch();
-        old.docs.forEach((d) => batch.delete(d.ref));
-        await batch.commit();
-    }
-    /* ---- JST 日付キーで範囲取得 ---- */
     const startDate = toDateKeyJst(range.start);
     const endDate = toDateKeyJst(range.end);
     const statsSnap = await db()
@@ -89,7 +78,6 @@ async function buildRanking(kind, league) {
         .where("date", ">=", startDate)
         .where("date", "<=", endDate)
         .get();
-    console.log("[RANK]", { kind, league, startDate, endDate, size: statsSnap.size });
     const map = new Map();
     for (const doc of statsSnap.docs) {
         const d = doc.data();
@@ -117,7 +105,8 @@ async function buildRanking(kind, league) {
         agg.upsetSum += (_f = leagueStats.upsetScoreSum) !== null && _f !== void 0 ? _f : 0;
         agg.calibrationErrorSum += (_g = leagueStats.calibrationErrorSum) !== null && _g !== void 0 ? _g : 0;
     }
-    /* ---- 書き込み ---- */
+    /* ---- rows 作成 ---- */
+    const rows = [];
     for (const [uid, agg] of map.entries()) {
         if (agg.posts < minPosts)
             continue;
@@ -128,8 +117,13 @@ async function buildRanking(kind, league) {
         const consistency = agg.calibrationErrorSum > 0
             ? Math.max(0, Math.min(100, (1 - agg.calibrationErrorSum / agg.posts) * 100))
             : null;
-        await ref.collection("users").doc(uid).set({
+        const userSnap = await db().collection("users").doc(uid).get();
+        const user = userSnap.exists ? userSnap.data() : {};
+        rows.push({
             uid,
+            handle: (_h = user === null || user === void 0 ? void 0 : user.handle) !== null && _h !== void 0 ? _h : null,
+            displayName: (_j = user === null || user === void 0 ? void 0 : user.displayName) !== null && _j !== void 0 ? _j : "user",
+            photoURL: (_k = user === null || user === void 0 ? void 0 : user.photoURL) !== null && _k !== void 0 ? _k : null,
             league,
             posts: agg.posts,
             wins: agg.wins,
@@ -138,9 +132,17 @@ async function buildRanking(kind, league) {
             avgPrecision,
             avgUpset,
             consistency,
-            updatedAt: firestore_1.FieldValue.serverTimestamp(),
-        }, { merge: true });
+        });
     }
+    /* ---- Top10 保存（★ 追加部分） ---- */
+    const top10 = {
+        winRate: topN(rows, "winRate"),
+        accuracy: topN(rows, "accuracy"),
+        consistency: topN(rows, "consistency"),
+        avgPrecision: topN(rows, "avgPrecision"),
+        avgUpset: topN(rows, "avgUpset"),
+    };
+    await ref.set({ top10 }, { merge: true });
     return { kind, league, periodId: range.id };
 }
 /* ============================================================================
