@@ -55,6 +55,32 @@ export default function Mobile({
 
   const isMine = uid && post.authorUid === uid;
 
+  /* ------------------------------
+ * Author (users/{uid} を正とする)
+ * ------------------------------ */
+const [author, setAuthor] = React.useState<{
+  name?: string;
+  avatarUrl?: string | null;
+} | null>(null);
+
+React.useEffect(() => {
+  if (!post.authorUid) return;
+
+  const ref = doc(db, "users", post.authorUid);
+  const unsub = onSnapshot(ref, (snap) => {
+    if (snap.exists()) {
+      setAuthor({
+        // ★ ここ重要（次の項目）
+        name: snap.data().displayName ?? snap.data().name,
+        avatarUrl: snap.data().avatarUrl ?? snap.data().photoURL,
+      });
+    }
+  });
+
+  return () => unsub();
+}, [post.authorUid]);
+
+
   // 不正な ID（"(invalid)" など）を弾く
 const isValidPostId =
   typeof post.id === "string" &&
@@ -135,11 +161,14 @@ const doDelete = async (e: any) => {
   // ★ ここに badge ロジックを追加
 let badge: "hit" | "upset" | "miss" | null = null;
 
-if (post.stats?.isWin) {
-  badge = "hit";
-} else if (post.stats?.upsetScore && post.stats.upsetScore > 5) {
+if (post.stats?.isWin && post.stats?.upsetScore && post.stats.upsetScore > 5) {
+  // アップセット勝利
   badge = "upset";
+} else if (post.stats?.isWin) {
+  // 通常勝利
+  badge = "hit";
 } else if (post.stats && post.stats.isWin === false) {
+  // 外れ
   badge = "miss";
 }
 
@@ -225,21 +254,22 @@ const winnerTeam =
         >
           <div className="w-12 h-12 rounded-full overflow-hidden ring-4 ring-[#0f2d35] shrink-0 bg-white/10 flex items-center justify-center">
 
-  {post.author?.avatarUrl ? (
-    <img
-      src={post.author.avatarUrl}
-      className="w-full h-full object-cover"
-      alt="avatar"
-    />
-  ) : null}
+  {(author?.avatarUrl ?? post.author?.avatarUrl) ? (
+  <img
+    src={author?.avatarUrl ?? post.author?.avatarUrl}
+    className="w-full h-full object-cover"
+    alt="avatar"
+  />
+) : null}
+
 
 </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-[15px] font-extrabold truncate">
-                {post.author?.name ?? "ユーザー"}
-              </h3>
+  {author?.name ?? post.author?.name ?? "ユーザー"}
+</h3>
               <span className="text-xs opacity-70">
                 {post.createdAtText}
               </span>

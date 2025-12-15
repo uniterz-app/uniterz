@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import PredictionPostCard from "@/app/component/post/PredictionPostCardV2";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { fetchTrendHitPosts } from "@/lib/trend";
+import { usePrefix } from "@/app/PrefixContext";
 
 const LIMIT = 20;
 
 export default function TrendHitPostsSection() {
+  const prefix = usePrefix();
+  const router = useRouter();
   const [posts, setPosts] = useState<PredictionPostV2[] | null>(null);
 
   useEffect(() => {
@@ -36,7 +40,23 @@ export default function TrendHitPostsSection() {
 
       <div className="space-y-6">
         {posts.map((post) => (
-          <PredictionPostCard key={post.id} post={post} />
+          <div
+  key={post.id}
+  onClickCapture={(e) => {
+    if (e.defaultPrevented) return; // プロフィールクリック時は何もしない
+    router.push(`${prefix}/post/${post.id}`);
+  }}
+>
+            <PredictionPostCard
+  post={post}
+  profileHref={
+    typeof post.author?.handle === "string" &&
+    post.author.handle.trim() !== ""
+      ? `${prefix}/u/${post.author.handle}`
+      : undefined
+  }
+/>
+          </div>
         ))}
       </div>
     </section>

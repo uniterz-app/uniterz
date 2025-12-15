@@ -54,15 +54,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const [selected, setSelected] = useState<Date | null>(null);
 
-  // ★ 初期化フラグを追加
-const didInit = useRef(false);
+  // ★ 初期化フラグ（既存）
+  const didInit = useRef(false);
 
-useEffect(() => {
-  if (!didInit.current && initialSelected) {
-    setSelected(initialSelected); // 初回のみ今日 or 最寄りの試合日に設定
-    didInit.current = true;
-  }
-}, [initialSelected]);
+  useEffect(() => {
+    if (!didInit.current && initialSelected) {
+      setSelected(initialSelected);
+      didInit.current = true;
+    }
+  }, [initialSelected]);
 
   // ---------- スワイプ ----------
   const pageRef = useRef<HTMLDivElement>(null);
@@ -91,6 +91,46 @@ useEffect(() => {
   // ---------- 試合データ ----------
   const safeDate = selected ?? new Date(2099, 0, 1);
   const { loading, error, games } = useGamesByDate(league, safeDate);
+
+  // ---------- 今日かどうか ----------
+  const isToday = useMemo(() => {
+    if (!selected) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return isSameDay(selected, today);
+  }, [selected]);
+
+  // ---------- 全試合終了判定（status: "final"） ----------
+  const allFinished = useMemo(() => {
+    if (!games || games.length === 0) return false;
+    return games.every((g: any) => g.status === "final");
+  }, [games]);
+
+  // ---------- 翌日の試合日 ----------
+  const nextDay = useMemo(() => {
+    if (!selected) return null;
+    const idx = gameDays.findIndex((d) => isSameDay(d, selected));
+    return idx >= 0 && idx < gameDays.length - 1
+      ? gameDays[idx + 1]
+      : null;
+  }, [selected, gameDays]);
+
+  // ★ 今日の試合がすべて終了したら翌日をデフォルトにする（追加部分）
+  const didAutoAdvance = useRef(false);
+
+  useEffect(() => {
+    if (
+      !isToday ||
+      !allFinished ||
+      !nextDay ||
+      didAutoAdvance.current
+    ) {
+      return;
+    }
+
+    setSelected(nextDay);
+    didAutoAdvance.current = true;
+  }, [isToday, allFinished, nextDay]);
 
   const visibleCount = dense ? 7 : 10;
   const pagePad = dense ? "px-3" : "px-4 md:px-6";
@@ -125,7 +165,7 @@ useEffect(() => {
       style={{ touchAction: "pan-y" }}
     >
       {/* ---------------------------------
-          🔥 ヘッダー（MobileTrendPage と統一）
+          🔥 ヘッダー
       ---------------------------------- */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md ">
         <div className="relative h-11 flex items-center justify-between px-3 md:px-8">
@@ -143,7 +183,11 @@ useEffect(() => {
 
       {/* -------- League Tabs -------- */}
       <div className="flex items-center justify-between mb-2 mt-3">
-        <LeagueTabs value={league} onChange={setLeague} size={dense ? "md" : "lg"} />
+        <LeagueTabs
+          value={league}
+          onChange={setLeague}
+          size={dense ? "md" : "lg"}
+        />
       </div>
 
       {/* -------- Month Header -------- */}

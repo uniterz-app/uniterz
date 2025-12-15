@@ -137,7 +137,7 @@ export default function TrendPanel() {
       <section className="space-y-3 mt-10">
         <div className="flex items-center gap-2">
           <CheckCircle className="w-5 h-5 text-yellow-400" />
-          <h3 className="text-lg font-semibold text-white">前日の的中投稿</h3>
+          <h3 className="text-lg font-semibold text-white">的中投稿</h3>
         </div>
 
         <TrendHitPostsSection />

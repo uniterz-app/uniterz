@@ -15,6 +15,7 @@ export type Metric =
 // ========== ランキング行 ==========
 export type RankingRow = {
   uid: string;
+  handle: string;
   displayName: string;
   photoURL?: string;
 

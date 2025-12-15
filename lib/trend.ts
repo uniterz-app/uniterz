@@ -177,19 +177,17 @@ export async function fetchTrendHitPosts(
   gameId: p.gameId,
   league: "nba",
 
-  authorUid: p.authorUid,
+authorUid: p.authorUid,
 
-  // ★ フラット
-  authorDisplayName: p.author?.name ?? "ユーザー",
-  authorHandle: p.author?.handle ?? "",
-  authorPhotoURL: p.author?.avatarUrl ?? null,
+authorDisplayName: p.author?.name ?? "ユーザー",
+authorHandle: p.authorHandle ?? "",
+authorPhotoURL: p.author?.avatarUrl ?? null,
 
-  // ★ author オブジェクトも用意（保険）
-  author: {
-    name: p.author?.name ?? "ユーザー",
-    handle: p.author?.handle ?? "",
-    avatarUrl: p.author?.avatarUrl ?? null,
-  },
+author: {
+  name: p.author?.name ?? "ユーザー",
+  handle: p.authorHandle ?? "",
+  avatarUrl: p.author?.avatarUrl ?? null,
+},
 
   home: game?.home,
   away: game?.away,

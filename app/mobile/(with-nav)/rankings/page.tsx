@@ -3,7 +3,10 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { Alfa_Slab_One } from "next/font/google";
 import type React from "react";
+import Link from "next/link";
+
 import type {
   Period,
   LeagueTab,
@@ -11,6 +14,11 @@ import type {
   RankingRow,
   RankingResponse,
 } from "@/lib/rankings/types";
+
+const alfa = Alfa_Slab_One({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 /* ====== UI 定数 ====== */
 const MAX_AVATAR = 70;
@@ -28,31 +36,26 @@ function badgeOffsetByRank(rank: number) {
   return map[rank] ?? { x: 0, y: 0 };
 }
 
-function BlobBG({ rank }: { rank: number }) {
-  const palette: Record<number, [string, string]> = {
-    1: ["#fef3c7", "#facc15"],
-    2: ["#e0f2fe", "#60a5fa"],
-    3: ["#fed7aa", "#fb923c"],
-  };
-  const [c1, c2] = palette[rank] ?? ["#6ee7b7", "#14b8a6"];
-
-  return (
-    <div
-      className="pointer-events-none absolute inset-x-3 inset-y-4 opacity-70 blur-2xl"
-      style={{
-        borderRadius: "1.5rem",
-        backgroundImage: `
-          radial-gradient(45% 45% at 25% 25%, ${c1} 0%, transparent 60%),
-          radial-gradient(55% 55% at 75% 75%, ${c2} 0%, transparent 70%)`,
-        filter: "blur(22px)",
-      }}
-    />
-  );
-}
-
 /* ============ ページ本体 ============ */
 
 export default function MobileRankingsPage() {
+  const DISABLE_RANKINGS_UI = false;
+    if (DISABLE_RANKINGS_UI) {
+    return (
+      <>
+        <header className="pt-2 sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md">
+          <div className="relative h-11 flex items-center justify-center px-3">
+            <img src="/logo/logo.png" alt="Uniterz Logo" className="w-10 h-auto" />
+          </div>
+        </header>
+
+        <div className="px-4 py-10 text-center text-white/60 text-sm">
+          ランキングは現在準備中です
+        </div>
+      </>
+    );
+  }
+
   const [league, setLeague] = useState<LeagueTab>("nba");
   const [period, setPeriod] = useState<Period>("week");
 
@@ -64,13 +67,14 @@ export default function MobileRankingsPage() {
   avgUpset: [],
 });
 
-  const [loading, setLoading] = useState<Record<Metric, boolean>>({
-  winRate: false,
-  avgPrecision: false,
-  accuracy: false,
-  consistency: false,
-  avgUpset: false,
-});
+  const [periodInfo, setPeriodInfo] = useState<{
+  startAt: string;
+  endAt: string;
+} | null>(null);
+
+// ★ 追加：この period 用のデータかを判定するキー
+const [periodKey, setPeriodKey] = useState<Period>("week");
+
 
   const [error, setError] = useState<string | null>(null);
 
@@ -85,31 +89,52 @@ export default function MobileRankingsPage() {
   };
 
   /* ====== fetch (V2) ====== */
-  async function fetchMetric(metric: Metric) {
-    try {
-      setLoading((prev) => ({ ...prev, [metric]: true }));
-      const query = `/api/rankings-v2?period=${period}&league=${league}&metric=${metric}&limit=50`;
+async function fetchAll() {
+  const currentPeriod = period;
+  setPeriodKey(currentPeriod);
+  setPeriodInfo(null);
 
-      const res = await fetch(query);
-      const json: RankingResponse & { error?: string } = await res.json();
-      if (!res.ok) throw new Error(json.error || "load failed");
+  try {
+    setError(null);
 
-      setRows((prev) => ({ ...prev, [metric]: json.rows ?? [] }));
-    } catch (e: any) {
-      setError(e?.message ?? "failed to load");
-    } finally {
-      setLoading((prev) => ({ ...prev, [metric]: false }));
-    }
+    const metrics: Metric[] = [
+      "winRate",
+      "avgPrecision",
+      "accuracy",
+      "consistency",
+      "avgUpset",
+    ];
+
+    const results = await Promise.all(
+      metrics.map(async (metric) => {
+        const res = await fetch(
+          `/api/rankings-v2?period=${period}&league=${league}&metric=${metric}`
+        );
+        const json = await res.json();
+
+        // ★ ここが重要
+        if (json.period && metric === "winRate") {
+          setPeriodInfo(json.period);
+        }
+
+        return [metric, json.rows ?? []] as const;
+      })
+    );
+
+    setRows((prev) => {
+      const next = { ...prev };
+      for (const [metric, rows] of results) {
+        next[metric] = rows;
+      }
+      return next;
+    });
+  } catch (e: any) {
+    setError(e?.message ?? "failed to load");
   }
+}
 
-  useEffect(() => {
-  setError(null);
-
-  fetchMetric("winRate");
-  fetchMetric("avgPrecision");
-  fetchMetric("accuracy");
-  fetchMetric("consistency");
-  fetchMetric("avgUpset");
+useEffect(() => {
+  fetchAll();
 }, [league, period]);
 
   const noData = Object.values(rows).every((arr) => arr.length === 0);
@@ -123,23 +148,47 @@ export default function MobileRankingsPage() {
         </div>
       </header>
 
-      <div className="mx-auto w-full px-3 py-6 space-y-6">
+      <div className="mx-auto w-full px-3 py-6 space-y-6 overflow-x-hidden">
         <TabsRow league={league} setLeague={setLeague} period={period} setPeriod={setPeriod} />
+        {/* ===== 集計期間 / 準備中 表示 ===== */}
+{period === "month" && !periodInfo ? (
+  <div className="text-center text-xs text-white/50 -mt-2">
+    月間ランキングは準備中です
+  </div>
+) : (
+  period === "week" &&
+  periodInfo &&
+  periodKey === period && (   // ★ これを追加
+    <div className="text-center text-xs text-white/60 -mt-2">
+      集計期間：
+      {new Date(periodInfo.startAt).toLocaleDateString("ja-JP", {
+        month: "numeric",
+        day: "numeric",
+      })}
+      {" 〜 "}
+      {new Date(periodInfo.endAt).toLocaleDateString("ja-JP", {
+        month: "numeric",
+        day: "numeric",
+      })}
+    </div>
+  )
+)}
 
         {error && <p className="text-xs text-center text-red-300">{error}</p>}
 
-        {noData ? (
-          <p className="text-sm text-center text-white/60">ランキングデータがありません。</p>
-        ) : (
-          <>
-          <MobileSection title="勝率" metric="winRate" rows={rows.winRate} league={league} period={period} />
-<MobileSection title="スコア精度" metric="avgPrecision" rows={rows.avgPrecision} league={league} period={period} />
-<MobileSection title="予測精度" metric="accuracy" rows={rows.accuracy} league={league} period={period} />
-<MobileSection title="一致度" metric="consistency" rows={rows.consistency} league={league} period={period} />
-<MobileSection title="Upsetスコア" metric="avgUpset" rows={rows.avgUpset} league={league} period={period} />
-                 
-          </>
-        )}
+        {period === "month" && !periodInfo ? null : noData ? (
+  <p className="text-sm text-center text-white/60">
+    ランキングデータがありません。
+  </p>
+) : (
+  <>
+    <MobileSection title="勝率" metric="winRate" rows={rows.winRate} league={league} period={period} />
+    <MobileSection title="スコア精度" metric="avgPrecision" rows={rows.avgPrecision} league={league} period={period} />
+    <MobileSection title="予測精度" metric="accuracy" rows={rows.accuracy} league={league} period={period} />
+    <MobileSection title="一致度" metric="consistency" rows={rows.consistency} league={league} period={period} />
+    <MobileSection title="Upset指数" metric="avgUpset" rows={rows.avgUpset} league={league} period={period} />
+  </>
+)}
       </div>
     </>
   );
@@ -170,8 +219,8 @@ const listCount = period === "week" ? 10 : 20;
   };
 
   return (
-    <section className="space-y-4">
-      <h2 className="text-white text-[20px] text-center" style={headingStyle}>
+    <section className="space-y-8">
+      <h2 className="text-white text-[25px] text-center" style={headingStyle}>
         {title}
       </h2>
 
@@ -195,6 +244,7 @@ function TabsRow(props: {
   setPeriod: (v: Period) => void;
 }) {
   const { league, setLeague, period, setPeriod } = props;
+  const isB1 = league === "b1";
 
   const Tab = ({
     label,
@@ -215,18 +265,44 @@ function TabsRow(props: {
   );
 
   return (
+  <div className="flex flex-col gap-1">
+    {/* タブ本体 */}
     <div className="flex items-center justify-between">
       <div className="flex gap-2">
-        <Tab label="NBA" active={league === "nba"} onClick={() => setLeague("nba")} />
-        <Tab label="B1" active={league === "b1"} onClick={() => setLeague("b1")} />
+        <Tab
+          label="NBA"
+          active={league === "nba"}
+          onClick={() => setLeague("nba")}
+        />
+        <Tab
+          label="B1"
+          active={league === "b1"}
+          onClick={() => setLeague("b1")}
+        />
       </div>
 
       <div className="flex gap-2">
-        <Tab label="週間" active={period === "week"} onClick={() => setPeriod("week")} />
-        <Tab label="月間" active={period === "month"} onClick={() => setPeriod("month")} />
+        <Tab
+          label="週間"
+          active={period === "week"}
+          onClick={() => setPeriod("week")}
+        />
+        <Tab
+          label="月間"
+          active={period === "month"}
+          onClick={() => setPeriod("month")}
+        />
       </div>
     </div>
-  );
+
+    {/* ★ B1 × 週間 の説明文 */}
+    {isB1 && period === "week" && (
+      <div className="mt-2 text-[14px] text-white/40 text-center">
+        Bリーグは月間ランキングのみです
+      </div>
+    )}
+  </div>
+);
 }
 
 
@@ -274,7 +350,7 @@ function HeroRow({
           value = `${(r.avgUpset ?? 0).toFixed(1)}`;
         }
         else if (metric === "consistency") {
-  value = `${Math.round((r.consistency ?? 0) * 100)}%`;
+  value = `${Math.round(r.consistency ?? 0)}%`;
 }
 
 
@@ -300,9 +376,9 @@ function HeroRow({
         const leftPx = BADGE_GLOBAL_NUDGE.x + nudge.x;
 
         return (
-          <a
-            key={r.uid}
-            href={`/mobile/u/${encodeURIComponent(r.uid)}`}
+<Link
+  key={r.uid}
+  href={`/mobile/u/${r.handle}`}
             className={[
               "relative rounded-2xl border border-white/10 bg-white/[.04]",
               "px-2.5 pt-8 pb-3 flex flex-col items-center gap-0 overflow-visible",
@@ -310,18 +386,16 @@ function HeroRow({
             ].join(" ")}
             style={{ height: CARD_H }}
           >
-            <BlobBG rank={rank} />
 
             <div
               className="absolute left-1/2 -translate-x-1/2 z-20"
               style={{ top: topPx, width: badgeWidth, marginLeft: leftPx }}
             >
               <RankBadge
-                rank={rank}
-                size={badgeWidth}
-                priority={rank <= 2}
-                league={league}
-              />
+  rank={rank}
+  size={badgeWidth}
+  priority={rank <= 2}
+/>
             </div>
 
             <div
@@ -351,21 +425,34 @@ function HeroRow({
               </div>
             </div>
 
-            <div className="text-white font-semibold text-[13px] text-center max-w-[16ch] truncate h-[18px] flex items-center">
+            <div className="text-white font-bold text-[13px] text-center max-w-[16ch] truncate h-[18px] flex items-center">
               {r.displayName}
             </div>
 
-            <div className="h-[28px] mt-2 flex items-center">
-              <span
-                className={[
-                  "px-3 py-1 rounded-2xl text-[12px] font-black tracking-tight",
-                  chip,
-                ].join(" ")}
-              >
-                {value}
-              </span>
-            </div>
-          </a>
+            <div className="mt-2 flex flex-col items-center gap-0.5">
+  {/* 指標（Impact / Alfa） */}
+  <span
+    className={[
+      alfa.className,
+      "text-[19px] font-normal tracking-wide",
+      rank === 1
+        ? "text-yellow-300"
+        : rank === 2
+        ? "text-slate-300"
+        : rank === 3
+        ? "text-amber-600"
+        : "text-white/90",
+    ].join(" ")}
+  >
+    {value}
+  </span>
+
+  {/* 投稿数（補足情報） */}
+  <span className="text-[11px] text-white/40 leading-none">
+    {r.posts} 投稿
+  </span>
+</div>   
+          </Link>
         );
       })}
     </div>
@@ -373,31 +460,24 @@ function HeroRow({
 }
 
 /* =========================
- * RankBadge (UIは現状維持)
+ * RankBadge（修正版・確定）
  * =======================*/
 function RankBadge({
   rank,
   size,
   priority = false,
-  league,
 }: {
   rank: number;
   size: number;
   priority?: boolean;
-  league: LeagueTab;
 }) {
   if (rank < 1 || rank > 5) return null;
 
-  let src: string;
-
-  // B1/NBA で 1〜3 位だけ専用
-  if (league === "b1" && rank <= 3) {
-    src = `/rankings/emblems/b1rank-${rank}.png`;
-  } else if (league === "nba" && rank <= 3) {
-    src = `/rankings/emblems/nbarank-${rank}.png`;
-  } else {
-    src = `/rankings/emblems/rank-${rank}.png`;
-  }
+  // ★ NBA / B1 共通ルール
+  const src =
+    rank <= 3
+      ? `/rankings/emblems/b1rank-${rank}.png`
+      : `/rankings/emblems/rank-${rank}.png`;
 
   return (
     <Image
@@ -434,12 +514,12 @@ function badgeDimsByRankMobile(
   avatarSize: number
 ): { badgeWidth: number; badgeLift: number } {
   const widthScale: Record<number, number> = {
-    1: 1.8,
-    2: 1.7,
-    3: 1.9,
-    4: 1.05,
-    5: 0.98,
-  };
+  1: 1.8,   // 1位はそのまま
+  2: 2.25,  // ★ 少し大きく
+  3: 2.55,  // ★ 2位よりわずかに大きく
+  4: 1.05,
+  5: 0.98,
+};
   const liftScale: Record<number, number> = {
     1: 0.4,
     2: 0.34,
@@ -489,8 +569,9 @@ function RankingList({
           value = `${(r.avgUpset ?? 0).toFixed(1)}`;
         }
         else if (metric === "consistency") {
-  value = `${Math.round((r.consistency ?? 0) * 100)}%`;
+  value = `${Math.round(r.consistency ?? 0)}%`;
 }
+
 
         /* ----------------------------
          * ★ metricごとに色を変える
@@ -509,9 +590,9 @@ function RankingList({
     : "bg-gray-500 text-white";
 
         return (
-          <a
-            key={r.uid}
-            href={`/mobile/u/${encodeURIComponent(r.uid)}`}
+          <Link
+  key={r.uid}
+  href={`/mobile/u/${r.handle}`}
             className="flex items-center px-4 py-4 hover:bg-white/[.06]"
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -521,16 +602,19 @@ function RankingList({
                 {r.displayName}
               </div>
             </div>
+           <div className="ml-auto flex items-center gap-2">
+  {/* 指標 */}
+  <span className="text-[15px] font-bold text-white/90">
+    {value}
+  </span>
 
-            <span
-              className={[
-                "ml-auto px-3 py-1.5 rounded-2xl text-sm font-black tracking-tight",
-                chip,
-              ].join(" ")}
-            >
-              {value}
-            </span>
-          </a>
+  {/* 投稿数 */}
+  <span className="text-[12px] text-white/40">
+    {r.posts}投稿
+  </span>
+</div>
+
+          </Link>
         );
       })}
     </div>
@@ -565,12 +649,12 @@ function Avatar({
       style={{ width: size, height: size }}
       className="rounded-full overflow-hidden bg-white/10 border border-white/10 flex items-center justify-center shrink-0"
     >
-      {photoURL ? (
-        <img src={photoURL} alt={name} className="w-full h-full object-cover" />
-      ) : (
-        <span className="text-white/80 text-sm">
-          {(name || "U").slice(0, 1)}
-        </span>
+      {photoURL && (
+        <img
+          src={photoURL}
+          alt={name}
+          className="w-full h-full object-cover"
+        />
       )}
     </div>
   );

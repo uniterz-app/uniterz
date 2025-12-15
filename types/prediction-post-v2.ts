@@ -10,6 +10,7 @@ export type PredictionPostV2 = {
   authorHandle?: string | null;
   author?: {
     name: string;
+    handle?: string | null;
     avatarUrl?: string;
   } | null;
 
