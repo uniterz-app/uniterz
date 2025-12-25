@@ -110,8 +110,12 @@ async function aggregateGamesTrend() {
         const league = (e.league || "").toUpperCase();
         if (!gameId || !league)
             continue;
-        if (league !== "B1" && league !== "J1" && league !== "NBA")
+        if (league !== "B1" &&
+            league !== "J1" &&
+            league !== "NBA" &&
+            league !== "PL") {
             continue;
+        }
         // イベント時刻
         let at;
         if (typeof e.ts === "number" && Number.isFinite(e.ts)) {

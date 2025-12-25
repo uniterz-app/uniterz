@@ -11,7 +11,7 @@ const tsHoursAgo = Shared.tsHoursAgo;
 type GameEvent = {
   type: "click_card" | "open_predictions" | "create_prediction" | "predict";
   gameId: string;
-  league: "B1" | "J1" | string;
+  league: "B1" | "J1" | "NBA" | "PL" | string; // ★ PL 追加
   ts?: number;      // epoch ms (旧クライアント)
   at?: Timestamp;   // Timestamp (新クライアント)
 };
@@ -118,7 +118,14 @@ export async function aggregateGamesTrend() {
     const league = (e.league || "").toUpperCase();
 
     if (!gameId || !league) continue;
-    if (league !== "B1" && league !== "J1" && league !== "NBA") continue;
+    if (
+  league !== "B1" &&
+  league !== "J1" &&
+  league !== "NBA" &&
+  league !== "PL"
+) {
+  continue;
+}
 
     // イベント時刻
     let at: Timestamp;

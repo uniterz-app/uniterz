@@ -21,8 +21,10 @@ const sizeMap = {
  */
 const DISPLAY_ITEMS: Array<{ v: League; label: string }> = [
   { v: "nba", label: "NBA" },
+  { v: "pl", label: "Premier League" },
   { v: "bj", label: "B.LEAGUE" },
-  // ← 将来 J1 を表示するなら追加：{ v: "j", label: "J1" }
+  // J1 を出すなら：
+  // { v: "j1", label: "J1" },
 ];
 
 export default function LeagueTabsV2({

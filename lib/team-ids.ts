@@ -87,5 +87,29 @@ export const TEAM_IDS: Record<string, string> = {
 "Utah Jazz": "nba-jazz",
 "Washington Wizards": "nba-wizards",
 
+  // ===== Premier League =====
+  "Arsenal": "pl-arsenal",
+  "Aston Villa": "pl-aston-villa",
+  "Bournemouth": "pl-bournemouth",
+  "Brentford": "pl-brentford",
+  "Brighton & Hove Albion": "pl-brighton",
+  "Chelsea": "pl-chelsea",
+  "Crystal Palace": "pl-crystal-palace",
+  "Everton": "pl-everton",
+  "Fulham": "pl-fulham",
+  "Ipswich Town": "pl-ipswich",
+  "Leicester City": "pl-leicester",
+  "Liverpool": "pl-liverpool",
+  "Manchester City": "pl-man-city",
+  "Manchester United": "pl-man-united",
+  "Newcastle United": "pl-newcastle",
+  "Nottingham Forest": "pl-nottingham",
+  "Southampton": "pl-southampton",
+  "Tottenham Hotspur": "pl-tottenham",
+  "West Ham United": "pl-west-ham",
+  "Wolverhampton Wanderers": "pl-wolves",
+  "Sunderland": "pl-sunderland",
+  "Leeds United": "pl-leeds",
+  "Burnley": "pl-burnley"
 
 };

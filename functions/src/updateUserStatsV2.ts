@@ -44,7 +44,7 @@ type ApplyOptsV2 = {
 };
 
 const db = () => getFirestore();
-const LEAGUES = ["bj", "j1", "nba"];
+const LEAGUES = ["bj", "j1", "nba", "pl"] as const;
 
 /* =========================================================
  * Utils
@@ -66,6 +66,7 @@ function normalizeLeague(raw?: string | null): string | null {
   if (v === "bj" || v === "b1" || v.includes("b.league")) return "bj";
   if (v === "j1" || v === "j") return "j1";
   if (v === "nba") return "nba";
+  if (v === "pl" || v.includes("premier")) return "pl";
 
   return null;
 }
@@ -104,12 +105,12 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
     winRate: posts ? wins / posts : 0,
     avgScoreError: posts ? b.scoreErrorSum / posts : 0,
     avgBrier: posts ? b.brierSum / posts : 0,
-    avgUpset: wins ? b.upsetScoreSum / wins : 0, // upsetScore は勝ちだけで割る
+    avgUpset: wins ? b.upsetScoreSum / wins : 0,
     avgPrecision: posts ? b.scorePrecisionSum / posts : 0,
     avgCalibration:
-  b.calibrationCount > 0
-    ? b.calibrationErrorSum / b.calibrationCount
-    : null,
+      b.calibrationCount > 0
+        ? b.calibrationErrorSum / b.calibrationCount
+        : null,
   };
 }
 
@@ -130,6 +131,9 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
   const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
   const markerRef = dailyRef.collection("applied_posts").doc(postId);
 
+  // ★ 追加：ユーザー集計用
+  const userStatsRef = db().doc(`user_stats_v2/${uid}`);
+
   await db().runTransaction(async (tx) => {
     const marker = await tx.get(markerRef);
     if (marker.exists) return;
@@ -143,7 +147,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetScoreSum: FieldValue.increment(isWin ? upsetScore : 0),
       scorePrecisionSum: FieldValue.increment(scorePrecision),
       calibrationErrorSum: FieldValue.increment(opts.calibrationError),
-calibrationCount: FieldValue.increment(1),
+      calibrationCount: FieldValue.increment(1),
     };
 
     const update: any = {
@@ -157,6 +161,19 @@ calibrationCount: FieldValue.increment(1),
         ...(update.leagues || {}),
         [leagueKey]: inc,
       };
+
+      // ★ 追加：リーグ別投稿数を累積
+      tx.set(
+        userStatsRef,
+        {
+          leaguePosts: {
+            [leagueKey]: FieldValue.increment(1),
+          },
+          lastActiveLeague: leagueKey,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
 
     tx.set(dailyRef, update, { merge: true });
@@ -197,7 +214,7 @@ export async function getStatsForDateRangeV2(
     b.upsetScoreSum += src.upsetScoreSum || 0;
     b.scorePrecisionSum += src.scorePrecisionSum || 0;
     b.calibrationErrorSum += src.calibrationErrorSum || 0;
-b.calibrationCount += src.calibrationCount || 0;
+    b.calibrationCount += src.calibrationCount || 0;
   }
 
   return recomputeCache(b);

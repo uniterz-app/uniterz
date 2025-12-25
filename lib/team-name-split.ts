@@ -2,6 +2,7 @@
 import { teamNameRules as teamNameRulesB1 } from "./team-names";
 import { teamNameRulesJ1 } from "./team-names-j1";
 import { teamNameRulesNBA } from "./team-names-nba";
+import { teamNameRulesPL } from "./team-names-pl";
 
 // 正規化
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -10,7 +11,7 @@ const norm = (s: string) => s.replace(/\s+/g, " ").trim();
  * リーグ別にチーム名を 1行目 / 2行目 に分解する
  */
 export function splitTeamNameByLeague(
-  league: "bj" | "j1" | "nba",
+  league: "bj" | "j1" | "nba" | "pl",
   rawName: string
 ): [string, string] {
   const name = norm(rawName);
@@ -24,6 +25,8 @@ export function splitTeamNameByLeague(
     rules = teamNameRulesJ1;
   } else if (league === "nba") {
     rules = teamNameRulesNBA;
+  } else if (league === "pl") {
+    rules = teamNameRulesPL;
   } else {
     // 将来リーグ増やした時の安全策
     return [name, "\u00A0"];

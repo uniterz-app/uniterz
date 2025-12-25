@@ -8,7 +8,7 @@ import { doc, getDoc, Timestamp } from "firebase/firestore";
 
 export type TrendGame = {
   gameId: string;
-  league: "B1" | "J1" | string;
+  league: "NBA" | "B1" | "J1" | "PL";
   score: number;
   raw: number;
   clicks: number;
@@ -23,6 +23,7 @@ export type TrendCacheGames = {
   B1?: TrendGame[];
   J1?: TrendGame[];
   NBA?: TrendGame[];
+  PL?: TrendGame[];
 };
 
 export async function fetchTrendCacheGames(): Promise<TrendCacheGames | null> {
@@ -38,18 +39,22 @@ export async function fetchTrendCacheGames(): Promise<TrendCacheGames | null> {
     B1: Array.isArray(data?.B1) ? data.B1 : [],
     J1: Array.isArray(data?.J1) ? data.J1 : [],
     NBA: Array.isArray(data?.NBA) ? data.NBA : [],
+    PL: Array.isArray(data?.PL) ? data.PL : [],
   };
 }
 
 export function pickTopPerLeague(cache: TrendCacheGames, n = 1) {
-  const topB1 = (cache.B1 ?? []).slice(0, n);
-  const topJ1 = (cache.J1 ?? []).slice(0, n);
-  return { topB1, topJ1 };
+  return {
+    NBA: (cache.NBA ?? []).slice(0, n),
+    B1: (cache.B1 ?? []).slice(0, n),
+    J1: (cache.J1 ?? []).slice(0, n),
+    PL: (cache.PL ?? []).slice(0, n),
+  };
 }
 
 export type UICardGame = {
   gameId: string;
-  league: "NBA" | "B1" | "J1";
+  league: "NBA" | "B1" | "J1" | "PL",
   clickCount: number;
   viewCount: number;
   predictCount: number;
@@ -58,7 +63,7 @@ export type UICardGame = {
 
 export function selectLeagueGames(
   cache: TrendCacheGames | null,
-  league: "NBA" | "B1" | "J1",
+  league: "NBA" | "B1" | "J1" | "PL",
   limit = 10
 ): UICardGame[] {
   if (!cache) return [];
@@ -88,10 +93,10 @@ export function selectLeagueGames(
 
 export function pickTopGameIdByScore(
   cache: TrendCacheGames | null,
-  league: "B1" | "J1"
+  league: "NBA" | "B1" | "J1" | "PL"
 ): string | null {
   if (!cache) return null;
-  const arr = (cache[league] ?? []);
+  const arr = cache[league] ?? [];
   if (!arr.length) return null;
   return String(arr[0].gameId ?? "") || null;
 }
@@ -113,13 +118,10 @@ export type TrendUser = {
   handle: string;
   photoURL?: string;
 
-  currentStreak: number; // ★ 連勝中
-  maxStreak: number;     // ★ 最高連勝
+  currentStreak: number;
+  maxStreak: number;
 };
 
-/**
- * trend_cache/users に保存された「連勝上位ユーザー」を取得するだけ
- */
 export async function fetchTrendUsers(max: number = 12): Promise<TrendUser[]> {
   try {
     const ref = doc(db, "trend_cache", "users");
@@ -133,27 +135,21 @@ export async function fetchTrendUsers(max: number = 12): Promise<TrendUser[]> {
     console.warn("fetchTrendUsers: read failed", e);
   }
 
-  return []; // fallback は不要なので空
+  return [];
 }
 
-/**
- * 数字フォーマット（残しておいても問題なし）
- */
 export function formatCompactNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "m";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
   return String(n);
 }
+
 /* ============================================================
    ▼▼ Hit Posts Trend（当日NBA・20:00集計）▼▼
    ============================================================ */
 
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
-/**
- * trend_cache/hit_posts_today に保存された
- * 「当日NBAの的中投稿（scorePrecision順）」を取得
- */
 export async function fetchTrendHitPosts(
   limit: number = 10
 ): Promise<PredictionPostV2[]> {
@@ -164,48 +160,11 @@ export async function fetchTrendHitPosts(
     if (!snap.exists()) return [];
 
     const data = snap.data() as any;
+
+    // ★ game JOIN を削除。trend_cache の完成データをそのまま返す
     const posts = Array.isArray(data.posts) ? data.posts.slice(0, limit) : [];
 
-    return Promise.all(
-      posts.map(async (p: any) => {
-        // --- game join ---
-        const gameSnap = await getDoc(doc(db, "games", p.gameId));
-        const game = gameSnap.exists() ? gameSnap.data() : null;
-
-        return {
-  id: p.id,
-  gameId: p.gameId,
-  league: "nba",
-
-authorUid: p.authorUid,
-
-authorDisplayName: p.author?.name ?? "ユーザー",
-authorHandle: p.authorHandle ?? "",
-authorPhotoURL: p.author?.avatarUrl ?? null,
-
-author: {
-  name: p.author?.name ?? "ユーザー",
-  handle: p.authorHandle ?? "",
-  avatarUrl: p.author?.avatarUrl ?? null,
-},
-
-  home: game?.home,
-  away: game?.away,
-
-  prediction: p.prediction,
-  stats: p.stats,
-
-  status: "final",
-  createdAt: p.createdAt,
-  settledAt: p.settledAt,
-
-  likeCount: 0,
-  saveCount: 0,
-  comment: "",
-  schemaVersion: 2,
-};
-      })
-    );
+    return posts as PredictionPostV2[];
   } catch (e) {
     console.warn("fetchTrendHitPosts failed", e);
     return [];

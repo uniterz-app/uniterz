@@ -5,14 +5,14 @@ import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */
-type League = "bj" | "j" | "nba";
+type League = "bj" | "j1" | "nba" | "pl";
 type Status = "scheduled" | "live" | "final";
 
 type ParsedOkV2 = {
   ok: true;
   gameId: string;
   prediction: {
-    winner: "home" | "away";
+   winner: "home" | "away" | "draw";
     confidence: number;
     score: { home: number; away: number };
   };
@@ -27,8 +27,8 @@ function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
     if (!gameId) throw new Error("gameId required");
 
     const p = body?.prediction ?? {};
-    if (!["home", "away"].includes(p.winner))
-      throw new Error("prediction.winner must be home/away");
+    if (!["home", "away", "draw"].includes(p.winner))
+  throw new Error("prediction.winner must be home/away/draw");
 
     const confidence = Number(p.confidence);
     if (!Number.isFinite(confidence) || confidence < 1 || confidence > 99)
@@ -67,10 +67,11 @@ function normalizeLeague(v: any): League {
   const s = String(v ?? "").toLowerCase();
 
   if (s === "bj" || s === "b1") return "bj";
-  if (s === "j" || s === "j1") return "j";
-  if (s === "nba") return "nba";    // ★ 必須
+  if (s === "j1" || s === "j") return "j1";
+  if (s === "nba") return "nba";
+  if (s === "pl" || s.includes("premier")) return "pl";
 
-  return s as League;
+  return "bj"; // フォールバック
 }
 
 function toAdminTimestamp(v: any): Timestamp | null {

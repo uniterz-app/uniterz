@@ -119,13 +119,16 @@ export default function Page() {
 
       {/* 🎯 V2 勝敗ドーナツグラフ */}
       <div className="mt-2">
-        <GamePredictionDistributionV2
-          gameId={gameId}
-          homeName={homeName}
-          awayName={awayName}
-          homeColor={homeColor}
-          awayColor={awayColor}
-        />
+        {leagueNorm && (
+  <GamePredictionDistributionV2
+    gameId={gameId}
+    league={leagueNorm}
+    homeName={homeName}
+    awayName={awayName}
+    homeColor={homeColor}
+    awayColor={awayColor}
+  />
+)}
       </div>
 
       {/* 投稿一覧 */}

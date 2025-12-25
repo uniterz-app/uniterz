@@ -11,7 +11,9 @@ import {
   Timestamp,
 } from "firebase/firestore";
 
-type League = "nba" | "bj" | "j1";
+import type { League } from "@/lib/leagues";
+import { normalizeLeague } from "@/lib/leagues";
+
 const SEASON = "2025-26";
 
 /** yyyy-mm-dd の文字列化（試合日の uniq 抽出に使う） */
@@ -26,7 +28,9 @@ function toYYYYMMDD(d: Date) {
  * 指定リーグの「試合がある日」のみを TS で配列として返す。
  * ［昇順］で返す。
  */
-export function useGameDays(league: League) {
+export function useGameDays(rawLeague: League) {
+  const league = normalizeLeague(rawLeague);
+
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<string | null>(null);
@@ -60,30 +64,30 @@ export function useGameDays(league: League) {
   }, [league]);
 
   /** ▼ rows から「試合日のみ」を抽出して昇順に */
- const gameDays = useMemo(() => {
-  const map = new Map<string, Date>();
+  const gameDays = useMemo(() => {
+    const map = new Map<string, Date>();
 
-  function toJstDateOnly(d: Date) {
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  }
+    function toJstDateOnly(d: Date) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
 
-  for (const g of rows) {
-    const t = g.startAtJst;
-    if (!t) continue;
+    for (const g of rows) {
+      const t = g.startAtJst;
+      if (!t) continue;
 
-    let d: Date;
+      let d: Date;
 
-    if (t instanceof Timestamp) d = toJstDateOnly(t.toDate());
-    else if (typeof t?.toDate === "function") d = toJstDateOnly(t.toDate());
-    else if (t instanceof Date) d = toJstDateOnly(t);
-    else continue;
+      if (t instanceof Timestamp) d = toJstDateOnly(t.toDate());
+      else if (typeof t?.toDate === "function") d = toJstDateOnly(t.toDate());
+      else if (t instanceof Date) d = toJstDateOnly(t);
+      else continue;
 
-    const key = toYYYYMMDD(d);
-    if (!map.has(key)) map.set(key, d);
-  }
+      const key = toYYYYMMDD(d);
+      if (!map.has(key)) map.set(key, d);
+    }
 
-  return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
-}, [rows]);
+    return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
+  }, [rows]);
 
   return { gameDays, loading, error };
 }

@@ -1,5 +1,5 @@
 // types/prediction-post-v2.ts
-
+import type { League } from "@/lib/leagues";
 export type PredictionPostV2 = {
   id: string;
 
@@ -27,7 +27,7 @@ export type PredictionPostV2 = {
   gameId: string;
 
   // Firestore 上では top-level に league と status が存在している
-  league: "bj" | "j1" | "nba";
+  league: League;
   status: "scheduled" | "live" | "final";
 
   /* ------------------------
@@ -52,7 +52,7 @@ export type PredictionPostV2 = {
      (互換性のため残すが基本使わない)
   ------------------------ */
   game?: {
-    league: "bj" | "j1" | "nba";
+    league: League;
     home: string;
     away: string;
     status: "scheduled" | "live" | "final";
@@ -63,7 +63,7 @@ export type PredictionPostV2 = {
      Prediction
   ------------------------ */
   prediction: {
-    winner: "home" | "away";
+    winner: "home" | "away" | "draw";
     confidence: number;
     score: { home: number; away: number };
   };

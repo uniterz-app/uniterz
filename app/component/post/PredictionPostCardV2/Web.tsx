@@ -4,12 +4,13 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import cn from "clsx";
-import { Heart, Bookmark, Pencil, Trash2, X, Check } from "lucide-react";
+import { Heart, Bookmark, Trash2, } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { toast } from "sonner";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { motion } from "framer-motion";
+import { getTeamPrimaryColor } from "@/lib/team-colors";
 
 import {
   doc,
@@ -22,8 +23,6 @@ import {
 } from "firebase/firestore";
 
 import { usePrefix } from "@/app/PrefixContext";
-import { normalizeLeague } from "@/lib/leagues";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { toMatchCardProps } from "@/lib/games/transform";
 import MatchCard from "@/app/component/games/MatchCard";
 
@@ -54,6 +53,30 @@ export default function PredictionPostCardV2({
   }, []);
 
   const isMine = uid && post.authorUid === uid;
+
+  /* ------------------------------
+ * Author (users/{uid} を正とする)
+ * ------------------------------ */
+const [author, setAuthor] = React.useState<{
+  name?: string;
+  avatarUrl?: string | null;
+} | null>(null);
+
+React.useEffect(() => {
+  if (!post.authorUid) return;
+
+  const ref = doc(db, "users", post.authorUid);
+  const unsub = onSnapshot(ref, (snap) => {
+    if (snap.exists()) {
+      setAuthor({
+        name: snap.data().displayName ?? snap.data().name,
+        avatarUrl: snap.data().avatarUrl ?? snap.data().photoURL,
+      });
+    }
+  });
+
+  return () => unsub();
+}, [post.authorUid]);
 
   // 不正な ID（"(invalid)" など）を弾く
 const isValidPostId =
@@ -129,6 +152,17 @@ const doDelete = async (e: any) => {
   if (post.stats?.upsetScore && post.stats.upsetScore > 5)
     frame = "ring-2 ring-red-400/70 border-red-400";
 
+  // ★ badge ロジック
+let badge: "hit" | "upset" | "miss" | null = null;
+
+if (post.stats?.isWin && post.stats?.upsetScore && post.stats.upsetScore > 5) {
+  badge = "upset";
+} else if (post.stats?.isWin) {
+  badge = "hit";
+} else if (post.stats && post.stats.isWin === false) {
+  badge = "miss";
+}
+
   /* ------------------------------
    *  MatchCard 用に games/{id} を取得
    * ------------------------------ */
@@ -165,18 +199,57 @@ const doDelete = async (e: any) => {
    * 予想表示用
    * ------------------------------ */
   const homeName = post.home.name;
-  const awayName = post.away.name;
+const awayName = post.away.name;
 
-  const winnerTeam =
-    post.prediction.winner === "home" ? homeName : awayName;
+// ★ サッカー判定
+const isSoccer = post.league === "j1" || post.league === "pl";
+
+// ★ 勝敗ラベル
+const winnerLabel = (() => {
+  if (post.prediction.winner === "draw") return "引き分け";
+  if (post.prediction.winner === "home") return homeName;
+  if (post.prediction.winner === "away") return awayName;
+  return "-";
+})();
+
+// ★ 勝利チーム背景色（薄く）
+const winnerBgColor = (() => {
+  if (post.prediction.winner === "home") {
+    return getTeamPrimaryColor(post.league, post.home.teamId);
+  }
+  if (post.prediction.winner === "away") {
+    return getTeamPrimaryColor(post.league, post.away.teamId);
+  }
+  if (post.prediction.winner === "draw") {
+    return "rgba(156,163,175,0.18)";
+  }
+  return null;
+})();
+
 
   const scoreText = `${post.prediction.score.home} - ${post.prediction.score.away}`;
 
   return (
     <div
-      className={cn("rounded-3xl p-1 cursor-pointer", frame)}
+className={cn("rounded-3xl p-1 cursor-pointer relative", frame)}
       onClick={() => router.push(`${prefix}/post/${post.id}`)}
     >
+        {/* ★ BADGE エリア */}
+{badge === "hit" && (
+  <span className="absolute right-3 top-3 bg-yellow-400 text-black text-[11px] px-2 py-0.5 rounded-md font-bold shadow-md">
+    HIT
+  </span>
+)}
+{badge === "upset" && (
+  <span className="absolute right-3 top-3 bg-red-500 text-white text-[11px] px-2 py-0.5 rounded-md font-bold shadow-md">
+    UPSET
+  </span>
+)}
+{badge === "miss" && (
+  <span className="absolute right-3 top-3 bg-gray-500 text-white text-[11px] px-2 py-0.5 rounded-md font-bold shadow-md">
+    MISS
+  </span>
+)}
       <div className="rounded-2xl bg-black/10 border border-white/10 p-4 text-white">
 
         {/* ----------------------------------
@@ -191,20 +264,20 @@ const doDelete = async (e: any) => {
           className="flex items-start gap-3"
         >
           <div className="w-14 h-14 rounded-full overflow-hidden ring-4 ring-[#0f2d35] shrink-0 bg-white/10 flex items-center justify-center">
-  {post.author?.avatarUrl ? (
-    <img
-      src={post.author.avatarUrl}
-      className="w-full h-full object-cover"
-      alt="avatar"
-    />
-  ) : null}
+  {(author?.avatarUrl ?? post.author?.avatarUrl) ? (
+  <img
+    src={author?.avatarUrl ?? post.author?.avatarUrl}
+    className="w-full h-full object-cover"
+    alt="avatar"
+  />
+) : null}
 </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-[16px] md:text-xl font-extrabold truncate">
-                {post.author?.name ?? "ユーザー"}
-              </h3>
+  {author?.name ?? post.author?.name ?? "ユーザー"}
+</h3>
               <span className="text-sm md:text-base opacity-70">
                 {post.createdAtText}
               </span>
@@ -254,12 +327,23 @@ const doDelete = async (e: any) => {
        <div className="mt-4 grid grid-cols-10 gap-3">
 
   {/* 勝利チーム (col-span-4) */}
-  <div className="col-span-4 bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-    <div className="text-xs opacity-60 text-center">勝利チーム</div>
-    <div className="mt-1 text-xl font-extrabold truncate">
-      {winnerTeam}
-    </div>
+  <div
+  className="col-span-4 border border-white/10 rounded-xl p-3 text-center transition-colors"
+  style={{
+    backgroundColor: winnerBgColor
+      ? winnerBgColor.startsWith("rgba")
+        ? winnerBgColor
+        : `${winnerBgColor}33`
+      : "rgba(255,255,255,0.05)",
+  }}
+>
+  <div className="text-xs opacity-60 text-center">
+    勝利チーム
   </div>
+  <div className="mt-1 text-xl font-extrabold truncate">
+    {winnerLabel}
+  </div>
+</div>
 
   {/* 自信度 (col-span-2) */}
   <div className="col-span-2 bg-white/5 border border-white/10 rounded-xl p-3 text-center">

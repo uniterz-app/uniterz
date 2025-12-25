@@ -7,29 +7,33 @@ import SearchTabModal from "@/app/component/timeline/SearchTabModal";
 
 import { useFollowingFeed } from "./useFollowingFeed";
 import { useJLeagueFeed } from "./useJLeagueFeed";
+import { usePLFeed } from "./usePLFeed";
 import { useBLeagueFeed } from "./useBLeagueFeed";
 import { useNBAFeed } from "./useNBAFeed";
 
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-type Tab = "nba" | "bj" | "following";
+type Tab = "nba" | "pl" | "bj" | "following";
 
 export default function HomeTimeline({ variant = "mobile" }) {
   const [tab, setTab] = useState<Tab>("nba");
 
   // 🔥 Hooks は必ずトップレベルで呼ぶ
   const nbaFeed = useNBAFeed();
+  const plFeed = usePLFeed(); 
   const bjFeed = useBLeagueFeed();
   const followingFeed = useFollowingFeed();
 
   // タブごとに feed を切り替える
   const feed =
-    tab === "nba"
-      ? nbaFeed
-      : tab === "bj"
-      ? bjFeed
-      : followingFeed;
+  tab === "nba"
+    ? nbaFeed
+    : tab === "pl"
+    ? plFeed
+    : tab === "bj"
+    ? bjFeed
+    : followingFeed;
 
   /* -----------------------------------------
      Search モーダル
@@ -213,18 +217,22 @@ export default function HomeTimeline({ variant = "mobile" }) {
 
         {/* ★ 3タブ UI */}
         <nav className={`mx-auto ${wrapW} ${padX}`}>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1">
+          <div className="grid grid-cols-4 gap-1 rounded-xl bg-white/5 p-1">
             <TabButton active={tab === "nba"} onClick={() => setTab("nba")}>
-              NBA
-            </TabButton>
+  NBA
+</TabButton>
 
-            <TabButton active={tab === "bj"} onClick={() => setTab("bj")}>
-              Bリーグ
-            </TabButton>
+<TabButton active={tab === "pl"} onClick={() => setTab("pl")}>
+  Premier
+</TabButton>
 
-            <TabButton active={tab === "following"} onClick={() => setTab("following")}>
-              フォロー中
-            </TabButton>
+<TabButton active={tab === "bj"} onClick={() => setTab("bj")}>
+  Bリーグ
+</TabButton>
+
+<TabButton active={tab === "following"} onClick={() => setTab("following")}>
+  フォロー中
+</TabButton>
           </div>
         </nav>
       </header>

@@ -77,6 +77,8 @@ const [periodKey, setPeriodKey] = useState<Period>("week");
 
 
   const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
+
 
   const heroCount = 3;
  const listCount = period === "week" ? 10 : 20;
@@ -93,6 +95,8 @@ async function fetchAll() {
   const currentPeriod = period;
   setPeriodKey(currentPeriod);
   setPeriodInfo(null);
+
+  setLoading(true);
 
   try {
     setError(null);
@@ -130,6 +134,8 @@ async function fetchAll() {
     });
   } catch (e: any) {
     setError(e?.message ?? "failed to load");
+    } finally {
+    setLoading(false);
   }
 }
 
@@ -176,7 +182,11 @@ useEffect(() => {
 
         {error && <p className="text-xs text-center text-red-300">{error}</p>}
 
-        {period === "month" && !periodInfo ? null : noData ? (
+        {period === "month" && !periodInfo ? null : loading ? (
+  <p className="text-sm text-center text-white/60">
+    ランキングデータを読み込んでいます…
+  </p>
+) : noData ? (
   <p className="text-sm text-center text-white/60">
     ランキングデータがありません。
   </p>

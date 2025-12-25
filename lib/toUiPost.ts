@@ -19,13 +19,15 @@ function fmtCreatedAt(ts?: any): string {
   }).format(d);
 }
 
-const normalizeLeague = (v: any): "bj" | "j1" | "nba" => {
+const normalizeLeague = (v: any): "bj" | "j1" | "nba" | "pl" => {
   const s = String(v ?? "").toLowerCase();
   if (s === "bj" || s === "b1") return "bj";
   if (s === "j" || s === "j1") return "j1";
   if (s === "nba") return "nba";
+  if (s === "pl" || s === "premier" || s === "premierleague") return "pl";
   return "bj";
 };
+
 
 export function toUiPost(id: string, x: any): PredictionPostV2 {
   const createdAtMillis =
@@ -82,7 +84,9 @@ export function toUiPost(id: string, x: any): PredictionPostV2 {
   ---------------------------- */
   /* winner は prediction.winner ではなく score.winner を使う */
 const winner =
-  x?.prediction?.winner === "home" || x?.prediction?.winner === "away"
+  x?.prediction?.winner === "home" ||
+  x?.prediction?.winner === "away" ||
+  x?.prediction?.winner === "draw"
     ? x.prediction.winner
     : null;
 

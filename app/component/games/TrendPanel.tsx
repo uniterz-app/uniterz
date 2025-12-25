@@ -59,6 +59,7 @@ export default function TrendPanel() {
         // 🔥 表示順序はここで制御（今は NBA → B1）
         const TARGET_LEAGUES = [
   { key: "NBA" as const, label: "NBA" },
+  { key: "PL" as const, label: "Premier League" }, // ★ 追加
   { key: "B1" as const, label: "B.LEAGUE (B1)" },
 ];
 
@@ -102,26 +103,34 @@ export default function TrendPanel() {
         )}
       </div>
 
-      {/* 🔥 動的表示（NBA → B1） */}
-      {Object.entries(leagueCards).map(([lg, cards]) => (
-        <section key={lg} className="space-y-3">
-          <h3 className="text-sm font-semibold text-white/80">
-            {lg === "NBA" ? "NBA" : lg === "B1" ? "B.LEAGUE (B1)" : lg}
-          </h3>
+      {/* 🔥 動的表示（NBA → PL → B1） */}
+{[
+  { key: "NBA", label: "NBA" },
+  { key: "PL", label: "Premier League" },
+  { key: "B1", label: "B.LEAGUE (B1)" },
+].map(({ key, label }) => {
+  const cards = leagueCards[key] ?? [];
 
-          <div className="grid grid-cols-1 gap-4">
-            {cards.length === 0 ? (
-              <EmptyCard />
-            ) : (
-              cards.map((p) => (
-                <HotBadge key={`${lg}:${p.id}`}>
-                  <MatchCard {...p} />
-                </HotBadge>
-              ))
-            )}
-          </div>
-        </section>
-      ))}
+  return (
+    <section key={key} className="space-y-3">
+      <h3 className="text-sm font-semibold text-white/80">
+        {label}
+      </h3>
+
+      <div className="grid grid-cols-1 gap-4">
+        {cards.length === 0 ? (
+          <EmptyCard />
+        ) : (
+          cards.map((p) => (
+            <HotBadge key={`${key}:${p.id}`}>
+              <MatchCard {...p} />
+            </HotBadge>
+          ))
+        )}
+      </div>
+    </section>
+  );
+})}
       {/* 🔥 連勝中ユーザー */}
       <section className="space-y-3 mt-10">
         <div className="flex items-center gap-2">

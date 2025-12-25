@@ -6,6 +6,7 @@ import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Soccer from "@/app/component/games/icons/Soccer";
 
 /* ★ 追加: イベントロガー */
 import { logGameEvent } from "@/lib/analytics/logEvent";
@@ -108,8 +109,9 @@ export type MatchCardProps = {
 
 const leagueLineColor: Record<League, string> = {
   bj: "#eab308",   // Bリーグ
-  j1: "#22c55e",    // J1（仮）→今後使わないなら何色でもOK
-  nba: "#60a5fa",  // NBA（色は仮）
+  j1: "#22c55e",   // J1
+  nba: "#60a5fa",  // NBA
+  pl: "#a855f7",   // Premier League（紫系・仮）
 };
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
@@ -202,7 +204,11 @@ const awayColor =
   const scoreText = dense ? "text-2xl md:text-5xl" : "text-2xl md:text-6xl";
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
-  const Icon = Jersey;  // NBA も B1 も同じアイコンで良い
+  const Icon =
+  league === "nba" || league === "bj"
+    ? Jersey
+    : Soccer;
+
 
   // 現在のルートから /m or /web を決める & lg を引き継ぎ
   const prefix = useSectionPrefix();
@@ -304,7 +310,7 @@ const awayColor =
       await logGameEvent({
         type: GAME_EVENT.CLICK_CARD,
         gameId: id,
-        league: normalizedLeague as "B1" | "J1",
+        league: normalizedLeague as "B1" | "J1" | "NBA" | "PL",
       });
     } catch (e) {
       console.warn("log click_card failed", e);
@@ -321,7 +327,7 @@ const awayColor =
       void logGameEvent({
         type: GAME_EVENT.OPEN_PREDICTIONS,
         gameId: id,
-        league: normalizedLeague as "B1" | "J1",
+        league: normalizedLeague as "B1" | "J1" | "NBA" | "PL",
       });
     } catch (e) {
       console.warn("log open_predictions failed", e);

@@ -28,19 +28,26 @@ const pathname = usePathname();
 const isMobile = pathname.startsWith("/mobile");
 const prefix = isMobile ? "/mobile" : "/web";
 
+const gameDateKey = game.startAtJst
+  ? game.startAtJst.toISOString().slice(0, 10)
+  : undefined;
+
   /* ===== State ===== */
-  const [winner, setWinner] = useState<"home" | "away" | null>(null);
+  type Winner = "home" | "away" | "draw";
+
+const [winner, setWinner] = useState<Winner | null>(null);
   const [confidence, setConfidence] = useState(50);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const isSoccer = game.league === "pl" || game.league === "j1";
 
   const canSubmit =
   !!winner &&
+  !submitting &&
   scoreHome !== "" &&
-  scoreAway !== "" &&
-  !submitting;
+  scoreAway !== "";
 
   const padX = dense ? "px-3" : "px-6";
   const padY = dense ? "py-3" : "py-6";
@@ -72,6 +79,35 @@ const handleSubmit = async () => {
   if (!me) {
     alert("ログインが必要です");
     return;
+  }
+
+    // ===== スコアと勝敗の整合性チェック =====
+  const h = Number(scoreHome);
+  const a = Number(scoreAway);
+
+  if (Number.isNaN(h) || Number.isNaN(a)) {
+    alert("スコアを正しく入力してください");
+    return;
+  }
+
+  // 共通ルール（全競技）
+  if (winner === "home" && h <= a) {
+    alert("ホーム勝利予想の場合、ホーム得点を多くしてください");
+    return;
+  }
+
+  if (winner === "away" && a <= h) {
+    alert("アウェイ勝利予想の場合、アウェイ得点を多くしてください");
+    return;
+  }
+
+  // サッカー専用ルール
+
+  if (isSoccer) {
+    if (winner === "draw" && h !== a) {
+      alert("引き分け予想の場合、スコアは同点にしてください");
+      return;
+    }
   }
 
   try {
@@ -139,7 +175,7 @@ try {
 onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
 
 // 前のページへ戻る
-router.back();
+router.push(`${prefix}/games?date=${gameDateKey}`);
 
 // Reset（戻った後は基本使われないが安全のため残す）
 setWinner(null);
@@ -175,16 +211,22 @@ setComment("");
       <section className="mt-4">
         <div className="text-sm font-bold mb-1">勝利予想</div>
         <select
-          value={winner ?? ""}
-          onChange={(e) => setWinner(e.target.value as any)}
-          className={fieldBase}
-        >
-          <option value="" disabled>
-            勝利チームを選択
-          </option>
-          <option value="home">{homeSafe.name}</option>
-          <option value="away">{awaySafe.name}</option>
-        </select>
+  value={winner ?? ""}
+  onChange={(e) => setWinner(e.target.value as Winner)}
+  className={fieldBase}
+>
+  <option value="" disabled>
+    勝敗を選択
+  </option>
+
+  <option value="home">{homeSafe.name}</option>
+
+  {isSoccer && (
+    <option value="draw">引き分け</option>
+  )}
+
+  <option value="away">{awaySafe.name}</option>
+</select>
       </section>
 
       {/* ===== 自信度 ===== */}

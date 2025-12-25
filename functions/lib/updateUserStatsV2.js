@@ -5,7 +5,7 @@ exports.getStatsForDateRangeV2 = getStatsForDateRangeV2;
 // functions/src/updateUserStatsV2.ts
 const firestore_1 = require("firebase-admin/firestore");
 const db = () => (0, firestore_1.getFirestore)();
-const LEAGUES = ["bj", "j1", "nba"];
+const LEAGUES = ["bj", "j1", "nba", "pl"];
 /* =========================================================
  * Utils
  * =======================================================*/
@@ -27,6 +27,8 @@ function normalizeLeague(raw) {
         return "j1";
     if (v === "nba")
         return "nba";
+    if (v === "pl" || v.includes("premier"))
+        return "pl";
     return null;
 }
 /* =========================================================
@@ -66,6 +68,8 @@ async function applyPostToUserStatsV2(opts) {
     const leagueKey = normalizeLeague(league);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
+    // ★ 追加：ユーザー集計用
+    const userStatsRef = db().doc(`user_stats_v2/${uid}`);
     await db().runTransaction(async (tx) => {
         const marker = await tx.get(markerRef);
         if (marker.exists)
@@ -88,6 +92,14 @@ async function applyPostToUserStatsV2(opts) {
         };
         if (leagueKey) {
             update.leagues = Object.assign(Object.assign({}, (update.leagues || {})), { [leagueKey]: inc });
+            // ★ 追加：リーグ別投稿数を累積
+            tx.set(userStatsRef, {
+                leaguePosts: {
+                    [leagueKey]: firestore_1.FieldValue.increment(1),
+                },
+                lastActiveLeague: leagueKey,
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            }, { merge: true });
         }
         tx.set(dailyRef, update, { merge: true });
         tx.set(markerRef, { at: firestore_1.FieldValue.serverTimestamp() });

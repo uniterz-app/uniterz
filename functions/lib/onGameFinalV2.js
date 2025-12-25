@@ -141,20 +141,25 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         }
     }
     /* -----------------------------
- * teams 勝敗更新（final 確定時のみ）
- * ----------------------------- */
+     * teams 勝敗更新（final 確定時のみ）
+     * ----------------------------- */
     if (becameFinal && game.homeTeamId && game.awayTeamId) {
+        const isDraw = game.homeScore === game.awayScore;
         const homeWin = game.homeScore > game.awayScore;
         const awayWin = game.awayScore > game.homeScore;
         const teamBatch = db().batch();
+        // HOME TEAM
         teamBatch.update(db().doc(`teams/${game.homeTeamId}`), {
             wins: firestore_2.FieldValue.increment(homeWin ? 1 : 0),
-            losses: firestore_2.FieldValue.increment(homeWin ? 0 : 1),
+            losses: firestore_2.FieldValue.increment(homeWin || isDraw ? 0 : 1),
+            d: firestore_2.FieldValue.increment(isDraw ? 1 : 0),
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         });
+        // AWAY TEAM
         teamBatch.update(db().doc(`teams/${game.awayTeamId}`), {
             wins: firestore_2.FieldValue.increment(awayWin ? 1 : 0),
-            losses: firestore_2.FieldValue.increment(awayWin ? 0 : 1),
+            losses: firestore_2.FieldValue.increment(awayWin || isDraw ? 0 : 1),
+            d: firestore_2.FieldValue.increment(isDraw ? 1 : 0),
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         });
         await teamBatch.commit();
@@ -168,13 +173,17 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         .where("schemaVersion", "==", 2)
         .get();
     const totalPosts = postsSnap.size;
-    let homeCnt = 0, awayCnt = 0;
+    let homeCnt = 0;
+    let awayCnt = 0;
+    let drawCnt = 0;
     postsSnap.forEach((d) => {
-        const p = d.data();
-        if (p.prediction.winner === "home")
+        const w = d.data().prediction.winner;
+        if (w === "home")
             homeCnt++;
-        if (p.prediction.winner === "away")
+        else if (w === "away")
             awayCnt++;
+        else if (w === "draw")
+            drawCnt++;
     });
     const now = firestore_2.Timestamp.now();
     const batch = db().batch();
@@ -210,8 +219,22 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         if (totalPosts >= MIN_MARKET &&
             isWin &&
             p.prediction.winner !== "draw") {
-            const same = p.prediction.winner === "home" ? homeCnt : awayCnt;
-            const ratio = same / totalPosts;
+            const isSoccer = game.league === "j1" || game.league === "pl";
+            let ratio;
+            if (isSoccer) {
+                // サッカー：win vs not-win（draw + 反対側）
+                if (p.prediction.winner === "home") {
+                    ratio = homeCnt / (awayCnt + drawCnt);
+                }
+                else {
+                    ratio = awayCnt / (homeCnt + drawCnt);
+                }
+            }
+            else {
+                // バスケ等：従来どおり 2 択
+                const same = p.prediction.winner === "home" ? homeCnt : awayCnt;
+                ratio = same / totalPosts;
+            }
             if (homeRank != null && awayRank != null) {
                 const rankDiff = Math.abs(homeRank - awayRank);
                 const higher = homeRank < awayRank ? "home" : "away";

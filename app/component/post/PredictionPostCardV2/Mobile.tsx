@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import MobileMatchCard from "@/app/component/games/MobileMatchCard";
 import { motion } from "framer-motion";
+import { getTeamPrimaryColor } from "@/lib/team-colors";
+
 
 import {
   doc,
@@ -213,8 +215,30 @@ if (post.stats?.isWin && post.stats?.upsetScore && post.stats.upsetScore > 5) {
 const awayShort =
   TEAM_SHORT[post.away.teamId ?? ""] ?? post.away.name;
 
-const winnerTeam =
-  post.prediction.winner === "home" ? homeShort : awayShort;
+  // ★ サッカー判定（引き分け対応用）
+const isSoccer = post.league === "j1" || post.league === "pl";
+
+// ★ 勝敗（サッカーは引き分けあり）
+const winnerLabel = (() => {
+  if (post.prediction.winner === "draw") return "引き分け";
+  if (post.prediction.winner === "home") return homeShort;
+  if (post.prediction.winner === "away") return awayShort;
+  return "-";
+})();
+// ★ 勝利チーム背景色（薄く）
+const winnerBgColor = (() => {
+  if (post.prediction.winner === "home") {
+    return getTeamPrimaryColor(post.league, post.home.teamId);
+  }
+  if (post.prediction.winner === "away") {
+    return getTeamPrimaryColor(post.league, post.away.teamId);
+  }
+  if (post.prediction.winner === "draw") {
+    return "rgba(156,163,175,0.18)";
+  }
+  return null;
+})();
+
   const scoreText = `${post.prediction.score.home} - ${post.prediction.score.away}`;
 
   return (
@@ -299,11 +323,22 @@ const winnerTeam =
         <div className="mt-4 grid grid-cols-11 gap-3">
 
   {/* 勝利チーム */}
-  <div className="col-span-4 bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-center">
-    <div className="text-xs opacity-60 text-center">勝利チーム</div>
+  <div
+  className="col-span-4 border border-white/10 rounded-xl py-2 px-3 text-center transition-colors"
+  style={{
+    backgroundColor: winnerBgColor
+      ? winnerBgColor.startsWith("rgba")
+        ? winnerBgColor
+        : `${winnerBgColor}33` // ← hex + 20% opacity
+      : "rgba(255,255,255,0.05)",
+  }}
+>
+    <div className="text-xs opacity-60 text-center">
+  勝利チーム
+</div>
     <div className="mt-1 text-sm font-extrabold truncate">
-      {winnerTeam}
-    </div>
+  {winnerLabel}
+</div>
   </div>
 
   {/* 自信度 */}
