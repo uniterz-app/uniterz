@@ -154,17 +154,36 @@ export async function fetchTrendHitPosts(
   limit: number = 10
 ): Promise<PredictionPostV2[]> {
   try {
+    // ① trend_cache から「今日の的中投稿」を取得
     const ref = doc(db, "trend_cache", "hit_posts_today");
     const snap = await getDoc(ref);
-
     if (!snap.exists()) return [];
 
     const data = snap.data() as any;
+    const rawPosts = Array.isArray(data.posts)
+      ? data.posts.slice(0, limit)
+      : [];
 
-    // ★ game JOIN を削除。trend_cache の完成データをそのまま返す
-    const posts = Array.isArray(data.posts) ? data.posts.slice(0, limit) : [];
+    // ② gameId を使って games/{id} を取得し、home / away を補完
+    const joinedPosts = await Promise.all(
+      rawPosts.map(async (post: any) => {
+        if (!post.gameId) return null;
 
-    return posts as PredictionPostV2[];
+        const gameSnap = await getDoc(doc(db, "games", post.gameId));
+        if (!gameSnap.exists()) return null;
+
+        const game = gameSnap.data();
+
+        return {
+          ...post,
+          home: game.home,
+          away: game.away,
+        } as PredictionPostV2;
+      })
+    );
+
+    // ③ null を除外して返す
+    return joinedPosts.filter(Boolean) as PredictionPostV2[];
   } catch (e) {
     console.warn("fetchTrendHitPosts failed", e);
     return [];
