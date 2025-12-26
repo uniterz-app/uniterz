@@ -206,14 +206,29 @@ if (post.stats?.isWin && post.stats?.upsetScore && post.stats.upsetScore > 5) {
 
   const matchProps = toMatchCardProps(gameDoc, { dense: true });
 
-  /* ------------------------------
-   * 予想表示用
-   * ------------------------------ */
-  const homeShort =
-  TEAM_SHORT[post.home.teamId ?? ""] ?? post.home.name;
+  // ==============================
+// ★ 安全ガード（壊れた post を描画しない）
+// ==============================
+if (!post.home || !post.away) {
+  return null;
+}
+
+ // ==============================
+// ★ チーム短縮名（安全版）
+// ==============================
+const homeTeamId = post.home?.teamId;
+const awayTeamId = post.away?.teamId;
+
+const homeShort =
+  homeTeamId
+    ? TEAM_SHORT[homeTeamId] ?? post.home?.name ?? ""
+    : post.home?.name ?? "";
 
 const awayShort =
-  TEAM_SHORT[post.away.teamId ?? ""] ?? post.away.name;
+  awayTeamId
+    ? TEAM_SHORT[awayTeamId] ?? post.away?.name ?? ""
+    : post.away?.name ?? "";
+
 
   // ★ サッカー判定（引き分け対応用）
 const isSoccer = post.league === "j1" || post.league === "pl";
