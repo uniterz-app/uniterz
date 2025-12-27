@@ -87,7 +87,7 @@ export default function BadgeDetailModal({
             mt-0 mb-0 leading-none
           "
         >
-          {badge.name ?? badge.id}
+          {badge.title ?? badge.id}
         </h2>
 
         {/* === 説明文 === */}

@@ -31,19 +31,16 @@ import {
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import FollowListDialog from "@/app/component/profile/FollowListDialog";
 
-import { useUserBadges } from "./useUserBadges";
 import BadgeDetailModal from "@/app/web/(no-nav)/badges/BadgeDetailModal";
 
-function timeAgoFromTimestamp(ts?: { toDate?: () => Date } | null) {
-  if (!ts?.toDate) return "";
-  const d = ts.toDate();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${y}/${m}/${dd} ${hh}:${mm}`;
-}
+// ✅ 正しい hooks
+import { useUserBadges } from "../badges/useUserBadges";
+import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
+import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
+
+type ResolvedBadge = MasterBadge & {
+  grantedAt: Date | null;
+};
 
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const {
@@ -65,7 +62,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [noMore, setNoMore] = useState(false);
 
-  /* ========= ★ V2 投稿形式に統一 = mapRawToPredictionPostV2 ========= */
   const normalizePost = (id: string, data: any): PredictionPostV2 => {
     return mapRawToPredictionPostV2({ id, ...data });
   };
@@ -123,17 +119,32 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     setLastDoc(snap.docs[snap.docs.length - 1]);
   };
 
-  /* ======= Badges ======= */
-  const { badges: userBadges } = useUserBadges(targetUid);
-  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
-  const [selectedBadge, setSelectedBadge] = useState<any | null>(null);
+  /* ========= Badges（★ 修正済み） ========= */
+  const { badges: userBadges } = useUserBadges(
+    typeof targetUid === "string" ? targetUid : null
+  );
+  const { badges: masterBadges } = useMasterBadges();
 
-  /* ======= Follow list modal ======= */
+  const resolvedBadges: ResolvedBadge[] = userBadges
+    .map((ub) => {
+      const master = masterBadges.find((m) => m.id === ub.badgeId);
+      if (!master) return null;
+      return {
+        ...master,
+        grantedAt: ub.grantedAt,
+      };
+    })
+    .filter((b): b is ResolvedBadge => b !== null);
+
+  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(null);
+
+  /* ========= Follow list ========= */
   const [followListOpen, setFollowListOpen] = useState(false);
   const [followListInitial, setFollowListInitial] =
     useState<"followers" | "following">("followers");
 
-  /* ======= Drawer ======= */
+  /* ========= Drawer ========= */
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -191,23 +202,24 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           </button>
         </div>
 
-        {userBadges.length > 0 && (
+        {/* ✅ Badges */}
+        {resolvedBadges.length > 0 && (
           <div className="mt-4 grid grid-cols-10 gap-3">
-            {userBadges.slice(0, 10).map((b) => (
-              <div
+            {resolvedBadges.slice(0, 10).map((b) => (
+              <button
                 key={b.id}
-                className="w-14 h-14 flex items-center justify-center cursor-pointer"
+                className="w-14 h-14 rounded-xl overflow-hidden bg-white/10"
                 onClick={() => {
                   setSelectedBadge(b);
                   setBadgeModalOpen(true);
                 }}
               >
-                {b.icon ? (
-                  <img src={b.icon} className="w-full h-full object-contain" />
-                ) : (
-                  <span className="text-xs opacity-70">{b.id}</span>
-                )}
-              </div>
+                <img
+                  src={b.icon}
+                  alt={b.title}
+                  className="w-full h-full object-cover"
+                />
+              </button>
             ))}
           </div>
         )}
@@ -224,17 +236,17 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         {tab === "overview" ? (
           <div>
             <SummaryCardsV2
-            period={range} 
-  data={{
-    fullPosts: summary?.fullPosts ?? 0,  // ← これが全投稿数！
-    posts: summary?.posts ?? 0,          // ← 確定投稿数
-    winRate: summary?.winRate ?? 0,
-    avgPrecision: summary?.avgPrecision ?? 0,
-    avgBrier: summary?.avgBrier ?? 0,
-    avgUpset: summary?.avgUpset ?? 0,
-    avgCalibration: summary?.avgCalibration ?? null,
-  }}
-/>
+              period={range}
+              data={{
+                fullPosts: summary?.fullPosts ?? 0,
+                posts: summary?.posts ?? 0,
+                winRate: summary?.winRate ?? 0,
+                avgPrecision: summary?.avgPrecision ?? 0,
+                avgBrier: summary?.avgBrier ?? 0,
+                avgUpset: summary?.avgUpset ?? 0,
+                avgCalibration: summary?.avgCalibration ?? null,
+              }}
+            />
 
             <div className="mt-8 space-y-6">
               {loading && <div className="opacity-70">読み込み中…</div>}
@@ -244,7 +256,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               )}
 
               {posts.map((p) => (
-                <PredictionPostCardV2 key={p.id} post={p} mode="list" showDelete={true} />
+                <PredictionPostCardV2 key={p.id} post={p} mode="list" showDelete />
               ))}
 
               {!noMore && (
@@ -257,22 +269,17 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               )}
             </div>
           </div>
-        ) : <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center space-y-3">
-  <p className="text-lg font-semibold">Stats（準備中）</p>
-
-  <p className="text-sm text-white/80">
-    この機能は将来的に
-    <span className="font-semibold text-amber-300">
-      Proプラン限定機能
-    </span>
-    として提供予定です。
-  </p>
-
-  <p className="text-sm text-white/60">
-    より詳しい分析指標や成績の可視化を準備中です。
-  </p>
-</div>
-}
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center space-y-3">
+            <p className="text-lg font-semibold">Stats（準備中）</p>
+            <p className="text-sm text-white/80">
+              この機能は <span className="font-semibold text-amber-300">Proプラン限定</span> 予定
+            </p>
+            <p className="text-sm text-white/60">
+              より詳しい分析指標や成績の可視化を準備中です。
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Dialogs */}

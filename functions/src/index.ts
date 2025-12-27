@@ -193,6 +193,8 @@ export { fixUserStats } from "./fixUserStats";
 
 export { listUserStatsIds } from "./debug/listUserStats";
 
+export { xmasNba20251226 } from "./debug/xmasNba20251226";
+
 
 export const runDailyAnalyticsHttp = onRequest(async (_req, res) => {
   try {

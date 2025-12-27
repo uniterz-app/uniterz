@@ -25,8 +25,16 @@ import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 // ★ V2 フィードに差し替え
 import { useProfilePostsFeedV2 } from "./useProfilePostsFeedV2";
 
-import { useUserBadges } from "./useUserBadges";
 import BadgeDetailModal from "@/app/mobile/(no-nav)/badges/BadgeDetailModal";
+import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
+import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
+import { useUserBadges } from "../badges/useUserBadges";
+import { motion } from "framer-motion";
+
+
+type ResolvedBadge = MasterBadge & {
+  grantedAt: Date | null;
+};
 
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   if (typeof window !== "undefined") {
@@ -35,17 +43,29 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const { profile, tab, setTab, range, setRange, summary, targetUid } = props;
 
+const resolvedUid =
+  typeof targetUid === "string" ? targetUid : null;
+
+const {
+  badges: userBadges,
+  loading: badgesLoading,
+} = useUserBadges(resolvedUid);
+
+
   const me = auth.currentUser;
   const isMe = !!(me && targetUid && me.uid === targetUid);
 
   const summaryV2 = summary;
 
-  const { badges: userBadges } = useUserBadges(targetUid);
+  
+
+  const { badges: masterBadges } = useMasterBadges();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
-  const [selectedBadge, setSelectedBadge] = useState<any | null>(null);
+  const [selectedBadge, setSelectedBadge] =  useState<ResolvedBadge | null>(null);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
+  
 
   const [followListOpen, setFollowListOpen] = useState(false);
   const [followListInitial, setFollowListInitial] = useState<"followers" | "following">(
@@ -53,7 +73,23 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   );
 
   // ★ V2 フィード取得
-  const { posts, loading, loadMore, refresh } = useProfilePostsFeedV2(targetUid ?? null);
+const { posts, loading, loadMore, refresh } = useProfilePostsFeedV2(resolvedUid);
+
+const resolvedBadges = userBadges
+  .map((ub) => {
+    const master = masterBadges.find(
+      (m) => m.id === ub.badgeId
+    );
+    if (!master) return null;
+
+    return {
+      ...master,
+      grantedAt: ub.grantedAt,
+    };
+  })
+  .filter(
+    (b): b is MasterBadge & { grantedAt: Date | null } => b !== null
+  );
 
   const refreshedOnce = useRef(false);
   const ready = !loading && posts.length > 0;
@@ -185,22 +221,28 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       </div>
 
       {/* === Badges === */}
-      {userBadges.length > 0 && (
-        <div className="mt-4 grid grid-cols-5 gap-3 px-1">
-          {userBadges.slice(0, 10).map((b) => (
-            <button
-              key={b.id}
-              className="w-12 h-12 rounded-xl overflow-hidden"
-              onClick={() => {
-                setSelectedBadge(b);
-                setBadgeModalOpen(true);
-              }}
-            >
-              <img src={b.icon} className="w-full h-full object-cover" />
-            </button>
-          ))}
-        </div>
-      )}
+     {resolvedBadges.length > 0 && (
+  <div className="mt-4 grid grid-cols-5 gap-3 px-1">
+    {resolvedBadges.slice(0, 10).map((b) => (
+      <motion.button
+  key={b.id}
+  whileTap={{ scale: 1.12 }}
+  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+  className="w-14 h-14 rounded-2xl overflow-hidden"
+  onClick={() => {
+    setSelectedBadge(b);
+    setBadgeModalOpen(true);
+  }}
+>
+  <img
+    src={b.icon}
+    alt={b.title}
+    className="w-full h-full object-cover"
+  />
+</motion.button>
+    ))}
+  </div>
+)}
 
       {/* === Tabs === */}
       <div className="mt-4 flex items-center justify-between">
