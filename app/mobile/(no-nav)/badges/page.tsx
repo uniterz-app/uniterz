@@ -1,20 +1,32 @@
-// app/mobile/badges/page.tsx
 "use client";
 
 import { useState } from "react";
-import { useUserBadges } from "@/app/component/profile/useUserBadges";
-import BadgeDetailModal from "./BadgeDetailModal";
-import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserBadges } from "@/app/component/badges/useUserBadges";
+import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
+import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
+
+import BadgeDetailModal from "./BadgeDetailModal";
+
+type ResolvedBadge = MasterBadge & {
+  grantedAt: Date | null;
+};
 
 export default function MobileBadgesPage() {
   const router = useRouter();
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
 
-  const { badges } = useUserBadges(uid);
-  const [selected, setSelected] = useState<any | null>(null);
+  // user_badges
+  const { badges: userBadges } = useUserBadges(uid);
+
+  // master_badges
+  const { badges: masterBadges } = useMasterBadges();
+
+  const [selected, setSelected] = useState<ResolvedBadge | null>(null);
 
   if (status !== "ready") {
     return (
@@ -23,6 +35,19 @@ export default function MobileBadgesPage() {
       </div>
     );
   }
+
+  // ★ JOIN
+  const resolvedBadges: ResolvedBadge[] = userBadges
+    .map((ub) => {
+      const master = masterBadges.find((m) => m.id === ub.badgeId);
+      if (!master) return null;
+
+      return {
+        ...master,
+        grantedAt: ub.grantedAt,
+      };
+    })
+    .filter((b): b is ResolvedBadge => b !== null);
 
   return (
     <div className="min-h-screen px-4 py-6 text-white bg-[#0A1118]">
@@ -44,11 +69,13 @@ export default function MobileBadgesPage() {
           bg-[radial-gradient(circle_at_30%_30%,#0f1b2a_0%,#05080c_90%)]
         "
       >
-        {badges.length === 0 ? (
-          <p className="text-white/60 text-sm">まだ獲得バッジがありません。</p>
+        {resolvedBadges.length === 0 ? (
+          <p className="text-white/60 text-sm">
+            まだ獲得バッジがありません。
+          </p>
         ) : (
           <div className="grid grid-cols-4 gap-4">
-            {badges.map((b) => (
+            {resolvedBadges.map((b) => (
               <button
                 key={b.id}
                 onClick={() => setSelected(b)}
@@ -58,14 +85,20 @@ export default function MobileBadgesPage() {
                   hover:bg-white/10 transition-all
                 "
               >
-                <img
-                  src={b.icon}
-                  alt={b.id}
-                  className="
-                    w-full h-full object-cover p-1
-                    group-hover:scale-105 transition-transform
-                  "
-                />
+                {b.icon ? (
+                  <img
+                    src={b.icon}
+                    alt={b.title}
+                    className="
+                      w-full h-full object-cover p-1
+                      group-hover:scale-105 transition-transform
+                    "
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-white/60">
+                    {b.title}
+                  </div>
+                )}
 
                 {/* 光沢 */}
                 <div
@@ -83,7 +116,10 @@ export default function MobileBadgesPage() {
 
       {/* 詳細モーダル */}
       {selected && (
-        <BadgeDetailModal badge={selected} onClose={() => setSelected(null)} />
+        <BadgeDetailModal
+          badge={selected}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

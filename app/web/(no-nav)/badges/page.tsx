@@ -1,21 +1,44 @@
-// app/web/badges/page.tsx
 "use client";
 
 import { useState } from "react";
-import { useUserBadges } from "@/app/component/profile/useUserBadges";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserBadges } from "@/app/component/badges/useUserBadges";
+import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
+import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import BadgeDetailModal from "./BadgeDetailModal";
+
+type ResolvedBadge = MasterBadge & {
+  grantedAt: Date | null;
+};
 
 export default function WebBadgesPage() {
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
 
-  const { badges } = useUserBadges(uid);
-  const [selected, setSelected] = useState<any | null>(null);
+  // 🔹 user_badges（badgeId + grantedAt）
+  const { badges: userBadges } = useUserBadges(uid);
+
+  // 🔹 master_badges（title / icon / description）
+  const { badges: masterBadges } = useMasterBadges();
+
+  const [selected, setSelected] = useState<ResolvedBadge | null>(null);
 
   if (status !== "ready") {
     return <div className="p-6 text-white">読み込み中...</div>;
   }
+
+  // ★ JOIN（ここが重要）
+  const resolvedBadges: ResolvedBadge[] = userBadges
+    .map((ub) => {
+      const master = masterBadges.find((m) => m.id === ub.badgeId);
+      if (!master) return null;
+
+      return {
+        ...master,
+        grantedAt: ub.grantedAt,
+      };
+    })
+    .filter((b): b is ResolvedBadge => b !== null);
 
   return (
     <div className="min-h-screen px-6 py-10 text-white bg-[#08111A]">
@@ -31,11 +54,13 @@ export default function WebBadgesPage() {
           bg-[radial-gradient(circle_at_30%_30%,#0f1b2a_0%,#05080c_80%)]
         "
       >
-        {badges.length === 0 ? (
-          <p className="text-white/60 text-sm">まだ獲得バッジがありません。</p>
+        {resolvedBadges.length === 0 ? (
+          <p className="text-white/60 text-sm">
+            まだ獲得バッジがありません。
+          </p>
         ) : (
           <div className="grid grid-cols-8 gap-5">
-            {badges.map((b) => (
+            {resolvedBadges.map((b) => (
               <button
                 key={b.id}
                 onClick={() => setSelected(b)}
@@ -45,11 +70,21 @@ export default function WebBadgesPage() {
                   hover:bg-white/10 transition-all
                 "
               >
-                <img
-                  src={b.icon}
-                  alt={b.id}
-                  className="w-full h-full object-cover p-1 group-hover:scale-105 transition-transform"
-                />
+                {b.icon ? (
+                  <img
+                    src={b.icon}
+                    alt={b.title}
+                    className="
+                      w-full h-full object-cover p-1
+                      group-hover:scale-105 transition-transform
+                    "
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-white/60">
+                    {b.title}
+                  </div>
+                )}
+
                 <div
                   className="
                     absolute inset-0 pointer-events-none
@@ -64,7 +99,10 @@ export default function WebBadgesPage() {
       </div>
 
       {selected && (
-        <BadgeDetailModal badge={selected} onClose={() => setSelected(null)} />
+        <BadgeDetailModal
+          badge={selected}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
