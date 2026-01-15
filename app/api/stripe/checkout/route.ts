@@ -4,41 +4,51 @@ import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 /* =====================
-   Stripe
+   Stripe（遅延初期化）
 ===================== */
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
 
-/* =====================
-   Firebase Admin
-===================== */
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    }),
-  });
+  // apiVersion を指定しない
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-const db = getFirestore();
+/* =====================
+   Firebase Admin（遅延初期化）
+===================== */
+function getDb() {
+  if (!getApps().length) {
+    if (
+      !process.env.FIREBASE_PROJECT_ID ||
+      !process.env.FIREBASE_CLIENT_EMAIL ||
+      !process.env.FIREBASE_PRIVATE_KEY
+    ) {
+      throw new Error("Firebase Admin env vars are not set");
+    }
+
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      }),
+    });
+  }
+
+  return getFirestore();
+}
 
 export async function POST(req: Request) {
   try {
-    // 環境変数チェック
-    console.log("ENV CHECK:", {
-      hasSecret: !!process.env.STRIPE_SECRET_KEY,
-      monthly: process.env.STRIPE_PRICE_MONTHLY,
-      annual: process.env.STRIPE_PRICE_ANNUAL,
-      appUrl: process.env.NEXT_PUBLIC_APP_URL,
-    });
+    const stripe = getStripe();
+    const db = getDb();
 
     const body = await req.json();
     const plan = body?.plan;
     const uid = body?.uid;
     const platform = body?.platform === "web" ? "web" : "mobile";
-
-    console.log("REQUEST:", { plan, uid, platform });
 
     if (!uid) {
       return NextResponse.json({ error: "uid required" }, { status: 400 });
@@ -58,21 +68,17 @@ export async function POST(req: Request) {
     const cancelPath =
       platform === "web" ? "/web/pro/subscribe" : "/mobile/pro/subscribe";
 
-    /* =========================================================
-       ★ 追加：customer を必ず固定する
-    ========================================================= */
     const userRef = db.collection("users").doc(uid);
     const userSnap = await userRef.get();
 
     const currentPlanType = userSnap.data()?.planType;
 
-// 年額ユーザーは Checkout を使わせない
-if (currentPlanType === "annual") {
-  return NextResponse.json(
-    { error: "Annual users must use Stripe Portal" },
-    { status: 400 }
-  );
-}
+    if (currentPlanType === "annual") {
+      return NextResponse.json(
+        { error: "Annual users must use Stripe Portal" },
+        { status: 400 }
+      );
+    }
 
     let customerId = userSnap.data()?.stripeCustomerId;
 
@@ -84,37 +90,22 @@ if (currentPlanType === "annual") {
       customerId = customer.id;
 
       await userRef.set(
-  {
-    stripeCustomerId: customerId,
-  },
-  { merge: true }
-);
+        { stripeCustomerId: customerId },
+        { merge: true }
+      );
     }
 
-    /* =========================================================
-       Checkout Session 作成
-    ========================================================= */
     const session = await stripe.checkout.sessions.create({
-  mode: "subscription",
-  customer: customerId,
-  payment_method_types: ["card"],
-  line_items: [
-    {
-      price: priceId,
-      quantity: 1,
-    },
-  ],
-  subscription_data: {
-    metadata: {
-      uid,   // ★ ここ
-      plan,  // ★ ここ
-    },
-  },
-  success_url: `${process.env.NEXT_PUBLIC_APP_URL}${successPath}?session_id={CHECKOUT_SESSION_ID}`,
-cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}${cancelPath}`,
-});
-
-    console.log("SESSION CREATED:", session.id);
+      mode: "subscription",
+      customer: customerId,
+      payment_method_types: ["card"],
+      line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        metadata: { uid, plan },
+      },
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}${successPath}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}${cancelPath}`,
+    });
 
     return NextResponse.json({ url: session.url });
   } catch (e) {
