@@ -3,27 +3,48 @@ import Stripe from "stripe";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 /* =====================
-   Firebase Admin
+   Stripe（遅延初期化）
 ===================== */
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    }),
-  });
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-const db = getFirestore();
+/* =====================
+   Firebase Admin（遅延初期化）
+===================== */
+function getDb() {
+  if (!getApps().length) {
+    if (
+      !process.env.FIREBASE_PROJECT_ID ||
+      !process.env.FIREBASE_CLIENT_EMAIL ||
+      !process.env.FIREBASE_PRIVATE_KEY
+    ) {
+      throw new Error("Firebase Admin env vars are not set");
+    }
+
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      }),
+    });
+  }
+
+  return getFirestore();
+}
 
 /* =====================
    Webhook: Cancel Plan
 ===================== */
 export async function POST(req: Request) {
+  const stripe = getStripe();
+  const db = getDb();
+
   const sig = req.headers.get("stripe-signature");
   if (!sig) {
     return NextResponse.json({ error: "No signature" }, { status: 400 });
@@ -66,9 +87,7 @@ export async function POST(req: Request) {
   }
 
   /**
-   * 解約予約判定
-   * - Billing Portal 経由の解約では cancel_at_period_end は false のまま
-   * - cancel_at が入っていれば「解約予約あり」とみなす
+   * 解約予約判定（既存ロジック完全維持）
    */
   const hasCancelReservation =
     typeof sub.cancel_at === "number" ||
@@ -90,7 +109,9 @@ export async function POST(req: Request) {
 
   console.log("[CANCEL PLAN] periodEndSec:", periodEndSec);
 
-  // Firestore 更新（解約予約）
+  /* =====================
+     Firestore 更新（解約予約）
+  ===================== */
   await db.collection("users").doc(uid).set(
     {
       cancelAtPeriodEnd: true,

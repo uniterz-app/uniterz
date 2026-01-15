@@ -3,15 +3,22 @@ import Stripe from "stripe";
 import { adminDb } from "@/lib/firebaseAdmin";
 
 /* =====================
-   Stripe
+   Stripe（遅延初期化）
 ===================== */
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 /* =====================
    Portal API
 ===================== */
 export async function POST(req: Request) {
   try {
+    const stripe = getStripe();
+
     const { uid, returnUrl } = await req.json();
 
     if (!uid) {

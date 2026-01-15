@@ -4,29 +4,47 @@ import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* =====================
-   Stripe
+   Stripe（遅延初期化）
 ===================== */
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-/* =====================
-   Firebase Admin
-===================== */
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    }),
-  });
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-const db = getFirestore();
+/* =====================
+   Firebase Admin（遅延初期化）
+===================== */
+function getDb() {
+  if (!getApps().length) {
+    if (
+      !process.env.FIREBASE_PROJECT_ID ||
+      !process.env.FIREBASE_CLIENT_EMAIL ||
+      !process.env.FIREBASE_PRIVATE_KEY
+    ) {
+      throw new Error("Firebase Admin env vars are not set");
+    }
+
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      }),
+    });
+  }
+
+  return getFirestore();
+}
 
 /* =====================
    Webhook: Subscription Update
 ===================== */
 export async function POST(req: Request) {
+  const stripe = getStripe();
+  const db = getDb();
+
   const sig = req.headers.get("stripe-signature");
   if (!sig) {
     return NextResponse.json({ error: "No signature" }, { status: 400 });
@@ -86,8 +104,6 @@ export async function POST(req: Request) {
 
   /* =====================
      proUntil 決定
-     - cancel_at があれば最優先
-     - なければ current_period_end
   ===================== */
   let proUntilSec: number | null = null;
 
@@ -111,7 +127,7 @@ export async function POST(req: Request) {
     updatedAt: FieldValue.serverTimestamp(),
   };
 
-  // 年額→月額の予約処理（既存ロジック維持）
+  // 年額→月額の予約処理（既存ロジック完全維持）
   if (
     userData.planType === "annual" &&
     userData.nextPlanType === "monthly"
