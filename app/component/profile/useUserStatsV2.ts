@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 /* ========= Bucket 型 ========= */
 type Bucket = {
@@ -10,22 +10,22 @@ type Bucket = {
   wins: number;
   scoreErrorSum: number;
   brierSum: number;
-  upsetScoreSum: number;
+  upsetHitCount: number;
+  upsetOpportunityCount: number;
   scorePrecisionSum: number;
   calibrationErrorSum: number;
   calibrationCount: number;
 };
-// ★ SummaryCardsV2 / ProfilePageBaseV2 が必要とする型
+
 export type SummaryForCardsV2 = {
   posts: number;
   fullPosts: number;
   winRate: number;
   avgPrecision: number;
- avgBrier: number;
-  avgUpset: number;
+  avgBrier: number;
+  upsetHitRate: number;   // ★ ここ
   avgCalibration: number | null;
 };
-
 
 /* ========= 初期値 ========= */
 const empty = (): Bucket => ({
@@ -33,10 +33,11 @@ const empty = (): Bucket => ({
   wins: 0,
   scoreErrorSum: 0,
   brierSum: 0,
-  upsetScoreSum: 0,
+  upsetHitCount: 0,
+  upsetOpportunityCount: 0,
   scorePrecisionSum: 0,
-  calibrationErrorSum: 0,  // ← 追加
-    calibrationCount: 0,      // ← 追加
+  calibrationErrorSum: 0,
+  calibrationCount: 0,
 });
 
 /* ========= 再計算 ========= */
@@ -46,10 +47,14 @@ function compute(b: Bucket) {
     winRate: b.posts ? b.wins / b.posts : 0,
     avgPrecision: b.posts ? b.scorePrecisionSum / b.posts : NaN,
     avgBrier: b.posts ? b.brierSum / b.posts : NaN,
-    avgUpset: b.wins ? b.upsetScoreSum / b.wins : NaN,
-    avgCalibration: b.calibrationCount > 0
-  ? b.calibrationErrorSum / b.calibrationCount
-  : null,
+    upsetHitRate:
+  b.upsetOpportunityCount > 0
+    ? b.upsetHitCount / b.upsetOpportunityCount
+    : 0,
+    avgCalibration:
+      b.calibrationCount > 0
+        ? b.calibrationErrorSum / b.calibrationCount
+        : null,
   };
 }
 
@@ -66,30 +71,44 @@ export function useUserStatsV2(uid?: string | null) {
   const [summaries, setSummaries] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
 
+  // 同じ uid での再実行を防ぐ
+  const prevUidRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!uid) {
       setSummaries(null);
+      setStats(null);
       setLoading(false);
+      prevUidRef.current = null;
       return;
     }
 
-    async function run() {
-      setLoading(true);
+    if (prevUidRef.current === uid) return;
+    prevUidRef.current = uid;
 
-        const statsRef = doc(db, "user_stats_v2", uid!);
-  const statsSnap = await getDoc(statsRef);
-  setStats(statsSnap.exists() ? statsSnap.data() : null);
+    const safeUid: string = uid; // ★ 型確定
+
+    let cancelled = false;
+
+    async function run() {
+      /* ------------------------------
+         stats 本体
+      ------------------------------ */
+      const statsRef = doc(db, "user_stats_v2", safeUid);
+      const statsSnap = await getDoc(statsRef);
+      if (cancelled) return;
+      setStats(statsSnap.exists() ? statsSnap.data() : null);
 
       /* ------------------------------
-         ALL: キャッシュを1回読むだけ
+         ALL: キャッシュ
       ------------------------------ */
-      const allRef = doc(db, "user_stats_v2_all_cache", uid!);
+      const allRef = doc(db, "user_stats_v2_all_cache", safeUid);
       const allSnap = await getDoc(allRef);
       const all = allSnap.exists() ? (allSnap.data() as Bucket) : empty();
       const allComputed = compute(all);
 
       /* ------------------------------
-         7d / 30d: daily を合算
+         7d / 30d
       ------------------------------ */
       const today = new Date();
 
@@ -100,8 +119,8 @@ export function useUserStatsV2(uid?: string | null) {
           const d = new Date(today);
           d.setDate(today.getDate() - i);
 
-          const key = `${uid!}_${dateKey(d)}`;
-const snap = await getDoc(doc(db, "user_stats_v2_daily", key));
+          const key = `${safeUid}_${dateKey(d)}`;
+          const snap = await getDoc(doc(db, "user_stats_v2_daily", key));
           if (!snap.exists()) continue;
 
           const v = snap.data().all;
@@ -111,10 +130,11 @@ const snap = await getDoc(doc(db, "user_stats_v2_daily", key));
           b.wins += v.wins ?? 0;
           b.scoreErrorSum += v.scoreErrorSum ?? 0;
           b.brierSum += v.brierSum ?? 0;
-          b.upsetScoreSum += v.upsetScoreSum ?? 0;
+          b.upsetHitCount += v.upsetHitCount ?? 0;
+b.upsetOpportunityCount += v.upsetOpportunityCount ?? 0;
           b.scorePrecisionSum += v.scorePrecisionSum ?? 0;
           b.calibrationErrorSum += v.calibrationErrorSum ?? 0;
-b.calibrationCount += v.calibrationCount ?? 0;
+          b.calibrationCount += v.calibrationCount ?? 0;
         }
 
         return compute(b);
@@ -122,6 +142,7 @@ b.calibrationCount += v.calibrationCount ?? 0;
 
       const seven = await loadRange(7);
       const thirty = await loadRange(30);
+      if (cancelled) return;
 
       setSummaries({
         "7d": { fullPosts: seven.posts, ...seven },
@@ -133,6 +154,10 @@ b.calibrationCount += v.calibrationCount ?? 0;
     }
 
     run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [uid]);
 
   return { loading, summaries, stats };

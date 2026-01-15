@@ -110,61 +110,61 @@ export function useProfile(handle: string) {
   /* ---------------------------------------------------------
    * 2) users/{uid} をリアルタイム購読（ログアウト時は購読しない）
    * --------------------------------------------------------- */
-  useEffect(() => {
-    if (!targetUid) return;
+useEffect(() => {
+  if (!targetUid) return;
 
-    const me = auth.currentUser;
-    if (!me) {
-      // 🔒 ログアウト状態では購読を開始しない（permission-denied防止）
-      return;
-    }
+  // 🔥 ログイン有無で分岐しない
+  const ref = doc(db, "users", targetUid);
 
-    const ref = doc(db, "users", targetUid);
+  const unsub = onSnapshot(ref, (snap) => {
+    const d = snap.data() as any;
+    if (!d) return;
 
-    const unsub = onSnapshot(ref, (snap) => {
-      const d = snap.data() as any;
-      if (!d) return;
-
-      setUser({
-        displayName: d.displayName ?? "",
-        handle: d.handle ?? decodedHandle,
-        bio: d.bio ?? "",
-        photoURL: d.photoURL ?? "",
-        currentStreak: d.currentStreak ?? 0,
-  maxStreak: d.maxStreak ?? 0,
-      });
-
-      if (d.counts) {
-        setCounts({
-          posts: d.counts.posts ?? 0,
-          followers: d.counts.followers ?? 0,
-          following: d.counts.following ?? 0,
-        });
-      }
+    setUser({
+      displayName: d.displayName ?? "",
+      handle: d.handle ?? decodedHandle,
+      bio: d.bio ?? "",
+      photoURL: d.photoURL ?? "",
+      currentStreak: d.currentStreak ?? 0,
+      maxStreak: d.maxStreak ?? 0,
     });
 
-    return () => unsub();
+    if (d.counts) {
+      setCounts({
+        posts: d.counts.posts ?? 0,
+        followers: d.counts.followers ?? 0,
+        following: d.counts.following ?? 0,
+      });
+    }
+  });
 
-  }, [targetUid, decodedHandle, auth.currentUser]); // ★ ログアウト時に再評価されて購読しない
+  return () => unsub();
+}, [targetUid, decodedHandle]);
 
   /* ---------------------------------------------------------
    * 3) フォロー状態チェック（ログアウト時は実行しない）
    * --------------------------------------------------------- */
-  useEffect(() => {
-    let mounted = true;
-    if (!targetUid) return;
+useEffect(() => {
+  if (!targetUid) return;
 
-    const me = auth.currentUser;
-    if (!me) return; // 🔒 ログアウト中は実行しない
+  const me = auth.currentUser;
 
-    getIsFollowing(targetUid)
-      .then((v) => mounted && setIsFollowing(v))
-      .catch(() => {});
+  // 🔥 ゲストは必ず false
+  if (!me) {
+    setIsFollowing(false);
+    return;
+  }
 
-    return () => {
-      mounted = false;
-    };
-  }, [targetUid, auth.currentUser]);
+  let mounted = true;
+
+  getIsFollowing(targetUid)
+    .then((v) => mounted && setIsFollowing(v))
+    .catch(() => {});
+
+  return () => {
+    mounted = false;
+  };
+}, [targetUid]);
 
   /* ---------------------------------------------------------
    * 4) 表示用プロフィールを整形

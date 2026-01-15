@@ -42,7 +42,7 @@ export default function SideMenuDrawer({
         <div className="h-full px-3 py-6">
           {/* ★ 中身だけスクロール可能にする */}
           <div className="h-full overflow-y-auto pr-1">
-            <SettingsMenu variant={variant} />
+            <SettingsMenu />
           </div>
         </div>
       </div>

@@ -42,7 +42,7 @@ export default function MobileTermsPage() {
           </h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>「予想」：試合結果に対するユーザーの見解。</li>
-            <li>「分析指標」：勝率、ブライアスコア、スコア精度、アップセット指数、一致度（Calibration）等。</li>
+            <li>「分析指標」：勝率、ブライアスコア、スコア精度、アップセット的中率、一致度（Calibration）等。</li>
             <li>「Proプラン」：一部分析指標を高度化・拡張表示する有料機能。</li>
           </ul>
         </div>
@@ -170,6 +170,51 @@ export default function MobileTermsPage() {
             本規約は日本法に準拠し、紛争は日本国内の裁判所を専属管轄とします。
           </p>
         </div>
+
+        {/* 13 */}
+<div>
+  <h2 className="mb-1 text-base font-semibold text-white">
+    13. サブスクリプション（定期課金）について
+  </h2>
+
+  <p>
+    Proプランは、月額または年額の定期課金（サブスクリプション）として提供されます。
+    課金は、当社が利用する決済サービス（Stripe）を通じて処理されます。
+  </p>
+
+  <h3 className="mt-3 font-semibold text-white">
+    自動更新
+  </h3>
+  <p>
+    Proプランは、契約期間満了時に自動更新されます。
+    解約手続きを行わない限り、次回の課金が発生します。
+  </p>
+
+  <h3 className="mt-3 font-semibold text-white">
+    解約について
+  </h3>
+  <p>
+    解約はアプリ内の所定の手続きから行うことができます。
+    解約後も、すでに支払い済みの期間終了まではPro機能を利用できます。
+    期間終了後は自動的に無料プランに戻ります。
+  </p>
+
+  <h3 className="mt-3 font-semibold text-white">
+    返金について
+  </h3>
+  <p>
+    サブスクリプションの性質上、原則として返金は行いません。
+    ただし、当社が特別に認めた場合に限り、返金対応を行うことがあります。
+  </p>
+
+  <h3 className="mt-3 font-semibold text-white">
+    価格・内容の変更
+  </h3>
+  <p>
+    Proプランの料金、内容、提供条件は、事前の告知を行った上で変更される場合があります。
+    変更内容はアプリ内で告知します。
+  </p>
+</div>
 
       </section>
     </LegalPageLayout>

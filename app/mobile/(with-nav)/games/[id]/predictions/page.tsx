@@ -136,23 +136,23 @@ export default function Page() {
         <PredictionListByGame gameId={gameId} />
       </div>
 
-      {/* 🔥 初投稿ボタン */}
-      {hasMyPost === false && (
-        <button
-          onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
-          className="
-            fixed bottom-24 right-6 z-50
-            w-13 h-13 rounded-full
-            bg-yellow-400 text-white
-            flex items-center justify-center
-            shadow-xl
-            active:scale-90 transition-transform
-          "
-          aria-label="分析する"
-        >
-          <Pencil size={22} strokeWidth={3} />
-        </button>
-      )}
+      {/* 🔥 初投稿ボタン（ログイン済みのみ表示） */}
+{uid && hasMyPost === false && (
+  <button
+    onClick={() => router.push(`/mobile/games/${gameId}/predict`)}
+    className="
+      fixed bottom-24 right-6 z-50
+      w-13 h-13 rounded-full
+      bg-yellow-400 text-white
+      flex items-center justify-center
+      shadow-xl
+      active:scale-90 transition-transform
+    "
+    aria-label="分析する"
+  >
+    <Pencil size={22} strokeWidth={3} />
+  </button>
+)}
     </div>
   );
 }

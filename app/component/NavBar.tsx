@@ -101,24 +101,24 @@ export default function NavBar() {
   }
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setMyHref(`${prefix}/login`);
-        setInitialized(true);
-        return;
-      }
+  const unsub = onAuthStateChanged(auth, async (user) => {
+    // 🔥 ゲストでも mypage は存在させる
+    if (!user) {
+  setMyHref(`${prefix}/u/guest`);
+  setInitialized(true);
+  return;
+}
+    const snap = await getDoc(doc(db, "users", user.uid));
+    const h = snap.data()?.handle || snap.data()?.slug;
 
-      const snap = await getDoc(doc(db, "users", user.uid));
-      const h = snap.data()?.handle || snap.data()?.slug;
+    setMyHref(
+      h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
+    );
+    setInitialized(true);
+  });
 
-      setMyHref(
-        h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/login`
-      );
-      setInitialized(true);
-    });
-
-    return () => unsub();
-  }, [prefix]);
+  return () => unsub();
+}, [prefix]);
 
   // ⭐ 初回は NavBar を一切描画しない（フラッシュ防止）
   if (!initialized) return null;

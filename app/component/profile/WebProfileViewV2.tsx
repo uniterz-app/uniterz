@@ -1,7 +1,7 @@
 // app/component/profile/WebProfileViewV2.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu } from "lucide-react";
 
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
@@ -14,29 +14,28 @@ import PeriodToggle from "./ui/PeriodToggle";
 import SummaryCardsV2 from "./ui/SummaryCardsV2";
 
 import PredictionPostCardV2 from "@/app/component/post/PredictionPostCardV2";
-import type { PredictionPostV2 } from "@/types/prediction-post-v2";
-import { mapRawToPredictionPostV2 } from "@/lib/map-post-v2";
 
-import { db, auth } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  getDocs,
-  startAfter,
-  limit,
-} from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase"; // これを追加
+import { doc, getDoc } from "firebase/firestore"; // Firestore ドキュメント取得用
 
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import FollowListDialog from "@/app/component/profile/FollowListDialog";
 
 import BadgeDetailModal from "@/app/web/(no-nav)/badges/BadgeDetailModal";
+import { useRouter } from "next/navigation";
 
-// ✅ 正しい hooks
+
+// hooks
 import { useUserBadges } from "../badges/useUserBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
+
+// ★ 追加：Mobile と共通の feed hook
+import { useProfilePostsFeedV2 } from "./useProfilePostsFeedV2";
+import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
+import ProPreview from "@/app/component/pro/analysis/ProPreview";
+
 
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
@@ -54,72 +53,113 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   } = props;
 
   const me = auth.currentUser;
-  const isMe = !!(me && targetUid && me.uid === targetUid);
+const isMe = !!(me && targetUid && me.uid === targetUid);
+const isTargetGuestProfile = !targetUid;
 
-  /* ========= 投稿一覧 ========= */
-  const [posts, setPosts] = useState<PredictionPostV2[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lastDoc, setLastDoc] = useState<any>(null);
-  const [noMore, setNoMore] = useState(false);
 
-  const normalizePost = (id: string, data: any): PredictionPostV2 => {
-    return mapRawToPredictionPostV2({ id, ...data });
-  };
+// ★ 表示専用プロフィール
+const displayProfile = isTargetGuestProfile
+  ? {
+      ...profile,
+      displayName: "Guest User",
+      handle: "@guest",
+      bio: "ログインするとプロフィールを作成できます",
+      counts: { followers: 0, following: 0 },
+      plan: "free",
+    }
+  : profile;
 
+  const router = useRouter(); // 追加
+const [myPlan, setMyPlan] = useState<string | null>(null); // 追加
+
+const canOpenSettings = isMe || isTargetGuestProfile;
+
+useEffect(() => {
+  const uid = me?.uid;
+  if (!uid) return;
+
+  import("firebase/firestore").then(({ doc, getDoc }) => {
+    const userDocRef = doc(db, "users", uid);
+    getDoc(userDocRef).then((docSnap) => {
+      if (docSnap.exists()) setMyPlan((docSnap.data() as any).plan ?? "free");
+      else setMyPlan("free");
+    });
+  });
+}, [me]);
+
+// ==============================
+// ★ アクセス時 Pro 期限チェック（Web）
+// ==============================
+useEffect(() => {
+  const uid = me?.uid;
+  if (!uid) return;
+
+  // 自分のプロフィールを見ているときだけ
+  if (uid !== targetUid) return;
+
+  import("firebase/firestore").then(
+    async ({ doc, getDoc, setDoc, serverTimestamp }) => {
+      const userDocRef = doc(db, "users", uid);
+      const snap = await getDoc(userDocRef);
+      if (!snap.exists()) return;
+
+      const data = snap.data() as any;
+
+      const proUntilMs = data.proUntil?.toMillis?.();
+      const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
+
+      if (
+        data.plan === "pro" &&
+        cancelAtPeriodEnd &&
+        typeof proUntilMs === "number" &&
+        Date.now() > proUntilMs
+      ) {
+        await setDoc(
+          userDocRef,
+          {
+            plan: "free",
+            proUntil: null,
+            cancelAtPeriodEnd: false,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        setMyPlan("free");
+      }
+    }
+  );
+}, [me, targetUid]);
+
+const profilePlan = (displayProfile as any).plan as string | undefined;
+
+
+  /* ============================
+   * 投稿フィード（共通 hook）
+   * ============================ */
+  const {
+    posts,
+    loading,
+    noMore,
+    refresh,
+    loadMore,
+  } = useProfilePostsFeedV2(
+    typeof targetUid === "string" ? targetUid : null
+  );
+
+  // uid が変わったときだけ refresh
+  const lastUidRef = useRef<string | null>(null);
   useEffect(() => {
     if (!targetUid) return;
-
-    const load = async () => {
-      setLoading(true);
-
-      const q = query(
-        collection(db, "posts"),
-        where("authorUid", "==", targetUid),
-        orderBy("createdAt", "desc"),
-        limit(20)
-      );
-
-      const snap = await getDocs(q);
-      if (snap.empty) {
-        setPosts([]);
-        setNoMore(true);
-        setLoading(false);
-        return;
-      }
-
-      setPosts(snap.docs.map((d) => normalizePost(d.id, d.data())));
-      setLastDoc(snap.docs[snap.docs.length - 1]);
-      setLoading(false);
-    };
-
-    load();
-  }, [targetUid]);
-
-  const loadMore = async () => {
-    if (!targetUid || noMore || !lastDoc) return;
-
-    const q = query(
-      collection(db, "posts"),
-      where("authorUid", "==", targetUid),
-      orderBy("createdAt", "desc"),
-      startAfter(lastDoc),
-      limit(20)
-    );
-
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      setNoMore(true);
-      return;
+    if (lastUidRef.current !== targetUid) {
+      lastUidRef.current = targetUid;
+      refresh();
     }
+  }, [targetUid, refresh]);
 
-    setPosts((prev) => [
-      ...prev,
-      ...snap.docs.map((d) => normalizePost(d.id, d.data())),
-    ]);
-    setLastDoc(snap.docs[snap.docs.length - 1]);
-  };
-
-  /* ========= Badges（★ 修正済み） ========= */
+  /* ============================
+   * Badges
+   * ============================ */
   const { badges: userBadges } = useUserBadges(
     typeof targetUid === "string" ? targetUid : null
   );
@@ -129,22 +169,21 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     .map((ub) => {
       const master = masterBadges.find((m) => m.id === ub.badgeId);
       if (!master) return null;
-      return {
-        ...master,
-        grantedAt: ub.grantedAt,
-      };
+      return { ...master, grantedAt: ub.grantedAt };
     })
     .filter((b): b is ResolvedBadge => b !== null);
 
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
-  const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(null);
+  const [selectedBadge, setSelectedBadge] =
+    useState<ResolvedBadge | null>(null);
 
-  /* ========= Follow list ========= */
+  /* ============================
+   * Follow list / Drawer
+   * ============================ */
   const [followListOpen, setFollowListOpen] = useState(false);
   const [followListInitial, setFollowListInitial] =
     useState<"followers" | "following">("followers");
 
-  /* ========= Drawer ========= */
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -153,16 +192,21 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       <div className="rounded-2xl border border-white/10 bg-card p-10 shadow-lg min-h-[180px]">
         <div className="grid grid-cols-[96px_1fr_auto] gap-6 items-start">
           <div className="h-24 w-24 rounded-full ring-3 ring-[#FFCC00]/40 overflow-hidden">
-            {profile.avatarUrl && (
-              <img src={profile.avatarUrl} className="w-full h-full object-cover" />
+            {displayProfile.avatarUrl && (
+              <img src={displayProfile.avatarUrl}
+                className="w-full h-full object-cover"
+                alt=""
+              />
             )}
           </div>
 
           <div>
-            <h1 className="text-3xl font-extrabold">{profile.displayName}</h1>
-            <p className="opacity-70">{profile.handle}</p>
+            <h1 className="text-3xl font-extrabold">
+              {displayProfile.displayName}
+            </h1>
+            <p className="opacity-70">{displayProfile.handle}</p>
 
-            {profile.bio && <p className="mt-2">{profile.bio}</p>}
+            {displayProfile.bio && <p className="mt-2">{displayProfile.bio}</p>}
 
             <div className="mt-3 flex gap-2">
               <button
@@ -172,7 +216,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   setFollowListOpen(true);
                 }}
               >
-                <b>{profile.counts.followers}</b> フォロワー
+                <b>{displayProfile.counts?.followers ?? 0}</b> フォロワー
               </button>
 
               <button
@@ -182,27 +226,33 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   setFollowListOpen(true);
                 }}
               >
-                <b>{profile.counts.following}</b> フォロー中
+                <b>{displayProfile.counts?.following ?? 0}</b> フォロー中
               </button>
             </div>
 
             {!isMe && targetUid && (
               <div className="mt-3 flex gap-6">
-                <FollowButton targetUid={targetUid} size="md" variant="blue" />
+                <FollowButton
+                  targetUid={targetUid}
+                  size="md"
+                  variant="blue"
+                />
                 <BecomeMemberButton size="md" onClick={() => {}} />
               </div>
             )}
           </div>
 
-          <button
-            className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/5"
-            onClick={() => setDrawerOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </button>
+          {canOpenSettings && (
+  <button
+    className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/5"
+    onClick={() => setDrawerOpen(true)}
+  >
+    <Menu className="h-6 w-6" />
+  </button>
+)}
         </div>
 
-        {/* ✅ Badges */}
+        {/* Badges */}
         {resolvedBadges.length > 0 && (
           <div className="mt-4 grid grid-cols-10 gap-3">
             {resolvedBadges.slice(0, 10).map((b) => (
@@ -226,61 +276,62 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       </div>
 
       {/* Tabs */}
-      <div className="mt-6 flex items-center justify-between">
-        <Tabs value={tab} onChange={setTab} size="lg" showStats={isMe} />
-        <PeriodToggle value={range} onChange={setRange} size="lg" />
-      </div>
+{/* Tabs */}
+<div className="mt-6 flex items-center justify-between">
+  <Tabs
+    value={tab}
+    onChange={setTab}
+    size="lg" 
+  />
+
+  {tab === "overview" && (
+    <PeriodToggle
+      value={range}
+      onChange={setRange}
+      size="lg"
+    />
+  )}
+</div>
 
       {/* Content */}
-      <div className="mt-6">
-        {tab === "overview" ? (
-          <div>
-            <SummaryCardsV2
-              period={range}
-              data={{
-                fullPosts: summary?.fullPosts ?? 0,
-                posts: summary?.posts ?? 0,
-                winRate: summary?.winRate ?? 0,
-                avgPrecision: summary?.avgPrecision ?? 0,
-                avgBrier: summary?.avgBrier ?? 0,
-                avgUpset: summary?.avgUpset ?? 0,
-                avgCalibration: summary?.avgCalibration ?? null,
-              }}
-            />
+       <div className="mt-6">
+  {tab === "overview" ? (
+    <>
+      <SummaryCardsV2
+  compact
+  period={range}
+  data={{
+    fullPosts: summary?.fullPosts ?? 0,
+    posts: summary?.posts ?? 0,
+    winRate: summary?.winRate ?? 0,
+    avgPrecision: summary?.avgPrecision ?? 0,
+    avgBrier: summary?.avgBrier ?? 0,
+    upsetHitRate: summary?.upsetHitRate ?? 0, // ★ 正
+    avgCalibration: summary?.avgCalibration ?? null,
+  }}
+/>
 
-            <div className="mt-8 space-y-6">
-              {loading && <div className="opacity-70">読み込み中…</div>}
-
-              {!loading && posts.length === 0 && (
-                <div className="opacity-70">まだ投稿はありません。</div>
-              )}
-
-              {posts.map((p) => (
-                <PredictionPostCardV2 key={p.id} post={p} mode="list" showDelete />
-              ))}
-
-              {!noMore && (
-                <button
-                  onClick={loadMore}
-                  className="mt-4 w-full rounded-md border border-white/10 py-2 text-sm opacity-70 hover:bg-white/10"
-                >
-                  もっと見る
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center space-y-3">
-            <p className="text-lg font-semibold">Stats（準備中）</p>
-            <p className="text-sm text-white/80">
-              この機能は <span className="font-semibold text-amber-300">Proプラン限定</span> 予定
-            </p>
-            <p className="text-sm text-white/60">
-              より詳しい分析指標や成績の可視化を準備中です。
-            </p>
-          </div>
-        )}
+      <div className="mt-8 space-y-6">
+        {loading && <div className="opacity-70">読み込み中…</div>}
+        {!loading && posts.length === 0 && <div className="opacity-70">まだ投稿はありません。</div>}
+        {posts.map((p) => <PredictionPostCardV2 key={p.id} post={p} mode="list" showDelete />)}
+        {!noMore && <button onClick={loadMore} className="mt-4 w-full rounded-md border border-white/10 py-2 text-sm opacity-70 hover:bg-white/10">もっと見る</button>}
       </div>
+    </>
+  ) : isTargetGuestProfile ? (
+  <ProPreview />
+) : isMe ? (
+  <ProAnalysis />
+) : myPlan === "pro" && profilePlan === "pro" ? (
+  <ProAnalysis />
+) : (
+  <div className="rounded-2xl border border-white/15 bg-white/5 p-6 text-center space-y-3">
+    <p className="text-sm text-white/70">
+      対象ユーザーはProプランに加入していません。
+    </p>
+  </div>
+)}
+</div>
 
       {/* Dialogs */}
       {followListOpen && targetUid && (
@@ -292,7 +343,10 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         />
       )}
 
-      <SideMenuDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <SideMenuDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      />
 
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal

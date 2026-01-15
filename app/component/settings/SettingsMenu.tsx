@@ -6,13 +6,11 @@ import cn from "clsx";
 import {
   User,
   Bookmark,
-  Bell,
   Megaphone,
   FilePlus2,
   Package,
   HelpCircle,
   LogOut,
-  Settings,
   LayoutDashboard,
   Newspaper,
   PlusSquare,
@@ -24,7 +22,7 @@ import {
   Mail,
   Award,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { ADMIN_UID } from "@/lib/constants";
 import { db, auth } from "@/lib/firebase";
@@ -36,64 +34,88 @@ import {
   where,
   orderBy,
   limit,
+  doc,
 } from "firebase/firestore";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
+import LoginRequiredModal from "../modals/LoginRequiredModal";
 
 type Variant = "mobile" | "web";
-type SettingsMenuProps = { variant?: Variant; className?: string };
+type SettingsMenuProps = {
+  variant?: Variant; // 互換用に残す（ロジックでは使わない）
+  className?: string;
+};
 
-export default function SettingsMenu({
-  variant = "mobile",
-  className,
-}: SettingsMenuProps) {
-  const isMobile = variant === "mobile";
+export default function SettingsMenu({ className }: SettingsMenuProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
-  // ===== ログアウトモーダル =====
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  /** ★ 実際に使うのはこれだけ */
+  const resolvedVariant: Variant = pathname.startsWith("/web")
+    ? "web"
+    : "mobile";
 
-  // ===== プラン機能の案内モーダル =====
-  const [showPlanInfoModal, setShowPlanInfoModal] = useState(false);
+  const isMobile = resolvedVariant === "mobile";
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      const redirectPath = isMobile ? "/mobile/login" : "/web/login";
-      router.push(redirectPath);
-    } catch (e) {
-      console.error("Logout failed:", e);
+  const { fUser: user, status } = useFirebaseUser();
+
+  const requireLogin = (action: () => void) => {
+    if (!user) {
+      setShowLoginRequired(true);
+      return;
     }
+    action();
   };
 
-  const profileEditPath =
-    variant === "web" ? "/web/settings/profile" : "/mobile/settings/profile";
-  const bookmarksPath =
-    variant === "web" ? "/web/bookmarks" : "/mobile/bookmarks";
-  const announcementsPath =
-    variant === "web" ? "/web/announcements" : "/mobile/announcements";
-  const resetPath =
-    variant === "web"
-      ? "/web/settings/password"
-      : "/mobile/settings/password";
-  const helpPath = variant === "web" ? "/web/help" : "/mobile/help";
+  // ===== state =====
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showLoginRequired, setShowLoginRequired] = useState(false);
+  const [showPlanInfoModal, setShowPlanInfoModal] = useState(false);
 
-  const termsPath = variant === "web" ? "/web/terms" : "/mobile/terms";
-  const privacyPath = variant === "web" ? "/web/privacy" : "/mobile/privacy";
-  const guidelinesPath =
-    variant === "web"
-      ? "/web/community-guidelines"
-      : "/mobile/community-guidelines";
-
-  const contactPath =
-    variant === "web" ? "/web/contact" : "/mobile/contact";
-
-  // ===== 未読数（お知らせ） =====
-  const { fUser: user, status } = useFirebaseUser();
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [plan, setPlan] = useState<"free" | "pro">("free");
 
+  // ===== logout =====
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push(
+      resolvedVariant === "web" ? "/web/login" : "/mobile/login"
+    );
+  };
+
+  // ===== paths（すべて resolvedVariant ベース）=====
+  const p = (web: string, mobile: string) =>
+    resolvedVariant === "web" ? web : mobile;
+
+  const profileEditPath = p(
+    "/web/settings/profile",
+    "/mobile/settings/profile"
+  );
+  const bookmarksPath = p("/web/bookmarks", "/mobile/bookmarks");
+  const announcementsPath = p(
+    "/web/announcements",
+    "/mobile/announcements"
+  );
+  const resetPath = p(
+    "/web/settings/password",
+    "/mobile/settings/password"
+  );
+  const helpPath = p("/web/help", "/mobile/help");
+  const termsPath = p("/web/terms", "/mobile/terms");
+  const guidelinesPath = p(
+    "/web/community-guidelines",
+    "/mobile/community-guidelines"
+  );
+  const contactPath = p("/web/contact", "/mobile/contact");
+
+  const refundPath = p(
+  "/web/refund",
+  "/mobile/refund"
+);
+
+  // ===== announcements unread =====
   useEffect(() => {
-    if (status !== "ready" || !user?.uid) return;
+    if (status !== "ready") return;
     const q = query(
       collection(db, "announcements"),
       where("visible", "==", true),
@@ -101,327 +123,175 @@ export default function SettingsMenu({
       orderBy("postedAt", "desc"),
       limit(30)
     );
-    const unsub = onSnapshot(q, (snap) => {
+    return onSnapshot(q, snap => {
       const s = new Set<string>();
-      snap.forEach((d) => s.add(d.id));
+      snap.forEach(d => s.add(d.id));
       setVisibleIds(s);
     });
-    return () => unsub();
-  }, [status, user?.uid]);
+  }, [status]);
 
   useEffect(() => {
-    if (status !== "ready" || !user?.uid) {
+    if (!user?.uid) {
       setReadIds(new Set());
       return;
     }
-    const col = collection(db, `users/${user.uid}/reads`);
-    const unsub = onSnapshot(col, (snap) => {
-      const s = new Set<string>();
-      snap.forEach((d) => s.add(d.id));
-      setReadIds(s);
-    });
-    return () => unsub();
-  }, [status, user?.uid]);
+    return onSnapshot(
+      collection(db, `users/${user.uid}/reads`),
+      snap => {
+        const s = new Set<string>();
+        snap.forEach(d => s.add(d.id));
+        setReadIds(s);
+      }
+    );
+  }, [user?.uid]);
 
   const unreadCount = useMemo(() => {
-    if (status !== "ready" || !user?.uid) return 0;
-    let cnt = 0;
-    visibleIds.forEach((id) => {
-      if (!readIds.has(id)) cnt++;
+    let c = 0;
+    visibleIds.forEach(id => {
+      if (!readIds.has(id)) c++;
     });
-    return cnt;
-  }, [status, user?.uid, visibleIds, readIds]);
+    return c;
+  }, [visibleIds, readIds]);
 
-  // ===== お問い合わせ未読（管理者のみ） =====
-  const isAdmin = !!user && user.uid === ADMIN_UID;
-  const [unreadContacts, setUnreadContacts] = useState(0);
-
+  // ===== plan =====
   useEffect(() => {
-    if (!isAdmin) return;
-    const q = query(collection(db, "contacts"), where("status", "==", "unread"));
-    const unsub = onSnapshot(q, (snap) => {
-      setUnreadContacts(snap.size);
+    if (!user?.uid) return;
+    return onSnapshot(doc(db, "users", user.uid), snap => {
+      const p = snap.data()?.plan;
+      setPlan(p === "pro" ? "pro" : "free");
     });
-    return () => unsub();
-  }, [isAdmin]);
+  }, [user?.uid]);
 
-  // classes
+  const isAdmin = user?.uid === ADMIN_UID;
+
+  // ===== styles =====
   const containerClasses = cn(
-    "bg-[#050509] rounded-3xl text-white",
-    "flex flex-col",
+    "bg-[#050509] rounded-3xl text-white flex flex-col",
     isMobile ? "w-full p-4" : "w-80 p-6",
     className
   );
-  const groupTitleClasses = cn(
-    "text-xs font-semibold uppercase tracking-wide text-gray-400",
-    "mt-4 mb-2"
-  );
-  const itemClasses = cn(
-    "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm text-gray-100",
-    "hover:bg-white/10 active:bg-white/15 transition-colors"
-  );
-  const subItemClasses = cn(
-    "flex items-center gap-3 px-3 py-2 text-xs text-gray-400",
-    "hover:text-gray-100 hover:bg-white/5 transition-colors"
-  );
+
+  const groupTitleClasses =
+    "text-xs font-semibold uppercase tracking-wide text-gray-400 mt-4 mb-2";
+  const itemClasses =
+    "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm hover:bg-white/10 transition";
+  const subItemClasses =
+    "flex items-center gap-3 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-white/5";
 
   return (
     <>
-      <nav className={containerClasses} aria-label="設定メニュー">
-        {/* ヘッダー */}
-        <div className="mb-4 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 overflow-hidden">
-            <img
-              src="/logo/logo.png"
-              alt="Uniterz Logo"
-              className="w-6 h-6 object-contain select-none"
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-xs text-gray-400">Menu</span>
-            <span className="text-sm font-semibold">設定とメニュー</span>
-          </div>
-        </div>
-
-        {/* === Main === */}
+      <nav className={containerClasses}>
         <p className={groupTitleClasses}>メイン</p>
 
-        <button
-          type="button"
-          className={itemClasses}
-          onClick={() => router.push(profileEditPath)}
-        >
-          <User className="h-4 w-4" />
-          <span>プロフィール編集</span>
+        <button className={itemClasses} onClick={() => requireLogin(() => router.push(profileEditPath))}>
+          <User size={16} /> プロフィール編集
         </button>
 
-        <button
-  type="button"
-  className={itemClasses}
-  onClick={() =>
-    router.push(variant === "web" ? "/web/badges" : "/mobile/badges")
-  }
->
-  <Award className="h-4 w-4" />
-  <span>バッジパレット</span>
-</button>
-
-
-        <button
-          type="button"
-          className={itemClasses}
-          onClick={() => router.push(bookmarksPath)}
-        >
-          <Bookmark className="h-4 w-4" />
-          <span>ブックマーク</span>
+        <button className={itemClasses} onClick={() => requireLogin(() => router.push(p("/web/badges", "/mobile/badges")))}>
+          <Award size={16} /> バッジパレット
         </button>
 
-        <button
-          type="button"
-          className={itemClasses}
-          onClick={() => router.push(announcementsPath)}
-        >
-          <Megaphone className="h-4 w-4" />
-          <span className="relative inline-flex items-center">
-            運営からのお知らせ
-            {unreadCount > 0 && (
-              <span className="ml-2 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-500 text-[11px] font-bold leading-none px-1 shadow-[0_0_10px_rgba(255,0,0,0.6)]">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </span>
+        <button className={itemClasses} onClick={() => requireLogin(() => router.push(bookmarksPath))}>
+          <Bookmark size={16} /> ブックマーク
         </button>
 
-        {/* === Plan === */}
-        <p className={groupTitleClasses}>プラン</p>
-
-        <button
-          type="button"
-          className={itemClasses}
-          onClick={() => setShowPlanInfoModal(true)}
-        >
-          <FilePlus2 className="h-4 w-4" />
-          <span>プラン作成</span>
+        <button className={itemClasses} onClick={() => requireLogin(() => router.push(announcementsPath))}>
+          <Megaphone size={16} /> お知らせ
+          {unreadCount > 0 && <span className="ml-auto text-xs bg-red-500 px-2 rounded-full">{unreadCount}</span>}
         </button>
 
+        <p className={groupTitleClasses}>サブスクリプション</p>
+
         <button
-          type="button"
           className={itemClasses}
-          onClick={() => setShowPlanInfoModal(true)}
+          onClick={() =>
+            requireLogin(() =>
+              router.push(
+                resolvedVariant === "web"
+                  ? plan === "pro"
+                    ? "/web/plan-status"
+                    : "/web/pro/subscribe"
+                  : plan === "pro"
+                    ? "/mobile/plan-status"
+                    : "/mobile/pro/subscribe"
+              )
+            )
+          }
         >
-          <Package className="h-4 w-4" />
-          <span>加入プラン</span>
+          <Package size={16} /> プランの確認
         </button>
 
-        {/* !!! プライバシーデータは削除済み !!! */}
-
-        {/* === Support === */}
         <p className={groupTitleClasses}>サポート</p>
 
-        <button
-          type="button"
-          className={subItemClasses}
-          onClick={() => router.push(resetPath)}
-        >
-          <Key className="h-4 w-4" />
-          <span>パスワードをリセット</span>
+        <button className={subItemClasses} onClick={() => router.push(resetPath)}>
+          <Key size={14} /> パスワードリセット
+        </button>
+
+        <button className={subItemClasses} onClick={() => router.push(helpPath)}>
+          <HelpCircle size={14} /> ヘルプ
+        </button>
+
+        <button className={subItemClasses} onClick={() => router.push(guidelinesPath)}>
+          <Users size={14} /> ガイドライン
+        </button>
+
+        <button className={subItemClasses} onClick={() => router.push(termsPath)}>
+          <FileText size={14} /> 利用規約
         </button>
 
         <button
-          type="button"
-          className={subItemClasses}
-          onClick={() => router.push(helpPath)}
-        >
-          <HelpCircle className="h-4 w-4" />
-          <span>ヘルプ</span>
-        </button>
+  className={subItemClasses}
+  onClick={() => router.push(refundPath)}
+>
+  <FileText size={14} /> 返金・キャンセルポリシー
+</button>
 
-        <button
-          type="button"
-          className={subItemClasses}
-          onClick={() => router.push(guidelinesPath)}
-        >
-          <Users className="h-4 w-4" />
-          <span>コミュニティガイドライン</span>
-        </button>
-
-        <button
-          type="button"
-          className={subItemClasses}
-          onClick={() => router.push(termsPath)}
-        >
-          <FileText className="h-4 w-4" />
-          <span>利用規約</span>
-        </button>
-
-        <button
-          type="button"
-          className={subItemClasses}
-          onClick={() => router.push(contactPath)}
-        >
-          <Mail className="h-4 w-4" />
-          <span>お問い合わせ</span>
+        <button className={subItemClasses} onClick={() => router.push(contactPath)}>
+          <Mail size={14} /> お問い合わせ
         </button>
 
         {isAdmin && (
           <>
             <p className={groupTitleClasses}>管理</p>
 
-            <button
-              type="button"
-              className={itemClasses}
-              onClick={() => router.push("/admin")}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span>管理画面ダッシュボード</span>
+            <button className={itemClasses} onClick={() => router.push("/admin")}>
+              <LayoutDashboard size={16} /> 管理ダッシュボード
             </button>
 
-            <button
-  type="button"
-  className={itemClasses}
-  onClick={() => router.push("/admin/badges")}
->
-  <Award className="h-4 w-4" />
-  <span>バッジ付与</span>
-</button>
-
-
-            <button
-              type="button"
-              className={itemClasses}
-              onClick={() => router.push("/admin/announcements")}
-            >
-              <Newspaper className="h-4 w-4" />
-              <span>お知らせ管理</span>
+            <button className={itemClasses} onClick={() => router.push("/admin/badges")}>
+              <Award size={16} /> バッジ付与
             </button>
 
-            <button
-              type="button"
-              className={itemClasses}
-              onClick={() => router.push("/admin/announcements/new")}
-            >
-              <PlusSquare className="h-4 w-4" />
-              <span>お知らせを作成</span>
+            <button className={itemClasses} onClick={() => router.push("/admin/announcements")}>
+              <Newspaper size={16} /> お知らせ管理
             </button>
 
-            <button
-              type="button"
-              className={itemClasses}
-              onClick={() => router.push("/admin/games-import")}
-            >
-              <Database className="h-4 w-4" />
-              <span>試合データ インポート</span>
+            <button className={itemClasses} onClick={() => router.push("/admin/announcements/new")}>
+              <PlusSquare size={16} /> お知らせ作成
             </button>
 
-            <button
-              type="button"
-              className={itemClasses}
-              onClick={() => router.push("/admin/plans")}
-            >
-              <CheckCheck className="h-4 w-4" />
-              <span>プラン承認</span>
+            <button className={itemClasses} onClick={() => router.push("/admin/games-import")}>
+              <Database size={16} /> 試合インポート
             </button>
 
-            <button
-              type="button"
-              className={itemClasses}
-              onClick={() => router.push("/admin/contacts")}
-            >
-              <Mail className="h-4 w-4" />
-              <span className="relative inline-flex items-center">
-                お問い合わせ一覧
-                {unreadContacts > 0 && (
-                  <span className="ml-2 inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-red-500 text-[11px] font-bold leading-none px-1 shadow-[0_0_10px_rgba(255,0,0,0.6)]">
-                    {unreadContacts > 99 ? "99+" : unreadContacts}
-                  </span>
-                )}
-              </span>
+            <button className={itemClasses} onClick={() => router.push("/admin/plans")}>
+              <CheckCheck size={16} /> プラン承認
             </button>
           </>
         )}
 
-        {/* --- ログアウト --- */}
-        <div className="mt-5 border-t border-white/5 pt-3">
-          <button
-            type="button"
-            className={itemClasses}
-            onClick={() => setShowLogoutModal(true)}
-          >
-            <LogOut className="h-4 w-4" />
-            <span>ログアウト</span>
+        <div className="mt-5 border-t border-white/10 pt-3">
+          <button className={itemClasses} onClick={() => setShowLogoutModal(true)}>
+            <LogOut size={16} /> ログアウト
           </button>
         </div>
       </nav>
 
-      {/* プラン案内モーダル */}
-      {showPlanInfoModal && (
-        <div
-          className={cn(
-            "fixed inset-0 z-[9999] flex justify-center bg-black/50 p-4",
-            isMobile ? "items-end" : "items-center"
-          )}
-        >
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#050509] p-4 md:p-5 shadow-xl">
-            <h2 className="text-sm font-semibold mb-2">プラン機能は準備中です</h2>
-            <p className="text-xs text-gray-200 leading-relaxed">
-              プラン機能は現在準備中です。
-            </p>
-            <p className="mt-1 text-xs text-gray-200 leading-relaxed">
-              今後、クリエイターが独自プランを作成して、有料予想を公開できる機能も追加予定です。
-            </p>
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowPlanInfoModal(false)}
-                className="rounded-xl bg-white text-black text-xs font-semibold px-4 py-2 hover:bg-gray-100"
-              >
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LoginRequiredModal
+        open={showLoginRequired}
+        onClose={() => setShowLoginRequired(false)}
+        variant={resolvedVariant}
+      />
 
       <LogoutConfirmModal
         open={showLogoutModal}

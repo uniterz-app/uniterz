@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./app/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
@@ -9,21 +9,19 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        // 既存
-        sans:  ['var(--font-noto)', 'ui-sans-serif', 'system-ui'],
-        lilita: ['var(--font-lilita)', 'sans-serif'],
-        acme:  ['var(--font-acme)', 'sans-serif'],
-        alfa:  ['var(--font-alfa)', 'serif'],
+        sans:  ["var(--font-noto)", "ui-sans-serif", "system-ui"],
+        lilita:["var(--font-lilita)", "sans-serif"],
+        acme:  ["var(--font-acme)", "sans-serif"],
+        alfa:  ["var(--font-alfa)", "serif"],
 
-        // ← ここ（fontFamily 内）に入れる！
         team: [
-          'Hiragino Kaku Gothic Std', 'ヒラギノ角ゴ Std',
-          'Hiragino Kaku Gothic ProN', 'Hiragino Kaku Gothic Pro',
-          'Meiryo', 'Noto Sans JP', 'sans-serif',
+          "Hiragino Kaku Gothic Std", "ヒラギノ角ゴ Std",
+          "Hiragino Kaku Gothic ProN", "Hiragino Kaku Gothic Pro",
+          "Meiryo", "Noto Sans JP", "sans-serif",
         ],
         score: [
-          'Impact', 'Anton', 'Arial Black', 'Inter',
-          'ui-sans-serif', 'system-ui', 'sans-serif',
+          "Impact", "Anton", "Arial Black", "Inter",
+          "ui-sans-serif", "system-ui", "sans-serif",
         ],
       },
       colors: {

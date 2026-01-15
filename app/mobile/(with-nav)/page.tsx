@@ -1,3 +1,3 @@
-export default function Page() {
-  return <div>Mobile Home</div>;
+export default function MobileWithNavRootPage() {
+  return <div>MOBILE ROOT</div>;
 }

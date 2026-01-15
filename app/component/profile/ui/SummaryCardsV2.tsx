@@ -15,6 +15,8 @@ import { Alfa_Slab_One } from "next/font/google";
 
 // 既存 Tooltip を import
 import Tooltip from "@/app/component/common/Tooltip";
+import { useCountUp } from "@/lib/hooks/useCountUp";
+
 
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
@@ -33,7 +35,7 @@ export type SummaryDataV2 = {
   winRate: number;
   avgPrecision: number;
   avgBrier: number;
-  avgUpset: number;
+  upsetHitRate: number; // ← これに変更
   avgCalibration: number | null;
 };
 
@@ -56,42 +58,46 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
     message: string;
   } | null>(null);
 
-  const postsText = `${data.fullPosts}`;
-  const winRatePct = `${Math.round(data.winRate * 100)}%`;
-  const precisionText = data.avgPrecision.toFixed(1);
+  const postsCount = useCountUp(data.fullPosts, 700, true);
+const postsText = postsCount;
+  const winRateValue = Math.round(data.winRate * 100);
+const winRateCount = useCountUp(winRateValue, 700, true);
+const winRatePct = `${winRateCount}%`;
+  const precisionValue = Number(data.avgPrecision.toFixed(1));
+const precisionCount = useCountUp(precisionValue, 700, true);
+const precisionText = precisionCount.toFixed(1);
   const accuracy =
     data.posts === 0
       ? 0
       : Math.max(0, Math.min(100, Math.round((1 - data.avgBrier) * 100)));
-  const accuracyText = `${accuracy}%`;
+  const accuracyCount = useCountUp(accuracy, 700, true);
+const accuracyText = `${accuracyCount}%`;
 
-  const upsetText = data.avgUpset.toFixed(1);
+
+const upsetRateValue = Math.round(data.upsetHitRate * 100);
+const upsetRateCount = useCountUp(upsetRateValue, 700, true);
+const upsetText = `${upsetRateCount}%`;
 
   const min = MIN_POSTS[period];
 const enoughPosts = data.fullPosts >= min;
 
-
-// 一致度の安全処理
-let consistency: number;
-let consistencyText: string;
-
 // まず一時変数に入れる（これが重要）
+// 一致度の安全処理
 const calib = data.avgCalibration;
 
-// null または 非数値なら無効
 const validCalib =
-  typeof calib === "number" && Number.isFinite(calib);
+  typeof calib === "number" && Number.isFinite(calib) && data.posts > 0;
 
-if (!validCalib || data.posts === 0) {
-  consistency = NaN;
-  consistencyText = "NaN%";
-} else {
-  consistency = Math.max(
-    0,
-    Math.min(100, Math.round((1 - calib) * 100))
-  );
-  consistencyText = `${consistency}%`;
-}
+const consistency = validCalib
+  ? Math.max(0, Math.min(100, Math.round((1 - calib) * 100)))
+  : 0;
+
+// ★ Hooks は必ずトップレベルで呼ぶ
+const consistencyCount = useCountUp(consistency, 700, validCalib);
+
+const consistencyText = validCalib
+  ? `${consistencyCount}%`
+  : "NaN%";
 
 
  const NONE: HighlightV2 = { level: "none" };
@@ -99,7 +105,9 @@ if (!validCalib || data.posts === 0) {
 const hWin       = enoughPosts ? evaluateWinRateV2(data.winRate)      : NONE;
 const hPrecision = enoughPosts ? evaluatePrecisionV2(data.avgPrecision) : NONE;
 const hAcc       = enoughPosts ? evaluateAccuracyV2(accuracy)          : NONE;
-const hUpset     = enoughPosts ? evaluateUpsetV2(data.avgUpset)        : NONE;
+const hUpset = enoughPosts
+  ? evaluateUpsetV2(upsetRateValue) // 0〜100 を渡す
+  : NONE;
 const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
 
   const padCls = compact ? "p-2 md:p-3" : "p-4";
@@ -226,13 +234,13 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
             icon={<Zap size={iconSize} />}
             label={
               <div className="flex items-center gap-1">
-                UPSET指数
+                UPSET的中率
                 <button
                   className="opacity-70 text-xs"
                   onClick={(e) =>
                     openTooltip(
                       e,
-                      "『みんなが予想しなかった勝ち方』を当てたときに高くなる指標。市場の偏りやチーム順位に応じて0〜10で評価されます。"
+                      "アップセット（市場と実力差を覆した試合）が起きた試合のうち、どれだけ勝敗を当てられたかを示します。"
                     )
                   }
                 >
@@ -356,7 +364,7 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
         <Card
           label={
             <div className="flex items-center gap-1">
-              UPSET指数
+              UPSET的中率
               <button
                 className="opacity-70 text-xs"
                 onClick={(e) =>

@@ -17,6 +17,8 @@ import SimpleCenterModal from "@/app/component/common/SimpleCenterModal";
 
 // ★ V2 投稿カードに差し替え
 import PredictionPostCardV2 from "@/app/component/post/PredictionPostCardV2";
+import { db } from "@/lib/firebase"; // 普通はこれで Firestore 取得可能
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 import FollowListDialog from "@/app/component/profile/FollowListDialog";
 import FollowButton from "@/app/component/common/FollowButton";
@@ -25,11 +27,19 @@ import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 // ★ V2 フィードに差し替え
 import { useProfilePostsFeedV2 } from "./useProfilePostsFeedV2";
 
+import { useRouter } from "next/navigation";
+
 import BadgeDetailModal from "@/app/mobile/(no-nav)/badges/BadgeDetailModal";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import { useUserBadges } from "../badges/useUserBadges";
 import { motion } from "framer-motion";
+
+// ① import を追加
+import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
+
+import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
+import ProPreview from "@/app/component/pro/analysis/ProPreview";
 
 
 type ResolvedBadge = MasterBadge & {
@@ -53,8 +63,93 @@ const {
 
 
   const me = auth.currentUser;
-  const isMe = !!(me && targetUid && me.uid === targetUid);
 
+  const isMe = !!(me && targetUid && me.uid === targetUid);
+  // 表示対象が「ゲストプロフィール」かどうか
+const isTargetGuestProfile = !targetUid;
+
+// ② state を追加（上の方）
+const [showLoginRequired, setShowLoginRequired] = useState(false);
+
+// 表示用プロフィール（※見る人がゲストかどうかは関係ない）
+const displayProfile = isTargetGuestProfile
+  ? {
+      ...profile,
+      displayName: "Guest User",
+      handle: "@guest",
+      bio: "ログインするとプロフィールを作成できます",
+      counts: { followers: 0, following: 0 },
+      currentStreak: 0,
+      maxStreak: 0,
+      plan: "free",
+    }
+  : profile;
+  
+  const router = useRouter();
+
+const [myPlan, setMyPlan] = useState<string | null>(null);
+
+useEffect(() => {
+  const uid = me?.uid;
+  if (!uid) return;
+
+  const userDocRef = doc(db, "users", uid);
+  getDoc(userDocRef).then((docSnap) => {
+    if (docSnap.exists()) {
+      setMyPlan(docSnap.data().plan ?? "free");
+    } else {
+      setMyPlan("free");
+    }
+  });
+}, [me]);
+
+// ==============================
+// ★ アクセス時 Pro 期限チェック
+// ==============================
+useEffect(() => {
+  const uid = me?.uid;
+  if (!uid) return;
+
+  // 自分のプロフィールを見ているときだけ
+  if (uid !== targetUid) return;
+
+  const userDocRef = doc(db, "users", uid);
+
+  getDoc(userDocRef).then(async (snap) => {
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const proUntil = data.proUntil?.toMillis?.();
+    const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
+    const plan = data.plan;
+
+    // 条件をすべて満たしたら Free 化
+    if (
+      plan === "pro" &&
+      cancelAtPeriodEnd &&
+      typeof proUntil === "number" &&
+      Date.now() > proUntil
+    ) {
+      await setDoc(
+        userDocRef,
+        {
+          plan: "free",
+          proUntil: null,
+          cancelAtPeriodEnd: false,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      setMyPlan("free");
+    }
+  });
+}, [me, targetUid]);
+
+  const profilePlan = (displayProfile as any).plan as string | undefined;
+const isMyPro = myPlan === "pro";
+const isTargetPro = profilePlan === "pro";
+const isMyProfile = isMe;
   const summaryV2 = summary;
 
   
@@ -73,7 +168,9 @@ const {
   );
 
   // ★ V2 フィード取得
-const { posts, loading, loadMore, refresh } = useProfilePostsFeedV2(resolvedUid);
+const { posts, loading, noMore, loadMore, refresh } = useProfilePostsFeedV2(resolvedUid);
+
+const canOpenSettings = isMe || isTargetGuestProfile;
 
 const resolvedBadges = userBadges
   .map((ub) => {
@@ -91,17 +188,18 @@ const resolvedBadges = userBadges
     (b): b is MasterBadge & { grantedAt: Date | null } => b !== null
   );
 
-  const refreshedOnce = useRef(false);
+  const lastUidRef = useRef<string | null>(null);
   const ready = !loading && posts.length > 0;
+  const isInitialLoading = loading && posts.length === 0;
 
-  useEffect(() => {
-    if (!targetUid) return;
+ useEffect(() => {
+  if (!targetUid) return;
 
-    if (!refreshedOnce.current) {
-      refreshedOnce.current = true;
-      if (posts.length === 0) refresh();
-    }
-  }, [targetUid, refresh, posts.length]);
+  if (lastUidRef.current !== targetUid) {
+    lastUidRef.current = targetUid;
+    refresh();
+  }
+}, [targetUid, refresh]);
 
   // --- infinite scroll ---
   const bottomSentinel = useRef<HTMLDivElement>(null);
@@ -135,26 +233,26 @@ const resolvedBadges = userBadges
       {/* === Header === */}
       <div className="relative isolate rounded-2xl border border-white/10 bg-white/4 backdrop-blur-xl p-4 shadow-md">
 
-        {isMe && (
-          <button
-            type="button"
-            className="absolute right-2 top-2 z-20 h-10 w-10 flex items-center justify-center rounded-full border border-white/15 bg-white/10"
-            onClick={() => setDrawerOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        )}
+        {canOpenSettings && (
+  <button
+    type="button"
+    className="absolute right-2 top-2 z-20 h-10 w-10 flex items-center justify-center rounded-full border border-white/15 bg-white/10"
+    onClick={() => setDrawerOpen(true)}
+  >
+    <Menu className="h-5 w-5" />
+  </button>
+)}
 
         <div className="flex items-start gap-6">
           <div className="h-16 w-16 rounded-full ring-4 ring-[#0f2d35] bg-[#0f2d35] overflow-hidden">
-            {profile.avatarUrl && (
-              <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="" />
+            {displayProfile.avatarUrl && (
+              <img src={displayProfile.avatarUrl} className="w-full h-full object-cover" alt="" />
             )}
           </div>
 
           <div className="min-w-0">
-            <h1 className="text-[18px] font-extrabold truncate">{profile.displayName}</h1>
-            <p className="text-sm text-white/70 truncate">{profile.handle}</p>
+            <h1 className="text-[18px] font-extrabold truncate">{displayProfile.displayName}</h1>
+            <p className="text-sm text-white/70 truncate">{displayProfile.handle}</p>
 
             <div className="mt-2 flex gap-2 text-[12px]">
               <button
@@ -164,7 +262,7 @@ const resolvedBadges = userBadges
                 }}
                 className="rounded-full border border-white/10 px-2 py-0.5"
               >
-                <b>{profile.counts?.followers ?? 0}</b> フォロワー
+                <b>{displayProfile.counts?.followers ?? 0}</b> フォロワー
               </button>
 
               <button
@@ -174,13 +272,13 @@ const resolvedBadges = userBadges
                 }}
                 className="rounded-full border border-white/10 px-2 py-0.5"
               >
-                <b>{profile.counts?.following ?? 0}</b> フォロー中
+                <b>{displayProfile.counts?.following ?? 0}</b> フォロー中
               </button>
             </div>
           </div>
         </div>
 
-        {profile.bio && <p className="mt-2 text-[14px]">{profile.bio}</p>}
+        {displayProfile.bio && <p className="mt-2 text-[14px]">{displayProfile.bio}</p>}
 
         {!isMe && targetUid && (
           <div className="mt-3 flex gap-3">
@@ -192,27 +290,27 @@ const resolvedBadges = userBadges
 <div className="mt-3 flex gap-2 flex-wrap">
 
   {/* ▼現在の連勝（3以上で表示） */}
-  {profile.currentStreak >= 3 && (
+  {displayProfile.currentStreak >= 3 && (
     <div
       className={`
         inline-flex items-center px-3 py-1 rounded-full border text-sm
-        ${profile.currentStreak >= 3
+        ${displayProfile.currentStreak >= 3
           ? "border-red-500 text-red-400"
           : "border-white/20 text-white/90"}
       `}
     >
       <Flame className="w-4 h-4 mr-1 text-yellow-400" />
-      <span className="font-bold">{profile.currentStreak}</span> 連勝中
+      <span className="font-bold">{displayProfile.currentStreak}</span> 連勝中
     </div>
   )}
 
   {/* ▼最高連勝（3以上で表示） */}
-  {profile.maxStreak >= 3 && (
+  {displayProfile.maxStreak >= 3 && (
     <div
       className="inline-flex items-center px-3 py-1 rounded-full border border-white/20 text-sm text-white/90"
     >
       <Trophy className="w-4 h-4 mr-1 text-amber-400" />
-      <span className="font-bold">最高連勝: {profile.maxStreak}</span>
+      <span className="font-bold">最高連勝: {displayProfile.maxStreak}</span>
     </div>
   )}
 
@@ -245,63 +343,59 @@ const resolvedBadges = userBadges
 )}
 
       {/* === Tabs === */}
-      <div className="mt-4 flex items-center justify-between">
-        <Tabs value={tab} onChange={setTab} showStats={isMe} />
-        <PeriodToggle value={range} onChange={setRange} />
-      </div>
+<div className="mt-4 flex items-center justify-between">
+  <Tabs
+    value={tab}
+    onChange={setTab}
+  />
+
+  {tab === "overview" && (
+    <PeriodToggle
+      value={range}
+      onChange={setRange}
+    />
+  )}
+</div>
 
       {/* === Main Content === */}
-      <div className="mt-6">
-        {tab === "overview" ? (
-          <>
-            <SummaryCardsV2
+<div className="mt-6">
+  {tab === "overview" ? (
+    <>
+      <SummaryCardsV2
   compact
-  period={range} 
+  period={range}
   data={{
     fullPosts: summary?.fullPosts ?? 0,
-posts: summary?.posts ?? 0,
-winRate: summary?.winRate ?? 0,
-avgPrecision: summary?.avgPrecision ?? 0,
-avgBrier: summary?.avgBrier ?? 0,
-avgUpset: summary?.avgUpset ?? 0,
-avgCalibration: summary?.avgCalibration ?? null,
+    posts: summary?.posts ?? 0,
+    winRate: summary?.winRate ?? 0,
+    avgPrecision: summary?.avgPrecision ?? 0,
+    avgBrier: summary?.avgBrier ?? 0,
+    upsetHitRate: summary?.upsetHitRate ?? 0, // ★ 正
+    avgCalibration: summary?.avgCalibration ?? null,
   }}
 />
 
-            <div className="mt-6 space-y-4">
-              {loading && <div className="text-sm text-white/70">読み込み中…</div>}
-
-              {!loading && posts.length === 0 && (
-                <div className="text-sm text-white/70">まだ投稿はありません。</div>
-              )}
-
-              {!loading &&
-                posts.map((p) => (
-                  <PredictionPostCardV2
-                    key={p.id}
-                    post={p}
-                    mode="list"
-                    showDelete={true}
-                  />
-                ))}
-
-              <div ref={bottomSentinel} className="h-12" />
-            </div>
-          </>
-        ) : (
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center text-white">
-  <p className="text-base font-semibold">Stats（準備中）</p>
-
-  <p className="mt-2 text-sm text-white/70">
-    この機能は将来的に Proプラン限定機能として提供予定です。
-  </p>
-
-  <p className="mt-2 text-sm text-white/70">
-    より詳しい分析指標や成績の可視化を準備中です。
-  </p>
-</div>
-        )}
+      <div className="mt-8 space-y-6">
+        {loading && <div className="opacity-70">読み込み中…</div>}
+        {!loading && posts.length === 0 && <div className="opacity-70">まだ投稿はありません。</div>}
+        {posts.map((p) => <PredictionPostCardV2 key={p.id} post={p} mode="list" showDelete />)}
+        {!noMore && <button onClick={loadMore} className="mt-4 w-full rounded-md border border-white/10 py-2 text-sm opacity-70 hover:bg-white/10">もっと見る</button>}
       </div>
+    </>
+  ) : isTargetGuestProfile ? (
+  <ProPreview />
+) : isMyProfile ? (
+  <ProAnalysis />
+) : isMyPro && isTargetPro ? (
+  <ProAnalysis />
+) : (
+  <div className="rounded-2xl border border-white/15 bg-white/5 p-6 text-center space-y-3">
+    <p className="text-sm text-white/70">
+      対象ユーザーはProプランに加入していません。
+    </p>
+  </div>
+)}
+</div>
 
       {/* dialogs */}
       {targetUid && (

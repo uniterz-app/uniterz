@@ -48,6 +48,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ========================= */
   const [league, setLeague] = useState<League>("nba");
 
+  const [leagueReady, setLeagueReady] = useState(false);
+
   /* =========================
      初期リーグ決定フラグ
   ========================= */
@@ -56,39 +58,47 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      ユーザーの投稿数から初期リーグ決定
   ========================= */
-  useEffect(() => {
-    const resolveInitialLeague = async () => {
-      if (didInitLeague.current) return;
+ useEffect(() => {
+  const resolveInitialLeague = async () => {
+    if (didInitLeague.current) return;
 
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
-      if (!snap.exists()) {
-        didInitLeague.current = true;
-        setLeague("nba");
-        return;
-      }
-
-      const data = snap.data();
-      const leaguePosts: Record<League, number> = {
-        nba: data?.leagues?.nba?.posts ?? 0,
-        pl: data?.leagues?.pl?.posts ?? 0,
-        bj: data?.leagues?.bj?.posts ?? 0,
-        j1: data?.leagues?.j1?.posts ?? 0,
-      };
-
-      const sorted = (Object.entries(leaguePosts) as [League, number][])
-        .sort((a, b) => b[1] - a[1]);
-
-      const [topLeague, topCount] = sorted[0];
-
+    const user = auth.currentUser;
+    if (!user) {
+      // 未ログイン時も league を確定させる
       didInitLeague.current = true;
-      setLeague(topCount > 0 ? topLeague : "nba");
+      setLeague("nba");
+      setLeagueReady(true);
+      return;
+    }
+
+    const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
+    if (!snap.exists()) {
+      didInitLeague.current = true;
+      setLeague("nba");
+      setLeagueReady(true);
+      return;
+    }
+
+    const data = snap.data();
+    const leaguePosts: Record<League, number> = {
+      nba: data?.leagues?.nba?.posts ?? 0,
+      pl: data?.leagues?.pl?.posts ?? 0,
+      bj: data?.leagues?.bj?.posts ?? 0,
+      j1: data?.leagues?.j1?.posts ?? 0,
     };
 
-    resolveInitialLeague();
-  }, []);
+    const sorted = (Object.entries(leaguePosts) as [League, number][])
+      .sort((a, b) => b[1] - a[1]);
+
+    const [topLeague, topCount] = sorted[0];
+
+    didInitLeague.current = true;
+    setLeague(topCount > 0 ? topLeague : "nba");
+    setLeagueReady(true);
+  };
+
+  resolveInitialLeague();
+}, []);
 
   /* =========================
      Game days
@@ -104,37 +114,49 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const selected = selectedByLeague[league] ?? null;
 
-  /* =========================
-     Today（key）
-  ========================= */
-  const todayKey = useMemo(() => {
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    return toDateKey(t);
-  }, []);
+/* =========================
+   Today（key）15:00ルール
+========================= */
+const todayKey = useMemo(() => {
+  // JST に固定
+  const now = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
+  );
+
+  const base = new Date(now);
+  base.setHours(0, 0, 0, 0);
+
+  // 15:00以降は翌日
+  if (now.getHours() >= 15) {
+    base.setDate(base.getDate() + 1);
+  }
+
+  return toDateKey(base);
+}, []);
 
   /* =========================
      初期位置決定（唯一のロジック）
   ========================= */
   useEffect(() => {
-    if (selectedByLeague[league]) return;
-    if (!gameDays.length) return;
+  if (!leagueReady) return;          // ★ 追加
+  if (selectedByLeague[league]) return;
+  if (!gameDays.length) return;
 
-    const sorted = [...gameDays].sort(
-      (a, b) => toDateKey(a).localeCompare(toDateKey(b))
-    );
+  const sorted = [...gameDays].sort(
+    (a, b) => toDateKey(a).localeCompare(toDateKey(b))
+  );
 
-    const initial =
-      sorted.find((d) => toDateKey(d) >= todayKey) ??
-      sorted[sorted.length - 1];
+  const initial =
+    sorted.find((d) => toDateKey(d) >= todayKey) ??
+    sorted[sorted.length - 1];
 
-    setSelectedByLeague((prev) => ({
-      ...prev,
-      [league]: initial,
-    }));
+  setSelectedByLeague((prev) => ({
+    ...prev,
+    [league]: initial,
+  }));
 
-    router.replace(`?date=${toDateKey(initial)}`, { scroll: false });
-  }, [league, gameDays, todayKey, selectedByLeague, router]);
+  router.replace(`?date=${toDateKey(initial)}`, { scroll: false });
+}, [league, leagueReady, gameDays, todayKey, selectedByLeague, router]);
 
   /* =========================
      selected + URL 同期

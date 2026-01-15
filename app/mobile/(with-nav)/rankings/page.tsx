@@ -305,12 +305,24 @@ function TabsRow(props: {
       </div>
     </div>
 
-    {/* ★ B1 × 週間 の説明文 */}
-    {isB1 && period === "week" && (
-      <div className="mt-2 text-[14px] text-white/40 text-center">
-        Bリーグは月間ランキングのみです
-      </div>
-    )}
+    {/* ★ ランキング条件の説明（minPosts対応） */}
+<div className="mt-2 text-[13px] text-white/40 text-center leading-relaxed">
+  {league === "nba" && period === "week" && (
+    <>NBA週間ランキングは <b>20投稿以上</b> が対象です</>
+  )}
+
+  {league === "nba" && period === "month" && (
+    <>NBA月間ランキングは <b>30投稿以上</b> が対象です</>
+  )}
+
+  {league === "b1" && period === "month" && (
+    <>Bリーグ月間ランキングは <b>25投稿以上</b> が対象です</>
+  )}
+
+  {league === "b1" && period === "week" && (
+    <>Bリーグは月間ランキングのみです</>
+  )}
+</div>
   </div>
 );
 }

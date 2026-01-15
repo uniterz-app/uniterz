@@ -32,28 +32,5 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     load();
   }, [fUser]);
 
-  /* ---- 遷移制御（最低限） ---- */
-  useEffect(() => {
-    if (status === "loading") return;
-
-    // 未ログイン → /login へ
-    if (status === "guest") {
-      if (!isAuthPage) router.replace("/mobile/login");
-      return;
-    }
-
-    // ログイン済み → handle 未取得なら待つ
-    if (status === "ready" && !handle) return;
-
-    // ログイン中に /login or /signup に来た時 → プロフィールへ
-    if (isAuthPage && handle) {
-      if (isDesktop) {
-        router.replace(`/web/u/${handle}`);
-      } else {
-        router.replace(`/mobile/u/${handle}`);
-      }
-    }
-  }, [status, handle, isAuthPage, isDesktop, router]);
-
   return <>{children}</>;
 }

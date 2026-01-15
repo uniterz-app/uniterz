@@ -20,9 +20,7 @@ export default function WebOrMobileSplash({ children }: { children: React.ReactN
   // Mobile
   return (
     <SplashWrapper>
-      <AuthGate>
-        <div id="app-root">{children}</div>
-      </AuthGate>
+      <div id="app-root">{children}</div>
     </SplashWrapper>
   );
 }

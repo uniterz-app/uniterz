@@ -25,6 +25,8 @@ import {
   limit,
   getDocs,
 } from "firebase/firestore";
+import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
+
 
 /* ▼ 自分の投稿があるか確認する Hook */
 function useMyPostId(gameId: string) {
@@ -166,13 +168,19 @@ export default function MatchCard({
   className,
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
+  const [showLoginRequired, setShowLoginRequired] = useState(false);
+
+
   // ▼ 自分の投稿があるかをチェック
 const myPostId = useMyPostId(id);
 const isPredicted = !!myPostId;
 
+
+
     // ▼ 追加：モバイル判定
-  const isMobile =
-    typeof window !== "undefined" && window.innerWidth < 768;
+ // ✅ 追加（既存の useSectionPrefix を使う）
+const prefix = useSectionPrefix();
+const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
   function getDisplayName(league: League, l1: string, l2: string): string {
@@ -211,7 +219,6 @@ const awayColor =
 
 
   // 現在のルートから /m or /web を決める & lg を引き継ぎ
-  const prefix = useSectionPrefix();
   const sp = useSearchParams();
   const lg = sp.get("lg") ?? league;
 
@@ -339,12 +346,19 @@ const awayColor =
         - 試合開始後: 投稿あれば投稿詳細 / なければ“予想を見る”へ
   */
   const handleMakePrediction = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    try {
-      e.preventDefault();
-      e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
 
-      const me = auth.currentUser;
-      const token = me ? await me.getIdToken() : null;
+  const me = auth.currentUser;
+
+  // ★ 追加：未ログインならモーダルを出して終了
+  if (!me) {
+    setShowLoginRequired(true);
+    return;
+  }
+
+  try {
+    const token = await me.getIdToken();
 
       const res = await fetch(
         `/api/posts_v2/byGameMine?gameId=${encodeURIComponent(id)}`,
@@ -654,7 +668,7 @@ const awayColor =
   onClick={handleMakePrediction}
   className={
     isPredicted
-      ? "rounded-lg bg-gray-600/40 text-white grid place-items-center font-bold h-8 text-sm md:h-12 md:text-base active:scale-90 transition-transform"
+      ? "rounded-lg bg-gray-600/40 text-black grid place-items-center font-bold h-8 text-sm md:h-12 md:text-base active:scale-90 transition-transform"
       : "rounded-lg bg-blue-600 hover:bg-blue-500 text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base active:scale-90 transition-transform"
   }
 >
@@ -662,6 +676,11 @@ const awayColor =
 </Link>
         </div>
       )}
+      <LoginRequiredModal
+  open={showLoginRequired}
+  onClose={() => setShowLoginRequired(false)}
+  variant={isMobile ? "mobile" : "web"}
+/>
     </div>
   );
 }

@@ -1,0 +1,22 @@
+export type AnalysisTypeId =
+  | "COMPLETE_PLAYER"
+  | "ELITE_ANALYST"
+  | "BALANCED_PRO"
+  | "CONSISTENT_VET"
+  | "CLOSER"
+  | "FAVORITE_PUNISHER"
+  | "BOX_SCORE_ARTIST"
+  | "ANALYTICS_FIRST"
+  | "EFFICIENCY_FREAK"
+  | "GIANT_KILLER"
+  | "CHAOS_CREATOR"
+  | "IRON_MAN"
+  | "GRIND_ANALYST"
+  | "HEAT_CHECK"
+  | "WILD_CARD";
+
+export type AnalysisTypeMeta = {
+  label: string;
+  nbaArchetype: string;
+  description: string;
+};

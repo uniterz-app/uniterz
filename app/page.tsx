@@ -1,35 +1,48 @@
-// app/page.tsx
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/firebase";
+"use client";
 
-// ※注意：app/page.tsx は「サーバーコンポーネント」
-//       → Firebase Auth は使えないので cookie で判定する
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/AuthProvider";
+import SplashWrapper from "@/app/SplashWrapper";
 
-export default async function Page() {
-  // ---- UA 読み取り（Next.js 15 は await 必須） ----
-  const h = await headers();
-  const ua = h.get("user-agent") || "";
-  const isMobile = /iPhone|Android/i.test(ua);
+export default function Page() {
+  const router = useRouter();
+  const { status, handle } = useAuth();
+  const [showSplash, setShowSplash] = useState(true);
 
-  // ---- Firebase Auth のログイン状態は cookie に保存されている ----
-  //      → "firebase:authUser" という cookie の存在で判定できる
-  const cookieHeader = h.get("cookie") || "";
-  const isLoggedIn = cookieHeader.includes("firebase:authUser");
+  useEffect(() => {
+    // スプラッシュを必ず一度見せる（例：1.2秒）
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 1200);
 
-  // ---- PC（web）はこれだけでOK ----
-  if (!isMobile) {
-    if (isLoggedIn) {
-      redirect("/web/mypage");
-    } else {
-      redirect("/web/login");
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (showSplash) return;
+
+    const isMobile = window.innerWidth < 768;
+
+    // ログイン済み → 自分のプロフィール
+    if (status === "ready" && handle) {
+      router.replace(
+        isMobile ? `/mobile/u/${handle}` : `/web/u/${handle}`
+      );
+      return;
     }
+
+    // 未ログイン → 試合一覧
+    router.replace(
+      isMobile ? "/mobile/games" : "/web/games"
+    );
+  }, [showSplash, status, handle, router]);
+
+  // スプラッシュ表示中
+  if (showSplash) {
+    return <SplashWrapper />;
   }
 
-  // ---- Mobile の場合 ----
-  if (isLoggedIn) {
-    redirect("/mobile/mypage"); // ← ログイン済みはマイページへ
-  } else {
-    redirect("/mobile/signup"); // ← 初回 or 未ログイン
-  }
+  // 遷移直前の空描画
+  return null;
 }

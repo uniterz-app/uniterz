@@ -5,11 +5,12 @@ import React from "react";
 import { auth } from "@/lib/firebase";
 import { getIsFollowing, toggleFollow } from "@/lib/follow";
 import { toast } from "sonner";
+import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal"; // ★追加
 
 type Props = {
   targetUid: string;
   size?: "sm" | "md";
-  variant?: "blue" | "lime";   // 色
+  variant?: "blue" | "lime";
   onChanged?: (following: boolean) => void;
 };
 
@@ -24,6 +25,7 @@ export default function FollowButton({
 
   const [loading, setLoading] = React.useState(false);
   const [following, setFollowing] = React.useState(false);
+  const [showLoginRequired, setShowLoginRequired] = React.useState(false); // ★追加
 
   React.useEffect(() => {
     let alive = true;
@@ -38,13 +40,11 @@ export default function FollowButton({
 
   if (isMe) return null;
 
-  // ▼ 高さ・角丸・フォントサイズ（両状態で完全一致）
   const clsBase =
     size === "sm"
       ? "h-9 px-3 rounded-lg text-xs font-bold active:scale-90 transition-transform"
       : "h-10 px-4 rounded-xl text-sm font-bold transition";
 
-  // ▼ 色テーマ（両状態とも border を持たせてサイズを揃える）
   const theme =
     variant === "blue"
       ? {
@@ -59,17 +59,23 @@ export default function FollowButton({
   const cls = following ? theme.on : theme.off;
 
   const onClick = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // 親カードのクリック遷移を無効化
-    if (!auth.currentUser) return toast.error("ログインが必要です");
+    e.stopPropagation();
+
+    // ★ 未ログイン時はモーダル
+    if (!auth.currentUser) {
+      setShowLoginRequired(true);
+      return;
+    }
+
     try {
       setLoading(true);
-      setFollowing((prev) => !prev); // 楽観更新
+      setFollowing((prev) => !prev);
       const res = await toggleFollow(targetUid);
       setFollowing(res.following);
       onChanged?.(res.following);
       toast.success(res.following ? "フォローしました" : "フォローを解除しました");
     } catch (e: any) {
-      setFollowing((prev) => !prev); // ロールバック
+      setFollowing((prev) => !prev);
       toast.error(e?.message ?? "操作に失敗しました");
     } finally {
       setLoading(false);
@@ -77,13 +83,22 @@ export default function FollowButton({
   };
 
   return (
-    <button
-      type="button"
-      disabled={loading}
-      onClick={onClick}
-      className={`${clsBase} ${cls}`}
-    >
-      {following ? "フォロー中" : "フォロー"}
-    </button>
+    <>
+      <button
+        type="button"
+        disabled={loading}
+        onClick={onClick}
+        className={`${clsBase} ${cls}`}
+      >
+        {following ? "フォロー中" : "フォロー"}
+      </button>
+
+      {/* ★ 追加 */}
+      <LoginRequiredModal
+        open={showLoginRequired}
+        onClose={() => setShowLoginRequired(false)}
+        variant="mobile"
+      />
+    </>
   );
 }

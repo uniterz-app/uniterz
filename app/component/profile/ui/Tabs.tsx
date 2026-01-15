@@ -2,54 +2,75 @@
 import React from "react";
 import { Lilita_One } from "next/font/google";
 
-// ※ すでに他で読み込んでるならこの行はあなたの環境に合わせてOK
 const lilita = Lilita_One({ weight: "400", subsets: ["latin"] });
 
-const sizeMap = {
-  sm: "text-xs px-2 py-1 rounded-md",
-  md: "text-sm px-4 py-2 rounded-lg",
-  lg: "text-base px-5 py-3 rounded-xl",
-} as const;
-
 type Tab = "overview" | "stats";
+
+const sizeMap = {
+  sm: "text-sm pb-2",
+  md: "text-base pb-3",
+  lg: "text-lg pb-4",
+} as const;
 
 type Props = {
   value: Tab;
   onChange: (v: Tab) => void;
-  size?: keyof typeof sizeMap;
-  sizeClass?: string;
 
-  /** ★追加：stats を表示するかどうか（デフォルト true） */
+  /** stats を表示するか（デフォルト true） */
   showStats?: boolean;
+
+  /** Web / Mobile 用サイズ切り替え */
+  size?: keyof typeof sizeMap;
 };
 
 export default function Tabs({
   value,
   onChange,
-  size = "md",
-  sizeClass,
   showStats = true,
+  size = "md",
 }: Props) {
-  /** ★ ここだけ変更： stats を隠す場合は overview のみ */
   const items: Tab[] = showStats ? ["overview", "stats"] : ["overview"];
 
+  const labelMap: Record<Tab, string> = {
+    overview: "Overview",
+    stats: "Pro Stats",
+  };
+
   return (
-    <div className={`${lilita.className} flex gap-2`}>
+    <div
+      className={[
+        lilita.className,
+        "flex gap-8 border-b border-white/10",
+      ].join(" ")}
+    >
       {items.map((t) => {
         const active = value === t;
+
         return (
           <button
             key={t}
             onClick={() => onChange(t)}
             className={[
-              sizeClass ?? sizeMap[size],
-              "border transition-colors",
+              "relative transition-colors",
+              sizeMap[size],
               active
-                ? "bg-white/10 border-[#6EA8FE] text-white"
-                : "bg-transparent border-white/10 text-white/70 hover:bg-white/5",
+                ? "text-white"
+                : "text-white/50 hover:text-white/80",
             ].join(" ")}
           >
-            {t}
+            {labelMap[t]}
+
+            {/* active underline */}
+            {active && (
+              <span
+                className="
+                  absolute left-0 -bottom-[1px]
+                  h-[2px] w-full
+                  bg-[#6EA8FE]
+                  rounded-full
+                "
+              />
+            )}
           </button>
         );
       })}

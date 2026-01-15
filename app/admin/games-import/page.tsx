@@ -183,7 +183,7 @@ function normalizeRow(r: RawGame): Preview {
 
     // colorHex / teamId は存在するときのみキーを持たせる
 const toSide = (x: RawSide) => {
-  // --- 文字列だけ渡された場合（例: "浦和レッズ"）---
+  // 文字列だけ渡された場合（例: "浦和レッズ"）
   if (typeof x === "string") {
     const mappedId = TEAM_IDS[x];
     if (!mappedId) {
@@ -191,13 +191,11 @@ const toSide = (x: RawSide) => {
     }
     return {
       name: x,
-      record: { w: 0, l: 0 },
-      number: 8,
       teamId: mappedId,
     };
   }
 
-  // --- オブジェクトとして渡された場合 ---
+  // オブジェクトとして渡された場合
   const name = x?.name ?? "";
   const mappedId = x?.teamId ?? TEAM_IDS[name];
 
@@ -207,8 +205,6 @@ const toSide = (x: RawSide) => {
 
   return omitUndefined({
     name,
-    record: x?.record ?? { w: 0, l: 0 },
-    number: x?.number ?? 8,
     teamId: mappedId,
     ...(x?.colorHex ? { colorHex: x.colorHex } : {}),
   });
