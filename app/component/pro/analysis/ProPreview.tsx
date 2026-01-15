@@ -7,11 +7,31 @@ import { useRouter } from "next/navigation";
 const MONTHS = ["2025-01", "2025-02"];
 
 const DAILY_MOCK = [
-  { date: "1/1", posts: 3, winRate: 0.55, accuracy: 0.62, scorePrecision: 0.58 },
-  { date: "1/2", posts: 5, winRate: 0.60, accuracy: 0.66, scorePrecision: 0.61 },
-  { date: "1/3", posts: 2, winRate: 0.50, accuracy: 0.58, scorePrecision: 0.55 },
-  { date: "1/4", posts: 6, winRate: 0.68, accuracy: 0.70, scorePrecision: 0.65 },
-  { date: "1/5", posts: 4, winRate: 0.63, accuracy: 0.69, scorePrecision: 0.64 },
+  { date: "1/1",  posts: 3, winRate: 0.55, accuracy: 0.62, scorePrecision: 0.58 },
+  { date: "1/2",  posts: 5, winRate: 0.60, accuracy: 0.66, scorePrecision: 0.61 },
+  { date: "1/3",  posts: 2, winRate: 0.50, accuracy: 0.58, scorePrecision: 0.55 },
+  { date: "1/4",  posts: 6, winRate: 0.68, accuracy: 0.70, scorePrecision: 0.65 },
+  { date: "1/5",  posts: 4, winRate: 0.63, accuracy: 0.69, scorePrecision: 0.64 },
+  { date: "1/6",  posts: 5, winRate: 0.61, accuracy: 0.67, scorePrecision: 0.62 },
+  { date: "1/7",  posts: 3, winRate: 0.57, accuracy: 0.63, scorePrecision: 0.59 },
+  { date: "1/8",  posts: 4, winRate: 0.59, accuracy: 0.65, scorePrecision: 0.60 },
+  { date: "1/9",  posts: 6, winRate: 0.66, accuracy: 0.71, scorePrecision: 0.66 },
+  { date: "1/10", posts: 2, winRate: 0.52, accuracy: 0.60, scorePrecision: 0.56 },
+  { date: "1/11", posts: 5, winRate: 0.62, accuracy: 0.68, scorePrecision: 0.63 },
+  { date: "1/12", posts: 4, winRate: 0.60, accuracy: 0.66, scorePrecision: 0.61 },
+  { date: "1/13", posts: 6, winRate: 0.69, accuracy: 0.72, scorePrecision: 0.67 },
+  { date: "1/14", posts: 3, winRate: 0.56, accuracy: 0.64, scorePrecision: 0.59 },
+  { date: "1/15", posts: 5, winRate: 0.63, accuracy: 0.69, scorePrecision: 0.64 },
+  { date: "1/16", posts: 4, winRate: 0.61, accuracy: 0.67, scorePrecision: 0.62 },
+  { date: "1/17", posts: 2, winRate: 0.49, accuracy: 0.57, scorePrecision: 0.54 },
+  { date: "1/18", posts: 6, winRate: 0.67, accuracy: 0.71, scorePrecision: 0.66 },
+  { date: "1/19", posts: 5, winRate: 0.64, accuracy: 0.70, scorePrecision: 0.65 },
+  { date: "1/20", posts: 3, winRate: 0.55, accuracy: 0.62, scorePrecision: 0.58 },
+  { date: "1/21", posts: 4, winRate: 0.58, accuracy: 0.64, scorePrecision: 0.60 },
+  { date: "1/22", posts: 6, winRate: 0.70, accuracy: 0.73, scorePrecision: 0.68 },
+  { date: "1/23", posts: 5, winRate: 0.65, accuracy: 0.71, scorePrecision: 0.66 },
+  { date: "1/24", posts: 2, winRate: 0.51, accuracy: 0.59, scorePrecision: 0.55 },
+  { date: "1/25", posts: 4, winRate: 0.60, accuracy: 0.66, scorePrecision: 0.61 },
 ];
 
 const MONTHLY_MOCK = [
