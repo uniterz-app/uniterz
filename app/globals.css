@@ -4,18 +4,10 @@
    任意：色のユーティリティ
 -------------------------------- */
 :root {
-  --color-app-bg: #0a3b47;
-  --color-card-bg: #12444D;
-
-  /* 左側（選択部分）の色 — JSで動的に変える */
-  --fill: #3b82f6;        /* default blue */
-
-  /* 右側（未選択部分）常に固定の濃いグレー */
-  --track-bg: #3a3a3c;
-
-  /* 進捗位置（%） */
-  --val: 50%;
+  --color-app-bg: #1e293b;   /* ← ここを変える */
+  --color-card-bg: #334155;
 }
+
 
 .bg-app  { background: var(--color-app-bg); }
 .bg-card { background: var(--color-card-bg); }
