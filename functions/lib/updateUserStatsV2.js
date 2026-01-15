@@ -40,22 +40,26 @@ function emptyBucket() {
         wins: 0,
         scoreErrorSum: 0,
         brierSum: 0,
-        upsetScoreSum: 0,
+        upsetHitCount: 0,
+        upsetOpportunityCount: 0,
         scorePrecisionSum: 0,
         calibrationErrorSum: 0,
         calibrationCount: 0,
         winRate: 0,
         avgScoreError: 0,
         avgBrier: 0,
-        avgUpset: 0,
+        upsetHitRate: 0,
         avgPrecision: 0,
         avgCalibration: 0,
+        upsetPickCount: 0,
     };
 }
 function recomputeCache(b) {
     const posts = b.posts;
     const wins = b.wins;
-    return Object.assign(Object.assign({}, b), { winRate: posts ? wins / posts : 0, avgScoreError: posts ? b.scoreErrorSum / posts : 0, avgBrier: posts ? b.brierSum / posts : 0, avgUpset: wins ? b.upsetScoreSum / wins : 0, avgPrecision: posts ? b.scorePrecisionSum / posts : 0, avgCalibration: b.calibrationCount > 0
+    return Object.assign(Object.assign({}, b), { winRate: posts ? wins / posts : 0, avgScoreError: posts ? b.scoreErrorSum / posts : 0, avgBrier: posts ? b.brierSum / posts : 0, avgPrecision: posts ? b.scorePrecisionSum / posts : 0, upsetHitRate: b.upsetOpportunityCount > 0
+            ? b.upsetHitCount / b.upsetOpportunityCount
+            : 0, avgCalibration: b.calibrationCount > 0
             ? b.calibrationErrorSum / b.calibrationCount
             : null });
 }
@@ -63,7 +67,7 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, brier, upsetScore, scorePrecision, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, brier, scorePrecision, hadUpsetGame, } = opts;
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
@@ -75,12 +79,17 @@ async function applyPostToUserStatsV2(opts) {
         if (marker.exists)
             return;
         // ---------- increment data ----------
+        // applyPostToUserStatsV2 内 inc
         const inc = {
             posts: firestore_1.FieldValue.increment(1),
             wins: firestore_1.FieldValue.increment(isWin ? 1 : 0),
             scoreErrorSum: firestore_1.FieldValue.increment(scoreError),
             brierSum: firestore_1.FieldValue.increment(brier),
-            upsetScoreSum: firestore_1.FieldValue.increment(isWin ? upsetScore : 0),
+            // upset
+            upsetOpportunityCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
+            upsetHitCount: firestore_1.FieldValue.increment(hadUpsetGame && isWin ? 1 : 0),
+            // ★ 追加（Upset を狙った回数）
+            upsetPickCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
             scorePrecisionSum: firestore_1.FieldValue.increment(scorePrecision),
             calibrationErrorSum: firestore_1.FieldValue.increment(opts.calibrationError),
             calibrationCount: firestore_1.FieldValue.increment(1),
@@ -127,10 +136,12 @@ async function getStatsForDateRangeV2(uid, start, end, league) {
         b.wins += src.wins || 0;
         b.scoreErrorSum += src.scoreErrorSum || 0;
         b.brierSum += src.brierSum || 0;
-        b.upsetScoreSum += src.upsetScoreSum || 0;
+        b.upsetHitCount += src.upsetHitCount || 0;
+        b.upsetOpportunityCount += src.upsetOpportunityCount || 0;
         b.scorePrecisionSum += src.scorePrecisionSum || 0;
         b.calibrationErrorSum += src.calibrationErrorSum || 0;
         b.calibrationCount += src.calibrationCount || 0;
+        b.upsetPickCount += src.upsetPickCount || 0;
     }
     return recomputeCache(b);
 }

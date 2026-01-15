@@ -52,15 +52,31 @@ function getPreviousMonthRange() {
         id: `${year}-${String(month + 1).padStart(2, "0")}`,
     };
 }
+/* ============================================================================
+ * Ranking Core
+ * ============================================================================
+ */
+// ★ 追加：リーグ × 期間ごとの最低投稿数
+const MIN_POSTS = {
+    week: {
+        nba: 20, // NBA 週間
+        bj: 5, // Bリーグ 週間
+    },
+    month: {
+        nba: 30, // NBA 月間
+        bj: 25, // Bリーグ 月間
+    },
+};
 function topN(rows, key, n = 10) {
     return [...rows]
         .sort((a, b) => { var _a, _b; return Number((_a = b[key]) !== null && _a !== void 0 ? _a : 0) - Number((_b = a[key]) !== null && _b !== void 0 ? _b : 0); })
         .slice(0, n);
 }
 async function buildRanking(kind, league) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
     const range = kind === "week" ? getPreviousWeekRange() : getPreviousMonthRange();
-    const minPosts = kind === "week" ? 5 : 10;
+    // ★ 修正：期間 × リーグで最低投稿数を決める
+    const minPosts = (_b = (_a = MIN_POSTS[kind]) === null || _a === void 0 ? void 0 : _a[league]) !== null && _b !== void 0 ? _b : (kind === "week" ? 5 : 20);
     const docId = `${kind}_${league}_${range.id}`;
     const ref = db().collection("leaderboards_calendar_v2").doc(docId);
     await ref.set({
@@ -84,7 +100,7 @@ async function buildRanking(kind, league) {
         const uid = doc.id.split("_")[0];
         if (!uid)
             continue;
-        const leagueStats = (_a = d.leagues) === null || _a === void 0 ? void 0 : _a[league];
+        const leagueStats = (_c = d.leagues) === null || _c === void 0 ? void 0 : _c[league];
         if (!leagueStats)
             continue;
         if (!map.has(uid)) {
@@ -98,12 +114,12 @@ async function buildRanking(kind, league) {
             });
         }
         const agg = map.get(uid);
-        agg.posts += (_b = leagueStats.posts) !== null && _b !== void 0 ? _b : 0;
-        agg.wins += (_c = leagueStats.wins) !== null && _c !== void 0 ? _c : 0;
-        agg.brierSum += (_d = leagueStats.brierSum) !== null && _d !== void 0 ? _d : 0;
-        agg.precisionSum += (_e = leagueStats.scorePrecisionSum) !== null && _e !== void 0 ? _e : 0;
-        agg.upsetSum += (_f = leagueStats.upsetScoreSum) !== null && _f !== void 0 ? _f : 0;
-        agg.calibrationErrorSum += (_g = leagueStats.calibrationErrorSum) !== null && _g !== void 0 ? _g : 0;
+        agg.posts += (_d = leagueStats.posts) !== null && _d !== void 0 ? _d : 0;
+        agg.wins += (_e = leagueStats.wins) !== null && _e !== void 0 ? _e : 0;
+        agg.brierSum += (_f = leagueStats.brierSum) !== null && _f !== void 0 ? _f : 0;
+        agg.precisionSum += (_g = leagueStats.scorePrecisionSum) !== null && _g !== void 0 ? _g : 0;
+        agg.upsetSum += (_h = leagueStats.upsetScoreSum) !== null && _h !== void 0 ? _h : 0;
+        agg.calibrationErrorSum += (_j = leagueStats.calibrationErrorSum) !== null && _j !== void 0 ? _j : 0;
     }
     /* ---- rows 作成 ---- */
     const rows = [];
@@ -121,9 +137,9 @@ async function buildRanking(kind, league) {
         const user = userSnap.exists ? userSnap.data() : {};
         rows.push({
             uid,
-            handle: (_h = user === null || user === void 0 ? void 0 : user.handle) !== null && _h !== void 0 ? _h : null,
-            displayName: (_j = user === null || user === void 0 ? void 0 : user.displayName) !== null && _j !== void 0 ? _j : "user",
-            photoURL: (_k = user === null || user === void 0 ? void 0 : user.photoURL) !== null && _k !== void 0 ? _k : null,
+            handle: (_k = user === null || user === void 0 ? void 0 : user.handle) !== null && _k !== void 0 ? _k : null,
+            displayName: (_l = user === null || user === void 0 ? void 0 : user.displayName) !== null && _l !== void 0 ? _l : "user",
+            photoURL: (_m = user === null || user === void 0 ? void 0 : user.photoURL) !== null && _m !== void 0 ? _m : null,
             league,
             posts: agg.posts,
             wins: agg.wins,

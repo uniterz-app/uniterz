@@ -7,24 +7,12 @@ const firestore_2 = require("firebase-admin/firestore");
 const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const calcScorePrecision_1 = require("./calcScorePrecision");
 const db = () => (0, firestore_2.getFirestore)();
-/* =====================================================
- * Upset Score Utility
- * ===================================================== */
-const MARKET_K = 1.4;
-const MIN_MARKET = 10;
-function rankBonus(rankDiff) {
-    const MAX = 30;
-    const x = Math.min(Math.max(rankDiff, 0), MAX) / MAX;
-    const curved = Math.pow(x, 1.3);
-    return Math.round(curved * 50) / 10;
-}
-function calcRawUpsetScore(sameSideRatio, rankDiff) {
-    const p = Math.max(0.01, Math.min(0.99, sameSideRatio));
-    return MARKET_K * Math.log2(1 / p) + rankBonus(rankDiff);
-}
-function normalizeUpset(raw) {
-    return Math.max(0, Math.min(10, (raw / 8) * 10));
-}
+/* =========================
+ * Upset 判定用定数
+ * ========================= */
+const MIN_MARKET = 10; // 最低投稿数
+const UPSET_MARKET_RATIO = 0.7; // 市場偏り 70%
+const UPSET_WIN_DIFF = 10; // 勝数差 10
 /* =====================================================
  * Helpers
  * ===================================================== */
@@ -65,7 +53,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     document: "games/{gameId}",
     region: "asia-northeast1",
 }, async (event) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
     const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
     const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
     if (!after)
@@ -78,10 +66,12 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         return;
     const game = normalizeGame(after, gameId);
     /* -----------------------------
-     * ランク取得（軽量版）
-     * ----------------------------- */
+  * チーム順位・勝数取得（Upset 判定用）
+  * ----------------------------- */
     let homeRank = null;
     let awayRank = null;
+    let homeWins = 0;
+    let awayWins = 0;
     if (game.homeTeamId && game.awayTeamId) {
         const [hSnap, aSnap] = await Promise.all([
             db().doc(`teams/${game.homeTeamId}`).get(),
@@ -89,6 +79,8 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         ]);
         homeRank = Number((_f = (_e = hSnap.data()) === null || _e === void 0 ? void 0 : _e.rank) !== null && _f !== void 0 ? _f : null);
         awayRank = Number((_h = (_g = aSnap.data()) === null || _g === void 0 ? void 0 : _g.rank) !== null && _h !== void 0 ? _h : null);
+        homeWins = Number((_k = (_j = hSnap.data()) === null || _j === void 0 ? void 0 : _j.wins) !== null && _k !== void 0 ? _k : 0);
+        awayWins = Number((_m = (_l = aSnap.data()) === null || _l === void 0 ? void 0 : _l.wins) !== null && _m !== void 0 ? _m : 0);
     }
     game.homeRank = homeRank;
     game.awayRank = awayRank;
@@ -173,6 +165,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         .where("schemaVersion", "==", 2)
         .get();
     const totalPosts = postsSnap.size;
+    let hadUpsetGame = false;
     let homeCnt = 0;
     let awayCnt = 0;
     let drawCnt = 0;
@@ -185,6 +178,35 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         else if (w === "draw")
             drawCnt++;
     });
+    /* -----------------------------
+     * Upset Game 判定
+     * ----------------------------- */
+    if (totalPosts >= MIN_MARKET) {
+        const majority = homeCnt >= awayCnt
+            ? { side: "home", ratio: homeCnt / totalPosts }
+            : { side: "away", ratio: awayCnt / totalPosts };
+        const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
+        const winDiff = winnerSide === "home"
+            ? awayWins - homeWins
+            : homeWins - awayWins;
+        if (majority.side !== winnerSide &&
+            majority.ratio >= UPSET_MARKET_RATIO &&
+            winDiff >= UPSET_WIN_DIFF) {
+            hadUpsetGame = true;
+            // ★ Pro 表示用 Upset メタ保存
+            await db().doc(`games/${gameId}`).set({
+                upsetMeta: {
+                    homeRank,
+                    awayRank,
+                    homeWins,
+                    awayWins,
+                    marketMajoritySide: majority.side,
+                    marketMajorityRatio: majority.ratio,
+                    winDiff,
+                },
+            }, { merge: true });
+        }
+    }
     const now = firestore_2.Timestamp.now();
     const batch = db().batch();
     const userUpdateTasks = [];
@@ -206,62 +228,24 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             predictedAway: p.prediction.score.away,
             actualHome: game.homeScore,
             actualAway: game.awayScore,
-            league: (_j = game.league) !== null && _j !== void 0 ? _j : "bj",
+            league: (_o = game.league) !== null && _o !== void 0 ? _o : "bj",
         });
-        /* -----------------------------
-         * upsetScore 計算
-         * ----------------------------- */
-        /* -----------------------------
-    * upsetScore 計算
-    * ----------------------------- */
-        let upset = 0;
-        // draw 的中は upset 対象外
-        if (totalPosts >= MIN_MARKET &&
-            isWin &&
-            p.prediction.winner !== "draw") {
-            const isSoccer = game.league === "j1" || game.league === "pl";
-            let ratio;
-            if (isSoccer) {
-                // サッカー：win vs not-win（draw + 反対側）
-                if (p.prediction.winner === "home") {
-                    ratio = homeCnt / (awayCnt + drawCnt);
-                }
-                else {
-                    ratio = awayCnt / (homeCnt + drawCnt);
-                }
-            }
-            else {
-                // バスケ等：従来どおり 2 択
-                const same = p.prediction.winner === "home" ? homeCnt : awayCnt;
-                ratio = same / totalPosts;
-            }
-            if (homeRank != null && awayRank != null) {
-                const rankDiff = Math.abs(homeRank - awayRank);
-                const higher = homeRank < awayRank ? "home" : "away";
-                const winnerSide = final.home > final.away ? "home" : "away";
-                if (winnerSide !== higher) {
-                    const raw = calcRawUpsetScore(ratio, rankDiff);
-                    upset = normalizeUpset(raw);
-                }
-            }
-            else {
-                const raw = calcRawUpsetScore(ratio, 0);
-                upset = normalizeUpset(raw);
-            }
-        }
         /* -----------------------------
          * 投稿更新バッチ
          * ----------------------------- */
+        const upsetHit = hadUpsetGame && isWin;
         batch.update(doc.ref, {
             result: final,
             stats: {
                 isWin,
                 scoreError,
                 brier,
-                upsetScore: upset,
                 scorePrecision: totalPt,
                 scorePrecisionDetail: { homePt, awayPt, diffPt },
                 marketCount: totalPosts,
+                // ★ Upset 用フラグ（追加）
+                hadUpsetGame,
+                upsetHit,
             },
             status: "final",
             settledAt: now,
@@ -274,15 +258,15 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             uid: p.authorUid,
             postId: doc.id,
             createdAt: p.createdAt,
-            startAt: (_l = (_k = after.startAtJst) !== null && _k !== void 0 ? _k : after.startAt) !== null && _l !== void 0 ? _l : p.createdAt,
+            startAt: (_q = (_p = after.startAtJst) !== null && _p !== void 0 ? _p : after.startAt) !== null && _q !== void 0 ? _q : p.createdAt,
             league: game.league,
             isWin,
             scoreError,
             brier,
-            upsetScore: upset,
             scorePrecision: totalPt,
-            confidence: conf / 100,
+            confidence: conf,
             calibrationError,
+            hadUpsetGame,
         }));
         /* -----------------------------
          * ALL TIME キャッシュ更新
@@ -292,7 +276,6 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             isWin,
             scoreError,
             brier,
-            upsetScore: upset,
             scorePrecision: totalPt,
             calibrationError,
         }));
@@ -322,14 +305,13 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
 /* =====================================================
  * ALL TIME CACHE（外側に置く）
  * ===================================================== */
-async function updateAllTimeCache({ uid, isWin, scoreError, brier, upsetScore, scorePrecision, calibrationError, }) {
+async function updateAllTimeCache({ uid, isWin, scoreError, brier, scorePrecision, calibrationError, }) {
     const ref = db().doc(`user_stats_v2_all_cache/${uid}`);
     await ref.set({
         posts: firestore_2.FieldValue.increment(1),
         wins: firestore_2.FieldValue.increment(isWin ? 1 : 0),
         scoreErrorSum: firestore_2.FieldValue.increment(scoreError),
         brierSum: firestore_2.FieldValue.increment(brier),
-        upsetScoreSum: firestore_2.FieldValue.increment(isWin ? upsetScore : 0),
         scorePrecisionSum: firestore_2.FieldValue.increment(scorePrecision),
         calibrationErrorSum: firestore_2.FieldValue.increment(calibrationError),
         calibrationCount: firestore_2.FieldValue.increment(1),

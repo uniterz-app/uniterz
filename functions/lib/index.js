@@ -33,18 +33,19 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.updateTeamRankingsDaily = exports.aggregateHitPostsTodayNBACron = exports.aggregateUsersTrendCron = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildLeaderboardAllTimeCron = exports.rebuildLeaderboardAllTimeV2 = exports.rebuildLeaderboardMonthV2 = exports.rebuildLeaderboardWeekV2 = exports.rebuildCalendarLeaderboardsHttpV2 = exports.rebuildUsersTrend = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.updateTeamRankingsDaily = exports.aggregateHitPostsTodayNBACron = exports.aggregateUsersTrendCron = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildLeaderboardAllTimeCron = exports.rebuildLeaderboardAllTimeV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.rebuildLeaderboardMonthV2 = exports.rebuildLeaderboardWeekV2 = exports.rebuildCalendarLeaderboardsHttpV2 = exports.expireProUsers = exports.rebuildUsersTrend = exports.onGameFinalV2 = void 0;
 // functions/src/index.ts
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-functions/v2/firestore");
-const admin = __importStar(require("firebase-admin"));
 const firestore_2 = require("firebase-admin/firestore");
+const firebase_1 = require("./firebase");
 const games_aggregate_1 = require("./trend/games.aggregate");
 const _core_1 = require("./analytics/_core");
 const users_aggregate_1 = require("./trend/users.aggregate");
 const hitPosts_aggregate_1 = require("./trend/hitPosts.aggregate");
+const functions = __importStar(require("firebase-functions"));
 // ===============================
 // V2 Core
 // ===============================
@@ -52,11 +53,18 @@ var onGameFinalV2_1 = require("./onGameFinalV2");
 Object.defineProperty(exports, "onGameFinalV2", { enumerable: true, get: function () { return onGameFinalV2_1.onGameFinalV2; } });
 var users_rebuild_1 = require("./trend/users.rebuild");
 Object.defineProperty(exports, "rebuildUsersTrend", { enumerable: true, get: function () { return users_rebuild_1.rebuildUsersTrend; } });
+// 🔥 Pro 期限切れユーザーを Free に戻す Cron
+var expireProUsers_1 = require("./triggers/expireProUsers");
+Object.defineProperty(exports, "expireProUsers", { enumerable: true, get: function () { return expireProUsers_1.expireProUsers; } });
 // 🔥 週間・月間ランキング（V2）
 var leaderboards_calendar_v2_1 = require("./triggers/leaderboards.calendar.v2");
 Object.defineProperty(exports, "rebuildCalendarLeaderboardsHttpV2", { enumerable: true, get: function () { return leaderboards_calendar_v2_1.rebuildCalendarLeaderboardsHttpV2; } });
 Object.defineProperty(exports, "rebuildLeaderboardWeekV2", { enumerable: true, get: function () { return leaderboards_calendar_v2_1.rebuildLeaderboardWeekV2; } });
 Object.defineProperty(exports, "rebuildLeaderboardMonthV2", { enumerable: true, get: function () { return leaderboards_calendar_v2_1.rebuildLeaderboardMonthV2; } });
+// 🔥 ユーザー月次スタッツ（Pro用）
+var rebuildUserMonthlyStatsV2_1 = require("./stats/rebuildUserMonthlyStatsV2");
+Object.defineProperty(exports, "rebuildUserMonthlyStatsV2", { enumerable: true, get: function () { return rebuildUserMonthlyStatsV2_1.rebuildUserMonthlyStatsV2; } });
+Object.defineProperty(exports, "rebuildUserMonthlyStatsMonthCronV2", { enumerable: true, get: function () { return rebuildUserMonthlyStatsV2_1.rebuildUserMonthlyStatsMonthCronV2; } });
 // 🔥 オールタイムランキング（V2）
 var leaderboards_alltime_v2_1 = require("./triggers/leaderboards.alltime.v2");
 Object.defineProperty(exports, "rebuildLeaderboardAllTimeV2", { enumerable: true, get: function () { return leaderboards_alltime_v2_1.rebuildLeaderboardAllTimeV2; } });
@@ -65,8 +73,7 @@ Object.defineProperty(exports, "rebuildLeaderboardAllTimeCron", { enumerable: tr
 // Global
 // ===============================
 (0, options_1.setGlobalOptions)({ region: "asia-northeast1", maxInstances: 10 });
-admin.initializeApp();
-const db = admin.firestore();
+const db = firebase_1.admin.firestore();
 /* ============================================================================
  * followers / following
  * ==========================================================================*/
@@ -181,5 +188,13 @@ exports.runDailyAnalyticsHttp = (0, https_1.onRequest)(async (_req, res) => {
     catch (err) {
         res.status(500).json({ ok: false, error: String(err) });
     }
+});
+exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
+    const db = firebase_1.admin.firestore();
+    await db.collection("users").doc(user.uid).set({
+        plan: "free",
+        proUntil: null,
+        createdAt: firestore_2.FieldValue.serverTimestamp(),
+    });
 });
 //# sourceMappingURL=index.js.map

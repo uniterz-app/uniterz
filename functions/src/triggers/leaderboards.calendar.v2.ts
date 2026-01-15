@@ -69,6 +69,22 @@ function getPreviousMonthRange() {
  * Ranking Core
  * ============================================================================
  */
+
+// ★ 追加：リーグ × 期間ごとの最低投稿数
+const MIN_POSTS: Record<
+  "week" | "month",
+  Record<string, number>
+> = {
+  week: {
+    nba: 20, // NBA 週間
+    bj: 5,   // Bリーグ 週間
+  },
+  month: {
+    nba: 30, // NBA 月間
+    bj: 25,  // Bリーグ 月間
+  },
+};
+
 type Agg = {
   posts: number;
   wins: number;
@@ -77,6 +93,7 @@ type Agg = {
   upsetSum: number;
   calibrationErrorSum: number;
 };
+
 
 function topN(rows: any[], key: string, n = 10) {
   return [...rows]
@@ -88,7 +105,11 @@ async function buildRanking(kind: "week" | "month", league: string) {
   const range =
     kind === "week" ? getPreviousWeekRange() : getPreviousMonthRange();
 
-  const minPosts = kind === "week" ? 5 : 10;
+  // ★ 修正：期間 × リーグで最低投稿数を決める
+  const minPosts =
+    MIN_POSTS[kind]?.[league] ??
+    (kind === "week" ? 5 : 20);
+
   const docId = `${kind}_${league}_${range.id}`;
   const ref = db().collection("leaderboards_calendar_v2").doc(docId);
 

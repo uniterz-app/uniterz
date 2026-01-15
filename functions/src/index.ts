@@ -7,14 +7,15 @@ import {
   onDocumentDeleted,
 } from "firebase-functions/v2/firestore";
 
-import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { admin } from "./firebase";
 
 import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { dailyAnalyticsCore } from "./analytics/_core";
 import { aggregateUsersTrend } from "./trend/users.aggregate";
 import { aggregateHitPostsTodayNBA } from "./trend/hitPosts.aggregate";
 import { rebuildUsersTrend } from "./trend/users.rebuild";
+import * as functions from "firebase-functions";
 
 
 // ===============================
@@ -24,12 +25,21 @@ export { onGameFinalV2 } from "./onGameFinalV2";
 
 export { rebuildUsersTrend } from "./trend/users.rebuild";
 
+// 🔥 Pro 期限切れユーザーを Free に戻す Cron
+export { expireProUsers } from "./triggers/expireProUsers";
+
 // 🔥 週間・月間ランキング（V2）
 export {
   rebuildCalendarLeaderboardsHttpV2,
   rebuildLeaderboardWeekV2,
   rebuildLeaderboardMonthV2,
 } from "./triggers/leaderboards.calendar.v2";
+
+// 🔥 ユーザー月次スタッツ（Pro用）
+export {
+  rebuildUserMonthlyStatsV2,
+  rebuildUserMonthlyStatsMonthCronV2,
+} from "./stats/rebuildUserMonthlyStatsV2";
 
 // 🔥 オールタイムランキング（V2）
 export {
@@ -41,7 +51,6 @@ export {
 // Global
 // ===============================
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
-admin.initializeApp();
 const db = admin.firestore();
 
 /* ============================================================================
@@ -204,6 +213,17 @@ export const runDailyAnalyticsHttp = onRequest(async (_req, res) => {
     res.status(500).json({ ok: false, error: String(err) });
   }
 });
+
+export const onUserCreate = functions.auth.user().onCreate(async (user) => {
+  const db = admin.firestore();
+
+  await db.collection("users").doc(user.uid).set({
+    plan: "free",
+    proUntil: null,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+});
+
 
 
 
