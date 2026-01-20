@@ -26,6 +26,9 @@ import {
   getDocs,
 } from "firebase/firestore";
 import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
+import EventPill from "@/app/component/common/EventPill";
+import { getGameEventTag } from "@/lib/events/eventRules";
+
 
 
 /* ▼ 自分の投稿があるか確認する Hook */
@@ -435,6 +438,18 @@ const awayColor =
       ].join(" ")}
       onClick={handleClickCard}
     >
+      {(() => {
+  const tag = getGameEventTag(roundLabel);
+  if (!tag) return null;
+
+  return (
+    <div className="absolute top-2 right-2 z-20">
+      <EventPill label={tag.label} color={tag.color} />
+    </div>
+  );
+})()}
+
+
       <div className={`${dense ? "px-3 pt-3 mb-1" : "px-4 pt-4 mb-1"}`}>
         {!!roundLabel && (
   <div className="mc-round text-center font-bold text-l md:text-2xl mb-1">

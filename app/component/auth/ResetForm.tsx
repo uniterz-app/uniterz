@@ -117,7 +117,7 @@ export default function ResetForm({ variant = "web" }: Props) {
         <p style={{ marginTop: 18, fontSize: 13, opacity: 0.85 }}>
           ログイン画面へ戻る:{" "}
           <a
-            href={variant === "mobile" ? "/mobile/(no-nav)/login" : "/web/login"}
+            href={variant === "mobile" ? "/mobile/login" : "/web/login"}
             style={{ color: "#86e5ff", textDecoration: "underline", fontWeight: 700 }}
           >
             ログイン

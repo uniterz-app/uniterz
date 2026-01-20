@@ -4,6 +4,8 @@ import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
 
+import EventGate from "@/app/component/common/EventGate";
+
 // ★ 追加：メンテナンス表示コンポーネント
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 
@@ -44,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ) : (
           <>
             <AppActivityTracker />
+            <EventGate />
             <WebOrMobileSplash>{children}</WebOrMobileSplash>
             <ToastHost />
           </>
