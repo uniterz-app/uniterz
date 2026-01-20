@@ -44,10 +44,11 @@ export default function EventModal({
         {/* Common Header Image */}
         <div className="relative">
           <img
-            src="/event/even-header.png"
-            alt=""
-            className="w-full h-[160px] object-cover"
-          />
+  src="/event/eventheader.png"
+  alt=""
+  className="w-full object-cover"
+  style={{ height: 160 }}
+/>
           <div
             className="absolute inset-0"
             style={{

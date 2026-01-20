@@ -85,11 +85,18 @@ let awayRank: number | null = null;
 let homeWins = 0;
 let awayWins = 0;
 
+let homeConference: "east" | "west" | undefined;
+let awayConference: "east" | "west" | undefined;
+
+
 if (game.homeTeamId && game.awayTeamId) {
   const [hSnap, aSnap] = await Promise.all([
     db().doc(`teams/${game.homeTeamId}`).get(),
     db().doc(`teams/${game.awayTeamId}`).get(),
   ]);
+
+  homeConference = hSnap.data()?.conference;
+awayConference = aSnap.data()?.conference;
 
   homeRank = Number(hSnap.data()?.rank ?? null);
   awayRank = Number(aSnap.data()?.rank ?? null);
@@ -159,32 +166,163 @@ if (becameFinal) {
 }
 
 /* -----------------------------
- * teams 勝敗更新（final 確定時のみ）
+ * teams stats 更新（NBA / final 確定時のみ）
  * ----------------------------- */
-if (becameFinal && game.homeTeamId && game.awayTeamId) {
+if (
+  becameFinal &&
+  game.league === "nba" &&
+  game.homeTeamId &&
+  game.awayTeamId
+) {
+  if (!homeConference || !awayConference) return;
   const isDraw = game.homeScore === game.awayScore;
   const homeWin = game.homeScore > game.awayScore;
   const awayWin = game.awayScore > game.homeScore;
 
-  const teamBatch = db().batch();
+  const diff = game.homeScore - game.awayScore;
+  const isClose = Math.abs(diff) <= 5;
 
-  // HOME TEAM
-  teamBatch.update(db().doc(`teams/${game.homeTeamId}`), {
-    wins: FieldValue.increment(homeWin ? 1 : 0),
-    losses: FieldValue.increment(homeWin || isDraw ? 0 : 1),
-    d: FieldValue.increment(isDraw ? 1 : 0),
+  const homeRef = db().doc(`teams/${game.homeTeamId}`);
+  const awayRef = db().doc(`teams/${game.awayTeamId}`);
+
+  const batch = db().batch();
+
+  // ===== HOME TEAM =====
+  batch.update(homeRef, {
+    gamesPlayed: FieldValue.increment(1),
+    pointsForTotal: FieldValue.increment(game.homeScore),
+    pointsAgainstTotal: FieldValue.increment(game.awayScore),
+
+    homeGames: FieldValue.increment(1),
+    homeWins: FieldValue.increment(homeWin ? 1 : 0),
+
+    vsEastGames: FieldValue.increment(awayConference === "east" ? 1 : 0),
+    vsEastWins: FieldValue.increment(
+      homeWin && awayConference === "east" ? 1 : 0
+    ),
+
+    vsWestGames: FieldValue.increment(awayConference === "west" ? 1 : 0),
+    vsWestWins: FieldValue.increment(
+      homeWin && awayConference === "west" ? 1 : 0
+    ),
+
+    closeGames: FieldValue.increment(isClose ? 1 : 0),
+    closeWins: FieldValue.increment(isClose && homeWin ? 1 : 0),
+
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  // AWAY TEAM
-  teamBatch.update(db().doc(`teams/${game.awayTeamId}`), {
-    wins: FieldValue.increment(awayWin ? 1 : 0),
-    losses: FieldValue.increment(awayWin || isDraw ? 0 : 1),
-    d: FieldValue.increment(isDraw ? 1 : 0),
+  // ===== AWAY TEAM =====
+  batch.update(awayRef, {
+    gamesPlayed: FieldValue.increment(1),
+    pointsForTotal: FieldValue.increment(game.awayScore),
+    pointsAgainstTotal: FieldValue.increment(game.homeScore),
+
+    awayGames: FieldValue.increment(1),
+    awayWins: FieldValue.increment(awayWin ? 1 : 0),
+
+    vsEastGames: FieldValue.increment(homeConference === "east" ? 1 : 0),
+    vsEastWins: FieldValue.increment(
+      awayWin && homeConference === "east" ? 1 : 0
+    ),
+
+    vsWestGames: FieldValue.increment(homeConference === "west" ? 1 : 0),
+    vsWestWins: FieldValue.increment(
+      awayWin && homeConference === "west" ? 1 : 0
+    ),
+
+    closeGames: FieldValue.increment(isClose ? 1 : 0),
+    closeWins: FieldValue.increment(isClose && awayWin ? 1 : 0),
+
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  await teamBatch.commit();
+  await batch.commit();
+}
+
+/* -----------------------------
+ * teams currentStreak / lastGames 更新
+ * ----------------------------- */
+if (
+  becameFinal &&
+  game.league === "nba" &&
+  game.homeTeamId &&
+  game.awayTeamId
+) {
+  const homeRef = db().doc(`teams/${game.homeTeamId}`);
+  const awayRef = db().doc(`teams/${game.awayTeamId}`);
+
+  const homeWin = game.homeScore! > game.awayScore!;
+  const awayWin = game.awayScore! > game.homeScore!;
+  const isDraw = game.homeScore === game.awayScore;
+
+  const now = Timestamp.now();
+
+  // ===== HOME TEAM =====
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(homeRef);
+    const current = snap.get("currentStreak") ?? 0;
+    const lastGames = (snap.get("lastGames") ?? []) as any[];
+
+    let nextStreak = 0;
+    if (homeWin) nextStreak = current > 0 ? current + 1 : 1;
+    else if (!isDraw) nextStreak = current < 0 ? current - 1 : -1;
+
+    const nextGames = [
+      ...lastGames,
+      {
+        at: now,
+        homeAway: "home",
+        isWin: homeWin,
+        teamScore: game.homeScore!,
+        oppScore: game.awayScore!,
+        oppTeamId: game.awayTeamId!,
+      },
+    ].slice(-10);
+
+    tx.set(
+      homeRef,
+      {
+        currentStreak: nextStreak,
+        lastGames: nextGames,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
+
+  // ===== AWAY TEAM =====
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(awayRef);
+    const current = snap.get("currentStreak") ?? 0;
+    const lastGames = (snap.get("lastGames") ?? []) as any[];
+
+    let nextStreak = 0;
+    if (awayWin) nextStreak = current > 0 ? current + 1 : 1;
+    else if (!isDraw) nextStreak = current < 0 ? current - 1 : -1;
+
+    const nextGames = [
+      ...lastGames,
+      {
+        at: now,
+        homeAway: "away",
+        isWin: awayWin,
+        teamScore: game.awayScore!,
+        oppScore: game.homeScore!,
+        oppTeamId: game.homeTeamId!,
+      },
+    ].slice(-10);
+
+    tx.set(
+      awayRef,
+      {
+        currentStreak: nextStreak,
+        lastGames: nextGames,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
 }
 
     /* -----------------------------

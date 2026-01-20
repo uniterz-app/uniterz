@@ -1,6 +1,6 @@
 // lib/events/nbaRivalWeek.ts
 export const NBA_RIVAL_WEEK_EVENT = {
-  id: "nba-rival-week-2026",
+  id: "nba-rival-week-",
   tag: "イベント",
   title: "NBA Rival Week イベント",
   description:
