@@ -1,4 +1,4 @@
 // lib/events/currentEvent.ts
-import { NBA_RIVAL_WEEK_EVENT } from "./nbaRivalWeek";
+import { MONTHLY_TOP3_BADGE_GRANTED_EVENT } from "./monthlyTop3Badge";
 
-export const CURRENT_EVENT = NBA_RIVAL_WEEK_EVENT;
+export const CURRENT_EVENT = MONTHLY_TOP3_BADGE_GRANTED_EVENT;

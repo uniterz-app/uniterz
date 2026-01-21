@@ -75,6 +75,7 @@ const isTargetGuestProfile = !targetUid;
 // ② state を追加（上の方）
 const [showLoginRequired, setShowLoginRequired] = useState(false);
 
+
 // 表示用プロフィール（※見る人がゲストかどうかは関係ない）
 const displayProfile = isTargetGuestProfile
   ? {

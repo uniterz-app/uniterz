@@ -89,3 +89,36 @@ body.splash-bg {
   background-position: center;
   background-repeat: no-repeat;
 }
+
+/* ============================================================
+   ★ バッジ光エフェクト（強化版）
+   ============================================================ */
+
+@keyframes badge-shine {
+  0% {
+    transform: translateX(-140%) skewX(-15deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.6;
+  }
+
+  25% {
+    opacity: 1;
+  }
+
+  50% {
+    transform: translateX(140%) skewX(-15deg);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateX(160%) skewX(-15deg);
+    opacity: 0;
+  }
+}
+
+.animate-badge-shine {
+  animation: badge-shine 1.4s cubic-bezier(0.22, 0.6, 0.36, 0.7) forwards;
+}

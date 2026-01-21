@@ -24,41 +24,9 @@ export default function BadgeDetailModal({
     >
       {/* === カラーブロブ（背面演出） === */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* 黄金ブロブ（右上） */}
-        <div
-          className="
-            absolute top-[-120px] right-[-60px]
-            w-[280px] h-[280px]
-            bg-[#FFD451]
-            opacity-[0.18]
-            rounded-full blur-[90px]
-            mix-blend-screen
-          "
-        />
-
-        {/* 赤ワインブロブ（左下） */}
-        <div
-          className="
-            absolute bottom-[-100px] left-[-80px]
-            w-[260px] h-[260px]
-            bg-[#D12A4C]
-            opacity-[0.16]
-            rounded-full blur-[100px]
-            mix-blend-screen
-          "
-        />
-
-        {/* 白系の補助ブロブ（中央やや上） */}
-        <div
-          className="
-            absolute top-[20%] left-[50%] -translate-x-1/2
-            w-[200px] h-[200px]
-            bg-white
-            opacity-[0.1]
-            rounded-full blur-[120px]
-            mix-blend-screen
-          "
-        />
+        <div className="absolute top-[-120px] right-[-60px] w-[280px] h-[280px] bg-[#FFD451] opacity-[0.18] rounded-full blur-[90px] mix-blend-screen" />
+        <div className="absolute bottom-[-100px] left-[-80px] w-[260px] h-[260px] bg-[#D12A4C] opacity-[0.16] rounded-full blur-[100px] mix-blend-screen" />
+        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[200px] h-[200px] bg-white opacity-[0.1] rounded-full blur-[120px] mix-blend-screen" />
       </div>
 
       {/* ====== PANEL ====== */}
@@ -71,22 +39,34 @@ export default function BadgeDetailModal({
         "
         onClick={(e) => e.stopPropagation()}
       >
-        {/* === バッジ画像 === */}
-        <div className="flex justify-center leading-none">
-          <img
-            src={badge.icon}
-            alt={badge.id}
-            className="w-36 h-36 object-contain mb-0 leading-none"
-          />
+        {/* === バッジ画像（光る演出） === */}
+        <div className="flex justify-center">
+          <div className="relative w-36 h-36 overflow-hidden rounded-2xl">
+            <img
+              src={badge.icon}
+              alt={badge.id}
+              className="w-full h-full object-contain relative z-10"
+            />
+
+            {/* 光エフェクト */}
+            <div
+              className="
+                pointer-events-none
+                absolute inset-0
+                -translate-x-full
+                animate-badge-shine
+                bg-gradient-to-r
+                from-transparent
+                via-white/45
+                to-transparent
+                skew-x-12
+              "
+            />
+          </div>
         </div>
 
         {/* === タイトル === */}
-        <h2
-          className="
-            text-[18px] font-bold text-center tracking-wide
-            mt-0 mb-0 leading-none
-          "
-        >
+        <h2 className="text-[18px] font-bold text-center tracking-wide mt-0 mb-0 leading-none">
           {badge.title ?? badge.id}
         </h2>
 
