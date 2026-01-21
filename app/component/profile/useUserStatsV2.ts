@@ -23,8 +23,16 @@ export type SummaryForCardsV2 = {
   winRate: number;
   avgPrecision: number;
   avgBrier: number;
-  upsetHitRate: number;   // ★ ここ
+  upsetHitRate: number;
   avgCalibration: number | null;
+};
+
+export type DailyTrendStat = {
+  date: string;
+  posts: number;
+  winRate: number;
+  accuracy: number;
+  scorePrecision: number;
 };
 
 /* ========= 初期値 ========= */
@@ -48,9 +56,9 @@ function compute(b: Bucket) {
     avgPrecision: b.posts ? b.scorePrecisionSum / b.posts : NaN,
     avgBrier: b.posts ? b.brierSum / b.posts : NaN,
     upsetHitRate:
-  b.upsetOpportunityCount > 0
-    ? b.upsetHitCount / b.upsetOpportunityCount
-    : 0,
+      b.upsetOpportunityCount > 0
+        ? b.upsetHitCount / b.upsetOpportunityCount
+        : 0,
     avgCalibration:
       b.calibrationCount > 0
         ? b.calibrationErrorSum / b.calibrationCount
@@ -70,6 +78,7 @@ export function useUserStatsV2(uid?: string | null) {
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [dailyTrend, setDailyTrend] = useState<DailyTrendStat[]>([]);
 
   // 同じ uid での再実行を防ぐ
   const prevUidRef = useRef<string | null>(null);
@@ -78,6 +87,7 @@ export function useUserStatsV2(uid?: string | null) {
     if (!uid) {
       setSummaries(null);
       setStats(null);
+      setDailyTrend([]);
       setLoading(false);
       prevUidRef.current = null;
       return;
@@ -86,7 +96,7 @@ export function useUserStatsV2(uid?: string | null) {
     if (prevUidRef.current === uid) return;
     prevUidRef.current = uid;
 
-    const safeUid: string = uid; // ★ 型確定
+    const safeUid: string = uid;
 
     let cancelled = false;
 
@@ -108,10 +118,41 @@ export function useUserStatsV2(uid?: string | null) {
       const allComputed = compute(all);
 
       /* ------------------------------
-         7d / 30d
+         日別トレンド（30日分・1回だけ）
       ------------------------------ */
       const today = new Date();
+      const dailyRows: DailyTrendStat[] = [];
 
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+
+        const key = `${safeUid}_${dateKey(d)}`;
+        const snap = await getDoc(doc(db, "user_stats_v2_daily", key));
+        if (!snap.exists()) continue;
+
+        const v = snap.data().all;
+        if (!v) continue;
+
+        const posts = v.posts ?? 0;
+
+        dailyRows.push({
+          date: dateKey(d),
+          posts,
+          winRate: posts ? (v.wins ?? 0) / posts : 0,
+          accuracy: posts ? 1 - (v.brierSum ?? 0) / posts : 0,
+          scorePrecision: posts
+            ? (v.scorePrecisionSum ?? 0) / posts
+            : 0,
+        });
+      }
+
+      dailyRows.reverse();
+      setDailyTrend(dailyRows);
+
+      /* ------------------------------
+         7d / 30d 集計（既存ロジックそのまま）
+      ------------------------------ */
       async function loadRange(days: number) {
         let b: Bucket = empty();
 
@@ -131,7 +172,7 @@ export function useUserStatsV2(uid?: string | null) {
           b.scoreErrorSum += v.scoreErrorSum ?? 0;
           b.brierSum += v.brierSum ?? 0;
           b.upsetHitCount += v.upsetHitCount ?? 0;
-b.upsetOpportunityCount += v.upsetOpportunityCount ?? 0;
+          b.upsetOpportunityCount += v.upsetOpportunityCount ?? 0;
           b.scorePrecisionSum += v.scorePrecisionSum ?? 0;
           b.calibrationErrorSum += v.calibrationErrorSum ?? 0;
           b.calibrationCount += v.calibrationCount ?? 0;
@@ -160,5 +201,5 @@ b.upsetOpportunityCount += v.upsetOpportunityCount ?? 0;
     };
   }, [uid]);
 
-  return { loading, summaries, stats };
+  return { loading, summaries, stats, dailyTrend };
 }

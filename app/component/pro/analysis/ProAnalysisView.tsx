@@ -3,7 +3,7 @@
 import RadarChart from "@/app/component/pro/analysis/RadarChart";
 import AnalysisTypeCard from "@/app/component/pro/analysis/AnalysisTypeCard";
 import PercentileList from "@/app/component/pro/analysis/PercentileList";
-import ProTrendCard from "@/app/component/pro/analysis/ProTrendCard";
+import MonthlyTrendChart from "@/app/component/pro/analysis/MonthlyTrendChart";
 import MonthlyComparisonCard from "@/app/component/pro/analysis/MonthlyComparisonCard";
 import TeamAffinityCard from "@/app/component/pro/analysis/TeamAffinityCard";
 import HomeAwayWinRateBar from "@/app/component/pro/analysis/HomeAwayWinRateBar";
@@ -23,14 +23,6 @@ function SampleNotice() {
 /* =========================
  * 追加：型定義（★ここだけ追加）
  * ========================= */
-
-type DailyTrendStat = {
-  date: string;
-  posts: number;
-  winRate: number;
-  accuracy: number;
-  scorePrecision: number;
-};
 
 type MonthlyTrendStat = {
   month: string;
@@ -83,7 +75,6 @@ type Props = {
     weak: any[];
   };
 
-  dailyTrend: DailyTrendStat[];      // ★ 修正
   monthlyTrend: MonthlyTrendStat[];  // ★ 修正
 };
 
@@ -100,7 +91,6 @@ export default function ProAnalysisView({
   comparisonTop10UserCount,
   homeAway,
   teamAffinity,
-  dailyTrend,
   monthlyTrend,
 }: Props) {
   const summaries = buildMonthlySummary({
@@ -221,10 +211,8 @@ export default function ProAnalysisView({
       </div>
 
       {/* 時系列トレンド */}
-      <ProTrendCard
-        daily={dailyTrend}
-        monthly={monthlyTrend}
-      />
+      {/* 月次トレンド（Pro専用） */}
+<MonthlyTrendChart data={monthlyTrend} />
     </div>
   );
 }

@@ -77,11 +77,13 @@ export function evaluateUpsetV2(avgUpset: number): HighlightV2 {
   const u = Number(avgUpset);
   if (!Number.isFinite(u) || u <= 0) return { level: "none" };
 
-  if (u >= 8.0)
-    return { level: "strong", icon: "fire", reason: "upset>=8" };
+  // 旧: 8.0 / 10 → 新: 80 / 100
+  if (u >= 80)
+    return { level: "strong", icon: "fire", reason: "upset>=80" };
 
-  if (u >= 5.0)
-    return { level: "yellow", reason: "upset>=5" };
+  // 旧: 5.0 / 10 → 新: 50 / 100
+  if (u >= 50)
+    return { level: "yellow", reason: "upset>=50" };
 
   return { level: "none" };
 }

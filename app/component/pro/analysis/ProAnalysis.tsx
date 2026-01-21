@@ -5,7 +5,6 @@ import ProAnalysisView from "@/app/component/pro/analysis/ProAnalysisView";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserMonthlyStatsV2 } from "@/lib/stats/useUserMonthlyStatsV2";
 import { useMonthlyGlobalStatsV2 } from "@/lib/stats/useMonthlyGlobalStatsV2";
-import { useUserDailyTrendV2 } from "@/lib/stats/useUserDailyTrendV2";  // 追加
 import { useUserMonthlyTrendV2 } from "@/lib/stats/useUserMonthlyTrendV2";  // 追加
 import { TEAM_NAME_BY_ID } from "@/lib/team-name-by-id";
 import { useUserPlan } from "@/hooks/useUserPlan";
@@ -42,10 +41,6 @@ export default function ProAnalysisPage() {
     loading: globalLoading,
   } = useMonthlyGlobalStatsV2(month);
 
-  // 追加部分
-  const { data: dailyTrend, loading: dailyLoading } =
-  useUserDailyTrendV2(uid);
-
   const { data: monthlyTrend, loading: monthlyLoading } = useUserMonthlyTrendV2(uid);
 
   if (
@@ -53,7 +48,6 @@ export default function ProAnalysisPage() {
   planLoading ||
   userLoading ||
   globalLoading ||
-  dailyLoading ||
   monthlyLoading
 ) {
   return <div className="p-4 text-white/60">loading...</div>;
@@ -71,10 +65,6 @@ if (!uid || plan === "free") {
   // Upset の母数が 5 以上あるか
 const upsetValid =
   (stats.raw.upsetOpportunityCount ?? 0) >= 5;
-
-  // ★ ここに入れる
-console.log("dailyTrend at ProAnalysisPage", dailyTrend);
-console.log("dailyLoading", dailyLoading, "uid", uid, "month", month);
 
   /* =========================
    * 月間パフォーマンス比較
@@ -136,7 +126,6 @@ console.log("dailyLoading", dailyLoading, "uid", uid, "month", month);
         strong: normalizeTeams(stats.teamStats.strong),
         weak: normalizeTeams(stats.teamStats.weak),
       }}
-      dailyTrend={dailyTrend}  // 追加
       monthlyTrend={monthlyTrend}  // 追加
     />
   );

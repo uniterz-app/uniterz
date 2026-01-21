@@ -41,6 +41,10 @@ import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
 
+import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
+import { useUserDailyTrendV2 } from "@/lib/stats/useUserDailyTrendV2";
+
+
 
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
@@ -169,6 +173,15 @@ const isMyProfile = isMe;
 
   // ★ V2 フィード取得
 const { posts, loading, noMore, loadMore, refresh } = useProfilePostsFeedV2(resolvedUid);
+
+const uidForDailyTrend = resolvedUid ?? undefined;
+
+const {
+  data: dailyTrend,
+  loading: dailyTrendLoading,
+} = useUserDailyTrendV2(uidForDailyTrend);
+
+
 
 const canOpenSettings = isMe || isTargetGuestProfile;
 
@@ -374,6 +387,12 @@ const resolvedBadges = userBadges
     avgCalibration: summary?.avgCalibration ?? null,
   }}
 />
+
+{!dailyTrendLoading && dailyTrend.length > 0 && (
+  <div className="mt-6">
+    <DailyTrendCard data={dailyTrend} />
+  </div>
+)}
 
       <div className="mt-8 space-y-6">
         {loading && <div className="opacity-70">読み込み中…</div>}

@@ -54,12 +54,9 @@ export default function DailyTrendCard({ data }: Props) {
 
   return (
     <div
-      ref={ref}
-      className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
-    >
-      <div className="mb-3 text-sm font-semibold text-white">
-        日別パフォーマンス推移
-      </div>
+  ref={ref}
+  className="rounded-2xl border border-white/15 bg-[#202a37] p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
+>
 
       <div className="mb-2 flex gap-2">
   {[7, 15, 25].map(d => (

@@ -31,6 +31,10 @@ import { useUserBadges } from "../badges/useUserBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 
+import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
+import { useUserDailyTrendV2 } from "@/lib/stats/useUserDailyTrendV2";
+
+
 // ★ 追加：Mobile と共通の feed hook
 import { useProfilePostsFeedV2 } from "./useProfilePostsFeedV2";
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
@@ -146,6 +150,15 @@ const profilePlan = (displayProfile as any).plan as string | undefined;
   } = useProfilePostsFeedV2(
     typeof targetUid === "string" ? targetUid : null
   );
+
+  const uidForDailyTrend =
+  typeof targetUid === "string" ? targetUid : undefined;
+
+const {
+  data: dailyTrend,
+  loading: dailyTrendLoading,
+} = useUserDailyTrendV2(uidForDailyTrend);
+
 
   // uid が変わったときだけ refresh
   const lastUidRef = useRef<string | null>(null);
@@ -310,6 +323,14 @@ const profilePlan = (displayProfile as any).plan as string | undefined;
     avgCalibration: summary?.avgCalibration ?? null,
   }}
 />
+
+{!dailyTrendLoading && dailyTrend.length > 0 && (
+  <div className="mt-6">
+    <DailyTrendCard data={dailyTrend} />
+  </div>
+)}
+
+
 
       <div className="mt-8 space-y-6">
         {loading && <div className="opacity-70">読み込み中…</div>}
