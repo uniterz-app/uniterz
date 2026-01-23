@@ -14,10 +14,11 @@ import type { RadarChartProps } from "./types";
 export default function RadarChart({ value }: RadarChartProps) {
   const data = [
     { key: "winRate", label: "勝率", value: value.winRate },
-    { key: "accuracy", label: "精度", value: value.accuracy },
-    { key: "precision", label: "スコア", value: value.precision },
+    { key: "precision", label: "スコア精度", value: value.precision },
     { key: "upset", label: "Upset", value: value.upset },
     { key: "volume", label: "投稿量", value: value.volume },
+    { key: "streak", label: "耐性", value: value.streak },
+    { key: "market", label: "市場志向", value: value.market },
   ];
 
   return (
@@ -31,9 +32,9 @@ export default function RadarChart({ value }: RadarChartProps) {
       </div>
 
       {/* チャート */}
-      <div className="h-[280px]">
+      <div className="h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ReRadarChart data={data} outerRadius="75%">
+          <ReRadarChart data={data} outerRadius="65%">
             {/* グリッド */}
             <PolarGrid stroke="rgba(251,146,60,0.18)" radialLines />
 
@@ -42,12 +43,9 @@ export default function RadarChart({ value }: RadarChartProps) {
               dataKey="label"
               tick={(props) => {
                 const payloadValue = props.payload?.value;
-                const item = data.find(
-                  (d) => d.label === payloadValue
-                );
+                const item = data.find((d) => d.label === payloadValue);
                 if (!item) return <g />;
 
-                // ★ string | number → number に確定させる
                 const x = Number(props.x);
                 const y = Number(props.y);
                 const cx = Number(props.cx);
@@ -56,7 +54,7 @@ export default function RadarChart({ value }: RadarChartProps) {
                 const dx = x - cx;
                 const dy = y - cy;
 
-                const OFFSET = 18;
+                const OFFSET = 16;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
                 const nx = (dx / dist) * OFFSET;
@@ -64,24 +62,20 @@ export default function RadarChart({ value }: RadarChartProps) {
 
                 return (
                   <g transform={`translate(${x + nx}, ${y + ny})`}>
-                    {/* 指標名 */}
                     <text
                       y={0}
                       textAnchor="middle"
                       fill="rgba(248,250,252,0.95)"
-                      fontSize={13}
+                      fontSize={12}
                       fontWeight={600}
-                      letterSpacing={0.3}
                     >
                       {item.label}
                     </text>
-
-                    {/* 数値 */}
                     <text
-                      y={15}
+                      y={14}
                       textAnchor="middle"
                       fill="#fb923c"
-                      fontSize={12}
+                      fontSize={11}
                       fontWeight={700}
                     >
                       {item.value.toFixed(1)}
@@ -103,7 +97,7 @@ export default function RadarChart({ value }: RadarChartProps) {
               axisLine={false}
             />
 
-            {/* ベース（薄） */}
+            {/* ベース */}
             <Radar
               dataKey="value"
               stroke="rgba(251,146,60,0.25)"
@@ -127,11 +121,33 @@ export default function RadarChart({ value }: RadarChartProps) {
         </ResponsiveContainer>
       </div>
 
+      {/* 補足説明 */}
+      <div className="mt-3 space-y-1 text-[11px] leading-relaxed text-white/65">
+        <p>
+          <span className="font-semibold text-white/80">市場志向：</span>
+          多数派（順当）を選ぶ傾向か、少数派（逆張り）を選ぶ傾向かを示します。
+        </p>
+        <p>
+          <span className="font-semibold text-white/80">耐性：</span>
+          連続した結果の中でも判断がブレにくいかを示します。連勝と連敗をもとに判断
+        </p>
+        <p>
+          <span className="font-semibold text-white/80">スコア精度：</span>
+          勝敗だけでなく、点差や展開まで含めた読みの正確さを示します。
+        </p>
+      </div>
+
       <p className="mt-2 text-[11px] leading-relaxed text-white/70">
         今月の分析指標を 0–10 スケールで可視化しています。
         <br />
         外側に広がるほど、その分野が強みです。
       </p>
+
+      {!value.upsetValid && (
+        <p className="mt-1 text-[11px] leading-relaxed text-white/50">
+          Upset は今月の発生試合数が少ないため評価対象外です（5試合未満）。
+        </p>
+      )}
     </div>
   );
 }

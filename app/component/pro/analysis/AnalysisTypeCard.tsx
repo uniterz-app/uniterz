@@ -2,6 +2,8 @@
 
 import { ANALYSIS_TYPE_META_JA } from "@/shared/analysis/analysisTypeMeta";
 import type { AnalysisTypeId } from "@/shared/analysis/types";
+import { ANALYSIS_TYPE_COLOR } from "@/shared/analysis/analysisTypeColor";
+
 
 type Props = {
   analysisTypeId: AnalysisTypeId;
@@ -19,14 +21,15 @@ export default function AnalysisTypeCard({ analysisTypeId }: Props) {
       {/* 上段：タイプ */}
       <div className="mb-2">
         <div className="text-xs text-white/60">あなたの分析タイプ</div>
-        <div className="text-lg font-semibold text-white">
-          {meta.label}
-        </div>
-      </div>
-
-      {/* NBAアーキタイプ */}
-      <div className="mb-3 text-sm font-medium text-orange-400">
-        NBA Archetype: {meta.nbaArchetype}
+        <div className="flex items-center gap-2">
+  <span
+    className="h-3 w-3 rounded-sm"
+    style={{ backgroundColor: ANALYSIS_TYPE_COLOR[analysisTypeId] }}
+  />
+  <div className="text-lg font-semibold text-orange-400">
+    {meta.label}
+  </div>
+</div>
       </div>
 
       {/* 説明文 */}

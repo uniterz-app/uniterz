@@ -111,14 +111,15 @@ onKeyDown={(e) => { if (e.key === "Enter") handleProClick(); }}
   month={month}
   months={MONTHS}
   onChangeMonth={setMonth}
-  radar={{
-    winRate: 7,
-    accuracy: 8,
-    precision: 6,
-    upset: 5,
-    volume: 9,
-    upsetValid: true, // ★ 追加（Preview なので true 固定でOK）
-  }}
+ radar={{
+  winRate: 7,
+  precision: 6,
+  upset: 5,
+  volume: 9,
+  streak: 6,   // 追加（仮）
+  market: 4,   // 追加（仮）
+  upsetValid: true,
+}}
         analysisTypeId="COMPLETE_PLAYER"
         percentiles={{
           winRate: 92,
@@ -136,7 +137,19 @@ onKeyDown={(e) => { if (e.key === "Enter") handleProClick(); }}
         ]}
         comparisonUserCount={COMPARISON_USER_COUNT}
         comparisonTop10UserCount={COMPARISON_TOP10_USER_COUNT}
-        homeAway={{ homeRate: 0.71, awayRate: 0.58 }}
+        homeAway={{
+  homeRate: 0.71,
+  awayRate: 0.58,
+  homeShare: 0.55, // 仮でOK（例）
+  awayShare: 0.45, // 仮でOK
+}}
+
+  marketBias={{              // ← これを追加
+    favorableWinRate: 0.68,  // 仮
+    contrarianWinRate: 0.57, // 仮
+    favorableShare: 0.62,    // 仮
+    contrarianShare: 0.38,   // 仮
+  }}
         teamAffinity={{
           strong: [
             { teamId: "lal", teamName: "Lakers", games: 8, winRate: 0.75 },

@@ -9,10 +9,11 @@ const thresholds_1 = require("./thresholds");
 function judgeLevels(radar10) {
     const levels = {
         winRate: (0, thresholds_1.toLevel)(radar10.winRate),
-        accuracy: (0, thresholds_1.toLevel)(radar10.accuracy),
         precision: (0, thresholds_1.toLevel)(radar10.precision),
-        upset: (0, thresholds_1.toLevel)(radar10.upset),
+        upset: (0, thresholds_1.toUpsetLevel)(radar10.upset / 10),
         volume: (0, thresholds_1.toLevel)(radar10.volume),
+        streak: (0, thresholds_1.toLevel)(radar10.streak),
+        market: (0, thresholds_1.toLevel)(radar10.market),
     };
     const counts = {
         S: 0,

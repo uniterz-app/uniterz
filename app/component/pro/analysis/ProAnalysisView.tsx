@@ -7,6 +7,9 @@ import MonthlyTrendChart from "@/app/component/pro/analysis/MonthlyTrendChart";
 import MonthlyComparisonCard from "@/app/component/pro/analysis/MonthlyComparisonCard";
 import TeamAffinityCard from "@/app/component/pro/analysis/TeamAffinityCard";
 import HomeAwayWinRateBar from "@/app/component/pro/analysis/HomeAwayWinRateBar";
+import type { AnalysisTypeId } from "@/shared/analysis/types";
+import MarketBiasBars from "@/app/component/pro/analysis/MarketBiasSemiDonut";
+
 import {
   buildMonthlySummary,
   buildMonthlyImprovement,
@@ -43,15 +46,17 @@ type Props = {
   months: string[];
   onChangeMonth: (m: string) => void;
 
-  radar: {
-    winRate: number;
-    accuracy: number;
-    precision: number;
-    upset: number;
-    volume: number;
-    upsetValid: boolean; // ★ 追加
-  };
-  analysisTypeId: any;
+radar: {
+  winRate: number;
+  precision: number;
+  upset: number;
+  volume: number;
+  streak: number;   // 追加
+  market: number;   // 追加
+  upsetValid: boolean;
+};
+
+  analysisTypeId: AnalysisTypeId;
 
   percentiles: {
     winRate: number;
@@ -66,9 +71,19 @@ type Props = {
   comparisonTop10UserCount?: number;
 
   homeAway: {
-    homeRate: number;
-    awayRate: number;
-  };
+  homeRate: number;
+  awayRate: number;
+  homeShare: number; // ★追加
+  awayShare: number; // ★追加
+};
+
+marketBias: {
+  favorableWinRate: number;
+  contrarianWinRate: number;
+  favorableShare: number;
+  contrarianShare: number;
+};
+
 
   teamAffinity: {
     strong: any[];
@@ -90,6 +105,7 @@ export default function ProAnalysisView({
   comparisonUserCount,
   comparisonTop10UserCount,
   homeAway,
+  marketBias,
   teamAffinity,
   monthlyTrend,
 }: Props) {
@@ -198,10 +214,17 @@ export default function ProAnalysisView({
 
 
         <HomeAwayWinRateBar
-          homeRate={homeAway.homeRate}
-          awayRate={homeAway.awayRate}
-        />
-
+  homeRate={homeAway.homeRate}
+  awayRate={homeAway.awayRate}
+  homeShare={homeAway.homeShare}
+  awayShare={homeAway.awayShare}
+/>
+<MarketBiasBars
+  favorableWinRate={marketBias.favorableWinRate}
+  contrarianWinRate={marketBias.contrarianWinRate}
+  favorableShare={marketBias.favorableShare}
+  contrarianShare={marketBias.contrarianShare}
+/>
         <TeamAffinityCard
           strong={teamAffinity.strong}
           weak={teamAffinity.weak}

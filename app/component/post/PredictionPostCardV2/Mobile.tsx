@@ -155,22 +155,24 @@ const doDelete = async (e: any) => {
   /* ------------------------------
    * Highlight frame
    * ------------------------------ */
-  let frame = "ring-1 ring-white/10 border-white/10";
-  if (post.stats?.isWin) frame = "ring-2 ring-yellow-400/70 border-yellow-400";
-  if (post.stats?.upsetScore && post.stats.upsetScore > 5)
-    frame = "ring-2 ring-red-400/70 border-red-400";
+ let frame = "ring-1 ring-white/10 border-white/10";
+
+if (post.stats?.hadUpsetGame && post.stats?.isWin) {
+  // アップセット試合を的中
+  frame = "ring-2 ring-red-700/80 border-red-700";
+} else if (post.stats?.isWin) {
+  // 通常勝利
+  frame = "ring-2 ring-yellow-400/70 border-yellow-400";
+}
 
   // ★ ここに badge ロジックを追加
 let badge: "hit" | "upset" | "miss" | null = null;
 
-if (post.stats?.isWin && post.stats?.upsetScore && post.stats.upsetScore > 5) {
-  // アップセット勝利
+if (post.stats?.hadUpsetGame && post.stats?.isWin) {
   badge = "upset";
 } else if (post.stats?.isWin) {
-  // 通常勝利
   badge = "hit";
 } else if (post.stats && post.stats.isWin === false) {
-  // 外れ
   badge = "miss";
 }
 

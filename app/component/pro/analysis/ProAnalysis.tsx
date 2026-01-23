@@ -118,10 +118,18 @@ const upsetValid =
       comparisonRows={comparisonRows}
       comparisonUserCount={global.users}
       comparisonTop10UserCount={global.top10EligibleUsers}
-      homeAway={{
-        homeRate: stats.homeAway.home.winRate,
-        awayRate: stats.homeAway.away.winRate,
-      }}
+homeAway={{
+  homeRate: stats.homeAway.home.winRate,
+  awayRate: stats.homeAway.away.winRate,
+  homeShare: stats.homeAway.home.share,
+  awayShare: stats.homeAway.away.share,
+}}
+  marketBias={{
+    favorableWinRate: stats.marketBias.favorable.winRate,
+    contrarianWinRate: stats.marketBias.contrarian.winRate,
+    favorableShare: stats.marketBias.favorable.share,
+    contrarianShare: stats.marketBias.contrarian.share,
+  }}
       teamAffinity={{
         strong: normalizeTeams(stats.teamStats.strong),
         weak: normalizeTeams(stats.teamStats.weak),

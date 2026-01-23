@@ -79,25 +79,27 @@ export type PredictionPostV2 = {
   /* ------------------------
      Stats (V2)
   ------------------------ */
-  stats?: {
-    isWin: boolean | null;
+stats?: {
+  isWin: boolean | null;
 
-    scoreError?: number | null;
-    brier?: number | null;
+  hadUpsetGame?: boolean; // ← 追加
 
-    rankingReady?: boolean;
-    rankingFactor?: 0 | 1;
+  scoreError?: number | null;
+  brier?: number | null;
 
-    marketCount?: number | null;
-    marketBias?: number | null;
+  rankingReady?: boolean;
+  rankingFactor?: 0 | 1;
 
-    upsetScore: number | null;
+  marketCount?: number | null;
+  marketBias?: number | null;
 
-    scorePrecision?: number | null;
-    scorePrecisionDetail?: {
-      homePt: number;
-      awayPt: number;
-      diffPt: number;
-    } | null;
+  upsetScore: number | null; // 使ってないなら後で削除可
+
+  scorePrecision?: number | null;
+  scorePrecisionDetail?: {
+    homePt: number;
+    awayPt: number;
+    diffPt: number;
   } | null;
+} | null;
 };

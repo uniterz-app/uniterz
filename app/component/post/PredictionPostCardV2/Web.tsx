@@ -147,19 +147,21 @@ const doDelete = async (e: any) => {
   /* ------------------------------
    * Highlight Frame
    * ------------------------------ */
-  let frame = "ring-1 ring-white/10 border-white/10";
-  if (post.stats?.isWin) frame = "ring-2 ring-yellow-400/70 border-yellow-400";
-  if (post.stats?.upsetScore && post.stats.upsetScore > 5)
-    frame = "ring-2 ring-red-400/70 border-red-400";
+let frame = "ring-1 ring-white/10 border-white/10";
 
-  // ★ badge ロジック
+if (post.stats?.hadUpsetGame && post.stats?.isWin) {
+  frame = "ring-2 ring-red-600/80 border-red-600";
+} else if (post.stats?.isWin) {
+  frame = "ring-2 ring-yellow-400/70 border-yellow-400";
+}
+
 let badge: "hit" | "upset" | "miss" | null = null;
 
-if (post.stats?.isWin && post.stats?.upsetScore && post.stats.upsetScore > 5) {
+if (post.stats?.hadUpsetGame && post.stats?.isWin) {
   badge = "upset";
 } else if (post.stats?.isWin) {
   badge = "hit";
-} else if (post.stats && post.stats.isWin === false) {
+} else if (post.stats?.isWin === false) {
   badge = "miss";
 }
 
