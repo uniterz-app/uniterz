@@ -3,10 +3,13 @@ import type { Metadata, Viewport } from "next";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
+<<<<<<< Updated upstream
 
 import EventGate from "@/app/component/common/EventGate";
 
 // ★ 追加：メンテナンス表示コンポーネント
+=======
+>>>>>>> Stashed changes
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 
 export const metadata: Metadata = {
@@ -24,8 +27,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // ★ 今だけ true にしてメンテナンスモードを強制
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const maintenance = false;
 
   return (
@@ -40,14 +46,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           padding: 0,
         }}
       >
-        {/* ★ maintenance が true の間はアプリを覆う */}
         {maintenance ? (
           <MaintenanceOverlay />
         ) : (
           <>
             <AppActivityTracker />
+<<<<<<< Updated upstream
             <EventGate />
             <WebOrMobileSplash>{children}</WebOrMobileSplash>
+=======
+
+            {/* ★ 3D空間の親（Serverでも問題なし） */}
+            <div
+              style={{
+                perspective: "1400px",
+                width: "100%",
+                minHeight: "100vh",
+              }}
+            >
+              <WebOrMobileSplash>
+                {children}
+              </WebOrMobileSplash>
+            </div>
+
+>>>>>>> Stashed changes
             <ToastHost />
           </>
         )}
@@ -55,4 +77,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

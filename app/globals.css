@@ -89,6 +89,7 @@ body.splash-bg {
   background-position: center;
   background-repeat: no-repeat;
 }
+<<<<<<< Updated upstream
 
 /* ============================================================
    ★ バッジ光エフェクト（強化版）
@@ -121,4 +122,236 @@ body.splash-bg {
 
 .animate-badge-shine {
   animation: badge-shine 1.4s cubic-bezier(0.22, 0.6, 0.36, 0.7) forwards;
+=======
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeSlide {
+  animation: fadeSlide 0.35s ease-out;
+}
+
+/* スクロールバー完全非表示 */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* フリップ用 */
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-x-180 {
+  transform: rotateX(180deg);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE */
+  scrollbar-width: none;    /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;            /* Chrome / Safari */
+}
+
+
+
+
+/* =========================
+   Cyber Card Scan Effect
+========================= */
+
+.cyber-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0,255,255,0.18),
+    transparent
+  );
+  transform: translateX(-120%);
+  animation: cyberScan 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes cyberScan {
+  0%   { transform: translateX(-120%); }
+  35%  { transform: translateX(120%); }
+  100% { transform: translateX(120%); }
+}
+
+/* =========================
+   Hero Glow (Top Rank)
+========================= */
+
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 18px rgba(34,211,238,0.25); }
+  50%     { box-shadow: 0 0 36px rgba(34,211,238,0.45); }
+}
+
+.hero-glow {
+  animation: pulseGlow 4.5s ease-in-out infinite;
+}
+
+/* =========================
+   Hologram Text
+========================= */
+
+@keyframes holoText {
+  0%,100% { text-shadow: 0 0 12px rgba(34,211,238,.4); }
+  50%     { text-shadow: 0 0 20px rgba(34,211,238,.8); }
+}
+
+.holo-text {
+  animation: holoText 3.2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+
+
+
+
+
+
+
+
+
+
+/* =========================
+   背景レイヤー（奥）
+========================= */
+.depth-bg {
+  background:
+    radial-gradient(1000px 600px at 20% 20%, rgba(0,180,180,0.12), transparent 60%),
+    radial-gradient(800px 500px at 80% 80%, rgba(0,120,255,0.10), transparent 65%),
+    linear-gradient(180deg, #061c22, #041419);
+  transform: translateZ(-400px) scale(1.4);
+}
+
+
+/* =========================
+   中距離レイヤー
+========================= */
+.depth-mid {
+  background:
+    radial-gradient(circle at 40% 60%, rgba(0,255,255,0.08), transparent 45%),
+    radial-gradient(circle at 60% 40%, rgba(0,120,255,0.06), transparent 45%);
+  filter: blur(24px);
+  transform: translateZ(-200px) scale(1.2);
+  animation: midFloat 18s ease-in-out infinite alternate;
+}
+
+@keyframes midFloat {
+  from { transform: translateZ(-200px) translateY(0); }
+  to   { transform: translateZ(-200px) translateY(-30px); }
+}
+
+.depth-fog {
+  background: linear-gradient(
+    to bottom,
+    rgba(4,20,25,0) 40%,
+    rgba(4,20,25,0.65) 85%,
+    rgba(4,20,25,0.95) 100%
+  );
+  pointer-events: none;
+}
+
+.depth-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0,0,0,0) 40%,
+    rgba(0,0,0,0.35) 100%
+  );
+  pointer-events: none;
+}
+
+.glow-runner::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  padding: 2px;
+
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,215,0,0) 20%,
+    rgba(255,215,0,0.9) 40%,
+    rgba(255,215,0,0) 60%,
+    transparent 100%
+  );
+
+  /* ★ これを両方書く */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  animation: glow-run 2.2s linear infinite;
+  pointer-events: none;
+}
+
+
+@keyframes pulseSoft {
+  0%,100% { opacity: .9 }
+  50% { opacity: 1 }
+}
+
+
+
+/* ===== rankings 専用 3D 背景 ===== */
+
+.rank-bg-far {
+  background:
+    radial-gradient(900px 500px at 20% 30%, rgba(0,200,200,.12), transparent 60%),
+    linear-gradient(180deg, #061c22, #041419);
+  transform: translateZ(-500px) scale(1.6);
+}
+
+.rank-bg-mid {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,255,255,.10), transparent 45%);
+  filter: blur(28px);
+  transform: translateZ(-260px) scale(1.3);
+  animation: rankMidFloat 18s ease-in-out infinite alternate;
+}
+
+.rank-bg-fog {
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 40%,
+    rgba(0,0,0,.85) 100%
+  );
+}
+
+@keyframes rankMidFloat {
+  from { transform: translateZ(-260px) translateY(0) scale(1.3); }
+  to   { transform: translateZ(-260px) translateY(-30px) scale(1.3); }
+>>>>>>> Stashed changes
 }

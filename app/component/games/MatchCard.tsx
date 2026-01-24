@@ -236,6 +236,7 @@ const awayColor =
 
   // ▼ 試合が開始済みかどうか（status優先＋開始時刻フォールバック）
   const isGameStarted = (() => {
+
     if (status === "live" || status === "final") return true;
     if (status === "scheduled" && startAtJst instanceof Date) {
       try {
@@ -245,18 +246,35 @@ const awayColor =
     return false;
   })();
 
-  let center: React.ReactNode = (
-    <div
-      className={`${scoreText} leading-none font-black tabular-nums`}
-      style={{
-        fontFamily:
-          'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-        fontWeight: 800,
-      }}
-    >
-      {fmtKickoff(startAtJst)}
-    </div>
-  );
+  // ▼ LIVE判定（scoreが無くてもLIVE）
+// ▼ 自動LIVE判定（開始時刻を過ぎたらLIVE）
+const isLive =
+  status === "live" ||
+  (status === "scheduled" &&
+    startAtJst instanceof Date &&
+    Date.now() >= startAtJst.getTime());
+
+  let center: React.ReactNode = isLive ? (
+  <span
+    className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
+    style={{ fontSize: dense ? 10 : 11 }}
+  >
+    LIVE
+  </span>
+) : (
+  <div
+    className={`${scoreText} leading-none font-black tabular-nums`}
+    style={{
+      fontFamily:
+        'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
+      fontWeight: 800,
+    }}
+  >
+    {fmtKickoff(startAtJst)}
+  </div>
+);
+
+
 
   if (status === "live" && score) {
     center = (
