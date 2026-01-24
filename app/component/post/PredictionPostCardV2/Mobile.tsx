@@ -158,9 +158,14 @@ const doDelete = async (e: any) => {
  let frame = "ring-1 ring-white/10 border-white/10";
 
 if (post.stats?.upsetHit) {
-  frame = "ring-2 ring-red-700/80 border-red-700";
-} else if (post.stats?.isWin) {
-  frame = "ring-2 ring-yellow-400/70 border-yellow-400";
+  frame =
+    "ring-4 ring-red-700/90 border-red-700 " +
+    "shadow-[0_0_28px_rgba(220,38,38,0.75)]";
+}
+else if (post.stats?.isWin) {
+  frame =
+    "ring-2 ring-yellow-400/70 border-yellow-400 " +
+    "shadow-[0_0_14px_rgba(250,204,21,0.45)]";
 }
 
   // ★ ここに badge ロジックを追加

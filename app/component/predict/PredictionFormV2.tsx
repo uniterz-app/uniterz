@@ -127,12 +127,6 @@ const handleSubmit = async () => {
         },
       },
       comment: comment || "",
-
-      // ★ 投稿直後の初期 stats
-      stats: {
-        isWin: null,
-        upsetScore: null,
-      },
     };
 
     const res = await fetch("/api/posts_v2", {

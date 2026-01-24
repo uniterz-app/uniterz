@@ -104,17 +104,15 @@ const winner =
   /* ----------------------------
      stats
   ---------------------------- */
-  const stats =
-    x?.stats
-      ? {
-          isWin:
-            typeof x.stats.isWin === "boolean" ? x.stats.isWin : null,
-          upsetScore:
-            typeof x.stats.upsetScore === "number"
-              ? x.stats.upsetScore
-              : null,
-        }
-      : null;
+const stats =
+  x?.stats
+    ? {
+        isWin:
+          typeof x.stats.isWin === "boolean" ? x.stats.isWin : null,
+        hadUpsetGame: x.stats.hadUpsetGame === true,
+        upsetHit: x.stats.upsetHit === true,
+      }
+    : null;
 
   /* ----------------------------
      author
