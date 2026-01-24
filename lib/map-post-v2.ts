@@ -110,10 +110,10 @@ if (!id) { id = "(invalid)"; }
       },
     },
 
-    stats: {
-      isWin: d?.stats?.isWin ?? null,
-      upsetScore: d?.stats?.upsetScore ?? null,
-    },
+ stats: {
+  isWin: d?.stats?.isWin ?? null,
+  upsetHit: d?.stats?.upsetHit ?? false,
+},
 
     note: d?.note ?? d?.comment ?? "",
 
