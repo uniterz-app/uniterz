@@ -93,7 +93,7 @@ stats?: {
   marketCount?: number | null;
   marketBias?: number | null;
 
-  upsetScore: number | null; // 使ってないなら後で削除可
+  upsetHit?: boolean;
 
   scorePrecision?: number | null;
   scorePrecisionDetail?: {

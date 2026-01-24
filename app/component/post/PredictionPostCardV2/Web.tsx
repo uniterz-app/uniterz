@@ -149,7 +149,7 @@ const doDelete = async (e: any) => {
    * ------------------------------ */
 let frame = "ring-1 ring-white/10 border-white/10";
 
-if (post.stats?.hadUpsetGame && post.stats?.isWin) {
+if (post.stats?.upsetHit) {
   frame = "ring-2 ring-red-600/80 border-red-600";
 } else if (post.stats?.isWin) {
   frame = "ring-2 ring-yellow-400/70 border-yellow-400";
@@ -157,7 +157,7 @@ if (post.stats?.hadUpsetGame && post.stats?.isWin) {
 
 let badge: "hit" | "upset" | "miss" | null = null;
 
-if (post.stats?.hadUpsetGame && post.stats?.isWin) {
+if (post.stats?.upsetHit) {
   badge = "upset";
 } else if (post.stats?.isWin) {
   badge = "hit";
