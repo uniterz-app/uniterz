@@ -1,11 +1,14 @@
 // app/mobile/(with-nav)/rankings/page.tsx
 "use client";
 
-import Image from "next/image";
+
 import { useEffect, useState } from "react";
 import { Alfa_Slab_One } from "next/font/google";
 import type React from "react";
 import Link from "next/link";
+import { animate } from "framer-motion";
+
+
 
 import type {
   Period,
@@ -20,30 +23,182 @@ const alfa = Alfa_Slab_One({
   subsets: ["latin"],
 });
 
+const DUMMY_ROWS: RankingRow[] = [
+  {
+    uid: "u1",
+    handle: "dummy_king",
+    displayName: "Dummy King",
+    photoURL: "/dummy/1.png",
+    winRate: 0.72,
+    avgPrecision: 7.8,
+    streak: 6,
+    posts: 42,
+  },
+  {
+    uid: "u2",
+    handle: "dummy_ace",
+    displayName: "Dummy Ace",
+    photoURL: "/dummy/2.png",
+    winRate: 0.67,
+    avgPrecision: 7.2,
+    streak: 4,
+    posts: 38,
+  },
+  {
+    uid: "u3",
+    handle: "dummy_star",
+    displayName: "Dummy Star",
+    photoURL: "/dummy/3.png",
+    winRate: 0.63,
+    avgPrecision: 6.9,
+    streak: 3,
+    posts: 30,
+  },
+  {
+    uid: "u4",
+    handle: "dummy_pro",
+    displayName: "Dummy Pro",
+    photoURL: "/dummy/4.png",
+    winRate: 0.61,
+    avgPrecision: 6.5,
+    streak: 2,
+    posts: 28,
+  },
+  {
+    uid: "u5",
+    handle: "dummy_rookie",
+    displayName: "Dummy Rookie",
+    photoURL: "/dummy/5.png",
+    winRate: 0.58,
+    avgPrecision: 6.1,
+    streak: 1,
+    posts: 22,
+  },
+  {
+    uid: "u6",
+    handle: "dummy_alpha",
+    displayName: "Dummy Alpha",
+    photoURL: "/dummy/1.png",
+    winRate: 0.56,
+    avgPrecision: 6.0,
+    streak: 1,
+    posts: 20,
+  },
+  {
+    uid: "u7",
+    handle: "dummy_beta",
+    displayName: "Dummy Beta",
+    photoURL: "/dummy/2.png",
+    winRate: 0.55,
+    avgPrecision: 5.9,
+    streak: 0,
+    posts: 19,
+  },
+  {
+    uid: "u8",
+    handle: "dummy_gamma",
+    displayName: "Dummy Gamma",
+    photoURL: "/dummy/3.png",
+    winRate: 0.54,
+    avgPrecision: 5.8,
+    streak: 0,
+    posts: 18,
+  },
+  {
+    uid: "u9",
+    handle: "dummy_delta",
+    displayName: "Dummy Delta",
+    photoURL: "/dummy/4.png",
+    winRate: 0.53,
+    avgPrecision: 5.7,
+    streak: 0,
+    posts: 17,
+  },
+  {
+    uid: "u10",
+    handle: "dummy_epsilon",
+    displayName: "Dummy Epsilon",
+    photoURL: "/dummy/5.png",
+    winRate: 0.52,
+    avgPrecision: 5.6,
+    streak: 0,
+    posts: 16,
+  },
+];
+
+
+const METRICS: { key: Metric; title: string }[] = [
+  { key: "winRate", title: "勝率" },
+  { key: "avgPrecision", title: "スコア精度" },
+ { key: "streak", title: "連勝" },
+];
+
+
+
+
 /* ====== UI 定数 ====== */
 const MAX_AVATAR = 70;
 const AVATAR_BOX_H = MAX_AVATAR + 26;
 const CARD_H = 190;
 
-const BADGE_GLOBAL_NUDGE = { x: 0, y: 0 };
 
-function badgeOffsetByRank(rank: number) {
-  const map: Record<number, { x: number; y: number }> = {
-    1: { x: 0, y: 5 },
-    2: { x: -2, y: 2 },
-    3: { x: 1, y: -5 },
-  };
-  return map[rank] ?? { x: 0, y: 0 };
+
+
+function AnimatedValue({
+  value,
+  isPercent,
+  animateTrigger = true, // ★ 追加
+}: {
+  value: number;
+  isPercent?: boolean;
+  animateTrigger?: boolean;
+}) {
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    if (!animateTrigger) return; // ★ 正面でない場合はアニメしない
+    const controls = animate(display, value, {
+      duration: 0.7, // ★ 速くする
+      onUpdate(latest) {
+        setDisplay(latest);
+      },
+      ease: [0.6, 0.01, 0.05, 0.95],
+    });
+    return () => controls.stop();
+  }, [value, animateTrigger]);
+
+  return <>{isPercent ? `${Math.round(display)}%` : display.toFixed(1)}</>;
 }
+
+
+
 
 /* ============ ページ本体 ============ */
 
 export default function MobileRankingsPage() {
+  const [metricIndex, setMetricIndex] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false); // ← ここに追加
+  const swipe = useSwipe((step) => {
+  setMetricIndex(i =>
+    (i + step + METRICS.length) % METRICS.length
+  );
+});
+
+const [entered, setEntered] = useState(false);
+
+useEffect(() => {
+  const id = requestAnimationFrame(() => setEntered(true));
+  return () => cancelAnimationFrame(id);
+}, []);
+
+
+
   const DISABLE_RANKINGS_UI = false;
     if (DISABLE_RANKINGS_UI) {
     return (
       <>
-        <header className="pt-2 sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md">
+        <header className="pt-2 sticky top-0 z-40 border-b border-white/10 bg-transparent backdrop-blur-md">
+
           <div className="relative h-11 flex items-center justify-center px-3">
             <img src="/logo/logo.png" alt="Uniterz Logo" className="w-10 h-auto" />
           </div>
@@ -62,9 +217,7 @@ export default function MobileRankingsPage() {
   const [rows, setRows] = useState<Record<Metric, RankingRow[]>>({
   winRate: [],
   avgPrecision: [],
-  accuracy: [],
-  consistency: [],   // ← 一致度（Metric にある前提）
-  avgUpset: [],
+  streak: [],
 });
 
   const [periodInfo, setPeriodInfo] = useState<{
@@ -102,12 +255,12 @@ async function fetchAll() {
     setError(null);
 
     const metrics: Metric[] = [
-      "winRate",
-      "avgPrecision",
-      "accuracy",
-      "consistency",
-      "avgUpset",
-    ];
+  "winRate",
+  "avgPrecision",
+  "streak",
+];
+
+
 
     const results = await Promise.all(
       metrics.map(async (metric) => {
@@ -140,110 +293,127 @@ async function fetchAll() {
 }
 
 useEffect(() => {
-  fetchAll();
+  document.body.classList.remove("splash-bg");
+  return () => {
+    document.body.classList.add("splash-bg");
+  };
+}, []);
+
+
+useEffect(() => {
+  setLoading(false);
+  setError(null);
+
+  setRows({
+    winRate: DUMMY_ROWS,
+    avgPrecision: DUMMY_ROWS,
+   streak: DUMMY_ROWS,
+  });
+
+ 
+  setPeriodInfo({
+    startAt: "2026-01-13",
+    endAt: "2026-01-19",
+  });
 }, [league, period]);
+
 
   const noData = Object.values(rows).every((arr) => arr.length === 0);
 
-  return (
-    <>
+return (
+ <div className="relative min-h-screen bg-transparent"
+
+  style={{
+    perspective: "1200px",
+    transformStyle: "preserve-3d",
+  }}
+>
+<div className="pointer-events-none absolute inset-0 z-25 depth-vignette" />
+
+{/* ===== Rankings 専用 3D 背景 ===== */}
+<div className="pointer-events-none absolute inset-0 z-0 rank-bg-far" />
+<div className="pointer-events-none absolute inset-0 z-10 rank-bg-mid" />
+<div className="pointer-events-none absolute inset-0 z-20 rank-bg-fog" />
+<div className="pointer-events-none absolute inset-0 z-30 depth-vignette" />
+
+
+
+    {/* ===== 中身 ===== */}
+    <div
+  className="relative z-30"
+  style={{
+    transformStyle: "preserve-3d",
+  }}
+>
+
       {/* ヘッダー */}
-      <header className="pt-2 sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md">
+      <header className="pt-2 sticky top-0 z-40 border-b border-white/10 bg-transparent backdrop-blur-md">
         <div className="relative h-11 flex items-center justify-center px-3">
           <img src="/logo/logo.png" alt="Uniterz Logo" className="w-10 h-auto" />
         </div>
       </header>
 
-      <div className="mx-auto w-full px-3 py-6 space-y-6 overflow-x-hidden">
-        <TabsRow league={league} setLeague={setLeague} period={period} setPeriod={setPeriod} />
-        {/* ===== 集計期間 / 準備中 表示 ===== */}
-{period === "month" && !periodInfo ? (
-  <div className="text-center text-xs text-white/50 -mt-2">
-    月間ランキングは準備中です
-  </div>
-) : (
-  period === "week" &&
-  periodInfo &&
-  periodKey === period && (   // ★ これを追加
-    <div className="text-center text-xs text-white/60 -mt-2">
-      集計期間：
-      {new Date(periodInfo.startAt).toLocaleDateString("ja-JP", {
-        month: "numeric",
-        day: "numeric",
-      })}
-      {" 〜 "}
-      {new Date(periodInfo.endAt).toLocaleDateString("ja-JP", {
-        month: "numeric",
-        day: "numeric",
-      })}
-    </div>
-  )
-)}
+      {/* タブ＋期間 */}
+      <div className="px-3 pt-3 pb-2 space-y-2">
+        <TabsRow
+          league={league}
+          setLeague={setLeague}
+          period={period}
+          setPeriod={setPeriod}
+        />
 
-        {error && <p className="text-xs text-center text-red-300">{error}</p>}
-
-        {period === "month" && !periodInfo ? null : loading ? (
-  <p className="text-sm text-center text-white/60">
-    ランキングデータを読み込んでいます…
-  </p>
-) : noData ? (
-  <p className="text-sm text-center text-white/60">
-    ランキングデータがありません。
-  </p>
-) : (
-  <>
-    <MobileSection title="勝率" metric="winRate" rows={rows.winRate} league={league} period={period} />
-    <MobileSection title="スコア精度" metric="avgPrecision" rows={rows.avgPrecision} league={league} period={period} />
-    <MobileSection title="予測精度" metric="accuracy" rows={rows.accuracy} league={league} period={period} />
-    <MobileSection title="一致度" metric="consistency" rows={rows.consistency} league={league} period={period} />
-    <MobileSection title="Upset指数" metric="avgUpset" rows={rows.avgUpset} league={league} period={period} />
-  </>
-)}
+        {period === "week" && periodInfo && (
+          <div className="text-center text-[11px] text-white/45">
+            集計期間：
+            {new Date(periodInfo.startAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}
+            {" 〜 "}
+            {new Date(periodInfo.endAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}
+          </div>
+        )}
       </div>
-    </>
-  );
-}
 
-/* ============ UI Section ============ */
-
-function MobileSection({
-  title,
-  metric,
-  rows,
-  league,
-  period,
-}: {
-  title: string;
-  metric: Metric;
-  rows: RankingRow[];
-  league: LeagueTab;
-  period: Period;
-}) {
-  const heroCount = 3;
-const listCount = period === "week" ? 10 : 20;
-
-  const headingStyle: React.CSSProperties = {
-    fontFamily:
-      "'Hiragino Kaku Gothic Std','Hiragino Kaku Gothic ProN','Hiragino Sans',system-ui,sans-serif",
-    fontWeight: 800,
-  };
-
-  return (
-    <section className="space-y-8">
-      <h2 className="text-white text-[25px] text-center" style={headingStyle}>
-        {title}
-      </h2>
-
-      <HeroRow rows={rows} heroCount={heroCount} metric={metric} league={league} period={period} />
-
-      <RankingList
-        rows={rows.slice(heroCount, listCount)}
-        metric={metric}
-        baseRank={heroCount}
+      {/* ★ 固定インジケータ（ここ） */}
+<div className="sticky top-[88px] z-40 flex justify-center py-2">
+  {METRICS.map((_, i) => {
+    const active = i === metricIndex;
+    return (
+      <span
+        key={i}
+        className={[
+          "w-2 h-2 rounded-full mx-1 transition-opacity",
+          active ? "bg-white opacity-100" : "bg-black/40 opacity-50",
+        ].join(" ")}
       />
-    </section>
-  );
+    );
+  })}
+</div>
+
+      {/* 状態表示 */}
+      {error && <p className="text-xs text-center text-red-300">{error}</p>}
+      {loading && <p className="text-sm text-center text-white/60">読み込み中…</p>}
+      {!loading && noData && <p className="text-sm text-center text-white/60">データなし</p>}
+
+{!loading && !noData && (
+  <>
+    <Rankings3D
+      swipe={swipe}
+      metrics={METRICS}
+      rows={rows}
+      metricIndex={metricIndex}
+      league={league}
+      period={period}
+      listCount={listCount}
+      entered={entered} 
+    />
+
+</>
+)}
+</div>
+</div>
+);
 }
+
+
 
 /* ============ Tabs ============ */
 
@@ -337,12 +507,16 @@ function HeroRow({
   metric,
   league,
   period, // ★ 追加: 週間/月間で表示が変わる可能性あり
+  isFront,
+  entered,
 }: {
   rows: RankingRow[];
   heroCount: number;
   metric: Metric;
   league: LeagueTab;
   period: Period;
+  isFront: boolean
+   entered: boolean;
 }) {
   const base = rows.slice(0, heroCount);
   const ORDER_3 = [1, 0, 2];
@@ -355,25 +529,22 @@ function HeroRow({
 
         const ring = ringByRank(rank);
         const avatarSize = avatarSizeByRankMobile(rank);
-        const { badgeWidth, badgeLift } = badgeDimsByRankMobile(rank, avatarSize);
+       
 
         /* --------------------------
          * ★ metricごとの値の表示切替 (V2仕様)
          * ------------------------ */
-        let value = "-";
+  let value = "-";
 
-        if (metric === "winRate") {
-          value = `${Math.round((r.winRate ?? 0) * 100)}%`;
-        } else if (metric === "accuracy") {
-          value = `${Math.round(r.accuracy ?? 0)}%`;
-        } else if (metric === "avgPrecision") {
-          value = `${(r.avgPrecision ?? 0).toFixed(1)} pt`;
-        } else if (metric === "avgUpset") {
-          value = `${(r.avgUpset ?? 0).toFixed(1)}`;
-        }
-        else if (metric === "consistency") {
-  value = `${Math.round(r.consistency ?? 0)}%`;
+if (metric === "winRate") {
+  value = `${Math.round((r.winRate ?? 0) * 100)}%`;
+} else if (metric === "avgPrecision") {
+  value = `${(r.avgPrecision ?? 0).toFixed(1)} pt`;
+} else if (metric === "streak") {
+  value = `${r.streak ?? 0}連勝`;
 }
+
+
 
 
         /* --------------------------
@@ -382,43 +553,60 @@ function HeroRow({
         const chip =
   metric === "winRate"
     ? "bg-emerald-600 text-white"
-    : metric === "accuracy"
-    ? "bg-blue-600 text-white"
+   
     : metric === "avgPrecision"
     ? "bg-purple-600 text-white"
-    : metric === "consistency"
-    ? "bg-cyan-600 text-white"
-    : metric === "avgUpset"
-    ? "bg-orange-600 text-white"
+    
+    
     : "bg-gray-500 text-white";
 
-        // バッジ位置調整
-        const nudge = badgeOffsetByRank(rank);
-        const topPx = -badgeLift + (BADGE_GLOBAL_NUDGE.y + nudge.y);
-        const leftPx = BADGE_GLOBAL_NUDGE.x + nudge.x;
+    const delayByRank =
+  rank === 1 ? 0.45 :   // ★ 1位を最後
+  rank === 2 ? 0.25 :
+  rank === 3 ? 0.15 :
+  0;
 
-        return (
-<Link
-  key={r.uid}
-  href={`/mobile/u/${r.handle}`}
-            className={[
-              "relative rounded-2xl border border-white/10 bg-white/[.04]",
-              "px-2.5 pt-8 pb-3 flex flex-col items-center gap-0 overflow-visible",
-              "shadow-[0_10px_28px_rgba(0,0,0,.22)]",
-            ].join(" ")}
-            style={{ height: CARD_H }}
-          >
+    
+return (
+  <Link
+    key={r.uid}
+    href={`/mobile/u/${r.handle}`}
+    className={[
+      "relative rounded-2xl",
+      "px-2.5 pt-8 pb-3 flex flex-col items-center gap-0 overflow-visible",
+      "shadow-[0_18px_40px_rgba(0,0,0,.45)]",
+    ].join(" ")}
+     style={{
+    height: CARD_H,
+    opacity: entered ? 1 : 0,
+    transform: entered
+      ? "translateY(0) scale(1)"
+      : "translateY(24px) scale(0.96)",
+    transition: `opacity 420ms ease-out ${delayByRank}s,
+                 transform 520ms cubic-bezier(.22,.61,.36,1) ${delayByRank}s`,
+    animation: rank === 1 ? "float 6s ease-in-out infinite" : undefined,
+  }}
+>
+    {/* ★ 1位専用 背景 */}
+   {rank === 1 && (
+  <div
+    className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 w-[120%] h-24"
+    style={{
+      background:
+        "radial-gradient(50% 60% at 50% 100%, rgba(255,215,120,.45), rgba(255,215,120,0))",
+      filter: "blur(20px)",
+      zIndex: -1,
+    }}
+  />
+)}
 
-            <div
-              className="absolute left-1/2 -translate-x-1/2 z-20"
-              style={{ top: topPx, width: badgeWidth, marginLeft: leftPx }}
-            >
-              <RankBadge
-  rank={rank}
-  size={badgeWidth}
-  priority={rank <= 2}
-/>
-            </div>
+
+    {/* ↓ 既存の中身そのまま */}
+
+
+          
+
+            
 
             <div
               className="w-full flex items-center justify-center"
@@ -453,21 +641,31 @@ function HeroRow({
 
             <div className="mt-2 flex flex-col items-center gap-0.5">
   {/* 指標（Impact / Alfa） */}
-  <span
-    className={[
-      alfa.className,
-      "text-[19px] font-normal tracking-wide",
-      rank === 1
-        ? "text-yellow-300"
-        : rank === 2
-        ? "text-slate-300"
-        : rank === 3
-        ? "text-amber-600"
-        : "text-white/90",
-    ].join(" ")}
-  >
-    {value}
-  </span>
+<span
+  className={[
+    alfa.className,
+    rank === 1 ? "text-[26px]" : "text-[22px]",
+    "font-bold",
+    rank === 1 ? "text-yellow-400" :
+    rank === 2 ? "text-slate-300" :
+    rank === 3 ? "text-orange-400" :
+    "text-white/90",
+  ].join(" ")}
+>
+  <AnimatedValue
+  value={
+    metric === "winRate"
+      ? (r.winRate ?? 0) * 100
+      : metric === "avgPrecision"
+      ? r.avgPrecision ?? 0
+      : r.streak ?? 0
+  }
+  isPercent={metric === "winRate"}
+  animateTrigger={isFront}
+/>
+
+
+</span>
 
   {/* 投稿数（補足情報） */}
   <span className="text-[11px] text-white/40 leading-none">
@@ -481,38 +679,7 @@ function HeroRow({
   );
 }
 
-/* =========================
- * RankBadge（修正版・確定）
- * =======================*/
-function RankBadge({
-  rank,
-  size,
-  priority = false,
-}: {
-  rank: number;
-  size: number;
-  priority?: boolean;
-}) {
-  if (rank < 1 || rank > 5) return null;
 
-  // ★ NBA / B1 共通ルール
-  const src =
-    rank <= 3
-      ? `/rankings/emblems/b1rank-${rank}.png`
-      : `/rankings/emblems/rank-${rank}.png`;
-
-  return (
-    <Image
-      src={src}
-      alt={`Rank ${rank}`}
-      width={size}
-      height={Math.round(size * 0.7)}
-      priority={priority}
-      loading={priority ? "eager" : "lazy"}
-      style={{ width: size, height: "auto", display: "block" }}
-    />
-  );
-}
 
 /* =========================
  * 見た目は変更なし
@@ -572,27 +739,25 @@ function RankingList({
   baseRank: number;
 }) {
   return (
-    <div className="w-full rounded-2xl border border-white/12 bg-white/[.04] overflow-hidden divide-y divide-white/10">
+    <div className="w-full bg-transparent divide-y divide-white/10">
+
       {rows.map((r, i) => {
         const rank = baseRank + i + 1;
 
         /* ----------------------------
          * ★ V2仕様の表示値
          * ----------------------------*/
-        let value = "-";
+let value = "-";
 
-        if (metric === "winRate") {
-          value = `${Math.round((r.winRate ?? 0) * 100)}%`;
-        } else if (metric === "accuracy") {
-          value = `${Math.round(r.accuracy ?? 0)}%`;
-        } else if (metric === "avgPrecision") {
-          value = `${(r.avgPrecision ?? 0).toFixed(1)} pt`;
-        } else if (metric === "avgUpset") {
-          value = `${(r.avgUpset ?? 0).toFixed(1)}`;
-        }
-        else if (metric === "consistency") {
-  value = `${Math.round(r.consistency ?? 0)}%`;
+if (metric === "winRate") {
+  value = `${Math.round((r.winRate ?? 0) * 100)}%`;
+} else if (metric === "avgPrecision") {
+  value = `${(r.avgPrecision ?? 0).toFixed(1)} pt`;
+} else if (metric === "streak") {
+  value = `${r.streak ?? 0}連勝`;
 }
+
+
 
 
         /* ----------------------------
@@ -601,14 +766,11 @@ function RankingList({
         const chip =
   metric === "winRate"
     ? "bg-emerald-600 text-white"
-    : metric === "accuracy"
-    ? "bg-blue-600 text-white"
+  
     : metric === "avgPrecision"
     ? "bg-purple-600 text-white"
-    : metric === "consistency"
-    ? "bg-cyan-600 text-white"
-    : metric === "avgUpset"
-    ? "bg-orange-600 text-white"
+    
+    
     : "bg-gray-500 text-white";
 
         return (
@@ -678,6 +840,163 @@ function Avatar({
           className="w-full h-full object-cover"
         />
       )}
+    </div>
+  );
+}
+
+
+
+// useSwipe の上 or 下（コンポーネント定義の外）
+function loopOffset(i: number, current: number, len: number) {
+  const diff = i - current;
+  if (diff >  len / 2) return diff - len;
+  if (diff < -len / 2) return diff + len;
+  return diff;
+}
+
+
+function useSwipe(
+  onStep: (step: number) => void,
+  onSwipeState?: (v: boolean) => void
+) {
+  let startX = 0;
+  let startY = 0;
+  let startT = 0;
+  let locked: "h" | "v" | null = null;
+
+  return {
+    onTouchStart: (e: React.TouchEvent) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startT = performance.now();
+      locked = null;
+      onSwipeState?.(true);
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      if (locked) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy) * 1.3) locked = "h";
+      else if (Math.abs(dy) > Math.abs(dx) * 1.3) locked = "v";
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      onSwipeState?.(false);
+      if (locked !== "h") return;
+
+      const dx = e.changedTouches[0].clientX - startX;
+      const dt = performance.now() - startT;
+      const velocity = Math.abs(dx) / Math.max(dt, 1);
+
+      let step = 0;
+      if (Math.abs(dx) > 60) step = dx < 0 ? 1 : -1;
+      if (velocity > 0.6) step *= 2;
+
+      if (step !== 0) onStep(step);
+    },
+  };
+}
+
+
+
+
+function Rankings3D({
+  swipe,
+  metrics,
+  rows,
+  metricIndex,
+  league,
+  period,
+  listCount,
+  entered,
+}: {
+  swipe: any;
+  metrics: { key: Metric; title: string }[];
+  rows: Record<Metric, RankingRow[]>;
+  metricIndex: number;
+  league: LeagueTab;
+  period: Period;
+  listCount: number;
+  entered: boolean;
+}) {
+  return (
+    <div className="mx-auto w-full px-3 py-6 overflow-x-hidden">
+      <div
+        {...swipe}
+        className="relative w-full h-[calc(100vh-140px)] overflow-hidden"
+        style={{
+  perspective: "1200px",
+  transformStyle: "preserve-3d",
+  touchAction: "pan-y", // ← これを追加
+}}
+
+      >
+       
+        {metrics.map((m, i) => {
+          const offset = loopOffset(i, metricIndex, metrics.length);
+
+          const rowsForMetric = rows[m.key] ?? [];
+const isFront = offset === 0;
+          return (
+            <div
+              key={m.key}
+              className="absolute inset-0 flex justify-center transition-transform duration-500 ease-out"
+       style={{
+  transform: isFront
+    ? entered
+      ? `
+        translateX(0%)
+        translateZ(0px)
+        rotateY(0deg)
+        scale(1.08)
+      `
+      : `
+        translateX(0%)
+        translateZ(-120px)
+        rotateY(0deg)
+        scale(0.96)
+      `
+    : `
+      translateX(${offset * 110}%)
+      translateZ(-260px)
+      rotateY(${offset * -18}deg)
+      scale(0.92)
+    `,
+  opacity: isFront ? 1 : Math.abs(offset) === 1 ? 0.35 : 0,
+  pointerEvents: isFront ? "auto" : "none",
+  transition:
+    isFront && !entered
+      ? "none"
+      : "transform 420ms cubic-bezier(.22,.61,.36,1), opacity 220ms ease-out",
+}}
+
+
+            >
+              <section className="w-full px-3 py-6 flex flex-col h-full">
+                <h2 className="text-white text-[26px] text-center font-extrabold">
+                  {m.title}
+                </h2>
+
+                <HeroRow
+                  rows={rowsForMetric}
+                  heroCount={3}
+                  metric={m.key}
+                  league={league}
+                  period={period}
+                  isFront={offset === 0}
+                  entered={entered}
+                />
+<div className="flex-1 overflow-y-auto mt-6">
+                <RankingList
+                  rows={rowsForMetric.slice(3, listCount)}
+                  metric={m.key}
+                  baseRank={3}
+                />
+                </div>
+              </section>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
