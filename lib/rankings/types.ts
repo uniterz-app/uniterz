@@ -15,13 +15,13 @@ export type Metric =
 // ========== ランキング行 ==========
 export type RankingRow = {
   uid: string;
-  handle: string;
+  handle: string; // ← これを追加
   displayName: string;
   photoURL?: string;
 
-  posts: number;      // 期間内投稿数
-  winRate?: number;   // 0..1
-  accuracy?: number;  // 0..100
+  posts: number;
+  winRate?: number;
+  accuracy?: number;
   avgPrecision?: number;
   avgUpset?: number;
   consistency?: number;
