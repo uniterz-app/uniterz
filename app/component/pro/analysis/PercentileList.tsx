@@ -1,5 +1,6 @@
 "use client";
 
+import { BarChart } from "lucide-react"; // chart-barアイコンとしてBarChartを使用
 import { useEffect, useRef, useState } from "react";
 
 type Percentiles = {
@@ -77,8 +78,12 @@ export default function PercentileList({
       ref={ref}
       className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
     >
-      <div className="mb-3 text-sm font-semibold text-white">
-        指標別パーセンタイル
+      <div className="mb-3 text-sm font-semibold text-white flex items-center gap-2">
+        {/* アイコン追加 */}
+        <div className="h-5 w-5 rounded-full bg-black flex items-center justify-center"> {/* 枠色を黒に変更 */}
+          <BarChart className="h-3 w-3 text-orange-400" /> {/* chart-bar アイコンをオレンジに変更 */}
+        </div>
+        <span>指標別パーセンタイル</span>
       </div>
 
       <div className="space-y-3">

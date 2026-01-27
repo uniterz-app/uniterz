@@ -1,5 +1,6 @@
 "use client";
 
+import { LineChart } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   ResponsiveContainer,
@@ -63,8 +64,12 @@ export default function MonthlyTrendChart({ data }: Props) {
       ref={ref}
       className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
     >
-      <div className="mb-3 text-sm font-semibold text-white">
-        月別パフォーマンス推移
+      <div className="mb-3 text-sm font-semibold text-white flex items-center gap-2">
+        {/* オレンジのアイコンと黒い丸 */}
+        <div className="h-5 w-5 rounded-full bg-black flex items-center justify-center"> {/* 枠色を黒に変更 */}
+          <LineChart className="h-4 w-4 text-orange-400" />
+        </div>
+        <span>月別パフォーマンス推移</span>
       </div>
 
       <div className="h-60 sm:h-64">
@@ -180,8 +185,8 @@ export default function MonthlyTrendChart({ data }: Props) {
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-white/60">
-  投稿数（棒）と勝率・予測精度（線）の推移を月別で表示しています。
-</p>
+        投稿数（棒）と勝率・予測精度（線）の推移を月別で表示しています。
+      </p>
     </div>
   );
 }

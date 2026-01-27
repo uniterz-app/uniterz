@@ -159,15 +159,18 @@ export default function ProSubscribePage() {
         {/* Feature List */}
         <ul className="space-y-3 text-sm">
           {[
-            "データを基にしたレーダーチャート",
-            "あなたの分析タイプ",
-            "指標別パーセンタイル",
-            "今月の傾向サマリー",
-            "月間パフォーマンス比較 vs平均 vs上位",
-            "Home/Away勝率",
-            "得意チーム・苦手チーム",
-            "日間・月間グラフ",
-          ].map((text) => (
+  "データを基にしたレーダーチャート",
+  "あなたの分析タイプ",
+  "指標別パーセンタイル",
+  "今月の傾向サマリー",
+  "月間パフォーマンス比較（平均・上位ユーザー）",
+  "Upsetデータ分析",
+  "連勝・連敗記録",
+  "Home / Away 分析",
+  "Market傾向分析",
+  "チーム別パフォーマンス",
+  "月別パフォーマンス",
+].map((text) => (
             <li key={text} className="flex items-start gap-2 text-white/85">
               <span
                 style={{

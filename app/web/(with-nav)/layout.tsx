@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css";
-import NavBar from '../../component/NavBar';
 import { Montserrat } from "next/font/google";
 import { Noto_Sans_JP, Lilita_One, Acme, Alfa_Slab_One } from "next/font/google";
 
@@ -37,10 +36,12 @@ export default function WithNavLayout({
   children: React.ReactNode;
 }) {
   return (
-  <div className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased bg-app min-h-screen`}
-  style={{ paddingBottom: 'calc(76px + env(safe-area-inset-bottom))' }}>
-    <NavBar />
-    {children}
-  </div>
-);
+    <div
+      className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased bg-app min-h-screen`}
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {/* ★ 下部 NavBar は削除 */}
+      {children}
+    </div>
+  );
 }

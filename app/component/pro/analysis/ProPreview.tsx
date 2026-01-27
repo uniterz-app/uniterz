@@ -4,49 +4,14 @@ import { useState, useEffect } from "react";
 import ProAnalysisView from "@/app/component/pro/analysis/ProAnalysisView";
 import { useRouter } from "next/navigation";
 
-const MONTHS = ["2024-11", "2024-12", "2025-01", "2025-02", "2025-03"];
+const MONTHS = ["2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
 
 const MONTHLY_MOCK = [
-  {
-    month: "2024-11",
-    posts: 72,
-    winRate: 0.58,
-    accuracy: 0.63,
-    avgPrecision: 0.59,
-    avgUpset: 0.42,
-  },
-  {
-    month: "2024-12",
-    posts: 118,
-    winRate: 0.67,
-    accuracy: 0.71,
-    avgPrecision: 0.66,
-    avgUpset: 0.55,
-  },
-  {
-    month: "2025-01",
-    posts: 94,
-    winRate: 0.61,
-    accuracy: 0.66,
-    avgPrecision: 0.62,
-    avgUpset: 0.48,
-  },
-  {
-    month: "2025-02",
-    posts: 136,
-    winRate: 0.72,
-    accuracy: 0.75,
-    avgPrecision: 0.69,
-    avgUpset: 0.60,
-  },
-  {
-    month: "2025-03",
-    posts: 81,
-    winRate: 0.56,
-    accuracy: 0.62,
-    avgPrecision: 0.58,
-    avgUpset: 0.40,
-  },
+  { month: "2024-11", posts: 72, winRate: 0.58, accuracy: 0.63, avgPrecision: 0.59, avgUpset: 0.42 },
+  { month: "2024-12", posts: 118, winRate: 0.67, accuracy: 0.71, avgPrecision: 0.66, avgUpset: 0.55 },
+  { month: "2025-01", posts: 94, winRate: 0.61, accuracy: 0.66, avgPrecision: 0.62, avgUpset: 0.48 },
+  { month: "2025-02", posts: 136, winRate: 0.72, accuracy: 0.75, avgPrecision: 0.69, avgUpset: 0.60 },
+  { month: "2025-03", posts: 81, winRate: 0.56, accuracy: 0.62, avgPrecision: 0.58, avgUpset: 0.40 },
 ];
 
 const COMPARISON_USER_COUNT = 300;
@@ -57,69 +22,62 @@ export default function ProPreviewPage() {
   const [month, setMonth] = useState("2025-01");
   const [pressed, setPressed] = useState(false);
 
-  // Web or Mobile 判定
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    setIsMobile(window.innerWidth <= 768); // 768px 以下で Mobile と判定
+    setIsMobile(window.innerWidth <= 768);
   }, []);
 
   const handleProClick = () => {
-    if (isMobile) {
-      router.push("/mobile/pro/subscribe");
-    } else {
-      router.push("/web/pro/subscribe");
-    }
+    router.push(isMobile ? "/mobile/pro/subscribe" : "/web/pro/subscribe");
   };
 
   return (
     <>
+      {/* CTA 上 */}
       <div className="flex flex-col items-center gap-2 mt-6">
-  <p className="text-xs text-white/60 text-center">
-    ※ この分析は有料プラン限定です
-  </p>
-
-  <div
-    role="button"
-    tabIndex={0}
-    onClick={handleProClick}
-onKeyDown={(e) => { if (e.key === "Enter") handleProClick(); }}
-    onPointerDown={() => setPressed(true)}
-    onPointerUp={() => setPressed(false)}
-    onPointerLeave={() => setPressed(false)}
-    style={{
-  background: "linear-gradient(90deg, #F59E0B, #F97316)", // ← オレンジに変更
-  color: "#fff",
-  padding: "13px 20px",
-  borderRadius: "14px",
-  fontWeight: 800,
-  fontSize: "14px",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.22)",
-  cursor: "pointer",
-  transition: "transform 0.12s ease",
-  transform: pressed ? "scale(0.94)" : "scale(1)",
-  width: "220px",
-  maxWidth: "90%",
-  textAlign: "center",
-}}
-  >
-    Proで全データを見る
-  </div>
-</div>
+        <p className="text-xs text-white/60 text-center">※ この分析は有料プラン限定です</p>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={handleProClick}
+          onKeyDown={(e) => e.key === "Enter" && handleProClick()}
+          onPointerDown={() => setPressed(true)}
+          onPointerUp={() => setPressed(false)}
+          onPointerLeave={() => setPressed(false)}
+          style={{
+            background: "linear-gradient(90deg, #F59E0B, #F97316)",
+            color: "#fff",
+            padding: "13px 20px",
+            borderRadius: "14px",
+            fontWeight: 800,
+            fontSize: "14px",
+            boxShadow: "0 8px 18px rgba(0,0,0,0.22)",
+            cursor: "pointer",
+            transition: "transform 0.12s ease",
+            transform: pressed ? "scale(0.94)" : "scale(1)",
+            width: "220px",
+            maxWidth: "90%",
+            textAlign: "center",
+          }}
+        >
+          Proで全データを見る
+        </div>
+      </div>
 
       <ProAnalysisView
-  isSample
-  month={month}
-  months={MONTHS}
-  onChangeMonth={setMonth}
- radar={{
-  winRate: 7,
-  precision: 6,
-  upset: 5,
-  volume: 9,
-  streak: 6,   // 追加（仮）
-  market: 4,   // 追加（仮）
-  upsetValid: true,
-}}
+        isSample
+        month={month}
+        months={MONTHS}
+        onChangeMonth={setMonth}
+        radar={{
+          winRate: 7,
+          precision: 6,
+          upset: 5,
+          volume: 9,
+          streak: 6,
+          market: 4,
+          upsetValid: true,
+        }}
         analysisTypeId="COMPLETE_PLAYER"
         percentiles={{
           winRate: 92,
@@ -128,6 +86,8 @@ onKeyDown={(e) => { if (e.key === "Enter") handleProClick(); }}
           upset: 61,
           volume: 97,
         }}
+        streak={{ maxWin: 10, maxLose: 6 }}
+        prevStreak={{ maxWin: 4, maxLose: 5 }}
         comparisonRows={[
           { label: "投稿数", format: (v: number) => `${v}`, self: 42, avg: 18, top10: 61 },
           { label: "勝率", format: (v: number) => `${Math.round(v * 100)}%`, self: 0.66, avg: 0.54, top10: 0.72 },
@@ -137,19 +97,30 @@ onKeyDown={(e) => { if (e.key === "Enter") handleProClick(); }}
         ]}
         comparisonUserCount={COMPARISON_USER_COUNT}
         comparisonTop10UserCount={COMPARISON_TOP10_USER_COUNT}
-        homeAway={{
-  homeRate: 0.71,
-  awayRate: 0.58,
-  homeShare: 0.55, // 仮でOK（例）
-  awayShare: 0.45, // 仮でOK
-}}
+        homeAway={{ homeRate: 0.71, awayRate: 0.58, homeShare: 0.55, awayShare: 0.45 }}
+        marketBias={{ favorableWinRate: 0.68, contrarianWinRate: 0.57, favorableShare: 0.62, contrarianShare: 0.38 }}
 
-  marketBias={{              // ← これを追加
-    favorableWinRate: 0.68,  // 仮
-    contrarianWinRate: 0.57, // 仮
-    favorableShare: 0.62,    // 仮
-    contrarianShare: 0.38,   // 仮
-  }}
+        /* ===== 追加① Upset ===== */
+        upset={{
+          nba: { totalGames: 143, upsetGames: 24 },
+          user: {
+            analyzedGames: 42,
+            upsetGames: 11,
+            upsetHitRate: 0.52,
+            shareOfAllUpsets: 0.08,
+          },
+        }}
+
+        /* ===== 追加② Style Map ===== */
+        styleMapPoints={[
+          {
+            homeAwayBias: 0.35,
+            marketBias: -0.2,
+            winRate: 0.66,
+            key: month,
+          },
+        ]}
+
         teamAffinity={{
           strong: [
             { teamId: "lal", teamName: "Lakers", games: 8, winRate: 0.75 },
@@ -165,38 +136,36 @@ onKeyDown={(e) => { if (e.key === "Enter") handleProClick(); }}
         monthlyTrend={MONTHLY_MOCK}
       />
 
+      {/* CTA 下 */}
       <div className="flex flex-col items-center gap-2 mt-6">
-  <p className="text-xs text-white/60 text-center">
-    ※ この分析は有料プラン限定です
-  </p>
-
-  <div
-    role="button"
-    tabIndex={0}
-    onClick={handleProClick}
-onKeyDown={(e) => { if (e.key === "Enter") handleProClick(); }}
-    onPointerDown={() => setPressed(true)}
-    onPointerUp={() => setPressed(false)}
-    onPointerLeave={() => setPressed(false)}
-    style={{
-  background: "linear-gradient(90deg, #F59E0B, #F97316)", // ← オレンジに変更
-  color: "#fff",
-  padding: "13px 20px",
-  borderRadius: "14px",
-  fontWeight: 800,
-  fontSize: "14px",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.22)",
-  cursor: "pointer",
-  transition: "transform 0.12s ease",
-  transform: pressed ? "scale(0.94)" : "scale(1)",
-  width: "220px",
-  maxWidth: "90%",
-  textAlign: "center",
-}}
-  >
-    Proで全データを見る
-  </div>
-</div>
+        <p className="text-xs text-white/60 text-center">※ この分析は有料プラン限定です</p>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={handleProClick}
+          onKeyDown={(e) => e.key === "Enter" && handleProClick()}
+          onPointerDown={() => setPressed(true)}
+          onPointerUp={() => setPressed(false)}
+          onPointerLeave={() => setPressed(false)}
+          style={{
+            background: "linear-gradient(90deg, #F59E0B, #F97316)",
+            color: "#fff",
+            padding: "13px 20px",
+            borderRadius: "14px",
+            fontWeight: 800,
+            fontSize: "14px",
+            boxShadow: "0 8px 18px rgba(0,0,0,0.22)",
+            cursor: "pointer",
+            transition: "transform 0.12s ease",
+            transform: pressed ? "scale(0.94)" : "scale(1)",
+            width: "220px",
+            maxWidth: "90%",
+            textAlign: "center",
+          }}
+        >
+          Proで全データを見る
+        </div>
+      </div>
     </>
   );
 }

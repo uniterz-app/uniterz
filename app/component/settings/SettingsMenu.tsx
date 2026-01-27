@@ -113,6 +113,11 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
   "/mobile/refund"
 );
 
+const lawPath = p(
+  "/web/law",
+  "/mobile/law"
+);
+
   // ===== announcements unread =====
   useEffect(() => {
     if (status !== "ready") return;
@@ -238,6 +243,14 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
         <button className={subItemClasses} onClick={() => router.push(termsPath)}>
           <FileText size={14} /> 利用規約
         </button>
+
+        {/* ★ 追加 */}
+<button
+  className={subItemClasses}
+  onClick={() => router.push(lawPath)}
+>
+  <FileText size={14} /> 特定商取引法に基づく表記
+</button>
 
         <button
   className={subItemClasses}

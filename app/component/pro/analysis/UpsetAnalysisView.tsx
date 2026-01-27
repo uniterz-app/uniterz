@@ -1,171 +1,270 @@
 "use client";
 
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
+import { motion } from "framer-motion";
+import { AlertTriangle } from "lucide-react";
+import { Alfa_Slab_One } from "next/font/google";
+import { useCountUp } from "@/lib/hooks/useCountUp";
+import { useEffect, useRef, useState } from "react";
 
-/* =====================
- * Dummy Data
- * ===================*/
+const alfa = Alfa_Slab_One({
+  weight: "400",
+  subsets: ["latin"],
+});
 
-const summary = {
-  upsetOpportunity: 12,
-  upsetPick: 9,
-  upsetHit: 5,
-  upsetWinRate: 0.556,
+type Props = {
+  month: string;
+  nba: {
+    totalGames: number;
+    upsetGames: number;
+  };
+  user: {
+    analyzedGames: number;
+    upsetGames: number;
+    upsetHitRate: number;
+    shareOfAllUpsets: number;
+  };
 };
 
-const gauge = [
-  { name: "hit", value: summary.upsetWinRate },
-  { name: "rest", value: 1 - summary.upsetWinRate },
-];
+/* =========================
+ * SVG 円弧
+ * ========================= */
+function ArcProgress({
+  size = 144,
+  stroke = 10,
+  value01,
+  color = "#f43f5e",
+  enabled,
+}: {
+  size?: number;
+  stroke?: number;
+  value01: number;
+  color?: string;
+  enabled: boolean;
+}) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const v = Math.max(0, Math.min(1, value01));
 
-const hitGames = [
-  {
-    gameId: "nba-1",
-    label: "LAL @ DEN",
-    marketMajorityRatio: 0.82,
-    winDiff: 14,
-    confidence: 0.78,
-  },
-  {
-    gameId: "nba-2",
-    label: "BOS @ MIL",
-    marketMajorityRatio: 0.76,
-    winDiff: 11,
-    confidence: 0.65,
-  },
-  {
-    gameId: "nba-3",
-    label: "PHX @ GSW",
-    marketMajorityRatio: 0.91,
-    winDiff: 18,
-    confidence: 0.84,
-  },
-];
-
-/* =====================
- * Colors
- * ===================*/
-
-const GREEN = "#3cffb0";
-const PINK = "#ec4899";
-
-/* =====================
- * View
- * ===================*/
-
-export default function UpsetAnalysisView() {
   return (
-    <div className="space-y-6">
-      {/* ===== Summary ===== */}
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label="Upset Games" value={summary.upsetOpportunity} />
-        <Stat label="Upset Picks" value={summary.upsetPick} />
-        <Stat label="Upset Hits" value={summary.upsetHit} />
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth={stroke}
+        fill="none"
+      />
+      <motion.circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke={color}
+        strokeWidth={stroke}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        initial={{ strokeDashoffset: c }}
+        animate={enabled ? { strokeDashoffset: c * (1 - v) } : {}}
+        transition={{ duration: 1.2, ease: "easeOut" }}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+    </svg>
+  );
+}
+
+/* =========================
+ * Bar（上から順に描画）
+ * ========================= */
+function StatBar({
+  label,
+  value,
+  percent01,
+  barClass,
+  enabled,
+  index,
+}: {
+  label: string;
+  value: string | number;
+  percent01: number;
+  barClass: string;
+  enabled: boolean;
+  index: number;
+}) {
+  const p = Math.max(0, Math.min(1, percent01));
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[11px] text-white/70">
+        <span>{label}</span>
+        <span className="font-semibold text-white">{value}</span>
       </div>
 
-      {/* ===== WinRate Gauge ===== */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="text-sm text-white/70 mb-2">
-          Upset Win Rate
-        </div>
-
-        <div className="relative h-44">
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={gauge}
-                startAngle={180}
-                endAngle={0}
-                innerRadius="70%"
-                outerRadius="100%"
-                dataKey="value"
-              >
-                <Cell fill={GREEN} />
-                <Cell fill="rgba(255,255,255,0.08)" />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold" style={{ color: GREEN }}>
-              {(summary.upsetWinRate * 100).toFixed(1)}%
-            </div>
-            <div className="text-xs text-white/40">
-              {summary.upsetHit}/{summary.upsetOpportunity}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ===== Difficulty Map ===== */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="text-sm text-white/70 mb-2">
-          Upset Difficulty
-        </div>
-
-        <div className="h-56">
-          <ResponsiveContainer>
-            <ScatterChart>
-              <XAxis
-                dataKey="marketMajorityRatio"
-                domain={[0.6, 1]}
-                tickFormatter={(v) => `${Math.round(v * 100)}%`}
-                tick={{ fill: "#aaa", fontSize: 10 }}
-              />
-              <YAxis
-                dataKey="winDiff"
-                domain={[0, 25]}
-                tick={{ fill: "#aaa", fontSize: 10 }}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "#0b0b12",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
-                labelFormatter={(_, p: any) =>
-                  p?.[0]?.payload?.label
-                }
-              />
-              <Scatter data={hitGames} fill={PINK} />
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* ===== Hit Cards ===== */}
-      <div className="space-y-3">
-        {hitGames.map((g) => (
-          <div
-            key={g.gameId}
-            className="rounded-xl border border-white/10 bg-black/40 p-3"
-          >
-            <div className="text-sm text-white">{g.label}</div>
-            <div className="mt-1 text-xs text-white/50">
-              Market {Math.round(g.marketMajorityRatio * 100)}% / WinDiff{" "}
-              {g.winDiff}
-            </div>
-          </div>
-        ))}
+      <div className="h-2 overflow-hidden rounded-full bg-white/10">
+        <motion.div
+          className={`h-full rounded-full ${barClass}`}
+          initial={{ width: 0 }}
+          animate={enabled ? { width: `${p * 100}%` } : {}}
+          transition={{
+            duration: 1.8,
+            ease: "easeOut",
+            delay: enabled ? index * 0.26 : 0,
+          }}
+        />
       </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+export default function UpsetAnalysisView({ month, nba, user }: Props) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const upsetRate = nba.totalGames > 0 ? nba.upsetGames / nba.totalGames : 0;
+
+  /* count up（遅め） */
+  const COUNT_DURATION = 1400;
+
+  const cuUpsetGames = useCountUp(nba.upsetGames, COUNT_DURATION, isInView);
+  const cuTotalGames = useCountUp(nba.totalGames, COUNT_DURATION, isInView);
+  const cuUpsetPct = useCountUp(
+    Math.round(upsetRate * 100),
+    COUNT_DURATION,
+    isInView
+  );
+  const cuUserAnalyzed = useCountUp(
+    user.analyzedGames,
+    COUNT_DURATION,
+    isInView
+  );
+  const cuUserUpset = useCountUp(user.upsetGames, COUNT_DURATION, isInView);
+  const cuUserHitPct = useCountUp(
+    Math.round(user.upsetHitRate * 100),
+    COUNT_DURATION,
+    isInView
+  );
+  const cuSharePct = useCountUp(
+    Math.round(user.shareOfAllUpsets * 100),
+    COUNT_DURATION,
+    isInView
+  );
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-      <div className="text-[11px] text-white/50">{label}</div>
-      <div className="text-lg font-semibold text-white">{value}</div>
+    <div ref={ref} className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Upset サマリー（カード表示アニメーションなし） */}
+        <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-6 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
+          <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-black">
+              <AlertTriangle className="h-3 w-3 text-orange-400" />
+            </div>
+            <span>Upset サマリー</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-8">
+            <div className="flex flex-col items-center">
+              <div className="mb-1 text-xs text-white/60">
+                アップセット試合数
+              </div>
+              <div
+                className={`${alfa.className} text-xl sm:text-4xl lg:text-5xl font-bold text-rose-400 leading-none`}
+              >
+                {cuUpsetGames}
+              </div>
+              <div className="my-2 h-px w-12 bg-white/20" />
+              <div
+                className={`${alfa.className} text-xl sm:text-4xl lg:text-5xl font-bold text-white/50 leading-none`}
+              >
+                {cuTotalGames}
+              </div>
+              <div className="mt-1 text-xs text-white/40">NBA総試合数</div>
+            </div>
+
+            <div className="relative flex h-28 w-28 items-center justify-center scale-[0.78] sm:h-36 sm:w-36 sm:scale-100">
+              <ArcProgress value01={upsetRate} enabled={isInView} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div
+                  className={`${alfa.className} text-xl sm:text-2xl md:text-3xl font-bold text-white`}
+                >
+                  {cuUpsetPct}%
+                </div>
+                <div className="text-[10px] text-white/50 sm:text-xs">
+                  Upset率
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center text-[11px] text-white/60 sm:text-sm">
+            {month} は{" "}
+            <span className="font-semibold text-white">
+              {upsetRate > 0 ? Math.round(1 / upsetRate) : "-"}
+            </span>
+            試合に1回 アップセットが発生
+          </div>
+        </div>
+
+        {/* あなたの Upset 関与（影 + スタイル統一） */}
+        <div className="space-y-4 rounded-2xl border border-white/15 bg-[#050814]/80 p-6 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
+          <div className="text-sm font-semibold text-white">
+            あなたの Upset 関与
+          </div>
+
+          <StatBar
+            index={0}
+            label="分析"
+            value={cuUserAnalyzed}
+            percent01={nba.totalGames > 0 ? user.analyzedGames / nba.totalGames : 0}
+            barClass="bg-white"
+            enabled={isInView}
+          />
+
+          <StatBar
+            index={1}
+            label="Upset"
+            value={cuUserUpset}
+            percent01={
+              user.analyzedGames > 0 ? user.upsetGames / user.analyzedGames : 0
+            }
+            barClass="bg-rose-400"
+            enabled={isInView}
+          />
+
+          <StatBar
+            index={2}
+            label="Hit%"
+            value={`${cuUserHitPct}%`}
+            percent01={user.upsetHitRate}
+            barClass="bg-purple-400"
+            enabled={isInView}
+          />
+
+          <div className="space-y-0.5 pt-1 text-left text-[11px] text-white/50">
+            <div>全Upset試合の {cuSharePct}% に参加</div>
+            <div>
+              分析した {cuUserAnalyzed} 試合中 {cuUserUpset} 試合で Upset
+              発生（的中率 {cuUserHitPct}%）
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

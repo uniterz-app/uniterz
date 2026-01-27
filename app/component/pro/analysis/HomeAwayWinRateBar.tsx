@@ -80,31 +80,34 @@ export default function HomeAwayWinRateBar({
         />
       </div>
 
-      {/* ===== 構造比 ===== */}
-      <div className="mt-4 mb-1 flex justify-between text-xs text-white/60">
-        <span>Away 投稿比 {awaySharePct}%</span>
-        <span>Home 投稿比 {homeSharePct}%</span>
-      </div>
+      {/* ===== 構造比（左右分割） ===== */}
+      <div className="mt-4">
+        <div className="mb-1 text-sm font-semibold text-white">
+          Home / Away 比率
+        </div>
 
-      <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
-        <div className="absolute left-1/2 top-0 h-full w-[1px] bg-white/20" />
+        <div className="mb-1 flex justify-between text-xs text-white/60">
+          <span>Away 投稿比 {awaySharePct}%</span>
+          <span>Home 投稿比 {homeSharePct}%</span>
+        </div>
 
-        <div
-          className="absolute right-1/2 top-0 h-full bg-rose-400/50 transition-all ease-out"
-          style={{
-            width: visible ? `${awaySharePct / 2}%` : "0%",
-            transitionDuration: "1400ms",
-          }}
-        />
-
-        <div
-          className="absolute left-1/2 top-0 h-full bg-emerald-400/50 transition-all ease-out"
-          style={{
-            width: visible ? `${homeSharePct / 2}%` : "0%",
-            transitionDuration: "1400ms",
-            transitionDelay: "120ms",
-          }}
-        />
+        <div className="h-3 w-full overflow-hidden rounded-full bg-white/10 flex">
+          <div
+            className="h-full bg-rose-400/70 transition-all ease-out"
+            style={{
+              width: visible ? `${awaySharePct}%` : "0%",
+              transitionDuration: "1400ms",
+            }}
+          />
+          <div
+            className="h-full bg-emerald-400/70 transition-all ease-out"
+            style={{
+              width: visible ? `${homeSharePct}%` : "0%",
+              transitionDuration: "1400ms",
+              transitionDelay: "120ms",
+            }}
+          />
+        </div>
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-white/50">

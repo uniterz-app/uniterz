@@ -24,10 +24,25 @@ export async function buildMonthlyGlobalStats(
   const [year, mm] = month.split("-");
   const start = new Date(`${year}-${mm}-01T00:00:00+09:00`);
   const end = new Date(
-    new Date(start.getFullYear(), start.getMonth() + 1, 0)
-      .setHours(23, 59, 59, 999)
+    new Date(start.getFullYear(), start.getMonth() + 1, 0).setHours(
+      23,
+      59,
+      59,
+      999
+    )
   );
 
+  // === NBA 総試合数 ===
+  const totalGamesSnap = await db()
+    .collection("games")
+    .where("league", "==", "nba")
+    .where("resultComputedAtV2", ">=", start)
+    .where("resultComputedAtV2", "<=", end)
+    .get();
+
+  const totalGames = totalGamesSnap.size;
+
+  // === アップセット試合数 ===
   const upsetGamesSnap = await db()
     .collection("games")
     .where("league", "==", "nba")
@@ -47,13 +62,19 @@ export async function buildMonthlyGlobalStats(
 
   const byWinRate = [...rowsForTop].sort((a, b) => a.winRate - b.winRate);
   const byAccuracy = [...rowsForTop].sort((a, b) => a.accuracy - b.accuracy);
-  const byPrecision = [...rowsForTop].sort((a, b) => a.avgPrecision - b.avgPrecision);
+  const byPrecision = [...rowsForTop].sort(
+    (a, b) => a.avgPrecision - b.avgPrecision
+  );
   const byUpset = [...rowsForTop].sort((a, b) => a.avgUpset - b.avgUpset);
   const byVolume = [...rows].sort((a, b) => a.posts - b.posts);
 
   const doc = {
     month,
-    upset: { totalGames: totalUpsetGames },
+    upset: {
+      totalGames: totalUpsetGames, // アップセットが起きた試合数
+      allGames: totalGames,        // NBA 総試合数
+      rate: totalGames > 0 ? totalUpsetGames / totalGames : 0, // 発生率
+    },
     avg: {
       winRate: avg(rows.map(r => r.winRate)),
       accuracy: avg(rows.map(r => r.accuracy)),

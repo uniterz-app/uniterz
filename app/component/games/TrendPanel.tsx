@@ -57,9 +57,9 @@ export default function TrendPanel() {
         setCache(c);
 
         // 🔥 表示順序はここで制御（今は NBA → B1）
-        const TARGET_LEAGUES = [
+const TARGET_LEAGUES = [
   { key: "NBA" as const, label: "NBA" },
-  { key: "PL" as const, label: "Premier League" }, // ★ 追加
+  // { key: "PL" as const, label: "Premier League" }, ← 削除
   { key: "B1" as const, label: "B.LEAGUE (B1)" },
 ];
 
@@ -106,7 +106,7 @@ export default function TrendPanel() {
       {/* 🔥 動的表示（NBA → PL → B1） */}
 {[
   { key: "NBA", label: "NBA" },
-  { key: "PL", label: "Premier League" },
+  // { key: "PL", label: "Premier League" }, ← 削除
   { key: "B1", label: "B.LEAGUE (B1)" },
 ].map(({ key, label }) => {
   const cards = leagueCards[key] ?? [];

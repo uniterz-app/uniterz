@@ -33,9 +33,17 @@ export default function AnalysisTypeCard({ analysisTypeId }: Props) {
       </div>
 
       {/* 説明文 */}
-      <p className="whitespace-pre-line text-sm leading-relaxed text-white/80">
-        {meta.description}
-      </p>
+      <p className="
+  whitespace-pre-line
+  leading-relaxed
+  text-[13px]
+  sm:text-sm
+  md:text-[15px]
+  lg:text-base
+  text-white/80
+">
+  {meta.description}
+</p>
     </div>
   );
 }

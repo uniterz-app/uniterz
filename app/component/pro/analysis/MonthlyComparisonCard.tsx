@@ -1,5 +1,7 @@
 "use client";
 
+import { Users } from "lucide-react";
+
 type Row = {
   label: string;
   format: (v: number) => string;
@@ -11,29 +13,36 @@ type Row = {
 type Props = {
   monthLabel: string;
   userCount?: number;        // 平均の母集団
-  top10UserCount?: number;   // ★ 上位10%の母集団
+  top10UserCount?: number;   // 上位10%の母集団
   rows: Row[];
 };
 
 export default function MonthlyComparisonCard({
   monthLabel,
   userCount,
-  top10UserCount, // ★ これを受け取る
+  top10UserCount,
   rows,
 }: Props) {
   return (
     <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-      <div className="mb-3">
-        <div className="text-sm font-semibold text-white">
-          月間パフォーマンス比較
+      <div className="mb-3 flex items-start gap-2">
+        {/* アイコン */}
+        <div className="mt-0.5 h-5 w-5 rounded-full bg-black flex items-center justify-center">
+          <Users className="h-3 w-3 text-orange-400" />
         </div>
-        <div className="text-xs text-white/50">
-          {monthLabel}
-          {typeof userCount === "number" && (
-            <span className="ml-2">
-              （対象 {userCount.toLocaleString()} 人）
-            </span>
-          )}
+
+        <div>
+          <div className="text-sm font-semibold text-white">
+            月間パフォーマンス比較
+          </div>
+          <div className="text-xs text-white/50">
+            {monthLabel}
+            {typeof userCount === "number" && (
+              <span className="ml-2">
+                （対象 {userCount.toLocaleString()} 人）
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -62,7 +71,6 @@ export default function MonthlyComparisonCard({
         ))}
       </div>
 
-      {/* ★ ここに追加 */}
       {typeof userCount === "number" &&
         typeof top10UserCount === "number" && (
           <div className="mt-3 text-[11px] leading-relaxed text-white/40">

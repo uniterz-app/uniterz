@@ -21,9 +21,8 @@ const sizeMap = {
  */
 const DISPLAY_ITEMS: Array<{ v: League; label: string }> = [
   { v: "nba", label: "NBA" },
-  { v: "pl", label: "Premier League" },
   { v: "bj", label: "B.LEAGUE" },
-  // J1 を出すなら：
+  // { v: "pl", label: "Premier League" }, ← 一旦非表示
   // { v: "j1", label: "J1" },
 ];
 

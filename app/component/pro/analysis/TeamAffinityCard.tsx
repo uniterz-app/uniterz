@@ -1,6 +1,13 @@
 "use client";
 
+import { Trophy, Users } from "lucide-react"; // アイコン変更
 import { useEffect, useRef, useState } from "react";
+import { Alfa_Slab_One } from "next/font/google";
+
+const alfa = Alfa_Slab_One({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 type TeamStat = {
   teamId: string;
@@ -17,8 +24,12 @@ type Props = {
 export default function TeamAffinityCard({ strong, weak }: Props) {
   return (
     <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-      <div className="mb-3 text-sm font-semibold text-white">
-        チーム別パフォーマンス
+      <div className="mb-3 text-sm font-semibold text-white flex items-center gap-2">
+        {/* チーム別パフォーマンスタイトルにアイコン追加 */}
+        <div className="h-5 w-5 rounded-full bg-black flex items-center justify-center"> {/* 枠色を黒に変更 */}
+          <Trophy className="h-3 w-3 text-orange-400" /> {/* アイコンをオレンジに変更 */}
+        </div>
+        <span>チーム別パフォーマンス</span>
       </div>
 
       {/* 横並び */}

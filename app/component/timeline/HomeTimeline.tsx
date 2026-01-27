@@ -7,21 +7,19 @@ import SearchTabModal from "@/app/component/timeline/SearchTabModal";
 
 import { useFollowingFeed } from "./useFollowingFeed";
 import { useJLeagueFeed } from "./useJLeagueFeed";
-import { usePLFeed } from "./usePLFeed";
 import { useBLeagueFeed } from "./useBLeagueFeed";
 import { useNBAFeed } from "./useNBAFeed";
 
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-type Tab = "nba" | "pl" | "bj" | "following";
+type Tab = "nba" | "bj" | "following";
 
 export default function HomeTimeline({ variant = "mobile" }) {
   const [tab, setTab] = useState<Tab>("nba");
 
   // 🔥 Hooks は必ずトップレベルで呼ぶ
   const nbaFeed = useNBAFeed();
-  const plFeed = usePLFeed(); 
   const bjFeed = useBLeagueFeed();
   const followingFeed = useFollowingFeed();
 
@@ -29,8 +27,6 @@ export default function HomeTimeline({ variant = "mobile" }) {
   const feed =
   tab === "nba"
     ? nbaFeed
-    : tab === "pl"
-    ? plFeed
     : tab === "bj"
     ? bjFeed
     : followingFeed;
@@ -220,10 +216,6 @@ export default function HomeTimeline({ variant = "mobile" }) {
           <div className="grid grid-cols-4 gap-1 rounded-xl bg-white/5 p-1">
             <TabButton active={tab === "nba"} onClick={() => setTab("nba")}>
   NBA
-</TabButton>
-
-<TabButton active={tab === "pl"} onClick={() => setTab("pl")}>
-  Premier
 </TabButton>
 
 <TabButton active={tab === "bj"} onClick={() => setTab("bj")}>

@@ -9,6 +9,10 @@ import TeamAffinityCard from "@/app/component/pro/analysis/TeamAffinityCard";
 import HomeAwayWinRateBar from "@/app/component/pro/analysis/HomeAwayWinRateBar";
 import type { AnalysisTypeId } from "@/shared/analysis/types";
 import MarketBiasBars from "@/app/component/pro/analysis/MarketBiasSemiDonut";
+import StreakSummaryWithComment from "@/app/component/pro/analysis/StreakSummaryWithComment";
+import UpsetAnalysisView from "@/app/component/pro/analysis/UpsetAnalysisView";
+import AnalysisStyleMap from "@/app/component/pro/analysis/AnalysisStyleMap";
+
 
 import {
   buildMonthlySummary,
@@ -70,6 +74,39 @@ radar: {
   comparisonUserCount: number;
   comparisonTop10UserCount?: number;
 
+  upset: {
+  nba: {
+    totalGames: number;
+    upsetGames: number;
+  };
+  user: {
+    analyzedGames: number;
+    upsetGames: number;
+    upsetHitRate: number;
+    shareOfAllUpsets: number;
+  };
+};
+
+styleMapPoints: {
+  homeAwayBias: number;
+  marketBias: number;
+  winRate: number;
+  key?: string;
+}[];
+
+
+    /** ★ 追加 */
+  streak: {
+    maxWin: number;
+    maxLose: number;
+  };
+
+  /** ★ 追加（先月・任意） */
+  prevStreak?: {
+    maxWin: number;
+    maxLose: number;
+  };
+
   homeAway: {
   homeRate: number;
   awayRate: number;
@@ -104,6 +141,10 @@ export default function ProAnalysisView({
   comparisonRows,
   comparisonUserCount,
   comparisonTop10UserCount,
+    streak,        // ★追加
+  prevStreak,    // ★追加
+    upset,            // ← これが必要
+  styleMapPoints,   // ← これも必要
   homeAway,
   marketBias,
   teamAffinity,
@@ -159,12 +200,14 @@ export default function ProAnalysisView({
       {/* =========================
        * 月次スナップショット
        * ========================= */}
+               {isSample && <SampleNotice />}
       <div className="space-y-4">
         <RadarChart
   value={radar}
 />
-         {isSample && <SampleNotice />}
+
         <AnalysisTypeCard analysisTypeId={analysisTypeId} />
+                {isSample && <SampleNotice />}
         <PercentileList percentiles={percentiles} />
 
         {summaries.length > 0 && (
@@ -212,6 +255,21 @@ export default function ProAnalysisView({
 
         {isSample && <SampleNotice />}
 
+        <UpsetAnalysisView
+  month={month}
+  nba={upset.nba}
+  user={upset.user}
+/>
+        {isSample && <SampleNotice />}
+
+        <StreakSummaryWithComment
+  maxWinStreak={streak.maxWin}          // ★ monthly の streak
+  maxLoseStreak={streak.maxLose}
+  lastMaxWinStreak={prevStreak?.maxWin} // ★ 先月
+  lastMaxLoseStreak={prevStreak?.maxLose}
+  periodLabel={month}
+/>
+
 
         <HomeAwayWinRateBar
   homeRate={homeAway.homeRate}
@@ -225,17 +283,19 @@ export default function ProAnalysisView({
   favorableShare={marketBias.favorableShare}
   contrarianShare={marketBias.contrarianShare}
 />
+        {isSample && <SampleNotice />}
+<AnalysisStyleMap points={styleMapPoints} />
+
         <TeamAffinityCard
           strong={teamAffinity.strong}
           weak={teamAffinity.weak}
         />
-
-        {isSample && <SampleNotice />}
       </div>
 
       {/* 時系列トレンド */}
       {/* 月次トレンド（Pro専用） */}
 <MonthlyTrendChart data={monthlyTrend} />
+        {isSample && <SampleNotice />}
     </div>
   );
 }

@@ -59,7 +59,6 @@ export default function MarketBiasBars({
         <div className="relative h-3 w-full rounded-full bg-white/10 overflow-hidden">
           <div className="absolute left-1/2 top-0 h-full w-[1px] bg-white/30" />
 
-          {/* 左：逆張り */}
           <div
             className="absolute right-1/2 top-0 h-full bg-blue-600 transition-all"
             style={{
@@ -68,7 +67,6 @@ export default function MarketBiasBars({
             }}
           />
 
-          {/* 右：順当 */}
           <div
             className="absolute left-1/2 top-0 h-full bg-orange-600 transition-all"
             style={{
