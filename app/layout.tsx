@@ -45,10 +45,13 @@ export default function RootLayout({
           <MaintenanceOverlay />
         ) : (
           <>
+            {/* transform / perspective の外 */}
+            <NavBar />
+
             <AppActivityTracker />
             <EventGate />
 
-            {/* Splash 管理下にまとめる */}
+            {/* アプリ本体 */}
             <div
               style={{
                 perspective: "1400px",
@@ -56,12 +59,7 @@ export default function RootLayout({
                 paddingBottom: "96px",
               }}
             >
-              <WebOrMobileSplash>
-                <>
-                  {children}
-                  <NavBar />
-                </>
-              </WebOrMobileSplash>
+              <WebOrMobileSplash>{children}</WebOrMobileSplash>
             </div>
 
             <ToastHost />
