@@ -87,21 +87,11 @@ const faqs: FAQItem[] = [
     answer: (
       <div className="space-y-2 text-sm leading-relaxed text-white/80">
         <ul className="list-disc pl-5 space-y-1">
-          <li>
-            <b>勝率</b>：勝敗予想の的中率
-          </li>
-          <li>
-            <b>スコア精度</b>：スコア予想と結果のズレ
-          </li>
-          <li>
-            <b>Brierスコア</b>：確率予想の正確さ
-          </li>
-          <li>
-            <b>Upsetスコア</b>：番狂わせを読み切る力
-          </li>
-          <li>
-            <b>一致度（Calibration）</b>：自信度と結果のズレ
-          </li>
+          <li><b>勝率</b>：勝敗予想の的中率</li>
+          <li><b>スコア精度</b>：スコア予想と結果のズレ</li>
+          <li><b>Brierスコア</b>：確率予想の正確さ</li>
+          <li><b>Upsetスコア</b>：番狂わせを読み切る力</li>
+          <li><b>一致度（Calibration）</b>：自信度と結果のズレ</li>
         </ul>
         <p>
           各指標は、7日間・30日間・通算で集計されます。
@@ -124,8 +114,7 @@ const faqs: FAQItem[] = [
           <li>投稿数：分析の蓄積量</li>
         </ul>
         <p>
-          「当て勘が強い」「スコアに強い」
-          「確率に強い」など特性が見える設計です。
+          「当て勘が強い」「スコアに強い」「確率に強い」など特性が見える設計です。
         </p>
       </div>
     ),
@@ -152,8 +141,7 @@ const faqs: FAQItem[] = [
           <li>Upsetスコアランキング</li>
         </ul>
         <p>
-          指標ごとに「得意分野の見える化」
-          を目的とした設計です。
+          指標ごとに「得意分野の見える化」を目的とした設計です。
         </p>
       </div>
     ),
@@ -205,7 +193,7 @@ function AccordionItem({
         >
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.accentClass} shadow-[0_0_16px_rgba(15,23,42,0.8)]`}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.accentClass}`}
             >
               {item.icon}
             </div>
@@ -218,9 +206,7 @@ function AccordionItem({
               </span>
             </div>
           </div>
-          <div className="flex items-center justify-center">
-            <span className="text-sm font-bold text-sky-300">?</span>
-          </div>
+          <span className="text-sm font-bold text-sky-300">?</span>
         </button>
         {isOpen && (
           <div className="border-t border-white/10 px-5 py-4">
@@ -245,9 +231,9 @@ export default function HelpPage({ variant }: { variant: Variant }) {
             : "mx-auto max-w-[640px] px-4 py-8 text-white"
         }
       >
-        <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-r from-[#111827] via-[#020617] to-[#020617] px-6 py-5 shadow-[0_0_36px_rgba(56,189,248,0.35)]">
+        <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-r from-[#111827] via-[#020617] to-[#020617] px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-fuchsia-500 to-amber-400 shadow-[0_0_18px_rgba(129,140,248,0.9)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-fuchsia-500 to-amber-400">
               <span className="text-lg font-extrabold text-white">?</span>
             </div>
             <div className="flex flex-col">
@@ -257,7 +243,7 @@ export default function HelpPage({ variant }: { variant: Variant }) {
               <p className="mt-1 text-xs md:text-sm text-white/70">
                 Uniterz は
                 <span className="font-semibold text-emerald-300">
-                  分析特化型の予想プラットフォーム
+                  分析特化型のスポーツ分析プラットフォーム
                 </span>
                 です。成績指標・ランキング・使い方の基本はこちらで確認できます。
               </p>
@@ -278,22 +264,6 @@ export default function HelpPage({ variant }: { variant: Variant }) {
           ))}
         </div>
       </div>
-
-      <button
-        onClick={() => window.history.back()}
-        className="
-          fixed bottom-6 right-6 z-50
-          w-14 h-14 rounded-full
-          bg-white/10 backdrop-blur 
-          border border-white/20 
-          flex items-center justify-center
-          shadow-[0_0_18px_rgba(0,0,0,0.35)]
-          active:scale-95 transition-transform
-        "
-        aria-label="閉じる"
-      >
-        <span className="text-2xl font-bold text-white">×</span>
-      </button>
     </div>
   );
 }

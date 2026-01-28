@@ -12,9 +12,6 @@ import SummaryCardsV2 from "./ui/SummaryCardsV2";
 import Tabs from "./ui/Tabs";
 import PeriodToggle from "./ui/PeriodToggle";
 
-import BecomeMemberButton from "@/app/component/common/BecomeMemberButton";
-import SimpleCenterModal from "@/app/component/common/SimpleCenterModal";
-
 // ★ V2 投稿カードに差し替え
 import PredictionPostCardV2 from "@/app/component/post/PredictionPostCardV2";
 import { db } from "@/lib/firebase"; // 普通はこれで Firestore 取得可能
@@ -164,7 +161,6 @@ const isMyProfile = isMe;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] =  useState<ResolvedBadge | null>(null);
-  const [memberModalOpen, setMemberModalOpen] = useState(false);
   
 
   const [followListOpen, setFollowListOpen] = useState(false);
@@ -294,12 +290,6 @@ const resolvedBadges = userBadges
 
         {displayProfile.bio && <p className="mt-2 text-[14px]">{displayProfile.bio}</p>}
 
-        {!isMe && targetUid && (
-          <div className="mt-3 flex gap-3">
-            <FollowButton targetUid={targetUid} size="sm" variant="blue" />
-            <BecomeMemberButton size="sm" onClick={() => setMemberModalOpen(true)} />
-          </div>
-        )}
 {/* ▼ 連勝関連の表示（3以上のみ表示） */}
 <div className="mt-3 flex gap-2 flex-wrap">
 
@@ -428,14 +418,6 @@ const resolvedBadges = userBadges
       )}
 
       <SideMenuDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-      <SimpleCenterModal
-        open={memberModalOpen}
-        onClose={() => setMemberModalOpen(false)}
-        title="現在開発中"
-        icon="⚙️"
-        message="今後、有料プラン作成機能を追加予定です。"
-      />
 
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal badge={selectedBadge} onClose={() => setBadgeModalOpen(false)} />

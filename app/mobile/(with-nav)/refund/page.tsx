@@ -47,13 +47,13 @@ export default function WebRefundPolicyPage() {
         </p>
       </section>
 
-      <section>
-        <h2 className="text-base font-semibold mb-1">4. 料金の請求</h2>
-        <p>
-          料金は、各プラン選択時に表示される金額に基づき、
-          Stripe を通じて請求されます。
-        </p>
-      </section>
+<section>
+  <h2 className="text-base font-semibold mb-1">4. 料金の請求</h2>
+  <p>
+    料金は、各プラン選択時に表示される金額に基づき、
+    当社が利用する決済サービスを通じて請求されます。
+  </p>
+</section>
 
       <section>
         <h2 className="text-base font-semibold mb-1">5. ポリシーの変更</h2>

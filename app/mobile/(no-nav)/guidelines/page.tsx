@@ -82,17 +82,17 @@ export default function MobileCommunityGuidelinesPage() {
           </ul>
         </div>
 
-        {/* 5 */}
-        <div>
-          <h2 className="text-base font-semibold mb-1">
-            5. ユニット・予想に関する注意
-          </h2>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>ユニットは仮想指標で、金銭的価値を持ちません。</li>
-            <li>投稿内容は個人の意見であり、投資助言ではありません。</li>
-            <li>外部サービス利用による損失について責任を負いません。</li>
-          </ul>
-        </div>
+{/* 5 */}
+<div>
+  <h2 className="text-base font-semibold mb-1">
+    5. 予想・分析内容に関する注意
+  </h2>
+  <ul className="list-disc pl-5 space-y-1">
+    <li>本サービスで扱う数値や指標は、分析・可視化を目的としたものです。</li>
+    <li>投稿内容はユーザー個人の見解であり、投資・賭博等の助言ではありません。</li>
+    <li>本サービスの利用により生じた判断や結果について、運営は責任を負いません。</li>
+  </ul>
+</div>
 
         {/* 6 */}
         <div>

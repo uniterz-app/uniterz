@@ -14,7 +14,9 @@ export default function WebTermsPage() {
       <section>
         <h2 className="text-base font-semibold mb-1">1. サービスの概要</h2>
         <p>
-          Uniterz（以下「本サービス」）は、スポーツの試合に関する予想、結果、各種分析指標を投稿・閲覧できる
+          Uniterz（以下「本サービス」）は、スポーツの試合に関する
+          <span className="font-semibold">ユーザー入力データおよび結果データ</span>
+          を基に、各種分析指標を算出・可視化できる
           <span className="font-semibold">分析特化型コミュニティサービス</span>
           です。
         </p>
@@ -22,7 +24,7 @@ export default function WebTermsPage() {
           本サービス上では、
           <span className="font-semibold">金銭の受渡し、賭博、ベット等は一切行いません</span>。
           表示される数値、スコア、ユニット、ランキング等は
-          <span className="font-semibold">すべて分析・可視化を目的とした指標</span>
+          <span className="font-semibold">すべて分析・可視化および振り返りを目的とした指標</span>
           であり、金銭的価値を有しません。
         </p>
       </section>
@@ -30,10 +32,21 @@ export default function WebTermsPage() {
       <section>
         <h2 className="text-base font-semibold mb-1">2. 用語の定義</h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li>「予想」：試合結果に対するユーザーの主観的見解を数値・テキストで表現したもの。</li>
-          <li>「分析指標」：勝率、ブライアスコア、スコア精度、アップセット指数、一致度（Calibration）等の統計的指標。</li>
-          <li>「一致度（Calibration）」：予測確率と実結果の乖離から算出される信頼性指標。</li>
-          <li>「Proプラン」：分析指標の一部を高度化・拡張表示する有料プラン。</li>
+          <li>
+            「予想」：試合結果に対するユーザーの主観的見解を数値・テキストで表現した
+            <span className="font-semibold">ユーザー入力データ</span>
+            であり、娯楽および自己分析目的のものを指します。
+          </li>
+          <li>
+            「分析指標」：勝率、ブライアスコア、スコア精度、アップセット指数、
+            一致度（Calibration）等の統計的指標。
+          </li>
+          <li>
+            「一致度（Calibration）」：予測確率と実結果の乖離から算出される信頼性指標。
+          </li>
+          <li>
+            「Proプラン」：分析指標の一部を高度化・拡張表示する有料プラン。
+          </li>
         </ul>
       </section>
 
@@ -44,7 +57,9 @@ export default function WebTermsPage() {
           <span className="font-semibold">アプリ版・Web版・API・その他すべての提供機能</span>
           に適用されます。
         </p>
-        <p className="mt-2">ユーザーは利用開始をもって本規約に同意したものとみなされます。</p>
+        <p className="mt-2">
+          ユーザーは利用開始をもって本規約に同意したものとみなされます。
+        </p>
       </section>
 
       <section>
@@ -60,7 +75,7 @@ export default function WebTermsPage() {
         <h2 className="text-base font-semibold mb-1">5. 分析指標・スコアの取り扱い</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li>表示される指標は統計処理・アルゴリズムに基づく計算結果です。</li>
-          <li>将来の結果を保証するものではありません。</li>
+          <li>将来の結果や成果を保証するものではありません。</li>
           <li>計算方法は改善のため予告なく変更されることがあります。</li>
           <li>無料表示とPro表示で内容・粒度が異なる場合があります。</li>
         </ul>
@@ -83,7 +98,7 @@ export default function WebTermsPage() {
           <li>著作権等の侵害</li>
           <li>
             <span className="font-semibold">
-              ギャンブル・投資への直接的誘導または斡旋
+              ギャンブル、ベッティング、投資等への直接的誘導または斡旋
             </span>
           </li>
           <li>金銭トラブルに発展するやり取り</li>

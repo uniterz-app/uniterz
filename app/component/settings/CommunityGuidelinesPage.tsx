@@ -88,19 +88,7 @@ export default function CommunityGuidelinesPage({
 
             {/* 3 */}
             <section>
-              <h2 className="text-lg font-bold mb-2">
-                3. プラン販売に関するルール（将来対応）
-              </h2>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>過剰な宣伝（100%当たる等）は禁止</li>
-                <li>外部販売は禁止、Uniterz 内のみで提供</li>
-                <li>根拠の提示を心がけ、公正な価格設定を行うこと</li>
-              </ul>
-            </section>
-
-            {/* 4 */}
-            <section>
-              <h2 className="text-lg font-bold mb-2">4. 違反時の対応</h2>
+              <h2 className="text-lg font-bold mb-2">3. 違反時の対応</h2>
               <p>
                 ガイドライン違反が確認された場合、以下の対応を行います：
               </p>
@@ -111,9 +99,9 @@ export default function CommunityGuidelinesPage({
               </ul>
             </section>
 
-            {/* 5 */}
+            {/* 4 */}
             <section>
-              <h2 className="text-lg font-bold mb-2">5. 安全なコミュニティのために</h2>
+              <h2 className="text-lg font-bold mb-2">4. 安全なコミュニティのために</h2>
               <p>
                 Uniterz は「予想 × 分析 × コミュニティ」を楽しむ場所です。
                 すべてのユーザーが気持ちよく利用できるよう、ガイドライン遵守にご協力ください。

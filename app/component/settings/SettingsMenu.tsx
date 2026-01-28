@@ -108,6 +108,11 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
   );
   const contactPath = p("/web/contact", "/mobile/contact");
 
+  const privacyPath = p(
+  "/web/privacy",
+  "/mobile/privacy"
+);
+
   const refundPath = p(
   "/web/refund",
   "/mobile/refund"
@@ -243,6 +248,13 @@ const lawPath = p(
         <button className={subItemClasses} onClick={() => router.push(termsPath)}>
           <FileText size={14} /> 利用規約
         </button>
+
+        <button
+  className={subItemClasses}
+  onClick={() => router.push(privacyPath)}
+>
+  <FileText size={14} /> プライバシーポリシー
+</button>
 
         {/* ★ 追加 */}
 <button

@@ -19,8 +19,10 @@ export default function MobileSpecifiedCommercialTransactionPage() {
           <ul className="space-y-1">
             <li>事業者名：神谷陸登</li>
             <li>運営責任者：神谷陸登</li>
-            <li>所在地：〒220-0072
-神奈川県横浜市西区浅間町1丁目4番3号ウィザードビル402</li>
+            <li>
+              所在地：〒220-0072  
+              神奈川県横浜市西区浅間町1丁目4番3号ウィザードビル402
+            </li>
             <li>
               電話番号：
               <span className="ml-1">
@@ -59,8 +61,12 @@ export default function MobileSpecifiedCommercialTransactionPage() {
             支払い方法・支払い時期
           </h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>支払い方法：クレジットカード（Stripe）</li>
-            <li>支払い時期：申込時に即時決済され、その後は自動更新されます</li>
+            <li>
+              支払い方法：当社が指定するオンライン決済手段（クレジットカード）
+            </li>
+            <li>
+              支払い時期：申込時に即時決済され、その後は自動更新されます
+            </li>
           </ul>
         </div>
 
@@ -91,8 +97,9 @@ export default function MobileSpecifiedCommercialTransactionPage() {
             返金について
           </h2>
           <p>
-            サービスの性質上、原則として返金は行いません。
-            ただし、当社が特別に認めた場合に限り返金対応を行うことがあります。
+            サービスの性質上、契約期間の途中で解約した場合であっても、
+            日割り・月割り等による返金は行っておりません。
+            ただし、法令に基づき対応が必要な場合を除きます。
           </p>
         </div>
 

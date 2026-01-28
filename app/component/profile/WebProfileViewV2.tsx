@@ -7,7 +7,6 @@ import { Menu } from "lucide-react";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 import FollowButton from "@/app/component/common/FollowButton";
-import BecomeMemberButton from "@/app/component/common/BecomeMemberButton";
 
 import Tabs from "./ui/Tabs";
 import PeriodToggle from "./ui/PeriodToggle";
@@ -242,17 +241,6 @@ const {
                 <b>{displayProfile.counts?.following ?? 0}</b> フォロー中
               </button>
             </div>
-
-            {!isMe && targetUid && (
-              <div className="mt-3 flex gap-6">
-                <FollowButton
-                  targetUid={targetUid}
-                  size="md"
-                  variant="blue"
-                />
-                <BecomeMemberButton size="md" onClick={() => {}} />
-              </div>
-            )}
           </div>
 
           {canOpenSettings && (
