@@ -83,45 +83,43 @@ const BarStyle = {
 
 export default function NavBar() {
   const pathname = usePathname();
-  const isMobile = pathname?.startsWith("/mobile");
-  const prefix: "/web" | "/mobile" = isMobile ? "/mobile" : "/web";
 
-  // ⭐ 初期表示では NavBar を描画しない（null）
-  const [myHref, setMyHref] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
+  const shouldShow =
+    pathname?.startsWith("/web") || pathname?.startsWith("/mobile");
 
-  // login / signup では NavBar を非表示
-  if (
+  const isAuthPage =
     pathname === "/web/login" ||
     pathname === "/web/signup" ||
     pathname === "/mobile/login" ||
-    pathname === "/mobile/signup"
-  ) {
-    return null;
-  }
+    pathname === "/mobile/signup";
+
+  const isMobile = pathname?.startsWith("/mobile");
+  const prefix: "/web" | "/mobile" = isMobile ? "/mobile" : "/web";
+
+  const [myHref, setMyHref] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-  const unsub = onAuthStateChanged(auth, async (user) => {
-    // 🔥 ゲストでも mypage は存在させる
-    if (!user) {
-  setMyHref(`${prefix}/u/guest`);
-  setInitialized(true);
-  return;
-}
-    const snap = await getDoc(doc(db, "users", user.uid));
-    const h = snap.data()?.handle || snap.data()?.slug;
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setMyHref(`${prefix}/u/guest`);
+        setInitialized(true);
+        return;
+      }
 
-    setMyHref(
-      h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
-    );
-    setInitialized(true);
-  });
+      const snap = await getDoc(doc(db, "users", user.uid));
+      const h = snap.data()?.handle || snap.data()?.slug;
 
-  return () => unsub();
-}, [prefix]);
+      setMyHref(
+        h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
+      );
+      setInitialized(true);
+    });
 
-  // ⭐ 初回は NavBar を一切描画しない（フラッシュ防止）
-  if (!initialized) return null;
+    return () => unsub();
+  }, [prefix]);
+
+  if (!shouldShow || isAuthPage || !initialized) return null;
 
   return (
     <>
@@ -142,7 +140,7 @@ export default function NavBar() {
                 : `${prefix}${item.href}`;
 
             const active =
-              pathname === href || pathname?.startsWith(href + "/");
+              pathname === href || pathname.startsWith(href + "/");
 
             const Icon = item.icon;
 
