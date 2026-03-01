@@ -27,7 +27,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const maintenance = false;
+  const maintenance = true;
 
   return (
     <html lang="ja">
