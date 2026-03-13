@@ -10,7 +10,14 @@ export type Metric =
   | "accuracy"
   | "avgPrecision"
   | "avgUpset"
-  | "consistency";
+  | "consistency"
+  | "streak";
+
+// ========== 期間情報 ==========
+export type RankingPeriodInfo = {
+  startAt: string;
+  endAt: string;
+};
 
 // ========== ランキング行 ==========
 export type RankingRow = {
@@ -19,12 +26,15 @@ export type RankingRow = {
   displayName: string;
   photoURL?: string;
 
-  posts: number;      // 期間内投稿数
-  winRate?: number;   // 0..1
-  accuracy?: number;  // 0..100
+  posts: number; // 期間内投稿数
+  winRate?: number; // 0..1
+  accuracy?: number; // 0..100
   avgPrecision?: number;
   avgUpset?: number;
   consistency?: number;
+  streak?: number;
+
+  period?: RankingPeriodInfo;
 };
 
 // ========== APIレスポンス ==========

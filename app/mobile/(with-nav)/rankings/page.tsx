@@ -215,10 +215,13 @@ useEffect(() => {
   const [period, setPeriod] = useState<Period>("week");
 
   const [rows, setRows] = useState<Record<Metric, RankingRow[]>>({
-  winRate: [],
-  avgPrecision: [],
-  streak: [],
-});
+    winRate: [],
+    accuracy: [],
+    avgPrecision: [],
+    avgUpset: [],
+    consistency: [],
+    streak:[],
+  });
 
   const [periodInfo, setPeriodInfo] = useState<{
   startAt: string;
@@ -306,7 +309,10 @@ useEffect(() => {
 
   setRows({
     winRate: DUMMY_ROWS,
+    accuracy:DUMMY_ROWS,
+    avgUpset:DUMMY_ROWS,
     avgPrecision: DUMMY_ROWS,
+     consistency: DUMMY_ROWS,
    streak: DUMMY_ROWS,
   });
 
