@@ -13,7 +13,7 @@ const privateKey = privateKeyRaw?.replace(/\\n/g, "\n");
 
 if (!projectId || !clientEmail || !privateKey) {
   throw new Error(
-    "Missing Firebase Admin env: FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY"
+    "Missing Firebase Admin env: FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / "
   );
 }
 

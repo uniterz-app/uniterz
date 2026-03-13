@@ -280,7 +280,7 @@ className={cn("rounded-3xl p-1 cursor-pointer relative", frame)}
 </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <h3 className="text-[16px] md:text-xl font-extrabold truncate">
   {author?.name ?? post.author?.name ?? "ユーザー"}
 </h3>
@@ -397,7 +397,7 @@ className={cn("rounded-3xl p-1 cursor-pointer relative", frame)}
   <div className="flex items-center gap-6 ml-auto">
 
     {/* いいね */}
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <motion.button
         whileTap={{ scale: 1.2 }}
         className="w-10 h-10 flex items-center justify-center"
@@ -423,7 +423,7 @@ className={cn("rounded-3xl p-1 cursor-pointer relative", frame)}
     </div>
 
     {/* ブックマーク */}
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <motion.button
         whileTap={{ scale: 1.2 }}
         className="w-10 h-10 flex items-center justify-center"

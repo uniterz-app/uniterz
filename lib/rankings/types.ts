@@ -1,5 +1,5 @@
 // ========== ランキング期間 ==========
-export type Period = "week" | "month";
+export type Period = "day" | "week" | "month";
 
 // ========== リーグタブ ==========
 export type LeagueTab = "nba" | "b1";
@@ -7,17 +7,10 @@ export type LeagueTab = "nba" | "b1";
 // ========== 指標 ==========
 export type Metric =
   | "winRate"
-  | "accuracy"
   | "avgPrecision"
-  | "avgUpset"
-  | "consistency"
-  | "streak";
-
-// ========== 期間情報 ==========
-export type RankingPeriodInfo = {
-  startAt: string;
-  endAt: string;
-};
+  | "streak"
+  
+  
 
 // ========== ランキング行 ==========
 export type RankingRow = {
@@ -26,15 +19,10 @@ export type RankingRow = {
   displayName: string;
   photoURL?: string;
 
-  posts: number; // 期間内投稿数
-  winRate?: number; // 0..1
-  accuracy?: number; // 0..100
+  posts: number;      // 期間内投稿数
+  winRate?: number;   // 0..1
   avgPrecision?: number;
-  avgUpset?: number;
-  consistency?: number;
   streak?: number;
-
-  period?: RankingPeriodInfo;
 };
 
 // ========== APIレスポンス ==========

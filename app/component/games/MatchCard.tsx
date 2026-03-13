@@ -1,12 +1,13 @@
 // app/component/games/MatchCard.tsx
 "use client";
 
-import Link from "next/link";
+
 import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
+import { motion } from "framer-motion";
 
 /* ★ 追加: イベントロガー */
 import { logGameEvent } from "@/lib/analytics/logEvent";
@@ -57,12 +58,17 @@ function useMyPostId(gameId: string) {
 }
 
 function useTeamRecord(teamId?: string) {
-  const [rec, setRec] = useState<{
-    wins: number;
-    losses: number;
-    rank?: number;
-  } | null>(null);
+type TeamLastGame = {
+  at?: any;
+  isWin?: boolean;
+};
 
+const [rec, setRec] = useState<{
+  wins: number;
+  losses: number;
+  rank?: number;
+  lastGames?: TeamLastGame[];
+} | null>(null);
   useEffect(() => {
     if (!teamId) return;
 
@@ -73,7 +79,8 @@ function useTeamRecord(teamId?: string) {
       setRec({
         wins: d.wins ?? 0,
         losses: d.losses ?? 0,
-        rank: d.rank, // ← 追加
+        rank: d.rank,
+        lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
       });
     });
   }, [teamId]);
@@ -103,14 +110,26 @@ export type MatchCardProps = {
   liveMeta: { period: string; runningTime?: string } | null;
   finalMeta: { ot?: boolean } | null;
 
-  /** 互換維持のため残す（内部では未使用） */
+  showRecentForm?: boolean;
+
   viewPredictionHref: string;
   makePredictionHref: string;
+  onOpenPredict?: (gameId: string) => void;
+  sharedLayoutId?: string;
+  disableCardMotion?: boolean;
 
   dense?: boolean;
   hideLine?: boolean;
   hideActions?: boolean;
+  marketBias?: {
+  homePct: number;
+  awayPct: number;
 };
+showMarketBias?: boolean;
+inPredictOverlay?: boolean;
+};
+
+
 
 const leagueLineColor: Record<League, string> = {
   bj: "#eab308",   // Bリーグ
@@ -167,12 +186,20 @@ export default function MatchCard({
   makePredictionHref,
   dense = false,
   hideLine = false,
-  hideActions = false,
-  className,
+  showRecentForm = false,
+ hideActions = false,
+marketBias,
+showMarketBias = false,
+inPredictOverlay = false,
+className,
+sharedLayoutId,
+onOpenPredict,
+disableCardMotion = false,
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
   const [showLoginRequired, setShowLoginRequired] = useState(false);
 
+    const [navigating, setNavigating] = useState(false);
 
   // ▼ 自分の投稿があるかをチェック
 const myPostId = useMyPostId(id);
@@ -200,12 +227,43 @@ const normalizedLeague = normalizeLeague(league);
 // ▼ Firestore からチーム成績（wins/losses）を取得
 const homeRecord = useTeamRecord(home.teamId);
 const awayRecord = useTeamRecord(away.teamId);
+function toLast5WL(
+  lastGames: { at?: any; isWin?: boolean }[] | undefined,
+  latestSide: "left" | "right"
+): ("W" | "L")[] {
+  if (!Array.isArray(lastGames)) return [];
 
+  const sorted = [...lastGames]
+    .sort((a, b) => {
+      const ams = a?.at?.toMillis ? a.at.toMillis() : 0;
+      const bms = b?.at?.toMillis ? b.at.toMillis() : 0;
+      return bms - ams; // new -> old
+    })
+    .slice(0, 5)
+    .map((g) => (g?.isWin ? "W" : "L"));
+
+  // latestSide が右なら old->new に反転（右端が最新）
+  return latestSide === "right" ? [...sorted].reverse() : sorted;
+}
+
+const homeForm = toLast5WL(homeRecord?.lastGames, "right"); // HOMEは内側(右)が最新
+const awayForm = toLast5WL(awayRecord?.lastGames, "left");  // AWAYは内側(左)が最新
 const homeColor =
   getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9";
 
 const awayColor =
   getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e";
+const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
+const awayBiasPct = Math.max(0, Math.min(100, marketBias?.awayPct ?? 32));
+
+const marketMajority =
+  Math.abs(homeBiasPct - awayBiasPct) < 0.0001
+    ? "none"
+    : homeBiasPct > awayBiasPct
+    ? "home"
+    : "away";
+
+
 
   const jerseyCls = dense
     ? "w-8 h-8 md:w-14 md:h-14"
@@ -254,29 +312,42 @@ const isLive =
     startAtJst instanceof Date &&
     Date.now() >= startAtJst.getTime());
 
-  let center: React.ReactNode = isLive ? (
-  <span
-    className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
-    style={{ fontSize: dense ? 10 : 11 }}
-  >
-    LIVE
-  </span>
-) : (
-  <div
-    className={`${scoreText} leading-none font-black tabular-nums`}
-    style={{
-      fontFamily:
-        'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-      fontWeight: 800,
-    }}
-  >
-    {fmtKickoff(startAtJst)}
+let center: React.ReactNode = inPredictOverlay ? (
+  <div className="flex min-h-[72px] items-center justify-center md:min-h-[88px]">
+    <div
+      className="text-4xl md:text-6xl leading-none font-black tracking-[0.06em] text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
+      style={{
+        fontFamily:
+          'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
+        fontWeight: 800,
+      }}
+    >
+      VS
+    </div>
   </div>
-);
+) : isLive ? (
+    <span
+      className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
+      style={{ fontSize: dense ? 10 : 11 }}
+    >
+      LIVE
+    </span>
+  ) : (
+    <div
+      className={`${scoreText} leading-none font-black tabular-nums`}
+      style={{
+        fontFamily:
+          'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
+        fontWeight: 800,
+      }}
+    >
+      {fmtKickoff(startAtJst)}
+    </div>
+  );
 
 
 
-  if (status === "live" && score) {
+    if (!inPredictOverlay && status === "live" && score) {
     center = (
       <div className="flex flex-col items-center gap-1">
         <span
@@ -305,7 +376,7 @@ const isLive =
     );
   }
 
-  if (status === "final" && score) {
+  if (!inPredictOverlay && status === "final" && score) {
     center = (
       <div className="flex flex-col items-center gap-1">
         <div
@@ -362,14 +433,38 @@ const isLive =
     }
   };
 
+const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const me = auth.currentUser;
+  if (!me) {
+    setShowLoginRequired(true);
+    return;
+  }
+
+  // 試合開始後は自分の予想カードだけ開く
+  if (isGameStarted) {
+    if (myPostId) {
+      router.push(buildMyPostHref(myPostId));
+    } else {
+      alert("この試合のあなたの予想はありません");
+    }
+    return;
+  }
+
+  // 試合前だけ overlay を開く
+  onOpenPredict?.(id);
+};
   /* ★ 「予想をする」クリック時：
         - 試合前   : 投稿あれば投稿詳細 / なければ予想作成へ
         - 試合開始後: 投稿あれば投稿詳細 / なければ“予想を見る”へ
   */
-  const handleMakePrediction = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleMakePrediction = async (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   e.stopPropagation();
-
+if (navigating) return;
+setNavigating(true);
   const me = auth.currentUser;
 
   // ★ 追加：未ログインならモーダルを出して終了
@@ -434,33 +529,170 @@ const isLive =
       } else {
         router.push(predictHref);
       }
-    } catch {
+     } catch {
       // 通信失敗時も上と同じフォールバック
       if (isGameStarted) {
         router.push(predictionsHref);
       } else {
         router.push(predictHref);
       }
+    } finally {
+      setNavigating(false);
     }
   };
 
-  return (
+const shimmerKeyframes = `
+@keyframes matchCardFloat {
+  0%   { transform: translateY(0px) scale(1); }
+  25%  { transform: translateY(-1px) scale(1.0015); }
+  50%  { transform: translateY(-2px) scale(1.003); }
+  75%  { transform: translateY(-1px) scale(1.0015); }
+  100% { transform: translateY(0px) scale(1); }
+}
+`;
+
+  const predictedStyle: React.CSSProperties = {
+    background: `
+      radial-gradient(95% 220% at 50% 50%,
+        rgba(148,163,184,0.22) 0%,
+        rgba(100,116,139,0.14) 42%,
+        rgba(71,85,105,0.06) 66%,
+        rgba(71,85,105,0.00) 100%
+      )
+    `,
+    backgroundColor: "transparent",
+    boxShadow: "none",
+  };
+
+  const normalStyle: React.CSSProperties = {
+    background: `
+      radial-gradient(92% 230% at 50% 50%,
+        rgba(59,130,246,0.92) 0%,
+        rgba(37,99,235,0.88) 36%,
+        rgba(29,78,216,0.58) 58%,
+        rgba(29,78,216,0.20) 74%,
+        rgba(29,78,216,0.05) 84%,
+        rgba(29,78,216,0.00) 100%
+      )
+    `,
+    backgroundColor: "transparent",
+    boxShadow: "none",
+  };
+
+return (
+<motion.div
+  layout={!disableCardMotion}
+  layoutId={sharedLayoutId}
+className={[
+  "group relative overflow-hidden text-white",
+  disableCardMotion
+    ? ""
+    : [
+        "transition-transform duration-300",
+        navigating
+          ? "scale-[0.992] opacity-95"
+          : "hover:-translate-y-[2px] hover:scale-[1.003]",
+      ].join(" "),
+    dense
+      ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(2,6,23,0.38),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"
+      : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
+    hideLine ? "pb-3 md:pb-4" : "",
+    className || "",
+  ].join(" ")}
+ style={{
+  animation:
+    disableCardMotion
+      ? undefined
+      : dense
+      ? undefined
+      : "matchCardFloat 6.2s ease-in-out infinite",
+  willChange: "transform",
+}}
+  onClick={handleClickCard}
+>
+      <style>{shimmerKeyframes}</style>
+
+
+
+{showMarketBias && marketBias && (
+  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+    {/* HOME 側バー */}
     <div
-      className={[
-        "text-white",
-        dense
-          ? "rounded-2xl border border-white/10 bg-white/3 backdrop-blur-sm shadow"
-          : "rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm shadow-md",
-        hideLine ? "pb-3 md:pb-4" : "",
-        className || "",
-      ].join(" ")}
-      onClick={handleClickCard}
-    >
+      className="absolute left-0 top-0 h-full"
+      style={{
+        width: `${homeBiasPct}%`,
+        background: `linear-gradient(90deg, ${homeColor}66 0%, ${homeColor}22 72%, transparent 100%)`,
+      }}
+    />
+
+    {/* AWAY 側バー */}
+    <div
+      className="absolute right-0 top-0 h-full"
+      style={{
+        width: `${awayBiasPct}%`,
+        background: `linear-gradient(270deg, ${awayColor}66 0%, ${awayColor}22 72%, transparent 100%)`,
+      }}
+    />
+
+    {/* HOME 優勢時の発光 */}
+    {marketMajority === "home" && (
+      <div
+        className="absolute left-0 top-0 h-full"
+        style={{
+          width: `${homeBiasPct}%`,
+          background: `linear-gradient(90deg, ${homeColor}22 0%, transparent 100%)`,
+          boxShadow: `inset 0 0 14px ${homeColor}14, 0 0 8px ${homeColor}14`,
+        }}
+      />
+    )}
+
+    {/* AWAY 優勢時の発光 */}
+    {marketMajority === "away" && (
+      <div
+        className="absolute right-0 top-0 h-full"
+        style={{
+          width: `${awayBiasPct}%`,
+          background: `linear-gradient(270deg, ${awayColor}22 0%, transparent 100%)`,
+          boxShadow: `inset 0 0 14px ${awayColor}14, 0 0 8px ${awayColor}14`,
+        }}
+      />
+    )}
+
+    {/* 境界線 */}
+    <div
+      className="absolute top-0 h-full w-[2px] -translate-x-1/2 bg-white/18"
+      style={{ left: `${homeBiasPct}%` }}
+    />
+  </div>
+)}
+
+<div
+  aria-hidden
+  className="pointer-events-none absolute inset-[1px] rounded-2xl"
+  style={{
+    boxShadow: `
+      inset 0 0 0 1px rgba(255,255,255,0.06),
+      inset 0 12px 24px rgba(255,255,255,0.03)
+    `,
+  }}
+/>
+
+
+
+      <div
+  aria-hidden
+  className="pointer-events-none absolute inset-0 rounded-2xl"
+  style={{
+background:
+  "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.008) 26%, rgba(255,255,255,0.00) 46%)",
+  }}
+/>
       {(() => {
   const tag = getGameEventTag(roundLabel);
   if (!tag) return null;
 
   return (
+    
     <div className="absolute top-2 right-2 z-20">
       <EventPill label={tag.label} color={tag.color} />
     </div>
@@ -468,7 +700,11 @@ const isLive =
 })()}
 
 
-      <div className={`${dense ? "px-3 pt-3 mb-1" : "px-4 pt-4 mb-1"}`}>
+      <div
+  className={`${
+    dense ? "px-3 pt-3 mb-1" : "px-4 pt-3 mb-1"
+  } ${inPredictOverlay ? "pb-0" : ""}`}
+>
         {!!roundLabel && (
   <div className="mc-round text-center font-bold text-l md:text-2xl mb-1">
     {roundLabel}
@@ -487,9 +723,9 @@ const isLive =
 <div className="mc-home flex flex-col items-center -mt-5 md:mt-0">
 
   {/* HOME ラベル：mobile 小 / web 通常 */}
-  <div className="text-[11px] md:text-sm font-bold uppercase tracking-wide opacity-80 mb-1">
-    HOME
-  </div>
+  <div className="text-xs md:text-sm font-bold uppercase tracking-wide opacity-85 mb-1">
+  HOME
+</div>
 
   <Icon
   className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
@@ -563,16 +799,50 @@ const isLive =
 
 
   {/* 戦績（record）は mobile 小・web 通常でOK） */}
-  <div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
+<div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
   {fmtRecordWithRank(homeRecord)}
 </div>
 
+{/* ★ ここに挿入 */}
+{showRecentForm && homeForm.length > 0 && (
+  <div className="mt-1 w-full flex justify-center">
+    <div className="flex items-center gap-1">
+      <div className="flex gap-[3px]">
+        {homeForm.map((result, idx) => {
+          const bgColor =
+            result === "W"
+              ? "bg-emerald-500/20 text-emerald-300 border-emerald-300/20"
+              : "bg-rose-500/20 text-rose-300 border-rose-300/20";
+
+          return (
+            <div
+              key={idx}
+              className={`
+                w-4 h-4 md:w-5 md:h-5 rounded-[5px] flex items-center justify-center
+                text-[8px] md:text-[9px] font-bold font-mono leading-none
+                backdrop-blur-sm border shrink-0
+                ${bgColor}
+              `}
+            >
+              {result}
+            </div>
+          );
+        })}
+      </div>
+      <span className="text-[10px] md:text-[11px] text-cyan-200/70">→</span>
+    </div>
+  </div>
+)}
 
 </div>
 
 
         {/* CENTER */}
-        <div className="mc-center flex flex-col items-center justify-center mt-4 md:mt-1">
+<div
+  className={`mc-center flex flex-col items-center justify-center ${
+    inPredictOverlay ? "-mt-2 md:-mt-3" : "mt-4 md:mt-1"
+  }`}
+>
   {center}
 </div>
 
@@ -580,9 +850,9 @@ const isLive =
 <div className="mc-away flex flex-col items-center -mt-5 md:mt-0">
 
   {/* AWAY ラベル：mobile 小 / web 通常 */}
-  <div className="text-[11px] md:text-sm font-bold uppercase tracking-wide opacity-80 mb-1">
-    AWAY
-  </div>
+ <div className="text-xs md:text-sm font-bold uppercase tracking-wide opacity-85 mb-1">
+  AWAY
+</div>
 
   {/* アイコン：mobile大きく / webそのまま */}
   <Icon
@@ -656,9 +926,40 @@ const isLive =
 </div>
 
 
-  <div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
+<div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
   {fmtRecordWithRank(awayRecord)}
 </div>
+
+{/* ★ ここに挿入 */}
+{showRecentForm && awayForm.length > 0 && (
+  <div className="mt-1 w-full flex justify-center">
+    <div className="flex items-center gap-1">
+      <span className="text-[10px] md:text-[11px] text-cyan-200/70">←</span>
+      <div className="flex gap-[3px]">
+        {awayForm.map((result, idx) => {
+          const bgColor =
+            result === "W"
+              ? "bg-emerald-500/20 text-emerald-300 border-emerald-300/20"
+              : "bg-rose-500/20 text-rose-300 border-rose-300/20";
+
+          return (
+            <div
+              key={idx}
+              className={`
+                w-4 h-4 md:w-5 md:h-5 rounded-[5px] flex items-center justify-center
+                text-[8px] md:text-[9px] font-bold font-mono leading-none
+                backdrop-blur-sm border shrink-0
+                ${bgColor}
+              `}
+            >
+              {result}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+)}
 
 </div>
 
@@ -679,34 +980,29 @@ const isLive =
 
       {/* ボタン行 */}
       {!hideActions && (
-        <div className="grid grid-cols-2 gap-2 px-3 py-2 md:gap-3 md:px-4 md:py-3">
+        <div className="grid grid-cols-1 gap-2 px-3 py-2 md:gap-3 md:px-4 md:py-3">
           {/* ▼ 試合別タイムラインへ */}
-          <Link
-            href={predictionsHref}
-            onClick={handleOpenPredictions}
-            className="rounded-lg bg-white/15 hover:bg-white/25 text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base active:scale-90 transition-transform"
-            aria-label="その試合の分析一覧（予想を見る）"
-          >
-            予想を見る
-          </Link>
-
           {/* ▼ 予想作成ページへ（自分の投稿があれば詳細へ／開始後は未投稿なら“見る”へ） */}
           {/* ▼ 予想をする / 予想済み */}
-<Link
-  href={
-    isPredicted
-      ? buildMyPostHref(myPostId!)
-      : predictHref
-  }
-  onClick={handleMakePrediction}
-  className={
-    isPredicted
-      ? "rounded-lg bg-gray-600/40 text-black grid place-items-center font-bold h-8 text-sm md:h-12 md:text-base active:scale-90 transition-transform"
-      : "rounded-lg bg-blue-600 hover:bg-blue-500 text-white grid place-items-center font-bold h-8 text-sm px-2 md:h-12 md:text-base active:scale-90 transition-transform"
-  }
+<button
+  type="button"
+  onClick={handleOpenPredict}
+  className={[
+    "grid w-full place-items-center font-bold text-white",
+    "h-8 text-sm px-2 md:h-12 md:text-base",
+    "rounded-md",
+    "active:scale-[0.985] transition-all duration-200",
+  ].join(" ")}
+  style={isPredicted ? predictedStyle : normalStyle}
 >
-  {isPredicted ? "予想済み" : "予想をする"}
-</Link>
+{status === "final"
+  ? "試合終了"
+  : isGameStarted
+  ? "試合中"
+  : isPredicted
+  ? "予想済み"
+  : "予想をする"}
+</button>
         </div>
       )}
       <LoginRequiredModal
@@ -714,6 +1010,6 @@ const isLive =
   onClose={() => setShowLoginRequired(false)}
   variant={isMobile ? "mobile" : "web"}
 />
-    </div>
+    </motion.div>
   );
 }

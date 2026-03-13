@@ -250,7 +250,7 @@ export default function AdminBadgesPage() {
                     : "border-white/10 hover:bg-white/10",
                 ].join(" ")}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <img
                     src={b.icon || "/badges/default.png"}
                     className="w-10 h-10 object-contain"

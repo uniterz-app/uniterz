@@ -175,7 +175,7 @@ export default function AnnouncementsPage() {
 
                   {/* 本文 */}
                   <div className="p-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <span
                         className={`px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r ${meta.grad} text-black/90 ${meta.glow}`}
                       >

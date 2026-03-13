@@ -77,7 +77,7 @@ export default function AdminContactsPage() {
                 </div>
 
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <h2 className="text-sm font-semibold text-white">
                       {c.type}
                     </h2>

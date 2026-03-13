@@ -13,6 +13,9 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@react-three/postprocessing": "^3.0.4",
     "@tanstack/react-virtual": "^3.13.12",
     "axios": "^1.13.2",
     "cheerio": "^1.1.2",
@@ -23,12 +26,15 @@
     "lucide-react": "^0.545.0",
     "next": "^16.0.7",
     "next-pwa": "^5.6.0",
+    "postprocessing": "^6.38.3",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-icons": "^5.5.0",
     "recharts": "^3.4.1",
     "sonner": "^2.0.7",
-    "stripe": "^20.1.2"
+    "stripe": "^20.1.2",
+    "three": "^0.183.2",
+    "three-csg-ts": "^3.2.0"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",

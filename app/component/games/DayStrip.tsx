@@ -1,16 +1,13 @@
 "use client";
-import React, {
-  useEffect,
-  useRef,
-} from "react";
+import React, { useEffect, useRef } from "react";
 
 type Props = {
-  dates: Date[];                // ★ 試合日だけ
+  dates: Date[];
   selectedDate: Date;
   onSelect: (d: Date) => void;
   className?: string;
   size?: "sm" | "md" | "lg";
-  visibleCount?: number;        // 同時表示数
+  visibleCount?: number;
   autoScrollOnInit?: boolean;
 };
 
@@ -43,13 +40,11 @@ export default function DayStrip({
 
   const today = new Date();
 
-  // ---- 選択変更時に中央へスナップ ----
   useEffect(() => {
     if (!listRef.current || !selRef.current) return;
 
     const wrap = listRef.current;
     const el = selRef.current;
-
     const left = el.offsetLeft - wrap.clientWidth / 2 + el.clientWidth / 2;
 
     wrap.scrollTo({
@@ -60,7 +55,6 @@ export default function DayStrip({
     didInit.current = true;
   }, [dates, selectedDate, autoScrollOnInit]);
 
-  // ---- スクロールが止まったとき自動スナップ ----
   const snapToNearest = () => {
     const wrap = listRef.current;
     if (!wrap) return;
@@ -106,31 +100,30 @@ export default function DayStrip({
     const onScroll = () => {
       if (scrollingByCode.current) return;
       if (scrollTimer.current) clearTimeout(scrollTimer.current);
-
       scrollTimer.current = window.setTimeout(snapToNearest, 130);
     };
 
     wrap.addEventListener("scroll", onScroll, { passive: true });
-    return () => wrap.removeEventListener("scroll", onScroll);
+    return () => {
+      wrap.removeEventListener("scroll", onScroll);
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    };
   }, [dates]);
 
   const sz = sizeMap[size];
 
-  // ---- 曜日を3文字に変更 ("Sun", "Mon", …) ----
   const weekday = (d: Date) =>
     ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
 
   return (
     <div
       ref={listRef}
-      className={`overflow-x-auto no-scrollbar ${sz.padX} ${
-        className ?? ""
-      } snap-x snap-mandatory`}
+      className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} snap-x snap-mandatory`}
     >
       <div className={`flex ${sz.gap} py-2`}>
         {dates.map((d, i) => {
           const selected = isSameDay(d, selectedDate);
-          const isToday = isSameDay(d, today);
+          const isTodayDate = isSameDay(d, today);
 
           const basis =
             visibleCount && visibleCount > 0
@@ -150,24 +143,68 @@ export default function DayStrip({
                 }}
                 onClick={() => onSelect(d)}
                 className="flex flex-col items-center"
+                type="button"
               >
-                {/* ---- 曜日（3文字） ---- */}
-                <span className="text-[11px] opacity-70 mb-1">
+                <span
+                  className={[
+                    "mb-1 text-[11px] transition-all duration-200",
+                    selected ? "text-white/95" : "text-white/70",
+                  ].join(" ")}
+                  style={{
+                    textShadow: selected ? "0 0 8px rgba(255,255,255,0.18)" : undefined,
+                    transform: selected ? "translateY(-1px)" : undefined,
+                  }}
+                >
                   {weekday(d)}
                 </span>
 
-                {/* ---- 日付 UI ---- */}
                 <div
                   className={[
-                    "grid place-items-center rounded-full border transition-colors",
-                    sz.circle,
-                    selected
-                      ? "bg-lime-600 border-lime-600 text-black"
-                      : "border-white/20 bg-white/5 text-white",
-                    isToday && !selected ? "ring-2 ring-lime-600" : "",
-                  ].join(" ")}
+  "relative grid place-items-center rounded-full border-2",
+  "transition-all duration-200 ease-out",
+  "backdrop-blur-md",
+  sz.circle,
+  "text-white",
+].join(" ")}
+                  style={{
+                    transform: selected ? "translateY(-3px) scale(1.08)" : "translateY(0) scale(1)",
+                    // ★ 当日は「線の色だけ」変更（外側リングなし）
+                    borderColor: selected
+                      ? "rgba(132, 204, 22, 0.75)"
+                      : isTodayDate
+                      ? "rgba(132, 204, 22, 0.70)"
+                      : "rgba(255,255,255,0.18)",
+                    background: selected
+                      ? "linear-gradient(180deg, rgba(132,204,22,0.95) 0%, rgba(101,163,13,0.92) 100%)"
+                      : "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
+                    boxShadow: selected
+                      ? isTodayDate
+                        ? "0 14px 28px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.25), 0 0 0 1px rgba(132,204,22,0.35), 0 0 20px rgba(132,204,22,0.65)"
+                        : "0 14px 28px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.20), 0 0 0 1px rgba(132,204,22,0.28), 0 0 14px rgba(132,204,22,0.35)"
+                      : isTodayDate
+                      ? "inset 0 1px 0 rgba(255,255,255,0.10), 0 0 10px rgba(132,204,22,0.18)"
+                      : "inset 0 1px 0 rgba(255,255,255,0.08)",
+                  }}
                 >
-                  <span className={`font-bold ${sz.num}`}>
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 rounded-full"
+                    style={{
+                      background: selected
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.00) 55%)"
+                        : "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.00) 60%)",
+                    }}
+                  />
+
+                  <span
+                    className={`relative z-10 font-bold ${sz.num}`}
+                    style={{
+                      color: selected ? "#04110a" : "#ffffff",
+                      textShadow: selected
+                        ? "0 1px 0 rgba(255,255,255,0.15)"
+                        : "0 0 8px rgba(255,255,255,0.08)",
+                    }}
+                  >
                     {d.getDate()}
                   </span>
                 </div>
@@ -179,4 +216,3 @@ export default function DayStrip({
     </div>
   );
 }
-

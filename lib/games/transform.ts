@@ -3,12 +3,20 @@ import { teamColorsB1 } from "@/lib/teams-b1";
 import { teamColorsNBA } from "@/lib/teams-nba";
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
-import type { Status, TeamSide, MatchCardProps } from "@/app/component/games/MatchCard";
+import type {
+  Status,
+  TeamSide,
+  MatchCardProps,
+} from "@/app/component/games/MatchCard";
 
 // --------------------------------------------------------
 // gamePath の参照
 // --------------------------------------------------------
-let gamePath: { predict: (id: string) => string; predictions: (id: string) => string } | null = null;
+let gamePath: {
+  predict: (id: string) => string;
+  predictions: (id: string) => string;
+} | null = null;
+
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   gamePath = require("@/lib/game-paths").gamePath ?? null;
@@ -17,14 +25,17 @@ try {
 /** 不正値を Date|null に丸める */
 export const toDateOrNull = (v: any): Date | null => {
   if (v instanceof Date) return v;
+
   if (v?.toDate && typeof v.toDate === "function") {
     const d = v.toDate();
-    return d instanceof Date && !isNaN(+d) ? d : null;
+    return d instanceof Date && !Number.isNaN(+d) ? d : null;
   }
+
   if (typeof v === "string" || typeof v === "number") {
     const d = new Date(v);
-    return isNaN(+d) ? null : d;
+    return Number.isNaN(+d) ? null : d;
   }
+
   return null;
 };
 
@@ -43,6 +54,7 @@ export const pickTeamColor = (league: League, name?: string) => {
   if (league === "bj") {
     return teamColorsB1[name]?.primary;
   }
+
   if (league === "nba") {
     return teamColorsNBA[name]?.primary;
   }
@@ -106,6 +118,20 @@ export type GameDoc = {
   awayScore?: number;
   liveMeta?: any;
   finalMeta?: any;
+
+  // market bias 候補
+  marketBias?: {
+    homePct?: number;
+    awayPct?: number;
+  };
+  market?: {
+    homePct?: number;
+    awayPct?: number;
+    homeRate?: number;
+    awayRate?: number;
+  };
+  homePct?: number;
+  awayPct?: number;
 };
 
 /** MatchCardProps へ整形 */
@@ -127,7 +153,7 @@ export function toMatchCardProps(
   const away = toTeamSide(league)(raw?.away);
 
   // --------------------------------------------------------
-  // ★ スコア補完（そのまま維持）
+  // スコア補完
   // --------------------------------------------------------
   let score = toScore(raw?.score);
 
@@ -143,13 +169,49 @@ export function toMatchCardProps(
   const liveMeta = toLiveMeta(raw?.liveMeta);
   const finalMeta = toFinalMeta(raw?.finalMeta);
 
-  // href ビルダー（そのまま維持）
+  // href ビルダー（互換維持）
   const buildView =
     opts?.hrefs?.view ??
-    (gamePath ? gamePath.predictions : (gid: string) => `/web/games/${gid}/predictions`);
+    (gamePath
+      ? gamePath.predictions
+      : (gid: string) => `/web/games/${gid}/predictions`);
+
   const buildMake =
     opts?.hrefs?.make ??
-    (gamePath ? gamePath.predict : (gid: string) => `/web/games/${gid}/predict`);
+    (gamePath
+      ? gamePath.predict
+      : (gid: string) => `/web/games/${gid}/predict`);
+
+  // --------------------------------------------------------
+  // marketBias 抽出
+  // --------------------------------------------------------
+  const homePct = Math.max(
+    0,
+    Math.min(
+      100,
+      Number(
+        raw?.marketBias?.homePct ??
+          raw?.market?.homePct ??
+          raw?.market?.homeRate ??
+          raw?.homePct ??
+          50
+      )
+    )
+  );
+
+  const awayPct = Math.max(
+    0,
+    Math.min(
+      100,
+      Number(
+        raw?.marketBias?.awayPct ??
+          raw?.market?.awayPct ??
+          raw?.market?.awayRate ??
+          raw?.awayPct ??
+          50
+      )
+    )
+  );
 
   return {
     id,
@@ -164,9 +226,14 @@ export function toMatchCardProps(
     liveMeta,
     finalMeta,
 
+    marketBias: {
+      homePct,
+      awayPct,
+    },
+
     // V2では MatchCard が自前でリンク生成するため不要
-    viewPredictionHref: "",
-    makePredictionHref: "",
+    viewPredictionHref: buildView(id),
+    makePredictionHref: buildMake(id),
 
     dense: Boolean(opts?.dense),
   };

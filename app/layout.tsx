@@ -3,9 +3,13 @@ import type { Metadata, Viewport } from "next";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
+
+
 import EventGate from "@/app/component/common/EventGate";
+
+// ★ 追加：メンテナンス表示コンポーネント
+
 import MaintenanceOverlay from "@/app/component/common/maintenance";
-import NavBar from "@/app/component/NavBar";
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -31,29 +35,37 @@ export default function RootLayout({
 
   return (
     <html lang="ja">
-      <body style={{ backgroundColor: "#000", margin: 0 }}>
+      <body
+        style={{
+          backgroundImage: "url('/splash/splash-1170x2532.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundColor: "#000",
+          margin: 0,
+          padding: 0,
+        }}
+      >
         {maintenance ? (
           <MaintenanceOverlay />
         ) : (
           <>
-            {/* ★ transform / perspective の外 */}
-            <NavBar />
-
             <AppActivityTracker />
-            <EventGate />
+<EventGate />
 
-            {/* ★ 3D / transform を使う世界 */}
-            <div
+<div
   style={{
     perspective: "1400px",
+    width: "100%",
     minHeight: "100vh",
-    paddingBottom: "96px", // ★ NavBar 分
   }}
 >
-  <WebOrMobileSplash>{children}</WebOrMobileSplash>
+  <WebOrMobileSplash>
+    {children}
+  </WebOrMobileSplash>
 </div>
 
-            <ToastHost />
+<ToastHost />
+
           </>
         )}
       </body>

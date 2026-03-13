@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
-import { FaTrophy } from "react-icons/fa";
+import { FaTrophy, FaBrain } from "react-icons/fa";
 import { FiTrendingUp, FiUser } from "react-icons/fi";
-import { Brain } from "lucide-react";
 import { useEffect, useState, CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -24,10 +24,7 @@ type Item = {
 
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
-
-  // ★ 修正：home → result + アイコン変更
-  { key: "home", href: "/result", label: "リザルト", icon: Brain },
-
+  { key: "home", href: "/home", label: "ホーム", icon: FaBrain },
   { key: "trend", href: "/trend", label: "トレンド", icon: FiTrendingUp },
   { key: "ranking", href: "/rankings", label: "ランキング", icon: FaTrophy },
   { key: "mypage", href: "/mypage", label: "マイページ", icon: FiUser },
@@ -37,34 +34,67 @@ const BarStyle = {
   wrap: {
     position: "fixed",
     left: "50%",
-    bottom: 16,
+    bottom: "calc(12px + env(safe-area-inset-bottom))",
     transform: "translateX(-50%)",
-    zIndex: 50,
+    zIndex: 999999,
     width: "min(960px, 92vw)",
-    paddingBottom: "env(safe-area-inset-bottom)",
+    pointerEvents: "none",
   } as CSSProperties,
+
   barMobile: {
-    background: "#0a3b47",
+    position: "relative",
+    overflow: "hidden",
+    background: "rgba(8, 30, 38, 0.55)",
     borderRadius: 30,
     padding: "14px 20px",
     display: "grid",
     gridTemplateColumns: "repeat(5, 1fr)",
     gap: 12,
+    border: "1px solid rgba(255,255,255,0.14)",
     boxShadow:
-      "0 10px 28px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,0.08)",
-    backdropFilter: "saturate(140%) blur(6px)",
+      "0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(80,220,255,0.06), 0 0 18px rgba(80,220,255,0.07)",
+    backdropFilter: "saturate(135%) blur(8px)",
+    WebkitBackdropFilter: "saturate(135%) blur(8px)",
+    pointerEvents: "auto",
   } as CSSProperties,
+
   barWeb: {
-    background: "#0a3b47",
+    position: "relative",
+    overflow: "hidden",
+    background: "rgba(8, 30, 38, 0.52)",
     borderRadius: 28,
     padding: "10px 16px",
     display: "grid",
     gridTemplateColumns: "repeat(5, 1fr)",
     gap: 8,
+    border: "1px solid rgba(255,255,255,0.12)",
     boxShadow:
-      "0 10px 28px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,0.08)",
-    backdropFilter: "saturate(140%) blur(6px)",
+      "0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,0.07), 0 0 0 1px rgba(80,220,255,0.05), 0 0 14px rgba(80,220,255,0.05)",
+    backdropFilter: "saturate(135%) blur(7px)",
+    WebkitBackdropFilter: "saturate(135%) blur(7px)",
+    pointerEvents: "auto",
   } as CSSProperties,
+
+  // ガラスのハイライト層
+  glassSheen: {
+    position: "absolute",
+    inset: 0,
+    borderRadius: "inherit",
+    pointerEvents: "none",
+    background:
+      "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.025) 28%, rgba(255,255,255,0.00) 45%)",
+  } as CSSProperties,
+
+  // 枠のグロー（常時）
+  glowRing: {
+    position: "absolute",
+    inset: 0,
+    borderRadius: "inherit",
+    pointerEvents: "none",
+    boxShadow:
+      "inset 0 0 0 1px rgba(120,240,255,0.10), inset 0 0 12px rgba(80,220,255,0.05), 0 0 12px rgba(70,210,255,0.06)",
+  } as CSSProperties,
+
   linkMobile: {
     display: "flex",
     alignItems: "center",
@@ -72,8 +102,13 @@ const BarStyle = {
     padding: "8px 0",
     borderRadius: 16,
     textDecoration: "none",
-    transition: "transform .15s ease-out",
+    transition: "transform .15s ease-out, background-color .2s ease",
+    background: "transparent",
+    boxShadow: "none",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   } as CSSProperties,
+
   linkWeb: {
     display: "flex",
     alignItems: "center",
@@ -81,18 +116,29 @@ const BarStyle = {
     padding: "6px 0",
     borderRadius: 16,
     textDecoration: "none",
-    transition: "transform .15s ease-out",
+    transition: "transform .15s ease-out, background-color .2s ease",
+    background: "transparent",
+    boxShadow: "none",
+    outline: "none",
+    WebkitTapHighlightColor: "transparent",
   } as CSSProperties,
 };
 
 export default function NavBar() {
-  const pathname = usePathname();
-  const isMobile = pathname?.startsWith("/mobile");
+  const pathname = usePathname() ?? "";
+  const isMobile =
+  pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix: "/web" | "/mobile" = isMobile ? "/mobile" : "/web";
 
-  // ⭐ 初期表示では NavBar を描画しない（null）
-  const [myHref, setMyHref] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
+  // SSR時は portal先がないので mount 後に描画
+  const [mounted, setMounted] = useState(false);
+
+  // 初回から描画する（ゲストで開始 → authで上書き）
+  const [myHref, setMyHref] = useState<string>(`${prefix}/u/guest`);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // login / signup では NavBar を非表示
   if (
@@ -105,29 +151,30 @@ export default function NavBar() {
   }
 
   useEffect(() => {
-  const unsub = onAuthStateChanged(auth, async (user) => {
-    // 🔥 ゲストでも mypage は存在させる
-    if (!user) {
-  setMyHref(`${prefix}/u/guest`);
-  setInitialized(true);
-  return;
-}
-    const snap = await getDoc(doc(db, "users", user.uid));
-    const h = snap.data()?.handle || snap.data()?.slug;
+    // ルート切替時に一旦ゲストに戻す
+    setMyHref(`${prefix}/u/guest`);
 
-    setMyHref(
-      h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
-    );
-    setInitialized(true);
-  });
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setMyHref(`${prefix}/u/guest`);
+        return;
+      }
 
-  return () => unsub();
-}, [prefix]);
+      try {
+        const snap = await getDoc(doc(db, "users", user.uid));
+        const h = snap.data()?.handle || snap.data()?.slug;
+        setMyHref(h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`);
+      } catch {
+        setMyHref(`${prefix}/mypage`);
+      }
+    });
 
-  // ⭐ 初回は NavBar を一切描画しない（フラッシュ防止）
-  if (!initialized) return null;
+    return () => unsub();
+  }, [prefix]);
 
-  return (
+  if (!mounted) return null;
+
+  const navEl = (
     <>
       <style>{`
         @keyframes popActive {
@@ -137,24 +184,24 @@ export default function NavBar() {
         }
       `}</style>
 
-      <nav style={BarStyle.wrap}>
+      <nav style={BarStyle.wrap} aria-label="Bottom navigation">
         <div style={isMobile ? BarStyle.barMobile : BarStyle.barWeb}>
+          {/* ガラス感のハイライト */}
+          <div style={BarStyle.glassSheen} />
+
+          {/* 常時うっすら光る枠 */}
+          <div style={BarStyle.glowRing} />
+
           {items.map((item) => {
-            const href =
-              item.key === "mypage"
-                ? myHref!
-                : `${prefix}${item.href}`;
-
-            const active =
-              pathname === href || pathname?.startsWith(href + "/");
-
+            const href = item.key === "mypage" ? myHref : `${prefix}${item.href}`;
+            const active = pathname === href || pathname.startsWith(href + "/");
             const Icon = item.icon;
 
             const iconStyle: CSSProperties = active
               ? {
                   animation: "popActive 0.24s ease",
                   transform: "scale(1.08)",
-                  filter: "drop-shadow(0 0 3px rgba(255,255,255,0.7))",
+                  filter: "none",
                 }
               : { transform: "scale(0.92)" };
 
@@ -162,7 +209,17 @@ export default function NavBar() {
               <Link
                 key={item.key}
                 href={href}
-                style={isMobile ? BarStyle.linkMobile : BarStyle.linkWeb}
+                style={{
+                  ...(isMobile ? BarStyle.linkMobile : BarStyle.linkWeb),
+                  background: "transparent",
+                  boxShadow: "none",
+                  outline: "none",
+                  WebkitTapHighlightColor: "transparent",
+                  position: "relative",
+                  zIndex: 2,
+                }}
+                aria-label={item.label}
+                title={item.label}
               >
                 <Icon
                   size={isMobile ? 26 : 24}
@@ -176,4 +233,6 @@ export default function NavBar() {
       </nav>
     </>
   );
+
+  return createPortal(navEl, document.body);
 }

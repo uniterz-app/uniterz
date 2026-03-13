@@ -72,7 +72,7 @@ export default function TrendUsersSection({ title = "注目ユーザー" }: Prop
       <div className="mb-3 flex items-end justify-between">
 
         {isMdUp && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               aria-label="左へ"

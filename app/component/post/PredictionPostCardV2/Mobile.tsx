@@ -310,7 +310,7 @@ const winnerBgColor = (() => {
 </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <h3 className="text-[15px] font-extrabold truncate">
   {author?.name ?? post.author?.name ?? "ユーザー"}
 </h3>
@@ -409,7 +409,7 @@ const winnerBgColor = (() => {
   <div className="flex items-center gap-6">
 
     {/* いいね */}
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <motion.button
         whileTap={{ scale: 1.2 }}
         className="w-4 h-4 flex items-center justify-center"
@@ -435,7 +435,7 @@ const winnerBgColor = (() => {
     </div>
 
     {/* ブックマーク */}
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <motion.button
         whileTap={{ scale: 1.2 }}
         className="w-6 h-6 flex items-center justify-center"
