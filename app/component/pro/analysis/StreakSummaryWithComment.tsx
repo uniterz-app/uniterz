@@ -3,7 +3,6 @@
 
 import { Flame, CloudRain } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
-import { useEffect, useRef, useState } from "react";
 
 const alfa = Alfa_Slab_One({
   weight: "400",
@@ -49,7 +48,7 @@ export default function StreakSummaryCard({
   return (
     <div className="rounded-2xl bg-[#050814]/80 p-3 border border-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
       {/* タイトル */}
-      <div className="mb-2 text-[11px] text-white/60">
+      <div className="mb-2 text-[11px] md:text-[14px] text-white/60">
         {periodLabel ? `${periodLabel} の連勝 / 連敗` : "今月の連勝 / 連敗"}
       </div>
 
@@ -58,23 +57,25 @@ export default function StreakSummaryCard({
         {/* 最大連勝 */}
         <div className="rounded-xl bg-[#050814]/60 p-3 border border-white/10">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-black/60 flex items-center justify-center ring-1 ring-white/10">
-              <Flame className="h-3.5 w-3.5 text-yellow-400" />
+            <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-black/60 flex items-center justify-center ring-1 ring-white/10">
+              <Flame className="h-3.5 w-3.5 md:h-4 md:w-4 text-yellow-400" />
             </div>
-            <div className="text-xs text-white/70">最大連勝</div>
+            <div className="text-xs md:text-[15px] text-white/70">
+              最大連勝
+            </div>
           </div>
 
           <div
             className={[
               alfa.className,
-              "mt-2 text-3xl tabular-nums text-yellow-400",
+              "mt-2 text-3xl md:text-4xl tabular-nums text-yellow-400",
             ].join(" ")}
           >
             {maxWinStreak}
           </div>
 
           {lastMaxWinStreak !== undefined && (
-            <div className="mt-0.5 text-[11px] text-white/45">
+            <div className="mt-0.5 text-[11px] md:text-[13px] text-white/45">
               先月 {lastMaxWinStreak}
             </div>
           )}
@@ -83,23 +84,25 @@ export default function StreakSummaryCard({
         {/* 最大連敗 */}
         <div className="rounded-xl bg-[#050814]/60 p-3 border border-white/10">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-black/60 flex items-center justify-center ring-1 ring-white/10">
-              <CloudRain className="h-3.5 w-3.5 text-rose-500" />
+            <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-black/60 flex items-center justify-center ring-1 ring-white/10">
+              <CloudRain className="h-3.5 w-3.5 md:h-4 md:w-4 text-rose-500" />
             </div>
-            <div className="text-xs text-white/70">最大連敗</div>
+            <div className="text-xs md:text-[15px] text-white/70">
+              最大連敗
+            </div>
           </div>
 
           <div
             className={[
               alfa.className,
-              "mt-2 text-3xl tabular-nums text-rose-500",
+              "mt-2 text-3xl md:text-4xl tabular-nums text-rose-500",
             ].join(" ")}
           >
             {maxLoseStreak}
           </div>
 
           {lastMaxLoseStreak !== undefined && (
-            <div className="mt-0.5 text-[11px] text-white/45">
+            <div className="mt-0.5 text-[11px] md:text-[13px] text-white/45">
               先月 {lastMaxLoseStreak}
             </div>
           )}
@@ -107,8 +110,10 @@ export default function StreakSummaryCard({
       </div>
 
       {/* コメント */}
-      <div className="mt-2 rounded-xl bg-white/5 border border-white/10 p-2">
-        <p className="text-xs leading-relaxed text-white/75">{comment}</p>
+      <div className="mt-2 rounded-xl bg-white/5 border border-white/10 p-2 md:p-3">
+        <p className="text-sm md:text-[14px] leading-relaxed text-white/75">
+          {comment}
+        </p>
       </div>
     </div>
   );

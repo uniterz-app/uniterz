@@ -1,5 +1,5 @@
-// types/prediction-post-v2.ts
 import type { League } from "@/lib/leagues";
+
 export type PredictionPostV2 = {
   id: string;
 
@@ -25,13 +25,11 @@ export type PredictionPostV2 = {
      Game Core Info
   ------------------------ */
   gameId: string;
-
-  // Firestore 上では top-level に league と status が存在している
   league: League;
   status: "scheduled" | "live" | "final";
 
   /* ------------------------
-     Team Info (Firestore準拠)
+     Team Info
   ------------------------ */
   home: {
     name: string;
@@ -48,8 +46,23 @@ export type PredictionPostV2 = {
   };
 
   /* ------------------------
-     Optional old game block
-     (互換性のため残すが基本使わない)
+     Final Score
+  ------------------------ */
+  result?: {
+    home: number;
+    away: number;
+  } | null;
+
+  /* ------------------------
+     Market Meta（finalizePostで保存）
+  ------------------------ */
+  marketMeta?: {
+    majoritySide: "home" | "away" | "draw";
+    majorityRatio: number; // 0〜1
+  } | null;
+
+  /* ------------------------
+     Legacy Game Block (optional)
   ------------------------ */
   game?: {
     league: League;
@@ -77,29 +90,47 @@ export type PredictionPostV2 = {
   saveCount?: number;
 
   /* ------------------------
-     Stats (V2)
+     Stats (V2 – finalizePost準拠)
   ------------------------ */
-stats?: {
-  isWin: boolean | null;
+  stats?: {
+    /* 基本 */
+    isWin: boolean | null;
+    hadUpsetGame?: boolean;
 
-  hadUpsetGame?: boolean; // ← 追加
+    /* 精度系 */
+    scoreError?: number | null;
+    brier?: number | null;
+    scorePrecision?: number | null;
+    scorePrecisionDetail?: {
+      homePt: number;
+      awayPt: number;
+      diffPt: number;
+    } | null;
 
-  scoreError?: number | null;
-  brier?: number | null;
+    /* マーケット */
+    marketCount?: number | null;
+    marketMajority?: "home" | "away" | "draw" | null;
+    isMajorityPick?: boolean;
+    marketBias?: number | null;
 
-  rankingReady?: boolean;
-  rankingFactor?: 0 | 1;
+    /* Upset */
+    upsetHit?: boolean;
+    upsetPoints?: number | null;
 
-  marketCount?: number | null;
-  marketBias?: number | null;
+    /* V3 総合得点 */
+    pointsV3?: number | null;
+    pointsV3Detail?: {
+      winnerCorrect: boolean;
+      winPoints: number;
+      diffPoints: number;
+      totalPoints: number;
+      upsetBonus: number;
+      diffError: number | null;
+      totalError: number | null;
+    } | null;
 
-  upsetHit?: boolean;
-
-  scorePrecision?: number | null;
-  scorePrecisionDetail?: {
-    homePt: number;
-    awayPt: number;
-    diffPt: number;
+    /* ランキング */
+    rankingReady?: boolean;
+    rankingFactor?: 0 | 1;
   } | null;
-} | null;
 };

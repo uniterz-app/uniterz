@@ -216,16 +216,19 @@ export default function AnalysisStyleMap({ points }: Props) {
         initial={{ opacity: 0, y: 6 }}
         animate={isInView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.4, delay: 0.6 }}
-        className="rounded-xl bg-white/5 border border-white/10 p-2"
+        className="rounded-xl bg-white/5 border border-white/10 p-2 md:p-3"
       >
-        <p className="text-xs font-semibold text-white/90">{comment.title}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-white/75">
+        <p className="text-xs md:text-[15px] font-semibold text-white/90">
+          {comment.title}
+        </p>
+        <p className="mt-0.5 text-xs md:text-[15px] leading-relaxed text-white/75">
           {comment.body}
         </p>
       </motion.div>
 
       <p className="text-[11px] text-white/50">
-        横軸：Away ←→ Home / 縦軸：順当 ←→ 逆張り  
+        横軸：Away ←→ Home / 縦軸：順当 ←→ 逆張り
+        <br />
         点の大きさ：勝率（40–85%・6段階）
       </p>
     </div>

@@ -5,38 +5,73 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 type Props = {
-  variant?: "web" | "mobile";          // 背景余白や幅の微調整用
+  variant?: "web" | "mobile";
 };
 
 export default function ResetForm({ variant = "web" }: Props) {
   const [email, setEmail] = useState("");
-  const [busy, setBusy]   = useState(false);
-  const [msg, setMsg]     = useState<string | null>(null);
-  const [err, setErr]     = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   const formWidth = variant === "mobile" ? 320 : 360;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (busy) return; // 二重送信防止
+
+    const trimmed = email.trim();
     setMsg(null);
     setErr(null);
 
-    // 簡易バリデーション
-    if (!email.trim()) {
+    if (!trimmed) {
       setErr("メールアドレスを入力してください。");
       return;
     }
 
     try {
       setBusy(true);
-      // 重要：存在可否は伏せる（常に同じメッセージ）
-      await sendPasswordResetEmail(auth, email.trim());
-      setMsg("リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。");
+
+      console.log("[reset] before sendPasswordResetEmail", { email: trimmed });
+
+      // 10秒でタイムアウトさせて「止まってる」を可視化
+      await Promise.race([
+        sendPasswordResetEmail(auth, trimmed),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 10000)
+        ),
+      ]);
+
+      console.log("[reset] success");
+      setMsg(
+        "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
+      );
     } catch (e: any) {
-      // 具体的な理由は出さない（セキュリティ的配慮）
-      setErr("送信に失敗しました。しばらくしてから再度お試しください。");
-      console.error(e);
+      const code = e?.code as string | undefined;
+
+      console.log("[reset] catch", code, e);
+
+      if (e?.message === "timeout") {
+        setErr(
+          "送信処理がタイムアウトしました。DevToolsのNetworkで identitytoolkit / sendOobCode のリクエストを確認してください。"
+        );
+      } else if (code === "auth/user-not-found" || code === "auth/invalid-email") {
+        // 存在可否は伏せる：未登録でも成功表示
+        setMsg(
+          "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
+        );
+      } else if (code === "auth/too-many-requests") {
+        setErr("送信回数が多すぎます。時間をおいて再度お試しください。");
+      } else if (code === "auth/network-request-failed") {
+        setErr("通信に失敗しました。ネットワーク接続をご確認ください。");
+      } else {
+        setErr("送信に失敗しました。しばらくしてから再度お試しください。");
+      }
+
+      console.error("[reset] sendPasswordResetEmail error:", code, e);
     } finally {
+      console.log("[reset] finally");
       setBusy(false);
     }
   }
@@ -68,6 +103,8 @@ export default function ResetForm({ variant = "web" }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={busy}
+            autoComplete="email"
+            inputMode="email"
             style={{
               width: "100%",
               padding: "12px",
@@ -81,7 +118,6 @@ export default function ResetForm({ variant = "web" }: Props) {
           />
         </div>
 
-        {/* グラデボタン：紫 → シアン */}
         <button
           type="submit"
           disabled={busy}
@@ -101,8 +137,8 @@ export default function ResetForm({ variant = "web" }: Props) {
               "0 10px 30px rgba(124,58,237,.25), 0 0 0 1px rgba(255,255,255,.08) inset",
             transition: "transform .06s ease",
           }}
-          onMouseDown={(e) => ((e.currentTarget.style.transform = "translateY(1px)"))}
-          onMouseUp={(e) => ((e.currentTarget.style.transform = "translateY(0)"))}
+          onMouseDown={(e) => (e.currentTarget.style.transform = "translateY(1px)")}
+          onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0)")}
         >
           {busy ? "送信中…" : "リセットリンクを送信"}
         </button>

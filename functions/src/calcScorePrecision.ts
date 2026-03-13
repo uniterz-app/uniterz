@@ -2,7 +2,7 @@ import { SPORT_TYPE_BY_LEAGUE } from "./sportTypes";
 import { scorePrecisionRules } from "./scorePrecisionRules";
 
 /**
- * スコア精度（0〜15 pt）
+ * スコア精度（0〜10 pt）
  */
 export function calcScorePrecision({
   predictedHome,
@@ -35,7 +35,7 @@ export function calcScorePrecision({
       homePt: 0,
       awayPt: 0,
       diffPt: 0,
-      totalPt, // 0–15
+      totalPt, // 0–10
     };
   }
 
@@ -59,6 +59,6 @@ export function calcScorePrecision({
     homePt,
     awayPt,
     diffPt,
-    totalPt: homePt + awayPt + diffPt, // 最大15
+    totalPt: homePt + awayPt + diffPt, // 最大10
   };
 }

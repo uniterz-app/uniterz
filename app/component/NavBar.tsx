@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
-import { FaTrophy, FaBrain } from "react-icons/fa";
+import { FaTrophy } from "react-icons/fa";
 import { FiTrendingUp, FiUser } from "react-icons/fi";
+import { Brain } from "lucide-react";
 import { useEffect, useState, CSSProperties } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -23,7 +24,10 @@ type Item = {
 
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
-  { key: "home", href: "/home", label: "ホーム", icon: FaBrain },
+
+  // ★ 修正：home → result + アイコン変更
+  { key: "home", href: "/result", label: "リザルト", icon: Brain },
+
   { key: "trend", href: "/trend", label: "トレンド", icon: FiTrendingUp },
   { key: "ranking", href: "/rankings", label: "ランキング", icon: FaTrophy },
   { key: "mypage", href: "/mypage", label: "マイページ", icon: FiUser },

@@ -6,43 +6,39 @@ import {
   Trophy,
   Gauge,
   Target,
-  CheckCircle,
   Flame,
   Crown,
   Zap,
 } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
 
-// 既存 Tooltip を import
 import Tooltip from "@/app/component/common/Tooltip";
 import { useCountUp } from "@/lib/hooks/useCountUp";
-
-
-const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
 import {
   evaluateWinRateV2,
   evaluatePrecisionV2,
   evaluateAccuracyV2,
-  evaluateUpsetV2,
-  evaluateConsistencyV2,
   type HighlightV2,
 } from "@/lib/stats/thresholdsV2";
+
+const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
 export type SummaryDataV2 = {
   posts: number;
   fullPosts: number;
   winRate: number;
-  avgPrecision: number;
+  wins: number;
+  scorePrecisionSum: number;
   avgBrier: number;
-  upsetHitRate: number; // ← これに変更
-  avgCalibration: number | null;
+  upsetPointsSum: number;
+  pointsSumV3: number;
 };
 
 type Props = {
   data: SummaryDataV2;
   compact?: boolean;
-  period: "7d" | "30d" | "all";   // ← 追加
+  period: "7d" | "30d" | "all";
 };
 
 const MIN_POSTS = {
@@ -52,63 +48,53 @@ const MIN_POSTS = {
 } as const;
 
 export default function SummaryCardsV2({ data, compact = false, period }: Props) {
-  /* Tooltip state */
   const [tooltip, setTooltip] = useState<{
     rect: DOMRect | null;
     message: string;
   } | null>(null);
 
   const postsCount = useCountUp(data.fullPosts, 700, true);
-const postsText = postsCount;
-  const winRateValue = Math.round(data.winRate * 100);
-const winRateCount = useCountUp(winRateValue, 700, true);
-const winRatePct = `${winRateCount}%`;
-  const precisionValue = Number(data.avgPrecision.toFixed(1));
-const precisionCount = useCountUp(precisionValue, 700, true);
-const precisionText = precisionCount.toFixed(1);
-  const accuracy =
+  const postsText = postsCount;
+
+  const winRateValue = Math.round((data.winRate ?? 0) * 100);
+  const winRateCount = useCountUp(winRateValue, 700, true);
+  const winRatePct = `${winRateCount}%`;
+
+  const scorePrecisionSumValue = Number((data.scorePrecisionSum ?? 0).toFixed(1));
+  const scorePrecisionSumCount = useCountUp(scorePrecisionSumValue, 700, true);
+  const scorePrecisionSumText = scorePrecisionSumCount.toFixed(1);
+
+  const probAccuracy =
     data.posts === 0
       ? 0
-      : Math.max(0, Math.min(100, Math.round((1 - data.avgBrier) * 100)));
-  const accuracyCount = useCountUp(accuracy, 700, true);
-const accuracyText = `${accuracyCount}%`;
+      : Math.max(0, Math.min(100, Math.round((1 - (data.avgBrier ?? 0)) * 100)));
+  const probAccuracyCount = useCountUp(probAccuracy, 700, true);
+  const probAccuracyText = `${probAccuracyCount}%`;
 
+  const upsetPointsValue = Math.max(0, Math.round(data.upsetPointsSum || 0));
+  const upsetPointsCount = useCountUp(upsetPointsValue, 700, true);
+  const upsetPointsText = `${upsetPointsCount}`;
 
-const upsetRateValue = Math.round(data.upsetHitRate * 100);
-const upsetRateCount = useCountUp(upsetRateValue, 700, true);
-const upsetText = `${upsetRateCount}%`;
+  const totalPointsValue = Math.max(0, Math.round(data.pointsSumV3 || 0));
+  const totalPointsCount = useCountUp(totalPointsValue, 700, true);
+  const totalPointsText = `${totalPointsCount}`;
 
   const min = MIN_POSTS[period];
-const enoughPosts = data.fullPosts >= min;
+  const enoughPosts = data.fullPosts >= min;
 
-// まず一時変数に入れる（これが重要）
-// 一致度の安全処理
-const calib = data.avgCalibration;
+  const NONE: HighlightV2 = { level: "none" };
 
-const validCalib =
-  typeof calib === "number" && Number.isFinite(calib) && data.posts > 0;
+  const avgPrecisionForHighlight =
+    data.posts > 0 ? (data.scorePrecisionSum ?? 0) / data.posts : 0;
 
-const consistency = validCalib
-  ? Math.max(0, Math.min(100, Math.round((1 - calib) * 100)))
-  : 0;
+  const hWin = enoughPosts ? evaluateWinRateV2(data.winRate ?? 0) : NONE;
+  const hPrecision = enoughPosts
+    ? evaluatePrecisionV2(avgPrecisionForHighlight)
+    : NONE;
+  const hProb = enoughPosts ? evaluateAccuracyV2(probAccuracy) : NONE;
 
-// ★ Hooks は必ずトップレベルで呼ぶ
-const consistencyCount = useCountUp(consistency, 700, validCalib);
-
-const consistencyText = validCalib
-  ? `${consistencyCount}%`
-  : "NaN%";
-
-
- const NONE: HighlightV2 = { level: "none" };
-
-const hWin       = enoughPosts ? evaluateWinRateV2(data.winRate)      : NONE;
-const hPrecision = enoughPosts ? evaluatePrecisionV2(data.avgPrecision) : NONE;
-const hAcc       = enoughPosts ? evaluateAccuracyV2(accuracy)          : NONE;
-const hUpset = enoughPosts
-  ? evaluateUpsetV2(upsetRateValue) // 0〜100 を渡す
-  : NONE;
-const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
+  const hUpset = NONE;
+  const hTotal = NONE;
 
   const padCls = compact ? "p-2 md:p-3" : "p-4";
   const gapCls = compact ? "gap-2" : "gap-3";
@@ -121,30 +107,95 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
     typeof window !== "undefined" &&
     window.matchMedia("(max-width: 768px)").matches;
 
-  /* -------------------------
-     Tooltip Helper
-  -------------------------- */
   function openTooltip(e: React.MouseEvent, message: string) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setTooltip({ rect, message });
   }
 
-  /* -------------------------
-     Mobile layout
-  -------------------------- */
+  const ScorePrecisionLabel = (
+    <div className="flex items-center gap-1">
+      スコア精度
+      <button
+        type="button"
+        className="opacity-70 text-xs"
+        onClick={(e) =>
+          openTooltip(
+            e,
+            "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
+          )
+        }
+      >
+        ⓘ
+      </button>
+    </div>
+  );
+
+  const ProbPrecisionLabel = (
+    <div className="flex items-center gap-1">
+      確率精度
+      <button
+        type="button"
+        className="opacity-70 text-xs"
+        onClick={(e) =>
+          openTooltip(
+            e,
+            "自信度（確率）と結果の整合性を評価します。表示は高いほど良い（Brierを反転して%化）です。"
+          )
+        }
+      >
+        ⓘ
+      </button>
+    </div>
+  );
+
+  const UpsetPointsLabel = (
+    <div className="flex items-center gap-1">
+      アップセット得点
+      <button
+        type="button"
+        className="opacity-70 text-xs"
+        onClick={(e) =>
+          openTooltip(
+            e,
+            "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
+          )
+        }
+      >
+        ⓘ
+      </button>
+    </div>
+  );
+
+  const TotalPointsLabel = (
+    <div className="flex items-center gap-1">
+      総合得点
+      <button
+        type="button"
+        className="opacity-70 text-xs"
+        onClick={(e) =>
+          openTooltip(
+            e,
+            "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
+          )
+        }
+      >
+        ⓘ
+      </button>
+    </div>
+  );
+
   if (isMobile) {
     return (
       <>
         <div className={`grid grid-cols-2 ${gapCls} mt-6`}>
-          
-            <Card
-              icon={<BarChartHorizontal size={iconSize} />}
-              label="確定分析数"
-              value={postsText}
-              padCls={padCls}
-              labelCls={labelCls}
-              valueCls={`${alfa.className} ${valueCls}`}
-            />
+          <Card
+            icon={<BarChartHorizontal size={iconSize} />}
+            label="確定分析数"
+            value={postsText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={`${alfa.className} ${valueCls}`}
+          />
 
           <Card
             icon={<Trophy size={iconSize} />}
@@ -158,23 +209,8 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
 
           <Card
             icon={<Gauge size={iconSize} />}
-            label={
-              <div className="flex items-center gap-1">
-                スコア精度
-                <button
-                  className="opacity-70 text-xs"
-                  onClick={(e) =>
-                    openTooltip(
-                      e,
-                      "予想した得点と実際の得点がどれくらい近かったかの精度。試合展開や実力差を分析できているかを評価します。15が最高値。"
-                    )
-                  }
-                >
-                  ⓘ
-                </button>
-              </div>
-            }
-            value={precisionText}
+            label={ScorePrecisionLabel}
+            value={scorePrecisionSumText}
             padCls={padCls}
             labelCls={labelCls}
             valueCls={decorate(`${alfa.className} ${valueCls}`, hPrecision)}
@@ -183,76 +219,32 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
 
           <Card
             icon={<Target size={iconSize} />}
-            label={
-              <div className="flex items-center gap-1">
-                予測精度
-                <button
-                  className="opacity-70 text-xs"
-                  onClick={(e) =>
-                    openTooltip(
-                      e,
-                      "勝敗をどれだけ正確に当てているかを示します。\n外したときの「ズレの大きさ」も評価に含まれるため、単なる勝率よりも厳密な指標です。"
-                    )
-                  }
-                >
-                  ⓘ
-                </button>
-              </div>
-            }
-            value={accuracyText}
+            label={ProbPrecisionLabel}
+            value={probAccuracyText}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={decorate(`${alfa.className} ${valueCls}`, hAcc)}
-            afterIcon={highlightIcon(hAcc, iconSize)}
+            valueCls={decorate(`${alfa.className} ${valueCls}`, hProb)}
+            afterIcon={highlightIcon(hProb, iconSize)}
           />
-          <Card
-  icon={<CheckCircle size={iconSize} />}
-  label={
-    <div className="flex items-center gap-1">
-      一致度
-      <button
-        className="opacity-70 text-xs"
-        onClick={(e) =>
-          openTooltip(
-            e,
-            "入力した自信度と、実際の結果が長期的にどれくらい一致しているかを示します。\n自信の付け方が正しいかを評価する指標です。"
-          )
-        }
-      >
-        ⓘ
-      </button>
-    </div>
-  }
-  value={consistencyText}
-  padCls={padCls}
-  labelCls={labelCls}
-  valueCls={decorate(`${alfa.className} ${valueCls}`, hCons)}
-  afterIcon={highlightIcon(hCons, iconSize)}
-/>
 
           <Card
             icon={<Zap size={iconSize} />}
-            label={
-              <div className="flex items-center gap-1">
-                UPSET的中率
-                <button
-                  className="opacity-70 text-xs"
-                  onClick={(e) =>
-                    openTooltip(
-                      e,
-                      "アップセット（市場と実力差を覆した試合）が起きた試合のうち、どれだけ勝敗を当てられたかを示します。"
-                    )
-                  }
-                >
-                  ⓘ
-                </button>
-              </div>
-            }
-            value={upsetText}
+            label={UpsetPointsLabel}
+            value={upsetPointsText}
             padCls={padCls}
             labelCls={labelCls}
             valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
             afterIcon={highlightIcon(hUpset, iconSize)}
+          />
+
+          <Card
+            icon={<Crown size={iconSize} />}
+            label={TotalPointsLabel}
+            value={totalPointsText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${alfa.className} ${valueCls}`, hTotal)}
+            afterIcon={highlightIcon(hTotal, iconSize)}
           />
         </div>
 
@@ -266,10 +258,6 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
       </>
     );
   }
-
-  /* -------------------------
-    Web Layout
-  -------------------------- */
 
   return (
     <>
@@ -292,23 +280,8 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
         />
 
         <Card
-          label={
-            <div className="flex items-center gap-1">
-              スコア精度
-              <button
-                className="opacity-70 text-xs"
-                onClick={(e) =>
-                  openTooltip(
-                    e,
-                    "予想した得点と実際の得点がどれくらい近かったかの精度。試合展開や実力差を分析できているかを評価します。15が最高値。"
-                  )
-                }
-              >
-                ⓘ
-              </button>
-            </div>
-          }
-          value={precisionText}
+          label={ScorePrecisionLabel}
+          value={scorePrecisionSumText}
           padCls={padCls}
           labelCls={labelCls}
           valueCls={decorate(`${alfa.className} ${valueCls}`, hPrecision)}
@@ -316,73 +289,30 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
         />
 
         <Card
-          label={
-            <div className="flex items-center gap-1">
-              予測精度
-              <button
-                className="opacity-70 text-xs"
-                onClick={(e) =>
-                  openTooltip(
-                    e,
-                    "勝敗をどれだけ正確に当てているかを示します。外したときの「ズレの大きさ」も評価に含まれるため、単なる勝率よりも厳密な指標です。"
-                  )
-                }
-              >
-                ⓘ
-              </button>
-            </div>
-          }
-          value={accuracyText}
+          label={ProbPrecisionLabel}
+          value={probAccuracyText}
           padCls={padCls}
           labelCls={labelCls}
-          valueCls={decorate(`${alfa.className} ${valueCls}`, hAcc)}
-          afterIcon={highlightIcon(hAcc, iconSize)}
+          valueCls={decorate(`${alfa.className} ${valueCls}`, hProb)}
+          afterIcon={highlightIcon(hProb, iconSize)}
         />
-<Card
-  label={
-    <div className="flex items-center gap-1">
-      一致度
-      <button
-        className="opacity-70 text-xs"
-        onClick={(e) =>
-          openTooltip(
-            e,
-            "入力した自信度と、実際の結果が長期的にどれくらい一致しているかを示します。\n自信の付け方が正しいかを評価する指標です。"
-          )
-        }
-      >
-        ⓘ
-      </button>
-    </div>
-  }
-  value={consistencyText}
-  padCls={padCls}
-  labelCls={labelCls}
-  valueCls={decorate(`${alfa.className} ${valueCls}`, hCons)}
-  afterIcon={highlightIcon(hCons, iconSize)}
-/>
+
         <Card
-          label={
-            <div className="flex items-center gap-1">
-              UPSET的中率
-              <button
-                className="opacity-70 text-xs"
-                onClick={(e) =>
-                  openTooltip(
-                    e,
-                    "『みんなが予想しなかった勝ち方』を当てたときに高くなる指標。市場の偏りやチーム順位に応じて0〜10で評価されます。"
-                  )
-                }
-              >
-                ⓘ
-              </button>
-            </div>
-          }
-          value={upsetText}
+          label={UpsetPointsLabel}
+          value={upsetPointsText}
           padCls={padCls}
           labelCls={labelCls}
           valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
           afterIcon={highlightIcon(hUpset, iconSize)}
+        />
+
+        <Card
+          label={TotalPointsLabel}
+          value={totalPointsText}
+          padCls={padCls}
+          labelCls={labelCls}
+          valueCls={decorate(`${alfa.className} ${valueCls}`, hTotal)}
+          afterIcon={highlightIcon(hTotal, iconSize)}
         />
       </div>
 
@@ -397,24 +327,26 @@ const hCons      = enoughPosts ? evaluateConsistencyV2(consistency)    : NONE;
   );
 }
 
-/* ---------------- 共通 UI パーツ ---------------- */
-
 function decorate(base: string, h: HighlightV2) {
-  if (h.level === "strong")
+  if (h.level === "strong") {
     return `${base} text-yellow-300 drop-shadow-[0_0_6px_rgba(234,179,8,0.35)]`;
-  if (h.level === "yellow") return `${base} text-amber-300`;
-  return base;
+  }
+  if (h.level === "yellow") {
+    return `${base} text-amber-300`;
+  }
+  return `${base} text-white`;
 }
 
 function highlightIcon(h: HighlightV2, size: number) {
-  if (h.icon === "crown")
+  if (h.icon === "crown") {
     return <Crown className="inline-block ml-1" size={size - 2} />;
-  if (h.icon === "fire")
+  }
+  if (h.icon === "fire") {
     return <Flame className="inline-block ml-1" size={size - 2} />;
+  }
   return null;
 }
 
-/* label を ReactNode に変更 */
 function Card({
   icon,
   label,
@@ -424,7 +356,7 @@ function Card({
   valueCls,
   afterIcon,
 }: {
-  icon?: React.ReactNode;          // ← optional に変更
+  icon?: React.ReactNode;
   label: React.ReactNode;
   value: string | number;
   padCls: string;
@@ -434,21 +366,16 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-white/10 bg-white/5 ${padCls} text-center min-w-0`}
+      className={`rounded-xl border border-white/10 bg-[#050814]/80 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ${padCls} text-center min-w-0`}
     >
-      <div className="flex items-center justify-center gap-2 mb-1 text-white/85">
-        {/* icon があるときだけ表示 */}
-        {icon && (
-          <span className="inline-flex">
-            {icon}
-          </span>
-        )}
+      <div className="mb-1 flex items-center justify-center gap-2 text-white/85">
+        {icon && <span className="inline-flex">{icon}</span>}
         <span className={`${labelCls} font-semibold tracking-[0.2px]`}>
           {label}
         </span>
       </div>
 
-      <div className="leading-none truncate flex items-center justify-center">
+      <div className="flex items-center justify-center leading-none truncate">
         <span className={`${valueCls} truncate`}>{value}</span>
         {afterIcon}
       </div>

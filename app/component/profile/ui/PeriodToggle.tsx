@@ -1,45 +1,47 @@
 "use client";
 import React from "react";
-import { Lilita_One } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 
-const lilita = Lilita_One({ weight: "400", subsets: ["latin"] });
-
-const sizeMap = {
-  sm: "text-xs px-2 py-1 rounded-md",
-  md: "text-sm px-4 py-3 rounded-lg",
-  lg: "text-base px-5 py-4 rounded-xl",
-} as const;
+const plex = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  display: "swap",
+});
 
 type Range = "7d" | "30d" | "all";
 
 type Props = {
   value: Range;
   onChange: (v: Range) => void;
-  /** ← これを追加： サイズ指定（sm/md/lg）。何も渡さなければ md */
-  size?: keyof typeof sizeMap;
-  sizeClass?: string;
 };
 
-export default function PeriodToggle({ value, onChange, size = "md", sizeClass }: Props) {
-  const items: Range[] = ["7d", "30d", "all"];
+export default function PeriodToggle({ value, onChange }: Props) {
+  const items: { key: Range; label: string }[] = [
+    { key: "7d", label: "7日" },
+    { key: "30d", label: "30日" },
+    { key: "all", label: "ALL" },
+  ];
 
   return (
-    <div className={`${lilita.className} flex gap-2`}>
-      {items.map((r) => {
-        const active = value === r;
+    <div
+      className={`${plex.className} flex items-center gap-4 text-[13px] font-semibold tracking-tight`}
+    >
+      {items.map((item) => {
+        const active = value === item.key;
+
         return (
           <button
-            key={r}
-            onClick={() => onChange(r)}
+            key={item.key}
+            onClick={() => onChange(item.key)}
             className={[
-              sizeClass ?? sizeMap[size],
-              "border transition-colors",
+              "transition-all duration-200",
+              "px-3 py-1.5",
               active
-                ? "bg-white/10 border-[#6EA8FE] text-white"
-                : "bg-transparent border-white/10 text-white/70 hover:bg-white/5",
+                ? "rounded-md bg-white/10 text-white"
+                : "text-white/50 hover:text-white/80",
             ].join(" ")}
           >
-            {r}
+            {item.label}
           </button>
         );
       })}

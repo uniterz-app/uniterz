@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -9,23 +9,32 @@ import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 
 type LoginFormProps = {
-  variant?: "web" | "mobile";
+  variant?: "web" | "mobile"; // 渡されても良いし、未指定なら pathname で判定
 };
 
-export default function LoginForm({ variant = "web" }: LoginFormProps) {
+export default function LoginForm({ variant }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
+  const pathname = usePathname();
 
-  // ==== ログイン処理（唯一の遷移ポイント） ====
+  // variant 未指定ならURLから自動判定
+  const v: "web" | "mobile" = useMemo(() => {
+    if (variant) return variant;
+    if (pathname?.startsWith("/mobile")) return "mobile";
+    return "web";
+  }, [variant, pathname]);
+
+  const formWidth = v === "mobile" ? 320 : 360;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        email.trim(),
         password
       );
       const user = userCredential.user;
@@ -34,18 +43,21 @@ export default function LoginForm({ variant = "web" }: LoginFormProps) {
       const d = snap.data() as any;
 
       const handle = d?.handle || d?.username;
-      const base = variant === "mobile" ? "/mobile/u" : "/web/u";
+
+      // 遷移先を v で確実に分岐
+      const base = v === "mobile" ? "/mobile/u" : "/web/u";
 
       if (handle) {
         router.replace(`${base}/${encodeURIComponent(handle)}`);
+      } else {
+        // handle 無い場合の保険（必要なら好きに）
+        router.replace(v === "mobile" ? "/mobile" : "/web");
       }
     } catch (error: any) {
       console.error("ログイン失敗:", error);
-      alert(error.message ?? "Login failed");
+      alert(error?.message ?? "Login failed");
     }
   };
-
-  const formWidth = variant === "mobile" ? 320 : 360;
 
   return (
     <form onSubmit={handleLogin}>
@@ -135,7 +147,6 @@ export default function LoginForm({ variant = "web" }: LoginFormProps) {
           )}
         </div>
 
-        {/* === Gradient Login Button === */}
         <button
           type="submit"
           style={{
@@ -166,7 +177,7 @@ export default function LoginForm({ variant = "web" }: LoginFormProps) {
         <p style={{ marginTop: 12, fontSize: "0.85rem", opacity: 0.9 }}>
           パスワードをお忘れの方は{" "}
           <Link
-            href={variant === "mobile" ? "/mobile/reset" : "/web/reset"}
+            href={v === "mobile" ? "/mobile/reset" : "/web/reset"}
             style={{
               color: "#7DD3FC",
               textDecoration: "underline",
@@ -181,7 +192,7 @@ export default function LoginForm({ variant = "web" }: LoginFormProps) {
         <p style={{ marginTop: 10 }}>
           アカウントを{" "}
           <Link
-            href={variant === "mobile" ? "/mobile/signup" : "/web/signup"}
+            href={v === "mobile" ? "/mobile/signup" : "/web/signup"}
             style={{
               color: "#7DD3FC",
               textDecoration: "underline",

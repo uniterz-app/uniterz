@@ -29,7 +29,8 @@ function getPreviousMonthRange() {
   const now = new Date();
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
 
-  const year = jst.getMonth() === 0 ? jst.getFullYear() - 1 : jst.getFullYear();
+  const year =
+    jst.getMonth() === 0 ? jst.getFullYear() - 1 : jst.getFullYear();
   const month = jst.getMonth() === 0 ? 11 : jst.getMonth() - 1;
 
   const start = new Date(year, month, 1, 0, 0, 0, 0);
@@ -54,6 +55,19 @@ type Agg = {
   upsetHit: number;
   upsetOpp: number;
   upsetPick: number;
+  upsetPointsSum: number;
+  pointsSumV3: number;
+  leaguePosts: Record<string, number>;
+};
+
+type MonthlyRow = {
+  uid: string;
+  posts: number;
+  winRate: number;
+  accuracy: number;
+  avgPrecision: number;
+  avgPointsV3: number;
+  upsetPointsSum: number;
   leaguePosts: Record<string, number>;
 };
 
@@ -69,17 +83,13 @@ function toRadar10(params: {
   winRate: number;
   accuracy: number;
   avgPrecision: number;
-  avgUpset: number;
   streakScore: number;
-  marketScore: number;
 }) {
   return {
     winRate: clamp10(params.winRate * 10),
     accuracy: clamp10(params.accuracy * 10),
-    precision: clamp10((params.avgPrecision / 15) * 10),
-    upset: clamp10(params.avgUpset * 10),
+    precision: clamp10(params.avgPrecision),
     streak: clamp10(params.streakScore),
-    market: clamp10(params.marketScore),
   };
 }
 
@@ -183,6 +193,8 @@ export async function rebuildUserMonthlyStatsCore() {
         upsetHit: 0,
         upsetOpp: 0,
         upsetPick: 0,
+        upsetPointsSum: 0,
+        pointsSumV3: 0,
         leaguePosts: {},
       });
     }
@@ -195,6 +207,8 @@ export async function rebuildUserMonthlyStatsCore() {
     agg.upsetHit += stats.upsetHitCount ?? 0;
     agg.upsetOpp += stats.upsetOpportunityCount ?? 0;
     agg.upsetPick += stats.upsetPickCount ?? 0;
+    agg.upsetPointsSum += stats.upsetPointsSum ?? 0;
+    agg.pointsSumV3 += stats.pointsSumV3 ?? 0;
 
     for (const [league, lstat] of Object.entries(d.leagues ?? {})) {
       const p = (lstat as any)?.posts ?? 0;
@@ -209,8 +223,7 @@ export async function rebuildUserMonthlyStatsCore() {
       const winRate = agg.wins / agg.posts;
       const accuracy = 1 - agg.brierSum / agg.posts;
       const avgPrecision = agg.precisionSum / agg.posts;
-      const avgUpset =
-        agg.upsetOpp >= 5 ? agg.upsetHit / agg.upsetOpp : 0;
+      const avgPointsV3 = agg.pointsSumV3 / agg.posts;
 
       return {
         uid,
@@ -218,24 +231,20 @@ export async function rebuildUserMonthlyStatsCore() {
         winRate,
         accuracy,
         avgPrecision,
-        avgUpset,
+        avgPointsV3,
+        upsetPointsSum: agg.upsetPointsSum,
         leaguePosts: agg.leaguePosts,
       };
     })
-    .filter(Boolean) as {
-    uid: string;
-    posts: number;
-    winRate: number;
-    accuracy: number;
-    avgPrecision: number;
-    avgUpset: number;
-    leaguePosts: Record<string, number>;
-  }[];
+    .filter(Boolean) as MonthlyRow[];
 
-  const winRates = rows.map(r => r.winRate).sort((a, b) => a - b);
-  const accuracies = rows.map(r => r.accuracy).sort((a, b) => a - b);
-  const precisions = rows.map(r => r.avgPrecision).sort((a, b) => a - b);
-  const upsets = rows.map(r => r.avgUpset).sort((a, b) => a - b);
+  const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
+  const accuracies = rows.map((r) => r.accuracy).sort((a, b) => a - b);
+  const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
+  const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
+  const upsetPointSums = rows
+    .map((r) => r.upsetPointsSum)
+    .sort((a, b) => a - b);
 
   const leagueVolumeMap: Record<string, number[]> = {};
   for (const r of rows) {
@@ -253,62 +262,57 @@ export async function rebuildUserMonthlyStatsCore() {
     .where("settledAt", "<=", range.end)
     .get();
 
-const postAggMap: Record<
-  string,
-  {
-    homeAway: {
-      home: { posts: number; wins: number };
-      away: { posts: number; wins: number };
-    };
-    teamMap: Record<string, { posts: number; wins: number }>;
-    results: { settledAt: Date; isWin: boolean }[];
-favoritePickCount: number;
-underdogPickCount: number;
-favoritePickRatioSum: number;
-
-favoriteWins: number;    // ★順当で勝った数
-underdogWins: number;    // ★逆張りで勝った数
-  }
-> = {};
+  const postAggMap: Record<
+    string,
+    {
+      homeAway: {
+        home: { posts: number; wins: number };
+        away: { posts: number; wins: number };
+      };
+      teamMap: Record<string, { posts: number; wins: number }>;
+      results: { settledAt: Date; isWin: boolean }[];
+      favoritePickCount: number;
+      underdogPickCount: number;
+      favoritePickRatioSum: number;
+      favoriteWins: number;
+      underdogWins: number;
+    }
+  > = {};
 
   for (const doc of postSnap.docs) {
     const p = doc.data();
     const uid = p.authorUid;
     if (!uid) continue;
 
-postAggMap[uid] ??= {
-  homeAway: {
-    home: { posts: 0, wins: 0 },
-    away: { posts: 0, wins: 0 },
-  },
-  teamMap: {},
-  results: [],
-
-  favoritePickCount: 0,
-  underdogPickCount: 0,
-  favoritePickRatioSum: 0,
-
-    favoriteWins: 0,    // ★追加
-  underdogWins: 0,    // ★追加
-};
+    postAggMap[uid] ??= {
+      homeAway: {
+        home: { posts: 0, wins: 0 },
+        away: { posts: 0, wins: 0 },
+      },
+      teamMap: {},
+      results: [],
+      favoritePickCount: 0,
+      underdogPickCount: 0,
+      favoritePickRatioSum: 0,
+      favoriteWins: 0,
+      underdogWins: 0,
+    };
 
     const agg = postAggMap[uid];
     const pick = p.prediction?.winner;
-
-    const market = p.marketMeta; // majoritySide / majorityRatio が入っている前提
+    const market = p.marketMeta;
     const isWin = p.stats?.isWin === true;
 
-/* ===== market 集計 ===== */
-if (market && pick) {
-  if (pick === market.majoritySide) {
-    agg.favoritePickCount++;
-    if (isWin) agg.favoriteWins++;
-    agg.favoritePickRatioSum += market.majorityRatio;
-  } else {
-    agg.underdogPickCount++;
-    if (isWin) agg.underdogWins++;
-  }
-}
+    if (market && pick) {
+      if (pick === market.majoritySide) {
+        agg.favoritePickCount++;
+        if (isWin) agg.favoriteWins++;
+        agg.favoritePickRatioSum += market.majorityRatio;
+      } else {
+        agg.underdogPickCount++;
+        if (isWin) agg.underdogWins++;
+      }
+    }
 
     if (pick === "home") {
       agg.homeAway.home.posts++;
@@ -343,7 +347,9 @@ if (market && pick) {
 
   for (const row of rows) {
     const postAgg = postAggMap[row.uid];
-    const streak = postAgg ? calcStreak(postAgg.results) : { maxWin: 0, maxLose: 0 };
+    const streak = postAgg
+      ? calcStreak(postAgg.results)
+      : { maxWin: 0, maxLose: 0 };
 
     const homeAway = postAgg
       ? {
@@ -352,8 +358,7 @@ if (market && pick) {
             wins: postAgg.homeAway.home.wins,
             winRate:
               postAgg.homeAway.home.posts > 0
-                ? postAgg.homeAway.home.wins /
-                  postAgg.homeAway.home.posts
+                ? postAgg.homeAway.home.wins / postAgg.homeAway.home.posts
                 : 0,
           },
           away: {
@@ -361,8 +366,7 @@ if (market && pick) {
             wins: postAgg.homeAway.away.wins,
             winRate:
               postAgg.homeAway.away.posts > 0
-                ? postAgg.homeAway.away.wins /
-                  postAgg.homeAway.away.posts
+                ? postAgg.homeAway.away.wins / postAgg.homeAway.away.posts
                 : 0,
           },
         }
@@ -379,17 +383,18 @@ if (market && pick) {
             wins: v.wins,
             winRate: v.wins / v.posts,
           }))
-          .filter(t => t.posts >= 5)
+          .filter((t) => t.posts >= 5)
           .sort((a, b) =>
-            b.winRate !== a.winRate
-              ? b.winRate - a.winRate
-              : b.posts - a.posts
+            b.winRate !== a.winRate ? b.winRate - a.winRate : b.posts - a.posts
           )
       : [];
 
     const strong = teams.slice(0, 3);
-    const strongIds = new Set(strong.map(t => t.teamId));
-    const weak = teams.filter(t => !strongIds.has(t.teamId)).slice(-3).reverse();
+    const strongIds = new Set(strong.map((t) => t.teamId));
+    const weak = teams
+      .filter((t) => !strongIds.has(t.teamId))
+      .slice(-3)
+      .reverse();
 
     const agg = map.get(row.uid)!;
 
@@ -405,7 +410,8 @@ if (market && pick) {
       winRate: percentile(winRates, row.winRate),
       accuracy: percentile(accuracies, row.accuracy),
       precision: percentile(precisions, row.avgPrecision),
-      upset: percentile(upsets, row.avgUpset),
+      pointsV3: percentile(pointsV3s, row.avgPointsV3),
+      upset: percentile(upsetPointSums, row.upsetPointsSum),
       volume: volumeMainLeague,
       volumeByLeague: Object.fromEntries(
         Object.entries(agg.leaguePosts).map(([league, p]) => [
@@ -415,64 +421,61 @@ if (market && pick) {
       ),
     };
 
-// ① market 集計
-const marketAgg = postAggMap[row.uid] ?? {
-  favoritePickCount: 0,
-  underdogPickCount: 0,
-  favoritePickRatioSum: 0,
-  favoriteWins: 0,
-  underdogWins: 0,
-};
+    const marketAgg = postAggMap[row.uid] ?? {
+      favoritePickCount: 0,
+      underdogPickCount: 0,
+      favoritePickRatioSum: 0,
+      favoriteWins: 0,
+      underdogWins: 0,
+    };
 
-const totalMarketPicks =
-  marketAgg.favoritePickCount + marketAgg.underdogPickCount;
+    const totalMarketPicks =
+      marketAgg.favoritePickCount + marketAgg.underdogPickCount;
 
-const favoritePickRate =
-  totalMarketPicks > 0
-    ? marketAgg.favoritePickCount / totalMarketPicks
-    : 0;
+    const favoritePickRate =
+      totalMarketPicks > 0
+        ? marketAgg.favoritePickCount / totalMarketPicks
+        : 0;
 
-    /* ★順当勝率 */
-const favoriteWinRate =
-  marketAgg.favoritePickCount > 0
-    ? marketAgg.favoriteWins / marketAgg.favoritePickCount
-    : 0;
+    const favoriteWinRate =
+      marketAgg.favoritePickCount > 0
+        ? marketAgg.favoriteWins / marketAgg.favoritePickCount
+        : 0;
 
-/* ★逆張り勝率 */
-const underdogWinRate =
-  marketAgg.underdogPickCount > 0
-    ? marketAgg.underdogWins / marketAgg.underdogPickCount
-    : 0;
+    const underdogWinRate =
+      marketAgg.underdogPickCount > 0
+        ? marketAgg.underdogWins / marketAgg.underdogPickCount
+        : 0;
 
-const avgMarketMajorityRatioPicked =
-  marketAgg.favoritePickCount > 0
-    ? marketAgg.favoritePickRatioSum / marketAgg.favoritePickCount
-    : 0;
+    const avgMarketMajorityRatioPicked =
+      marketAgg.favoritePickCount > 0
+        ? marketAgg.favoritePickRatioSum / marketAgg.favoritePickCount
+        : 0;
 
-// ② streak / market → 0–10
-const streakScore =
-  clamp10((streak.maxWin / (streak.maxWin + streak.maxLose + 1)) * 10);
+    const sample = Math.min(1, row.posts / 20);
 
-const marketScore =
-  clamp10(favoritePickRate * 10);
+    const rawStreakScore =
+      7 +
+      Math.min(streak.maxWin, 8) * 0.35 -
+      Math.min(streak.maxLose, 8) * 0.9;
 
-// ③ radar10 作成
-const radar10 = {
-  ...toRadar10({
-    ...row,
-    streakScore,
-    marketScore,
-  }),
-  volume: clamp10(percentiles.volume / 10),
-};
+    const streakScore = clamp10(
+      rawStreakScore * sample + 3 * (1 - sample)
+    );
 
-// ④ 判定系（ここで初めて使う）
-const levelSummary = judgeLevels(radar10);
-const analysisTypeId = judgeAnalysisType(levelSummary);
+    const radar10 = {
+      ...toRadar10({
+        winRate: row.winRate,
+        accuracy: row.accuracy,
+        avgPrecision: row.avgPrecision,
+        streakScore,
+      }),
+      upset: clamp10(percentiles.upset / 10),
+      volume: clamp10(percentiles.volume / 10),
+    };
 
-
-
-
+    const levelSummary = judgeLevels(radar10);
+    const analysisTypeId = judgeAnalysisType(levelSummary);
 
     const ref = db()
       .collection("user_stats_v2_monthly")
@@ -487,20 +490,21 @@ const analysisTypeId = judgeAnalysisType(levelSummary);
         winRate: row.winRate,
         accuracy: row.accuracy,
         avgPrecision: row.avgPrecision,
-        avgUpset: row.avgUpset,
+        avgPointsV3: row.avgPointsV3,
+        upsetPointsSum: agg.upsetPointsSum,
         upsetOpportunity: agg.upsetOpp,
         upsetPick: agg.upsetPick,
         upsetHit: agg.upsetHit,
         leaguePosts: agg.leaguePosts,
       },
-       marketBias: {
-    favoritePickCount: marketAgg.favoritePickCount,
-    underdogPickCount: marketAgg.underdogPickCount,
-      favoritePickRate,        // 構造比（順当）
-  favoriteWinRate,         // ★順当勝率
-  underdogWinRate,         // ★逆張り勝率
-    avgMarketMajorityRatioPicked,   // 例: 0.76
-  },
+      marketBias: {
+        favoritePickCount: marketAgg.favoritePickCount,
+        underdogPickCount: marketAgg.underdogPickCount,
+        favoritePickRate,
+        favoriteWinRate,
+        underdogWinRate,
+        avgMarketMajorityRatioPicked,
+      },
       radar10,
       percentiles,
       homeAway,

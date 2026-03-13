@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
-  favorableWinRate: number;    // 順当 勝率（0–1）
-  contrarianWinRate: number;   // 逆張り 勝率（0–1）
-  favorableShare: number;      // 順当 構造比（0–1）
-  contrarianShare: number;     // 逆張り 構造比（0–1）
+  favorableWinRate: number;
+  contrarianWinRate: number;
+  favorableShare: number;
+  contrarianShare: number;
 };
 
 export default function MarketBiasBars({
@@ -42,21 +42,20 @@ export default function MarketBiasBars({
   return (
     <div
       ref={ref}
-      className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4
-                 shadow-[0_14px_40px_rgba(0,0,0,0.55)] space-y-4"
+      className="space-y-4 rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
     >
       {/* ================= 勝率 ================= */}
       <div>
-        <div className="mb-1 text-sm font-semibold text-white">
+        <div className="mb-1 text-sm font-semibold text-white md:text-base">
           市場志向 勝率
         </div>
 
-        <div className="mb-1 flex justify-between text-xs text-white/60">
+        <div className="mb-1 flex justify-between text-xs text-white/60 md:text-sm">
           <span>逆張り {conWinPct}%</span>
           <span>順当 {favWinPct}%</span>
         </div>
 
-        <div className="relative h-3 w-full rounded-full bg-white/10 overflow-hidden">
+        <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
           <div className="absolute left-1/2 top-0 h-full w-[1px] bg-white/30" />
 
           <div
@@ -80,16 +79,16 @@ export default function MarketBiasBars({
 
       {/* ================= 構造比 ================= */}
       <div>
-        <div className="mb-1 text-sm font-semibold text-white">
+        <div className="mb-1 text-sm font-semibold text-white md:text-base">
           市場志向 構造比
         </div>
 
-        <div className="mb-1 flex justify-between text-xs text-white/60">
+        <div className="mb-1 flex justify-between text-xs text-white/60 md:text-sm">
           <span>逆張り {conSharePct}%</span>
           <span>順当 {favSharePct}%</span>
         </div>
 
-        <div className="h-3 w-full rounded-full bg-white/10 overflow-hidden flex">
+        <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full bg-blue-600 transition-all"
             style={{
@@ -107,7 +106,7 @@ export default function MarketBiasBars({
         </div>
       </div>
 
-      <p className="text-[11px] leading-relaxed text-white/50">
+      <p className="text-[11px] leading-relaxed text-white/50 md:text-[13px]">
         ※ 上段は勝率、下段は投稿構造比を示しています
       </p>
     </div>
