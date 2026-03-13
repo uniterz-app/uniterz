@@ -135,10 +135,12 @@ export default function MonthlyTrendChart({ data }: Props) {
                 fontSize: 11,
               }}
               labelStyle={{ color: "rgba(248,250,252,0.9)" }}
-              formatter={(value: number, name) => {
-                if (name === "投稿数") return [`${value}件`, name];
-                return [`${Math.round(value * 100)}%`, name];
-              }}
+formatter={(value, name) => {
+  const safeValue = typeof value === "number" ? value : 0;
+
+  if (name === "投稿数") return [`${safeValue}件`, name];
+  return [`${Math.round(safeValue * 100)}%`, name];
+}}
             />
 
             {/* ===== 投稿数 ===== */}
