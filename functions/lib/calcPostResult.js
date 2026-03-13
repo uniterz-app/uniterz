@@ -18,7 +18,6 @@ function calcPostResult({ prediction, final, market, hadUpsetGame, league, }) {
     const scoreError = calcScoreError(prediction.score, final);
     const conf = Math.min(99, Math.max(1, prediction.confidence));
     const brier = calcBrier(isWin, conf);
-    const calibrationError = Math.abs(conf / 100 - (isWin ? 1 : 0));
     const { homePt, awayPt, diffPt, totalPt } = (0, calcScorePrecision_1.calcScorePrecision)({
         predictedHome: prediction.score.home,
         predictedAway: prediction.score.away,
@@ -26,12 +25,17 @@ function calcPostResult({ prediction, final, market, hadUpsetGame, league, }) {
         actualAway: final.away,
         league: league !== null && league !== void 0 ? league : "bj",
     });
-    const upsetHit = hadUpsetGame && isWin;
+    // upsetHit = 「アップセット試合」かつ「少数派を当てた」
+    const pickSide = prediction.winner;
+    const upsetHit = hadUpsetGame &&
+        isWin &&
+        pickSide !== "draw" &&
+        marketMajority !== "draw" &&
+        pickSide !== marketMajority;
     return {
         isWin,
         scoreError,
         brier,
-        calibrationError,
         confidence: conf,
         scorePrecision: totalPt,
         scorePrecisionDetail: { homePt, awayPt, diffPt },

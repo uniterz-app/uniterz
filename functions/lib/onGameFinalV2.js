@@ -12,7 +12,7 @@ const updateUserStreak_1 = require("./updateUserStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
 const db = () => (0, firestore_2.getFirestore)();
 const MIN_MARKET = 10;
-const UPSET_MARKET_RATIO = 0.7;
+const UPSET_MARKET_RATIO = 0.6;
 const UPSET_WIN_DIFF = 10;
 exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     document: "games/{gameId}",
@@ -71,6 +71,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             homeRate: market.homeRate,
             awayRate: market.awayRate,
             majority: market.majoritySide,
+            majorityRatio: market.majorityRatio,
         },
     }, { merge: true });
     const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
