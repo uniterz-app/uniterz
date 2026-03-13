@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
-import { FaTrophy, FaBrain } from "react-icons/fa";
+import { FaTrophy } from "react-icons/fa";
 import { FiTrendingUp, FiUser } from "react-icons/fi";
+import { Brain } from "lucide-react";
 import { useEffect, useState, CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
@@ -24,7 +25,7 @@ type Item = {
 
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
-  { key: "home", href: "/home", label: "ホーム", icon: FaBrain },
+  { key: "home", href: "/result", label: "リザルト", icon: Brain },
   { key: "trend", href: "/trend", label: "トレンド", icon: FiTrendingUp },
   { key: "ranking", href: "/rankings", label: "ランキング", icon: FaTrophy },
   { key: "mypage", href: "/mypage", label: "マイページ", icon: FiUser },
@@ -75,7 +76,6 @@ const BarStyle = {
     pointerEvents: "auto",
   } as CSSProperties,
 
-  // ガラスのハイライト層
   glassSheen: {
     position: "absolute",
     inset: 0,
@@ -85,7 +85,6 @@ const BarStyle = {
       "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.025) 28%, rgba(255,255,255,0.00) 45%)",
   } as CSSProperties,
 
-  // 枠のグロー（常時）
   glowRing: {
     position: "absolute",
     inset: 0,
@@ -127,20 +126,17 @@ const BarStyle = {
 export default function NavBar() {
   const pathname = usePathname() ?? "";
   const isMobile =
-  pathname.startsWith("/mobile") || pathname.startsWith("/m/");
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix: "/web" | "/mobile" = isMobile ? "/mobile" : "/web";
 
-  // SSR時は portal先がないので mount 後に描画
   const [mounted, setMounted] = useState(false);
-
-  // 初回から描画する（ゲストで開始 → authで上書き）
-  const [myHref, setMyHref] = useState<string>(`${prefix}/u/guest`);
+  const [myHref, setMyHref] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // login / signup では NavBar を非表示
   if (
     pathname === "/web/login" ||
     pathname === "/web/signup" ||
@@ -151,28 +147,33 @@ export default function NavBar() {
   }
 
   useEffect(() => {
-    // ルート切替時に一旦ゲストに戻す
-    setMyHref(`${prefix}/u/guest`);
+    setInitialized(false);
+    setMyHref(null);
 
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setMyHref(`${prefix}/u/guest`);
+        setInitialized(true);
         return;
       }
 
       try {
         const snap = await getDoc(doc(db, "users", user.uid));
         const h = snap.data()?.handle || snap.data()?.slug;
-        setMyHref(h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`);
+        setMyHref(
+          h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
+        );
       } catch {
         setMyHref(`${prefix}/mypage`);
+      } finally {
+        setInitialized(true);
       }
     });
 
     return () => unsub();
   }, [prefix]);
 
-  if (!mounted) return null;
+  if (!mounted || !initialized || !myHref) return null;
 
   const navEl = (
     <>
@@ -186,10 +187,7 @@ export default function NavBar() {
 
       <nav style={BarStyle.wrap} aria-label="Bottom navigation">
         <div style={isMobile ? BarStyle.barMobile : BarStyle.barWeb}>
-          {/* ガラス感のハイライト */}
           <div style={BarStyle.glassSheen} />
-
-          {/* 常時うっすら光る枠 */}
           <div style={BarStyle.glowRing} />
 
           {items.map((item) => {
@@ -201,7 +199,7 @@ export default function NavBar() {
               ? {
                   animation: "popActive 0.24s ease",
                   transform: "scale(1.08)",
-                  filter: "none",
+                  filter: "drop-shadow(0 0 3px rgba(255,255,255,0.7))",
                 }
               : { transform: "scale(0.92)" };
 
@@ -211,10 +209,6 @@ export default function NavBar() {
                 href={href}
                 style={{
                   ...(isMobile ? BarStyle.linkMobile : BarStyle.linkWeb),
-                  background: "transparent",
-                  boxShadow: "none",
-                  outline: "none",
-                  WebkitTapHighlightColor: "transparent",
                   position: "relative",
                   zIndex: 2,
                 }}
