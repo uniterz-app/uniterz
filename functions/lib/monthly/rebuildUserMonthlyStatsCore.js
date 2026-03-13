@@ -48,10 +48,8 @@ function toRadar10(params) {
     return {
         winRate: clamp10(params.winRate * 10),
         accuracy: clamp10(params.accuracy * 10),
-        precision: clamp10((params.avgPrecision / 15) * 10),
-        upset: clamp10(params.avgUpset * 10),
+        precision: clamp10(params.avgPrecision),
         streak: clamp10(params.streakScore),
-        market: clamp10(params.marketScore),
     };
 }
 /* ============================================================================
@@ -117,8 +115,8 @@ function calcStreak(results) {
  * ============================================================================
  */
 async function rebuildUserMonthlyStatsCore() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
-    var _v;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w;
+    var _x;
     const range = getPreviousMonthRange();
     const startDate = toDateKeyJst(range.start);
     const endDate = toDateKeyJst(range.end);
@@ -145,6 +143,8 @@ async function rebuildUserMonthlyStatsCore() {
                 upsetHit: 0,
                 upsetOpp: 0,
                 upsetPick: 0,
+                upsetPointsSum: 0,
+                pointsSumV3: 0,
                 leaguePosts: {},
             });
         }
@@ -156,9 +156,11 @@ async function rebuildUserMonthlyStatsCore() {
         agg.upsetHit += (_e = stats.upsetHitCount) !== null && _e !== void 0 ? _e : 0;
         agg.upsetOpp += (_f = stats.upsetOpportunityCount) !== null && _f !== void 0 ? _f : 0;
         agg.upsetPick += (_g = stats.upsetPickCount) !== null && _g !== void 0 ? _g : 0;
-        for (const [league, lstat] of Object.entries((_h = d.leagues) !== null && _h !== void 0 ? _h : {})) {
-            const p = (_j = lstat === null || lstat === void 0 ? void 0 : lstat.posts) !== null && _j !== void 0 ? _j : 0;
-            agg.leaguePosts[league] = ((_k = agg.leaguePosts[league]) !== null && _k !== void 0 ? _k : 0) + p;
+        agg.upsetPointsSum += (_h = stats.upsetPointsSum) !== null && _h !== void 0 ? _h : 0;
+        agg.pointsSumV3 += (_j = stats.pointsSumV3) !== null && _j !== void 0 ? _j : 0;
+        for (const [league, lstat] of Object.entries((_k = d.leagues) !== null && _k !== void 0 ? _k : {})) {
+            const p = (_l = lstat === null || lstat === void 0 ? void 0 : lstat.posts) !== null && _l !== void 0 ? _l : 0;
+            agg.leaguePosts[league] = ((_m = agg.leaguePosts[league]) !== null && _m !== void 0 ? _m : 0) + p;
         }
     }
     const rows = Array.from(map.entries())
@@ -168,26 +170,30 @@ async function rebuildUserMonthlyStatsCore() {
         const winRate = agg.wins / agg.posts;
         const accuracy = 1 - agg.brierSum / agg.posts;
         const avgPrecision = agg.precisionSum / agg.posts;
-        const avgUpset = agg.upsetOpp >= 5 ? agg.upsetHit / agg.upsetOpp : 0;
+        const avgPointsV3 = agg.pointsSumV3 / agg.posts;
         return {
             uid,
             posts: agg.posts,
             winRate,
             accuracy,
             avgPrecision,
-            avgUpset,
+            avgPointsV3,
+            upsetPointsSum: agg.upsetPointsSum,
             leaguePosts: agg.leaguePosts,
         };
     })
         .filter(Boolean);
-    const winRates = rows.map(r => r.winRate).sort((a, b) => a - b);
-    const accuracies = rows.map(r => r.accuracy).sort((a, b) => a - b);
-    const precisions = rows.map(r => r.avgPrecision).sort((a, b) => a - b);
-    const upsets = rows.map(r => r.avgUpset).sort((a, b) => a - b);
+    const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
+    const accuracies = rows.map((r) => r.accuracy).sort((a, b) => a - b);
+    const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
+    const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
+    const upsetPointSums = rows
+        .map((r) => r.upsetPointsSum)
+        .sort((a, b) => a - b);
     const leagueVolumeMap = {};
     for (const r of rows) {
         for (const [league, p] of Object.entries(r.leaguePosts)) {
-            (_l = leagueVolumeMap[league]) !== null && _l !== void 0 ? _l : (leagueVolumeMap[league] = []);
+            (_o = leagueVolumeMap[league]) !== null && _o !== void 0 ? _o : (leagueVolumeMap[league] = []);
             leagueVolumeMap[league].push(p);
         }
     }
@@ -205,7 +211,7 @@ async function rebuildUserMonthlyStatsCore() {
         const uid = p.authorUid;
         if (!uid)
             continue;
-        (_m = postAggMap[uid]) !== null && _m !== void 0 ? _m : (postAggMap[uid] = {
+        (_p = postAggMap[uid]) !== null && _p !== void 0 ? _p : (postAggMap[uid] = {
             homeAway: {
                 home: { posts: 0, wins: 0 },
                 away: { posts: 0, wins: 0 },
@@ -215,14 +221,13 @@ async function rebuildUserMonthlyStatsCore() {
             favoritePickCount: 0,
             underdogPickCount: 0,
             favoritePickRatioSum: 0,
-            favoriteWins: 0, // ★追加
-            underdogWins: 0, // ★追加
+            favoriteWins: 0,
+            underdogWins: 0,
         });
         const agg = postAggMap[uid];
-        const pick = (_o = p.prediction) === null || _o === void 0 ? void 0 : _o.winner;
-        const market = p.marketMeta; // majoritySide / majorityRatio が入っている前提
-        const isWin = ((_p = p.stats) === null || _p === void 0 ? void 0 : _p.isWin) === true;
-        /* ===== market 集計 ===== */
+        const pick = (_q = p.prediction) === null || _q === void 0 ? void 0 : _q.winner;
+        const market = p.marketMeta;
+        const isWin = ((_r = p.stats) === null || _r === void 0 ? void 0 : _r.isWin) === true;
         if (market && pick) {
             if (pick === market.majoritySide) {
                 agg.favoritePickCount++;
@@ -253,13 +258,13 @@ async function rebuildUserMonthlyStatsCore() {
             });
         }
         const teamId = pick === "home"
-            ? (_q = p.home) === null || _q === void 0 ? void 0 : _q.teamId
+            ? (_s = p.home) === null || _s === void 0 ? void 0 : _s.teamId
             : pick === "away"
-                ? (_r = p.away) === null || _r === void 0 ? void 0 : _r.teamId
+                ? (_t = p.away) === null || _t === void 0 ? void 0 : _t.teamId
                 : null;
         if (!teamId)
             continue;
-        (_s = (_v = agg.teamMap)[teamId]) !== null && _s !== void 0 ? _s : (_v[teamId] = { posts: 0, wins: 0 });
+        (_u = (_x = agg.teamMap)[teamId]) !== null && _u !== void 0 ? _u : (_x[teamId] = { posts: 0, wins: 0 });
         agg.teamMap[teamId].posts++;
         if (isWin)
             agg.teamMap[teamId].wins++;
@@ -267,23 +272,23 @@ async function rebuildUserMonthlyStatsCore() {
     const batch = db().batch();
     for (const row of rows) {
         const postAgg = postAggMap[row.uid];
-        const streak = postAgg ? calcStreak(postAgg.results) : { maxWin: 0, maxLose: 0 };
+        const streak = postAgg
+            ? calcStreak(postAgg.results)
+            : { maxWin: 0, maxLose: 0 };
         const homeAway = postAgg
             ? {
                 home: {
                     posts: postAgg.homeAway.home.posts,
                     wins: postAgg.homeAway.home.wins,
                     winRate: postAgg.homeAway.home.posts > 0
-                        ? postAgg.homeAway.home.wins /
-                            postAgg.homeAway.home.posts
+                        ? postAgg.homeAway.home.wins / postAgg.homeAway.home.posts
                         : 0,
                 },
                 away: {
                     posts: postAgg.homeAway.away.posts,
                     wins: postAgg.homeAway.away.wins,
                     winRate: postAgg.homeAway.away.posts > 0
-                        ? postAgg.homeAway.away.wins /
-                            postAgg.homeAway.away.posts
+                        ? postAgg.homeAway.away.wins / postAgg.homeAway.away.posts
                         : 0,
                 },
             }
@@ -299,24 +304,26 @@ async function rebuildUserMonthlyStatsCore() {
                 wins: v.wins,
                 winRate: v.wins / v.posts,
             }))
-                .filter(t => t.posts >= 5)
-                .sort((a, b) => b.winRate !== a.winRate
-                ? b.winRate - a.winRate
-                : b.posts - a.posts)
+                .filter((t) => t.posts >= 5)
+                .sort((a, b) => b.winRate !== a.winRate ? b.winRate - a.winRate : b.posts - a.posts)
             : [];
         const strong = teams.slice(0, 3);
-        const strongIds = new Set(strong.map(t => t.teamId));
-        const weak = teams.filter(t => !strongIds.has(t.teamId)).slice(-3).reverse();
+        const strongIds = new Set(strong.map((t) => t.teamId));
+        const weak = teams
+            .filter((t) => !strongIds.has(t.teamId))
+            .slice(-3)
+            .reverse();
         const agg = map.get(row.uid);
         const mainLeague = getMainLeague(agg.leaguePosts);
         const volumeMainLeague = mainLeague
-            ? percentile((_t = leagueVolumeMap[mainLeague]) !== null && _t !== void 0 ? _t : [], agg.leaguePosts[mainLeague])
+            ? percentile((_v = leagueVolumeMap[mainLeague]) !== null && _v !== void 0 ? _v : [], agg.leaguePosts[mainLeague])
             : 0;
         const percentiles = {
             winRate: percentile(winRates, row.winRate),
             accuracy: percentile(accuracies, row.accuracy),
             precision: percentile(precisions, row.avgPrecision),
-            upset: percentile(upsets, row.avgUpset),
+            pointsV3: percentile(pointsV3s, row.avgPointsV3),
+            upset: percentile(upsetPointSums, row.upsetPointsSum),
             volume: volumeMainLeague,
             volumeByLeague: Object.fromEntries(Object.entries(agg.leaguePosts).map(([league, p]) => {
                 var _a;
@@ -326,8 +333,7 @@ async function rebuildUserMonthlyStatsCore() {
                 ];
             })),
         };
-        // ① market 集計
-        const marketAgg = (_u = postAggMap[row.uid]) !== null && _u !== void 0 ? _u : {
+        const marketAgg = (_w = postAggMap[row.uid]) !== null && _w !== void 0 ? _w : {
             favoritePickCount: 0,
             underdogPickCount: 0,
             favoritePickRatioSum: 0,
@@ -338,24 +344,26 @@ async function rebuildUserMonthlyStatsCore() {
         const favoritePickRate = totalMarketPicks > 0
             ? marketAgg.favoritePickCount / totalMarketPicks
             : 0;
-        /* ★順当勝率 */
         const favoriteWinRate = marketAgg.favoritePickCount > 0
             ? marketAgg.favoriteWins / marketAgg.favoritePickCount
             : 0;
-        /* ★逆張り勝率 */
         const underdogWinRate = marketAgg.underdogPickCount > 0
             ? marketAgg.underdogWins / marketAgg.underdogPickCount
             : 0;
         const avgMarketMajorityRatioPicked = marketAgg.favoritePickCount > 0
             ? marketAgg.favoritePickRatioSum / marketAgg.favoritePickCount
             : 0;
-        // ② streak / market → 0–10
-        const streakScore = clamp10((streak.maxWin / (streak.maxWin + streak.maxLose + 1)) * 10);
-        const marketScore = clamp10(favoritePickRate * 10);
-        // ③ radar10 作成
-        const radar10 = Object.assign(Object.assign({}, toRadar10(Object.assign(Object.assign({}, row), { streakScore,
-            marketScore }))), { volume: clamp10(percentiles.volume / 10) });
-        // ④ 判定系（ここで初めて使う）
+        const sample = Math.min(1, row.posts / 20);
+        const rawStreakScore = 7 +
+            Math.min(streak.maxWin, 8) * 0.35 -
+            Math.min(streak.maxLose, 8) * 0.9;
+        const streakScore = clamp10(rawStreakScore * sample + 3 * (1 - sample));
+        const radar10 = Object.assign(Object.assign({}, toRadar10({
+            winRate: row.winRate,
+            accuracy: row.accuracy,
+            avgPrecision: row.avgPrecision,
+            streakScore,
+        })), { upset: clamp10(percentiles.upset / 10), volume: clamp10(percentiles.volume / 10) });
         const levelSummary = (0, judgeLevel_1.judgeLevels)(radar10);
         const analysisTypeId = (0, judgeAnalysisType_1.judgeAnalysisType)(levelSummary);
         const ref = db()
@@ -370,7 +378,8 @@ async function rebuildUserMonthlyStatsCore() {
                 winRate: row.winRate,
                 accuracy: row.accuracy,
                 avgPrecision: row.avgPrecision,
-                avgUpset: row.avgUpset,
+                avgPointsV3: row.avgPointsV3,
+                upsetPointsSum: agg.upsetPointsSum,
                 upsetOpportunity: agg.upsetOpp,
                 upsetPick: agg.upsetPick,
                 upsetHit: agg.upsetHit,
@@ -379,10 +388,10 @@ async function rebuildUserMonthlyStatsCore() {
             marketBias: {
                 favoritePickCount: marketAgg.favoritePickCount,
                 underdogPickCount: marketAgg.underdogPickCount,
-                favoritePickRate, // 構造比（順当）
-                favoriteWinRate, // ★順当勝率
-                underdogWinRate, // ★逆張り勝率
-                avgMarketMajorityRatioPicked, // 例: 0.76
+                favoritePickRate,
+                favoriteWinRate,
+                underdogWinRate,
+                avgMarketMajorityRatioPicked,
             },
             radar10,
             percentiles,

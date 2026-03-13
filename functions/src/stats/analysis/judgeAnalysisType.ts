@@ -2,19 +2,11 @@
 import { LevelSummary } from "./judgeLevel";
 import { AnalysisTypeId } from "./types";
 
-/**
- * 16タイプ判定
- * market 軸を廃止し、accuracy 軸へ置換
- */
 export function judgeAnalysisType(
   summary: LevelSummary
 ): AnalysisTypeId {
   const { levels, counts } = summary;
   const { S, M, W } = counts;
-
-  // ====================
-  // Tier 1 : 完成度・総合力
-  // ====================
 
   if (S >= 5) {
     return "COMPLETE_PLAYER";
@@ -24,11 +16,7 @@ export function judgeAnalysisType(
     return "ELITE_ALLROUNDER";
   }
 
-  // ====================
-  // S=3
-  // ====================
   if (S === 3) {
-    // 勝率中核型
     if (
       levels.winRate === "S" &&
       levels.precision === "S" &&
@@ -58,7 +46,7 @@ export function judgeAnalysisType(
       levels.precision === "S" &&
       levels.accuracy === "S"
     ) {
-      return "SAFE_CLOSER";
+      return "PRECISE_CLOSER";
     }
 
     if (
@@ -66,10 +54,9 @@ export function judgeAnalysisType(
       levels.streak === "S" &&
       levels.accuracy === "S"
     ) {
-      return "Hot_Hand";
+      return "CONFIDENT_FINISHER";
     }
 
-    // 分析・精度中核型
     if (
       levels.precision === "S" &&
       levels.volume === "S" &&
@@ -83,7 +70,7 @@ export function judgeAnalysisType(
       levels.volume === "S" &&
       levels.accuracy === "S"
     ) {
-      return "MODEL_FOLLOWER";
+      return "PROBABILITY_READER";
     }
 
     if (
@@ -94,7 +81,6 @@ export function judgeAnalysisType(
       return "STABLE_ANALYST";
     }
 
-    // Upset 中核型
     if (
       levels.upset === "S" &&
       levels.winRate === "S" &&
@@ -119,13 +105,12 @@ export function judgeAnalysisType(
       return "CHAOS_ENGINE";
     }
 
-    // accuracy 中核型
     if (
       levels.accuracy === "S" &&
       levels.volume === "S" &&
       levels.streak === "S"
     ) {
-      return "PUBLIC_CONTROLLER";
+      return "ACCURACY_CONTROLLER";
     }
 
     if (
@@ -133,15 +118,11 @@ export function judgeAnalysisType(
       levels.winRate === "S" &&
       levels.volume === "S"
     ) {
-      return "SAFE_PRODUCER";
+      return "CONSISTENT_PRODUCER";
     }
   }
 
-  // ====================
-  // S=2
-  // ====================
   if (S === 2) {
-    // 勝率軸
     if (levels.winRate === "S" && levels.precision === "S") {
       return "SHARP_EXECUTOR";
     }
@@ -155,14 +136,13 @@ export function judgeAnalysisType(
     }
 
     if (levels.winRate === "S" && levels.accuracy === "S") {
-      return "SAFE_DOMINANCE";
+      return "CONFIDENCE_DOMINANCE";
     }
 
     if (levels.winRate === "S" && levels.accuracy === "W") {
-      return "CROWD_BREAKER";
+      return "HIGH_RISK_READER";
     }
 
-    // 精度軸
     if (levels.precision === "S" && levels.volume === "S") {
       return "DATA_FORGE";
     }
@@ -172,14 +152,13 @@ export function judgeAnalysisType(
     }
 
     if (levels.precision === "S" && levels.accuracy === "S") {
-      return "MODEL_COMMANDER";
+      return "PROBABILITY_COMMANDER";
     }
 
     if (levels.precision === "S" && levels.accuracy === "W") {
-      return "LINE_CUTTER";
+      return "VOLATILE_READER";
     }
 
-    // Upset 軸
     if (levels.upset === "S" && levels.winRate === "S") {
       return "BOLD_STRIKER";
     }
@@ -193,39 +172,32 @@ export function judgeAnalysisType(
     }
 
     if (levels.upset === "S" && levels.accuracy === "W") {
-      return "FADE_ASSASSIN";
+      return "BOLD_READER";
     }
 
-    // 量・継続
     if (levels.volume === "S" && levels.streak === "S") {
       return "ENDURANCE_CORE";
     }
 
     if (levels.volume === "S" && levels.accuracy === "S") {
-      return "PUBLIC_ENGINE";
+      return "ACCURACY_ENGINE";
     }
 
     if (levels.volume === "S" && levels.accuracy === "W") {
-      return "DARK_ENGINE";
+      return "RISK_ENGINE";
     }
   }
 
-  // ====================
-  // S=1
-  // ====================
   if (S === 1) {
     if (levels.winRate === "S") return "CLEAN_HIT";
     if (levels.precision === "S") return "SHARP_EYE";
     if (levels.upset === "S") return "CHAOS_TAKER";
     if (levels.volume === "S") return "HIGH_ACTIVITY";
     if (levels.streak === "S") return "HOT_PHASE";
-    if (levels.accuracy === "S") return "PUBLIC_PATH";
-    if (levels.accuracy === "W") return "CROWD_FADE";
+    if (levels.accuracy === "S") return "ACCURACY_PATH";
+    if (levels.accuracy === "W") return "VOLATILE_PATH";
   }
 
-  // ====================
-  // S=0
-  // ====================
   if (S === 0) {
     if (W >= 4) return "RAW";
     if (W >= 3) return "UNSTABLE";
@@ -233,8 +205,5 @@ export function judgeAnalysisType(
     return "BASELINE";
   }
 
-  // ====================
-  // fallback
-  // ====================
   return "WILD_CARD";
 }
