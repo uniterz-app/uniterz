@@ -334,14 +334,6 @@ const showCurrentStreakBadge = currentStreak >= 3;
 
       <SideMenuDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      <SimpleCenterModal
-        open={memberModalOpen}
-        onClose={() => setMemberModalOpen(false)}
-        title="現在開発中"
-        icon="⚙️"
-        message="今後、有料プラン作成機能を追加予定です。"
-      />
-
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal
           badge={selectedBadge}
