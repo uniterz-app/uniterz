@@ -12,7 +12,7 @@ import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { League } from "@/lib/leagues";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 /* =========================
    Date Utils（唯一の真実）
@@ -41,14 +41,18 @@ function findMonthFirstGame(gameDays: Date[], baseDate: Date, offset: number) {
 
 export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   /* =========================
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
-
   const [leagueReady, setLeagueReady] = useState(false);
+
+  /* =========================
+     Login modal
+  ========================= */
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   /* =========================
      初期リーグ決定フラグ
@@ -58,47 +62,46 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      ユーザーの投稿数から初期リーグ決定
   ========================= */
- useEffect(() => {
-  const resolveInitialLeague = async () => {
-    if (didInitLeague.current) return;
+  useEffect(() => {
+    const resolveInitialLeague = async () => {
+      if (didInitLeague.current) return;
 
-    const user = auth.currentUser;
-    if (!user) {
-      // 未ログイン時も league を確定させる
+      const user = auth.currentUser;
+      if (!user) {
+        didInitLeague.current = true;
+        setLeague("nba");
+        setLeagueReady(true);
+        return;
+      }
+
+      const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
+      if (!snap.exists()) {
+        didInitLeague.current = true;
+        setLeague("nba");
+        setLeagueReady(true);
+        return;
+      }
+
+      const data = snap.data();
+      const leaguePosts: Record<League, number> = {
+        nba: data?.leagues?.nba?.posts ?? 0,
+        pl: data?.leagues?.pl?.posts ?? 0,
+        bj: data?.leagues?.bj?.posts ?? 0,
+        j1: data?.leagues?.j1?.posts ?? 0,
+      };
+
+      const sorted = (Object.entries(leaguePosts) as [League, number][])
+        .sort((a, b) => b[1] - a[1]);
+
+      const [topLeague, topCount] = sorted[0];
+
       didInitLeague.current = true;
-      setLeague("nba");
+      setLeague(topCount > 0 ? topLeague : "nba");
       setLeagueReady(true);
-      return;
-    }
-
-    const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
-    if (!snap.exists()) {
-      didInitLeague.current = true;
-      setLeague("nba");
-      setLeagueReady(true);
-      return;
-    }
-
-    const data = snap.data();
-    const leaguePosts: Record<League, number> = {
-      nba: data?.leagues?.nba?.posts ?? 0,
-      pl: data?.leagues?.pl?.posts ?? 0,
-      bj: data?.leagues?.bj?.posts ?? 0,
-      j1: data?.leagues?.j1?.posts ?? 0,
     };
 
-    const sorted = (Object.entries(leaguePosts) as [League, number][])
-      .sort((a, b) => b[1] - a[1]);
-
-    const [topLeague, topCount] = sorted[0];
-
-    didInitLeague.current = true;
-    setLeague(topCount > 0 ? topLeague : "nba");
-    setLeagueReady(true);
-  };
-
-  resolveInitialLeague();
-}, []);
+    resolveInitialLeague();
+  }, []);
 
   /* =========================
      Game days
@@ -114,49 +117,46 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const selected = selectedByLeague[league] ?? null;
 
-/* =========================
-   Today（key）15:00ルール
-========================= */
-const todayKey = useMemo(() => {
-  // JST に固定
-  const now = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
-  );
+  /* =========================
+     Today（key）15:00ルール
+  ========================= */
+  const todayKey = useMemo(() => {
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
+    );
 
-  const base = new Date(now);
-  base.setHours(0, 0, 0, 0);
+    const base = new Date(now);
+    base.setHours(0, 0, 0, 0);
 
-  // 15:00以降は翌日
-  if (now.getHours() >= 15) {
-    base.setDate(base.getDate() + 1);
-  }
+    if (now.getHours() >= 15) {
+      base.setDate(base.getDate() + 1);
+    }
 
-  return toDateKey(base);
-}, []);
+    return toDateKey(base);
+  }, []);
 
   /* =========================
      初期位置決定（唯一のロジック）
   ========================= */
   useEffect(() => {
-  if (!leagueReady) return;          // ★ 追加
-  if (selectedByLeague[league]) return;
-  if (!gameDays.length) return;
+    if (!leagueReady) return;
+    if (selectedByLeague[league]) return;
+    if (!gameDays.length) return;
 
-  const sorted = [...gameDays].sort(
-    (a, b) => toDateKey(a).localeCompare(toDateKey(b))
-  );
+    const sorted = [...gameDays].sort((a, b) =>
+      toDateKey(a).localeCompare(toDateKey(b))
+    );
 
-  const initial =
-    sorted.find((d) => toDateKey(d) >= todayKey) ??
-    sorted[sorted.length - 1];
+    const initial =
+      sorted.find((d) => toDateKey(d) >= todayKey) ?? sorted[sorted.length - 1];
 
-  setSelectedByLeague((prev) => ({
-    ...prev,
-    [league]: initial,
-  }));
+    setSelectedByLeague((prev) => ({
+      ...prev,
+      [league]: initial,
+    }));
 
-  router.replace(`?date=${toDateKey(initial)}`, { scroll: false });
-}, [league, leagueReady, gameDays, todayKey, selectedByLeague, router]);
+    router.replace(`?date=${toDateKey(initial)}`, { scroll: false });
+  }, [league, leagueReady, gameDays, todayKey, selectedByLeague, router]);
 
   /* =========================
      selected + URL 同期
@@ -258,6 +258,29 @@ const todayKey = useMemo(() => {
     load();
   }, []);
 
+  /* =========================
+     Paths
+  ========================= */
+  const isMobile = pathname?.startsWith("/mobile");
+  const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff-bracket";
+  const signupHref = isMobile ? "/mobile/signup" : "/web/signup";
+
+  function handleBracketClick() {
+    const user = auth.currentUser;
+
+    if (!user) {
+      setLoginModalOpen(true);
+      return;
+    }
+
+    router.push(playoffHref);
+  }
+
+  function handleGoSignup() {
+    setLoginModalOpen(false);
+    router.push(signupHref);
+  }
+
   return (
     <div
       ref={pageRef}
@@ -269,21 +292,44 @@ const todayKey = useMemo(() => {
       style={{ touchAction: "pan-y" }}
     >
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md">
-        <div className="relative h-11 flex items-center justify-between px-3 md:px-8">
-          <Link href={myProfileHref ?? "#"} className="w-9 h-9" />
+        <div className="relative flex h-11 items-center justify-between px-3 md:px-8">
+          <Link href={myProfileHref ?? "#"} className="h-9 w-9" />
           <div className="absolute left-1/2 -translate-x-1/2">
-            <img src="/logo/logo.png" alt="Uniterz Logo" className="w-10 h-auto" />
+            <img src="/logo/logo.png" alt="Uniterz Logo" className="h-auto w-10" />
           </div>
-          <div className="w-9 h-9" />
+          <div className="h-9 w-9" />
         </div>
       </header>
 
-      <div className="flex items-center justify-between mb-2 mt-3">
-        <LeagueTabs value={league} onChange={setLeague} size={dense ? "md" : "lg"} />
+      <div className="mb-2 mt-3 flex items-center justify-between gap-3">
+        <LeagueTabs
+          value={league}
+          onChange={setLeague}
+          size={dense ? "md" : "lg"}
+        />
+
+        {league === "nba" && (
+          <button
+            type="button"
+            onClick={handleBracketClick}
+            className={[
+              dense
+                ? "rounded-lg px-3 py-1.5 text-sm"
+                : "rounded-xl px-4 py-2 text-base",
+              "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-semibold text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
+            ].join(" ")}
+          >
+            Bracket
+          </button>
+        )}
       </div>
 
       <MonthHeader
-        month={selected ? new Date(selected.getFullYear(), selected.getMonth(), 1) : null}
+        month={
+          selected
+            ? new Date(selected.getFullYear(), selected.getMonth(), 1)
+            : null
+        }
         onPrev={() => {
           if (!selected) return;
           const prev = findMonthFirstGame(gameDays, selected, -1);
@@ -298,7 +344,7 @@ const todayKey = useMemo(() => {
       />
 
       {loadingDays || !selected ? (
-        <div className="text-center text-white/60 my-4">読み込み中...</div>
+        <div className="my-4 text-center text-white/60">読み込み中...</div>
       ) : (
         <DayStrip
           dates={gameDays}
@@ -320,14 +366,54 @@ const todayKey = useMemo(() => {
       ) : (
         <ScheduleList games={games} dense={dense} />
       )}
+
+      {loginModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close modal"
+            onClick={() => setLoginModalOpen(false)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+          />
+
+          <div className="relative z-[201] w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d1015] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+            <div className="text-[18px] font-semibold text-white">
+              ログインしてください
+            </div>
+
+            <div className="mt-4 space-y-2 text-[14px] leading-relaxed text-white/78">
+              <p>ブラケット機能を使うにはアカウントが必要です。</p>
+              <p>アカウント作成後にブラケットを作成できます。</p>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setLoginModalOpen(false)}
+                className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/10"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleGoSignup}
+                className="rounded-xl bg-[#163a5f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4c78]"
+              >
+                アカウント作成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 animate-pulse">
-      <div className="h-4 w-40 rounded bg-white/10 mx-auto mb-3" />
+    <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
     </div>
   );
 }

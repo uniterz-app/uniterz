@@ -7,6 +7,64 @@ export type HighlightV2 = {
   reason?: string;
 };
 
+export type PeriodV2 = "7d" | "30d" | "all";
+
+type ThresholdPair = { yellow: number; strong: number };
+
+/* =============================
+ * 期間別・合計指標用の閾値（厳しめ）
+ * ============================= */
+const SUM_THRESHOLDS = {
+  scorePrecisionSum: {
+    "7d": { yellow: 28, strong: 36 },
+    "30d": { yellow: 70, strong: 90 },
+    "all": { yellow: 140, strong: 180 },
+  } satisfies Record<PeriodV2, ThresholdPair>,
+
+  upsetPointsSum: {
+    "7d": { yellow: 10, strong: 20 },
+    "30d": { yellow: 30, strong: 55 },
+    "all": { yellow: 80, strong: 130 },
+  } satisfies Record<PeriodV2, ThresholdPair>,
+
+  pointsSumV3: {
+    "7d": { yellow: 30, strong: 42 },
+    "30d": { yellow: 75, strong: 105 },
+    "all": { yellow: 150, strong: 210 },
+  } satisfies Record<PeriodV2, ThresholdPair>,
+} as const;
+
+function evalSumByPeriod(
+  sum: number,
+  period: PeriodV2,
+  t: Record<PeriodV2, ThresholdPair>,
+  opts?: { strongIcon?: HighlightV2["icon"]; yellowIcon?: HighlightV2["icon"]; metric?: string }
+): HighlightV2 {
+  const v = Number(sum);
+  if (!Number.isFinite(v) || v <= 0) return { level: "none" };
+
+  const th = t[period];
+  const metric = opts?.metric ?? "sum";
+
+  if (v >= th.strong) {
+    return {
+      level: "strong",
+      icon: opts?.strongIcon,
+      reason: `${metric}>=${th.strong} (${period})`,
+    };
+  }
+
+  if (v >= th.yellow) {
+    return {
+      level: "yellow",
+      icon: opts?.yellowIcon,
+      reason: `${metric}>=${th.yellow} (${period})`,
+    };
+  }
+
+  return { level: "none" };
+}
+
 /* =============================
  * 勝率（WinRate）
  * ============================= */
@@ -14,32 +72,14 @@ export function evaluateWinRateV2(winRate01: number): HighlightV2 {
   const r = Number(winRate01);
   if (!Number.isFinite(r) || r <= 0) return { level: "none" };
 
-  if (r >= 0.57) return { level: "strong", reason: "winrate>=57%" };
-  if (r >= 0.52) return { level: "yellow", reason: "winrate>=52%" };
+  // yellow: 65% / strong: 78%
+  if (r >= 0.78) return { level: "strong", reason: "winrate>=78%" };
+  if (r >= 0.65) return { level: "yellow", reason: "winrate>=65%" };
   return { level: "none" };
 }
 
 /* =============================
- * 精度（Score Precision：0〜15）
- *
- *  10.5 以上 → strong（濃黄 + 👑）
- *   7.0 以上 → yellow
- * ============================= */
-export function evaluatePrecisionV2(avgPrecision: number): HighlightV2 {
-  const p = Number(avgPrecision);
-  if (!Number.isFinite(p) || p < 0) return { level: "none" };
-
-  if (p >= 10.5)
-    return { level: "strong", icon: "crown", reason: "precision>=10.5" };
-
-  if (p >= 7.0)
-    return { level: "yellow", reason: "precision>=7" };
-
-  return { level: "none" };
-}
-
-/* =============================
- * 自信精度（Accuracy % = (1 - AvgBrier)*100）
+ * 確率精度（Accuracy % = (1 - AvgBrier)*100）
  * ============================= */
 export function evaluateAccuracyV2(accPct: number): HighlightV2 {
   const a = Number(accPct);
@@ -49,43 +89,58 @@ export function evaluateAccuracyV2(accPct: number): HighlightV2 {
   if (a >= 70) return { level: "yellow", reason: "accuracy>=70%" };
   return { level: "none" };
 }
+
 /* =============================
- * 一致度（Consistency % = (1 - CalibrationError)*100）
+ * スコア精度（合計：scorePrecisionSum）
  * ============================= */
-export function evaluateConsistencyV2(consistencyPct: number): HighlightV2 {
-  const c = Number(consistencyPct);
-  if (!Number.isFinite(c) || c <= 0) return { level: "none" };
-
-  // 自信度のズレがほぼない = 本物
-  if (c >= 90)
-    return { level: "strong", icon: "crown", reason: "consistency>=90%" };
-
-  // かなり安定
-  if (c >= 75)
-    return { level: "yellow", reason: "consistency>=75%" };
-
-  return { level: "none" };
+export function evaluateScorePrecisionSumV2(
+  scorePrecisionSum: number,
+  period: PeriodV2
+): HighlightV2 {
+  return evalSumByPeriod(scorePrecisionSum, period, SUM_THRESHOLDS.scorePrecisionSum, {
+    strongIcon: "crown",
+    metric: "scorePrecisionSum",
+  });
 }
 
 /* =============================
- * UPSET（0〜10 正規化版）
- *
- * 8.0 以上 → strong（🔥）
- * 5.0 以上 → yellow
+ * UPSET得点（合計：upsetPointsSum）
  * ============================= */
-export function evaluateUpsetV2(avgUpset: number): HighlightV2 {
-  const u = Number(avgUpset);
-  if (!Number.isFinite(u) || u <= 0) return { level: "none" };
+export function evaluateUpsetPointsSumV2(
+  upsetPointsSum: number,
+  period: PeriodV2
+): HighlightV2 {
+  return evalSumByPeriod(upsetPointsSum, period, SUM_THRESHOLDS.upsetPointsSum, {
+    strongIcon: "fire",
+    metric: "upsetPointsSum",
+  });
+}
 
-  // 旧: 8.0 / 10 → 新: 80 / 100
-  if (u >= 80)
-    return { level: "strong", icon: "fire", reason: "upset>=80" };
+/* =============================
+ * 総合得点（合計：pointsSumV3）
+ * ============================= */
+export function evaluatePointsSumV3V2(
+  pointsSumV3: number,
+  period: PeriodV2
+): HighlightV2 {
+  return evalSumByPeriod(pointsSumV3, period, SUM_THRESHOLDS.pointsSumV3, {
+    strongIcon: "crown",
+    metric: "pointsSumV3",
+  });
+}
 
-  // 旧: 5.0 / 10 → 新: 50 / 100
-  if (u >= 50)
-    return { level: "yellow", reason: "upset>=50" };
+/* =============================
+ * （互換用：古いAPIを残す）
+ * - 旧 evaluatePrecisionV2 は平均前提だったので常に none に寄せる
+ * - 旧 evaluateUpsetV2 は 0-100 前提だったので常に none に寄せる
+ *   ※ UI 側の置換が完了したら削除でOK
+ * ============================= */
+export function evaluatePrecisionV2(_avgPrecision: number): HighlightV2 {
+  return { level: "none", reason: "deprecated: use evaluateScorePrecisionSumV2" };
+}
 
-  return { level: "none" };
+export function evaluateUpsetV2(_legacy: number): HighlightV2 {
+  return { level: "none", reason: "deprecated: use evaluateUpsetPointsSumV2" };
 }
 
 /* =============================
@@ -103,4 +158,3 @@ export function pickStrongerV2(a: HighlightV2, b: HighlightV2): HighlightV2 {
 
   return prio(a.icon) >= prio(b.icon) ? a : b;
 }
-

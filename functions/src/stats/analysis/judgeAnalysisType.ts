@@ -3,7 +3,8 @@ import { LevelSummary } from "./judgeLevel";
 import { AnalysisTypeId } from "./types";
 
 /**
- * 16タイプ判定（最終確定版・TypeScriptエラーなし）
+ * 16タイプ判定
+ * market 軸を廃止し、accuracy 軸へ置換
  */
 export function judgeAnalysisType(
   summary: LevelSummary
@@ -15,12 +16,10 @@ export function judgeAnalysisType(
   // Tier 1 : 完成度・総合力
   // ====================
 
-  // S=5 → COMPLETE_PLAYER
   if (S >= 5) {
     return "COMPLETE_PLAYER";
   }
 
-  // S=4 → ELITE_ALLROUNDER
   if (S === 4) {
     return "ELITE_ALLROUNDER";
   }
@@ -57,7 +56,7 @@ export function judgeAnalysisType(
     if (
       levels.winRate === "S" &&
       levels.precision === "S" &&
-      levels.market === "S"
+      levels.accuracy === "S"
     ) {
       return "SAFE_CLOSER";
     }
@@ -65,7 +64,7 @@ export function judgeAnalysisType(
     if (
       levels.winRate === "S" &&
       levels.streak === "S" &&
-      levels.market === "S"
+      levels.accuracy === "S"
     ) {
       return "Hot_Hand";
     }
@@ -82,7 +81,7 @@ export function judgeAnalysisType(
     if (
       levels.precision === "S" &&
       levels.volume === "S" &&
-      levels.market === "S"
+      levels.accuracy === "S"
     ) {
       return "MODEL_FOLLOWER";
     }
@@ -90,7 +89,7 @@ export function judgeAnalysisType(
     if (
       levels.precision === "S" &&
       levels.streak === "S" &&
-      levels.market === "S"
+      levels.accuracy === "S"
     ) {
       return "STABLE_ANALYST";
     }
@@ -120,9 +119,9 @@ export function judgeAnalysisType(
       return "CHAOS_ENGINE";
     }
 
-    // 市場理解型（market=S）
+    // accuracy 中核型
     if (
-      levels.market === "S" &&
+      levels.accuracy === "S" &&
       levels.volume === "S" &&
       levels.streak === "S"
     ) {
@@ -130,7 +129,7 @@ export function judgeAnalysisType(
     }
 
     if (
-      levels.market === "S" &&
+      levels.accuracy === "S" &&
       levels.winRate === "S" &&
       levels.volume === "S"
     ) {
@@ -155,11 +154,11 @@ export function judgeAnalysisType(
       return "RELENTLESS_OUTPUT";
     }
 
-    if (levels.winRate === "S" && levels.market === "S") {
+    if (levels.winRate === "S" && levels.accuracy === "S") {
       return "SAFE_DOMINANCE";
     }
 
-    if (levels.winRate === "S" && levels.market === "W") {
+    if (levels.winRate === "S" && levels.accuracy === "W") {
       return "CROWD_BREAKER";
     }
 
@@ -172,11 +171,11 @@ export function judgeAnalysisType(
       return "RHYTHM_BLADE";
     }
 
-    if (levels.precision === "S" && levels.market === "S") {
+    if (levels.precision === "S" && levels.accuracy === "S") {
       return "MODEL_COMMANDER";
     }
 
-    if (levels.precision === "S" && levels.market === "W") {
+    if (levels.precision === "S" && levels.accuracy === "W") {
       return "LINE_CUTTER";
     }
 
@@ -193,7 +192,7 @@ export function judgeAnalysisType(
       return "CHAOS_SURGE";
     }
 
-    if (levels.upset === "S" && levels.market === "W") {
+    if (levels.upset === "S" && levels.accuracy === "W") {
       return "FADE_ASSASSIN";
     }
 
@@ -202,11 +201,11 @@ export function judgeAnalysisType(
       return "ENDURANCE_CORE";
     }
 
-    if (levels.volume === "S" && levels.market === "S") {
+    if (levels.volume === "S" && levels.accuracy === "S") {
       return "PUBLIC_ENGINE";
     }
 
-    if (levels.volume === "S" && levels.market === "W") {
+    if (levels.volume === "S" && levels.accuracy === "W") {
       return "DARK_ENGINE";
     }
   }
@@ -220,8 +219,8 @@ export function judgeAnalysisType(
     if (levels.upset === "S") return "CHAOS_TAKER";
     if (levels.volume === "S") return "HIGH_ACTIVITY";
     if (levels.streak === "S") return "HOT_PHASE";
-    if (levels.market === "S") return "PUBLIC_PATH";
-    if (levels.market === "W") return "CROWD_FADE";
+    if (levels.accuracy === "S") return "PUBLIC_PATH";
+    if (levels.accuracy === "W") return "CROWD_FADE";
   }
 
   // ====================
@@ -235,7 +234,7 @@ export function judgeAnalysisType(
   }
 
   // ====================
-  // fallback（保険）
+  // fallback
   // ====================
   return "WILD_CARD";
 }

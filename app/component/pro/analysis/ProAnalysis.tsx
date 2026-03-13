@@ -5,7 +5,6 @@ import ProAnalysisView from "@/app/component/pro/analysis/ProAnalysisView";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserMonthlyStatsV2 } from "@/lib/stats/useUserMonthlyStatsV2";
 import { useMonthlyGlobalStatsV2 } from "@/lib/stats/useMonthlyGlobalStatsV2";
-import { useUserMonthlyTrendV2 } from "@/lib/stats/useUserMonthlyTrendV2";
 import { TEAM_NAME_BY_ID } from "@/lib/team-name-by-id";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
@@ -49,16 +48,12 @@ export default function ProAnalysisPage() {
     loading: globalLoading,
   } = useMonthlyGlobalStatsV2(month ?? undefined);
 
-  const { data: monthlyTrend, loading: monthlyLoading } =
-    useUserMonthlyTrendV2(uid);
-
   if (
     status !== "ready" ||
     planLoading ||
     monthsLoading ||
     userLoading ||
     globalLoading ||
-    monthlyLoading ||
     !month
   ) {
     return <div className="p-4 text-white/60">loading...</div>;
@@ -102,9 +97,16 @@ export default function ProAnalysisPage() {
       top10: global.top10.precision,
     },
     {
+      label: "総合得点",
+      format: (v: number) => v.toFixed(1),
+      self: stats.raw.avgPointsV3,
+      avg: global.avg.pointsV3,
+      top10: global.top10.pointsV3,
+    },
+    {
       label: "Upset指数",
       format: (v: number) => v.toFixed(2),
-      self: stats.raw.avgUpset,
+      self: stats.raw.upsetPointsSum,
       avg: global.avg.upset,
       top10: global.top10.upset,
     },
@@ -121,18 +123,6 @@ export default function ProAnalysisPage() {
       comparisonRows={comparisonRows}
       comparisonUserCount={global.users}
       comparisonTop10UserCount={global.top10EligibleUsers}
-      upset={{
-        nba: {
-          totalGames: global.raw.totalGames,
-          upsetGames: global.raw.upsetGames,
-        },
-        user: {
-          analyzedGames: stats.raw.posts,
-          upsetGames: stats.upset.games,
-          upsetHitRate: stats.upset.hitRate,
-          shareOfAllUpsets: stats.upset.shareOfAll,
-        },
-      }}
       styleMapPoints={[
         {
           homeAwayBias: stats.style.homeAwayBias,
@@ -162,7 +152,6 @@ export default function ProAnalysisPage() {
         strong: normalizeTeams(stats.teamStats.strong),
         weak: normalizeTeams(stats.teamStats.weak),
       }}
-      monthlyTrend={monthlyTrend}
     />
   );
 }

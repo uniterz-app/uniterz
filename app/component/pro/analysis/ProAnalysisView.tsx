@@ -3,16 +3,13 @@
 import RadarChart from "@/app/component/pro/analysis/RadarChart";
 import AnalysisTypeCard from "@/app/component/pro/analysis/AnalysisTypeCard";
 import PercentileList from "@/app/component/pro/analysis/PercentileList";
-import MonthlyTrendChart from "@/app/component/pro/analysis/MonthlyTrendChart";
 import MonthlyComparisonCard from "@/app/component/pro/analysis/MonthlyComparisonCard";
 import TeamAffinityCard from "@/app/component/pro/analysis/TeamAffinityCard";
 import HomeAwayWinRateBar from "@/app/component/pro/analysis/HomeAwayWinRateBar";
 import type { AnalysisTypeId } from "@/shared/analysis/types";
 import MarketBiasBars from "@/app/component/pro/analysis/MarketBiasSemiDonut";
 import StreakSummaryWithComment from "@/app/component/pro/analysis/StreakSummaryWithComment";
-import UpsetAnalysisView from "@/app/component/pro/analysis/UpsetAnalysisView";
 import AnalysisStyleMap from "@/app/component/pro/analysis/AnalysisStyleMap";
-
 
 import {
   buildMonthlySummary,
@@ -27,38 +24,21 @@ function SampleNotice() {
   );
 }
 
-/* =========================
- * 追加：型定義（★ここだけ追加）
- * ========================= */
-
-type MonthlyTrendStat = {
-  month: string;
-  posts: number;
-  winRate: number;
-  accuracy: number;
-  avgPrecision: number;
-  avgUpset: number;
-};
-
-/* =========================
- * Props
- * ========================= */
-
 type Props = {
   isSample?: boolean;
   month: string;
   months: string[];
   onChangeMonth: (m: string) => void;
 
-radar: {
-  winRate: number;
-  precision: number;
-  upset: number;
-  volume: number;
-  streak: number;   // 追加
-  market: number;   // 追加
-  upsetValid: boolean;
-};
+  radar: {
+    winRate: number;
+    accuracy: number;
+    precision: number;
+    upset: number;
+    volume: number;
+    streak: number;
+    upsetValid: boolean;
+  };
 
   analysisTypeId: AnalysisTypeId;
 
@@ -66,6 +46,7 @@ radar: {
     winRate: number;
     accuracy: number;
     precision: number;
+    pointsV3: number;
     upset: number;
     volume: number;
   };
@@ -74,64 +55,45 @@ radar: {
   comparisonUserCount: number;
   comparisonTop10UserCount?: number;
 
-  upset: {
-  nba: {
-    totalGames: number;
-    upsetGames: number;
-  };
-  user: {
-    analyzedGames: number;
-    upsetGames: number;
-    upsetHitRate: number;
-    shareOfAllUpsets: number;
-  };
-};
+  styleMapPoints: {
+    homeAwayBias: number;
+    marketBias: number;
+    winRate: number;
+    key?: string;
+  }[];
 
-styleMapPoints: {
-  homeAwayBias: number;
-  marketBias: number;
-  winRate: number;
-  key?: string;
-}[];
-
-
-    /** ★ 追加 */
   streak: {
     maxWin: number;
     maxLose: number;
   };
 
-  /** ★ 追加（先月・任意） */
   prevStreak?: {
     maxWin: number;
     maxLose: number;
   };
 
   homeAway: {
-  homeRate: number;
-  awayRate: number;
-  homeShare: number; // ★追加
-  awayShare: number; // ★追加
-};
+    homeRate: number;
+    awayRate: number;
+    homeShare: number;
+    awayShare: number;
+  };
 
-marketBias: {
-  favorableWinRate: number;
-  contrarianWinRate: number;
-  favorableShare: number;
-  contrarianShare: number;
-};
-
+  marketBias: {
+    favorableWinRate: number;
+    contrarianWinRate: number;
+    favorableShare: number;
+    contrarianShare: number;
+  };
 
   teamAffinity: {
     strong: any[];
     weak: any[];
   };
-
-  monthlyTrend: MonthlyTrendStat[];  // ★ 修正
 };
 
 export default function ProAnalysisView({
-    isSample,
+  isSample,
   month,
   months,
   onChangeMonth,
@@ -141,14 +103,12 @@ export default function ProAnalysisView({
   comparisonRows,
   comparisonUserCount,
   comparisonTop10UserCount,
-    streak,        // ★追加
-  prevStreak,    // ★追加
-    upset,            // ← これが必要
-  styleMapPoints,   // ← これも必要
+  streak,
+  prevStreak,
+  styleMapPoints,
   homeAway,
   marketBias,
   teamAffinity,
-  monthlyTrend,
 }: Props) {
   const summaries = buildMonthlySummary({
     month,
@@ -171,10 +131,7 @@ export default function ProAnalysisView({
       : null;
 
   return (
-    <div className="p-4 space-y-4">
-      {/* =========================
-       * 月セレクタ
-       * ========================= */}
+    <div className="space-y-4 p-4">
       <div className="flex items-center justify-center gap-4">
         <button
           disabled={!prevMonth}
@@ -184,9 +141,7 @@ export default function ProAnalysisView({
           ◀
         </button>
 
-        <span className="text-sm font-semibold text-white">
-          {month}
-        </span>
+        <span className="text-sm font-semibold text-white">{month}</span>
 
         <button
           disabled={!nextMonth}
@@ -197,29 +152,41 @@ export default function ProAnalysisView({
         </button>
       </div>
 
-      {/* =========================
-       * 月次スナップショット
-       * ========================= */}
-               {isSample && <SampleNotice />}
+      {isSample && <SampleNotice />}
+
       <div className="space-y-4">
-        <RadarChart
-  value={radar}
-/>
+        {/* 1段目: レーダー + 分析タイプ */}
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+          <RadarChart value={radar} />
+          <AnalysisTypeCard analysisTypeId={analysisTypeId} />
+        </div>
 
-        <AnalysisTypeCard analysisTypeId={analysisTypeId} />
-                {isSample && <SampleNotice />}
-        <PercentileList percentiles={percentiles} />
+        {isSample && <SampleNotice />}
 
+        {/* 2段目: パーセンタイル + 月間比較 */}
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+          <PercentileList percentiles={percentiles} />
+
+          <MonthlyComparisonCard
+            monthLabel={month}
+            userCount={comparisonUserCount}
+            top10UserCount={comparisonTop10UserCount}
+            rows={comparisonRows}
+          />
+        </div>
+
+        {/* 3段目: 今月の傾向サマリー */}
         {summaries.length > 0 && (
           <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-            <div className="mb-2 text-sm font-semibold text-white">
+            <div className="mb-2 text-sm font-semibold text-white md:text-lg">
               今月の傾向サマリー
             </div>
+
             <ul className="space-y-1">
               {summaries.map((text, i) => (
                 <li
                   key={i}
-                  className="text-[12px] font-semibold leading-relaxed text-white"
+                  className="text-[12px] font-semibold leading-relaxed text-white md:text-[15px]"
                 >
                   • {text}
                 </li>
@@ -228,16 +195,44 @@ export default function ProAnalysisView({
           </div>
         )}
 
+        {/* 4段目: 連勝連敗 */}
+        <StreakSummaryWithComment
+          maxWinStreak={streak.maxWin}
+          maxLoseStreak={streak.maxLose}
+          lastMaxWinStreak={prevStreak?.maxWin}
+          lastMaxLoseStreak={prevStreak?.maxLose}
+          periodLabel={month}
+        />
+
+        {/* 5段目: Home/Away + 市場傾向 */}
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+          <HomeAwayWinRateBar
+            homeRate={homeAway.homeRate}
+            awayRate={homeAway.awayRate}
+            homeShare={homeAway.homeShare}
+            awayShare={homeAway.awayShare}
+          />
+
+          <MarketBiasBars
+            favorableWinRate={marketBias.favorableWinRate}
+            contrarianWinRate={marketBias.contrarianWinRate}
+            favorableShare={marketBias.favorableShare}
+            contrarianShare={marketBias.contrarianShare}
+          />
+        </div>
+
+        {/* 6段目: 改善ポイント */}
         {improvements.length > 0 && (
           <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-            <div className="mb-2 text-sm font-semibold text-white">
+            <div className="mb-2 text-sm font-semibold text-white md:text-lg">
               今月の改善ポイント
             </div>
+
             <ul className="space-y-1">
               {improvements.map((text, i) => (
                 <li
                   key={i}
-                  className="text-[12px] font-semibold leading-relaxed text-white"
+                  className="text-[12px] font-semibold leading-relaxed text-white md:text-[15px]"
                 >
                   • {text}
                 </li>
@@ -246,56 +241,15 @@ export default function ProAnalysisView({
           </div>
         )}
 
-        <MonthlyComparisonCard
-          monthLabel={month}
-          userCount={comparisonUserCount}
-          top10UserCount={comparisonTop10UserCount}
-          rows={comparisonRows}
-        />
-
         {isSample && <SampleNotice />}
 
-        <UpsetAnalysisView
-  month={month}
-  nba={upset.nba}
-  user={upset.user}
-/>
-        {isSample && <SampleNotice />}
-
-        <StreakSummaryWithComment
-  maxWinStreak={streak.maxWin}          // ★ monthly の streak
-  maxLoseStreak={streak.maxLose}
-  lastMaxWinStreak={prevStreak?.maxWin} // ★ 先月
-  lastMaxLoseStreak={prevStreak?.maxLose}
-  periodLabel={month}
-/>
-
-
-        <HomeAwayWinRateBar
-  homeRate={homeAway.homeRate}
-  awayRate={homeAway.awayRate}
-  homeShare={homeAway.homeShare}
-  awayShare={homeAway.awayShare}
-/>
-<MarketBiasBars
-  favorableWinRate={marketBias.favorableWinRate}
-  contrarianWinRate={marketBias.contrarianWinRate}
-  favorableShare={marketBias.favorableShare}
-  contrarianShare={marketBias.contrarianShare}
-/>
-        {isSample && <SampleNotice />}
-<AnalysisStyleMap points={styleMapPoints} />
+        <AnalysisStyleMap points={styleMapPoints} />
 
         <TeamAffinityCard
           strong={teamAffinity.strong}
           weak={teamAffinity.weak}
         />
       </div>
-
-      {/* 時系列トレンド */}
-      {/* 月次トレンド（Pro専用） */}
-<MonthlyTrendChart data={monthlyTrend} />
-        {isSample && <SampleNotice />}
     </div>
   );
 }

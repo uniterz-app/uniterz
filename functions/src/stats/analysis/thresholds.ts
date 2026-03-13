@@ -14,11 +14,3 @@ export function toLevel(score10: number): Level {
   if (score10 >= LEVEL_THRESHOLD.MID) return "M";
   return "W";
 }
-
-// Upset（割合）専用
-export function toUpsetLevel(upsetRate: number): Level {
-  // upsetRate: 0.0〜1.0（例: 0.42 = 42%）
-  if (upsetRate >= 0.4) return "S";
-  if (upsetRate <= 0.1) return "W";
-  return "M";
-}

@@ -9,28 +9,24 @@ export type SummaryKey =
   | "winRate"
   | "accuracy"
   | "precision"
+  | "pointsV3"
   | "upset"
   | "volume";
 
 export type SummaryRule = {
   key: SummaryKey;
-  priority: number;         // 大きいほど優先
-  tone: "strong" | "weak";  // 強み / 弱み
-  texts: string[];          // 複数文言（ランダム選択）
+  priority: number;
+  tone: "strong" | "weak";
+  texts: string[];
   condition: (params: {
-    now: number;            // 今月 percentile
-    prev?: number | null;   // 先月 percentile
+    now: number;
+    prev?: number | null;
     percentile: number;
   }) => boolean;
 };
 
 /* ============================================================================
- * NBA Percentile 基準（ローテーション約450人想定）
- *
- * 95%+  MVPクラス
- * 90%+  All-NBAクラス
- * 80%+  オールスター級
- * 60%+  上位スターター
+ * SUMMARY RULES
  * ============================================================================
  */
 
@@ -38,7 +34,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
   /* =========================
    * 勝率
    * ========================= */
-
   {
     key: "winRate",
     tone: "strong",
@@ -50,7 +45,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     ],
     condition: ({ percentile }) => percentile >= 95,
   },
-
   {
     key: "winRate",
     tone: "strong",
@@ -62,7 +56,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     ],
     condition: ({ percentile }) => percentile >= 90,
   },
-
   {
     key: "winRate",
     tone: "weak",
@@ -75,9 +68,8 @@ export const SUMMARY_RULES: SummaryRule[] = [
   },
 
   /* =========================
-   * 精度（Accuracy / Brier）
+   * 予測精度
    * ========================= */
-
   {
     key: "accuracy",
     tone: "strong",
@@ -88,7 +80,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     ],
     condition: ({ percentile }) => percentile >= 90,
   },
-
   {
     key: "accuracy",
     tone: "strong",
@@ -99,7 +90,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     ],
     condition: ({ percentile }) => percentile >= 80,
   },
-
   {
     key: "accuracy",
     tone: "weak",
@@ -112,9 +102,8 @@ export const SUMMARY_RULES: SummaryRule[] = [
   },
 
   /* =========================
-   * スコア精度（Precision）
+   * スコア精度
    * ========================= */
-
   {
     key: "precision",
     tone: "strong",
@@ -125,11 +114,45 @@ export const SUMMARY_RULES: SummaryRule[] = [
     ],
     condition: ({ percentile }) => percentile >= 80,
   },
+  {
+    key: "precision",
+    tone: "weak",
+    priority: 52,
+    texts: [
+      "【スコア精度】展開読みはやや不安定で、点差感覚に改善余地があります。",
+      "【スコア精度】勝敗は取れていても、細かい試合展開の読みはまだ伸ばせます。",
+    ],
+    condition: ({ percentile }) => percentile <= 40,
+  },
+
+  /* =========================
+   * 総合得点
+   * ========================= */
+  {
+    key: "pointsV3",
+    tone: "strong",
+    priority: 85,
+    texts: [
+      "【総合得点】上位帯。勝敗・点差・合計点を総合して高水準です。",
+      "【総合得点】総合力が高く、完成度のある予想ができています。",
+      "【総合得点】トータルで強く、安定したハイレベル分析です。",
+    ],
+    condition: ({ percentile }) => percentile >= 85,
+  },
+  {
+    key: "pointsV3",
+    tone: "weak",
+    priority: 58,
+    texts: [
+      "【総合得点】部分的には当てられていても、全体の完成度には改善余地があります。",
+      "【総合得点】勝敗以外の細部を詰めると、総合値を伸ばしやすい状態です。",
+    ],
+    condition: ({ percentile }) => percentile <= 40,
+  },
 
   /* =========================
    * Upset
    * ========================= */
-
   {
     key: "upset",
     tone: "strong",
@@ -140,7 +163,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     ],
     condition: ({ percentile }) => percentile >= 80,
   },
-
   {
     key: "upset",
     tone: "weak",
@@ -153,9 +175,8 @@ export const SUMMARY_RULES: SummaryRule[] = [
   },
 
   /* =========================
-   * 投稿量（Volume）
+   * 投稿量
    * ========================= */
-
   {
     key: "volume",
     tone: "strong",
@@ -166,7 +187,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     ],
     condition: ({ percentile }) => percentile >= 85,
   },
-
   {
     key: "volume",
     tone: "weak",
@@ -181,19 +201,15 @@ export const SUMMARY_RULES: SummaryRule[] = [
 
 /* ============================================================================
  * Utils
- *  - 同じ「月 × 指標」なら必ず同じ文言を返す
  * ============================================================================
  */
 
-function pickTextByMonth(
-  texts: string[],
-  seed: string
-): string {
+function pickTextByMonth(texts: string[], seed: string): string {
   let hash = 0;
 
   for (let i = 0; i < seed.length; i++) {
     hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0; // 32bit int に丸める
+    hash |= 0;
   }
 
   const index = Math.abs(hash) % texts.length;
@@ -202,7 +218,6 @@ function pickTextByMonth(
 
 /* ============================================================================
  * Builder
- *  - 強み 2 + 弱み 1 を最大で抽出
  * ============================================================================
  */
 
@@ -215,7 +230,7 @@ export function buildMonthlySummary({
   prevPercentiles?: Record<SummaryKey, number> | null;
   month: string;
 }): string[] {
-  const matched = SUMMARY_RULES.filter(rule =>
+  const matched = SUMMARY_RULES.filter((rule) =>
     rule.condition({
       now: percentiles[rule.key],
       prev: prevPercentiles?.[rule.key],
@@ -224,35 +239,31 @@ export function buildMonthlySummary({
   );
 
   const strong = matched
-    .filter(r => r.tone === "strong")
+    .filter((r) => r.tone === "strong")
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 2);
 
   const weak = matched
-    .filter(r => r.tone === "weak")
+    .filter((r) => r.tone === "weak")
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 1);
 
   const picked = [...strong, ...weak];
 
-  return picked.map(rule =>
-    pickTextByMonth(
-      rule.texts,
-      `${month}-${rule.key}`
-    )
+  return picked.map((rule) =>
+    pickTextByMonth(rule.texts, `${month}-${rule.key}`)
   );
 }
 
 /* ============================================================================
  * Improvement Rules
- *  - 今月の改善ポイント（1〜2行）
  * ============================================================================
  */
 
 export type ImprovementRule = {
   key: SummaryKey;
-  priority: number;     // 表示優先度
-  texts: string[];      // 改善アドバイス文言
+  priority: number;
+  texts: string[];
   condition: (params: {
     percentile: number;
   }) => boolean;
@@ -268,7 +279,6 @@ export const IMPROVEMENT_RULES: ImprovementRule[] = [
     ],
     condition: ({ percentile }) => percentile <= 45,
   },
-
   {
     key: "winRate",
     priority: 90,
@@ -278,7 +288,15 @@ export const IMPROVEMENT_RULES: ImprovementRule[] = [
     ],
     condition: ({ percentile }) => percentile <= 45,
   },
-
+  {
+    key: "pointsV3",
+    priority: 85,
+    texts: [
+      "【総合得点】勝敗だけでなく、点差や合計点の精度も詰めると伸ばしやすいです。",
+      "【総合得点】細部の取りこぼしがある状態です。総合的な完成度を高める余地があります。",
+    ],
+    condition: ({ percentile }) => percentile <= 45,
+  },
   {
     key: "upset",
     priority: 80,
@@ -287,7 +305,6 @@ export const IMPROVEMENT_RULES: ImprovementRule[] = [
     ],
     condition: ({ percentile }) => percentile <= 35,
   },
-
   {
     key: "volume",
     priority: 70,
@@ -300,7 +317,6 @@ export const IMPROVEMENT_RULES: ImprovementRule[] = [
 
 /* ============================================================================
  * Builder
- *  - 今月の改善ポイント（最大2行）
  * ============================================================================
  */
 
@@ -312,7 +328,7 @@ export function buildMonthlyImprovement({
   month: string;
 }): string[] {
   const matched = IMPROVEMENT_RULES
-    .filter(rule =>
+    .filter((rule) =>
       rule.condition({
         percentile: percentiles[rule.key],
       })
@@ -320,11 +336,7 @@ export function buildMonthlyImprovement({
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 2);
 
-  return matched.map(rule =>
-    pickTextByMonth(
-      rule.texts,
-      `${month}-improve-${rule.key}`
-    )
+  return matched.map((rule) =>
+    pickTextByMonth(rule.texts, `${month}-improve-${rule.key}`)
   );
 }
-

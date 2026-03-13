@@ -32,7 +32,6 @@ export function calcPostResult({
   const scoreError = calcScoreError(prediction.score, final);
   const conf = Math.min(99, Math.max(1, prediction.confidence));
   const brier = calcBrier(isWin, conf);
-  const calibrationError = Math.abs(conf / 100 - (isWin ? 1 : 0));
 
   const { homePt, awayPt, diffPt, totalPt } = calcScorePrecision({
     predictedHome: prediction.score.home,
@@ -42,13 +41,19 @@ export function calcPostResult({
     league: league ?? "bj",
   });
 
-  const upsetHit = hadUpsetGame && isWin;
+  // upsetHit = 「アップセット試合」かつ「少数派を当てた」
+  const pickSide = prediction.winner as "home" | "away" | "draw";
+  const upsetHit =
+    hadUpsetGame &&
+    isWin &&
+    pickSide !== "draw" &&
+    marketMajority !== "draw" &&
+    pickSide !== marketMajority;
 
   return {
     isWin,
     scoreError,
     brier,
-    calibrationError,
     confidence: conf,
     scorePrecision: totalPt,
     scorePrecisionDetail: { homePt, awayPt, diffPt },
