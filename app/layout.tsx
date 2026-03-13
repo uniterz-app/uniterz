@@ -3,13 +3,9 @@ import type { Metadata, Viewport } from "next";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
-
-
 import EventGate from "@/app/component/common/EventGate";
-
-// ★ 追加：メンテナンス表示コンポーネント
-
 import MaintenanceOverlay from "@/app/component/common/maintenance";
+import NavBar from "@/app/component/NavBar";
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -50,22 +46,20 @@ export default function RootLayout({
         ) : (
           <>
             <AppActivityTracker />
-<EventGate />
+            <EventGate />
 
-<div
-  style={{
-    perspective: "1400px",
-    width: "100%",
-    minHeight: "100vh",
-  }}
->
-  <WebOrMobileSplash>
-    {children}
-  </WebOrMobileSplash>
-</div>
+            <div
+              style={{
+                perspective: "1400px",
+                width: "100%",
+                minHeight: "100vh",
+              }}
+            >
+              <WebOrMobileSplash>{children}</WebOrMobileSplash>
+            </div>
 
-<ToastHost />
-
+            <ToastHost />
+            <NavBar />
           </>
         )}
       </body>
