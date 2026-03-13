@@ -9,11 +9,19 @@ async function buildMonthlyGlobalStats(rows, month) {
     if (rows.length === 0)
         return;
     const MIN_POSTS_TOP = 30;
-    const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
     const [year, mm] = month.split("-");
     const start = new Date(`${year}-${mm}-01T00:00:00+09:00`);
-    const end = new Date(new Date(start.getFullYear(), start.getMonth() + 1, 0)
-        .setHours(23, 59, 59, 999));
+    const end = new Date(new Date(start.getFullYear(), start.getMonth() + 1, 0).setHours(23, 59, 59, 999));
+    // === NBA 総試合数 ===
+    const totalGamesSnap = await db()
+        .collection("games")
+        .where("league", "==", "nba")
+        .where("resultComputedAtV2", ">=", start)
+        .where("resultComputedAtV2", "<=", end)
+        .get();
+    const totalGames = totalGamesSnap.size;
+    // === アップセット試合数 ===
     const upsetGamesSnap = await db()
         .collection("games")
         .where("league", "==", "nba")
@@ -21,41 +29,46 @@ async function buildMonthlyGlobalStats(rows, month) {
         .where("resultComputedAtV2", ">=", start)
         .where("resultComputedAtV2", "<=", end)
         .get();
-    const totalUpsetGames = upsetGamesSnap.size;
+    const upsetGames = upsetGamesSnap.size;
     const top10Of = (arr) => {
         const n = Math.max(1, Math.floor(arr.length * 0.1));
         return arr.slice(-n);
     };
-    const rowsForTop = rows.filter(r => r.posts >= MIN_POSTS_TOP);
+    const rowsForTop = rows.filter((r) => r.posts >= MIN_POSTS_TOP);
     const byWinRate = [...rowsForTop].sort((a, b) => a.winRate - b.winRate);
     const byAccuracy = [...rowsForTop].sort((a, b) => a.accuracy - b.accuracy);
     const byPrecision = [...rowsForTop].sort((a, b) => a.avgPrecision - b.avgPrecision);
-    const byUpset = [...rowsForTop].sort((a, b) => a.avgUpset - b.avgUpset);
+    const byPointsV3 = [...rowsForTop].sort((a, b) => a.avgPointsV3 - b.avgPointsV3);
+    const byUpset = [...rowsForTop].sort((a, b) => a.upsetPointsSum - b.upsetPointsSum);
     const byVolume = [...rows].sort((a, b) => a.posts - b.posts);
     const doc = {
         month,
-        upset: { totalGames: totalUpsetGames },
+        // ProAnalysisPage 側で global.raw.totalGames / upsetGames を読むので raw に揃える
+        raw: {
+            totalGames,
+            upsetGames,
+            upsetRate: totalGames > 0 ? upsetGames / totalGames : 0,
+        },
         avg: {
-            winRate: avg(rows.map(r => r.winRate)),
-            accuracy: avg(rows.map(r => r.accuracy)),
-            precision: avg(rows.map(r => r.avgPrecision)),
-            upset: avg(rows.map(r => r.avgUpset)),
-            volume: avg(rows.map(r => r.posts)),
+            winRate: avg(rows.map((r) => r.winRate)),
+            accuracy: avg(rows.map((r) => r.accuracy)),
+            precision: avg(rows.map((r) => r.avgPrecision)),
+            pointsV3: avg(rows.map((r) => r.avgPointsV3)),
+            upset: avg(rows.map((r) => r.upsetPointsSum)),
+            volume: avg(rows.map((r) => r.posts)),
         },
         top10: {
-            winRate: avg(top10Of(byWinRate).map(r => r.winRate)),
-            accuracy: avg(top10Of(byAccuracy).map(r => r.accuracy)),
-            precision: avg(top10Of(byPrecision).map(r => r.avgPrecision)),
-            upset: avg(top10Of(byUpset).map(r => r.avgUpset)),
-            volume: avg(top10Of(byVolume).map(r => r.posts)),
+            winRate: avg(top10Of(byWinRate).map((r) => r.winRate)),
+            accuracy: avg(top10Of(byAccuracy).map((r) => r.accuracy)),
+            precision: avg(top10Of(byPrecision).map((r) => r.avgPrecision)),
+            pointsV3: avg(top10Of(byPointsV3).map((r) => r.avgPointsV3)),
+            upset: avg(top10Of(byUpset).map((r) => r.upsetPointsSum)),
+            volume: avg(top10Of(byVolume).map((r) => r.posts)),
         },
         users: rows.length,
         top10EligibleUsers: rowsForTop.length,
         updatedAt: firestore_1.FieldValue.serverTimestamp(),
     };
-    await db()
-        .collection("monthly_global_stats_v2")
-        .doc(month)
-        .set(doc);
+    await db().collection("monthly_global_stats_v2").doc(month).set(doc);
 }
 //# sourceMappingURL=buildMonthlyGlobalStats.js.map

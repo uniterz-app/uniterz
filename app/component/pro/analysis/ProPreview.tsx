@@ -6,14 +6,6 @@ import { useRouter } from "next/navigation";
 
 const MONTHS = ["2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
 
-const MONTHLY_MOCK = [
-  { month: "2024-11", posts: 72, winRate: 0.58, accuracy: 0.63, avgPrecision: 0.59, avgUpset: 0.42 },
-  { month: "2024-12", posts: 118, winRate: 0.67, accuracy: 0.71, avgPrecision: 0.66, avgUpset: 0.55 },
-  { month: "2025-01", posts: 94, winRate: 0.61, accuracy: 0.66, avgPrecision: 0.62, avgUpset: 0.48 },
-  { month: "2025-02", posts: 136, winRate: 0.72, accuracy: 0.75, avgPrecision: 0.69, avgUpset: 0.60 },
-  { month: "2025-03", posts: 81, winRate: 0.56, accuracy: 0.62, avgPrecision: 0.58, avgUpset: 0.40 },
-];
-
 const COMPARISON_USER_COUNT = 300;
 const COMPARISON_TOP10_USER_COUNT = 120;
 
@@ -21,8 +13,8 @@ export default function ProPreviewPage() {
   const router = useRouter();
   const [month, setMonth] = useState("2025-01");
   const [pressed, setPressed] = useState(false);
-
   const [isMobile, setIsMobile] = useState(false);
+
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
   }, []);
@@ -33,9 +25,10 @@ export default function ProPreviewPage() {
 
   return (
     <>
-      {/* CTA 上 */}
-      <div className="flex flex-col items-center gap-2 mt-6">
-        <p className="text-xs text-white/60 text-center">※ この分析は有料プラン限定です</p>
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <p className="text-center text-xs text-white/60">
+          ※ この分析は有料プラン限定です
+        </p>
         <div
           role="button"
           tabIndex={0}
@@ -71,11 +64,11 @@ export default function ProPreviewPage() {
         onChangeMonth={setMonth}
         radar={{
           winRate: 7,
+          accuracy: 8,
           precision: 6,
           upset: 5,
           volume: 9,
           streak: 6,
-          market: 4,
           upsetValid: true,
         }}
         analysisTypeId="COMPLETE_PLAYER"
@@ -83,35 +76,70 @@ export default function ProPreviewPage() {
           winRate: 92,
           accuracy: 88,
           precision: 74,
+          pointsV3: 81,
           upset: 61,
           volume: 97,
         }}
         streak={{ maxWin: 10, maxLose: 6 }}
         prevStreak={{ maxWin: 4, maxLose: 5 }}
         comparisonRows={[
-          { label: "投稿数", format: (v: number) => `${v}`, self: 42, avg: 18, top10: 61 },
-          { label: "勝率", format: (v: number) => `${Math.round(v * 100)}%`, self: 0.66, avg: 0.54, top10: 0.72 },
-          { label: "予測精度", format: (v: number) => `${Math.round(v * 100)}%`, self: 0.68, avg: 0.61, top10: 0.78 },
-          { label: "スコア精度", format: (v: number) => `${Math.round(v * 100)}%`, self: 0.71, avg: 0.63, top10: 0.78 },
-          { label: "Upset的中率", format: (v: number) => v.toFixed(2), self: 0.52, avg: 0.31, top10: 0.60 },
+          {
+            label: "投稿数",
+            format: (v: number) => `${v}`,
+            self: 42,
+            avg: 18,
+            top10: 61,
+          },
+          {
+            label: "勝率",
+            format: (v: number) => `${Math.round(v * 100)}%`,
+            self: 0.66,
+            avg: 0.54,
+            top10: 0.72,
+          },
+          {
+            label: "予測精度",
+            format: (v: number) => `${Math.round(v * 100)}%`,
+            self: 0.68,
+            avg: 0.61,
+            top10: 0.78,
+          },
+          {
+            label: "スコア精度",
+            format: (v: number) => `${Math.round(v * 100)}%`,
+            self: 0.71,
+            avg: 0.63,
+            top10: 0.78,
+          },
+          {
+            label: "総合得点",
+            format: (v: number) => v.toFixed(1),
+            self: 8.4,
+            avg: 5.9,
+            top10: 9.2,
+          },
+          {
+            label: "Upset指数",
+            format: (v: number) => v.toFixed(2),
+            self: 4.8,
+            avg: 2.3,
+            top10: 6.1,
+          },
         ]}
         comparisonUserCount={COMPARISON_USER_COUNT}
         comparisonTop10UserCount={COMPARISON_TOP10_USER_COUNT}
-        homeAway={{ homeRate: 0.71, awayRate: 0.58, homeShare: 0.55, awayShare: 0.45 }}
-        marketBias={{ favorableWinRate: 0.68, contrarianWinRate: 0.57, favorableShare: 0.62, contrarianShare: 0.38 }}
-
-        /* ===== 追加① Upset ===== */
-        upset={{
-          nba: { totalGames: 143, upsetGames: 24 },
-          user: {
-            analyzedGames: 42,
-            upsetGames: 11,
-            upsetHitRate: 0.52,
-            shareOfAllUpsets: 0.08,
-          },
+        homeAway={{
+          homeRate: 0.71,
+          awayRate: 0.58,
+          homeShare: 0.55,
+          awayShare: 0.45,
         }}
-
-        /* ===== 追加② Style Map ===== */
+        marketBias={{
+          favorableWinRate: 0.68,
+          contrarianWinRate: 0.57,
+          favorableShare: 0.62,
+          contrarianShare: 0.38,
+        }}
         styleMapPoints={[
           {
             homeAwayBias: 0.35,
@@ -120,7 +148,6 @@ export default function ProPreviewPage() {
             key: month,
           },
         ]}
-
         teamAffinity={{
           strong: [
             { teamId: "lal", teamName: "Lakers", games: 8, winRate: 0.75 },
@@ -133,12 +160,12 @@ export default function ProPreviewPage() {
             { teamId: "phx", teamName: "Suns", games: 4, winRate: 0.5 },
           ],
         }}
-        monthlyTrend={MONTHLY_MOCK}
       />
 
-      {/* CTA 下 */}
-      <div className="flex flex-col items-center gap-2 mt-6">
-        <p className="text-xs text-white/60 text-center">※ この分析は有料プラン限定です</p>
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <p className="text-center text-xs text-white/60">
+          ※ この分析は有料プラン限定です
+        </p>
         <div
           role="button"
           tabIndex={0}

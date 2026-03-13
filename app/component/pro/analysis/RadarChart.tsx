@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   RadarChart as ReRadarChart,
   Radar,
@@ -12,33 +13,57 @@ import {
 import type { RadarChartProps } from "./types";
 
 export default function RadarChart({ value }: RadarChartProps) {
+  const [openInfo, setOpenInfo] = useState(false);
+  const [isWeb, setIsWeb] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsWeb(window.innerWidth >= 960);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   const data = [
     { key: "winRate", label: "勝率", value: value.winRate },
+    { key: "accuracy", label: "予測精度", value: value.accuracy },
     { key: "precision", label: "スコア精度", value: value.precision },
     { key: "upset", label: "Upset", value: value.upset },
     { key: "volume", label: "投稿量", value: value.volume },
     { key: "streak", label: "耐性", value: value.streak },
-    { key: "market", label: "市場志向", value: value.market },
   ];
+
+  const chartHeight = isWeb ? 280 : 220;
+  const outerRadius = isWeb ? "64%" : "62%";
+  const labelFontSize = isWeb ? 15 : 11;
+  const valueFontSize = isWeb ? 13 : 10;
+  const radiusTickFontSize = isWeb ? 11 : 9;
+  const valueYOffset = isWeb ? 16 : 13;
+  const offset = isWeb ? 18 : 14;
 
   return (
     <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-      {/* 見出し */}
-      <div className="mb-3">
-        <div className="text-xs text-white/60">分析バランス</div>
-        <div className="text-sm font-semibold text-white">
-          レーダーチャート
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs text-white/60 lg:text-sm">分析バランス</div>
+          <div className="text-sm font-semibold text-white lg:text-base">
+            レーダーチャート
+          </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setOpenInfo((v) => !v)}
+          className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white/80 transition hover:bg-white/10 lg:text-xs"
+        >
+          {openInfo ? "説明を閉じる" : "説明を見る"}
+        </button>
       </div>
 
-      {/* チャート */}
-      <div className="h-[220px]">
+      <div className="w-full" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ReRadarChart data={data} outerRadius="65%">
-            {/* グリッド */}
+          <ReRadarChart data={data} cx="50%" cy="50%" outerRadius={outerRadius}>
             <PolarGrid stroke="rgba(251,146,60,0.18)" radialLines />
 
-            {/* 軸ラベル（指標名 + 数値） */}
             <PolarAngleAxis
               dataKey="label"
               tick={(props) => {
@@ -51,14 +76,21 @@ export default function RadarChart({ value }: RadarChartProps) {
                 const cx = Number(props.cx);
                 const cy = Number(props.cy);
 
+                if (
+                  Number.isNaN(x) ||
+                  Number.isNaN(y) ||
+                  Number.isNaN(cx) ||
+                  Number.isNaN(cy)
+                ) {
+                  return <g />;
+                }
+
                 const dx = x - cx;
                 const dy = y - cy;
-
-                const OFFSET = 16;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-                const nx = (dx / dist) * OFFSET;
-                const ny = (dy / dist) * OFFSET;
+                const nx = (dx / dist) * offset;
+                const ny = (dy / dist) * offset;
 
                 return (
                   <g transform={`translate(${x + nx}, ${y + ny})`}>
@@ -66,16 +98,16 @@ export default function RadarChart({ value }: RadarChartProps) {
                       y={0}
                       textAnchor="middle"
                       fill="rgba(248,250,252,0.95)"
-                      fontSize={12}
+                      fontSize={labelFontSize}
                       fontWeight={600}
                     >
                       {item.label}
                     </text>
                     <text
-                      y={14}
+                      y={valueYOffset}
                       textAnchor="middle"
                       fill="#fb923c"
-                      fontSize={11}
+                      fontSize={valueFontSize}
                       fontWeight={700}
                     >
                       {item.value.toFixed(1)}
@@ -85,34 +117,22 @@ export default function RadarChart({ value }: RadarChartProps) {
               }}
             />
 
-            {/* 半径（0–10） */}
             <PolarRadiusAxis
               angle={90}
               domain={[0, 10]}
               tickCount={6}
               tick={{
                 fill: "rgba(148,163,184,0.7)",
-                fontSize: 10,
+                fontSize: radiusTickFontSize,
               }}
               axisLine={false}
             />
 
-            {/* ベース */}
-            <Radar
-              dataKey="value"
-              stroke="rgba(251,146,60,0.25)"
-              fill="rgba(251,146,60,0.15)"
-              fillOpacity={0.15}
-              strokeWidth={1}
-              isAnimationActive={false}
-            />
-
-            {/* メイン */}
             <Radar
               dataKey="value"
               stroke="#fb923c"
               fill="#fb923c"
-              fillOpacity={0.35}
+              fillOpacity={0.9}
               strokeWidth={2.5}
               animationDuration={1200}
               animationEasing="ease-out"
@@ -121,32 +141,43 @@ export default function RadarChart({ value }: RadarChartProps) {
         </ResponsiveContainer>
       </div>
 
-      {/* 補足説明 */}
-      <div className="mt-3 space-y-1 text-[11px] leading-relaxed text-white/65">
-        <p>
-          <span className="font-semibold text-white/80">市場志向：</span>
-          多数派（順当）を選ぶ傾向か、少数派（逆張り）を選ぶ傾向かを示します。
-        </p>
-        <p>
-          <span className="font-semibold text-white/80">耐性：</span>
-          連続した結果の中でも判断がブレにくいかを示します。連勝と連敗をもとに判断
-        </p>
-        <p>
-          <span className="font-semibold text-white/80">スコア精度：</span>
-          勝敗だけでなく、点差や展開まで含めた読みの正確さを示します。
-        </p>
-      </div>
+      {openInfo && (
+        <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="space-y-1.5 text-[11px] leading-relaxed text-white/65 lg:text-[13px]">
+            <p>
+              <span className="font-semibold text-white/80">予測精度：</span>
+              予想した自信度と実際の結果がどれだけ一致しているかを示します。高いほど、自信の置き方が適切です。
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">耐性：</span>
+              連続した結果の中でも判断がブレにくいかを示します。連勝と連敗をもとに判断します。
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">スコア精度：</span>
+              勝敗だけでなく、点差や展開まで含めた読みの正確さを示します。
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">投稿量：</span>
+              主戦場リーグ内での活動量を相対比較した指標です。多く投稿しているほど高くなります。
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">Upset：</span>
+              波乱が起きる試合で少数派側を正しく当てる力を示します。
+            </p>
+          </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-white/70">
-        今月の分析指標を 0–10 スケールで可視化しています。
-        <br />
-        外側に広がるほど、その分野が強みです。
-      </p>
+          <p className="mt-2 text-[11px] leading-relaxed text-white/70 lg:text-[13px]">
+            今月の分析指標を 0–10 スケールで可視化しています。
+            <br />
+            外側に広がるほど、その分野が強みです。
+          </p>
 
-      {!value.upsetValid && (
-        <p className="mt-1 text-[11px] leading-relaxed text-white/50">
-          Upset は今月の発生試合数が少ないため評価対象外です（5試合未満）。
-        </p>
+          {!value.upsetValid && (
+            <p className="mt-2 text-[11px] leading-relaxed text-white/50 lg:text-[13px]">
+              Upset は今月の発生試合数が少ないため評価対象外です（5試合未満）。
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

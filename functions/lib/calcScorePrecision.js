@@ -4,7 +4,7 @@ exports.calcScorePrecision = calcScorePrecision;
 const sportTypes_1 = require("./sportTypes");
 const scorePrecisionRules_1 = require("./scorePrecisionRules");
 /**
- * スコア精度（0〜15 pt）
+ * スコア精度（0〜10 pt）
  */
 function calcScorePrecision({ predictedHome, predictedAway, actualHome, actualAway, league, }) {
     var _a;
@@ -19,7 +19,7 @@ function calcScorePrecision({ predictedHome, predictedAway, actualHome, actualAw
             homePt: 0,
             awayPt: 0,
             diffPt: 0,
-            totalPt, // 0–15
+            totalPt, // 0–10
         };
     }
     /* =========================
@@ -37,7 +37,7 @@ function calcScorePrecision({ predictedHome, predictedAway, actualHome, actualAw
         homePt,
         awayPt,
         diffPt,
-        totalPt: homePt + awayPt + diffPt, // 最大15
+        totalPt: homePt + awayPt + diffPt, // 最大10
     };
 }
 //# sourceMappingURL=calcScorePrecision.js.map

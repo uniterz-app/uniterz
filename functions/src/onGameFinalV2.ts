@@ -12,7 +12,7 @@ import { updateTeamStats } from "./updateTeamStats";
 const db = () => getFirestore();
 
 const MIN_MARKET = 10;
-const UPSET_MARKET_RATIO = 0.7;
+const UPSET_MARKET_RATIO = 0.6;
 const UPSET_WIN_DIFF = 10;
 
 export const onGameFinalV2 = onDocumentWritten(
@@ -94,6 +94,7 @@ await updateTeamStats({
           homeRate: market.homeRate,
           awayRate: market.awayRate,
           majority: market.majoritySide,
+          majorityRatio: market.majorityRatio,
         },
       },
       { merge: true }

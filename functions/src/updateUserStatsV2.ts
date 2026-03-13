@@ -11,20 +11,25 @@ export type StatsV2Bucket = {
 
   scoreErrorSum: number;
   brierSum: number;
-  upsetHitCount: number; // Upsetを当てた試合数
-  upsetOpportunityCount: number;
+  upsetHitCount: number; // 少数派Upset的中数
+  upsetOpportunityCount: number; // upsetGameの母数（hadUpsetGame）
   scorePrecisionSum: number;
 
-  // ★ 一致度用
-  calibrationErrorSum: number;
-  calibrationCount: number;
+  // ★ 追加：総合得点（pointsV3）
+  pointsSumV3: number;
+
+  // ★ 追加：Upset独立ポイント合計
+  upsetPointsSum: number;
 
   winRate: number;
   avgScoreError: number;
   avgBrier: number;
   upsetHitRate: number;
   avgPrecision: number;
-  avgCalibration: number;
+
+  // ★ 追加：平均総合得点
+  avgPointsV3: number;
+
   consistency?: number;
   upsetPickCount: number;
 };
@@ -40,9 +45,15 @@ type ApplyOptsV2 = {
   scoreError: number;
   brier: number;
   scorePrecision: number;
-  confidence: number; 
-  calibrationError: number;
+  confidence: number;
   hadUpsetGame: boolean;
+
+  // ★ 追加：finalizePost から渡す
+  points: number;
+
+  // ★ 追加：Upset（独立）
+  upsetHit: boolean;     // 少数派的中
+  upsetPoints: number;   // 0〜10
 };
 
 const db = () => getFirestore();
@@ -87,15 +98,21 @@ function emptyBucket(): StatsV2Bucket {
     upsetOpportunityCount: 0,
     scorePrecisionSum: 0,
 
-    calibrationErrorSum: 0,
-    calibrationCount: 0,
+    // ★ 追加
+    pointsSumV3: 0,
+
+    // ★ 追加
+    upsetPointsSum: 0,
 
     winRate: 0,
     avgScoreError: 0,
     avgBrier: 0,
     upsetHitRate: 0,
     avgPrecision: 0,
-    avgCalibration: 0,
+
+    // ★ 追加
+    avgPointsV3: 0,
+
     upsetPickCount: 0,
   };
 }
@@ -111,14 +128,12 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
     avgBrier: posts ? b.brierSum / posts : 0,
     avgPrecision: posts ? b.scorePrecisionSum / posts : 0,
     upsetHitRate:
-  b.upsetOpportunityCount > 0
-    ? b.upsetHitCount / b.upsetOpportunityCount
-    : 0,
+      b.upsetOpportunityCount > 0
+        ? b.upsetHitCount / b.upsetOpportunityCount
+        : 0,
 
-    avgCalibration:
-      b.calibrationCount > 0
-        ? b.calibrationErrorSum / b.calibrationCount
-        : null,
+    // ★ 追加：平均総合得点
+    avgPointsV3: posts ? b.pointsSumV3 / posts : 0,
   };
 }
 
@@ -128,10 +143,18 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
 
 export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
   const {
-    uid, postId, startAt,
-    league, isWin, scoreError, brier,
+    uid,
+    postId,
+    startAt,
+    league,
+    isWin,
+    scoreError,
+    brier,
     scorePrecision,
     hadUpsetGame,
+    points,
+    upsetHit,
+    upsetPoints,
   } = opts;
 
   const dateKey = toDateKeyJST(startAt);
@@ -148,24 +171,29 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     if (marker.exists) return;
 
     // ---------- increment data ----------
-   // applyPostToUserStatsV2 内 inc
-const inc: any = {
-  posts: FieldValue.increment(1),
-  wins: FieldValue.increment(isWin ? 1 : 0),
-  scoreErrorSum: FieldValue.increment(scoreError),
-  brierSum: FieldValue.increment(brier),
+    const inc: any = {
+      posts: FieldValue.increment(1),
+      wins: FieldValue.increment(isWin ? 1 : 0),
+      scoreErrorSum: FieldValue.increment(scoreError),
+      brierSum: FieldValue.increment(brier),
 
-  // upset
-  upsetOpportunityCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
-  upsetHitCount: FieldValue.increment(hadUpsetGame && isWin ? 1 : 0),
+      // upset
+      upsetOpportunityCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
 
-  // ★ 追加（Upset を狙った回数）
-  upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
+      // ★ 修正：少数派Upset的中でカウント
+      upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
 
-  scorePrecisionSum: FieldValue.increment(scorePrecision),
-  calibrationErrorSum: FieldValue.increment(opts.calibrationError),
-  calibrationCount: FieldValue.increment(1),
-};
+      // ★ 追加（Upset を狙った回数）※現状仕様のまま
+      upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
+
+      scorePrecisionSum: FieldValue.increment(scorePrecision),
+
+      // ★ 追加：総合得点
+      pointsSumV3: FieldValue.increment(points),
+
+      // ★ 追加：Upset独立ポイント
+      upsetPointsSum: FieldValue.increment(upsetPoints),
+    };
 
     const update: any = {
       date: dateKey,
@@ -231,11 +259,14 @@ export async function getStatsForDateRangeV2(
     b.upsetHitCount += src.upsetHitCount || 0;
     b.upsetOpportunityCount += src.upsetOpportunityCount || 0;
     b.scorePrecisionSum += src.scorePrecisionSum || 0;
-    b.calibrationErrorSum += src.calibrationErrorSum || 0;
-    b.calibrationCount += src.calibrationCount || 0;
     b.upsetPickCount += src.upsetPickCount || 0;
+
+    // ★ 追加
+    b.pointsSumV3 += src.pointsSumV3 || 0;
+
+    // ★ 追加
+    b.upsetPointsSum += src.upsetPointsSum || 0;
   }
 
   return recomputeCache(b);
 }
-

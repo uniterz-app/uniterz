@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
-  homeRate: number;   // 勝率（0–1）
-  awayRate: number;   // 勝率（0–1）
-  homeShare: number;  // 投稿構造比（0–1）
-  awayShare: number;  // 投稿構造比（0–1）
+  homeRate: number;
+  awayRate: number;
+  homeShare: number;
+  awayShare: number;
 };
 
 export default function HomeAwayWinRateBar({
@@ -49,12 +49,13 @@ export default function HomeAwayWinRateBar({
       ref={ref}
       className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
     >
-      <div className="mb-3 text-sm font-semibold text-white">
+      {/* タイトル */}
+      <div className="mb-3 text-sm md:text-base font-semibold text-white">
         Home / Away 分析
       </div>
 
       {/* ===== 勝率 ===== */}
-      <div className="mb-1 flex justify-between text-xs text-white/60">
+      <div className="mb-1 flex justify-between text-xs md:text-sm text-white/60">
         <span>Away 勝率 {awayPct}%</span>
         <span>Home 勝率 {homePct}%</span>
       </div>
@@ -80,13 +81,13 @@ export default function HomeAwayWinRateBar({
         />
       </div>
 
-      {/* ===== 構造比（左右分割） ===== */}
+      {/* ===== 構造比 ===== */}
       <div className="mt-4">
-        <div className="mb-1 text-sm font-semibold text-white">
+        <div className="mb-1 text-sm md:text-base font-semibold text-white">
           Home / Away 比率
         </div>
 
-        <div className="mb-1 flex justify-between text-xs text-white/60">
+        <div className="mb-1 flex justify-between text-xs md:text-sm text-white/60">
           <span>Away 投稿比 {awaySharePct}%</span>
           <span>Home 投稿比 {homeSharePct}%</span>
         </div>
@@ -110,7 +111,8 @@ export default function HomeAwayWinRateBar({
         </div>
       </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-white/50">
+      {/* 説明 */}
+      <p className="mt-2 text-[11px] md:text-[13px] leading-relaxed text-white/50">
         ※ 上段：勝率 / 下段：投稿構造比（どちらを多く選んでいるか）
       </p>
     </div>

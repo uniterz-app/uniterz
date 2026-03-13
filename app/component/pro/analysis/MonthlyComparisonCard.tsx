@@ -12,8 +12,8 @@ type Row = {
 
 type Props = {
   monthLabel: string;
-  userCount?: number;        // 平均の母集団
-  top10UserCount?: number;   // 上位10%の母集団
+  userCount?: number;
+  top10UserCount?: number;
   rows: Row[];
 };
 
@@ -26,16 +26,17 @@ export default function MonthlyComparisonCard({
   return (
     <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
       <div className="mb-3 flex items-start gap-2">
-        {/* アイコン */}
-        <div className="mt-0.5 h-5 w-5 rounded-full bg-black flex items-center justify-center">
-          <Users className="h-3 w-3 text-orange-400" />
+        {/* icon */}
+        <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black md:h-6 md:w-6">
+          <Users className="h-3 w-3 text-orange-400 md:h-3.5 md:w-3.5" />
         </div>
 
         <div>
-          <div className="text-sm font-semibold text-white">
+          <div className="text-sm font-semibold text-white md:text-base">
             月間パフォーマンス比較
           </div>
-          <div className="text-xs text-white/50">
+
+          <div className="text-xs text-white/50 md:text-sm">
             {monthLabel}
             {typeof userCount === "number" && (
               <span className="ml-2">
@@ -46,25 +47,31 @@ export default function MonthlyComparisonCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-y-3 text-xs">
+      <div className="grid grid-cols-4 gap-y-3 text-xs md:text-sm">
         {/* header */}
         <div />
+
         <div className="text-center text-white/60">自分</div>
+
         <div className="text-center text-white/40">平均</div>
+
         <div className="text-center font-semibold text-emerald-400">
           上位10%
         </div>
 
         {rows.map((r) => (
           <div key={r.label} className="contents">
-            <div className="text-white/70">{r.label}</div>
-            <div className="text-center font-semibold text-white">
+            <div className="text-white/70 md:text-[10px]">{r.label}</div>
+
+            <div className="text-center font-semibold text-white md:text-[16px]">
               {r.format(r.self)}
             </div>
-            <div className="text-center text-white/60">
+
+            <div className="text-center text-white/60 md:text-[15px]">
               {r.format(r.avg)}
             </div>
-            <div className="text-center font-semibold text-emerald-400">
+
+            <div className="text-center font-semibold text-emerald-400 md:text-[16px]">
               {r.format(r.top10)}
             </div>
           </div>
@@ -73,7 +80,7 @@ export default function MonthlyComparisonCard({
 
       {typeof userCount === "number" &&
         typeof top10UserCount === "number" && (
-          <div className="mt-3 text-[11px] leading-relaxed text-white/40">
+          <div className="mt-3 text-[11px] leading-relaxed text-white/40 md:text-[13px]">
             平均値は {userCount.toLocaleString()} 人を対象に算出。<br />
             上位10%は、投稿数30以上の{" "}
             {top10UserCount.toLocaleString()} 人を対象に算出。
