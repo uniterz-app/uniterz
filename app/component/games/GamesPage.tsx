@@ -301,10 +301,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     <div
       ref={pageRef}
       className={[
-        "min-h-[100svh] overflow-y-auto overscroll-x-contain",
-        pagePad,
-        "pt-2 pb-4 text-white",
-      ].join(" ")}
+  "min-h-[100svh] overflow-y-auto overscroll-x-contain",
+  pagePad,
+  "pt-2 pb-28 text-white",
+].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md">

@@ -111,6 +111,7 @@ export default function DayStrip({
   }, [dates]);
 
   const sz = sizeMap[size];
+  const gapPx = size === "lg" ? 12 : 8;
 
   const weekday = (d: Date) =>
     ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
@@ -127,7 +128,9 @@ export default function DayStrip({
 
           const basis =
             visibleCount && visibleCount > 0
-              ? ({ flex: `0 0 calc(100% / ${visibleCount})` } as const)
+              ? ({
+                  flex: `0 0 calc((100% - ${(visibleCount - 1) * gapPx}px) / ${visibleCount})`,
+                } as const)
               : undefined;
 
           return (
