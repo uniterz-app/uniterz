@@ -88,7 +88,7 @@ export default function DayStrip({
       });
     }
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       scrollingByCode.current = false;
     }, 250);
   };
@@ -99,14 +99,14 @@ export default function DayStrip({
 
     const onScroll = () => {
       if (scrollingByCode.current) return;
-      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+      if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
       scrollTimer.current = window.setTimeout(snapToNearest, 130);
     };
 
     wrap.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       wrap.removeEventListener("scroll", onScroll);
-      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+      if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
     };
   }, [dates]);
 
@@ -151,7 +151,9 @@ export default function DayStrip({
                     selected ? "text-white/95" : "text-white/70",
                   ].join(" ")}
                   style={{
-                    textShadow: selected ? "0 0 8px rgba(255,255,255,0.18)" : undefined,
+                    textShadow: selected
+                      ? "0 0 4px rgba(255,255,255,0.10)"
+                      : undefined,
                     transform: selected ? "translateY(-1px)" : undefined,
                   }}
                 >
@@ -160,30 +162,29 @@ export default function DayStrip({
 
                 <div
                   className={[
-  "relative grid place-items-center rounded-full border-2",
-  "transition-all duration-200 ease-out",
-  "backdrop-blur-md",
-  sz.circle,
-  "text-white",
-].join(" ")}
+                    "relative grid place-items-center rounded-full border-2",
+                    "transition-all duration-200 ease-out",
+                    sz.circle,
+                    "text-white",
+                  ].join(" ")}
                   style={{
-                    transform: selected ? "translateY(-3px) scale(1.08)" : "translateY(0) scale(1)",
-                    // ★ 当日は「線の色だけ」変更（外側リングなし）
+                    transform: selected
+                      ? "translateY(-1px) scale(1.02)"
+                      : "translateY(0) scale(1)",
                     borderColor: selected
-                      ? "rgba(132, 204, 22, 0.75)"
+                      ? "rgba(132,204,22,0.54)"
                       : isTodayDate
-                      ? "rgba(132, 204, 22, 0.70)"
-                      : "rgba(255,255,255,0.18)",
+                        ? "rgba(132,204,22,0.42)"
+                        : "rgba(255,255,255,0.16)",
                     background: selected
-                      ? "linear-gradient(180deg, rgba(132,204,22,0.95) 0%, rgba(101,163,13,0.92) 100%)"
-                      : "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
+                      ? "linear-gradient(180deg, rgba(132,204,22,0.86) 0%, rgba(101,163,13,0.82) 100%)"
+                      : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
                     boxShadow: selected
-                      ? isTodayDate
-                        ? "0 14px 28px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.25), 0 0 0 1px rgba(132,204,22,0.35), 0 0 20px rgba(132,204,22,0.65)"
-                        : "0 14px 28px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.20), 0 0 0 1px rgba(132,204,22,0.28), 0 0 14px rgba(132,204,22,0.35)"
+                      ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(132,204,22,0.12), 0 0 4px rgba(132,204,22,0.08)"
                       : isTodayDate
-                      ? "inset 0 1px 0 rgba(255,255,255,0.10), 0 0 10px rgba(132,204,22,0.18)"
-                      : "inset 0 1px 0 rgba(255,255,255,0.08)",
+                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 3px rgba(132,204,22,0.05)"
+                        : "inset 0 1px 0 rgba(255,255,255,0.06)",
+                    isolation: "isolate",
                   }}
                 >
                   <div
@@ -191,18 +192,18 @@ export default function DayStrip({
                     className="pointer-events-none absolute inset-0 rounded-full"
                     style={{
                       background: selected
-                        ? "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.00) 55%)"
-                        : "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.00) 60%)",
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.00) 55%)"
+                        : "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.00) 60%)",
                     }}
                   />
 
                   <span
                     className={`relative z-10 font-bold ${sz.num}`}
                     style={{
-                      color: selected ? "#04110a" : "#ffffff",
+                      color: selected ? "#071006" : "#ffffff",
                       textShadow: selected
-                        ? "0 1px 0 rgba(255,255,255,0.15)"
-                        : "0 0 8px rgba(255,255,255,0.08)",
+                        ? "0 1px 0 rgba(255,255,255,0.08)"
+                        : "0 0 3px rgba(255,255,255,0.04)",
                     }}
                   >
                     {d.getDate()}

@@ -1,40 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
 export default function SplashWrapper({
   children,
   forceSplash = false,
+  onDone,
 }: {
   children?: React.ReactNode;
   forceSplash?: boolean;
+  onDone?: () => void;
 }) {
   const { status } = useFirebaseUser();
   const [fadeDone, setFadeDone] = useState(false);
+  const doneCalledRef = useRef(false);
 
   const shouldShowSplash = forceSplash || status === "loading";
 
-  // ★ 初回ロード時：body 背景をスプラッシュ画像にする
   useEffect(() => {
-    if (!fadeDone) {
+    if (shouldShowSplash && !fadeDone) {
       document.body.classList.remove("bg-black");
       document.body.classList.add("splash-bg");
+      return;
     }
 
     if (!shouldShowSplash && !fadeDone) {
-      // ローディングが終わった瞬間に黒背景へ切り替え
       const timer = setTimeout(() => {
         document.body.classList.remove("splash-bg");
         document.body.classList.add("bg-black");
         setFadeDone(true);
-      }, 50); // ← これで黒とびしない（即座に黒に）
+
+        if (!doneCalledRef.current) {
+          doneCalledRef.current = true;
+          onDone?.();
+        }
+      }, 50);
 
       return () => clearTimeout(timer);
     }
-  }, [shouldShowSplash, fadeDone]);
+  }, [shouldShowSplash, fadeDone, onDone]);
 
-  // ★ ローディング中はスプラッシュを表示
   if (shouldShowSplash && !fadeDone) {
     return (
       <div
@@ -53,6 +59,5 @@ export default function SplashWrapper({
     );
   }
 
-  // ★ ローディング後は children を表示（背景は黒のまま）
   return <>{children}</>;
 }

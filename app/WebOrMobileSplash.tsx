@@ -3,24 +3,31 @@
 import { usePathname } from "next/navigation";
 import SplashWrapper from "@/app/SplashWrapper";
 import AuthGate from "@/app/AuthGate";
+import NavBar from "@/app/component/NavBar";
 
-export default function WebOrMobileSplash({ children }: { children: React.ReactNode }) {
+export default function WebOrMobileSplash({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const isWeb = pathname?.startsWith("/web");
 
-  // PC(Web)
   if (isWeb) {
     return (
       <AuthGate>
-        <div id="app-root">{children}</div>
+        <SplashWrapper>
+          <div id="app-root">{children}</div>
+          <NavBar />
+        </SplashWrapper>
       </AuthGate>
     );
   }
 
-  // Mobile
   return (
     <SplashWrapper>
       <div id="app-root">{children}</div>
+      <NavBar />
     </SplashWrapper>
   );
 }
