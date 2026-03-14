@@ -9,6 +9,7 @@ type Side = "left" | "right";
 export type BracketCardWebProps = {
   teamId?: string | null;
   wins?: number | string;
+  seed?: number | string;
   league?: League;
   side?: Side;
   className?: string;
@@ -73,10 +74,29 @@ function isFourWins(wins?: number | string) {
   return false;
 }
 
+function hasSeed(seed?: number | string) {
+  if (seed === 0) return true;
+  if (seed == null) return false;
+  if (typeof seed === "string") return seed.trim().length > 0;
+  return true;
+}
+
+function formatSeed(seed?: number | string) {
+  if (seed == null || seed === "") return "";
+  const n = Number(seed);
+
+  if (n === 1) return "1st";
+  if (n === 2) return "2nd";
+  if (n === 3) return "3rd";
+  return `${n}th`;
+}
+
 export default function BracketCardWeb({
   teamId,
   wins,
+  seed,
   league = "nba",
+  side = "left",
   className = "",
 }: BracketCardWebProps) {
   const c = getTeamUiColor(league, teamId);
@@ -91,6 +111,7 @@ export default function BracketCardWeb({
         borderRadius: 0,
         borderColor: c.border,
         color: c.text,
+        overflow: "visible",
         boxShadow: win4
           ? `
             inset 0 0 ${22 * SCALE}px ${c.soft},
@@ -104,6 +125,27 @@ export default function BracketCardWeb({
           `,
       }}
     >
+      {hasSeed(seed) && (
+        <div
+          className="absolute font-bold leading-none"
+          style={{
+            top: "50%",
+            transform: "translateY(-50%)",
+            [side === "left" ? "left" : "right"]: -52 * SCALE,
+            fontFamily: "Oswald, Bebas Neue, sans-serif",
+            fontSize: 20 * SCALE,
+            letterSpacing: "0.03em",
+            color: "#f8fbff",
+            textShadow: `
+              0 0 ${4 * SCALE}px ${c.glow},
+              0 0 ${10 * SCALE}px ${c.glow}
+            `,
+          }}
+        >
+          {formatSeed(seed)}
+        </div>
+      )}
+
       <div
         className="flex items-center justify-center leading-none"
         style={{

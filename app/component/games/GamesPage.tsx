@@ -13,6 +13,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { League } from "@/lib/leagues";
 import { useRouter, usePathname } from "next/navigation";
+import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 
 /* =========================
    Date Utils（唯一の真実）
@@ -265,16 +266,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff-bracket";
   const signupHref = isMobile ? "/mobile/signup" : "/web/signup";
 
-  function handleBracketClick() {
-    const user = auth.currentUser;
+async function handleBracketClick() {
+  const user = auth.currentUser;
 
-    if (!user) {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    router.push(playoffHref);
+  if (!user) {
+    setLoginModalOpen(true);
+    return;
   }
+
+  const saved = await loadPlayoffBracket(user.uid);
+
+  if (saved) {
+    router.push(
+      isMobile
+        ? "/mobile/playoff-bracket/view"
+        : "/web/playoff-bracket/view"
+    );
+    return;
+  }
+
+  router.push(playoffHref);
+}
 
   function handleGoSignup() {
     setLoginModalOpen(false);

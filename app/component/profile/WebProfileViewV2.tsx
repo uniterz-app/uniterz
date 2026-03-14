@@ -33,6 +33,16 @@ import ProbAccuracyCard from "./ui/summary/ProbAccuracyCard";
 import UpsetCard from "./ui/summary/UpsetCard";
 import MaxStreakCard from "./ui/summary/MaxStreakCard";
 
+import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb";
+import {
+  buildPlayoffDisplayData,
+  type PlayoffDisplayData,
+} from "@/lib/playoff-bracket-display";
+import {
+  loadPlayoffBracket,
+  type PlayoffBracketDoc,
+} from "@/lib/playoff-bracket-firestore";
+
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
 };
@@ -41,6 +51,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, range, setRange, summary, targetUid } = props;
 
   const me = auth.currentUser;
+  const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const isMe = !!(me && targetUid && me.uid === targetUid);
   const isTargetGuestProfile = !targetUid;
 
@@ -60,6 +71,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const canOpenSettings = isMe || isTargetGuestProfile;
 
   const [myPlan, setMyPlan] = useState<string | null>(null);
+  const [playoffBracketLoading, setPlayoffBracketLoading] = useState(false);
+  const [playoffBracketDoc, setPlayoffBracketDoc] =
+    useState<PlayoffBracketDoc | null>(null);
 
   useEffect(() => {
     const uid = me?.uid;
@@ -108,6 +122,37 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     });
   }, [me, targetUid]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchPlayoffBracket() {
+      if (!resolvedUid) {
+        setPlayoffBracketDoc(null);
+        setPlayoffBracketLoading(false);
+        return;
+      }
+
+      try {
+        setPlayoffBracketLoading(true);
+        const data = await loadPlayoffBracket(resolvedUid);
+        if (cancelled) return;
+        setPlayoffBracketDoc(data);
+      } catch (e) {
+        if (cancelled) return;
+        console.error("failed to load playoff bracket", e);
+        setPlayoffBracketDoc(null);
+      } finally {
+        if (!cancelled) setPlayoffBracketLoading(false);
+      }
+    }
+
+    fetchPlayoffBracket();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedUid]);
+
   const profilePlan = (displayProfile as any).plan as string | undefined;
   const isMyPro = myPlan === "pro";
   const isTargetPro = profilePlan === "pro";
@@ -134,6 +179,16 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       })
       .filter((b): b is ResolvedBadge => b !== null);
   }, [userBadges, masterBadges]);
+
+const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
+  if (!playoffBracketDoc?.bracket || !playoffBracketDoc?.season) return null;
+  return buildPlayoffDisplayData(
+    playoffBracketDoc.bracket,
+    playoffBracketDoc.season
+  );
+}, [playoffBracketDoc]);
+
+  const playoffScore = playoffBracketDoc?.totalScore ?? 0;
 
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(
@@ -172,8 +227,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   }
 
   return (
-    <div className="mx-auto max-w-[960px] px-4 py-6 text-white">
-      {/* Header */}
+    <div className="mx-auto w-full max-w-[1200px] px-4 py-6 text-white">
       <div className="min-h-[180px] rounded-2xl border border-white/10 bg-[#050814]/80 p-10 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
         <div className="grid grid-cols-[96px_1fr_auto] items-start gap-6">
           <div className="relative">
@@ -238,7 +292,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         )}
       </div>
 
-      {/* Tabs */}
       <div className="mt-6 flex items-center justify-between">
         <Tabs value={tab} onChange={setTab} size="lg" />
 
@@ -247,7 +300,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         )}
       </div>
 
-      {/* Content */}
       <div className="mt-6">
         {tab === "overview" ? (
           <>
@@ -327,6 +379,39 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </div>
             )}
           </>
+        ) : tab === "bracket" ? (
+          isTargetGuestProfile ? (
+            <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+              <p className="text-sm text-white/70">
+                ゲストプロフィールではブラケットを表示できません。
+              </p>
+            </div>
+          ) : playoffBracketLoading ? (
+            <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+              <p className="text-sm text-white/70">loading...</p>
+            </div>
+          ) : !playoffDisplayData ? (
+            <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+              <p className="text-sm text-white/70">
+                まだブラケットは提出されていません。
+              </p>
+            </div>
+          ) : (
+<PlayoffFullBracketWeb
+  league="nba"
+  season={playoffDisplayData.season}
+  score={playoffScore}
+  leftRound1={playoffDisplayData.leftRound1}
+  leftRound2={playoffDisplayData.leftRound2}
+  leftRound3={playoffDisplayData.leftRound3}
+  leftRound4={playoffDisplayData.leftRound4}
+  rightRound1={playoffDisplayData.rightRound1}
+  rightRound2={playoffDisplayData.rightRound2}
+  rightRound3={playoffDisplayData.rightRound3}
+  rightRound4={playoffDisplayData.rightRound4}
+  champion={playoffDisplayData.champion}
+/>
+          )
         ) : isTargetGuestProfile ? (
           <ProPreview />
         ) : isMe ? (
@@ -346,7 +431,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         )}
       </div>
 
-      {/* Dialogs */}
       <SideMenuDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       {badgeModalOpen && selectedBadge && (

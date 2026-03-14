@@ -1,6 +1,12 @@
 "use client";
 
-export default function PlayoffBracketWebHeader() {
+type Props = {
+  season?: string;
+};
+
+export default function PlayoffBracketWebHeader({ season }: Props) {
+  const title = season ? `${season} PLAYOFF BRACKET` : "PLAYOFF BRACKET";
+
   return (
     <div className="flex flex-col items-center mb-2">
       {/* UNITERZ */}
@@ -44,7 +50,7 @@ export default function PlayoffBracketWebHeader() {
           `,
         }}
       >
-        PLAYOFF BRACKET
+        {title}
       </div>
     </div>
   );

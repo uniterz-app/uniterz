@@ -11,6 +11,7 @@ export type PlayoffFullBracketWebProps = {
   league?: League;
   className?: string;
   score?: number | string;
+  season?: string;
 
   leftRound1: TeamSlot[];
   leftRound2: TeamSlot[];
@@ -58,7 +59,7 @@ const SCORE_X = DESIGN_W / 2;
 const SCORE_Y = CENTER_BOTTOM_Y + CARD_H + 60;
 
 function getSafeItem(list: TeamSlot[] | undefined, index: number): TeamSlot {
-  return list?.[index] ?? { teamId: null, wins: "" };
+  return list?.[index] ?? { teamId: null, wins: "", seed: "" };
 }
 
 function CardAt({
@@ -66,6 +67,7 @@ function CardAt({
   y,
   teamId,
   wins,
+  seed,
   side,
   league,
 }: {
@@ -73,6 +75,7 @@ function CardAt({
   y: number;
   teamId?: string | null;
   wins?: number | string;
+  seed?: number | string;
   side: "left" | "right";
   league: League;
 }) {
@@ -89,6 +92,7 @@ function CardAt({
       <BracketCardWeb
         teamId={teamId}
         wins={wins}
+        seed={seed}
         side={side}
         league={league}
       />
@@ -100,6 +104,7 @@ export default function PlayoffFullBracketWeb({
   league = "nba",
   className = "",
   score,
+  season,
   leftRound1,
   leftRound2,
   leftRound3,
@@ -112,13 +117,13 @@ export default function PlayoffFullBracketWeb({
 }: PlayoffFullBracketWebProps) {
   return (
     <div
-      className={`relative mx-auto w-full max-w-[980px] overflow-hidden rounded-[24px] ${className}`}
+      className={`relative mx-auto w-full max-w-[1200px] overflow-visible rounded-[24px] ${className}`}
       style={{ background: "#020611" }}
     >
       <PlayoffBracketBackground />
 
       <div className="relative z-10 px-8 pt-8">
-        <PlayoffBracketWebHeader />
+        <PlayoffBracketWebHeader season={season} />
       </div>
 
       <div
@@ -155,6 +160,7 @@ export default function PlayoffFullBracketWeb({
                 y={y}
                 teamId={item.teamId}
                 wins={item.wins}
+                seed={item.seed}
                 side="left"
                 league={league}
               />
@@ -170,6 +176,7 @@ export default function PlayoffFullBracketWeb({
                 y={y}
                 teamId={item.teamId}
                 wins={item.wins}
+                seed={undefined}
                 side="left"
                 league={league}
               />
@@ -185,29 +192,42 @@ export default function PlayoffFullBracketWeb({
                 y={y}
                 teamId={item.teamId}
                 wins={item.wins}
+                seed={undefined}
                 side="left"
                 league={league}
               />
             );
           })}
 
-          <CardAt
-            x={COL_X.center}
-            y={CENTER_TOP_Y}
-            teamId={getSafeItem(leftRound4, 0).teamId}
-            wins={getSafeItem(leftRound4, 0).wins}
-            side="left"
-            league={league}
-          />
+          {(() => {
+            const item = getSafeItem(leftRound4, 0);
+            return (
+              <CardAt
+                x={COL_X.center}
+                y={CENTER_TOP_Y}
+                teamId={item.teamId}
+                wins={item.wins}
+                seed={undefined}
+                side="left"
+                league={league}
+              />
+            );
+          })()}
 
-          <CardAt
-            x={COL_X.center}
-            y={CENTER_BOTTOM_Y}
-            teamId={getSafeItem(rightRound4, 0).teamId}
-            wins={getSafeItem(rightRound4, 0).wins}
-            side="right"
-            league={league}
-          />
+          {(() => {
+            const item = getSafeItem(rightRound4, 0);
+            return (
+              <CardAt
+                x={COL_X.center}
+                y={CENTER_BOTTOM_Y}
+                teamId={item.teamId}
+                wins={item.wins}
+                seed={undefined}
+                side="right"
+                league={league}
+              />
+            );
+          })()}
 
           <div
             className="absolute text-center"
@@ -237,6 +257,7 @@ export default function PlayoffFullBracketWeb({
                 y={y}
                 teamId={item.teamId}
                 wins={item.wins}
+                seed={undefined}
                 side="right"
                 league={league}
               />
@@ -252,6 +273,7 @@ export default function PlayoffFullBracketWeb({
                 y={y}
                 teamId={item.teamId}
                 wins={item.wins}
+                seed={undefined}
                 side="right"
                 league={league}
               />
@@ -267,6 +289,7 @@ export default function PlayoffFullBracketWeb({
                 y={y}
                 teamId={item.teamId}
                 wins={item.wins}
+                seed={item.seed}
                 side="right"
                 league={league}
               />

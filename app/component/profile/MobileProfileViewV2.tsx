@@ -33,6 +33,16 @@ import ProbAccuracyCard from "./ui/summary/ProbAccuracyCard";
 import UpsetCard from "./ui/summary/UpsetCard";
 import MaxStreakCard from "./ui/summary/MaxStreakCard";
 
+import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
+import {
+  buildPlayoffDisplayData,
+  type PlayoffDisplayData,
+} from "@/lib/playoff-bracket-display";
+import {
+  loadPlayoffBracket,
+  type PlayoffBracketDoc,
+} from "@/lib/playoff-bracket-firestore";
+
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
 };
@@ -68,6 +78,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     : profile;
 
   const [myPlan, setMyPlan] = useState<string | null>(null);
+
+  const [playoffBracketLoading, setPlayoffBracketLoading] = useState(false);
+  const [playoffBracketDoc, setPlayoffBracketDoc] =
+    useState<PlayoffBracketDoc | null>(null);
 
   useEffect(() => {
     const uid = me?.uid;
@@ -115,6 +129,47 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       }
     });
   }, [me, targetUid]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchPlayoffBracket() {
+      if (!resolvedUid) {
+        setPlayoffBracketDoc(null);
+        setPlayoffBracketLoading(false);
+        return;
+      }
+
+      try {
+        setPlayoffBracketLoading(true);
+        const data = await loadPlayoffBracket(resolvedUid);
+        if (cancelled) return;
+        setPlayoffBracketDoc(data);
+      } catch (e) {
+        if (cancelled) return;
+        console.error("failed to load playoff bracket", e);
+        setPlayoffBracketDoc(null);
+      } finally {
+        if (!cancelled) setPlayoffBracketLoading(false);
+      }
+    }
+
+    fetchPlayoffBracket();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedUid]);
+
+const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
+  if (!playoffBracketDoc?.bracket || !playoffBracketDoc?.season) return null;
+  return buildPlayoffDisplayData(
+    playoffBracketDoc.bracket,
+    playoffBracketDoc.season
+  );
+}, [playoffBracketDoc]);
+
+  const playoffScore = playoffBracketDoc?.totalScore ?? 0;
 
   const profilePlan = (displayProfile as any).plan as string | undefined;
   const isMyPro = myPlan === "pro";
@@ -165,8 +220,11 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const periodLabel = range === "7d" ? "7日" : range === "30d" ? "30日" : "All";
 
   const maxStreak = (displayProfile as any)?.maxStreak ?? 0;
-  const currentStreak = Math.max(0, (displayProfile as any)?.currentStreak ?? 0);
-const showCurrentStreakBadge = currentStreak >= 3;
+  const currentStreak = Math.max(
+    0,
+    (displayProfile as any)?.currentStreak ?? 0
+  );
+  const showCurrentStreakBadge = currentStreak >= 3;
 
   if (isMe && myPlan === null) {
     return <div className="p-4 text-white/60">loading...</div>;
@@ -174,7 +232,6 @@ const showCurrentStreakBadge = currentStreak >= 3;
 
   return (
     <div className="mx-auto min-h-screen max-w-[640px] px-4 py-4 text-white">
-      {/* Header */}
       <div className="relative isolate rounded-2xl border border-white/10 bg-[#050814]/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
         {canOpenSettings && (
           <button
@@ -199,14 +256,14 @@ const showCurrentStreakBadge = currentStreak >= 3;
             </div>
 
             {showCurrentStreakBadge && (
-  <div className="absolute left-1/2 -bottom-2 z-10 -translate-x-1/2">
-    <div className="inline-flex whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-yellow-300 shadow-[0_8px_18px_rgba(0,0,0,0.45)] backdrop-blur">
-      <Flame className="h-3.5 w-3.5 text-orange-400" />
-      <span className="ml-1 tabular-nums">{currentStreak}</span>
-      <span className="ml-1">連勝中</span>
-    </div>
-  </div>
-)}
+              <div className="absolute left-1/2 -bottom-2 z-10 -translate-x-1/2">
+                <div className="inline-flex whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-yellow-300 shadow-[0_8px_18px_rgba(0,0,0,0.45)] backdrop-blur">
+                  <Flame className="h-3.5 w-3.5 text-orange-400" />
+                  <span className="ml-1 tabular-nums">{currentStreak}</span>
+                  <span className="ml-1">連勝中</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="min-w-0">
@@ -313,6 +370,47 @@ const showCurrentStreakBadge = currentStreak >= 3;
               />
             </div>
           </>
+        ) : tab === "bracket" ? (
+          isTargetGuestProfile ? (
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
+              <p className="text-sm text-white/70">
+                ゲストプロフィールではブラケットを表示できません。
+              </p>
+            </div>
+          ) : playoffBracketLoading ? (
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
+              <p className="text-sm text-white/70">loading...</p>
+            </div>
+          ) : !playoffDisplayData ? (
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
+              <p className="text-sm text-white/70">
+                まだブラケットは提出されていません。
+              </p>
+            </div>
+) : (
+<div className="relative mt-4">
+  <div
+  className="pointer-events-none absolute left-1/2 top-0 h-full w-[calc(100vw-10px)] -translate-x-1/2 rounded-[18px] bg-[#020611]"
+/>
+
+  <div className="relative overflow-visible">
+    <PlayoffFullBracketMobile
+      league="nba"
+      score={playoffScore}
+      season={playoffDisplayData.season}
+      leftRound1={playoffDisplayData.leftRound1}
+      leftRound2={playoffDisplayData.leftRound2}
+      leftRound3={playoffDisplayData.leftRound3}
+      leftRound4={playoffDisplayData.leftRound4}
+      rightRound1={playoffDisplayData.rightRound1}
+      rightRound2={playoffDisplayData.rightRound2}
+      rightRound3={playoffDisplayData.rightRound3}
+      rightRound4={playoffDisplayData.rightRound4}
+      champion={playoffDisplayData.champion}
+    />
+  </div>
+</div>
+)
         ) : isTargetGuestProfile ? (
           <ProPreview />
         ) : isMyProfile ? (

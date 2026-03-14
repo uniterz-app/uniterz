@@ -7,7 +7,6 @@ import {
 } from "@/lib/playoff-bracket";
 import SubmitBracketModal from "@/app/component/common/SubmitBracketModal";
 import PlayoffBracketBoard from "@/app/component/predict/PlayoffBracketBoard";
-import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
 import { auth } from "@/lib/firebase";
 import {
   createPlayoffBracket,
@@ -15,26 +14,17 @@ import {
   type BracketState,
 } from "@/lib/playoff-bracket-firestore";
 import { getSeriesTeams, pruneBracket } from "@/lib/playoff-bracket-utils";
-import { buildPlayoffDisplayData } from "@/lib/playoff-bracket-display";
+import {
+  getPlayoffBracketConfig,
+  buildRound1Series,
+} from "@/lib/playoff-bracket-config";
 
 type Team = {
   code: string;
   seed: number;
 };
 
-const EAST_R1: { id: SeriesId; teams: [Team, Team] }[] = [
-  { id: "R1_E1", teams: [{ code: "BOS", seed: 1 }, { code: "MIA", seed: 8 }] },
-  { id: "R1_E2", teams: [{ code: "MIL", seed: 2 }, { code: "IND", seed: 7 }] },
-  { id: "R1_E3", teams: [{ code: "NYK", seed: 3 }, { code: "PHI", seed: 6 }] },
-  { id: "R1_E4", teams: [{ code: "CLE", seed: 4 }, { code: "ORL", seed: 5 }] },
-];
-
-const WEST_R1: { id: SeriesId; teams: [Team, Team] }[] = [
-  { id: "R1_W1", teams: [{ code: "OKC", seed: 1 }, { code: "NOP", seed: 8 }] },
-  { id: "R1_W2", teams: [{ code: "DEN", seed: 2 }, { code: "LAL", seed: 7 }] },
-  { id: "R1_W3", teams: [{ code: "MIN", seed: 3 }, { code: "PHX", seed: 6 }] },
-  { id: "R1_W4", teams: [{ code: "LAC", seed: 4 }, { code: "DAL", seed: 5 }] },
-];
+const SEASON = "2026";
 
 export default function PlayoffBracketPredict() {
   const [bracket, setBracket] = useState<BracketState>({});
@@ -55,6 +45,22 @@ export default function PlayoffBracketPredict() {
   const [canEditBracket, setCanEditBracket] = useState(true);
 
   const isComplete = isPlayoffBracketComplete(bracket as any);
+
+  const { eastR1, westR1 } = useMemo(() => {
+    const config = getPlayoffBracketConfig(SEASON);
+    const { eastR1, westR1 } = buildRound1Series(config);
+
+return {
+  eastR1: eastR1.map((series, index) => ({
+    id: (`R1_E${index + 1}` as SeriesId),
+    teams: series as [Team, Team],
+  })),
+  westR1: westR1.map((series, index) => ({
+    id: (`R1_W${index + 1}` as SeriesId),
+    teams: series as [Team, Team],
+  })),
+};
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +131,7 @@ export default function PlayoffBracketPredict() {
         return;
       }
 
-      await createPlayoffBracket(me.uid, bracket, "2026");
+      await createPlayoffBracket(me.uid, bracket, SEASON);
 
       setHasSubmittedBracket(true);
       setSubmitOpen(false);
@@ -175,14 +181,14 @@ export default function PlayoffBracketPredict() {
   const teamMap = useMemo(() => {
     const map: Record<string, Team> = {};
 
-    [...EAST_R1, ...WEST_R1].forEach((series) => {
+    [...eastR1, ...westR1].forEach((series) => {
       series.teams.forEach((team) => {
         map[team.code] = team;
       });
     });
 
     return map;
-  }, []);
+  }, [eastR1, westR1]);
 
   const eastR2Top = getSeriesTeams(bracket, teamMap, "R1_E1", "R1_E2");
   const eastR2Bottom = getSeriesTeams(bracket, teamMap, "R1_E3", "R1_E4");
@@ -192,8 +198,6 @@ export default function PlayoffBracketPredict() {
   const eastCF = getSeriesTeams(bracket, teamMap, "R2_E1", "R2_E2");
   const westCF = getSeriesTeams(bracket, teamMap, "R2_W1", "R2_W2");
   const finalsTeams = getSeriesTeams(bracket, teamMap, "CF_E", "CF_W");
-
-  const displayData = useMemo(() => buildPlayoffDisplayData(bracket), [bracket]);
 
   useEffect(() => {
     if (eastR2Top) {
@@ -261,8 +265,8 @@ export default function PlayoffBracketPredict() {
 
       <PlayoffBracketBoard
         bracket={bracket}
-        eastR1={EAST_R1}
-        westR1={WEST_R1}
+        eastR1={eastR1}
+        westR1={westR1}
         eastR2Top={eastR2Top}
         eastR2Bottom={eastR2Bottom}
         westR2Top={westR2Top}
