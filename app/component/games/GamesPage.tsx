@@ -24,9 +24,8 @@ function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-// ★ 指定した月の最初の試合日
 function findMonthFirstGame(gameDays: Date[], baseDate: Date, offset: number) {
-  const baseKey = toDateKey(baseDate).slice(0, 7); // yyyy-mm
+  const baseKey = toDateKey(baseDate).slice(0, 7);
   const targetMonth =
     offset === 0
       ? baseKey
@@ -167,6 +166,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   };
 
   /* =========================
+     today へ戻す
+  ========================= */
+  const moveToToday = () => {
+    if (!gameDays.length) return;
+
+    const sorted = [...gameDays].sort((a, b) =>
+      toDateKey(a).localeCompare(toDateKey(b))
+    );
+
+    const target =
+      sorted.find((d) => toDateKey(d) >= todayKey) ?? sorted[sorted.length - 1];
+
+    if (!target) return;
+    setSelectedAndSync(target);
+  };
+
+  /* =========================
      Swipe
   ========================= */
   const pageRef = useRef<HTMLDivElement>(null);
@@ -295,7 +311,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         <div className="relative flex h-11 items-center justify-between px-3 md:px-8">
           <Link href={myProfileHref ?? "#"} className="h-9 w-9" />
           <div className="absolute left-1/2 -translate-x-1/2">
-            <img src="/logo/logo.png" alt="Uniterz Logo" className="h-auto w-10" />
+            <img
+              src="/logo/logo.png"
+              alt="Uniterz Logo"
+              className="h-auto w-10"
+            />
           </div>
           <div className="h-9 w-9" />
         </div>
@@ -340,6 +360,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           const next = findMonthFirstGame(gameDays, selected, 1);
           if (next) setSelectedAndSync(next);
         }}
+        onCenterClick={moveToToday}
         className="mb-2"
       />
 
