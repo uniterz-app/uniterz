@@ -6,12 +6,16 @@ import { TEAM_SHORT } from "@/lib/team-short";
 
 type Side = "left" | "right";
 
+export type BracketCardHitStatus = "none" | "winner" | "winnerAndGames";
+
 export type BracketCardWebProps = {
   teamId?: string | null;
   wins?: number | string;
+  seed?: number | string;
   league?: League;
   side?: Side;
   className?: string;
+  hitStatus?: BracketCardHitStatus;
 };
 
 const SCALE = 0.64;
@@ -73,11 +77,100 @@ function isFourWins(wins?: number | string) {
   return false;
 }
 
+function hasSeed(seed?: number | string) {
+  if (seed === 0) return true;
+  if (seed == null) return false;
+  if (typeof seed === "string") return seed.trim().length > 0;
+  return true;
+}
+
+function formatSeed(seed?: number | string) {
+  if (seed == null || seed === "") return "";
+  const n = Number(seed);
+
+  if (n === 1) return "1st";
+  if (n === 2) return "2nd";
+  if (n === 3) return "3rd";
+  return `${n}th`;
+}
+
+function getHitColors(hitStatus: BracketCardHitStatus) {
+  if (hitStatus === "winnerAndGames") {
+    return {
+      color: "#36e6ff",
+      border: "rgba(54, 230, 255, 0.95)",
+      glow: "rgba(54, 230, 255, 0.58)",
+      soft: "rgba(54, 230, 255, 0.18)",
+    };
+  }
+
+  if (hitStatus === "winner") {
+    return {
+      color: "#ff9f2f",
+      border: "rgba(255, 159, 47, 0.95)",
+      glow: "rgba(255, 159, 47, 0.52)",
+      soft: "rgba(255, 159, 47, 0.16)",
+    };
+  }
+
+  return null;
+}
+
+function HitCheck({
+  hitStatus,
+}: {
+  hitStatus: Exclude<BracketCardHitStatus, "none">;
+}) {
+  const hit = getHitColors(hitStatus);
+  if (!hit) return null;
+
+  return (
+    <div
+      className="absolute flex items-center justify-center rounded-full border"
+      style={{
+        top: 6 * SCALE,
+        right: 6 * SCALE,
+        width: 22 * SCALE,
+        height: 22 * SCALE,
+        borderColor: hit.border,
+        background: "rgba(6, 12, 24, 0.94)",
+        boxShadow: `
+          inset 0 0 ${6 * SCALE}px ${hit.soft},
+          0 0 ${8 * SCALE}px ${hit.glow},
+          0 0 ${14 * SCALE}px ${hit.glow}
+        `,
+      }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width={13 * SCALE}
+        height={13 * SCALE}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5 12.5L9.2 16.5L19 7.5"
+          stroke={hit.color}
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            filter: `drop-shadow(0 0 ${5 * SCALE}px ${hit.glow})`,
+          }}
+        />
+      </svg>
+    </div>
+  );
+}
+
 export default function BracketCardWeb({
   teamId,
   wins,
+  seed,
   league = "nba",
+  side = "left",
   className = "",
+  hitStatus = "none",
 }: BracketCardWebProps) {
   const c = getTeamUiColor(league, teamId);
   const win4 = isFourWins(wins);
@@ -91,6 +184,7 @@ export default function BracketCardWeb({
         borderRadius: 0,
         borderColor: c.border,
         color: c.text,
+        overflow: "visible",
         boxShadow: win4
           ? `
             inset 0 0 ${22 * SCALE}px ${c.soft},
@@ -104,6 +198,29 @@ export default function BracketCardWeb({
           `,
       }}
     >
+      {hitStatus !== "none" && <HitCheck hitStatus={hitStatus} />}
+
+      {hasSeed(seed) && (
+        <div
+          className="absolute font-bold leading-none"
+          style={{
+            top: "50%",
+            transform: "translateY(-50%)",
+            [side === "left" ? "left" : "right"]: -52 * SCALE,
+            fontFamily: "Oswald, Bebas Neue, sans-serif",
+            fontSize: 20 * SCALE,
+            letterSpacing: "0.03em",
+            color: "#f8fbff",
+            textShadow: `
+              0 0 ${4 * SCALE}px ${c.glow},
+              0 0 ${10 * SCALE}px ${c.glow}
+            `,
+          }}
+        >
+          {formatSeed(seed)}
+        </div>
+      )}
+
       <div
         className="flex items-center justify-center leading-none"
         style={{

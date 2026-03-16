@@ -24,6 +24,9 @@ import * as functions from "firebase-functions";
 export { onGameFinalV2 } from "./onGameFinalV2";
 
 export { rebuildUsersTrend } from "./trend/users.rebuild";
+export { rescorePlayoffBrackets } from "./playoff/rescorePlayoffBrackets";
+export { onPlayoffResultsWrite } from "./playoff/onPlayoffResultsWrite";
+export { rebuildPlayoffBracketMarket } from "./playoff/rebuildPlayoffBracketMarket";
 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";

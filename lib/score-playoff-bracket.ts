@@ -7,14 +7,14 @@ import {
   SeriesId,
 } from "./playoff-bracket";
 
-type SeriesResult = {
+export type SeriesResult = {
   winner: string;
   games: number;
 };
 
-type Bracket = Partial<Record<SeriesId, SeriesResult>>;
+export type Bracket = Partial<Record<SeriesId, SeriesResult>>;
 
-function getRound(seriesId: SeriesId) {
+function getRound(seriesId: SeriesId): "R1" | "R2" | "CF" | "FINALS" {
   if (seriesId.startsWith("R1")) return "R1";
   if (seriesId.startsWith("R2")) return "R2";
   if (seriesId.startsWith("CF")) return "CF";
@@ -66,7 +66,6 @@ export function scorePlayoffBracket(
     const pred = prediction[id];
 
     if (!result || !pred) continue;
-
     if (!isSeriesValid(id, prediction)) continue;
 
     if (pred.winner === result.winner) {
@@ -80,11 +79,9 @@ export function scorePlayoffBracket(
         gamesPoints += PLAYOFF_GAMES_EXACT_POINTS;
         totalScore += PLAYOFF_GAMES_EXACT_POINTS;
       }
-    } else {
-      if (alive) {
-        alive = false;
-        firstMissSeriesId = id;
-      }
+    } else if (alive) {
+      alive = false;
+      firstMissSeriesId = id;
     }
   }
 

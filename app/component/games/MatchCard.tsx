@@ -5,7 +5,8 @@
 import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useMemo, useCallback } from "react";
+import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion } from "framer-motion";
 
@@ -13,80 +14,15 @@ import { motion } from "framer-motion";
 import { logGameEvent } from "@/lib/analytics/logEvent";
 import { GAME_EVENT } from "@/lib/analytics/eventTypes";
 /* ★ 追加: 認証トークン取得用 */
-import { auth } from "@/lib/firebase";
+
 import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import {
-  collection,
-  query,
-  where,
-  limit,
-  getDocs,
-} from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 
-
-
-/* ▼ 自分の投稿があるか確認する Hook */
-function useMyPostId(gameId: string) {
-  const [postId, setPostId] = useState<string | null>(null);
-  const uid = auth.currentUser?.uid ?? null;
-
-  useEffect(() => {
-    if (!uid) return;
-
-    (async () => {
-      const q = query(
-        collection(db, "posts"),
-        where("authorUid", "==", uid),
-        where("gameId", "==", gameId),
-        where("schemaVersion", "==", 2),
-        limit(1)
-      );
-
-      const snap = await getDocs(q);
-      setPostId(!snap.empty ? snap.docs[0].id : null);
-    })();
-  }, [uid, gameId]);
-
-  return postId;
-}
-
-function useTeamRecord(teamId?: string) {
-type TeamLastGame = {
-  at?: any;
-  isWin?: boolean;
-};
-
-const [rec, setRec] = useState<{
-  wins: number;
-  losses: number;
-  rank?: number;
-  lastGames?: TeamLastGame[];
-} | null>(null);
-  useEffect(() => {
-    if (!teamId) return;
-
-    const ref = doc(db, "teams", teamId);
-    getDoc(ref).then((snap) => {
-      if (!snap.exists()) return;
-      const d = snap.data();
-      setRec({
-        wins: d.wins ?? 0,
-        losses: d.losses ?? 0,
-        rank: d.rank,
-        lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
-      });
-    });
-  }, [teamId]);
-
-  return rec;
-}
 
 
 export type Status = "scheduled" | "live" | "final";
@@ -127,6 +63,19 @@ export type MatchCardProps = {
 };
 showMarketBias?: boolean;
 inPredictOverlay?: boolean;
+myPostId?: string | null;
+homeRecord?: {
+  wins: number;
+  losses: number;
+  rank?: number;
+  lastGames?: { at?: any; isWin?: boolean }[];
+} | null;
+awayRecord?: {
+  wins: number;
+  losses: number;
+  rank?: number;
+  lastGames?: { at?: any; isWin?: boolean }[];
+} | null;
 };
 
 
@@ -169,7 +118,7 @@ function useSectionPrefix() {
   return "/web";
 }
 
-export default function MatchCard({
+function MatchCard({
   id,
   league,
   venue,
@@ -181,31 +130,29 @@ export default function MatchCard({
   score,
   liveMeta,
   finalMeta,
-  // 互換で受け取るが内部では使わない
   viewPredictionHref,
   makePredictionHref,
   dense = false,
   hideLine = false,
   showRecentForm = false,
- hideActions = false,
-marketBias,
-showMarketBias = false,
-inPredictOverlay = false,
-className,
-sharedLayoutId,
-onOpenPredict,
-disableCardMotion = false,
+  hideActions = false,
+  marketBias,
+  showMarketBias = false,
+  inPredictOverlay = false,
+  myPostId = null,
+  homeRecord = null,
+  awayRecord = null,
+  className,
+  sharedLayoutId,
+  onOpenPredict,
+  disableCardMotion = false,
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
   const [showLoginRequired, setShowLoginRequired] = useState(false);
 
     const [navigating, setNavigating] = useState(false);
 
-  // ▼ 自分の投稿があるかをチェック
-const myPostId = useMyPostId(id);
 const isPredicted = !!myPostId;
-
-
 
     // ▼ 追加：モバイル判定
  // ✅ 追加（既存の useSectionPrefix を使う）
@@ -225,8 +172,6 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
 const normalizedLeague = normalizeLeague(league);
 
 // ▼ Firestore からチーム成績（wins/losses）を取得
-const homeRecord = useTeamRecord(home.teamId);
-const awayRecord = useTeamRecord(away.teamId);
 function toLast5WL(
   lastGames: { at?: any; isWin?: boolean }[] | undefined,
   latestSide: "left" | "right"
@@ -246,22 +191,31 @@ function toLast5WL(
   return latestSide === "right" ? [...sorted].reverse() : sorted;
 }
 
-const homeForm = toLast5WL(homeRecord?.lastGames, "right"); // HOMEは内側(右)が最新
-const awayForm = toLast5WL(awayRecord?.lastGames, "left");  // AWAYは内側(左)が最新
-const homeColor =
-  getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9";
+const homeForm = useMemo(
+  () => toLast5WL(homeRecord?.lastGames, "right"),
+  [homeRecord]
+);
 
-const awayColor =
-  getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e";
+const awayForm = useMemo(
+  () => toLast5WL(awayRecord?.lastGames, "left"),
+  [awayRecord]
+);
+const homeColor = useMemo(
+  () => getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9",
+  [normalizedLeague, home.teamId]
+);
+
+const awayColor = useMemo(
+  () => getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e",
+  [normalizedLeague, away.teamId]
+);
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
 const awayBiasPct = Math.max(0, Math.min(100, marketBias?.awayPct ?? 32));
 
-const marketMajority =
-  Math.abs(homeBiasPct - awayBiasPct) < 0.0001
-    ? "none"
-    : homeBiasPct > awayBiasPct
-    ? "home"
-    : "away";
+const marketMajority = useMemo(() => {
+  if (Math.abs(homeBiasPct - awayBiasPct) < 0.0001) return "none";
+  return homeBiasPct > awayBiasPct ? "home" : "away";
+}, [homeBiasPct, awayBiasPct]);
 
 
 
@@ -541,15 +495,6 @@ setNavigating(true);
     }
   };
 
-const shimmerKeyframes = `
-@keyframes matchCardFloat {
-  0%   { transform: translateY(0px) scale(1); }
-  25%  { transform: translateY(-1px) scale(1.0015); }
-  50%  { transform: translateY(-2px) scale(1.003); }
-  75%  { transform: translateY(-1px) scale(1.0015); }
-  100% { transform: translateY(0px) scale(1); }
-}
-`;
 
   const predictedStyle: React.CSSProperties = {
     background: `
@@ -585,6 +530,7 @@ return (
   layoutId={sharedLayoutId}
 className={[
   "group relative overflow-hidden text-white",
+  "max-w-[1200px] mx-auto",
   disableCardMotion
     ? ""
     : [
@@ -593,24 +539,17 @@ className={[
           ? "scale-[0.992] opacity-95"
           : "hover:-translate-y-[2px] hover:scale-[1.003]",
       ].join(" "),
-    dense
-      ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(2,6,23,0.38),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"
-      : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(2,6,23,0.42),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
+dense
+  ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"
+  : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
     hideLine ? "pb-3 md:pb-4" : "",
     className || "",
   ].join(" ")}
  style={{
-  animation:
-    disableCardMotion
-      ? undefined
-      : dense
-      ? undefined
-      : "matchCardFloat 6.2s ease-in-out infinite",
   willChange: "transform",
 }}
   onClick={handleClickCard}
 >
-      <style>{shimmerKeyframes}</style>
 
 
 
@@ -1013,3 +952,4 @@ background:
     </motion.div>
   );
 }
+export default React.memo(MatchCard);

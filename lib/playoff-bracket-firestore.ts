@@ -30,8 +30,12 @@ export type PlayoffBracketDoc = {
   firstMissSeriesId: SeriesId | null;
 };
 
-export async function loadPlayoffBracket(uid: string) {
-  const ref = doc(db, "playoffBrackets", uid);
+function getPlayoffBracketDocId(uid: string, season: string) {
+  return `${season}_${uid}`;
+}
+
+export async function loadPlayoffBracket(uid: string, season: string) {
+  const ref = doc(db, "playoffBrackets", getPlayoffBracketDocId(uid, season));
   const snap = await getDoc(ref);
 
   if (!snap.exists()) return null;
@@ -44,7 +48,7 @@ export async function createPlayoffBracket(
   bracket: BracketState,
   season: string
 ) {
-  const ref = doc(db, "playoffBrackets", uid);
+  const ref = doc(db, "playoffBrackets", getPlayoffBracketDocId(uid, season));
 
   await setDoc(ref, {
     uid,
@@ -63,9 +67,10 @@ export async function createPlayoffBracket(
 
 export async function updatePlayoffBracket(
   uid: string,
+  season: string,
   bracket: BracketState
 ) {
-  const ref = doc(db, "playoffBrackets", uid);
+  const ref = doc(db, "playoffBrackets", getPlayoffBracketDocId(uid, season));
 
   await updateDoc(ref, {
     bracket,
@@ -73,7 +78,7 @@ export async function updatePlayoffBracket(
   });
 }
 
-export async function deletePlayoffBracket(uid: string) {
-  const ref = doc(db, "playoffBrackets", uid);
+export async function deletePlayoffBracket(uid: string, season: string) {
+  const ref = doc(db, "playoffBrackets", getPlayoffBracketDocId(uid, season));
   await deleteDoc(ref);
 }
