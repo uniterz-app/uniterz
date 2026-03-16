@@ -42,6 +42,7 @@ import {
   loadPlayoffBracket,
   type PlayoffBracketDoc,
 } from "@/lib/playoff-bracket-firestore";
+import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
@@ -122,36 +123,38 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     });
   }, [me, targetUid]);
 
-  useEffect(() => {
-    let cancelled = false;
+const SEASON = getCurrentPlayoffSeason();
 
-    async function fetchPlayoffBracket() {
-      if (!resolvedUid) {
-        setPlayoffBracketDoc(null);
-        setPlayoffBracketLoading(false);
-        return;
-      }
+useEffect(() => {
+  let cancelled = false;
 
-      try {
-        setPlayoffBracketLoading(true);
-        const data = await loadPlayoffBracket(resolvedUid);
-        if (cancelled) return;
-        setPlayoffBracketDoc(data);
-      } catch (e) {
-        if (cancelled) return;
-        console.error("failed to load playoff bracket", e);
-        setPlayoffBracketDoc(null);
-      } finally {
-        if (!cancelled) setPlayoffBracketLoading(false);
-      }
+  async function fetchPlayoffBracket() {
+    if (!resolvedUid) {
+      setPlayoffBracketDoc(null);
+      setPlayoffBracketLoading(false);
+      return;
     }
 
-    fetchPlayoffBracket();
+    try {
+      setPlayoffBracketLoading(true);
+      const data = await loadPlayoffBracket(resolvedUid, SEASON);
+      if (cancelled) return;
+      setPlayoffBracketDoc(data);
+    } catch (e) {
+      if (cancelled) return;
+      console.error("failed to load playoff bracket", e);
+      setPlayoffBracketDoc(null);
+    } finally {
+      if (!cancelled) setPlayoffBracketLoading(false);
+    }
+  }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [resolvedUid]);
+  fetchPlayoffBracket();
+
+  return () => {
+    cancelled = true;
+  };
+}, [resolvedUid]);
 
   const profilePlan = (displayProfile as any).plan as string | undefined;
   const isMyPro = myPlan === "pro";

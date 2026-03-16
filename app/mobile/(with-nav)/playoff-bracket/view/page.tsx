@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { buildPlayoffDisplayData } from "@/lib/playoff-bracket-display";
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
-
-const FALLBACK_SEASON = "2026";
+import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 
 export default function MobilePlayoffBracketViewPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fallbackSeason =
+    searchParams.get("season") ?? getCurrentPlayoffSeason();
 
   const [loading, setLoading] = useState(true);
-  const [season, setSeason] = useState(FALLBACK_SEASON);
+  const [season, setSeason] = useState(fallbackSeason);
   const [display, setDisplay] = useState<any | null>(null);
 
   useEffect(() => {
@@ -28,14 +30,16 @@ export default function MobilePlayoffBracketViewPage() {
       }
 
       try {
-        const saved = await loadPlayoffBracket(me.uid);
+        const saved = await loadPlayoffBracket(me.uid, fallbackSeason);
 
         if (!saved) {
-          router.replace("/mobile/playoff");
+          router.replace(
+            `/mobile/playoff?season=${encodeURIComponent(fallbackSeason)}`
+          );
           return;
         }
 
-        const resolvedSeason = saved.season ?? FALLBACK_SEASON;
+        const resolvedSeason = saved.season ?? fallbackSeason;
 
         const nextDisplay = buildPlayoffDisplayData(
           saved.bracket,
@@ -49,7 +53,9 @@ export default function MobilePlayoffBracketViewPage() {
         setLoading(false);
       } catch (e) {
         console.error("failed to load playoff bracket view", e);
-        router.replace("/mobile/playoff");
+        router.replace(
+          `/mobile/playoff?season=${encodeURIComponent(fallbackSeason)}`
+        );
       }
     }
 
@@ -58,7 +64,7 @@ export default function MobilePlayoffBracketViewPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, fallbackSeason]);
 
   if (loading || !display) {
     return (
@@ -71,9 +77,7 @@ export default function MobilePlayoffBracketViewPage() {
   return (
     <main className="min-h-screen bg-[#050b14] px-4 py-4 text-white">
       <div className="relative mt-4">
-        <div
-          className="pointer-events-none absolute left-1/2 top-0 h-full w-[calc(100vw-10px)] -translate-x-1/2 rounded-[18px] bg-[#020611]"
-        />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-full w-[calc(100vw-10px)] -translate-x-1/2 rounded-[18px] bg-[#020611]" />
 
         <div className="relative overflow-visible">
           <PlayoffFullBracketMobile

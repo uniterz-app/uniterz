@@ -19,24 +19,24 @@ export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
   "2026": {
     season: "2026",
     east: [
-      { code: "BOS", seed: 1 },
-      { code: "MIL", seed: 2 },
+      { code: "DET", seed: 1 },
+      { code: "BOS", seed: 2 },
       { code: "NYK", seed: 3 },
       { code: "CLE", seed: 4 },
       { code: "ORL", seed: 5 },
-      { code: "PHI", seed: 6 },
-      { code: "IND", seed: 7 },
-      { code: "MIA", seed: 8 },
+      { code: "MIA", seed: 6 },
+      { code: "TOR", seed: 7 },
+      { code: "ATL", seed: 8 },
     ],
     west: [
       { code: "OKC", seed: 1 },
-      { code: "DEN", seed: 2 },
-      { code: "MIN", seed: 3 },
-      { code: "LAC", seed: 4 },
-      { code: "DAL", seed: 5 },
-      { code: "PHX", seed: 6 },
-      { code: "LAL", seed: 7 },
-      { code: "NOP", seed: 8 },
+      { code: "SAS", seed: 2 },
+      { code: "HOU", seed: 3 },
+      { code: "LAL", seed: 4 },
+      { code: "DEN", seed: 5 },
+      { code: "MIN", seed: 6 },
+      { code: "PHX", seed: 7 },
+      { code: "LAC", seed: 8 },
     ],
   },
 };
@@ -44,6 +44,20 @@ export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
 /* =========================
    Helpers
 ========================= */
+
+export function getCurrentPlayoffSeason(): string {
+  const currentYear = String(new Date().getFullYear());
+
+  if (PLAYOFF_BRACKET_CONFIGS[currentYear]) {
+    return currentYear;
+  }
+
+  const seasons = Object.keys(PLAYOFF_BRACKET_CONFIGS).sort(
+    (a, b) => Number(b) - Number(a)
+  );
+
+  return seasons[0] ?? "2026";
+}
 
 export function getPlayoffBracketConfig(
   season: string

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   isPlayoffBracketComplete,
   type SeriesId,
 } from "@/lib/playoff-bracket";
 import SubmitBracketModal from "@/app/component/common/SubmitBracketModal";
 import PlayoffBracketBoard from "@/app/component/predict/PlayoffBracketBoard";
+import PlayoffBracketRulesModal from "@/app/component/predict/PlayoffBracketRulesModal";
 import { auth } from "@/lib/firebase";
 import {
   createPlayoffBracket,
@@ -17,6 +19,7 @@ import { getSeriesTeams, pruneBracket } from "@/lib/playoff-bracket-utils";
 import {
   getPlayoffBracketConfig,
   buildRound1Series,
+  getCurrentPlayoffSeason,
 } from "@/lib/playoff-bracket-config";
 
 type Team = {
@@ -24,9 +27,10 @@ type Team = {
   seed: number;
 };
 
-const SEASON = "2026";
-
 export default function PlayoffBracketPredict() {
+  const searchParams = useSearchParams();
+  const season = searchParams.get("season") ?? getCurrentPlayoffSeason();
+
   const [bracket, setBracket] = useState<BracketState>({});
 
   const [showR2E1, setShowR2E1] = useState(false);
@@ -39,6 +43,7 @@ export default function PlayoffBracketPredict() {
 
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(true);
 
   const [savedBracketLoading, setSavedBracketLoading] = useState(true);
   const [hasSubmittedBracket, setHasSubmittedBracket] = useState(false);
@@ -47,20 +52,20 @@ export default function PlayoffBracketPredict() {
   const isComplete = isPlayoffBracketComplete(bracket as any);
 
   const { eastR1, westR1 } = useMemo(() => {
-    const config = getPlayoffBracketConfig(SEASON);
+    const config = getPlayoffBracketConfig(season);
     const { eastR1, westR1 } = buildRound1Series(config);
 
-return {
-  eastR1: eastR1.map((series, index) => ({
-    id: (`R1_E${index + 1}` as SeriesId),
-    teams: series as [Team, Team],
-  })),
-  westR1: westR1.map((series, index) => ({
-    id: (`R1_W${index + 1}` as SeriesId),
-    teams: series as [Team, Team],
-  })),
-};
-  }, []);
+    return {
+      eastR1: eastR1.map((series, index) => ({
+        id: `R1_E${index + 1}` as SeriesId,
+        teams: series as [Team, Team],
+      })),
+      westR1: westR1.map((series, index) => ({
+        id: `R1_W${index + 1}` as SeriesId,
+        teams: series as [Team, Team],
+      })),
+    };
+  }, [season]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +75,7 @@ return {
 
       if (!me) {
         if (cancelled) return;
+        setBracket({});
         setHasSubmittedBracket(false);
         setCanEditBracket(true);
         setSavedBracketLoading(false);
@@ -77,17 +83,19 @@ return {
       }
 
       try {
-        const data = await loadPlayoffBracket(me.uid);
+        setSavedBracketLoading(true);
+
+        const data = await loadPlayoffBracket(me.uid, season);
+
+        if (cancelled) return;
 
         if (!data) {
-          if (cancelled) return;
+          setBracket({});
           setHasSubmittedBracket(false);
           setCanEditBracket(true);
           setSavedBracketLoading(false);
           return;
         }
-
-        if (cancelled) return;
 
         setBracket(data.bracket ?? {});
         setHasSubmittedBracket(true);
@@ -96,6 +104,7 @@ return {
       } catch (e) {
         if (cancelled) return;
         console.error("failed to load playoff bracket", e);
+        setBracket({});
         setHasSubmittedBracket(false);
         setCanEditBracket(true);
         setSavedBracketLoading(false);
@@ -107,7 +116,7 @@ return {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [season]);
 
   async function handleSubmit() {
     const me = auth.currentUser;
@@ -122,7 +131,7 @@ return {
     try {
       setSubmitting(true);
 
-      const existing = await loadPlayoffBracket(me.uid);
+      const existing = await loadPlayoffBracket(me.uid, season);
 
       if (existing) {
         alert("ブラケットはすでに提出済みです");
@@ -131,7 +140,7 @@ return {
         return;
       }
 
-      await createPlayoffBracket(me.uid, bracket, SEASON);
+      await createPlayoffBracket(me.uid, bracket, season);
 
       setHasSubmittedBracket(true);
       setSubmitOpen(false);
@@ -298,6 +307,11 @@ return {
         }}
         onConfirm={handleSubmit}
         loading={submitting}
+      />
+
+      <PlayoffBracketRulesModal
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
       />
     </div>
   );
