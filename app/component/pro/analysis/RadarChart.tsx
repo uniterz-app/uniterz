@@ -66,15 +66,15 @@ export default function RadarChart({ value }: RadarChartProps) {
 
             <PolarAngleAxis
               dataKey="label"
-              tick={(props) => {
-                const payloadValue = props.payload?.value;
+              tick={(props: any) => {
+                const payloadValue = props?.payload?.value;
                 const item = data.find((d) => d.label === payloadValue);
                 if (!item) return <g />;
 
-                const x = Number(props.x);
-                const y = Number(props.y);
-                const cx = Number(props.cx);
-                const cy = Number(props.cy);
+                const x = Number(props?.x);
+                const y = Number(props?.y);
+                const cx = Number(props?.cx);
+                const cy = Number(props?.cy);
 
                 if (
                   Number.isNaN(x) ||

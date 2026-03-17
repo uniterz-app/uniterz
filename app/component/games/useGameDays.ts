@@ -7,7 +7,7 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot,
+  getDocs,
   Timestamp,
 } from "firebase/firestore";
 
@@ -16,7 +16,6 @@ import { normalizeLeague } from "@/lib/leagues";
 
 const SEASON = "2025-26";
 
-/** yyyy-mm-dd の文字列化（試合日の uniq 抽出に使う） */
 function toYYYYMMDD(d: Date) {
   const y = d.getFullYear();
   const m = `${d.getMonth() + 1}`.padStart(2, "0");
@@ -24,10 +23,6 @@ function toYYYYMMDD(d: Date) {
   return `${y}-${m}-${dd}`;
 }
 
-/**
- * 指定リーグの「試合がある日」のみを TS で配列として返す。
- * ［昇順］で返す。
- */
 export function useGameDays(rawLeague: League) {
   const league = normalizeLeague(rawLeague);
 
@@ -36,35 +31,46 @@ export function useGameDays(rawLeague: League) {
   const [error, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    setErr(null);
+    let alive = true;
 
-    const ref = collection(db, "games");
-    const q = query(
-      ref,
-      where("league", "==", league),
-      where("season", "==", SEASON),
-      orderBy("startAtJst", "asc")
-    );
+    async function load() {
+      setLoading(true);
+      setErr(null);
 
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
+      try {
+        const ref = collection(db, "games");
+
+        const q = query(
+          ref,
+          where("league", "==", league),
+          where("season", "==", SEASON),
+          orderBy("startAtJst", "asc")
+        );
+
+        const snap = await getDocs(q);
+
+        if (!alive) return;
+
         const list = snap.docs.map((d) => d.data());
         setRows(list);
-        setLoading(false);
-      },
-      (e) => {
+      } catch (e: any) {
+        if (!alive) return;
         setErr(e?.message ?? "unknown error");
-        setLoading(false);
+      } finally {
+        if (alive) setLoading(false);
       }
-    );
+    }
 
-    return () => unsub();
+    load();
+
+    return () => {
+      alive = false;
+    };
   }, [league]);
 
-  /** ▼ rows から「試合日のみ」を抽出して昇順に */
   const gameDays = useMemo(() => {
+    if (!rows.length) return [];
+
     const map = new Map<string, Date>();
 
     function toJstDateOnly(d: Date) {
@@ -75,15 +81,19 @@ export function useGameDays(rawLeague: League) {
       const t = g.startAtJst;
       if (!t) continue;
 
-      let d: Date;
+      let d: Date | null = null;
 
       if (t instanceof Timestamp) d = toJstDateOnly(t.toDate());
       else if (typeof t?.toDate === "function") d = toJstDateOnly(t.toDate());
       else if (t instanceof Date) d = toJstDateOnly(t);
-      else continue;
+
+      if (!d) continue;
 
       const key = toYYYYMMDD(d);
-      if (!map.has(key)) map.set(key, d);
+
+      if (!map.has(key)) {
+        map.set(key, d);
+      }
     }
 
     return [...map.values()].sort((a, b) => a.getTime() - b.getTime());

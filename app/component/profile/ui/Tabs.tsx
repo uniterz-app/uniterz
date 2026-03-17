@@ -4,7 +4,7 @@ import { Lilita_One } from "next/font/google";
 
 const lilita = Lilita_One({ weight: "400", subsets: ["latin"] });
 
-type Tab = "overview" | "stats";
+export type Tab = "overview" | "stats" | "bracket";
 
 const sizeMap = {
   sm: "text-sm pb-2",
@@ -15,11 +15,7 @@ const sizeMap = {
 type Props = {
   value: Tab;
   onChange: (v: Tab) => void;
-
-  /** stats を表示するか（デフォルト true） */
   showStats?: boolean;
-
-  /** Web / Mobile 用サイズ切り替え */
   size?: keyof typeof sizeMap;
 };
 
@@ -29,11 +25,14 @@ export default function Tabs({
   showStats = true,
   size = "md",
 }: Props) {
-  const items: Tab[] = showStats ? ["overview", "stats"] : ["overview"];
+  const items: Tab[] = showStats
+    ? ["overview", "stats", "bracket"]
+    : ["overview", "bracket"];
 
   const labelMap: Record<Tab, string> = {
     overview: "Overview",
     stats: "Pro Stats",
+    bracket: "Bracket",
   };
 
   return (
@@ -60,7 +59,6 @@ export default function Tabs({
           >
             {labelMap[t]}
 
-            {/* active underline */}
             {active && (
               <span
                 className="

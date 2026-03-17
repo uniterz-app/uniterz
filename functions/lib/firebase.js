@@ -33,8 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.admin = void 0;
+exports.admin = exports.db = void 0;
 const admin = __importStar(require("firebase-admin"));
 exports.admin = admin;
 admin.initializeApp();
+exports.db = admin.firestore();
 //# sourceMappingURL=firebase.js.map

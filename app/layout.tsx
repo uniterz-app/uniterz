@@ -5,7 +5,7 @@ import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
 import EventGate from "@/app/component/common/EventGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
-import NavBar from "@/app/component/NavBar";
+import AppChrome from "@/app/component/AppChrome";
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -33,10 +33,7 @@ export default function RootLayout({
     <html lang="ja">
       <body
         style={{
-          backgroundImage: "url('/splash/splash-1170x2532.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundColor: "#000",
+          backgroundColor: "#040A14",
           margin: 0,
           padding: 0,
         }}
@@ -55,11 +52,13 @@ export default function RootLayout({
                 minHeight: "100vh",
               }}
             >
-              <WebOrMobileSplash>{children}</WebOrMobileSplash>
+              <WebOrMobileSplash>
+                <AppChrome />
+                {children}
+              </WebOrMobileSplash>
             </div>
 
             <ToastHost />
-            <NavBar />
           </>
         )}
       </body>

@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { auth, db } from "@/lib/firebase";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
 import { toMatchCardProps } from "@/lib/games/transform";
@@ -10,15 +17,74 @@ import PredictionFormV2 from "../predict/PredictionFormV2";
 
 export type GameItemRaw = any;
 
+type TeamRecord = {
+  wins: number;
+  losses: number;
+  rank?: number;
+  lastGames?: { at?: any; isWin?: boolean }[];
+};
+
+const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v2";
+const TEAM_RECORD_CACHE_TTL_MS = 1000 * 60 * 30;
+
+const memoryTeamRecordCache = new Map<string, TeamRecord>();
+
+function readTeamRecordCacheFromSession(): Record<string, TeamRecord> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = window.sessionStorage.getItem(TEAM_RECORD_CACHE_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as {
+      savedAt: number;
+      records: Record<string, TeamRecord>;
+    };
+
+    if (!parsed?.savedAt || !parsed?.records) return {};
+
+    if (Date.now() - parsed.savedAt > TEAM_RECORD_CACHE_TTL_MS) {
+      window.sessionStorage.removeItem(TEAM_RECORD_CACHE_KEY);
+      return {};
+    }
+
+    return parsed.records;
+  } catch {
+    return {};
+  }
+}
+
+function writeTeamRecordCacheToSession(next: Record<string, TeamRecord>) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(
+      TEAM_RECORD_CACHE_KEY,
+      JSON.stringify({
+        savedAt: Date.now(),
+        records: next,
+      })
+    );
+  } catch {}
+}
+
 export default function ScheduleList({
   games,
   dense = false,
+  loading = false,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
+  loading?: boolean;
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const scrollYRef = useRef(0);
+
+  const [myPostMap, setMyPostMap] = useState<Record<string, string>>({});
+  const [teamRecordMap, setTeamRecordMap] = useState<Record<string, TeamRecord>>(
+    {}
+  );
 
   const propsList = useMemo<MatchCardProps[]>(() => {
     return (games ?? []).map(
@@ -26,18 +92,173 @@ export default function ScheduleList({
     );
   }, [games, dense]);
 
+  const gameIds = useMemo(() => {
+    return propsList.map((p) => String(p.id));
+  }, [propsList]);
+
+  const teamIds = useMemo(() => {
+    return Array.from(
+      new Set(
+        propsList
+          .flatMap((p) => [p.home?.teamId, p.away?.teamId])
+          .filter(Boolean)
+      )
+    ) as string[];
+  }, [propsList]);
+
   const selectedProps = useMemo<MatchCardProps | null>(() => {
     if (!openGameId) return null;
     return propsList.find((p) => String(p.id) === String(openGameId)) ?? null;
   }, [propsList, openGameId]);
 
-  const open = useCallback((gameId: string) => {
-    setOpenGameId(String(gameId));
-  }, []);
+const open = useCallback((gameId: string) => {
+  scrollYRef.current = window.scrollY;
+  setOpenGameId(String(gameId));
+}, []);
 
-  const close = useCallback(() => {
-    setOpenGameId(null);
-  }, []);
+const close = useCallback(() => {
+  setOpenGameId(null);
+
+  requestAnimationFrame(() => {
+    window.scrollTo({
+      top: scrollYRef.current,
+      behavior: "auto",
+    });
+  });
+}, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const run = async () => {
+      const uid = auth.currentUser?.uid ?? null;
+
+      if (!uid || gameIds.length === 0) {
+        setMyPostMap({});
+        return;
+      }
+
+      try {
+        const chunks: string[][] = [];
+        for (let i = 0; i < gameIds.length; i += 10) {
+          chunks.push(gameIds.slice(i, i + 10));
+        }
+
+        const snaps = await Promise.all(
+          chunks.map((chunk) =>
+            getDocs(
+              query(
+                collection(db, "posts"),
+                where("authorUid", "==", uid),
+                where("schemaVersion", "==", 2),
+                where("gameId", "in", chunk)
+              )
+            )
+          )
+        );
+
+        if (!alive) return;
+
+        const nextMap: Record<string, string> = {};
+        snaps.forEach((snap) => {
+          snap.docs.forEach((d) => {
+            const data = d.data() as any;
+            const gameId = String(data?.gameId ?? "");
+            if (gameId) nextMap[gameId] = d.id;
+          });
+        });
+
+        setMyPostMap(nextMap);
+      } catch {
+        if (alive) setMyPostMap({});
+      }
+    };
+
+    run();
+
+    return () => {
+      alive = false;
+    };
+  }, [gameIds]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const run = async () => {
+      if (teamIds.length === 0) {
+        setTeamRecordMap({});
+        return;
+      }
+
+      const sessionCache = readTeamRecordCacheFromSession();
+
+      const immediateMap: Record<string, TeamRecord> = {};
+      for (const teamId of teamIds) {
+        const mem = memoryTeamRecordCache.get(teamId);
+        const ses = sessionCache[teamId];
+        const cached = mem ?? ses ?? null;
+        if (cached) immediateMap[teamId] = cached;
+      }
+
+      if (alive) setTeamRecordMap(immediateMap);
+
+      const missingTeamIds = teamIds.filter(
+        (teamId) => !memoryTeamRecordCache.has(teamId) && !sessionCache[teamId]
+      );
+
+      if (missingTeamIds.length === 0) return;
+
+      try {
+        const chunks: string[][] = [];
+        for (let i = 0; i < missingTeamIds.length; i += 10) {
+          chunks.push(missingTeamIds.slice(i, i + 10));
+        }
+
+        const snaps = await Promise.all(
+          chunks.map((chunk) =>
+            getDocs(
+              query(collection(db, "teams"), where("__name__", "in", chunk))
+            )
+          )
+        );
+
+        if (!alive) return;
+
+        const merged: Record<string, TeamRecord> = { ...immediateMap };
+        const nextSessionCache: Record<string, TeamRecord> = { ...sessionCache };
+
+        snaps.forEach((snap) => {
+          snap.docs.forEach((docSnap) => {
+            const d = docSnap.data() as any;
+
+            const value: TeamRecord = {
+              wins: d.wins ?? 0,
+              losses: d.losses ?? 0,
+              rank: d.rank,
+              lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+            };
+
+            const teamId = docSnap.id;
+
+            memoryTeamRecordCache.set(teamId, value);
+            nextSessionCache[teamId] = value;
+            merged[teamId] = value;
+          });
+        });
+
+        writeTeamRecordCacheToSession(nextSessionCache);
+        setTeamRecordMap(merged);
+      } catch {
+        if (alive) setTeamRecordMap(immediateMap);
+      }
+    };
+
+    run();
+
+    return () => {
+      alive = false;
+    };
+  }, [teamIds]);
 
   useEffect(() => {
     if (!openGameId) return;
@@ -65,13 +286,25 @@ export default function ScheduleList({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [openGameId, close]);
 
-  if (!propsList.length) {
+  if (loading) {
     return (
-      <div className="rounded-xl border border-dashed border-white/10 py-10 text-center text-white/70">
-        この日に試合はありません
+      <div className="grid gap-6 px-4 md:px-6 lg:px-8">
+        <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
+        </div>
+        <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
+        </div>
+        <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
+        </div>
       </div>
     );
   }
+
+if (!propsList.length) {
+  return null;
+}
 
   return (
     <LayoutGroup id="schedule-list">
@@ -101,6 +334,17 @@ export default function ScheduleList({
             >
               <MatchCard
                 {...props}
+                myPostId={myPostMap[String(props.id)] ?? null}
+                homeRecord={
+                  props.home?.teamId
+                    ? teamRecordMap[props.home.teamId] ?? null
+                    : null
+                }
+                awayRecord={
+                  props.away?.teamId
+                    ? teamRecordMap[props.away.teamId] ?? null
+                    : null
+                }
                 sharedLayoutId={`matchcard-${props.id}`}
                 onOpenPredict={open}
                 showMarketBias={false}
@@ -167,7 +411,7 @@ export default function ScheduleList({
               }}
             >
               <div
-                className="mx-auto w-full max-w-2xl overflow-x-hidden px-3 pt-4 pb-32 sm:px-4 sm:pt-6 sm:pb-36 md:px-6"
+                className="mx-auto w-full max-w-2xl overflow-x-hidden px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
                 onClick={(e) => e.stopPropagation()}
               >
                 <motion.div
@@ -209,6 +453,17 @@ export default function ScheduleList({
 
                   <MatchCard
                     {...selectedProps}
+                    myPostId={myPostMap[String(selectedProps.id)] ?? null}
+                    homeRecord={
+                      selectedProps.home?.teamId
+                        ? teamRecordMap[selectedProps.home.teamId] ?? null
+                        : null
+                    }
+                    awayRecord={
+                      selectedProps.away?.teamId
+                        ? teamRecordMap[selectedProps.away.teamId] ?? null
+                        : null
+                    }
                     sharedLayoutId={`matchcard-${selectedProps.id}`}
                     disableCardMotion
                     hideActions
@@ -227,14 +482,23 @@ export default function ScheduleList({
                     }}
                     className="mt-2 overflow-x-hidden px-0 py-0"
                   >
-                    <PredictionFormV2
-                      dense={dense}
-                      game={selectedProps}
-                      user={{ name: "You" }}
-                      embedded
-                      inOverlay
-                      onPostCreated={close}
-                    />
+<PredictionFormV2
+  dense={dense}
+  game={selectedProps}
+  user={{ name: "You" }}
+  embedded
+  inOverlay
+  onPostCreated={() => {
+    setOpenGameId(null);
+
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: scrollYRef.current,
+        behavior: "auto",
+      });
+    });
+  }}
+/>
                   </motion.div>
                 </motion.div>
               </div>

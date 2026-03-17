@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import LeagueTabs from "./LeagueTabs";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
@@ -8,14 +8,15 @@ import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
 import { useGamesByDate } from "./useGamesByDate";
 import { useGameDays } from "./useGameDays";
-import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { League } from "@/lib/leagues";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
+import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 
 /* =========================
-   Date Utils（唯一の真実）
+   Date Utils
 ========================= */
 function toDateKey(d: Date): string {
   const y = d.getFullYear();
@@ -24,82 +25,143 @@ function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function findMonthFirstGame(gameDays: Date[], baseDate: Date, offset: number) {
-  const baseKey = toDateKey(baseDate).slice(0, 7);
-  const targetMonth =
-    offset === 0
-      ? baseKey
-      : (() => {
-          const d = new Date(baseDate);
-          d.setMonth(d.getMonth() + offset);
-          return toDateKey(d).slice(0, 7);
-        })();
+function parseDateKey(dateKey: string | null): Date | null {
+  if (!dateKey) return null;
 
-  return gameDays.find((d) => toDateKey(d).startsWith(targetMonth)) ?? null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!m) return null;
+
+  const y = Number(m[1]);
+  const mm = Number(m[2]);
+  const d = Number(m[3]);
+
+  if (!y || !mm || !d) return null;
+
+  const parsed = new Date(y, mm - 1, d);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return parsed;
+}
+
+function findMonthFirstGame(gameDays: Date[], baseDate: Date, offset: number) {
+  const target = new Date(baseDate);
+  target.setMonth(target.getMonth() + offset);
+  const targetMonthKey = toDateKey(target).slice(0, 7);
+
+  return gameDays.find((d) => toDateKey(d).startsWith(targetMonthKey)) ?? null;
+}
+
+function getTodayKey(): string {
+  const nowJst = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
+  );
+
+  const base = new Date(nowJst);
+  base.setHours(0, 0, 0, 0);
+
+  return toDateKey(base);
+}
+
+function findInitialGameDay(params: {
+  gameDays: Date[];
+  stateSelected: Date | null;
+  urlDate: string | null;
+  todayKey: string;
+}): Date | null {
+  const { gameDays, stateSelected, urlDate, todayKey } = params;
+
+  if (!gameDays.length) return null;
+
+  if (stateSelected) {
+    const hit = gameDays.find((d) => toDateKey(d) === toDateKey(stateSelected));
+    if (hit) return hit;
+  }
+
+  const parsedUrlDate = parseDateKey(urlDate);
+  if (parsedUrlDate) {
+    const hit = gameDays.find((d) => toDateKey(d) === toDateKey(parsedUrlDate));
+    if (hit) return hit;
+  }
+
+  const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
+
+  return (
+    sorted.find((d) => toDateKey(d) >= todayKey) ??
+    sorted[sorted.length - 1] ??
+    null
+  );
 }
 
 export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const season = searchParams.get("season") ?? getCurrentPlayoffSeason();
+  const dateParam = searchParams.get("date");
 
   /* =========================
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
   const [leagueReady, setLeagueReady] = useState(false);
-
-  /* =========================
-     Login modal
-  ========================= */
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-
-  /* =========================
-     初期リーグ決定フラグ
-  ========================= */
   const didInitLeague = useRef(false);
 
-  /* =========================
-     ユーザーの投稿数から初期リーグ決定
-  ========================= */
   useEffect(() => {
+    let alive = true;
+
     const resolveInitialLeague = async () => {
       if (didInitLeague.current) return;
 
       const user = auth.currentUser;
       if (!user) {
+        if (!alive) return;
         didInitLeague.current = true;
         setLeague("nba");
         setLeagueReady(true);
         return;
       }
 
-      const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
-      if (!snap.exists()) {
+      try {
+        const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
+        if (!alive) return;
+
+        if (!snap.exists()) {
+          didInitLeague.current = true;
+          setLeague("nba");
+          setLeagueReady(true);
+          return;
+        }
+
+        const data = snap.data();
+        const leaguePosts: Record<League, number> = {
+          nba: data?.leagues?.nba?.posts ?? 0,
+          pl: data?.leagues?.pl?.posts ?? 0,
+          bj: data?.leagues?.bj?.posts ?? 0,
+          j1: data?.leagues?.j1?.posts ?? 0,
+        };
+
+        const sorted = (Object.entries(leaguePosts) as [League, number][])
+          .sort((a, b) => b[1] - a[1]);
+
+        const [topLeague, topCount] = sorted[0];
+
+        didInitLeague.current = true;
+        setLeague(topCount > 0 ? topLeague : "nba");
+        setLeagueReady(true);
+      } catch {
+        if (!alive) return;
         didInitLeague.current = true;
         setLeague("nba");
         setLeagueReady(true);
-        return;
       }
-
-      const data = snap.data();
-      const leaguePosts: Record<League, number> = {
-        nba: data?.leagues?.nba?.posts ?? 0,
-        pl: data?.leagues?.pl?.posts ?? 0,
-        bj: data?.leagues?.bj?.posts ?? 0,
-        j1: data?.leagues?.j1?.posts ?? 0,
-      };
-
-      const sorted = (Object.entries(leaguePosts) as [League, number][])
-        .sort((a, b) => b[1] - a[1]);
-
-      const [topLeague, topCount] = sorted[0];
-
-      didInitLeague.current = true;
-      setLeague(topCount > 0 ? topLeague : "nba");
-      setLeagueReady(true);
     };
 
     resolveInitialLeague();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   /* =========================
@@ -114,94 +176,102 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     Partial<Record<League, Date>>
   >({});
 
-  const selected = selectedByLeague[league] ?? null;
+  const todayKey = useMemo(() => getTodayKey(), []);
 
   /* =========================
-     Today（key）15:00ルール
+     初期選択日を render 中に確定
   ========================= */
-  const todayKey = useMemo(() => {
-    const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
-    );
+  const selected = useMemo(() => {
+    if (!leagueReady) return null;
 
-    const base = new Date(now);
-    base.setHours(0, 0, 0, 0);
-
-    if (now.getHours() >= 15) {
-      base.setDate(base.getDate() + 1);
-    }
-
-    return toDateKey(base);
-  }, []);
+    return findInitialGameDay({
+      gameDays,
+      stateSelected: selectedByLeague[league] ?? null,
+      urlDate: dateParam,
+      todayKey,
+    });
+  }, [leagueReady, gameDays, selectedByLeague, league, dateParam, todayKey]);
 
   /* =========================
-     初期位置決定（唯一のロジック）
+     state に保存
   ========================= */
   useEffect(() => {
     if (!leagueReady) return;
+    if (!selected) return;
     if (selectedByLeague[league]) return;
-    if (!gameDays.length) return;
-
-    const sorted = [...gameDays].sort((a, b) =>
-      toDateKey(a).localeCompare(toDateKey(b))
-    );
-
-    const initial =
-      sorted.find((d) => toDateKey(d) >= todayKey) ?? sorted[sorted.length - 1];
 
     setSelectedByLeague((prev) => ({
       ...prev,
-      [league]: initial,
+      [league]: selected,
     }));
-
-    router.replace(`?date=${toDateKey(initial)}`, { scroll: false });
-  }, [league, leagueReady, gameDays, todayKey, selectedByLeague, router]);
+  }, [leagueReady, selected, selectedByLeague, league]);
 
   /* =========================
-     selected + URL 同期
+     URL同期
   ========================= */
-  const setSelectedAndSync = (d: Date) => {
-    setSelectedByLeague((prev) => ({ ...prev, [league]: d }));
-    router.replace(`?date=${toDateKey(d)}`, { scroll: false });
-  };
+  useEffect(() => {
+    if (!selected) return;
+
+    const nextDateKey = toDateKey(selected);
+    const currentDateKey = searchParams.get("date");
+
+    if (currentDateKey === nextDateKey) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("date", nextDateKey);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [selected, router, searchParams]);
+
+  const setSelectedAndSync = useCallback(
+    (d: Date) => {
+      setSelectedByLeague((prev) => ({ ...prev, [league]: d }));
+
+      const nextDateKey = toDateKey(d);
+      const currentDateKey = searchParams.get("date");
+      if (currentDateKey === nextDateKey) return;
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("date", nextDateKey);
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [league, router, searchParams]
+  );
 
   /* =========================
      today へ戻す
   ========================= */
-  const moveToToday = () => {
+  const moveToToday = useCallback(() => {
     if (!gameDays.length) return;
 
-    const sorted = [...gameDays].sort((a, b) =>
-      toDateKey(a).localeCompare(toDateKey(b))
-    );
-
+    const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
     const target =
-      sorted.find((d) => toDateKey(d) >= todayKey) ?? sorted[sorted.length - 1];
+      sorted.find((d) => toDateKey(d) >= todayKey) ??
+      sorted[sorted.length - 1];
 
     if (!target) return;
     setSelectedAndSync(target);
-  };
+  }, [gameDays, todayKey, setSelectedAndSync]);
 
   /* =========================
      Swipe
   ========================= */
   const pageRef = useRef<HTMLDivElement>(null);
 
-  const moveToPrevDay = () => {
+  const moveToPrevDay = useCallback(() => {
     if (!selected) return;
     const key = toDateKey(selected);
     const idx = gameDays.findIndex((d) => toDateKey(d) === key);
     if (idx > 0) setSelectedAndSync(gameDays[idx - 1]);
-  };
+  }, [selected, gameDays, setSelectedAndSync]);
 
-  const moveToNextDay = () => {
+  const moveToNextDay = useCallback(() => {
     if (!selected) return;
     const key = toDateKey(selected);
     const idx = gameDays.findIndex((d) => toDateKey(d) === key);
     if (idx >= 0 && idx < gameDays.length - 1) {
       setSelectedAndSync(gameDays[idx + 1]);
     }
-  };
+  }, [selected, gameDays, setSelectedAndSync]);
 
   usePageSwipe(pageRef, {
     onSwipeRight: moveToPrevDay,
@@ -213,17 +283,17 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Games
   ========================= */
-  const safeDate = selected ?? new Date();
-  const { loading, games } = useGamesByDate(league, safeDate);
+  const { loading, games } = useGamesByDate(league, selected);
 
   /* =========================
      全試合終了判定
   ========================= */
   const allFinished = useMemo(() => {
+    if (!selected) return false;
     if (!games) return false;
-    if (games.length === 0) return true;
+    if (games.length === 0) return false;
     return games.every((g: any) => g.status === "final");
-  }, [games]);
+  }, [selected, games]);
 
   /* =========================
      次の試合日
@@ -248,40 +318,28 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
     didAutoAdvance.current[league] = true;
     setSelectedAndSync(nextGameDay);
-  }, [selected, todayKey, allFinished, nextGameDay, league]);
+  }, [selected, todayKey, allFinished, nextGameDay, league, setSelectedAndSync]);
 
   /* =========================
      UI
   ========================= */
   const visibleCount = dense ? 7 : 10;
   const pagePad = dense ? "px-3" : "px-4 md:px-6";
-
-  /* =========================
-     Profile
-  ========================= */
-  const [myProfileHref, setMyProfileHref] = useState<string | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (snap.exists()) {
-        const handle = snap.data()?.handle || snap.data()?.slug;
-        if (handle) setMyProfileHref(`/web/u/${encodeURIComponent(handle)}`);
-      }
-    };
-    load();
-  }, []);
+  const isPageLoading = loadingDays || loading || !selected;
 
   /* =========================
      Paths
   ========================= */
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+
   const isMobile = pathname?.startsWith("/mobile");
-  const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff-bracket";
+  const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
+  const playoffViewHref = isMobile
+    ? "/mobile/playoff-bracket/view"
+    : "/web/playoff-bracket/view";
   const signupHref = isMobile ? "/mobile/signup" : "/web/signup";
 
-  function handleBracketClick() {
+  async function handleBracketClick() {
     const user = auth.currentUser;
 
     if (!user) {
@@ -289,13 +347,24 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       return;
     }
 
-    router.push(playoffHref);
+    const saved = await loadPlayoffBracket(user.uid, season);
+
+    if (saved) {
+      router.push(`${playoffViewHref}?season=${encodeURIComponent(season)}`);
+      return;
+    }
+
+    router.push(`${playoffHref}?season=${encodeURIComponent(season)}`);
   }
 
   function handleGoSignup() {
     setLoginModalOpen(false);
     router.push(signupHref);
   }
+
+  const monthValue = selected
+    ? new Date(selected.getFullYear(), selected.getMonth(), 1)
+    : null;
 
   return (
     <div
@@ -307,20 +376,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 ].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[var(--color-app-bg,#0b2126)]/85 backdrop-blur-md">
-        <div className="relative flex h-11 items-center justify-between px-3 md:px-8">
-          <Link href={myProfileHref ?? "#"} className="h-9 w-9" />
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <img
-              src="/logo/logo.png"
-              alt="Uniterz Logo"
-              className="h-auto w-10"
-            />
-          </div>
-          <div className="h-9 w-9" />
-        </div>
-      </header>
-
       <div className="mb-2 mt-3 flex items-center justify-between gap-3">
         <LeagueTabs
           value={league}
@@ -345,11 +400,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </div>
 
       <MonthHeader
-        month={
-          selected
-            ? new Date(selected.getFullYear(), selected.getMonth(), 1)
-            : null
-        }
+        month={monthValue}
         onPrev={() => {
           if (!selected) return;
           const prev = findMonthFirstGame(gameDays, selected, -1);
@@ -364,28 +415,32 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         className="mb-2"
       />
 
-      {loadingDays || !selected ? (
-        <div className="my-4 text-center text-white/60">読み込み中...</div>
-      ) : (
-        <DayStrip
-          dates={gameDays}
-          selectedDate={selected}
-          onSelect={setSelectedAndSync}
-          size={dense ? "md" : "lg"}
-          visibleCount={visibleCount}
-          autoScrollOnInit={false}
-          className="mb-4"
-        />
-      )}
+      {isPageLoading ? (
+        <>
+          <div className="mb-4">
+            <div className="h-14 rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
+          </div>
 
-      {loading ? (
-        <div className="grid gap-6 px-4 md:px-6 lg:px-8">
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
+          <div className="grid gap-6 px-4 md:px-6 lg:px-8">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        </>
       ) : (
-        <ScheduleList games={games} dense={dense} />
+        <>
+          <DayStrip
+            dates={gameDays}
+            selectedDate={selected}
+            onSelect={setSelectedAndSync}
+            size={dense ? "md" : "lg"}
+            visibleCount={visibleCount}
+            autoScrollOnInit={false}
+            className="mb-4"
+          />
+
+          <ScheduleList games={games} dense={dense} />
+        </>
       )}
 
       {loginModalOpen && (
