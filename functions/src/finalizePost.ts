@@ -2,21 +2,19 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
 import { calcPostResult } from "./calcPostResult";
 import { calcUpsetPoints } from "./calcUpsetPoints";
+import { calcStreakBonus } from "./calcStreakBonus";
+import type { UpdatedUserStreakResult } from "./updateUserStreak";
 
 function calcPointsV3({
   predHome,
   predAway,
   finalHome,
   finalAway,
-  hadUpsetGame,
-  upsetHit,
 }: {
   predHome: number;
   predAway: number;
   finalHome: number;
   finalAway: number;
-  hadUpsetGame: boolean;
-  upsetHit: boolean;
 }) {
   const finalDiff = finalHome - finalAway;
   const predDiff = predHome - predAway;
@@ -30,37 +28,37 @@ function calcPointsV3({
   if (!winnerCorrect) {
     return {
       points: 0,
+      basePoints: 0,
       winnerCorrect: false,
       winPoints: 0,
       diffPoints: 0,
       totalPoints: 0,
-      upsetBonus: 0,
       diffError,
       totalError,
     };
   }
 
-  const winPoints = 3;
+  const winPoints = 4;
 
   let diffPoints = 0;
-  if (diffError === 0) diffPoints = 5;
-  else if (diffError <= 3) diffPoints = 4;
-  else if (diffError <= 6) diffPoints = 3;
+  if (diffError === 0) diffPoints = 4;
+  else if (diffError <= 3) diffPoints = 3;
+  else if (diffError <= 6) diffPoints = 2;
   else if (diffError <= 10) diffPoints = 1;
 
   let totalPoints = 0;
   if (totalError <= 3) totalPoints = 2;
-  else if (totalError <= 6) totalPoints = 1;
+  else if (totalError <= 7) totalPoints = 1;
 
-  const upsetBonus = hadUpsetGame && upsetHit ? 2 : 0;
+  const basePoints = winPoints + diffPoints + totalPoints; // max 10
 
   return {
-    points: winPoints + diffPoints + totalPoints + upsetBonus, // max 12
+    points: basePoints,
+    basePoints,
     winnerCorrect: true,
     winPoints,
     diffPoints,
     totalPoints,
-    upsetBonus,
     diffError,
     totalError,
   };
@@ -74,7 +72,17 @@ export async function finalizePost({
   after,
   batch,
   userUpdateTasks,
-}: any) {
+  streakResultMap,
+}: {
+  postDoc: FirebaseFirestore.QueryDocumentSnapshot;
+  game: any;
+  market: any;
+  hadUpsetGame: boolean;
+  after: any;
+  batch: FirebaseFirestore.WriteBatch;
+  userUpdateTasks: Promise<any>[];
+  streakResultMap: Map<string, UpdatedUserStreakResult>;
+}) {
   const p = postDoc.data();
   if (p.settledAt) return;
 
@@ -88,37 +96,41 @@ export async function finalizePost({
     league: game.league,
   });
 
-  // ===== Upset（独立ポイント）=====
-  // calcPostResult 側で upsetHit は「少数派的中」定義に更新済み
+  // 従来の upset 指標
   const upsetPoints = result.upsetHit
     ? calcUpsetPoints(market.majorityRatio)
     : 0;
 
-  // ===== V3（既存）=====
+  // 総合得点用ボーナス
+  const upsetBonus = result.upsetHit ? 2 : 0;
+
   const predHome = p.prediction?.score?.home;
   const predAway = p.prediction?.score?.away;
   const canScore = Number.isFinite(predHome) && Number.isFinite(predAway);
 
-  const pointsV3 = canScore
+  const baseScore = canScore
     ? calcPointsV3({
         predHome,
         predAway,
         finalHome: final.home,
         finalAway: final.away,
-        hadUpsetGame,
-        upsetHit: !!result.upsetHit,
       })
     : {
         points: 0,
+        basePoints: 0,
         winnerCorrect: false,
         winPoints: 0,
         diffPoints: 0,
         totalPoints: 0,
-        upsetBonus: 0,
         diffError: null,
         totalError: null,
       };
 
+  const streakInfo = p.authorUid ? streakResultMap.get(p.authorUid) : undefined;
+  const activeWinStreak = streakInfo?.activeWinStreak ?? 0;
+  const streakBonus = calcStreakBonus(activeWinStreak);
+
+  const totalPoints = baseScore.basePoints + upsetBonus + streakBonus;
   const now = Timestamp.now();
 
   batch.update(postDoc.ref, {
@@ -132,7 +144,6 @@ export async function finalizePost({
     stats: {
       isWin: result.isWin,
       scoreError: result.scoreError,
-      brier: result.brier,
       scorePrecision: result.scorePrecision,
       scorePrecisionDetail: result.scorePrecisionDetail,
       marketCount: market.total,
@@ -141,19 +152,22 @@ export async function finalizePost({
       hadUpsetGame,
       upsetHit: result.upsetHit,
 
-      // ★ 追加：Upset（独立）
       upsetPoints,
+      upsetBonus,
+      streakBonus,
 
-      // ★ 追加：総合得点（V3は変更しない）
-      pointsV3: pointsV3.points,
+      pointsV3: totalPoints,
       pointsV3Detail: {
-        winnerCorrect: pointsV3.winnerCorrect,
-        winPoints: pointsV3.winPoints,
-        diffPoints: pointsV3.diffPoints,
-        totalPoints: pointsV3.totalPoints,
-        upsetBonus: pointsV3.upsetBonus,
-        diffError: pointsV3.diffError,
-        totalError: pointsV3.totalError,
+        basePoints: baseScore.basePoints,
+        winnerCorrect: baseScore.winnerCorrect,
+        winPoints: baseScore.winPoints,
+        diffPoints: baseScore.diffPoints,
+        totalPoints: baseScore.totalPoints,
+        upsetBonus,
+        streakBonus,
+        activeWinStreak,
+        diffError: baseScore.diffError,
+        totalError: baseScore.totalError,
       },
     },
 
@@ -172,17 +186,15 @@ export async function finalizePost({
 
       isWin: result.isWin,
       scoreError: result.scoreError,
-      brier: result.brier,
       scorePrecision: result.scorePrecision,
-      confidence: result.confidence,
       hadUpsetGame,
 
-      // ★ 追加：Upset（独立）
       upsetHit: result.upsetHit,
       upsetPoints,
+      upsetBonus,
+      streakBonus,
 
-      // ★ 追加：総合得点（V3）
-      points: pointsV3.points,
+      points: totalPoints,
     })
   );
 }

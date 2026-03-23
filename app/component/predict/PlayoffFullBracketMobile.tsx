@@ -26,6 +26,7 @@ export type PlayoffFullBracketProps = {
   league?: League;
   className?: string;
   score?: number | string;
+  season?: string;
 
   leftRound1: TeamSlot[];
   leftRound2: TeamSlot[];
@@ -259,6 +260,7 @@ export default function PlayoffFullBracketMobile({
   league = "nba",
   className = "",
   score,
+  season,
   leftRound1,
   leftRound2,
   leftRound3,
@@ -343,7 +345,7 @@ export default function PlayoffFullBracketMobile({
       <PlayoffBracketBackground />
 
       <div className="relative z-10 pt-4">
-        <PlayoffBracketHeader />
+        <PlayoffBracketHeader season={season} />
       </div>
 
       <div

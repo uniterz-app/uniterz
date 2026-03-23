@@ -25,7 +25,6 @@ export default function RadarChart({ value }: RadarChartProps) {
 
   const data = [
     { key: "winRate", label: "勝率", value: value.winRate },
-    { key: "accuracy", label: "予測精度", value: value.accuracy },
     { key: "precision", label: "スコア精度", value: value.precision },
     { key: "upset", label: "Upset", value: value.upset },
     { key: "volume", label: "投稿量", value: value.volume },
@@ -66,15 +65,15 @@ export default function RadarChart({ value }: RadarChartProps) {
 
             <PolarAngleAxis
               dataKey="label"
-              tick={(props) => {
-                const payloadValue = props.payload?.value;
+              tick={(props: any) => {
+                const payloadValue = props?.payload?.value;
                 const item = data.find((d) => d.label === payloadValue);
                 if (!item) return <g />;
 
-                const x = Number(props.x);
-                const y = Number(props.y);
-                const cx = Number(props.cx);
-                const cy = Number(props.cy);
+                const x = Number(props?.x);
+                const y = Number(props?.y);
+                const cx = Number(props?.cx);
+                const cy = Number(props?.cy);
 
                 if (
                   Number.isNaN(x) ||
@@ -145,24 +144,24 @@ export default function RadarChart({ value }: RadarChartProps) {
         <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
           <div className="space-y-1.5 text-[11px] leading-relaxed text-white/65 lg:text-[13px]">
             <p>
-              <span className="font-semibold text-white/80">予測精度：</span>
-              予想した自信度と実際の結果がどれだけ一致しているかを示します。高いほど、自信の置き方が適切です。
-            </p>
-            <p>
-              <span className="font-semibold text-white/80">耐性：</span>
-              連続した結果の中でも判断がブレにくいかを示します。連勝と連敗をもとに判断します。
+              <span className="font-semibold text-white/80">勝率：</span>
+              的中率の高さを示します。高いほど安定して勝敗を当てています。
             </p>
             <p>
               <span className="font-semibold text-white/80">スコア精度：</span>
-              勝敗だけでなく、点差や展開まで含めた読みの正確さを示します。
+              予想スコアと実際スコアの近さを示します。
+            </p>
+            <p>
+              <span className="font-semibold text-white/80">Upset：</span>
+              波乱が起きる試合で少数派側を正しく当てる力を示します。
             </p>
             <p>
               <span className="font-semibold text-white/80">投稿量：</span>
               主戦場リーグ内での活動量を相対比較した指標です。多く投稿しているほど高くなります。
             </p>
             <p>
-              <span className="font-semibold text-white/80">Upset：</span>
-              波乱が起きる試合で少数派側を正しく当てる力を示します。
+              <span className="font-semibold text-white/80">耐性：</span>
+              連続した結果の中でも判断がブレにくいかを示します。連勝と連敗をもとに判断します。
             </p>
           </div>
 

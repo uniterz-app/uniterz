@@ -58,7 +58,7 @@ export type PredictionPostV2 = {
   ------------------------ */
   marketMeta?: {
     majoritySide: "home" | "away" | "draw";
-    majorityRatio: number; // 0〜1
+    majorityRatio: number;
   } | null;
 
   /* ------------------------
@@ -77,29 +77,19 @@ export type PredictionPostV2 = {
   ------------------------ */
   prediction: {
     winner: "home" | "away" | "draw";
-    confidence: number;
     score: { home: number; away: number };
   };
 
   note?: string;
 
   /* ------------------------
-     Interaction
-  ------------------------ */
-  likeCount?: number;
-  saveCount?: number;
-
-  /* ------------------------
      Stats (V2 – finalizePost準拠)
   ------------------------ */
   stats?: {
-    /* 基本 */
     isWin: boolean | null;
     hadUpsetGame?: boolean;
 
-    /* 精度系 */
     scoreError?: number | null;
-    brier?: number | null;
     scorePrecision?: number | null;
     scorePrecisionDetail?: {
       homePt: number;
@@ -107,17 +97,14 @@ export type PredictionPostV2 = {
       diffPt: number;
     } | null;
 
-    /* マーケット */
     marketCount?: number | null;
     marketMajority?: "home" | "away" | "draw" | null;
     isMajorityPick?: boolean;
     marketBias?: number | null;
 
-    /* Upset */
     upsetHit?: boolean;
     upsetPoints?: number | null;
 
-    /* V3 総合得点 */
     pointsV3?: number | null;
     pointsV3Detail?: {
       winnerCorrect: boolean;
@@ -129,7 +116,6 @@ export type PredictionPostV2 = {
       totalError: number | null;
     } | null;
 
-    /* ランキング */
     rankingReady?: boolean;
     rankingFactor?: 0 | 1;
   } | null;

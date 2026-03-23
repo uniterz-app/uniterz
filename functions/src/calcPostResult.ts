@@ -1,12 +1,6 @@
 import { judgeWin } from "./judgeWin";
 import { calcScorePrecision } from "./calcScorePrecision";
 
-function calcBrier(isWin: boolean, confidence: number) {
-  const p = Math.min(0.999, Math.max(0.001, confidence / 100));
-  const y = isWin ? 1 : 0;
-  return Math.round((p - y) * (p - y) * 10000) / 10000;
-}
-
 function calcScoreError(pred: any, real: any) {
   return Math.abs(pred.home - real.home) + Math.abs(pred.away - real.away);
 }
@@ -30,8 +24,6 @@ export function calcPostResult({
   const isMajorityPick = prediction.winner === marketMajority;
 
   const scoreError = calcScoreError(prediction.score, final);
-  const conf = Math.min(99, Math.max(1, prediction.confidence));
-  const brier = calcBrier(isWin, conf);
 
   const { homePt, awayPt, diffPt, totalPt } = calcScorePrecision({
     predictedHome: prediction.score.home,
@@ -41,7 +33,6 @@ export function calcPostResult({
     league: league ?? "bj",
   });
 
-  // upsetHit = 「アップセット試合」かつ「少数派を当てた」
   const pickSide = prediction.winner as "home" | "away" | "draw";
   const upsetHit =
     hadUpsetGame &&
@@ -53,8 +44,6 @@ export function calcPostResult({
   return {
     isWin,
     scoreError,
-    brier,
-    confidence: conf,
     scorePrecision: totalPt,
     scorePrecisionDetail: { homePt, awayPt, diffPt },
     marketMajority,

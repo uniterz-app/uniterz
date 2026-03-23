@@ -4,17 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
 import { FaTrophy } from "react-icons/fa";
-import { FiTrendingUp, FiUser } from "react-icons/fi";
+import { FiUser } from "react-icons/fi";
 import { Brain } from "lucide-react";
 import { useEffect, useState, CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { PiChartBarFill } from "react-icons/pi";
 
 type Item = {
   href: string;
-  key: "games" | "home" | "trend" | "ranking" | "mypage";
+  key: "games" | "home" | "leaderboards" | "ranking" | "mypage";
   label: string;
   icon: React.ComponentType<{
     size?: number;
@@ -26,8 +27,13 @@ type Item = {
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
   { key: "home", href: "/result", label: "リザルト", icon: Brain },
-  { key: "trend", href: "/trend", label: "トレンド", icon: FiTrendingUp },
   { key: "ranking", href: "/rankings", label: "ランキング", icon: FaTrophy },
+  {
+    key: "leaderboards",
+    href: "/leaderboards",
+    label: "リーダーボード",
+    icon: PiChartBarFill,
+  },
   { key: "mypage", href: "/mypage", label: "マイページ", icon: FiUser },
 ];
 
@@ -47,16 +53,17 @@ const BarStyle = {
     overflow: "hidden",
     background: "rgba(8, 30, 38, 0.55)",
     borderRadius: 30,
-    padding: "14px 20px",
+    padding: "9px 20px",
     display: "grid",
     gridTemplateColumns: "repeat(5, 1fr)",
     gap: 12,
     border: "1px solid rgba(255,255,255,0.14)",
     boxShadow:
-      "0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(80,220,255,0.06), 0 0 18px rgba(80,220,255,0.07)",
+      "0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(80,220,255,0.04)",
     backdropFilter: "saturate(135%) blur(8px)",
     WebkitBackdropFilter: "saturate(135%) blur(8px)",
     pointerEvents: "auto",
+    isolation: "isolate",
   } as CSSProperties,
 
   barWeb: {
@@ -70,10 +77,11 @@ const BarStyle = {
     gap: 8,
     border: "1px solid rgba(255,255,255,0.12)",
     boxShadow:
-      "0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,0.07), 0 0 0 1px rgba(80,220,255,0.05), 0 0 14px rgba(80,220,255,0.05)",
+      "0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,0.07), 0 0 0 1px rgba(80,220,255,0.035)",
     backdropFilter: "saturate(135%) blur(7px)",
     WebkitBackdropFilter: "saturate(135%) blur(7px)",
     pointerEvents: "auto",
+    isolation: "isolate",
   } as CSSProperties,
 
   glassSheen: {
@@ -91,7 +99,31 @@ const BarStyle = {
     borderRadius: "inherit",
     pointerEvents: "none",
     boxShadow:
-      "inset 0 0 0 1px rgba(120,240,255,0.10), inset 0 0 12px rgba(80,220,255,0.05), 0 0 12px rgba(70,210,255,0.06)",
+      "inset 0 0 0 1px rgba(120,240,255,0.08), inset 0 0 10px rgba(80,220,255,0.03)",
+  } as CSSProperties,
+
+  edgeGlow: {
+    position: "absolute",
+    inset: 0,
+    borderRadius: "inherit",
+    pointerEvents: "none",
+    background:
+      "radial-gradient(120% 80% at 50% 0%, rgba(120,240,255,0.10) 0%, rgba(120,240,255,0.04) 22%, rgba(120,240,255,0.00) 58%)",
+    filter: "blur(10px)",
+    opacity: 0.7,
+  } as CSSProperties,
+
+  bottomGlow: {
+    position: "absolute",
+    left: "8%",
+    right: "8%",
+    bottom: -10,
+    height: 24,
+    borderRadius: 999,
+    pointerEvents: "none",
+    background: "rgba(70,210,255,0.10)",
+    filter: "blur(18px)",
+    opacity: 0.5,
   } as CSSProperties,
 
   linkMobile: {
@@ -121,13 +153,35 @@ const BarStyle = {
     outline: "none",
     WebkitTapHighlightColor: "transparent",
   } as CSSProperties,
+
+  iconWrap: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 38,
+    height: 38,
+    borderRadius: "50%",
+    overflow: "visible",
+    lineHeight: 0,
+  } as CSSProperties,
 };
 
 export default function NavBar() {
   const pathname = usePathname() ?? "";
+
   const isMobile =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix: "/web" | "/mobile" = isMobile ? "/mobile" : "/web";
+
+  const shouldHide =
+    pathname === "/" ||
+    pathname === "/web" ||
+    pathname === "/mobile" ||
+    pathname === "/web/login" ||
+    pathname === "/web/signup" ||
+    pathname === "/mobile/login" ||
+    pathname === "/mobile/signup";
 
   const [mounted, setMounted] = useState(false);
   const [myHref, setMyHref] = useState<string | null>(null);
@@ -137,16 +191,9 @@ export default function NavBar() {
     setMounted(true);
   }, []);
 
-  if (
-    pathname === "/web/login" ||
-    pathname === "/web/signup" ||
-    pathname === "/mobile/login" ||
-    pathname === "/mobile/signup"
-  ) {
-    return null;
-  }
-
   useEffect(() => {
+    if (shouldHide) return;
+
     setInitialized(false);
     setMyHref(null);
 
@@ -171,8 +218,9 @@ export default function NavBar() {
     });
 
     return () => unsub();
-  }, [prefix]);
+  }, [prefix, shouldHide]);
 
+  if (shouldHide) return null;
   if (!mounted || !initialized || !myHref) return null;
 
   const navEl = (
@@ -187,11 +235,14 @@ export default function NavBar() {
 
       <nav style={BarStyle.wrap} aria-label="Bottom navigation">
         <div style={isMobile ? BarStyle.barMobile : BarStyle.barWeb}>
+          <div style={BarStyle.edgeGlow} />
+          <div style={BarStyle.bottomGlow} />
           <div style={BarStyle.glassSheen} />
           <div style={BarStyle.glowRing} />
 
           {items.map((item) => {
-            const href = item.key === "mypage" ? myHref : `${prefix}${item.href}`;
+            const href =
+              item.key === "mypage" ? myHref : `${prefix}${item.href}`;
             const active = pathname === href || pathname.startsWith(href + "/");
             const Icon = item.icon;
 
@@ -199,9 +250,16 @@ export default function NavBar() {
               ? {
                   animation: "popActive 0.24s ease",
                   transform: "scale(1.08)",
-                  filter: "drop-shadow(0 0 3px rgba(255,255,255,0.7))",
+                  position: "relative",
+                  zIndex: 2,
+                  opacity: 1,
                 }
-              : { transform: "scale(0.92)" };
+              : {
+                  transform: "scale(0.92)",
+                  position: "relative",
+                  zIndex: 2,
+                  opacity: 0.9,
+                };
 
             return (
               <Link
@@ -215,11 +273,13 @@ export default function NavBar() {
                 aria-label={item.label}
                 title={item.label}
               >
-                <Icon
-                  size={isMobile ? 26 : 24}
-                  color={active ? "#ffffff" : "rgba(255,255,255,0.45)"}
-                  style={iconStyle}
-                />
+                <span style={BarStyle.iconWrap}>
+                  <Icon
+                    size={isMobile ? 26 : 24}
+                    color={active ? "#ffffff" : "rgba(255,255,255,0.45)"}
+                    style={iconStyle}
+                  />
+                </span>
               </Link>
             );
           })}

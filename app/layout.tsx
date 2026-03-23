@@ -33,7 +33,7 @@ export default function RootLayout({
     <html lang="ja">
       <body
         style={{
-          backgroundColor: "#040A14",
+          backgroundColor: "#081116",
           margin: 0,
           padding: 0,
         }}

@@ -89,7 +89,6 @@ export default function ScorePrecisionCard({
           className,
         ].join(" ")}
       >
-        {/* タイトル */}
         <div className="mb-2 md:mb-4 flex items-center gap-2 text-xs md:text-[18px] font-semibold text-white">
           <div className="flex h-4 w-4 md:h-8 md:w-8 items-center justify-center rounded-full bg-black">
             <Gauge className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
@@ -107,11 +106,10 @@ export default function ScorePrecisionCard({
           </button>
         </div>
 
-        {/* 合計 */}
         <div
           className={[
             alfa.className,
-            "text-xl md:text-3xl",
+            "text-lg md:text-3xl",
             "font-bold text-white leading-none text-center tabular-nums",
           ].join(" ")}
         >
@@ -119,8 +117,7 @@ export default function ScorePrecisionCard({
           <span className="ml-2 text-sm md:text-lg text-white/70">pts</span>
         </div>
 
-        {/* AVG + バー */}
-        <div className="mt-3 md:mt-4 w-full">
+        <div className="mt-1 md:mt-4 w-full">
           <div className="flex items-center justify-between text-[11px] md:text-[16px] text-white/60">
             <span>AVG</span>
             <span className="tabular-nums">

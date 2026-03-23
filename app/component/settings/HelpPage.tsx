@@ -51,34 +51,6 @@ const faqs: FAQItem[] = [
     ),
   },
   {
-    id: "confidence",
-    label: "自信度",
-    question: "自信度（%）とは何ですか？",
-    icon: <Coins className="h-5 w-5 text-amber-300" />,
-    accentClass: "from-amber-400/70 via-orange-400/70 to-pink-500/70",
-    answer: (
-      <div className="space-y-2 text-sm leading-relaxed text-white/80">
-        <p>
-          自信度は、
-          <span className="font-semibold text-amber-300">
-            その予想が当たると思う確率
-          </span>
-          を 1〜100% で表した指標です。
-        </p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>90%：ほぼ勝つと思う</li>
-          <li>70%：有利と判断</li>
-          <li>50%：五分</li>
-          <li>30%：不利と判断</li>
-        </ul>
-        <p>
-          50% 未満の投稿は、
-          一致度（Calibration）の集計対象外になります。
-        </p>
-      </div>
-    ),
-  },
-  {
     id: "stats",
     label: "分析指標",
     question: "どんな成績指標がありますか？",

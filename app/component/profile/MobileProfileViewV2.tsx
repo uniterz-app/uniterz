@@ -1,52 +1,36 @@
-// app/component/profile/MobileProfileViewV2.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Menu, Flame } from "lucide-react";
 
-import { auth, db } from "@/lib/firebase";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 import Tabs from "./ui/Tabs";
 import PeriodToggle from "./ui/PeriodToggle";
 import SummaryCardsV2 from "./ui/SummaryCardsV2";
 
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
-
-import BadgeDetailModal from "@/app/mobile/(no-nav)/badges/BadgeDetailModal";
-import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
-import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
-import { useUserBadges } from "../badges/useUserBadges";
+import BadgeDetailModal from "@/app/mobile/badges/BadgeDetailModal";
 
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
-
 import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
-import { useUserDailyTrendV2 } from "@/lib/stats/useUserDailyTrendV2";
 
 import AnalysisWinCard from "./ui/summary/AnalysisWinCard";
 import TotalScoreCard from "./ui/summary/TotalScoreCard";
 import ScorePrecisionCard from "./ui/summary/ScorePrecisionCard";
-import ProbAccuracyCard from "./ui/summary/ProbAccuracyCard";
 import UpsetCard from "./ui/summary/UpsetCard";
 import MaxStreakCard from "./ui/summary/MaxStreakCard";
 
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
-import {
-  buildPlayoffDisplayData,
-  type PlayoffDisplayData,
-} from "@/lib/playoff-bracket-display";
-import {
-  loadPlayoffBracket,
-  type PlayoffBracketDoc,
-} from "@/lib/playoff-bracket-firestore";
-import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 
-type ResolvedBadge = MasterBadge & {
-  grantedAt: Date | null;
-};
+import { useProfilePlan } from "@/lib/profile/useProfilePlan";
+import {
+  useProfileBadges,
+  type ResolvedBadge,
+} from "@/lib/profile/useProfileBadges";
+import { useProfileDailyTrend } from "@/lib/profile/useProfileDailyTrend";
+import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
 
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
@@ -56,13 +40,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const { profile, tab, setTab, range, setRange, summary, targetUid } = props;
 
-  const me = auth.currentUser;
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
-
-  const { badges: userBadges } = useUserBadges(resolvedUid);
-  const { badges: masterBadges } = useMasterBadges();
-
-  const isMe = !!(me && targetUid && me.uid === targetUid);
   const isTargetGuestProfile = !targetUid;
 
   const displayProfile = isTargetGuestProfile
@@ -78,139 +56,36 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       }
     : profile;
 
-  const [myPlan, setMyPlan] = useState<string | null>(null);
+  const {
+    myPlan,
+    loadingPlan,
+    isMe,
+    isMyPro,
+    isTargetPro,
+    isProView,
+  } = useProfilePlan({
+    targetUid,
+    profilePlan: (displayProfile as any).plan,
+  });
 
-  const [playoffBracketLoading, setPlayoffBracketLoading] = useState(false);
-  const [playoffBracketDoc, setPlayoffBracketDoc] =
-    useState<PlayoffBracketDoc | null>(null);
+  const forceProView = false;
+  const currentIsProView = forceProView || isProView;
 
-  useEffect(() => {
-    const uid = me?.uid;
-    if (!uid) return;
+  const { resolvedBadges } = useProfileBadges(resolvedUid);
 
-    const userDocRef = doc(db, "users", uid);
-    getDoc(userDocRef).then((docSnap) => {
-      if (docSnap.exists()) setMyPlan(docSnap.data().plan ?? "free");
-      else setMyPlan("free");
-    });
-  }, [me]);
+  const { chartData: dailyTrendForChart } = useProfileDailyTrend(resolvedUid);
 
-  useEffect(() => {
-    const uid = me?.uid;
-    if (!uid) return;
-    if (uid !== targetUid) return;
-
-    const userDocRef = doc(db, "users", uid);
-
-    getDoc(userDocRef).then(async (snap) => {
-      if (!snap.exists()) return;
-
-      const data = snap.data();
-      const proUntil = data.proUntil?.toMillis?.();
-      const cancelAtPeriodEnd = data.cancelAtPeriodEnd === true;
-      const plan = data.plan;
-
-      if (
-        plan === "pro" &&
-        cancelAtPeriodEnd &&
-        typeof proUntil === "number" &&
-        Date.now() > proUntil
-      ) {
-        await setDoc(
-          userDocRef,
-          {
-            plan: "free",
-            proUntil: null,
-            cancelAtPeriodEnd: false,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
-        setMyPlan("free");
-      }
-    });
-  }, [me, targetUid]);
-
-const SEASON = getCurrentPlayoffSeason();
-
-useEffect(() => {
-  let cancelled = false;
-
-  async function fetchPlayoffBracket() {
-    if (!resolvedUid) {
-      setPlayoffBracketDoc(null);
-      setPlayoffBracketLoading(false);
-      return;
-    }
-
-    try {
-      setPlayoffBracketLoading(true);
-      const data = await loadPlayoffBracket(resolvedUid, SEASON);
-      if (cancelled) return;
-      setPlayoffBracketDoc(data);
-    } catch (e) {
-      if (cancelled) return;
-      console.error("failed to load playoff bracket", e);
-      setPlayoffBracketDoc(null);
-    } finally {
-      if (!cancelled) setPlayoffBracketLoading(false);
-    }
-  }
-
-  fetchPlayoffBracket();
-
-  return () => {
-    cancelled = true;
-  };
-}, [resolvedUid]);
-
-const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
-  if (!playoffBracketDoc?.bracket || !playoffBracketDoc?.season) return null;
-  return buildPlayoffDisplayData(
-    playoffBracketDoc.bracket,
-    playoffBracketDoc.season
-  );
-}, [playoffBracketDoc]);
-
-  const playoffScore = playoffBracketDoc?.totalScore ?? 0;
-
-  const profilePlan = (displayProfile as any).plan as string | undefined;
-  const isMyPro = myPlan === "pro";
-  const isTargetPro = profilePlan === "pro";
-  const isMyProfile = isMe;
-
-  const effectivePlan = isMe ? (myPlan ?? "free") : (profilePlan ?? "free");
-  const isProView = effectivePlan === "pro";
+  const {
+    loading: playoffBracketLoading,
+    playoffDisplayData,
+    playoffScore,
+  } = useProfilePlayoffBracket(resolvedUid);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(null);
 
-  const uidForDailyTrend = resolvedUid ?? undefined;
-  const { data: dailyTrend } = useUserDailyTrendV2(uidForDailyTrend);
-
   const canOpenSettings = isMe || isTargetGuestProfile;
-
-  const resolvedBadges = useMemo(() => {
-    return userBadges
-      .map((ub) => {
-        const master = masterBadges.find((m) => m.id === ub.badgeId);
-        if (!master) return null;
-        return { ...master, grantedAt: ub.grantedAt };
-      })
-      .filter((b): b is MasterBadge & { grantedAt: Date | null } => b !== null);
-  }, [userBadges, masterBadges]);
-
-  const dailyTrendForChart = useMemo(() => {
-    return (dailyTrend ?? []).map((row: any) => ({
-      date: row.date ?? row.dateKey ?? "",
-      posts: row.posts ?? 0,
-      wins: row.wins ?? row.hitCount ?? 0,
-      pointsV3: row.pointsV3 ?? row.totalPoints ?? row.pointsSumV3 ?? 0,
-      scorePrecision: row.scorePrecision ?? row.scorePrecisionSum ?? 0,
-      upsetPoints: row.upsetPoints ?? row.upsetPointsSum ?? 0,
-    }));
-  }, [dailyTrend]);
 
   const posts = summary?.posts ?? 0;
   const wins = (summary as any)?.wins ?? 0;
@@ -220,7 +95,8 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
   const upsetChanceCount = (summary as any)?.upsetChanceCount ?? 0;
   const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
 
-  const periodLabel = range === "7d" ? "7日" : range === "30d" ? "30日" : "All";
+  const periodLabel =
+    range === "7d" ? "7日" : range === "30d" ? "30日" : "All";
 
   const maxStreak = (displayProfile as any)?.maxStreak ?? 0;
   const currentStreak = Math.max(
@@ -229,7 +105,7 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
   );
   const showCurrentStreakBadge = currentStreak >= 3;
 
-  if (isMe && myPlan === null) {
+  if (isMe && loadingPlan) {
     return <div className="p-4 text-white/60">loading...</div>;
   }
 
@@ -284,6 +160,27 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
             )}
           </div>
         </div>
+
+        {resolvedBadges.length > 0 && (
+          <div className="mt-2 grid grid-cols-5">
+            {resolvedBadges.slice(0, 10).map((b) => (
+              <button
+                key={b.id}
+                className="h-12 w-12 overflow-hidden rounded-lg"
+                onClick={() => {
+                  setSelectedBadge(b);
+                  setBadgeModalOpen(true);
+                }}
+              >
+                <img
+                  src={b.icon}
+                  alt={b.title}
+                  className="h-full w-full object-contain"
+                />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex items-center justify-between">
@@ -293,20 +190,15 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
       <div className="mt-1">
         {tab === "overview" ? (
           <>
-            {isProView ? (
+            {currentIsProView ? (
               <>
                 <div className="grid grid-cols-5 items-stretch gap-3">
                   <div className="col-span-3 h-full">
                     <AnalysisWinCard posts={posts} wins={wins} />
                   </div>
 
-                  <div className="col-span-2 h-full">
-                    <TotalScoreCard
-                      compact
-                      periodLabel={periodLabel}
-                      totalPoints={totalPoints}
-                      analyses={posts}
-                    />
+                  <div className="col-span-2 h-full min-w-0">
+                    <MaxStreakCard compact maxStreak={maxStreak} />
                   </div>
                 </div>
 
@@ -319,17 +211,7 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
                     />
                   </div>
 
-                  <div className="h-full">
-                    <ProbAccuracyCard
-                      compact
-                      avgBrier={summary?.avgBrier ?? 0}
-                      analyses={posts}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3 grid grid-cols-5 items-stretch gap-3">
-                  <div className="col-span-3 h-full min-w-0">
+                  <div className="h-full min-w-0">
                     <UpsetCard
                       compact
                       upsetPointsSum={upsetPointsSum}
@@ -338,9 +220,16 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
                       upsetHitCount={upsetHitCount}
                     />
                   </div>
+                </div>
 
-                  <div className="col-span-2 h-full min-w-0">
-                    <MaxStreakCard compact maxStreak={maxStreak} />
+                <div className="mt-3 grid grid-cols-5 items-stretch gap-3">
+                  <div className="col-span-5 h-full">
+                    <TotalScoreCard
+                      compact
+                      periodLabel={periodLabel}
+                      totalPoints={totalPoints}
+                      analyses={posts}
+                    />
                   </div>
                 </div>
               </>
@@ -354,8 +243,8 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
                   wins: (summary as any)?.wins ?? 0,
                   winRate: summary?.winRate ?? 0,
                   scorePrecisionSum: summary?.scorePrecisionSum ?? 0,
-                  avgBrier: summary?.avgBrier ?? 0,
                   upsetPointsSum: summary?.upsetPointsSum ?? 0,
+                  maxStreak,
                   pointsSumV3: summary?.pointsSumV3 ?? 0,
                 }}
               />
@@ -369,7 +258,7 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
               <DailyTrendCard
                 data={dailyTrendForChart}
                 range={range}
-                allowAll={isProView}
+                allowAll={currentIsProView}
               />
             </div>
           </>
@@ -390,33 +279,33 @@ const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
                 まだブラケットは提出されていません。
               </p>
             </div>
-) : (
-<div className="relative mt-4">
-  <div
-  className="pointer-events-none absolute left-1/2 top-0 h-full w-[calc(100vw-10px)] -translate-x-1/2 rounded-[18px] bg-[#020611]"
-/>
+          ) : (
+            <div className="relative mt-4">
+              <div className="pointer-events-none absolute left-1/2 top-0 h-full w-[calc(100vw-10px)] -translate-x-1/2 rounded-[18px] bg-[#020611]" />
 
-  <div className="relative overflow-visible">
-    <PlayoffFullBracketMobile
-      league="nba"
-      score={playoffScore}
-      season={playoffDisplayData.season}
-      leftRound1={playoffDisplayData.leftRound1}
-      leftRound2={playoffDisplayData.leftRound2}
-      leftRound3={playoffDisplayData.leftRound3}
-      leftRound4={playoffDisplayData.leftRound4}
-      rightRound1={playoffDisplayData.rightRound1}
-      rightRound2={playoffDisplayData.rightRound2}
-      rightRound3={playoffDisplayData.rightRound3}
-      rightRound4={playoffDisplayData.rightRound4}
-      champion={playoffDisplayData.champion}
-    />
-  </div>
-</div>
-)
+              <div className="relative overflow-visible">
+                <PlayoffFullBracketMobile
+                  league="nba"
+                  score={playoffScore}
+                  season={playoffDisplayData.season}
+                  leftRound1={playoffDisplayData.leftRound1}
+                  leftRound2={playoffDisplayData.leftRound2}
+                  leftRound3={playoffDisplayData.leftRound3}
+                  leftRound4={playoffDisplayData.leftRound4}
+                  rightRound1={playoffDisplayData.rightRound1}
+                  rightRound2={playoffDisplayData.rightRound2}
+                  rightRound3={playoffDisplayData.rightRound3}
+                  rightRound4={playoffDisplayData.rightRound4}
+                  champion={playoffDisplayData.champion}
+                />
+              </div>
+            </div>
+          )
         ) : isTargetGuestProfile ? (
           <ProPreview />
-        ) : isMyProfile ? (
+        ) : currentIsProView ? (
+          <ProAnalysis />
+        ) : isMe ? (
           myPlan === "pro" ? (
             <ProAnalysis />
           ) : (

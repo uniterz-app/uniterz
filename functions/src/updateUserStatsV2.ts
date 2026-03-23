@@ -10,24 +10,26 @@ export type StatsV2Bucket = {
   wins: number;
 
   scoreErrorSum: number;
-  brierSum: number;
   upsetHitCount: number; // 少数派Upset的中数
   upsetOpportunityCount: number; // upsetGameの母数（hadUpsetGame）
   scorePrecisionSum: number;
 
-  // ★ 追加：総合得点（pointsV3）
+  // 総合得点
   pointsSumV3: number;
 
-  // ★ 追加：Upset独立ポイント合計
+  // Upset独立ポイント合計
   upsetPointsSum: number;
+
+  // 総合得点内訳ボーナス合計
+  upsetBonusSum: number;
+  streakBonusSum: number;
 
   winRate: number;
   avgScoreError: number;
-  avgBrier: number;
   upsetHitRate: number;
   avgPrecision: number;
 
-  // ★ 追加：平均総合得点
+  // 平均総合得点
   avgPointsV3: number;
 
   consistency?: number;
@@ -43,17 +45,19 @@ type ApplyOptsV2 = {
 
   isWin: boolean;
   scoreError: number;
-  brier: number;
   scorePrecision: number;
-  confidence: number;
   hadUpsetGame: boolean;
 
-  // ★ 追加：finalizePost から渡す
+  // finalizePost から渡す
   points: number;
 
-  // ★ 追加：Upset（独立）
-  upsetHit: boolean;     // 少数派的中
-  upsetPoints: number;   // 0〜10
+  // Upset（独立）
+  upsetHit: boolean;
+  upsetPoints: number; // 0〜10
+
+  // 総合得点内訳ボーナス
+  upsetBonus: number;
+  streakBonus: number;
 };
 
 const db = () => getFirestore();
@@ -93,24 +97,20 @@ function emptyBucket(): StatsV2Bucket {
     posts: 0,
     wins: 0,
     scoreErrorSum: 0,
-    brierSum: 0,
     upsetHitCount: 0,
     upsetOpportunityCount: 0,
     scorePrecisionSum: 0,
 
-    // ★ 追加
     pointsSumV3: 0,
-
-    // ★ 追加
     upsetPointsSum: 0,
+
+    upsetBonusSum: 0,
+    streakBonusSum: 0,
 
     winRate: 0,
     avgScoreError: 0,
-    avgBrier: 0,
     upsetHitRate: 0,
     avgPrecision: 0,
-
-    // ★ 追加
     avgPointsV3: 0,
 
     upsetPickCount: 0,
@@ -125,14 +125,11 @@ function recomputeCache(b: StatsV2Bucket): StatsV2Bucket {
     ...b,
     winRate: posts ? wins / posts : 0,
     avgScoreError: posts ? b.scoreErrorSum / posts : 0,
-    avgBrier: posts ? b.brierSum / posts : 0,
     avgPrecision: posts ? b.scorePrecisionSum / posts : 0,
     upsetHitRate:
       b.upsetOpportunityCount > 0
         ? b.upsetHitCount / b.upsetOpportunityCount
         : 0,
-
-    // ★ 追加：平均総合得点
     avgPointsV3: posts ? b.pointsSumV3 / posts : 0,
   };
 }
@@ -149,12 +146,13 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     league,
     isWin,
     scoreError,
-    brier,
     scorePrecision,
     hadUpsetGame,
     points,
     upsetHit,
     upsetPoints,
+    upsetBonus,
+    streakBonus,
   } = opts;
 
   const dateKey = toDateKeyJST(startAt);
@@ -163,36 +161,28 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
   const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
   const markerRef = dailyRef.collection("applied_posts").doc(postId);
 
-  // ★ 追加：ユーザー集計用
   const userStatsRef = db().doc(`user_stats_v2/${uid}`);
 
   await db().runTransaction(async (tx) => {
     const marker = await tx.get(markerRef);
     if (marker.exists) return;
 
-    // ---------- increment data ----------
     const inc: any = {
       posts: FieldValue.increment(1),
       wins: FieldValue.increment(isWin ? 1 : 0),
       scoreErrorSum: FieldValue.increment(scoreError),
-      brierSum: FieldValue.increment(brier),
 
-      // upset
       upsetOpportunityCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
-
-      // ★ 修正：少数派Upset的中でカウント
       upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
-
-      // ★ 追加（Upset を狙った回数）※現状仕様のまま
       upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
 
       scorePrecisionSum: FieldValue.increment(scorePrecision),
 
-      // ★ 追加：総合得点
       pointsSumV3: FieldValue.increment(points),
-
-      // ★ 追加：Upset独立ポイント
       upsetPointsSum: FieldValue.increment(upsetPoints),
+
+      upsetBonusSum: FieldValue.increment(upsetBonus),
+      streakBonusSum: FieldValue.increment(streakBonus),
     };
 
     const update: any = {
@@ -207,7 +197,6 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         [leagueKey]: inc,
       };
 
-      // ★ 追加：リーグ別投稿数を累積
       tx.set(
         userStatsRef,
         {
@@ -255,17 +244,16 @@ export async function getStatsForDateRangeV2(
     b.posts += src.posts || 0;
     b.wins += src.wins || 0;
     b.scoreErrorSum += src.scoreErrorSum || 0;
-    b.brierSum += src.brierSum || 0;
     b.upsetHitCount += src.upsetHitCount || 0;
     b.upsetOpportunityCount += src.upsetOpportunityCount || 0;
     b.scorePrecisionSum += src.scorePrecisionSum || 0;
     b.upsetPickCount += src.upsetPickCount || 0;
 
-    // ★ 追加
     b.pointsSumV3 += src.pointsSumV3 || 0;
-
-    // ★ 追加
     b.upsetPointsSum += src.upsetPointsSum || 0;
+
+    b.upsetBonusSum += src.upsetBonusSum || 0;
+    b.streakBonusSum += src.streakBonusSum || 0;
   }
 
   return recomputeCache(b);

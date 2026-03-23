@@ -79,18 +79,6 @@ export function evaluateWinRateV2(winRate01: number): HighlightV2 {
 }
 
 /* =============================
- * 確率精度（Accuracy % = (1 - AvgBrier)*100）
- * ============================= */
-export function evaluateAccuracyV2(accPct: number): HighlightV2 {
-  const a = Number(accPct);
-  if (!Number.isFinite(a) || a <= 0) return { level: "none" };
-
-  if (a >= 80) return { level: "strong", reason: "accuracy>=80%" };
-  if (a >= 70) return { level: "yellow", reason: "accuracy>=70%" };
-  return { level: "none" };
-}
-
-/* =============================
  * スコア精度（合計：scorePrecisionSum）
  * ============================= */
 export function evaluateScorePrecisionSumV2(

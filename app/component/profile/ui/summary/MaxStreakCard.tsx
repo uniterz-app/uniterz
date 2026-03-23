@@ -79,13 +79,11 @@ export default function MaxStreakCard({
           "rounded-xl border border-white/10 bg-[#050814]/80",
           "p-3 md:p-6",
           "shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
-          "flex flex-col items-center justify-start",
-          "h-full",
+          "flex h-full flex-col",
           className,
         ].join(" ")}
       >
-        {/* タイトル */}
-        <div className="mb-2 md:mb-4 flex items-center gap-2 text-xs md:text-[18px] font-semibold text-white">
+        <div className="mb-2 md:mb-4 flex items-center justify-center gap-2 text-xs md:text-[18px] font-semibold text-white">
           <div className="flex h-4 w-4 md:h-8 md:w-8 items-center justify-center rounded-full bg-black">
             <Flame className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
           </div>
@@ -102,22 +100,21 @@ export default function MaxStreakCard({
           </button>
         </div>
 
-        {/* 数値 */}
-        <div
-          className={[
-            alfa.className,
-            "mt-2 md:mt-4",
-            "text-2xl md:text-3xl",
-            "font-bold leading-none text-center tabular-nums",
-            valueColor,
-          ].join(" ")}
-        >
-          {cu}
-        </div>
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <div
+            className={[
+              alfa.className,
+              "text-2xl md:text-3xl",
+              "font-bold leading-none text-center tabular-nums",
+              valueColor,
+            ].join(" ")}
+          >
+            {cu}
+          </div>
 
-        {/* 説明 */}
-        <div className="mt-2 md:mt-4 text-[11px] md:text-[15px] text-white/60 text-center leading-snug">
-          全期間での最高連勝
+<div className="mt-3 text-[11px] md:text-[15px] text-white/60 text-center leading-snug">
+  全期間での最高連勝
+</div>
         </div>
       </div>
 

@@ -16,7 +16,7 @@ import { getIsFollowing } from "@/lib/follow";
 
 export type Profile = {
   displayName: string;
-  handle: string; // 先頭に @ を付けた表示用
+  handle: string;
   bio: string;
   avatarUrl: string;
   counts: { posts: number; followers: number; following: number };
@@ -24,44 +24,45 @@ export type Profile = {
   maxStreak: number;
 };
 
+type Counts = {
+  posts: number;
+  followers: number;
+  following: number;
+};
+
+type UserState = {
+  displayName?: string;
+  handle?: string;
+  bio?: string;
+  photoURL?: string;
+  currentStreak?: number;
+  maxStreak?: number;
+} | null;
+
+const EMPTY_COUNTS: Counts = {
+  posts: 0,
+  followers: 0,
+  following: 0,
+};
+
 const BASE_PROFILE: Omit<Profile, "handle"> & { handle?: string } = {
   displayName: "Chiki",
   bio: "",
-  avatarUrl:
-    "https://images.unsplash.com/photo-1541614101341-1b1c1f1a1c87?q=80&w=400&auto=format&fit=crop",
-  counts: { posts: 128, followers: 2450, following: 311 },
+  avatarUrl: "",
+  counts: EMPTY_COUNTS,
   currentStreak: 0,
   maxStreak: 0,
 };
 
 export function useProfile(handle: string) {
-  // URL の handle を decode して固定
   const decodedHandle = useMemo(() => decodeURIComponent(handle), [handle]);
 
-  const [user, setUser] = useState<{
-    displayName?: string;
-    handle?: string;
-    bio?: string;
-    photoURL?: string;
-    currentStreak?: number;
-  maxStreak?: number;
-  } | null>(null);
-
+  const [user, setUser] = useState<UserState>(null);
   const [loading, setLoading] = useState(true);
-
-  type Counts = { posts: number; followers: number; following: number };
-  const [counts, setCounts] = useState<Counts>({
-    posts: 0,
-    followers: 0,
-    following: 0,
-  });
-
-  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [counts, setCounts] = useState<Counts>(EMPTY_COUNTS);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [targetUid, setTargetUid] = useState<string | null>(null);
 
-  /* ---------------------------------------------------------
-   * 1) handle からユーザーを1回解決
-   * --------------------------------------------------------- */
   useEffect(() => {
     let cancelled = false;
 
@@ -76,27 +77,39 @@ export function useProfile(handle: string) {
         );
         const snap = await getDocs(qref);
 
-        if (!cancelled && !snap.empty) {
-          const docSnap = snap.docs[0];
-          const d = docSnap.data() as any;
+        if (cancelled) return;
 
-          setTargetUid(docSnap.id);
-
-          setCounts(d.counts ?? {
-            posts: 0,
-            followers: 0,
-            following: 0,
-          });
-
-          setUser({
-            displayName: d.displayName ?? "",
-            handle: d.handle ?? decodedHandle,
-            bio: d.bio ?? "",
-            photoURL: d.photoURL ?? "",
-            currentStreak: d.currentStreak ?? 0,
-  maxStreak: d.maxStreak ?? 0,
-          });
+        if (snap.empty) {
+          setTargetUid(null);
+          setUser(null);
+          setCounts(EMPTY_COUNTS);
+          setIsFollowing(false);
+          return;
         }
+
+        const docSnap = snap.docs[0];
+        const d = docSnap.data() as any;
+
+        setTargetUid(docSnap.id);
+
+        setCounts(
+          d.counts
+            ? {
+                posts: d.counts.posts ?? 0,
+                followers: d.counts.followers ?? 0,
+                following: d.counts.following ?? 0,
+              }
+            : EMPTY_COUNTS
+        );
+
+        setUser({
+          displayName: d.displayName ?? "",
+          handle: d.handle ?? decodedHandle,
+          bio: d.bio ?? "",
+          photoURL: d.photoURL ?? "",
+          currentStreak: d.currentStreak ?? 0,
+          maxStreak: d.maxStreak ?? 0,
+        });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -107,81 +120,74 @@ export function useProfile(handle: string) {
     };
   }, [decodedHandle]);
 
-  /* ---------------------------------------------------------
-   * 2) users/{uid} をリアルタイム購読（ログアウト時は購読しない）
-   * --------------------------------------------------------- */
-useEffect(() => {
-  if (!targetUid) return;
+  useEffect(() => {
+    if (!targetUid) return;
 
-  // 🔥 ログイン有無で分岐しない
-  const ref = doc(db, "users", targetUid);
+    const ref = doc(db, "users", targetUid);
 
-  const unsub = onSnapshot(ref, (snap) => {
-    const d = snap.data() as any;
-    if (!d) return;
+    const unsub = onSnapshot(ref, (snap) => {
+      const d = snap.data() as any;
+      if (!d) return;
 
-    setUser({
-      displayName: d.displayName ?? "",
-      handle: d.handle ?? decodedHandle,
-      bio: d.bio ?? "",
-      photoURL: d.photoURL ?? "",
-      currentStreak: d.currentStreak ?? 0,
-      maxStreak: d.maxStreak ?? 0,
+      setUser({
+        displayName: d.displayName ?? "",
+        handle: d.handle ?? decodedHandle,
+        bio: d.bio ?? "",
+        photoURL: d.photoURL ?? "",
+        currentStreak: d.currentStreak ?? 0,
+        maxStreak: d.maxStreak ?? 0,
+      });
+
+      setCounts(
+        d.counts
+          ? {
+              posts: d.counts.posts ?? 0,
+              followers: d.counts.followers ?? 0,
+              following: d.counts.following ?? 0,
+            }
+          : EMPTY_COUNTS
+      );
     });
 
-    if (d.counts) {
-      setCounts({
-        posts: d.counts.posts ?? 0,
-        followers: d.counts.followers ?? 0,
-        following: d.counts.following ?? 0,
-      });
+    return () => unsub();
+  }, [targetUid, decodedHandle]);
+
+  useEffect(() => {
+    if (!targetUid) {
+      setIsFollowing(false);
+      return;
     }
-  });
 
-  return () => unsub();
-}, [targetUid, decodedHandle]);
+    const me = auth.currentUser;
+    if (!me) {
+      setIsFollowing(false);
+      return;
+    }
 
-  /* ---------------------------------------------------------
-   * 3) フォロー状態チェック（ログアウト時は実行しない）
-   * --------------------------------------------------------- */
-useEffect(() => {
-  if (!targetUid) return;
+    let mounted = true;
 
-  const me = auth.currentUser;
+    getIsFollowing(targetUid)
+      .then((v) => {
+        if (mounted) setIsFollowing(v);
+      })
+      .catch(() => {});
 
-  // 🔥 ゲストは必ず false
-  if (!me) {
-    setIsFollowing(false);
-    return;
-  }
+    return () => {
+      mounted = false;
+    };
+  }, [targetUid]);
 
-  let mounted = true;
-
-  getIsFollowing(targetUid)
-    .then((v) => mounted && setIsFollowing(v))
-    .catch(() => {});
-
-  return () => {
-    mounted = false;
-  };
-}, [targetUid]);
-
-  /* ---------------------------------------------------------
-   * 4) 表示用プロフィールを整形
-   * --------------------------------------------------------- */
   const profile: Profile = useMemo(() => {
     const u = user ?? {};
+
     return {
       displayName: u.displayName || BASE_PROFILE.displayName,
-      handle: u.handle || decodedHandle,   // ← @ を付けない
+      handle: u.handle || decodedHandle,
       bio: u.bio ?? "",
-      avatarUrl:
-  u.photoURL && u.photoURL.trim()
-    ? u.photoURL
-    : "",
+      avatarUrl: u.photoURL && u.photoURL.trim() ? u.photoURL : "",
       counts,
-      currentStreak: (u as any).currentStreak ?? 0,
-    maxStreak: (u as any).maxStreak ?? 0,
+      currentStreak: u.currentStreak ?? 0,
+      maxStreak: u.maxStreak ?? 0,
     };
   }, [user, decodedHandle, counts]);
 

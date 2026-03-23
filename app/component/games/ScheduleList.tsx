@@ -1,15 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
+import { usePathname } from "next/navigation";
+import { LayoutGroup, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
 import { toMatchCardProps } from "@/lib/games/transform";
@@ -78,6 +74,13 @@ export default function ScheduleList({
   loading?: boolean;
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
+  const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
+  const [disableReturnLayout, setDisableReturnLayout] = useState(false);
+
+  const pathname = usePathname();
+  const isMobile =
+    pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
+
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const scrollYRef = useRef(0);
 
@@ -111,21 +114,18 @@ export default function ScheduleList({
     return propsList.find((p) => String(p.id) === String(openGameId)) ?? null;
   }, [propsList, openGameId]);
 
-const open = useCallback((gameId: string) => {
-  scrollYRef.current = window.scrollY;
-  setOpenGameId(String(gameId));
-}, []);
+  const open = useCallback((gameId: string) => {
+    scrollYRef.current = window.scrollY;
+    setStandingsOpenInOverlay(false);
+    setDisableReturnLayout(false);
+    setOpenGameId(String(gameId));
+  }, []);
 
-const close = useCallback(() => {
-  setOpenGameId(null);
-
-  requestAnimationFrame(() => {
-    window.scrollTo({
-      top: scrollYRef.current,
-      behavior: "auto",
-    });
-  });
-}, []);
+  const close = useCallback(() => {
+    setStandingsOpenInOverlay(false);
+    setDisableReturnLayout(true);
+    setOpenGameId(null);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -279,12 +279,32 @@ const close = useCallback(() => {
     if (!openGameId) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        if (standingsOpenInOverlay) return;
+        close();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [openGameId, close]);
+  }, [openGameId, standingsOpenInOverlay, close]);
+
+  useEffect(() => {
+    if (openGameId !== null) return;
+
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: scrollYRef.current,
+        behavior: "auto",
+      });
+    });
+  }, [openGameId]);
+
+  useEffect(() => {
+    if (!openGameId) {
+      setDisableReturnLayout(false);
+    }
+  }, [openGameId]);
 
   if (loading) {
     return (
@@ -302,9 +322,9 @@ const close = useCallback(() => {
     );
   }
 
-if (!propsList.length) {
-  return null;
-}
+  if (!propsList.length) {
+    return null;
+  }
 
   return (
     <LayoutGroup id="schedule-list">
@@ -316,7 +336,6 @@ if (!propsList.length) {
         animate={{
           scale: openGameId ? 0.988 : 1,
           opacity: openGameId ? 0.94 : 1,
-          filter: openGameId ? "blur(0.8px)" : "blur(0px)",
         }}
         transition={{
           duration: 0.28,
@@ -324,7 +343,7 @@ if (!propsList.length) {
         }}
       >
         {propsList.map((props) => {
-          const isOpen = String(openGameId) === String(props.id);
+          const isOpen = !!selectedProps && String(selectedProps.id) === String(props.id);
 
           return (
             <div
@@ -345,7 +364,9 @@ if (!propsList.length) {
                     ? teamRecordMap[props.away.teamId] ?? null
                     : null
                 }
-                sharedLayoutId={`matchcard-${props.id}`}
+                sharedLayoutId={
+                  disableReturnLayout ? undefined : `matchcard-${props.id}`
+                }
                 onOpenPredict={open}
                 showMarketBias={false}
                 disableCardMotion={!!openGameId}
@@ -355,157 +376,162 @@ if (!propsList.length) {
         })}
       </motion.div>
 
-      <AnimatePresence mode="wait">
-        {openGameId && selectedProps && (
+      {openGameId && selectedProps && (
+        <motion.div
+          key="prediction-page"
+          className="fixed inset-0 z-[99999] overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            duration: 0.2,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+        >
           <motion.div
-            key="prediction-page"
-            className="fixed inset-0 z-[99999] overflow-hidden"
+            className={[
+              "absolute inset-0 z-0 bg-black/22 backdrop-blur-[10px]",
+              standingsOpenInOverlay
+                ? "pointer-events-none"
+                : "pointer-events-auto",
+            ].join(" ")}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{
-              duration: 0.2,
-              ease: [0.22, 1, 0.36, 1],
+            transition={{ duration: 0.22 }}
+            onClick={() => {
+              if (standingsOpenInOverlay) return;
+              close();
+            }}
+          />
+
+          <div
+            className="relative z-10 h-[100dvh] overflow-y-auto overflow-x-hidden pointer-events-auto"
+            style={{
+              WebkitOverflowScrolling: "touch",
+              overscrollBehaviorY: "contain",
+              overscrollBehaviorX: "none",
+              touchAction: "pan-y",
+            }}
+            onTouchStartCapture={(e) => {
+              const t = e.touches[0];
+              if (!t) return;
+              touchStartRef.current = { x: t.clientX, y: t.clientY };
+            }}
+            onTouchMoveCapture={(e) => {
+              const start = touchStartRef.current;
+              const t = e.touches[0];
+              if (!start || !t) return;
+
+              const dx = Math.abs(t.clientX - start.x);
+              const dy = Math.abs(t.clientY - start.y);
+
+              if (dx > dy && dx > 8) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
+            onTouchEndCapture={() => {
+              touchStartRef.current = null;
+            }}
+            onTouchCancelCapture={() => {
+              touchStartRef.current = null;
             }}
           >
-            <motion.div
-              className="absolute inset-0 z-0 bg-black/22 backdrop-blur-[10px] pointer-events-auto"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              onClick={close}
-            />
-
             <div
-              className="relative z-10 h-[100dvh] overflow-y-auto overflow-x-hidden pointer-events-auto"
-              style={{
-                WebkitOverflowScrolling: "touch",
-                overscrollBehaviorY: "contain",
-                overscrollBehaviorX: "none",
-                touchAction: "pan-y",
-              }}
-              onTouchStartCapture={(e) => {
-                const t = e.touches[0];
-                if (!t) return;
-                touchStartRef.current = { x: t.clientX, y: t.clientY };
-              }}
-              onTouchMoveCapture={(e) => {
-                const start = touchStartRef.current;
-                const t = e.touches[0];
-                if (!start || !t) return;
-
-                const dx = Math.abs(t.clientX - start.x);
-                const dy = Math.abs(t.clientY - start.y);
-
-                if (dx > dy && dx > 8) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-              }}
-              onTouchEndCapture={() => {
-                touchStartRef.current = null;
-              }}
-              onTouchCancelCapture={() => {
-                touchStartRef.current = null;
-              }}
+              className={[
+                "mx-auto w-full overflow-x-hidden",
+                isMobile
+                  ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
+                  : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
+              ].join(" ")}
+              onClick={(e) => e.stopPropagation()}
             >
-              <div
-                className="mx-auto w-full max-w-2xl overflow-x-hidden px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
-                onClick={(e) => e.stopPropagation()}
+              <motion.div
+                className="relative w-full overflow-x-hidden"
+                initial={{
+                  opacity: 0,
+                  y: 18,
+                  scale: 0.972,
+                  filter: "blur(10px)",
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  filter: "blur(0px)",
+                }}
+                transition={{
+                  duration: 0.42,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
               >
-                <motion.div
-                  className="relative w-full overflow-x-hidden"
-                  initial={{
-                    opacity: 0,
-                    y: 18,
-                    scale: 0.972,
-                    filter: "blur(10px)",
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    filter: "blur(0px)",
-                  }}
-                  exit={{
-                    opacity: 0,
-                    y: 8,
-                    scale: 0.985,
-                    filter: "blur(6px)",
-                  }}
-                  transition={{
-                    duration: 0.42,
-                    ease: [0.22, 1, 0.36, 1],
+                <button
+                  type="button"
+                  aria-label="閉じる"
+                  className={[
+                    "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55",
+                    standingsOpenInOverlay
+                      ? "pointer-events-none opacity-0"
+                      : "",
+                  ].join(" ")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (standingsOpenInOverlay) return;
+                    close();
                   }}
                 >
-                  <button
-                    type="button"
-                    aria-label="閉じる"
-                    className="absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                  <X size={18} strokeWidth={2.4} />
+                </button>
+
+                <MatchCard
+                  {...selectedProps}
+                  myPostId={myPostMap[String(selectedProps.id)] ?? null}
+                  homeRecord={
+                    selectedProps.home?.teamId
+                      ? teamRecordMap[selectedProps.home.teamId] ?? null
+                      : null
+                  }
+                  awayRecord={
+                    selectedProps.away?.teamId
+                      ? teamRecordMap[selectedProps.away.teamId] ?? null
+                      : null
+                  }
+                  sharedLayoutId={undefined}
+                  disableCardMotion
+                  hideActions
+                  showMarketBias
+                  inPredictOverlay
+                />
+
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.3,
+                    delay: 0.05,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="mt-2 overflow-x-hidden px-0 py-0"
+                >
+                  <PredictionFormV2
+                    dense={dense}
+                    game={selectedProps}
+                    user={{ name: "You" }}
+                    embedded
+                    inOverlay
+                    onStandingsOpenChange={(open) => {
+                      setStandingsOpenInOverlay(open);
+                      if (open) setDisableReturnLayout(true);
+                    }}
+                    onPostCreated={() => {
                       close();
                     }}
-                  >
-                    <X size={18} strokeWidth={2.4} />
-                  </button>
-
-                  <MatchCard
-                    {...selectedProps}
-                    myPostId={myPostMap[String(selectedProps.id)] ?? null}
-                    homeRecord={
-                      selectedProps.home?.teamId
-                        ? teamRecordMap[selectedProps.home.teamId] ?? null
-                        : null
-                    }
-                    awayRecord={
-                      selectedProps.away?.teamId
-                        ? teamRecordMap[selectedProps.away.teamId] ?? null
-                        : null
-                    }
-                    sharedLayoutId={`matchcard-${selectedProps.id}`}
-                    disableCardMotion
-                    hideActions
-                    showMarketBias
-                    inPredictOverlay
                   />
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 8 }}
-                    transition={{
-                      duration: 0.3,
-                      delay: 0.05,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    className="mt-2 overflow-x-hidden px-0 py-0"
-                  >
-<PredictionFormV2
-  dense={dense}
-  game={selectedProps}
-  user={{ name: "You" }}
-  embedded
-  inOverlay
-  onPostCreated={() => {
-    setOpenGameId(null);
-
-    requestAnimationFrame(() => {
-      window.scrollTo({
-        top: scrollYRef.current,
-        behavior: "auto",
-      });
-    });
-  }}
-/>
-                  </motion.div>
                 </motion.div>
-              </div>
+              </motion.div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
     </LayoutGroup>
   );
 }
