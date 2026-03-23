@@ -67,13 +67,22 @@ export async function GET(req: Request) {
     const uids = [...new Set(brackets.map((b) => b.uid))];
     const userMap = new Map<string, { displayName: string; handle: string | null; photoURL: string | null }>();
 
-    for (const uid of uids) {
-      const userSnap = await adminDb.collection("users").doc(uid).get();
-      const u = userSnap.data() as { displayName?: string; handle?: string; photoURL?: string; avatarUrl?: string } | undefined;
-      userMap.set(uid, {
-        displayName: u?.displayName?.trim() ?? "User",
-        handle: u?.handle?.trim() ?? null,
-        photoURL: u?.photoURL ?? u?.avatarUrl ?? null,
+    // Firestore getAll は最大 100 件まで。バッチで取得
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < uids.length; i += BATCH_SIZE) {
+      const batch = uids.slice(i, i + BATCH_SIZE);
+      const refs = batch.map((uid) => adminDb.collection("users").doc(uid));
+      const snaps = await adminDb.getAll(...refs);
+
+      snaps.forEach((snap, idx) => {
+        const uid = batch[idx];
+        if (!uid) return;
+        const u = snap.data() as { displayName?: string; handle?: string; photoURL?: string; avatarUrl?: string } | undefined;
+        userMap.set(uid, {
+          displayName: u?.displayName?.trim() ?? "User",
+          handle: u?.handle?.trim() ?? null,
+          photoURL: u?.photoURL ?? u?.avatarUrl ?? null,
+        });
       });
     }
 

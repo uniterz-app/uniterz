@@ -6,7 +6,6 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore";
 
 import MatchCard from "@/app/component/games/MatchCard";
-import PredictionListByGame from "@/app/component/post/PredictionListByGame";
 
 // ★ 新しい勝敗分布ドーナツ（V2）
 import GamePredictionDistributionV2 from "@/app/component/predict/GamePredictionDistribution";
@@ -131,10 +130,7 @@ export default function Page() {
 )}
       </div>
 
-      {/* 投稿一覧 */}
-      <div className="mt-2">
-        <PredictionListByGame gameId={gameId} />
-      </div>
+      {/* 投稿一覧（TODO: コンポーネント実装） */}
 
       {/* 🔥 初投稿ボタン（ログイン済みのみ表示） */}
 {uid && hasMyPost === false && (

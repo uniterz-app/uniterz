@@ -25,7 +25,7 @@ export default function LoginRequiredModal({
     variant === "web" ? "/web/signup" : "/mobile/signup";
 
   return (
-    <div className="fixed inset-0 z-[1000]">
+    <div className="fixed inset-0 z-1000">
       {/* backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -58,7 +58,7 @@ export default function LoginRequiredModal({
             {/* アカウント作成 */}
             <button
               onClick={() => router.push(signupHref)}
-              className="flex-1 rounded-xl bg-gradient-to-r from-orange-400 to-orange-500 py-2 text-sm font-bold text-black hover:opacity-90"
+              className="flex-1 rounded-xl bg-linear-to-r from-orange-400 to-orange-500 py-2 text-sm font-bold text-black hover:opacity-90"
             >
               アカウント作成
             </button>

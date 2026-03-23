@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Fragment } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 /* ================= util ================= */
@@ -75,7 +75,6 @@ type Team = {
 
 type Props = {
   teamHrefBase: string;
-  useLiveSnapshot?: boolean;
   compact?: boolean;
   className?: string;
 };
@@ -84,7 +83,6 @@ type Props = {
 
 export default function NbaStandingsPanel({
   teamHrefBase,
-  useLiveSnapshot = false,
   compact = false,
   className = "",
 }: Props) {
@@ -93,54 +91,29 @@ export default function NbaStandingsPanel({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let alive = true;
     const q = query(collection(db, "teams"), where("league", "==", "nba"));
 
-    if (useLiveSnapshot) {
-      const unsub = onSnapshot(
-        q,
-        (snap) => {
-          const list = snap.docs.map((d) => ({
-            id: d.id,
-            ...(d.data() as Omit<Team, "id">),
-          }));
-          setTeams(list);
-          setLoading(false);
-        },
-        (err) => {
-          console.error("standings subscribe error", err);
-          setLoading(false);
-        }
-      );
-
-      return () => unsub();
-    }
-
-    let alive = true;
-
-    async function run() {
-      try {
-        const snap = await getDocs(q);
+    getDocs(q)
+      .then((snap) => {
         if (!alive) return;
-
         const list = snap.docs.map((d) => ({
           id: d.id,
           ...(d.data() as Omit<Team, "id">),
         }));
-
         setTeams(list);
-      } catch (err) {
+      })
+      .catch((err) => {
         console.error("standings fetch error", err);
-      } finally {
+      })
+      .finally(() => {
         if (alive) setLoading(false);
-      }
-    }
-
-    run();
+      });
 
     return () => {
       alive = false;
     };
-  }, [useLiveSnapshot]);
+  }, []);
 
   const filtered = teams.filter(
     (t) => normalizeConference(t.conference) === tab

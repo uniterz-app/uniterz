@@ -32,7 +32,6 @@ type Props = {
 
   radar: {
     winRate: number;
-    accuracy: number;
     precision: number;
     upset: number;
     volume: number;
@@ -44,7 +43,6 @@ type Props = {
 
   percentiles: {
     winRate: number;
-    accuracy: number;
     precision: number;
     pointsV3: number;
     upset: number;

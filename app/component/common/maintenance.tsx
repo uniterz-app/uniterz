@@ -3,7 +3,7 @@
 export default function MaintenanceOverlay() {
   return (
     <div className="
-      fixed inset-0 z-[9999]
+      fixed inset-0 z-9999
       bg-black/70 backdrop-blur-sm
       flex items-center justify-center
       text-center text-white

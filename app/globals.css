@@ -89,14 +89,65 @@
 }
 
 /* ============================================================
-   スプラッシュ背景
+   スプラッシュ背景（public/splash/）
    ============================================================ */
 
-body.splash-bg {
-  background-image: url("/event/eventheader.png");
+.splash-screen-bg {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background-color: #000;
+  background-image: url("/splash/splash-640x1136.png");
+}
+@media (min-width: 414px) {
+  .splash-screen-bg {
+    background-image: url("/splash/splash-750×1334.png");
+  }
+}
+@media (min-width: 428px) {
+  .splash-screen-bg {
+    background-image: url("/splash/splash-1242×2208.png");
+  }
+}
+@media (min-width: 430px) {
+  .splash-screen-bg {
+    background-image: url("/splash/splash-1170x2532.png");
+  }
+}
+
+/* Web のみ：eventheader をローディング背景に */
+@media (min-width: 768px) {
+  .splash-screen-bg {
+    background-image: url("/event/eventheader.png");
+  }
+}
+
+body.splash-bg {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-image: url("/splash/splash-640x1136.png");
+}
+@media (min-width: 414px) {
+  body.splash-bg {
+    background-image: url("/splash/splash-750×1334.png");
+  }
+}
+@media (min-width: 428px) {
+  body.splash-bg {
+    background-image: url("/splash/splash-1242×2208.png");
+  }
+}
+@media (min-width: 430px) {
+  body.splash-bg {
+    background-image: url("/splash/splash-1170x2532.png");
+  }
+}
+
+@media (min-width: 768px) {
+  body.splash-bg {
+    background-image: url("/event/eventheader.png");
+  }
 }
 
 /* ============================================================

@@ -192,9 +192,9 @@ const sortedGames = [...games].sort(
     <div className="relative">
       {/* 上下ガウス（さらに弱く・自然） */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-6 z-20
-        bg-gradient-to-b from-black/12 via-black/6 to-transparent" />
+        bg-linear-to-b from-black/12 via-black/6 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 z-20
-        bg-gradient-to-t from-black/12 via-black/6 to-transparent" />
+        bg-linear-to-t from-black/12 via-black/6 to-transparent" />
 
       {/* 中枠（小さめ・端も中央に来るよう余白拡張） */}
       <div
@@ -440,8 +440,7 @@ export default function TeamDetailView({ team }: Props) {
 
 const conferenceRank = Number(searchParams.get("rank"));
 const conference = searchParams.get("conference") as "east" | "west";
-  console.log("TEAM IN VIEW", team);
-    const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false);
     const [mode, setMode] = useState<"total" | "home" | "away">("total");
 const [confMode, setConfMode] = useState<"east" | "west">(
@@ -962,7 +961,7 @@ useEffect(() => {
     transition={{ duration: 0.25, ease: "easeOut" }}
     className="
       absolute z-50
-      right-0 -top-2 translate-y-[-100%]
+      right-0 -top-2 -translate-y-full
       rounded-lg px-3 py-2
       text-[11px] text-white/95
       border border-white/10

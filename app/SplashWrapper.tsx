@@ -43,15 +43,7 @@ export default function SplashWrapper({
 
   if (shouldShowSplash && !fadeDone) {
     return (
-      <div
-        className="w-screen h-screen flex items-center justify-center relative"
-        style={{
-          backgroundImage: 'url("/event/eventheader.png")',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundColor: "#000",
-        }}
-      >
+      <div className="w-screen h-screen flex items-center justify-center relative splash-screen-bg">
         <div className="absolute bottom-12 text-white/80 text-sm animate-pulse">
           Loading...
         </div>

@@ -10,7 +10,7 @@ import {
   METRICS,
   MOCK_ROWS,
 } from "@/app/component/rankings/_data/mockRows";
-import { toApiMetric, toMobileRows } from "@/lib/rankings/rankingTransform";
+import { toMobileRows } from "@/lib/rankings/rankingTransform";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
@@ -110,31 +110,38 @@ export function useWebRankings(useMock = false) {
           return;
         }
 
-        const results = await Promise.all(
-          AVAILABLE_METRICS.map(async (m) => {
-            const apiMetric = toApiMetric(m);
-            const res = await fetch(`/api/cumulative-ranking?metric=${apiMetric}`, {
-              method: "GET",
-              cache: "no-store",
-            });
+        const res = await fetch("/api/cumulative-ranking/bulk", {
+          method: "GET",
+          cache: "no-store",
+        });
 
-            if (!res.ok) {
-              return [m, toMockRows(m)] as const;
-            }
+        if (!res.ok) {
+          throw new Error("bulk fetch failed");
+        }
 
-            const json = await res.json();
-            const rawRows = Array.isArray(json?.rows) ? json.rows : [];
-
-            return [m, mergeRowsWithMeta(m, rawRows)] as const;
-          })
-        );
+        const json = await res.json();
+        if (!json?.ok || !json?.byMetric) {
+          throw new Error("invalid bulk response");
+        }
 
         if (cancelled) return;
 
+        const byMetric = json.byMetric as Record<string, { rows?: unknown[] }>;
+        const apiMetricByMobile: Record<MobileMetric, string> = {
+          totalScore: "totalPoints",
+          winRate: "winRate",
+          marginPrecision: "totalPrecision",
+          upsetScore: "totalUpset",
+          streak: "activeWinStreak",
+        };
+
         setRowsMap((prev) => {
           const next = { ...prev };
-          for (const [m, rows] of results) {
-            next[m] = rows;
+          for (const m of AVAILABLE_METRICS) {
+            const apiMetric = apiMetricByMobile[m];
+            const data = byMetric[apiMetric];
+            const rawRows = Array.isArray(data?.rows) ? data.rows : [];
+            next[m] = mergeRowsWithMeta(m, rawRows);
           }
           return next;
         });

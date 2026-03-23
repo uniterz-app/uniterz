@@ -3,11 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.calcPostResult = calcPostResult;
 const judgeWin_1 = require("./judgeWin");
 const calcScorePrecision_1 = require("./calcScorePrecision");
-function calcBrier(isWin, confidence) {
-    const p = Math.min(0.999, Math.max(0.001, confidence / 100));
-    const y = isWin ? 1 : 0;
-    return Math.round((p - y) * (p - y) * 10000) / 10000;
-}
 function calcScoreError(pred, real) {
     return Math.abs(pred.home - real.home) + Math.abs(pred.away - real.away);
 }
@@ -16,8 +11,6 @@ function calcPostResult({ prediction, final, market, hadUpsetGame, league, }) {
     const marketMajority = market.majoritySide;
     const isMajorityPick = prediction.winner === marketMajority;
     const scoreError = calcScoreError(prediction.score, final);
-    const conf = Math.min(99, Math.max(1, prediction.confidence));
-    const brier = calcBrier(isWin, conf);
     const { homePt, awayPt, diffPt, totalPt } = (0, calcScorePrecision_1.calcScorePrecision)({
         predictedHome: prediction.score.home,
         predictedAway: prediction.score.away,
@@ -25,7 +18,6 @@ function calcPostResult({ prediction, final, market, hadUpsetGame, league, }) {
         actualAway: final.away,
         league: league !== null && league !== void 0 ? league : "bj",
     });
-    // upsetHit = 「アップセット試合」かつ「少数派を当てた」
     const pickSide = prediction.winner;
     const upsetHit = hadUpsetGame &&
         isWin &&
@@ -35,8 +27,6 @@ function calcPostResult({ prediction, final, market, hadUpsetGame, league, }) {
     return {
         isWin,
         scoreError,
-        brier,
-        confidence: conf,
         scorePrecision: totalPt,
         scorePrecisionDetail: { homePt, awayPt, diffPt },
         marketMajority,

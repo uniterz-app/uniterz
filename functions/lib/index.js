@@ -34,29 +34,25 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.aggregateHitPostsTodayNBACron = exports.aggregateUsersTrendCron = exports.aggregateTrendsGamesCron = exports.aggregateTrendsGames = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.getMonthlyLeaderboard = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.rebuildUsersTrend = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.getMonthlyLeaderboard = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const firebase_1 = require("./firebase");
-const games_aggregate_1 = require("./trend/games.aggregate");
 const _core_1 = require("./analytics/_core");
-const users_aggregate_1 = require("./trend/users.aggregate");
-const hitPosts_aggregate_1 = require("./trend/hitPosts.aggregate");
 const functions = __importStar(require("firebase-functions"));
 const buildCumulativeStats_1 = require("./rankings/buildCumulativeStats");
 const buildCumulativeRankingSnapshot_1 = require("./rankings/buildCumulativeRankingSnapshot");
 // ★追加
 const buildMonthlyLeaderboardSnapshot_1 = require("./leaderboards/buildMonthlyLeaderboardSnapshot");
+const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 // ===============================
 // V2 Core
 // ===============================
 var onGameFinalV2_1 = require("./onGameFinalV2");
 Object.defineProperty(exports, "onGameFinalV2", { enumerable: true, get: function () { return onGameFinalV2_1.onGameFinalV2; } });
-var users_rebuild_1 = require("./trend/users.rebuild");
-Object.defineProperty(exports, "rebuildUsersTrend", { enumerable: true, get: function () { return users_rebuild_1.rebuildUsersTrend; } });
 var rescorePlayoffBrackets_1 = require("./playoff-bracket/rescorePlayoffBrackets");
 Object.defineProperty(exports, "rescorePlayoffBrackets", { enumerable: true, get: function () { return rescorePlayoffBrackets_1.rescorePlayoffBrackets; } });
 var onPlayoffResultsWrite_1 = require("./playoff-bracket/onPlayoffResultsWrite");
@@ -132,34 +128,6 @@ Object.defineProperty(exports, "onPostCreatedV2", { enumerable: true, get: funct
 var onPostDeleted_1 = require("./onPostDeleted");
 Object.defineProperty(exports, "onPostDeletedV2", { enumerable: true, get: function () { return onPostDeleted_1.onPostDeletedV2; } });
 /* ============================================================================
- * トレンド（Games）
- * ==========================================================================*/
-exports.aggregateTrendsGames = (0, https_1.onRequest)(async (_req, res) => {
-    var _a;
-    try {
-        const result = await (0, games_aggregate_1.aggregateGamesTrend)();
-        res.status(200).json(result);
-    }
-    catch (e) {
-        res.status(500).json({ ok: false, error: (_a = e === null || e === void 0 ? void 0 : e.message) !== null && _a !== void 0 ? _a : "failed" });
-    }
-});
-exports.aggregateTrendsGamesCron = (0, scheduler_1.onSchedule)({ schedule: "0 * * * *", timeZone: "Asia/Tokyo" }, async () => {
-    await (0, games_aggregate_1.aggregateGamesTrend)();
-});
-exports.aggregateUsersTrendCron = (0, scheduler_1.onSchedule)({ schedule: "0 0 * * *", timeZone: "Asia/Tokyo" }, async () => {
-    await (0, users_aggregate_1.aggregateUsersTrend)();
-});
-/* ============================================================================
- * Hit Posts Trend (NBA / Today)
- * ==========================================================================*/
-exports.aggregateHitPostsTodayNBACron = (0, scheduler_1.onSchedule)({
-    schedule: "30 15 * * *",
-    timeZone: "Asia/Tokyo",
-}, async () => {
-    await (0, hitPosts_aggregate_1.aggregateHitPostsTodayNBA)();
-});
-/* ============================================================================
  * Team Rankings (Daily)
  * ==========================================================================*/
 const updateTeamRankings_1 = require("./team-standing/updateTeamRankings");
@@ -192,6 +160,14 @@ exports.buildMonthlyLeaderboardSnapshotCron = (0, scheduler_1.onSchedule)({ sche
     for (const league of LEAGUES) {
         await (0, buildMonthlyLeaderboardSnapshot_1.buildMonthlyLeaderboardSnapshot)({ league, month });
     }
+});
+/* ============================================================================
+ * User Stats Window Cache（7d/30d ロールアップ）
+ * 毎日 05:00 にプリウォーム
+ * ==========================================================================*/
+exports.buildUserStatsWindowCacheCron = (0, scheduler_1.onSchedule)({ schedule: "0 5 * * *", timeZone: "Asia/Tokyo" }, async () => {
+    const { ok, err } = await (0, buildUserStatsWindowCache_1.buildAllUsersWindowCache)();
+    console.log(`[buildUserStatsWindowCacheCron] ok=${ok} err=${err}`);
 });
 /* ============================================================================
  * Analytics

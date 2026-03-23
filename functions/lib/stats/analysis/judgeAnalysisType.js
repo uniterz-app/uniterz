@@ -26,30 +26,10 @@ function judgeAnalysisType(summary) {
             levels.volume === "S") {
             return "IRON_RUNNER";
         }
-        if (levels.winRate === "S" &&
-            levels.precision === "S" &&
-            levels.accuracy === "S") {
-            return "PRECISE_CLOSER";
-        }
-        if (levels.winRate === "S" &&
-            levels.streak === "S" &&
-            levels.accuracy === "S") {
-            return "CONFIDENT_FINISHER";
-        }
         if (levels.precision === "S" &&
             levels.volume === "S" &&
             levels.streak === "S") {
             return "DATA_GRINDER";
-        }
-        if (levels.precision === "S" &&
-            levels.volume === "S" &&
-            levels.accuracy === "S") {
-            return "PROBABILITY_READER";
-        }
-        if (levels.precision === "S" &&
-            levels.streak === "S" &&
-            levels.accuracy === "S") {
-            return "STABLE_ANALYST";
         }
         if (levels.upset === "S" &&
             levels.winRate === "S" &&
@@ -66,16 +46,6 @@ function judgeAnalysisType(summary) {
             levels.streak === "S") {
             return "CHAOS_ENGINE";
         }
-        if (levels.accuracy === "S" &&
-            levels.volume === "S" &&
-            levels.streak === "S") {
-            return "ACCURACY_CONTROLLER";
-        }
-        if (levels.accuracy === "S" &&
-            levels.winRate === "S" &&
-            levels.volume === "S") {
-            return "CONSISTENT_PRODUCER";
-        }
     }
     if (S === 2) {
         if (levels.winRate === "S" && levels.precision === "S") {
@@ -87,23 +57,11 @@ function judgeAnalysisType(summary) {
         if (levels.winRate === "S" && levels.volume === "S") {
             return "RELENTLESS_OUTPUT";
         }
-        if (levels.winRate === "S" && levels.accuracy === "S") {
-            return "CONFIDENCE_DOMINANCE";
-        }
-        if (levels.winRate === "S" && levels.accuracy === "W") {
-            return "HIGH_RISK_READER";
-        }
         if (levels.precision === "S" && levels.volume === "S") {
             return "DATA_FORGE";
         }
         if (levels.precision === "S" && levels.streak === "S") {
             return "RHYTHM_BLADE";
-        }
-        if (levels.precision === "S" && levels.accuracy === "S") {
-            return "PROBABILITY_COMMANDER";
-        }
-        if (levels.precision === "S" && levels.accuracy === "W") {
-            return "VOLATILE_READER";
         }
         if (levels.upset === "S" && levels.winRate === "S") {
             return "BOLD_STRIKER";
@@ -114,17 +72,8 @@ function judgeAnalysisType(summary) {
         if (levels.upset === "S" && levels.streak === "S") {
             return "CHAOS_SURGE";
         }
-        if (levels.upset === "S" && levels.accuracy === "W") {
-            return "BOLD_READER";
-        }
         if (levels.volume === "S" && levels.streak === "S") {
             return "ENDURANCE_CORE";
-        }
-        if (levels.volume === "S" && levels.accuracy === "S") {
-            return "ACCURACY_ENGINE";
-        }
-        if (levels.volume === "S" && levels.accuracy === "W") {
-            return "RISK_ENGINE";
         }
     }
     if (S === 1) {
@@ -138,10 +87,6 @@ function judgeAnalysisType(summary) {
             return "HIGH_ACTIVITY";
         if (levels.streak === "S")
             return "HOT_PHASE";
-        if (levels.accuracy === "S")
-            return "ACCURACY_PATH";
-        if (levels.accuracy === "W")
-            return "VOLATILE_PATH";
     }
     if (S === 0) {
         if (W >= 4)

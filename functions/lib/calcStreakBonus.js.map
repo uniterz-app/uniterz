@@ -1,0 +1,1 @@
+{"version":3,"file":"calcStreakBonus.js","sourceRoot":"","sources":["../src/calcStreakBonus.ts"],"names":[],"mappings":";;AAAA,0CAKC;AALD,SAAgB,eAAe,CAAC,eAAuB;IACrD,IAAI,CAAC,MAAM,CAAC,QAAQ,CAAC,eAAe,CAAC,IAAI,eAAe,GAAG,CAAC;QAAE,OAAO,CAAC,CAAC;IACvE,IAAI,eAAe,IAAI,CAAC;QAAE,OAAO,CAAC,CAAC;IACnC,IAAI,eAAe,IAAI,CAAC;QAAE,OAAO,CAAC,CAAC;IACnC,OAAO,CAAC,CAAC;AACX,CAAC"}

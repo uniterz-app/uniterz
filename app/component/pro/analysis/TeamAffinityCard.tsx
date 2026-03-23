@@ -76,8 +76,8 @@ function TeamList({
     color === "emerald" ? "text-emerald-400" : "text-rose-400";
   const barColor =
     color === "emerald"
-      ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
-      : "bg-gradient-to-r from-rose-400 to-rose-500";
+      ? "bg-linear-to-r from-emerald-400 to-emerald-500"
+      : "bg-linear-to-r from-rose-400 to-rose-500";
 
   return (
     <div ref={ref}>

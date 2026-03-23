@@ -290,7 +290,7 @@ export default function PredictionFormV2({
               toolButtonBase,
               statsOpen
                 ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/[0.06]",
+                : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
             ].join(" ")}
           >
             <span>詳細スタッツ</span>
@@ -315,8 +315,8 @@ export default function PredictionFormV2({
               standingsOpen
                 ? "border-cyan-300/35 bg-cyan-300/12 text-white"
                 : showStandings
-                ? "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/[0.06]"
-                : "cursor-not-allowed border-white/10 bg-white/[0.02] text-white/35",
+                ? "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6"
+                : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
             ].join(" ")}
           >
             <span>Standings</span>
@@ -354,11 +354,10 @@ export default function PredictionFormV2({
               {showStandings ? (
                 <NbaStandingsPanel
                   teamHrefBase={standingsHrefBase}
-                  useLiveSnapshot={isMobile}
                   compact={isMobile}
                 />
               ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-white/65">
+                <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-4 text-sm text-white/65">
                   このリーグでは Standings はまだ未対応です。
                 </div>
               )}
@@ -405,19 +404,33 @@ export default function PredictionFormV2({
             disabled={!canSubmit}
             onClick={handleSubmit}
             className={[
-              "flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold",
+              "flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold text-white",
               "border backdrop-blur-xl transition-all duration-200",
               "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]",
               canSubmit
                 ? [
-                    "border-yellow-300/45 text-[#1c1200]",
-                    "bg-gradient-to-b from-yellow-300 to-amber-400",
-                    "shadow-[0_10px_28px_rgba(250,204,21,0.28)]",
-                    "hover:from-yellow-200 hover:to-amber-300",
+                    "border-blue-500/40",
                     "active:scale-[0.98]",
                   ].join(" ")
                 : "cursor-not-allowed border-white/15 bg-white/6 text-white/40",
             ].join(" ")}
+            style={
+              canSubmit
+                ? {
+                    background: `
+                      radial-gradient(92% 230% at 50% 50%,
+                        rgba(59,130,246,0.92) 0%,
+                        rgba(37,99,235,0.88) 36%,
+                        rgba(29,78,216,0.58) 58%,
+                        rgba(29,78,216,0.20) 74%,
+                        rgba(29,78,216,0.05) 84%,
+                        rgba(29,78,216,0.00) 100%
+                      )
+                    `,
+                    boxShadow: "none",
+                  }
+                : undefined
+            }
           >
             {submitting ? "投稿中…" : "予想する"}
           </button>
