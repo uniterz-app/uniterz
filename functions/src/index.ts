@@ -18,6 +18,7 @@ import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankin
 
 // ★追加
 import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
+import { buildAllUsersWindowCache } from "./stats/buildUserStatsWindowCache";
 
 // ===============================
 // V2 Core
@@ -176,6 +177,19 @@ export const buildMonthlyLeaderboardSnapshotCron = onSchedule(
     for (const league of LEAGUES) {
       await buildMonthlyLeaderboardSnapshot({ league, month });
     }
+  }
+);
+
+/* ============================================================================
+ * User Stats Window Cache（7d/30d ロールアップ）
+ * 毎日 05:00 にプリウォーム
+ * ==========================================================================*/
+
+export const buildUserStatsWindowCacheCron = onSchedule(
+  { schedule: "0 5 * * *", timeZone: "Asia/Tokyo" },
+  async () => {
+    const { ok, err } = await buildAllUsersWindowCache();
+    console.log(`[buildUserStatsWindowCacheCron] ok=${ok} err=${err}`);
   }
 );
 

@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import ResultCard from "@/app/component/result/ResultCard";
+import ResultListWithOverlay from "@/app/component/result/ResultListWithOverlay";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 const PAGE_SIZE = 20;
@@ -211,54 +211,13 @@ export default function ResultPage() {
   if (!uid) return null;
 
   return (
-    <div className="px-4 py-4 space-y-6">
-      {grouped.map((day) => (
-        <div key={day.dateLabel}>
-          <div className="mb-3 flex items-center justify-center">
-            <div className="px-3 py-1 text-[11px] font-semibold tracking-wide text-white/70 bg-white/5 border border-white/10 rounded-full backdrop-blur-sm">
-              {day.dateLabel}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {day.pending.length > 0 && (
-              <div className="space-y-3">
-                {day.pending.map((post) => (
-                  <ResultCard
-                    key={post.id}
-                    post={post}
-                    href={`/mobile/result/${post.id}`}
-                  />
-                ))}
-              </div>
-            )}
-
-            {day.final.length > 0 && (
-              <div className="space-y-3">
-                {day.final.map((post) => (
-                  <ResultCard
-                    key={post.id}
-                    post={post}
-                    href={`/mobile/result/${post.id}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-
-      <div ref={sentinelRef} className="h-10" />
-
-      {loading && (
-        <div className="py-6 text-center text-white/60 text-sm">Loading...</div>
-      )}
-
-      {!loading && !hasMore && posts.length > 0 && (
-        <div className="py-6 text-center text-white/40 text-sm">
-          これ以上ありません
-        </div>
-      )}
+    <div className="px-4 py-4">
+      <ResultListWithOverlay
+        grouped={grouped}
+        loading={loading}
+        hasMore={hasMore}
+        sentinelRef={sentinelRef}
+      />
     </div>
   );
 }

@@ -168,7 +168,7 @@ function AccordionItem({
   onToggle: () => void;
 }) {
   return (
-    <div className="rounded-2xl bg-gradient-to-r from-[#111827] via-[#020617] to-[#020617] p-[1px] shadow-[0_0_24px_rgba(15,23,42,0.8)]">
+    <div className="rounded-2xl bg-linear-to-r from-[#111827] via-[#020617] to-[#020617] p-[1px] shadow-[0_0_24px_rgba(15,23,42,0.8)]">
       <div className="rounded-2xl bg-[#020617]">
         <button
           type="button"
@@ -177,7 +177,7 @@ function AccordionItem({
         >
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${item.accentClass} shadow-[0_0_16px_rgba(15,23,42,0.8)]`}
+              className={`flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br ${item.accentClass} shadow-[0_0_16px_rgba(15,23,42,0.8)]`}
             >
               {item.icon}
             </div>
@@ -217,9 +217,9 @@ export default function HelpPage({ variant }: { variant: Variant }) {
             : "mx-auto max-w-[640px] px-4 py-8 text-white"
         }
       >
-        <div className="mb-6 rounded-3xl border border-white/10 bg-gradient-to-r from-[#111827] via-[#020617] to-[#020617] px-6 py-5 shadow-[0_0_36px_rgba(56,189,248,0.35)]">
+        <div className="mb-6 rounded-3xl border border-white/10 bg-linear-to-r from-[#111827] via-[#020617] to-[#020617] px-6 py-5 shadow-[0_0_36px_rgba(56,189,248,0.35)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-fuchsia-500 to-amber-400 shadow-[0_0_18px_rgba(129,140,248,0.9)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-br from-sky-400 via-fuchsia-500 to-amber-400 shadow-[0_0_18px_rgba(129,140,248,0.9)]">
               <span className="text-lg font-extrabold text-white">?</span>
             </div>
             <div className="flex flex-col">

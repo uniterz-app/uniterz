@@ -43,8 +43,9 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     if (game.homeScore == null || game.awayScore == null)
         return;
     /* ===== ② streak / team stats ===== */
+    let streakResultMap = new Map();
     if (becameFinal) {
-        await (0, updateUserStreak_1.updateUserStreak)({
+        streakResultMap = await (0, updateUserStreak_1.updateUserStreak)({
             db: db(),
             gameId,
             final: { home: game.homeScore, away: game.awayScore },
@@ -110,6 +111,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             after,
             batch,
             userUpdateTasks,
+            streakResultMap,
         });
     }
     await batch.commit();

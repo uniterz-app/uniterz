@@ -379,7 +379,7 @@ export default function ScheduleList({
       {openGameId && selectedProps && (
         <motion.div
           key="prediction-page"
-          className="fixed inset-0 z-[99999] overflow-hidden"
+          className="fixed inset-0 z-99999 overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{
@@ -404,7 +404,7 @@ export default function ScheduleList({
           />
 
           <div
-            className="relative z-10 h-[100dvh] overflow-y-auto overflow-x-hidden pointer-events-auto"
+            className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto"
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehaviorY: "contain",
@@ -522,7 +522,14 @@ export default function ScheduleList({
                       setStandingsOpenInOverlay(open);
                       if (open) setDisableReturnLayout(true);
                     }}
-                    onPostCreated={() => {
+                    onPostCreated={(payload) => {
+                      const gameId = selectedProps?.id;
+                      if (gameId && payload?.id) {
+                        setMyPostMap((prev) => ({
+                          ...prev,
+                          [String(gameId)]: payload.id,
+                        }));
+                      }
                       close();
                     }}
                   />

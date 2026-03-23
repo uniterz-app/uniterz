@@ -1,5 +1,6 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
+import { buildWindowCacheForUser } from "./stats/buildUserStatsWindowCache";
 import { calcPostResult } from "./calcPostResult";
 import { calcUpsetPoints } from "./calcUpsetPoints";
 import { calcStreakBonus } from "./calcStreakBonus";
@@ -176,9 +177,10 @@ export async function finalizePost({
     updatedAt: FieldValue.serverTimestamp(),
   });
 
+  const uid = p.authorUid;
   userUpdateTasks.push(
     applyPostToUserStatsV2({
-      uid: p.authorUid,
+      uid,
       postId: postDoc.id,
       createdAt: p.createdAt,
       startAt: after.startAtJst ?? after.startAt ?? p.createdAt,
@@ -195,6 +197,6 @@ export async function finalizePost({
       streakBonus,
 
       points: totalPoints,
-    })
+    }).then(() => buildWindowCacheForUser(uid))
   );
 }

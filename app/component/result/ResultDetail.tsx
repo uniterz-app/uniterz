@@ -27,7 +27,7 @@ export default function ResultDetail({ post, market }: Props) {
       className={[
         "min-h-screen text-white",
         // 背景は共通でOK
-        "bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#111827]",
+        "bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827]",
         // 余白だけモバイルで縮める
         isMobile ? "px-4 py-4" : "p-6",
       ].join(" ")}

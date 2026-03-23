@@ -9,8 +9,6 @@ import {
   where,
   getDocs,
   limit,
-  doc,
-  onSnapshot,
 } from "firebase/firestore";
 import { getIsFollowing } from "@/lib/follow";
 
@@ -119,38 +117,6 @@ export function useProfile(handle: string) {
       cancelled = true;
     };
   }, [decodedHandle]);
-
-  useEffect(() => {
-    if (!targetUid) return;
-
-    const ref = doc(db, "users", targetUid);
-
-    const unsub = onSnapshot(ref, (snap) => {
-      const d = snap.data() as any;
-      if (!d) return;
-
-      setUser({
-        displayName: d.displayName ?? "",
-        handle: d.handle ?? decodedHandle,
-        bio: d.bio ?? "",
-        photoURL: d.photoURL ?? "",
-        currentStreak: d.currentStreak ?? 0,
-        maxStreak: d.maxStreak ?? 0,
-      });
-
-      setCounts(
-        d.counts
-          ? {
-              posts: d.counts.posts ?? 0,
-              followers: d.counts.followers ?? 0,
-              following: d.counts.following ?? 0,
-            }
-          : EMPTY_COUNTS
-      );
-    });
-
-    return () => unsub();
-  }, [targetUid, decodedHandle]);
 
   useEffect(() => {
     if (!targetUid) {

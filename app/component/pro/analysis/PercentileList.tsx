@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 
 type Percentiles = {
   winRate: number;
-  accuracy: number;
   precision: number;
   pointsV3: number;
   upset: number;
@@ -129,7 +128,7 @@ export default function PercentileList({
 
               <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all ease-out"
+                  className="h-2 rounded-full bg-linear-to-r from-orange-400 to-orange-500 transition-all ease-out"
                   style={{
                     width: visible ? `${now}%` : "0%",
                     transitionDuration: "1800ms",

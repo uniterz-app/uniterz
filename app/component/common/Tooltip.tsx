@@ -40,7 +40,7 @@ export default function Tooltip({
 
   return (
     <div
-      className="fixed z-[9999]"
+      className="fixed z-9999"
       style={{ top, left, width }}
       onClick={(e) => e.stopPropagation()} // tooltip 外へのバブリングを防ぐ
     >

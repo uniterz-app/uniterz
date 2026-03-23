@@ -23,7 +23,7 @@ export const nameOxanium = Oxanium({
 
 export const nameRajdhani = Rajdhani({
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 

@@ -1,15 +1,13 @@
 "use client";
 import React from "react";
-import { Lilita_One } from "next/font/google";
-
-const lilita = Lilita_One({ weight: "400", subsets: ["latin"] });
+import { nameRajdhani } from "@/lib/fonts";
 
 export type Tab = "overview" | "stats" | "bracket";
 
 const sizeMap = {
-  sm: "text-sm pb-2",
-  md: "text-base pb-3",
-  lg: "text-lg pb-4",
+  sm: "text-sm pb-2 tracking-[0.06em]",
+  md: "text-[15px] pb-3 tracking-[0.06em]",
+  lg: "text-[18px] pb-4 tracking-[0.06em]",
 } as const;
 
 type Props = {
@@ -38,7 +36,7 @@ export default function Tabs({
   return (
     <div
       className={[
-        lilita.className,
+        nameRajdhani.className,
         "flex gap-8 border-b border-white/10",
       ].join(" ")}
     >
@@ -50,7 +48,7 @@ export default function Tabs({
             key={t}
             onClick={() => onChange(t)}
             className={[
-              "relative transition-colors",
+              "relative font-medium transition-colors",
               sizeMap[size],
               active
                 ? "text-white"
@@ -62,7 +60,7 @@ export default function Tabs({
             {active && (
               <span
                 className="
-                  absolute left-0 -bottom-[1px]
+                  absolute left-0 -bottom-px
                   h-[2px] w-full
                   bg-[#6EA8FE]
                   rounded-full

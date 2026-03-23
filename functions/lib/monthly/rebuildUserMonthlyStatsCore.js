@@ -47,9 +47,9 @@ function clamp10(v) {
 function toRadar10(params) {
     return {
         winRate: clamp10(params.winRate * 10),
-        accuracy: clamp10(params.accuracy * 10),
         precision: clamp10(params.avgPrecision),
         streak: clamp10(params.streakScore),
+        pointsV3: clamp10(params.pointsV3Percentile / 10),
     };
 }
 /* ============================================================================
@@ -168,14 +168,12 @@ async function rebuildUserMonthlyStatsCore() {
         if (agg.posts === 0)
             return null;
         const winRate = agg.wins / agg.posts;
-        const accuracy = 1 - agg.brierSum / agg.posts;
         const avgPrecision = agg.precisionSum / agg.posts;
         const avgPointsV3 = agg.pointsSumV3 / agg.posts;
         return {
             uid,
             posts: agg.posts,
             winRate,
-            accuracy,
             avgPrecision,
             avgPointsV3,
             upsetPointsSum: agg.upsetPointsSum,
@@ -184,7 +182,6 @@ async function rebuildUserMonthlyStatsCore() {
     })
         .filter(Boolean);
     const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
-    const accuracies = rows.map((r) => r.accuracy).sort((a, b) => a - b);
     const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
     const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
     const upsetPointSums = rows
@@ -320,7 +317,6 @@ async function rebuildUserMonthlyStatsCore() {
             : 0;
         const percentiles = {
             winRate: percentile(winRates, row.winRate),
-            accuracy: percentile(accuracies, row.accuracy),
             precision: percentile(precisions, row.avgPrecision),
             pointsV3: percentile(pointsV3s, row.avgPointsV3),
             upset: percentile(upsetPointSums, row.upsetPointsSum),
@@ -360,9 +356,9 @@ async function rebuildUserMonthlyStatsCore() {
         const streakScore = clamp10(rawStreakScore * sample + 3 * (1 - sample));
         const radar10 = Object.assign(Object.assign({}, toRadar10({
             winRate: row.winRate,
-            accuracy: row.accuracy,
             avgPrecision: row.avgPrecision,
             streakScore,
+            pointsV3Percentile: percentiles.pointsV3,
         })), { upset: clamp10(percentiles.upset / 10), volume: clamp10(percentiles.volume / 10) });
         const levelSummary = (0, judgeLevel_1.judgeLevels)(radar10);
         const analysisTypeId = (0, judgeAnalysisType_1.judgeAnalysisType)(levelSummary);
@@ -376,7 +372,6 @@ async function rebuildUserMonthlyStatsCore() {
                 posts: agg.posts,
                 wins: agg.wins,
                 winRate: row.winRate,
-                accuracy: row.accuracy,
                 avgPrecision: row.avgPrecision,
                 avgPointsV3: row.avgPointsV3,
                 upsetPointsSum: agg.upsetPointsSum,

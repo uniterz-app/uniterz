@@ -14,15 +14,18 @@ async function updateUserStreak({ db, gameId, final, }) {
     const userResult = new Map();
     postsSnap.docs.forEach((d) => {
         const p = d.data();
+        if (!p.authorUid)
+            return;
         if (userResult.has(p.authorUid))
             return;
         const isWin = (0, judgeWin_1.judgeWin)(p.prediction, final);
         userResult.set(p.authorUid, isWin);
     });
+    const updatedMap = new Map();
     for (const [uid, didWin] of userResult.entries()) {
         const userRef = db.doc(`user_stats_v2/${uid}`);
-        const cumulativeRef = db.doc(`cumulative_stats/${uid}`); // ★変更
-        await db.runTransaction(async (tx) => {
+        const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
+        const updated = await db.runTransaction(async (tx) => {
             var _a, _b, _c;
             const snap = await tx.get(userRef);
             let current = (_a = snap.get("currentStreak")) !== null && _a !== void 0 ? _a : 0;
@@ -39,6 +42,7 @@ async function updateUserStreak({ db, gameId, final, }) {
                     maxLose = Math.abs(current);
                 }
             }
+            const activeWinStreak = current > 0 ? current : 0;
             // user_stats_v2 更新
             tx.set(userRef, {
                 currentStreak: current,
@@ -46,13 +50,23 @@ async function updateUserStreak({ db, gameId, final, }) {
                 maxLoseStreak: maxLose,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
-            // ★変更：cumulative_stats に統一
+            // cumulative_stats 更新
             tx.set(cumulativeRef, {
                 currentStreak: current,
-                activeWinStreak: current > 0 ? current : 0,
+                activeWinStreak,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
+            return {
+                uid,
+                didWin,
+                currentStreak: current,
+                activeWinStreak,
+                maxWinStreak: maxWin,
+                maxLoseStreak: maxLose,
+            };
         });
+        updatedMap.set(uid, updated);
     }
+    return updatedMap;
 }
 //# sourceMappingURL=updateUserStreak.js.map

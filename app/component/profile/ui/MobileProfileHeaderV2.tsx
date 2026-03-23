@@ -66,8 +66,8 @@ export default function MobileProfileHeaderV2({
       <div className="relative rounded-3xl overflow-visible">
         {isHot && (
           <>
-            <div className="absolute -inset-[10px] rounded-[28px] bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600 blur-2xl opacity-70 pointer-events-none" />
-            <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-yellow-300 via-orange-500 to-red-600 pointer-events-none" />
+            <div className="absolute -inset-[10px] rounded-[28px] bg-linear-to-r from-yellow-400 via-orange-500 to-red-600 blur-2xl opacity-70 pointer-events-none" />
+            <div className="absolute -inset-[2px] rounded-3xl bg-linear-to-r from-yellow-300 via-orange-500 to-red-600 pointer-events-none" />
           </>
         )}
 
@@ -80,8 +80,8 @@ export default function MobileProfileHeaderV2({
               className={[
                 "absolute inset-0",
                 isHot
-                  ? "bg-gradient-to-br from-[#2a1206] via-[#1a0b06] to-[#060a12]"
-                  : "bg-gradient-to-br from-[#0b1220] via-[#111827] to-[#060a12]",
+                  ? "bg-linear-to-br from-[#2a1206] via-[#1a0b06] to-[#060a12]"
+                  : "bg-linear-to-br from-[#0b1220] via-[#111827] to-[#060a12]",
               ].join(" ")}
             />
 
@@ -96,7 +96,7 @@ export default function MobileProfileHeaderV2({
 
             {/* overlay */}
             <div className="absolute inset-0 bg-black/35" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/70" />
+            <div className="absolute inset-0 bg-linear-to-b from-black/10 via-transparent to-black/70" />
 
             {/* settings */}
             {canOpenSettings && (

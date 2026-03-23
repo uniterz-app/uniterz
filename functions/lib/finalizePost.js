@@ -3,9 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.finalizePost = finalizePost;
 const firestore_1 = require("firebase-admin/firestore");
 const updateUserStatsV2_1 = require("./updateUserStatsV2");
+const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 const calcPostResult_1 = require("./calcPostResult");
 const calcUpsetPoints_1 = require("./calcUpsetPoints");
-function calcPointsV3({ predHome, predAway, finalHome, finalAway, hadUpsetGame, upsetHit, }) {
+const calcStreakBonus_1 = require("./calcStreakBonus");
+function calcPointsV3({ predHome, predAway, finalHome, finalAway, }) {
     const finalDiff = finalHome - finalAway;
     const predDiff = predHome - predAway;
     const winnerCorrect = (finalDiff > 0 && predDiff > 0) || (finalDiff < 0 && predDiff < 0);
@@ -14,44 +16,44 @@ function calcPointsV3({ predHome, predAway, finalHome, finalAway, hadUpsetGame, 
     if (!winnerCorrect) {
         return {
             points: 0,
+            basePoints: 0,
             winnerCorrect: false,
             winPoints: 0,
             diffPoints: 0,
             totalPoints: 0,
-            upsetBonus: 0,
             diffError,
             totalError,
         };
     }
-    const winPoints = 3;
+    const winPoints = 4;
     let diffPoints = 0;
     if (diffError === 0)
-        diffPoints = 5;
-    else if (diffError <= 3)
         diffPoints = 4;
-    else if (diffError <= 6)
+    else if (diffError <= 3)
         diffPoints = 3;
+    else if (diffError <= 6)
+        diffPoints = 2;
     else if (diffError <= 10)
         diffPoints = 1;
     let totalPoints = 0;
     if (totalError <= 3)
         totalPoints = 2;
-    else if (totalError <= 6)
+    else if (totalError <= 7)
         totalPoints = 1;
-    const upsetBonus = hadUpsetGame && upsetHit ? 2 : 0;
+    const basePoints = winPoints + diffPoints + totalPoints; // max 10
     return {
-        points: winPoints + diffPoints + totalPoints + upsetBonus, // max 12
+        points: basePoints,
+        basePoints,
         winnerCorrect: true,
         winPoints,
         diffPoints,
         totalPoints,
-        upsetBonus,
         diffError,
         totalError,
     };
 }
-async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, }) {
-    var _a, _b, _c, _d, _e, _f;
+async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
+    var _a, _b, _c, _d, _e, _f, _g;
     const p = postDoc.data();
     if (p.settledAt)
         return;
@@ -63,34 +65,36 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         hadUpsetGame,
         league: game.league,
     });
-    // ===== Upset（独立ポイント）=====
-    // calcPostResult 側で upsetHit は「少数派的中」定義に更新済み
+    // 従来の upset 指標
     const upsetPoints = result.upsetHit
         ? (0, calcUpsetPoints_1.calcUpsetPoints)(market.majorityRatio)
         : 0;
-    // ===== V3（既存）=====
+    // 総合得点用ボーナス
+    const upsetBonus = result.upsetHit ? 2 : 0;
     const predHome = (_b = (_a = p.prediction) === null || _a === void 0 ? void 0 : _a.score) === null || _b === void 0 ? void 0 : _b.home;
     const predAway = (_d = (_c = p.prediction) === null || _c === void 0 ? void 0 : _c.score) === null || _d === void 0 ? void 0 : _d.away;
     const canScore = Number.isFinite(predHome) && Number.isFinite(predAway);
-    const pointsV3 = canScore
+    const baseScore = canScore
         ? calcPointsV3({
             predHome,
             predAway,
             finalHome: final.home,
             finalAway: final.away,
-            hadUpsetGame,
-            upsetHit: !!result.upsetHit,
         })
         : {
             points: 0,
+            basePoints: 0,
             winnerCorrect: false,
             winPoints: 0,
             diffPoints: 0,
             totalPoints: 0,
-            upsetBonus: 0,
             diffError: null,
             totalError: null,
         };
+    const streakInfo = p.authorUid ? streakResultMap.get(p.authorUid) : undefined;
+    const activeWinStreak = (_e = streakInfo === null || streakInfo === void 0 ? void 0 : streakInfo.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
+    const streakBonus = (0, calcStreakBonus_1.calcStreakBonus)(activeWinStreak);
+    const totalPoints = baseScore.basePoints + upsetBonus + streakBonus;
     const now = firestore_1.Timestamp.now();
     batch.update(postDoc.ref, {
         result: final,
@@ -101,7 +105,6 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         stats: {
             isWin: result.isWin,
             scoreError: result.scoreError,
-            brier: result.brier,
             scorePrecision: result.scorePrecision,
             scorePrecisionDetail: result.scorePrecisionDetail,
             marketCount: market.total,
@@ -109,41 +112,43 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             isMajorityPick: result.isMajorityPick,
             hadUpsetGame,
             upsetHit: result.upsetHit,
-            // ★ 追加：Upset（独立）
             upsetPoints,
-            // ★ 追加：総合得点（V3は変更しない）
-            pointsV3: pointsV3.points,
+            upsetBonus,
+            streakBonus,
+            pointsV3: totalPoints,
             pointsV3Detail: {
-                winnerCorrect: pointsV3.winnerCorrect,
-                winPoints: pointsV3.winPoints,
-                diffPoints: pointsV3.diffPoints,
-                totalPoints: pointsV3.totalPoints,
-                upsetBonus: pointsV3.upsetBonus,
-                diffError: pointsV3.diffError,
-                totalError: pointsV3.totalError,
+                basePoints: baseScore.basePoints,
+                winnerCorrect: baseScore.winnerCorrect,
+                winPoints: baseScore.winPoints,
+                diffPoints: baseScore.diffPoints,
+                totalPoints: baseScore.totalPoints,
+                upsetBonus,
+                streakBonus,
+                activeWinStreak,
+                diffError: baseScore.diffError,
+                totalError: baseScore.totalError,
             },
         },
         status: "final",
         settledAt: now,
         updatedAt: firestore_1.FieldValue.serverTimestamp(),
     });
+    const uid = p.authorUid;
     userUpdateTasks.push((0, updateUserStatsV2_1.applyPostToUserStatsV2)({
-        uid: p.authorUid,
+        uid,
         postId: postDoc.id,
         createdAt: p.createdAt,
-        startAt: (_f = (_e = after.startAtJst) !== null && _e !== void 0 ? _e : after.startAt) !== null && _f !== void 0 ? _f : p.createdAt,
+        startAt: (_g = (_f = after.startAtJst) !== null && _f !== void 0 ? _f : after.startAt) !== null && _g !== void 0 ? _g : p.createdAt,
         league: game.league,
         isWin: result.isWin,
         scoreError: result.scoreError,
-        brier: result.brier,
         scorePrecision: result.scorePrecision,
-        confidence: result.confidence,
         hadUpsetGame,
-        // ★ 追加：Upset（独立）
         upsetHit: result.upsetHit,
         upsetPoints,
-        // ★ 追加：総合得点（V3）
-        points: pointsV3.points,
-    }));
+        upsetBonus,
+        streakBonus,
+        points: totalPoints,
+    }).then(() => (0, buildUserStatsWindowCache_1.buildWindowCacheForUser)(uid)));
 }
 //# sourceMappingURL=finalizePost.js.map

@@ -93,7 +93,7 @@ export default function WebAnnouncementDetailPage() {
       />
 
       {/* header */}
-      <div className="sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-[#0B0F17]/70 border-b border-white/5">
+      <div className="sticky top-0 z-10 backdrop-blur supports-backdrop-filter:bg-[#0B0F17]/70 border-b border-white/5">
         <div className="mx-auto max-w-[840px] px-5">
           <div className="flex items-center gap-3 py-4">
             <button
@@ -123,7 +123,7 @@ export default function WebAnnouncementDetailPage() {
         <div className="mt-4 flex items-center gap-3">
           {/* 一覧と同じ “日本語ラベル & グラデ & グロー” */}
           <span
-            className={`px-3 py-1.5 rounded-full text-[12px] font-semibold bg-gradient-to-r ${meta.grad} text-black/90 ${meta.glow}`}
+            className={`px-3 py-1.5 rounded-full text-[12px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
           >
             {meta.label}
           </span>

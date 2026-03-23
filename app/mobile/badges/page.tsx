@@ -104,7 +104,7 @@ export default function MobileBadgesPage() {
                 <div
                   className="
                     absolute inset-0 pointer-events-none
-                    bg-gradient-to-br from-white/10 to-transparent
+                    bg-linear-to-br from-white/10 to-transparent
                     opacity-0 group-hover:opacity-20 transition-opacity
                   "
                 />

@@ -347,7 +347,7 @@ export default function GamesImportPage() {
   };
 
   return (
-    <main className="min-h-[100svh] bg-app text-white p-4 md:p-8">
+    <main className="min-h-svh bg-app text-white p-4 md:p-8">
       <h1 className="text-2xl font-extrabold mb-2">Games Import</h1>
       <p className="text-white/70 mb-4">
         JSON を貼り付けてプレビュー → 問題なければ Firestore に一括書き込みします。

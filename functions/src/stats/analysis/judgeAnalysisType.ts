@@ -42,43 +42,11 @@ export function judgeAnalysisType(
     }
 
     if (
-      levels.winRate === "S" &&
-      levels.precision === "S" &&
-      levels.accuracy === "S"
-    ) {
-      return "PRECISE_CLOSER";
-    }
-
-    if (
-      levels.winRate === "S" &&
-      levels.streak === "S" &&
-      levels.accuracy === "S"
-    ) {
-      return "CONFIDENT_FINISHER";
-    }
-
-    if (
       levels.precision === "S" &&
       levels.volume === "S" &&
       levels.streak === "S"
     ) {
       return "DATA_GRINDER";
-    }
-
-    if (
-      levels.precision === "S" &&
-      levels.volume === "S" &&
-      levels.accuracy === "S"
-    ) {
-      return "PROBABILITY_READER";
-    }
-
-    if (
-      levels.precision === "S" &&
-      levels.streak === "S" &&
-      levels.accuracy === "S"
-    ) {
-      return "STABLE_ANALYST";
     }
 
     if (
@@ -105,21 +73,6 @@ export function judgeAnalysisType(
       return "CHAOS_ENGINE";
     }
 
-    if (
-      levels.accuracy === "S" &&
-      levels.volume === "S" &&
-      levels.streak === "S"
-    ) {
-      return "ACCURACY_CONTROLLER";
-    }
-
-    if (
-      levels.accuracy === "S" &&
-      levels.winRate === "S" &&
-      levels.volume === "S"
-    ) {
-      return "CONSISTENT_PRODUCER";
-    }
   }
 
   if (S === 2) {
@@ -135,28 +88,12 @@ export function judgeAnalysisType(
       return "RELENTLESS_OUTPUT";
     }
 
-    if (levels.winRate === "S" && levels.accuracy === "S") {
-      return "CONFIDENCE_DOMINANCE";
-    }
-
-    if (levels.winRate === "S" && levels.accuracy === "W") {
-      return "HIGH_RISK_READER";
-    }
-
     if (levels.precision === "S" && levels.volume === "S") {
       return "DATA_FORGE";
     }
 
     if (levels.precision === "S" && levels.streak === "S") {
       return "RHYTHM_BLADE";
-    }
-
-    if (levels.precision === "S" && levels.accuracy === "S") {
-      return "PROBABILITY_COMMANDER";
-    }
-
-    if (levels.precision === "S" && levels.accuracy === "W") {
-      return "VOLATILE_READER";
     }
 
     if (levels.upset === "S" && levels.winRate === "S") {
@@ -171,21 +108,10 @@ export function judgeAnalysisType(
       return "CHAOS_SURGE";
     }
 
-    if (levels.upset === "S" && levels.accuracy === "W") {
-      return "BOLD_READER";
-    }
-
     if (levels.volume === "S" && levels.streak === "S") {
       return "ENDURANCE_CORE";
     }
 
-    if (levels.volume === "S" && levels.accuracy === "S") {
-      return "ACCURACY_ENGINE";
-    }
-
-    if (levels.volume === "S" && levels.accuracy === "W") {
-      return "RISK_ENGINE";
-    }
   }
 
   if (S === 1) {
@@ -194,8 +120,6 @@ export function judgeAnalysisType(
     if (levels.upset === "S") return "CHAOS_TAKER";
     if (levels.volume === "S") return "HIGH_ACTIVITY";
     if (levels.streak === "S") return "HOT_PHASE";
-    if (levels.accuracy === "S") return "ACCURACY_PATH";
-    if (levels.accuracy === "W") return "VOLATILE_PATH";
   }
 
   if (S === 0) {

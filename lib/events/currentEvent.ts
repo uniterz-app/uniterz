@@ -1,4 +1,4 @@
 // lib/events/currentEvent.ts
-import { MONTHLY_TOP3_BADGE_GRANTED_EVENT } from "./monthlyTop3Badge";
+import { PLAYOFF_COMPETITION_EVENT } from "./playoffCompetition";
 
-export const CURRENT_EVENT = MONTHLY_TOP3_BADGE_GRANTED_EVENT;
+export const CURRENT_EVENT = PLAYOFF_COMPETITION_EVENT;

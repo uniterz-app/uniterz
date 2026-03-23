@@ -1,49 +1,30 @@
-// app/lib/stats/useUserStatsV2.ts
+// app/component/profile/useUserStatsV2.ts
 "use client";
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-/* ========= Bucket 型（Firestore: user_stats_v2_daily/{uid_date}.all と揃える） ========= */
+/* ========= Bucket 型（user_stats_v2_daily/{uid_date}.all と揃える） ========= */
 type Bucket = {
   posts: number;
   wins: number;
-
   scoreErrorSum: number;
-
-  // upset
   upsetHitCount: number;
   upsetOpportunityCount: number;
   upsetPointsSum: number;
-
-  // score precision
   scorePrecisionSum: number;
-
-  // total points
   pointsSumV3: number;
 };
 
 export type SummaryForCardsV2 = {
   posts: number;
   fullPosts: number;
-
-  // 的中数
   wins: number;
-
-  // ① 勝率
   winRate: number;
-
-  // ② スコア精度（期間合計）
   scorePrecisionSum: number;
-
-  // ③ アップセット得点（期間合計）
   upsetPointsSum: number;
-
-  // ④ 総合得点（期間合計）
   pointsSumV3: number;
-
-  // Upset補助
   upsetChanceCount: number;
   upsetHitCount: number;
 };
@@ -60,63 +41,50 @@ const empty = (): Bucket => ({
   pointsSumV3: 0,
 });
 
-/* ========= 再計算（サマリーカード用） ========= */
-function computeForCards(b: Bucket): Omit<SummaryForCardsV2, "fullPosts"> {
-  const posts = safeInt(b.posts);
-  const wins = safeInt(b.wins);
-
-  const scorePrecisionSum = safeNum(b.scorePrecisionSum);
-  const upsetPointsSum = safeNum(b.upsetPointsSum);
-  const pointsSumV3 = safeNum(b.pointsSumV3);
-
-  const upsetChanceCount = safeInt(b.upsetOpportunityCount);
-  const upsetHitCount = safeInt(b.upsetHitCount);
-
-  return {
-    posts,
-    wins,
-    winRate: posts ? wins / posts : 0,
-    scorePrecisionSum,
-    upsetPointsSum,
-    pointsSumV3,
-    upsetChanceCount,
-    upsetHitCount,
-  };
-}
-
-function safeNum(v: any): number {
+function safeNum(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-function safeInt(v: any): number {
+function safeInt(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
 }
 
-function dateKey(d: Date) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+function dateKeyJST(d: Date): string {
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const yyyy = j.getUTCFullYear();
+  const mm = String(j.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(j.getUTCDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
 function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   if (!v) return base;
-
   base.posts += safeInt(v.posts);
   base.wins += safeInt(v.wins);
-
   base.scoreErrorSum += safeNum(v.scoreErrorSum);
-
   base.upsetHitCount += safeInt(v.upsetHitCount);
   base.upsetOpportunityCount += safeInt(v.upsetOpportunityCount);
   base.upsetPointsSum += safeNum(v.upsetPointsSum);
-
   base.scorePrecisionSum += safeNum(v.scorePrecisionSum);
   base.pointsSumV3 += safeNum(v.pointsSumV3);
-
   return base;
+}
+
+function computeForCards(b: Bucket): Omit<SummaryForCardsV2, "fullPosts"> {
+  const posts = safeInt(b.posts);
+  const wins = safeInt(b.wins);
+  return {
+    posts,
+    wins,
+    winRate: posts ? wins / posts : 0,
+    scorePrecisionSum: safeNum(b.scorePrecisionSum),
+    upsetPointsSum: safeNum(b.upsetPointsSum),
+    pointsSumV3: safeNum(b.pointsSumV3),
+    upsetChanceCount: safeInt(b.upsetOpportunityCount),
+    upsetHitCount: safeInt(b.upsetHitCount),
+  };
 }
 
 export function useUserStatsV2(uid?: string | null) {
@@ -124,7 +92,7 @@ export function useUserStatsV2(uid?: string | null) {
   const [summaries, setSummaries] = useState<
     Record<"7d" | "30d" | "all", SummaryForCardsV2> | null
   >(null);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,12 +124,11 @@ export function useUserStatsV2(uid?: string | null) {
 
         const allRaw = allSnap.exists()
           ? (allSnap.data() as Partial<Bucket>)
-          : {};
-        const allBucket: Bucket = { ...empty(), ...(allRaw as any) };
+          : ({} as Partial<Bucket>);
+        const allBucket: Bucket = { ...empty(), ...(allRaw as Record<string, unknown>) };
         const allComputed = computeForCards(allBucket);
 
         const today = new Date();
-
         const dates = Array.from({ length: 30 }, (_, i) => {
           const d = new Date(today);
           d.setDate(today.getDate() - i);
@@ -170,7 +137,7 @@ export function useUserStatsV2(uid?: string | null) {
 
         const dailySnaps = await Promise.all(
           dates.map((d) =>
-            getDoc(doc(db, "user_stats_v2_daily", `${safeUid}_${dateKey(d)}`))
+            getDoc(doc(db, "user_stats_v2_daily", `${safeUid}_${dateKeyJST(d)}`))
           )
         );
 
@@ -181,9 +148,7 @@ export function useUserStatsV2(uid?: string | null) {
           const raw = snap.exists()
             ? (snap.data()?.all as Partial<Bucket> | undefined)
             : undefined;
-
           return {
-            date: dateKey(d),
             bucket: raw ? ({ ...empty(), ...raw } as Bucket) : null,
           };
         });

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import DonutChart from "./DonutChart";
 
@@ -27,36 +27,34 @@ const [awayCount, setAwayCount] = useState(0);
 const [drawCount, setDrawCount] = useState(0);
 
   useEffect(() => {
+    let alive = true;
     const q = query(
       collection(db, "posts"),
       where("gameId", "==", gameId),
       where("schemaVersion", "==", 2)
     );
 
-    const unsub = onSnapshot(q, (snap) => {
+    getDocs(q).then((snap) => {
+      if (!alive) return;
       let h = 0;
-let a = 0;
-let d = 0;
-
-snap.docs.forEach((doc) => {
-  const data = doc.data() as any;
-
-  const winner =
-    data?.prediction?.winner ??
-    data?.winner ??
-    null;
-
-  if (winner === "home") h++;
-  else if (winner === "away") a++;
-  else if (winner === "draw") d++;
-});
-
-setHomeCount(h);
-setAwayCount(a);
-setDrawCount(d);
+      let a = 0;
+      let d = 0;
+      snap.docs.forEach((docSnap) => {
+        const data = docSnap.data() as any;
+        const winner =
+          data?.prediction?.winner ?? data?.winner ?? null;
+        if (winner === "home") h++;
+        else if (winner === "away") a++;
+        else if (winner === "draw") d++;
+      });
+      setHomeCount(h);
+      setAwayCount(a);
+      setDrawCount(d);
     });
 
-    return () => unsub();
+    return () => {
+      alive = false;
+    };
   }, [gameId]);
   const isSoccer = league === "j1" || league === "pl";
   const total = homeCount + awayCount + (isSoccer ? drawCount : 0);
@@ -109,7 +107,7 @@ setDrawCount(d);
         "
       >
         {/* ==== 円グラフ ==== */}
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <div className="md:hidden">
             <DonutChart segments={segments} size={140} thickness={50} />
           </div>

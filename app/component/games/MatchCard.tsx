@@ -384,6 +384,9 @@ const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   e.stopPropagation();
 
+  // 予想済みなら何もしない（2回投稿防止・遷移防止）
+  if (myPostId) return;
+
   const me = auth.currentUser;
   if (!me) {
     setShowLoginRequired(true);
@@ -392,9 +395,6 @@ const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
 
   // 試合開始後は遷移しない（predictions/post ページは使わない）
   if (isGameStarted) {
-    if (!myPostId) {
-      alert("この試合のあなたの予想はありません");
-    }
     return;
   }
 
@@ -903,11 +903,15 @@ background:
 <button
   type="button"
   onClick={handleOpenPredict}
+  disabled={isPredicted}
   className={[
     "grid w-full place-items-center font-bold text-white",
     "h-8 text-sm px-2 md:h-12 md:text-base",
     "rounded-md",
-    "active:scale-[0.985] transition-all duration-200",
+    "transition-all duration-200",
+    isPredicted
+      ? "cursor-default"
+      : "active:scale-[0.985] cursor-pointer",
   ].join(" ")}
   style={isPredicted ? predictedStyle : normalStyle}
 >

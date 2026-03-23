@@ -29,7 +29,8 @@ import { db, auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import {
   collection,
-  onSnapshot,
+  getDocs,
+  getDoc,
   query,
   where,
   orderBy,
@@ -121,6 +122,7 @@ const lawPath = p(
   // ===== announcements unread =====
   useEffect(() => {
     if (status !== "ready") return;
+    let alive = true;
     const q = query(
       collection(db, "announcements"),
       where("visible", "==", true),
@@ -128,11 +130,13 @@ const lawPath = p(
       orderBy("postedAt", "desc"),
       limit(30)
     );
-    return onSnapshot(q, snap => {
+    getDocs(q).then((snap) => {
+      if (!alive) return;
       const s = new Set<string>();
-      snap.forEach(d => s.add(d.id));
+      snap.forEach((d) => s.add(d.id));
       setVisibleIds(s);
     });
+    return () => { alive = false; };
   }, [status]);
 
   useEffect(() => {
@@ -140,19 +144,19 @@ const lawPath = p(
       setReadIds(new Set());
       return;
     }
-    return onSnapshot(
-      collection(db, `users/${user.uid}/reads`),
-      snap => {
-        const s = new Set<string>();
-        snap.forEach(d => s.add(d.id));
-        setReadIds(s);
-      }
-    );
+    let alive = true;
+    getDocs(collection(db, `users/${user.uid}/reads`)).then((snap) => {
+      if (!alive) return;
+      const s = new Set<string>();
+      snap.forEach((d) => s.add(d.id));
+      setReadIds(s);
+    });
+    return () => { alive = false; };
   }, [user?.uid]);
 
   const unreadCount = useMemo(() => {
     let c = 0;
-    visibleIds.forEach(id => {
+    visibleIds.forEach((id) => {
       if (!readIds.has(id)) c++;
     });
     return c;
@@ -161,10 +165,13 @@ const lawPath = p(
   // ===== plan =====
   useEffect(() => {
     if (!user?.uid) return;
-    return onSnapshot(doc(db, "users", user.uid), snap => {
+    let alive = true;
+    getDoc(doc(db, "users", user.uid)).then((snap) => {
+      if (!alive) return;
       const p = snap.data()?.plan;
       setPlan(p === "pro" ? "pro" : "free");
     });
+    return () => { alive = false; };
   }, [user?.uid]);
 
   const isAdmin = user?.uid === ADMIN_UID;

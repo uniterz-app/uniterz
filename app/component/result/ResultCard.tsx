@@ -14,7 +14,8 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 type Props = {
   post: PredictionPostV2;
-  href: string;
+  href?: string;
+  onOpen?: (post: PredictionPostV2) => void;
 };
 
 const leaguePillBg: Record<string, string> = {
@@ -63,7 +64,7 @@ function getStreakBadge(activeWinStreak: unknown): {
     return {
       label: `${v}連勝`,
       className:
-        "bg-gradient-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
+        "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
       iconClassName: "text-yellow-200",
     };
   }
@@ -72,7 +73,7 @@ function getStreakBadge(activeWinStreak: unknown): {
     return {
       label: `${v}連勝`,
       className:
-        "bg-gradient-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
+        "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
       iconClassName: "text-yellow-100",
     };
   }
@@ -80,12 +81,12 @@ function getStreakBadge(activeWinStreak: unknown): {
   return {
     label: `${v}連勝`,
     className:
-      "bg-gradient-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
+      "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
     iconClassName: "text-red-500",
   };
 }
 
-export default function ResultCard({ post, href }: Props) {
+export default function ResultCard({ post, href, onOpen }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
@@ -129,7 +130,13 @@ export default function ResultCard({ post, href }: Props) {
     ? `${post.result!.home} - ${post.result!.away}`
     : null;
 
-  const handle = () => router.push(href);
+  const handle = () => {
+    if (onOpen) {
+      onOpen(post);
+    } else if (href) {
+      router.push(href);
+    }
+  };
 
   const pillBg = leaguePillBg[normalizedLeague] ?? "#334155";
   const pillText =

@@ -64,7 +64,6 @@ type MonthlyRow = {
   uid: string;
   posts: number;
   winRate: number;
-  accuracy: number;
   avgPrecision: number;
   avgPointsV3: number;
   upsetPointsSum: number;
@@ -81,15 +80,15 @@ function clamp10(v: number) {
 
 function toRadar10(params: {
   winRate: number;
-  accuracy: number;
   avgPrecision: number;
   streakScore: number;
+  pointsV3Percentile: number;
 }) {
   return {
     winRate: clamp10(params.winRate * 10),
-    accuracy: clamp10(params.accuracy * 10),
     precision: clamp10(params.avgPrecision),
     streak: clamp10(params.streakScore),
+    pointsV3: clamp10(params.pointsV3Percentile / 10),
   };
 }
 
@@ -221,7 +220,6 @@ export async function rebuildUserMonthlyStatsCore() {
       if (agg.posts === 0) return null;
 
       const winRate = agg.wins / agg.posts;
-      const accuracy = 1 - agg.brierSum / agg.posts;
       const avgPrecision = agg.precisionSum / agg.posts;
       const avgPointsV3 = agg.pointsSumV3 / agg.posts;
 
@@ -229,7 +227,6 @@ export async function rebuildUserMonthlyStatsCore() {
         uid,
         posts: agg.posts,
         winRate,
-        accuracy,
         avgPrecision,
         avgPointsV3,
         upsetPointsSum: agg.upsetPointsSum,
@@ -239,7 +236,6 @@ export async function rebuildUserMonthlyStatsCore() {
     .filter(Boolean) as MonthlyRow[];
 
   const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
-  const accuracies = rows.map((r) => r.accuracy).sort((a, b) => a - b);
   const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
   const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
   const upsetPointSums = rows
@@ -408,7 +404,6 @@ export async function rebuildUserMonthlyStatsCore() {
 
     const percentiles = {
       winRate: percentile(winRates, row.winRate),
-      accuracy: percentile(accuracies, row.accuracy),
       precision: percentile(precisions, row.avgPrecision),
       pointsV3: percentile(pointsV3s, row.avgPointsV3),
       upset: percentile(upsetPointSums, row.upsetPointsSum),
@@ -466,9 +461,9 @@ export async function rebuildUserMonthlyStatsCore() {
     const radar10 = {
       ...toRadar10({
         winRate: row.winRate,
-        accuracy: row.accuracy,
         avgPrecision: row.avgPrecision,
         streakScore,
+        pointsV3Percentile: percentiles.pointsV3,
       }),
       upset: clamp10(percentiles.upset / 10),
       volume: clamp10(percentiles.volume / 10),
@@ -488,7 +483,6 @@ export async function rebuildUserMonthlyStatsCore() {
         posts: agg.posts,
         wins: agg.wins,
         winRate: row.winRate,
-        accuracy: row.accuracy,
         avgPrecision: row.avgPrecision,
         avgPointsV3: row.avgPointsV3,
         upsetPointsSum: agg.upsetPointsSum,

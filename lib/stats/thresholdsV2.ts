@@ -16,8 +16,8 @@ type ThresholdPair = { yellow: number; strong: number };
  * ============================= */
 const SUM_THRESHOLDS = {
   scorePrecisionSum: {
-    "7d": { yellow: 28, strong: 36 },
-    "30d": { yellow: 70, strong: 90 },
+    "7d": { yellow: 50, strong: 100 },
+    "30d": { yellow: 200, strong: 300 },
     "all": { yellow: 140, strong: 180 },
   } satisfies Record<PeriodV2, ThresholdPair>,
 
@@ -28,8 +28,8 @@ const SUM_THRESHOLDS = {
   } satisfies Record<PeriodV2, ThresholdPair>,
 
   pointsSumV3: {
-    "7d": { yellow: 30, strong: 42 },
-    "30d": { yellow: 75, strong: 105 },
+    "7d": { yellow: 50, strong: 100 },
+    "30d": { yellow: 200, strong: 300 },
     "all": { yellow: 150, strong: 210 },
   } satisfies Record<PeriodV2, ThresholdPair>,
 } as const;
@@ -115,6 +115,17 @@ export function evaluatePointsSumV3V2(
     strongIcon: "crown",
     metric: "pointsSumV3",
   });
+}
+
+/* =============================
+ * 連勝（maxStreak）
+ * yellow: 7以上 / strong: 10以上
+ * ============================= */
+export function evaluateMaxStreakV2(maxStreak: number): HighlightV2 {
+  const v = Math.max(0, Math.floor(Number(maxStreak)));
+  if (v >= 10) return { level: "strong", reason: "streak>=10" };
+  if (v >= 7) return { level: "yellow", reason: "streak>=7" };
+  return { level: "none" };
 }
 
 /* =============================

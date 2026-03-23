@@ -16,7 +16,9 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 
 import {
   evaluateWinRateV2,
-  evaluatePrecisionV2,
+  evaluateScorePrecisionSumV2,
+  evaluatePointsSumV3V2,
+  evaluateMaxStreakV2,
   type HighlightV2,
 } from "@/lib/stats/thresholdsV2";
 
@@ -96,16 +98,15 @@ export default function SummaryCardsV2({
 
   const NONE: HighlightV2 = { level: "none" };
 
-  const avgPrecisionForHighlight =
-    data.posts > 0 ? (data.scorePrecisionSum ?? 0) / data.posts : 0;
-
   const hWin = enoughPosts ? evaluateWinRateV2(data.winRate ?? 0) : NONE;
   const hPrecision = enoughPosts
-    ? evaluatePrecisionV2(avgPrecisionForHighlight)
+    ? evaluateScorePrecisionSumV2(data.scorePrecisionSum ?? 0, period)
     : NONE;
   const hUpset = NONE;
-  const hStreak = NONE;
-  const hTotal = NONE;
+  const hStreak = evaluateMaxStreakV2(data.maxStreak ?? 0);
+  const hTotal = enoughPosts
+    ? evaluatePointsSumV3V2(data.pointsSumV3 ?? 0, period)
+    : NONE;
 
   const padCls = compact ? "p-2 md:p-3" : "p-4";
   const gapCls = compact ? "gap-2" : "gap-3";

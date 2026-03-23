@@ -20,7 +20,7 @@ type Props = {
 
 export default function MobileResultDetail({ post, market }: Props) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#111827] text-white px-4 py-4">
+    <div className="min-h-screen bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827] text-white px-4 py-4">
       {/* 上部：試合カード（mobileサイズ） */}
       <MobileResultMatchHeader post={post} />
 
