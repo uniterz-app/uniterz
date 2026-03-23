@@ -6,9 +6,10 @@ export default function LPSignupSection() {
   return (
     <section
       id="signup"
-      className="relative mx-auto max-w-7xl px-6 pb-32 pt-16 sm:px-8 sm:pt-18 lg:px-10 lg:pb-40 lg:pt-20"
+      data-lp-animate="up"
+      className="lp-section-shell pb-32 lg:pb-40"
     >
-      <div className="pointer-events-none absolute inset-x-6 top-0 sm:inset-x-8 lg:inset-x-10">
+      <div className="lp-section-rail">
         <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
         <div className="mx-auto h-24 w-[72%] max-w-4xl bg-cyan-300/8 blur-3xl" />
       </div>

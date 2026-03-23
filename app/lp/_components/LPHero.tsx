@@ -53,6 +53,19 @@ const METRIC_BADGES = [
   "総合得点",
 ] as const;
 
+const FLOW_STEPS = [
+  "試合を選ぶ",
+  "予想を投稿",
+  "結果を自動集計",
+  "ランキング/分析",
+] as const;
+
+const TRUST_METRICS = [
+  { label: "投稿総数", value: "120K+" },
+  { label: "アクティブ予想者", value: "18K+" },
+  { label: "週次分析更新", value: "毎週" },
+] as const;
+
 export default function LPHero() {
   const [activeView, setActiveView] = useState<HeroView>("ranking");
 
@@ -69,7 +82,10 @@ export default function LPHero() {
   const handleNext = () => setActiveView(right.key);
 
   return (
-    <section className="relative w-full overflow-hidden pb-16 pt-6 sm:pb-20 sm:pt-8 lg:pb-24 lg:pt-10">
+    <section
+      data-lp-animate="up"
+      className="relative w-full overflow-hidden pb-16 pt-6 sm:pb-20 sm:pt-8 lg:pb-24 lg:pt-10"
+    >
       <style>{`
         @keyframes lp-grid-drift {
           0% { transform: translate3d(0,0,0); }
@@ -120,23 +136,39 @@ export default function LPHero() {
           0% { background-position: -160% 50%; }
           100% { background-position: 220% 50%; }
         }
+        @keyframes lp-enter-soft {
+          0% { opacity: 0; transform: translate3d(0, 18px, 0); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        @keyframes lp-enter-phone {
+          0% { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.92); filter: blur(3px); }
+          100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+        }
+        @keyframes lp-impact-ring {
+          0% { transform: scale(0.7); opacity: 0.75; }
+          100% { transform: scale(1.22); opacity: 0; }
+        }
       `}</style>
 
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:120px_120px] opacity-[0.08]" />
-          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:120px_120px] opacity-[0.04] [animation:lp-grid-drift_12s_linear_infinite_alternate]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(103,232,249,0.05)_1px,transparent_1px)] bg-[size:132px_132px] opacity-[0.04]" />
+          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(103,232,249,0.04)_1px,transparent_1px)] bg-[size:132px_132px] opacity-[0.03] [animation:lp-grid-drift_12s_linear_infinite_alternate]" />
         </div>
 
-        <div className="absolute inset-x-0 top-0 h-[620px] bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_34%),radial-gradient(circle_at_78%_16%,rgba(34,211,238,0.08),transparent_28%),radial-gradient(circle_at_58%_72%,rgba(59,130,246,0.06),transparent_32%)]" />
-        <div className="absolute left-[6%] top-[16%] h-[300px] w-[300px] rounded-full bg-cyan-400/6 blur-3xl" />
-        <div className="absolute right-[8%] top-[10%] h-[260px] w-[260px] rounded-full bg-sky-400/6 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-[620px] bg-[radial-gradient(circle_at_18%_18%,rgba(34,211,238,0.05),transparent_34%),radial-gradient(circle_at_78%_16%,rgba(56,189,248,0.04),transparent_28%),radial-gradient(circle_at_58%_72%,rgba(59,130,246,0.03),transparent_32%)]" />
+        <div className="absolute left-[6%] top-[16%] h-[300px] w-[300px] rounded-full bg-cyan-400/3 blur-3xl" />
+        <div className="absolute right-[8%] top-[10%] h-[260px] w-[260px] rounded-full bg-sky-400/3 blur-3xl" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
         <div className="relative z-10 grid grid-cols-1 gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-10">
           <div className="min-w-0 pt-2 lg:pt-10">
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-cyan-300/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100/76 [animation:lp-enter-soft_.55s_ease-out_.03s_both]">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.7)]" />
+              Team Prediction Platform
+            </div>
+            <div className="mt-3 flex items-center gap-3 sm:gap-4 [animation:lp-enter-soft_.55s_ease-out_.08s_both]">
               <div className="relative h-11 w-11 shrink-0 sm:h-14 sm:w-14">
                 <Image
                   src="/logo/logo.png"
@@ -149,14 +181,14 @@ export default function LPHero() {
               <div className="h-px flex-1 bg-gradient-to-r from-cyan-300/30 to-transparent" />
             </div>
 
-            <h1 className="mt-6 max-w-5xl sm:mt-7">
+            <h1 className="mt-6 max-w-5xl sm:mt-7 [animation:lp-enter-soft_.65s_ease-out_.16s_both]">
               <span
                 className="block text-[48px] font-black leading-[0.95] tracking-[-0.065em] text-white sm:text-[72px] lg:text-[84px] xl:text-[96px]"
                 style={{
                   animation: "lp-title-float 6s ease-in-out infinite",
                 }}
               >
-                スポーツ予想を
+                予想を、
               </span>
 
               <span
@@ -171,16 +203,29 @@ export default function LPHero() {
                     "lp-title-float 6s ease-in-out infinite, lp-title-shine 7s linear infinite",
                 }}
               >
-                競技体験へ。
+                実力に変える。
               </span>
             </h1>
 
-            <p className="mt-5 max-w-[34rem] text-[15px] leading-7 text-white/68 sm:mt-7 sm:max-w-2xl sm:text-lg sm:leading-8">
-              Uniterzは、予想投稿、結果反映、ランキング、分析までを一体化したスポーツ予想プラットフォーム。
-              当てたかどうかだけではなく、どれだけ上手いかまで見える。
+            <p className="mt-5 max-w-[34rem] text-[15px] leading-7 text-white/68 sm:mt-7 sm:max-w-2xl sm:text-lg sm:leading-8 [animation:lp-enter-soft_.65s_ease-out_.28s_both]">
+              Uniterzは、予想投稿から結果反映、ランキング、分析までを一つの流れでつなぐ。
+              単発の的中ではなく、継続的な予想力を記録し、成長を可視化する。
             </p>
 
-            <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-4">
+            <div className="mt-5 flex flex-wrap items-center gap-2 text-[11px] font-semibold tracking-[0.08em] text-white/64 [animation:lp-enter-soft_.65s_ease-out_.34s_both]">
+              {FLOW_STEPS.map((step, index) => (
+                <div key={step} className="inline-flex items-center gap-2">
+                  <span className="rounded-full border border-cyan-300/14 bg-cyan-300/[0.05] px-3 py-1.5 text-cyan-100/80">
+                    {step}
+                  </span>
+                  {index < FLOW_STEPS.length - 1 ? (
+                    <span className="text-cyan-200/56">→</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-4 [animation:lp-enter-soft_.65s_ease-out_.4s_both]">
               <Link
                 href="#signup"
                 className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-300 via-sky-400 to-cyan-100 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.20)] transition duration-200 hover:scale-[1.02]"
@@ -192,11 +237,11 @@ export default function LPHero() {
                 href="#features"
                 className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] px-6 py-3.5 text-sm font-semibold text-white/88 backdrop-blur-xl transition duration-200 hover:bg-white/[0.07]"
               >
-                仕組みを見る
+                デモを見る
               </Link>
             </div>
 
-            <div className="mt-7 flex flex-wrap gap-3 sm:mt-9">
+            <div className="mt-7 flex flex-wrap gap-3 sm:mt-9 [animation:lp-enter-soft_.65s_ease-out_.52s_both]">
               {METRIC_BADGES.map((label) => (
                 <div
                   key={label}
@@ -207,10 +252,47 @@ export default function LPHero() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-7 grid max-w-2xl grid-cols-1 gap-3 sm:mt-8 sm:grid-cols-3 [animation:lp-enter-soft_.65s_ease-out_.62s_both]">
+              {TRUST_METRICS.map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl"
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/64">
+                    {item.label}
+                  </div>
+                  <div className="mt-2 text-[22px] font-black leading-none tracking-[-0.03em] text-white">
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[430px] min-h-[540px] sm:max-w-[560px] sm:min-h-[660px] lg:max-w-none lg:min-h-[780px]">
-            <div className="absolute inset-x-0 bottom-0 top-[-20px] sm:top-[-12px] lg:top-[-12px]">
+          <div className="relative mx-auto w-full max-w-[430px] min-h-[540px] sm:max-w-[560px] sm:min-h-[660px] lg:max-w-none lg:min-h-[740px] [animation:lp-enter-phone_.8s_cubic-bezier(.2,.8,.2,1)_.2s_both]">
+            <div className="pointer-events-none absolute -right-2 top-0 z-0 hidden w-[320px] rounded-[24px] border border-white/12 bg-[linear-gradient(180deg,rgba(10,18,30,0.88),rgba(8,15,24,0.8))] p-3 backdrop-blur-xl shadow-[0_20px_70px_rgba(0,0,0,0.35)] 2xl:block">
+              <div className="mb-3 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/68">
+                  Product Preview
+                </div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
+                  Live UI
+                </div>
+              </div>
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+                <Image
+                  src="/lp/ranking-v2.png"
+                  alt="Uniterz desktop preview"
+                  width={1280}
+                  height={720}
+                  className="h-auto w-full object-cover"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(6,10,16,0.04),rgba(6,10,16,0.35))]" />
+              </div>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 top-[-20px] z-20 sm:top-[-12px] lg:top-[-6px]">
+              <div className="pointer-events-none absolute left-1/2 top-[41%] h-[220px] w-[220px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-300/35 [animation:lp-impact-ring_1s_ease-out_.18s_both]" />
               <div className="absolute left-1/2 top-[38%] h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/7 blur-3xl [animation:lp-glow-pulse_6.5s_ease-in-out_infinite] sm:h-[320px] sm:w-[320px] lg:top-[41%] lg:h-[380px] lg:w-[380px]" />
               <div className="absolute left-1/2 top-[41%] h-[190px] w-[190px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300/6 blur-[72px] sm:h-[240px] sm:w-[240px] lg:h-[270px] lg:w-[270px]" />
               <div className="pointer-events-none absolute bottom-[128px] left-1/2 h-[88px] w-[280px] -translate-x-1/2 rounded-[999px] bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.05),rgba(0,0,0,0)_72%)] blur-xl sm:w-[340px] lg:bottom-[156px] lg:h-[108px] lg:w-[420px]" />
@@ -219,14 +301,14 @@ export default function LPHero() {
                 type="button"
                 onClick={handlePrev}
                 aria-label={`Show ${left.label}`}
-                className="absolute left-[6%] top-[182px] z-10 hidden lg:block"
+                className="absolute left-[8%] top-[188px] z-10 hidden xl:block"
               >
                 <div className="transition duration-300 hover:scale-[1.02]">
                   <div className="[animation:lp-float-side-left_7.2s_ease-in-out_infinite]">
                     <PhoneMock
                       src={left.src}
                       alt={`${left.label} UI`}
-                      widthClassName="w-[150px]"
+                      widthClassName="w-[132px]"
                       glowClassName="from-transparent via-transparent to-transparent"
                       imageClassName="brightness-[0.56] saturate-[0.62]"
                       frameClassName="rounded-[30px] p-[7px] opacity-[0.38]"
@@ -240,7 +322,7 @@ export default function LPHero() {
                 </div>
               </button>
 
-              <div className="absolute left-1/2 top-[126px] z-30 -translate-x-1/2 sm:top-[142px] lg:top-[96px]">
+              <div className="absolute left-1/2 top-[126px] z-30 -translate-x-1/2 sm:top-[140px] lg:top-[86px]">
                 <div
                   key={active.key}
                   className="[animation:lp-fade-up_.35s_ease-out] [animation-fill-mode:both]"
@@ -249,7 +331,7 @@ export default function LPHero() {
                     <PhoneMock
                       src={active.src}
                       alt={`${active.label} UI`}
-                      widthClassName="w-[224px] sm:w-[248px] lg:w-[262px]"
+                      widthClassName="w-[224px] sm:w-[248px] lg:w-[246px] xl:w-[262px]"
                       glowClassName="from-cyan-400/8 via-sky-400/5 to-cyan-200/4"
                       imageClassName="brightness-[1] saturate-[1.02]"
                       priority
@@ -263,14 +345,14 @@ export default function LPHero() {
                 type="button"
                 onClick={handleNext}
                 aria-label={`Show ${right.label}`}
-                className="absolute right-[6%] top-[190px] z-10 hidden lg:block"
+                className="absolute right-[8%] top-[196px] z-10 hidden xl:block"
               >
                 <div className="transition duration-300 hover:scale-[1.02]">
                   <div className="[animation:lp-float-side-right_7.5s_ease-in-out_infinite]">
                     <PhoneMock
                       src={right.src}
                       alt={`${right.label} UI`}
-                      widthClassName="w-[150px]"
+                      widthClassName="w-[132px]"
                       glowClassName="from-transparent via-transparent to-transparent"
                       imageClassName="brightness-[0.56] saturate-[0.62]"
                       frameClassName="rounded-[30px] p-[7px] opacity-[0.38]"
@@ -284,7 +366,7 @@ export default function LPHero() {
                 </div>
               </button>
 
-              <div className="absolute left-[7%] top-[236px] z-10 lg:hidden">
+              <div className="absolute left-[8%] top-[244px] z-10 lg:hidden">
                 <div className="[animation:lp-float-mobile-left_7.2s_ease-in-out_infinite]">
                   <PhoneMock
                     src={left.src}
@@ -302,7 +384,7 @@ export default function LPHero() {
                 </div>
               </div>
 
-              <div className="absolute right-[7%] top-[252px] z-10 lg:hidden">
+              <div className="absolute right-[8%] top-[258px] z-10 lg:hidden">
                 <div className="[animation:lp-float-mobile-right_7.5s_ease-in-out_infinite]">
                   <PhoneMock
                     src={right.src}
@@ -320,7 +402,7 @@ export default function LPHero() {
                 </div>
               </div>
 
-              <div className="absolute bottom-[18px] left-1/2 z-40 w-[min(92%,520px)] -translate-x-1/2 sm:bottom-[28px]">
+              <div className="absolute bottom-[10px] left-1/2 z-40 w-[min(88%,470px)] -translate-x-1/2 sm:bottom-[18px]">
                 <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,18,28,0.56),rgba(5,14,24,0.34))] px-5 py-4 backdrop-blur-[18px] shadow-[0_18px_40px_rgba(0,0,0,0.20)] ring-1 ring-cyan-300/5">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/24 to-transparent" />
 

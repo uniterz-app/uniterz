@@ -50,8 +50,12 @@ export default function LPMetrics() {
     ) || 0;
 
   return (
-    <section className="relative mx-auto max-w-7xl px-6 pb-24 pt-16 sm:px-8 sm:pt-18 lg:px-10 lg:pt-20">
-      <div className="pointer-events-none absolute inset-x-6 top-0 sm:inset-x-8 lg:inset-x-10">
+    <section
+      id="metrics"
+      data-lp-animate="right"
+      className="lp-section-shell"
+    >
+      <div className="lp-section-rail">
         <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-cyan-300/38 to-transparent" />
         <div className="mx-auto h-24 w-[68%] max-w-4xl bg-cyan-300/7 blur-3xl" />
       </div>
@@ -65,11 +69,11 @@ export default function LPMetrics() {
             </div>
           </div>
 
-          <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-[42px] lg:leading-[1.05]">
+          <h2 className="lp-section-title">
             予想力を、4つの指標で分解する。
           </h2>
 
-          <p className="mt-4 text-base leading-7 text-white/68">
+          <p className="lp-section-desc">
             順位だけでは見えない差を、4つの視点で可視化する。勝率だけでなく、スコア精度、アップセット得点、総合得点まで含めて予想の質を評価する。
           </p>
 

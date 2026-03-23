@@ -22,9 +22,10 @@ export default function LPFeatures() {
   return (
     <section
       id="features"
-      className="relative mx-auto max-w-7xl px-6 pb-24 pt-16 sm:px-8 sm:pt-18 lg:px-10 lg:pt-20"
+      data-lp-animate="left"
+      className="lp-section-shell"
     >
-      <div className="pointer-events-none absolute inset-x-6 top-0 sm:inset-x-8 lg:inset-x-10">
+      <div className="lp-section-rail">
         <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-cyan-300/42 to-transparent" />
         <div className="mx-auto h-24 w-[72%] max-w-4xl bg-cyan-300/8 blur-3xl" />
       </div>
@@ -38,11 +39,11 @@ export default function LPFeatures() {
             </div>
           </div>
 
-          <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-[42px] lg:leading-[1.05]">
+          <h2 className="lp-section-title">
             予想して終わらず、記録と分析につながる。
           </h2>
 
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/68">
+          <p className="lp-section-desc">
             投稿した予想は、その場で終わらない。入力した内容が結果反映、ランキング、分析まで一連の流れでつながっていく。
           </p>
 
