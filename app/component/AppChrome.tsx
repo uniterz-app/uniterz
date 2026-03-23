@@ -7,8 +7,11 @@ import Header from "@/app/component/Header";
 export default function AppChrome() {
   const pathname = usePathname() ?? "";
 
-  const shouldHide =
+  const shouldHideHeader = pathname === "/lp";
+
+  const shouldHideNav =
     pathname === "/" ||
+    pathname === "/lp" ||
     pathname === "/web" ||
     pathname === "/mobile" ||
     pathname === "/web/login" ||
@@ -16,12 +19,10 @@ export default function AppChrome() {
     pathname === "/mobile/login" ||
     pathname === "/mobile/signup";
 
-  if (shouldHide) return null;
-
   return (
     <>
-      <Header />
-      <NavBar />
+      {!shouldHideHeader && <Header />}
+      {!shouldHideNav && <NavBar />}
     </>
   );
 }

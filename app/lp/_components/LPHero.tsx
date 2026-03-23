@@ -3,10 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { stats } from "./lp-data";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import PhoneMock from "./PhoneMock";
 
-type HeroView = "ranking" | "games" | "predict";
+type HeroView = "ranking" | "games" | "post";
 
 const HERO_VIEWS: Array<{
   key: HeroView;
@@ -15,32 +15,43 @@ const HERO_VIEWS: Array<{
   desc: string;
   src: string;
   chip: string;
+  imagePosition?: string;
 }> = [
   {
     key: "ranking",
     label: "Ranking",
     title: "実力が、立体的に見える。",
-    desc: "勝率だけでなく、5指標で予想の強さを可視化。結果を見る場所ではなく、競い合う場所になる。",
-    src: "/lp/ranking.png",
-    chip: "5 Metrics",
+    desc: "勝率だけでなく、4指標で予想の強さを可視化。結果だけでなく、予想の質まで見える。",
+    src: "/lp/ranking-v2.png",
+    chip: "4 Metrics",
+    imagePosition: "center top",
   },
   {
     key: "games",
     label: "Games",
-    title: "試合選択から予想までが速い。",
-    desc: "日付ごとに試合を確認し、そのままテンポよく予想投稿。迷わない導線で体験が途切れない。",
-    src: "/lp/games.png",
-    chip: "Schedule Flow",
+    title: "試合選択から投稿までが速い。",
+    desc: "日付ごとに試合を確認し、そのままテンポよく予想投稿。迷わず進める導線で体験が途切れない。",
+    src: "/lp/games-v2.png",
+    chip: "Fast Flow",
+    imagePosition: "center top",
   },
   {
-    key: "predict",
-    label: "Predict",
-    title: "予想を、入力体験ごと磨く。",
-    desc: "勝敗だけでなく、信頼度とスコアまで入力。予想の質そのものをデータとして積み上げられる。",
-    src: "/lp/predict.png",
-    chip: "Confidence Input",
+    key: "post",
+    label: "Post",
+    title: "予想を、記録として積み上げる。",
+    desc: "勝敗とスコアを投稿し、結果反映後はランキングと分析までつながる。予想がその場で終わらない。",
+    src: "/lp/predict-v2.png",
+    chip: "Prediction Post",
+    imagePosition: "center top",
   },
-];
+] as const;
+
+const METRIC_BADGES = [
+  "勝率",
+  "スコア精度",
+  "アップセット得点",
+  "総合得点",
+] as const;
 
 export default function LPHero() {
   const [activeView, setActiveView] = useState<HeroView>("ranking");
@@ -54,257 +65,337 @@ export default function LPHero() {
   const mobileTitle = useMemo(() => active.title, [active]);
   const mobileDesc = useMemo(() => active.desc, [active]);
 
+  const handlePrev = () => setActiveView(left.key);
+  const handleNext = () => setActiveView(right.key);
+
   return (
-    <section className="relative w-full overflow-hidden pb-24 pt-3 lg:pb-28 lg:pt-4">
+    <section className="relative w-full overflow-hidden pb-16 pt-6 sm:pb-20 sm:pt-8 lg:pb-24 lg:pt-10">
       <style>{`
         @keyframes lp-grid-drift {
           0% { transform: translate3d(0,0,0); }
-          100% { transform: translate3d(0,24px,0); }
-        }
-
-        @keyframes lp-float-main {
-          0%, 100% { transform: translate3d(0,0,0); }
-          50% { transform: translate3d(0,-10px,0); }
-        }
-
-        @keyframes lp-float-left {
-          0%, 100% { transform: translate3d(0,0,0); }
-          50% { transform: translate3d(0,-6px,0); }
-        }
-
-        @keyframes lp-float-right {
-          0%, 100% { transform: translate3d(0,0,0); }
-          50% { transform: translate3d(0,-6px,0); }
+          100% { transform: translate3d(0,18px,0); }
         }
 
         @keyframes lp-fade-up {
-          0% { opacity: 0; transform: translate3d(0,18px,0); }
+          0% { opacity: 0; transform: translate3d(0,16px,0); }
           100% { opacity: 1; transform: translate3d(0,0,0); }
         }
 
         @keyframes lp-glow-pulse {
-          0%, 100% { opacity: .34; transform: scale(1); }
-          50% { opacity: .58; transform: scale(1.03); }
+          0%, 100% { opacity: .22; transform: scale(1); }
+          50% { opacity: .36; transform: scale(1.03); }
+        }
+
+        @keyframes lp-float-main {
+          0%, 100% { transform: translateY(0px) rotate(-1.5deg); }
+          50% { transform: translateY(-8px) rotate(-1.5deg); }
+        }
+
+        @keyframes lp-float-side-left {
+          0%, 100% { transform: translate(-10px,16px) rotate(-9deg); }
+          50% { transform: translate(-10px,8px) rotate(-9deg); }
+        }
+
+        @keyframes lp-float-side-right {
+          0%, 100% { transform: translate(8px,10px) rotate(8deg); }
+          50% { transform: translate(8px,2px) rotate(8deg); }
+        }
+
+        @keyframes lp-float-mobile-left {
+          0%, 100% { transform: rotate(-9deg) translateY(0px); }
+          50% { transform: rotate(-9deg) translateY(-5px); }
+        }
+
+        @keyframes lp-float-mobile-right {
+          0%, 100% { transform: rotate(8deg) translateY(0px); }
+          50% { transform: rotate(8deg) translateY(-5px); }
+        }
+
+        @keyframes lp-title-float {
+          0%, 100% { transform: translate3d(0,0,0); }
+          50% { transform: translate3d(0,-2px,0); }
+        }
+
+        @keyframes lp-title-shine {
+          0% { background-position: -160% 50%; }
+          100% { background-position: 220% 50%; }
         }
       `}</style>
 
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:120px_120px] opacity-[0.08]" />
-          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:120px_120px] opacity-[0.05] [animation:lp-grid-drift_10s_linear_infinite_alternate]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:120px_120px] opacity-[0.08]" />
+          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:120px_120px] opacity-[0.04] [animation:lp-grid-drift_12s_linear_infinite_alternate]" />
         </div>
 
-        <div className="absolute inset-y-0 left-0 w-[24vw] min-w-[120px] bg-gradient-to-r from-cyan-400/8 to-transparent" />
-        <div className="absolute inset-y-0 right-0 w-[28vw] min-w-[160px] bg-gradient-to-l from-emerald-300/7 to-transparent" />
-        <div className="absolute inset-x-0 top-0 h-[680px] bg-[radial-gradient(circle_at_18%_22%,rgba(56,189,248,0.16),transparent_34%),radial-gradient(circle_at_78%_18%,rgba(16,185,129,0.14),transparent_30%),radial-gradient(circle_at_58%_78%,rgba(59,130,246,0.10),transparent_32%)]" />
-        <div className="absolute left-[6%] top-[18%] h-[360px] w-[360px] rounded-full bg-cyan-400/8 blur-3xl" />
-        <div className="absolute right-[6%] top-[10%] h-[300px] w-[300px] rounded-full bg-emerald-300/8 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-[620px] bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.12),transparent_34%),radial-gradient(circle_at_78%_16%,rgba(34,211,238,0.08),transparent_28%),radial-gradient(circle_at_58%_72%,rgba(59,130,246,0.06),transparent_32%)]" />
+        <div className="absolute left-[6%] top-[16%] h-[300px] w-[300px] rounded-full bg-cyan-400/6 blur-3xl" />
+        <div className="absolute right-[8%] top-[10%] h-[260px] w-[260px] rounded-full bg-sky-400/6 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6 sm:px-8 lg:px-10">
-        <header className="relative z-10 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="relative h-11 w-11 shrink-0">
-              <Image
-                src="/logo/logo.png"
-                alt="Uniterz logo"
-                fill
-                priority
-                className="object-contain drop-shadow-[0_0_18px_rgba(44,244,255,0.38)]"
-              />
-            </div>
-
-            <div className="text-[24px] font-black tracking-[0.28em] text-white/95">
-              UNITERZ
-            </div>
-          </div>
-
-          <div className="hidden rounded-full border border-cyan-300/20 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/85 backdrop-blur-xl sm:block">
-            Sports Prediction Platform
-          </div>
-        </header>
-
-        <div className="relative z-10 grid items-center gap-12 pt-8 lg:grid-cols-[0.96fr_1.04fr] lg:gap-8 lg:pt-10">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-medium text-white/72 backdrop-blur-xl">
-              <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(103,232,249,0.95)]" />
-              Predict. Analyze. Rank.
-            </div>
-
-            <div className="mt-7 flex items-center gap-4">
-              <div className="relative h-14 w-14 shrink-0 sm:h-16 sm:w-16">
+      <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-10">
+        <div className="relative z-10 grid grid-cols-1 gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-10">
+          <div className="min-w-0 pt-2 lg:pt-10">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="relative h-11 w-11 shrink-0 sm:h-14 sm:w-14">
                 <Image
                   src="/logo/logo.png"
                   alt="Uniterz symbol"
                   fill
-                  className="object-contain drop-shadow-[0_0_26px_rgba(44,244,255,0.34)]"
+                  priority
+                  className="object-contain drop-shadow-[0_0_22px_rgba(44,244,255,0.24)]"
                 />
               </div>
-              <div className="h-px flex-1 bg-gradient-to-r from-cyan-300/40 to-transparent" />
+              <div className="h-px flex-1 bg-gradient-to-r from-cyan-300/30 to-transparent" />
             </div>
 
-            <h1 className="mt-6 max-w-5xl text-5xl font-black leading-[0.92] tracking-[-0.04em] sm:text-6xl lg:text-7xl xl:text-[92px]">
-              スポーツ予想を
-              <span className="block bg-gradient-to-r from-cyan-300 via-sky-400 to-emerald-300 bg-clip-text text-transparent">
+            <h1 className="mt-6 max-w-5xl sm:mt-7">
+              <span
+                className="block text-[48px] font-black leading-[0.95] tracking-[-0.065em] text-white sm:text-[72px] lg:text-[84px] xl:text-[96px]"
+                style={{
+                  animation: "lp-title-float 6s ease-in-out infinite",
+                }}
+              >
+                スポーツ予想を
+              </span>
+
+              <span
+                className="relative mt-1 block bg-gradient-to-r from-cyan-300 via-sky-400 to-cyan-100 bg-clip-text text-[48px] font-black leading-[0.95] tracking-[-0.065em] text-transparent sm:text-[72px] lg:text-[84px] xl:text-[96px]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(90deg, rgba(125,211,252,1) 0%, rgba(56,189,248,1) 36%, rgba(34,211,238,1) 64%, rgba(207,250,254,0.98) 100%)",
+                  backgroundSize: "180% 100%",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  animation:
+                    "lp-title-float 6s ease-in-out infinite, lp-title-shine 7s linear infinite",
+                }}
+              >
                 競技体験へ。
               </span>
             </h1>
 
-            <p className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg sm:leading-8">
+            <p className="mt-5 max-w-[34rem] text-[15px] leading-7 text-white/68 sm:mt-7 sm:max-w-2xl sm:text-lg sm:leading-8">
               Uniterzは、予想投稿、結果反映、ランキング、分析までを一体化したスポーツ予想プラットフォーム。
               当てたかどうかだけではなく、どれだけ上手いかまで見える。
             </p>
 
-            <div className="mt-9 flex flex-wrap gap-4">
+            <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-4">
               <Link
                 href="#signup"
-                className="rounded-2xl bg-gradient-to-r from-cyan-300 via-sky-400 to-emerald-300 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_0_36px_rgba(34,211,238,0.28)] transition duration-200 hover:scale-[1.02]"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-300 via-sky-400 to-cyan-100 px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.20)] transition duration-200 hover:scale-[1.02]"
               >
                 無料で始める
               </Link>
 
               <Link
                 href="#features"
-                className="rounded-2xl border border-white/14 bg-white/[0.04] px-6 py-3.5 text-sm font-semibold text-white/88 backdrop-blur-xl transition duration-200 hover:bg-white/[0.07]"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] px-6 py-3.5 text-sm font-semibold text-white/88 backdrop-blur-xl transition duration-200 hover:bg-white/[0.07]"
               >
-                機能を見る
+                仕組みを見る
               </Link>
             </div>
 
-            <div className="mt-12 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
-              {stats.map((item) => (
+            <div className="mt-7 flex flex-wrap gap-3 sm:mt-9">
+              {METRIC_BADGES.map((label) => (
                 <div
-                  key={item.label}
-                  className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl"
+                  key={label}
+                  className="inline-flex items-center gap-2 rounded-full border border-cyan-300/12 bg-cyan-300/[0.04] px-3.5 py-2 text-[11px] font-semibold tracking-[0.16em] text-cyan-100/68 backdrop-blur-xl"
                 >
-                  <div className="text-[28px] font-black leading-none text-white">
-                    {item.value}
-                  </div>
-                  <div className="mt-2 text-[11px] uppercase tracking-[0.22em] text-white/42">
-                    {item.label}
-                  </div>
+                  <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.35)]" />
+                  {label}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="relative min-h-[650px] sm:min-h-[720px] lg:min-h-[780px]">
-            <div className="absolute inset-x-0 top-4 z-40 flex items-center justify-center">
-              <div className="rounded-full border border-white/10 bg-[#08111d]/72 p-1.5 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                <div className="flex items-center gap-1.5">
-                  {HERO_VIEWS.map((view) => {
-                    const isActive = view.key === activeView;
-                    return (
-                      <button
-                        key={view.key}
-                        type="button"
-                        onClick={() => setActiveView(view.key)}
-                        className={`rounded-full px-4 py-2.5 text-[12px] font-semibold tracking-[0.08em] transition ${
-                          isActive
-                            ? "bg-gradient-to-r from-cyan-300 via-sky-400 to-emerald-300 text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.20)]"
-                            : "text-white/70 hover:bg-white/[0.06] hover:text-white"
-                        }`}
-                      >
-                        {view.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+          <div className="relative mx-auto w-full max-w-[430px] min-h-[540px] sm:max-w-[560px] sm:min-h-[660px] lg:max-w-none lg:min-h-[780px]">
+            <div className="absolute inset-x-0 bottom-0 top-[-20px] sm:top-[-12px] lg:top-[-12px]">
+              <div className="absolute left-1/2 top-[38%] h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/7 blur-3xl [animation:lp-glow-pulse_6.5s_ease-in-out_infinite] sm:h-[320px] sm:w-[320px] lg:top-[41%] lg:h-[380px] lg:w-[380px]" />
+              <div className="absolute left-1/2 top-[41%] h-[190px] w-[190px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300/6 blur-[72px] sm:h-[240px] sm:w-[240px] lg:h-[270px] lg:w-[270px]" />
+              <div className="pointer-events-none absolute bottom-[128px] left-1/2 h-[88px] w-[280px] -translate-x-1/2 rounded-[999px] bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.05),rgba(0,0,0,0)_72%)] blur-xl sm:w-[340px] lg:bottom-[156px] lg:h-[108px] lg:w-[420px]" />
 
-            <div className="absolute inset-x-0 top-[72px] bottom-0 overflow-hidden">
-              <div className="absolute left-1/2 top-[43%] z-0 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/10 blur-3xl [animation:lp-glow-pulse_6.5s_ease-in-out_infinite]" />
-
-              <div className="pointer-events-none absolute left-1/2 top-[70%] z-0 h-[108px] w-[420px] -translate-x-1/2 rounded-[999px] bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.07),rgba(0,0,0,0)_72%)] blur-xl" />
-              <div className="pointer-events-none absolute left-1/2 top-[72.2%] z-0 h-[92px] w-[360px] -translate-x-1/2 rounded-[999px] border border-white/6 bg-white/[0.02] [transform:perspective(1200px)_rotateX(78deg)]" />
-
-              <div className="absolute inset-0 [perspective:1800px]">
-                <div className="relative h-full w-full [transform-style:preserve-3d]">
-                  <button
-                    type="button"
-                    onClick={() => setActiveView(left.key)}
-                    aria-label={`Show ${left.label}`}
-                    className="absolute left-[8%] top-[29%] z-10 hidden lg:block"
-                  >
-                    <div className="[animation:lp-float-left_7.2s_ease-in-out_infinite] transition duration-300 hover:scale-[1.03] [transform-style:preserve-3d] [transform:translate3d(0,0,-56px)_rotateY(24deg)_rotateX(6deg)_rotateZ(-4deg)]">
-                      <PhoneMock
-                        src={left.src}
-                        alt={`${left.label} UI`}
-                        widthClassName="w-[158px]"
-                        glowClassName="from-transparent via-transparent to-transparent"
-                        imageClassName="brightness-[0.84] saturate-[0.88]"
-                        hideStatusBar
-                      />
-                    </div>
-                  </button>
-
-                  <div className="absolute left-1/2 top-[46.5%] z-30 -translate-x-1/2 -translate-y-1/2">
-                    <div
-                      key={active.key}
-                      className="[animation:lp-fade-up_.35s_ease-out] [animation-fill-mode:both]"
-                    >
-                      <div className="[animation:lp-float-main_7.2s_ease-in-out_infinite] [transform-style:preserve-3d] [transform:translateZ(32px)]">
-                        <PhoneMock
-                          src={active.src}
-                          alt={`${active.label} UI`}
-                          widthClassName="w-[214px] sm:w-[244px] lg:w-[268px]"
-                          glowClassName="from-transparent via-transparent to-transparent"
-                          imageClassName="brightness-[0.98] saturate-[1.02]"
-                          tiltClassName="[transform:rotateY(-5deg)_rotateX(5deg)_rotateZ(1deg)]"
-                          hideStatusBar
-                          priority
-                        />
-                      </div>
-                    </div>
+              <button
+                type="button"
+                onClick={handlePrev}
+                aria-label={`Show ${left.label}`}
+                className="absolute left-[6%] top-[182px] z-10 hidden lg:block"
+              >
+                <div className="transition duration-300 hover:scale-[1.02]">
+                  <div className="[animation:lp-float-side-left_7.2s_ease-in-out_infinite]">
+                    <PhoneMock
+                      src={left.src}
+                      alt={`${left.label} UI`}
+                      widthClassName="w-[150px]"
+                      glowClassName="from-transparent via-transparent to-transparent"
+                      imageClassName="brightness-[0.56] saturate-[0.62]"
+                      frameClassName="rounded-[30px] p-[7px] opacity-[0.38]"
+                      screenClassName="rounded-[21px]"
+                      bezelClassName="rounded-[29px]"
+                      notchClassName="top-[5px] h-[18px] w-[35%]"
+                      tiltClassName="opacity-[0.22]"
+                      imagePosition={left.imagePosition}
+                    />
                   </div>
+                </div>
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setActiveView(right.key)}
-                    aria-label={`Show ${right.label}`}
-                    className="absolute right-[8%] top-[37%] z-10 hidden lg:block"
-                  >
-                    <div className="[animation:lp-float-right_7.5s_ease-in-out_infinite] transition duration-300 hover:scale-[1.03] [transform-style:preserve-3d] [transform:translate3d(0,0,-56px)_rotateY(-24deg)_rotateX(6deg)_rotateZ(4deg)]">
-                      <PhoneMock
-                        src={right.src}
-                        alt={`${right.label} UI`}
-                        widthClassName="w-[168px]"
-                        glowClassName="from-transparent via-transparent to-transparent"
-                        imageClassName="brightness-[0.84] saturate-[0.88]"
-                        hideStatusBar
-                      />
-                    </div>
-                  </button>
+              <div className="absolute left-1/2 top-[126px] z-30 -translate-x-1/2 sm:top-[142px] lg:top-[96px]">
+                <div
+                  key={active.key}
+                  className="[animation:lp-fade-up_.35s_ease-out] [animation-fill-mode:both]"
+                >
+                  <div className="[animation:lp-float-main_7.2s_ease-in-out_infinite]">
+                    <PhoneMock
+                      src={active.src}
+                      alt={`${active.label} UI`}
+                      widthClassName="w-[224px] sm:w-[248px] lg:w-[262px]"
+                      glowClassName="from-cyan-400/8 via-sky-400/5 to-cyan-200/4"
+                      imageClassName="brightness-[1] saturate-[1.02]"
+                      priority
+                      imagePosition={active.imagePosition}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="absolute bottom-1 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 px-2 sm:px-0">
-                <div className="rounded-[24px] border border-white/10 bg-[#07111d]/76 px-5 py-4 backdrop-blur-2xl shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200/66">
-                        Experience
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-label={`Show ${right.label}`}
+                className="absolute right-[6%] top-[190px] z-10 hidden lg:block"
+              >
+                <div className="transition duration-300 hover:scale-[1.02]">
+                  <div className="[animation:lp-float-side-right_7.5s_ease-in-out_infinite]">
+                    <PhoneMock
+                      src={right.src}
+                      alt={`${right.label} UI`}
+                      widthClassName="w-[150px]"
+                      glowClassName="from-transparent via-transparent to-transparent"
+                      imageClassName="brightness-[0.56] saturate-[0.62]"
+                      frameClassName="rounded-[30px] p-[7px] opacity-[0.38]"
+                      screenClassName="rounded-[21px]"
+                      bezelClassName="rounded-[29px]"
+                      notchClassName="top-[5px] h-[18px] w-[35%]"
+                      tiltClassName="opacity-[0.22]"
+                      imagePosition={right.imagePosition}
+                    />
+                  </div>
+                </div>
+              </button>
+
+              <div className="absolute left-[7%] top-[236px] z-10 lg:hidden">
+                <div className="[animation:lp-float-mobile-left_7.2s_ease-in-out_infinite]">
+                  <PhoneMock
+                    src={left.src}
+                    alt={`${left.label} UI`}
+                    widthClassName="w-[80px] sm:w-[96px]"
+                    glowClassName="from-transparent via-transparent to-transparent"
+                    imageClassName="brightness-[0.64] saturate-[0.68]"
+                    frameClassName="rounded-[22px] p-[5px] opacity-[0.34]"
+                    screenClassName="rounded-[15px]"
+                    bezelClassName="rounded-[21px]"
+                    notchClassName="top-[4px] h-[12px] w-[34%]"
+                    tiltClassName="opacity-[0.2]"
+                    imagePosition={left.imagePosition}
+                  />
+                </div>
+              </div>
+
+              <div className="absolute right-[7%] top-[252px] z-10 lg:hidden">
+                <div className="[animation:lp-float-mobile-right_7.5s_ease-in-out_infinite]">
+                  <PhoneMock
+                    src={right.src}
+                    alt={`${right.label} UI`}
+                    widthClassName="w-[84px] sm:w-[100px]"
+                    glowClassName="from-transparent via-transparent to-transparent"
+                    imageClassName="brightness-[0.64] saturate-[0.68]"
+                    frameClassName="rounded-[22px] p-[5px] opacity-[0.34]"
+                    screenClassName="rounded-[15px]"
+                    bezelClassName="rounded-[21px]"
+                    notchClassName="top-[4px] h-[12px] w-[34%]"
+                    tiltClassName="opacity-[0.2]"
+                    imagePosition={right.imagePosition}
+                  />
+                </div>
+              </div>
+
+              <div className="absolute bottom-[18px] left-1/2 z-40 w-[min(92%,520px)] -translate-x-1/2 sm:bottom-[28px]">
+                <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,18,28,0.56),rgba(5,14,24,0.34))] px-5 py-4 backdrop-blur-[18px] shadow-[0_18px_40px_rgba(0,0,0,0.20)] ring-1 ring-cyan-300/5">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/24 to-transparent" />
+
+                  <div className="relative flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.26em] text-cyan-200/58">
+                        {active.label}
                       </div>
-                      <div className="mt-2 text-lg font-black tracking-[-0.03em] text-white sm:text-xl">
+                      <div className="mt-2 max-w-[340px] text-[18px] font-black leading-[1.08] tracking-[-0.045em] text-white sm:text-[22px]">
                         {mobileTitle}
                       </div>
                     </div>
 
-                    <div className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/56 sm:block">
+                    <div className="hidden shrink-0 rounded-full border border-cyan-300/12 bg-cyan-300/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100/62 backdrop-blur-xl sm:block">
                       {active.chip}
                     </div>
                   </div>
 
-                  <div className="mt-3 max-w-[360px] text-sm leading-6 text-white/64">
+                  <div className="relative mt-3 h-px w-full bg-gradient-to-r from-cyan-300/16 via-white/8 to-transparent" />
+
+                  <p className="relative mt-3 max-w-[430px] text-[13px] leading-6 text-white/56 sm:text-[14px]">
                     {mobileDesc}
+                  </p>
+
+                  <div className="relative mt-4 flex items-center justify-between gap-3">
+                    <div
+                      className="flex items-center gap-2"
+                      role="tablist"
+                      aria-label="Hero views"
+                    >
+                      {HERO_VIEWS.map((view) => {
+                        const isActive = view.key === activeView;
+                        return (
+                          <button
+                            key={view.key}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            aria-label={`Show ${view.label}`}
+                            onClick={() => setActiveView(view.key)}
+                            className={`h-2.5 rounded-full transition-all ${
+                              isActive
+                                ? "w-8 bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.36)]"
+                                : "w-2.5 bg-white/18 hover:bg-white/28"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handlePrev}
+                        aria-label={`Previous ${left.label}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/70 transition hover:bg-white/[0.07]"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        aria-label={`Next ${right.label}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/70 transition hover:bg-white/[0.07]"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="absolute inset-x-0 bottom-0 z-10 block lg:hidden">
-              <div className="mx-auto h-[220px] w-[220px] rounded-full bg-cyan-400/10 blur-3xl" />
+              <div className="mx-auto h-[180px] w-[180px] rounded-full bg-cyan-400/7 blur-3xl sm:h-[220px] sm:w-[220px]" />
             </div>
           </div>
         </div>

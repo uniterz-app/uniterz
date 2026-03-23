@@ -1,81 +1,148 @@
+export const heroHighlights = [
+  {
+    label: "INPUT",
+    value: "試合選択",
+    sub: "気になる試合を開いて予想開始",
+  },
+  {
+    label: "TRACKING",
+    value: "自動集計",
+    sub: "結果反映までそのままつながる",
+  },
+  {
+    label: "ANALYTICS",
+    value: "4指標分析",
+    sub: "予想の質を立体的に可視化",
+  },
+] as const;
+
 export const featureCards = [
   {
-    eyebrow: "PREDICTION",
-    title: "試合を予想して投稿",
-    text: "NBAを中心に、各試合の勝敗予想を投稿。単発で終わらず、すべての予想が成績として積み上がる。",
+    eyebrow: "STEP 01",
+    title: "試合を選んで予想する",
+    text: "日付ごとに試合を確認し、勝敗とスコアをそのまま入力できる。",
   },
   {
-    eyebrow: "RANKING",
-    title: "実力が順位として可視化",
-    text: "的中率だけでなく、複数指標でユーザーを評価。誰が本当に強いのかをランキングで確認できる。",
+    eyebrow: "STEP 02",
+    title: "予想が結果に変わる",
+    text: "試合終了後、的中・得点・各種成績に自動で反映され、記録が積み上がる。",
   },
   {
-    eyebrow: "ANALYTICS",
-    title: "5指標で精度を分析",
-    text: "勝率、スコア精度、確率精度、アップセット得点、総合得点。予想の質を多面的に可視化。",
+    eyebrow: "STEP 03",
+    title: "ランキングで現在地が見える",
+    text: "他ユーザーとの比較を通して、自分の順位や立ち位置をすぐに確認できる。",
   },
   {
-    eyebrow: "TREND",
-    title: "日次・月次の推移を追跡",
-    text: "一時的な好調ではなく、継続して強いかまで見える。自分の波や成長も確認できる。",
+    eyebrow: "STEP 04",
+    title: "4指標で予想力を分解する",
+    text: "勝率、スコア精度、アップセット得点、総合得点から強みと弱みを見返せる。",
   },
   {
-    eyebrow: "PLAYOFF",
-    title: "プレーオフブラケットにも対応",
-    text: "シリーズ単位ではなく、プレーオフ全体を通して予想。提出後はスコアと生存状況を追跡可能。",
+    eyebrow: "STEP 05",
+    title: "日次・月次の推移を追う",
+    text: "一時的な好不調ではなく、継続して強いか、伸びているかまで確認できる。",
+  },
+] as const;
+
+export const flowNodes = [
+  {
+    id: "pick",
+    label: "PICK",
+    title: "試合選択",
+    text: "日付ごとに試合を見て、予想するカードを選ぶ。",
   },
   {
-    eyebrow: "IDENTITY",
-    title: "予想スタイルが個性になる",
-    text: "ただ参加するだけではなく、ランキング・分析・プロフィールを通して自分の強みが形になる。",
+    id: "input",
+    label: "INPUT",
+    title: "予想入力",
+    text: "勝敗とスコアを記録する。",
   },
-];
+  {
+    id: "sync",
+    label: "SYNC",
+    title: "結果反映",
+    text: "試合終了後に成績へ自動反映される。",
+  },
+  {
+    id: "rank",
+    label: "RANK",
+    title: "順位比較",
+    text: "ランキングで自分の現在地を確認する。",
+  },
+  {
+    id: "analyze",
+    label: "ANALYZE",
+    title: "分析",
+    text: "4指標と推移で予想力を見返す。",
+  },
+] as const;
 
 export const metrics = [
   {
+    key: "winRate",
+    short: "WIN",
     title: "勝率",
     text: "どれだけ勝敗を当てたか。ベースとなる基本指標。",
   },
   {
+    key: "scorePrecision",
+    short: "SCORE",
     title: "スコア精度",
     text: "試合展開や点差までどれだけ近く読めたかを評価。",
   },
   {
-    title: "確率精度",
-    text: "予想の自信度と実際の結果のズレを可視化。",
-  },
-  {
+    key: "upsetPoints",
+    short: "UPSET",
     title: "アップセット得点",
-    text: "難しい試合を当てた価値を反映。簡単な的中と区別する。",
+    text: "難しい試合を当てた価値を反映し、簡単な的中と区別する。",
   },
   {
+    key: "totalPoints",
+    short: "TOTAL",
     title: "総合得点",
-    text: "各指標を統合し、総合的な予想力を評価。",
+    text: "各指標を横断して、総合的な予想力を評価。",
   },
-];
+] as const;
+
+export const metricRadar = [
+  { label: "勝率", value: 84 },
+  { label: "スコア精度", value: 78 },
+  { label: "アップセット", value: 69 },
+  { label: "総合得点", value: 81 },
+] as const;
+
+export const trendBars = [
+  { label: "W1", value: 48 },
+  { label: "W2", value: 62 },
+  { label: "W3", value: 58 },
+  { label: "W4", value: 74 },
+  { label: "W5", value: 83 },
+  { label: "W6", value: 79 },
+] as const;
 
 export const steps = [
   {
     no: "01",
-    title: "試合を選ぶ",
-    text: "気になる試合を開き、勝敗や内容を予想する。",
+    title: "試合を選んで予想",
+    text: "気になる試合を開き、勝敗とスコアを入力する。",
   },
   {
     no: "02",
-    title: "結果が自動反映",
-    text: "試合終了後、成績と各種指標に自動で反映される。",
+    title: "結果が自動で記録",
+    text: "試合終了後、成績や各種指標に自動で反映される。",
   },
   {
     no: "03",
-    title: "ランキングと分析を見る",
-    text: "自分の強み、弱み、現在地を数字で確認できる。",
+    title: "順位と分析を見る",
+    text: "ランキング、4指標、推移データから自分の現在地を確認できる。",
   },
-];
+] as const;
 
 export const plans = [
   {
     name: "Free",
     price: "¥0",
+    caption: "まず参加して記録する",
     items: [
       "試合予想に参加",
       "ランキング閲覧",
@@ -88,6 +155,7 @@ export const plans = [
   {
     name: "Pro",
     price: "More Analytics",
+    caption: "分析をさらに深く見る",
     items: [
       "詳細分析の開放",
       "日次・月次トレンド",
@@ -97,18 +165,37 @@ export const plans = [
     accent: "border-cyan-300/30 bg-cyan-400/[0.08]",
     button: "Proを見る",
   },
-];
+] as const;
 
 export const stats = [
-  { label: "Metrics", value: "5" },
-  { label: "Leagues", value: "Multi" },
+  { label: "Metrics", value: "4" },
+  { label: "Flow", value: "Pick → Rank" },
   { label: "Mode", value: "Free / Pro" },
   { label: "Focus", value: "NBA First" },
-];
+] as const;
 
 export const rankingRows = [
-  { rank: "#1", name: "RIKUTO", score: "92.4" },
-  { rank: "#2", name: "AKIRA", score: "90.8" },
-  { rank: "#3", name: "SORA", score: "89.7" },
-  { rank: "#4", name: "YUTO", score: "87.9" },
-];
+  { rank: "#1", name: "RIKUTO", score: "92.4", trend: "+4.8" },
+  { rank: "#2", name: "AKIRA", score: "90.8", trend: "+2.1" },
+  { rank: "#3", name: "SORA", score: "89.7", trend: "+1.6" },
+  { rank: "#4", name: "YUTO", score: "87.9", trend: "-0.4" },
+] as const;
+
+export const signupPoints = [
+  {
+    title: "試合予想を投稿できる",
+    sub: "日付ごとに試合を選び、そのまま予想まで進める。",
+  },
+  {
+    title: "結果が自動で集計される",
+    sub: "試合終了後、成績や得点が自動で反映される。",
+  },
+  {
+    title: "ランキングで現在地が見える",
+    sub: "他ユーザーとの比較で、自分の立ち位置が分かる。",
+  },
+  {
+    title: "4指標で予想の質を分析できる",
+    sub: "勝率、スコア精度、アップセット得点、総合得点を見返せる。",
+  },
+] as const;

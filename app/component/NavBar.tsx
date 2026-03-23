@@ -172,6 +172,7 @@ export default function NavBar() {
     pathname === "/" ||
     pathname === "/web" ||
     pathname === "/mobile" ||
+    pathname.startsWith("/lp") ||
     pathname === "/web/login" ||
     pathname === "/web/signup" ||
     pathname === "/mobile/login" ||
