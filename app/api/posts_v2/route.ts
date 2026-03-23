@@ -12,8 +12,7 @@ type ParsedOkV2 = {
   ok: true;
   gameId: string;
   prediction: {
-   winner: "home" | "away" | "draw";
-    confidence: number;
+    winner: "home" | "away" | "draw";
     score: { home: number; away: number };
   };
   comment: string;
@@ -28,11 +27,7 @@ function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
 
     const p = body?.prediction ?? {};
     if (!["home", "away", "draw"].includes(p.winner))
-  throw new Error("prediction.winner must be home/away/draw");
-
-    const confidence = Number(p.confidence);
-    if (!Number.isFinite(confidence) || confidence < 1 || confidence > 99)
-      throw new Error("confidence must be 1..99");
+      throw new Error("prediction.winner must be home/away/draw");
 
     const s = p.score ?? {};
     const home = Number(s.home);
@@ -52,7 +47,6 @@ function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
       gameId,
       prediction: {
         winner: p.winner,
-        confidence,
         score: { home, away },
       },
       comment,
@@ -131,7 +125,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // 投稿者の表示名など
   let authorDisplayName = "ユーザー";
   let authorPhotoURL: string | null = null;
   let authorHandle: string | null = null;
@@ -146,7 +139,6 @@ export async function POST(req: Request) {
     }
   } catch {}
 
-  // ゲーム確認
   const gameSnap = await adminDb.collection("games").doc(parsed.gameId).get();
   if (!gameSnap.exists) {
     return NextResponse.json(
@@ -173,7 +165,6 @@ export async function POST(req: Request) {
   const startAtMillis = startAtTs.toMillis();
   const startAtIso = new Date(startAtMillis).toISOString();
 
-  // 開始後はロック
   if (Date.now() >= startAtMillis) {
     return NextResponse.json(
       { ok: false, error: "locked: game started" },
@@ -181,7 +172,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // 重複禁止
   const dup = await adminDb
     .collection("posts")
     .where("authorUid", "==", uid)
@@ -197,7 +187,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // 保存データ
   const data = {
     schemaVersion: 2,
 
@@ -220,8 +209,6 @@ export async function POST(req: Request) {
     comment: parsed.comment,
 
     result: null,
-
-    // ⭐ 試合終了時に onGameFinalV2 が埋めるので null のままでよい
     stats: null as any,
 
     likeCount: 0,

@@ -18,7 +18,6 @@ export type MonthlyTrendStat = {
   month: string; // "2025-01"
   posts: number;
   winRate: number;   // 0–1
-  accuracy: number;  // 0–1（予測精度）
 };
 
 type Props = {
@@ -169,25 +168,12 @@ formatter={(value, name) => {
               isAnimationActive={animate}
               animationDuration={1700}
             />
-
-            {/* ===== 予測精度 ===== */}
-            <Line
-              yAxisId="rate"
-              type="monotone"
-              dataKey="accuracy"
-              name="予測精度"
-              stroke="#22d3ee"
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={animate}
-              animationDuration={1900}
-            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-white/60">
-        投稿数（棒）と勝率・予測精度（線）の推移を月別で表示しています。
+        投稿数（棒）と勝率（線）の推移を月別で表示しています。
       </p>
     </div>
   );

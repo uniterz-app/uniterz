@@ -6,7 +6,6 @@ function db() {
 
 type MonthlyGlobalRow = {
   winRate: number;
-  accuracy: number;
   avgPrecision: number;
   avgPointsV3: number;
   upsetPointsSum: number;
@@ -35,7 +34,6 @@ export async function buildMonthlyGlobalStats(
     )
   );
 
-  // === NBA 総試合数 ===
   const totalGamesSnap = await db()
     .collection("games")
     .where("league", "==", "nba")
@@ -45,7 +43,6 @@ export async function buildMonthlyGlobalStats(
 
   const totalGames = totalGamesSnap.size;
 
-  // === アップセット試合数 ===
   const upsetGamesSnap = await db()
     .collection("games")
     .where("league", "==", "nba")
@@ -64,7 +61,6 @@ export async function buildMonthlyGlobalStats(
   const rowsForTop = rows.filter((r) => r.posts >= MIN_POSTS_TOP);
 
   const byWinRate = [...rowsForTop].sort((a, b) => a.winRate - b.winRate);
-  const byAccuracy = [...rowsForTop].sort((a, b) => a.accuracy - b.accuracy);
   const byPrecision = [...rowsForTop].sort(
     (a, b) => a.avgPrecision - b.avgPrecision
   );
@@ -78,32 +74,25 @@ export async function buildMonthlyGlobalStats(
 
   const doc = {
     month,
-
-    // ProAnalysisPage 側で global.raw.totalGames / upsetGames を読むので raw に揃える
     raw: {
       totalGames,
       upsetGames,
       upsetRate: totalGames > 0 ? upsetGames / totalGames : 0,
     },
-
     avg: {
       winRate: avg(rows.map((r) => r.winRate)),
-      accuracy: avg(rows.map((r) => r.accuracy)),
       precision: avg(rows.map((r) => r.avgPrecision)),
       pointsV3: avg(rows.map((r) => r.avgPointsV3)),
       upset: avg(rows.map((r) => r.upsetPointsSum)),
       volume: avg(rows.map((r) => r.posts)),
     },
-
     top10: {
       winRate: avg(top10Of(byWinRate).map((r) => r.winRate)),
-      accuracy: avg(top10Of(byAccuracy).map((r) => r.accuracy)),
       precision: avg(top10Of(byPrecision).map((r) => r.avgPrecision)),
       pointsV3: avg(top10Of(byPointsV3).map((r) => r.avgPointsV3)),
       upset: avg(top10Of(byUpset).map((r) => r.upsetPointsSum)),
       volume: avg(top10Of(byVolume).map((r) => r.posts)),
     },
-
     users: rows.length,
     top10EligibleUsers: rowsForTop.length,
     updatedAt: FieldValue.serverTimestamp(),

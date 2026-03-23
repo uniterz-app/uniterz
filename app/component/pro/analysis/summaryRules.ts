@@ -7,7 +7,6 @@
 
 export type SummaryKey =
   | "winRate"
-  | "accuracy"
   | "precision"
   | "pointsV3"
   | "upset"
@@ -63,40 +62,6 @@ export const SUMMARY_RULES: SummaryRule[] = [
     texts: [
       "【勝率】平均を下回っており、ピック精度の改善余地があります。",
       "【勝率】結果が伸び悩んでおり、判断基準の見直しが必要です。",
-    ],
-    condition: ({ percentile }) => percentile <= 40,
-  },
-
-  /* =========================
-   * 予測精度
-   * ========================= */
-  {
-    key: "accuracy",
-    tone: "strong",
-    priority: 95,
-    texts: [
-      "【精度】上位10%。All-NBA級の再現性があります。",
-      "【精度】ブレが少なく、長期的に勝てる分析スタイルです。",
-    ],
-    condition: ({ percentile }) => percentile >= 90,
-  },
-  {
-    key: "accuracy",
-    tone: "strong",
-    priority: 80,
-    texts: [
-      "【精度】オールスター級。安定感のある予想ができています。",
-      "【精度】無駄打ちが少なく、試合選別が的確です。",
-    ],
-    condition: ({ percentile }) => percentile >= 80,
-  },
-  {
-    key: "accuracy",
-    tone: "weak",
-    priority: 55,
-    texts: [
-      "【精度】やや不安定で、結果の振れ幅が大きくなっています。",
-      "【精度】ムラがあり、条件整理の余地があります。",
     ],
     condition: ({ percentile }) => percentile <= 40,
   },
@@ -270,15 +235,6 @@ export type ImprovementRule = {
 };
 
 export const IMPROVEMENT_RULES: ImprovementRule[] = [
-  {
-    key: "accuracy",
-    priority: 100,
-    texts: [
-      "【精度】ムラがあります。条件を絞ると安定しやすくなります。",
-      "【精度】試合選別を厳しくすると、結果が安定しやすくなります。",
-    ],
-    condition: ({ percentile }) => percentile <= 45,
-  },
   {
     key: "winRate",
     priority: 90,

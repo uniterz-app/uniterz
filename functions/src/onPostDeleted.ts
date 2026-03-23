@@ -15,14 +15,14 @@ export const onPostDeletedV2 = onDocumentDeleted(
     if (!before) return;
 
     const uid = before.authorUid;
-    const stats = before.stats; // 確定投稿なら存在
-    const startAt: Timestamp = before.startAtJst ?? before.startAt ?? before.createdAt;
+    const stats = before.stats;
+    const startAt: Timestamp =
+      before.startAtJst ?? before.startAt ?? before.createdAt;
 
     if (!uid || !startAt) return;
 
     const db = getFirestore();
 
-    // JST dateKey
     const d = startAt.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
     const yyyy = j.getUTCFullYear();
@@ -33,7 +33,6 @@ export const onPostDeletedV2 = onDocumentDeleted(
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(snap.id);
 
-    // stats が無い → 未確定投稿 → posts だけ減らす
     if (!stats) {
       await db.runTransaction(async (tx) => {
         const dailySnap = await tx.get(dailyRef);
@@ -48,11 +47,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
         const leagueKey = before.league ?? null;
         if (leagueKey) {
-          tx.set(
-            dailyRef,
-            { leagues: { [leagueKey]: dec } },
-            { merge: true }
-          );
+          tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
         }
 
         tx.delete(markerRef);
@@ -61,13 +56,13 @@ export const onPostDeletedV2 = onDocumentDeleted(
       return;
     }
 
-    // stats がある → 確定投稿 → apply の逆操作
     const isWin = stats.isWin === true;
-
     const scoreError = stats.scoreError ?? 0;
-    const brier = stats.brier ?? 0;
-    const upset = isWin ? (stats.upsetScore ?? 0) : 0;
-    const precision = stats.scorePrecision ?? 0;
+    const scorePrecision = stats.scorePrecision ?? 0;
+    const hadUpsetGame = stats.hadUpsetGame === true;
+    const upsetHit = stats.upsetHit === true;
+    const upsetPoints = stats.upsetPoints ?? 0;
+    const pointsV3 = stats.pointsV3 ?? 0;
 
     await db.runTransaction(async (tx) => {
       const dailySnap = await tx.get(dailyRef);
@@ -77,9 +72,12 @@ export const onPostDeletedV2 = onDocumentDeleted(
         posts: FieldValue.increment(-1),
         wins: FieldValue.increment(isWin ? -1 : 0),
         scoreErrorSum: FieldValue.increment(-scoreError),
-        brierSum: FieldValue.increment(-brier),
-        upsetScoreSum: FieldValue.increment(-upset),
-        scorePrecisionSum: FieldValue.increment(-precision),
+        upsetOpportunityCount: FieldValue.increment(hadUpsetGame ? -1 : 0),
+        upsetHitCount: FieldValue.increment(upsetHit ? -1 : 0),
+        upsetPickCount: FieldValue.increment(hadUpsetGame ? -1 : 0),
+        upsetPointsSum: FieldValue.increment(-upsetPoints),
+        scorePrecisionSum: FieldValue.increment(-scorePrecision),
+        pointsSumV3: FieldValue.increment(-pointsV3),
         updatedAt: FieldValue.serverTimestamp(),
       };
 
@@ -87,11 +85,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
       const leagueKey = before.league ?? null;
       if (leagueKey) {
-        tx.set(
-          dailyRef,
-          { leagues: { [leagueKey]: dec } },
-          { merge: true }
-        );
+        tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
       }
 
       tx.delete(markerRef);

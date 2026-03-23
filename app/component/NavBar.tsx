@@ -4,17 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GiCrossedSwords } from "react-icons/gi";
 import { FaTrophy } from "react-icons/fa";
-import { FiTrendingUp, FiUser } from "react-icons/fi";
+import { FiUser } from "react-icons/fi";
 import { Brain } from "lucide-react";
 import { useEffect, useState, CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { PiChartBarFill } from "react-icons/pi";
 
 type Item = {
   href: string;
-  key: "games" | "home" | "trend" | "ranking" | "mypage";
+  key: "games" | "home" | "leaderboards" | "ranking" | "mypage";
   label: string;
   icon: React.ComponentType<{
     size?: number;
@@ -26,8 +27,13 @@ type Item = {
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
   { key: "home", href: "/result", label: "リザルト", icon: Brain },
-  { key: "trend", href: "/trend", label: "トレンド", icon: FiTrendingUp },
   { key: "ranking", href: "/rankings", label: "ランキング", icon: FaTrophy },
+  {
+    key: "leaderboards",
+    href: "/leaderboards",
+    label: "リーダーボード",
+    icon: PiChartBarFill,
+  },
   { key: "mypage", href: "/mypage", label: "マイページ", icon: FiUser },
 ];
 

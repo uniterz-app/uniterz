@@ -46,7 +46,7 @@ export default function SplashWrapper({
       <div
         className="w-screen h-screen flex items-center justify-center relative"
         style={{
-          backgroundImage: 'url("/splash/splash-1170x2532.png")',
+          backgroundImage: 'url("/event/eventheader.png")',
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundColor: "#000",

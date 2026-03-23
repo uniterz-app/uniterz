@@ -83,13 +83,6 @@ export default function ProAnalysisPage() {
       top10: global.top10.winRate,
     },
     {
-      label: "予測精度",
-      format: (v: number) => `${Math.round(v * 100)}%`,
-      self: stats.raw.accuracy,
-      avg: global.avg.accuracy,
-      top10: global.top10.accuracy,
-    },
-    {
       label: "スコア精度",
       format: (v: number) => v.toFixed(1),
       self: stats.raw.avgPrecision,

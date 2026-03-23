@@ -1,7 +1,7 @@
 // app/lib/stats/useUserStatsV2.ts
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -11,25 +11,24 @@ type Bucket = {
   wins: number;
 
   scoreErrorSum: number;
-  brierSum: number;
 
   // upset
-  upsetHitCount: number; // 少数派Upset的中数（count）
-  upsetOpportunityCount: number; // upsetGameの母数（hadUpsetGame）
-  upsetPointsSum: number; // Upset独立ポイント合計（0〜10/試合の合計）
+  upsetHitCount: number;
+  upsetOpportunityCount: number;
+  upsetPointsSum: number;
 
   // score precision
-  scorePrecisionSum: number; // 合計（表示も合計にする）
+  scorePrecisionSum: number;
 
   // total points
-  pointsSumV3: number; // 総合得点合計（pointsV3）
+  pointsSumV3: number;
 };
 
 export type SummaryForCardsV2 = {
   posts: number;
   fullPosts: number;
 
-  // 的中数（AnalysisWinCard用）
+  // 的中数
   wins: number;
 
   // ① 勝率
@@ -38,26 +37,15 @@ export type SummaryForCardsV2 = {
   // ② スコア精度（期間合計）
   scorePrecisionSum: number;
 
-  // ③ 確率精度（Brier 平均。表示側で (1-avgBrier)*100 にしてOK）
-  avgBrier: number;
-
-  // ④ アップセット得点（期間合計）
+  // ③ アップセット得点（期間合計）
   upsetPointsSum: number;
 
-  // ⑤ 総合得点（期間合計）
+  // ④ 総合得点（期間合計）
   pointsSumV3: number;
 
-  // Upset（カード参照用：このhookで確実に供給）
-  upsetChanceCount: number; // = upsetOpportunityCount
+  // Upset補助
+  upsetChanceCount: number;
   upsetHitCount: number;
-};
-
-export type DailyTrendStat = {
-  date: string;
-  posts: number;
-  winRate: number;
-  accuracy: number; // 0..1
-  scorePrecision: number; // 0..10（平均）
 };
 
 /* ========= 初期値 ========= */
@@ -65,7 +53,6 @@ const empty = (): Bucket => ({
   posts: 0,
   wins: 0,
   scoreErrorSum: 0,
-  brierSum: 0,
   upsetHitCount: 0,
   upsetOpportunityCount: 0,
   upsetPointsSum: 0,
@@ -82,8 +69,6 @@ function computeForCards(b: Bucket): Omit<SummaryForCardsV2, "fullPosts"> {
   const upsetPointsSum = safeNum(b.upsetPointsSum);
   const pointsSumV3 = safeNum(b.pointsSumV3);
 
-  const brierSum = safeNum(b.brierSum);
-
   const upsetChanceCount = safeInt(b.upsetOpportunityCount);
   const upsetHitCount = safeInt(b.upsetHitCount);
 
@@ -91,13 +76,9 @@ function computeForCards(b: Bucket): Omit<SummaryForCardsV2, "fullPosts"> {
     posts,
     wins,
     winRate: posts ? wins / posts : 0,
-
     scorePrecisionSum,
-    avgBrier: posts ? brierSum / posts : NaN,
-
     upsetPointsSum,
     pointsSumV3,
-
     upsetChanceCount,
     upsetHitCount,
   };
@@ -120,15 +101,30 @@ function dateKey(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
+  if (!v) return base;
+
+  base.posts += safeInt(v.posts);
+  base.wins += safeInt(v.wins);
+
+  base.scoreErrorSum += safeNum(v.scoreErrorSum);
+
+  base.upsetHitCount += safeInt(v.upsetHitCount);
+  base.upsetOpportunityCount += safeInt(v.upsetOpportunityCount);
+  base.upsetPointsSum += safeNum(v.upsetPointsSum);
+
+  base.scorePrecisionSum += safeNum(v.scorePrecisionSum);
+  base.pointsSumV3 += safeNum(v.pointsSumV3);
+
+  return base;
+}
+
 export function useUserStatsV2(uid?: string | null) {
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<
     Record<"7d" | "30d" | "all", SummaryForCardsV2> | null
   >(null);
   const [stats, setStats] = useState<any>(null);
-  const [dailyTrend, setDailyTrend] = useState<DailyTrendStat[]>([]);
-
-  const prevUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,14 +132,9 @@ export function useUserStatsV2(uid?: string | null) {
     if (!uid) {
       setSummaries(null);
       setStats(null);
-      setDailyTrend([]);
       setLoading(false);
-      prevUidRef.current = null;
       return;
     }
-
-    if (prevUidRef.current === uid) return;
-    prevUidRef.current = uid;
 
     const safeUid = uid;
 
@@ -151,97 +142,69 @@ export function useUserStatsV2(uid?: string | null) {
       try {
         setLoading(true);
 
-        // stats 本体
-        {
-          const statsRef = doc(db, "user_stats_v2", safeUid);
-          const statsSnap = await getDoc(statsRef);
-          if (cancelled) return;
-          setStats(statsSnap.exists() ? statsSnap.data() : null);
-        }
+        const statsRef = doc(db, "user_stats_v2", safeUid);
+        const allRef = doc(db, "user_stats_v2_all_cache", safeUid);
 
-        // ALL: キャッシュ
-        const allBucket: Bucket = await (async () => {
-          const allRef = doc(db, "user_stats_v2_all_cache", safeUid);
-          const allSnap = await getDoc(allRef);
-          const raw = allSnap.exists() ? (allSnap.data() as Partial<Bucket>) : {};
-          return { ...empty(), ...(raw as any) };
-        })();
+        const [statsSnap, allSnap] = await Promise.all([
+          getDoc(statsRef),
+          getDoc(allRef),
+        ]);
 
+        if (cancelled) return;
+
+        setStats(statsSnap.exists() ? statsSnap.data() : null);
+
+        const allRaw = allSnap.exists()
+          ? (allSnap.data() as Partial<Bucket>)
+          : {};
+        const allBucket: Bucket = { ...empty(), ...(allRaw as any) };
         const allComputed = computeForCards(allBucket);
 
-        // 日別トレンド（30日）
         const today = new Date();
-        const dailyRows: DailyTrendStat[] = [];
 
-        for (let i = 0; i < 30; i++) {
+        const dates = Array.from({ length: 30 }, (_, i) => {
           const d = new Date(today);
           d.setDate(today.getDate() - i);
+          return d;
+        });
 
-          const key = `${safeUid}_${dateKey(d)}`;
-          const snap = await getDoc(doc(db, "user_stats_v2_daily", key));
-          if (!snap.exists()) continue;
+        const dailySnaps = await Promise.all(
+          dates.map((d) =>
+            getDoc(doc(db, "user_stats_v2_daily", `${safeUid}_${dateKey(d)}`))
+          )
+        );
 
-          const v = snap.data()?.all as Partial<Bucket> | undefined;
-          if (!v) continue;
-
-          const posts = safeInt(v.posts);
-          const wins = safeInt(v.wins);
-          const brierSum = safeNum(v.brierSum);
-          const scorePrecisionSum = safeNum(v.scorePrecisionSum);
-
-          dailyRows.push({
-            date: dateKey(d),
-            posts,
-            winRate: posts ? wins / posts : 0,
-            accuracy: posts ? 1 - brierSum / posts : 0,
-            scorePrecision: posts ? scorePrecisionSum / posts : 0,
-          });
-        }
-
-        dailyRows.reverse();
         if (cancelled) return;
-        setDailyTrend(dailyRows);
 
-        // 7d / 30d 集計（Bucket を合算）
-        async function loadRange(days: number) {
-          let b: Bucket = empty();
+        const dailyDocs = dates.map((d, index) => {
+          const snap = dailySnaps[index];
+          const raw = snap.exists()
+            ? (snap.data()?.all as Partial<Bucket> | undefined)
+            : undefined;
 
-          for (let i = 0; i < days; i++) {
-            const d = new Date(today);
-            d.setDate(today.getDate() - i);
+          return {
+            date: dateKey(d),
+            bucket: raw ? ({ ...empty(), ...raw } as Bucket) : null,
+          };
+        });
 
-            const key = `${safeUid}_${dateKey(d)}`;
-            const snap = await getDoc(doc(db, "user_stats_v2_daily", key));
-            if (!snap.exists()) continue;
+        const sevenBucket = dailyDocs
+          .slice(0, 7)
+          .reduce((acc, row) => mergeBucket(acc, row.bucket), empty());
 
-            const v = snap.data()?.all as Partial<Bucket> | undefined;
-            if (!v) continue;
+        const thirtyBucket = dailyDocs
+          .slice(0, 30)
+          .reduce((acc, row) => mergeBucket(acc, row.bucket), empty());
 
-            b.posts += safeInt(v.posts);
-            b.wins += safeInt(v.wins);
+        const seven = computeForCards(sevenBucket);
+        const thirty = computeForCards(thirtyBucket);
 
-            b.scoreErrorSum += safeNum(v.scoreErrorSum);
-            b.brierSum += safeNum(v.brierSum);
-
-            b.upsetHitCount += safeInt(v.upsetHitCount);
-            b.upsetOpportunityCount += safeInt(v.upsetOpportunityCount);
-            b.upsetPointsSum += safeNum(v.upsetPointsSum);
-
-            b.scorePrecisionSum += safeNum(v.scorePrecisionSum);
-            b.pointsSumV3 += safeNum(v.pointsSumV3);
-          }
-
-          return computeForCards(b);
-        }
-
-        const seven = await loadRange(7);
-        const thirty = await loadRange(30);
         if (cancelled) return;
 
         setSummaries({
           "7d": { fullPosts: seven.posts, ...seven },
           "30d": { fullPosts: thirty.posts, ...thirty },
-          "all": { fullPosts: allComputed.posts, ...allComputed },
+          all: { fullPosts: allComputed.posts, ...allComputed },
         });
       } finally {
         if (!cancelled) setLoading(false);
@@ -255,5 +218,5 @@ export function useUserStatsV2(uid?: string | null) {
     };
   }, [uid]);
 
-  return { loading, summaries, stats, dailyTrend };
+  return { loading, summaries, stats };
 }

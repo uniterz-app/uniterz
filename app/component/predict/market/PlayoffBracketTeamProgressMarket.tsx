@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Jersey from "@/app/component/games/icons/Jersey";
-import { bebas } from "@/app/fonts";
+import { nameBebas } from "@/lib/fonts";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
@@ -178,7 +178,7 @@ function TeamCard({ row }: { row: TeamRow }) {
 
         <div className="min-w-0">
           <div
-            className={`${bebas.className} truncate text-[18px] leading-none tracking-[0.14em] text-white md:text-[26px]`}
+            className={`${nameBebas.className} truncate text-[18px] leading-none tracking-[0.14em] text-white md:text-[26px]`}
           >
             {row.code}
           </div>
@@ -209,7 +209,7 @@ function ConferenceHeader({ title }: { title: string }) {
   return (
     <div className="mb-4 flex flex-col items-center md:mb-5">
       <div
-        className={`${bebas.className} text-[22px] tracking-[0.16em] text-[#f8fbff] md:text-[26px]`}
+        className={`${nameBebas.className} text-[22px] tracking-[0.16em] text-[#f8fbff] md:text-[26px]`}
       >
         {title}
       </div>

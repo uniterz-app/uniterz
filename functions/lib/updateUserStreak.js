@@ -1,7 +1,7 @@
 "use strict";
+// functions/src/updateUserStreak.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateUserStreak = updateUserStreak;
-// functions/src/updateUserStreak.ts
 const firestore_1 = require("firebase-admin/firestore");
 const judgeWin_1 = require("./judgeWin");
 async function updateUserStreak({ db, gameId, final, }) {
@@ -20,30 +20,36 @@ async function updateUserStreak({ db, gameId, final, }) {
         userResult.set(p.authorUid, isWin);
     });
     for (const [uid, didWin] of userResult.entries()) {
-        const ref = db.doc(`user_stats_v2/${uid}`);
+        const userRef = db.doc(`user_stats_v2/${uid}`);
+        const cumulativeRef = db.doc(`cumulative_stats/${uid}`); // ★変更
         await db.runTransaction(async (tx) => {
             var _a, _b, _c;
-            const snap = await tx.get(ref);
+            const snap = await tx.get(userRef);
             let current = (_a = snap.get("currentStreak")) !== null && _a !== void 0 ? _a : 0;
             let maxWin = (_b = snap.get("maxWinStreak")) !== null && _b !== void 0 ? _b : 0;
             let maxLose = (_c = snap.get("maxLoseStreak")) !== null && _c !== void 0 ? _c : 0;
             if (didWin) {
-                // 勝ち
                 current = current > 0 ? current + 1 : 1;
                 if (current > maxWin)
                     maxWin = current;
             }
             else {
-                // 負け
                 current = current < 0 ? current - 1 : -1;
                 if (Math.abs(current) > maxLose) {
                     maxLose = Math.abs(current);
                 }
             }
-            tx.set(ref, {
-                currentStreak: current, // +連勝 / -連敗
-                maxWinStreak: maxWin, // 最大連勝
-                maxLoseStreak: maxLose, // 最大連敗
+            // user_stats_v2 更新
+            tx.set(userRef, {
+                currentStreak: current,
+                maxWinStreak: maxWin,
+                maxLoseStreak: maxLose,
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            // ★変更：cumulative_stats に統一
+            tx.set(cumulativeRef, {
+                currentStreak: current,
+                activeWinStreak: current > 0 ? current : 0,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
         });

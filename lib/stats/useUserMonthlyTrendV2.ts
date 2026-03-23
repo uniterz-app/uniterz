@@ -3,12 +3,23 @@ import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 
+type MonthlyTrendRow = {
+  month: string;
+  posts: number;
+  winRate: number;
+  avgPrecision: number;
+};
+
 export function useUserMonthlyTrendV2(uid?: string) {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<MonthlyTrendRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
 
     async function fetch() {
       setLoading(true);
@@ -21,17 +32,16 @@ export function useUserMonthlyTrendV2(uid?: string) {
 
       const snap = await getDocs(q);
 
-      const rows = snap.docs.map(doc => {
+      const rows: MonthlyTrendRow[] = snap.docs.map((doc) => {
         const d = doc.data();
-        const r = d.raw;
+        const r = d.raw ?? {};
 
-       return {
-  month: d.month,
-  posts: r.posts ?? 0,
-  winRate: r.winRate ?? 0,
-  accuracy: r.accuracy ?? 0,
-  avgPrecision: r.avgPrecision ?? 0,
-};
+        return {
+          month: d.month,
+          posts: r.posts ?? 0,
+          winRate: r.winRate ?? 0,
+          avgPrecision: r.avgPrecision ?? 0,
+        };
       });
 
       setData(rows);

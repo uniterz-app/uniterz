@@ -66,7 +66,10 @@ export default function UpsetCard({
 
   const points = useMemo(() => clampInt(upsetPointsSum || 0), [upsetPointsSum]);
   const analyzed = useMemo(() => clampInt(analyses || 0), [analyses]);
-  const chances = useMemo(() => clampInt(upsetChanceCount || 0), [upsetChanceCount]);
+  const chances = useMemo(
+    () => clampInt(upsetChanceCount || 0),
+    [upsetChanceCount]
+  );
   const hits = useMemo(() => clampInt(upsetHitCount || 0), [upsetHitCount]);
 
   const hitPct = useMemo(() => {
@@ -92,7 +95,6 @@ export default function UpsetCard({
           className,
         ].join(" ")}
       >
-        {/* タイトル */}
         <div className="mb-1 md:mb-4 flex items-center gap-2 text-xs md:text-[18px] font-semibold text-white">
           <div className="flex h-4 w-4 md:h-8 md:w-8 items-center justify-center rounded-full bg-black">
             <Zap className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
@@ -110,12 +112,11 @@ export default function UpsetCard({
           </button>
         </div>
 
-        {/* Upset Points */}
         <div
           className={[
             alfa.className,
-            "mt-2 md:mt-4",
-            "text-xl md:text-3xl",
+            "mt-1 md:mt-4",
+            "text-lg md:text-3xl",
             "font-bold text-white leading-none text-center tabular-nums",
           ].join(" ")}
         >
@@ -123,14 +124,10 @@ export default function UpsetCard({
           <span className="ml-2 text-sm md:text-lg text-white/70">pts</span>
         </div>
 
-        {/* 説明テキスト */}
         <div className="mt-2 md:mt-4 text-[11px] md:text-[13px] text-white/60 text-center leading-snug md:leading-relaxed">
-          分析した <span className="tabular-nums">{cuAnalyzed}</span> 試合中{" "}
-          <span className="tabular-nums">{cuChances}</span> 試合で
+          発生 {cuChances} / 分析 {cuAnalyzed}
           <br />
-          Upset発生
-          <br />
-          （的中率 <span className="tabular-nums">{cuHitPct}</span>%）
+          的中率 {cuHitPct}%
         </div>
       </div>
 

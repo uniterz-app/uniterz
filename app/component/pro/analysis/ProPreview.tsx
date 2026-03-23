@@ -64,7 +64,6 @@ export default function ProPreviewPage() {
         onChangeMonth={setMonth}
         radar={{
           winRate: 7,
-          accuracy: 8,
           precision: 6,
           upset: 5,
           volume: 9,
@@ -74,7 +73,6 @@ export default function ProPreviewPage() {
         analysisTypeId="COMPLETE_PLAYER"
         percentiles={{
           winRate: 92,
-          accuracy: 88,
           precision: 74,
           pointsV3: 81,
           upset: 61,
@@ -97,13 +95,7 @@ export default function ProPreviewPage() {
             avg: 0.54,
             top10: 0.72,
           },
-          {
-            label: "予測精度",
-            format: (v: number) => `${Math.round(v * 100)}%`,
-            self: 0.68,
-            avg: 0.61,
-            top10: 0.78,
-          },
+
           {
             label: "スコア精度",
             format: (v: number) => `${Math.round(v * 100)}%`,

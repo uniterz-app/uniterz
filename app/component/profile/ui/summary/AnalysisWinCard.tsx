@@ -117,33 +117,28 @@ export default function AnalysisWinCard(props: Props) {
       ref={ref}
       className="rounded-xl border border-white/10 bg-[#050814]/80 p-3 md:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
     >
-      {/* タイトル */}
-      <div className="mb-3 md:mb-4 flex items-center gap-2 text-xs md:text-[18px] font-semibold text-white">
-        <div className="flex h-4 w-4 md:h-7 md:w-7 items-center justify-center rounded-full bg-black">
-          <Check className="h-3 w-3 md:h-4 md:w-4 text-orange-400" />
-        </div>
-        <span>分析結果</span>
-      </div>
 
       <div className="flex items-center justify-between gap-4 md:gap-10">
-        {/* 的中 / 確定 */}
         <div className="flex flex-col items-center">
           <div className="text-[10px] md:text-[16px] text-white/60">的中</div>
 
-          <div className={`${alfa.className} text-2xl md:text-4xl font-bold text-white`}>
+          <div
+            className={`${alfa.className} text-xl md:text-4xl font-bold text-white`}
+          >
             {cuHit}
           </div>
 
           <div className="my-1 md:my-2 h-px w-10 md:w-14 bg-white/20" />
 
-          <div className={`${alfa.className} text-2xl md:text-4xl font-bold text-white/40`}>
+          <div
+            className={`${alfa.className} text-xl md:text-4xl font-bold text-white/40`}
+          >
             {cuTotal}
           </div>
 
           <div className="text-[10px] md:text-[16px] text-white/40">確定</div>
         </div>
 
-        {/* 勝率 */}
         <div className="relative flex items-center justify-center">
           <ArcProgress
             size={gaugeSize}
@@ -153,7 +148,9 @@ export default function AnalysisWinCard(props: Props) {
           />
 
           <div className="absolute flex flex-col items-center">
-            <div className={`${alfa.className} text-lg md:text-3xl font-bold ${rateColor}`}>
+            <div
+              className={`${alfa.className} text-lg md:text-3xl font-bold ${rateColor}`}
+            >
               {cuRate}%
             </div>
 

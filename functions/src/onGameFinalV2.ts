@@ -1,6 +1,6 @@
 // functions/src/onGameFinalV2.ts
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 import { fetchGameContext } from "./fetchGameContext";
 import { marketCalculator } from "./marketCalculator";
@@ -58,25 +58,27 @@ export const onGameFinalV2 = onDocumentWritten(
     if (game.homeScore == null || game.awayScore == null) return;
 
     /* ===== ② streak / team stats ===== */
+    let streakResultMap = new Map();
+
     if (becameFinal) {
-      await updateUserStreak({
+      streakResultMap = await updateUserStreak({
         db: db(),
         gameId,
         final: { home: game.homeScore, away: game.awayScore },
       });
 
-await updateTeamStats({
-  db: db(),
-  game: {
-    ...game,
-    homeRank,
-    awayRank,
-  },
-  homeConference,
-  awayConference,
-  homeWins,
-  awayWins,
-});
+      await updateTeamStats({
+        db: db(),
+        game: {
+          ...game,
+          homeRank,
+          awayRank,
+        },
+        homeConference,
+        awayConference,
+        homeWins,
+        awayWins,
+      });
     }
 
     /* ===== ③ market / upset ===== */
@@ -100,8 +102,7 @@ await updateTeamStats({
       { merge: true }
     );
 
-    const winnerSide =
-      game.homeScore > game.awayScore ? "home" : "away";
+    const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
 
     const upset = upsetJudge({
       market: {
@@ -148,6 +149,7 @@ await updateTeamStats({
         after,
         batch,
         userUpdateTasks,
+        streakResultMap,
       });
     }
 
