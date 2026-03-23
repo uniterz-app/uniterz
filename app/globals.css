@@ -115,8 +115,8 @@
   }
 }
 
-/* Web のみ：eventheader をローディング背景に */
-@media (min-width: 768px) {
+/* Web（PC）のみ：eventheader をローディング背景に。1024px未満はモバイル/タブレット向け splash のまま */
+@media (min-width: 1024px) {
   .splash-screen-bg {
     background-image: url("/event/eventheader.png");
   }
@@ -144,7 +144,7 @@ body.splash-bg {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   body.splash-bg {
     background-image: url("/event/eventheader.png");
   }
