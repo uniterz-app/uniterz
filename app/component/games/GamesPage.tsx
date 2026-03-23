@@ -325,7 +325,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ========================= */
   const visibleCount = dense ? 7 : 10;
   const pagePad = dense ? "px-3" : "px-4 md:px-6";
-  const isPageLoading = loadingDays || loading || !selected;
+  const isInitialLoading = loadingDays || !selected;
+const isSwitchingDate = !!selected && loading;
 
   /* =========================
      Paths
@@ -415,33 +416,40 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         className="mb-2"
       />
 
-      {isPageLoading ? (
-        <>
-          <div className="mb-4">
-            <div className="h-14 rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
-          </div>
+{isInitialLoading ? (
+  <>
+    <div className="mb-4">
+      <div className="h-14 rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
+    </div>
 
-          <div className="grid gap-6 px-4 md:px-6 lg:px-8">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        </>
-      ) : (
-        <>
-          <DayStrip
-            dates={gameDays}
-            selectedDate={selected}
-            onSelect={setSelectedAndSync}
-            size={dense ? "md" : "lg"}
-            visibleCount={visibleCount}
-            autoScrollOnInit={false}
-            className="mb-4"
-          />
+    <div className="grid gap-6 px-4 md:px-6 lg:px-8">
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+    </div>
+  </>
+) : (
+  <>
+    <DayStrip
+      dates={gameDays}
+      selectedDate={selected}
+      onSelect={setSelectedAndSync}
+      size={dense ? "md" : "lg"}
+      visibleCount={visibleCount}
+      autoScrollOnInit={false}
+      className="mb-4"
+    />
 
-          <ScheduleList games={games} dense={dense} />
-        </>
-      )}
+    <div
+      className={[
+        "transition-opacity duration-150",
+        isSwitchingDate ? "opacity-85" : "opacity-100",
+      ].join(" ")}
+    >
+      <ScheduleList games={games} dense={dense} />
+    </div>
+  </>
+)}
 
       {loginModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">

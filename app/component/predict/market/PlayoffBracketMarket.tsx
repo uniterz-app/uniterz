@@ -98,14 +98,14 @@ export default function PlayoffBracketMarket({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 text-white">
+    <div className="mx-auto w-full max-w-5xl space-y-3 text-white">
       <PlayoffBracketMarketHeader
         season={market.season}
         totalEntries={market.totalEntries}
       />
 
       <section className="p-0">
-        <div className="mb-3 flex items-center justify-center gap-2">
+        <div className="mb-2 flex items-center justify-center gap-2">
           <Trophy className="h-5 w-5 text-yellow-300" />
           <h2 className="text-lg font-bold">優勝予想</h2>
         </div>

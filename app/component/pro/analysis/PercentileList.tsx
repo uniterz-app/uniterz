@@ -19,7 +19,6 @@ type Props = {
 
 const ITEMS = [
   { key: "winRate", label: "勝率" },
-  { key: "accuracy", label: "精度" },
   { key: "precision", label: "スコア精度" },
   { key: "pointsV3", label: "総合得点" },
   { key: "upset", label: "Upset力" },

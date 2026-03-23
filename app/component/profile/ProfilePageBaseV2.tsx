@@ -13,9 +13,14 @@ import type { SummaryForCardsV2 } from "./useUserStatsV2";
 type Props = { handle: string; variant?: "web" | "mobile" };
 
 export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
-  const { profile, loading, targetUid } = useProfile(handle);
+  const {
+    profile,
+    loading,
+    targetUid,
+    isFollowing,
+    setIsFollowing,
+  } = useProfile(handle);
 
-  const [isFollowing, setIsFollowing] = useState(false);
   const [tab, setTab] = useState<"overview" | "stats" | "bracket">("overview");
   const [range, setRange] = useState<"7d" | "30d" | "all">("7d");
 

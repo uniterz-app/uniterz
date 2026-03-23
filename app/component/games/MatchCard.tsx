@@ -112,9 +112,8 @@ function ordinal(n: number) {
 /** ルートから Web/Mobile の prefix を決定 */
 function useSectionPrefix() {
   const pathname = usePathname();
-  // 既存のモバイル構成は /m/(with-nav)/... を想定
-  if (pathname?.startsWith("/m/")) return "/m/(with-nav)";
-  if (pathname?.startsWith("/mobile")) return "/mobile"; // 予備互換
+  if (pathname?.startsWith("/mobile") || pathname?.startsWith("/m/"))
+    return "/mobile";
   return "/web";
 }
 
@@ -237,14 +236,8 @@ const marketMajority = useMemo(() => {
   const sp = useSearchParams();
   const lg = sp.get("lg") ?? league;
 
-  // ▼ 統一：試合別タイムライン（分析一覧）
-  const predictionsHref = `${prefix}/games/${id}/predictions${lg ? `?lg=${lg}` : ""}`;
-  // ▼ 予想をするページ（従来どおり /predict）
+  // ▼ 予想をするページ（/predict のみ使用、predictions/post への遷移は廃止）
   const predictHref = `${prefix}/games/${id}/predict${lg ? `?lg=${lg}` : ""}`;
-
-  // ▼ 自分の投稿詳細（あなたのURL仕様に合わせる：/post/[id]）
-  const buildMyPostHref = (postId: string) =>
-  `${prefix}/post/${postId}${lg ? `?lg=${lg}` : ""}`;
 
   // ▼ 試合が開始済みかどうか（status優先＋開始時刻フォールバック）
   const isGameStarted = (() => {
@@ -397,11 +390,9 @@ const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
     return;
   }
 
-  // 試合開始後は自分の予想カードだけ開く
+  // 試合開始後は遷移しない（predictions/post ページは使わない）
   if (isGameStarted) {
-    if (myPostId) {
-      router.push(buildMyPostHref(myPostId));
-    } else {
+    if (!myPostId) {
       alert("この試合のあなたの予想はありません");
     }
     return;
@@ -443,13 +434,11 @@ setNavigating(true);
         const json = await res.json().catch(() => ({} as any));
         const postId = json?.postId as string | undefined;
         if (postId) {
-          router.push(buildMyPostHref(postId));
+          // post 詳細への遷移は使わない
           return;
         }
         // 念のためのフォールバック（200でpostId無いのは想定外）
-        if (isGameStarted) {
-          router.push(predictionsHref);
-        } else {
+        if (!isGameStarted) {
           router.push(predictHref);
         }
         return;
@@ -457,18 +446,14 @@ setNavigating(true);
 
       if (res.status === 404) {
         // 自分の投稿が無い
-        if (isGameStarted) {
-          // 開始後は新規作成させず 予想“を見る”へ
-          router.push(predictionsHref);
-        } else {
+        if (!isGameStarted) {
           router.push(predictHref);
         }
         return;
       }
 
       if (res.status === 409) {
-        // サーバー側が「開始後ロック」を返したケース
-        router.push(predictionsHref);
+        // サーバー側が「開始後ロック」を返したケース → 遷移なし
         return;
       }
 
@@ -477,17 +462,13 @@ setNavigating(true);
         return;
       }
 
-      // その他の失敗は安全側で「見る」へ（開始前なら作成へ）
-      if (isGameStarted) {
-        router.push(predictionsHref);
-      } else {
+      // その他の失敗
+      if (!isGameStarted) {
         router.push(predictHref);
       }
      } catch {
-      // 通信失敗時も上と同じフォールバック
-      if (isGameStarted) {
-        router.push(predictionsHref);
-      } else {
+      // 通信失敗時
+      if (!isGameStarted) {
         router.push(predictHref);
       }
     } finally {
@@ -496,33 +477,31 @@ setNavigating(true);
   };
 
 
-  const predictedStyle: React.CSSProperties = {
-    background: `
-      radial-gradient(95% 220% at 50% 50%,
-        rgba(148,163,184,0.22) 0%,
-        rgba(100,116,139,0.14) 42%,
-        rgba(71,85,105,0.06) 66%,
-        rgba(71,85,105,0.00) 100%
-      )
-    `,
-    backgroundColor: "transparent",
-    boxShadow: "none",
-  };
+const predictedStyle: React.CSSProperties = {
+  background: `
+    radial-gradient(95% 220% at 50% 50%,
+      rgba(148,163,184,0.22) 0%,
+      rgba(100,116,139,0.14) 42%,
+      rgba(71,85,105,0.06) 66%,
+      rgba(71,85,105,0.00) 100%
+    )
+  `,
+  boxShadow: "none",
+};
 
-  const normalStyle: React.CSSProperties = {
-    background: `
-      radial-gradient(92% 230% at 50% 50%,
-        rgba(59,130,246,0.92) 0%,
-        rgba(37,99,235,0.88) 36%,
-        rgba(29,78,216,0.58) 58%,
-        rgba(29,78,216,0.20) 74%,
-        rgba(29,78,216,0.05) 84%,
-        rgba(29,78,216,0.00) 100%
-      )
-    `,
-    backgroundColor: "transparent",
-    boxShadow: "none",
-  };
+const normalStyle: React.CSSProperties = {
+  background: `
+    radial-gradient(92% 230% at 50% 50%,
+      rgba(59,130,246,0.92) 0%,
+      rgba(37,99,235,0.88) 36%,
+      rgba(29,78,216,0.58) 58%,
+      rgba(29,78,216,0.20) 74%,
+      rgba(29,78,216,0.05) 84%,
+      rgba(29,78,216,0.00) 100%
+    )
+  `,
+  boxShadow: "none",
+};
 
 return (
 <motion.div
@@ -531,14 +510,12 @@ return (
 className={[
   "group relative overflow-hidden text-white",
   "max-w-[1200px] mx-auto",
-  disableCardMotion
-    ? ""
-    : [
-        "transition-transform duration-300",
-        navigating
-          ? "scale-[0.992] opacity-95"
-          : "hover:-translate-y-[2px] hover:scale-[1.003]",
-      ].join(" "),
+disableCardMotion
+  ? ""
+  : [
+      "transition-transform duration-300",
+      navigating ? "scale-[0.992] opacity-95" : "",
+    ].join(" "),
 dense
   ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
@@ -607,7 +584,7 @@ dense
 
 <div
   aria-hidden
-  className="pointer-events-none absolute inset-[1px] rounded-2xl"
+  className="pointer-events-none absolute inset-px rounded-2xl"
   style={{
     boxShadow: `
       inset 0 0 0 1px rgba(255,255,255,0.06),

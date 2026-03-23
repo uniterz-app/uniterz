@@ -19,7 +19,10 @@ export async function GET(req: Request) {
     const gameId = searchParams.get("gameId")?.trim();
 
     if (!gameId) {
-      return NextResponse.json({ ok: false, error: "gameId required" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "gameId required" },
+        { status: 400 }
+      );
     }
 
     // 該当する v2 投稿を探す
@@ -48,7 +51,10 @@ export async function GET(req: Request) {
 
     // 投稿なし
     if (q.empty) {
-      return NextResponse.json({ ok: true, exists: false, started }, { status: 200 });
+      return NextResponse.json(
+        { ok: true, exists: false, started },
+        { status: 200 }
+      );
     }
 
     const doc = q.docs[0];

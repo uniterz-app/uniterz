@@ -4,7 +4,7 @@
    任意：色のユーティリティ
 -------------------------------- */
 :root {
-  --color-app-bg: #101827;
+  --color-app-bg: #081116;
   --color-card-bg: #334155;
 }
 
@@ -93,7 +93,7 @@
    ============================================================ */
 
 body.splash-bg {
-  background-image: url("/splash/splash-1170x2532.png");
+  background-image: url("/event/eventheader.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

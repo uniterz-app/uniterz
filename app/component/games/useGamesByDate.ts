@@ -43,12 +43,12 @@ export function useGamesByDate(rawLeague: League, jstDate: Date | null) {
     let alive = true;
 
     async function load() {
-if (!jstDate || !range) {
-  setGames([]);
-  setErr(null);
-  setLoading(true);
-  return;
-}
+      if (!jstDate || !range) {
+        if (!alive) return;
+        setErr(null);
+        setLoading(true);
+        return;
+      }
 
       setLoading(true);
       setErr(null);
@@ -80,7 +80,6 @@ if (!jstDate || !range) {
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? "unknown error");
-        setGames([]);
         setLoading(false);
       }
     }

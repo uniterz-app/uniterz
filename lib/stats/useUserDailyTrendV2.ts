@@ -6,7 +6,6 @@ type DailyTrendRow = {
   date: string;
   posts: number;
   winRate: number;
-  accuracy: number;
   scorePrecision: number;
 };
 
@@ -22,14 +21,18 @@ export function useUserDailyTrendV2(uid?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
 
     async function fetchDaily() {
       setLoading(true);
 
-      const endDate = new Date(); // 今日
+      const endDate = new Date();
       const startDate = new Date();
-      startDate.setDate(endDate.getDate() - 29); // 直近30日
+      startDate.setDate(endDate.getDate() - 29);
 
       const start = toDateKey(startDate);
       const end = toDateKey(endDate);
@@ -44,13 +47,10 @@ export function useUserDailyTrendV2(uid?: string) {
       const snap = await getDocs(q);
 
       const rows: DailyTrendRow[] = snap.docs
-        .filter(doc => doc.id.startsWith(`${uid}_`))
-        .map(doc => {
+        .filter((doc) => doc.id.startsWith(`${uid}_`))
+        .map((doc) => {
           const d = doc.data();
-          const all =
-            d.applied_posts?.all ??
-            d.applied_posts ??
-            d.all;
+          const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
 
           const posts = all?.posts ?? 0;
           const wins = all?.wins ?? 0;
@@ -59,13 +59,9 @@ export function useUserDailyTrendV2(uid?: string) {
             date: d.date,
             posts,
             winRate: posts > 0 ? wins / posts : 0,
-            accuracy:
-              posts > 0 && typeof all?.brierSum === "number"
-                ? Math.max(0, 1 - all.brierSum / posts)
-                : 0,
             scorePrecision:
               posts > 0 && typeof all?.scorePrecisionSum === "number"
-                ? (all.scorePrecisionSum / posts) / 15
+                ? all.scorePrecisionSum / posts / 15
                 : 0,
           };
         });

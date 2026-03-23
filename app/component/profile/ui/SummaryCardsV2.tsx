@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChartHorizontal,
   Trophy,
   Gauge,
-  Target,
   Flame,
   Crown,
   Zap,
@@ -18,7 +17,6 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import {
   evaluateWinRateV2,
   evaluatePrecisionV2,
-  evaluateAccuracyV2,
   type HighlightV2,
 } from "@/lib/stats/thresholdsV2";
 
@@ -30,8 +28,8 @@ export type SummaryDataV2 = {
   winRate: number;
   wins: number;
   scorePrecisionSum: number;
-  avgBrier: number;
   upsetPointsSum: number;
+  maxStreak: number;
   pointsSumV3: number;
 };
 
@@ -44,39 +42,53 @@ type Props = {
 const MIN_POSTS = {
   "7d": 4,
   "30d": 10,
-  "all": 20,
+  all: 20,
 } as const;
 
-export default function SummaryCardsV2({ data, compact = false, period }: Props) {
+export default function SummaryCardsV2({
+  data,
+  compact = false,
+  period,
+}: Props) {
   const [tooltip, setTooltip] = useState<{
     rect: DOMRect | null;
     message: string;
   } | null>(null);
 
-  const postsCount = useCountUp(data.fullPosts, 700, true);
+  const animatedPeriodsRef = useRef<Set<"7d" | "30d" | "all">>(new Set());
+  const shouldAnimate = !animatedPeriodsRef.current.has(period);
+
+  useEffect(() => {
+    animatedPeriodsRef.current.add(period);
+  }, [period]);
+
+  const postsCount = useCountUp(data.fullPosts, 700, shouldAnimate);
   const postsText = postsCount;
 
   const winRateValue = Math.round((data.winRate ?? 0) * 100);
-  const winRateCount = useCountUp(winRateValue, 700, true);
+  const winRateCount = useCountUp(winRateValue, 700, shouldAnimate);
   const winRatePct = `${winRateCount}%`;
 
-  const scorePrecisionSumValue = Number((data.scorePrecisionSum ?? 0).toFixed(1));
-  const scorePrecisionSumCount = useCountUp(scorePrecisionSumValue, 700, true);
+  const scorePrecisionSumValue = Number(
+    (data.scorePrecisionSum ?? 0).toFixed(1)
+  );
+  const scorePrecisionSumCount = useCountUp(
+    scorePrecisionSumValue,
+    700,
+    shouldAnimate
+  );
   const scorePrecisionSumText = scorePrecisionSumCount.toFixed(1);
 
-  const probAccuracy =
-    data.posts === 0
-      ? 0
-      : Math.max(0, Math.min(100, Math.round((1 - (data.avgBrier ?? 0)) * 100)));
-  const probAccuracyCount = useCountUp(probAccuracy, 700, true);
-  const probAccuracyText = `${probAccuracyCount}%`;
-
   const upsetPointsValue = Math.max(0, Math.round(data.upsetPointsSum || 0));
-  const upsetPointsCount = useCountUp(upsetPointsValue, 700, true);
+  const upsetPointsCount = useCountUp(upsetPointsValue, 700, shouldAnimate);
   const upsetPointsText = `${upsetPointsCount}`;
 
+  const maxStreakValue = Math.max(0, Math.round(data.maxStreak || 0));
+  const maxStreakCount = useCountUp(maxStreakValue, 700, shouldAnimate);
+  const maxStreakText = `${maxStreakCount}`;
+
   const totalPointsValue = Math.max(0, Math.round(data.pointsSumV3 || 0));
-  const totalPointsCount = useCountUp(totalPointsValue, 700, true);
+  const totalPointsCount = useCountUp(totalPointsValue, 700, shouldAnimate);
   const totalPointsText = `${totalPointsCount}`;
 
   const min = MIN_POSTS[period];
@@ -91,9 +103,8 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
   const hPrecision = enoughPosts
     ? evaluatePrecisionV2(avgPrecisionForHighlight)
     : NONE;
-  const hProb = enoughPosts ? evaluateAccuracyV2(probAccuracy) : NONE;
-
   const hUpset = NONE;
+  const hStreak = NONE;
   const hTotal = NONE;
 
   const padCls = compact ? "p-2 md:p-3" : "p-4";
@@ -103,94 +114,104 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
     compact ? "text-[18px] md:text-[24px]" : "text-[20px] md:text-[28px]";
   const iconSize = compact ? 16 : 20;
 
-  const isMobile =
-    typeof window !== "undefined" &&
-    window.matchMedia("(max-width: 768px)").matches;
+  const isMobile = compact;
 
   function openTooltip(e: React.MouseEvent, message: string) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setTooltip({ rect, message });
   }
 
-  const ScorePrecisionLabel = (
-    <div className="flex items-center gap-1">
-      スコア精度
-      <button
-        type="button"
-        className="opacity-70 text-xs"
-        onClick={(e) =>
-          openTooltip(
-            e,
-            "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
-          )
-        }
-      >
-        ⓘ
-      </button>
-    </div>
+  const ScorePrecisionLabel = useMemo(
+    () => (
+      <div className="flex items-center gap-1">
+        点差精度
+        <button
+          type="button"
+          className="opacity-70 text-xs"
+          onClick={(e) =>
+            openTooltip(
+              e,
+              "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
+            )
+          }
+        >
+          ⓘ
+        </button>
+      </div>
+    ),
+    []
   );
 
-  const ProbPrecisionLabel = (
-    <div className="flex items-center gap-1">
-      確率精度
-      <button
-        type="button"
-        className="opacity-70 text-xs"
-        onClick={(e) =>
-          openTooltip(
-            e,
-            "自信度（確率）と結果の整合性を評価します。表示は高いほど良い（Brierを反転して%化）です。"
-          )
-        }
-      >
-        ⓘ
-      </button>
-    </div>
+  const UpsetPointsLabel = useMemo(
+    () => (
+      <div className="flex items-center gap-1">
+        アップセット得点
+        <button
+          type="button"
+          className="opacity-70 text-xs"
+          onClick={(e) =>
+            openTooltip(
+              e,
+              "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
+            )
+          }
+        >
+          ⓘ
+        </button>
+      </div>
+    ),
+    []
   );
 
-  const UpsetPointsLabel = (
-    <div className="flex items-center gap-1">
-      アップセット得点
-      <button
-        type="button"
-        className="opacity-70 text-xs"
-        onClick={(e) =>
-          openTooltip(
-            e,
-            "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
-          )
-        }
-      >
-        ⓘ
-      </button>
-    </div>
+  const MaxStreakLabel = useMemo(
+    () => (
+      <div className="flex items-center gap-1">
+        最大連勝
+        <button
+          type="button"
+          className="opacity-70 text-xs"
+          onClick={(e) =>
+            openTooltip(
+              e,
+              "この期間内で記録した最長の連勝数です。"
+            )
+          }
+        >
+          ⓘ
+        </button>
+      </div>
+    ),
+    []
   );
 
-  const TotalPointsLabel = (
-    <div className="flex items-center gap-1">
-      総合得点
-      <button
-        type="button"
-        className="opacity-70 text-xs"
-        onClick={(e) =>
-          openTooltip(
-            e,
-            "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
-          )
-        }
-      >
-        ⓘ
-      </button>
-    </div>
+  const TotalPointsLabel = useMemo(
+    () => (
+      <div className="flex items-center gap-1">
+        総合得点
+        <button
+          type="button"
+          className="opacity-70 text-xs"
+          onClick={(e) =>
+            openTooltip(
+              e,
+              "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
+            )
+          }
+        >
+          ⓘ
+        </button>
+      </div>
+    ),
+    []
   );
 
   if (isMobile) {
     return (
       <>
-        <div className={`grid grid-cols-2 ${gapCls} mt-6`}>
+        <div className={`mt-6 grid grid-cols-2 ${gapCls}`}>
           <Card
             icon={<BarChartHorizontal size={iconSize} />}
-            label="確定分析数"
+            label="投稿数"
             value={postsText}
             padCls={padCls}
             labelCls={labelCls}
@@ -218,16 +239,6 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
           />
 
           <Card
-            icon={<Target size={iconSize} />}
-            label={ProbPrecisionLabel}
-            value={probAccuracyText}
-            padCls={padCls}
-            labelCls={labelCls}
-            valueCls={decorate(`${alfa.className} ${valueCls}`, hProb)}
-            afterIcon={highlightIcon(hProb, iconSize)}
-          />
-
-          <Card
             icon={<Zap size={iconSize} />}
             label={UpsetPointsLabel}
             value={upsetPointsText}
@@ -235,6 +246,16 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
             labelCls={labelCls}
             valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
             afterIcon={highlightIcon(hUpset, iconSize)}
+          />
+
+          <Card
+            icon={<Flame size={iconSize} />}
+            label={MaxStreakLabel}
+            value={maxStreakText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${alfa.className} ${valueCls}`, hStreak)}
+            afterIcon={highlightIcon(hStreak, iconSize)}
           />
 
           <Card
@@ -261,9 +282,9 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
 
   return (
     <>
-      <div className={`grid grid-cols-6 ${gapCls} mt-6`}>
+      <div className={`mt-6 grid grid-cols-6 ${gapCls}`}>
         <Card
-          label="確定分析数"
+          label="投稿数"
           value={postsText}
           padCls={padCls}
           labelCls={labelCls}
@@ -289,21 +310,21 @@ export default function SummaryCardsV2({ data, compact = false, period }: Props)
         />
 
         <Card
-          label={ProbPrecisionLabel}
-          value={probAccuracyText}
-          padCls={padCls}
-          labelCls={labelCls}
-          valueCls={decorate(`${alfa.className} ${valueCls}`, hProb)}
-          afterIcon={highlightIcon(hProb, iconSize)}
-        />
-
-        <Card
           label={UpsetPointsLabel}
           value={upsetPointsText}
           padCls={padCls}
           labelCls={labelCls}
           valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
           afterIcon={highlightIcon(hUpset, iconSize)}
+        />
+
+        <Card
+          label={MaxStreakLabel}
+          value={maxStreakText}
+          padCls={padCls}
+          labelCls={labelCls}
+          valueCls={decorate(`${alfa.className} ${valueCls}`, hStreak)}
+          afterIcon={highlightIcon(hStreak, iconSize)}
         />
 
         <Card
@@ -339,10 +360,10 @@ function decorate(base: string, h: HighlightV2) {
 
 function highlightIcon(h: HighlightV2, size: number) {
   if (h.icon === "crown") {
-    return <Crown className="inline-block ml-1" size={size - 2} />;
+    return <Crown className="ml-1 inline-block" size={size - 2} />;
   }
   if (h.icon === "fire") {
-    return <Flame className="inline-block ml-1" size={size - 2} />;
+    return <Flame className="ml-1 inline-block" size={size - 2} />;
   }
   return null;
 }
@@ -366,7 +387,7 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-white/10 bg-[#050814]/80 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ${padCls} text-center min-w-0`}
+      className={`min-w-0 rounded-xl border border-white/10 bg-[#050814]/80 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)] ${padCls}`}
     >
       <div className="mb-1 flex items-center justify-center gap-2 text-white/85">
         {icon && <span className="inline-flex">{icon}</span>}
@@ -375,7 +396,7 @@ function Card({
         </span>
       </div>
 
-      <div className="flex items-center justify-center leading-none truncate">
+      <div className="flex items-center justify-center truncate leading-none">
         <span className={`${valueCls} truncate`}>{value}</span>
         {afterIcon}
       </div>

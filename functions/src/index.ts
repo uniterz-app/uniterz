@@ -1,4 +1,5 @@
 // functions/src/index.ts
+
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
@@ -9,46 +10,33 @@ import {
 
 import { FieldValue } from "firebase-admin/firestore";
 import { admin } from "./firebase";
-
-import { aggregateGamesTrend } from "./trend/games.aggregate";
 import { dailyAnalyticsCore } from "./analytics/_core";
-import { aggregateUsersTrend } from "./trend/users.aggregate";
-import { aggregateHitPostsTodayNBA } from "./trend/hitPosts.aggregate";
-import { rebuildUsersTrend } from "./trend/users.rebuild";
 import * as functions from "firebase-functions";
 
+import { buildCumulativeStats } from "./rankings/buildCumulativeStats";
+import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankingSnapshot";
+
+// ★追加
+import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
 
 // ===============================
 // V2 Core
 // ===============================
 export { onGameFinalV2 } from "./onGameFinalV2";
-
-export { rebuildUsersTrend } from "./trend/users.rebuild";
-export { rescorePlayoffBrackets } from "./playoff/rescorePlayoffBrackets";
-export { onPlayoffResultsWrite } from "./playoff/onPlayoffResultsWrite";
-export { rebuildPlayoffBracketMarket } from "./playoff/rebuildPlayoffBracketMarket";
+export { rescorePlayoffBrackets } from "./playoff-bracket/rescorePlayoffBrackets";
+export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
+export { rebuildPlayoffBracketMarket } from "./playoff-bracket/rebuildPlayoffBracketMarket";
+export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
+export { getMonthlyLeaderboard } from "./leaderboards/getMonthlyLeaderboard";
 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";
-
-// 🔥 週間・月間ランキング（V2）
-export {
-  rebuildCalendarLeaderboardsHttpV2,
-  rebuildLeaderboardWeekV2,
-  rebuildLeaderboardMonthV2,
-} from "./triggers/leaderboards.calendar.v2";
 
 // 🔥 ユーザー月次スタッツ（Pro用）
 export {
   rebuildUserMonthlyStatsV2,
   rebuildUserMonthlyStatsMonthCronV2,
 } from "./stats/rebuildUserMonthlyStatsV2";
-
-// 🔥 オールタイムランキング（V2）
-export {
-  rebuildLeaderboardAllTimeV2,
-  rebuildLeaderboardAllTimeCron,
-} from "./triggers/leaderboards.alltime.v2";
 
 // ===============================
 // Global
@@ -134,57 +122,60 @@ export { onPostCreatedV2 } from "./onPostCreated";
 export { onPostDeletedV2 } from "./onPostDeleted";
 
 /* ============================================================================
- * トレンド（Games）
- * ==========================================================================*/
-
-export const aggregateTrendsGames = onRequest(async (_req, res) => {
-  try {
-    const result = await aggregateGamesTrend();
-    res.status(200).json(result);
-  } catch (e: any) {
-    res.status(500).json({ ok: false, error: e?.message ?? "failed" });
-  }
-});
-
-export const aggregateTrendsGamesCron = onSchedule(
-  { schedule: "0 * * * *", timeZone: "Asia/Tokyo" },
-  async () => {
-    await aggregateGamesTrend(); // return しない
-  }
-);
-
-export const aggregateUsersTrendCron = onSchedule(
-  { schedule: "0 0 * * *", timeZone: "Asia/Tokyo" }, // 毎日24:00
-  async () => {
-    await aggregateUsersTrend();
-  }
-);
-
-/* ============================================================================
- * Hit Posts Trend (NBA / Today)
- * ==========================================================================*/
-
-export const aggregateHitPostsTodayNBACron = onSchedule(
-  {
-    schedule: "30 15 * * *", // ★ 15:30 JST
-    timeZone: "Asia/Tokyo",
-  },
-  async () => {
-    await aggregateHitPostsTodayNBA();
-  }
-);
-
-
-/* ============================================================================
  * Team Rankings (Daily)
  * ==========================================================================*/
 
-import { updateTeamRankings } from "./ranking/updateTeamRankings";
+import { updateTeamRankings } from "./team-standing/updateTeamRankings";
 
 export const updateTeamRankingsDaily = onSchedule(
   { schedule: "0 0 * * *", timeZone: "Asia/Tokyo" },
   async () => {
     await updateTeamRankings();
+  }
+);
+
+/* ============================================================================
+ * Cumulative Stats (15:40)
+ * ==========================================================================*/
+
+export const buildCumulativeStatsCron = onSchedule(
+  { schedule: "40 15 * * *", timeZone: "Asia/Tokyo" },
+  async () => {
+    await buildCumulativeStats();
+  }
+);
+
+/* ============================================================================
+ * Cumulative Ranking Snapshot (15:55)
+ * ==========================================================================*/
+
+export const buildCumulativeRankingSnapshotCron = onSchedule(
+  { schedule: "55 15 * * *", timeZone: "Asia/Tokyo" },
+  async () => {
+    await buildCumulativeRankingSnapshot();
+  }
+);
+
+/* ============================================================================
+ * Monthly Leaderboard Snapshot（★追加）
+ * 毎月1日 04:05 → 前月分を確定
+ * ==========================================================================*/
+
+export const buildMonthlyLeaderboardSnapshotCron = onSchedule(
+  { schedule: "0 4 1 * *", timeZone: "Asia/Tokyo" },
+  async () => {
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const y = prev.getFullYear();
+    const m = String(prev.getMonth() + 1).padStart(2, "0");
+    const month = `${y}-${m}`;
+
+    const LEAGUES = ["nba", "j1", "bj"];
+
+    for (const league of LEAGUES) {
+      await buildMonthlyLeaderboardSnapshot({ league, month });
+    }
   }
 );
 
@@ -198,15 +189,12 @@ export { runDailyAnalytics } from "./analytics/runDaily";
 
 export { fixUserStats } from "./fixUserStats";
 
-
-// ============================================================
-// Debug: 全ユーザーを一括で再計算する HTTP エンドポイント
-// ============================================================
+/* ============================================================================
+ * Debug
+ * ==========================================================================*/
 
 export { listUserStatsIds } from "./debug/listUserStats";
-
 export { xmasNba20251226 } from "./debug/xmasNba20251226";
-
 
 export const runDailyAnalyticsHttp = onRequest(async (_req, res) => {
   try {
@@ -226,7 +214,6 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
     createdAt: FieldValue.serverTimestamp(),
   });
 });
-
 
 
 

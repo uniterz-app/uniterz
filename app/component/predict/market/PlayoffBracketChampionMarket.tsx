@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { bebas } from "@/app/fonts";
+import { nameBebas } from "@//lib/fonts";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 
@@ -183,7 +183,7 @@ export default function PlayoffBracketChampionMarket({
                   </div>
 
                   <div
-                    className={`${bebas.className} font-extrabold tracking-[0.12em] text-white ${s.team}`}
+                    className={`${nameBebas.className} font-extrabold tracking-[0.12em] text-white ${s.team}`}
                   >
                     {row.short}
                   </div>
