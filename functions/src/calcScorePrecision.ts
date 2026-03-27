@@ -55,10 +55,13 @@ export function calcScorePrecision({
   const awayPt = rules.pointByAway(diffAway);
   const diffPt = rules.pointByDiff(diff);
 
+  const total = homePt + awayPt + diffPt;
+  const totalPt = Math.min(10, Math.round(total * 10) / 10); // 最大10でクリップ
+
   return {
     homePt,
     awayPt,
     diffPt,
-    totalPt: homePt + awayPt + diffPt, // 最大10
+    totalPt,
   };
 }

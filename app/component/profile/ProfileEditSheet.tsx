@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Camera } from "lucide-react";
+import { onAuthStateChanged } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db, auth } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Props = {
   draftName: string;
@@ -38,6 +40,14 @@ export default function ProfileEditSheet({
   const [currentPhotoURL, setCurrentPhotoURL] = useState<string | null>(initialPhotoURL ?? null);
   const [uploading, setUploading] = useState(false);
 
+  const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
+    return () => unsub();
+  }, []);
+  const { language } = useUserLanguage(uid);
+  const isEn = language === "en";
+
   useEffect(() => {
     setCurrentPhotoURL(initialPhotoURL ?? null);
   }, [initialPhotoURL]);
@@ -70,7 +80,7 @@ export default function ProfileEditSheet({
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) {
-      alert("ログインが必要です");
+      alert(isEn ? "Login is required." : "ログインが必要です");
       return;
     }
 
@@ -125,7 +135,7 @@ export default function ProfileEditSheet({
           textAlign: 'center',
         }}
       >
-        プロフィール編集
+        {isEn ? "Edit Profile" : "プロフィール編集"}
       </h3>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -174,7 +184,7 @@ export default function ProfileEditSheet({
         {/* 名前 */}
         <input
           type="text"
-          placeholder="名前"
+          placeholder={isEn ? "Name" : "名前"}
           value={nameLocal}
           onChange={(e) => setNameLocal(e.target.value)}
           className="field"
@@ -187,7 +197,7 @@ export default function ProfileEditSheet({
 
         {/* 自己紹介 */}
         <textarea
-          placeholder="自己紹介"
+          placeholder={isEn ? "Bio" : "自己紹介"}
           value={bioLocal}
           onChange={(e) => setBioLocal(e.target.value)}
           className="field"
@@ -214,7 +224,7 @@ export default function ProfileEditSheet({
             cursor: 'pointer',
           }}
         >
-          {uploading ? "アップロード中..." : "変更"}
+          {uploading ? (isEn ? "Uploading..." : "アップロード中...") : isEn ? "Save" : "変更"}
         </button>
       </form>
     </div>

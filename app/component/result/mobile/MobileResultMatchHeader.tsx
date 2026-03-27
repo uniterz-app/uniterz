@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Flame } from "lucide-react";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -13,9 +12,11 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   post: PredictionPostV2;
+  language?: Language;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -99,10 +100,13 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
-function getStreakBadge(activeWinStreak: unknown): {
+/** Mobile用: 文字白・視認性重視・3/5/7で色階層 */
+function getStreakBadgeForMobile(
+  activeWinStreak: unknown,
+  isEn: boolean
+): {
   label: string;
   className: string;
-  iconClassName: string;
 } | null {
   const v =
     typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
@@ -113,32 +117,33 @@ function getStreakBadge(activeWinStreak: unknown): {
 
   if (v >= 7) {
     return {
-      label: `${v}連勝`,
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
-        "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
-      iconClassName: "text-yellow-200",
+        "bg-linear-to-r from-[#180f2b] via-[#312e81] to-[#0f172a] text-white border border-violet-400/60 shadow-[0_0_14px_rgba(167,139,250,0.5)]",
     };
   }
 
   if (v >= 5) {
     return {
-      label: `${v}連勝`,
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
-        "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
-      iconClassName: "text-yellow-100",
+        "bg-linear-to-r from-[#0a1628] via-[#0e7490] to-[#052e2b] text-white border border-cyan-400/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]",
     };
   }
 
   return {
-    label: `${v}連勝`,
+    label: isEn ? `${v} Win Streak` : `${v}連勝`,
     className:
-      "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
-    iconClassName: "text-red-500",
+      "bg-linear-to-r from-[#0b1f1a] via-[#166534] to-[#0f172a] text-white border border-emerald-400/60 shadow-[0_0_10px_rgba(52,211,153,0.4)]",
   };
 }
 
-export default function MobileResultMatchHeader({ post }: Props) {
+export default function MobileResultMatchHeader({
+  post,
+  language = "ja",
+}: Props) {
   const normalizedLeague = normalizeLeague(post.league);
+  const isEn = language === "en";
   const Icon =
     normalizedLeague === "nba" || normalizedLeague === "bj" ? Jersey : Soccer;
 
@@ -183,7 +188,7 @@ export default function MobileResultMatchHeader({ post }: Props) {
 
   const activeWinStreak =
     toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getStreakBadge(activeWinStreak);
+  const streakBadge = getStreakBadgeForMobile(activeWinStreak, isEn);
 
   let badge: "hit" | "upset" | "miss" | "streak" | null = null;
   if ((post.stats as any)?.upsetHit) badge = "upset";
@@ -198,13 +203,13 @@ export default function MobileResultMatchHeader({ post }: Props) {
   } else if (badge === "streak") {
     if (activeWinStreak >= 7) {
       frame =
-        "border border-red-400 ring-2 ring-red-400/70 shadow-[0_0_22px_rgba(239,68,68,0.45)]";
+        "border border-violet-400/80 ring-2 ring-violet-400/70 shadow-[0_0_22px_rgba(167,139,250,0.5)]";
     } else if (activeWinStreak >= 5) {
       frame =
-        "border border-orange-300 ring-2 ring-orange-300/60 shadow-[0_0_18px_rgba(249,115,22,0.38)]";
+        "border border-cyan-400/80 ring-2 ring-cyan-400/70 shadow-[0_0_18px_rgba(34,211,238,0.45)]";
     } else {
       frame =
-        "border border-yellow-300 ring-1 ring-yellow-300/60 shadow-[0_0_16px_rgba(250,204,21,0.32)]";
+        "border border-emerald-400/80 ring-1 ring-emerald-400/70 shadow-[0_0_16px_rgba(52,211,153,0.42)]";
     }
   } else if (badge === "hit") {
     frame =
@@ -230,24 +235,23 @@ export default function MobileResultMatchHeader({ post }: Props) {
 
       {badge === "streak" && streakBadge && (
         <span
-          className={`absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-md font-extrabold shadow-md ${streakBadge.className}`}
+          className={`absolute right-3 top-3 z-10 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md ${streakBadge.className}`}
         >
-          <Flame className={`h-3.5 w-3.5 ${streakBadge.iconClassName}`} />
           {streakBadge.label}
         </span>
       )}
       {badge === "hit" && (
-        <span className="absolute right-3 top-3 z-10 bg-yellow-400 text-black text-[11px] px-2 py-0.5 rounded-md font-extrabold shadow-md">
+        <span className="absolute right-3 top-3 z-10 bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md">
           HIT
         </span>
       )}
       {badge === "upset" && (
-        <span className="absolute right-3 top-3 z-10 bg-red-500 text-white text-[11px] px-2 py-0.5 rounded-md font-extrabold shadow-md">
+        <span className="absolute right-3 top-3 z-10 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md">
           UPSET
         </span>
       )}
       {badge === "miss" && (
-        <span className="absolute right-3 top-3 z-10 bg-gray-500 text-white text-[11px] px-2 py-0.5 rounded-md font-extrabold shadow-md">
+        <span className="absolute right-3 top-3 z-10 bg-gray-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md">
           MISS
         </span>
       )}
@@ -284,8 +288,11 @@ export default function MobileResultMatchHeader({ post }: Props) {
           </div>
 
           {finalScore && (
-            <div className="mt-1.5 text-[12px] font-extrabold tabular-nums opacity-85">
-              Final: {finalScore}
+            <div className="mt-1.5 flex flex-col items-center tabular-nums opacity-85">
+              <div className="text-[10px] font-extrabold uppercase tracking-wide">
+                Final
+              </div>
+              <div className="text-[12px] font-extrabold">{finalScore}</div>
             </div>
           )}
         </div>

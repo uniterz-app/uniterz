@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { IBM_Plex_Sans } from "next/font/google";
+import type { Language } from "@/lib/i18n/language";
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -13,13 +14,20 @@ type Range = "7d" | "30d" | "all";
 type Props = {
   value: Range;
   onChange: (v: Range) => void;
+  language?: Language;
 };
 
-export default function PeriodToggle({ value, onChange }: Props) {
+export default function PeriodToggle({
+  value,
+  onChange,
+  language = "ja",
+}: Props) {
+  const isEn = language === "en";
+
   const items: { key: Range; label: string }[] = [
-    { key: "7d", label: "7日" },
-    { key: "30d", label: "30日" },
-    { key: "all", label: "ALL" },
+    { key: "7d", label: isEn ? "Last 7d" : "7日" },
+    { key: "30d", label: isEn ? "Last 30d" : "30日" },
+    { key: "all", label: isEn ? "All-time" : "ALL" },
   ];
 
   return (

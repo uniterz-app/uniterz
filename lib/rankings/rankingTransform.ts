@@ -15,6 +15,7 @@ export type RankingApiRow = {
   totalUpset?: number;
   currentStreak?: number;
   activeWinStreak?: number;
+  countryCode?: string | null;
 };
 
 export function toApiMetric(metric: MobileMetric) {
@@ -55,7 +56,7 @@ export function toMobileRows(
       posts: totalPosts,
       winRate: totalPosts > 0 ? totalWins / totalPosts : 0,
 
-      countryCode: undefined,
+      countryCode: row.countryCode ?? undefined,
     };
   });
 }

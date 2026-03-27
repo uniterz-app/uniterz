@@ -21,6 +21,9 @@ import {
   buildRound1Series,
   getCurrentPlayoffSeason,
 } from "@/lib/playoff-bracket-config";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { getPlayoffBracketStrings } from "@/lib/i18n/playoffBracket";
 
 type Team = {
   code: string;
@@ -30,6 +33,9 @@ type Team = {
 export default function PlayoffBracketPredict() {
   const searchParams = useSearchParams();
   const season = searchParams.get("season") ?? getCurrentPlayoffSeason();
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const t = getPlayoffBracketStrings(language);
 
   const [bracket, setBracket] = useState<BracketState>({});
 
@@ -122,7 +128,7 @@ export default function PlayoffBracketPredict() {
     const me = auth.currentUser;
 
     if (!me) {
-      alert("ログインが必要です");
+      alert(t.alertLoginRequired);
       return;
     }
 
@@ -134,7 +140,7 @@ export default function PlayoffBracketPredict() {
       const existing = await loadPlayoffBracket(me.uid, season);
 
       if (existing) {
-        alert("ブラケットはすでに提出済みです");
+        alert(t.alertAlreadySubmitted);
         setHasSubmittedBracket(true);
         setSubmitOpen(false);
         return;
@@ -144,9 +150,9 @@ export default function PlayoffBracketPredict() {
 
       setHasSubmittedBracket(true);
       setSubmitOpen(false);
-      alert("ブラケットを提出しました");
+      alert(t.alertSubmittedOk);
     } catch (e: any) {
-      alert(e?.message ?? "提出に失敗しました");
+      alert(e?.message ?? t.alertSubmitFailed);
     } finally {
       setSubmitting(false);
     }
@@ -265,7 +271,7 @@ export default function PlayoffBracketPredict() {
   }, [finalsTeams]);
 
   return (
-    <div className="min-h-screen bg-[#050b14] text-white">
+    <div className="min-h-screen bg-[#050b14] pb-bottom-nav text-white">
       <div className="border-b border-white/10 px-4 pt-4">
         <div className="flex items-center justify-center overflow-x-auto whitespace-nowrap pb-4 text-[18px] font-semibold">
           NBA Playoff Bracket

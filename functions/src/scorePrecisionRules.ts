@@ -1,9 +1,8 @@
-function curvedScore(diff: number, full: number, zeroAt: number, gamma: number) {
-  if (diff <= full) return 1;
+/** 誤差 0→1, 1〜11 で線形減衰, 12+ → 0 */
+function gradientScore(diff: number, zeroAt: number): number {
+  if (diff <= 0) return 1;
   if (diff >= zeroAt) return 0;
-
-  const r = 1 - (diff - full) / (zeroAt - full);
-  return Math.pow(r, gamma);
+  return 1 - diff / zeroAt;
 }
 
 const SCALE_15_TO_10 = 10 / 15;
@@ -12,26 +11,26 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 export const scorePrecisionRules = {
   /* =========================
    * Basketball（10点満点）
-   * 点差 4.7 + HOME 2.7 + AWAY 2.7 = 10.1 にならないよう合計は10に丸め
-   * → 15点設計(7/4/4)を 10/15 スケールして返す
+   * 点差4 + Home3 + Away3 = 10
+   * 誤差 0〜11 でグラデーション、12以上で0点
    * ========================= */
   basketball: {
-    // 点差（最大 7 → 4.7）
+    // 点差（最大 4）
     pointByDiff(diff: number) {
-      const r = curvedScore(diff, 6, 16, 1.6);
-      return round1(r * 7 * SCALE_15_TO_10);
+      const r = gradientScore(diff, 12);
+      return round1(r * 4);
     },
 
-    // HOME（最大 4 → 2.7）
+    // HOME（最大 3）
     pointByHome(diff: number) {
-      const r = curvedScore(diff, 6, 16, 1.6);
-      return round1(r * 4 * SCALE_15_TO_10);
+      const r = gradientScore(diff, 12);
+      return round1(r * 3);
     },
 
-    // AWAY（最大 4 → 2.7）
+    // AWAY（最大 3）
     pointByAway(diff: number) {
-      const r = curvedScore(diff, 6, 16, 1.6);
-      return round1(r * 4 * SCALE_15_TO_10);
+      const r = gradientScore(diff, 12);
+      return round1(r * 3);
     },
   },
 

@@ -7,21 +7,21 @@ export function metricNum(r: RankingRowWithCountry, metric: MobileMetric) {
   if (metric === "totalScore") {
     return {
       n: r.totalScore ?? 0,
-      d: 0,
+      d: 1,
     };
   }
 
   if (metric === "marginPrecision") {
     return {
       n: r.marginPrecisionScore ?? 0,
-      d: 0,
+      d: 1,
     };
   }
 
   if (metric === "upsetScore") {
     return {
       n: r.upsetScore ?? 0,
-      d: 0,
+      d: 1,
     };
   }
 
@@ -40,7 +40,8 @@ export function metricNum(r: RankingRowWithCountry, metric: MobileMetric) {
 
 export function getMetricSubText(
   r: RankingRowWithCountry,
-  metric: MobileMetric
+  metric: MobileMetric,
+  lang: "ja" | "en" = "ja"
 ) {
   if (metric === "totalScore") {
     return `avg ${(r.avgTotalScore ?? 0).toFixed(1)}`;
@@ -54,5 +55,5 @@ export function getMetricSubText(
     return `avg ${(r.avgUpsetScore ?? 0).toFixed(1)}`;
   }
 
-  return `投稿 ${r.posts ?? 0}`;
+  return lang === "en" ? `Posts ${r.posts ?? 0}` : `投稿 ${r.posts ?? 0}`;
 }

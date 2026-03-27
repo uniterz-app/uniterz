@@ -6,6 +6,7 @@ import { Zap } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
+import type { Language } from "@/lib/i18n/language";
 
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
@@ -16,6 +17,7 @@ type Props = {
   upsetHitCount: number;
   compact?: boolean;
   className?: string;
+  language?: Language;
 };
 
 const UPSET_TOOLTIP =
@@ -33,7 +35,9 @@ export default function UpsetCard({
   upsetHitCount,
   compact = true,
   className = "",
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
 
@@ -64,7 +68,10 @@ export default function UpsetCard({
     setTooltip({ rect, message });
   }
 
-  const points = useMemo(() => clampInt(upsetPointsSum || 0), [upsetPointsSum]);
+  const points = useMemo(
+    () => Math.max(0, Number((upsetPointsSum || 0).toFixed(1))),
+    [upsetPointsSum]
+  );
   const analyzed = useMemo(() => clampInt(analyses || 0), [analyses]);
   const chances = useMemo(
     () => clampInt(upsetChanceCount || 0),
@@ -77,10 +84,14 @@ export default function UpsetCard({
     return Math.max(0, Math.min(100, Math.round((hits / chances) * 100)));
   }, [hits, chances]);
 
-  const cuPoints = useCountUp(points, 1000, inView);
+  const cuPoints = useCountUp(points, 1000, inView, 1);
   const cuAnalyzed = useCountUp(analyzed, 1000, inView);
   const cuChances = useCountUp(chances, 1000, inView);
   const cuHitPct = useCountUp(hitPct, 1000, inView);
+
+  const tooltipMsg = isEn
+    ? "You earn Upset Points only when you correctly predict an upset (0–10 points per match). “Occurred” means how many of your predicted matches actually had an upset."
+    : UPSET_TOOLTIP;
 
   return (
     <>
@@ -100,13 +111,13 @@ export default function UpsetCard({
             <Zap className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
           </div>
 
-          <span className="text-white">アップセット</span>
+          <span className="text-white">{isEn ? "Upset" : "アップセット"}</span>
 
           <button
             type="button"
             className="ml-1 text-[11px] md:text-[16px] text-white/60 hover:text-white/80"
-            onClick={(e) => openTooltip(e, UPSET_TOOLTIP)}
-            aria-label="アップセットの説明"
+            onClick={(e) => openTooltip(e, tooltipMsg)}
+            aria-label={isEn ? "Upset description" : "アップセットの説明"}
           >
             ⓘ
           </button>
@@ -120,14 +131,14 @@ export default function UpsetCard({
             "font-bold text-white leading-none text-center tabular-nums",
           ].join(" ")}
         >
-          {cuPoints}
+          {cuPoints.toFixed(1)}
           <span className="ml-2 text-sm md:text-lg text-white/70">pts</span>
         </div>
 
         <div className="mt-2 md:mt-4 text-[11px] md:text-[13px] text-white/60 text-center leading-snug md:leading-relaxed">
-          発生 {cuChances} / 分析 {cuAnalyzed}
+          {isEn ? `Upsets ${cuChances} / Analyses ${cuAnalyzed}` : `発生 ${cuChances} / 分析 ${cuAnalyzed}`}
           <br />
-          的中率 {cuHitPct}%
+          {isEn ? `Hit Rate ${cuHitPct}%` : `的中率 ${cuHitPct}%`}
         </div>
       </div>
 

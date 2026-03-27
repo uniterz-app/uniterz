@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { Trophy, Swords, TrendingUp } from "lucide-react";
 
 import PlayoffBracketMarketHeader from "@/app/component/predict/market/PlayoffBracketMarketHeader";
 import PlayoffBracketRound1Market from "@/app/component/predict/market/PlayoffBracketRound1Market";
 import PlayoffBracketChampionMarket from "@/app/component/predict/market/PlayoffBracketChampionMarket";
 import PlayoffBracketTeamProgressMarket from "@/app/component/predict/market/PlayoffBracketTeamProgressMarket";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 
 type MarketCountMap = Record<string, number>;
 
@@ -56,6 +60,17 @@ export default function PlayoffBracketMarket({
   const [market, setMarket] = useState<PlayoffBracketMarketData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUid(u?.uid ?? null);
+    });
+    return () => unsub();
+  }, []);
+
+  const { language } = useUserLanguage(uid);
+  const isEn = language === "en";
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -84,7 +99,7 @@ export default function PlayoffBracketMarket({
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-5xl text-white">
-        読み込み中...
+        {isEn ? "Loading..." : "読み込み中..."}
       </div>
     );
   }
@@ -92,7 +107,7 @@ export default function PlayoffBracketMarket({
   if (!market) {
     return (
       <div className="mx-auto w-full max-w-5xl text-white">
-        マーケットデータがありません
+        {isEn ? "No market data available" : "マーケットデータがありません"}
       </div>
     );
   }
@@ -107,32 +122,40 @@ export default function PlayoffBracketMarket({
       <section className="p-0">
         <div className="mb-2 flex items-center justify-center gap-2">
           <Trophy className="h-5 w-5 text-yellow-300" />
-          <h2 className="text-lg font-bold">優勝予想</h2>
+          <h2 className="text-lg font-bold">
+            {isEn ? "Champion Predictions" : "優勝予想"}
+          </h2>
         </div>
 
         <PlayoffBracketChampionMarket
           championPickCounts={market.championPickCounts}
           totalEntries={market.totalEntries}
+          language={language as Language}
         />
       </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-center gap-2">
           <TrendingUp className="h-5 w-5 text-emerald-300" />
-          <h2 className="text-lg font-bold">勝ち上がり予想</h2>
+          <h2 className="text-lg font-bold">
+            {isEn ? "Advancement Predictions" : "勝ち上がり予想"}
+          </h2>
         </div>
 
-<PlayoffBracketTeamProgressMarket
-  season={market.season}
-  teamProgressMarkets={market.teamProgressMarkets}
-  totalEntries={market.totalEntries}
-/>
+        <PlayoffBracketTeamProgressMarket
+          season={market.season}
+          teamProgressMarkets={market.teamProgressMarkets}
+          totalEntries={market.totalEntries}
+          language={language as Language}
+        />
       </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-center gap-2">
           <Swords className="h-5 w-5 text-cyan-300" />
-          <h2 className="text-lg font-bold">1stラウンド予想</h2>
+          <h2 className="text-lg font-bold">
+            {isEn ? "Round 1 Predictions" : "1stラウンド予想"}
+          </h2>
         </div>
 
         <PlayoffBracketRound1Market

@@ -52,6 +52,7 @@ export async function buildCumulativeRankingSnapshot() {
       displayName: d.displayName ?? "user",
       handle: d.handle ?? null,
       photoURL: d.photoURL ?? null,
+        countryCode: d.countryCode ?? null,
 
       totalPosts,
       totalWins,

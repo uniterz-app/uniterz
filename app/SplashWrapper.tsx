@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
 export default function SplashWrapper({
@@ -13,38 +13,42 @@ export default function SplashWrapper({
   onDone?: () => void;
 }) {
   const { status } = useFirebaseUser();
-  const [fadeDone, setFadeDone] = useState(false);
-  const doneCalledRef = useRef(false);
-
   const shouldShowSplash = forceSplash || status === "loading";
+
+  const [fadeDone, setFadeDone] = useState(
+    () => !(forceSplash || status === "loading")
+  );
+
+  const doneCalledRef = useRef(false);
 
   useEffect(() => {
     if (shouldShowSplash && !fadeDone) {
       document.body.classList.remove("bg-black");
       document.body.classList.add("splash-bg");
-      return;
     }
+  }, [shouldShowSplash, fadeDone]);
 
-    if (!shouldShowSplash && !fadeDone) {
-      const timer = setTimeout(() => {
-        document.body.classList.remove("splash-bg");
-        document.body.classList.add("bg-black");
-        setFadeDone(true);
+  useLayoutEffect(() => {
+    if (shouldShowSplash || fadeDone) return;
 
-        if (!doneCalledRef.current) {
-          doneCalledRef.current = true;
-          onDone?.();
-        }
-      }, 50);
+    document.body.classList.remove("splash-bg");
+    document.body.classList.add("bg-black");
+    setFadeDone(true);
 
-      return () => clearTimeout(timer);
+    if (!doneCalledRef.current) {
+      doneCalledRef.current = true;
+      onDone?.();
     }
   }, [shouldShowSplash, fadeDone, onDone]);
 
-  if (shouldShowSplash && !fadeDone) {
+  const showSplashUi = shouldShowSplash || !fadeDone;
+
+  if (showSplashUi) {
     return (
-      <div className="w-screen h-screen flex items-center justify-center relative splash-screen-bg">
-        <div className="mt-27 ml-4 text-white/80 text-sm animate-pulse">Loading...</div>
+      <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
+        <div className="mt-27 ml-4 animate-pulse text-sm text-white/80">
+          Loading...
+        </div>
       </div>
     );
   }

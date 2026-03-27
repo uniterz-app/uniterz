@@ -92,6 +92,7 @@ export async function buildCumulativeStats() {
           displayName: user.displayName ?? "user",
           handle: user.handle ?? null,
           photoURL: user.photoURL ?? null,
+          countryCode: user.countryCode ?? null,
 
           totalPosts: nextPosts,
           totalWins: nextWins,

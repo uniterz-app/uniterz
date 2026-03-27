@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 type DailyTrendRow = {
   date: string;
   posts: number;
+  wins: number;
+  pointsV3: number;
+  upsetPoints: number;
   winRate: number;
   scorePrecision: number;
 };
@@ -54,15 +57,19 @@ export function useUserDailyTrendV2(uid?: string) {
 
           const posts = all?.posts ?? 0;
           const wins = all?.wins ?? 0;
+          const pointsV3 = all?.pointsSumV3 ?? 0;
+          const upsetPoints = all?.upsetPointsSum ?? 0;
+          const scorePrecisionSum = all?.scorePrecisionSum ?? 0;
 
           return {
             date: d.date,
             posts,
+            wins,
+            pointsV3,
+            upsetPoints,
             winRate: posts > 0 ? wins / posts : 0,
-            scorePrecision:
-              posts > 0 && typeof all?.scorePrecisionSum === "number"
-                ? all.scorePrecisionSum / posts / 15
-                : 0,
+            // 現行仕様では scorePrecision は 10点スケールの合計値を日次で保持
+            scorePrecision: scorePrecisionSum,
           };
         });
 

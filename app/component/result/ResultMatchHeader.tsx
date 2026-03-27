@@ -13,9 +13,11 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   post: PredictionPostV2;
+  language?: Language;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -103,7 +105,7 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
-function getStreakBadge(activeWinStreak: unknown): {
+function getStreakBadge(activeWinStreak: unknown, isEn: boolean): {
   label: string;
   className: string;
   iconClassName: string;
@@ -117,7 +119,7 @@ function getStreakBadge(activeWinStreak: unknown): {
 
   if (v >= 7) {
     return {
-      label: `${v}連勝`,
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
         "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
       iconClassName: "text-yellow-200",
@@ -126,7 +128,7 @@ function getStreakBadge(activeWinStreak: unknown): {
 
   if (v >= 5) {
     return {
-      label: `${v}連勝`,
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
         "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
       iconClassName: "text-yellow-100",
@@ -134,15 +136,19 @@ function getStreakBadge(activeWinStreak: unknown): {
   }
 
   return {
-    label: `${v}連勝`,
+    label: isEn ? `${v} Win Streak` : `${v}連勝`,
     className:
       "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
       iconClassName: "text-red-500",
     };
 }
 
-export default function ResultMatchHeader({ post }: Props) {
+export default function ResultMatchHeader({
+  post,
+  language = "ja",
+}: Props) {
   const normalizedLeague = normalizeLeague(post.league);
+  const isEn = language === "en";
 
   const Icon =
     normalizedLeague === "nba" || normalizedLeague === "bj"
@@ -190,7 +196,7 @@ export default function ResultMatchHeader({ post }: Props) {
 
   const activeWinStreak =
     toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getStreakBadge(activeWinStreak);
+  const streakBadge = getStreakBadge(activeWinStreak, isEn);
 
   let badge: "hit" | "upset" | "miss" | "streak" | null = null;
   if ((post.stats as any)?.upsetHit) badge = "upset";

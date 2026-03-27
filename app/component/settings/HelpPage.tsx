@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
+import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
-  Target,
-  Coins,
+  Gamepad2,
   BarChart3,
-  User,
+  Sigma,
   Trophy,
-  ShieldCheck,
 } from "lucide-react";
 
 type Variant = "web" | "mobile";
@@ -21,41 +22,38 @@ type FAQItem = {
   answer: React.ReactNode;
 };
 
-const faqs: FAQItem[] = [
+const faqsJa: FAQItem[] = [
   {
     id: "form",
-    label: "予想投稿（V2）",
-    question: "V2では何を投稿するのですか？",
-    icon: <Target className="h-5 w-5 text-pink-400" />,
-    accentClass: "from-pink-500/70 via-fuchsia-500/70 to-sky-500/70",
+    label: "ゲームの遊び方",
+    question: "このアプリでは何を楽しめますか？",
+    icon: <Gamepad2 className="h-5 w-5 text-cyan-200" />,
+    accentClass: "from-cyan-500/70 via-blue-500/70 to-indigo-500/70",
     answer: (
       <div className="space-y-2 text-sm leading-relaxed text-white/80">
         <p>
-          Uniterz V2 では、オッズや賭け要素のない
-          <span className="font-semibold text-pink-300">
-            「予想・分析コミュニティ」
+          Uniterz は、スポーツ予想をベースに楽しむ
+          <span className="font-semibold text-cyan-300">
+            ファンタジーゲーム
           </span>
-          として、次の内容を投稿します。
+          です。次のようなプレイができます。
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>勝敗予想</li>
           <li>スコア予想（任意）</li>
-          <li>自信度（1〜100%）</li>
-          <li>分析メモ</li>
+          <li>試合ごとの投稿でポイント獲得</li>
+          <li>ランキングで他ユーザーと競争</li>
         </ul>
-        <p>
-          投稿データは
-          勝率・精度・信頼度などの指標として自動集計されます。
-        </p>
+        <p>日々の投稿結果はプロフィールやランキングに反映されます。</p>
       </div>
     ),
   },
   {
     id: "stats",
-    label: "分析指標",
+    label: "スコア計算",
     question: "どんな成績指標がありますか？",
-    icon: <BarChart3 className="h-5 w-5 text-sky-300" />,
-    accentClass: "from-sky-400/70 via-cyan-400/70 to-emerald-400/70",
+    icon: <BarChart3 className="h-5 w-5 text-violet-200" />,
+    accentClass: "from-violet-500/70 via-fuchsia-500/70 to-indigo-500/70",
     answer: (
       <div className="space-y-2 text-sm leading-relaxed text-white/80">
         <ul className="list-disc pl-5 space-y-1">
@@ -66,38 +64,44 @@ const faqs: FAQItem[] = [
             <b>スコア精度</b>：スコア予想と結果のズレ
           </li>
           <li>
-            <b>Brierスコア</b>：確率予想の正確さ
-          </li>
-          <li>
             <b>Upsetスコア</b>：番狂わせを読み切る力
           </li>
-          <li>
-            <b>一致度（Calibration）</b>：自信度と結果のズレ
-          </li>
+          <li><b>総合得点</b>：各指標を合算したスコア</li>
         </ul>
-        <p>
-          各指標は、7日間・30日間・通算で集計されます。
-        </p>
+        <p>各指標は、7日間・30日間・通算で集計されます。</p>
       </div>
     ),
   },
   {
-    id: "profile",
-    label: "プロフィール",
-    question: "プロフィールの数値は何を表していますか？",
-    icon: <User className="h-5 w-5 text-indigo-300" />,
-    accentClass: "from-indigo-400/70 via-violet-500/70 to-fuchsia-500/70",
+    id: "scoring-logic",
+    label: "採点ロジック",
+    question: "得点はどう計算されていますか？",
+    icon: <Sigma className="h-5 w-5 text-emerald-200" />,
+    accentClass: "from-emerald-500/70 via-teal-500/70 to-cyan-500/70",
     answer: (
       <div className="space-y-2 text-sm leading-relaxed text-white/80">
+        <p>
+          試合ごとの投稿には、主に
+          <span className="font-semibold text-emerald-300"> 勝率・スコア精度・総合得点 </span>
+          が反映されます。
+        </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>勝率：結果を当てる力</li>
-          <li>スコア精度：点差を読む力</li>
-          <li>一致度：確率感覚の正確さ</li>
-          <li>投稿数：分析の蓄積量</li>
+          <li>
+            <b>勝率</b>：勝敗予想の的中率（勝ち数 ÷ 投稿数）
+          </li>
+          <li>
+            <b>スコア精度</b>（1試合 0〜10点）：HOME得点差(最大3) + AWAY得点差(最大3) + 点差精度(最大4)
+          </li>
+          <li>スコア精度は誤差0で満点、誤差1〜11で段階的に減点、誤差12以上は0点</li>
+          <li>
+            <b>総合得点 pointsV3</b>：勝者的中4点 + 点差の近さ(最大4点) + 合計得点の近さ(最大2点)
+          </li>
+          <li>総合得点は勝者を外すと0点。条件成立時のみアップセット/連勝ボーナスが加算されます</li>
         </ul>
         <p>
-          「当て勘が強い」「スコアに強い」
-          「確率に強い」など特性が見える設計です。
+          サマリーカードの表示は期間内の合計値です。ハイライトは
+          <span className="font-semibold text-emerald-300"> 過去3日で4投稿以上 </span>
+          の場合に判定されます。
         </p>
       </div>
     ),
@@ -106,13 +110,13 @@ const faqs: FAQItem[] = [
     id: "ranking",
     label: "ランキング",
     question: "ランキングはどのように表示されますか？",
-    icon: <Trophy className="h-5 w-5 text-yellow-300" />,
-    accentClass: "from-yellow-400/70 via-amber-400/70 to-emerald-400/70",
+    icon: <Trophy className="h-5 w-5 text-amber-200" />,
+    accentClass: "from-amber-500/70 via-orange-500/70 to-red-500/70",
     answer: (
       <div className="space-y-2 text-sm leading-relaxed text-white/80">
         <p>
-          ランキングは、
-          <span className="font-semibold text-emerald-300">
+          ランキングは
+          <span className="font-semibold text-amber-300">
             指標ごとに個別に表示
           </span>
           されます。
@@ -120,39 +124,125 @@ const faqs: FAQItem[] = [
         <ul className="list-disc pl-5 space-y-1">
           <li>勝率ランキング</li>
           <li>スコア精度ランキング</li>
-          <li>一致度ランキング</li>
+          <li>総合得点ランキング</li>
           <li>Upsetスコアランキング</li>
         </ul>
+        <p>期間ごとの順位変化を見ながらプレイを継続できます。</p>
+      </div>
+    ),
+  },
+];
+
+const faqsEn: FAQItem[] = [
+  {
+    id: "form",
+    label: "How to play",
+    question: "What can I enjoy in this app?",
+    icon: <Gamepad2 className="h-5 w-5 text-cyan-200" />,
+    accentClass: "from-cyan-500/70 via-blue-500/70 to-indigo-500/70",
+    answer: (
+      <div className="space-y-2 text-sm leading-relaxed text-white/80">
         <p>
-          指標ごとに「得意分野の見える化」
-          を目的とした設計です。
+          Uniterz is a sports-prediction fantasy game. You enjoy it by making
+          predictions for matches. You can:
+        </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Predict wins and losses.</li>
+          <li>Predict scores (optional).</li>
+          <li>Earn points from match-by-match submissions.</li>
+          <li>Compete with other users in the rankings.</li>
+        </ul>
+        <p>Your daily submission results are reflected on your profile and rankings.</p>
+      </div>
+    ),
+  },
+  {
+    id: "stats",
+    label: "Scoring",
+    question: "What performance metrics are available?",
+    icon: <BarChart3 className="h-5 w-5 text-violet-200" />,
+    accentClass: "from-violet-500/70 via-fuchsia-500/70 to-indigo-500/70",
+    answer: (
+      <div className="space-y-2 text-sm leading-relaxed text-white/80">
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            <b>Win Rate</b>: your accuracy in predicting winners.
+          </li>
+          <li>
+            <b>Score Precision</b>: how close your predicted score is to
+            the actual score.
+          </li>
+          <li>
+            <b>Upset Score</b>: your ability to read upsets.
+          </li>
+          <li>
+            <b>Total Points</b>: the combined score from all metrics.
+          </li>
+        </ul>
+        <p>Each metric is aggregated for the last 7 days, last 30 days, and all-time.</p>
+      </div>
+    ),
+  },
+  {
+    id: "scoring-logic",
+    label: "Scoring logic",
+    question: "How are points calculated?",
+    icon: <Sigma className="h-5 w-5 text-emerald-200" />,
+    accentClass: "from-emerald-500/70 via-teal-500/70 to-cyan-500/70",
+    answer: (
+      <div className="space-y-2 text-sm leading-relaxed text-white/80">
+        <p>
+          Match submissions mainly reflect:{" "}
+          <span className="font-semibold text-emerald-300">
+            Win Rate, Score Precision, and Total Points
+          </span>
+          .
+        </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            <b>Win Rate</b>: your win accuracy (wins ÷ submissions).
+          </li>
+          <li>
+            <b>Score Precision</b> (0–10 per match): HOME point difference
+            (max 3) + AWAY point difference (max 3) + margin precision (max 4).
+          </li>
+          <li>
+            Score Precision is 10 points at 0 error, deducted stepwise for
+            errors 1–11, and 0 points for errors 12+.
+          </li>
+          <li>
+            <b>Total Points (pointsV3)</b>: 4 points for correct winner +
+            up to 4 points for closeness of point difference + up to 2 points for closeness of total score.
+          </li>
+          <li>
+            Total Points become 0 if you miss the winner. Upset / win-streak bonuses are added only when the conditions are met.
+          </li>
+        </ul>
+        <p>
+          Summary cards show the total values within the selected period.
+          Highlights are applied when you have <span className="font-semibold text-emerald-300">4+ posts in the last 3 days</span>.
         </p>
       </div>
     ),
   },
   {
-    id: "safety",
-    label: "安全性",
-    question: "ギャンブルや投資と関係ありますか？",
-    icon: <ShieldCheck className="h-5 w-5 text-emerald-300" />,
-    accentClass: "from-emerald-400/70 via-teal-400/70 to-sky-400/70",
+    id: "ranking",
+    label: "Rankings",
+    question: "How are rankings displayed?",
+    icon: <Trophy className="h-5 w-5 text-amber-200" />,
+    accentClass: "from-amber-500/70 via-orange-500/70 to-red-500/70",
     answer: (
       <div className="space-y-2 text-sm leading-relaxed text-white/80">
         <p>
-          Uniterz は、
-          <span className="font-semibold text-emerald-300">
-            金銭を扱うサービスではありません。
-          </span>
+          Rankings are displayed separately for each metric:
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>賭け行為なし</li>
-          <li>課金による有利不利なし</li>
-          <li>分析・学習目的のみ</li>
+          <li>Win Rate rankings</li>
+          <li>Score Precision rankings</li>
+          <li>Total Points rankings</li>
+          <li>Upset Score rankings</li>
         </ul>
-        <p>
-          投稿内容は個人の見解であり、
-          投資・賭博の助言ではありません。
-        </p>
+        <p>You can keep playing while watching how your rank changes over time.</p>
       </div>
     ),
   },
@@ -168,8 +258,8 @@ function AccordionItem({
   onToggle: () => void;
 }) {
   return (
-    <div className="rounded-2xl bg-linear-to-r from-[#111827] via-[#020617] to-[#020617] p-[1px] shadow-[0_0_24px_rgba(15,23,42,0.8)]">
-      <div className="rounded-2xl bg-[#020617]">
+    <div className="rounded-2xl border border-white/10 bg-[#0b1020]">
+      <div className="rounded-2xl bg-[#0b1020]">
         <button
           type="button"
           onClick={onToggle}
@@ -177,7 +267,7 @@ function AccordionItem({
         >
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br ${item.accentClass} shadow-[0_0_16px_rgba(15,23,42,0.8)]`}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br ${item.accentClass}`}
             >
               {item.icon}
             </div>
@@ -191,7 +281,7 @@ function AccordionItem({
             </div>
           </div>
           <div className="flex items-center justify-center">
-            <span className="text-sm font-bold text-sky-300">?</span>
+            <span className="text-sm font-bold text-cyan-300">?</span>
           </div>
         </button>
         {isOpen && (
@@ -206,38 +296,23 @@ function AccordionItem({
 
 export default function HelpPage({ variant }: { variant: Variant }) {
   const [openId, setOpenId] = useState<string | null>(null);
-  const isWeb = variant === "web";
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
+  const faqs = isEn ? faqsEn : faqsJa;
 
   return (
-    <div className="min-h-screen w-full bg-[#0a3b47]">
-      <div
-        className={
-          isWeb
-            ? "mx-auto max-w-4xl px-6 py-10 text-white"
-            : "mx-auto max-w-[640px] px-4 py-8 text-white"
-        }
-      >
-        <div className="mb-6 rounded-3xl border border-white/10 bg-linear-to-r from-[#111827] via-[#020617] to-[#020617] px-6 py-5 shadow-[0_0_36px_rgba(56,189,248,0.35)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-br from-sky-400 via-fuchsia-500 to-amber-400 shadow-[0_0_18px_rgba(129,140,248,0.9)]">
-              <span className="text-lg font-extrabold text-white">?</span>
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">
-                ヘルプ & ガイド（V2）
-              </h1>
-              <p className="mt-1 text-xs md:text-sm text-white/70">
-                Uniterz は
-                <span className="font-semibold text-emerald-300">
-                  分析特化型の予想プラットフォーム
-                </span>
-                です。成績指標・ランキング・使い方の基本はこちらで確認できます。
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
+    <LegalPageLayout
+      variant={variant}
+      title={isEn ? "Help & Guide" : "ヘルプ & ガイド"}
+      description={
+        isEn
+          ? "Uniterz is a fantasy sports game based on sports predictions. Check the basics of the game and how to read scores."
+          : "Uniterz はスポーツ予想をベースにしたファンタジーゲームです。ゲームの基本ルールやスコアの見方を確認できます。"
+      }
+      updatedAt="2026-03-23"
+    >
+      <section className="space-y-4">
           {faqs.map((item) => (
             <AccordionItem
               key={item.id}
@@ -248,24 +323,7 @@ export default function HelpPage({ variant }: { variant: Variant }) {
               }
             />
           ))}
-        </div>
-      </div>
-
-      <button
-        onClick={() => window.history.back()}
-        className="
-          fixed bottom-6 right-6 z-50
-          w-14 h-14 rounded-full
-          bg-white/10 backdrop-blur 
-          border border-white/20 
-          flex items-center justify-center
-          shadow-[0_0_18px_rgba(0,0,0,0.35)]
-          active:scale-95 transition-transform
-        "
-        aria-label="閉じる"
-      >
-        <span className="text-2xl font-bold text-white">×</span>
-      </button>
-    </div>
+      </section>
+    </LegalPageLayout>
   );
 }

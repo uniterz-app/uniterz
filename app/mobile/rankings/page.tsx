@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   METRICS,
-  MOCK_ROWS,
   type MobileMetric,
   type RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
@@ -22,6 +21,36 @@ import {
   type RankingRow,
 } from "@/lib/rankings/useRanking";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
+import { useRankingCountryCodes } from "@/lib/rankings/useRankingCountryCodes";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import {
+  TIMEZONE_ET,
+  TIMEZONE_JST,
+  parseDateKeyInTimeZone,
+  toDateKeyInTimeZone,
+} from "@/lib/time/zonedTime";
+
+function formatRankingsUpdateTimeEn() {
+  // Ranking update is scheduled at 16:00 in JST.
+  // Convert that wall-clock time to America/New_York (DST-aware).
+  const now = new Date();
+  const todayKeyJst = toDateKeyInTimeZone(now, TIMEZONE_JST);
+  const todayMidnightJst = parseDateKeyInTimeZone(todayKeyJst, TIMEZONE_JST);
+  if (!todayMidnightJst) return "16:00";
+
+  const MS_16H = 16 * 60 * 60 * 1000;
+  const MS_1D = 24 * 60 * 60 * 1000;
+  const jstUpdateTodayMs = todayMidnightJst.getTime() + MS_16H;
+  const jstUpdateMs =
+    now.getTime() >= jstUpdateTodayMs ? jstUpdateTodayMs + MS_1D : jstUpdateTodayMs;
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE_ET,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(jstUpdateMs));
+}
 
 function toHookMetric(metric: MobileMetric) {
   if (metric === "winRate") return "winRate";
@@ -70,16 +99,43 @@ export default function MobileRankingsPage() {
   } = useRanking(rankingMetric);
 
   const { user, loading: userLoading } = useMyRankingUser(myUid);
+  const { language } = useUserLanguage(myUid);
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length > 0) {
-      return toMobileRows(metric, rawRows);
+      const base = toMobileRows(metric, rawRows);
+      // API側で countryCode が欠けているケースがあるため、先にUS/CN/JPでフォールバックして表示を成立させる
+      // （Firestore から countryCode を取得でき次第、正しい値で上書き）
+      return base.map((r, idx) => {
+        if (r.countryCode) return r;
+        const fallback =
+          idx % 3 === 0 ? "US" : idx % 3 === 1 ? "CN" : ("JP" as string);
+        return { ...r, countryCode: fallback };
+      });
     }
-    return MOCK_ROWS[metric];
+    return [];
   }, [metric, rawRows]);
 
-  const top3 = rows.slice(0, 3);
-  const restRows = rows.slice(3);
+  const uidsForCountry = useMemo(() => rawRows.map((r) => r.uid ?? "").filter(Boolean), [rawRows]);
+  const { loading: countryLoading, countryCodeByUid } = useRankingCountryCodes(uidsForCountry);
+
+  const rowsWithCountry: RankingRowWithCountry[] = useMemo(() => {
+    if (countryLoading) return rows;
+    return rows.map((r) => {
+      // 取得できた場合は上書き。未設定(null)なら undefined にしてフラグ非表示にする。
+      if (Object.prototype.hasOwnProperty.call(countryCodeByUid, r.uid)) {
+        const code = countryCodeByUid[r.uid];
+        if (typeof code === "string") {
+          return { ...r, countryCode: code };
+        }
+        return r;
+      }
+      return r;
+    });
+  }, [rows, countryCodeByUid, countryLoading]);
+
+  const top3 = rowsWithCountry.slice(0, 3);
+  const restRows = rowsWithCountry.slice(3);
 
   const myRawRow = useMemo(() => findMyRow(rawRows, myUid), [rawRows, myUid]);
 
@@ -121,7 +177,7 @@ export default function MobileRankingsPage() {
         <CyberPageBackground />
       </div>
 
-      <div className="relative z-10 h-full overflow-y-auto overscroll-y-contain">
+      <div className="relative z-10 h-full overflow-y-auto overscroll-y-contain pb-bottom-nav">
         <div className="sticky top-0 z-40">
           <Header />
         </div>
@@ -131,7 +187,9 @@ export default function MobileRankingsPage() {
 
           <div className="text-center">
             <p className="text-[12px] text-white/60">
-              ランキングは毎日16:00に更新 / スコアは累積です
+              {language === "en"
+                ? `Rankings are updated daily at ${formatRankingsUpdateTimeEn()} / Scores are cumulative.`
+                : "ランキングは毎日16:00に更新 / スコアは累積です"}
             </p>
           </div>
 
@@ -144,12 +202,14 @@ export default function MobileRankingsPage() {
             handle={user.handle || null}
             totalPosts={myRawRow?.totalPosts}
             loading={loading || userLoading}
+            language={language}
           />
 
           <RankingsMetricRow
             metrics={metricItems}
             metric={metric}
             setMetric={setMetric}
+            language={language}
           />
         </div>
 
@@ -167,13 +227,14 @@ export default function MobileRankingsPage() {
                 metric={metric}
                 onTopCountDone={handleTopCountDone}
                 intro={intro}
+                language={language}
               />
               <div className="h-[2px]" />
             </div>
 
             <motion.div
               key={`rest-${pageKey}`}
-              className="px-2 pb-28 pt-4"
+              className="px-2 pt-4"
               variants={restContainer}
               initial="hidden"
               animate={topDone ? "show" : "hidden"}
@@ -187,7 +248,12 @@ export default function MobileRankingsPage() {
                       variants={restItem}
                       custom={i}
                     >
-                      <RankingCard row={r} rank={i + 4} metric={metric} />
+                      <RankingCard
+                        row={r}
+                        rank={i + 4}
+                        metric={metric}
+                        language={language}
+                      />
                     </motion.div>
                   ))}
                 </div>

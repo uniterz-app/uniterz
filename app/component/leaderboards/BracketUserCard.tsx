@@ -12,41 +12,68 @@ type Props = {
 export default function BracketUserCard({ row, onClick }: Props) {
   const avatarUrl = row.photoURL ?? null;
   const displayName = row.displayName || "User";
+  const initial = displayName.charAt(0).toUpperCase();
+  const handle = row.handle ?? null;
+  const baseCardClass =
+    "relative flex items-center justify-between rounded-[18px] border px-4 py-3";
 
   const content = (
     <>
-      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-white/10">
-        {avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt=""
-            fill
-            sizes="48px"
-            className="object-cover"
-          />
-        ) : (
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="relative h-[44px] w-[44px] shrink-0 overflow-hidden rounded-full border border-white/20 bg-black">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt=""
+              fill
+              sizes="44px"
+              className="object-cover"
+            />
+          ) : (
+            <div
+              className={[
+                "grid h-full w-full place-items-center font-black text-[18px] text-white/50",
+                alfa.className,
+              ].join(" ")}
+            >
+              {initial}
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0">
           <div
-            className={["flex h-full w-full items-center justify-center text-lg font-black text-white/50", alfa.className].join(" ")}
+            className={[
+              "truncate font-black text-[16px] leading-none text-white",
+              jp.className,
+            ].join(" ")}
           >
-            {displayName.charAt(0).toUpperCase()}
+            {displayName}
           </div>
-        )}
+          {handle && <div className="truncate text-[12px] text-white/50">@{handle}</div>}
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
+
+      <div className="flex flex-col items-center justify-center">
+        <div className="text-[9px] tracking-wider text-white/40">RANK</div>
         <div
-          className={["truncate font-black text-[16px] leading-none text-white", jp.className].join(" ")}
+          className={["font-black leading-none text-white", alfa.className].join(" ")}
+          style={{ fontSize: 24 }}
         >
-          {displayName}
-        </div>
-        <div className={["text-sm text-white/50", jp.className].join(" ")}>
-          {row.rank}位
+          #{row.rank}
         </div>
       </div>
-      <div
-        className={["shrink-0 font-black tabular-nums leading-none text-white", alfa.className].join(" ")}
-        style={{ fontSize: 20 }}
-      >
-        {row.totalScore} pts
+
+      <div className="flex flex-col items-end">
+        <div
+          className={[
+            "font-black tabular-nums leading-none text-white",
+            alfa.className,
+          ].join(" ")}
+          style={{ fontSize: 20 }}
+        >
+          {row.totalScore} pts
+        </div>
       </div>
     </>
   );
@@ -56,7 +83,17 @@ export default function BracketUserCard({ row, onClick }: Props) {
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-white/4 px-4 py-3 text-left transition hover:bg-white/8 active:scale-[0.99]"
+        className={[
+          baseCardClass,
+          "w-full text-left transition hover:bg-white/8 active:scale-[0.99]",
+        ].join(" ")}
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+          borderColor: "rgba(255,255,255,0.12)",
+          boxShadow:
+            "0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
+        }}
       >
         {content}
       </button>
@@ -64,7 +101,16 @@ export default function BracketUserCard({ row, onClick }: Props) {
   }
 
   return (
-    <div className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-white/4 px-4 py-3">
+    <div
+      className={baseCardClass}
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+        borderColor: "rgba(255,255,255,0.12)",
+        boxShadow:
+          "0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
+      }}
+    >
       {content}
     </div>
   );

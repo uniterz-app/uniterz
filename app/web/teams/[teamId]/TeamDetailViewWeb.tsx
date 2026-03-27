@@ -447,7 +447,7 @@ return (
       variants={page}
       initial="hidden"
       animate="show"
-      className="relative z-10 min-h-screen px-4 pt-4 pb-28 space-y-5 text-white overflow-hidden"
+      className="relative z-10 min-h-screen px-4 pt-4 pb-bottom-nav space-y-5 text-white overflow-hidden"
     >
       {/* Hero */}
       <motion.div variants={item}>

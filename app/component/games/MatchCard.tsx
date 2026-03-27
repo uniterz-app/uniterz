@@ -9,6 +9,9 @@ import { useState, useMemo, useCallback } from "react";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion } from "framer-motion";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 /* ★ 追加: イベントロガー */
 import { logGameEvent } from "@/lib/analytics/logEvent";
@@ -88,8 +91,15 @@ const leagueLineColor: Record<League, string> = {
 };
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
-const fmtKickoff = (d: Date | null) =>
-  d ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}` : "--:--";
+const fmtKickoff = (d: Date | null, timeZone: string) =>
+  d
+    ? d.toLocaleTimeString("en-US", {
+        timeZone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    : "--:--";
 const fmtRecordWithRank = (
   r: { wins: number; losses: number; rank?: number } | null
 ) => {
@@ -148,6 +158,11 @@ function MatchCard({
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
   const [showLoginRequired, setShowLoginRequired] = useState(false);
+
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
+  const displayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
 
     const [navigating, setNavigating] = useState(false);
 
@@ -288,7 +303,7 @@ let center: React.ReactNode = inPredictOverlay ? (
         fontWeight: 800,
       }}
     >
-      {fmtKickoff(startAtJst)}
+      {fmtKickoff(startAtJst, displayTimeZone)}
     </div>
   );
 
@@ -458,7 +473,7 @@ setNavigating(true);
       }
 
       if (res.status === 401 || res.status === 403) {
-        alert("ログインが必要です。");
+        alert(isEn ? "Please sign in." : "ログインが必要です。");
         return;
       }
 
@@ -916,11 +931,19 @@ background:
   style={isPredicted ? predictedStyle : normalStyle}
 >
 {status === "final"
-  ? "試合終了"
+  ? isEn
+    ? "Final"
+    : "試合終了"
   : isGameStarted
-  ? "試合中"
+  ? isEn
+    ? "Live"
+    : "試合中"
   : isPredicted
-  ? "予想済み"
+  ? isEn
+    ? "Predicted"
+    : "予想済み"
+  : isEn
+  ? "Predict"
   : "予想をする"}
 </button>
         </div>

@@ -2,14 +2,26 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut } from "lucide-react";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  language?: Language;
 };
 
-export default function LogoutConfirmModal({ open, onClose, onConfirm }: Props) {
+export default function LogoutConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  language = "ja",
+}: Props) {
+  const isEn = language === "en";
+  const title = isEn ? "Log out?" : "ログアウトしますか？";
+  const cancelLabel = isEn ? "Cancel" : "キャンセル";
+  const confirmLabel = isEn ? "Log out" : "ログアウト";
+
   return (
     <AnimatePresence>
       {open && (
@@ -57,7 +69,7 @@ export default function LogoutConfirmModal({ open, onClose, onConfirm }: Props) 
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15, duration: 0.4 }}
                 >
-                  ログアウトしますか？
+                  {title}
                 </motion.h2>
 
                 {/* ボタン */}
@@ -73,7 +85,7 @@ export default function LogoutConfirmModal({ open, onClose, onConfirm }: Props) 
                     onClick={onClose}
                     className="flex-1 py-2 rounded-lg bg-neutral-800 text-gray-300 hover:bg-neutral-700 transition"
                   >
-                    Cancel
+                    {cancelLabel}
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -81,7 +93,7 @@ export default function LogoutConfirmModal({ open, onClose, onConfirm }: Props) 
                     onClick={onConfirm}
                     className="flex-1 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition"
                   >
-                    Log out
+                    {confirmLabel}
                   </motion.button>
                 </motion.div>
               </div>

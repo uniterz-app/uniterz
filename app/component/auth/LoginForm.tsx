@@ -16,6 +16,8 @@ export default function LoginForm({ variant }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [pressed, setPressed] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -27,11 +29,28 @@ export default function LoginForm({ variant }: LoginFormProps) {
     return "web";
   }, [variant, pathname]);
 
+  const osIsJa =
+    typeof navigator !== "undefined" &&
+    navigator.language?.toLowerCase().startsWith("ja");
+
+  const ui = {
+    title: osIsJa ? "ログイン" : "Login",
+    emailPlaceholder: osIsJa ? "メールアドレス" : "Email Address",
+    passwordPlaceholder: osIsJa ? "パスワード" : "Password",
+    loginCta: osIsJa ? "ログイン" : "LOG IN",
+    forgotText: osIsJa ? "パスワードをお忘れの方は" : "Forgot your password?",
+    hereText: osIsJa ? "こちら" : "Reset it",
+    signupPrefix: osIsJa ? "アカウントを" : "Create an account",
+    signupCta: osIsJa ? "新規作成" : "Sign Up",
+  };
+
   const formWidth = v === "mobile" ? 320 : 360;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (submitting) return;
+      setSubmitting(true);
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email.trim(),
@@ -43,19 +62,26 @@ export default function LoginForm({ variant }: LoginFormProps) {
       const d = snap.data() as any;
 
       const handle = d?.handle || d?.username;
+      const hasLanguage = d?.language === "ja" || d?.language === "en";
 
       // 遷移先を v で確実に分岐
       const base = v === "mobile" ? "/mobile/u" : "/web/u";
+      const onboardingPath =
+        v === "mobile" ? "/mobile/onboarding" : "/web/onboarding";
 
-      if (handle) {
+      if (handle && hasLanguage) {
         router.replace(`${base}/${encodeURIComponent(handle)}`);
+      } else if (!hasLanguage) {
+        router.replace(onboardingPath);
       } else {
         // handle 無い場合の保険（必要なら好きに）
-        router.replace(v === "mobile" ? "/mobile" : "/web");
+        router.replace(onboardingPath);
       }
     } catch (error: any) {
       console.error("ログイン失敗:", error);
       alert(error?.message ?? "Login failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -71,13 +97,13 @@ export default function LoginForm({ variant }: LoginFormProps) {
           boxShadow: "0 0 30px rgba(0,0,0,0.3)",
         }}
       >
-        <h1 style={{ fontWeight: "bold", fontSize: "1.7rem" }}>Login</h1>
+        <h1 style={{ fontWeight: "bold", fontSize: "1.7rem" }}>{ui.title}</h1>
 
         {/* Email */}
         <div style={{ position: "relative", marginTop: 16 }}>
           <input
             type="email"
-            placeholder="Email Address"
+            placeholder={ui.emailPlaceholder}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={{
@@ -106,7 +132,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
         <div style={{ position: "relative", marginTop: 10 }}>
           <input
             type={showPassword ? "text" : "password"}
-            placeholder="Password"
+            placeholder={ui.passwordPlaceholder}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={{
@@ -149,6 +175,10 @@ export default function LoginForm({ variant }: LoginFormProps) {
 
         <button
           type="submit"
+          disabled={submitting}
+          onPointerDown={() => setPressed(true)}
+          onPointerUp={() => setPressed(false)}
+          onPointerCancel={() => setPressed(false)}
           style={{
             display: "flex",
             alignItems: "center",
@@ -167,15 +197,24 @@ export default function LoginForm({ variant }: LoginFormProps) {
             boxShadow:
               "0 10px 30px rgba(6,182,212,0.25), 0 12px 34px rgba(124,58,237,0.22)",
             transition: "transform .06s ease, filter .15s ease, box-shadow .15s ease",
+            transform: pressed ? "scale(0.97)" : "scale(1)",
+            opacity: submitting ? 0.65 : 1,
+            cursor: submitting ? "not-allowed" : "pointer",
           }}
         >
-          <span>LOG IN</span>
+          <span>
+            {submitting
+              ? osIsJa
+                ? "ログイン中..."
+                : "Logging in..."
+              : ui.loginCta}
+          </span>
           <span style={{ fontSize: 18, lineHeight: 1 }}>↗</span>
         </button>
 
         {/* Reset */}
         <p style={{ marginTop: 12, fontSize: "0.85rem", opacity: 0.9 }}>
-          パスワードをお忘れの方は{" "}
+          {ui.forgotText}{" "}
           <Link
             href={v === "mobile" ? "/mobile/reset" : "/web/reset"}
             style={{
@@ -184,13 +223,13 @@ export default function LoginForm({ variant }: LoginFormProps) {
               fontWeight: "bold",
             }}
           >
-            こちら
+            {ui.hereText}
           </Link>
         </p>
 
         {/* Signup */}
         <p style={{ marginTop: 10 }}>
-          アカウントを{" "}
+          {ui.signupPrefix}{" "}
           <Link
             href={v === "mobile" ? "/mobile/signup" : "/web/signup"}
             style={{
@@ -199,7 +238,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
               fontWeight: "bold",
             }}
           >
-            新規作成
+            {ui.signupCta}
           </Link>
         </p>
       </div>

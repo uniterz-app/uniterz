@@ -11,6 +11,7 @@ import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 /* ======================
    Motion
@@ -51,6 +52,8 @@ export default function PredictionFormV2({
   const isMobile =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix = isMobile ? "/mobile" : "/web";
+  const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
+  const isEn = language === "en";
 
   const gameDateKey = useMemo(() => {
     return game.startAtJst
@@ -148,7 +151,7 @@ export default function PredictionFormV2({
 
     const me = auth.currentUser;
     if (!me) {
-      alert("ログインが必要です");
+      alert(isEn ? "Login is required." : "ログインが必要です");
       return;
     }
 
@@ -156,20 +159,32 @@ export default function PredictionFormV2({
     const a = Number(scoreAway);
 
     if (Number.isNaN(h) || Number.isNaN(a)) {
-      alert("スコアを正しく入力してください");
+      alert(isEn ? "Please enter valid scores." : "スコアを正しく入力してください");
       return;
     }
 
     if (winner === "home" && h <= a) {
-      alert("ホーム勝利予想の場合、ホーム得点を多くしてください");
+      alert(
+        isEn
+          ? "For a home-win prediction, the home score must be higher."
+          : "ホーム勝利予想の場合、ホーム得点を多くしてください"
+      );
       return;
     }
     if (winner === "away" && a <= h) {
-      alert("アウェイ勝利予想の場合、アウェイ得点を多くしてください");
+      alert(
+        isEn
+          ? "For an away-win prediction, the away score must be higher."
+          : "アウェイ勝利予想の場合、アウェイ得点を多くしてください"
+      );
       return;
     }
     if (isSoccer && winner === "draw" && h !== a) {
-      alert("引き分け予想の場合、スコアは同点にしてください");
+      alert(
+        isEn
+          ? "For a draw prediction, both scores must be equal."
+          : "引き分け予想の場合、スコアは同点にしてください"
+      );
       return;
     }
 
@@ -224,7 +239,7 @@ export default function PredictionFormV2({
         });
       } catch {}
 
-      toast.success("予想を投稿しました");
+      toast.success(isEn ? "Prediction submitted." : "予想を投稿しました");
       onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
 
       if (!inOverlay) {
@@ -235,7 +250,7 @@ export default function PredictionFormV2({
       setScoreHome("");
       setScoreAway("");
     } catch (e: any) {
-      alert(e.message ?? "送信に失敗しました");
+      alert(e.message ?? (isEn ? "Failed to submit." : "送信に失敗しました"));
     } finally {
       setSubmitting(false);
     }
@@ -250,7 +265,7 @@ export default function PredictionFormV2({
         "mx-auto w-full max-w-[900px] overflow-x-hidden text-white",
         embedded
           ? "min-h-0 overflow-y-visible pb-2"
-          : "min-h-screen overflow-y-auto overflow-x-hidden overscroll-none pb-2",
+          : "min-h-screen overflow-y-auto overflow-x-hidden overscroll-none pb-bottom-nav",
       ].join(" ")}
       style={{
         overscrollBehaviorX: "none",
@@ -293,7 +308,7 @@ export default function PredictionFormV2({
                 : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
             ].join(" ")}
           >
-            <span>詳細スタッツ</span>
+            <span>{isEn ? "Team Stats" : "詳細スタッツ"}</span>
             <ChevronDown
               size={16}
               className={[
@@ -333,13 +348,14 @@ export default function PredictionFormV2({
         {statsOpen && (
           <motion.div variants={fadeUp} className={glassCard}>
             <div className="mb-3 text-sm font-semibold text-white/90">
-              詳細スタッツ
+              {isEn ? "Team Stats" : "詳細スタッツ"}
             </div>
             <div className="border-t border-white/10 pt-3">
               <GameTeamStats
                 league={game.league}
                 homeTeamId={game.home.teamId ?? ""}
                 awayTeamId={game.away.teamId ?? ""}
+                language={language}
               />
             </div>
           </motion.div>
@@ -358,7 +374,9 @@ export default function PredictionFormV2({
                 />
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-4 text-sm text-white/65">
-                  このリーグでは Standings はまだ未対応です。
+                  {isEn
+                    ? "Standings are not available for this league yet."
+                    : "このリーグでは Standings はまだ未対応です。"}
                 </div>
               )}
             </div>
@@ -366,7 +384,9 @@ export default function PredictionFormV2({
         )}
 
         <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
-          <div className="text-sm font-semibold text-white/88">スコア予想</div>
+          <div className="text-sm font-semibold text-white/88">
+            {isEn ? "Score Prediction" : "スコア予想"}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -377,7 +397,7 @@ export default function PredictionFormV2({
                 type="number"
                 inputMode="numeric"
                 className={fieldBase}
-                placeholder="得点"
+                placeholder={isEn ? "Score" : "得点"}
                 value={scoreHome}
                 onChange={(e) => setScoreHome(e.target.value)}
               />
@@ -391,7 +411,7 @@ export default function PredictionFormV2({
                 type="number"
                 inputMode="numeric"
                 className={fieldBase}
-                placeholder="得点"
+                placeholder={isEn ? "Score" : "得点"}
                 value={scoreAway}
                 onChange={(e) => setScoreAway(e.target.value)}
               />
@@ -432,7 +452,7 @@ export default function PredictionFormV2({
                 : undefined
             }
           >
-            {submitting ? "投稿中…" : "予想する"}
+            {submitting ? (isEn ? "Submitting..." : "投稿中…") : isEn ? "Submit Prediction" : "予想する"}
           </button>
         </motion.div>
       </div>

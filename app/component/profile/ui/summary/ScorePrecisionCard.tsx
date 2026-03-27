@@ -6,6 +6,7 @@ import { Gauge } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
+import type { Language } from "@/lib/i18n/language";
 
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
@@ -14,6 +15,7 @@ type Props = {
   analyses: number;
   compact?: boolean;
   className?: string;
+  language?: Language;
 };
 
 const SCORE_PRECISION_TOOLTIP =
@@ -29,7 +31,9 @@ export default function ScorePrecisionCard({
   analyses,
   compact = true,
   className = "",
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
 
@@ -70,11 +74,15 @@ export default function ScorePrecisionCard({
     [scorePrecisionSum, analyses]
   );
 
-  const sumCu = useCountUp(sum, 1000, visible);
-  const avgCu = useCountUp(Number(avg.toFixed(1)), 1000, visible);
+  const sumCu = useCountUp(sum, 1000, visible, 1);
+  const avgCu = useCountUp(Number(avg.toFixed(1)), 1000, visible, 1);
 
   const bar01 = clamp01(avg / 10);
   const barPct = `${Math.round(bar01 * 100)}%`;
+
+  const tooltipMsg = isEn
+    ? "Evaluate how close your predicted score is to the actual score on a 0–10 scale, summed within the selected period. The bar below visualizes your per-match average (0–10)."
+    : SCORE_PRECISION_TOOLTIP;
 
   return (
     <>
@@ -94,13 +102,13 @@ export default function ScorePrecisionCard({
             <Gauge className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
           </div>
 
-          <span>スコア精度</span>
+          <span>{isEn ? "Score Precision" : "スコア精度"}</span>
 
           <button
             type="button"
             className="ml-1 text-[11px] md:text-[16px] text-white/60 hover:text-white/80"
-            onClick={(e) => openTooltip(e, SCORE_PRECISION_TOOLTIP)}
-            aria-label="スコア精度の説明"
+            onClick={(e) => openTooltip(e, tooltipMsg)}
+            aria-label={isEn ? "Score Precision description" : "スコア精度の説明"}
           >
             ⓘ
           </button>

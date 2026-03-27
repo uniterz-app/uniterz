@@ -37,7 +37,7 @@ function getValue(d, metric) {
 async function buildCumulativeRankingSnapshot() {
     const snap = await db().collection("cumulative_stats").get();
     const baseRows = snap.docs.map((doc) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
         const d = doc.data();
         const totalPosts = (_a = d.totalPosts) !== null && _a !== void 0 ? _a : 0;
         const totalWins = (_b = d.totalWins) !== null && _b !== void 0 ? _b : 0;
@@ -46,13 +46,14 @@ async function buildCumulativeRankingSnapshot() {
             displayName: (_c = d.displayName) !== null && _c !== void 0 ? _c : "user",
             handle: (_d = d.handle) !== null && _d !== void 0 ? _d : null,
             photoURL: (_e = d.photoURL) !== null && _e !== void 0 ? _e : null,
+            countryCode: (_f = d.countryCode) !== null && _f !== void 0 ? _f : null,
             totalPosts,
             totalWins,
             winRate: totalPosts > 0 ? totalWins / totalPosts : 0,
-            totalPoints: (_f = d.totalPoints) !== null && _f !== void 0 ? _f : 0,
-            totalPrecision: (_g = d.totalPrecision) !== null && _g !== void 0 ? _g : 0,
-            totalUpset: (_h = d.totalUpset) !== null && _h !== void 0 ? _h : 0,
-            activeWinStreak: (_j = d.activeWinStreak) !== null && _j !== void 0 ? _j : 0,
+            totalPoints: (_g = d.totalPoints) !== null && _g !== void 0 ? _g : 0,
+            totalPrecision: (_h = d.totalPrecision) !== null && _h !== void 0 ? _h : 0,
+            totalUpset: (_j = d.totalUpset) !== null && _j !== void 0 ? _j : 0,
+            activeWinStreak: (_k = d.activeWinStreak) !== null && _k !== void 0 ? _k : 0,
         };
     });
     for (const metric of METRICS) {

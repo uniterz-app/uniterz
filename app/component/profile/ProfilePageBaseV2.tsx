@@ -41,8 +41,15 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   const mergedProfile = useMemo<Profile>(
     () => ({
       ...normalizedProfile!,
-      currentStreak: stats?.currentStreak ?? 0,
-      maxStreak: stats?.maxStreak ?? 0,
+      // `useUserStatsV2` の `stats` は型的に unknown 扱いなので、安全に number 化する
+      currentStreak: (() => {
+        const n = Number((stats as any)?.currentStreak ?? 0);
+        return Number.isFinite(n) ? n : 0;
+      })(),
+      maxStreak: (() => {
+        const n = Number((stats as any)?.maxStreak ?? 0);
+        return Number.isFinite(n) ? n : 0;
+      })(),
     }),
     [normalizedProfile, stats]
   );

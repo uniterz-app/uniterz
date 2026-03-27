@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { RankingRowWithCountry, MobileMetric } from "./_data/mockRows";
 import { alfa, jp } from "@/lib/fonts";
 import { metricNum, getMetricSubText } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
+import type { Language } from "@/lib/i18n/language";
+import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 
 const FLAG_SRC: Record<string, string> = {
   US: "/flags/us.png",
@@ -166,11 +169,13 @@ function ValueText({
   metric,
   counted,
   isTop3,
+  language,
 }: {
   rank: number;
   metric: MobileMetric;
   counted: number;
   isTop3: boolean;
+  language: Language;
 }) {
   const m = medal(rank);
 
@@ -201,7 +206,7 @@ function ValueText({
       >
         <span>{Math.round(counted)}</span>
         <span className={rank === 1 ? "text-[17px]" : isTop3 ? "text-[15px]" : "text-[11px]"}>
-          連勝
+          {streakShortLabel(language)}
         </span>
       </div>
     );
@@ -241,7 +246,7 @@ function ValueText({
       ].join(" ")}
       style={glowStyle}
     >
-      <span>{Math.round(counted)}</span>
+      <span>{counted.toFixed(1)}</span>
       <span className={rank === 1 ? "text-[15px]" : isTop3 ? "text-[13px]" : "text-[9px]"}>
         pts
       </span>
@@ -254,16 +259,24 @@ export default function RankingCard({
   rank,
   metric,
   onCountDone,
+  language = "ja",
 }: {
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
   onCountDone?: () => void;
+  language?: Language;
 }) {
   const isTop3 = rank <= 3;
   const m = medal(rank);
   const tone = cardTone(rank);
   const countryCode = getCountryCode(r);
+
+  const pathname = usePathname() ?? "";
+  const base = pathname.startsWith("/mobile") || pathname.startsWith("/m/")
+    ? "/mobile"
+    : "/web";
+  const handleOrUid = r.handle || r.uid;
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(
@@ -273,11 +286,14 @@ export default function RankingCard({
     true,
     rank === 1 ? onCountDone : undefined
   );
-  const subText = getMetricSubText(r, metric);
+  const subText = getMetricSubText(r, metric, language);
+  const showPostsUnderAvg =
+    metric === "totalScore" || metric === "marginPrecision";
+  const showSubText = metric !== "upsetScore";
 
   return (
     <Link
-      href={`/u/${r.uid}`}
+      href={`${base}/u/${handleOrUid}`}
       className={["block", isTop3 ? "mb-1.5" : "mb-2"].join(" ")}
     >
       <div
@@ -313,7 +329,7 @@ export default function RankingCard({
         />
 
         <div
-          className="pointer-events-none absolute left-3 right-3 top-0 h-[1px]"
+          className="pointer-events-none absolute left-3 right-3 top-0 h-px"
           style={{
             background:
               "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0))",
@@ -350,7 +366,7 @@ export default function RankingCard({
           <div className="flex items-center justify-center">
             <div
               className={[
-                "translate-y-[1px] text-center font-black leading-none tabular-nums",
+                "translate-y-px text-center font-black leading-none tabular-nums",
                 alfa.className,
                 rank === 1 ? "text-[34px]" : rank <= 3 ? "text-[29px]" : "text-[20px]",
               ].join(" ")}
@@ -397,10 +413,21 @@ export default function RankingCard({
                 metric={metric}
                 counted={counted}
                 isTop3={isTop3}
+                language={language}
               />
-              <div className="mt-0.5 text-[9px] leading-none text-white/40">
-                {subText}
-              </div>
+              {showSubText &&
+                (showPostsUnderAvg ? (
+                  <div className="mt-0.5 inline-flex items-center gap-1 text-[9px] leading-none text-white/40">
+                    <span>{subText}</span>
+                    <span>
+                      {postsLabel(language)}:{r.posts ?? 0}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-0.5 text-[9px] leading-none text-white/40">
+                    {subText}
+                  </div>
+                ))}
             </div>
           </div>
         </div>

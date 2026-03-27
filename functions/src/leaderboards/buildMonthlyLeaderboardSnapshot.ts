@@ -20,6 +20,7 @@ type MonthlyLeaderboardRow = {
   displayName: string;
   handle: string | null;
   photoURL: string | null;
+  countryCode?: string | null;
 
   league: string;
   posts: number;

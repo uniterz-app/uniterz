@@ -30,6 +30,7 @@ type MonthlyLeaderboardRow = {
   handle: string | null;
   displayName: string;
   photoURL: string | null;
+  countryCode?: string | null;
 
   league: string;
   posts: number;
@@ -161,6 +162,7 @@ async function buildMonthlyLeaderboard(league: string) {
       handle: user?.handle ?? null,
       displayName: user?.displayName ?? "user",
       photoURL: user?.photoURL ?? null,
+      countryCode: user?.countryCode ?? null,
 
       league,
       posts: agg.posts,

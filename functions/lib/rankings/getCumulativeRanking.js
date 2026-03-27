@@ -15,7 +15,7 @@ function isMetric(v) {
         v === "activeWinStreak");
 }
 exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
     try {
         const rawMetric = req.query.metric;
         const uid = req.query.uid;
@@ -51,13 +51,14 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
                     displayName: (_f = me.displayName) !== null && _f !== void 0 ? _f : "",
                     handle: (_g = me.handle) !== null && _g !== void 0 ? _g : null,
                     photoURL: (_h = me.photoURL) !== null && _h !== void 0 ? _h : null,
-                    totalPosts: (_j = me.totalPosts) !== null && _j !== void 0 ? _j : 0,
-                    totalWins: (_k = me.totalWins) !== null && _k !== void 0 ? _k : 0,
-                    winRate: (_l = me.winRate) !== null && _l !== void 0 ? _l : 0,
-                    totalPoints: (_m = me.totalPoints) !== null && _m !== void 0 ? _m : 0,
-                    totalPrecision: (_o = me.totalPrecision) !== null && _o !== void 0 ? _o : 0,
-                    totalUpset: (_p = me.totalUpset) !== null && _p !== void 0 ? _p : 0,
-                    activeWinStreak: (_q = me.activeWinStreak) !== null && _q !== void 0 ? _q : 0,
+                    countryCode: (_j = me.countryCode) !== null && _j !== void 0 ? _j : null,
+                    totalPosts: (_k = me.totalPosts) !== null && _k !== void 0 ? _k : 0,
+                    totalWins: (_l = me.totalWins) !== null && _l !== void 0 ? _l : 0,
+                    winRate: (_m = me.winRate) !== null && _m !== void 0 ? _m : 0,
+                    totalPoints: (_o = me.totalPoints) !== null && _o !== void 0 ? _o : 0,
+                    totalPrecision: (_p = me.totalPrecision) !== null && _p !== void 0 ? _p : 0,
+                    totalUpset: (_q = me.totalUpset) !== null && _q !== void 0 ? _q : 0,
+                    activeWinStreak: (_r = me.activeWinStreak) !== null && _r !== void 0 ? _r : 0,
                     rank: myRank,
                 };
             }
@@ -78,7 +79,7 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
     catch (e) {
         res.status(500).json({
             ok: false,
-            error: (_r = e === null || e === void 0 ? void 0 : e.message) !== null && _r !== void 0 ? _r : "unknown error",
+            error: (_s = e === null || e === void 0 ? void 0 : e.message) !== null && _s !== void 0 ? _s : "unknown error",
         });
         return;
     }

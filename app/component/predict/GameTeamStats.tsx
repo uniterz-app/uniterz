@@ -39,6 +39,7 @@ type Props = {
   league: League;
   homeTeamId: string;
   awayTeamId: string;
+  language?: "ja" | "en";
 };
 
 type ViewStats = {
@@ -62,7 +63,9 @@ export default function GameTeamStats({
   league,
   homeTeamId,
   awayTeamId,
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const [home, setHome] = useState<ViewStats | null>(null);
   const [away, setAway] = useState<ViewStats | null>(null);
 
@@ -121,7 +124,7 @@ export default function GameTeamStats({
   return (
     <section className="mt-3 space-y-4">
       <CenterBarRow
-        label="平均得点"
+        label={isEn ? "Points For (Avg)" : "平均得点"}
         left={home.avgFor}
         right={away.avgFor}
         leftColor={home.color}
@@ -130,7 +133,7 @@ export default function GameTeamStats({
       />
 
       <CenterBarRow
-        label="平均失点"
+        label={isEn ? "Points Against (Avg)" : "平均失点"}
         left={home.avgAgainst}
         right={away.avgAgainst}
         leftColor={home.color}
@@ -140,7 +143,7 @@ export default function GameTeamStats({
       />
 
       <DiffRow
-        label="得失点差"
+        label={isEn ? "Point Diff" : "得失点差"}
         homeDiff={home.diff}
         awayDiff={away.diff}
         homeRecord={`${home.homeW}-${home.homeL}`}
@@ -149,6 +152,7 @@ export default function GameTeamStats({
         homeVsRecord={home.vsRecord}
         awayVsLabel={away.vsLabel}
         awayVsRecord={away.vsRecord}
+        language={language}
       />
     </section>
   );
@@ -238,6 +242,7 @@ function DiffRow({
   homeVsRecord,
   awayVsLabel,
   awayVsRecord,
+  language = "ja",
 }: {
   label: string;
   homeDiff: number;
@@ -248,16 +253,18 @@ function DiffRow({
   homeVsRecord: string;
   awayVsLabel: string;
   awayVsRecord: string;
+  language?: "ja" | "en";
 }) {
   const homeWin = homeDiff > awayDiff;
   const awayWin = awayDiff > homeDiff;
+  const isEn = language === "en";
 
   return (
     <div className="space-y-3">
       {/* 見出し */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-5">
         <div className="text-left text-xs md:text-sm tracking-widest text-white/60">
-          Home 戦績
+          {isEn ? "Home Record" : "Home 戦績"}
         </div>
 
         <div className="w-[88px] shrink-0 text-center text-xs md:text-sm tracking-widest text-white/60">
@@ -265,7 +272,7 @@ function DiffRow({
         </div>
 
         <div className="text-right text-xs md:text-sm tracking-widest text-white/60">
-          Away 戦績
+          {isEn ? "Away Record" : "Away 戦績"}
         </div>
       </div>
 

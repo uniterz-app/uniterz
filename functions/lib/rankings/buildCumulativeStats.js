@@ -41,7 +41,7 @@ async function buildCumulativeStats() {
         const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
         const userRef = db().doc(`users/${uid}`);
         const result = await db().runTransaction(async (tx) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
             const [cumulativeSnap, userSnap] = await Promise.all([
                 tx.get(cumulativeRef),
                 tx.get(userRef),
@@ -75,6 +75,7 @@ async function buildCumulativeStats() {
                 displayName: (_m = user.displayName) !== null && _m !== void 0 ? _m : "user",
                 handle: (_o = user.handle) !== null && _o !== void 0 ? _o : null,
                 photoURL: (_p = user.photoURL) !== null && _p !== void 0 ? _p : null,
+                countryCode: (_q = user.countryCode) !== null && _q !== void 0 ? _q : null,
                 totalPosts: nextPosts,
                 totalWins: nextWins,
                 totalPoints: nextPoints,

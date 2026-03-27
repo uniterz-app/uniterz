@@ -14,52 +14,42 @@ import type { League } from "@/lib/leagues";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import {
+  TIMEZONE_ET,
+  TIMEZONE_JST,
+  getTodayKeyInTimeZone,
+  parseDateKeyInTimeZone,
+  toDateKeyInTimeZone,
+} from "@/lib/time/zonedTime";
 
 /* =========================
    Date Utils
 ========================= */
-function toDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
-function parseDateKey(dateKey: string | null): Date | null {
-  if (!dateKey) return null;
+function findMonthFirstGame(
+  gameDays: Date[],
+  baseDate: Date,
+  offset: number,
+  timeZone: string
+) {
+  const baseKey = toDateKeyInTimeZone(baseDate, timeZone);
+  const [yStr, mStr] = baseKey.slice(0, 7).split("-");
+  const y = Number(yStr);
+  const m0 = Number(mStr) - 1;
 
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
-  if (!m) return null;
+  const target = new Date(Date.UTC(y, m0 + offset, 1));
+  const targetMonthKey = `${target.getUTCFullYear()}-${pad2(
+    target.getUTCMonth() + 1
+  )}`;
 
-  const y = Number(m[1]);
-  const mm = Number(m[2]);
-  const d = Number(m[3]);
-
-  if (!y || !mm || !d) return null;
-
-  const parsed = new Date(y, mm - 1, d);
-  if (Number.isNaN(parsed.getTime())) return null;
-
-  return parsed;
-}
-
-function findMonthFirstGame(gameDays: Date[], baseDate: Date, offset: number) {
-  const target = new Date(baseDate);
-  target.setMonth(target.getMonth() + offset);
-  const targetMonthKey = toDateKey(target).slice(0, 7);
-
-  return gameDays.find((d) => toDateKey(d).startsWith(targetMonthKey)) ?? null;
-}
-
-function getTodayKey(): string {
-  const nowJst = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
+  return (
+    gameDays.find((d) =>
+      toDateKeyInTimeZone(d, timeZone).startsWith(targetMonthKey)
+    ) ?? null
   );
-
-  const base = new Date(nowJst);
-  base.setHours(0, 0, 0, 0);
-
-  return toDateKey(base);
 }
 
 function findInitialGameDay(params: {
@@ -67,26 +57,35 @@ function findInitialGameDay(params: {
   stateSelected: Date | null;
   urlDate: string | null;
   todayKey: string;
+  timeZone: string;
 }): Date | null {
-  const { gameDays, stateSelected, urlDate, todayKey } = params;
+  const { gameDays, stateSelected, urlDate, todayKey, timeZone } = params;
 
   if (!gameDays.length) return null;
 
   if (stateSelected) {
-    const hit = gameDays.find((d) => toDateKey(d) === toDateKey(stateSelected));
+    const hit = gameDays.find(
+      (d) =>
+        toDateKeyInTimeZone(d, timeZone) ===
+        toDateKeyInTimeZone(stateSelected, timeZone)
+    );
     if (hit) return hit;
   }
 
-  const parsedUrlDate = parseDateKey(urlDate);
+  const parsedUrlDate = parseDateKeyInTimeZone(urlDate ?? "", timeZone);
   if (parsedUrlDate) {
-    const hit = gameDays.find((d) => toDateKey(d) === toDateKey(parsedUrlDate));
+    const hit = gameDays.find(
+      (d) =>
+        toDateKeyInTimeZone(d, timeZone) ===
+        toDateKeyInTimeZone(parsedUrlDate, timeZone)
+    );
     if (hit) return hit;
   }
 
   const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
 
   return (
-    sorted.find((d) => toDateKey(d) >= todayKey) ??
+    sorted.find((d) => toDateKeyInTimeZone(d, timeZone) >= todayKey) ??
     sorted[sorted.length - 1] ??
     null
   );
@@ -99,6 +98,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const season = searchParams.get("season") ?? getCurrentPlayoffSeason();
   const dateParam = searchParams.get("date");
+
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
+  const dayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
 
   /* =========================
      League
@@ -167,7 +171,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Game days
   ========================= */
-  const { gameDays, loading: loadingDays } = useGameDays(league);
+  const { gameDays, loading: loadingDays } = useGameDays(league, dayTimeZone);
 
   /* =========================
      League ごとの選択日
@@ -176,7 +180,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     Partial<Record<League, Date>>
   >({});
 
-  const todayKey = useMemo(() => getTodayKey(), []);
+  const todayKey = useMemo(
+    () => getTodayKeyInTimeZone(dayTimeZone),
+    [dayTimeZone]
+  );
 
   /* =========================
      初期選択日を render 中に確定
@@ -189,8 +196,17 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       stateSelected: selectedByLeague[league] ?? null,
       urlDate: dateParam,
       todayKey,
+      timeZone: dayTimeZone,
     });
-  }, [leagueReady, gameDays, selectedByLeague, league, dateParam, todayKey]);
+  }, [
+    leagueReady,
+    gameDays,
+    selectedByLeague,
+    league,
+    dateParam,
+    todayKey,
+    dayTimeZone,
+  ]);
 
   /* =========================
      state に保存
@@ -212,7 +228,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   useEffect(() => {
     if (!selected) return;
 
-    const nextDateKey = toDateKey(selected);
+    const nextDateKey = toDateKeyInTimeZone(selected, dayTimeZone);
     const currentDateKey = searchParams.get("date");
 
     if (currentDateKey === nextDateKey) return;
@@ -226,7 +242,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     (d: Date) => {
       setSelectedByLeague((prev) => ({ ...prev, [league]: d }));
 
-      const nextDateKey = toDateKey(d);
+      const nextDateKey = toDateKeyInTimeZone(d, dayTimeZone);
       const currentDateKey = searchParams.get("date");
       if (currentDateKey === nextDateKey) return;
 
@@ -245,12 +261,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
     const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
     const target =
-      sorted.find((d) => toDateKey(d) >= todayKey) ??
+      sorted.find((d) => toDateKeyInTimeZone(d, dayTimeZone) >= todayKey) ??
       sorted[sorted.length - 1];
 
     if (!target) return;
     setSelectedAndSync(target);
-  }, [gameDays, todayKey, setSelectedAndSync]);
+  }, [gameDays, todayKey, dayTimeZone, setSelectedAndSync]);
 
   /* =========================
      Swipe
@@ -259,19 +275,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const moveToPrevDay = useCallback(() => {
     if (!selected) return;
-    const key = toDateKey(selected);
-    const idx = gameDays.findIndex((d) => toDateKey(d) === key);
+    const key = toDateKeyInTimeZone(selected, dayTimeZone);
+    const idx = gameDays.findIndex(
+      (d) => toDateKeyInTimeZone(d, dayTimeZone) === key
+    );
     if (idx > 0) setSelectedAndSync(gameDays[idx - 1]);
-  }, [selected, gameDays, setSelectedAndSync]);
+  }, [selected, gameDays, dayTimeZone, setSelectedAndSync]);
 
   const moveToNextDay = useCallback(() => {
     if (!selected) return;
-    const key = toDateKey(selected);
-    const idx = gameDays.findIndex((d) => toDateKey(d) === key);
+    const key = toDateKeyInTimeZone(selected, dayTimeZone);
+    const idx = gameDays.findIndex(
+      (d) => toDateKeyInTimeZone(d, dayTimeZone) === key
+    );
     if (idx >= 0 && idx < gameDays.length - 1) {
       setSelectedAndSync(gameDays[idx + 1]);
     }
-  }, [selected, gameDays, setSelectedAndSync]);
+  }, [selected, gameDays, dayTimeZone, setSelectedAndSync]);
 
   usePageSwipe(pageRef, {
     onSwipeRight: moveToPrevDay,
@@ -283,7 +303,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Games
   ========================= */
-  const { loading, games } = useGamesByDate(league, selected);
+  const { loading, games } = useGamesByDate(league, selected, dayTimeZone);
 
   /* =========================
      全試合終了判定
@@ -300,9 +320,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ========================= */
   const nextGameDay = useMemo(() => {
     if (!selected) return null;
-    const key = toDateKey(selected);
-    return gameDays.find((d) => toDateKey(d) > key) ?? null;
-  }, [gameDays, selected]);
+    const key = toDateKeyInTimeZone(selected, dayTimeZone);
+    return (
+      gameDays.find((d) => toDateKeyInTimeZone(d, dayTimeZone) > key) ?? null
+    );
+  }, [gameDays, selected, dayTimeZone]);
 
   /* =========================
      auto advance
@@ -311,14 +333,22 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   useEffect(() => {
     if (!selected) return;
-    if (toDateKey(selected) !== todayKey) return;
+    if (toDateKeyInTimeZone(selected, dayTimeZone) !== todayKey) return;
     if (!allFinished) return;
     if (!nextGameDay) return;
     if (didAutoAdvance.current[league]) return;
 
     didAutoAdvance.current[league] = true;
     setSelectedAndSync(nextGameDay);
-  }, [selected, todayKey, allFinished, nextGameDay, league, setSelectedAndSync]);
+  }, [
+    selected,
+    todayKey,
+    allFinished,
+    nextGameDay,
+    league,
+    dayTimeZone,
+    setSelectedAndSync,
+  ]);
 
   /* =========================
      UI
@@ -363,17 +393,15 @@ const isSwitchingDate = !!selected && loading;
     router.push(signupHref);
   }
 
-  const monthValue = selected
-    ? new Date(selected.getFullYear(), selected.getMonth(), 1)
-    : null;
+  const monthValue = selected ?? null;
 
   return (
     <div
       ref={pageRef}
       className={[
-        "min-h-[100svh] overflow-y-auto overscroll-x-contain",
+        "min-h-svh overflow-y-auto overscroll-x-contain",
         pagePad,
-        "pt-2 pb-4 text-white",
+        "pt-2 pb-bottom-nav text-white",
       ].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
@@ -404,15 +432,22 @@ const isSwitchingDate = !!selected && loading;
         month={monthValue}
         onPrev={() => {
           if (!selected) return;
-          const prev = findMonthFirstGame(gameDays, selected, -1);
+          const prev = findMonthFirstGame(
+            gameDays,
+            selected,
+            -1,
+            dayTimeZone
+          );
           if (prev) setSelectedAndSync(prev);
         }}
         onNext={() => {
           if (!selected) return;
-          const next = findMonthFirstGame(gameDays, selected, 1);
+          const next = findMonthFirstGame(gameDays, selected, 1, dayTimeZone);
           if (next) setSelectedAndSync(next);
         }}
         onCenterClick={moveToToday}
+        timeZone={dayTimeZone}
+        isEn={isEn}
         className="mb-2"
       />
 
@@ -437,6 +472,8 @@ const isSwitchingDate = !!selected && loading;
       size={dense ? "md" : "lg"}
       visibleCount={visibleCount}
       autoScrollOnInit={false}
+      timeZone={dayTimeZone}
+      isEn={isEn}
       className="mb-4"
     />
 
@@ -452,7 +489,7 @@ const isSwitchingDate = !!selected && loading;
 )}
 
       {loginModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-200 flex items-center justify-center px-4">
           <button
             type="button"
             aria-label="Close modal"
@@ -460,14 +497,22 @@ const isSwitchingDate = !!selected && loading;
             className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
           />
 
-          <div className="relative z-[201] w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d1015] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+          <div className="relative z-201 w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d1015] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
             <div className="text-[18px] font-semibold text-white">
-              ログインしてください
+              {isEn ? "Please log in" : "ログインしてください"}
             </div>
 
             <div className="mt-4 space-y-2 text-[14px] leading-relaxed text-white/78">
-              <p>ブラケット機能を使うにはアカウントが必要です。</p>
-              <p>アカウント作成後にブラケットを作成できます。</p>
+              <p>
+                {isEn
+                  ? "An account is required to use the Bracket feature."
+                  : "ブラケット機能を使うにはアカウントが必要です。"}
+              </p>
+              <p>
+                {isEn
+                  ? "After creating an account, you can create brackets."
+                  : "アカウント作成後にブラケットを作成できます。"}
+              </p>
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
@@ -484,7 +529,7 @@ const isSwitchingDate = !!selected && loading;
                 onClick={handleGoSignup}
                 className="rounded-xl bg-[#163a5f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4c78]"
               >
-                アカウント作成
+                {isEn ? "Create account" : "アカウント作成"}
               </button>
             </div>
           </div>

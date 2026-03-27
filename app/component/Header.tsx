@@ -19,10 +19,23 @@ export default function Header() {
           UNITERZ
         </div>
 
-        {/* cyber line */}
+        {/* cyber line + light sweep */}
         <div className="relative w-full">
-          <div className="h-[2px] w-full bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-95" />
-          <div className="absolute inset-0 bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-70 blur-sm" />
+          <div className="relative z-1 h-[2px] w-full overflow-hidden rounded-full">
+            <div className="absolute inset-0 bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-95" />
+            <div
+              className="animate-header-cyber-sweep pointer-events-none absolute inset-y-0 left-0 w-[42%] max-w-[220px] opacity-90 will-change-transform"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 35%, rgba(224,255,255,0.95) 50%, rgba(255,255,255,0.35) 65%, transparent 100%)",
+              }}
+              aria-hidden
+            />
+          </div>
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[2px] bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-70 blur-sm"
+            aria-hidden
+          />
         </div>
       </div>
     </header>

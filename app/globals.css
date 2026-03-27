@@ -6,6 +6,13 @@
 :root {
   --color-app-bg: #081116;
   --color-card-bg: #334155;
+  /* Fixed bottom NavBar: offset + pill height (~56–64px) + home indicator */
+  --bottom-nav-clearance: calc(12px + 72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Reserve space so content/buttons aren’t hidden under the fixed NavBar */
+.pb-bottom-nav {
+  padding-bottom: var(--bottom-nav-clearance);
 }
 
 .bg-app {
@@ -262,6 +269,37 @@ body.splash-bg {
 
   100% {
     transform: translateX(120%);
+  }
+}
+
+/* =========================
+   Header cyber line (light sweep, loop)
+========================= */
+
+@keyframes headerCyberLineSweep {
+  0% {
+    transform: translate3d(-100%, 0, 0);
+  }
+
+  28% {
+    transform: translate3d(350%, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(350%, 0, 0);
+  }
+}
+
+.animate-header-cyber-sweep {
+  /* 以前 5.2s → 周期を長めに（待ち時間も長く感じる） */
+  animation: headerCyberLineSweep 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-header-cyber-sweep {
+    animation: none;
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
   }
 }
 

@@ -4,6 +4,8 @@
 import React from "react";
 import cn from "clsx";
 import Image from "next/image";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Variant = "web" | "mobile";
 
@@ -23,9 +25,12 @@ export default function LegalPageLayout({
   children,
 }: Props) {
   const isWeb = variant === "web";
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
 
   return (
-    <div className="min-h-screen w-full bg-[#0a3b47] relative">
+    <div className="min-h-screen w-full bg-[#050814] relative">
       <div
         className={cn(
           "mx-auto text-white",
@@ -33,7 +38,7 @@ export default function LegalPageLayout({
         )}
       >
         {/* カード */}
-        <div className="rounded-3xl bg-[#072d37] px-6 py-6 shadow-lg border border-white/10">
+        <div className="rounded-3xl bg-[#0b1020] px-6 py-6 border border-white/10">
           {/* ヘッダー */}
           <div className="mb-4 flex items-center gap-3">
             {/* ロゴ差し替え（U → ロゴ画像） */}
@@ -54,7 +59,8 @@ export default function LegalPageLayout({
               </h1>
               {updatedAt && (
                 <p className="mt-1 text-xs text-white/60">
-                  最終更新日: {updatedAt}
+                  {isEn ? "Last updated: " : "最終更新日: "}
+                  {updatedAt}
                 </p>
               )}
             </div>
@@ -72,19 +78,19 @@ export default function LegalPageLayout({
         </div>
       </div>
 
-      {/* ===== 戻る（×）ボタン：右下固定 ===== */}
+      {/* ===== 戻る（×）ボタン：右上固定 ===== */}
       <button
         onClick={() => window.history.back()}
         className="
-          fixed bottom-6 right-6 z-50
-          w-14 h-14 rounded-full
+          fixed top-4 right-4 z-50
+          w-11 h-11 rounded-full
           bg-white/10 backdrop-blur 
           border border-white/20 
           flex items-center justify-center
           shadow-[0_0_18px_rgba(0,0,0,0.35)]
           active:scale-95 transition-transform
         "
-        aria-label="閉じる"
+        aria-label={isEn ? "Close" : "閉じる"}
       >
         <span className="text-2xl font-bold text-white">×</span>
       </button>

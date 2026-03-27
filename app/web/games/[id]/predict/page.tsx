@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -19,6 +20,8 @@ export default function Page() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { fUser, status } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
+  const isEn = language === "en";
 
   // Firestore から読むプロフィール（displayName / photoURL）
   const [profile, setProfile] = useState<{ displayName?: string; photoURL?: string } | null>(null);
@@ -101,10 +104,14 @@ export default function Page() {
 
   // ローディング／エラー簡易表示（必要ならお好みでUI調整）
   if (gameState.kind === "loading" || gameState.kind === "idle") {
-    return <div style={{ padding: 16 }}>読み込み中…</div>;
+    return <div style={{ padding: 16 }}>{isEn ? "Loading..." : "読み込み中…"}</div>;
   }
   if (gameState.kind === "error") {
-    return <div style={{ padding: 16 }}>試合データの取得に失敗しました。</div>;
+    return (
+      <div style={{ padding: 16 }}>
+        {isEn ? "Failed to load game data." : "試合データの取得に失敗しました。"}
+      </div>
+    );
   }
 
   // Firestore の users/{uid} を1回だけ読んでプロフィールを優先利用
@@ -112,7 +119,7 @@ export default function Page() {
     name:
       (profile?.displayName && profile.displayName.trim()) ||
       fUser.displayName ||
-      "ユーザー",
+      (isEn ? "User" : "ユーザー"),
   avatarUrl:
       (profile?.photoURL && profile.photoURL.trim()) ||
       fUser.photoURL ||

@@ -3,10 +3,13 @@
 export default function BadgeDetailModal({
   badge,
   onClose,
+  language = "ja",
 }: {
   badge: any;
   onClose: () => void;
+  language?: "ja" | "en";
 }) {
+  const isEn = language === "en";
   const awardedAt =
     badge.awardedAt?.toMillis
       ? badge.awardedAt.toMillis()
@@ -100,7 +103,9 @@ export default function BadgeDetailModal({
         {/* === 付与日 === */}
         {awardedAt && (
           <p className="text-[11px] text-white/40 text-center mt-1 leading-none">
-            付与日：{new Date(awardedAt).toLocaleDateString("ja-JP")}
+            {isEn
+              ? `Awarded on: ${new Date(awardedAt).toLocaleDateString("en-US")}`
+              : `付与日：${new Date(awardedAt).toLocaleDateString("ja-JP")}`}
           </p>
         )}
 

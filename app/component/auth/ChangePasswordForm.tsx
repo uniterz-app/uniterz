@@ -9,6 +9,8 @@ import {
   updatePassword,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -16,6 +18,9 @@ type Props = {
 
 export default function ChangePasswordForm({ variant = "web" }: Props) {
   const router = useRouter();
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [nextConfirm, setNextConfirm] = useState("");
@@ -29,17 +34,27 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
 
     try {
       if (!auth.currentUser || !auth.currentUser.email) {
-        alert("ログイン状態を確認できません。いったんログインし直してください。");
+        alert(
+          isEn
+            ? "Can't verify your session. Please sign in again."
+            : "ログイン状態を確認できません。いったんログインし直してください。"
+        );
         return;
       }
 
       if (!current || !next) {
-        alert("現在のパスワードと新しいパスワードを入力してください。");
+        alert(
+          isEn
+            ? "Enter your current password and a new password."
+            : "現在のパスワードと新しいパスワードを入力してください。"
+        );
         return;
       }
 
       if (next !== nextConfirm) {
-        alert("新しいパスワードが一致していません。");
+        alert(
+          isEn ? "New passwords don't match." : "新しいパスワードが一致していません。"
+        );
         return;
       }
 
@@ -55,7 +70,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
       // 2) パスワード更新
       await updatePassword(auth.currentUser, next);
 
-      alert("パスワードを変更しました。");
+      alert(isEn ? "Password updated." : "パスワードを変更しました。");
       setCurrent("");
       setNext("");
       setNextConfirm("");
@@ -66,11 +81,18 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
     } catch (err: any) {
       console.error("change password error:", err);
       if (err?.code === "auth/wrong-password") {
-        alert("現在のパスワードが違います。");
+        alert(isEn ? "Current password is incorrect." : "現在のパスワードが違います。");
       } else if (err?.code === "auth/weak-password") {
-        alert("新しいパスワードが簡単すぎます。6文字以上にしてください。");
+        alert(
+          isEn
+            ? "New password is too weak. Use at least 6 characters."
+            : "新しいパスワードが簡単すぎます。6文字以上にしてください。"
+        );
       } else {
-        alert(err?.message ?? "パスワード変更に失敗しました。");
+        alert(
+          err?.message ??
+            (isEn ? "Failed to change password." : "パスワード変更に失敗しました。")
+        );
       }
     } finally {
       setLoading(false);
@@ -97,7 +119,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
             marginBottom: 4,
           }}
         >
-          パスワード変更
+          {isEn ? "Change password" : "パスワード変更"}
         </h1>
         <p
           style={{
@@ -106,14 +128,16 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
             marginBottom: 16,
           }}
         >
-          現在のパスワードを確認してから、新しいパスワードに更新します。
+          {isEn
+            ? "Enter your current password, then set a new one."
+            : "現在のパスワードを確認してから、新しいパスワードに更新します。"}
         </p>
 
         {/* 現在のパスワード */}
         <div style={{ position: "relative", marginTop: 10 }}>
           <input
             type="password"
-            placeholder="現在のパスワード"
+            placeholder={isEn ? "Current password" : "現在のパスワード"}
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
             style={{
@@ -142,7 +166,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
         <div style={{ position: "relative", marginTop: 10 }}>
           <input
             type="password"
-            placeholder="新しいパスワード"
+            placeholder={isEn ? "New password" : "新しいパスワード"}
             value={next}
             onChange={(e) => setNext(e.target.value)}
             style={{
@@ -171,7 +195,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
         <div style={{ position: "relative", marginTop: 10 }}>
           <input
             type="password"
-            placeholder="新しいパスワード（確認）"
+            placeholder={isEn ? "Confirm new password" : "新しいパスワード（確認）"}
             value={nextConfirm}
             onChange={(e) => setNextConfirm(e.target.value)}
             style={{
@@ -217,7 +241,13 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
             transition: "transform 0.1s ease, box-shadow 0.1s ease",
           }}
         >
-          {loading ? "更新中..." : "パスワードを変更する"}
+          {loading
+            ? isEn
+              ? "Updating..."
+              : "更新中..."
+            : isEn
+              ? "Change password"
+              : "パスワードを変更する"}
         </button>
       </div>
     </form>

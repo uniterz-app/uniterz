@@ -56,7 +56,7 @@ export function transformMonthlyLeaderboardRow(
     totalPrecision: row.totalPrecision ?? 0,
     totalUpset: row.totalUpset ?? 0,
 
-    countryCode: undefined,
+    countryCode: row.countryCode ?? undefined,
   };
 }
 

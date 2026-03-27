@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { nameBebas } from "@//lib/fonts";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
+import type { Language } from "@/lib/i18n/language";
 
 type MarketCountMap = Record<string, number>;
 
 type Props = {
   championPickCounts: MarketCountMap;
   totalEntries: number;
+  language?: Language;
 };
 
 type Row = {
@@ -97,9 +99,11 @@ function getRowStyle(index: number) {
 export default function PlayoffBracketChampionMarket({
   championPickCounts,
   totalEntries,
+  language = "ja",
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [animatedMap, setAnimatedMap] = useState<Record<number, boolean>>({});
+  const isEn = language === "en";
 
   const rows: Row[] = useMemo(() => {
     return Object.entries(championPickCounts)
@@ -153,7 +157,7 @@ export default function PlayoffBracketChampionMarket({
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-        データがありません
+        {isEn ? "No data available" : "データがありません"}
       </div>
     );
   }
@@ -226,7 +230,13 @@ export default function PlayoffBracketChampionMarket({
             onClick={() => setExpanded((v) => !v)}
             className="flex w-full items-center justify-center py-2 text-[12px] font-semibold text-white/65 transition hover:text-white"
           >
-            {expanded ? "閉じる" : "もっとみる"}
+            {expanded
+              ? isEn
+                ? "Close"
+                : "閉じる"
+              : isEn
+              ? "Show more"
+              : "もっとみる"}
           </button>
         )}
       </div>

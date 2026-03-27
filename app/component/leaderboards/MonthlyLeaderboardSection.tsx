@@ -22,6 +22,8 @@ import useMonthlyLeaderboard, {
   type MonthlyLeaderboardRow,
 } from "@/lib/leaderboards/useMonthlyLeaderboard";
 import { nameBebas, jp } from "@/lib/fonts";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   league?: string;
@@ -87,7 +89,7 @@ function toDisplayRows(
       totalPosts: row.posts ?? 0,
 
       value,
-      countryCode: undefined,
+      countryCode: row.countryCode ?? undefined,
     } as RankingRowWithCountry;
   });
 }
@@ -110,6 +112,7 @@ export default function MonthlyLeaderboardSection({
 }: Props) {
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [myUid, setMyUid] = useState<string | null>(null);
+  const { language } = useUserLanguage(myUid);
 
   const visibleMetrics: MobileMetric[] = [
     "totalScore",
@@ -192,7 +195,7 @@ export default function MonthlyLeaderboardSection({
 
   return (
     <div className="relative min-h-dvh bg-app">
-      <div className="relative z-10 min-h-dvh overflow-y-auto overscroll-y-contain">
+      <div className="relative z-10 min-h-dvh overflow-y-auto overscroll-y-contain pb-bottom-nav">
         <div className="space-y-2 px-3 pt-2">
           <div className="text-center">
 <h1
@@ -209,7 +212,9 @@ export default function MonthlyLeaderboardSection({
   {title}
 </h1>
             <p className={["mt-1 text-[12px] text-white/60", jp.className].join(" ")}>
-              先月の結果をもとにした月間リーダーボード
+              {language === "en"
+                ? "Monthly Leaderboard based on last month's results"
+                : "先月の結果をもとにした月間リーダーボード"}
             </p>
           </div>
 
@@ -229,17 +234,21 @@ export default function MonthlyLeaderboardSection({
             handle={user.handle || null}
             totalPosts={myRawRow?.posts}
             loading={loading || userLoading}
+            language={language}
           />
 
           <RankingsMetricRow
             metrics={metricItems}
             metric={metric}
             setMetric={setMetric}
+            language={language}
           />
         </div>
 
         {loading && (
-          <div className="px-3 pt-2 text-[11px] text-white/40">loading...</div>
+          <div className="px-3 pt-2 text-[11px] text-white/40">
+            {language === "en" ? "loading..." : "読み込み中..."}
+          </div>
         )}
 
         {!loading && error && (
@@ -254,13 +263,14 @@ export default function MonthlyLeaderboardSection({
                 metric={metric}
                 onTopCountDone={handleTopCountDone}
                 intro={intro}
+                language={language}
               />
               <div className="h-[2px]" />
             </div>
 
             <motion.div
               key={`rest-${pageKey}`}
-              className="px-2 pb-28 pt-4"
+              className="px-2 pt-4"
               variants={restContainer}
               initial="hidden"
               animate={topDone ? "show" : "hidden"}
@@ -274,7 +284,12 @@ export default function MonthlyLeaderboardSection({
                       variants={restItem}
                       custom={i}
                     >
-                      <RankingCard row={row} rank={i + 4} metric={metric} />
+                      <RankingCard
+                        row={row}
+                        rank={i + 4}
+                        metric={metric}
+                        language={language}
+                      />
                     </motion.div>
                   ))}
                 </div>

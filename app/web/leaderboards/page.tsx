@@ -59,7 +59,7 @@ export default function WebLeaderboardsPage() {
 
   return (
     <div className="min-h-dvh bg-app text-white">
-      <main className="mx-auto w-full max-w-7xl px-6 pb-20 pt-6 lg:px-10">
+      <main className="mx-auto w-full max-w-7xl px-6 pb-bottom-nav pt-6 lg:px-10">
         <div className="border-b border-white/10">
           <div className="flex overflow-x-auto">
             {TABS.map((item) => {

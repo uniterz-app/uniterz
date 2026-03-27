@@ -8,6 +8,9 @@ import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import type { MatchCardProps } from "./MatchCard";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 // ★ 追加：Premier League 用 alias
 import { getTeamAlias } from "@/lib/team-alias";
@@ -31,9 +34,18 @@ export default function MobileMatchCard(props: MatchCardProps) {
   } = props;
 
   const router = useRouter();
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
   const fmtShortDate = (d: Date | null) =>
-    d ? `${d.getMonth() + 1}/${d.getDate()}` : "";
+    d
+      ? new Intl.DateTimeFormat("en-US", {
+          timeZone: displayTimeZone,
+          month: "numeric",
+          day: "numeric",
+        }).format(d)
+      : "";
 
   /* ------------------------------
    * League 正規化 & Icon 切り替え
@@ -55,9 +67,12 @@ export default function MobileMatchCard(props: MatchCardProps) {
 
   const kickoff =
     startAtJst instanceof Date
-      ? `${String(startAtJst.getHours()).padStart(2, "0")}:${String(
-          startAtJst.getMinutes()
-        ).padStart(2, "0")}`
+      ? startAtJst.toLocaleTimeString("en-US", {
+          timeZone: displayTimeZone,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
       : "--:--";
 
   const [homeL1, homeL2] = splitTeamNameByLeague(league, home.name);

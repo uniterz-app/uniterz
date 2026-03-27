@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef } from "react";
+import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 type Props = {
   dates: Date[];
@@ -9,6 +10,8 @@ type Props = {
   size?: "sm" | "md" | "lg";
   visibleCount?: number;
   autoScrollOnInit?: boolean;
+  timeZone: string;
+  isEn?: boolean;
 };
 
 const sizeMap = {
@@ -25,6 +28,8 @@ export default function DayStrip({
   size = "lg",
   visibleCount,
   autoScrollOnInit = false,
+  timeZone,
+  isEn = false,
 }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   const selRef = useRef<HTMLButtonElement>(null);
@@ -33,12 +38,8 @@ export default function DayStrip({
   const scrollTimer = useRef<number | null>(null);
   const scrollingByCode = useRef(false);
 
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-
-  const today = new Date();
+  const selectedKey = toDateKeyInTimeZone(selectedDate, timeZone);
+  const todayKey = toDateKeyInTimeZone(new Date(), timeZone);
 
   useEffect(() => {
     if (!listRef.current || !selRef.current) return;
@@ -113,7 +114,10 @@ export default function DayStrip({
   const sz = sizeMap[size];
 
   const weekday = (d: Date) =>
-    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+    new Intl.DateTimeFormat(isEn ? "en-US" : "ja-JP", {
+      timeZone,
+      weekday: "short",
+    }).format(d);
 
   return (
     <div
@@ -122,8 +126,9 @@ export default function DayStrip({
     >
       <div className={`flex ${sz.gap} py-2`}>
         {dates.map((d, i) => {
-          const selected = isSameDay(d, selectedDate);
-          const isTodayDate = isSameDay(d, today);
+          const dayKey = toDateKeyInTimeZone(d, timeZone);
+          const selected = dayKey === selectedKey;
+          const isTodayDate = dayKey === todayKey;
 
           const basis =
             visibleCount && visibleCount > 0
@@ -132,7 +137,7 @@ export default function DayStrip({
 
           return (
             <div
-              key={d.toISOString()}
+              key={toDateKeyInTimeZone(d, timeZone)}
               className="shrink-0 flex justify-center snap-center"
               style={basis}
             >
@@ -206,7 +211,10 @@ export default function DayStrip({
                         : "0 0 3px rgba(255,255,255,0.04)",
                     }}
                   >
-                    {d.getDate()}
+                  {new Intl.DateTimeFormat("en-US", {
+                    timeZone,
+                    day: "numeric",
+                  }).format(d)}
                   </span>
                 </div>
               </button>

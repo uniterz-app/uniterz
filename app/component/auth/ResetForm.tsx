@@ -3,12 +3,18 @@
 import { useState } from "react";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Props = {
   variant?: "web" | "mobile";
 };
 
 export default function ResetForm({ variant = "web" }: Props) {
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
+
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -26,7 +32,9 @@ export default function ResetForm({ variant = "web" }: Props) {
     setErr(null);
 
     if (!trimmed) {
-      setErr("メールアドレスを入力してください。");
+      setErr(
+        isEn ? "Please enter your email address." : "メールアドレスを入力してください。"
+      );
       return;
     }
 
@@ -45,7 +53,9 @@ export default function ResetForm({ variant = "web" }: Props) {
 
       console.log("[reset] success");
       setMsg(
-        "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
+        isEn
+          ? "If this email is registered, we sent a reset link. Check spam if you don't see it."
+          : "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
       );
     } catch (e: any) {
       const code = e?.code as string | undefined;
@@ -54,19 +64,35 @@ export default function ResetForm({ variant = "web" }: Props) {
 
       if (e?.message === "timeout") {
         setErr(
-          "送信処理がタイムアウトしました。DevToolsのNetworkで identitytoolkit / sendOobCode のリクエストを確認してください。"
+          isEn
+            ? "Request timed out. In DevTools → Network, check identitytoolkit / sendOobCode."
+            : "送信処理がタイムアウトしました。DevToolsのNetworkで identitytoolkit / sendOobCode のリクエストを確認してください。"
         );
       } else if (code === "auth/user-not-found" || code === "auth/invalid-email") {
         // 存在可否は伏せる：未登録でも成功表示
         setMsg(
-          "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
+          isEn
+            ? "If this email is registered, we sent a reset link. Check spam if you don't see it."
+            : "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
         );
       } else if (code === "auth/too-many-requests") {
-        setErr("送信回数が多すぎます。時間をおいて再度お試しください。");
+        setErr(
+          isEn
+            ? "Too many attempts. Please try again later."
+            : "送信回数が多すぎます。時間をおいて再度お試しください。"
+        );
       } else if (code === "auth/network-request-failed") {
-        setErr("通信に失敗しました。ネットワーク接続をご確認ください。");
+        setErr(
+          isEn
+            ? "Network error. Check your connection."
+            : "通信に失敗しました。ネットワーク接続をご確認ください。"
+        );
       } else {
-        setErr("送信に失敗しました。しばらくしてから再度お試しください。");
+        setErr(
+          isEn
+            ? "Failed to send. Please try again in a moment."
+            : "送信に失敗しました。しばらくしてから再度お試しください。"
+        );
       }
 
       console.error("[reset] sendPasswordResetEmail error:", code, e);
@@ -90,16 +116,18 @@ export default function ResetForm({ variant = "web" }: Props) {
         }}
       >
         <h1 style={{ fontWeight: 800, fontSize: "1.6rem", marginBottom: 6 }}>
-          パスワードをリセット
+          {isEn ? "Reset password" : "パスワードをリセット"}
         </h1>
         <p style={{ margin: 0, opacity: 0.8, fontSize: 14 }}>
-          登録メールアドレスにリセットリンクを送ります。
+          {isEn
+            ? "We'll email a reset link to your registered address."
+            : "登録メールアドレスにリセットリンクを送ります。"}
         </p>
 
         <div style={{ position: "relative", marginTop: 16 }}>
           <input
             type="email"
-            placeholder="Email Address"
+            placeholder={isEn ? "Email address" : "メールアドレス"}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={busy}
@@ -140,7 +168,13 @@ export default function ResetForm({ variant = "web" }: Props) {
           onMouseDown={(e) => (e.currentTarget.style.transform = "translateY(1px)")}
           onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0)")}
         >
-          {busy ? "送信中…" : "リセットリンクを送信"}
+          {busy
+            ? isEn
+              ? "Sending…"
+              : "送信中…"
+            : isEn
+              ? "Send reset link"
+              : "リセットリンクを送信"}
         </button>
 
         {msg && (
@@ -151,12 +185,12 @@ export default function ResetForm({ variant = "web" }: Props) {
         )}
 
         <p style={{ marginTop: 18, fontSize: 13, opacity: 0.85 }}>
-          ログイン画面へ戻る:{" "}
+          {isEn ? "Back to " : "ログイン画面へ戻る: "}
           <a
             href={variant === "mobile" ? "/mobile/login" : "/web/login"}
             style={{ color: "#86e5ff", textDecoration: "underline", fontWeight: 700 }}
           >
-            ログイン
+            {isEn ? "Log in" : "ログイン"}
           </a>
         </p>
       </div>

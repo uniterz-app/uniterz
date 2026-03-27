@@ -527,7 +527,7 @@ useEffect(() => {
   variants={page}
   initial="hidden"
   animate="show"
-  className="min-h-screen px-4 pt-4 pb-28 space-y-5 text-white relative overflow-hidden"
+  className="min-h-screen px-4 pt-4 pb-bottom-nav space-y-5 text-white relative overflow-hidden"
   style={{
     background: `
       radial-gradient(900px 420px at 15% -10%, rgba(0,220,255,0.22), transparent 60%),

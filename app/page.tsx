@@ -2,47 +2,81 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/AuthProvider";
-import SplashWrapper from "@/app/SplashWrapper";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+
+function EntrySplash() {
+  return (
+    <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
+      <div className="mt-27 ml-4 animate-pulse text-sm text-white/80">
+        Loading...
+      </div>
+    </div>
+  );
+}
 
 export default function Page() {
   const router = useRouter();
-  const { status, handle } = useAuth();
-  const [showSplash, setShowSplash] = useState(true);
+  const { status, fUser } = useFirebaseUser();
+  const [showIntroSplash, setShowIntroSplash] = useState(true);
+  const [handle, setHandle] = useState<string | null>(null);
+  const [handleResolved, setHandleResolved] = useState(false);
 
   useEffect(() => {
-    // スプラッシュを必ず一度見せる（例：1.2秒）
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 1200);
-
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setShowIntroSplash(false), 1200);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
-    if (showSplash) return;
+    if (!fUser) {
+      setHandle(null);
+      setHandleResolved(true);
+      return;
+    }
+    setHandleResolved(false);
+    let cancelled = false;
+    (async () => {
+      const snap = await getDoc(doc(db, "users", fUser.uid));
+      if (cancelled) return;
+      const h = snap.data()?.handle || snap.data()?.slug || null;
+      setHandle(h);
+      setHandleResolved(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fUser]);
+
+  useEffect(() => {
+    if (showIntroSplash) return;
+    if (status === "loading") return;
+    if (status === "ready" && fUser && !handleResolved) return;
 
     const isMobile = window.innerWidth < 768;
 
-    // ログイン済み → 自分のプロフィール
-    if (status === "ready" && handle) {
-      router.replace(
-        isMobile ? `/mobile/u/${handle}` : `/web/u/${handle}`
-      );
+    if (status === "ready" && fUser && handle) {
+      router.replace(isMobile ? `/mobile/u/${handle}` : `/web/u/${handle}`);
       return;
     }
 
-    // 未ログイン → 試合一覧
-    router.replace(
-      isMobile ? "/mobile/games" : "/web/games"
-    );
-  }, [showSplash, status, handle, router]);
+    router.replace(isMobile ? "/mobile/games" : "/web/games");
+  }, [
+    showIntroSplash,
+    status,
+    fUser,
+    handle,
+    handleResolved,
+    router,
+  ]);
 
-  // スプラッシュ表示中
-  if (showSplash) {
-    return <SplashWrapper />;
+  if (showIntroSplash) {
+    return <EntrySplash />;
   }
 
-  // 遷移直前の空描画
+  if (status === "loading" || (status === "ready" && fUser && !handleResolved)) {
+    return <EntrySplash />;
+  }
+
   return null;
 }

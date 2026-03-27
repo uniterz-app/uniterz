@@ -12,6 +12,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { ChevronLeft } from "lucide-react";
 
 /* 一覧と同じマッピング */
@@ -21,6 +22,14 @@ const TYPE_META: Record<string, { label: string; grad: string; glow: string }> =
   update:      { label: "アップデート", grad: "from-[#9DFF00] to-[#3DFF75]", glow: "shadow-[0_0_22px_rgba(61,255,117,0.35)]" },
   maintenance: { label: "メンテナンス", grad: "from-[#FFC400] to-[#FF7A00]", glow: "shadow-[0_0_22px_rgba(255,122,0,0.35)]" },
   info:        { label: "お知らせ",     grad: "from-[#9CA3AF] to-[#6B7280]", glow: "shadow-[0_0_22px_rgba(156,163,175,0.25)]" },
+};
+
+const TYPE_LABEL_EN: Record<string, string> = {
+  event: "Event",
+  campaign: "Campaign",
+  update: "Update",
+  maintenance: "Maintenance",
+  info: "News",
 };
 
 type Ann = {
@@ -46,6 +55,8 @@ export default function WebAnnouncementDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { fUser: user, status } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
 
   const [a, setA] = useState<Ann | null>(null);
 
@@ -71,14 +82,16 @@ export default function WebAnnouncementDetailPage() {
     return (
       <div className="min-h-screen bg-[#0B0F17] text-white">
         <div className="mx-auto max-w-[840px] px-5 py-10">
-          <p className="text-white/60">読み込み中...</p>
+          <p className="text-white/60">{isEn ? "Loading..." : "読み込み中..."}</p>
         </div>
       </div>
     );
   }
 
   const src = (a.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
-  const meta = TYPE_META[a.type ?? "info"];
+  const typeKey = a.type ?? "info";
+  const meta = TYPE_META[typeKey];
+  const typeLabel = isEn ? TYPE_LABEL_EN[typeKey] ?? meta.label : meta.label;
 
   return (
     <div className="relative min-h-screen text-white">
@@ -99,11 +112,11 @@ export default function WebAnnouncementDetailPage() {
             <button
               onClick={() => router.back()}
               className="p-1.5 rounded-full bg-white/10 hover:bg-white/15 active:scale-95"
-              aria-label="戻る"
+              aria-label={isEn ? "Back" : "戻る"}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-bold">お知らせ</h1>
+            <h1 className="text-lg font-bold">{isEn ? "News" : "お知らせ"}</h1>
           </div>
         </div>
       </div>
@@ -125,7 +138,7 @@ export default function WebAnnouncementDetailPage() {
           <span
             className={`px-3 py-1.5 rounded-full text-[12px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
           >
-            {meta.label}
+            {typeLabel}
           </span>
           <span className="text-xs text-white/60">{formatDate(a.postedAt)}</span>
         </div>

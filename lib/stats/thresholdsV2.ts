@@ -79,6 +79,17 @@ export function evaluateWinRateV2(winRate01: number): HighlightV2 {
 }
 
 /* =============================
+ * スコア精度（平均）
+ * ============================= */
+export function evaluateScorePrecisionAvgV2(avgScorePrecision: number): HighlightV2 {
+  const v = Number(avgScorePrecision);
+  if (!Number.isFinite(v) || v <= 0) return { level: "none" };
+  if (v >= 8.0) return { level: "strong", icon: "crown", reason: "avgScorePrecision>=8.0" };
+  if (v >= 6.5) return { level: "yellow", reason: "avgScorePrecision>=6.5" };
+  return { level: "none" };
+}
+
+/* =============================
  * スコア精度（合計：scorePrecisionSum）
  * ============================= */
 export function evaluateScorePrecisionSumV2(
@@ -115,6 +126,17 @@ export function evaluatePointsSumV3V2(
     strongIcon: "crown",
     metric: "pointsSumV3",
   });
+}
+
+/* =============================
+ * 総合得点（平均）
+ * ============================= */
+export function evaluatePointsAvgV3V2(avgPointsV3: number): HighlightV2 {
+  const v = Number(avgPointsV3);
+  if (!Number.isFinite(v) || v <= 0) return { level: "none" };
+  if (v >= 8.0) return { level: "strong", icon: "crown", reason: "avgPointsV3>=8.0" };
+  if (v >= 6.5) return { level: "yellow", reason: "avgPointsV3>=6.5" };
+  return { level: "none" };
 }
 
 /* =============================

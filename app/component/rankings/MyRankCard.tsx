@@ -2,6 +2,8 @@
 
 import { alfa, jp } from "@/lib/fonts";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
+import type { Language } from "@/lib/i18n/language";
+import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 
 type Props = {
   rank: number | null;
@@ -12,6 +14,7 @@ type Props = {
   handle?: string | null;
   totalPosts?: number;
   loading?: boolean;
+  language?: Language;
 };
 
 function formatValue(metric: MobileMetric, value: number) {
@@ -19,7 +22,7 @@ function formatValue(metric: MobileMetric, value: number) {
   if (metric === "streak") {
     return `${Math.round(value)}`;
   }
-  return `${Math.round(value)} pts`;
+  return `${value.toFixed(1)} pts`;
 }
 
 function getRankStyle(rank: number | null, loading: boolean) {
@@ -59,7 +62,9 @@ export default function MyRankCard({
   handle,
   totalPosts,
   loading = false,
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const initial = displayName?.slice(0, 1).toUpperCase() ?? "?";
   const rankStyle = getRankStyle(rank, loading);
 
@@ -155,7 +160,7 @@ export default function MyRankCard({
                   transform: "translateY(-1px)",
                 }}
               >
-                連勝
+                {streakShortLabel(language)}
               </span>
             </div>
           ) : (
@@ -175,7 +180,7 @@ export default function MyRankCard({
 
           {metric === "winRate" && totalPosts !== undefined && (
             <div className="text-[11px] text-white/40">
-              投稿 {totalPosts}
+              {postsLabel(language)} {totalPosts}
             </div>
           )}
         </div>

@@ -7,6 +7,7 @@ import ResultMatchHeader from "@/app/component/result/ResultMatchHeader";
 import ResultMarketCard from "@/app/component/result/ResultMarketCard";
 import ResultStatsCard from "@/app/component/result/ResultStatsCard";
 import { usePathname } from "next/navigation";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   post: PredictionPostV2;
@@ -16,9 +17,14 @@ type Props = {
     drawRate?: number;
     total?: number;
   };
+  language?: Language;
 };
 
-export default function ResultDetail({ post, market }: Props) {
+export default function ResultDetail({
+  post,
+  market,
+  language = "ja",
+}: Props) {
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
 
@@ -33,7 +39,7 @@ export default function ResultDetail({ post, market }: Props) {
       ].join(" ")}
     >
       {/* 上部：試合カード */}
-      <ResultMatchHeader post={post} />
+      <ResultMatchHeader post={post} language={language} />
 
       {/* 下段 */}
       <div
@@ -49,6 +55,7 @@ export default function ResultDetail({ post, market }: Props) {
           post={post}
           // モバイルはmin-heightを消す/小さくする
           minHeightClassName={isMobile ? "min-h-[360px]" : "min-h-[480px]"}
+          language={language}
         />
       </div>
     </div>

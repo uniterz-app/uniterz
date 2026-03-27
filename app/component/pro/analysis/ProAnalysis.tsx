@@ -9,6 +9,7 @@ import { TEAM_NAME_BY_ID } from "@/lib/team-name-by-id";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
 import { useUserMonthlyListV2 } from "@/lib/stats/useUserMonthlyListV2";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 const normalizeTeams = (arr: any[]) =>
   arr.map((t) => ({
@@ -21,6 +22,7 @@ const normalizeTeams = (arr: any[]) =>
 export default function ProAnalysisPage() {
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid;
+  const { language } = useUserLanguage(uid);
   const { plan, loading: planLoading } = useUserPlan(uid);
 
   const { months, loading: monthsLoading } = useUserMonthlyListV2(uid);
@@ -64,40 +66,53 @@ export default function ProAnalysisPage() {
   }
 
   if (!stats || !global) {
-    return <div className="p-4 text-white/60">データがありません</div>;
+    return (
+      <div className="p-4 text-white/60">
+        {language === "en" ? "No data available" : "データがありません"}
+      </div>
+    );
   }
+
+  const postsLabel = language === "en" ? "Posts" : "投稿数";
+  const winRateLabel = language === "en" ? "Win Rate" : "勝率";
+  const scorePrecisionLabel =
+    language === "en" ? "Score Precision" : "スコア精度";
+  const totalPointsLabel =
+    language === "en" ? "Total Points" : "総合得点";
+  const upsetIndexLabel =
+    language === "en" ? "Upset Index" : "Upset指数";
 
   const comparisonRows = [
     {
-      label: "投稿数",
+      label: postsLabel,
       format: (v: number) => `${Math.round(v)}`,
       self: stats.raw.posts,
       avg: global.avg.volume,
       top10: global.top10.volume,
     },
     {
-      label: "勝率",
+      label: winRateLabel,
       format: (v: number) => `${Math.round(v * 100)}%`,
       self: stats.raw.winRate,
       avg: global.avg.winRate,
       top10: global.top10.winRate,
     },
     {
-      label: "スコア精度",
+      label: scorePrecisionLabel,
       format: (v: number) => v.toFixed(1),
       self: stats.raw.avgPrecision,
       avg: global.avg.precision,
       top10: global.top10.precision,
     },
     {
-      label: "総合得点",
+      label: totalPointsLabel,
       format: (v: number) => v.toFixed(1),
       self: stats.raw.avgPointsV3,
       avg: global.avg.pointsV3,
       top10: global.top10.pointsV3,
     },
     {
-      label: "Upset指数",
+      label: upsetIndexLabel,
       format: (v: number) => v.toFixed(2),
       self: stats.raw.upsetPointsSum,
       avg: global.avg.upset,
