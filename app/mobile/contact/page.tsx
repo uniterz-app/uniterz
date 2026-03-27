@@ -1,4 +1,6 @@
 // app/mobile/(no-nav)/contact/page.tsx
+"use client";
+
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
 import ContactForm from "@/app/component/support/ContactForm";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";

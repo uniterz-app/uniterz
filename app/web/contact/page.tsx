@@ -1,10 +1,12 @@
 // app/web/(no-nav)/contact/page.tsx
+"use client";
+
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
 import ContactForm from "@/app/component/support/ContactForm";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
-export default function MobileContactPage() {
+export default function WebContactPage() {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const isEn = language === "en";
@@ -12,7 +14,7 @@ export default function MobileContactPage() {
 
   return (
     <LegalPageLayout
-      variant="mobile"
+      variant="web"
       title={isEn ? "Contact Us" : "お問い合わせ"}
       description={
         isEn
@@ -37,7 +39,7 @@ export default function MobileContactPage() {
         </p>
       </section>
 
-      <ContactForm variant="mobile" />
+      <ContactForm variant="web" />
     </LegalPageLayout>
   );
 }
