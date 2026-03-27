@@ -1,5 +1,9 @@
 "use client";
 
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { getPlayoffBracketStrings } from "@/lib/i18n/playoffBracket";
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -9,10 +13,14 @@ export default function PlayoffBracketRulesModal({
   open,
   onClose,
 }: Props) {
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const t = getPlayoffBracketStrings(language);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-200 flex items-center justify-center px-4">
       <button
         type="button"
         aria-label="Close modal"
@@ -20,48 +28,48 @@ export default function PlayoffBracketRulesModal({
         className="absolute inset-0 bg-black/72 backdrop-blur-[3px]"
       />
 
-      <div className="relative z-[201] w-full max-w-md rounded-2xl border border-white/10 bg-[#0d1015] p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+      <div className="relative z-201 w-full max-w-md rounded-2xl border border-white/10 bg-[#0d1015] p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
         <div className="text-[20px] font-semibold tracking-[0.02em] text-white">
-          プレーオフブラケットのルール
+          {t.rulesTitle}
         </div>
 
         <div className="mt-4 space-y-4 text-[14px] leading-relaxed text-white/82">
           <div>
             <div className="mb-1 text-[15px] font-semibold text-white">
-              採点方法
+              {t.scoringHeading}
             </div>
             <div className="space-y-1">
-              <p>・1回戦の勝者を当てると 4点</p>
-              <p>・2回戦の勝者を当てると 5点</p>
-              <p>・カンファレンス決勝の勝者を当てると 6点</p>
-              <p>・NBAファイナルの勝者を当てると 6点</p>
-              <p>・試合数までぴったり当てると さらに 2点</p>
+              <p>{t.scoringR1}</p>
+              <p>{t.scoringR2}</p>
+              <p>{t.scoringCF}</p>
+              <p>{t.scoringFinals}</p>
+              <p>{t.scoringGamesBonus}</p>
             </div>
           </div>
 
           <div>
             <div className="mb-1 text-[15px] font-semibold text-white">
-              重要
+              {t.importantHeading}
             </div>
             <div className="space-y-1">
-              <p>・試合数のボーナスは、勝者予想も当たっている場合だけ加点されます</p>
-              <p>・勝者を外したシリーズは 0点です</p>
-              <p>・前のラウンドで勝ち上がっていないチームを次のラウンドで選んでいる場合、その予想は採点されません</p>
+              <p>{t.importantGamesBonus}</p>
+              <p>{t.importantWrongWinner}</p>
+              <p>{t.importantInvalidAdvance}</p>
             </div>
           </div>
 
           <div>
             <div className="mb-1 text-[15px] font-semibold text-white">
-              合計点
+              {t.totalHeading}
             </div>
-            <p>・満点は 100点 です</p>
+            <p>{t.totalMax}</p>
           </div>
 
           <div>
             <div className="mb-1 text-[15px] font-semibold text-white">
-              提出後について
+              {t.afterSubmitHeading}
             </div>
-            <p>・ブラケットは提出後に変更できません</p>
+            <p>{t.afterSubmitNoEdit}</p>
           </div>
         </div>
 
@@ -70,7 +78,7 @@ export default function PlayoffBracketRulesModal({
           onClick={onClose}
           className="mt-6 w-full rounded-xl bg-[#163a5f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4c78]"
         >
-          ルールを確認しました
+          {t.rulesConfirmButton}
         </button>
       </div>
     </div>

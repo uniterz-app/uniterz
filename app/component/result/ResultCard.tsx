@@ -11,11 +11,13 @@ import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   post: PredictionPostV2;
   href?: string;
   onOpen?: (post: PredictionPostV2) => void;
+  language?: Language;
 };
 
 const leaguePillBg: Record<string, string> = {
@@ -48,7 +50,10 @@ function isRedUpset(v: unknown): boolean {
   return typeof v === "number" && Number.isFinite(v) && v > 0;
 }
 
-function getStreakBadge(activeWinStreak: unknown): {
+function getStreakBadge(
+  activeWinStreak: unknown,
+  isEn: boolean
+): {
   label: string;
   className: string;
   iconClassName: string;
@@ -62,7 +67,7 @@ function getStreakBadge(activeWinStreak: unknown): {
 
   if (v >= 7) {
     return {
-      label: `${v}連勝`,
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
         "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
       iconClassName: "text-yellow-200",
@@ -71,7 +76,7 @@ function getStreakBadge(activeWinStreak: unknown): {
 
   if (v >= 5) {
     return {
-      label: `${v}連勝`,
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
         "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
       iconClassName: "text-yellow-100",
@@ -79,17 +84,65 @@ function getStreakBadge(activeWinStreak: unknown): {
   }
 
   return {
-    label: `${v}連勝`,
+    label: isEn ? `${v} Win Streak` : `${v}連勝`,
     className:
       "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
     iconClassName: "text-red-500",
   };
 }
 
-export default function ResultCard({ post, href, onOpen }: Props) {
+/** Mobile用: 文字白・視認性重視・3/5/7で色階層 */
+function getStreakBadgeForMobile(
+  activeWinStreak: unknown,
+  isEn: boolean
+): {
+  label: string;
+  className: string;
+  iconClassName: string;
+} | null {
+  const v =
+    typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
+      ? Math.floor(activeWinStreak)
+      : 0;
+
+  if (v < 3) return null;
+
+  if (v >= 7) {
+    return {
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      className:
+        "bg-linear-to-r from-[#180f2b] via-[#312e81] to-[#0f172a] text-white border border-violet-400/60 shadow-[0_0_14px_rgba(167,139,250,0.5)]",
+      iconClassName: "text-white/90",
+    };
+  }
+
+  if (v >= 5) {
+    return {
+      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      className:
+        "bg-linear-to-r from-[#0a1628] via-[#0e7490] to-[#052e2b] text-white border border-cyan-400/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]",
+      iconClassName: "text-white/90",
+    };
+  }
+
+  return {
+    label: isEn ? `${v} Win Streak` : `${v}連勝`,
+    className:
+      "bg-linear-to-r from-[#0b1f1a] via-[#166534] to-[#0f172a] text-white border border-emerald-400/60 shadow-[0_0_10px_rgba(52,211,153,0.4)]",
+    iconClassName: "text-white/90",
+  };
+}
+
+export default function ResultCard({
+  post,
+  href,
+  onOpen,
+  language = "ja",
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
+  const isEn = language === "en";
 
   const normalizedLeague = normalizeLeague(post.league);
 
@@ -144,13 +197,21 @@ export default function ResultCard({ post, href, onOpen }: Props) {
 
   const scorePrecisionText = toFixed1(post.stats?.scorePrecision);
   const upsetPointsVal = toInt((post.stats as any)?.upsetPoints);
-  const pointsV3Val = toInt((post.stats as any)?.pointsV3);
+  const pointsV3Text = toFixed1((post.stats as any)?.pointsV3);
+  const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
+  const upsetDisplayText = hadUpsetGame
+    ? typeof upsetPointsVal === "number"
+      ? `${upsetPointsVal}`
+      : "0"
+    : "--";
 
   const activeWinStreak = toInt(
     (post.stats as any)?.pointsV3Detail?.activeWinStreak
   ) ?? 0;
 
-  const streakBadge = getStreakBadge(activeWinStreak);
+  const streakBadge = isMobile
+    ? getStreakBadgeForMobile(activeWinStreak, isEn)
+    : getStreakBadge(activeWinStreak, isEn);
 
   const scorePrecisionValueClass = isYellow10pt(post.stats?.scorePrecision)
     ? "text-yellow-300"
@@ -158,7 +219,7 @@ export default function ResultCard({ post, href, onOpen }: Props) {
   const pointsV3ValueClass = isYellow10pt((post.stats as any)?.pointsV3)
     ? "text-yellow-300"
     : "text-white";
-  const upsetValueClass = isRedUpset((post.stats as any)?.upsetPoints)
+  const upsetValueClass = hadUpsetGame && isRedUpset((post.stats as any)?.upsetPoints)
     ? "text-red-400"
     : "text-white";
 
@@ -192,6 +253,13 @@ export default function ResultCard({ post, href, onOpen }: Props) {
 
   const finalScoreClass = isMobile ? "text-[12px]" : "text-[16px]";
   const nameMt = isMobile ? "mt-1" : "mt-1.5";
+  const mobileBadgeClass = isMobile
+    ? "text-[10px] px-1.5 py-0.5"
+    : "text-[11px] px-2 py-0.5";
+  const mobileStreakBadgeClass = isMobile
+    ? "text-[9px] px-1.5 py-0.5 gap-1"
+    : "text-[11px] px-2.5 py-0.5 gap-1.5";
+  const mobileStreakIconClass = isMobile ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
 
   return (
     <div
@@ -207,24 +275,28 @@ export default function ResultCard({ post, href, onOpen }: Props) {
     >
       {badge === "streak" && streakBadge && (
         <span
-          className={`absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-md font-extrabold shadow-md ${streakBadge.className}`}
+          className={`absolute right-3 top-3 z-10 inline-flex items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
         >
-          <Flame className={`h-3.5 w-3.5 ${streakBadge.iconClassName}`} />
+          {!isMobile && (
+            <Flame
+              className={`${mobileStreakIconClass} ${streakBadge.iconClassName}`}
+            />
+          )}
           {streakBadge.label}
         </span>
       )}
       {badge === "hit" && (
-        <span className="absolute right-3 top-3 z-10 bg-yellow-400 text-black text-[11px] px-2 py-0.5 rounded-md font-extrabold shadow-md">
+        <span className={`absolute right-3 top-3 z-10 bg-yellow-400 text-black rounded-md font-extrabold shadow-md ${mobileBadgeClass}`}>
           HIT
         </span>
       )}
       {badge === "upset" && (
-        <span className="absolute right-3 top-3 z-10 bg-red-500 text-white text-[11px] px-2 py-0.5 rounded-md font-extrabold shadow-md">
+        <span className={`absolute right-3 top-3 z-10 bg-red-500 text-white rounded-md font-extrabold shadow-md ${mobileBadgeClass}`}>
           UPSET
         </span>
       )}
       {badge === "miss" && (
-        <span className="absolute right-3 top-3 z-10 bg-gray-500 text-white text-[11px] px-2 py-0.5 rounded-md font-extrabold shadow-md">
+        <span className={`absolute right-3 top-3 z-10 bg-gray-500 text-white rounded-md font-extrabold shadow-md ${mobileBadgeClass}`}>
           MISS
         </span>
       )}
@@ -312,7 +384,7 @@ export default function ResultCard({ post, href, onOpen }: Props) {
         <div className={`grid grid-cols-3 ${isMobile ? "gap-2" : "gap-3"}`}>
           <div className="rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-center">
             <div className="text-[10px] font-semibold tracking-wide text-white/60">
-              スコア精度
+              {isEn ? "Score Precision" : "スコア精度"}
             </div>
             <div
               className={`mt-1 text-[13px] font-extrabold tabular-nums ${scorePrecisionValueClass}`}
@@ -323,23 +395,23 @@ export default function ResultCard({ post, href, onOpen }: Props) {
 
           <div className="rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-center">
             <div className="text-[10px] font-semibold tracking-wide text-white/60">
-              Upsetスコア
+              {isEn ? "Upset Score" : "Upsetスコア"}
             </div>
             <div
               className={`mt-1 text-[13px] font-extrabold tabular-nums ${upsetValueClass}`}
             >
-              {typeof upsetPointsVal === "number" ? `+${upsetPointsVal}` : "--"}
+              {upsetDisplayText}
             </div>
           </div>
 
           <div className="rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-center">
             <div className="text-[10px] font-semibold tracking-wide text-white/60">
-              総合スコア
+              {isEn ? "Total Score" : "総合スコア"}
             </div>
             <div
               className={`mt-1 text-[13px] font-extrabold tabular-nums ${pointsV3ValueClass}`}
             >
-              {typeof pointsV3Val === "number" ? pointsV3Val : "--"}
+              {pointsV3Text ?? "--"}
             </div>
           </div>
         </div>

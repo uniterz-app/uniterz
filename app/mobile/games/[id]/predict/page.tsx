@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -21,6 +22,8 @@ export default function Page() {
   // ---- Hooks（順序固定）----
   const { id } = useParams<{ id: string }>();
   const { fUser, status } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
+  const isEn = language === "en";
 
   const [profile, setProfile] = useState<{ displayName?: string; photoURL?: string } | null>(null);
   const [rawGame, setRawGame] = useState<GameDoc | null>(null);
@@ -81,7 +84,7 @@ export default function Page() {
     name:
       (profile?.displayName && profile.displayName.trim()) ||
       fUser.displayName ||
-      "ユーザー",
+      (isEn ? "User" : "ユーザー"),
     avatarUrl:
       (profile?.photoURL && profile.photoURL.trim()) ||
       fUser.photoURL ||

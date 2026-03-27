@@ -19,6 +19,7 @@ type RankingRow = {
   displayName: string;
   handle: string | null;
   photoURL: string | null;
+  countryCode?: string | null;
 
   totalPosts: number;
   totalWins: number;
@@ -88,6 +89,7 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
           displayName: me.displayName ?? "",
           handle: me.handle ?? null,
           photoURL: me.photoURL ?? null,
+          countryCode: me.countryCode ?? null,
 
           totalPosts: me.totalPosts ?? 0,
           totalWins: me.totalWins ?? 0,

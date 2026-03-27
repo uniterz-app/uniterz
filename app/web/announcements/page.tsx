@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Announcement = {
   id: string;
@@ -33,6 +34,14 @@ const TYPE_META: Record<string, { label: string; grad: string; glow: string }> =
   info:        { label: "お知らせ",     grad: "from-[#9CA3AF] to-[#6B7280]", glow: "shadow-[0_0_22px_rgba(156,163,175,0.25)]" },
 };
 
+const TYPE_LABEL_EN: Record<string, string> = {
+  event: "Event",
+  campaign: "Campaign",
+  update: "Update",
+  maintenance: "Maintenance",
+  info: "News",
+};
+
 function formatDate(d?: Timestamp | Date | null) {
   if (!d) return "";
   const date = d instanceof Timestamp ? d.toDate() : d;
@@ -49,6 +58,8 @@ export default function WebAnnouncementsPage() {
   const [loading, setLoading] = useState(true);
 
   const { fUser: user, status } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   // fetch announcements
@@ -106,7 +117,9 @@ export default function WebAnnouncementsPage() {
       {/* header */}
       <div className="sticky top-0 z-10 backdrop-blur supports-backdrop-filter:bg-[#0B0F17]/70 border-b border-white/5">
         <div className="mx-auto max-w-[840px] px-5">
-          <h1 className="text-left text-xl font-bold py-4">お知らせ</h1>
+          <h1 className="text-left text-xl font-bold py-4">
+            {isEn ? "News" : "お知らせ"}
+          </h1>
         </div>
       </div>
 
@@ -127,12 +140,16 @@ export default function WebAnnouncementsPage() {
         )}
 
         {!loading && items.length === 0 && (
-          <p className="text-center text-sm text-white/60 mt-16">現在お知らせはありません</p>
+          <p className="text-center text-sm text-white/60 mt-16">
+            {isEn ? "No announcements." : "現在お知らせはありません"}
+          </p>
         )}
 
         {!loading && items.map((a) => {
           const src = (a.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
-          const meta = TYPE_META[a.type ?? "info"];
+          const typeKey = a.type ?? "info";
+          const meta = TYPE_META[typeKey];
+          const typeLabel = isEn ? TYPE_LABEL_EN[typeKey] ?? meta.label : meta.label;
           const unread = isUnread(a.id);
 
           return (
@@ -146,7 +163,7 @@ export default function WebAnnouncementsPage() {
                 {unread && (
                   <span
                     className="absolute right-3 top-3 w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(0,229,255,0.9)]"
-                    aria-label="未読"
+                    aria-label={isEn ? "Unread" : "未読"}
                   />
                 )}
 
@@ -168,7 +185,7 @@ export default function WebAnnouncementsPage() {
                     <span
                       className={`px-3 py-1.5 rounded-full text-[12px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
                     >
-                      {meta.label}
+                      {typeLabel}
                     </span>
                     <span className="text-xs text-white/60">{formatDate(a.postedAt)}</span>
                   </div>

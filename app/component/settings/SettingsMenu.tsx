@@ -5,7 +5,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import cn from "clsx";
 import {
   User,
-  Bookmark,
   Megaphone,
   FilePlus2,
   Package,
@@ -27,6 +26,7 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { ADMIN_UID } from "@/lib/constants";
 import { db, auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   collection,
   getDocs,
@@ -58,6 +58,8 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
   const isMobile = resolvedVariant === "mobile";
 
   const { fUser: user, status } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
 
   const requireLogin = (action: () => void) => {
     if (!user) {
@@ -92,7 +94,6 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
     "/web/settings/profile",
     "/mobile/settings/profile"
   );
-  const bookmarksPath = p("/web/bookmarks", "/mobile/bookmarks");
   const announcementsPath = p(
     "/web/announcements",
     "/mobile/announcements"
@@ -108,16 +109,6 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
     "/mobile/community-guidelines"
   );
   const contactPath = p("/web/contact", "/mobile/contact");
-
-  const refundPath = p(
-  "/web/refund",
-  "/mobile/refund"
-);
-
-const lawPath = p(
-  "/web/law",
-  "/mobile/law"
-);
 
   // ===== announcements unread =====
   useEffect(() => {
@@ -193,26 +184,22 @@ const lawPath = p(
   return (
     <>
       <nav className={containerClasses}>
-        <p className={groupTitleClasses}>メイン</p>
+        <p className={groupTitleClasses}>{isEn ? "Main" : "メイン"}</p>
 
         <button className={itemClasses} onClick={() => requireLogin(() => router.push(profileEditPath))}>
-          <User size={16} /> プロフィール編集
+          <User size={16} /> {isEn ? "Edit Profile" : "プロフィール編集"}
         </button>
 
         <button className={itemClasses} onClick={() => requireLogin(() => router.push(p("/web/badges", "/mobile/badges")))}>
-          <Award size={16} /> バッジパレット
-        </button>
-
-        <button className={itemClasses} onClick={() => requireLogin(() => router.push(bookmarksPath))}>
-          <Bookmark size={16} /> ブックマーク
+          <Award size={16} /> {isEn ? "Badge Palette" : "バッジパレット"}
         </button>
 
         <button className={itemClasses} onClick={() => requireLogin(() => router.push(announcementsPath))}>
-          <Megaphone size={16} /> お知らせ
+          <Megaphone size={16} /> {isEn ? "Announcements" : "お知らせ"}
           {unreadCount > 0 && <span className="ml-auto text-xs bg-red-500 px-2 rounded-full">{unreadCount}</span>}
         </button>
 
-        <p className={groupTitleClasses}>サブスクリプション</p>
+        <p className={groupTitleClasses}>{isEn ? "Subscription" : "サブスクリプション"}</p>
 
         <button
           className={itemClasses}
@@ -230,79 +217,64 @@ const lawPath = p(
             )
           }
         >
-          <Package size={16} /> プランの確認
+          <Package size={16} /> {isEn ? "Plan Status" : "プランの確認"}
         </button>
 
-        <p className={groupTitleClasses}>サポート</p>
+        <p className={groupTitleClasses}>{isEn ? "Support" : "サポート"}</p>
 
         <button className={subItemClasses} onClick={() => router.push(resetPath)}>
-          <Key size={14} /> パスワードリセット
+          <Key size={14} /> {isEn ? "Password Reset" : "パスワードリセット"}
         </button>
 
         <button className={subItemClasses} onClick={() => router.push(helpPath)}>
-          <HelpCircle size={14} /> ヘルプ
+          <HelpCircle size={14} /> {isEn ? "Help" : "ヘルプ"}
         </button>
 
         <button className={subItemClasses} onClick={() => router.push(guidelinesPath)}>
-          <Users size={14} /> ガイドライン
+          <Users size={14} /> {isEn ? "Community Guidelines" : "ガイドライン"}
         </button>
 
         <button className={subItemClasses} onClick={() => router.push(termsPath)}>
-          <FileText size={14} /> 利用規約
+          <FileText size={14} /> {isEn ? "Terms of Service" : "利用規約"}
         </button>
 
-        {/* ★ 追加 */}
-<button
-  className={subItemClasses}
-  onClick={() => router.push(lawPath)}
->
-  <FileText size={14} /> 特定商取引法に基づく表記
-</button>
-
-        <button
-  className={subItemClasses}
-  onClick={() => router.push(refundPath)}
->
-  <FileText size={14} /> 返金・キャンセルポリシー
-</button>
-
         <button className={subItemClasses} onClick={() => router.push(contactPath)}>
-          <Mail size={14} /> お問い合わせ
+          <Mail size={14} /> {isEn ? "Contact" : "お問い合わせ"}
         </button>
 
         {isAdmin && (
           <>
-            <p className={groupTitleClasses}>管理</p>
+            <p className={groupTitleClasses}>{isEn ? "Admin" : "管理"}</p>
 
             <button className={itemClasses} onClick={() => router.push("/admin")}>
-              <LayoutDashboard size={16} /> 管理ダッシュボード
+              <LayoutDashboard size={16} /> {isEn ? "Admin Dashboard" : "管理ダッシュボード"}
             </button>
 
             <button className={itemClasses} onClick={() => router.push("/admin/badges")}>
-              <Award size={16} /> バッジ付与
+              <Award size={16} /> {isEn ? "Grant Badges" : "バッジ付与"}
             </button>
 
             <button className={itemClasses} onClick={() => router.push("/admin/announcements")}>
-              <Newspaper size={16} /> お知らせ管理
+              <Newspaper size={16} /> {isEn ? "Manage Announcements" : "お知らせ管理"}
             </button>
 
             <button className={itemClasses} onClick={() => router.push("/admin/announcements/new")}>
-              <PlusSquare size={16} /> お知らせ作成
+              <PlusSquare size={16} /> {isEn ? "Create Announcement" : "お知らせ作成"}
             </button>
 
             <button className={itemClasses} onClick={() => router.push("/admin/games-import")}>
-              <Database size={16} /> 試合インポート
+              <Database size={16} /> {isEn ? "Game Import" : "試合インポート"}
             </button>
 
             <button className={itemClasses} onClick={() => router.push("/admin/plans")}>
-              <CheckCheck size={16} /> プラン承認
+              <CheckCheck size={16} /> {isEn ? "Plan Approval" : "プラン承認"}
             </button>
           </>
         )}
 
         <div className="mt-5 border-t border-white/10 pt-3">
           <button className={itemClasses} onClick={() => setShowLogoutModal(true)}>
-            <LogOut size={16} /> ログアウト
+            <LogOut size={16} /> {isEn ? "Logout" : "ログアウト"}
           </button>
         </div>
       </nav>
@@ -317,6 +289,7 @@ const lawPath = p(
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
+        language={language}
       />
     </>
   );

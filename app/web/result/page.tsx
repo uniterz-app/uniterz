@@ -15,6 +15,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import ResultListWithOverlay from "@/app/component/result/ResultListWithOverlay";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 
 const PAGE_SIZE = 20;
 
@@ -41,8 +43,8 @@ function toSettledAtMillis(p: any): number | null {
   return null;
 }
 
-function formatDateLabel(ms?: number | null) {
-  if (!ms) return "Unknown";
+function formatDateLabel(ms: number | null | undefined, lang: Language) {
+  if (!ms) return lang === "en" ? "Unknown" : "不明";
   const d = new Date(ms);
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
@@ -58,6 +60,7 @@ function isFinalPost(post: PostWithMillis): boolean {
 export default function ResultPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const { language } = useUserLanguage(uid);
 
   const [posts, setPosts] = useState<PostWithMillis[]>([]);
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
@@ -172,7 +175,7 @@ export default function ResultPage() {
 
     posts.forEach((post) => {
       const groupMs = getGroupDateMillis(post);
-      const dateLabel = formatDateLabel(groupMs);
+      const dateLabel = formatDateLabel(groupMs, language);
 
       if (!dayMap.has(dateLabel)) {
         dayMap.set(dateLabel, {
@@ -205,7 +208,7 @@ export default function ResultPage() {
     });
 
     return days;
-  }, [posts]);
+  }, [posts, language]);
 
   if (!authReady || !uid) return null;
 
@@ -216,6 +219,7 @@ export default function ResultPage() {
         loading={loading}
         hasMore={hasMore}
         sentinelRef={sentinelRef}
+        language={language}
       />
     </div>
   );

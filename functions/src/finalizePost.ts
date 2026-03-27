@@ -6,6 +6,28 @@ import { calcUpsetPoints } from "./calcUpsetPoints";
 import { calcStreakBonus } from "./calcStreakBonus";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 
+function lerpByRange(
+  value: number,
+  min: number,
+  max: number,
+  start: number,
+  end: number
+) {
+  if (value <= min) return start;
+  if (value >= max) return end;
+  const t = (value - min) / (max - min);
+  return start + (end - start) * t;
+}
+
+function calcDiffPointsGradient(diffError: number) {
+  if (diffError <= 0) return 4;
+  if (diffError <= 3) return lerpByRange(diffError, 0, 3, 4, 3);
+  if (diffError <= 6) return lerpByRange(diffError, 3, 6, 3, 2);
+  if (diffError <= 10) return lerpByRange(diffError, 6, 10, 2, 1);
+  if (diffError <= 14) return lerpByRange(diffError, 10, 14, 1, 0);
+  return 0;
+}
+
 function calcPointsV3({
   predHome,
   predAway,
@@ -40,12 +62,7 @@ function calcPointsV3({
   }
 
   const winPoints = 4;
-
-  let diffPoints = 0;
-  if (diffError === 0) diffPoints = 4;
-  else if (diffError <= 3) diffPoints = 3;
-  else if (diffError <= 6) diffPoints = 2;
-  else if (diffError <= 10) diffPoints = 1;
+  const diffPoints = calcDiffPointsGradient(diffError);
 
   let totalPoints = 0;
   if (totalError <= 3) totalPoints = 2;

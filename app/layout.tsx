@@ -1,5 +1,6 @@
 import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
+import AppProviders from "@/app/AppProviders";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import AppActivityTracker from "@/app/component/common/AppActivityTracker";
@@ -52,10 +53,12 @@ export default function RootLayout({
                 minHeight: "100vh",
               }}
             >
-              <WebOrMobileSplash>
-                <AppChrome />
-                {children}
-              </WebOrMobileSplash>
+              <AppProviders>
+                <WebOrMobileSplash>
+                  <AppChrome />
+                  {children}
+                </WebOrMobileSplash>
+              </AppProviders>
             </div>
 
             <ToastHost />

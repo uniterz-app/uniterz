@@ -1,8 +1,9 @@
 // app/component/modals/LoginRequiredModal.tsx
 "use client";
 
-import { ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Variant = "mobile" | "web";
 
@@ -18,6 +19,9 @@ export default function LoginRequiredModal({
   variant,
 }: Props) {
   const router = useRouter();
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
 
   if (!open) return null;
 
@@ -52,7 +56,7 @@ export default function LoginRequiredModal({
               onClick={onClose}
               className="flex-1 rounded-xl border border-white/20 py-2 text-sm text-white/80 hover:bg-white/10"
             >
-              戻る
+              {isEn ? "Back" : "戻る"}
             </button>
 
             {/* アカウント作成 */}
@@ -60,7 +64,7 @@ export default function LoginRequiredModal({
               onClick={() => router.push(signupHref)}
               className="flex-1 rounded-xl bg-linear-to-r from-orange-400 to-orange-500 py-2 text-sm font-bold text-black hover:opacity-90"
             >
-              アカウント作成
+              {isEn ? "Create account" : "アカウント作成"}
             </button>
           </div>
         </div>

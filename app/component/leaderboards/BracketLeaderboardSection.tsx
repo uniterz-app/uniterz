@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
 import { nameBebas, jp } from "@/lib/fonts";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import BracketUserCard from "./BracketUserCard";
 import useBracketLeaderboard, {
   type BracketLeaderboardRow,
@@ -15,18 +17,29 @@ import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { buildPlayoffDisplayData } from "@/lib/playoff-bracket-display";
 import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb";
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Props = {
   season?: string;
 };
 
 export default function BracketLeaderboardSection({ season: propSeason }: Props) {
+  const router = useRouter();
   const pathname = usePathname();
   const isMobile =
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const season = propSeason ?? getCurrentPlayoffSeason();
   const { loading, error, rows } = useBracketLeaderboard({ season });
+
+  const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUid(u?.uid ?? null);
+    });
+    return () => unsub();
+  }, []);
+  const { language } = useUserLanguage(uid);
 
   const [selectedRow, setSelectedRow] = useState<BracketLeaderboardRow | null>(
     null
@@ -69,6 +82,14 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     setPlayoffDisplayData(null);
   }, []);
 
+  const openProfileFromSheet = useCallback(
+    (row: BracketLeaderboardRow) => {
+      const handleOrUid = row.handle || row.uid;
+      router.push(`${isMobile ? "/mobile" : "/web"}/u/${handleOrUid}`);
+    },
+    [isMobile, router]
+  );
+
   const PlayoffBracket = isMobile ? PlayoffFullBracketMobile : PlayoffFullBracketWeb;
 
   const titleBlock = (
@@ -87,7 +108,9 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
         PLAYOFFS BRACKET
       </h1>
       <p className={["mt-1 text-[12px] text-white/60", jp.className].join(" ")}>
-        生き残ったブラケットの得点が高い順に表示
+        {language === "en"
+          ? "Showing bracket scores in descending order"
+          : "生き残ったブラケットの得点が高い順に表示"}
       </p>
     </div>
   );
@@ -97,7 +120,9 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
       <div className="space-y-2 px-3 pt-2">
         {titleBlock}
         <div className="flex items-center justify-center py-16">
-          <div className="text-white/60">読み込み中...</div>
+          <div className="text-white/60">
+            {language === "en" ? "Loading..." : "読み込み中..."}
+          </div>
         </div>
       </div>
     );
@@ -117,7 +142,9 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
       <div className="space-y-2 px-3 pt-2">
         {titleBlock}
         <div className="py-16 text-center text-white/60">
-          生き残りユーザーはいません
+          {language === "en"
+            ? "No remaining users."
+            : "生き残りユーザーはいません"}
         </div>
       </div>
     );
@@ -127,7 +154,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     <>
       <div className="space-y-2 px-3 pt-2">
         {titleBlock}
-        <div className="space-y-3 pb-24 pt-2">
+        <div className="space-y-3 pb-bottom-nav pt-2">
           {rows.map((row) => (
             <BracketUserCard
               key={row.uid}
@@ -170,7 +197,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
             >
               <button
                 type="button"
-                aria-label="閉じる"
+                aria-label={language === "en" ? "Close" : "閉じる"}
                 className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
                 onClick={closeDetail}
               >
@@ -178,13 +205,18 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
               </button>
 
               <div className="sticky top-0 z-10 shrink-0 border-b border-white/10 bg-black/10 px-4 py-3 backdrop-blur-xl">
-                <BracketUserCard row={selectedRow} />
+                <BracketUserCard
+                  row={selectedRow}
+                  onClick={() => openProfileFromSheet(selectedRow)}
+                />
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 pb-bottom-nav">
                 {bracketLoading ? (
                   <div className="flex items-center justify-center py-16">
-                    <div className="text-white/60">読み込み中...</div>
+                    <div className="text-white/60">
+                      {language === "en" ? "Loading..." : "読み込み中..."}
+                    </div>
                   </div>
                 ) : playoffDisplayData ? (
                   <div className="mx-auto max-w-2xl">
@@ -196,7 +228,9 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                   </div>
                 ) : (
                   <div className="py-16 text-center text-white/60">
-                    ブラケットを読み込めませんでした
+                    {language === "en"
+                      ? "Couldn't load the bracket"
+                      : "ブラケットを読み込めませんでした"}
                   </div>
                 )}
               </div>

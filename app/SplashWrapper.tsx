@@ -1,58 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+
+type SplashWrapperProps = {
+  children?: React.ReactNode;
+  forceSplash?: boolean;
+  /** スプラッシュ終了時（body 背景切り替え後）に一度だけ呼ぶ */
+  onDone?: () => void;
+};
 
 export default function SplashWrapper({
   children,
   forceSplash = false,
-}: {
-  children?: React.ReactNode;
-  forceSplash?: boolean;
-}) {
+  onDone,
+}: SplashWrapperProps) {
   const { status } = useFirebaseUser();
-  const [fadeDone, setFadeDone] = useState(false);
-
   const shouldShowSplash = forceSplash || status === "loading";
 
-  // ★ 初回ロード時：body 背景をスプラッシュ画像にする
+  const [fadeDone, setFadeDone] = useState(
+    () => !(forceSplash || status === "loading")
+  );
+
+  const doneCalledRef = useRef(false);
+
   useEffect(() => {
     if (!fadeDone) {
       document.body.classList.remove("bg-black");
       document.body.classList.add("splash-bg");
     }
-
-    if (!shouldShowSplash && !fadeDone) {
-      // ローディングが終わった瞬間に黒背景へ切り替え
-      const timer = setTimeout(() => {
-        document.body.classList.remove("splash-bg");
-        document.body.classList.add("bg-black");
-        setFadeDone(true);
-      }, 50); // ← これで黒とびしない（即座に黒に）
-
-      return () => clearTimeout(timer);
-    }
   }, [shouldShowSplash, fadeDone]);
 
-  // ★ ローディング中はスプラッシュを表示
-  if (shouldShowSplash && !fadeDone) {
+  useLayoutEffect(() => {
+    if (shouldShowSplash || fadeDone) return;
+
+    document.body.classList.remove("splash-bg");
+    document.body.classList.add("bg-black");
+    setFadeDone(true);
+
+    if (!doneCalledRef.current) {
+      doneCalledRef.current = true;
+      onDone?.();
+    }
+  }, [shouldShowSplash, fadeDone, onDone]);
+
+  const showSplashUi = shouldShowSplash || !fadeDone;
+
+  if (showSplashUi) {
     return (
-      <div
-        className="w-screen h-screen flex items-center justify-center relative"
-        style={{
-          backgroundImage: 'url("/splash/splash-1170x2532.png")',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundColor: "#000",
-        }}
-      >
-        <div className="absolute bottom-12 text-white/80 text-sm animate-pulse">
+      <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
+        <div className="mt-27 ml-4 animate-pulse text-sm text-white/80">
           Loading...
         </div>
       </div>
     );
   }
 
-  // ★ ローディング後は children を表示（背景は黒のまま）
   return <>{children}</>;
 }

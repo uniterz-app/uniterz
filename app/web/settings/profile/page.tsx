@@ -4,15 +4,29 @@ import { useState, useEffect } from "react";
 import { Camera, ArrowLeft } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db, auth } from "@/lib/firebase";
+import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
+type Language = "ja" | "en";
+const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
+  ja: "Asia/Tokyo",
+  en: "America/New_York",
+};
+
 export default function ProfileEditPage() {
   const router = useRouter();
 
+  const osIsJa =
+    typeof navigator !== "undefined" &&
+    navigator.language?.toLowerCase().startsWith("ja");
+
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
+  const [language, setLanguage] = useState<Language>(() => (osIsJa ? "ja" : "en"));
+  const isEn = language === "en";
+  const [countryCode, setCountryCode] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPhotoURL, setCurrentPhotoURL] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -27,6 +41,12 @@ export default function ProfileEditPage() {
         setName(d.displayName ?? "");
         setBio(d.bio ?? "");
         setCurrentPhotoURL(d.photoURL ?? null);
+        if (d.language === "ja" || d.language === "en") {
+          setLanguage(d.language);
+        } else {
+          setLanguage(osIsJa ? "ja" : "en");
+        }
+        setCountryCode(typeof d.countryCode === "string" ? d.countryCode : "");
       }
     });
     return () => unsub();
@@ -83,6 +103,10 @@ export default function ProfileEditPage() {
         displayName: name || "",
         bio: bio || "",
         photoURL: photoURL || "",
+        language,
+        locale: language,
+        timeZone: TIMEZONE_BY_LANGUAGE[language],
+        countryCode: countryCode || null,
         updatedAt: serverTimestamp(),
       },
       { merge: true }
@@ -113,16 +137,16 @@ export default function ProfileEditPage() {
             type="button"
             onClick={() => router.back()}
             className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/10"
-            aria-label="戻る"
+            aria-label={isEn ? "Back" : "戻る"}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
             <h1 className="text-base font-semibold leading-tight">
-              プロフィール設定
+              {isEn ? "Profile Settings" : "プロフィール設定"}
             </h1>
             <p className="text-xs text-white/60">
-              アイコン・名前・自己紹介を編集できます
+              {isEn ? "Edit your icon, name, and bio." : "アイコン・名前・自己紹介を編集できます"}
             </p>
           </div>
         </header>
@@ -163,10 +187,12 @@ export default function ProfileEditPage() {
 
           {/* ===== 名前 ===== */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-white/70">名前</label>
+            <label className="text-xs font-medium text-white/70">
+              {isEn ? "Name" : "名前"}
+            </label>
             <input
               type="text"
-              placeholder="名前"
+              placeholder={isEn ? "Name" : "名前"}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
@@ -176,14 +202,48 @@ export default function ProfileEditPage() {
           {/* ===== 自己紹介 ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              自己紹介
+              {isEn ? "Bio" : "自己紹介"}
             </label>
             <textarea
-              placeholder="自己紹介"
+              placeholder={isEn ? "Bio" : "自己紹介"}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60 min-h-[96px]"
             />
+          </div>
+
+          {/* ===== 使用言語 ===== */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-white/70">
+              {isEn ? "App Language" : "使用言語"}
+            </label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as Language)}
+              className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
+            >
+              <option value="ja">{isEn ? "Japanese" : "日本語"}</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          {/* ===== 住んでいる国（任意） ===== */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-white/70">
+              {isEn ? "Country (optional)" : "住んでいる国（任意）"}
+            </label>
+            <select
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
+            >
+              <option value="">{isEn ? "Not set" : "未設定"}</option>
+              {COUNTRY_OPTIONS.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {language === "ja" ? c.labelJa : c.labelEn}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* ===== 保存ボタン ===== */}
@@ -192,7 +252,7 @@ export default function ProfileEditPage() {
             disabled={uploading}
             className="mt-2 w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-400 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {uploading ? "アップロード中..." : "変更を保存"}
+            {uploading ? (isEn ? "Uploading..." : "アップロード中...") : isEn ? "Save Changes" : "変更を保存"}
           </button>
         </form>
       </div>

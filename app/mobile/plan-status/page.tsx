@@ -7,6 +7,7 @@ import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Image from "next/image";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type PlanType = "monthly" | "annual" | null;
 
@@ -15,15 +16,24 @@ export default function PlanStatusPage() {
 
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [planType, setPlanType] = useState<PlanType>(null);
-  const [proUntil, setProUntil] = useState<string | null>(null);
-  const [planStart, setPlanStart] = useState<string | null>(null);
+  const [proUntil, setProUntil] = useState<Date | null>(null);
+  const [planStart, setPlanStart] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uid, setUid] = useState<string | null>(null);
+
+  const { language } = useUserLanguage(uid);
+  const isEn = language === "en";
+
+  const formatDate = (d: Date | null) =>
+    d ? d.toLocaleDateString(isEn ? "en-US" : "ja-JP") : null;
 
   useEffect(() => {
     const fetchUser = async () => {
       const auth = getAuth();
       const user = auth.currentUser;
       if (!user) return;
+
+      setUid(user.uid);
 
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
@@ -35,15 +45,11 @@ export default function PlanStatusPage() {
       setPlanType(data.planType ?? null);
 
       setProUntil(
-        data.proUntil
-          ? data.proUntil.toDate().toLocaleDateString("ja-JP")
-          : null
+        data.proUntil ? data.proUntil.toDate() : null
       );
 
       setPlanStart(
-        data.planStartDate
-          ? data.planStartDate.toDate().toLocaleDateString("ja-JP")
-          : null
+        data.planStartDate ? data.planStartDate.toDate() : null
       );
 
       setLoading(false);
@@ -53,7 +59,9 @@ export default function PlanStatusPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-4 text-white/60">loading...</div>;
+    return (
+      <div className="p-4 text-white/60">{isEn ? "Loading..." : "loading..."}</div>
+    );
   }
 
   return (
@@ -70,7 +78,9 @@ export default function PlanStatusPage() {
           />
           {plan === "pro" && planStart && (
             <div className="text-xs text-white/50">
-              Started on {planStart}
+              {isEn
+                ? `Started on ${formatDate(planStart)}`
+                : `Started on ${formatDate(planStart)}`}
             </div>
           )}
         </div>
@@ -78,13 +88,19 @@ export default function PlanStatusPage() {
         {/* プラン名 */}
         <div className="text-2xl font-extrabold text-white">
           {plan === "free" ? (
-            "Free Plan"
+            isEn ? "Free Plan" : "Free Plan"
           ) : (
             <>
-              Pro Plan
+              {isEn ? "Pro Plan" : "Pro Plan"}
               {planType && (
                 <span className="ml-2 text-lg text-white/40">
-                  {planType === "annual" ? "Yearly" : "Monthly"}
+                  {isEn
+                    ? planType === "annual"
+                      ? "Yearly"
+                      : "Monthly"
+                    : planType === "annual"
+                    ? "Yearly"
+                    : "Monthly"}
                 </span>
               )}
             </>
@@ -93,7 +109,11 @@ export default function PlanStatusPage() {
 
         {/* 次回更新日 */}
         <div className="mt-2 text-sm text-white/70">
-          次回更新日：{plan === "pro" && proUntil ? proUntil : "-----"}
+          {isEn
+            ? `Next billing date: ${
+                plan === "pro" && proUntil ? formatDate(proUntil) : "-----"
+              }`
+            : `次回更新日：${plan === "pro" && proUntil ? formatDate(proUntil) : "-----"}`}
         </div>
 
         {/* Divider */}
@@ -130,7 +150,7 @@ export default function PlanStatusPage() {
     boxShadow: "0 10px 25px rgba(0,0,0,0.35)",
   }}
 >
-  プラン変更
+  {isEn ? "Change Plan" : "プラン変更"}
 </button>
 
     {/* 解約ボタン */}
@@ -144,7 +164,7 @@ export default function PlanStatusPage() {
     active:scale-95 active:bg-red-400/20
   "
 >
-  解約
+  {isEn ? "Cancel" : "解約"}
 </button>
   </div>
 )}

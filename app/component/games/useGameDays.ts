@@ -13,17 +13,14 @@ import {
 
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
+import {
+  parseDateKeyInTimeZone,
+  toDateKeyInTimeZone,
+} from "@/lib/time/zonedTime";
 
 const SEASON = "2025-26";
 
-function toYYYYMMDD(d: Date) {
-  const y = d.getFullYear();
-  const m = `${d.getMonth() + 1}`.padStart(2, "0");
-  const dd = `${d.getDate()}`.padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-
-export function useGameDays(rawLeague: League) {
+export function useGameDays(rawLeague: League, timeZone: string) {
   const league = normalizeLeague(rawLeague);
 
   const [rows, setRows] = useState<any[]>([]);
@@ -73,31 +70,25 @@ export function useGameDays(rawLeague: League) {
 
     const map = new Map<string, Date>();
 
-    function toJstDateOnly(d: Date) {
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    }
-
     for (const g of rows) {
       const t = g.startAtJst;
       if (!t) continue;
 
       let d: Date | null = null;
-
-      if (t instanceof Timestamp) d = toJstDateOnly(t.toDate());
-      else if (typeof t?.toDate === "function") d = toJstDateOnly(t.toDate());
-      else if (t instanceof Date) d = toJstDateOnly(t);
-
+      if (t instanceof Timestamp) d = t.toDate();
+      else if (typeof t?.toDate === "function") d = t.toDate();
+      else if (t instanceof Date) d = t;
       if (!d) continue;
 
-      const key = toYYYYMMDD(d);
-
+      const key = toDateKeyInTimeZone(d, timeZone);
       if (!map.has(key)) {
-        map.set(key, d);
+        const dayStart = parseDateKeyInTimeZone(key, timeZone);
+        if (dayStart) map.set(key, dayStart);
       }
     }
 
     return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
-  }, [rows]);
+  }, [rows, timeZone]);
 
   return { gameDays, loading, error };
 }

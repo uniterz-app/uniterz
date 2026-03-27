@@ -53,7 +53,7 @@ function topN(rows, key, n = 10) {
         .map((row, index) => (Object.assign(Object.assign({}, row), { rank: index + 1 })));
 }
 async function buildMonthlyLeaderboard(league) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
     const { start, end, month } = getPreviousMonthRange();
     const startDate = toDateKeyJST(start);
     const endDate = toDateKeyJST(end);
@@ -109,6 +109,7 @@ async function buildMonthlyLeaderboard(league) {
             handle: (_h = user === null || user === void 0 ? void 0 : user.handle) !== null && _h !== void 0 ? _h : null,
             displayName: (_j = user === null || user === void 0 ? void 0 : user.displayName) !== null && _j !== void 0 ? _j : "user",
             photoURL: (_k = user === null || user === void 0 ? void 0 : user.photoURL) !== null && _k !== void 0 ? _k : null,
+            countryCode: (_l = user === null || user === void 0 ? void 0 : user.countryCode) !== null && _l !== void 0 ? _l : null,
             league,
             posts: agg.posts,
             wins: agg.wins,

@@ -11,6 +11,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import type { Language } from "@/lib/i18n/language";
 
 /**
  * 日別データ
@@ -28,6 +29,7 @@ type Props = {
   data: DailyTrendStat[];
   range?: "7d" | "30d" | "all";
   allowAll?: boolean;
+  language?: Language;
 };
 
 /* ===== colors ===== */
@@ -80,11 +82,84 @@ function formatDateLabel(value: string) {
   return value;
 }
 
+/** 正の数を「きりのいい」上限へ切り上げ（軸の上限用） */
+function niceCeil(x: number): number {
+  if (!Number.isFinite(x) || x <= 0) return 1;
+  const exp = Math.floor(Math.log10(x));
+  const f = x / 10 ** exp;
+  let nf: number;
+  if (f <= 1) nf = 1;
+  else if (f <= 2) nf = 2;
+  else if (f <= 5) nf = 5;
+  else nf = 10;
+  return nf * 10 ** exp;
+}
+
+/** 0 … max を均等分割した目盛り（右軸の小数も許容） */
+function linspaceTicks(min: number, max: number, count: number): number[] {
+  if (count < 2) return [min];
+  const lo = clampNum(min);
+  const hi = clampNum(max);
+  if (hi <= lo) return [lo];
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const t = lo + ((hi - lo) * i) / (count - 1);
+    out.push(Math.round(t * 1e6) / 1e6);
+  }
+  return out;
+}
+
+/** 棒グラフ用：整数上限と 0 始まりの目盛り */
+function buildCountAxis(chartRows: ReturnType<typeof buildCumulative>) {
+  let maxBar = 0;
+  for (const row of chartRows) {
+    maxBar = Math.max(maxBar, clampNum(row.posts), clampNum(row.wins));
+  }
+  const top = Math.max(1, Math.ceil(maxBar * 1.12));
+  const targetSteps = 6;
+  const step = Math.max(1, Math.ceil(top / (targetSteps - 1)));
+  const ticks: number[] = [];
+  for (let v = 0; v <= top; v += step) ticks.push(v);
+  if (ticks[ticks.length - 1] < top) ticks.push(top);
+  return { domain: [0, top] as [number, number], ticks };
+}
+
+/** 累積ライン用：データ最大に合わせた上限と目盛り */
+function buildPointsAxis(chartRows: ReturnType<typeof buildCumulative>) {
+  let maxPt = 0;
+  for (const row of chartRows) {
+    maxPt = Math.max(
+      maxPt,
+      clampNum(row.pointsCum),
+      clampNum(row.scorePrecisionCum)
+    );
+  }
+  const padded = Math.max(maxPt * 1.08, maxPt > 0 ? 0 : 1);
+  const top = niceCeil(padded);
+  const ticks = linspaceTicks(0, top, 7);
+  return { domain: [0, top] as [number, number], ticks, top };
+}
+
 export default function DailyTrendCard({
   data,
   range = "7d",
   allowAll = false,
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
+
+  const emptyMsg = isEn ? "No data available" : "データがありません";
+  const lockedMsg = isEn
+    ? "Pro lets you view monthly trends."
+    : "Proでは月ごとの推移が確認できます";
+
+  const postsLabel = isEn ? "Posts" : "投稿数";
+  const hitsLabel = isEn ? "Correct Picks" : "的中数";
+  const totalLabel = isEn ? "Total Points" : "総合得点";
+  const scorePrecisionLabel = isEn ? "Score Precision" : "スコア精度";
+  const unitCount = isEn ? "items" : "件";
+  const unitPts = "pts";
+
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -120,8 +195,18 @@ export default function DailyTrendCard({
   const isLocked = range === "all" && !allowAll;
   const isEmpty = !isLocked && limitedData.length === 0;
 
-  const countTicks = [3, 6, 9, 12, 15];
-  const pointTicks = [0, 50, 100, 150, 200, 250, 300];
+  const { countDomain, countTicks, pointsDomain, pointTicks, pointsTop } =
+    useMemo(() => {
+      const c = buildCountAxis(chartData);
+      const p = buildPointsAxis(chartData);
+      return {
+        countDomain: c.domain,
+        countTicks: c.ticks,
+        pointsDomain: p.domain,
+        pointTicks: p.ticks,
+        pointsTop: p.top,
+      };
+    }, [chartData]);
 
   return (
     <div
@@ -135,7 +220,7 @@ export default function DailyTrendCard({
         {isEmpty ? (
           <div className="absolute inset-0 grid place-items-center border border-white/10 bg-black/20">
             <div className="text-sm font-semibold text-white/80">
-              データがありません
+              {emptyMsg}
             </div>
           </div>
         ) : (
@@ -166,7 +251,7 @@ export default function DailyTrendCard({
                     yAxisId="count"
                     width={30}
                     ticks={countTicks}
-                    domain={[3, 15]}
+                    domain={countDomain}
                     tick={{ fontSize: 9, fill: "rgba(148,163,184,0.9)" }}
                     tickLine={false}
                     axisLine={false}
@@ -178,10 +263,16 @@ export default function DailyTrendCard({
                     orientation="right"
                     width={38}
                     ticks={pointTicks}
+                    domain={pointsDomain}
                     tick={{ fontSize: 9, fill: "rgba(148,163,184,0.9)" }}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v) => `${toInt(v)}`}
+                    tickFormatter={(v) => {
+                      const n = clampNum(v);
+                      return pointsTop < 20
+                        ? `${toFixed1(n)}`
+                        : `${toInt(n)}`;
+                    }}
                   />
 
                   <Tooltip
@@ -197,17 +288,17 @@ export default function DailyTrendCard({
                       const n = clampNum(value);
                       const label = String(name);
 
-                      if (label === "投稿数" || label === "的中数") {
-                        return [`${toInt(n)}件`, label];
+                      if (label === postsLabel || label === hitsLabel) {
+                        return [`${toInt(n)} ${unitCount}`, label];
                       }
-                      return [`${toFixed1(n)} pts`, label];
+                      return [`${toFixed1(n)} ${unitPts}`, label];
                     }}
                   />
 
                   <Bar
                     yAxisId="count"
                     dataKey="posts"
-                    name="投稿数"
+                    name={postsLabel}
                     fill={COLORS.posts}
                     opacity={0.85}
                     radius={[3, 3, 0, 0]}
@@ -216,7 +307,7 @@ export default function DailyTrendCard({
                   <Bar
                     yAxisId="count"
                     dataKey="wins"
-                    name="的中数"
+                    name={hitsLabel}
                     fill={COLORS.wins}
                     opacity={0.85}
                     radius={[3, 3, 0, 0]}
@@ -227,7 +318,7 @@ export default function DailyTrendCard({
                     yAxisId="points"
                     type="monotone"
                     dataKey="pointsCum"
-                    name="総合得点"
+                    name={totalLabel}
                     stroke={COLORS.total}
                     strokeWidth={1.75}
                     dot={false}
@@ -236,7 +327,7 @@ export default function DailyTrendCard({
                     yAxisId="points"
                     type="monotone"
                     dataKey="scorePrecisionCum"
-                    name="スコア精度"
+                    name={scorePrecisionLabel}
                     stroke={COLORS.score}
                     strokeWidth={1.75}
                     dot={false}
@@ -251,7 +342,7 @@ export default function DailyTrendCard({
                 <div className="absolute inset-0 bg-[#050814]/58 backdrop-blur-[3px]" />
                 <div className="relative mx-4 rounded-2xl border border-white/15 bg-black/35 px-4 py-4 text-center shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
                   <div className="text-sm font-semibold text-white">
-                    Proでは月ごとの推移が確認できます
+                    {lockedMsg}
                   </div>
                 </div>
               </div>
@@ -261,10 +352,10 @@ export default function DailyTrendCard({
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-white/80">
-        <Chip label="投稿数" hex={COLORS.posts} />
-        <Chip label="的中数" hex={COLORS.wins} />
-        <Chip label="総合得点" hex={COLORS.total} />
-        <Chip label="スコア精度" hex={COLORS.score} />
+        <Chip label={postsLabel} hex={COLORS.posts} />
+        <Chip label={hitsLabel} hex={COLORS.wins} />
+        <Chip label={totalLabel} hex={COLORS.total} />
+        <Chip label={scorePrecisionLabel} hex={COLORS.score} />
       </div>
     </div>
   );

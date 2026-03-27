@@ -8,6 +8,8 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserBadges } from "@/app/component/badges/useUserBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 
 import BadgeDetailModal from "./BadgeDetailModal";
 
@@ -19,6 +21,7 @@ export default function MobileBadgesPage() {
   const router = useRouter();
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
+  const { language } = useUserLanguage(uid);
 
   // user_badges
   const { badges: userBadges } = useUserBadges(uid);
@@ -31,7 +34,7 @@ export default function MobileBadgesPage() {
   if (status !== "ready") {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
-        読み込み中…
+        {language === "en" ? "Loading..." : "読み込み中…"}
       </div>
     );
   }
@@ -59,7 +62,9 @@ export default function MobileBadgesPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold tracking-wide">バッジパレット</h1>
+        <h1 className="text-xl font-bold tracking-wide">
+          {language === "en" ? "Badge Palette" : "バッジパレット"}
+        </h1>
       </div>
 
       {/* ベロア風背景 */}
@@ -71,7 +76,7 @@ export default function MobileBadgesPage() {
       >
         {resolvedBadges.length === 0 ? (
           <p className="text-white/60 text-sm">
-            まだ獲得バッジがありません。
+            {language === "en" ? "No badges yet." : "まだ獲得バッジがありません。"}
           </p>
         ) : (
           <div className="grid grid-cols-4 gap-4">
@@ -119,6 +124,7 @@ export default function MobileBadgesPage() {
         <BadgeDetailModal
           badge={selected}
           onClose={() => setSelected(null)}
+          language={language as Language}
         />
       )}
     </div>

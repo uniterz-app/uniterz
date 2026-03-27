@@ -59,7 +59,7 @@ export default function LeaderboardsPage() {
 
   return (
     <div className="min-h-dvh bg-app">
-      <main className="pb-24">
+      <main className="pb-bottom-nav">
         <div className="border-b border-white/10 px-4 pt-3">
           <div className="scrollbar-none flex overflow-x-auto">
             {TABS.map((item) => {

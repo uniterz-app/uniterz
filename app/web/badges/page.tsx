@@ -6,6 +6,8 @@ import { useUserBadges } from "@/app/component/badges/useUserBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import BadgeDetailModal from "./BadgeDetailModal";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
@@ -14,6 +16,7 @@ type ResolvedBadge = MasterBadge & {
 export default function WebBadgesPage() {
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
+  const { language } = useUserLanguage(uid);
 
   // 🔹 user_badges（badgeId + grantedAt）
   const { badges: userBadges } = useUserBadges(uid);
@@ -24,7 +27,11 @@ export default function WebBadgesPage() {
   const [selected, setSelected] = useState<ResolvedBadge | null>(null);
 
   if (status !== "ready") {
-    return <div className="p-6 text-white">読み込み中...</div>;
+    return (
+      <div className="p-6 text-white">
+        {language === "en" ? "Loading..." : "読み込み中..."}
+      </div>
+    );
   }
 
   // ★ JOIN（ここが重要）
@@ -44,7 +51,7 @@ export default function WebBadgesPage() {
     <div className="min-h-screen px-6 py-10 text-white bg-[#08111A]">
       {/* Header */}
       <h1 className="text-3xl font-extrabold mb-6 tracking-wide">
-        バッジパレット
+        {language === "en" ? "Badge Palette" : "バッジパレット"}
       </h1>
 
       {/* velvet / velour風 */}
@@ -56,7 +63,7 @@ export default function WebBadgesPage() {
       >
         {resolvedBadges.length === 0 ? (
           <p className="text-white/60 text-sm">
-            まだ獲得バッジがありません。
+            {language === "en" ? "No badges yet." : "まだ獲得バッジがありません。"}
           </p>
         ) : (
           <div className="grid grid-cols-8 gap-5">
@@ -102,6 +109,7 @@ export default function WebBadgesPage() {
         <BadgeDetailModal
           badge={selected}
           onClose={() => setSelected(null)}
+          language={language as Language}
         />
       )}
     </div>

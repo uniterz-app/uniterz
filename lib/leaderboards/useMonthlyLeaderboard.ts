@@ -28,6 +28,9 @@ export type MonthlyLeaderboardRow = {
   totalUpset: number;
 
   rank: number;
+
+  // rankings に表示するフラッグ用（未設定は null/undefined）
+  countryCode?: string | null;
 };
 
 type MonthlyLeaderboardApiResponse = {

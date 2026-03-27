@@ -6,6 +6,7 @@ import { Flame } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
+import type { Language } from "@/lib/i18n/language";
 
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
@@ -13,6 +14,7 @@ type Props = {
   maxStreak: number;
   compact?: boolean;
   className?: string;
+  language?: Language;
 };
 
 const MAX_STREAK_TOOLTIP =
@@ -34,7 +36,9 @@ export default function MaxStreakCard({
   maxStreak,
   compact = true,
   className = "",
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
 
@@ -71,6 +75,14 @@ export default function MaxStreakCard({
   const shown = useMemo(() => safeInt(cu), [cu]);
   const valueColor = getStreakColor(shown);
 
+  const tooltipMsg = isEn
+    ? "All-time maximum win streak. It is not affected by the 7d/30d period switch."
+    : MAX_STREAK_TOOLTIP;
+  const title = isEn ? "Max Win Streak" : "最高連勝";
+  const subtitle = isEn
+    ? "All-time Max Win Streak"
+    : "全期間での最高連勝";
+
   return (
     <>
       <div
@@ -88,13 +100,13 @@ export default function MaxStreakCard({
             <Flame className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
           </div>
 
-          <span>最高連勝</span>
+          <span>{title}</span>
 
           <button
             type="button"
             className="ml-1 text-[11px] md:text-[16px] text-white/60 hover:text-white/80"
-            onClick={(e) => openTooltip(e, MAX_STREAK_TOOLTIP)}
-            aria-label="最高連勝の説明"
+            onClick={(e) => openTooltip(e, tooltipMsg)}
+            aria-label={isEn ? "Max Win Streak description" : "最高連勝の説明"}
           >
             ⓘ
           </button>
@@ -112,9 +124,9 @@ export default function MaxStreakCard({
             {cu}
           </div>
 
-<div className="mt-3 text-[11px] md:text-[15px] text-white/60 text-center leading-snug">
-  全期間での最高連勝
-</div>
+          <div className="mt-3 text-[11px] md:text-[15px] text-white/60 text-center leading-snug">
+            {subtitle}
+          </div>
         </div>
       </div>
 

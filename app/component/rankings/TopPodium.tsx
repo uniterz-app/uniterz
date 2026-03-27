@@ -3,11 +3,14 @@
 import type { RankingRow } from "@/lib/rankings/types";
 import { alfa, jp } from "@/lib/fonts";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
+import type { Language } from "@/lib/i18n/language";
+import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 
 /* =========================
  * Flag map
@@ -273,11 +276,13 @@ function ScoreText({
   metric,
   n,
   row,
+  language,
 }: {
   rank: 1 | 2 | 3;
   metric: MobileMetric;
   n: number;
   row: RankingRowWithCountry;
+  language: Language;
 }) {
   const m = medal(rank);
   const s = rankPreset(rank);
@@ -308,12 +313,13 @@ function ScoreText({
     metric === "marginPrecision" ||
     metric === "upsetScore"
   ) {
+    const showMeta = metric === "totalScore" || metric === "marginPrecision";
     const avg =
       metric === "totalScore"
         ? row.avgTotalScore
         : metric === "marginPrecision"
         ? row.avgMarginPrecision
-        : row.avgUpsetScore;
+        : null;
 
     return (
       <div className="flex flex-col items-end leading-none">
@@ -324,7 +330,7 @@ function ScoreText({
           ].join(" ")}
         >
           <span className={s.scoreMain} style={style}>
-            {Math.round(n)}
+            {n.toFixed(1)}
           </span>
           <span
             className={s.scoreSub}
@@ -337,9 +343,14 @@ function ScoreText({
           </span>
         </div>
 
-        <span className="mt-1 text-[11px] leading-none text-white/40">
-          avg {avg?.toFixed(1) ?? "0.0"}
-        </span>
+        {showMeta && (
+          <span className="mt-1 inline-flex items-center gap-1 text-[11px] leading-none text-white/40">
+            <span>avg {avg?.toFixed(1) ?? "0.0"}</span>
+            <span>
+              {postsLabel(language)}:{row.posts ?? 0}
+            </span>
+          </span>
+        )}
       </div>
     );
   }
@@ -364,12 +375,12 @@ function ScoreText({
               transform: "translateY(-1px)",
             }}
           >
-            連勝
+            {streakShortLabel(language)}
           </span>
         </div>
 
         <span className="mt-1 text-[11px] leading-none text-white/40">
-          投稿 {row.posts ?? 0}
+          {postsLabel(language)} {row.posts ?? 0}
         </span>
       </div>
     );
@@ -400,7 +411,7 @@ function ScoreText({
         </div>
 
         <span className="mt-1 text-[11px] leading-none text-white/40">
-          投稿 {row.posts ?? 0}
+          {postsLabel(language)} {row.posts ?? 0}
         </span>
       </div>
     );
@@ -434,25 +445,33 @@ export default function TopPodium({
   metric,
   onTopCountDone,
   intro = false,
+  language = "ja",
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
   onTopCountDone?: () => void;
   intro?: boolean;
+  language?: Language;
 }) {
+  const pathname = usePathname() ?? "";
+  const base =
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/")
+      ? "/mobile"
+      : "/web";
+
   const r1 = rows[0];
   const r2 = rows[1];
   const r3 = rows[2];
 
-  if (!r1) return null;
-
-  const a1 = metricNum(r1, metric);
+  const a1 = r1 ? metricNum(r1, metric) : { n: 0, d: 0 };
   const a2 = r2 ? metricNum(r2, metric) : null;
   const a3 = r3 ? metricNum(r3, metric) : null;
 
-  const v1n = useRankCountUp(a1.n, 100, a1.d, true, onTopCountDone);
+  const v1n = useRankCountUp(a1.n, 100, a1.d, !!r1, onTopCountDone);
   const v2n = useRankCountUp(a2?.n ?? 0, 900, a2?.d ?? 0, !!r2);
   const v3n = useRankCountUp(a3?.n ?? 0, 900, a3?.d ?? 0, !!r3);
+
+  if (!r1) return null;
 
   const topRows = [
     r1 ? { rank: 1 as const, row: r1, value: v1n } : null,
@@ -474,7 +493,11 @@ export default function TopPodium({
           const countryCode = getCountryCode(row);
 
           return (
-            <Link key={row.uid} href={`/mobile/u/${row.uid}`} className="block">
+            <Link
+              key={row.uid}
+              href={`${base}/u/${row.handle || row.uid}`}
+              className="block"
+            >
               <motion.div
                 className={[
                   "relative overflow-hidden rounded-t-[10px] rounded-b-[10px] border",
@@ -514,7 +537,7 @@ export default function TopPodium({
                 />
 
                 <div
-                  className="pointer-events-none absolute left-3 right-3 top-0 h-[1px]"
+                  className="pointer-events-none absolute left-3 right-3 top-0 h-px"
                   style={{
                     background:
                       "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0))",
@@ -588,7 +611,13 @@ export default function TopPodium({
                         s.scoreW,
                       ].join(" ")}
                     >
-                      <ScoreText rank={rank} metric={metric} n={Number(value)} row={row} />
+                      <ScoreText
+                        rank={rank}
+                        metric={metric}
+                        n={Number(value)}
+                        row={row}
+                        language={language}
+                      />
                     </div>
                   </div>
 

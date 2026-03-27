@@ -12,6 +12,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { ChevronLeft } from "lucide-react";
 
 /* 一覧と同じタイプ定義（日本語ラベル＋グラデ＋グロー） */
@@ -21,6 +22,14 @@ const TYPE_META: Record<string, { label: string; grad: string; glow: string }> =
   update:      { label: "アップデート", grad: "from-[#9DFF00] to-[#3DFF75]", glow: "shadow-[0_0_22px_rgba(61,255,117,0.35)]" },
   maintenance: { label: "メンテナンス", grad: "from-[#FFC400] to-[#FF7A00]", glow: "shadow-[0_0_22px_rgba(255,122,0,0.35)]" },
   info:        { label: "お知らせ",     grad: "from-[#9CA3AF] to-[#6B7280]", glow: "shadow-[0_0_22px_rgba(156,163,175,0.25)]" },
+};
+
+const TYPE_LABEL_EN: Record<string, string> = {
+  event: "Event",
+  campaign: "Campaign",
+  update: "Update",
+  maintenance: "Maintenance",
+  info: "News",
 };
 
 type Ann = {
@@ -46,6 +55,8 @@ export default function MobileAnnouncementDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { fUser: user, status } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
 
   const [a, setA] = useState<Ann | null>(null);
 
@@ -70,13 +81,17 @@ export default function MobileAnnouncementDetailPage() {
   if (!a) {
     return (
       <div className="min-h-screen bg-[#0B0F17] text-white p-4">
-        <p className="text-center text-white/60">読み込み中...</p>
+        <p className="text-center text-white/60">
+          {isEn ? "Loading..." : "読み込み中..."}
+        </p>
       </div>
     );
   }
 
   const src = (a.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
-  const meta = TYPE_META[a.type ?? "info"];
+  const typeKey = a.type ?? "info";
+  const meta = TYPE_META[typeKey];
+  const typeLabel = isEn ? TYPE_LABEL_EN[typeKey] ?? meta.label : meta.label;
 
   return (
     <div className="relative min-h-screen text-white">
@@ -96,11 +111,11 @@ export default function MobileAnnouncementDetailPage() {
           <button
             onClick={() => router.back()}
             className="p-1 rounded-full bg-white/10 hover:bg-white/15 active:scale-95"
-            aria-label="戻る"
+            aria-label={isEn ? "Back" : "戻る"}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-base font-bold">お知らせ</h1>
+          <h1 className="text-base font-bold">{isEn ? "News" : "お知らせ"}</h1>
         </div>
       </div>
 
@@ -122,7 +137,7 @@ export default function MobileAnnouncementDetailPage() {
           <span
             className={`px-2.5 py-1 rounded-full text-[11px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
           >
-            {meta.label}
+            {typeLabel}
           </span>
           <span className="text-xs text-white/60">{formatDate(a.postedAt)}</span>
         </div>

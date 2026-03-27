@@ -14,20 +14,15 @@ import {
 
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
+import { getDayRangeInTimeZone } from "@/lib/time/zonedTime";
 
 const SEASON = "2025-26";
 
-const jstDayRange = (d: Date) => {
-  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0);
-
-  return {
-    startTs: Timestamp.fromDate(start),
-    endTs: Timestamp.fromDate(end),
-  };
-};
-
-export function useGamesByDate(rawLeague: League, jstDate: Date | null) {
+export function useGamesByDate(
+  rawLeague: League,
+  dayDate: Date | null,
+  timeZone: string
+) {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<string | null>(null);
@@ -35,15 +30,19 @@ export function useGamesByDate(rawLeague: League, jstDate: Date | null) {
   const league = useMemo(() => normalizeLeague(rawLeague), [rawLeague]);
 
   const range = useMemo(() => {
-    if (!jstDate) return null;
-    return jstDayRange(jstDate);
-  }, [jstDate]);
+    if (!dayDate) return null;
+    const { start, end } = getDayRangeInTimeZone(dayDate, timeZone);
+    return {
+      startTs: Timestamp.fromDate(start),
+      endTs: Timestamp.fromDate(end),
+    };
+  }, [dayDate, timeZone]);
 
   useEffect(() => {
     let alive = true;
 
     async function load() {
-      if (!jstDate || !range) {
+      if (!dayDate || !range) {
         if (!alive) return;
         setErr(null);
         setLoading(true);
@@ -89,7 +88,7 @@ export function useGamesByDate(rawLeague: League, jstDate: Date | null) {
     return () => {
       alive = false;
     };
-  }, [league, jstDate, range]);
+  }, [league, dayDate, range]);
 
   return { loading, error, games };
 }

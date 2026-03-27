@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, Flame } from "lucide-react";
+import { Menu, Flame, Loader2 } from "lucide-react";
 
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 import Tabs from "./ui/Tabs";
 import PeriodToggle from "./ui/PeriodToggle";
 import SummaryCardsV2 from "./ui/SummaryCardsV2";
-
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
 
@@ -31,19 +30,27 @@ import {
 } from "@/lib/profile/useProfileBadges";
 import { useProfileDailyTrend } from "@/lib/profile/useProfileDailyTrend";
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
-  const { profile, tab, setTab, range, setRange, summary, targetUid } = props;
+  const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
+    props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const isTargetGuestProfile = !targetUid;
+
+  const { language } = useUserLanguage(resolvedUid);
 
   const displayProfile = isTargetGuestProfile
     ? {
         ...profile,
         displayName: "Guest User",
         handle: "@guest",
-        bio: "ログインするとプロフィールを作成できます",
+        bio:
+          language === "en"
+            ? "Log in to create your profile."
+            : "ログインするとプロフィールを作成できます",
         counts: { followers: 0, following: 0 },
         currentStreak: 0,
         maxStreak: 0,
@@ -94,7 +101,17 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
 
   const periodLabel =
-    range === "7d" ? "7日" : range === "30d" ? "30日" : "All";
+    range === "7d"
+      ? language === "en"
+        ? "Last 7 days"
+        : "7日"
+      : range === "30d"
+      ? language === "en"
+        ? "Last 30 days"
+        : "30日"
+      : language === "en"
+      ? "All"
+      : "All";
 
   const maxStreak = (displayProfile as any)?.maxStreak ?? 0;
   const currentStreak = Math.max(
@@ -108,7 +125,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-4 py-6 text-white">
+    <div className="mx-auto w-full max-w-[1200px] px-4 py-6 pb-bottom-nav text-white">
       <div className="min-h-[180px] rounded-2xl border border-white/10 bg-[#050814]/80 p-10 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
         <div className="grid grid-cols-[96px_1fr_auto] items-start gap-6">
           <div className="relative">
@@ -124,9 +141,12 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
             {showCurrentStreakBadge && (
               <div className="absolute left-1/2 -bottom-2 -translate-x-1/2">
-                <div className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-yellow-300 backdrop-blur">
+                <div className="inline-flex whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-yellow-300 shadow-[0_8px_18px_rgba(0,0,0,0.45)] backdrop-blur">
                   <Flame className="h-3.5 w-3.5 text-orange-400" />
-                  {currentStreak}連勝
+                  <span className="ml-1 tabular-nums">{currentStreak}</span>
+                  <span className="ml-1">
+                    {language === "en" ? "Win streak" : "連勝中"}
+                  </span>
                 </div>
               </div>
             )}
@@ -175,22 +195,36 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       <div className="mt-6 flex items-center justify-between">
         <Tabs value={tab} onChange={setTab} size="lg" />
         {tab === "overview" && (
-          <PeriodToggle value={range} onChange={setRange} />
+          <PeriodToggle value={range} onChange={setRange} language={language} />
         )}
       </div>
 
       <div className="mt-6">
         {tab === "overview" ? (
           <>
+            {statsLoading ? (
+              <div
+                className="flex min-h-[200px] items-center justify-center py-12"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2
+                  className="h-9 w-9 animate-spin text-white/45"
+                  aria-hidden
+                />
+              </div>
+            ) : (
+              <>
             {currentIsProView ? (
               <>
                 <div className="grid grid-cols-3 gap-3">
-                  <AnalysisWinCard posts={posts} wins={wins} />
-                  <MaxStreakCard compact maxStreak={maxStreak} />
+                  <AnalysisWinCard posts={posts} wins={wins} language={language} />
+                  <MaxStreakCard compact maxStreak={maxStreak} language={language} />
                   <ScorePrecisionCard
                     compact
                     scorePrecisionSum={summary?.scorePrecisionSum ?? 0}
                     analyses={posts}
+                    language={language}
                   />
                 </div>
 
@@ -201,12 +235,14 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                     analyses={posts}
                     upsetChanceCount={upsetChanceCount}
                     upsetHitCount={upsetHitCount}
+                    language={language}
                   />
                   <TotalScoreCard
                     compact
                     periodLabel={periodLabel}
                     totalPoints={totalPoints}
                     analyses={posts}
+                    language={language}
                   />
                 </div>
               </>
@@ -214,8 +250,10 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               <SummaryCardsV2
                 compact
                 period={range}
+                language={language}
                 data={{
                   fullPosts: summary?.fullPosts ?? 0,
+                  recent3Posts: summary?.recent3Posts ?? 0,
                   posts,
                   wins,
                   winRate: summary?.winRate ?? 0,
@@ -226,6 +264,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                 }}
               />
             )}
+              </>
+            )}
 
             {!dailyTrendLoading && (
               <div className="mt-6">
@@ -233,6 +273,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   data={chartData}
                   range={range}
                   allowAll={currentIsProView}
+                  language={language}
                 />
               </div>
             )}
@@ -240,7 +281,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         ) : tab === "bracket" ? (
           isTargetGuestProfile ? (
             <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
-              ゲストは不可
+              {language === "en"
+                ? "Guests can't view the bracket."
+                : "ゲストは不可"}
             </div>
           ) : playoffBracketLoading ? (
             <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
@@ -248,7 +291,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             </div>
           ) : !playoffDisplayData ? (
             <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
-              未提出
+              {language === "en" ? "Not submitted" : "未提出"}
             </div>
           ) : (
             <PlayoffFullBracketWeb
@@ -267,7 +310,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           <ProAnalysis />
         ) : (
           <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
-            対象ユーザーはPro未加入
+            {language === "en"
+              ? "This user isn't on the Pro plan."
+              : "対象ユーザーはPro未加入"}
           </div>
         )}
       </div>

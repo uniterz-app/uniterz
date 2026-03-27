@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { Language } from "@/lib/i18n/language";
 
 const alfa = Alfa_Slab_One({
   weight: "400",
@@ -16,6 +17,7 @@ type Props = {
   hitAnalyses?: number;
   posts?: number;
   wins?: number;
+  language?: Language;
 };
 
 function ArcProgress({
@@ -62,7 +64,13 @@ function ArcProgress({
   );
 }
 
-export default function AnalysisWinCard(props: Props) {
+export default function AnalysisWinCard({ language = "ja", ...props }: Props) {
+  const isEn = language === "en";
+
+  const hitLabel = isEn ? "Correct Picks" : "的中";
+  const totalLabel = isEn ? "Total Picks" : "確定";
+  const winRateLabel = isEn ? "Win Rate" : "勝率";
+
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -120,7 +128,7 @@ export default function AnalysisWinCard(props: Props) {
 
       <div className="flex items-center justify-between gap-4 md:gap-10">
         <div className="flex flex-col items-center">
-          <div className="text-[10px] md:text-[16px] text-white/60">的中</div>
+          <div className="text-[10px] md:text-[16px] text-white/60">{hitLabel}</div>
 
           <div
             className={`${alfa.className} text-xl md:text-4xl font-bold text-white`}
@@ -136,7 +144,7 @@ export default function AnalysisWinCard(props: Props) {
             {cuTotal}
           </div>
 
-          <div className="text-[10px] md:text-[16px] text-white/40">確定</div>
+          <div className="text-[10px] md:text-[16px] text-white/40">{totalLabel}</div>
         </div>
 
         <div className="relative flex items-center justify-center">
@@ -154,7 +162,7 @@ export default function AnalysisWinCard(props: Props) {
               {cuRate}%
             </div>
 
-            <div className="text-[10px] md:text-[14px] text-white/50">勝率</div>
+            <div className="text-[10px] md:text-[14px] text-white/50">{winRateLabel}</div>
           </div>
         </div>
       </div>

@@ -14,6 +14,7 @@ import { toMatchCardProps } from "@/lib/games/transform";
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
@@ -29,6 +30,8 @@ export default function Page() {
   const gameId = String(id);
 
   const { fUser } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
+  const isEn = language === "en";
   const uid = fUser?.uid ?? null;
 
   const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
@@ -107,7 +110,7 @@ export default function Page() {
     text-gray-500
     active:scale-95 transition-transform
   "
-  aria-label="戻る"
+  aria-label={isEn ? "Back" : "戻る"}
 >
   <ArrowLeft size={28} />
 </button>
@@ -144,7 +147,7 @@ export default function Page() {
       shadow-xl
       active:scale-90 transition-transform
     "
-    aria-label="分析する"
+    aria-label={isEn ? "Predict" : "分析する"}
   >
     <Pencil size={22} strokeWidth={3} />
   </button>

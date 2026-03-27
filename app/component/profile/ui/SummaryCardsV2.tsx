@@ -13,6 +13,7 @@ import { Alfa_Slab_One } from "next/font/google";
 
 import Tooltip from "@/app/component/common/Tooltip";
 import { useCountUp } from "@/lib/hooks/useCountUp";
+import type { Language } from "@/lib/i18n/language";
 
 import {
   evaluateWinRateV2,
@@ -27,6 +28,7 @@ const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 export type SummaryDataV2 = {
   posts: number;
   fullPosts: number;
+  recent3Posts: number;
   winRate: number;
   wins: number;
   scorePrecisionSum: number;
@@ -39,19 +41,18 @@ type Props = {
   data: SummaryDataV2;
   compact?: boolean;
   period: "7d" | "30d" | "all";
+  language?: Language;
 };
 
-const MIN_POSTS = {
-  "7d": 4,
-  "30d": 10,
-  all: 20,
-} as const;
+const MIN_RECENT3_POSTS = 4;
 
 export default function SummaryCardsV2({
   data,
   compact = false,
   period,
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const [tooltip, setTooltip] = useState<{
     rect: DOMRect | null;
     message: string;
@@ -77,36 +78,57 @@ export default function SummaryCardsV2({
   const scorePrecisionSumCount = useCountUp(
     scorePrecisionSumValue,
     700,
-    shouldAnimate
+    shouldAnimate,
+    1
   );
   const scorePrecisionSumText = scorePrecisionSumCount.toFixed(1);
 
-  const upsetPointsValue = Math.max(0, Math.round(data.upsetPointsSum || 0));
-  const upsetPointsCount = useCountUp(upsetPointsValue, 700, shouldAnimate);
-  const upsetPointsText = `${upsetPointsCount}`;
+  const upsetPointsValue = Math.max(
+    0,
+    Number((data.upsetPointsSum ?? 0).toFixed(1))
+  );
+  const upsetPointsCount = useCountUp(
+    upsetPointsValue,
+    700,
+    shouldAnimate,
+    1
+  );
+  const upsetPointsText = upsetPointsCount.toFixed(1);
 
   const maxStreakValue = Math.max(0, Math.round(data.maxStreak || 0));
   const maxStreakCount = useCountUp(maxStreakValue, 700, shouldAnimate);
   const maxStreakText = `${maxStreakCount}`;
 
-  const totalPointsValue = Math.max(0, Math.round(data.pointsSumV3 || 0));
-  const totalPointsCount = useCountUp(totalPointsValue, 700, shouldAnimate);
-  const totalPointsText = `${totalPointsCount}`;
+  const totalPointsValue = Math.max(
+    0,
+    Number((data.pointsSumV3 ?? 0).toFixed(1))
+  );
+  const totalPointsCount = useCountUp(
+    totalPointsValue,
+    700,
+    shouldAnimate,
+    1
+  );
+  const totalPointsText = totalPointsCount.toFixed(1);
 
-  const min = MIN_POSTS[period];
-  const enoughPosts = data.fullPosts >= min;
+  const enoughPosts = (data.recent3Posts ?? 0) >= MIN_RECENT3_POSTS;
 
   const NONE: HighlightV2 = { level: "none" };
 
-  const hWin = enoughPosts ? evaluateWinRateV2(data.winRate ?? 0) : NONE;
-  const hPrecision = enoughPosts
+  const hWinRaw = enoughPosts ? evaluateWinRateV2(data.winRate ?? 0) : NONE;
+  const hWin = hWinRaw.level === "none" ? hWinRaw : { level: "yellow" as const };
+  const hPrecisionRaw = enoughPosts
     ? evaluateScorePrecisionSumV2(data.scorePrecisionSum ?? 0, period)
     : NONE;
+  const hPrecision =
+    hPrecisionRaw.level === "none" ? hPrecisionRaw : { level: "yellow" as const };
   const hUpset = NONE;
   const hStreak = evaluateMaxStreakV2(data.maxStreak ?? 0);
-  const hTotal = enoughPosts
+  const hTotalRaw = enoughPosts
     ? evaluatePointsSumV3V2(data.pointsSumV3 ?? 0, period)
     : NONE;
+  const hTotal =
+    hTotalRaw.level === "none" ? hTotalRaw : { level: "yellow" as const };
 
   const padCls = compact ? "p-2 md:p-3" : "p-4";
   const gapCls = compact ? "gap-2" : "gap-3";
@@ -125,14 +147,16 @@ export default function SummaryCardsV2({
   const ScorePrecisionLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        点差精度
+        {isEn ? "Score Precision" : "スコア精度"}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
+              isEn
+                ? "Evaluate how close your predicted score is to the actual score on a 0–10 scale, then sum it within the selected period (higher is better)."
+                : "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
             )
           }
         >
@@ -140,20 +164,22 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    []
+    [isEn]
   );
 
   const UpsetPointsLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        アップセット得点
+        {isEn ? "Upset Points" : "アップセット得点"}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
+              isEn
+                ? "Upset Points are awarded only when you correctly predict an upset (0–10 per match). This is the total within the selected period."
+                : "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
             )
           }
         >
@@ -161,20 +187,22 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    []
+    [isEn]
   );
 
   const MaxStreakLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        最大連勝
+        {isEn ? "Max Win Streak" : "最大連勝"}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              "この期間内で記録した最長の連勝数です。"
+              isEn
+                ? "The longest win streak you recorded within this period."
+                : "この期間内で記録した最長の連勝数です。"
             )
           }
         >
@@ -182,20 +210,22 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    []
+    [isEn]
   );
 
   const TotalPointsLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        総合得点
+        {isEn ? "Total Points" : "総合得点"}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
+              isEn
+                ? "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
+                : "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
             )
           }
         >
@@ -203,7 +233,7 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    []
+    [isEn]
   );
 
   if (isMobile) {
@@ -212,7 +242,7 @@ export default function SummaryCardsV2({
         <div className={`mt-6 grid grid-cols-2 ${gapCls}`}>
           <Card
             icon={<BarChartHorizontal size={iconSize} />}
-            label="投稿数"
+            label={isEn ? "Posts" : "投稿数"}
             value={postsText}
             padCls={padCls}
             labelCls={labelCls}
@@ -221,7 +251,7 @@ export default function SummaryCardsV2({
 
           <Card
             icon={<Trophy size={iconSize} />}
-            label="勝率"
+            label={isEn ? "Win Rate" : "勝率"}
             value={winRatePct}
             padCls={padCls}
             labelCls={labelCls}
@@ -285,7 +315,7 @@ export default function SummaryCardsV2({
     <>
       <div className={`mt-6 grid grid-cols-6 ${gapCls}`}>
         <Card
-          label="投稿数"
+          label={isEn ? "Posts" : "投稿数"}
           value={postsText}
           padCls={padCls}
           labelCls={labelCls}
@@ -293,7 +323,7 @@ export default function SummaryCardsV2({
         />
 
         <Card
-          label="勝率"
+          label={isEn ? "Win Rate" : "勝率"}
           value={winRatePct}
           padCls={padCls}
           labelCls={labelCls}

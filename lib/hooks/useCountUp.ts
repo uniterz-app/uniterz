@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 export function useCountUp(
   target: number,
   duration = 600,
-  enabled = true
+  enabled = true,
+  decimals = 0
 ) {
   const [value, setValue] = useState(0);
 
@@ -14,11 +15,12 @@ export function useCountUp(
     }
 
     const startTime = performance.now();
+    const p = Math.pow(10, decimals);
 
     const tick = (now: number) => {
       const progress = Math.min((now - startTime) / duration, 1);
-      const next = Math.round(target * progress);
-      setValue(next);
+      const next = target * progress;
+      setValue(Math.round(next * p) / p);
 
       if (progress < 1) {
         requestAnimationFrame(tick);
@@ -26,7 +28,7 @@ export function useCountUp(
     };
 
     requestAnimationFrame(tick);
-  }, [target, duration, enabled]);
+  }, [target, duration, enabled, decimals]);
 
   return value;
 }

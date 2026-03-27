@@ -10,6 +10,8 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import MatchCard, { type MatchCardProps } from "./MatchCard";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 export type GameItemRaw = any;
 
@@ -80,6 +82,9 @@ export default function ScheduleList({
   const pathname = usePathname();
   const isMobile =
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const scrollYRef = useRef(0);
@@ -404,7 +409,7 @@ export default function ScheduleList({
           />
 
           <div
-            className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto"
+            className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehaviorY: "contain",
@@ -466,7 +471,7 @@ export default function ScheduleList({
               >
                 <button
                   type="button"
-                  aria-label="閉じる"
+                  aria-label={isEn ? "Close" : "閉じる"}
                   className={[
                     "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55",
                     standingsOpenInOverlay

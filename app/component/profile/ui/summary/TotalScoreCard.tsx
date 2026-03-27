@@ -11,6 +11,7 @@ import { Crown } from "lucide-react";
 import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
+import type { Language } from "@/lib/i18n/language";
 
 const alfa = Alfa_Slab_One({
   weight: "400",
@@ -26,6 +27,7 @@ type Props = {
   periodLabel?: string;
   compact?: boolean;
   className?: string;
+  language?: Language;
 };
 
 const TOTAL_SCORE_TOOLTIP =
@@ -89,7 +91,9 @@ export default function TotalScoreCard({
   periodLabel,
   compact = true,
   className = "",
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
   const [pieProgress, setPieProgress] = useState(0);
@@ -146,17 +150,21 @@ export default function TotalScoreCard({
     setTooltip({ rect, message });
   }
 
-  const total = Math.max(0, Math.round(totalPoints || 0));
-  const base = Math.max(0, Math.round(basePoints || 0));
-  const upset = Math.max(0, Math.round(upsetBonusPoints || 0));
-  const streak = Math.max(0, Math.round(streakBonusPoints || 0));
+  const total = Math.max(0, totalPoints ?? 0);
+  const base = Math.max(0, basePoints ?? 0);
+  const upset = Math.max(0, upsetBonusPoints ?? 0);
+  const streak = Math.max(0, streakBonusPoints ?? 0);
 
-  const totalCu = useCountUp(total, 1000, inView);
-  const baseCu = useCountUp(base, 1000, inView);
-  const upsetCu = useCountUp(upset, 1000, inView);
-  const streakCu = useCountUp(streak, 1000, inView);
+  const totalCu = useCountUp(total, 1000, inView, 1);
+  const baseCu = useCountUp(base, 1000, inView, 1);
+  const upsetCu = useCountUp(upset, 1000, inView, 1);
+  const streakCu = useCountUp(streak, 1000, inView, 1);
 
   const avg = analyses > 0 ? (totalPoints / analyses).toFixed(1) : "0";
+
+  const tooltipMsg = isEn
+    ? "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
+    : TOTAL_SCORE_TOOLTIP;
 
   const slices = useMemo(() => {
     const sum = Math.max(total, 1);
@@ -206,13 +214,13 @@ export default function TotalScoreCard({
             <Crown className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
           </div>
 
-          <span>総合得点</span>
+          <span>{isEn ? "Total Points" : "総合得点"}</span>
 
           <button
             type="button"
             className="ml-1 text-[11px] md:text-[16px] text-white/60 hover:text-white/80"
-            onClick={(e) => openTooltip(e, TOTAL_SCORE_TOOLTIP)}
-            aria-label="総合得点の説明"
+            onClick={(e) => openTooltip(e, tooltipMsg)}
+            aria-label={isEn ? "Total Points description" : "総合得点の説明"}
           >
             ⓘ
           </button>
@@ -228,7 +236,7 @@ export default function TotalScoreCard({
                 "font-bold text-white leading-none tabular-nums",
               ].join(" ")}
             >
-              {totalCu}
+              {totalCu.toFixed(1)}
               <span className="ml-2 text-sm md:text-xl text-white/70">pts</span>
             </div>
 
@@ -281,10 +289,10 @@ export default function TotalScoreCard({
           <div className="min-w-0 space-y-2.5 md:space-y-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] md:text-[14px] text-white/55">
-                基本点
+                {isEn ? "Base Points" : "基本点"}
               </span>
               <span className="tabular-nums text-[14px] md:text-[22px] font-bold text-white">
-                {baseCu}
+                {baseCu.toFixed(1)}
               </span>
             </div>
 
@@ -293,16 +301,16 @@ export default function TotalScoreCard({
                 Upset Bonus
               </span>
               <span className="tabular-nums text-[14px] md:text-[22px] font-bold text-orange-300">
-                {upsetCu}
+                {upsetCu.toFixed(1)}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] md:text-[14px] text-white/55">
-                連勝ボーナス
+                {isEn ? "Win Streak Bonus" : "連勝ボーナス"}
               </span>
               <span className="tabular-nums text-[14px] md:text-[22px] font-bold text-yellow-300">
-                {streakCu}
+                {streakCu.toFixed(1)}
               </span>
             </div>
           </div>

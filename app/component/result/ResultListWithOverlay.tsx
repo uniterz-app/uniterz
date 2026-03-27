@@ -6,6 +6,7 @@ import { LayoutGroup, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import type { Language } from "@/lib/i18n/language";
 
 import ResultCard from "@/app/component/result/ResultCard";
 import ResultDetail from "@/app/component/result/ResultDetail";
@@ -36,6 +37,7 @@ type Props = {
   loading: boolean;
   hasMore: boolean;
   sentinelRef: React.RefObject<HTMLDivElement | null>;
+  language: Language;
 };
 
 export default function ResultListWithOverlay({
@@ -43,6 +45,7 @@ export default function ResultListWithOverlay({
   loading,
   hasMore,
   sentinelRef,
+  language,
 }: Props) {
   const [openPostId, setOpenPostId] = useState<string | null>(null);
   const [market, setMarket] = useState<MarketData | null>(null);
@@ -171,7 +174,7 @@ export default function ResultListWithOverlay({
                         className={isOpen ? "pointer-events-none opacity-0" : ""}
                         aria-hidden={isOpen}
                       >
-                        <ResultCard post={post} onOpen={open} />
+                        <ResultCard post={post} onOpen={open} language={language} />
                       </div>
                     );
                   })}
@@ -188,7 +191,7 @@ export default function ResultListWithOverlay({
                         className={isOpen ? "pointer-events-none opacity-0" : ""}
                         aria-hidden={isOpen}
                       >
-                        <ResultCard post={post} onOpen={open} />
+                        <ResultCard post={post} onOpen={open} language={language} />
                       </div>
                     );
                   })}
@@ -211,7 +214,7 @@ export default function ResultListWithOverlay({
           grouped.reduce((a, d) => a + d.pending.length + d.final.length, 0) >
             0 && (
           <div className="py-6 text-center text-white/40 text-sm">
-            これ以上ありません
+            {language === "en" ? "No more posts" : "これ以上ありません"}
           </div>
         )}
       </motion.div>
@@ -236,7 +239,7 @@ export default function ResultListWithOverlay({
           />
 
           <div
-            className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto"
+            className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
             style={{
               WebkitOverflowScrolling: "touch",
               overscrollBehaviorY: "contain",
@@ -274,7 +277,7 @@ export default function ResultListWithOverlay({
               >
                 <button
                   type="button"
-                  aria-label="閉じる"
+                  aria-label={language === "en" ? "Close" : "閉じる"}
                   className="absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -285,9 +288,17 @@ export default function ResultListWithOverlay({
                 </button>
 
                 {isMobile ? (
-                  <MobileResultDetail post={selectedPost} market={market ?? undefined} />
+                  <MobileResultDetail
+                    post={selectedPost}
+                    market={market ?? undefined}
+                    language={language}
+                  />
                 ) : (
-                  <ResultDetail post={selectedPost} market={market ?? undefined} />
+                  <ResultDetail
+                    post={selectedPost}
+                    market={market ?? undefined}
+                    language={language}
+                  />
                 )}
               </motion.div>
             </div>

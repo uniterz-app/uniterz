@@ -6,6 +6,7 @@ import { nameBebas } from "@/lib/fonts";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
+import type { Language } from "@/lib/i18n/language";
 
 type MarketCountMap = Record<string, number>;
 
@@ -20,6 +21,7 @@ type Props = {
   season: string;
   teamProgressMarkets: TeamProgressMap;
   totalEntries: number;
+  language?: Language;
 };
 
 type TeamRow = {
@@ -74,12 +76,25 @@ function getBestMetricLabel(row: {
   cf: number;
   finals: number;
   champion: number;
-}) {
+}, language: Language) {
+  const isEn = language === "en";
   const items = [
-    { label: "2回戦進出", pct: row.r2, priority: 0 },
-    { label: "CF進出", pct: row.cf, priority: 1 },
+    {
+      label: isEn ? "R2" : "2回戦進出",
+      pct: row.r2,
+      priority: 0,
+    },
+    {
+      label: isEn ? "CF" : "CF進出",
+      pct: row.cf,
+      priority: 1,
+    },
     { label: "Finals", pct: row.finals, priority: 2 },
-    { label: "優勝", pct: row.champion, priority: 3 },
+    {
+      label: isEn ? "Champion" : "優勝",
+      pct: row.champion,
+      priority: 3,
+    },
   ].sort((a, b) => {
     if (b.pct !== a.pct) return b.pct - a.pct;
     return b.priority - a.priority;
@@ -92,18 +107,21 @@ function TeamProgressDetails({
   row,
   color,
   open,
+  language,
 }: {
   row: TeamRow;
   color: string;
   open: boolean;
+  language: Language;
 }) {
   const [animateBars, setAnimateBars] = useState(false);
+  const isEn = language === "en";
 
   const items = [
-    { label: "2回戦進出", pct: row.r2 },
-    { label: "CF進出", pct: row.cf },
+    { label: isEn ? "R2" : "2回戦進出", pct: row.r2 },
+    { label: isEn ? "CF" : "CF進出", pct: row.cf },
     { label: "Finals", pct: row.finals },
-    { label: "優勝", pct: row.champion },
+    { label: isEn ? "Champion" : "優勝", pct: row.champion },
   ];
 
   useEffect(() => {
@@ -154,7 +172,13 @@ function TeamProgressDetails({
   );
 }
 
-function TeamCard({ row }: { row: TeamRow }) {
+function TeamCard({
+  row,
+  language,
+}: {
+  row: TeamRow;
+  language: Language;
+}) {
   const [open, setOpen] = useState(false);
   const color = row.color;
 
@@ -200,7 +224,14 @@ function TeamCard({ row }: { row: TeamRow }) {
         </button>
       </div>
 
-      {open && <TeamProgressDetails row={row} color={color} open={open} />}
+      {open && (
+        <TeamProgressDetails
+          row={row}
+          color={color}
+          open={open}
+          language={language}
+        />
+      )}
     </div>
   );
 }
@@ -222,7 +253,9 @@ export default function PlayoffBracketTeamProgressMarket({
   season,
   teamProgressMarkets,
   totalEntries,
+  language = "ja",
 }: Props) {
+  const isEn = language === "en";
   const { eastCodes, westCodes, seedByTeam } = useMemo(() => {
     const config = getPlayoffBracketConfig(season);
 
@@ -268,7 +301,7 @@ export default function PlayoffBracketTeamProgressMarket({
           ),
         };
 
-        const best = getBestMetricLabel(rowBase);
+        const best = getBestMetricLabel(rowBase, language);
 
         return {
           code,
@@ -297,7 +330,7 @@ export default function PlayoffBracketTeamProgressMarket({
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-        データがありません
+        {language === "en" ? "No data available" : "データがありません"}
       </div>
     );
   }
@@ -308,7 +341,7 @@ export default function PlayoffBracketTeamProgressMarket({
         <ConferenceHeader title="EASTERN CONFERENCE" />
         <div className="grid grid-cols-2 gap-3 md:gap-4">
           {eastRows.map((row) => (
-            <TeamCard key={row.code} row={row} />
+            <TeamCard key={row.code} row={row} language={language} />
           ))}
         </div>
       </section>
@@ -317,7 +350,7 @@ export default function PlayoffBracketTeamProgressMarket({
         <ConferenceHeader title="WESTERN CONFERENCE" />
         <div className="grid grid-cols-2 gap-3 md:gap-4">
           {westRows.map((row) => (
-            <TeamCard key={row.code} row={row} />
+            <TeamCard key={row.code} row={row} language={language} />
           ))}
         </div>
       </section>

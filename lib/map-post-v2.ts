@@ -103,7 +103,6 @@ if (!id) { id = "(invalid)"; }
 
     prediction: {
       winner: d?.prediction?.winner ?? "home",
-      confidence: d?.prediction?.confidence ?? 50,
       score: {
         home: d?.prediction?.score?.home ?? 0,
         away: d?.prediction?.score?.away ?? 0,

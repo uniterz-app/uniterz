@@ -4,12 +4,15 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import LoginForm from "@/app/component/auth/LoginForm";
 import AuthBackdrop from "@/app/component/auth/AuthBackdrop";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function MobileLoginPage() {
   const { status, fUser } = useFirebaseUser();
+  const router = useRouter();
   const [handle, setHandle] = useState<string | null>(null);
+  const [language, setLanguage] = useState<string | null>(null);
 
   /* ------------------------------------
    * ① ログイン済みなら handle を読み込む
@@ -21,10 +24,21 @@ export default function MobileLoginPage() {
       const snap = await getDoc(doc(db, "users", fUser.uid));
       const h = snap.data()?.handle || snap.data()?.slug;
       setHandle(h || null);
+      const lang = snap.data()?.language;
+      setLanguage(lang === "ja" || lang === "en" ? lang : null);
     };
 
     loadHandle();
   }, [fUser]);
+
+  useEffect(() => {
+    if (status !== "ready" || !fUser) return;
+    if (handle && language) {
+      router.replace(`/mobile/u/${encodeURIComponent(handle)}`);
+      return;
+    }
+    router.replace("/mobile/onboarding");
+  }, [status, fUser, handle, language, router]);
 
   /* ------------------------------------
    * ② 画面を絶対に出さない条件

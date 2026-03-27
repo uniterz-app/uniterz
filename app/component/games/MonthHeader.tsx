@@ -9,6 +9,8 @@ type Props = {
   onNext: () => void;
   onCenterClick?: () => void;
   className?: string;
+  timeZone: string;
+  isEn: boolean;
 };
 
 export default function MonthHeader({
@@ -17,6 +19,8 @@ export default function MonthHeader({
   onNext,
   onCenterClick,
   className,
+  timeZone,
+  isEn,
 }: Props) {
   if (!month) {
     return (
@@ -28,8 +32,21 @@ export default function MonthHeader({
     );
   }
 
-  const y = month.getFullYear();
-  const m = month.getMonth() + 1;
+  const y = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric" }).format(month)
+  );
+  const m = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone, month: "2-digit" }).format(month)
+  );
+
+  const enMonthLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "short",
+    year: "numeric",
+  }).format(month);
+
+  // Fallback for Japanese label; still roughly correct even if the local TZ differs.
+  const jaLabel = `${y}年 ${m}月`;
 
   return (
     <div className={`flex items-center justify-between ${className ?? ""}`}>
@@ -46,7 +63,7 @@ export default function MonthHeader({
         onClick={onCenterClick}
         className="text-lg font-bold text-white transition hover:text-white/85"
       >
-        {`${y}年 ${m}月`}
+        {isEn ? enMonthLabel : jaLabel}
       </button>
 
       <button

@@ -10,12 +10,13 @@ export type MobileMetric =
 export const METRICS: { key: MobileMetric; label: string }[] = [
   { key: "totalScore", label: "総合スコア" },
   { key: "winRate", label: "勝率" },
-  { key: "marginPrecision", label: "点差精度" },
+  { key: "marginPrecision", label: "スコア精度" },
   { key: "upsetScore", label: "アップセットスコア" },
   { key: "streak", label: "連勝" },
 ];
 
-export type CountryCode = "US" | "CN" | "JP";
+// Firestore に保存された countryCode は将来的に増えるため、ここでは汎用stringで扱います。
+export type CountryCode = string;
 
 export type RankingRowWithCountry = RankingRow & {
   countryCode?: CountryCode;
@@ -52,7 +53,7 @@ const USERS: RankingRowWithCountry[] = Array.from({ length: 20 }).map((_, i) => 
 
     streak: Math.max(1, 6 - Math.floor(i / 3)),
 
-    countryCode: (["US", "CN", "JP"] as CountryCode[])[i % 3],
+    countryCode: (["US", "CN", "JP"] as string[])[i % 3],
   };
 });
 

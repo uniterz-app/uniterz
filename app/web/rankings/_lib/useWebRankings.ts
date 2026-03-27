@@ -8,7 +8,6 @@ import type {
 } from "@/app/component/rankings/_data/mockRows";
 import {
   METRICS,
-  MOCK_ROWS,
 } from "@/app/component/rankings/_data/mockRows";
 import { toMobileRows } from "@/lib/rankings/rankingTransform";
 
@@ -40,10 +39,6 @@ function withCountryFallback(rows: WebRankingRow[]): WebRankingRow[] {
   }));
 }
 
-function toMockRows(metric: MobileMetric): WebRankingRow[] {
-  return withCountryFallback(MOCK_ROWS[metric] ?? []);
-}
-
 function mergeRowsWithMeta(
   metric: MobileMetric,
   rawRows: any[]
@@ -64,7 +59,7 @@ function mergeRowsWithMeta(
   );
 }
 
-export function useWebRankings(useMock = false) {
+export function useWebRankings() {
   const visibleMetrics = useMemo(
     () => METRICS.filter((m) => AVAILABLE_METRICS.includes(m.key)),
     []
@@ -97,19 +92,6 @@ export function useWebRankings(useMock = false) {
       setLoading(true);
 
       try {
-        if (useMock) {
-          const next: Record<MobileMetric, WebRankingRow[]> = {
-            totalScore: toMockRows("totalScore"),
-            winRate: toMockRows("winRate"),
-            marginPrecision: toMockRows("marginPrecision"),
-            upsetScore: toMockRows("upsetScore"),
-            streak: toMockRows("streak"),
-          };
-
-          if (!cancelled) setRowsMap(next);
-          return;
-        }
-
         const res = await fetch("/api/cumulative-ranking/bulk", {
           method: "GET",
           cache: "no-store",
@@ -147,21 +129,13 @@ export function useWebRankings(useMock = false) {
         });
       } catch {
         if (cancelled) return;
-
-        setRowsMap((prev) => ({
-          ...prev,
-          totalScore: prev.totalScore.length
-            ? prev.totalScore
-            : toMockRows("totalScore"),
-          marginPrecision: prev.marginPrecision.length
-            ? prev.marginPrecision
-            : toMockRows("marginPrecision"),
-          upsetScore: prev.upsetScore.length
-            ? prev.upsetScore
-            : toMockRows("upsetScore"),
-          streak: prev.streak.length ? prev.streak : toMockRows("streak"),
-          winRate: prev.winRate.length ? prev.winRate : toMockRows("winRate"),
-        }));
+        setRowsMap({
+          totalScore: [],
+          winRate: [],
+          marginPrecision: [],
+          upsetScore: [],
+          streak: [],
+        });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -172,7 +146,7 @@ export function useWebRankings(useMock = false) {
     return () => {
       cancelled = true;
     };
-  }, [useMock]);
+  }, []);
 
   const rows = rowsMap[metric] ?? [];
   const top3 = rows.slice(0, 3);

@@ -2,26 +2,30 @@
 
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import { jp } from "@/lib/fonts";
+import type { Language } from "@/lib/i18n/language";
+import { metricLabel, upsetShortLabel } from "@/lib/i18n/rankings";
 
 type Props = {
   metrics: { key: MobileMetric; label: string }[];
   metric: MobileMetric;
   setMetric: (v: MobileMetric) => void;
+  language?: Language;
 };
 
 function wrapIndex(index: number, length: number) {
   return (index + length) % length;
 }
 
-function formatLabel(key: MobileMetric, label: string) {
-  if (key === "upsetScore") return "Upset";
-  return label;
+function formatLabel(key: MobileMetric, lang: Language, label: string) {
+  if (key === "upsetScore") return upsetShortLabel(lang);
+  return lang === "en" ? metricLabel(key, lang) : label;
 }
 
 export default function RankingsMetricRow({
   metrics,
   metric,
   setMetric,
+  language = "ja",
 }: Props) {
   const currentIndex = metrics.findIndex((m) => m.key === metric);
 
@@ -55,7 +59,7 @@ export default function RankingsMetricRow({
             }}
           >
             <span className="truncate">
-              {formatLabel(prevMetric.key, prevMetric.label)}
+              {formatLabel(prevMetric.key, language, prevMetric.label)}
             </span>
           </button>
         )}
@@ -78,7 +82,7 @@ export default function RankingsMetricRow({
           }}
         >
           <span className="truncate">
-            {formatLabel(currentMetric?.key, currentMetric?.label)}
+            {formatLabel(currentMetric?.key, language, currentMetric?.label)}
           </span>
         </button>
 
@@ -102,7 +106,7 @@ export default function RankingsMetricRow({
             }}
           >
             <span className="truncate">
-              {formatLabel(nextMetric.key, nextMetric.label)}
+              {formatLabel(nextMetric.key, language, nextMetric.label)}
             </span>
           </button>
         )}

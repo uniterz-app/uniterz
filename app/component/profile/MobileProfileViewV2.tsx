@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Menu, Flame } from "lucide-react";
+import { Menu, Flame, Loader2 } from "lucide-react";
 
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 import Tabs from "./ui/Tabs";
 import PeriodToggle from "./ui/PeriodToggle";
 import SummaryCardsV2 from "./ui/SummaryCardsV2";
-
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/mobile/badges/BadgeDetailModal";
 
@@ -31,6 +30,8 @@ import {
 } from "@/lib/profile/useProfileBadges";
 import { useProfileDailyTrend } from "@/lib/profile/useProfileDailyTrend";
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
@@ -38,17 +39,23 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const { profile, tab, setTab, range, setRange, summary, targetUid } = props;
+  const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
+    props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
   const isTargetGuestProfile = !targetUid;
+
+  const { language } = useUserLanguage(resolvedUid);
 
   const displayProfile = isTargetGuestProfile
     ? {
         ...profile,
         displayName: "Guest User",
         handle: "@guest",
-        bio: "ログインするとプロフィールを作成できます",
+        bio:
+          language === "en"
+            ? "Log in to create your profile."
+            : "ログインするとプロフィールを作成できます",
         counts: { followers: 0, following: 0 },
         currentStreak: 0,
         maxStreak: 0,
@@ -96,7 +103,17 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
 
   const periodLabel =
-    range === "7d" ? "7日" : range === "30d" ? "30日" : "All";
+    range === "7d"
+      ? language === "en"
+        ? "Last 7 days"
+        : "7日"
+      : range === "30d"
+      ? language === "en"
+        ? "Last 30 days"
+        : "30日"
+      : language === "en"
+      ? "All"
+      : "All";
 
   const maxStreak = (displayProfile as any)?.maxStreak ?? 0;
   const currentStreak = Math.max(
@@ -110,7 +127,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-[640px] px-4 py-4 text-white">
+    <div className="mx-auto min-h-screen max-w-[640px] px-4 py-4 pb-bottom-nav text-white">
       <div className="relative isolate rounded-2xl border border-white/10 bg-[#050814]/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
         {canOpenSettings && (
           <button
@@ -139,7 +156,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 <div className="inline-flex whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-yellow-300 shadow-[0_8px_18px_rgba(0,0,0,0.45)] backdrop-blur">
                   <Flame className="h-3.5 w-3.5 text-orange-400" />
                   <span className="ml-1 tabular-nums">{currentStreak}</span>
-                  <span className="ml-1">連勝中</span>
+                  <span className="ml-1">
+                    {language === "en" ? "Win streak" : "連勝中"}
+                  </span>
                 </div>
               </div>
             )}
@@ -190,15 +209,32 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       <div className="mt-1">
         {tab === "overview" ? (
           <>
+            {statsLoading ? (
+              <div
+                className="flex min-h-[180px] items-center justify-center py-10"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2
+                  className="h-8 w-8 animate-spin text-white/45"
+                  aria-hidden
+                />
+              </div>
+            ) : (
+              <>
             {currentIsProView ? (
               <>
                 <div className="grid grid-cols-5 items-stretch gap-3">
                   <div className="col-span-3 h-full">
-                    <AnalysisWinCard posts={posts} wins={wins} />
+                    <AnalysisWinCard posts={posts} wins={wins} language={language} />
                   </div>
 
                   <div className="col-span-2 h-full min-w-0">
-                    <MaxStreakCard compact maxStreak={maxStreak} />
+                    <MaxStreakCard
+                      compact
+                      maxStreak={maxStreak}
+                      language={language}
+                    />
                   </div>
                 </div>
 
@@ -208,6 +244,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                       compact
                       scorePrecisionSum={summary?.scorePrecisionSum ?? 0}
                       analyses={posts}
+                      language={language}
                     />
                   </div>
 
@@ -218,6 +255,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                       analyses={posts}
                       upsetChanceCount={upsetChanceCount}
                       upsetHitCount={upsetHitCount}
+                      language={language}
                     />
                   </div>
                 </div>
@@ -229,6 +267,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                       periodLabel={periodLabel}
                       totalPoints={totalPoints}
                       analyses={posts}
+                      language={language}
                     />
                   </div>
                 </div>
@@ -237,8 +276,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               <SummaryCardsV2
                 compact
                 period={range}
+                language={language}
                 data={{
                   fullPosts: summary?.fullPosts ?? 0,
+                  recent3Posts: summary?.recent3Posts ?? 0,
                   posts: summary?.posts ?? 0,
                   wins: (summary as any)?.wins ?? 0,
                   winRate: summary?.winRate ?? 0,
@@ -249,9 +290,11 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 }}
               />
             )}
+              </>
+            )}
 
             <div className="mb-3 mt-3 flex justify-center">
-              <PeriodToggle value={range} onChange={setRange} />
+              <PeriodToggle value={range} onChange={setRange} language={language} />
             </div>
 
             <div className="mt-6">
@@ -259,6 +302,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 data={dailyTrendForChart}
                 range={range}
                 allowAll={currentIsProView}
+                language={language}
               />
             </div>
           </>
@@ -266,7 +310,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           isTargetGuestProfile ? (
             <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
               <p className="text-sm text-white/70">
-                ゲストプロフィールではブラケットを表示できません。
+                {language === "en"
+                  ? "Guest profiles can't view the bracket."
+                  : "ゲストプロフィールではブラケットを表示できません。"}
               </p>
             </div>
           ) : playoffBracketLoading ? (
@@ -276,7 +322,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           ) : !playoffDisplayData ? (
             <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
               <p className="text-sm text-white/70">
-                まだブラケットは提出されていません。
+                {language === "en"
+                  ? "The bracket hasn't been submitted yet."
+                  : "まだブラケットは提出されていません。"}
               </p>
             </div>
           ) : (
@@ -316,7 +364,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         ) : (
           <div className="space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
             <p className="text-sm text-white/70">
-              対象ユーザーはProプランに加入していません。
+              {language === "en"
+                ? "This user isn't on the Pro plan."
+                : "対象ユーザーはProプランに加入していません。"}
             </p>
           </div>
         )}

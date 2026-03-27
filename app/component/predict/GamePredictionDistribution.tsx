@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import DonutChart from "./DonutChart";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { auth } from "@/lib/firebase";
 
 type Props = {
   gameId: string;
@@ -22,6 +24,8 @@ export default function GamePredictionDistribution({
   homeColor,
   awayColor,
 }: Props) {
+  const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
+  const isEn = language === "en";
   const [homeCount, setHomeCount] = useState(0);
 const [awayCount, setAwayCount] = useState(0);
 const [drawCount, setDrawCount] = useState(0);
@@ -62,7 +66,7 @@ const [drawCount, setDrawCount] = useState(0);
   if (total === 0) {
     return (
       <div className="rounded-xl p-4 border border-white/10 text-white/70">
-        まだこの試合の予想がありません。
+        {isEn ? "No predictions for this game yet." : "まだこの試合の予想がありません。"}
       </div>
     );
   }
@@ -75,7 +79,7 @@ const [drawCount, setDrawCount] = useState(0);
         color: homeColor,
       },
       {
-        label: "引き分け",
+        label: isEn ? "Draw" : "引き分け",
         value: drawCount / total,
         color: "#9ca3af", // グレー
       },
@@ -121,7 +125,8 @@ const [drawCount, setDrawCount] = useState(0);
 
           {/* ★★ 追加部分：凡例の上に総分析数を表示 ★★ */}
           <div className="text-center md:text-left text-white/70 text-xs md:text-sm mb-2">
-            総分析数：<span className="tabular-nums">{total}</span>
+            {isEn ? "Total predictions: " : "総分析数："}
+            <span className="tabular-nums">{total}</span>
           </div>
 
           {/* HOME */}
@@ -144,7 +149,7 @@ const [drawCount, setDrawCount] = useState(0);
           {isSoccer && (
   <div className="flex items-center justify-center gap-3">
     <span className="w-3 h-3 rounded-sm bg-gray-400" />
-    <span className="whitespace-nowrap">引き分け</span>
+    <span className="whitespace-nowrap">{isEn ? "Draw" : "引き分け"}</span>
     <span className="tabular-nums">
       {((drawCount / total) * 100).toFixed(1)}%
     </span>

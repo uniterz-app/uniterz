@@ -3,6 +3,8 @@
 import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 type Variant = "web" | "mobile";
 
@@ -13,16 +15,20 @@ export default function CommunityGuidelinesPage({
 }) {
   const router = useRouter();
   const isWeb = variant === "web";
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  const isEn = language === "en";
+  const updatedAt = "2026-03-23";
 
   return (
-    <div className="min-h-screen w-full bg-[#0a3b47] relative">
-      {/* 戻るボタン（丸 ×） */}
+    <div className="min-h-screen w-full bg-[#050814] relative">
       <button
         onClick={() => router.back()}
-        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full 
+        className="fixed top-4 right-4 z-50 h-11 w-11 rounded-full 
                    bg-white/10 backdrop-blur border border-white/20 
                    flex items-center justify-center text-white text-2xl 
-                   shadow-[0_0_15px_rgba(0,0,0,0.4)] active:scale-95"
+                   shadow-[0_8px_18px_rgba(0,0,0,0.35)] active:scale-95"
+        aria-label={isEn ? "Close" : "閉じる"}
       >
         ×
       </button>
@@ -34,11 +40,8 @@ export default function CommunityGuidelinesPage({
             : "mx-auto max-w-[640px] px-4 py-8 text-white"
         }
       >
-        {/* カード */}
-        <div className="rounded-3xl bg-[#072d37] px-6 py-6 shadow-lg border border-white/10">
-          {/* ヘッダー */}
-          <div className="mb-4 flex items-center gap-3">
-            {/* ロゴ */}
+        <div className="rounded-3xl bg-[#0b1020] px-6 py-6 border border-white/10">
+          <div className="mb-6 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 overflow-hidden">
               <Image
                 src="/logo/logo.png"
@@ -48,75 +51,136 @@ export default function CommunityGuidelinesPage({
                 className="object-contain"
               />
             </div>
-
             <div className="flex flex-col">
               <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">
-                コミュニティガイドライン
+                {isEn ? "Community Guidelines" : "コミュニティガイドライン"}
               </h1>
               <p className="mt-1 text-xs text-white/60">
-                Uniterz を安心して楽しむために
+                {isEn
+                  ? "To enjoy this sports-prediction fantasy game in a healthy and fair way."
+                  : "スポーツ予想ファンタジーゲームを健全に楽しむために"}
+              </p>
+              <p className="mt-1 text-xs text-white/50">
+                {isEn ? `Last updated: ${updatedAt}` : `最終更新日: ${updatedAt}`}
               </p>
             </div>
           </div>
 
-          {/* 本文 */}
           <div className="space-y-6 text-sm md:text-base leading-relaxed text-white/85">
-            {/* 1 */}
-            <section>
-              <h2 className="text-lg font-bold mb-2">1. 禁止される行為</h2>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>投資・ギャンブル・副業などへの勧誘</li>
-                <li>「絶対当たる」「確実に儲かる」など誤解を招く表現</li>
-                <li>外部サービス（LINE、情報商材等）への誘導</li>
-                <li>金銭を伴う賭博行為の推奨</li>
-                <li>他者への攻撃的・侮辱的な内容</li>
-                <li>虚偽情報や実績の捏造、なりすまし</li>
-                <li>無断転載など著作権侵害行為</li>
-              </ul>
-            </section>
-
-            {/* 2 */}
-            <section>
-              <h2 className="text-lg font-bold mb-2">2. 投稿に関するルール</h2>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>予想・分析は事実ベースで記述すること</li>
-                <li>不正確な煽り・誤情報の投稿は禁止</li>
-                <li>選手・チーム・他ユーザーへの過度な批判は禁止</li>
-                <li>プロフィール文や投稿タイトルも同様に適用されます</li>
-              </ul>
-            </section>
-
-            {/* 3 */}
             <section>
               <h2 className="text-lg font-bold mb-2">
-                3. プラン販売に関するルール（将来対応）
+                {isEn ? "1. About Uniterz" : "1. Uniterz について"}
+              </h2>
+              <p>
+                {isEn
+                  ? "Uniterz is a fantasy sports game where you predict the results of sports matches and compete with scores. By submitting your predictions for each match (win/loss and score), you earn points based on the outcomes, and those points are reflected in the rankings and your profile."
+                  : "Uniterz はスポーツ試合の結果を予想し、スコアを競い合うファンタジーゲームです。\n試合ごとに勝敗・スコアを予想して投稿すると、結果に応じてポイントが付与され、\nランキングやプロフィールに反映されます。"}
+              </p>
+              <p className="mt-2">
+                {isEn
+                  ? "This is not a service intended for financial returns. You compete using only in-game points."
+                  : "金銭的リターンを目的としたサービスではなく、ゲーム内のポイントのみで競います。"}
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold mb-2">
+                {isEn ? "2. Fair Play" : "2. 公平なプレイ"}
               </h2>
               <ul className="list-disc pl-5 space-y-1">
-                <li>過剰な宣伝（100%当たる等）は禁止</li>
-                <li>外部販売は禁止、Uniterz 内のみで提供</li>
-                <li>根拠の提示を心がけ、公正な価格設定を行うこと</li>
+                <li>
+                  {isEn
+                    ? "You may submit predictions up to once per match (submissions after the match starts are invalid)."
+                    : "1試合につき1回まで予想を投稿できます（試合開始後の投稿は無効）"}
+                </li>
+                <li>
+                  {isEn
+                    ? "Cheating by farming scores using multiple accounts is prohibited."
+                    : "複数アカウントを用いた不正なスコア稼ぎは禁止です"}
+                </li>
+                <li>
+                  {isEn
+                    ? "Using someone else's account or impersonating others is prohibited."
+                    : "他人のアカウントを使用したり、なりすましたりすることは禁止です"}
+                </li>
+                <li>
+                  {isEn
+                    ? "Intentionally exploiting system malfunctions is prohibited."
+                    : "システムの不具合を意図的に利用する行為は禁止です"}
+                </li>
               </ul>
             </section>
 
-            {/* 4 */}
             <section>
-              <h2 className="text-lg font-bold mb-2">4. 違反時の対応</h2>
+              <h2 className="text-lg font-bold mb-2">
+                {isEn ? "3. About Profiles / Display Names" : "3. プロフィール・表示名について"}
+              </h2>
               <p>
-                ガイドライン違反が確認された場合、以下の対応を行います：
+                {isEn
+                  ? "Your profile display name, handle, and bio are visible to other users. You must not include the following:"
+                  : "プロフィールの表示名・ハンドル・自己紹介文は、他のユーザーに公開されます。\n以下の内容を含めることは禁止です。"}
               </p>
               <ul className="list-disc pl-5 space-y-1 mt-2">
-                <li>軽度：投稿非表示・警告・修正依頼</li>
-                <li>中度：一時的な利用制限</li>
-                <li>重大：アカウント停止または永久BAN</li>
+                <li>{isEn ? "Expressions that attack, insult, or discriminate against others." : "他者を攻撃・侮辱・差別する表現"}</li>
+                <li>{isEn ? "False titles or misrepresentation of affiliations." : "虚偽の肩書き・所属の詐称"}</li>
+                <li>
+                  {isEn
+                    ? "Promoting or directing users to external services (e.g., posting URLs/contact information)."
+                    : "外部サービスへの誘導（URL・連絡先の掲示など）"}
+                </li>
+                <li>{isEn ? "Spam or promotional text." : "スパム・宣伝目的の文言"}</li>
               </ul>
             </section>
 
-            {/* 5 */}
             <section>
-              <h2 className="text-lg font-bold mb-2">5. 安全なコミュニティのために</h2>
+              <h2 className="text-lg font-bold mb-2">
+                {isEn ? "4. Prohibited Acts" : "4. 禁止される行為"}
+              </h2>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>{isEn ? "Impersonating other users or the operator." : "他者や運営になりすます行為"}</li>
+                <li>
+                  {isEn
+                    ? "Acts that interfere with or abuse the service's operation (automated access, excessive requests, etc.)."
+                    : "サービスの動作を妨害・悪用する行為（自動化アクセス、過剰リクエスト等）"}
+                </li>
+                <li>{isEn ? "Unauthorized access and other acts that violate laws or regulations." : "不正アクセスその他、法令に違反する行為"}</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold mb-2">
+                {isEn ? "5. Actions When Violations Are Found" : "5. 違反時の対応"}
+              </h2>
               <p>
-                Uniterz は「予想 × 分析 × コミュニティ」を楽しむ場所です。
-                すべてのユーザーが気持ちよく利用できるよう、ガイドライン遵守にご協力ください。
+                {isEn
+                  ? "If a violation of these guidelines is confirmed, we may take one of the following actions:"
+                  : "ガイドライン違反が確認された場合、以下のいずれかの対応を行うことがあります。"}
+              </p>
+              <ul className="list-disc pl-5 space-y-1 mt-2">
+                <li>{isEn ? "Mild: warning or a request to revise the content." : "軽度：警告・内容の修正依頼"}</li>
+                <li>{isEn ? "Moderate: temporary restriction of usage." : "中度：一時的な利用制限"}</li>
+                <li>{isEn ? "Severe: account suspension or a permanent ban." : "重大：アカウント停止または永久BAN"}</li>
+              </ul>
+              <p className="mt-2">
+                {isEn
+                  ? "The content and severity of any response will be determined at our discretion."
+                  : "対応の内容・程度は、当社の判断により決定します。"}
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold mb-2">
+                {isEn ? "6. About the Service" : "6. サービスについて"}
+              </h2>
+              <p>
+                {isEn
+                  ? "The content and specifications of Uniterz may change without notice. Regarding match information, rankings, point calculations, etc., we do not guarantee accuracy or completeness."
+                  : "Uniterz のサービス内容・仕様は予告なく変更される場合があります。\n掲載されている試合情報・ランキング・ポイント計算などについて、\n正確性・完全性を保証するものではありません。"}
+              </p>
+              <p className="mt-2">
+                {isEn
+                  ? "To help all users enjoy the game in a healthy manner, please cooperate with compliance to these guidelines."
+                  : "すべてのユーザーが健全にゲームを楽しめるよう、\n本ガイドラインの遵守にご協力ください。"}
               </p>
             </section>
           </div>
