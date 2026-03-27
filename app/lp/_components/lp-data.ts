@@ -111,15 +111,6 @@ export const metricRadar = [
   { label: "総合得点", value: 81 },
 ] as const;
 
-export const trendBars = [
-  { label: "W1", value: 48 },
-  { label: "W2", value: 62 },
-  { label: "W3", value: 58 },
-  { label: "W4", value: 74 },
-  { label: "W5", value: 83 },
-  { label: "W6", value: 79 },
-] as const;
-
 export const steps = [
   {
     no: "01",

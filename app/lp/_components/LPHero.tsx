@@ -46,24 +46,11 @@ const HERO_VIEWS: Array<{
   },
 ] as const;
 
-const METRIC_BADGES = [
-  "勝率",
-  "スコア精度",
-  "アップセット得点",
-  "総合得点",
-] as const;
-
 const FLOW_STEPS = [
   "試合を選ぶ",
   "予想を投稿",
   "結果を自動集計",
   "ランキング/分析",
-] as const;
-
-const TRUST_METRICS = [
-  { label: "投稿総数", value: "120K+" },
-  { label: "アクティブ予想者", value: "18K+" },
-  { label: "週次分析更新", value: "毎週" },
 ] as const;
 
 export default function LPHero() {
@@ -248,46 +235,6 @@ export default function LPHero() {
               >
                 デモを見る
               </Link>
-            </div>
-
-            <div
-              className="mt-7 flex flex-wrap gap-3 sm:mt-9 [animation:lp-enter-soft_.65s_ease-out_.52s_both]"
-              data-lp-stagger-group
-              data-lp-stagger-variant="up"
-              data-lp-stagger-step="0.06"
-            >
-              {METRIC_BADGES.map((label) => (
-                <div
-                  key={label}
-                  className="inline-flex items-center gap-2 rounded-full border border-cyan-300/12 bg-cyan-300/[0.04] px-3.5 py-2 text-[11px] font-semibold tracking-[0.16em] text-cyan-100/68 backdrop-blur-xl"
-                  data-lp-stagger-item
-                >
-                  <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.35)]" />
-                  {label}
-                </div>
-              ))}
-            </div>
-
-            <div
-              className="mt-7 grid max-w-2xl grid-cols-1 gap-3 sm:mt-8 sm:grid-cols-3 [animation:lp-enter-soft_.65s_ease-out_.62s_both]"
-              data-lp-stagger-group
-              data-lp-stagger-variant="up"
-              data-lp-stagger-step="0.08"
-            >
-              {TRUST_METRICS.map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl"
-                  data-lp-stagger-item
-                >
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/64">
-                    {item.label}
-                  </div>
-                  <div className="mt-2 text-[22px] font-black leading-none tracking-[-0.03em] text-white">
-                    {item.value}
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 

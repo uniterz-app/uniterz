@@ -1,4 +1,4 @@
-import { metricRadar, metrics, trendBars } from "./lp-data";
+import { metricRadar, metrics } from "./lp-data";
 
 function polarToCartesian(
   cx: number,
@@ -270,98 +270,6 @@ export default function LPMetrics() {
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.022))] p-[1px] backdrop-blur-xl">
-            <div className="relative rounded-[29px] bg-[linear-gradient(180deg,rgba(8,18,30,0.90),rgba(6,16,26,0.84))] p-6">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/38 to-transparent" />
-              <div className="pointer-events-none absolute inset-x-[10%] top-0 h-20 rounded-full bg-cyan-300/8 blur-3xl" />
-              <div className="pointer-events-none absolute inset-[1px] rounded-[28px] ring-1 ring-inset ring-white/6" />
-
-              <div className="relative flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300/74">
-                    Trend View
-                  </div>
-                  <div className="mt-2 text-[22px] font-black tracking-[-0.04em] text-white">
-                    推移も合わせて見る
-                  </div>
-                </div>
-
-                <div className="rounded-full border border-cyan-300/18 bg-cyan-300/[0.06] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100/74">
-                  Weekly Growth
-                </div>
-              </div>
-
-              <div
-                className="mt-6 flex items-end gap-3"
-                data-lp-stagger-group
-                data-lp-stagger-variant="up"
-                data-lp-stagger-step="0.06"
-              >
-                {trendBars.map((bar) => (
-                  <div
-                    key={bar.label}
-                    className="flex flex-1 flex-col items-center"
-                    data-lp-stagger-item
-                  >
-                    <div className="flex h-[180px] w-full items-end justify-center rounded-[18px] border border-white/6 bg-white/[0.02] px-2 pb-2">
-                      <div
-                        className="w-full rounded-[14px] bg-gradient-to-t from-cyan-300 via-sky-400 to-emerald-300 shadow-[0_0_22px_rgba(34,211,238,0.14)]"
-                        style={{
-                          height: `${bar.value}%`,
-                          minHeight: "18px",
-                        }}
-                      />
-                    </div>
-                    <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/54">
-                      {bar.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                className="mt-5 grid gap-3 sm:grid-cols-3"
-                data-lp-stagger-group
-                data-lp-stagger-variant="up"
-                data-lp-stagger-step="0.08"
-              >
-                <div
-                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
-                  data-lp-stagger-item
-                >
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                    Current
-                  </div>
-                  <div className="mt-2 text-[20px] font-black text-white">
-                    83
-                  </div>
-                </div>
-                <div
-                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
-                  data-lp-stagger-item
-                >
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                    Best Week
-                  </div>
-                  <div className="mt-2 text-[20px] font-black text-white">
-                    W5
-                  </div>
-                </div>
-                <div
-                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
-                  data-lp-stagger-item
-                >
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                    Direction
-                  </div>
-                  <div className="mt-2 text-[20px] font-black text-white">
-                    Up
-                  </div>
-                </div>
               </div>
             </div>
           </div>

@@ -57,9 +57,7 @@ export default function LPFeatures() {
                 Connected Flow
               </div>
 
-              <div className="relative mt-7">
-                <div className="pointer-events-none absolute left-[9%] right-[9%] top-5 hidden h-px bg-gradient-to-r from-cyan-300/10 via-cyan-300/55 to-emerald-300/18 md:block" />
-
+              <div className="mt-7">
                 <div
                   className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
                   data-lp-stagger-group
