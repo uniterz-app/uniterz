@@ -60,15 +60,17 @@ export default function LPFeatures() {
               <div className="relative mt-7">
                 <div className="pointer-events-none absolute left-[9%] right-[9%] top-5 hidden h-px bg-gradient-to-r from-cyan-300/10 via-cyan-300/55 to-emerald-300/18 md:block" />
 
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <div
+                  className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+                  data-lp-stagger-group
+                  data-lp-stagger-variant="up"
+                  data-lp-stagger-step="0.07"
+                >
                   {flowNodes.map((node, index) => (
                     <div
                       key={node.id}
                       className="relative"
-                      style={{
-                        animation: "lp-features-fade-up .65s ease-out both",
-                        animationDelay: `${index * 0.08}s`,
-                      }}
+                      data-lp-stagger-item
                     >
                       <div className="relative rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] px-3 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
                         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/28 bg-cyan-300/10 text-[11px] font-bold tracking-[0.18em] text-cyan-200">
@@ -100,15 +102,17 @@ export default function LPFeatures() {
           </div>
         </div>
 
-        <div className="relative grid gap-5">
+        <div
+          className="relative grid gap-5"
+          data-lp-stagger-group
+          data-lp-stagger-variant="up"
+          data-lp-stagger-step="0.09"
+        >
           {DISPLAY_CARDS.map((item, index) => (
             <div
               key={item.title}
               className="group relative overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.025))] p-[1px] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-white/16 hover:shadow-[0_24px_60px_rgba(0,0,0,0.22)]"
-              style={{
-                animation: "lp-features-fade-up .7s ease-out both",
-                animationDelay: `${index * 0.08}s`,
-              }}
+              data-lp-stagger-item
             >
               <div className="relative h-full rounded-[29px] bg-[linear-gradient(180deg,rgba(8,18,30,0.90),rgba(6,16,26,0.84))] p-6">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/42 to-transparent" />
@@ -145,18 +149,6 @@ export default function LPFeatures() {
         </div>
       </div>
 
-      <style>{`
-        @keyframes lp-features-fade-up {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, 18px, 0);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-      `}</style>
     </section>
   );
 }

@@ -100,15 +100,17 @@ export default function LPMetrics() {
 
               <div className="mt-5 h-px w-full bg-gradient-to-r from-cyan-300/24 via-white/10 to-transparent" />
 
-              <div className="mt-5 grid gap-3">
+              <div
+                className="mt-5 grid gap-3"
+                data-lp-stagger-group
+                data-lp-stagger-variant="up"
+                data-lp-stagger-step="0.08"
+              >
                 {metrics.map((item, index) => (
                   <div
                     key={item.key}
                     className="rounded-[22px] border border-white/8 bg-white/[0.03] px-4 py-4"
-                    style={{
-                      animation: "lp-metrics-fade-up .7s ease-out both",
-                      animationDelay: `${index * 0.08}s`,
-                    }}
+                    data-lp-stagger-item
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -248,15 +250,17 @@ export default function LPMetrics() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {metricRadar.map((item, index) => (
+              <div
+                className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"
+                data-lp-stagger-group
+                data-lp-stagger-variant="up"
+                data-lp-stagger-step="0.06"
+              >
+                {metricRadar.map((item) => (
                   <div
                     key={item.label}
                     className="rounded-[20px] border border-white/8 bg-white/[0.03] px-3 py-3 text-center"
-                    style={{
-                      animation: "lp-metrics-fade-up .7s ease-out both",
-                      animationDelay: `${index * 0.08}s`,
-                    }}
+                    data-lp-stagger-item
                   >
                     <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
                       {item.label}
@@ -291,15 +295,17 @@ export default function LPMetrics() {
                 </div>
               </div>
 
-              <div className="mt-6 flex items-end gap-3">
-                {trendBars.map((bar, index) => (
+              <div
+                className="mt-6 flex items-end gap-3"
+                data-lp-stagger-group
+                data-lp-stagger-variant="up"
+                data-lp-stagger-step="0.06"
+              >
+                {trendBars.map((bar) => (
                   <div
                     key={bar.label}
                     className="flex flex-1 flex-col items-center"
-                    style={{
-                      animation: "lp-metrics-fade-up .7s ease-out both",
-                      animationDelay: `${index * 0.08}s`,
-                    }}
+                    data-lp-stagger-item
                   >
                     <div className="flex h-[180px] w-full items-end justify-center rounded-[18px] border border-white/6 bg-white/[0.02] px-2 pb-2">
                       <div
@@ -317,8 +323,16 @@ export default function LPMetrics() {
                 ))}
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
+              <div
+                className="mt-5 grid gap-3 sm:grid-cols-3"
+                data-lp-stagger-group
+                data-lp-stagger-variant="up"
+                data-lp-stagger-step="0.08"
+              >
+                <div
+                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
+                  data-lp-stagger-item
+                >
                   <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
                     Current
                   </div>
@@ -326,7 +340,10 @@ export default function LPMetrics() {
                     83
                   </div>
                 </div>
-                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
+                <div
+                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
+                  data-lp-stagger-item
+                >
                   <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
                     Best Week
                   </div>
@@ -334,7 +351,10 @@ export default function LPMetrics() {
                     W5
                   </div>
                 </div>
-                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
+                <div
+                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
+                  data-lp-stagger-item
+                >
                   <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
                     Direction
                   </div>
@@ -348,18 +368,6 @@ export default function LPMetrics() {
         </div>
       </div>
 
-      <style>{`
-        @keyframes lp-metrics-fade-up {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, 18px, 0);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-      `}</style>
     </section>
   );
 }

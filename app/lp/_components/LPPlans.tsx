@@ -1,5 +1,48 @@
 import Link from "next/link";
-import { plans } from "./lp-data";
+import {
+  planComparisonRows,
+  planProGuide,
+  planTrustLines,
+  plans,
+  type PlanComparisonAccess,
+} from "./lp-data";
+
+function comparisonCell(access: PlanComparisonAccess, variant: "free" | "pro") {
+  const base =
+    "inline-flex min-h-[44px] min-w-[4.5rem] items-center justify-center text-sm font-bold tabular-nums";
+
+  if (access === "full") {
+    return (
+      <span
+        className={`${base} ${
+          variant === "pro"
+            ? "text-cyan-200 drop-shadow-[0_0_12px_rgba(103,232,249,0.35)]"
+            : "text-white/86"
+        }`}
+        title="利用可能"
+      >
+        ◯
+      </span>
+    );
+  }
+
+  if (access === "limited") {
+    return (
+      <span
+        className={`${base} text-[11px] font-semibold tracking-wide text-white/62`}
+        title="基本のみ／制限あり"
+      >
+        一部
+      </span>
+    );
+  }
+
+  return (
+    <span className={`${base} text-white/28`} title="対象外">
+      —
+    </span>
+  );
+}
 
 export default function LPPlans() {
   return (
@@ -13,8 +56,8 @@ export default function LPPlans() {
         <div className="mx-auto h-24 w-[68%] max-w-4xl bg-cyan-300/7 blur-3xl" />
       </div>
 
-      <div className="relative grid gap-10 lg:grid-cols-[0.84fr_1.16fr] lg:items-start">
-        <div className="max-w-3xl">
+      <div className="relative grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-stretch lg:gap-12">
+        <div className="flex min-h-0 max-w-3xl flex-col lg:flex-1">
           <div className="inline-flex items-center gap-3">
             <div className="h-px w-10 bg-gradient-to-r from-cyan-300/70 to-transparent" />
             <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-300/82">
@@ -27,293 +70,265 @@ export default function LPPlans() {
           </h2>
 
           <p className="lp-section-desc">
-            まずは無料で参加し、ランキングや基本成績を確認できる。さらに詳しく振り返りたい人向けに、Proで分析機能を広げる。
+            迷ったらまずFree。分析まで使うならPro。使い方に合わせて、必要な深さだけ選べる。
           </p>
 
-          <div className="mt-8 overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-[1px] backdrop-blur-xl">
-            <div className="relative rounded-[31px] bg-[linear-gradient(180deg,rgba(8,18,30,0.92),rgba(6,16,26,0.86))] p-6 sm:p-7">
+          <p className="mt-3 max-w-[42rem] text-sm leading-relaxed text-white/52">
+            <span className="font-semibold text-cyan-200/88">Pro向き：</span>
+            {planProGuide}
+          </p>
+
+          <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-[1px] backdrop-blur-xl">
+            <div className="relative flex min-h-0 flex-1 flex-col rounded-[31px] bg-[linear-gradient(180deg,rgba(8,18,30,0.92),rgba(6,16,26,0.86))] p-6 sm:p-7">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/38 to-transparent" />
               <div className="pointer-events-none absolute inset-x-[10%] top-0 h-24 rounded-full bg-cyan-300/8 blur-3xl" />
               <div className="pointer-events-none absolute inset-[1px] rounded-[30px] ring-1 ring-inset ring-white/6" />
               <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(120,220,255,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(120,220,255,0.18)_1px,transparent_1px)] [background-size:34px_34px]" />
 
-              <div className="relative">
+              <div className="relative flex min-h-0 flex-1 flex-col">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300/74">
-                  Comparison
+                  機能比較
                 </div>
 
                 <div className="mt-3 text-[24px] font-black leading-[1.08] tracking-[-0.04em] text-white">
-                  見える深さが変わる。
+                  機能の違いを一覧で比較。
                 </div>
 
                 <p className="mt-3 max-w-[34rem] text-sm leading-7 text-white/58">
-                  Freeは参加と確認の入口。Proは推移、比較、詳細分析まで広げて、自分の予想力をより深く見返せる。
+                  表の「一部」は Free
+                  で概要のみ／制限ありを表します。詳細は右のプランカードとアプリ内表示をご確認ください。
                 </p>
 
-                <div className="relative mt-6 space-y-4">
-                  <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-[18px] font-black tracking-tight text-white">
+                <div
+                  className="relative mt-6 -mx-1 overflow-x-auto sm:mx-0"
+                  data-lp-stagger-group
+                  data-lp-stagger-variant="up"
+                  data-lp-stagger-step="0.06"
+                >
+                  <table className="w-full min-w-[320px] border-separate border-spacing-0 text-left">
+                    <caption className="sr-only">
+                      Free プランと Pro プランの機能比較
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th
+                          scope="col"
+                          className="rounded-tl-2xl border border-b-0 border-white/10 bg-white/[0.04] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/48"
+                        >
+                          機能
+                        </th>
+                        <th
+                          scope="col"
+                          className="border border-b-0 border-l-0 border-white/10 bg-white/[0.04] px-3 py-3 text-center text-[11px] font-black tracking-tight text-white/78"
+                        >
                           Free
-                        </div>
-                        <div className="mt-1 text-sm leading-6 text-white/56">
-                          参加して、順位と基本成績を見る
-                        </div>
-                      </div>
-
-                      <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">
-                        Entry
-                      </div>
-                    </div>
-
-                    <div className="mt-4 h-2 rounded-full bg-white/8">
-                      <div className="h-2 w-[42%] rounded-full bg-gradient-to-r from-white/70 to-cyan-300/70" />
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <div className="rounded-[18px] border border-white/8 bg-white/[0.03] px-4 py-3">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                          View
-                        </div>
-                        <div className="mt-2 text-sm font-bold text-white">
-                          ランキング
-                        </div>
-                      </div>
-                      <div className="rounded-[18px] border border-white/8 bg-white/[0.03] px-4 py-3">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                          Base
-                        </div>
-                        <div className="mt-2 text-sm font-bold text-white">
-                          基本成績
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-cyan-300/16 bg-cyan-300/[0.04] p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-[18px] font-black tracking-tight text-white">
+                        </th>
+                        <th
+                          scope="col"
+                          className="rounded-tr-2xl border border-b-0 border-l-0 border-cyan-300/22 bg-cyan-300/[0.07] px-3 py-3 text-center text-[11px] font-black tracking-tight text-cyan-100/88"
+                        >
                           Pro
-                        </div>
-                        <div className="mt-1 text-sm leading-6 text-white/56">
-                          トレンドや比較まで含めて深く分析する
-                        </div>
-                      </div>
-
-                      <div className="rounded-full border border-cyan-300/18 bg-cyan-300/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100/78">
-                        Deep Analysis
-                      </div>
-                    </div>
-
-                    <div className="mt-4 h-2 rounded-full bg-white/8">
-                      <div className="h-2 w-[88%] rounded-full bg-gradient-to-r from-cyan-300 via-sky-400 to-emerald-300 shadow-[0_0_18px_rgba(34,211,238,0.18)]" />
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-3">
-                      <div className="rounded-[18px] border border-cyan-300/12 bg-cyan-300/[0.04] px-4 py-3">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                          Trend
-                        </div>
-                        <div className="mt-2 text-sm font-bold text-white">
-                          推移
-                        </div>
-                      </div>
-                      <div className="rounded-[18px] border border-cyan-300/12 bg-cyan-300/[0.04] px-4 py-3">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                          Compare
-                        </div>
-                        <div className="mt-2 text-sm font-bold text-white">
-                          比較
-                        </div>
-                      </div>
-                      <div className="rounded-[18px] border border-cyan-300/12 bg-cyan-300/[0.04] px-4 py-3">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                          Analyze
-                        </div>
-                        <div className="mt-2 text-sm font-bold text-white">
-                          詳細分析
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {planComparisonRows.map((row, i) => {
+                        const isLast = i === planComparisonRows.length - 1;
+                        return (
+                          <tr key={row.feature} data-lp-stagger-item>
+                            <th
+                              scope="row"
+                              className={`border border-white/10 bg-white/[0.025] px-4 py-3 text-left text-[13px] font-semibold leading-snug text-white/78 ${
+                                isLast ? "rounded-bl-2xl border-b" : "border-b-0"
+                              }`}
+                            >
+                              {row.feature}
+                            </th>
+                            <td
+                              className={`border border-l-0 border-white/10 bg-white/[0.02] text-center ${
+                                isLast ? "border-b" : "border-b-0"
+                              }`}
+                            >
+                              {comparisonCell(row.free, "free")}
+                            </td>
+                            <td
+                              className={`border border-l-0 border-cyan-300/16 bg-cyan-300/[0.03] text-center ${
+                                isLast ? "rounded-br-2xl border-b border-cyan-300/22" : "border-b-0"
+                              }`}
+                            >
+                              {comparisonCell(row.pro, "pro")}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                      Start
-                    </div>
-                    <div className="mt-2 text-[20px] font-black text-white">
-                      Free
-                    </div>
-                  </div>
-                  <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                      Expand
-                    </div>
-                    <div className="mt-2 text-[20px] font-black text-white">
-                      Pro
-                    </div>
-                  </div>
-                  <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
-                      Goal
-                    </div>
-                    <div className="mt-2 text-[20px] font-black text-white">
-                      Analysis
-                    </div>
-                  </div>
-                </div>
+                <ul className="mt-5 space-y-2 text-[12px] leading-relaxed text-white/42">
+                  {planTrustLines.map((line) => (
+                    <li key={line} className="flex gap-2">
+                      <span className="mt-[0.35em] h-1 w-1 shrink-0 rounded-full bg-cyan-300/45" />
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="relative grid gap-5 lg:grid-cols-2">
-          {plans.map((plan, index) => {
-            const isPro = plan.name === "Pro";
+        <div className="flex min-h-0 flex-col lg:h-full lg:min-w-0">
+          <div className="mb-5 sm:mb-6">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300/74">
+              プラン選択
+            </div>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-white/52 lg:max-w-sm">
+              表で違いを確認したら、ここから登録へ進めます。
+            </p>
+          </div>
 
-            return (
-              <div
-                key={plan.name}
-                className={`group relative overflow-hidden rounded-[32px] border p-[1px] backdrop-blur-2xl transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(0,0,0,0.22)] ${
-                  isPro
-                    ? "border-cyan-300/22 bg-[linear-gradient(180deg,rgba(34,211,238,0.10),rgba(255,255,255,0.03))] hover:border-cyan-300/30"
-                    : "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] hover:border-white/16"
-                }`}
-                style={{
-                  animation: "lp-plans-fade-up .7s ease-out both",
-                  animationDelay: `${index * 0.09}s`,
-                }}
-              >
+          <div
+            className="relative grid flex-1 gap-6 sm:gap-6 lg:grid-cols-2 lg:items-start"
+            data-lp-stagger-group
+            data-lp-stagger-variant="up"
+            data-lp-stagger-step="0.09"
+          >
+            {plans.map((plan) => {
+              const isPro = plan.tier === "pro";
+
+              return (
                 <div
-                  className={`relative flex h-full flex-col rounded-[31px] p-7 ${
+                  key={plan.name}
+                  className={`group relative flex w-full min-h-0 self-start overflow-hidden rounded-[28px] border p-[1px] backdrop-blur-2xl transition duration-300 ${
                     isPro
-                      ? "bg-[linear-gradient(180deg,rgba(8,20,32,0.94),rgba(5,16,26,0.90))]"
-                      : "bg-[linear-gradient(180deg,rgba(8,18,30,0.90),rgba(6,16,26,0.84))]"
+                      ? "border-cyan-300/40 bg-[linear-gradient(165deg,rgba(45,232,255,0.18),rgba(255,255,255,0.05))] shadow-[0_16px_48px_rgba(34,211,238,0.12)] hover:border-cyan-300/55 hover:shadow-[0_22px_64px_rgba(34,211,238,0.16)]"
+                      : "border-white/[0.1] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] hover:border-white/16 hover:shadow-[0_14px_40px_rgba(0,0,0,0.22)]"
                   }`}
+                  data-lp-stagger-item
                 >
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/40 to-transparent" />
                   <div
-                    className={`pointer-events-none absolute inset-x-[12%] top-0 h-24 rounded-full blur-3xl ${
-                      isPro ? "bg-cyan-300/10" : "bg-cyan-300/7"
+                    className={`relative flex w-full flex-col overflow-hidden rounded-[27px] px-5 pb-6 pt-5 sm:px-6 sm:pb-7 sm:pt-6 ${
+                      isPro
+                        ? "bg-[linear-gradient(180deg,rgba(6,22,38,0.97),rgba(4,14,26,0.94))]"
+                        : "bg-[linear-gradient(180deg,rgba(10,18,30,0.96),rgba(6,14,24,0.92))]"
                     }`}
-                  />
-                  <div className="pointer-events-none absolute inset-[1px] rounded-[30px] ring-1 ring-inset ring-white/6" />
-
-                  {isPro ? (
-                    <div className="relative mb-5 inline-flex w-fit items-center rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-100/78">
-                      Recommended for analysis
-                    </div>
-                  ) : (
-                    <div className="relative mb-5 inline-flex w-fit items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/68">
-                      Best for getting started
-                    </div>
-                  )}
-
-                  <div className="relative flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-[30px] font-black tracking-tight text-white">
-                        {plan.name}
-                      </div>
-                      <div className="mt-2 text-sm font-medium text-white/72">
-                        {plan.price}
-                      </div>
-                      <div className="mt-2 text-sm leading-6 text-white/54">
-                        {plan.caption}
-                      </div>
-                    </div>
-
-                    <div
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-black ${
-                        isPro
-                          ? "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-100"
-                          : "border-white/10 bg-white/[0.05] text-white/82"
-                      }`}
-                    >
-                      {plan.name === "Free" ? "F" : "P"}
-                    </div>
-                  </div>
-
-                  <div className="relative mt-6 h-px w-full bg-gradient-to-r from-cyan-300/22 via-white/10 to-transparent" />
-
-                  <div className="relative mt-6 space-y-3">
-                    {plan.items.map((item, itemIndex) => (
+                  >
+                    {isPro ? (
                       <div
-                        key={item}
-                        className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${
+                        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-cyan-300 via-sky-400 to-emerald-400 opacity-95"
+                        aria-hidden
+                      />
+                    ) : null}
+
+                    <div className="pointer-events-none absolute inset-x-0 top-[3px] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+                    <div
+                      className={`pointer-events-none absolute inset-x-[8%] top-8 h-28 rounded-full blur-3xl ${
+                        isPro ? "bg-cyan-400/12" : "bg-white/[0.04]"
+                      }`}
+                    />
+                    <div
+                      className={`pointer-events-none absolute inset-[1px] rounded-[26px] ring-1 ring-inset ${
+                        isPro ? "ring-cyan-300/18" : "ring-white/[0.06]"
+                      }`}
+                    />
+
+                    <div className="relative">
+                      {isPro ? (
+                        <div className="inline-flex w-fit rounded-full border border-cyan-300/25 bg-cyan-300/[0.1] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100/88">
+                          分析したい人向け
+                        </div>
+                      ) : (
+                        <div className="inline-flex w-fit rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/65">
+                          はじめての人向け
+                        </div>
+                      )}
+
+                      <div
+                        className={`mt-4 text-[clamp(1.5rem,4.5vw,1.875rem)] font-black leading-[1.05] tracking-[-0.04em] ${
                           isPro
-                            ? "border-cyan-300/12 bg-cyan-300/[0.04] text-white/80"
-                            : "border-white/8 bg-white/[0.03] text-white/76"
+                            ? "bg-gradient-to-br from-white via-cyan-50 to-cyan-300/85 bg-clip-text text-transparent"
+                            : "text-white"
                         }`}
                       >
-                        <div
-                          className={`h-2 w-2 rounded-full ${
-                            isPro
-                              ? "bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.55)]"
-                              : "bg-white/46"
-                          }`}
-                        />
-                        <span>{item}</span>
-                        <div className="ml-auto text-[10px] font-semibold uppercase tracking-[0.16em] text-white/34">
-                          {String(itemIndex + 1).padStart(2, "0")}
-                        </div>
+                        {plan.name}
                       </div>
-                    ))}
-                  </div>
 
-                  <div className="mt-auto">
-                    <div className="relative mt-6">
+                      {/* 価格を主役に */}
+                      <div className="mt-5">
+                        {isPro ? (
+                          <>
+                            <p className="text-xl font-black leading-tight tracking-tight text-white sm:text-2xl">
+                              {plan.price}
+                            </p>
+                            <p className="mt-2 text-[13px] leading-snug text-cyan-200/58">
+                              {plan.priceNote}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-[2.25rem] font-black tabular-nums leading-none tracking-tight text-white sm:text-[2.5rem]">
+                              {plan.price}
+                            </p>
+                            <p className="mt-2 text-[13px] font-medium text-white/48">
+                              {plan.priceNote}
+                            </p>
+                          </>
+                        )}
+                      </div>
+
+                      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200/62">
+                        {plan.subtitle}
+                      </p>
+                      <p className="mt-2 text-[13px] leading-relaxed text-white/50">
+                        {plan.caption}
+                      </p>
+                    </div>
+
+                    <div className="relative my-6 h-px w-full bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+
+                    <div className="relative">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/38">
+                        このプランでできること
+                      </p>
+                      <ul className="mt-3.5 space-y-3">
+                        {plan.summaryLines.map((line) => (
+                          <li key={line} className="flex gap-3 text-[13px] leading-snug text-white/78">
+                            <span
+                              className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-lg border text-[11px] font-bold ${
+                                isPro
+                                  ? "border-cyan-300/35 bg-cyan-300/[0.12] text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.15)]"
+                                  : "border-white/14 bg-white/[0.06] text-white/75"
+                              }`}
+                              aria-hidden
+                            >
+                              ✓
+                            </span>
+                            <span>{line}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="mt-7">
                       <Link
-                        href="#signup"
-                        className={`inline-flex min-h-[50px] w-full items-center justify-center rounded-2xl border px-4 py-3 text-sm font-semibold transition duration-200 ${
+                        href={plan.ctaHref}
+                        className={`inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl px-4 py-3 text-[13px] font-bold transition duration-200 ${
                           isPro
-                            ? "border-cyan-300/18 bg-cyan-300/[0.08] text-cyan-50 hover:bg-cyan-300/[0.12]"
-                            : "border-white/12 bg-white/[0.05] text-white/86 hover:bg-white/[0.08]"
+                            ? "border border-cyan-200/30 bg-gradient-to-r from-cyan-400 via-sky-500 to-teal-400 text-slate-950 shadow-[0_0_32px_rgba(34,211,238,0.28)] hover:brightness-[1.06] active:scale-[0.99]"
+                            : "border border-white/14 bg-white/[0.07] text-white/92 hover:border-white/22 hover:bg-white/[0.1]"
                         }`}
                       >
                         {plan.button}
                       </Link>
                     </div>
-
-                    <div className="relative mt-5 flex items-center gap-3">
-                      <div
-                        className={`h-[7px] w-[7px] rounded-full ${
-                          isPro
-                            ? "bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.85)]"
-                            : "bg-white/46"
-                        }`}
-                      />
-                      <div
-                        className={`h-px flex-1 ${
-                          isPro
-                            ? "bg-gradient-to-r from-cyan-300/55 to-transparent"
-                            : "bg-gradient-to-r from-white/24 to-transparent"
-                        }`}
-                      />
-                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes lp-plans-fade-up {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, 18px, 0);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-      `}</style>
     </section>
   );
 }

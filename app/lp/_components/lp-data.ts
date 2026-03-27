@@ -138,32 +138,79 @@ export const steps = [
   },
 ] as const;
 
+/** プラン比較表のセル種別（LPPlans で表示に変換） */
+export type PlanComparisonAccess = "full" | "limited" | "none";
+
+export const planComparisonRows = [
+  {
+    feature: "試合予想に参加",
+    free: "full" satisfies PlanComparisonAccess,
+    pro: "full" satisfies PlanComparisonAccess,
+  },
+  {
+    feature: "ランキング閲覧",
+    free: "full" satisfies PlanComparisonAccess,
+    pro: "full" satisfies PlanComparisonAccess,
+  },
+  {
+    feature: "基本プロフィール表示",
+    free: "full" satisfies PlanComparisonAccess,
+    pro: "full" satisfies PlanComparisonAccess,
+  },
+  {
+    feature: "勝率・スコア精度・アップセット・総合の4指標ビュー",
+    free: "limited" satisfies PlanComparisonAccess,
+    pro: "full" satisfies PlanComparisonAccess,
+  },
+  {
+    feature: "日次・月次の推移トレンド",
+    free: "none" satisfies PlanComparisonAccess,
+    pro: "full" satisfies PlanComparisonAccess,
+  },
+  {
+    feature: "詳細な比較・分析画面",
+    free: "none" satisfies PlanComparisonAccess,
+    pro: "full" satisfies PlanComparisonAccess,
+  },
+] as const;
+
+export const planTrustLines = [
+  "料金の確認・契約・解約はアプリ内の設定からいつでも行えます。",
+  "まずは Free で参加し、必要になったタイミングで Pro に切り替えられます。",
+] as const;
+
+/** Pro を検討しやすいユーザーの目安（LP 用短文） */
+export const planProGuide = "週に何試合も予想したり、推移や4指標で振り返したい人向き。";
+
 export const plans = [
   {
+    tier: "free" as const,
     name: "Free",
     price: "¥0",
+    /** メイン価格行の直下に表示する補足（期待値の明確化） */
+    priceNote: "ずっと無料",
+    subtitle: "参加無料",
     caption: "まず参加して記録する",
-    items: [
-      "試合予想に参加",
-      "ランキング閲覧",
-      "基本プロフィール表示",
-      "成績のベース確認",
+    summaryLines: [
+      "ランキングと基本成績で立ち位置を把握できる",
+      "予想への参加は Free のままでも問題ありません",
     ],
-    accent: "border-white/12 bg-white/[0.04]",
+    ctaHref: "#signup",
     button: "無料で始める",
   },
   {
+    tier: "pro" as const,
     name: "Pro",
-    price: "More Analytics",
-    caption: "分析をさらに深く見る",
-    items: [
-      "詳細分析の開放",
-      "日次・月次トレンド",
-      "深い比較データ",
-      "より高度な成績可視化",
+    price: "月額プラン",
+    priceNote: "金額はアプリ内で表示",
+    subtitle: "分析をフルで使う",
+    caption: "推移と4指標で予想力を深く見返す",
+    summaryLines: [
+      "日次・月次の推移で継続力や伸びを追える",
+      "詳細ビューで他者との比較まで踏み込める",
     ],
-    accent: "border-cyan-300/30 bg-cyan-400/[0.08]",
-    button: "Proを見る",
+    ctaHref: "#signup",
+    button: "登録後、アプリで Pro を確認",
   },
 ] as const;
 

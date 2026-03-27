@@ -2,19 +2,22 @@ import Image from "next/image";
 import SignupForm from "@/app/component/auth/SignupForm";
 import { signupPoints } from "./lp-data";
 
+const FOCUS_POINTS = signupPoints.slice(0, 3);
+
 export default function LPSignupSection() {
   return (
     <section
       id="signup"
       data-lp-animate="up"
-      className="lp-section-shell pb-32 lg:pb-40"
+      className="lp-section-shell pb-14 lg:pb-16"
     >
       <div className="lp-section-rail">
         <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
         <div className="mx-auto h-24 w-[72%] max-w-4xl bg-cyan-300/8 blur-3xl" />
       </div>
 
-      <div className="relative overflow-hidden rounded-[40px] border border-cyan-300/16 bg-[linear-gradient(135deg,rgba(34,211,238,0.10),rgba(255,255,255,0.03),rgba(16,185,129,0.08))] px-7 py-12 backdrop-blur-2xl sm:px-10 sm:py-14">
+      <div className="relative overflow-hidden rounded-[40px] border border-cyan-300/16 bg-[linear-gradient(135deg,rgba(34,211,238,0.10),rgba(255,255,255,0.03),rgba(16,185,129,0.08))] px-6 py-8 backdrop-blur-2xl sm:px-8 sm:py-10 lg:px-10 lg:py-10">
+        <div className="pointer-events-none absolute right-[-120px] top-[38%] z-[1] hidden h-[320px] w-[320px] rounded-full bg-cyan-300/14 blur-3xl lg:block" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/42 to-transparent" />
         <div className="pointer-events-none absolute inset-x-[10%] top-0 h-28 rounded-full bg-cyan-300/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-12 right-[8%] h-32 w-40 rounded-full bg-emerald-300/8 blur-3xl" />
@@ -36,23 +39,23 @@ export default function LPSignupSection() {
             </div>
           </div>
 
-          <h2 className="mx-auto mt-4 max-w-3xl text-center text-3xl font-black tracking-tight text-white sm:text-5xl">
-            予想を、感覚ではなく実力に変える。
+          <h2 className="mx-auto mt-3 max-w-3xl text-center text-3xl font-black tracking-tight text-white sm:text-[44px]">
+            ここから、予想を実力として積み上げる。
           </h2>
 
-          <p className="mx-auto mt-5 max-w-2xl text-center text-base leading-7 text-white/68">
-            投稿、集計、ランキング、分析まで。Uniterzで、自分の予想力を数字で残す。
+          <p className="mx-auto mt-3 max-w-2xl text-center text-sm leading-6 text-white/68 sm:text-base sm:leading-7">
+            無料で始めて、投稿から分析までをひと続きで記録。最後に登録して、今すぐ始めよう。
           </p>
 
           <div className="mx-auto mt-4 w-fit rounded-full border border-cyan-300/14 bg-cyan-300/[0.05] px-4 py-2 text-xs font-medium tracking-[0.06em] text-cyan-100/78">
             無料で始めて、予想を記録する。
           </div>
 
-          <div className="relative mt-10 grid items-stretch gap-8 lg:grid-cols-[1.04fr_460px]">
+          <div className="relative mt-7 grid items-stretch gap-5 lg:grid-cols-[1.02fr_410px]">
             <div className="pointer-events-none absolute left-[50%] top-1/2 z-20 hidden h-px w-[120px] -translate-y-1/2 bg-gradient-to-r from-cyan-300/0 via-cyan-300/40 to-cyan-300/0 lg:block" />
             <div className="pointer-events-none absolute left-[55%] top-1/2 z-20 hidden h-16 w-16 -translate-y-1/2 rounded-full bg-cyan-300/10 blur-2xl lg:block" />
 
-            <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(7,17,34,0.84),rgba(6,16,28,0.78))] p-6 sm:p-7">
+            <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(7,17,34,0.84),rgba(6,16,28,0.78))] p-5 sm:p-6">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/26 to-transparent" />
               <div className="pointer-events-none absolute inset-x-[10%] top-0 h-20 rounded-full bg-cyan-300/6 blur-3xl" />
               <div className="pointer-events-none absolute inset-[1px] rounded-[29px] ring-1 ring-inset ring-white/5" />
@@ -64,23 +67,25 @@ export default function LPSignupSection() {
                 <div className="h-2 w-2 rounded-full bg-cyan-200/65 shadow-[0_0_12px_rgba(103,232,249,0.55)]" />
               </div>
 
-              <div className="relative mt-5 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+              <div className="relative mt-4 rounded-[24px] border border-white/8 bg-white/[0.03] p-3.5 sm:p-4">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-300/72">
                   Connected Value
                 </div>
 
-                <div className="relative mt-4">
+                <div className="relative mt-3">
                   <div className="pointer-events-none absolute bottom-0 left-5 top-0 w-px bg-gradient-to-b from-cyan-300/55 via-cyan-300/22 to-transparent" />
 
-                  <div className="space-y-4">
-                    {signupPoints.map((item, index) => (
+                  <div
+                    className="space-y-3"
+                    data-lp-stagger-group
+                    data-lp-stagger-variant="up"
+                    data-lp-stagger-step="0.08"
+                  >
+                    {FOCUS_POINTS.map((item, index) => (
                       <div
                         key={item.title}
-                        className="relative pl-8"
-                        style={{
-                          animation: "lp-signup-fade-up .65s ease-out both",
-                          animationDelay: `${index * 0.06}s`,
-                        }}
+                        className="relative pl-7"
+                        data-lp-stagger-item
                       >
                         <div className="absolute left-[14px] top-[8px] h-3 w-3 -translate-x-1/2 rounded-full border border-cyan-300/30 bg-[rgba(8,18,30,0.92)]" />
                         <div
@@ -98,7 +103,7 @@ export default function LPSignupSection() {
                               : "border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))]"
                           }`}
                         >
-                          <div className="relative rounded-[19px] bg-[linear-gradient(180deg,rgba(10,22,40,0.88),rgba(8,18,34,0.82))] px-4 py-3">
+                          <div className="relative rounded-[19px] bg-[linear-gradient(180deg,rgba(10,22,40,0.88),rgba(8,18,34,0.82))] px-4 py-2.5">
                             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/22 to-transparent" />
                             <div
                               className={`pointer-events-none absolute left-0 top-0 h-full w-[3px] rounded-l-[19px] bg-gradient-to-b from-cyan-300 via-sky-400 to-emerald-300 ${
@@ -118,7 +123,7 @@ export default function LPSignupSection() {
                                 >
                                   {item.title}
                                 </div>
-                                <div className="mt-1 text-[13px] leading-6 text-white/46">
+                                <div className="mt-1 text-[12px] leading-5 text-white/46">
                                   {item.sub}
                                 </div>
                               </div>
@@ -140,8 +145,16 @@ export default function LPSignupSection() {
                 </div>
               </div>
 
-              <div className="relative mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
+              <div
+                className="relative mt-4 hidden gap-3 xl:grid xl:grid-cols-3"
+                data-lp-stagger-group
+                data-lp-stagger-variant="up"
+                data-lp-stagger-step="0.08"
+              >
+                <div
+                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
+                  data-lp-stagger-item
+                >
                   <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
                     Start
                   </div>
@@ -150,7 +163,10 @@ export default function LPSignupSection() {
                   </div>
                 </div>
 
-                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
+                <div
+                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
+                  data-lp-stagger-item
+                >
                   <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
                     Flow
                   </div>
@@ -159,7 +175,10 @@ export default function LPSignupSection() {
                   </div>
                 </div>
 
-                <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4">
+                <div
+                  className="rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-4"
+                  data-lp-stagger-item
+                >
                   <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/70">
                     Goal
                   </div>
@@ -170,8 +189,10 @@ export default function LPSignupSection() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-[32px] border border-cyan-300/22 bg-[linear-gradient(180deg,rgba(103,232,249,0.12),rgba(255,255,255,0.03))] p-[1px] shadow-[0_28px_80px_rgba(0,0,0,0.28)]">
-              <div className="relative flex h-full items-center justify-center rounded-[31px] bg-[linear-gradient(180deg,rgba(24,40,60,0.96),rgba(16,28,46,0.92))] p-5 backdrop-blur-xl sm:p-6">
+            <div className="relative overflow-hidden rounded-[32px] border border-cyan-300/28 bg-[linear-gradient(180deg,rgba(103,232,249,0.16),rgba(255,255,255,0.04))] p-[1px] shadow-[0_34px_90px_rgba(0,0,0,0.34)]">
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] [animation:lp-signup-cta-pulse_2.8s_ease-in-out_infinite]" />
+              <div className="pointer-events-none absolute -inset-x-8 top-0 h-20 bg-[linear-gradient(180deg,rgba(186,230,253,0.18),transparent)] blur-2xl" />
+              <div className="relative flex h-full items-center justify-center rounded-[31px] bg-[linear-gradient(180deg,rgba(24,40,60,0.96),rgba(16,28,46,0.92))] p-4 backdrop-blur-xl sm:p-5">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/48 to-transparent" />
                 <div className="pointer-events-none absolute inset-x-[12%] top-0 h-28 rounded-full bg-cyan-300/14 blur-3xl" />
                 <div className="pointer-events-none absolute inset-[1px] rounded-[30px] ring-1 ring-inset ring-cyan-200/10" />
@@ -185,8 +206,17 @@ export default function LPSignupSection() {
                 <div className="pointer-events-none absolute right-5 top-5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/66">
                   Account
                 </div>
+                <div className="pointer-events-none absolute bottom-5 left-5 rounded-full border border-emerald-300/24 bg-emerald-300/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-100/82">
+                  今すぐ無料登録
+                </div>
 
-                <div className="relative w-full max-w-[360px]">
+                <div
+                  className="pointer-events-none absolute bottom-5 right-5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/82"
+                >
+                  最短30秒
+                </div>
+
+                <div className="relative w-full max-w-[360px] [filter:drop-shadow(0_14px_28px_rgba(34,211,238,0.12))]">
                   <SignupForm variant="web" />
                 </div>
               </div>
@@ -194,19 +224,20 @@ export default function LPSignupSection() {
           </div>
         </div>
       </div>
-
       <style>{`
-        @keyframes lp-signup-fade-up {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, 14px, 0);
-          }
+        @keyframes lp-signup-cta-pulse {
+          0%,
           100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
+            box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.24),
+              0 0 0 0 rgba(34, 211, 238, 0);
+          }
+          50% {
+            box-shadow: inset 0 0 0 1px rgba(186, 230, 253, 0.42),
+              0 0 0 10px rgba(34, 211, 238, 0.08);
           }
         }
       `}</style>
+
     </section>
   );
 }
