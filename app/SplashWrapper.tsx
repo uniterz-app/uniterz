@@ -3,15 +3,18 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
+type SplashWrapperProps = {
+  children?: React.ReactNode;
+  forceSplash?: boolean;
+  /** スプラッシュ終了時（body 背景切り替え後）に一度だけ呼ぶ */
+  onDone?: () => void;
+};
+
 export default function SplashWrapper({
   children,
   forceSplash = false,
   onDone,
-}: {
-  children?: React.ReactNode;
-  forceSplash?: boolean;
-  onDone?: () => void;
-}) {
+}: SplashWrapperProps) {
   const { status } = useFirebaseUser();
   const shouldShowSplash = forceSplash || status === "loading";
 
@@ -22,7 +25,7 @@ export default function SplashWrapper({
   const doneCalledRef = useRef(false);
 
   useEffect(() => {
-    if (shouldShowSplash && !fadeDone) {
+    if (!fadeDone) {
       document.body.classList.remove("bg-black");
       document.body.classList.add("splash-bg");
     }
