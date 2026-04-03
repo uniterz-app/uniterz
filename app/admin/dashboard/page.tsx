@@ -22,7 +22,7 @@ export default function AdminDashboard() {
     setDateKey(key);
 
     const fetch = async () => {
-      const snap = await getDoc(doc(db, "analytics/daily/stats", key));
+      const snap = await getDoc(doc(db, "analytics", "daily", "stats", key));
       setStats(snap.exists() ? (snap.data() as DailyStats) : null);
     };
 

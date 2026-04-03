@@ -19,7 +19,9 @@ export default function AppChrome() {
 
   const shouldHideHeader =
     pathname === "/web/rankings" ||
-    pathname === "/mobile/rankings";
+    pathname === "/mobile/rankings" ||
+    pathname.startsWith("/web/communities/") ||
+    pathname.startsWith("/mobile/communities/");
 
   const shouldHideNavBar = false;
 

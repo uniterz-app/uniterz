@@ -16,23 +16,23 @@ export const restContainer: Variants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,   // ← ここを広げる
+      staggerChildren: 0.1,
       when: "beforeChildren",
     },
   },
 };
 
 export const restItem: Variants = {
-  hidden: { opacity: 0, y: 16, scale: 0.985 },
+  hidden: { opacity: 0, y: 20, scale: 0.988 },
   show: {
     opacity: 1,
     y: 0,
     scale: 1,
     transition: {
       type: "spring",
-      stiffness: 170,
-      damping: 20,
-      mass: 0.6,
+      stiffness: 82,
+      damping: 18,
+      mass: 0.92,
     },
   },
 };

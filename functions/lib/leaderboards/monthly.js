@@ -5,6 +5,7 @@ exports.rebuildMonthlyLeaderboardsCron = exports.rebuildMonthlyLeaderboardsHttp 
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
+const jstLeaderboardMonth_1 = require("./jstLeaderboardMonth");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
@@ -15,26 +16,6 @@ const MIN_POSTS_BY_LEAGUE = {
     j1: 20,
     pl: 20,
 };
-function getPreviousMonthRange() {
-    const now = new Date();
-    const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const year = jst.getMonth() === 0 ? jst.getFullYear() - 1 : jst.getFullYear();
-    const month = jst.getMonth() === 0 ? 11 : jst.getMonth() - 1;
-    const start = new Date(year, month, 1, 0, 0, 0, 0);
-    const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
-    return {
-        start,
-        end,
-        month: `${year}-${String(month + 1).padStart(2, "0")}`,
-    };
-}
-function toDateKeyJST(d) {
-    const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-    const y = j.getUTCFullYear();
-    const m = String(j.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(j.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${dd}`;
-}
 function topN(rows, key, n = 10) {
     return [...rows]
         .sort((a, b) => {
@@ -54,9 +35,9 @@ function topN(rows, key, n = 10) {
 }
 async function buildMonthlyLeaderboard(league) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-    const { start, end, month } = getPreviousMonthRange();
-    const startDate = toDateKeyJST(start);
-    const endDate = toDateKeyJST(end);
+    const month = (0, jstLeaderboardMonth_1.getLeaderboardLatestMonthKey)();
+    const { startKey, endKey } = (0, jstLeaderboardMonth_1.getJstMonthDateKeyRange)(month);
+    const { start, end } = (0, jstLeaderboardMonth_1.jstMonthBoundaryDates)(month);
     const minPosts = (_a = MIN_POSTS_BY_LEAGUE[league]) !== null && _a !== void 0 ? _a : 20;
     const ref = db().collection("leaderboards_monthly").doc(`${league}_${month}`);
     await ref.set({
@@ -70,8 +51,8 @@ async function buildMonthlyLeaderboard(league) {
     }, { merge: true });
     const statsSnap = await db()
         .collection("user_stats_v2_daily")
-        .where("date", ">=", startDate)
-        .where("date", "<=", endDate)
+        .where("date", ">=", startKey)
+        .where("date", "<=", endKey)
         .get();
     const map = new Map();
     for (const doc of statsSnap.docs) {

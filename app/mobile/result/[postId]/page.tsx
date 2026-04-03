@@ -1,27 +1,44 @@
-// app/mobile/result/[postId]/page.tsx など（例）
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import MobileResultDetail from "@/app/component/result/mobile/MobileResultDetail";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
-export default function MobileResultDetailPage() {
+export default function MobileResultPostPage() {
   const params = useParams();
   const postId = params?.postId as string;
 
+  const [uid, setUid] = useState<string | null>(null);
   const [post, setPost] = useState<PredictionPostV2 | null>(null);
-  const [market, setMarket] = useState<any>(null);
+  const [market, setMarket] = useState<{
+    homeRate: number;
+    awayRate: number;
+    drawRate?: number;
+    total?: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { language } = useUserLanguage(uid);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (!postId) return;
 
-    async function fetchData() {
+    let alive = true;
+
+    (async () => {
       try {
         const postSnap = await getDoc(doc(db, "posts", postId));
+        if (!alive) return;
         if (!postSnap.exists()) {
           setLoading(false);
           return;
@@ -35,8 +52,9 @@ export default function MobileResultDetailPage() {
         setPost(postData);
 
         const gameSnap = await getDoc(doc(db, "games", postData.gameId));
+        if (!alive) return;
         if (gameSnap.exists()) {
-          const gameData = gameSnap.data() as any;
+          const gameData: any = gameSnap.data();
           setMarket({
             homeRate: gameData?.market?.homeRate ?? 0,
             awayRate: gameData?.market?.awayRate ?? 0,
@@ -46,22 +64,36 @@ export default function MobileResultDetailPage() {
         }
 
         setLoading(false);
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error(e);
         setLoading(false);
       }
-    }
+    })();
 
-    fetchData();
+    return () => {
+      alive = false;
+    };
   }, [postId]);
 
   if (loading) {
-    return <div className="min-h-screen grid place-items-center text-white">Loading...</div>;
+    return (
+      <div className="min-h-screen grid place-items-center text-white">
+        Loading...
+      </div>
+    );
   }
 
   if (!post) {
-    return <div className="min-h-screen grid place-items-center text-white">Post not found</div>;
+    return (
+      <div className="min-h-screen grid place-items-center text-white">
+        Post not found
+      </div>
+    );
   }
 
-  return <MobileResultDetail post={post} market={market} />;
+  return (
+    <div className="px-4 py-4">
+      <MobileResultDetail post={post} market={market ?? undefined} language={language} />
+    </div>
+  );
 }

@@ -1,7 +1,7 @@
 // app/component/result/ResultCard.tsx
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Flame } from "lucide-react";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -12,6 +12,17 @@ import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
+import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x));
+}
+
+function toNumber(v: unknown, fallback = 0) {
+  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+}
 
 type Props = {
   post: PredictionPostV2;
@@ -33,10 +44,6 @@ const leagueLabel: Record<string, string> = {
   pl: "PL",
   j1: "J1",
 };
-
-function toFixed1(v: unknown): string | null {
-  return typeof v === "number" && Number.isFinite(v) ? v.toFixed(1) : null;
-}
 
 function toInt(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
@@ -143,6 +150,7 @@ export default function ResultCard({
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
   const isEn = language === "en";
+  const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
 
   const normalizedLeague = normalizeLeague(post.league);
 
@@ -195,16 +203,6 @@ export default function ResultCard({
   const pillText =
     leagueLabel[normalizedLeague] ?? normalizedLeague.toUpperCase();
 
-  const scorePrecisionText = toFixed1(post.stats?.scorePrecision);
-  const upsetPointsVal = toInt((post.stats as any)?.upsetPoints);
-  const pointsV3Text = toFixed1((post.stats as any)?.pointsV3);
-  const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
-  const upsetDisplayText = hadUpsetGame
-    ? typeof upsetPointsVal === "number"
-      ? `${upsetPointsVal}`
-      : "0"
-    : "--";
-
   const activeWinStreak = toInt(
     (post.stats as any)?.pointsV3Detail?.activeWinStreak
   ) ?? 0;
@@ -229,7 +227,7 @@ export default function ResultCard({
   else if (post.stats?.isWin) badge = "hit";
   else if (post.stats && post.stats.isWin === false) badge = "miss";
 
-  let frame = "border border-white/15 shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
+  let frame = "";
   if (badge === "upset") {
     frame =
       "border border-red-700 ring-4 ring-red-700/90 shadow-[0_0_28px_rgba(220,38,38,0.75)]";
@@ -261,17 +259,51 @@ export default function ResultCard({
     : "text-[11px] px-2.5 py-0.5 gap-1.5";
   const mobileStreakIconClass = isMobile ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
 
+  const statRows = useMemo(() => {
+    const scorePrecision = toNumber(post.stats?.scorePrecision, 0);
+    const upsetPoints = toNumber((post.stats as any)?.upsetPoints, 0);
+    const pointsV3 = toNumber((post.stats as any)?.pointsV3, 0);
+
+    return [
+      {
+        key: "scorePrecision" as const,
+        label: isEn ? "Score Precision" : "スコア精度",
+        value: scorePrecision,
+        barMax: 10,
+        format: (v: number) => v.toFixed(1),
+      },
+      {
+        key: "upsetPoints" as const,
+        label: isEn ? "Upset Score" : "Upsetスコア",
+        value: upsetPoints,
+        barMax: 10,
+        format: (v: number) =>
+          hadUpsetGame ? `${(Math.round(v * 10) / 10).toFixed(1)}` : "--",
+      },
+      {
+        key: "pointsV3" as const,
+        label: isEn ? "Total Score" : "総合スコア",
+        value: pointsV3,
+        barMax: 10,
+        format: (v: number) =>
+          `${(Math.round(v * 10) / 10).toFixed(1)}`,
+      },
+    ];
+  }, [post.stats, isEn, hadUpsetGame]);
+
+  const barAnimateMs = isMobile ? 480 : 520;
+  const barStaggerMs = isMobile ? 80 : 90;
+
   return (
     <div
       onClick={handle}
-      className={`
-        relative rounded-2xl
-        bg-[#050814]/80 text-white
-        active:scale-[0.98] transition-transform
-        cursor-pointer select-none overflow-hidden
-        ${frame}
-        ${isMobile ? "w-full px-4 py-3" : "w-full max-w-4xl mx-auto px-8 py-6"}
-      `}
+      className={[
+        "relative max-w-[1200px] mx-auto w-full overflow-hidden text-white",
+        "active:scale-[0.98] transition-transform cursor-pointer select-none",
+        MATCH_OVERLAY_GLASS_PANEL,
+        isMobile ? "px-4 py-3" : "px-8 py-6",
+        frame,
+      ].join(" ")}
     >
       {badge === "streak" && streakBadge && (
         <span
@@ -380,41 +412,70 @@ export default function ResultCard({
 
       <div className="mt-4 border-t border-dashed border-white/15" />
 
-      <div className="mt-3">
-        <div className={`grid grid-cols-3 ${isMobile ? "gap-2" : "gap-3"}`}>
-          <div className="rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-center">
-            <div className="text-[10px] font-semibold tracking-wide text-white/60">
-              {isEn ? "Score Precision" : "スコア精度"}
-            </div>
-            <div
-              className={`mt-1 text-[13px] font-extrabold tabular-nums ${scorePrecisionValueClass}`}
-            >
-              {scorePrecisionText ?? "--"}
-            </div>
-          </div>
+      <div className={`mt-2.5 ${isMobile ? "space-y-0.5" : "space-y-1"}`}>
+        {statRows.map((r, index) => {
+          const cap = r.barMax;
+          const ratio =
+            r.key === "upsetPoints" && !hadUpsetGame
+              ? 0
+              : cap > 0
+                ? clamp01(r.value / cap)
+                : 0;
+          const display = r.format(r.value);
 
-          <div className="rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-center">
-            <div className="text-[10px] font-semibold tracking-wide text-white/60">
-              {isEn ? "Upset Score" : "Upsetスコア"}
-            </div>
-            <div
-              className={`mt-1 text-[13px] font-extrabold tabular-nums ${upsetValueClass}`}
-            >
-              {upsetDisplayText}
-            </div>
-          </div>
+          const valueClass =
+            r.key === "scorePrecision"
+              ? scorePrecisionValueClass
+              : r.key === "upsetPoints"
+                ? upsetValueClass
+                : pointsV3ValueClass;
 
-          <div className="rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-center">
-            <div className="text-[10px] font-semibold tracking-wide text-white/60">
-              {isEn ? "Total Score" : "総合スコア"}
-            </div>
+          return (
             <div
-              className={`mt-1 text-[13px] font-extrabold tabular-nums ${pointsV3ValueClass}`}
+              key={r.key}
+              className={
+                isMobile
+                  ? "flex items-center gap-2"
+                  : "flex items-center gap-2.5 sm:gap-3"
+              }
             >
-              {pointsV3Text ?? "--"}
+              <div
+                className={
+                  isMobile
+                    ? "w-[6.5rem] min-w-0 shrink-0"
+                    : "flex w-[7.25rem] min-w-0 shrink-0 sm:w-[7.75rem]"
+                }
+              >
+                <span
+                  className={
+                    isMobile
+                      ? "truncate text-[11px] font-semibold leading-tight text-white"
+                      : "truncate text-[12px] font-semibold text-white sm:text-[13px]"
+                  }
+                >
+                  {r.label}
+                </span>
+              </div>
+
+              <ResultStatRatingBar
+                ratio={ratio}
+                animateMs={barAnimateMs}
+                delayMs={index * barStaggerMs}
+                size={isMobile ? "sm" : "md"}
+              />
+
+              <div
+                className={
+                  isMobile
+                    ? `w-10 shrink-0 text-right text-[11px] ${resultStatsMetricNumClass}`
+                    : `w-11 shrink-0 text-right text-[12px] text-white sm:w-12 sm:text-[13px] ${resultStatsMetricNumClass}`
+                }
+              >
+                <span className={valueClass}>{display}</span>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );

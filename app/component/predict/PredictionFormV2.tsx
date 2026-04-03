@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { auth } from "@/lib/firebase";
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import { toast } from "@/app/component/ui/toast";
-import { logGameEvent } from "@/lib/analytics/logEvent";
 import { useRouter, usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
@@ -12,6 +12,12 @@ import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
+import { getNextScheduledGameIdOnSameDay } from "@/lib/games/nextPredictGame";
+import {
+  readPredictNextGameModalSkip,
+  writePredictNextGameModalSkip,
+} from "@/lib/predict/nextGameModalPrefs";
 
 /* ======================
    Motion
@@ -34,6 +40,14 @@ type Props = {
   onStandingsOpenChange?: (open: boolean) => void;
   inOverlay?: boolean;
   embedded?: boolean;
+  /** Games オーバーレイ: 閉じる（同日に次試合がない・ユーザーがいいえ） */
+  onClosePredictOverlay?: () => void;
+  /** Games オーバーレイ: 次の試合へ切り替え（はい） */
+  onSwitchOverlayGame?: (gameId: string) => void;
+  /** オーバーレイで「次へ」に出せる試合 ID（当日リストに無い試合は除外） */
+  overlayScheduleGameIds?: string[];
+  /** 当日の試合一覧（次試合のチーム名・カラー表示用） */
+  overlayScheduleGames?: MatchCardProps[];
 };
 
 type Winner = "home" | "away" | "draw";
@@ -46,6 +60,10 @@ export default function PredictionFormV2({
   onStandingsOpenChange,
   inOverlay = false,
   embedded = false,
+  onClosePredictOverlay,
+  onSwitchOverlayGame,
+  overlayScheduleGameIds,
+  overlayScheduleGames,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -67,6 +85,10 @@ export default function PredictionFormV2({
   const [submitting, setSubmitting] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [standingsOpen, setStandingsOpen] = useState(false);
+  /** Games オーバーレイ: 投稿後モーダル用の次試合 */
+  const [nextGamePreview, setNextGamePreview] = useState<MatchCardProps | null>(
+    null
+  );
 
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -224,31 +246,50 @@ export default function PredictionFormV2({
         throw new Error(`APIがJSONではなくHTMLを返しました (${res.status})`);
       }
 
-      try {
-        const normalizedLeague =
-          game.league === "bj"
-            ? "B1"
-            : game.league === "j1"
-            ? "J1"
-            : game.league.toUpperCase();
-
-        void logGameEvent({
-          type: "predict",
-          gameId: (game as any).id,
-          league: normalizedLeague,
-        });
-      } catch {}
-
       toast.success(isEn ? "Prediction submitted." : "予想を投稿しました");
       onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
-
-      if (!inOverlay) {
-        router.push(`${prefix}/games?date=${gameDateKey}`);
-      }
 
       setWinner(null);
       setScoreHome("");
       setScoreAway("");
+
+      if (inOverlay) {
+        if (readPredictNextGameModalSkip()) {
+          onClosePredictOverlay?.();
+        } else {
+          let nextId: string | null = null;
+          if (game.startAtJst) {
+            try {
+              nextId = await getNextScheduledGameIdOnSameDay({
+                currentGameId: String((game as any).id),
+                league: game.league,
+                dayAnchor: game.startAtJst,
+              });
+            } catch {
+              /* ignore */
+            }
+          }
+          const nextInSchedule =
+            nextId &&
+            (!overlayScheduleGameIds?.length ||
+              overlayScheduleGameIds.some(
+                (id) => String(id) === String(nextId)
+              ));
+          const preview =
+            nextInSchedule && nextId
+              ? overlayScheduleGames?.find(
+                  (p) => String(p.id) === String(nextId)
+                ) ?? null
+              : null;
+          if (preview) {
+            setNextGamePreview(preview);
+          } else {
+            onClosePredictOverlay?.();
+          }
+        }
+      } else {
+        router.push(`${prefix}/games?date=${gameDateKey}`);
+      }
     } catch (e: any) {
       alert(e.message ?? (isEn ? "Failed to submit." : "送信に失敗しました"));
     } finally {
@@ -256,7 +297,47 @@ export default function PredictionFormV2({
     }
   };
 
+  const handleNextModalYes = useCallback(
+    (dontShowAgain: boolean) => {
+      if (dontShowAgain) writePredictNextGameModalSkip();
+      const id = nextGamePreview?.id;
+      setNextGamePreview(null);
+      if (id) onSwitchOverlayGame?.(String(id));
+    },
+    [nextGamePreview, onSwitchOverlayGame]
+  );
+
+  const handleNextModalNo = useCallback(
+    (dontShowAgain: boolean) => {
+      if (dontShowAgain) writePredictNextGameModalSkip();
+      setNextGamePreview(null);
+      onClosePredictOverlay?.();
+    },
+    [onClosePredictOverlay]
+  );
+
+  const nextModal =
+    typeof document !== "undefined" && nextGamePreview
+      ? createPortal(
+          <PredictNextGameModal
+            open
+            isEn={isEn}
+            league={nextGamePreview.league}
+            homeName={nextGamePreview.home?.name ?? ""}
+            awayName={nextGamePreview.away?.name ?? ""}
+            homeTeamId={nextGamePreview.home?.teamId}
+            awayTeamId={nextGamePreview.away?.teamId}
+            homeColorHex={nextGamePreview.home?.colorHex}
+            awayColorHex={nextGamePreview.away?.colorHex}
+            onYes={handleNextModalYes}
+            onNo={handleNextModalNo}
+          />,
+          document.body
+        )
+      : null;
+
   return (
+    <>
     <motion.div
       variants={pageContainer}
       initial="hidden"
@@ -457,5 +538,7 @@ export default function PredictionFormV2({
         </motion.div>
       </div>
     </motion.div>
+    {nextModal}
+    </>
   );
 }

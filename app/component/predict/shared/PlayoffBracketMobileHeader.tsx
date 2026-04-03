@@ -4,14 +4,18 @@ type Props = {
   season?: string;
 };
 
+const bebas = "Bebas Neue, sans-serif";
+
 export default function PlayoffBracketHeader({ season }: Props) {
+  const title = season ? `${season} PLAYOFFS BRACKET` : "PLAYOFFS BRACKET";
+
   return (
-    <div className="flex flex-col items-center mb-1">
-      {/* UNITERZ */}
+    <div className="mb-1 flex w-full flex-col items-center">
       <div
+        className="w-full text-center leading-none"
         style={{
-          fontFamily: "Bebas Neue",
-          fontSize: 23,
+          fontFamily: bebas,
+          fontSize: 20,
           letterSpacing: "0.22em",
           color: "#9fb4ff",
         }}
@@ -19,44 +23,27 @@ export default function PlayoffBracketHeader({ season }: Props) {
         UNITERZ
       </div>
 
-      {/* divider line */}
       <div
+        className="mt-2 h-px w-[min(180px,65vw)] max-w-[220px]"
         style={{
-          width: 160,
-          height: 1,
-          marginTop: 2,
-          marginBottom: 4,
           background:
-            "linear-gradient(90deg, transparent, #5f7cff, transparent)",
-          opacity: 0.6,
+            "linear-gradient(90deg, transparent, rgba(56,189,248,0.5), #5f7cff, rgba(56,189,248,0.5), transparent)",
+          boxShadow:
+            "0 0 10px rgba(95,124,255,0.65), 0 0 22px rgba(34,211,238,0.3)",
         }}
+        aria-hidden
       />
 
-      {/* season */}
-      {season && (
-        <div
-          style={{
-            fontFamily: "Bebas Neue",
-            fontSize: 16,
-            letterSpacing: "0.14em",
-            color: "#9fb4ff",
-            marginBottom: 2,
-          }}
-        >
-          {season}
-        </div>
-      )}
-
-      {/* title */}
       <div
+        className="mt-2 leading-none"
         style={{
-          fontFamily: "Bebas Neue",
-          fontSize: 28,
+          fontFamily: bebas,
+          fontSize: 24,
           letterSpacing: "0.06em",
           color: "#f8fbff",
         }}
       >
-        PLAYOFF BRACKET
+        {title}
       </div>
     </div>
   );

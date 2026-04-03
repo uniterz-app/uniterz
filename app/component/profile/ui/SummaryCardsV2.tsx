@@ -9,8 +9,6 @@ import {
   Crown,
   Zap,
 } from "lucide-react";
-import { Alfa_Slab_One } from "next/font/google";
-
 import Tooltip from "@/app/component/common/Tooltip";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import type { Language } from "@/lib/i18n/language";
@@ -22,8 +20,8 @@ import {
   evaluateMaxStreakV2,
   type HighlightV2,
 } from "@/lib/stats/thresholdsV2";
-
-const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
+import SummaryCardReveal from "./SummaryCardReveal";
+import { summaryMetricNumClass } from "@/lib/fonts";
 
 export type SummaryDataV2 = {
   posts: number;
@@ -42,15 +40,20 @@ type Props = {
   compact?: boolean;
   period: "7d" | "30d" | "all";
   language?: Language;
+  /** 取得完了後にカードを順番に浮き上がらせる */
+  reveal?: boolean;
 };
 
 const MIN_RECENT3_POSTS = 4;
+
+const SUMMARY_CARD_TOTAL = 6;
 
 export default function SummaryCardsV2({
   data,
   compact = false,
   period,
   language = "ja",
+  reveal = false,
 }: Props) {
   const isEn = language === "en";
   const [tooltip, setTooltip] = useState<{
@@ -130,12 +133,15 @@ export default function SummaryCardsV2({
   const hTotal =
     hTotalRaw.level === "none" ? hTotalRaw : { level: "yellow" as const };
 
-  const padCls = compact ? "p-2 md:p-3" : "p-4";
-  const gapCls = compact ? "gap-2" : "gap-3";
-  const labelCls = compact ? "text-[12px] md:text-[13px]" : "text-[14px]";
-  const valueCls =
-    compact ? "text-[18px] md:text-[24px]" : "text-[20px] md:text-[28px]";
-  const iconSize = compact ? 16 : 20;
+  const padCls = compact ? "p-1.5 md:p-3" : "p-4";
+  const gapCls = compact ? "gap-1.5 md:gap-3" : "gap-3";
+  const labelCls = compact
+    ? "text-[10px] md:text-[13px] tracking-tight"
+    : "text-[14px]";
+  const valueCls = compact
+    ? "text-[14px] md:text-[24px] tracking-tight"
+    : "text-[20px] md:text-[28px]";
+  const iconSize = compact ? 13 : 20;
 
   const isMobile = compact;
 
@@ -236,68 +242,104 @@ export default function SummaryCardsV2({
     [isEn]
   );
 
+  const wrap = (i: number, node: React.ReactNode) => (
+    <SummaryCardReveal
+      key={i}
+      index={i}
+      total={SUMMARY_CARD_TOTAL}
+      enabled={reveal}
+      className="min-w-0"
+    >
+      {node}
+    </SummaryCardReveal>
+  );
+
   if (isMobile) {
     return (
       <>
         <div className={`mt-6 grid grid-cols-2 ${gapCls}`}>
-          <Card
-            icon={<BarChartHorizontal size={iconSize} />}
-            label={isEn ? "Posts" : "投稿数"}
-            value={postsText}
-            padCls={padCls}
-            labelCls={labelCls}
-            valueCls={`${alfa.className} ${valueCls}`}
-          />
+          {wrap(
+            0,
+            <Card
+              icon={<BarChartHorizontal size={iconSize} />}
+              label={isEn ? "Posts" : "投稿数"}
+              value={postsText}
+              padCls={padCls}
+              labelCls={labelCls}
+              valueCls={`${summaryMetricNumClass} ${valueCls}`}
+              compactShell={compact}
+            />
+          )}
 
-          <Card
-            icon={<Trophy size={iconSize} />}
-            label={isEn ? "Win Rate" : "勝率"}
-            value={winRatePct}
-            padCls={padCls}
-            labelCls={labelCls}
-            valueCls={decorate(`${alfa.className} ${valueCls}`, hWin)}
-            afterIcon={highlightIcon(hWin, iconSize)}
-          />
+          {wrap(
+            1,
+            <Card
+              icon={<Trophy size={iconSize} />}
+              label={isEn ? "Win Rate" : "勝率"}
+              value={winRatePct}
+              padCls={padCls}
+              labelCls={labelCls}
+              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hWin)}
+              afterIcon={highlightIcon(hWin, iconSize)}
+              compactShell={compact}
+            />
+          )}
 
-          <Card
-            icon={<Gauge size={iconSize} />}
-            label={ScorePrecisionLabel}
-            value={scorePrecisionSumText}
-            padCls={padCls}
-            labelCls={labelCls}
-            valueCls={decorate(`${alfa.className} ${valueCls}`, hPrecision)}
-            afterIcon={highlightIcon(hPrecision, iconSize)}
-          />
+          {wrap(
+            2,
+            <Card
+              icon={<Gauge size={iconSize} />}
+              label={ScorePrecisionLabel}
+              value={scorePrecisionSumText}
+              padCls={padCls}
+              labelCls={labelCls}
+              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hPrecision)}
+              afterIcon={highlightIcon(hPrecision, iconSize)}
+              compactShell={compact}
+            />
+          )}
 
-          <Card
-            icon={<Zap size={iconSize} />}
-            label={UpsetPointsLabel}
-            value={upsetPointsText}
-            padCls={padCls}
-            labelCls={labelCls}
-            valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
-            afterIcon={highlightIcon(hUpset, iconSize)}
-          />
+          {wrap(
+            3,
+            <Card
+              icon={<Zap size={iconSize} />}
+              label={UpsetPointsLabel}
+              value={upsetPointsText}
+              padCls={padCls}
+              labelCls={labelCls}
+              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hUpset)}
+              afterIcon={highlightIcon(hUpset, iconSize)}
+              compactShell={compact}
+            />
+          )}
 
-          <Card
-            icon={<Flame size={iconSize} />}
-            label={MaxStreakLabel}
-            value={maxStreakText}
-            padCls={padCls}
-            labelCls={labelCls}
-            valueCls={decorate(`${alfa.className} ${valueCls}`, hStreak)}
-            afterIcon={highlightIcon(hStreak, iconSize)}
-          />
+          {wrap(
+            4,
+            <Card
+              icon={<Flame size={iconSize} />}
+              label={MaxStreakLabel}
+              value={maxStreakText}
+              padCls={padCls}
+              labelCls={labelCls}
+              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hStreak)}
+              afterIcon={highlightIcon(hStreak, iconSize)}
+              compactShell={compact}
+            />
+          )}
 
-          <Card
-            icon={<Crown size={iconSize} />}
-            label={TotalPointsLabel}
-            value={totalPointsText}
-            padCls={padCls}
-            labelCls={labelCls}
-            valueCls={decorate(`${alfa.className} ${valueCls}`, hTotal)}
-            afterIcon={highlightIcon(hTotal, iconSize)}
-          />
+          {wrap(
+            5,
+            <Card
+              icon={<Crown size={iconSize} />}
+              label={TotalPointsLabel}
+              value={totalPointsText}
+              padCls={padCls}
+              labelCls={labelCls}
+              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hTotal)}
+              afterIcon={highlightIcon(hTotal, iconSize)}
+              compactShell={compact}
+            />
+          )}
         </div>
 
         {tooltip && (
@@ -314,58 +356,81 @@ export default function SummaryCardsV2({
   return (
     <>
       <div className={`mt-6 grid grid-cols-6 ${gapCls}`}>
-        <Card
-          label={isEn ? "Posts" : "投稿数"}
-          value={postsText}
-          padCls={padCls}
-          labelCls={labelCls}
-          valueCls={`${alfa.className} ${valueCls}`}
-        />
+        {wrap(
+          0,
+          <Card
+            label={isEn ? "Posts" : "投稿数"}
+            value={postsText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={`${summaryMetricNumClass} ${valueCls}`}
+          />
+        )}
 
-        <Card
-          label={isEn ? "Win Rate" : "勝率"}
-          value={winRatePct}
-          padCls={padCls}
-          labelCls={labelCls}
-          valueCls={decorate(`${alfa.className} ${valueCls}`, hWin)}
-          afterIcon={highlightIcon(hWin, iconSize)}
-        />
+        {wrap(
+          1,
+          <Card
+            label={isEn ? "Win Rate" : "勝率"}
+            value={winRatePct}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hWin)}
+            afterIcon={highlightIcon(hWin, iconSize)}
+            compactShell={compact}
+          />
+        )}
 
-        <Card
-          label={ScorePrecisionLabel}
-          value={scorePrecisionSumText}
-          padCls={padCls}
-          labelCls={labelCls}
-          valueCls={decorate(`${alfa.className} ${valueCls}`, hPrecision)}
-          afterIcon={highlightIcon(hPrecision, iconSize)}
-        />
+        {wrap(
+          2,
+          <Card
+            label={ScorePrecisionLabel}
+            value={scorePrecisionSumText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hPrecision)}
+            afterIcon={highlightIcon(hPrecision, iconSize)}
+            compactShell={compact}
+          />
+        )}
 
-        <Card
-          label={UpsetPointsLabel}
-          value={upsetPointsText}
-          padCls={padCls}
-          labelCls={labelCls}
-          valueCls={decorate(`${alfa.className} ${valueCls}`, hUpset)}
-          afterIcon={highlightIcon(hUpset, iconSize)}
-        />
+        {wrap(
+          3,
+          <Card
+            label={UpsetPointsLabel}
+            value={upsetPointsText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hUpset)}
+            afterIcon={highlightIcon(hUpset, iconSize)}
+            compactShell={compact}
+          />
+        )}
 
-        <Card
-          label={MaxStreakLabel}
-          value={maxStreakText}
-          padCls={padCls}
-          labelCls={labelCls}
-          valueCls={decorate(`${alfa.className} ${valueCls}`, hStreak)}
-          afterIcon={highlightIcon(hStreak, iconSize)}
-        />
+        {wrap(
+          4,
+          <Card
+            label={MaxStreakLabel}
+            value={maxStreakText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hStreak)}
+            afterIcon={highlightIcon(hStreak, iconSize)}
+            compactShell={compact}
+          />
+        )}
 
-        <Card
-          label={TotalPointsLabel}
-          value={totalPointsText}
-          padCls={padCls}
-          labelCls={labelCls}
-          valueCls={decorate(`${alfa.className} ${valueCls}`, hTotal)}
-          afterIcon={highlightIcon(hTotal, iconSize)}
-        />
+        {wrap(
+          5,
+          <Card
+            label={TotalPointsLabel}
+            value={totalPointsText}
+            padCls={padCls}
+            labelCls={labelCls}
+            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hTotal)}
+            afterIcon={highlightIcon(hTotal, iconSize)}
+            compactShell={compact}
+          />
+        )}
       </div>
 
       {tooltip && (
@@ -381,7 +446,7 @@ export default function SummaryCardsV2({
 
 function decorate(base: string, h: HighlightV2) {
   if (h.level === "strong") {
-    return `${base} text-yellow-300 drop-shadow-[0_0_6px_rgba(234,179,8,0.35)]`;
+    return `${base} text-yellow-300`;
   }
   if (h.level === "yellow") {
     return `${base} text-amber-300`;
@@ -407,6 +472,7 @@ function Card({
   labelCls,
   valueCls,
   afterIcon,
+  compactShell,
 }: {
   icon?: React.ReactNode;
   label: React.ReactNode;
@@ -415,12 +481,17 @@ function Card({
   labelCls: string;
   valueCls: string;
   afterIcon?: React.ReactNode;
+  compactShell?: boolean;
 }) {
+  const shell = compactShell
+    ? "min-w-0 rounded-lg md:rounded-xl border border-white/15 md:border-white/10 bg-[#050814]/80 text-center shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+    : "min-w-0 rounded-xl border border-white/10 bg-[#050814]/80 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)]";
+
   return (
-    <div
-      className={`min-w-0 rounded-xl border border-white/10 bg-[#050814]/80 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)] ${padCls}`}
-    >
-      <div className="mb-1 flex items-center justify-center gap-2 text-white/85">
+    <div className={`${shell} ${padCls}`}>
+      <div
+        className={`flex items-center justify-center gap-1.5 text-white/85 md:gap-2 ${compactShell ? "mb-0.5 md:mb-1" : "mb-1"}`}
+      >
         {icon && <span className="inline-flex">{icon}</span>}
         <span className={`${labelCls} font-semibold tracking-[0.2px]`}>
           {label}

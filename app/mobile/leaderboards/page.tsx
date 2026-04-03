@@ -6,24 +6,9 @@ import MonthlyLeaderboardSection from "@/app/component/leaderboards/MonthlyLeade
 import PlayoffBracketMarket from "@/app/component/predict/market/PlayoffBracketMarket";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { nameRajdhani } from "@/lib/fonts";
+import { getLeaderboardLatestMonthKey } from "@/lib/time/zonedTime";
 
 type LeaderboardsTab = "playoff" | "bracket" | "leaderboard";
-
-function getLastMonthJst() {
-  const now = new Date();
-  const jstNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" })
-  );
-
-  const year = jstNow.getFullYear();
-  const month = jstNow.getMonth();
-
-  const lastMonthDate = new Date(year, month - 1, 1);
-  const y = lastMonthDate.getFullYear();
-  const m = String(lastMonthDate.getMonth() + 1).padStart(2, "0");
-
-  return `${y}-${m}`;
-}
 
 function shiftMonth(month: string, delta: number) {
   const match = month.match(/^(\d{4})-(\d{2})$/);
@@ -51,7 +36,7 @@ const TABS: Array<{
 export default function LeaderboardsPage() {
   const [tab, setTab] = useState<LeaderboardsTab>("playoff");
 
-  const latestMonth = useMemo(() => getLastMonthJst(), []);
+  const latestMonth = useMemo(() => getLeaderboardLatestMonthKey(), []);
   const [month, setMonth] = useState<string>(latestMonth);
   const season = useMemo(() => getCurrentPlayoffSeason(), []);
 

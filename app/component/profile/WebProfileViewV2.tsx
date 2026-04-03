@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Menu, Flame, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 import Tabs from "./ui/Tabs";
 import PeriodToggle from "./ui/PeriodToggle";
 import SummaryCardsV2 from "./ui/SummaryCardsV2";
+import SummaryCardReveal from "./ui/SummaryCardReveal";
+import ProfileHeroCard from "./ui/ProfileHeroCard";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
+import ScoringRulesChangeNoticeModal from "@/app/component/profile/ScoringRulesChangeNoticeModal";
 
 import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
@@ -82,6 +84,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     loading: playoffBracketLoading,
     playoffDisplayData,
     playoffScore,
+    playoffBracketDoc,
+    officialResults,
   } = useProfilePlayoffBracket(resolvedUid);
 
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
@@ -120,62 +124,71 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   );
   const showCurrentStreakBadge = currentStreak >= 3;
 
+  const proSummaryTotal = 5;
+  const summaryMountKey = `profile-summary-${resolvedUid ?? "guest"}-${range}`;
+  const overviewReady =
+    !resolvedUid || (!statsLoading && !dailyTrendLoading);
+
+  const summaryEntranceLockedRef = useRef(false);
+  useEffect(() => {
+    if (tab !== "overview") summaryEntranceLockedRef.current = true;
+  }, [tab]);
+  const playSummaryEntrance =
+    !summaryEntranceLockedRef.current && !statsLoading && overviewReady;
+
+  const [chartEntranceDone, setChartEntranceDone] = useState(false);
+  const onChartRevealComplete = useCallback(() => {
+    setChartEntranceDone(true);
+  }, []);
+
+  useEffect(() => {
+    if (!overviewReady) setChartEntranceDone(false);
+  }, [overviewReady]);
+
+  useEffect(() => {
+    if (!playSummaryEntrance) setChartEntranceDone(true);
+  }, [playSummaryEntrance]);
+
+  const heroUidKey = resolvedUid ?? "guest";
+  const prevHeroUidRef = useRef(heroUidKey);
+  const [heroEntranceLocked, setHeroEntranceLocked] = useState(false);
+  useEffect(() => {
+    if (prevHeroUidRef.current !== heroUidKey) {
+      setHeroEntranceLocked(false);
+      prevHeroUidRef.current = heroUidKey;
+    }
+  }, [heroUidKey]);
+  const playHeroEntrance = !heroEntranceLocked;
+
   if (isMe && loadingPlan) {
     return <div className="p-4 text-white/60">loading...</div>;
   }
 
   return (
     <div className="mx-auto w-full max-w-[1200px] px-4 py-6 pb-bottom-nav text-white">
-      <div className="min-h-[180px] rounded-2xl border border-white/10 bg-[#050814]/80 p-10 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
-        <div className="grid grid-cols-[96px_1fr_auto] items-start gap-6">
-          <div className="relative">
-            <div className="h-24 w-24 overflow-hidden rounded-full bg-[#0f2d35] ring-4 ring-[#0f2d35]">
-              {displayProfile.avatarUrl && (
-                <img
-                  src={displayProfile.avatarUrl}
-                  className="h-full w-full object-cover"
-                  alt=""
-                />
-              )}
-            </div>
-
-            {showCurrentStreakBadge && (
-              <div className="absolute left-1/2 -bottom-2 -translate-x-1/2">
-                <div className="inline-flex whitespace-nowrap rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-yellow-300 shadow-[0_8px_18px_rgba(0,0,0,0.45)] backdrop-blur">
-                  <Flame className="h-3.5 w-3.5 text-orange-400" />
-                  <span className="ml-1 tabular-nums">{currentStreak}</span>
-                  <span className="ml-1">
-                    {language === "en" ? "Win streak" : "連勝中"}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h1 className="text-3xl font-extrabold">
-              {displayProfile.displayName}
-            </h1>
-            <p className="opacity-70">{displayProfile.handle}</p>
-            {displayProfile.bio && <p className="mt-2">{displayProfile.bio}</p>}
-          </div>
-
-          {canOpenSettings && (
-            <button
-              className="h-11 w-11 rounded-lg border border-white/10 bg-white/5"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-          )}
-        </div>
-
-        {resolvedBadges.length > 0 && (
-          <div className="mt-4 grid grid-cols-10">
+      <ProfileHeroCard
+        key={heroUidKey}
+        layout="web"
+        playEntrance={playHeroEntrance}
+        onEntranceComplete={() => setHeroEntranceLocked(true)}
+        language={language}
+        displayProfile={{
+          displayName: displayProfile.displayName,
+          handle: displayProfile.handle,
+          bio: displayProfile.bio,
+          avatarUrl: displayProfile.avatarUrl,
+        }}
+        showCurrentStreakBadge={showCurrentStreakBadge}
+        currentStreak={currentStreak}
+        canOpenSettings={canOpenSettings}
+        onOpenSettings={() => setDrawerOpen(true)}
+      >
+        {resolvedBadges.length > 0 ? (
+          <div className="grid grid-cols-10 gap-0.5">
             {resolvedBadges.slice(0, 10).map((b) => (
               <button
                 key={b.id}
-                className="h-14 w-14 rounded-xl"
+                className="h-12 w-12 rounded-lg"
                 onClick={() => {
                   setSelectedBadge(b);
                   setBadgeModalOpen(true);
@@ -189,8 +202,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </button>
             ))}
           </div>
-        )}
-      </div>
+        ) : null}
+      </ProfileHeroCard>
 
       <div className="mt-6 flex items-center justify-between">
         <Tabs value={tab} onChange={setTab} size="lg" />
@@ -202,81 +215,126 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       <div className="mt-6">
         {tab === "overview" ? (
           <>
-            {statsLoading ? (
-              <div
-                className="flex min-h-[200px] items-center justify-center py-12"
-                role="status"
-                aria-live="polite"
-              >
-                <Loader2
-                  className="h-9 w-9 animate-spin text-white/45"
-                  aria-hidden
+            {overviewReady ? (
+              <>
+              <div key={summaryMountKey} className="min-h-[120px]">
+              {currentIsProView ? (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <SummaryCardReveal
+                      index={0}
+                      total={proSummaryTotal}
+                      enabled={playSummaryEntrance}
+                      className="min-w-0"
+                    >
+                      <AnalysisWinCard
+                        posts={posts}
+                        wins={wins}
+                        language={language}
+                      />
+                    </SummaryCardReveal>
+                    <SummaryCardReveal
+                      index={1}
+                      total={proSummaryTotal}
+                      enabled={playSummaryEntrance}
+                      className="min-w-0"
+                    >
+                      <MaxStreakCard
+                        compact
+                        maxStreak={maxStreak}
+                        language={language}
+                      />
+                    </SummaryCardReveal>
+                    <SummaryCardReveal
+                      index={2}
+                      total={proSummaryTotal}
+                      enabled={playSummaryEntrance}
+                      className="min-w-0"
+                    >
+                      <ScorePrecisionCard
+                        compact
+                        scorePrecisionSum={summary?.scorePrecisionSum ?? 0}
+                        analyses={posts}
+                        language={language}
+                      />
+                    </SummaryCardReveal>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <SummaryCardReveal
+                      index={3}
+                      total={proSummaryTotal}
+                      enabled={playSummaryEntrance}
+                      className="min-w-0"
+                    >
+                      <UpsetCard
+                        compact
+                        upsetPointsSum={upsetPointsSum}
+                        analyses={posts}
+                        upsetChanceCount={upsetChanceCount}
+                        upsetHitCount={upsetHitCount}
+                        language={language}
+                      />
+                    </SummaryCardReveal>
+                    <SummaryCardReveal
+                      index={4}
+                      total={proSummaryTotal}
+                      enabled={playSummaryEntrance}
+                      className="min-w-0"
+                    >
+                      <TotalScoreCard
+                        compact
+                        periodLabel={periodLabel}
+                        totalPoints={totalPoints}
+                        analyses={posts}
+                        language={language}
+                      />
+                    </SummaryCardReveal>
+                  </div>
+                </>
+              ) : (
+                <SummaryCardsV2
+                  compact
+                  period={range}
+                  language={language}
+                  reveal={playSummaryEntrance}
+                  data={{
+                    fullPosts: summary?.fullPosts ?? 0,
+                    recent3Posts: summary?.recent3Posts ?? 0,
+                    posts,
+                    wins,
+                    winRate: summary?.winRate ?? 0,
+                    scorePrecisionSum: summary?.scorePrecisionSum ?? 0,
+                    upsetPointsSum,
+                    maxStreak,
+                    pointsSumV3: totalPoints,
+                  }}
                 />
+              )}
               </div>
-            ) : (
-              <>
-            {currentIsProView ? (
-              <>
-                <div className="grid grid-cols-3 gap-3">
-                  <AnalysisWinCard posts={posts} wins={wins} language={language} />
-                  <MaxStreakCard compact maxStreak={maxStreak} language={language} />
-                  <ScorePrecisionCard
-                    compact
-                    scorePrecisionSum={summary?.scorePrecisionSum ?? 0}
-                    analyses={posts}
-                    language={language}
-                  />
-                </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <UpsetCard
-                    compact
-                    upsetPointsSum={upsetPointsSum}
-                    analyses={posts}
-                    upsetChanceCount={upsetChanceCount}
-                    upsetHitCount={upsetHitCount}
-                    language={language}
-                  />
-                  <TotalScoreCard
-                    compact
-                    periodLabel={periodLabel}
-                    totalPoints={totalPoints}
-                    analyses={posts}
-                    language={language}
-                  />
-                </div>
-              </>
-            ) : (
-              <SummaryCardsV2
-                compact
-                period={range}
-                language={language}
-                data={{
-                  fullPosts: summary?.fullPosts ?? 0,
-                  recent3Posts: summary?.recent3Posts ?? 0,
-                  posts,
-                  wins,
-                  winRate: summary?.winRate ?? 0,
-                  scorePrecisionSum: summary?.scorePrecisionSum ?? 0,
-                  upsetPointsSum,
-                  maxStreak,
-                  pointsSumV3: totalPoints,
-                }}
-              />
-            )}
-              </>
-            )}
-
-            {!dailyTrendLoading && (
-              <div className="mt-6">
+            <div className="mt-6">
+              <SummaryCardReveal
+                index={5}
+                total={6}
+                enabled={playSummaryEntrance}
+                className="min-w-0 overflow-hidden"
+                onAnimationComplete={onChartRevealComplete}
+              >
                 <DailyTrendCard
                   data={chartData}
                   range={range}
                   allowAll={currentIsProView}
                   language={language}
+                  entranceSync
+                  rechartsAfterEntrance={
+                    !playSummaryEntrance || chartEntranceDone
+                  }
                 />
-              </div>
-            )}
+              </SummaryCardReveal>
+            </div>
+              </>
+            ) : null}
           </>
         ) : tab === "bracket" ? (
           isTargetGuestProfile ? (
@@ -294,11 +352,17 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               {language === "en" ? "Not submitted" : "未提出"}
             </div>
           ) : (
-            <PlayoffFullBracketWeb
-              league="nba"
-              score={playoffScore}
-              {...playoffDisplayData}
-            />
+            <div className="mt-2 overflow-visible sm:mt-0">
+              <PlayoffFullBracketWeb
+                league="nba"
+                score={playoffScore}
+                {...playoffDisplayData}
+                bracket={playoffBracketDoc?.bracket}
+                results={officialResults ?? undefined}
+                hitLegend={{ language }}
+                showGlassShell={false}
+              />
+            </div>
           )
         ) : isTargetGuestProfile ? (
           <ProPreview />
@@ -318,6 +382,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       </div>
 
       <SideMenuDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      <ScoringRulesChangeNoticeModal
+        language={language}
+        enabled={!!resolvedUid}
+      />
 
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal

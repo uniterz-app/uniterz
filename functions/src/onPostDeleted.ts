@@ -43,7 +43,7 @@ export const onPostDeletedV2 = onDocumentDeleted(
           updatedAt: FieldValue.serverTimestamp(),
         };
 
-        tx.set(dailyRef, { all: dec }, { merge: true });
+        tx.set(dailyRef, { all: dec, ranking: dec }, { merge: true });
 
         const leagueKey = before.league ?? null;
         if (leagueKey) {
@@ -55,6 +55,8 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
       return;
     }
+
+    const countRank = stats.countedForRanking !== false;
 
     const isWin = stats.isWin === true;
     const scoreError = stats.scoreError ?? 0;
@@ -82,6 +84,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
       };
 
       tx.set(dailyRef, { all: dec }, { merge: true });
+      if (countRank) {
+        tx.set(dailyRef, { ranking: dec }, { merge: true });
+      }
 
       const leagueKey = before.league ?? null;
       if (leagueKey) {

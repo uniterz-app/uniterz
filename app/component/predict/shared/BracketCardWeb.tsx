@@ -187,10 +187,10 @@ export default function BracketCardWeb({
         overflow: "visible",
         boxShadow: win4
           ? `
-            inset 0 0 ${22 * SCALE}px ${c.soft},
-            0 0 ${10 * SCALE}px ${c.glow},
-            0 0 ${22 * SCALE}px ${c.glow},
-            0 0 ${42 * SCALE}px ${c.soft}
+            inset 0 0 ${16 * SCALE}px ${c.soft},
+            0 0 ${6 * SCALE}px ${c.glow},
+            0 0 ${14 * SCALE}px ${c.glow},
+            0 0 ${28 * SCALE}px ${c.soft}
           `
           : `
             inset 0 0 ${12 * SCALE}px ${c.soft},
@@ -257,8 +257,8 @@ export default function BracketCardWeb({
             color: win4 ? "#ffd84d" : c.text,
             textShadow: win4
               ? `
-                0 0 ${4 * SCALE}px rgba(255, 216, 77, 0.95),
-                0 0 ${10 * SCALE}px rgba(255, 216, 77, 0.6)
+                0 0 ${2 * SCALE}px rgba(255, 216, 77, 0.5),
+                0 0 ${6 * SCALE}px rgba(255, 216, 77, 0.28)
               `
               : `
                 0 0 ${4 * SCALE}px ${c.glow},

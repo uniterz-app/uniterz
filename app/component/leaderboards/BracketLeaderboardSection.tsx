@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
 import { nameBebas, jp } from "@/lib/fonts";
+import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import BracketUserCard from "./BracketUserCard";
@@ -13,8 +14,12 @@ import useBracketLeaderboard, {
   type BracketLeaderboardRow,
 } from "@/lib/leaderboards/useBracketLeaderboard";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
-import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
+import {
+  loadPlayoffBracket,
+  type BracketState,
+} from "@/lib/playoff-bracket-firestore";
 import { buildPlayoffDisplayData } from "@/lib/playoff-bracket-display";
+import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResults";
 import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb";
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -31,6 +36,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
 
   const season = propSeason ?? getCurrentPlayoffSeason();
   const { loading, error, rows } = useBracketLeaderboard({ season });
+  const officialResults = usePlayoffOfficialResults(season);
 
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
   useEffect(() => {
@@ -49,16 +55,21 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     typeof buildPlayoffDisplayData
   > | null>(null);
   const [playoffScore, setPlayoffScore] = useState(0);
+  const [overlayBracket, setOverlayBracket] = useState<BracketState | null>(
+    null
+  );
 
   const loadBracketForUser = useCallback(
     async (uid: string) => {
       setBracketLoading(true);
       setPlayoffDisplayData(null);
+      setOverlayBracket(null);
       try {
         const doc = await loadPlayoffBracket(uid, season);
         if (doc?.bracket && doc?.season) {
           setPlayoffDisplayData(buildPlayoffDisplayData(doc.bracket, doc.season));
           setPlayoffScore(doc.totalScore ?? 0);
+          setOverlayBracket(doc.bracket);
         }
       } catch (e) {
         console.error("failed to load bracket", e);
@@ -80,6 +91,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
   const closeDetail = useCallback(() => {
     setSelectedRow(null);
     setPlayoffDisplayData(null);
+    setOverlayBracket(null);
   }, []);
 
   const openProfileFromSheet = useCallback(
@@ -92,11 +104,13 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
 
   const PlayoffBracket = isMobile ? PlayoffFullBracketMobile : PlayoffFullBracketWeb;
 
+  const titleDisplay = useScrambleDecode("PLAYOFFS BRACKET", true);
+
   const titleBlock = (
     <div className="text-center">
       <h1
         className={[
-          "text-[36px] leading-none tracking-[0.04em]",
+          "text-[30px] leading-none tracking-[0.04em] sm:text-[34px]",
           nameBebas.className,
         ].join(" ")}
         style={{
@@ -105,12 +119,12 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
             "0 0 8px rgba(56,189,248,0.35), 0 0 18px rgba(56,189,248,0.25), 0 0 34px rgba(56,189,248,0.15)",
         }}
       >
-        PLAYOFFS BRACKET
+        {titleDisplay}
       </h1>
-      <p className={["mt-1 text-[12px] text-white/60", jp.className].join(" ")}>
+      <p className={["mt-1 text-[11px] text-white/60 sm:text-[12px]", jp.className].join(" ")}>
         {language === "en"
-          ? "Showing bracket scores in descending order"
-          : "生き残ったブラケットの得点が高い順に表示"}
+          ? "Bracket scores, highest first"
+          : "ブラケットの得点が高い順に表示しています"}
       </p>
     </div>
   );
@@ -143,8 +157,8 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
         {titleBlock}
         <div className="py-16 text-center text-white/60">
           {language === "en"
-            ? "No remaining users."
-            : "生き残りユーザーはいません"}
+            ? "No bracket entries for this season."
+            : "このシーズンのブラケットはまだありません"}
         </div>
       </div>
     );
@@ -154,13 +168,23 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     <>
       <div className="space-y-2 px-3 pt-2">
         {titleBlock}
-        <div className="space-y-3 pb-bottom-nav pt-2">
-          {rows.map((row) => (
-            <BracketUserCard
+        <div className="space-y-2 pb-bottom-nav pt-2">
+          {rows.map((row, index) => (
+            <motion.div
               key={row.uid}
-              row={row}
-              onClick={() => openDetail(row)}
-            />
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.4,
+                delay: index * 0.05,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
+              <BracketUserCard
+                row={row}
+                onClick={() => openDetail(row)}
+              />
+            </motion.div>
           ))}
         </div>
       </div>
@@ -185,7 +209,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
             />
 
             <motion.div
-              className="relative z-10 flex h-full flex-col rounded-t-2xl bg-black/10 pb-4 backdrop-blur-xl"
+              className="relative z-10 flex h-full flex-col rounded-t-2xl bg-transparent pb-4"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -204,14 +228,14 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                 <X size={18} strokeWidth={2.4} />
               </button>
 
-              <div className="sticky top-0 z-10 shrink-0 border-b border-white/10 bg-black/10 px-4 py-3 backdrop-blur-xl">
+              <div className="sticky top-0 z-10 shrink-0 border-b border-white/12 bg-black/25 px-4 py-3 backdrop-blur-md">
                 <BracketUserCard
                   row={selectedRow}
                   onClick={() => openProfileFromSheet(selectedRow)}
                 />
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 pb-bottom-nav">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 pb-bottom-nav sm:px-4 sm:py-6">
                 {bracketLoading ? (
                   <div className="flex items-center justify-center py-16">
                     <div className="text-white/60">
@@ -219,11 +243,15 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                     </div>
                   </div>
                 ) : playoffDisplayData ? (
-                  <div className="mx-auto max-w-2xl">
+                  <div className="mx-auto flex w-full max-w-[1200px] justify-center">
                     <PlayoffBracket
                       league="nba"
                       score={playoffScore}
                       {...playoffDisplayData}
+                      bracket={overlayBracket ?? undefined}
+                      results={officialResults ?? undefined}
+                      hitLegend={{ language }}
+                      showGlassShell={false}
                     />
                   </div>
                 ) : (

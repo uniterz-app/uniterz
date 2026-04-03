@@ -92,6 +92,5 @@ export default function Page() {
     verified: !!fUser.emailVerified,
   };
 
-  // ---- ⑥ 描画 ----
   return <PredictionForm dense game={gameProps} user={user} />;
 }

@@ -2,7 +2,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -18,7 +18,6 @@ const PredictionForm = dynamic(
 export default function Page() {
   // 1) Hooks は最初に宣言
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const { fUser, status } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
   const isEn = language === "en";
@@ -127,6 +126,5 @@ export default function Page() {
     verified: !!fUser.emailVerified,
   };
 
-  // 既存どおり PredictionForm に渡す
   return <PredictionForm game={gameState.game} user={user} />;
 }

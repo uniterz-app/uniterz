@@ -166,10 +166,10 @@ export default function BracketCard({
         color: c.text,
         boxShadow: win4
           ? `
-            inset 0 0 ${18 * SCALE}px ${c.soft},
-            0 0 ${8 * SCALE}px ${c.glow},
-            0 0 ${18 * SCALE}px ${c.glow},
-            0 0 ${34 * SCALE}px ${c.soft}
+            inset 0 0 ${14 * SCALE}px ${c.soft},
+            0 0 ${5 * SCALE}px ${c.glow},
+            0 0 ${12 * SCALE}px ${c.glow},
+            0 0 ${22 * SCALE}px ${c.soft}
           `
           : `
             inset 0 0 ${10 * SCALE}px ${c.soft}
@@ -213,8 +213,8 @@ export default function BracketCard({
             color: win4 ? "#ffd84d" : c.text,
             textShadow: win4
               ? `
-                0 0 ${3 * SCALE}px rgba(255, 216, 77, 0.9),
-                0 0 ${8 * SCALE}px rgba(255, 216, 77, 0.55)
+                0 0 ${2 * SCALE}px rgba(255, 216, 77, 0.55),
+                0 0 ${5 * SCALE}px rgba(255, 216, 77, 0.28)
               `
               : `
                 0 0 ${3 * SCALE}px ${c.glow},

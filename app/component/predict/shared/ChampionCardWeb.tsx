@@ -101,24 +101,37 @@ export default function ChampionCardWeb({
   const name = getShortName(teamId);
 
   return (
-    <div className="relative flex flex-col items-center">
+    <div
+      className="relative flex flex-col items-center"
+      style={{ width: CARD_W }}
+    >
       <div
-        className="absolute flex items-center gap-2"
+        className="absolute flex flex-col items-center"
         style={{
-          top: -16 * SCALE,
-          fontFamily: "Oswald, Bebas Neue, sans-serif",
-          fontSize: 12 * SCALE,
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          color: "#ffd84d",
-          textShadow: `
-            0 0 ${3 * SCALE}px rgba(255,216,77,0.72),
-            0 0 ${8 * SCALE}px rgba(255,216,77,0.32)
-          `,
+          left: "50%",
+          transform: "translateX(-50%)",
+          bottom: "100%",
+          marginBottom: 6 * SCALE,
+          gap: 2 * SCALE,
         }}
       >
-        <Crown size={12 * SCALE} strokeWidth={2.2} />
-        CHAMPION
+        <Crown size={14 * SCALE} strokeWidth={2.4} />
+        <div
+          style={{
+            fontFamily: "Oswald, Bebas Neue, sans-serif",
+            fontSize: 13.5 * SCALE,
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            color: "#ffd84d",
+            lineHeight: 1,
+            textShadow: `
+              0 0 ${3 * SCALE}px rgba(255,216,77,0.72),
+              0 0 ${8 * SCALE}px rgba(255,216,77,0.32)
+            `,
+          }}
+        >
+          CHAMPION
+        </div>
       </div>
 
       <div

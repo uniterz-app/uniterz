@@ -18,12 +18,15 @@ type Props = {
     total?: number;
   };
   language?: Language;
+  /** 一覧オーバーレイ内（試合の予想オーバーレイと同じガラス＋透過背景用） */
+  inOverlay?: boolean;
 };
 
 export default function ResultDetail({
   post,
   market,
   language = "ja",
+  inOverlay = false,
 }: Props) {
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
@@ -31,31 +34,31 @@ export default function ResultDetail({
   return (
     <div
       className={[
-        "min-h-screen text-white",
-        // 背景は共通でOK
-        "bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827]",
-        // 余白だけモバイルで縮める
-        isMobile ? "px-4 py-4" : "p-6",
+        "text-white",
+        inOverlay
+          ? "min-h-0 bg-transparent"
+          : "min-h-screen bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827]",
+        inOverlay
+          ? "px-0 py-0"
+          : isMobile
+            ? "px-4 py-4"
+            : "p-6",
       ].join(" ")}
     >
-      {/* 上部：試合カード */}
-      <ResultMatchHeader post={post} language={language} />
+      <ResultMatchHeader post={post} language={language} inOverlay={inOverlay} />
 
-      {/* 下段 */}
       <div
         className={[
-          // モバイルは縦積み固定
           "grid grid-cols-1",
-          // webは2カラム
           isMobile ? "gap-4 mt-4" : "md:grid-cols-2 gap-8 mt-10",
         ].join(" ")}
       >
-        <ResultMarketCard post={post} market={market} />
+        <ResultMarketCard post={post} market={market} inOverlay={inOverlay} />
         <ResultStatsCard
           post={post}
-          // モバイルはmin-heightを消す/小さくする
           minHeightClassName={isMobile ? "min-h-[360px]" : "min-h-[480px]"}
           language={language}
+          inOverlay={inOverlay}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 
 type Props = {
   gamesPickCounts: Record<string, number>;
@@ -16,17 +16,10 @@ const GAMES = [4, 5, 6, 7];
 export default function PlayoffBracketSeriesGamesTab({
   gamesPickCounts,
 }: Props) {
-  const [animate, setAnimate] = useState(false);
-
   const total = Object.values(gamesPickCounts).reduce(
     (a, b) => a + Number(b ?? 0),
     0
   );
-
-  useEffect(() => {
-    const t = setTimeout(() => setAnimate(true), 40);
-    return () => clearTimeout(t);
-  }, []);
 
   return (
     <div className="mt-4 space-y-2">
@@ -43,16 +36,12 @@ export default function PlayoffBracketSeriesGamesTab({
               </span>
             </div>
 
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-2 rounded-full transition-all ease-out"
-                style={{
-                  width: animate ? `${p}%` : "0%",
-                  transitionDuration: "1400ms",
-                  transitionDelay: `${i * 180}ms`,
-                  background:
-                    "linear-gradient(90deg,#60a5fa 0%,#3b82f6 55%,#1d4ed8 100%)",
-                }}
+            <div className="flex items-center">
+              <ResultStatRatingBar
+                ratio={total > 0 ? p / 100 : 0}
+                animateMs={520}
+                delayMs={i * 140}
+                size="sm"
               />
             </div>
           </div>

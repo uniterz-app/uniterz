@@ -1,28 +1,44 @@
-// app/mobile/result/[postId]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import ResultDetail from "@/app/component/result/ResultDetail";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
-export default function MobileResultDetailPage() {
+export default function WebResultPostPage() {
   const params = useParams();
   const postId = params?.postId as string;
 
+  const [uid, setUid] = useState<string | null>(null);
   const [post, setPost] = useState<PredictionPostV2 | null>(null);
-  const [market, setMarket] = useState<any>(null);
+  const [market, setMarket] = useState<{
+    homeRate: number;
+    awayRate: number;
+    drawRate?: number;
+    total?: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { language } = useUserLanguage(uid);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (!postId) return;
 
+    let alive = true;
+
     (async () => {
       try {
-        // ① post取得
         const postSnap = await getDoc(doc(db, "posts", postId));
+        if (!alive) return;
         if (!postSnap.exists()) {
           setLoading(false);
           return;
@@ -35,8 +51,8 @@ export default function MobileResultDetailPage() {
 
         setPost(postData);
 
-        // ② game取得（market用）
         const gameSnap = await getDoc(doc(db, "games", postData.gameId));
+        if (!alive) return;
         if (gameSnap.exists()) {
           const gameData: any = gameSnap.data();
           setMarket({
@@ -53,6 +69,10 @@ export default function MobileResultDetailPage() {
         setLoading(false);
       }
     })();
+
+    return () => {
+      alive = false;
+    };
   }, [postId]);
 
   if (loading) {
@@ -71,10 +91,9 @@ export default function MobileResultDetailPage() {
     );
   }
 
-  // ★ モバイル用に余白だけ変えるならここでラップ
   return (
     <div className="px-4 py-4">
-      <ResultDetail post={post} market={market} />
+      <ResultDetail post={post} market={market ?? undefined} language={language} />
     </div>
   );
 }

@@ -13,10 +13,12 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { Language } from "@/lib/i18n/language";
+import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 
 type Props = {
   post: PredictionPostV2;
   language?: Language;
+  inOverlay?: boolean;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -141,6 +143,7 @@ function getStreakBadgeForMobile(
 export default function MobileResultMatchHeader({
   post,
   language = "ja",
+  inOverlay = false,
 }: Props) {
   const normalizedLeague = normalizeLeague(post.league);
   const isEn = language === "en";
@@ -219,12 +222,13 @@ export default function MobileResultMatchHeader({
       "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
   }
 
-  const cardBase =
-    "rounded-2xl border border-white/15 bg-[#050814]/80 text-white overflow-hidden shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
+  const cardBase = inOverlay
+    ? `${MATCH_OVERLAY_GLASS_PANEL} text-white overflow-hidden`
+    : "rounded-2xl border border-white/15 bg-[#050814]/80 text-white overflow-hidden shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
 
   return (
-    <div className={`relative ${cardBase} ${frame} px-6 py-8`}>
-      <div className="absolute left-3 top-3 z-10">
+    <div className={`relative ${cardBase} ${frame} px-4 py-5`}>
+      <div className="absolute left-2.5 top-2.5 z-10">
         <span
           className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide"
           style={{ backgroundColor: pillBg }}
@@ -267,19 +271,17 @@ export default function MobileResultMatchHeader({
               homeL2
             )}
           </div>
-          <div className="mt-0.5 text-[10px] opacity-70 leading-none tracking-tight text-center">
+          <div className="mt-0.5 text-[9px] opacity-70 leading-none tracking-tight text-center">
             {fmtRecordWithRank(homeRecord)}
           </div>
         </div>
 
         <div className="flex flex-col items-center justify-center">
-          {matchDate && <div className="text-[11px] opacity-80 mb-1">{matchDate}</div>}
+          {matchDate && <div className="text-[10px] opacity-80 mb-0.5">{matchDate}</div>}
 
           <div
-            className="font-black tracking-tight leading-none tabular-nums"
+            className="font-black tracking-tight leading-none tabular-nums text-[24px]"
             style={{
-              fontSize: "28px",
-              lineHeight: "1",
               fontFamily:
                 'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
             }}
@@ -288,18 +290,18 @@ export default function MobileResultMatchHeader({
           </div>
 
           {finalScore && (
-            <div className="mt-1.5 flex flex-col items-center tabular-nums opacity-85">
-              <div className="text-[10px] font-extrabold uppercase tracking-wide">
+            <div className="mt-1 flex flex-col items-center tabular-nums opacity-85">
+              <div className="text-[9px] font-extrabold uppercase tracking-wide">
                 Final
               </div>
-              <div className="text-[12px] font-extrabold">{finalScore}</div>
+              <div className="text-[11px] font-extrabold">{finalScore}</div>
             </div>
           )}
         </div>
 
         <div className="flex flex-col items-center">
-          <Icon className="w-10 h-10" fill={awayColor} stroke="#fff" />
-          <div className="mt-1 text-[12px] text-center leading-tight font-bold">
+          <Icon className="w-9 h-9" fill={awayColor} stroke="#fff" />
+          <div className="mt-0.5 text-[11px] text-center leading-tight font-bold">
             {getMobileTeamName(
               post.league,
               post.away?.name ?? "",
@@ -307,7 +309,7 @@ export default function MobileResultMatchHeader({
               awayL2
             )}
           </div>
-          <div className="mt-0.5 text-[10px] opacity-70 leading-none tracking-tight text-center">
+          <div className="mt-0.5 text-[9px] opacity-70 leading-none tracking-tight text-center">
             {fmtRecordWithRank(awayRecord)}
           </div>
         </div>

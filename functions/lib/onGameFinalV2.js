@@ -10,6 +10,7 @@ const upsetJudge_1 = require("./upsetJudge");
 const finalizePost_1 = require("./finalizePost");
 const updateUserStreak_1 = require("./updateUserStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
+const updateTeamSeasonRecord_1 = require("./updateTeamSeasonRecord");
 const db = () => (0, firestore_2.getFirestore)();
 const MIN_MARKET = 10;
 const UPSET_MARKET_RATIO = 0.6;
@@ -49,6 +50,14 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             db: db(),
             gameId,
             final: { home: game.homeScore, away: game.awayScore },
+        });
+        await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
+            db: db(),
+            league: game.league,
+            homeTeamId: game.homeTeamId,
+            awayTeamId: game.awayTeamId,
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
         });
         await (0, updateTeamStats_1.updateTeamStats)({
             db: db(),

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import Jersey from "@/app/component/games/icons/Jersey";
 import { nameBebas } from "@/lib/fonts";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
 import type { Language } from "@/lib/i18n/language";
+import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 
 type MarketCountMap = Record<string, number>;
 
@@ -47,28 +49,6 @@ const NBA_TEAM_ID_BY_CODE: Record<string, string> = Object.fromEntries(
 function percent(v: number, total: number) {
   if (!total) return 0;
   return Math.round((v / total) * 100);
-}
-
-function hexToRgb(hex: string) {
-  const h = hex.replace("#", "").trim();
-  const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  const n = parseInt(v, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-
-function mixHex(a: string, b: string, t: number) {
-  const A = hexToRgb(a);
-  const B = hexToRgb(b);
-  const r = Math.round(A.r + (B.r - A.r) * t);
-  const g = Math.round(A.g + (B.g - A.g) * t);
-  const bl = Math.round(A.b + (B.b - A.b) * t);
-  return `rgb(${r} ${g} ${bl})`;
-}
-
-function buildBarGradient(baseHex: string) {
-  const light = mixHex("#ffffff", baseHex, 0.78);
-  const dark = mixHex("#000000", baseHex, 0.58);
-  return `linear-gradient(90deg, ${light} 0%, ${baseHex} 55%, ${dark} 100%)`;
 }
 
 function getBestMetricLabel(row: {
@@ -114,7 +94,6 @@ function TeamProgressDetails({
   open: boolean;
   language: Language;
 }) {
-  const [animateBars, setAnimateBars] = useState(false);
   const isEn = language === "en";
 
   const items = [
@@ -124,20 +103,7 @@ function TeamProgressDetails({
     { label: isEn ? "Champion" : "優勝", pct: row.champion },
   ];
 
-  useEffect(() => {
-    if (!open) {
-      setAnimateBars(false);
-      return;
-    }
-
-    setAnimateBars(false);
-
-    const timer = window.setTimeout(() => {
-      setAnimateBars(true);
-    }, 40);
-
-    return () => window.clearTimeout(timer);
-  }, [open]);
+  if (!open) return null;
 
   return (
     <div className="mt-3 border-t border-white/10 pt-3">
@@ -153,16 +119,13 @@ function TeamProgressDetails({
               </span>
             </div>
 
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: animateBars ? `${item.pct}%` : "0%",
-                  background: buildBarGradient(color),
-                  boxShadow: "inset 0 0 5px rgba(0,0,0,0.22)",
-                  transition: "width 1400ms cubic-bezier(0.22, 1, 0.36, 1)",
-                  transitionDelay: `${i * 180}ms`,
-                }}
+            <div className="flex items-center">
+              <ResultStatRatingBar
+                ratio={item.pct > 0 ? item.pct / 100 : 0}
+                teamBaseHex={color}
+                animateMs={520}
+                delayMs={i * 140}
+                size="sm"
               />
             </div>
           </div>
@@ -175,15 +138,26 @@ function TeamProgressDetails({
 function TeamCard({
   row,
   language,
+  cardIndex,
 }: {
   row: TeamRow;
   language: Language;
+  cardIndex: number;
 }) {
   const [open, setOpen] = useState(false);
   const color = row.color;
 
   return (
-    <div className="w-full rounded-2xl border border-white/15 bg-[#050814]/80 px-3 py-3 text-left text-white md:px-4 md:py-4">
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.42,
+        delay: cardIndex * 0.05,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="w-full rounded-2xl border border-white/15 bg-[#050814]/80 px-3 py-3 text-left text-white md:px-4 md:py-4"
+    >
       <div className="grid grid-cols-[auto_auto_1fr] items-center gap-x-3 gap-y-2">
         <div className="text-center">
           <div className="text-[10px] text-white/45 md:text-[11px]">SEED</div>
@@ -224,15 +198,13 @@ function TeamCard({
         </button>
       </div>
 
-      {open && (
-        <TeamProgressDetails
-          row={row}
-          color={color}
-          open={open}
-          language={language}
-        />
-      )}
-    </div>
+      <TeamProgressDetails
+        row={row}
+        color={color}
+        open={open}
+        language={language}
+      />
+    </motion.div>
   );
 }
 
@@ -340,8 +312,13 @@ export default function PlayoffBracketTeamProgressMarket({
       <section>
         <ConferenceHeader title="EASTERN CONFERENCE" />
         <div className="grid grid-cols-2 gap-3 md:gap-4">
-          {eastRows.map((row) => (
-            <TeamCard key={row.code} row={row} language={language} />
+          {eastRows.map((row, index) => (
+            <TeamCard
+              key={row.code}
+              row={row}
+              language={language}
+              cardIndex={index}
+            />
           ))}
         </div>
       </section>
@@ -349,8 +326,13 @@ export default function PlayoffBracketTeamProgressMarket({
       <section>
         <ConferenceHeader title="WESTERN CONFERENCE" />
         <div className="grid grid-cols-2 gap-3 md:gap-4">
-          {westRows.map((row) => (
-            <TeamCard key={row.code} row={row} language={language} />
+          {westRows.map((row, index) => (
+            <TeamCard
+              key={row.code}
+              row={row}
+              language={language}
+              cardIndex={index + eastRows.length}
+            />
           ))}
         </div>
       </section>

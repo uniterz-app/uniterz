@@ -7,7 +7,6 @@ import TopPodium from "@/app/component/rankings/TopPodium";
 import CyberPageBackground from "@/app/component/rankings/CyberPageBackground";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence } from "framer-motion";
-import RankingsTabsRow from "@/app/component/rankings/RankingsTabsRow";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import Header from "@/app/component/Header";
@@ -172,8 +171,6 @@ export default function WebRankingsShell() {
         </div>
 
         <div className="mx-auto max-w-[860px] space-y-3 px-3 pt-2">
-          <RankingsTabsRow />
-
           <RankingInfoNotice language={language} />
 
           <MyRankCard
@@ -203,55 +200,55 @@ export default function WebRankingsShell() {
         )}
 
         {rows.length === 0 ? (
-          <div className="mx-auto max-w-[860px] px-3 pt-6 text-sm text-white/50">
-            {language === "en"
-              ? "Ranking data not found"
-              : "ランキングデータが見つかりません"}
-          </div>
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div key={pageKey} className="relative">
-              <div className="mx-auto max-w-[860px] px-2 pt-3">
-                <TopPodium
-                  rows={top3WithCountry}
-                  metric={metric}
-                  onTopCountDone={handleTopCountDone}
-                  intro={intro}
-                  language={language}
-                />
-                <div className="h-[16px]" />
-              </div>
+            <div className="mx-auto max-w-[860px] px-3 pt-6 text-sm text-white/50">
+              {language === "en"
+                ? "Ranking data not found"
+                : "ランキングデータが見つかりません"}
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div key={pageKey} className="relative">
+                <div className="mx-auto max-w-[860px] px-2 pt-3">
+                  <TopPodium
+                    rows={top3WithCountry}
+                    metric={metric}
+                    onTopCountDone={handleTopCountDone}
+                    intro={intro}
+                    language={language}
+                  />
+                  <div className="h-[16px]" />
+                </div>
 
-              <motion.div
-                key={`rest-${pageKey}`}
-                className="mx-auto max-w-[860px] px-2 pb-bottom-nav pt-2"
-                variants={restContainer}
-                initial="hidden"
-                animate={topDone ? "show" : "hidden"}
-                style={{ pointerEvents: topDone ? "auto" : "none" }}
-              >
-                {restRows.length > 0 && (
-                  <div className="space-y-2 pt-0.5">
-                    {restRowsWithCountry.map((r, i) => (
-                      <motion.div
-                        key={`${metric}-${r.uid}`}
-                        variants={restItem}
-                        custom={i}
-                      >
-                        <RankingCard
-                          row={r}
-                          rank={i + 4}
-                          metric={metric}
-                          language={language}
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+                <motion.div
+                  key={`rest-${pageKey}`}
+                  className="mx-auto max-w-[860px] px-2 pb-bottom-nav pt-2"
+                  variants={restContainer}
+                  initial="hidden"
+                  animate={topDone ? "show" : "hidden"}
+                  style={{ pointerEvents: topDone ? "auto" : "none" }}
+                >
+                  {restRows.length > 0 && (
+                    <div className="space-y-2 pt-0.5">
+                      {restRowsWithCountry.map((r, i) => (
+                        <motion.div
+                          key={`${metric}-${r.uid}`}
+                          variants={restItem}
+                          custom={i}
+                        >
+                          <RankingCard
+                            row={r}
+                            rank={i + 4}
+                            metric={metric}
+                            language={language}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
               </motion.div>
-            </motion.div>
-          </AnimatePresence>
-        )}
+            </AnimatePresence>
+          )}
       </div>
     </div>
   );

@@ -8,15 +8,10 @@ import React, {
   useId,
 } from "react";
 import { Crown } from "lucide-react";
-import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
-
-const alfa = Alfa_Slab_One({
-  weight: "400",
-  subsets: ["latin"],
-});
+import { summaryMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   totalPoints: number;
@@ -202,23 +197,23 @@ export default function TotalScoreCard({
       <div
         ref={ref}
         className={[
-          "rounded-xl border border-white/10 bg-[#050814]/80",
-          "p-3 md:p-6",
-          "shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
+          "rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
+          "p-2 md:p-6",
+          "shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
           "h-full",
           className,
         ].join(" ")}
       >
-        <div className="mb-3 md:mb-5 flex items-center gap-2 text-xs md:text-[18px] font-semibold text-white">
-          <div className="flex h-4 w-4 md:h-8 md:w-8 items-center justify-center rounded-full bg-black">
-            <Crown className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
+        <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-tight text-white md:mb-5 md:gap-2 md:text-[18px]">
+          <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black md:h-8 md:w-8">
+            <Crown className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
           </div>
 
           <span>{isEn ? "Total Points" : "総合得点"}</span>
 
           <button
             type="button"
-            className="ml-1 text-[11px] md:text-[16px] text-white/60 hover:text-white/80"
+            className="ml-0.5 text-[9px] text-white/60 hover:text-white/80 md:ml-1 md:text-[16px]"
             onClick={(e) => openTooltip(e, tooltipMsg)}
             aria-label={isEn ? "Total Points description" : "総合得点の説明"}
           >
@@ -226,28 +221,30 @@ export default function TotalScoreCard({
           </button>
         </div>
 
-        <div className="grid grid-cols-[1.15fr_0.85fr_1fr] items-center gap-4 md:gap-8">
+        <div className="grid grid-cols-[1.15fr_0.85fr_1fr] items-center gap-2 md:gap-8">
           {/* 左：合計得点 */}
-          <div className="min-w-0 pl-2 md:pl-4">
+          <div className="min-w-0 pl-1 md:pl-4">
             <div
               className={[
-                alfa.className,
-                "text-2xl md:text-4xl",
-                "font-bold text-white leading-none tabular-nums",
+                summaryMetricNumClass,
+                "text-xl tabular-nums tracking-tight text-white md:text-4xl",
+                "leading-none",
               ].join(" ")}
             >
               {totalCu.toFixed(1)}
-              <span className="ml-2 text-sm md:text-xl text-white/70">pts</span>
+              <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-xl">
+                pts
+              </span>
             </div>
 
-            <div className="mt-3 md:mt-4 text-[11px] md:text-[16px] text-white/60">
+            <div className="mt-2 text-[9px] tracking-tight text-white/60 md:mt-4 md:text-[16px]">
               AVG {avg} pts
             </div>
           </div>
 
           {/* 中央：円グラフ */}
           <div className="flex items-center justify-center">
-            <div className="relative h-[110px] w-[110px] md:h-[150px] md:w-[150px]">
+            <div className="relative h-[88px] w-[88px] md:h-[150px] md:w-[150px]">
               <svg viewBox="0 0 100 100" className="h-full w-full">
                 <defs>
                   <mask id={maskId}>
@@ -286,30 +283,45 @@ export default function TotalScoreCard({
           </div>
 
           {/* 右：内訳 */}
-          <div className="min-w-0 space-y-2.5 md:space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] md:text-[14px] text-white/55">
+          <div className="min-w-0 space-y-1.5 md:space-y-3">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[8px] tracking-tight text-white/55 md:text-[14px]">
                 {isEn ? "Base Points" : "基本点"}
               </span>
-              <span className="tabular-nums text-[14px] md:text-[22px] font-bold text-white">
+              <span
+                className={[
+                  summaryMetricNumClass,
+                  "tabular-nums text-xs tracking-tight text-white md:text-[22px]",
+                ].join(" ")}
+              >
                 {baseCu.toFixed(1)}
               </span>
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] md:text-[14px] text-white/55">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[8px] tracking-tight text-white/55 md:text-[14px]">
                 Upset Bonus
               </span>
-              <span className="tabular-nums text-[14px] md:text-[22px] font-bold text-orange-300">
+              <span
+                className={[
+                  summaryMetricNumClass,
+                  "tabular-nums text-xs tracking-tight text-orange-300 md:text-[22px]",
+                ].join(" ")}
+              >
                 {upsetCu.toFixed(1)}
               </span>
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] md:text-[14px] text-white/55">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[8px] tracking-tight text-white/55 md:text-[14px]">
                 {isEn ? "Win Streak Bonus" : "連勝ボーナス"}
               </span>
-              <span className="tabular-nums text-[14px] md:text-[22px] font-bold text-yellow-300">
+              <span
+                className={[
+                  summaryMetricNumClass,
+                  "tabular-nums text-xs tracking-tight text-yellow-300 md:text-[22px]",
+                ].join(" ")}
+              >
                 {streakCu.toFixed(1)}
               </span>
             </div>

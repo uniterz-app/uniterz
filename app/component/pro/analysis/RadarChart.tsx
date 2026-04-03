@@ -60,7 +60,14 @@ export default function RadarChart({ value }: RadarChartProps) {
 
       <div className="w-full" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ReRadarChart data={data} cx="50%" cy="50%" outerRadius={outerRadius}>
+          <ReRadarChart
+            data={data}
+            cx="50%"
+            cy="50%"
+            outerRadius={outerRadius}
+            startAngle={90}
+            endAngle={-270}
+          >
             <PolarGrid stroke="rgba(251,146,60,0.18)" radialLines />
 
             <PolarAngleAxis

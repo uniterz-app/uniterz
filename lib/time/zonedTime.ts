@@ -7,7 +7,7 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-function getZonedYMD(date: Date, timeZone: string): YMD {
+export function getZonedYMD(date: Date, timeZone: string): YMD {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
@@ -123,6 +123,32 @@ export function parseDateKeyInTimeZone(dateKey: string, timeZone: string): Date 
 
 export function getTodayKeyInTimeZone(timeZone: string, now = new Date()): string {
   return toDateKeyInTimeZone(now, timeZone);
+}
+
+/**
+ * リーダーボードの「最新として扱う確定月」キー（YYYY-MM）。
+ * 日本時間の「今日」の直前の暦月（例: JST で 4 月なら 2026-03）。
+ */
+export function getLeaderboardLatestMonthKey(now: Date = new Date()): string {
+  const { year, month } = getZonedYMD(now, TIMEZONE_JST);
+  if (month === 1) return `${year - 1}-12`;
+  return `${year}-${pad2(month - 1)}`;
+}
+
+/** YYYY-MM の JST 暦月の日付キー範囲（user_stats_v2_daily.date 用） */
+export function getJstMonthDateKeyRange(monthKey: string): {
+  startKey: string;
+  endKey: string;
+} {
+  const m = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!m) throw new Error(`invalid monthKey: ${monthKey}`);
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  if (mo < 1 || mo > 12) throw new Error(`invalid monthKey: ${monthKey}`);
+
+  const startKey = `${monthKey}-01`;
+  const lastDay = new Date(y, mo, 0).getDate();
+  return { startKey, endKey: `${monthKey}-${pad2(lastDay)}` };
 }
 
 function addDaysToYmd(ymd: YMD, days: number): YMD {

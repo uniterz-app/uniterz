@@ -4,12 +4,15 @@ import { useMemo } from "react";
 import type { League } from "@/lib/leagues";
 import type { SeriesId } from "@/lib/playoff-bracket";
 import type { TeamSlot } from "@/lib/playoff-bracket-display";
+import { slotTeamIdToBracketCode } from "@/lib/playoff-bracket-display";
 import BracketCardWeb, {
   type BracketCardHitStatus,
 } from "@/app/component/predict/shared/BracketCardWeb";
 import ChampionCardWeb from "@/app/component/predict/shared/ChampionCardWeb";
-import PlayoffBracketBackground from "@/app/component/predict/shared/PlayoffBracketBackground";
+import { PLAYOFF_BRACKET_PANEL } from "@/lib/ui/matchOverlayGlass";
 import PlayoffBracketWebHeader from "@/app/component/predict/shared/PlayoffBracketWebHeader";
+import PlayoffBracketHitLegend from "@/app/component/predict/shared/PlayoffBracketHitLegend";
+import type { Language } from "@/lib/i18n/language";
 import {
   buildRound1Series,
   getPlayoffBracketConfig,
@@ -42,6 +45,10 @@ export type PlayoffFullBracketWebProps = {
 
   bracket?: BracketLike;
   results?: BracketLike;
+  /** When set, shows hit-mark legend under the season header */
+  hitLegend?: { language: Language };
+  /** false ＝外枠のガラスパネルなし（オーバーレイ内など、背後のブラーだけ使うとき） */
+  showGlassShell?: boolean;
 };
 
 const SCALE = 0.64;
@@ -277,6 +284,8 @@ export default function PlayoffFullBracketWeb({
   champion,
   bracket,
   results,
+  hitLegend,
+  showGlassShell = true,
 }: PlayoffFullBracketWebProps) {
   const round1InitialTeams = useMemo(() => getRound1InitialTeams(season), [season]);
 
@@ -300,32 +309,55 @@ export default function PlayoffFullBracketWeb({
     teamId?: string | null
   ): BracketCardHitStatus {
     const winner = normalizeTeamId(bracket?.[seriesId]?.winner);
-    const currentTeam = normalizeTeamId(teamId);
+    const slotCode = slotTeamIdToBracketCode(teamId);
 
-    if (!winner || !currentTeam) return "none";
-    if (winner !== currentTeam) return "none";
+    if (!winner || !slotCode) return "none";
+    if (winner !== slotCode) return "none";
 
     return seriesStatusMap[seriesId] ?? "none";
   }
 
+  const championHitStatus = useMemo<BracketCardHitStatus>(() => {
+    const championCode = slotTeamIdToBracketCode(champion?.teamId);
+    const predictedChampion = normalizeTeamId(bracket?.FINALS?.winner);
+
+    if (!championCode || !predictedChampion) return "none";
+    if (championCode !== predictedChampion) return "none";
+
+    return seriesStatusMap.FINALS ?? "none";
+  }, [champion?.teamId, bracket?.FINALS?.winner, seriesStatusMap]);
+
   return (
     <div
-      className={`relative mx-auto w-full max-w-[1200px] overflow-visible rounded-[24px] ${className}`}
-      style={{ background: "#020611" }}
+      className={[
+        "relative mx-auto w-full max-w-[1200px] overflow-visible",
+        showGlassShell ? PLAYOFF_BRACKET_PANEL : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <PlayoffBracketBackground />
-
-      <div className="relative z-10 px-8 pt-8">
+      <div className="relative z-10 flex w-full flex-col items-center space-y-3 px-4 pt-6 sm:px-8 sm:pt-8">
         <PlayoffBracketWebHeader season={season} />
+        {hitLegend ? (
+          <PlayoffBracketHitLegend language={hitLegend.language} />
+        ) : null}
       </div>
 
       <div
-        className="relative z-10 mx-auto"
+        className="relative z-10 mx-auto flex w-full justify-center pb-6 sm:pb-8"
         style={{
-          width: DESIGN_W,
-          height: DESIGN_H + HEADER_BOTTOM_GAP,
+          width: "100%",
+          minHeight: DESIGN_H + HEADER_BOTTOM_GAP,
         }}
       >
+        <div
+          className="relative"
+          style={{
+            width: DESIGN_W,
+            height: DESIGN_H + HEADER_BOTTOM_GAP,
+          }}
+        >
         <div
           className="absolute left-0"
           style={{
@@ -341,7 +373,11 @@ export default function PlayoffFullBracketWeb({
               top: CHAMPION_Y,
             }}
           >
-            <ChampionCardWeb teamId={champion?.teamId} league={league} />
+            <ChampionCardWeb
+              teamId={champion?.teamId}
+              league={league}
+              hitStatus={championHitStatus}
+            />
           </div>
 
           {R1_Y.map((y, i) => {
@@ -512,6 +548,7 @@ export default function PlayoffFullBracketWeb({
               />
             );
           })}
+        </div>
         </div>
       </div>
     </div>

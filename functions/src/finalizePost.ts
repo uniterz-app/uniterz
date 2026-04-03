@@ -148,6 +148,8 @@ export async function finalizePost({
   const activeWinStreak = streakInfo?.activeWinStreak ?? 0;
   const streakBonus = calcStreakBonus(activeWinStreak);
 
+  const countsForRanking = game?.countsForRanking !== false;
+
   const totalPoints = baseScore.basePoints + upsetBonus + streakBonus;
   const now = Timestamp.now();
 
@@ -173,6 +175,8 @@ export async function finalizePost({
       upsetPoints,
       upsetBonus,
       streakBonus,
+
+      countedForRanking: countsForRanking,
 
       pointsV3: totalPoints,
       pointsV3Detail: {
@@ -214,6 +218,7 @@ export async function finalizePost({
       streakBonus,
 
       points: totalPoints,
+      countsForRanking,
     }).then(() => buildWindowCacheForUser(uid))
   );
 }

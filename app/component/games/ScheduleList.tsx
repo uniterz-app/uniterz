@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { LayoutGroup, motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -10,6 +11,11 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import MatchCard, { type MatchCardProps } from "./MatchCard";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
+import PredictionRulesIntroModal from "../predict/PredictionRulesIntroModal";
+import {
+  readPredictionRulesIntroSeen,
+  writePredictionRulesIntroSeen,
+} from "@/lib/predict/predictionRulesIntroPrefs";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
@@ -78,10 +84,15 @@ export default function ScheduleList({
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
   const [disableReturnLayout, setDisableReturnLayout] = useState(false);
+  const [rulesIntroOpen, setRulesIntroOpen] = useState(false);
+  const [pendingGameIdForRules, setPendingGameIdForRules] = useState<
+    string | null
+  >(null);
 
   const pathname = usePathname();
   const isMobile =
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
+
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const isEn = language === "en";
@@ -123,7 +134,25 @@ export default function ScheduleList({
     scrollYRef.current = window.scrollY;
     setStandingsOpenInOverlay(false);
     setDisableReturnLayout(false);
+    if (!readPredictionRulesIntroSeen()) {
+      setPendingGameIdForRules(String(gameId));
+      setRulesIntroOpen(true);
+      return;
+    }
     setOpenGameId(String(gameId));
+  }, []);
+
+  const handleRulesIntroStart = useCallback(() => {
+    writePredictionRulesIntroSeen();
+    setRulesIntroOpen(false);
+    const id = pendingGameIdForRules;
+    setPendingGameIdForRules(null);
+    if (id) setOpenGameId(id);
+  }, [pendingGameIdForRules]);
+
+  const handleRulesIntroCancel = useCallback(() => {
+    setRulesIntroOpen(false);
+    setPendingGameIdForRules(null);
   }, []);
 
   const close = useCallback(() => {
@@ -280,6 +309,12 @@ export default function ScheduleList({
     };
   }, [openGameId]);
 
+  /* オーバーレイ直前に splash 用 body クラスが残っていると画像が一瞬見える */
+  useEffect(() => {
+    if (!openGameId) return;
+    document.body.classList.remove("splash-bg");
+  }, [openGameId]);
+
   useEffect(() => {
     if (!openGameId) return;
 
@@ -331,6 +366,191 @@ export default function ScheduleList({
     return null;
   }
 
+  const overlayContent =
+    openGameId && selectedProps ? (
+      <div
+        key="prediction-page"
+        className={[
+          "fixed inset-0 overflow-hidden",
+          isMobile ? "z-100000" : "z-99999",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "absolute inset-0 z-0 bg-black/35 backdrop-blur-md",
+            standingsOpenInOverlay
+              ? "pointer-events-none"
+              : "pointer-events-auto",
+          ].join(" ")}
+          onClick={() => {
+            if (standingsOpenInOverlay) return;
+            close();
+          }}
+        />
+
+        <div
+          className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorY: "contain",
+            overscrollBehaviorX: "none",
+            touchAction: "pan-y",
+          }}
+          onTouchStartCapture={(e) => {
+            const t = e.touches[0];
+            if (!t) return;
+            touchStartRef.current = { x: t.clientX, y: t.clientY };
+          }}
+          onTouchMoveCapture={(e) => {
+            const start = touchStartRef.current;
+            const t = e.touches[0];
+            if (!start || !t) return;
+
+            const dx = Math.abs(t.clientX - start.x);
+            const dy = Math.abs(t.clientY - start.y);
+
+            if (dx > dy && dx > 8) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          onTouchEndCapture={() => {
+            touchStartRef.current = null;
+          }}
+          onTouchCancelCapture={() => {
+            touchStartRef.current = null;
+          }}
+        >
+          <div
+            className={[
+              "mx-auto w-full overflow-x-hidden",
+              isMobile
+                ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
+                : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
+            ].join(" ")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative w-full overflow-x-hidden">
+              <button
+                type="button"
+                aria-label={isEn ? "Close" : "閉じる"}
+                className={[
+                  "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55",
+                  standingsOpenInOverlay
+                    ? "pointer-events-none opacity-0"
+                    : "",
+                ].join(" ")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (standingsOpenInOverlay) return;
+                  close();
+                }}
+              >
+                <X size={18} strokeWidth={2.4} />
+              </button>
+
+              <MatchCard
+                {...selectedProps}
+                myPostId={myPostMap[String(selectedProps.id)] ?? null}
+                homeRecord={
+                  selectedProps.home?.teamId
+                    ? teamRecordMap[selectedProps.home.teamId] ?? null
+                    : null
+                }
+                awayRecord={
+                  selectedProps.away?.teamId
+                    ? teamRecordMap[selectedProps.away.teamId] ?? null
+                    : null
+                }
+                sharedLayoutId={
+                  disableReturnLayout || isMobile
+                    ? undefined
+                    : `matchcard-${selectedProps.id}`
+                }
+                disableCardMotion={isMobile}
+                hideActions
+                showMarketBias
+                inPredictOverlay
+              />
+
+              {isMobile ? (
+                <div className="mt-2 overflow-x-hidden px-0 py-0">
+                  <PredictionFormV2
+                    dense={dense}
+                    game={selectedProps}
+                    user={{ name: "You" }}
+                    embedded
+                    inOverlay
+                    overlayScheduleGameIds={gameIds}
+                    overlayScheduleGames={propsList}
+                    onClosePredictOverlay={close}
+                    onSwitchOverlayGame={(id) => {
+                      setOpenGameId(String(id));
+                      setStandingsOpenInOverlay(false);
+                      setDisableReturnLayout(false);
+                    }}
+                    onStandingsOpenChange={(open) => {
+                      setStandingsOpenInOverlay(open);
+                      if (open) setDisableReturnLayout(true);
+                    }}
+                    onPostCreated={(payload) => {
+                      const gameId = selectedProps?.id;
+                      if (gameId && payload?.id) {
+                        setMyPostMap((prev) => ({
+                          ...prev,
+                          [String(gameId)]: payload.id,
+                        }));
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 1, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.32,
+                    delay: 0.08,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="mt-2 overflow-x-hidden px-0 py-0"
+                >
+                  <PredictionFormV2
+                    dense={dense}
+                    game={selectedProps}
+                    user={{ name: "You" }}
+                    embedded
+                    inOverlay
+                    overlayScheduleGameIds={gameIds}
+                    overlayScheduleGames={propsList}
+                    onClosePredictOverlay={close}
+                    onSwitchOverlayGame={(id) => {
+                      setOpenGameId(String(id));
+                      setStandingsOpenInOverlay(false);
+                      setDisableReturnLayout(false);
+                    }}
+                    onStandingsOpenChange={(open) => {
+                      setStandingsOpenInOverlay(open);
+                      if (open) setDisableReturnLayout(true);
+                    }}
+                    onPostCreated={(payload) => {
+                      const gameId = selectedProps?.id;
+                      if (gameId && payload?.id) {
+                        setMyPostMap((prev) => ({
+                          ...prev,
+                          [String(gameId)]: payload.id,
+                        }));
+                      }
+                    }}
+                  />
+                </motion.div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <LayoutGroup id="schedule-list">
       <motion.div
@@ -339,8 +559,8 @@ export default function ScheduleList({
           openGameId ? "pointer-events-none" : "",
         ].join(" ")}
         animate={{
-          scale: openGameId ? 0.988 : 1,
-          opacity: openGameId ? 0.94 : 1,
+          scale: openGameId && !isMobile ? 0.985 : 1,
+          opacity: 1,
         }}
         transition={{
           duration: 0.28,
@@ -353,7 +573,7 @@ export default function ScheduleList({
           return (
             <div
               key={props.id}
-              className={isOpen ? "pointer-events-none opacity-0" : ""}
+              className={isOpen ? "pointer-events-none" : ""}
               aria-hidden={isOpen}
             >
               <MatchCard
@@ -370,180 +590,41 @@ export default function ScheduleList({
                     : null
                 }
                 sharedLayoutId={
-                  disableReturnLayout ? undefined : `matchcard-${props.id}`
+                  disableReturnLayout || isMobile
+                    ? undefined
+                    : `matchcard-${props.id}`
                 }
                 onOpenPredict={open}
-                showMarketBias={false}
-                disableCardMotion={!!openGameId}
+                showMarketBias={isMobile ? isOpen : false}
+                hideActions={isMobile ? isOpen : false}
+                inPredictOverlay={isMobile ? isOpen : false}
+                disableCardMotion={
+                  isMobile || (!!openGameId && !isOpen)
+                }
               />
             </div>
           );
         })}
       </motion.div>
 
-      {openGameId && selectedProps && (
-        <motion.div
-          key="prediction-page"
-          className="fixed inset-0 z-99999 overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{
-            duration: 0.2,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-        >
-          <motion.div
-            className={[
-              "absolute inset-0 z-0 bg-black/22 backdrop-blur-[10px]",
-              standingsOpenInOverlay
-                ? "pointer-events-none"
-                : "pointer-events-auto",
-            ].join(" ")}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.22 }}
-            onClick={() => {
-              if (standingsOpenInOverlay) return;
-              close();
-            }}
-          />
+      {overlayContent &&
+        (isMobile && typeof document !== "undefined"
+          ? createPortal(overlayContent, document.body)
+          : !isMobile
+            ? overlayContent
+            : null)}
 
-          <div
-            className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
-            style={{
-              WebkitOverflowScrolling: "touch",
-              overscrollBehaviorY: "contain",
-              overscrollBehaviorX: "none",
-              touchAction: "pan-y",
-            }}
-            onTouchStartCapture={(e) => {
-              const t = e.touches[0];
-              if (!t) return;
-              touchStartRef.current = { x: t.clientX, y: t.clientY };
-            }}
-            onTouchMoveCapture={(e) => {
-              const start = touchStartRef.current;
-              const t = e.touches[0];
-              if (!start || !t) return;
-
-              const dx = Math.abs(t.clientX - start.x);
-              const dy = Math.abs(t.clientY - start.y);
-
-              if (dx > dy && dx > 8) {
-                e.preventDefault();
-                e.stopPropagation();
-              }
-            }}
-            onTouchEndCapture={() => {
-              touchStartRef.current = null;
-            }}
-            onTouchCancelCapture={() => {
-              touchStartRef.current = null;
-            }}
-          >
-            <div
-              className={[
-                "mx-auto w-full overflow-x-hidden",
-                isMobile
-                  ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
-                  : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
-              ].join(" ")}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <motion.div
-                className="relative w-full overflow-x-hidden"
-                initial={{
-                  opacity: 0,
-                  y: 18,
-                  scale: 0.972,
-                  filter: "blur(10px)",
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                  filter: "blur(0px)",
-                }}
-                transition={{
-                  duration: 0.42,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label={isEn ? "Close" : "閉じる"}
-                  className={[
-                    "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55",
-                    standingsOpenInOverlay
-                      ? "pointer-events-none opacity-0"
-                      : "",
-                  ].join(" ")}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (standingsOpenInOverlay) return;
-                    close();
-                  }}
-                >
-                  <X size={18} strokeWidth={2.4} />
-                </button>
-
-                <MatchCard
-                  {...selectedProps}
-                  myPostId={myPostMap[String(selectedProps.id)] ?? null}
-                  homeRecord={
-                    selectedProps.home?.teamId
-                      ? teamRecordMap[selectedProps.home.teamId] ?? null
-                      : null
-                  }
-                  awayRecord={
-                    selectedProps.away?.teamId
-                      ? teamRecordMap[selectedProps.away.teamId] ?? null
-                      : null
-                  }
-                  sharedLayoutId={undefined}
-                  disableCardMotion
-                  hideActions
-                  showMarketBias
-                  inPredictOverlay
-                />
-
-                <motion.div
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.3,
-                    delay: 0.05,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                  className="mt-2 overflow-x-hidden px-0 py-0"
-                >
-                  <PredictionFormV2
-                    dense={dense}
-                    game={selectedProps}
-                    user={{ name: "You" }}
-                    embedded
-                    inOverlay
-                    onStandingsOpenChange={(open) => {
-                      setStandingsOpenInOverlay(open);
-                      if (open) setDisableReturnLayout(true);
-                    }}
-                    onPostCreated={(payload) => {
-                      const gameId = selectedProps?.id;
-                      if (gameId && payload?.id) {
-                        setMyPostMap((prev) => ({
-                          ...prev,
-                          [String(gameId)]: payload.id,
-                        }));
-                      }
-                      close();
-                    }}
-                  />
-                </motion.div>
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {rulesIntroOpen && typeof document !== "undefined"
+        ? createPortal(
+            <PredictionRulesIntroModal
+              open={rulesIntroOpen}
+              isEn={isEn}
+              onStart={handleRulesIntroStart}
+              onCancel={handleRulesIntroCancel}
+            />,
+            document.body
+          )
+        : null}
     </LayoutGroup>
   );
 }

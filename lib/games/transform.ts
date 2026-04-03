@@ -116,6 +116,8 @@ export type GameDoc = {
   score?: any;
   homeScore?: number;
   awayScore?: number;
+  /** false = ランキング集計から除外（例: プレーイン）。未設定は true 扱い */
+  countsForRanking?: boolean;
   liveMeta?: any;
   finalMeta?: any;
 

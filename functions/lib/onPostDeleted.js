@@ -39,7 +39,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
                 posts: firestore_2.FieldValue.increment(-1),
                 updatedAt: firestore_2.FieldValue.serverTimestamp(),
             };
-            tx.set(dailyRef, { all: dec }, { merge: true });
+            tx.set(dailyRef, { all: dec, ranking: dec }, { merge: true });
             const leagueKey = (_a = before.league) !== null && _a !== void 0 ? _a : null;
             if (leagueKey) {
                 tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
@@ -48,6 +48,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         });
         return;
     }
+    const countRank = stats.countedForRanking !== false;
     const isWin = stats.isWin === true;
     const scoreError = (_c = stats.scoreError) !== null && _c !== void 0 ? _c : 0;
     const scorePrecision = (_d = stats.scorePrecision) !== null && _d !== void 0 ? _d : 0;
@@ -73,6 +74,9 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         };
         tx.set(dailyRef, { all: dec }, { merge: true });
+        if (countRank) {
+            tx.set(dailyRef, { ranking: dec }, { merge: true });
+        }
         const leagueKey = (_a = before.league) !== null && _a !== void 0 ? _a : null;
         if (leagueKey) {
             tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });

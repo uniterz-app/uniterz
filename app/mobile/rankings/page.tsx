@@ -12,7 +12,6 @@ import CyberPageBackground from "@/app/component/rankings/CyberPageBackground";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
-import RankingsTabsRow from "@/app/component/rankings/RankingsTabsRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import Header from "@/app/component/Header";
 import { toMobileRows } from "@/lib/rankings/rankingTransform";
@@ -183,8 +182,6 @@ export default function MobileRankingsPage() {
         </div>
 
         <div className="space-y-3 px-3 pt-2">
-          <RankingsTabsRow />
-
           <div className="text-center">
             <p className="text-[12px] text-white/60">
               {language === "en"
@@ -220,46 +217,46 @@ export default function MobileRankingsPage() {
         )}
 
         <AnimatePresence mode="wait">
-          <motion.div key={pageKey} className="relative">
-            <div className="relative z-10">
-              <TopPodium
-                rows={top3}
-                metric={metric}
-                onTopCountDone={handleTopCountDone}
-                intro={intro}
-                language={language}
-              />
-              <div className="h-[2px]" />
-            </div>
+            <motion.div key={pageKey} className="relative">
+              <div className="relative z-10">
+                <TopPodium
+                  rows={top3}
+                  metric={metric}
+                  onTopCountDone={handleTopCountDone}
+                  intro={intro}
+                  language={language}
+                />
+                <div className="h-[2px]" />
+              </div>
 
-            <motion.div
-              key={`rest-${pageKey}`}
-              className="px-2 pt-4"
-              variants={restContainer}
-              initial="hidden"
-              animate={topDone ? "show" : "hidden"}
-              style={{ pointerEvents: topDone ? "auto" : "none" }}
-            >
-              {restRows.length > 0 && (
-                <div className="space-y-2 pt-0.5">
-                  {restRows.map((r, i) => (
-                    <motion.div
-                      key={`${metric}-${r.uid}`}
-                      variants={restItem}
-                      custom={i}
-                    >
-                      <RankingCard
-                        row={r}
-                        rank={i + 4}
-                        metric={metric}
-                        language={language}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+              <motion.div
+                key={`rest-${pageKey}`}
+                className="px-2 pt-4"
+                variants={restContainer}
+                initial="hidden"
+                animate={topDone ? "show" : "hidden"}
+                style={{ pointerEvents: topDone ? "auto" : "none" }}
+              >
+                {restRows.length > 0 && (
+                  <div className="space-y-2 pt-0.5">
+                    {restRows.map((r, i) => (
+                      <motion.div
+                        key={`${metric}-${r.uid}`}
+                        variants={restItem}
+                        custom={i}
+                      >
+                        <RankingCard
+                          row={r}
+                          rank={i + 4}
+                          metric={metric}
+                          language={language}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
             </motion.div>
-          </motion.div>
         </AnimatePresence>
       </div>
     </div>

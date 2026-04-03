@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { RankingRowWithCountry, MobileMetric } from "./_data/mockRows";
-import { alfa, jp } from "@/lib/fonts";
+import { jp, summaryMetricNumClass } from "@/lib/fonts";
+import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import { metricNum, getMetricSubText } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
@@ -18,6 +19,15 @@ const FLAG_SRC: Record<string, string> = {
 function getCountryCode(row: RankingRowWithCountry): string | undefined {
   if (!row.countryCode) return undefined;
   return FLAG_SRC[row.countryCode] ? row.countryCode : undefined;
+}
+
+const rankHudNumClass = summaryMetricNumClass;
+
+function rankDigitGlowFilter(rank: number): string | undefined {
+  if (rank === 1) return "drop-shadow(0 0 12px rgba(255,215,90,0.5))";
+  if (rank === 2) return "drop-shadow(0 0 10px rgba(230,238,250,0.4))";
+  if (rank === 3) return "drop-shadow(0 0 10px rgba(220,150,90,0.42))";
+  return undefined;
 }
 
 function medal(rank: number) {
@@ -110,60 +120,6 @@ function FadedFlagBg({
   );
 }
 
-function AvatarCircle({
-  row,
-  rank,
-  isTop3,
-}: {
-  row: RankingRowWithCountry;
-  rank: number;
-  isTop3: boolean;
-}) {
-  const m = medal(rank);
-  const tone = cardTone(rank);
-  const initial = (row.displayName ?? row.handle ?? "?").slice(0, 1).toUpperCase();
-
-  return (
-    <div
-      className={[
-        "relative shrink-0 overflow-hidden rounded-full border bg-black",
-        isTop3 ? "h-14 w-14" : "h-9 w-9",
-      ].join(" ")}
-      style={{
-        borderColor: tone.border,
-        boxShadow: [
-          "0 10px 24px rgba(0,0,0,0.24)",
-          `0 0 14px ${m.glow}`,
-          "inset 0 1px 0 rgba(255,255,255,0.14)",
-        ].join(", "),
-      }}
-    >
-      {row.photoURL ? (
-        <img src={row.photoURL} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <div
-          className={[
-            "grid h-full w-full place-items-center font-black",
-            alfa.className,
-            isTop3 ? "text-[22px]" : "text-[15px]",
-          ].join(" ")}
-          style={{
-            color: "rgba(255,255,255,0.94)",
-            textShadow: "0 2px 10px rgba(0,0,0,0.35)",
-          }}
-        >
-          {initial}
-        </div>
-      )}
-
-      <div
-        className="pointer-events-none absolute inset-0 rounded-full"
-        style={{ boxShadow: `inset 0 0 0 1px ${tone.border}` }}
-      />
-    </div>
-  );
-}
-
 function ValueText({
   rank,
   metric,
@@ -182,27 +138,31 @@ function ValueText({
   const baseTextClass =
     rank === 1 ? "text-[32px]" : isTop3 ? "text-[28px]" : "text-[20px]";
 
-  const glowStyle = {
-    color: m.text,
-    textShadow:
-      rank === 1
-        ? "0 0 16px rgba(255,215,90,0.18)"
-        : rank === 2
-        ? "0 0 14px rgba(230,235,245,0.10)"
-        : rank === 3
-        ? "0 0 14px rgba(205,127,50,0.10)"
-        : "0 0 10px rgba(255,255,255,0.06)",
-  } as const;
+  const valueStyle =
+    rank <= 3
+      ? ({
+          color: m.text,
+          textShadow:
+            rank === 1
+              ? "0 0 16px rgba(255,215,90,0.18)"
+              : rank === 2
+                ? "0 0 14px rgba(230,235,245,0.10)"
+                : "0 0 14px rgba(205,127,50,0.10)",
+        } as const)
+      : ({
+          color: "rgba(255,255,255,0.9)",
+          textShadow: "none",
+        } as const);
 
   if (metric === "streak") {
     return (
       <div
         className={[
-          "inline-flex items-baseline justify-center gap-0.5 font-black tabular-nums leading-none",
-          alfa.className,
+          "inline-flex items-baseline justify-center gap-0.5 leading-none",
+          rankHudNumClass,
           baseTextClass,
         ].join(" ")}
-        style={glowStyle}
+        style={valueStyle}
       >
         <span>{Math.round(counted)}</span>
         <span className={rank === 1 ? "text-[17px]" : isTop3 ? "text-[15px]" : "text-[11px]"}>
@@ -216,8 +176,8 @@ function ValueText({
     return (
       <div
         className={[
-          "inline-flex items-baseline justify-center font-black tabular-nums leading-none",
-          alfa.className,
+          "inline-flex items-baseline justify-center leading-none",
+          rankHudNumClass,
         ].join(" ")}
         style={glowStyle}
       >
@@ -240,11 +200,11 @@ function ValueText({
   return (
     <div
       className={[
-        "inline-flex items-baseline justify-center gap-1 font-black tabular-nums leading-none",
-        alfa.className,
+        "inline-flex items-baseline justify-center gap-1 leading-none",
+        rankHudNumClass,
         baseTextClass,
       ].join(" ")}
-      style={glowStyle}
+      style={valueStyle}
     >
       <span>{counted.toFixed(1)}</span>
       <span className={rank === 1 ? "text-[15px]" : isTop3 ? "text-[13px]" : "text-[9px]"}>
@@ -366,20 +326,21 @@ export default function RankingCard({
           <div className="flex items-center justify-center">
             <div
               className={[
-                "translate-y-px text-center font-black leading-none tabular-nums",
-                alfa.className,
+                "translate-y-px text-center leading-none",
+                rankHudNumClass,
                 rank === 1 ? "text-[34px]" : rank <= 3 ? "text-[29px]" : "text-[20px]",
               ].join(" ")}
               style={{
                 color: m.text,
                 textShadow:
                   rank === 1
-                    ? "0 0 14px rgba(255,215,90,0.18)"
+                    ? "0 0 18px rgba(255,215,90,0.35), 0 0 8px rgba(255,215,90,0.2)"
                     : rank === 2
-                    ? "0 0 12px rgba(230,235,245,0.10)"
-                    : rank === 3
-                    ? "0 0 12px rgba(205,127,50,0.10)"
-                    : "0 0 8px rgba(255,255,255,0.06)",
+                      ? "0 0 16px rgba(230,235,245,0.22), 0 0 8px rgba(230,235,245,0.12)"
+                      : rank === 3
+                        ? "0 0 16px rgba(205,127,50,0.22), 0 0 8px rgba(205,127,50,0.12)"
+                        : "none",
+                filter: rankDigitGlowFilter(rank),
               }}
             >
               {rank}
@@ -387,7 +348,13 @@ export default function RankingCard({
           </div>
 
           <div className="flex items-center">
-            <AvatarCircle row={r} rank={rank} isTop3={isTop3} />
+            <RankingsAvatarCircle
+              photoURL={r.photoURL}
+              displayName={r.displayName ?? r.handle ?? "?"}
+              boxClassName={isTop3 ? "h-14 w-14" : "h-9 w-9"}
+              initialTextClassName={isTop3 ? "text-[22px]" : "text-[15px]"}
+              gateReady
+            />
           </div>
 
           <div className="min-w-0">

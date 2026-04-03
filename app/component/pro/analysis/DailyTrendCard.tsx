@@ -30,6 +30,15 @@ type Props = {
   range?: "7d" | "30d" | "all";
   allowAll?: boolean;
   language?: Language;
+  /**
+   * true のとき Intersection 待ちをせずチャートを即マウントし、Recharts の描画アニメを切る。
+   * 親の入場（例: motion のフェードアップ）と同期させる用途。
+   */
+  entranceSync?: boolean;
+  /**
+   * entranceSync 時のみ有効。false の間は棒・線のアニメを止め、true で再生（親のカード入場後に渡す）。
+   */
+  rechartsAfterEntrance?: boolean;
 };
 
 /* ===== colors ===== */
@@ -145,6 +154,8 @@ export default function DailyTrendCard({
   range = "7d",
   allowAll = false,
   language = "ja",
+  entranceSync = false,
+  rechartsAfterEntrance = false,
 }: Props) {
   const isEn = language === "en";
 
@@ -161,15 +172,16 @@ export default function DailyTrendCard({
   const unitPts = "pts";
 
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [ioVisible, setIoVisible] = useState(false);
 
   useEffect(() => {
+    if (entranceSync) return;
     if (!ref.current) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisible(true);
+          setIoVisible(true);
           observer.disconnect();
         }
       },
@@ -178,7 +190,16 @@ export default function DailyTrendCard({
 
     observer.observe(ref.current);
     return () => observer.disconnect();
-  }, []);
+  }, [entranceSync]);
+
+  const chartVisible = entranceSync || ioVisible;
+
+  const rechartsAnimActive = !entranceSync || rechartsAfterEntrance;
+  const composedChartKey = entranceSync
+    ? rechartsAfterEntrance
+      ? "trend-rc-on"
+      : "trend-rc-hold"
+    : "trend-io";
 
   const limitedData = useMemo(() => {
     const rows = Array.isArray(data) ? data : [];
@@ -226,10 +247,12 @@ export default function DailyTrendCard({
         ) : (
           <>
             <ResponsiveContainer width="100%" height="100%">
-              {visible && (
+              {chartVisible && (
                 <ComposedChart
+                  key={composedChartKey}
                   data={chartData}
                   margin={{ top: 6, right: 10, left: 2, bottom: -6 }}
+                  isAnimationActive={rechartsAnimActive}
                 >
                   <CartesianGrid
                     stroke="rgba(148,163,184,0.15)"
@@ -303,6 +326,7 @@ export default function DailyTrendCard({
                     opacity={0.85}
                     radius={[3, 3, 0, 0]}
                     barSize={8}
+                    isAnimationActive={rechartsAnimActive}
                   />
                   <Bar
                     yAxisId="count"
@@ -312,6 +336,7 @@ export default function DailyTrendCard({
                     opacity={0.85}
                     radius={[3, 3, 0, 0]}
                     barSize={8}
+                    isAnimationActive={rechartsAnimActive}
                   />
 
                   <Line
@@ -322,6 +347,7 @@ export default function DailyTrendCard({
                     stroke={COLORS.total}
                     strokeWidth={1.75}
                     dot={false}
+                    isAnimationActive={rechartsAnimActive}
                   />
                   <Line
                     yAxisId="points"
@@ -332,6 +358,7 @@ export default function DailyTrendCard({
                     strokeWidth={1.75}
                     dot={false}
                     strokeDasharray="4 2"
+                    isAnimationActive={rechartsAnimActive}
                   />
                 </ComposedChart>
               )}

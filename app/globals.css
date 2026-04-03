@@ -28,6 +28,35 @@
   background: var(--color-card-bg);
 }
 
+/* ============================================================
+   Dev preview only — 青系グラデ + 静止ドット（アプリ全体には未適用）
+   /web/bg-halftone-preview · /mobile/bg-halftone-preview
+   ============================================================ */
+.bg-halftone-preview-demo {
+  min-height: 100dvh;
+  background-color: #020508;
+  background-image:
+    radial-gradient(
+      circle,
+      rgba(34, 211, 238, 0.22) 1px,
+      transparent 1.35px
+    ),
+    linear-gradient(
+      180deg,
+      #067a9a 0%,
+      #045a74 22%,
+      #0a3d50 48%,
+      #061820 78%,
+      #040a0e 100%
+    );
+  background-size:
+    11px 11px,
+    100% 100%;
+  background-position:
+    0 0,
+    center;
+}
+
 /* -------------------------------
    Pretty Range Slider
 -------------------------------- */

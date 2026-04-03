@@ -18,25 +18,33 @@ type Props = {
     total?: number;
   };
   language?: Language;
+  inOverlay?: boolean;
 };
 
 export default function MobileResultDetail({
   post,
   market,
   language = "ja",
+  inOverlay = false,
 }: Props) {
   return (
-    <div className="min-h-screen bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827] text-white px-4 py-4">
-      {/* 上部：試合カード（mobileサイズ） */}
-      <MobileResultMatchHeader post={post} language={language} />
+    <div
+      className={[
+        "text-white",
+        inOverlay
+          ? "min-h-0 bg-transparent px-0 py-0"
+          : "min-h-screen bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827] px-4 py-4",
+      ].join(" ")}
+    >
+      <MobileResultMatchHeader post={post} language={language} inOverlay={inOverlay} />
 
-      {/* 下段：縦積み（mobile） */}
       <div className="mt-4 space-y-4">
-        <MobileResultMarketCard post={post} market={market} />
+        <MobileResultMarketCard post={post} market={market} inOverlay={inOverlay} />
         <MobileResultStatsCard
           post={post}
           minHeightClassName="min-h-[360px]"
           language={language}
+          inOverlay={inOverlay}
         />
       </div>
     </div>

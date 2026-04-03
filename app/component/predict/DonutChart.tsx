@@ -12,6 +12,8 @@ type Props = {
   segments: DonutSegment[];
   size?: number;
   thickness?: number;
+  /** 先頭セグメントの開始角を回転（度）。試合画面の Market 円と揃える用。0 で 12 時から時計回り */
+  rotationDeg?: number;
   center?: React.ReactNode;
   ariaLabel?: string;
 };
@@ -47,6 +49,7 @@ export default function DonutChart({
   segments,
   size = 220,
   thickness = 90, // ← 太くしたいならここだけで調整
+  rotationDeg = 0,
   center,
   ariaLabel = "donut chart",
 }: Props) {
@@ -65,7 +68,7 @@ export default function DonutChart({
 
   // 座標
   const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => {
-    const a = (angle - 90) * (Math.PI / 180);
+    const a = (angle - 90 + rotationDeg) * (Math.PI / 180);
     return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
   };
 

@@ -11,6 +11,7 @@ import {
   type PlayoffBracketDoc,
 } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
+import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResults";
 
 export function useProfilePlayoffBracket(targetUid: string | null) {
   const [loading, setLoading] = useState(false);
@@ -18,6 +19,8 @@ export function useProfilePlayoffBracket(targetUid: string | null) {
     useState<PlayoffBracketDoc | null>(null);
 
   const season = getCurrentPlayoffSeason();
+
+  const officialResults = usePlayoffOfficialResults(targetUid ? season : null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,5 +69,6 @@ export function useProfilePlayoffBracket(targetUid: string | null) {
     playoffDisplayData,
     playoffScore,
     season,
+    officialResults,
   };
 }

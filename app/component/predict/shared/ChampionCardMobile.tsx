@@ -96,22 +96,32 @@ export default function ChampionCard({
   const name = getShortName(teamId);
 
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="relative flex w-[120px] flex-col items-center">
       <div
-        className="absolute -top-5 flex items-center gap-1"
+        className="absolute flex flex-col items-center gap-0.5"
         style={{
-          fontFamily: "Bebas Neue",
-          fontSize: 14,
-          letterSpacing: "0.08em",
-          color: "#ffd84d",
-          textShadow: `
-            0 0 4px rgba(255,216,77,0.9),
-            0 0 12px rgba(255,216,77,0.6)
-          `,
+          left: "50%",
+          transform: "translateX(-50%)",
+          bottom: "100%",
+          marginBottom: 5,
         }}
       >
-        <Crown size={14} strokeWidth={2.4} />
-        CHAMPION
+        <Crown size={17} strokeWidth={2.4} />
+        <div
+          style={{
+            fontFamily: "Bebas Neue, sans-serif",
+            fontSize: 16,
+            letterSpacing: "0.08em",
+            color: "#ffd84d",
+            lineHeight: 1,
+            textShadow: `
+              0 0 4px rgba(255,216,77,0.9),
+              0 0 12px rgba(255,216,77,0.6)
+            `,
+          }}
+        >
+          CHAMPION
+        </div>
       </div>
 
       <div

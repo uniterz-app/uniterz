@@ -16,16 +16,11 @@ async function dailyAnalyticsCore() {
     const newPosts = (await db.collectionGroup("posts").where("createdAt", ">=", startTs).get()).size;
     // ---- ③ 累計ユーザー ----
     const totalUsers = (await db.collection("users").get()).size;
-    // ---- ④ 今日のアクティブユーザー（DAU） ----
-    const dau = (await db
-        .collection("activityLogs")
-        .where("date", "==", dateKey)
-        .get()).size;
     const payload = {
         newUsers,
         newPosts,
         totalUsers,
-        dau,
+        dau: 0,
         ts: Date.now(),
     };
     // ---- Firestore に保存 ----

@@ -3,10 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
+import {
+  loadPlayoffBracket,
+  type BracketState,
+} from "@/lib/playoff-bracket-firestore";
 import { buildPlayoffDisplayData } from "@/lib/playoff-bracket-display";
 import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
+import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResults";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 export default function WebPlayoffBracketViewPage() {
   const router = useRouter();
@@ -16,6 +21,12 @@ export default function WebPlayoffBracketViewPage() {
 
   const [loading, setLoading] = useState(true);
   const [display, setDisplay] = useState<any | null>(null);
+  const [savedBracket, setSavedBracket] = useState<BracketState | null>(null);
+  const [resolvedSeason, setResolvedSeason] = useState(fallbackSeason);
+  const [viewerUid, setViewerUid] = useState<string | null>(null);
+
+  const { language } = useUserLanguage(viewerUid);
+  const officialResults = usePlayoffOfficialResults(resolvedSeason);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +39,8 @@ export default function WebPlayoffBracketViewPage() {
         return;
       }
 
+      if (!cancelled) setViewerUid(me.uid);
+
       try {
         const saved = await loadPlayoffBracket(me.uid, fallbackSeason);
 
@@ -36,13 +49,13 @@ export default function WebPlayoffBracketViewPage() {
           return;
         }
 
-        const nextDisplay = buildPlayoffDisplayData(
-          saved.bracket,
-          saved.season ?? fallbackSeason
-        );
+        const season = saved.season ?? fallbackSeason;
+        const nextDisplay = buildPlayoffDisplayData(saved.bracket, season);
 
         if (cancelled) return;
 
+        setSavedBracket(saved.bracket);
+        setResolvedSeason(season);
         setDisplay(nextDisplay);
         setLoading(false);
       } catch (e) {
@@ -81,6 +94,9 @@ export default function WebPlayoffBracketViewPage() {
         rightRound3={display.rightRound3}
         rightRound4={display.rightRound4}
         champion={display.champion}
+        bracket={savedBracket ?? undefined}
+        results={officialResults ?? undefined}
+        hitLegend={{ language }}
       />
     </main>
   );

@@ -25,19 +25,11 @@ export async function dailyAnalyticsCore() {
   // ---- ③ 累計ユーザー ----
   const totalUsers = (await db.collection("users").get()).size;
 
-  // ---- ④ 今日のアクティブユーザー（DAU） ----
-  const dau = (
-    await db
-      .collection("activityLogs")
-      .where("date", "==", dateKey)
-      .get()
-  ).size;
-
   const payload = {
     newUsers,
     newPosts,
     totalUsers,
-    dau,
+    dau: 0,
     ts: Date.now(),
   };
 

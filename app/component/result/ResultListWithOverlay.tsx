@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePathname } from "next/navigation";
 import { LayoutGroup, motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -54,12 +61,21 @@ export default function ResultListWithOverlay({
   const isMobile = pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
   const scrollYRef = useRef(0);
 
-  const selectedPost = grouped
-    .flatMap((d) => [...d.pending, ...d.final])
-    .find((p) => p.id === openPostId) ?? null;
+  const selectedPost = useMemo(() => {
+    if (!openPostId) return null;
+    return (
+      grouped
+        .flatMap((d) => [...d.pending, ...d.final])
+        .find((p) => p.id === openPostId) ?? null
+    );
+  }, [grouped, openPostId]);
 
   const open = useCallback((post: PredictionPostV2) => {
     scrollYRef.current = typeof window !== "undefined" ? window.scrollY : 0;
+    /* ScheduleList 同様: body に splash-bg が残っているとオーバーレイ直前にスプラッシュ画像が一瞬見える */
+    if (typeof document !== "undefined") {
+      document.body.classList.remove("splash-bg");
+    }
     setOpenPostId(post.id);
     setMarket(null);
   }, []);
@@ -96,6 +112,11 @@ export default function ResultListWithOverlay({
       alive = false;
     };
   }, [openPostId, selectedPost?.gameId]);
+
+  useLayoutEffect(() => {
+    if (!openPostId) return;
+    document.body.classList.remove("splash-bg");
+  }, [openPostId]);
 
   useEffect(() => {
     if (!openPostId) return;
@@ -222,7 +243,10 @@ export default function ResultListWithOverlay({
       {openPostId && selectedPost && (
         <motion.div
           key="result-overlay"
-          className="fixed inset-0 z-99999 overflow-hidden"
+          className={[
+            "fixed inset-0 overflow-hidden",
+            isMobile ? "z-100000" : "z-99999",
+          ].join(" ")}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{
@@ -230,11 +254,8 @@ export default function ResultListWithOverlay({
             ease: [0.22, 1, 0.36, 1],
           }}
         >
-          <motion.div
-            className="absolute inset-0 z-0 bg-black/22 backdrop-blur-[10px] pointer-events-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.22 }}
+          <div
+            className="absolute inset-0 z-0 bg-black/35 backdrop-blur-md pointer-events-auto"
             onClick={close}
           />
 
@@ -292,12 +313,14 @@ export default function ResultListWithOverlay({
                     post={selectedPost}
                     market={market ?? undefined}
                     language={language}
+                    inOverlay
                   />
                 ) : (
                   <ResultDetail
                     post={selectedPost}
                     market={market ?? undefined}
                     language={language}
+                    inOverlay
                   />
                 )}
               </motion.div>

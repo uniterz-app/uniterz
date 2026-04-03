@@ -4,12 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { League } from "@/lib/leagues";
 import type { SeriesId } from "@/lib/playoff-bracket";
 import type { TeamSlot } from "@/lib/playoff-bracket-display";
+import { slotTeamIdToBracketCode } from "@/lib/playoff-bracket-display";
 import BracketCard, {
   type BracketCardHitStatus,
 } from "@/app/component/predict/shared/BracketCardMobile";
 import ChampionCard from "@/app/component/predict/shared/ChampionCardMobile";
-import PlayoffBracketBackground from "@/app/component/predict/shared/PlayoffBracketBackground";
+import { PLAYOFF_BRACKET_PANEL } from "@/lib/ui/matchOverlayGlass";
 import PlayoffBracketHeader from "@/app/component/predict/shared/PlayoffBracketMobileHeader";
+import PlayoffBracketHitLegend from "@/app/component/predict/shared/PlayoffBracketHitLegend";
+import type { Language } from "@/lib/i18n/language";
 import {
   buildRound1Series,
   getPlayoffBracketConfig,
@@ -42,6 +45,9 @@ export type PlayoffFullBracketProps = {
 
   bracket?: BracketLike;
   results?: BracketLike;
+  hitLegend?: { language: Language };
+  /** false ＝外枠のガラスパネルなし（オーバーレイ内など） */
+  showGlassShell?: boolean;
 };
 
 const SCALE = 0.375;
@@ -51,7 +57,11 @@ const CARD_H = 72 * SCALE;
 
 const DESIGN_W = 504;
 const DESIGN_H = 289;
+/** Pull bracket up under header only when there is no hit legend (legend sits above and must not overlap). */
 const BRACKET_OFFSET_Y = -36;
+const BRACKET_OFFSET_Y_WITH_LEGEND = 4;
+/** 下端のカード・スコアが丸み背景内で切れないようデザイン座標で余白を足す */
+const MOBILE_BRACKET_BOTTOM_SLACK = 64;
 
 const COL_X = {
   leftR1: 0,
@@ -272,6 +282,8 @@ export default function PlayoffFullBracketMobile({
   champion,
   bracket,
   results,
+  hitLegend,
+  showGlassShell = true,
 }: PlayoffFullBracketProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [wrapWidth, setWrapWidth] = useState(0);
@@ -298,7 +310,14 @@ export default function PlayoffFullBracketMobile({
     return wrapWidth / DESIGN_W;
   }, [wrapWidth]);
 
-  const scaledHeight = DESIGN_H * viewScale;
+  const bracketOffsetY = hitLegend ? BRACKET_OFFSET_Y_WITH_LEGEND : BRACKET_OFFSET_Y;
+
+  /** 正の top オフセット＋下端余白でクリップを防ぐ */
+  const scaledHeight =
+    (DESIGN_H +
+      MOBILE_BRACKET_BOTTOM_SLACK +
+      Math.max(0, bracketOffsetY)) *
+    viewScale;
 
   const round1InitialTeams = useMemo(() => getRound1InitialTeams(season), [season]);
 
@@ -322,44 +341,58 @@ export default function PlayoffFullBracketMobile({
     teamId?: string | null
   ): BracketCardHitStatus {
     const winner = normalizeTeamId(bracket?.[seriesId]?.winner);
-    const currentTeam = normalizeTeamId(teamId);
+    const slotCode = slotTeamIdToBracketCode(teamId);
 
-    if (!winner || !currentTeam) return "none";
-    if (winner !== currentTeam) return "none";
+    if (!winner || !slotCode) return "none";
+    if (winner !== slotCode) return "none";
 
     return seriesStatusMap[seriesId] ?? "none";
   }
 
   const championHitStatus = useMemo<BracketCardHitStatus>(() => {
-    const championTeam = normalizeTeamId(champion?.teamId);
+    const championCode = slotTeamIdToBracketCode(champion?.teamId);
     const predictedChampion = normalizeTeamId(bracket?.FINALS?.winner);
 
-    if (!championTeam || !predictedChampion) return "none";
-    if (championTeam !== predictedChampion) return "none";
+    if (!championCode || !predictedChampion) return "none";
+    if (championCode !== predictedChampion) return "none";
 
     return seriesStatusMap.FINALS ?? "none";
   }, [champion?.teamId, bracket?.FINALS?.winner, seriesStatusMap]);
 
   return (
-    <div ref={wrapRef} className={`relative w-full ${className}`}>
-      <PlayoffBracketBackground />
-
-      <div className="relative z-10 pt-4">
+    <div
+      ref={wrapRef}
+      className={[
+        "relative w-full overflow-visible",
+        showGlassShell ? PLAYOFF_BRACKET_PANEL : "",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className="relative z-20 flex w-full flex-col items-center space-y-2 px-2 pb-1 pt-4">
         <PlayoffBracketHeader season={season} />
+        {hitLegend ? (
+          <PlayoffBracketHitLegend
+            language={hitLegend.language}
+            className="px-0.5"
+            compact
+          />
+        ) : null}
       </div>
 
       <div
-        className="relative mx-auto z-10"
+        className="relative z-10 mx-auto mt-1 flex w-full justify-center pb-4"
         style={{
           width: "100%",
-          height: scaledHeight,
+          minHeight: scaledHeight,
           overflow: "visible",
         }}
       >
         <div
           className="absolute left-0"
           style={{
-            top: BRACKET_OFFSET_Y * viewScale,
+            top: bracketOffsetY * viewScale,
             width: DESIGN_W,
             height: DESIGN_H,
             transform: `scale(${viewScale})`,

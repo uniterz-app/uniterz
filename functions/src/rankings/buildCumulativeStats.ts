@@ -40,8 +40,11 @@ export async function buildCumulativeStats() {
     const uid = doc.id.split("_")[0];
     if (!uid) continue;
 
-    const stats = data.all;
-    if (!stats) continue;
+    const statsAll = data.all;
+    if (!statsAll) continue;
+
+    /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
+    const statsRanking = data.ranking ?? data.all;
 
     const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
     const userRef = db().doc(`users/${uid}`);
@@ -62,7 +65,7 @@ export async function buildCumulativeStats() {
       const user = userSnap.exists ? userSnap.data()! : {};
 
       /* =========================
-       * 累積値
+       * 累積値（プロフィール = 全試合）
        * =======================*/
       const prevPosts = cumulativeSnap.get("totalPosts") ?? 0;
       const prevWins = cumulativeSnap.get("totalWins") ?? 0;
@@ -70,11 +73,11 @@ export async function buildCumulativeStats() {
       const prevUpset = cumulativeSnap.get("totalUpset") ?? 0;
       const prevPrecision = cumulativeSnap.get("totalPrecision") ?? 0;
 
-      const addPosts = stats.posts ?? 0;
-      const addWins = stats.wins ?? 0;
-      const addPoints = stats.pointsSumV3 ?? 0;
-      const addUpset = stats.upsetPointsSum ?? 0;
-      const addPrecision = stats.scorePrecisionSum ?? 0;
+      const addPosts = statsAll.posts ?? 0;
+      const addWins = statsAll.wins ?? 0;
+      const addPoints = statsAll.pointsSumV3 ?? 0;
+      const addUpset = statsAll.upsetPointsSum ?? 0;
+      const addPrecision = statsAll.scorePrecisionSum ?? 0;
 
       const nextPosts = prevPosts + addPosts;
       const nextWins = prevWins + addWins;
@@ -83,6 +86,42 @@ export async function buildCumulativeStats() {
       const nextPrecision = prevPrecision + addPrecision;
 
       const winRate = nextPosts > 0 ? nextWins / nextPosts : 0;
+
+      /* =========================
+       * ランキング用累積（プレーイン除外など）
+       * ranking 未保存時はプロフィール累積でブートストラップ（二重計上防止）
+       * =======================*/
+      const prevR = cumulativeSnap.get("ranking") as
+        | {
+            totalPosts?: number;
+            totalWins?: number;
+            totalPoints?: number;
+            totalUpset?: number;
+            totalPrecision?: number;
+          }
+        | undefined;
+
+      const bootPosts =
+        prevR?.totalPosts != null ? prevR.totalPosts : prevPosts;
+      const bootWins = prevR?.totalWins != null ? prevR.totalWins : prevWins;
+      const bootPoints =
+        prevR?.totalPoints != null ? prevR.totalPoints : prevPoints;
+      const bootUpset = prevR?.totalUpset != null ? prevR.totalUpset : prevUpset;
+      const bootPrecision =
+        prevR?.totalPrecision != null ? prevR.totalPrecision : prevPrecision;
+
+      const addRPosts = statsRanking.posts ?? 0;
+      const addRWins = statsRanking.wins ?? 0;
+      const addRPoints = statsRanking.pointsSumV3 ?? 0;
+      const addRUpset = statsRanking.upsetPointsSum ?? 0;
+      const addRPrecision = statsRanking.scorePrecisionSum ?? 0;
+
+      const nextRPosts = bootPosts + addRPosts;
+      const nextRWins = bootWins + addRWins;
+      const nextRPoints = bootPoints + addRPoints;
+      const nextRUpset = bootUpset + addRUpset;
+      const nextRPrecision = bootPrecision + addRPrecision;
+      const winRateRanking = nextRPosts > 0 ? nextRWins / nextRPosts : 0;
 
       tx.set(
         cumulativeRef,
@@ -101,6 +140,15 @@ export async function buildCumulativeStats() {
           totalUpset: nextUpset,
           totalPrecision: nextPrecision,
           winRate,
+
+          ranking: {
+            totalPosts: nextRPosts,
+            totalWins: nextRWins,
+            totalPoints: nextRPoints,
+            totalUpset: nextRUpset,
+            totalPrecision: nextRPrecision,
+            winRate: winRateRanking,
+          },
 
           lastAggregatedDate: dateKey,
           updatedAt: FieldValue.serverTimestamp(),

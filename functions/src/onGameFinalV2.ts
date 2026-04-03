@@ -8,6 +8,7 @@ import { upsetJudge } from "./upsetJudge";
 import { finalizePost } from "./finalizePost";
 import { updateUserStreak } from "./updateUserStreak";
 import { updateTeamStats } from "./updateTeamStats";
+import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
 
 const db = () => getFirestore();
 
@@ -65,6 +66,15 @@ export const onGameFinalV2 = onDocumentWritten(
         db: db(),
         gameId,
         final: { home: game.homeScore, away: game.awayScore },
+      });
+
+      await updateTeamSeasonRecord({
+        db: db(),
+        league: game.league,
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
       });
 
       await updateTeamStats({

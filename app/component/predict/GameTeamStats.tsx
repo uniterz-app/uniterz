@@ -4,18 +4,21 @@ import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { motion } from "framer-motion";
 import { Alfa_Slab_One } from "next/font/google";
-
-/* ================= Font ================= */
 
 const alfa = Alfa_Slab_One({
   subsets: ["latin"],
   weight: ["400"],
 });
 
-/* ================= Types ================= */
+const ROW_STAGGER = 0.09;
+const BAR_DURATION = 0.72;
+const BAR_AFTER_ROW = 0.06;
+
+/** 左: ミント系ネオン（シアンより緑寄り） / 右: バイオレット系（マゼンタより青紫） */
+const BAR_LEFT_HEX = "#5cf0b5";
+const BAR_RIGHT_HEX = "#b388ff";
 
 type TeamDoc = {
   gamesPlayed: number;
@@ -33,6 +36,9 @@ type TeamDoc = {
   vsEastWins: number;
   vsWestGames: number;
   vsWestWins: number;
+
+  ppgRank?: number;
+  papgRank?: number;
 };
 
 type Props = {
@@ -46,25 +52,63 @@ type ViewStats = {
   avgFor: number;
   avgAgainst: number;
   diff: number;
-  color: string;
 
   homeW: number;
   homeL: number;
   awayW: number;
   awayL: number;
 
-  vsLabel: string;
-  vsRecord: string;
+  homeWinPct: number;
+  awayWinPct: number;
+
+  vsEastW: number;
+  vsEastL: number;
+  vsEastPct: number;
+  vsWestW: number;
+  vsWestL: number;
+  vsWestPct: number;
+
+  ppgRank?: number;
+  papgRank?: number;
 };
 
-/* ================= Main ================= */
+function formatStatRank(rank: number | undefined, isEn: boolean): string | null {
+  if (rank == null || rank < 1 || !Number.isFinite(rank)) return null;
+  const r = Math.round(rank);
+  return isEn ? `#${r}` : `${r}位`;
+}
+
+function shareHigherBetter(a: number, b: number): [number, number] {
+  const t = a + b;
+  if (t <= 0) return [50, 50];
+  return [Math.round((100 * a) / t), Math.round((100 * b) / t)];
+}
+
+function shareLowerBetter(a: number, b: number): [number, number] {
+  const ia = 1 / Math.max(a, 0.01);
+  const ib = 1 / Math.max(b, 0.01);
+  const s = ia + ib;
+  return [Math.round((100 * ia) / s), Math.round((100 * ib) / s)];
+}
+
+function diffBarPcts(homeD: number, awayD: number): [number, number] {
+  const minD = Math.min(homeD, awayD);
+  const maxD = Math.max(homeD, awayD);
+  if (maxD === minD) return [50, 50];
+  return [
+    Math.round((100 * (homeD - minD)) / (maxD - minD)),
+    Math.round((100 * (awayD - minD)) / (maxD - minD)),
+  ];
+}
 
 export default function GameTeamStats({
-  league,
+  league: _league,
   homeTeamId,
   awayTeamId,
   language = "ja",
 }: Props) {
+  void _league;
+
   const isEn = language === "en";
   const [home, setHome] = useState<ViewStats | null>(null);
   const [away, setAway] = useState<ViewStats | null>(null);
@@ -80,7 +124,7 @@ export default function GameTeamStats({
       const homeDoc = hSnap.data() as TeamDoc;
       const awayDoc = aSnap.data() as TeamDoc;
 
-      const build = (t: TeamDoc, teamId: string): ViewStats => {
+      const build = (t: TeamDoc): ViewStats => {
         const avgFor = t.gamesPlayed > 0 ? t.pointsForTotal / t.gamesPlayed : 0;
         const avgAgainst =
           t.gamesPlayed > 0 ? t.pointsAgainstTotal / t.gamesPlayed : 0;
@@ -88,302 +132,473 @@ export default function GameTeamStats({
         const homeL = Math.max(0, (t.homeGames ?? 0) - (t.homeWins ?? 0));
         const awayL = Math.max(0, (t.awayGames ?? 0) - (t.awayWins ?? 0));
 
-        const oppConf =
-          teamId === homeTeamId ? awayDoc.conference : homeDoc.conference;
+        const homeGames = t.homeGames ?? 0;
+        const awayGames = t.awayGames ?? 0;
+        const homeWinPct =
+          homeGames > 0 ? (100 * (t.homeWins ?? 0)) / homeGames : 0;
+        const awayWinPct =
+          awayGames > 0 ? (100 * (t.awayWins ?? 0)) / awayGames : 0;
 
-        const isVsEast = oppConf === "east";
-        const vsWins = isVsEast ? t.vsEastWins : t.vsWestWins;
-        const vsGames = isVsEast ? t.vsEastGames : t.vsWestGames;
-        const vsLosses = Math.max(0, vsGames - vsWins);
+        const eg = t.vsEastGames ?? 0;
+        const ew = t.vsEastWins ?? 0;
+        const el = Math.max(0, eg - ew);
+        const wg = t.vsWestGames ?? 0;
+        const ww = t.vsWestWins ?? 0;
+        const wl = Math.max(0, wg - ww);
 
         return {
           avgFor: Number(avgFor.toFixed(1)),
           avgAgainst: Number(avgAgainst.toFixed(1)),
           diff: Number((avgFor - avgAgainst).toFixed(1)),
-          color: getTeamPrimaryColor(league, teamId) ?? "#3b82f6",
 
           homeW: t.homeWins ?? 0,
           homeL,
           awayW: t.awayWins ?? 0,
           awayL,
 
-          vsLabel: isVsEast ? "Vs East" : "Vs West",
-          vsRecord: `${vsWins}-${vsLosses}`,
+          homeWinPct,
+          awayWinPct,
+
+          vsEastW: ew,
+          vsEastL: el,
+          vsEastPct: eg > 0 ? (100 * ew) / eg : 0,
+          vsWestW: ww,
+          vsWestL: wl,
+          vsWestPct: wg > 0 ? (100 * ww) / wg : 0,
+
+          ppgRank: typeof t.ppgRank === "number" ? t.ppgRank : undefined,
+          papgRank: typeof t.papgRank === "number" ? t.papgRank : undefined,
         };
       };
 
-      setHome(build(homeDoc, homeTeamId));
-      setAway(build(awayDoc, awayTeamId));
+      setHome(build(homeDoc));
+      setAway(build(awayDoc));
     };
 
     run();
-  }, [league, homeTeamId, awayTeamId]);
+  }, [homeTeamId, awayTeamId]);
 
   if (!home || !away) return null;
 
+  const fmtDiff = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
+
+  const [ppgBarL, ppgBarR] = shareHigherBetter(home.avgFor, away.avgFor);
+  const [papgBarL, papgBarR] = shareLowerBetter(home.avgAgainst, away.avgAgainst);
+  const [diffBarL, diffBarR] = diffBarPcts(home.diff, away.diff);
+
+  const rows: Array<{
+    key: string;
+    label: string;
+    left: {
+      primary: string;
+      rank: string | null;
+      barPct: number;
+      recordBelow: string | null;
+    };
+    right: {
+      primary: string;
+      rank: string | null;
+      barPct: number;
+      recordBelow: string | null;
+    };
+    leftWin: boolean;
+    rightWin: boolean;
+  }> = [
+    {
+      key: "ppg",
+      label: isEn ? "PTS / G" : "平均得点",
+      left: {
+        primary: home.avgFor.toFixed(1),
+        rank: formatStatRank(home.ppgRank, isEn),
+        barPct: ppgBarL,
+        recordBelow: null,
+      },
+      right: {
+        primary: away.avgFor.toFixed(1),
+        rank: formatStatRank(away.ppgRank, isEn),
+        barPct: ppgBarR,
+        recordBelow: null,
+      },
+      leftWin: home.avgFor > away.avgFor,
+      rightWin: away.avgFor > home.avgFor,
+    },
+    {
+      key: "papg",
+      label: isEn ? "OPP PTS / G" : "平均失点",
+      left: {
+        primary: home.avgAgainst.toFixed(1),
+        rank: formatStatRank(home.papgRank, isEn),
+        barPct: papgBarL,
+        recordBelow: null,
+      },
+      right: {
+        primary: away.avgAgainst.toFixed(1),
+        rank: formatStatRank(away.papgRank, isEn),
+        barPct: papgBarR,
+        recordBelow: null,
+      },
+      leftWin: home.avgAgainst < away.avgAgainst,
+      rightWin: away.avgAgainst < home.avgAgainst,
+    },
+    {
+      key: "diff",
+      label: isEn ? "Point diff" : "得失点差",
+      left: {
+        primary: fmtDiff(home.diff),
+        rank: null,
+        barPct: diffBarL,
+        recordBelow: null,
+      },
+      right: {
+        primary: fmtDiff(away.diff),
+        rank: null,
+        barPct: diffBarR,
+        recordBelow: null,
+      },
+      leftWin: home.diff > away.diff,
+      rightWin: away.diff > home.diff,
+    },
+    {
+      key: "home",
+      label: isEn ? "Home" : "ホーム戦績",
+      left: {
+        primary: `${Math.round(home.homeWinPct)}%`,
+        rank: null,
+        barPct: Math.round(Math.min(100, Math.max(0, home.homeWinPct))),
+        recordBelow: `${home.homeW}-${home.homeL}`,
+      },
+      right: {
+        primary: `${Math.round(away.homeWinPct)}%`,
+        rank: null,
+        barPct: Math.round(Math.min(100, Math.max(0, away.homeWinPct))),
+        recordBelow: `${away.homeW}-${away.homeL}`,
+      },
+      leftWin: home.homeWinPct > away.homeWinPct,
+      rightWin: away.homeWinPct > home.homeWinPct,
+    },
+    {
+      key: "away",
+      label: isEn ? "Away" : "アウェイ戦績",
+      left: {
+        primary: `${Math.round(home.awayWinPct)}%`,
+        rank: null,
+        barPct: Math.round(Math.min(100, Math.max(0, home.awayWinPct))),
+        recordBelow: `${home.awayW}-${home.awayL}`,
+      },
+      right: {
+        primary: `${Math.round(away.awayWinPct)}%`,
+        rank: null,
+        barPct: Math.round(Math.min(100, Math.max(0, away.awayWinPct))),
+        recordBelow: `${away.awayW}-${away.awayL}`,
+      },
+      leftWin: home.awayWinPct > away.awayWinPct,
+      rightWin: away.awayWinPct > home.awayWinPct,
+    },
+    {
+      key: "vsEast",
+      label: isEn ? "VS EAST" : "VS EAST",
+      left: {
+        primary:
+          home.vsEastW + home.vsEastL > 0
+            ? `${Math.round(home.vsEastPct)}%`
+            : "—",
+        rank: null,
+        barPct:
+          home.vsEastW + home.vsEastL > 0 &&
+          away.vsEastW + away.vsEastL > 0
+            ? shareHigherBetter(home.vsEastPct, away.vsEastPct)[0]
+            : home.vsEastW + home.vsEastL > 0
+              ? Math.round(home.vsEastPct)
+              : 0,
+        recordBelow:
+          home.vsEastW + home.vsEastL > 0
+            ? `${home.vsEastW}-${home.vsEastL}`
+            : null,
+      },
+      right: {
+        primary:
+          away.vsEastW + away.vsEastL > 0
+            ? `${Math.round(away.vsEastPct)}%`
+            : "—",
+        rank: null,
+        barPct:
+          home.vsEastW + home.vsEastL > 0 &&
+          away.vsEastW + away.vsEastL > 0
+            ? shareHigherBetter(home.vsEastPct, away.vsEastPct)[1]
+            : away.vsEastW + away.vsEastL > 0
+              ? Math.round(away.vsEastPct)
+              : 0,
+        recordBelow:
+          away.vsEastW + away.vsEastL > 0
+            ? `${away.vsEastW}-${away.vsEastL}`
+            : null,
+      },
+      leftWin:
+        home.vsEastW + home.vsEastL > 0 &&
+        away.vsEastW + away.vsEastL > 0 &&
+        home.vsEastPct > away.vsEastPct,
+      rightWin:
+        home.vsEastW + home.vsEastL > 0 &&
+        away.vsEastW + away.vsEastL > 0 &&
+        away.vsEastPct > home.vsEastPct,
+    },
+    {
+      key: "vsWest",
+      label: isEn ? "VS WEST" : "VS WEST",
+      left: {
+        primary:
+          home.vsWestW + home.vsWestL > 0
+            ? `${Math.round(home.vsWestPct)}%`
+            : "—",
+        rank: null,
+        barPct:
+          home.vsWestW + home.vsWestL > 0 &&
+          away.vsWestW + away.vsWestL > 0
+            ? shareHigherBetter(home.vsWestPct, away.vsWestPct)[0]
+            : home.vsWestW + home.vsWestL > 0
+              ? Math.round(home.vsWestPct)
+              : 0,
+        recordBelow:
+          home.vsWestW + home.vsWestL > 0
+            ? `${home.vsWestW}-${home.vsWestL}`
+            : null,
+      },
+      right: {
+        primary:
+          away.vsWestW + away.vsWestL > 0
+            ? `${Math.round(away.vsWestPct)}%`
+            : "—",
+        rank: null,
+        barPct:
+          home.vsWestW + home.vsWestL > 0 &&
+          away.vsWestW + away.vsWestL > 0
+            ? shareHigherBetter(home.vsWestPct, away.vsWestPct)[1]
+            : away.vsWestW + away.vsWestL > 0
+              ? Math.round(away.vsWestPct)
+              : 0,
+        recordBelow:
+          away.vsWestW + away.vsWestL > 0
+            ? `${away.vsWestW}-${away.vsWestL}`
+            : null,
+      },
+      leftWin:
+        home.vsWestW + home.vsWestL > 0 &&
+        away.vsWestW + away.vsWestL > 0 &&
+        home.vsWestPct > away.vsWestPct,
+      rightWin:
+        home.vsWestW + home.vsWestL > 0 &&
+        away.vsWestW + away.vsWestL > 0 &&
+        away.vsWestPct > home.vsWestPct,
+    },
+  ];
+
   return (
-    <section className="mt-3 space-y-4">
-      <CenterBarRow
-        label={isEn ? "Points For (Avg)" : "平均得点"}
-        left={home.avgFor}
-        right={away.avgFor}
-        leftColor={home.color}
-        rightColor={away.color}
-        delay={0.15}
-      />
-
-      <CenterBarRow
-        label={isEn ? "Points Against (Avg)" : "平均失点"}
-        left={home.avgAgainst}
-        right={away.avgAgainst}
-        leftColor={home.color}
-        rightColor={away.color}
-        inverse
-        delay={0.35}
-      />
-
-      <DiffRow
-        label={isEn ? "Point Diff" : "得失点差"}
-        homeDiff={home.diff}
-        awayDiff={away.diff}
-        homeRecord={`${home.homeW}-${home.homeL}`}
-        awayRecord={`${away.awayW}-${away.awayL}`}
-        homeVsLabel={home.vsLabel}
-        homeVsRecord={home.vsRecord}
-        awayVsLabel={away.vsLabel}
-        awayVsRecord={away.vsRecord}
-        language={language}
-      />
+    <section className="space-y-0">
+      {rows.map((row, index) => (
+        <SymmetricalCompareRow
+          key={row.key}
+          label={row.label}
+          left={row.left}
+          right={row.right}
+          leftWin={row.leftWin}
+          rightWin={row.rightWin}
+          barDelay={index * ROW_STAGGER}
+        />
+      ))}
     </section>
   );
 }
 
-/* ================= UI ================= */
-
-function CenterBarRow({
+function SymmetricalCompareRow({
   label,
   left,
   right,
-  leftColor,
-  rightColor,
-  inverse,
-  delay,
+  leftWin,
+  rightWin,
+  barDelay,
 }: {
   label: string;
-  left: number;
-  right: number;
-  leftColor: string;
-  rightColor: string;
-  inverse?: boolean;
-  delay: number;
+  left: {
+    primary: string;
+    rank: string | null;
+    barPct: number;
+    recordBelow: string | null;
+  };
+  right: {
+    primary: string;
+    rank: string | null;
+    barPct: number;
+    recordBelow: string | null;
+  };
+  leftWin: boolean;
+  rightWin: boolean;
+  barDelay: number;
 }) {
-  const lWin = inverse ? left < right : left > right;
-  const rWin = inverse ? right < left : right > left;
-  const max = Math.max(left, right, 1);
+  const rowAnimDelay = barDelay;
+
+  const leftNumClass = [
+    alfa.className,
+    "text-right text-sm tabular-nums font-bold md:text-base",
+    "text-[#5cf0b5]",
+  ].join(" ");
+
+  const rightNumClass = [
+    alfa.className,
+    "text-left text-sm tabular-nums font-bold md:text-base",
+    "text-[#b388ff]",
+  ].join(" ");
 
   return (
-    <div className="space-y-1.5">
-      <div className="text-center text-xs md:text-sm tracking-widest text-white/60">
-        {label}
-      </div>
-
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-5">
-        <div className="flex min-w-0 items-center justify-end gap-2 md:gap-3">
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: rowAnimDelay, ease: "easeOut" }}
+      className="border-b border-white/8 py-2.5 last:border-b-0"
+    >
+      <div className="flex items-center gap-1 md:gap-1.5">
+        {/* 左: 外→中央 = バー | 順位 | 数字（下にレコード） */}
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1 md:gap-1.5">
+          <CyberBar
+            value={left.barPct}
+            grow="left"
+            winGlow={leftWin}
+            delay={barDelay + BAR_AFTER_ROW}
+          />
           <span
             className={[
               alfa.className,
-              "shrink-0 tabular-nums text-sm md:text-base",
-              lWin ? "font-bold text-yellow-300" : "text-white/80 opacity-80",
+              "w-9 shrink-0 text-right text-[10px] tabular-nums text-white/38 md:w-10 md:text-[11px]",
             ].join(" ")}
           >
-            {left.toFixed(1)}
+            {left.rank ?? ""}
           </span>
-
-          <AnimatedBar
-            value={left / max}
-            color={leftColor}
-            origin="right"
-            delay={delay}
-          />
-        </div>
-
-        <div className="h-4 w-[3px] shrink-0 rounded bg-white/40" />
-
-        <div className="flex min-w-0 items-center gap-2 md:gap-3">
-          <AnimatedBar
-            value={right / max}
-            color={rightColor}
-            origin="left"
-            delay={delay}
-          />
-
-          <span
-            className={[
-              alfa.className,
-              "shrink-0 tabular-nums text-sm md:text-base",
-              rWin ? "font-bold text-yellow-300" : "text-white/80 opacity-80",
-            ].join(" ")}
-          >
-            {right.toFixed(1)}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DiffRow({
-  label,
-  homeDiff,
-  awayDiff,
-  homeRecord,
-  awayRecord,
-  homeVsLabel,
-  homeVsRecord,
-  awayVsLabel,
-  awayVsRecord,
-  language = "ja",
-}: {
-  label: string;
-  homeDiff: number;
-  awayDiff: number;
-  homeRecord: string;
-  awayRecord: string;
-  homeVsLabel: string;
-  homeVsRecord: string;
-  awayVsLabel: string;
-  awayVsRecord: string;
-  language?: "ja" | "en";
-}) {
-  const homeWin = homeDiff > awayDiff;
-  const awayWin = awayDiff > homeDiff;
-  const isEn = language === "en";
-
-  return (
-    <div className="space-y-3">
-      {/* 見出し */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-5">
-        <div className="text-left text-xs md:text-sm tracking-widest text-white/60">
-          {isEn ? "Home Record" : "Home 戦績"}
-        </div>
-
-        <div className="w-[88px] shrink-0 text-center text-xs md:text-sm tracking-widest text-white/60">
-          {label}
-        </div>
-
-        <div className="text-right text-xs md:text-sm tracking-widest text-white/60">
-          {isEn ? "Away Record" : "Away 戦績"}
-        </div>
-      </div>
-
-      {/* 数値 */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 md:gap-5">
-        <div
-          className={[
-            alfa.className,
-            "tabular-nums text-left text-sm md:text-base text-white/80 whitespace-nowrap",
-          ].join(" ")}
-        >
-          {homeRecord}
-        </div>
-
-        <div className="shrink-0">
-          <div className="flex items-center gap-3">
-            <div
-              className={[
-                alfa.className,
-                "w-[64px] md:w-[72px] tabular-nums text-right text-sm md:text-base",
-                homeWin ? "font-bold text-yellow-300" : "text-white/80 opacity-80",
-              ].join(" ")}
+          <div className="flex min-w-0 flex-col items-end gap-0.5">
+            <span
+              className={leftNumClass}
+              style={{
+                textShadow: leftWin
+                  ? "0 0 6px rgba(92,240,181,0.42), 0 0 2px rgba(92,240,181,0.55)"
+                  : undefined,
+              }}
             >
-              {homeDiff > 0 ? "+" : ""}
-              {homeDiff.toFixed(1)}
-            </div>
-
-            <div className="h-4 w-[3px] shrink-0 rounded bg-white/40" />
-
-            <div
-              className={[
-                alfa.className,
-                "w-[64px] md:w-[72px] tabular-nums text-left text-sm md:text-base",
-                awayWin ? "font-bold text-yellow-300" : "text-white/80 opacity-80",
-              ].join(" ")}
-            >
-              {awayDiff > 0 ? "+" : ""}
-              {awayDiff.toFixed(1)}
-            </div>
+              {left.primary}
+            </span>
+            {left.recordBelow ? (
+              <span
+                className={[
+                  alfa.className,
+                  "text-[10px] tabular-nums text-white/45 md:text-[11px]",
+                ].join(" ")}
+              >
+                {left.recordBelow}
+              </span>
+            ) : null}
           </div>
         </div>
 
-        <div
-          className={[
-            alfa.className,
-            "tabular-nums text-right text-sm md:text-base text-white/80 whitespace-nowrap",
-          ].join(" ")}
-        >
-          {awayRecord}
-        </div>
-      </div>
-
-      {/* VS 見出し */}
-      <div className="grid grid-cols-2 gap-6 md:gap-10 pt-1">
-        <div className="text-right text-xs md:text-sm tracking-widest text-white/60">
-          {homeVsLabel}
-        </div>
-        <div className="text-left text-xs md:text-sm tracking-widest text-white/60">
-          {awayVsLabel}
-        </div>
-      </div>
-
-      {/* VS 数値 */}
-      <div className="grid grid-cols-2 gap-6 md:gap-10">
-        <div
-          className={[
-            alfa.className,
-            "tabular-nums text-right text-sm md:text-base text-white/80 whitespace-nowrap",
-          ].join(" ")}
-        >
-          {homeVsRecord}
+        <div className="w-18 shrink-0 px-0.5 text-center md:w-21">
+          <div className="text-[10px] font-medium leading-tight tracking-wide text-white/65 md:text-[11px]">
+            {label}
+          </div>
         </div>
 
-        <div
-          className={[
-            alfa.className,
-            "tabular-nums text-left text-sm md:text-base text-white/80 whitespace-nowrap",
-          ].join(" ")}
-        >
-          {awayVsRecord}
+        {/* 右: 中央→外 = 数字（下にレコード）| 順位 | バー */}
+        <div className="flex min-w-0 flex-1 items-center gap-1 md:gap-1.5">
+          <div className="flex min-w-0 flex-col items-start gap-0.5">
+            <span
+              className={rightNumClass}
+              style={{
+                textShadow: rightWin
+                  ? "0 0 6px rgba(179,136,255,0.4), 0 0 2px rgba(179,136,255,0.52)"
+                  : undefined,
+              }}
+            >
+              {right.primary}
+            </span>
+            {right.recordBelow ? (
+              <span
+                className={[
+                  alfa.className,
+                  "text-[10px] tabular-nums text-white/45 md:text-[11px]",
+                ].join(" ")}
+              >
+                {right.recordBelow}
+              </span>
+            ) : null}
+          </div>
+          <span
+            className={[
+              alfa.className,
+              "w-9 shrink-0 text-left text-[10px] tabular-nums text-white/38 md:w-10 md:text-[11px]",
+            ].join(" ")}
+          >
+            {right.rank ?? ""}
+          </span>
+          <CyberBar
+            value={right.barPct}
+            grow="right"
+            winGlow={rightWin}
+            delay={barDelay + BAR_AFTER_ROW}
+          />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-/* ================= Animated Bar ================= */
-
-function AnimatedBar({
+function CyberBar({
   value,
-  color,
-  origin,
+  grow,
+  winGlow,
   delay,
 }: {
   value: number;
-  color: string;
-  origin: "left" | "right";
+  grow: "left" | "right";
+  winGlow: boolean;
   delay: number;
 }) {
+  const v = Math.min(100, Math.max(0, value)) / 100;
+  const origin = grow === "left" ? "right center" : "left center";
+  const hex = grow === "left" ? BAR_LEFT_HEX : BAR_RIGHT_HEX;
+  const borderTint =
+    grow === "left" ? "border-[#5cf0b5]/28" : "border-[#b388ff]/28";
+  const baseInset =
+    grow === "left"
+      ? "inset 0 0 6px rgba(92,240,181,0.07)"
+      : "inset 0 0 6px rgba(179,136,255,0.07)";
+  const fillBg =
+    grow === "left"
+      ? `linear-gradient(to right, ${hex}44 0%, ${hex}cc 45%, ${hex} 100%)`
+      : `linear-gradient(to right, ${hex} 0%, ${hex}cc 55%, ${hex}44 100%)`;
+
   return (
-    <div className="relative h-2 md:h-3 w-[96px] md:w-[180px] shrink-0 overflow-hidden rounded bg-white/10">
-      <motion.div
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: Math.min(value, 1) }}
-        transition={{ duration: 1.3, delay, ease: "easeOut" }}
-        className="absolute inset-0"
-        style={{
-          backgroundColor: color,
-          transformOrigin: origin === "left" ? "left center" : "right center",
-        }}
-      />
+    <div
+      className={[
+        "relative h-[3px] max-w-[68px] min-w-[40px] flex-1 overflow-visible rounded-[1px] md:h-1 md:max-w-[92px]",
+        "border bg-black/60",
+        borderTint,
+      ].join(" ")}
+      style={{
+        boxShadow: winGlow
+          ? `${baseInset}, 0 0 8px ${hex}44, 0 0 3px ${hex}66`
+          : baseInset,
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[1px]">
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: v }}
+          transition={{ duration: BAR_DURATION, delay, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute inset-y-0 left-0 w-full"
+          style={{
+            transformOrigin: origin,
+            background: fillBg,
+            boxShadow: winGlow
+              ? `0 0 5px ${hex}55, 0 0 2px ${hex}77`
+              : `0 0 2px ${hex}28`,
+          }}
+        />
+      </div>
     </div>
   );
 }

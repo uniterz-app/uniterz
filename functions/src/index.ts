@@ -18,6 +18,7 @@ import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankin
 
 // ★追加
 import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
+import { getLeaderboardLatestMonthKey } from "./leaderboards/jstLeaderboardMonth";
 import { buildAllUsersWindowCache } from "./stats/buildUserStatsWindowCache";
 
 // ===============================
@@ -29,6 +30,10 @@ export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
 export { rebuildPlayoffBracketMarket } from "./playoff-bracket/rebuildPlayoffBracketMarket";
 export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
 export { getMonthlyLeaderboard } from "./leaderboards/getMonthlyLeaderboard";
+export {
+  rebuildMonthlyLeaderboardsCron,
+  rebuildMonthlyLeaderboardsHttp,
+} from "./leaderboards/monthly";
 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";
@@ -52,18 +57,12 @@ const db = admin.firestore();
 export const onFollowerAdded = onDocumentCreated(
   "users/{uid}/followers/{followerUid}",
   async (event) => {
-    const { uid, followerUid } = event.params;
+    const { uid } = event.params;
     try {
       await db.doc(`users/${uid}`).set(
         { counts: { followers: FieldValue.increment(1) } },
         { merge: true }
       );
-      await db.collection("events_follow").add({
-        targetUid: uid,
-        actorUid: followerUid,
-        op: "follow",
-        createdAt: FieldValue.serverTimestamp(),
-      });
     } catch (e) {
       console.error("[onFollowerAdded] failed:", e);
     }
@@ -165,12 +164,7 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 export const buildMonthlyLeaderboardSnapshotCron = onSchedule(
   { schedule: "0 4 1 * *", timeZone: "Asia/Tokyo" },
   async () => {
-    const now = new Date();
-    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-    const y = prev.getFullYear();
-    const m = String(prev.getMonth() + 1).padStart(2, "0");
-    const month = `${y}-${m}`;
+    const month = getLeaderboardLatestMonthKey();
 
     const LEAGUES = ["nba", "j1", "bj"];
 
@@ -198,7 +192,6 @@ export const buildUserStatsWindowCacheCron = onSchedule(
  * ==========================================================================*/
 
 export { dailyAnalytics } from "./analytics/daily";
-export { logUserActive } from "./analytics/logUserActive";
 export { runDailyAnalytics } from "./analytics/runDaily";
 
 export { fixUserStats } from "./fixUserStats";

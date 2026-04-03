@@ -1,16 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
-import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Language } from "@/lib/i18n/language";
-
-const alfa = Alfa_Slab_One({
-  weight: "400",
-  subsets: ["latin"],
-});
+import { summaryMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   totalAnalyses?: number;
@@ -117,37 +111,41 @@ export default function AnalysisWinCard({ language = "ja", ...props }: Props) {
 
   const rateColor = winRate >= 0.75 ? "text-yellow-300" : "text-white";
 
-  const gaugeSize = isDesktop ? 120 : 80;
-  const gaugeStroke = isDesktop ? 10 : 8;
+  const gaugeSize = isDesktop ? 120 : 64;
+  const gaugeStroke = isDesktop ? 10 : 6;
 
   return (
     <div
       ref={ref}
-      className="rounded-xl border border-white/10 bg-[#050814]/80 p-3 md:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+      className="rounded-lg border border-white/15 bg-[#050814]/80 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:rounded-xl md:border-white/10 md:p-5 md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
     >
 
-      <div className="flex items-center justify-between gap-4 md:gap-10">
+      <div className="flex items-center justify-between gap-2 md:gap-10">
         <div className="flex flex-col items-center">
-          <div className="text-[10px] md:text-[16px] text-white/60">{hitLabel}</div>
+          <div className="text-[9px] tracking-tight md:text-[16px] text-white/60">
+            {hitLabel}
+          </div>
 
           <div
-            className={`${alfa.className} text-xl md:text-4xl font-bold text-white`}
+            className={`${summaryMetricNumClass} text-base tabular-nums tracking-tight text-white md:text-4xl`}
           >
             {cuHit}
           </div>
 
-          <div className="my-1 md:my-2 h-px w-10 md:w-14 bg-white/20" />
+          <div className="my-0.5 h-px w-8 bg-white/20 md:my-2 md:w-14" />
 
           <div
-            className={`${alfa.className} text-xl md:text-4xl font-bold text-white/40`}
+            className={`${summaryMetricNumClass} text-base tabular-nums tracking-tight text-white/40 md:text-4xl`}
           >
             {cuTotal}
           </div>
 
-          <div className="text-[10px] md:text-[16px] text-white/40">{totalLabel}</div>
+          <div className="text-[9px] tracking-tight md:text-[16px] text-white/40">
+            {totalLabel}
+          </div>
         </div>
 
-        <div className="relative flex items-center justify-center">
+        <div className="relative flex shrink-0 items-center justify-center">
           <ArcProgress
             size={gaugeSize}
             stroke={gaugeStroke}
@@ -157,12 +155,14 @@ export default function AnalysisWinCard({ language = "ja", ...props }: Props) {
 
           <div className="absolute flex flex-col items-center">
             <div
-              className={`${alfa.className} text-lg md:text-3xl font-bold ${rateColor}`}
+              className={`${summaryMetricNumClass} text-sm tabular-nums tracking-tight md:text-3xl ${rateColor}`}
             >
               {cuRate}%
             </div>
 
-            <div className="text-[10px] md:text-[14px] text-white/50">{winRateLabel}</div>
+            <div className="text-[8px] tracking-tight text-white/50 md:text-[14px]">
+              {winRateLabel}
+            </div>
           </div>
         </div>
       </div>

@@ -32,9 +32,26 @@ const NBA_TEAM_CODE_TO_ID: Record<string, string> = Object.fromEntries(
     .map(([teamId, short]) => [short, teamId])
 );
 
+const NBA_ID_TO_BRACKET_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(NBA_TEAM_CODE_TO_ID).map(([code, id]) => [
+    id.toLowerCase(),
+    code,
+  ])
+);
+
 function toTeamId(code?: string) {
   if (!code) return null;
   return NBA_TEAM_CODE_TO_ID[code] ?? null;
+}
+
+/** 表示スロットの teamId（例: nba-pistons）を bracket の winner コード（例: DET）に揃える */
+export function slotTeamIdToBracketCode(teamId?: string | null): string {
+  const raw = String(teamId ?? "").trim();
+  if (!raw) return "";
+  const key = raw.toLowerCase();
+  const code = NBA_ID_TO_BRACKET_CODE[key];
+  if (code) return code.toUpperCase();
+  return raw.toUpperCase();
 }
 
 function buildTeamCodeToSeed(season: string): Record<string, number> {

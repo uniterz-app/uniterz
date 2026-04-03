@@ -1,11 +1,13 @@
 "use client";
 
 import type { RankingRow } from "@/lib/rankings/types";
-import { alfa, jp } from "@/lib/fonts";
+import { jp, summaryMetricNumClass } from "@/lib/fonts";
+import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
+import { useMemo } from "react";
 import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
@@ -24,6 +26,37 @@ const FLAG_SRC: Record<string, string> = {
 function getCountryCode(row: RankingRowWithCountry): string | undefined {
   if (!row.countryCode) return undefined;
   return FLAG_SRC[row.countryCode] ? row.countryCode : undefined;
+}
+
+const rankHudNumClass = summaryMetricNumClass;
+
+/** Top3 スコア列：順位ごとに色＋グロー */
+function podiumScoreStyle(rank: 1 | 2 | 3) {
+  if (rank === 1) {
+    return {
+      color: "#FFD65A",
+      textShadow:
+        "0 0 10px rgba(255,215,90,0.65), 0 0 22px rgba(255,193,7,0.45), 0 0 40px rgba(234,179,8,0.25)",
+    } as const;
+  }
+  if (rank === 2) {
+    return {
+      color: "#E9EDF6",
+      textShadow:
+        "0 0 10px rgba(230,238,250,0.55), 0 0 22px rgba(203,213,225,0.38), 0 0 38px rgba(148,163,184,0.22)",
+    } as const;
+  }
+  return {
+    color: "#D59A5A",
+    textShadow:
+      "0 0 10px rgba(222,150,90,0.6), 0 0 22px rgba(180,95,50,0.38), 0 0 38px rgba(146,85,40,0.22)",
+  } as const;
+}
+
+function rankDigitGlow(rank: 1 | 2 | 3): string {
+  if (rank === 1) return "drop-shadow(0 0 14px rgba(255,215,90,0.55))";
+  if (rank === 2) return "drop-shadow(0 0 12px rgba(230,238,250,0.45))";
+  return "drop-shadow(0 0 12px rgba(220,150,90,0.48))";
 }
 
 /* =========================
@@ -98,7 +131,7 @@ function rankPreset(rank: 1 | 2 | 3) {
       rankText: "text-[28px]",
       avatar: "h-[40px] w-[40px]",
       avatarText: "text-[17px]",
-      nameText: "text-[24px]",
+      nameText: "text-[22px]",
       scoreW: "w-[66px]",
       scoreMain: "text-[28px]",
       scoreSub: "text-[12px]",
@@ -117,7 +150,7 @@ function rankPreset(rank: 1 | 2 | 3) {
       rankText: "text-[26px]",
       avatar: "h-[38px] w-[38px]",
       avatarText: "text-[15px]",
-      nameText: "text-[21px]",
+      nameText: "text-[19px]",
       scoreW: "w-[62px]",
       scoreMain: "text-[25px]",
       scoreSub: "text-[11px]",
@@ -135,7 +168,7 @@ function rankPreset(rank: 1 | 2 | 3) {
     rankText: "text-[24px]",
     avatar: "h-[36px] w-[36px]",
     avatarText: "text-[14px]",
-    nameText: "text-[19px]",
+    nameText: "text-[17px]",
     scoreW: "w-[58px]",
     scoreMain: "text-[22px]",
     scoreSub: "text-[11px]",
@@ -143,57 +176,6 @@ function rankPreset(rank: 1 | 2 | 3) {
     px: "px-2.5",
     badgeSize: "h-[11px] w-[11px]",
   };
-}
-
-function AvatarCircle({ row, rank }: { row: RankingRow; rank: 1 | 2 | 3 }) {
-  const m = medal(rank);
-  const ink = rankInk(rank);
-  const s = rankPreset(rank);
-  const initial = (row.displayName ?? row.handle ?? "?").slice(0, 1).toUpperCase();
-
-  return (
-    <div
-      className="relative shrink-0"
-      style={{
-        filter:
-          rank === 1
-            ? "drop-shadow(0 0 14px rgba(255,215,90,0.20))"
-            : rank === 2
-            ? "drop-shadow(0 0 12px rgba(230,235,245,0.14))"
-            : "drop-shadow(0 0 12px rgba(205,127,50,0.14))",
-      }}
-    >
-      <div
-        className={[
-          "relative rounded-full overflow-hidden border bg-black",
-          s.avatar,
-        ].join(" ")}
-        style={{
-          borderColor: m.ring,
-          boxShadow: ["0 10px 24px rgba(0,0,0,0.24)", `0 0 14px ${m.glow}`].join(", "),
-        }}
-      >
-        {row.photoURL ? (
-          <img src={row.photoURL} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div
-            className={[
-              "grid h-full w-full place-items-center font-black",
-              alfa.className,
-              s.avatarText,
-            ].join(" ")}
-          >
-            <span style={rank === 2 ? ink.solidStyle : ink.gradStyle}>{initial}</span>
-          </div>
-        )}
-      </div>
-
-      <div
-        className="pointer-events-none absolute inset-0 rounded-full"
-        style={{ boxShadow: `inset 0 0 0 1px ${m.ring}` }}
-      />
-    </div>
-  );
 }
 
 /* =========================
@@ -284,29 +266,8 @@ function ScoreText({
   row: RankingRowWithCountry;
   language: Language;
 }) {
-  const m = medal(rank);
   const s = rankPreset(rank);
-
-  const solidStyle = {
-    color: m.solid,
-    textShadow:
-      rank === 1
-        ? "0 0 14px rgba(255,215,90,0.16)"
-        : rank === 2
-        ? "0 0 12px rgba(230,235,245,0.10)"
-        : "0 0 12px rgba(205,127,50,0.10)",
-  } as const;
-
-  const gradStyle = {
-    backgroundImage: m.grad,
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
-    textShadow: `0 0 12px ${m.glow}`,
-    display: "inline-block",
-  } as const;
-
-  const style = rank === 2 ? solidStyle : gradStyle;
+  const scoreStyle = podiumScoreStyle(rank);
 
   if (
     metric === "totalScore" ||
@@ -325,17 +286,17 @@ function ScoreText({
       <div className="flex flex-col items-end leading-none">
         <div
           className={[
-            "inline-flex items-baseline justify-end gap-1 font-black tabular-nums leading-none",
-            alfa.className,
+            "inline-flex items-baseline justify-end gap-1 leading-none",
+            rankHudNumClass,
           ].join(" ")}
         >
-          <span className={s.scoreMain} style={style}>
+          <span className={s.scoreMain} style={scoreStyle}>
             {n.toFixed(1)}
           </span>
           <span
             className={s.scoreSub}
             style={{
-              ...style,
+              ...scoreStyle,
               transform: "translateY(-1px)",
             }}
           >
@@ -360,17 +321,20 @@ function ScoreText({
       <div className="flex flex-col items-end leading-none">
         <div
           className={[
-            "inline-flex items-baseline justify-end gap-1 font-black tabular-nums leading-none",
+            "inline-flex items-baseline justify-end gap-1 leading-none",
             jp.className,
           ].join(" ")}
         >
-          <span className={s.scoreMain} style={style}>
+          <span
+            className={[rankHudNumClass, s.scoreMain].join(" ")}
+            style={scoreStyle}
+          >
             {Math.round(n)}
           </span>
           <span
             className={s.scoreSub}
             style={{
-              ...style,
+              ...scoreStyle,
               letterSpacing: "0.03em",
               transform: "translateY(-1px)",
             }}
@@ -391,18 +355,18 @@ function ScoreText({
       <div className="flex flex-col items-end leading-none">
         <div
           className={[
-            "inline-flex items-baseline justify-end font-black tabular-nums leading-none",
-            alfa.className,
+            "inline-flex items-baseline justify-end leading-none",
+            rankHudNumClass,
           ].join(" ")}
         >
-          <span className={s.scoreMain} style={style}>
+          <span className={s.scoreMain} style={scoreStyle}>
             {Math.round(n)}
           </span>
 
           <span
             className={[s.scoreSub, "ml-0.5"].join(" ")}
             style={{
-              ...style,
+              ...scoreStyle,
               transform: "translateY(-1px)",
             }}
           >
@@ -421,23 +385,6 @@ function ScoreText({
 }
 
 /* =========================
- * Card motion
- * ========================= */
-const cardFx: Variants = {
-  hidden: { opacity: 0, x: -18, scale: 0.985 },
-  show: (delay: number) => ({
-    opacity: 1,
-    x: 0,
-    scale: 1,
-    transition: {
-      duration: 1,
-      delay,
-      ease: [0.22, 1, 0.36, 1],
-    },
-  }),
-};
-
-/* =========================
  * TopPodium
  * ========================= */
 export default function TopPodium({
@@ -453,6 +400,34 @@ export default function TopPodium({
   intro?: boolean;
   language?: Language;
 }) {
+  const reduceMotion = useReducedMotion();
+  const cardVariants = useMemo<Variants>(
+    () => ({
+      hidden: {
+        opacity: 0,
+        y: reduceMotion ? 0 : 22,
+        x: reduceMotion ? 0 : -8,
+        scale: reduceMotion ? 1 : 0.987,
+      },
+      show: (i: number) => ({
+        opacity: 1,
+        y: 0,
+        x: 0,
+        scale: 1,
+        transition: reduceMotion
+          ? { duration: 0 }
+          : {
+              delay: i * 0.11,
+              type: "spring",
+              stiffness: 86,
+              damping: 19,
+              mass: 0.95,
+            },
+      }),
+    }),
+    [reduceMotion]
+  );
+
   const pathname = usePathname() ?? "";
   const base =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/")
@@ -467,9 +442,10 @@ export default function TopPodium({
   const a2 = r2 ? metricNum(r2, metric) : null;
   const a3 = r3 ? metricNum(r3, metric) : null;
 
-  const v1n = useRankCountUp(a1.n, 100, a1.d, !!r1, onTopCountDone);
-  const v2n = useRankCountUp(a2?.n ?? 0, 900, a2?.d ?? 0, !!r2);
-  const v3n = useRankCountUp(a3?.n ?? 0, 900, a3?.d ?? 0, !!r3);
+  /** 1位カウント完了で4位以下を出す。表示は短いカードアニメと重ねる */
+  const v1n = useRankCountUp(a1.n, 780, a1.d, !!r1, onTopCountDone);
+  const v2n = useRankCountUp(a2?.n ?? 0, 520, a2?.d ?? 0, !!r2);
+  const v3n = useRankCountUp(a3?.n ?? 0, 520, a3?.d ?? 0, !!r3);
 
   if (!r1) return null;
 
@@ -518,10 +494,10 @@ export default function TopPodium({
                     `0 0 18px ${m.glow}`,
                   ].join(", "),
                 }}
-                variants={cardFx}
-                initial={intro ? "hidden" : "show"}
+                variants={cardVariants}
+                initial={intro && reduceMotion !== true ? "hidden" : "show"}
                 animate="show"
-                custom={index * 0.1}
+                custom={index}
               >
                 <FadedFlagBg rank={rank} countryCode={countryCode} />
 
@@ -567,18 +543,29 @@ export default function TopPodium({
                   <div className={["flex items-center", s.gap, s.topH].join(" ")}>
                     <div
                       className={[
-                        "shrink-0 text-center font-black leading-none",
-                        alfa.className,
+                        "shrink-0 text-center leading-none",
+                        rankHudNumClass,
                         s.rankW,
                         s.rankText,
                       ].join(" ")}
-                      style={rank === 2 ? ink.solidStyle : ink.gradStyle}
+                      style={{
+                        ...(rank === 2 ? ink.solidStyle : ink.gradStyle),
+                        filter: rankDigitGlow(rank),
+                      }}
                     >
                       {rank}
                     </div>
 
                     <div className={rank === 1 ? "-translate-y-[5px]" : "-translate-y-[2px]"}>
-                      <AvatarCircle row={row} rank={rank} />
+                      <RankingsAvatarCircle
+                        photoURL={row.photoURL}
+                        displayName={
+                          row.displayName ?? row.handle ?? "?"
+                        }
+                        boxClassName={s.avatar}
+                        initialTextClassName={s.avatarText}
+                        gateReady
+                      />
                     </div>
 
                     <div className="min-w-0 flex-1 flex items-center justify-center">

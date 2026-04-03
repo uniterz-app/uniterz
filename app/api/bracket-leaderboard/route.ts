@@ -52,9 +52,10 @@ export async function GET(req: Request) {
     const brackets: BracketEntry[] = bracketsSnap.docs
       .map((doc) => {
         const d = doc.data();
-        if (d.alive !== true) return null;
+        const uid = typeof d.uid === "string" ? d.uid.trim() : "";
+        if (!uid) return null;
         return {
-          uid: d.uid as string,
+          uid,
           totalScore: Number(d.totalScore ?? 0),
           winnerPoints: Number(d.winnerPoints ?? 0),
           gamesPoints: Number(d.gamesPoints ?? 0),

@@ -7,6 +7,7 @@ import { normalizeLeague } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { PieChart } from "lucide-react";
+import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 
 type Props = {
   post: PredictionPostV2;
@@ -16,9 +17,14 @@ type Props = {
     drawRate?: number;
     total?: number;
   };
+  inOverlay?: boolean;
 };
 
-export default function MobileResultMarketCard({ post, market }: Props) {
+export default function MobileResultMarketCard({
+  post,
+  market,
+  inOverlay = false,
+}: Props) {
   const normalizedLeague = normalizeLeague(post.league);
 
   const homeColor =
@@ -39,8 +45,12 @@ export default function MobileResultMarketCard({ post, market }: Props) {
         { label: post.away?.name ?? "Away", value: market?.awayRate ?? 0, color: awayColor },
       ];
 
+  const shell = inOverlay
+    ? `${MATCH_OVERLAY_GLASS_PANEL} p-4 text-white`
+    : "rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)] text-white";
+
   return (
-    <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)] text-white">
+    <div className={shell}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <div className="h-5 w-5 rounded-full bg-black flex items-center justify-center">
@@ -52,7 +62,7 @@ export default function MobileResultMarketCard({ post, market }: Props) {
       <div className="flex items-center gap-4">
         {/* Donut（小さめ） */}
         <div className="shrink-0">
-          <DonutChart segments={segments} size={160} thickness={50} />
+          <DonutChart segments={segments} size={132} thickness={42} />
         </div>
 
         {/* 凡例カラム */}

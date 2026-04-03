@@ -13,11 +13,6 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
-/* ★ 追加: イベントロガー */
-import { logGameEvent } from "@/lib/analytics/logEvent";
-import { GAME_EVENT } from "@/lib/analytics/eventTypes";
-/* ★ 追加: 認証トークン取得用 */
-
 import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
@@ -361,61 +356,27 @@ let center: React.ReactNode = inPredictOverlay ? (
   const [homeL1, homeL2] = splitTeamNameByLeague(league, home.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(league, away.name);
 
-  /* ★ カード全体タップで click_card を送る（DRY_RUN なので console に出るだけ） */
-  const handleClickCard = async () => {
-    try {
-      const normalizedLeague =
-  league === "bj" ? "B1" :
-  league === "nba" ? "NBA" :
-  league;
-      await logGameEvent({
-        type: GAME_EVENT.CLICK_CARD,
-        gameId: id,
-        league: normalizedLeague as "B1" | "J1" | "NBA" | "PL",
-      });
-    } catch (e) {
-      console.warn("log click_card failed", e);
+  const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 予想済みなら何もしない（2回投稿防止・遷移防止）
+    if (myPostId) return;
+
+    const me = auth.currentUser;
+    if (!me) {
+      setShowLoginRequired(true);
+      return;
     }
-  };
 
-  /* ★ 「予想を見る」クリック時の open_predictions を送る（遷移をブロックしない） */
-  const handleOpenPredictions = () => {
-    try {
-      const normalizedLeague =
-  league === "bj" ? "B1" :
-  league === "nba" ? "NBA" :
-  league;
-      void logGameEvent({
-        type: GAME_EVENT.OPEN_PREDICTIONS,
-        gameId: id,
-        league: normalizedLeague as "B1" | "J1" | "NBA" | "PL",
-      });
-    } catch (e) {
-      console.warn("log open_predictions failed", e);
+    // 試合開始後は遷移しない（predictions/post ページは使わない）
+    if (isGameStarted) {
+      return;
     }
+
+    // 試合前だけ overlay を開く
+    onOpenPredict?.(id);
   };
-
-const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
-  e.preventDefault();
-  e.stopPropagation();
-
-  // 予想済みなら何もしない（2回投稿防止・遷移防止）
-  if (myPostId) return;
-
-  const me = auth.currentUser;
-  if (!me) {
-    setShowLoginRequired(true);
-    return;
-  }
-
-  // 試合開始後は遷移しない（predictions/post ページは使わない）
-  if (isGameStarted) {
-    return;
-  }
-
-  // 試合前だけ overlay を開く
-  onOpenPredict?.(id);
-};
   /* ★ 「予想をする」クリック時：
         - 試合前   : 投稿あれば投稿詳細 / なければ予想作成へ
         - 試合開始後: 投稿あれば投稿詳細 / なければ“予想を見る”へ
@@ -540,7 +501,6 @@ dense
  style={{
   willChange: "transform",
 }}
-  onClick={handleClickCard}
 >
 
 
@@ -921,7 +881,7 @@ background:
   disabled={isPredicted}
   className={[
     "grid w-full place-items-center font-bold text-white",
-    "h-8 text-sm px-2 md:h-12 md:text-base",
+    "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
     "rounded-md",
     "transition-all duration-200",
     isPredicted

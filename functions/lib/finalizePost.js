@@ -107,6 +107,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
     const streakInfo = p.authorUid ? streakResultMap.get(p.authorUid) : undefined;
     const activeWinStreak = (_e = streakInfo === null || streakInfo === void 0 ? void 0 : streakInfo.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
     const streakBonus = (0, calcStreakBonus_1.calcStreakBonus)(activeWinStreak);
+    const countsForRanking = (game === null || game === void 0 ? void 0 : game.countsForRanking) !== false;
     const totalPoints = baseScore.basePoints + upsetBonus + streakBonus;
     const now = firestore_1.Timestamp.now();
     batch.update(postDoc.ref, {
@@ -128,6 +129,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             upsetPoints,
             upsetBonus,
             streakBonus,
+            countedForRanking: countsForRanking,
             pointsV3: totalPoints,
             pointsV3Detail: {
                 basePoints: baseScore.basePoints,
@@ -162,6 +164,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         upsetBonus,
         streakBonus,
         points: totalPoints,
+        countsForRanking,
     }).then(() => (0, buildUserStatsWindowCache_1.buildWindowCacheForUser)(uid)));
 }
 //# sourceMappingURL=finalizePost.js.map

@@ -3,6 +3,11 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import {
+  getJstMonthDateKeyRange,
+  getLeaderboardLatestMonthKey,
+  jstMonthBoundaryDates,
+} from "./jstLeaderboardMonth";
 
 function db() {
   return getFirestore();
@@ -48,31 +53,6 @@ type MonthlyLeaderboardRow = {
   avgUpset: number;
 };
 
-function getPreviousMonthRange() {
-  const now = new Date();
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-
-  const year = jst.getMonth() === 0 ? jst.getFullYear() - 1 : jst.getFullYear();
-  const month = jst.getMonth() === 0 ? 11 : jst.getMonth() - 1;
-
-  const start = new Date(year, month, 1, 0, 0, 0, 0);
-  const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
-
-  return {
-    start,
-    end,
-    month: `${year}-${String(month + 1).padStart(2, "0")}`,
-  };
-}
-
-function toDateKeyJST(d: Date) {
-  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  const y = j.getUTCFullYear();
-  const m = String(j.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(j.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-
 function topN<T extends Record<string, any>>(rows: T[], key: keyof T, n = 10) {
   return [...rows]
     .sort((a, b) => {
@@ -94,10 +74,9 @@ function topN<T extends Record<string, any>>(rows: T[], key: keyof T, n = 10) {
 }
 
 async function buildMonthlyLeaderboard(league: string) {
-  const { start, end, month } = getPreviousMonthRange();
-
-  const startDate = toDateKeyJST(start);
-  const endDate = toDateKeyJST(end);
+  const month = getLeaderboardLatestMonthKey();
+  const { startKey, endKey } = getJstMonthDateKeyRange(month);
+  const { start, end } = jstMonthBoundaryDates(month);
   const minPosts = MIN_POSTS_BY_LEAGUE[league] ?? 20;
 
   const ref = db().collection("leaderboards_monthly").doc(`${league}_${month}`);
@@ -117,8 +96,8 @@ async function buildMonthlyLeaderboard(league: string) {
 
   const statsSnap = await db()
     .collection("user_stats_v2_daily")
-    .where("date", ">=", startDate)
-    .where("date", "<=", endDate)
+    .where("date", ">=", startKey)
+    .where("date", "<=", endKey)
     .get();
 
   const map = new Map<string, MonthlyAgg>();

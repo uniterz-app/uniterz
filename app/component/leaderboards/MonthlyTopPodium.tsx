@@ -84,6 +84,29 @@ function rankInk(rank: 1 | 2 | 3) {
   return { solidStyle, gradStyle };
 }
 
+/** Top3 スコア列：順位ごとに色＋グロー（メインランキング TopPodium と同じ） */
+function podiumScoreStyle(rank: 1 | 2 | 3) {
+  if (rank === 1) {
+    return {
+      color: "#FFD65A",
+      textShadow:
+        "0 0 10px rgba(255,215,90,0.65), 0 0 22px rgba(255,193,7,0.45), 0 0 40px rgba(234,179,8,0.25)",
+    } as const;
+  }
+  if (rank === 2) {
+    return {
+      color: "#E9EDF6",
+      textShadow:
+        "0 0 10px rgba(230,238,250,0.55), 0 0 22px rgba(203,213,225,0.38), 0 0 38px rgba(148,163,184,0.22)",
+    } as const;
+  }
+  return {
+    color: "#D59A5A",
+    textShadow:
+      "0 0 10px rgba(222,150,90,0.6), 0 0 22px rgba(180,95,50,0.38), 0 0 38px rgba(146,85,40,0.22)",
+  } as const;
+}
+
 /* =========================
  * Size presets
  * ========================= */
@@ -245,29 +268,8 @@ function ScoreText({
   row: RankingRowWithCountry;
   language: Language;
 }) {
-  const m = medal(rank);
   const s = rankPreset(rank);
-
-  const solidStyle = {
-    color: m.solid,
-    textShadow:
-      rank === 1
-        ? "0 0 14px rgba(255,215,90,0.16)"
-        : rank === 2
-        ? "0 0 12px rgba(230,235,245,0.10)"
-        : "0 0 12px rgba(205,127,50,0.10)",
-  } as const;
-
-  const gradStyle = {
-    backgroundImage: m.grad,
-    WebkitBackgroundClip: "text",
-    backgroundClip: "text",
-    color: "transparent",
-    textShadow: `0 0 12px ${m.glow}`,
-    display: "inline-block",
-  } as const;
-
-  const style = rank === 2 ? solidStyle : gradStyle;
+  const scoreStyle = podiumScoreStyle(rank);
 
   if (
     metric === "totalScore" ||
@@ -290,13 +292,13 @@ function ScoreText({
             alfa.className,
           ].join(" ")}
         >
-          <span className={s.scoreMain} style={style}>
+          <span className={s.scoreMain} style={scoreStyle}>
             {n.toFixed(1)}
           </span>
           <span
             className={s.scoreSub}
             style={{
-              ...style,
+              ...scoreStyle,
               transform: "translateY(-1px)",
             }}
           >
@@ -325,13 +327,13 @@ function ScoreText({
             jp.className,
           ].join(" ")}
         >
-          <span className={s.scoreMain} style={style}>
+          <span className={s.scoreMain} style={scoreStyle}>
             {Math.round(n)}
           </span>
           <span
             className={s.scoreSub}
             style={{
-              ...style,
+              ...scoreStyle,
               letterSpacing: "0.03em",
               transform: "translateY(-1px)",
             }}
@@ -356,14 +358,14 @@ function ScoreText({
             alfa.className,
           ].join(" ")}
         >
-          <span className={s.scoreMain} style={style}>
+          <span className={s.scoreMain} style={scoreStyle}>
             {Math.round(n)}
           </span>
 
           <span
             className={[s.scoreSub, "ml-0.5"].join(" ")}
             style={{
-              ...style,
+              ...scoreStyle,
               transform: "translateY(-1px)",
             }}
           >
@@ -385,13 +387,13 @@ function ScoreText({
  * Card motion
  * ========================= */
 const cardFx: Variants = {
-  hidden: { opacity: 0, x: -18, scale: 0.985 },
+  hidden: { opacity: 0, y: 14, scale: 0.99 },
   show: (delay: number) => ({
     opacity: 1,
-    x: 0,
+    y: 0,
     scale: 1,
     transition: {
-      duration: 1,
+      duration: 0.42,
       delay,
       ease: [0.22, 1, 0.36, 1],
     },
@@ -404,14 +406,10 @@ const cardFx: Variants = {
 export default function MonthlyTopPodium({
   rows,
   metric,
-  onTopCountDone,
-  intro = false,
   language = "ja",
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
-  onTopCountDone?: () => void;
-  intro?: boolean;
   language?: Language;
 }) {
   const pathname = usePathname() ?? "";
@@ -428,7 +426,7 @@ export default function MonthlyTopPodium({
   const a2 = r2 ? metricNum(r2, metric) : null;
   const a3 = r3 ? metricNum(r3, metric) : null;
 
-  const v1n = useRankCountUp(a1.n, 100, a1.d, !!r1, onTopCountDone);
+  const v1n = useRankCountUp(a1.n, 100, a1.d, !!r1);
   const v2n = useRankCountUp(a2?.n ?? 0, 900, a2?.d ?? 0, !!r2);
   const v3n = useRankCountUp(a3?.n ?? 0, 900, a3?.d ?? 0, !!r3);
 
@@ -447,7 +445,7 @@ export default function MonthlyTopPodium({
   return (
     <div className="px-3 pt-5 pb-1">
       <div className="flex flex-col gap-3">
-        {topRows.map(({ rank, row, value }, index) => {
+        {topRows.map(({ rank, row, value }) => {
           const ink = rankInk(rank);
           const m = medal(rank);
           const s = rankPreset(rank);
@@ -480,9 +478,9 @@ export default function MonthlyTopPodium({
                   ].join(", "),
                 }}
                 variants={cardFx}
-                initial={intro ? "hidden" : "show"}
+                initial="hidden"
                 animate="show"
-                custom={index * 0.1}
+                custom={(rank - 1) * 0.05}
               >
                 <FadedFlagBg rank={rank} countryCode={countryCode} />
 

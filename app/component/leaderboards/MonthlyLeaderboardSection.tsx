@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 import RankingCard from "@/app/component/rankings/RankingCard";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
-import { restContainer, restItem } from "@/app/component/rankings/anim";
 import {
   METRICS,
   type MobileMetric,
@@ -22,6 +21,7 @@ import useMonthlyLeaderboard, {
   type MonthlyLeaderboardRow,
 } from "@/lib/leaderboards/useMonthlyLeaderboard";
 import { nameBebas, jp } from "@/lib/fonts";
+import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 
@@ -172,45 +172,27 @@ export default function MonthlyLeaderboardSection({
     return Math.round(myRawRow.winRate ?? 0);
   }, [metric, myRawRow]);
 
-  const introRef = useRef(true);
-  const intro = introRef.current;
-
-  useEffect(() => {
-    introRef.current = false;
-  }, []);
-
-  const [topDone, setTopDone] = useState(false);
   const pageKey = `${month}-${metric}`;
-  const pageKeyRef = useRef(pageKey);
-  pageKeyRef.current = pageKey;
-
-  useEffect(() => {
-    setTopDone(false);
-  }, [pageKey]);
-
-  const handleTopCountDone = useCallback(() => {
-    if (pageKeyRef.current !== pageKey) return;
-    setTopDone(true);
-  }, [pageKey]);
+  const titleDisplay = useScrambleDecode(title, true);
 
   return (
     <div className="relative min-h-dvh bg-app">
       <div className="relative z-10 min-h-dvh overflow-y-auto overscroll-y-contain pb-bottom-nav">
         <div className="space-y-2 px-3 pt-2">
           <div className="text-center">
-<h1
-  className={[
-    "text-[36px] leading-none tracking-[0.04em]",
-    nameBebas.className,
-  ].join(" ")}
-  style={{
-    color: "#FFD65A",
-    textShadow:
-      "0 0 8px rgba(255,214,90,0.22), 0 0 18px rgba(255,214,90,0.18), 0 0 34px rgba(255,214,90,0.10), 0 2px 12px rgba(0,0,0,0.28)",
-  }}
->
-  {title}
-</h1>
+            <h1
+              className={[
+                "text-[36px] leading-none tracking-[0.04em]",
+                nameBebas.className,
+              ].join(" ")}
+              style={{
+                color: "#FFD65A",
+                textShadow:
+                  "0 0 8px rgba(255,214,90,0.22), 0 0 18px rgba(255,214,90,0.18), 0 0 34px rgba(255,214,90,0.10), 0 2px 12px rgba(0,0,0,0.28)",
+              }}
+            >
+              {titleDisplay}
+            </h1>
             <p className={["mt-1 text-[12px] text-white/60", jp.className].join(" ")}>
               {language === "en"
                 ? "Monthly Leaderboard based on last month's results"
@@ -258,31 +240,23 @@ export default function MonthlyLeaderboardSection({
         <AnimatePresence mode="wait">
           <motion.div key={pageKey} className="relative">
             <div className="relative z-10">
-              <MonthlyTopPodium
-                rows={top3}
-                metric={metric}
-                onTopCountDone={handleTopCountDone}
-                intro={intro}
-                language={language}
-              />
+              <MonthlyTopPodium rows={top3} metric={metric} language={language} />
               <div className="h-[2px]" />
             </div>
 
-            <motion.div
-              key={`rest-${pageKey}`}
-              className="px-2 pt-4"
-              variants={restContainer}
-              initial="hidden"
-              animate={topDone ? "show" : "hidden"}
-              style={{ pointerEvents: topDone ? "auto" : "none" }}
-            >
+            <div key={`rest-${pageKey}`} className="px-2 pt-4">
               {restRows.length > 0 && (
                 <div className="space-y-2 pt-0.5">
                   {restRows.map((row, i) => (
                     <motion.div
                       key={`${metric}-${row.uid}`}
-                      variants={restItem}
-                      custom={i}
+                      initial={{ opacity: 0, y: 14 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.4,
+                        delay: (3 + i) * 0.05,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
                     >
                       <RankingCard
                         row={row}
@@ -294,7 +268,7 @@ export default function MonthlyLeaderboardSection({
                   ))}
                 </div>
               )}
-            </motion.div>
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>

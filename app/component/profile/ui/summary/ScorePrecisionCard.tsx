@@ -3,12 +3,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Gauge } from "lucide-react";
-import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
-
-const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
+import { summaryMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   scorePrecisionSum: number;
@@ -89,24 +87,24 @@ export default function ScorePrecisionCard({
       <div
         ref={ref}
         className={[
-          "rounded-xl border border-white/10 bg-[#050814]/80",
-          "p-3 md:p-6",
-          "shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
+          "rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
+          "p-2 md:p-6",
+          "shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
           "flex flex-col items-center justify-start",
           "h-full",
           className,
         ].join(" ")}
       >
-        <div className="mb-2 md:mb-4 flex items-center gap-2 text-xs md:text-[18px] font-semibold text-white">
-          <div className="flex h-4 w-4 md:h-8 md:w-8 items-center justify-center rounded-full bg-black">
-            <Gauge className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
+        <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-tight text-white md:mb-4 md:gap-2 md:text-[18px]">
+          <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black md:h-8 md:w-8">
+            <Gauge className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
           </div>
 
           <span>{isEn ? "Score Precision" : "スコア精度"}</span>
 
           <button
             type="button"
-            className="ml-1 text-[11px] md:text-[16px] text-white/60 hover:text-white/80"
+            className="ml-0.5 text-[9px] text-white/60 hover:text-white/80 md:ml-1 md:text-[16px]"
             onClick={(e) => openTooltip(e, tooltipMsg)}
             aria-label={isEn ? "Score Precision description" : "スコア精度の説明"}
           >
@@ -116,26 +114,31 @@ export default function ScorePrecisionCard({
 
         <div
           className={[
-            alfa.className,
-            "text-lg md:text-3xl",
-            "font-bold text-white leading-none text-center tabular-nums",
+            summaryMetricNumClass,
+            "text-base tabular-nums tracking-tight text-white md:text-3xl",
+            "leading-none text-center",
           ].join(" ")}
         >
           {sumCu.toFixed(1)}
-          <span className="ml-2 text-sm md:text-lg text-white/70">pts</span>
+          <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
+            pts
+          </span>
         </div>
 
-        <div className="mt-1 md:mt-4 w-full">
-          <div className="flex items-center justify-between text-[11px] md:text-[16px] text-white/60">
+        <div className="mt-1 w-full md:mt-4">
+          <div className="flex items-center justify-between text-[9px] tracking-tight text-white/60 md:text-[16px]">
             <span>AVG</span>
-            <span className="tabular-nums">
-              {avgCu.toFixed(1)} <span className="text-white/45">/ 10</span>
+            <span
+              className={[summaryMetricNumClass, "tabular-nums"].join(" ")}
+            >
+              {avgCu.toFixed(1)}{" "}
+              <span className="text-white/45">/ 10</span>
             </span>
           </div>
 
-          <div className="mt-2 md:mt-3 h-2 md:h-3 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10 md:mt-3 md:h-3">
             <div
-              className="h-2 md:h-3 rounded-full bg-blue-500 transition-all ease-out"
+              className="h-1.5 rounded-full bg-blue-500 transition-all ease-out md:h-3"
               style={{
                 width: visible ? barPct : "0%",
                 transitionDuration: "900ms",

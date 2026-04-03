@@ -1,9 +1,9 @@
 import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
+import { jp } from "@/lib/fonts";
 import AppProviders from "@/app/AppProviders";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
-import AppActivityTracker from "@/app/component/common/AppActivityTracker";
 import EventGate from "@/app/component/common/EventGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 import AppChrome from "@/app/component/AppChrome";
@@ -33,6 +33,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
+        className={jp.className}
         style={{
           backgroundColor: "#081116",
           margin: 0,
@@ -43,7 +44,6 @@ export default function RootLayout({
           <MaintenanceOverlay />
         ) : (
           <>
-            <AppActivityTracker />
             <EventGate />
 
             <div

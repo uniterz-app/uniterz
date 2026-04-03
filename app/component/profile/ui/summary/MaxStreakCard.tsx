@@ -3,12 +3,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Flame } from "lucide-react";
-import { Alfa_Slab_One } from "next/font/google";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
-
-const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
+import { summaryMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   maxStreak: number;
@@ -88,23 +86,23 @@ export default function MaxStreakCard({
       <div
         ref={ref}
         className={[
-          "rounded-xl border border-white/10 bg-[#050814]/80",
-          "p-3 md:p-6",
-          "shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
+          "rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
+          "p-2 md:p-6",
+          "shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
           "flex h-full flex-col",
           className,
         ].join(" ")}
       >
-        <div className="mb-2 md:mb-4 flex items-center justify-center gap-2 text-xs md:text-[18px] font-semibold text-white">
-          <div className="flex h-4 w-4 md:h-8 md:w-8 items-center justify-center rounded-full bg-black">
-            <Flame className="h-3 w-3 md:h-5 md:w-5 text-orange-400" />
+        <div className="mb-1.5 flex items-center justify-center gap-1.5 text-[10px] font-semibold tracking-tight text-white md:mb-4 md:gap-2 md:text-[18px]">
+          <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black md:h-8 md:w-8">
+            <Flame className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
           </div>
 
           <span>{title}</span>
 
           <button
             type="button"
-            className="ml-1 text-[11px] md:text-[16px] text-white/60 hover:text-white/80"
+            className="ml-0.5 text-[9px] text-white/60 hover:text-white/80 md:ml-1 md:text-[16px]"
             onClick={(e) => openTooltip(e, tooltipMsg)}
             aria-label={isEn ? "Max Win Streak description" : "最高連勝の説明"}
           >
@@ -115,16 +113,15 @@ export default function MaxStreakCard({
         <div className="flex flex-1 flex-col items-center justify-center">
           <div
             className={[
-              alfa.className,
-              "text-2xl md:text-3xl",
-              "font-bold leading-none text-center tabular-nums",
+              summaryMetricNumClass,
+              "text-xl leading-none text-center tabular-nums tracking-tight md:text-3xl",
               valueColor,
             ].join(" ")}
           >
             {cu}
           </div>
 
-          <div className="mt-3 text-[11px] md:text-[15px] text-white/60 text-center leading-snug">
+          <div className="mt-2 text-[9px] text-white/60 text-center leading-snug tracking-tight md:mt-3 md:text-[15px]">
             {subtitle}
           </div>
         </div>

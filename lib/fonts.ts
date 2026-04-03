@@ -65,8 +65,27 @@ export const alfa = Alfa_Slab_One({
   display: "swap",
 });
 
+/** サマリーカード・ランキングの数値（Alfa Slab One）— サマリーを基準に両方で共通 */
+export const summaryMetricNumClass = [
+  alfa.className,
+  "font-bold tabular-nums tracking-wide",
+].join(" ");
+
+/** アプリ日本語の基準フォント（モーダル・ランキング等と共通） */
 export const jp = Noto_Sans_JP({
   subsets: ["latin"],
-  weight: ["800", "900"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
+
+/** リザルト Performance Stats・カード下部の数値（nameOxanium とは別インスタンス／太めウェイト込み） */
+const resultStatsOxanium = Oxanium({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  display: "swap",
+});
+
+export const resultStatsMetricNumClass = [
+  resultStatsOxanium.className,
+  "tabular-nums tracking-tight font-bold",
+].join(" ");

@@ -14,10 +14,12 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { Language } from "@/lib/i18n/language";
+import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 
 type Props = {
   post: PredictionPostV2;
   language?: Language;
+  inOverlay?: boolean;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -146,6 +148,7 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): {
 export default function ResultMatchHeader({
   post,
   language = "ja",
+  inOverlay = false,
 }: Props) {
   const normalizedLeague = normalizeLeague(post.league);
   const isEn = language === "en";
@@ -228,14 +231,15 @@ export default function ResultMatchHeader({
       "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
   }
 
-  const cardBase =
-    "rounded-2xl border border-white/15 bg-[#050814]/80 p-10 text-white overflow-hidden shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
+  const cardBase = inOverlay
+    ? `${MATCH_OVERLAY_GLASS_PANEL} px-5 py-5 sm:px-6 sm:py-6 text-white overflow-hidden`
+    : "rounded-2xl border border-white/15 bg-[#050814]/80 px-5 py-5 sm:px-6 sm:py-6 text-white overflow-hidden shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
 
   return (
     <div className={`relative ${cardBase} ${frame}`}>
-      <div className="absolute left-4 top-4 z-10">
+      <div className="absolute left-3 top-3 z-10 sm:left-3.5 sm:top-3.5">
         <span
-          className="inline-flex items-center justify-center rounded-full px-3 py-1.5 text-[12px] font-extrabold tracking-wide"
+          className="inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-wide sm:px-3 sm:py-1 sm:text-[11px]"
           style={{ backgroundColor: pillBg }}
         >
           {pillText}
@@ -244,32 +248,32 @@ export default function ResultMatchHeader({
 
       {badge === "streak" && streakBadge && (
         <span
-          className={`absolute right-4 top-4 z-10 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-extrabold shadow-md ${streakBadge.className}`}
+          className={`absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold shadow-md sm:right-3.5 sm:top-3.5 sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[11px] ${streakBadge.className}`}
         >
-          <Flame className={`h-4 w-4 ${streakBadge.iconClassName}`} />
+          <Flame className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${streakBadge.iconClassName}`} />
           {streakBadge.label}
         </span>
       )}
       {badge === "hit" && (
-        <span className="absolute right-4 top-4 z-10 rounded-md bg-yellow-400 px-2.5 py-1 text-[12px] font-extrabold text-black shadow-md">
+        <span className="absolute right-3 top-3 z-10 rounded-md bg-yellow-400 px-2 py-0.5 text-[10px] font-extrabold text-black shadow-md sm:right-3.5 sm:top-3.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
           HIT
         </span>
       )}
       {badge === "upset" && (
-        <span className="absolute right-4 top-4 z-10 rounded-md bg-red-500 px-2.5 py-1 text-[12px] font-extrabold text-white shadow-md">
+        <span className="absolute right-3 top-3 z-10 rounded-md bg-red-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md sm:right-3.5 sm:top-3.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
           UPSET
         </span>
       )}
       {badge === "miss" && (
-        <span className="absolute right-4 top-4 z-10 rounded-md bg-gray-500 px-2.5 py-1 text-[12px] font-extrabold text-white shadow-md">
+        <span className="absolute right-3 top-3 z-10 rounded-md bg-gray-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md sm:right-3.5 sm:top-3.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
           MISS
         </span>
       )}
 
-      <div className="grid grid-cols-3 items-center">
+      <div className="grid grid-cols-3 items-center gap-1 pt-1 sm:gap-2 sm:pt-1.5">
         <div className="flex flex-col items-center">
-          <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
-          <div className="mt-2 text-center text-[20px] font-bold leading-tight">
+          <Icon className="h-11 w-11 sm:h-12 sm:w-12" fill={homeColor} stroke="#fff" />
+          <div className="mt-1.5 text-center text-[13px] font-bold leading-tight sm:mt-2 sm:text-[15px]">
             {getMobileTeamName(
               post.league,
               post.home?.name ?? "",
@@ -277,19 +281,19 @@ export default function ResultMatchHeader({
               homeL2
             )}
           </div>
-          <div className="mt-1 text-center text-[16px] leading-none tracking-tight opacity-70">
+          <div className="mt-0.5 text-center text-[11px] leading-none tracking-tight opacity-70 sm:mt-1 sm:text-[12px]">
             {fmtRecordWithRank(homeRecord)}
           </div>
         </div>
 
         <div className="flex flex-col items-center justify-center">
-          {matchDate && <div className="mb-2 text-[18px] opacity-80">{matchDate}</div>}
+          {matchDate && (
+            <div className="mb-1 text-[12px] opacity-80 sm:mb-1.5 sm:text-[13px]">{matchDate}</div>
+          )}
 
           <div
-            className="font-black leading-none tracking-tight tabular-nums"
+            className="font-black leading-none tracking-tight tabular-nums text-[36px] sm:text-[42px]"
             style={{
-              fontSize: "56px",
-              lineHeight: "1",
               fontFamily:
                 'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
             }}
@@ -298,15 +302,15 @@ export default function ResultMatchHeader({
           </div>
 
           {finalScore && (
-            <div className="mt-4 text-[20px] font-extrabold tabular-nums opacity-85">
+            <div className="mt-2 text-[13px] font-extrabold tabular-nums opacity-85 sm:mt-2.5 sm:text-[15px]">
               Final: {finalScore}
             </div>
           )}
         </div>
 
         <div className="flex flex-col items-center">
-          <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
-          <div className="mt-2 text-center text-[20px] font-bold leading-tight">
+          <Icon className="h-11 w-11 sm:h-12 sm:w-12" fill={awayColor} stroke="#fff" />
+          <div className="mt-1.5 text-center text-[13px] font-bold leading-tight sm:mt-2 sm:text-[15px]">
             {getMobileTeamName(
               post.league,
               post.away?.name ?? "",
@@ -314,7 +318,7 @@ export default function ResultMatchHeader({
               awayL2
             )}
           </div>
-          <div className="mt-1 text-center text-[16px] leading-none tracking-tight opacity-70">
+          <div className="mt-0.5 text-center text-[11px] leading-none tracking-tight opacity-70 sm:mt-1 sm:text-[12px]">
             {fmtRecordWithRank(awayRecord)}
           </div>
         </div>

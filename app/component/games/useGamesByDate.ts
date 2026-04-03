@@ -15,8 +15,7 @@ import {
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
 import { getDayRangeInTimeZone } from "@/lib/time/zonedTime";
-
-const SEASON = "2025-26";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 
 export function useGamesByDate(
   rawLeague: League,
@@ -58,7 +57,7 @@ export function useGamesByDate(
         const q = query(
           ref,
           where("league", "==", league),
-          where("season", "==", SEASON),
+          where("season", "==", GAME_SCHEDULE_SEASON),
           where("startAtJst", ">=", range.startTs),
           where("startAtJst", "<", range.endTs),
           orderBy("startAtJst", "asc"),

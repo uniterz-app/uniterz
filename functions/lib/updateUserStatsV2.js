@@ -4,6 +4,9 @@ exports.applyPostToUserStatsV2 = applyPostToUserStatsV2;
 exports.getStatsForDateRangeV2 = getStatsForDateRangeV2;
 // functions/src/updateUserStatsV2.ts
 const firestore_1 = require("firebase-admin/firestore");
+function shouldCountForRanking(v) {
+    return v !== false;
+}
 const db = () => (0, firestore_1.getFirestore)();
 const LEAGUES = ["bj", "j1", "nba", "pl"];
 /* =========================================================
@@ -65,7 +68,8 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, } = opts;
+    const forRanking = shouldCountForRanking(countsForRanking);
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
@@ -88,11 +92,7 @@ async function applyPostToUserStatsV2(opts) {
             upsetBonusSum: firestore_1.FieldValue.increment(upsetBonus),
             streakBonusSum: firestore_1.FieldValue.increment(streakBonus),
         };
-        const update = {
-            date: dateKey,
-            updatedAt: firestore_1.FieldValue.serverTimestamp(),
-            all: inc,
-        };
+        const update = Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {}));
         if (leagueKey) {
             update.leagues = Object.assign(Object.assign({}, (update.leagues || {})), { [leagueKey]: inc });
             tx.set(userStatsRef, {

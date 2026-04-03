@@ -4,6 +4,9 @@ import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import { jp } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { metricLabel, upsetShortLabel } from "@/lib/i18n/rankings";
+import { motion, useReducedMotion } from "framer-motion";
+
+const tabFadeEase: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
 
 type Props = {
   metrics: { key: MobileMetric; label: string }[];
@@ -27,6 +30,7 @@ export default function RankingsMetricRow({
   setMetric,
   language = "ja",
 }: Props) {
+  const reduceMotion = useReducedMotion();
   const currentIndex = metrics.findIndex((m) => m.key === metric);
 
   const prevIndex = wrapIndex(currentIndex - 1, metrics.length);
@@ -37,7 +41,20 @@ export default function RankingsMetricRow({
   const nextMetric = metrics[nextIndex];
 
   return (
-    <div className="flex items-center justify-center px-2">
+    <motion.div
+      className="flex items-center justify-center px-2"
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : {
+              duration: 0.38,
+              delay: 0.08,
+              ease: tabFadeEase,
+            }
+      }
+    >
       <div className="relative flex h-[48px] w-full max-w-[320px] items-center justify-center sm:h-[56px] sm:max-w-[420px]">
         {/* LEFT */}
         {metrics.length > 1 && (
@@ -111,6 +128,6 @@ export default function RankingsMetricRow({
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

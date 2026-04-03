@@ -29,6 +29,8 @@ type RawSide =
       teamId?: string;
     };
 
+type SeasonPhase = "regular" | "play_in" | "playoffs";
+
 type RawGame = {
   id: string;
   league: League;
@@ -39,6 +41,10 @@ type RawGame = {
   season?: string;
   venue?: string;
   roundLabel?: string;
+  /** play_in のときランキング除外（countsForRanking 未指定時のみ効く） */
+  seasonPhase?: SeasonPhase;
+  /** 明示指定が最優先。省略時は seasonPhase で決定、それも無ければ true */
+  countsForRanking?: boolean;
   status?: "scheduled" | "live" | "final";
   home: RawSide;
   away: RawSide;
@@ -59,6 +65,8 @@ type Preview =
         season: string;
         venue?: string;
         roundLabel?: string;
+        countsForRanking: boolean;
+        seasonPhase?: SeasonPhase;
         status: "scheduled" | "live" | "final";
         home: any;
         away: any;
@@ -181,6 +189,8 @@ function normalizeRow(r: RawGame): Preview {
       return "scheduled";
     })();
 
+    const { countsForRanking, seasonPhase } = resolveCountsForRanking(r);
+
     // colorHex / teamId は存在するときのみキーを持たせる
 const toSide = (x: RawSide) => {
   // 文字列だけ渡された場合（例: "浦和レッズ"）
@@ -221,6 +231,8 @@ const toSide = (x: RawSide) => {
         season,
         venue: r?.venue || "",
         roundLabel: r?.roundLabel || "",
+        countsForRanking,
+        ...(seasonPhase ? { seasonPhase } : {}),
         status,
         home: toSide(r?.home),
         away: toSide(r?.away),
@@ -319,6 +331,8 @@ export default function GamesImportPage() {
             startAtJst: g.startAtJst, // Timestamp
             venue: g.venue ?? "",
             roundLabel: g.roundLabel ?? "",
+            countsForRanking: g.countsForRanking,
+            ...(g.seasonPhase ? { seasonPhase: g.seasonPhase } : {}),
             status: g.status,
             home: g.home,
             away: g.away,
@@ -384,6 +398,7 @@ export default function GamesImportPage() {
     "startAtJstIso": "2025-11-08T18:05:00+09:00",
     "venue": "代々木第二体育館",
     "roundLabel": "第5節",
+    "seasonPhase": "regular",
     "home": { "name": "アルバルク東京" },
     "away": { "name": "川崎ブレイブサンダース" },
     "status": "scheduled"
@@ -435,6 +450,9 @@ export default function GamesImportPage() {
                       "ja-JP"
                     )}{" "}
                     / season: {r.normalized.season}
+                    {r.normalized.countsForRanking === false
+                      ? " / ranking: off"
+                      : ""}
                   </div>
                 ) : (
                   <div className="text-red-300">⛔ {r.reason}</div>

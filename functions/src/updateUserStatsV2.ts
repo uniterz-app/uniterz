@@ -58,7 +58,14 @@ type ApplyOptsV2 = {
   // 総合得点内訳ボーナス
   upsetBonus: number;
   streakBonus: number;
+
+  /** false のとき（例: プレーイン）はランキング用日次・累積に含めない。未設定は従来どおり true */
+  countsForRanking?: boolean;
 };
+
+function shouldCountForRanking(v: boolean | undefined) {
+  return v !== false;
+}
 
 const db = () => getFirestore();
 const LEAGUES = ["bj", "j1", "nba", "pl"] as const;
@@ -153,7 +160,10 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     upsetPoints,
     upsetBonus,
     streakBonus,
+    countsForRanking,
   } = opts;
+
+  const forRanking = shouldCountForRanking(countsForRanking);
 
   const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
@@ -189,6 +199,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       date: dateKey,
       updatedAt: FieldValue.serverTimestamp(),
       all: inc,
+      ...(forRanking ? { ranking: inc } : {}),
     };
 
     if (leagueKey) {

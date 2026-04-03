@@ -17,8 +17,7 @@ import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
-
-const SEASON = "2025-26";
+import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 
 export function useGameDays(rawLeague: League, timeZone: string) {
   const league = normalizeLeague(rawLeague);
@@ -40,7 +39,7 @@ export function useGameDays(rawLeague: League, timeZone: string) {
         const q = query(
           ref,
           where("league", "==", league),
-          where("season", "==", SEASON),
+          where("season", "==", GAME_SCHEDULE_SEASON),
           orderBy("startAtJst", "asc")
         );
 

@@ -1,7 +1,7 @@
 // functions/src/rankings/getCumulativeRanking.ts
 
 import { onRequest } from "firebase-functions/v2/https";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldPath } from "firebase-admin/firestore";
 
 function db() {
   return getFirestore();
@@ -43,6 +43,32 @@ function isMetric(v: unknown): v is Metric {
   );
 }
 
+function rankingSlice(d: any) {
+  const rk = d.ranking;
+  if (rk && typeof rk === "object") {
+    const tp = rk.totalPosts ?? 0;
+    const tw = rk.totalWins ?? 0;
+    return {
+      totalPosts: tp,
+      totalWins: tw,
+      winRate: tp > 0 ? tw / tp : rk.winRate ?? 0,
+      totalPoints: rk.totalPoints ?? 0,
+      totalPrecision: rk.totalPrecision ?? 0,
+      totalUpset: rk.totalUpset ?? 0,
+    };
+  }
+  const totalPosts = d.totalPosts ?? 0;
+  const totalWins = d.totalWins ?? 0;
+  return {
+    totalPosts,
+    totalWins,
+    winRate: d.winRate ?? 0,
+    totalPoints: d.totalPoints ?? 0,
+    totalPrecision: d.totalPrecision ?? 0,
+    totalUpset: d.totalUpset ?? 0,
+  };
+}
+
 export const getCumulativeRanking = onRequest(async (req, res) => {
   try {
     const rawMetric = req.query.metric;
@@ -73,12 +99,34 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
 
       if (mySnap.exists) {
         const me = mySnap.data() as any;
+        const rk = rankingSlice(me);
 
-        const myValue = metric === "winRate" ? me.winRate ?? 0 : me[metric] ?? 0;
+        const myValue =
+          metric === "activeWinStreak"
+            ? me.activeWinStreak ?? 0
+            : metric === "winRate"
+              ? rk.winRate ?? 0
+              : rk[metric] ?? 0;
+
+        const hasRankingObj =
+          me.ranking &&
+          typeof me.ranking === "object" &&
+          (me.ranking.totalPosts != null || me.ranking.totalPoints != null);
+
+        const rankField =
+          metric === "activeWinStreak"
+            ? new FieldPath("activeWinStreak")
+            : hasRankingObj
+              ? metric === "winRate"
+                ? new FieldPath("ranking", "winRate")
+                : new FieldPath("ranking", metric)
+              : metric === "winRate"
+                ? "winRate"
+                : metric;
 
         const higherSnap = await db()
           .collection("cumulative_stats")
-          .where(metric === "winRate" ? "winRate" : metric, ">", myValue)
+          .where(rankField as any, ">", myValue)
           .count()
           .get();
 
@@ -91,13 +139,13 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
           photoURL: me.photoURL ?? null,
           countryCode: me.countryCode ?? null,
 
-          totalPosts: me.totalPosts ?? 0,
-          totalWins: me.totalWins ?? 0,
-          winRate: me.winRate ?? 0,
+          totalPosts: rk.totalPosts,
+          totalWins: rk.totalWins,
+          winRate: rk.winRate,
 
-          totalPoints: me.totalPoints ?? 0,
-          totalPrecision: me.totalPrecision ?? 0,
-          totalUpset: me.totalUpset ?? 0,
+          totalPoints: rk.totalPoints,
+          totalPrecision: rk.totalPrecision,
+          totalUpset: rk.totalUpset,
           activeWinStreak: me.activeWinStreak ?? 0,
 
           rank: myRank,

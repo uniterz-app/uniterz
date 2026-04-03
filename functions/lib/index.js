@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.logUserActive = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.getMonthlyLeaderboard = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -47,6 +47,7 @@ const buildCumulativeStats_1 = require("./rankings/buildCumulativeStats");
 const buildCumulativeRankingSnapshot_1 = require("./rankings/buildCumulativeRankingSnapshot");
 // ★追加
 const buildMonthlyLeaderboardSnapshot_1 = require("./leaderboards/buildMonthlyLeaderboardSnapshot");
+const jstLeaderboardMonth_1 = require("./leaderboards/jstLeaderboardMonth");
 const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 // ===============================
 // V2 Core
@@ -63,6 +64,9 @@ var getCumulativeRanking_1 = require("./rankings/getCumulativeRanking");
 Object.defineProperty(exports, "getCumulativeRanking", { enumerable: true, get: function () { return getCumulativeRanking_1.getCumulativeRanking; } });
 var getMonthlyLeaderboard_1 = require("./leaderboards/getMonthlyLeaderboard");
 Object.defineProperty(exports, "getMonthlyLeaderboard", { enumerable: true, get: function () { return getMonthlyLeaderboard_1.getMonthlyLeaderboard; } });
+var monthly_1 = require("./leaderboards/monthly");
+Object.defineProperty(exports, "rebuildMonthlyLeaderboardsCron", { enumerable: true, get: function () { return monthly_1.rebuildMonthlyLeaderboardsCron; } });
+Object.defineProperty(exports, "rebuildMonthlyLeaderboardsHttp", { enumerable: true, get: function () { return monthly_1.rebuildMonthlyLeaderboardsHttp; } });
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 var expireProUsers_1 = require("./triggers/expireProUsers");
 Object.defineProperty(exports, "expireProUsers", { enumerable: true, get: function () { return expireProUsers_1.expireProUsers; } });
@@ -79,15 +83,9 @@ const db = firebase_1.admin.firestore();
  * followers / following
  * ==========================================================================*/
 exports.onFollowerAdded = (0, firestore_1.onDocumentCreated)("users/{uid}/followers/{followerUid}", async (event) => {
-    const { uid, followerUid } = event.params;
+    const { uid } = event.params;
     try {
         await db.doc(`users/${uid}`).set({ counts: { followers: firestore_2.FieldValue.increment(1) } }, { merge: true });
-        await db.collection("events_follow").add({
-            targetUid: uid,
-            actorUid: followerUid,
-            op: "follow",
-            createdAt: firestore_2.FieldValue.serverTimestamp(),
-        });
     }
     catch (e) {
         console.error("[onFollowerAdded] failed:", e);
@@ -151,11 +149,7 @@ exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ sched
  * 毎月1日 04:05 → 前月分を確定
  * ==========================================================================*/
 exports.buildMonthlyLeaderboardSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "0 4 1 * *", timeZone: "Asia/Tokyo" }, async () => {
-    const now = new Date();
-    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const y = prev.getFullYear();
-    const m = String(prev.getMonth() + 1).padStart(2, "0");
-    const month = `${y}-${m}`;
+    const month = (0, jstLeaderboardMonth_1.getLeaderboardLatestMonthKey)();
     const LEAGUES = ["nba", "j1", "bj"];
     for (const league of LEAGUES) {
         await (0, buildMonthlyLeaderboardSnapshot_1.buildMonthlyLeaderboardSnapshot)({ league, month });
@@ -174,8 +168,6 @@ exports.buildUserStatsWindowCacheCron = (0, scheduler_1.onSchedule)({ schedule: 
  * ==========================================================================*/
 var daily_1 = require("./analytics/daily");
 Object.defineProperty(exports, "dailyAnalytics", { enumerable: true, get: function () { return daily_1.dailyAnalytics; } });
-var logUserActive_1 = require("./analytics/logUserActive");
-Object.defineProperty(exports, "logUserActive", { enumerable: true, get: function () { return logUserActive_1.logUserActive; } });
 var runDaily_1 = require("./analytics/runDaily");
 Object.defineProperty(exports, "runDailyAnalytics", { enumerable: true, get: function () { return runDaily_1.runDailyAnalytics; } });
 var fixUserStats_1 = require("./fixUserStats");
