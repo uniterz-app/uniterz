@@ -145,6 +145,21 @@ function omitUndefined<T>(v: T): T {
   return v;
 }
 
+/** countsForRanking / seasonPhase を RawGame から決定（明示指定が最優先） */
+function resolveCountsForRanking(r: RawGame): {
+  countsForRanking: boolean;
+  seasonPhase?: SeasonPhase;
+} {
+  const seasonPhase = r.seasonPhase;
+  if (typeof r.countsForRanking === "boolean") {
+    return { countsForRanking: r.countsForRanking, seasonPhase };
+  }
+  if (seasonPhase === "play_in") {
+    return { countsForRanking: false, seasonPhase };
+  }
+  return { countsForRanking: true, seasonPhase };
+}
+
 /** 1件を正規化してプレビュー用に返す（startAt / startAtJst を両方 Timestamp で統一） */
 function normalizeRow(r: RawGame): Preview {
   try {
@@ -178,9 +193,9 @@ function normalizeRow(r: RawGame): Preview {
     const jsDate = new Date(ts.toMillis());
 
     const season =
-  typeof r.season === "string" && r.season.trim()
-    ? r.season.trim()
-    : seasonFromDateByLeague(league, jsDate);
+      typeof r.season === "string" && r.season.trim()
+        ? r.season.trim()
+        : seasonFromDateByLeague(league, jsDate);
 
     const status = ((): "scheduled" | "live" | "final" => {
       const s = String(r?.status ?? "scheduled").toLowerCase();

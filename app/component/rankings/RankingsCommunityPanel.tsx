@@ -41,6 +41,7 @@ export default function RankingsCommunityPanel({ language, variant }: Props) {
   const [joinCode, setJoinCode] = useState("");
   const [joinBusy, setJoinBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [overlayGroupId, setOverlayGroupId] = useState<string | null>(null);
 
   const basePath = variant === "web" ? "/web" : "/mobile";
 

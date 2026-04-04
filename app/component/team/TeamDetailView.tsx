@@ -13,7 +13,10 @@ const bebas = Bebas_Neue({ weight: "400", subsets: ["latin"] });
 
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import {
+  nbaRegularSeasonWinsLosses,
+  type NbaTeamRecordFields,
+} from "@/lib/nbaRegularSeasonRecord";
 import {
   CONFERENCE_RECORD_STYLE,
   enOrdinal,
@@ -383,8 +386,8 @@ export default function TeamDetailView({ team }: Props) {
           ...(d.data() as Record<string, unknown>),
         }));
         const sorted = [...list].sort((a, b) => {
-          const ar = nbaRegularSeasonWinsLosses(a);
-          const br = nbaRegularSeasonWinsLosses(b);
+          const ar = nbaRegularSeasonWinsLosses(a as NbaTeamRecordFields);
+          const br = nbaRegularSeasonWinsLosses(b as NbaTeamRecordFields);
           const ag = ar.wins + ar.losses;
           const bg = br.wins + br.losses;
           const arate = ag > 0 ? ar.wins / ag : 0;

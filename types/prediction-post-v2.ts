@@ -78,9 +78,15 @@ export type PredictionPostV2 = {
   prediction: {
     winner: "home" | "away" | "draw";
     score: { home: number; away: number };
+    /** UI 用（任意） */
+    confidence?: number;
   };
 
   note?: string;
+
+  /** 一覧用キャッシュ（サブコレ likes/saves と同期しない場合あり） */
+  likeCount?: number;
+  saveCount?: number;
 
   /* ------------------------
      Stats (V2 – finalizePost準拠)

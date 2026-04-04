@@ -25,7 +25,7 @@ type StatRow = {
   /** レーティングバー用の上限（未指定なら max） */
   barMax?: number;
   format?: (v: number) => string;
-  Icon: React.ComponentType<any>;
+  Icon?: React.ComponentType<{ className?: string }>;
 };
 
 function clamp01(x: number) {

@@ -252,7 +252,6 @@ export default function DailyTrendCard({
                   key={composedChartKey}
                   data={chartData}
                   margin={{ top: 6, right: 10, left: 2, bottom: -6 }}
-                  isAnimationActive={rechartsAnimActive}
                 >
                   <CartesianGrid
                     stroke="rgba(148,163,184,0.15)"
