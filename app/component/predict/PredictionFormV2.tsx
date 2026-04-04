@@ -1,15 +1,22 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+} from "react";
 import { createPortal } from "react-dom";
 import { auth } from "@/lib/firebase";
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import { toast } from "@/app/component/ui/toast";
 import { useRouter, usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
+import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
@@ -83,8 +90,10 @@ export default function PredictionFormV2({
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [standingsOpen, setStandingsOpen] = useState(false);
+  const [toolsTab, setToolsTab] = useState<
+    null | "stats" | "market" | "standings"
+  >(null);
+  const [marketChartKey, setMarketChartKey] = useState(0);
   /** Games オーバーレイ: 投稿後モーダル用の次試合 */
   const [nextGamePreview, setNextGamePreview] = useState<MatchCardProps | null>(
     null
@@ -101,13 +110,15 @@ export default function PredictionFormV2({
   const [homeL1, homeL2] = splitTeamNameByLeague(game.league, homeSafe.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(game.league, awaySafe.name);
 
-  const setStandingsState = useCallback(
-    (open: boolean) => {
-      setStandingsOpen(open);
-      onStandingsOpenChange?.(open);
-    },
-    [onStandingsOpenChange]
-  );
+  useEffect(() => {
+    onStandingsOpenChange?.(toolsTab === "standings");
+  }, [toolsTab, onStandingsOpenChange]);
+
+  useLayoutEffect(() => {
+    if (toolsTab === "market") {
+      setMarketChartKey((k) => k + 1);
+    }
+  }, [toolsTab]);
 
   function getMobileTeamLabel(
     league: MatchCardProps["league"],
@@ -157,14 +168,21 @@ export default function PredictionFormV2({
   const canSubmit =
     !!winner && !submitting && scoreHome !== "" && scoreAway !== "";
 
-  const fieldBase =
-    "w-full rounded-xl border border-white/15 bg-white/[0.10] px-4 py-3 text-left text-base font-medium text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]";
+  const scoreInputClass = [
+    "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left font-medium text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
+    isMobile ? "px-3.5 py-2.5 text-[15px]" : "px-4 py-3 text-base",
+  ].join(" ");
 
   const glassCard =
     "rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
 
-  const toolButtonBase =
-    "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
+  const glassCardStatsPanel = isMobile
+    ? "rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
+    : glassCard;
+
+  const toolButtonBase = isMobile
+    ? "flex h-9 w-full items-center justify-center rounded-xl border px-1.5 text-xs font-semibold transition-all duration-200"
+    : "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
 
   const standingsHrefBase = isMobile ? "/mobile/teams" : "/web/teams";
 
@@ -378,60 +396,86 @@ export default function PredictionFormV2({
       }}
     >
       <div className="space-y-4 overflow-x-hidden">
-        <motion.div variants={fadeUp} className="grid grid-cols-2 gap-2">
+        <motion.div
+          variants={fadeUp}
+          className={["grid grid-cols-3", isMobile ? "gap-1.5" : "gap-2"].join(
+            " "
+          )}
+        >
           <button
             type="button"
-            onClick={() => setStatsOpen((v) => !v)}
+            onClick={() =>
+              setToolsTab((t) => (t === "stats" ? null : "stats"))
+            }
             className={[
               toolButtonBase,
-              statsOpen
+              toolsTab === "stats"
                 ? "border-cyan-300/35 bg-cyan-300/12 text-white"
                 : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
             ].join(" ")}
           >
-            <span>{isEn ? "Team Stats" : "詳細スタッツ"}</span>
-            <ChevronDown
-              size={16}
-              className={[
-                "ml-2 transition-transform duration-200",
-                statsOpen ? "rotate-180" : "",
-              ].join(" ")}
-            />
+            <span className={isMobile ? "truncate" : ""}>
+              {isEn ? "Stats" : "詳細スタッツ"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setToolsTab((t) => (t === "market" ? null : "market"))
+            }
+            className={[
+              toolButtonBase,
+              toolsTab === "market"
+                ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
+            ].join(" ")}
+          >
+            <span className={isMobile ? "truncate" : ""}>
+              {isEn ? "Market" : "市場"}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => {
               if (!showStandings) return;
-              setStandingsState(!standingsOpen);
+              setToolsTab((t) => (t === "standings" ? null : "standings"));
             }}
             disabled={!showStandings}
             className={[
               toolButtonBase,
-              standingsOpen
+              toolsTab === "standings"
                 ? "border-cyan-300/35 bg-cyan-300/12 text-white"
                 : showStandings
-                ? "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6"
-                : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
+                  ? "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6"
+                  : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
             ].join(" ")}
           >
-            <span>Standings</span>
-            <ChevronDown
-              size={16}
-              className={[
-                "ml-2 transition-transform duration-200",
-                standingsOpen ? "rotate-180" : "",
-              ].join(" ")}
-            />
+            <span className={isMobile ? "truncate" : ""}>
+              {isEn ? "Standings" : "順位表"}
+            </span>
           </button>
         </motion.div>
 
-        {statsOpen && (
-          <motion.div variants={fadeUp} className={glassCard}>
-            <div className="mb-3 text-sm font-semibold text-white/90">
-              {isEn ? "Team Stats" : "詳細スタッツ"}
+        {toolsTab === "stats" && (
+          <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <div
+              className={
+                isMobile
+                  ? "mb-2 text-xs font-semibold text-white/90"
+                  : "mb-3 text-sm font-semibold text-white/90"
+              }
+            >
+              {isEn ? "Stats" : "詳細スタッツ"}
             </div>
-            <div className="border-t border-white/10 pt-3">
+            <div
+              className={
+                isMobile
+                  ? "border-t border-white/10 pt-2"
+                  : "border-t border-white/10 pt-3"
+              }
+            >
               <GameTeamStats
                 league={game.league}
                 homeTeamId={game.home.teamId ?? ""}
@@ -442,12 +486,40 @@ export default function PredictionFormV2({
           </motion.div>
         )}
 
-        {standingsOpen && (
-          <motion.div variants={fadeUp} className={glassCard}>
-            <div className="mb-3 text-sm font-semibold text-white/90">
-              Standings
+        {toolsTab === "market" && (
+          <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <GamePredictionDistribution
+              gameId={(game as { id: string }).id}
+              league={game.league}
+              homeName={homeSafe.name}
+              awayName={awaySafe.name}
+              homeColor={homeSafe.colorHex ?? "#ef4444"}
+              awayColor={awaySafe.colorHex ?? "#3b82f6"}
+              variant="predictForm"
+              chartReplayKey={marketChartKey}
+              fallbackMarketBias={game.marketBias}
+            />
+          </motion.div>
+        )}
+
+        {toolsTab === "standings" && (
+          <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <div
+              className={
+                isMobile
+                  ? "mb-2 text-xs font-semibold text-white/90"
+                  : "mb-3 text-sm font-semibold text-white/90"
+              }
+            >
+              {isEn ? "Standings" : "順位表"}
             </div>
-            <div className="border-t border-white/10 pt-3">
+            <div
+              className={
+                isMobile
+                  ? "border-t border-white/10 pt-2"
+                  : "border-t border-white/10 pt-3"
+              }
+            >
               {showStandings ? (
                 <NbaStandingsPanel
                   teamHrefBase={standingsHrefBase}
@@ -477,7 +549,7 @@ export default function PredictionFormV2({
               <input
                 type="number"
                 inputMode="numeric"
-                className={fieldBase}
+                className={scoreInputClass}
                 placeholder={isEn ? "Score" : "得点"}
                 value={scoreHome}
                 onChange={(e) => setScoreHome(e.target.value)}
@@ -491,7 +563,7 @@ export default function PredictionFormV2({
               <input
                 type="number"
                 inputMode="numeric"
-                className={fieldBase}
+                className={scoreInputClass}
                 placeholder={isEn ? "Score" : "得点"}
                 value={scoreAway}
                 onChange={(e) => setScoreAway(e.target.value)}

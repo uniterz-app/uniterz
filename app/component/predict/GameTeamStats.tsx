@@ -19,6 +19,8 @@ const BAR_AFTER_ROW = 0.06;
 /** 左: ミント系ネオン（シアンより緑寄り） / 右: バイオレット系（マゼンタより青紫） */
 const BAR_LEFT_HEX = "#5cf0b5";
 const BAR_RIGHT_HEX = "#b388ff";
+const BAR_LEFT_RGB = "92,240,181";
+const BAR_RIGHT_RGB = "179,136,255";
 
 type TeamDoc = {
   gamesPlayed: number;
@@ -78,26 +80,43 @@ function formatStatRank(rank: number | undefined, isEn: boolean): string | null 
   return isEn ? `#${r}` : `${r}位`;
 }
 
-function shareHigherBetter(a: number, b: number): [number, number] {
-  const t = a + b;
-  if (t <= 0) return [50, 50];
-  return [Math.round((100 * a) / t), Math.round((100 * b) / t)];
-}
-
-function shareLowerBetter(a: number, b: number): [number, number] {
-  const ia = 1 / Math.max(a, 0.01);
-  const ib = 1 / Math.max(b, 0.01);
-  const s = ia + ib;
-  return [Math.round((100 * ia) / s), Math.round((100 * ib) / s)];
-}
-
-function diffBarPcts(homeD: number, awayD: number): [number, number] {
-  const minD = Math.min(homeD, awayD);
-  const maxD = Math.max(homeD, awayD);
-  if (maxD === minD) return [50, 50];
+/** 数値が大きいほど良い: 大きい方を 100%、もう一方は比率で短く */
+function barPctMaxNorm(h: number, a: number): [number, number] {
+  const m = Math.max(h, a);
+  if (m <= 0 || !Number.isFinite(m)) return [0, 0];
   return [
-    Math.round((100 * (homeD - minD)) / (maxD - minD)),
-    Math.round((100 * (awayD - minD)) / (maxD - minD)),
+    Math.min(100, Math.max(0, Math.round((h / m) * 100))),
+    Math.min(100, Math.max(0, Math.round((a / m) * 100))),
+  ];
+}
+
+/** 数値が小さいほど良い（平均失点）: 小さい方を基準 100%、もう一方は min/値 で短く */
+function barPctMinPaNorm(h: number, a: number): [number, number] {
+  const lo = Math.min(h, a);
+  const hi = Math.max(h, a);
+  if (hi <= 0 || !Number.isFinite(hi)) return [0, 0];
+  const left = h > 0 ? Math.min(100, Math.round((lo / h) * 100)) : 0;
+  const right = a > 0 ? Math.min(100, Math.round((lo / a) * 100)) : 0;
+  return [Math.max(0, left), Math.max(0, right)];
+}
+
+/** 得失点差: 高い方が良い。プラス含むときは max を 100%。両方マイナスだけ別スケール */
+function barPctDiffNorm(h: number, a: number): [number, number] {
+  const mPos = Math.max(h, a);
+  if (mPos > 0) {
+    return [
+      Math.min(100, Math.max(0, Math.round((Math.max(0, h) / mPos) * 100))),
+      Math.min(100, Math.max(0, Math.round((Math.max(0, a) / mPos) * 100))),
+    ];
+  }
+  if (h === 0 && a === 0) return [0, 0];
+  const worst = Math.min(h, a);
+  const best = Math.max(h, a);
+  const span = best - worst;
+  if (span <= 0) return [50, 50];
+  return [
+    Math.min(100, Math.max(0, Math.round(((h - worst) / span) * 100))),
+    Math.min(100, Math.max(0, Math.round(((a - worst) / span) * 100))),
   ];
 }
 
@@ -182,9 +201,9 @@ export default function GameTeamStats({
 
   const fmtDiff = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
 
-  const [ppgBarL, ppgBarR] = shareHigherBetter(home.avgFor, away.avgFor);
-  const [papgBarL, papgBarR] = shareLowerBetter(home.avgAgainst, away.avgAgainst);
-  const [diffBarL, diffBarR] = diffBarPcts(home.diff, away.diff);
+  const [ppgBarL, ppgBarR] = barPctMaxNorm(home.avgFor, away.avgFor);
+  const [papgBarL, papgBarR] = barPctMinPaNorm(home.avgAgainst, away.avgAgainst);
+  const [diffBarL, diffBarR] = barPctDiffNorm(home.diff, away.diff);
 
   const rows: Array<{
     key: string;
@@ -304,12 +323,9 @@ export default function GameTeamStats({
             : "—",
         rank: null,
         barPct:
-          home.vsEastW + home.vsEastL > 0 &&
-          away.vsEastW + away.vsEastL > 0
-            ? shareHigherBetter(home.vsEastPct, away.vsEastPct)[0]
-            : home.vsEastW + home.vsEastL > 0
-              ? Math.round(home.vsEastPct)
-              : 0,
+          home.vsEastW + home.vsEastL > 0
+            ? Math.round(Math.min(100, Math.max(0, home.vsEastPct)))
+            : 0,
         recordBelow:
           home.vsEastW + home.vsEastL > 0
             ? `${home.vsEastW}-${home.vsEastL}`
@@ -322,12 +338,9 @@ export default function GameTeamStats({
             : "—",
         rank: null,
         barPct:
-          home.vsEastW + home.vsEastL > 0 &&
           away.vsEastW + away.vsEastL > 0
-            ? shareHigherBetter(home.vsEastPct, away.vsEastPct)[1]
-            : away.vsEastW + away.vsEastL > 0
-              ? Math.round(away.vsEastPct)
-              : 0,
+            ? Math.round(Math.min(100, Math.max(0, away.vsEastPct)))
+            : 0,
         recordBelow:
           away.vsEastW + away.vsEastL > 0
             ? `${away.vsEastW}-${away.vsEastL}`
@@ -352,12 +365,9 @@ export default function GameTeamStats({
             : "—",
         rank: null,
         barPct:
-          home.vsWestW + home.vsWestL > 0 &&
-          away.vsWestW + away.vsWestL > 0
-            ? shareHigherBetter(home.vsWestPct, away.vsWestPct)[0]
-            : home.vsWestW + home.vsWestL > 0
-              ? Math.round(home.vsWestPct)
-              : 0,
+          home.vsWestW + home.vsWestL > 0
+            ? Math.round(Math.min(100, Math.max(0, home.vsWestPct)))
+            : 0,
         recordBelow:
           home.vsWestW + home.vsWestL > 0
             ? `${home.vsWestW}-${home.vsWestL}`
@@ -370,12 +380,9 @@ export default function GameTeamStats({
             : "—",
         rank: null,
         barPct:
-          home.vsWestW + home.vsWestL > 0 &&
           away.vsWestW + away.vsWestL > 0
-            ? shareHigherBetter(home.vsWestPct, away.vsWestPct)[1]
-            : away.vsWestW + away.vsWestL > 0
-              ? Math.round(away.vsWestPct)
-              : 0,
+            ? Math.round(Math.min(100, Math.max(0, away.vsWestPct)))
+            : 0,
         recordBelow:
           away.vsWestW + away.vsWestL > 0
             ? `${away.vsWestW}-${away.vsWestL}`
@@ -560,6 +567,7 @@ function CyberBar({
   const v = Math.min(100, Math.max(0, value)) / 100;
   const origin = grow === "left" ? "right center" : "left center";
   const hex = grow === "left" ? BAR_LEFT_HEX : BAR_RIGHT_HEX;
+  const rgb = grow === "left" ? BAR_LEFT_RGB : BAR_RIGHT_RGB;
   const borderTint =
     grow === "left" ? "border-[#5cf0b5]/28" : "border-[#b388ff]/28";
   const baseInset =
@@ -568,14 +576,15 @@ function CyberBar({
       : "inset 0 0 6px rgba(179,136,255,0.07)";
   const fillBg =
     grow === "left"
-      ? `linear-gradient(to right, ${hex}44 0%, ${hex}cc 45%, ${hex} 100%)`
-      : `linear-gradient(to right, ${hex} 0%, ${hex}cc 55%, ${hex}44 100%)`;
+      ? `linear-gradient(to right, ${hex}55 0%, ${hex}dd 45%, ${hex} 100%)`
+      : `linear-gradient(to right, ${hex} 0%, ${hex}dd 55%, ${hex}55 100%)`;
 
   return (
     <div
       className={[
-        "relative h-[3px] max-w-[68px] min-w-[40px] flex-1 overflow-visible rounded-[1px] md:h-1 md:max-w-[92px]",
-        "border bg-black/60",
+        "relative h-[3px] min-w-[56px] max-w-[min(36vw,132px)] flex-1 overflow-hidden rounded-[1px]",
+        "md:h-1 md:min-w-[100px] md:max-w-[min(30vw,260px)]",
+        "border bg-black/50",
         borderTint,
       ].join(" ")}
       style={{
@@ -584,18 +593,30 @@ function CyberBar({
           : baseInset,
       }}
     >
+      {/* トラック全体を常に色で埋める（空白に見えないベース） */}
+      <div
+        className="pointer-events-none absolute inset-0 rounded-[1px]"
+        style={{
+          background: `linear-gradient(
+            to bottom,
+            rgba(${rgb},0.3),
+            rgba(${rgb},0.12)
+          )`,
+        }}
+        aria-hidden
+      />
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[1px]">
         <motion.div
           initial={{ scaleX: 0 }}
           animate={{ scaleX: v }}
           transition={{ duration: BAR_DURATION, delay, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-y-0 left-0 w-full"
+          className="absolute inset-y-0 left-0 z-1 w-full"
           style={{
             transformOrigin: origin,
             background: fillBg,
             boxShadow: winGlow
               ? `0 0 5px ${hex}55, 0 0 2px ${hex}77`
-              : `0 0 2px ${hex}28`,
+              : `0 0 2px ${hex}35`,
           }}
         />
       </div>

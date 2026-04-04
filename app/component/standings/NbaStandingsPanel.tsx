@@ -120,18 +120,22 @@ export default function NbaStandingsPanel({
   );
 
   return (
-    <div className={["space-y-5", className].join(" ")}>
-      <div className="flex gap-3">
+    <div
+      className={[compact ? "space-y-3" : "space-y-5", className].join(" ")}
+    >
+      <div className={compact ? "flex gap-2" : "flex gap-3"}>
         {(["east", "west"] as const).map((c) => (
           <button
             key={c}
             type="button"
             onClick={() => setTab(c)}
-            className={`rounded-full border px-5 py-2 text-sm font-medium ${
+            className={[
+              "rounded-full border font-medium",
+              compact ? "px-3.5 py-1.5 text-xs" : "px-5 py-2 text-sm",
               tab === c
                 ? "border-white/30 bg-white/15 text-white"
-                : "border-white/10 text-white/50"
-            }`}
+                : "border-white/10 text-white/50",
+            ].join(" ")}
           >
             {c.toUpperCase()}
           </button>
@@ -185,7 +189,7 @@ function Conference({
   if (!leader) return null;
 
   return (
-    <div className="space-y-2">
+    <div className={compact ? "space-y-1" : "space-y-2"}>
       {sorted.map((team, index) => (
         <Fragment key={team.id}>
           <TeamRow
@@ -285,45 +289,72 @@ function TeamRow({
           ease: [0.22, 1, 0.36, 1],
         }}
         style={{ perspective: "1400px" }}
-        className="mb-2"
+        className={compact ? "mb-1" : "mb-2"}
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
       >
         <motion.div
-          className="relative overflow-hidden rounded-2xl transition hover:scale-[1.03] hover:shadow-[0_22px_70px_rgba(0,0,0,0.65)]"
+          className={[
+            "relative overflow-hidden transition hover:scale-[1.03] hover:shadow-[0_22px_70px_rgba(0,0,0,0.65)]",
+            compact ? "rounded-xl" : "rounded-2xl",
+          ].join(" ")}
           style={rankGradientStyle(rank, conference)}
         >
           <div
-            className="pointer-events-none absolute inset-0 rounded-2xl"
+            className={[
+              "pointer-events-none absolute inset-0",
+              compact ? "rounded-xl" : "rounded-2xl",
+            ].join(" ")}
             style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.08)" }}
           />
 
           <div
             className={[
               "relative z-10 flex items-center justify-between",
-              compact ? "px-4 py-3" : "px-5 py-3",
+              compact ? "px-3 py-2" : "px-5 py-3",
             ].join(" ")}
           >
-            <div className="flex min-w-0 items-center gap-4">
-              <span className={`w-6 text-xs font-mono ${rankNumberClass(rank)}`}>
+            <div
+              className={[
+                "flex min-w-0 items-center",
+                compact ? "gap-2" : "gap-4",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "font-mono",
+                  compact ? "w-5 text-[10px]" : "w-6 text-xs",
+                  rankNumberClass(rank),
+                ].join(" ")}
+              >
                 {rank}
               </span>
-              <span className="truncate font-semibold text-white">
+              <span
+                className={[
+                  "truncate font-semibold text-white",
+                  compact ? "text-[13px] leading-tight" : "",
+                ].join(" ")}
+              >
                 {team.name}
               </span>
             </div>
 
             <div
               className={[
-                "flex items-center gap-4 font-mono tabular-nums shrink-0",
-                compact ? "text-[10px]" : "text-[11px]",
+                "flex items-center font-mono tabular-nums shrink-0",
+                compact ? "gap-2 text-[9px]" : "gap-4 text-[11px]",
               ].join(" ")}
             >
               <span className="text-white/70">
                 {teamWins}-{teamLosses}
               </span>
 
-              <span className="w-8 text-right text-white/45">
+              <span
+                className={[
+                  "text-right text-white/45",
+                  compact ? "w-7" : "w-8",
+                ].join(" ")}
+              >
                 {gb === null ? "—" : gb.toFixed(1)}
               </span>
 
@@ -345,9 +376,11 @@ function TeamRow({
 function SeparatorLine({
   color,
   delay,
+  compact = false,
 }: {
   color: "emerald" | "amber";
   delay: number;
+  compact?: boolean;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -369,7 +402,7 @@ function SeparatorLine({
   }, [delay]);
 
   return (
-    <div className="my-3">
+    <div className={compact ? "my-2" : "my-3"}>
       <div
         ref={ref}
         className={`h-px w-full ${
