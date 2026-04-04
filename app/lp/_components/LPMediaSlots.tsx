@@ -1,4 +1,5 @@
 import Image from "next/image";
+import LPMediaSlotVideo from "./LPMediaSlotVideo";
 import { mediaSlots } from "./lp-data";
 
 export default function LPMediaSlots() {
@@ -23,16 +24,11 @@ export default function LPMediaSlots() {
 
         <h2 className="lp-section-title">ランキング実績の見せ場</h2>
         <p className="lp-section-desc">
-          世界ランキング、毎日更新の推移、月間1位報酬をここで証明する。素材差し替えは
-          `lp-data.ts` のパス更新だけで完了する。
+          世界ランキングの画面をここで見せる。素材差し替えは `lp-data.ts` のパス更新だけで完了する。
         </p>
 
-        <p className="mb-3 mt-8 flex items-center gap-2 text-[11px] font-medium text-cyan-200/76 md:hidden">
-          <span className="inline-block h-1 w-8 rounded-full bg-gradient-to-r from-cyan-300/70 to-transparent" />
-          カードを横にスワイプして比較
-        </p>
         <div
-          className="mt-2 flex gap-5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-none snap-x snap-mandatory md:mx-0 md:mt-8 md:grid md:grid-cols-2 md:overflow-visible md:pb-0 md:px-0 md:snap-none xl:grid-cols-3"
+          className="mt-8 flex flex-col gap-5 md:mx-auto md:mt-8 md:max-w-3xl"
           data-lp-stagger-group
           data-lp-stagger-variant="up"
           data-lp-stagger-step="0.11"
@@ -40,7 +36,7 @@ export default function LPMediaSlots() {
           {mediaSlots.map((slot) => (
             <article
               key={slot.id}
-              className="relative min-w-[min(300px,88vw)] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-[1px] md:min-w-0 md:shrink md:snap-none"
+              className="relative w-full overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-[1px]"
               data-lp-stagger-item
             >
               <div className="relative rounded-[25px] bg-[linear-gradient(180deg,rgba(8,18,30,0.9),rgba(6,16,26,0.84))] p-3.5 sm:p-4">
@@ -60,33 +56,27 @@ export default function LPMediaSlots() {
                   {slot.title}
                 </div>
 
-                <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                <div className="mt-4">
                   {slot.enabled && slot.src ? (
                     slot.type === "video" ? (
-                      <video
+                      <LPMediaSlotVideo
                         src={slot.src}
                         poster={slot.poster}
-                        aria-label={slot.alt}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        className="h-48 w-full object-cover min-[390px]:h-52 sm:h-64"
+                        alt={slot.alt}
                       />
                     ) : (
-                      <div className="relative h-48 w-full min-[390px]:h-52 sm:h-64">
+                      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black/30">
                         <Image
                           src={slot.src}
                           alt={slot.alt}
                           fill
-                          sizes="(max-width: 1024px) 100vw, 33vw"
+                          sizes="(max-width: 768px) 100vw, 896px"
                           className="object-cover"
                         />
                       </div>
                     )
                   ) : (
-                    <div className="flex h-48 w-full items-center justify-center bg-[linear-gradient(180deg,rgba(8,18,30,0.5),rgba(6,16,26,0.45))] px-4 text-center text-sm leading-6 text-white/45 min-[390px]:h-52 sm:h-64">
+                    <div className="flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,18,30,0.5),rgba(6,16,26,0.45))] px-4 text-center text-sm leading-6 text-white/45">
                       ランキング実績素材をここに表示
                       <br />
                       lp-data.ts でパスを設定

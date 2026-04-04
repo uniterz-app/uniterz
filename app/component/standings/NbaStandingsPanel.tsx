@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef, Fragment } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -80,7 +79,6 @@ type Team = {
 };
 
 type Props = {
-  teamHrefBase: string;
   compact?: boolean;
   className?: string;
 };
@@ -88,7 +86,6 @@ type Props = {
 /* ================= main ================= */
 
 export default function NbaStandingsPanel({
-  teamHrefBase,
   compact = false,
   className = "",
 }: Props) {
@@ -126,8 +123,8 @@ export default function NbaStandingsPanel({
   );
 
   return (
-    <div className={["space-y-5", className].join(" ")}>
-      <div className="flex gap-3">
+    <div className={["space-y-5 text-left", className].join(" ")}>
+      <div className="flex flex-wrap justify-start gap-3">
         {(["east", "west"] as const).map((c) => (
           <button
             key={c}
@@ -147,12 +144,7 @@ export default function NbaStandingsPanel({
       {loading ? (
         <div className="text-sm text-white/70">Loading...</div>
       ) : (
-        <Conference
-          teams={filtered}
-          conference={tab}
-          teamHrefBase={teamHrefBase}
-          compact={compact}
-        />
+        <Conference teams={filtered} conference={tab} compact={compact} />
       )}
     </div>
   );
@@ -163,12 +155,10 @@ export default function NbaStandingsPanel({
 function Conference({
   teams,
   conference,
-  teamHrefBase,
   compact,
 }: {
   teams: Team[];
   conference: "east" | "west";
-  teamHrefBase: string;
   compact: boolean;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -189,7 +179,7 @@ function Conference({
   if (!leader) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 text-left">
       {sorted.map((team, index) => (
         <Fragment key={team.id}>
           <TeamRow
@@ -201,7 +191,6 @@ function Conference({
             onEnter={() => setHoveredId(team.id)}
             onLeave={() => setHoveredId(null)}
             conference={conference}
-            teamHrefBase={teamHrefBase}
             compact={compact}
           />
 
@@ -228,7 +217,6 @@ function TeamRow({
   onEnter,
   onLeave,
   conference,
-  teamHrefBase,
   compact,
 }: {
   team: Team;
@@ -239,7 +227,6 @@ function TeamRow({
   onEnter: () => void;
   onLeave: () => void;
   conference: "east" | "west";
-  teamHrefBase: string;
   compact: boolean;
 }) {
   const [rate, setRate] = useState(0);
@@ -278,7 +265,7 @@ function TeamRow({
   }, [hovered, winRateCalc]);
 
   return (
-    <Link href={`${teamHrefBase}/${team.id}`} scroll={false}>
+    <div className="mb-2 cursor-default">
       <motion.div
         initial={{ opacity: 0, y: 28, rotateX: 14, z: -120, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, rotateX: 0, z: 0, scale: 1 }}
@@ -288,12 +275,11 @@ function TeamRow({
           ease: [0.22, 1, 0.36, 1],
         }}
         style={{ perspective: "1400px" }}
-        className="mb-2"
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
       >
         <motion.div
-          className="relative overflow-hidden rounded-2xl transition hover:scale-[1.03] hover:shadow-[0_22px_70px_rgba(0,0,0,0.65)]"
+          className="relative overflow-hidden rounded-2xl transition hover:shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
           style={rankGradientStyle(rank, conference)}
         >
           <div
@@ -307,8 +293,10 @@ function TeamRow({
               compact ? "px-4 py-3" : "px-5 py-3",
             ].join(" ")}
           >
-            <div className="flex min-w-0 items-center gap-4">
-              <span className={`w-6 text-xs font-mono ${rankNumberClass(rank)}`}>
+            <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
+              <span
+                className={`w-5 shrink-0 text-left text-xs font-mono tabular-nums ${rankNumberClass(rank)}`}
+              >
                 {rank}
               </span>
               <span className="truncate font-semibold text-white">
@@ -339,7 +327,7 @@ function TeamRow({
           </div>
         </motion.div>
       </motion.div>
-    </Link>
+    </div>
   );
 }
 

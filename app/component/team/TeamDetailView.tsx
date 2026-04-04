@@ -1,16 +1,23 @@
 "use client";
 import type { Variants } from "framer-motion";
 import { useEffect,useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { Home, Plane } from "lucide-react";
+import { Home, Plane, ChevronLeft } from "lucide-react";
 
 import { Alfa_Slab_One } from "next/font/google";
 const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
-import { Anton } from "next/font/google";
-const anton = Anton({ weight: "400", subsets: ["latin"] });
+import { Bebas_Neue } from "next/font/google";
+const bebas = Bebas_Neue({ weight: "400", subsets: ["latin"] });
 
-import { useSearchParams } from "next/navigation";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import {
+  CONFERENCE_RECORD_STYLE,
+  enOrdinal,
+} from "@/lib/teamDetailConference";
 import { compareLastGamesByTime } from "@/lib/teamLastGameAt";
 
 type TeamDetail = any;
@@ -24,25 +31,17 @@ type Game = {
   result: "W" | "L";
 };
 
-
-
-
-
 /* ================= UI Parts ================= */
 
 function GlassHeroCard({ children }: { children: React.ReactNode }) {
   return (
-    // ① 動かす箱（丸角・overflowを持たせない）
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="relative"
     >
-      {/* ② 切り抜き専用の箱 */}
       <div className="relative overflow-hidden rounded-2xl p-3 border border-white/10 bg-white/5 backdrop-blur">
-
-        {/* ネオン */}
         <motion.div
           className="pointer-events-none absolute inset-0"
           animate={{ opacity: [0.25, 0.45, 0.25] }}
@@ -55,7 +54,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* スキャンライン */}
         <motion.div
           className="pointer-events-none absolute inset-0"
           animate={{ backgroundPositionY: ["0%", "100%"] }}
@@ -67,7 +65,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* シマー（insetは0固定） */}
         <motion.div
           className="pointer-events-none absolute inset-0"
           animate={{ x: ["-120%", "120%"] }}
@@ -79,7 +76,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* 枠（外グロー禁止、insetのみ） */}
         <div
           className="pointer-events-none absolute inset-0 rounded-2xl"
           style={{
@@ -87,7 +83,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* コンテンツ */}
         <div className="relative z-10">{children}</div>
       </div>
     </motion.div>
@@ -292,117 +287,6 @@ const sortedGames = [...games].sort(compareLastGamesByTime);
   );
 }
 
-
-function OffDefenseBalanceBar({
-  value,
-  max = 15,
-}: {
-  value: number;
-  max?: number;
-}) {
-  // -1 ～ +1 に正規化
-  const bias = Math.max(-1, Math.min(1, value / max));
-
-  // 表示用
-  const pct = Math.round(Math.abs(bias) * 100);
-  const label =
-    bias > 0 ? `+${pct}% OFFENSE`
-    : bias < 0 ? `-${pct}% DEFENSE`
-    : "BALANCED";
-
-  // 位置（中央=50%）
-  const pos = 50 + bias * 45;
-
-  return (
-    <div className="relative w-full">
-      {/* 外枠 */}
-      <div
-        className="relative h-10 rounded-xl overflow-hidden border border-white/10"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02))",
-        }}
-      >
-        {/* 背景グラデーション（DF→OFF） */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(255,80,80,.20) 0%, rgba(255,255,255,.08) 50%, rgba(80,200,255,.22) 100%)",
-          }}
-        />
-
-        {/* センターライン */}
-        <div
-          className="absolute inset-y-1 left-1/2 w-px"
-          style={{
-            background: "rgba(255,255,255,.35)",
-            boxShadow: "0 0 10px rgba(255,255,255,.25)",
-          }}
-        />
-
-        {/* スキャンライト */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(120deg, transparent 30%, rgba(120,200,255,.28) 45%, transparent 60%)",
-            mixBlendMode: "screen",
-          }}
-          animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }}
-          transition={{ duration: 2.6, repeat: Infinity, ease: "linear" }}
-        />
-
-        {/* 可動インジケータ */}
-        <motion.div
-          className="absolute top-1/2 -translate-y-1/2 h-7 rounded-lg"
-          style={{
-            left: `${pos}%`,
-            transform: "translate(-50%, -50%)",
-            width: "22%",
-            background:
-              bias >= 0
-                ? "linear-gradient(90deg, rgba(80,200,255,.35), rgba(80,200,255,.12))"
-                : "linear-gradient(90deg, rgba(255,80,80,.35), rgba(255,80,80,.12))",
-            boxShadow:
-              bias >= 0
-                ? "0 0 0 1px rgba(80,200,255,.7), 0 0 18px rgba(80,200,255,.55)"
-                : "0 0 0 1px rgba(255,80,80,.7), 0 0 18px rgba(255,80,80,.55)",
-          }}
-          animate={{
-            scale: [1, 1.04, 1],
-            filter: ["brightness(1)", "brightness(1.15)", "brightness(1)"],
-          }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        {/* ラベル */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span
-            className="text-[11px] font-semibold tracking-wider"
-            style={{
-              color: bias >= 0 ? "#7dd3fc" : "#fca5a5",
-              textShadow:
-                bias >= 0
-                  ? "0 0 10px rgba(80,200,255,.6)"
-                  : "0 0 10px rgba(255,80,80,.6)",
-            }}
-          >
-            {label}
-          </span>
-        </div>
-      </div>
-
-      {/* 補助テキスト */}
-      <div className="mt-2 flex justify-between text-[10px] text-white/60">
-        <span>DEF LEANING</span>
-        <span>NEUTRAL</span>
-        <span>OFF LEANING</span>
-      </div>
-    </div>
-  );
-}
-
 /* ================= Page Motion ================= */
 
 const page: Variants = {
@@ -437,90 +321,139 @@ const item: Variants = {
 
 /* ================= Page ================= */
 
-export default function TeamDetailView({ team }: Props) {
-  const searchParams = useSearchParams();
+function isSafeFirestoreDocId(id: string | null): id is string {
+  return id != null && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
+}
 
-const conferenceRank = Number(searchParams.get("rank"));
-const conference = searchParams.get("conference") as "east" | "west";
+export default function TeamDetailView({ team }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromPredict = searchParams.get("fromPredict");
+  const fallbackStandingsHref = "/mobile/standings";
+
+  const goBackFromTeamDetail = () => {
+    if (isSafeFirestoreDocId(fromPredict)) {
+      router.push(`/mobile/games/${fromPredict}/predict?standings=1`);
+      return;
+    }
+    router.push(fallbackStandingsHref);
+  };
   const [expanded, setExpanded] = useState(false);
-  const [open, setOpen] = useState(false);
-    const [mode, setMode] = useState<"total" | "home" | "away">("total");
-const [confMode, setConfMode] = useState<"east" | "west">(
+  const [mode, setMode] = useState<"total" | "home" | "away">("total");
+  const [confMode, setConfMode] = useState<"east" | "west">(
     team.conference === "EAST" || team.conference === "east"
       ? "east"
       : "west"
   );
-  // ← ここに追加
   const [frontIndex, setFrontIndex] = useState<number | null>(null);
-  /* ===== motion values ===== */
+  const [conferenceRank, setConferenceRank] = useState<number | null>(null);
+
+  const conferenceLabel: "east" | "west" =
+    team.conference === "EAST" || team.conference === "east"
+      ? "east"
+      : "west";
+
   const ptsForCount = useMotionValue(0);
   const ptsAgainstCount = useMotionValue(0);
   const rateCount = useMotionValue(0);
-  
 
   const ptsForDisplay = useTransform(ptsForCount, v => v.toFixed(1));
   const ptsAgainstDisplay = useTransform(ptsAgainstCount, v => v.toFixed(1));
   const rateDisplay = useTransform(rateCount, v => `${v.toFixed(1)}%`);
-const balance = team.avgPointsFor - team.avgPointsAgainst;
 
-
-const home = team.homeAway?.home;
-const away = team.homeAway?.away;
-
-
-// + → OF寄り / − → DF寄り
-
-useEffect(() => {
   const home = team.homeAway?.home;
   const away = team.homeAway?.away;
 
-  const ptsFor =
-    mode === "total"
-      ? team.avgPointsFor
-      : mode === "home"
-      ? home?.avgFor ?? 0
-      : away?.avgFor ?? 0;
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!team.conference) {
+        setConferenceRank(null);
+        return;
+      }
+      try {
+        const q = query(
+          collection(db, "teams"),
+          where("league", "==", "nba"),
+          where("conference", "==", team.conference)
+        );
+        const snap = await getDocs(q);
+        const list = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Record<string, unknown>),
+        }));
+        const sorted = [...list].sort((a, b) => {
+          const ar = nbaRegularSeasonWinsLosses(a);
+          const br = nbaRegularSeasonWinsLosses(b);
+          const ag = ar.wins + ar.losses;
+          const bg = br.wins + br.losses;
+          const arate = ag > 0 ? ar.wins / ag : 0;
+          const brate = bg > 0 ? br.wins / bg : 0;
+          if (brate !== arate) return brate - arate;
+          if (br.wins !== ar.wins) return br.wins - ar.wins;
+          return 0;
+        });
+        const idx = sorted.findIndex((t) => t.id === team.id);
+        if (alive && idx !== -1) setConferenceRank(idx + 1);
+        else if (alive) setConferenceRank(null);
+      } catch {
+        if (alive) setConferenceRank(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [team.id, team.conference]);
 
-  const ptsAgainst =
-    mode === "total"
-      ? team.avgPointsAgainst
-      : mode === "home"
-      ? home?.avgAgainst ?? 0
-      : away?.avgAgainst ?? 0;
+  useEffect(() => {
+    const home = team.homeAway?.home;
+    const away = team.homeAway?.away;
 
-  const wins =
-    mode === "total"
-      ? team.wins
-      : mode === "home"
-      ? home?.wins ?? 0
-      : away?.wins ?? 0;
+    const ptsFor =
+      mode === "total"
+        ? team.avgPointsFor
+        : mode === "home"
+          ? home?.avgFor ?? 0
+          : away?.avgFor ?? 0;
 
-  const losses =
-    mode === "total"
-      ? team.losses
-      : mode === "home"
-      ? home?.losses ?? 0
-      : away?.losses ?? 0;
+    const ptsAgainst =
+      mode === "total"
+        ? team.avgPointsAgainst
+        : mode === "home"
+          ? home?.avgAgainst ?? 0
+          : away?.avgAgainst ?? 0;
 
-  const rate =
-    mode === "total"
-      ? team.winRate
-      : wins + losses > 0
-      ? (wins / (wins + losses)) * 100
-      : 0;
+    const wins =
+      mode === "total"
+        ? team.wins
+        : mode === "home"
+          ? home?.wins ?? 0
+          : away?.wins ?? 0;
 
-  const a = animate(ptsForCount, ptsFor, { duration: 0.6 });
-  const b = animate(ptsAgainstCount, ptsAgainst, { duration: 0.6 });
-  const c = animate(rateCount, rate, { duration: 0.6 });
+    const losses =
+      mode === "total"
+        ? team.losses
+        : mode === "home"
+          ? home?.losses ?? 0
+          : away?.losses ?? 0;
 
-  return () => {
-    a.stop();
-    b.stop();
-    c.stop();
-  };
+    const rate =
+      mode === "total"
+        ? team.winRate
+        : wins + losses > 0
+          ? (wins / (wins + losses)) * 100
+          : 0;
 
-  
-}, [mode, team]);
+    const a = animate(ptsForCount, ptsFor, { duration: 0.6 });
+    const b = animate(ptsAgainstCount, ptsAgainst, { duration: 0.6 });
+    const c = animate(rateCount, rate, { duration: 0.6 });
+
+    return () => {
+      a.stop();
+      b.stop();
+      c.stop();
+    };
+  }, [mode, team]);
 
 
 
@@ -539,8 +472,16 @@ useEffect(() => {
     `,
   }}
 >
-
-
+    <div className="relative z-10 flex items-center -mt-1 mb-0.5">
+      <button
+        type="button"
+        onClick={goBackFromTeamDetail}
+        className="rounded-full p-2 text-white/85 transition-colors hover:bg-white/12 hover:text-white active:scale-95"
+        aria-label="試合予想のスタンディングへ戻る"
+      >
+        <ChevronLeft className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+      </button>
+    </div>
 
     {/* ===== ベースのネオン発光 ===== */}
     <div
@@ -594,56 +535,27 @@ useEffect(() => {
 
     {/* ここから既存の中身 */}
 
-   {/* ===== Hero ===== */}
+   {/* ===== Hero：カンファレンス順位 → チーム名 ===== */}
 <motion.div variants={item}>
   <GlassHeroCard>
-    {/* はみ出し防止 */}
     <div className="relative overflow-hidden rounded-2xl">
-
-      {/* ===== 上段：バッジ（左寄せ・非absolute） ===== */}
-      <div className="flex items-center justify-start px-4 pt-2">
-        <motion.div
-          className="
-            inline-flex items-center gap-1
-            px-2 py-[2px] rounded-md
-            text-[11px] font-semibold tracking-wide text-cyan-300
-          "
-          animate={{
-            boxShadow: [
-              "0 0 0 1px rgba(80,200,255,.45), 0 0 6px rgba(80,200,255,.25)",
-              "0 0 0 1px rgba(80,200,255,.75), 0 0 10px rgba(80,200,255,.45)",
-              "0 0 0 1px rgba(80,200,255,.45), 0 0 6px rgba(80,200,255,.25)",
-            ],
-          }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(80,200,255,.20), rgba(80,200,255,.05))",
-          }}
+      <div className="flex justify-start px-4 pt-2">
+        <p
+          className={`${bebas.className} w-full text-left text-base tracking-wide`}
         >
-          {/* 王冠は1位だけ */}
-          {conferenceRank === 1 && <span>👑</span>}
-
-          <span>
-            #{conferenceRank} IN {(conference ?? team.conference).toUpperCase()}
+          <span style={CONFERENCE_RECORD_STYLE[conferenceLabel]}>
+            {conferenceLabel.toUpperCase()}
           </span>
-
-        </motion.div>
+          <span className="text-white/55">
+            {" "}
+            {conferenceRank != null ? enOrdinal(conferenceRank) : "—"}
+          </span>
+        </p>
       </div>
 
-      {/* ===== 中央：チーム名（被らない） ===== */}
-      <div className="mt-0.5 flex justify-center px-4">
+      <div className="mt-1 flex justify-center px-4 pb-4">
         <h1
-          className={`
-            ${anton.className}
-            w-full
-            text-center
-            whitespace-nowrap
-            overflow-hidden
-          `}
-          style={{
-            fontSize: "clamp(20px, 8vw, 28px)",
-          }}
+          className={`${bebas.className} w-full text-center text-[clamp(26px,8vw,34px)] font-normal tracking-wider text-white leading-none whitespace-nowrap overflow-hidden text-ellipsis relative z-10`}
         >
           {team.name}
         </h1>
@@ -770,9 +682,7 @@ useEffect(() => {
     <div className="flex items-end justify-between gap-2">
       <div
         className={`${alfa.className} text-3xl font-bold tabular-nums`}
-        style={{
-          color: confMode === "east" ? "#F87171" : "#5AC8FA",
-        }}
+        style={CONFERENCE_RECORD_STYLE[confMode]}
       >
         {confMode === "east"
           ? `${team.conferenceRecord.vsEast.wins}-${team.conferenceRecord.vsEast.losses}`
@@ -906,117 +816,6 @@ useEffect(() => {
       <div className="text-xs text-white/40">No games</div>
     )}
   </DepthCard>
-</motion.div>
-
-
-
-
-
-
-
-
-
-
-
-{/* ===== Offense / Defense Balance ===== */}
-
-<motion.div variants={item}>
-<div className="relative"> {/* ← カードの“外”を基準にする */}
-
-  <DepthCard accent={team.colors.primary}>
-    
-    
-    <div className="flex items-center gap-1 text-xs text-white/70 mb-2">
-      <span> OFF / DF Balance</span>
-
-      {/* ⓘ トリガー（クリックで開閉） */}
-      <button
-        type="button"
-        onClick={() => setOpen(v => !v)}   // もう一回押すと閉じる
-        className="
-          inline-flex h-4 w-4 items-center justify-center rounded-full
-          border border-white/30 text-[10px] text-white/70
-          cursor-pointer
-        "
-        aria-label="info"
-      >
-        i
-      </button>
-    </div>
-
-   <OffDefenseBalanceBar value={balance} />
-
-
-  </DepthCard>
-  
-
- {/* ===== 説明パネル：カード“外”の右上（馴染む背景＋アニメ） ===== */}
-{open && (
-  <motion.div
-    initial={{ opacity: 0, y: 6, scale: 0.98 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: 6, scale: 0.98 }}
-    transition={{ duration: 0.25, ease: "easeOut" }}
-    className="
-      absolute z-50
-      right-0 -top-2 -translate-y-full
-      rounded-lg px-3 py-2
-      text-[11px] text-white/95
-      border border-white/10
-      max-w-[360px]
-      whitespace-pre-wrap
-      leading-relaxed
-      overflow-hidden
-    "
-    style={{
-      /* 黒ベタをやめて“馴染む”ガラス背景 */
-      background: `
-        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
-        radial-gradient(140px 60px at 20% 0%, rgba(80,200,255,0.20), transparent 60%),
-        radial-gradient(160px 70px at 85% 20%, rgba(140,80,255,0.18), transparent 60%)
-      `,
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-      boxShadow: "0 0 18px rgba(80,200,255,.35)",
-    }}
-  >
-    {/* ===== 内側のホログラム・シマー（常時ゆっくり） ===== */}
-    <motion.div
-      className="pointer-events-none absolute -inset-1"
-      animate={{ x: ["-120%", "120%"] }}
-      transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-      style={{
-        background:
-          "linear-gradient(120deg, transparent 40%, rgba(120,200,255,.12) 50%, transparent 60%)",
-        mixBlendMode: "screen",
-      }}
-    />
-
-    {/* ===== 微スキャンライン ===== */}
-    <motion.div
-      className="pointer-events-none absolute inset-0"
-      animate={{ backgroundPositionY: ["0%", "100%"] }}
-      transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-      style={{
-        backgroundImage:
-          "repeating-linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.04) 1px, transparent 1px, transparent 4px)",
-        opacity: 0.22,
-      }}
-    />
-
-    {/* ===== コンテンツ ===== */}
-    <div className="relative z-10">
-表示値の意味：
-攻撃力（平均得点） − 守備力（平均失点）
-
-＋ → 得点力が強い（OFF寄り）
-０ → 攻守が均衡
-− → 守備力が強い（DEF寄り）
-    </div>
-  </motion.div>
-)}
-
-</div>
 </motion.div>
 </motion.div>
 );

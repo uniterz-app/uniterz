@@ -320,7 +320,7 @@ export default function RankingCard({
             "relative z-10 grid items-center gap-2.5 px-2.5",
             isTop3
               ? "grid-cols-[32px_56px_minmax(0,1fr)_84px] py-4"
-              : "grid-cols-[22px_36px_minmax(0,1fr)_50px] py-3",
+              : "grid-cols-[22px_36px_minmax(0,1fr)_58px] py-3",
           ].join(" ")}
         >
           <div className="flex items-center justify-center">
@@ -373,7 +373,12 @@ export default function RankingCard({
             </div>
           </div>
 
-          <div className="flex justify-center">
+          <div
+            className={[
+              "flex justify-center",
+              isTop3 ? "" : "pr-3",
+            ].join(" ")}
+          >
             <div className="flex min-w-[68px] flex-col items-center justify-center text-center">
               <ValueText
                 rank={rank}

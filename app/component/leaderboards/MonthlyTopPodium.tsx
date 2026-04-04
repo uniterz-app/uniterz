@@ -4,8 +4,9 @@ import type { RankingRow } from "@/lib/rankings/types";
 import { alfa, jp } from "@/lib/fonts";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
+import { useMemo } from "react";
 import type { MobileMetric, RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
@@ -110,55 +111,56 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
 /* =========================
  * Size presets
  * ========================= */
+function rankDigitGlow(rank: 1 | 2 | 3): string {
+  if (rank === 1) return "drop-shadow(0 0 14px rgba(255,215,90,0.55))";
+  if (rank === 2) return "drop-shadow(0 0 12px rgba(230,238,250,0.45))";
+  return "drop-shadow(0 0 12px rgba(220,150,90,0.48))";
+}
+
+/** TopPodium と同様、1〜3 位でカード枠の高さを揃える */
+const monthlyPodiumLayoutStable = {
+  cardMinH: "min-h-[92px]",
+  rowPy: "py-1.5",
+  rowMinH: "min-h-[50px]",
+  gap: "gap-2",
+  px: "px-3",
+} as const;
+
 function rankPreset(rank: 1 | 2 | 3) {
+  const avatar = { avatar: "h-[40px] w-[40px]", avatarText: "text-[16px]" };
   if (rank === 1) {
     return {
-      cardMinH: "min-h-[84px]",
-      topH: "h-[44px]",
-      rowPy: "py-1.5",
-      rankW: "w-[24px]",
+      ...monthlyPodiumLayoutStable,
+      rankW: "w-[28px]",
       rankText: "text-[28px]",
-      avatar: "h-[40px] w-[40px]",
-      avatarText: "text-[17px]",
+      ...avatar,
       nameText: "text-[24px]",
-      scoreW: "w-[66px]",
+      scoreW: "min-w-[58px]",
       scoreMain: "text-[28px]",
       scoreSub: "text-[12px]",
-      gap: "gap-1.5",
-      px: "px-3",
     };
   }
   if (rank === 2) {
     return {
-      cardMinH: "min-h-[80px]",
-      topH: "h-[42px]",
-      rowPy: "py-1.5",
-      rankW: "w-[22px]",
+      ...monthlyPodiumLayoutStable,
+      rankW: "w-[26px]",
       rankText: "text-[26px]",
-      avatar: "h-[38px] w-[38px]",
-      avatarText: "text-[15px]",
+      ...avatar,
       nameText: "text-[21px]",
-      scoreW: "w-[62px]",
+      scoreW: "min-w-[54px]",
       scoreMain: "text-[25px]",
       scoreSub: "text-[11px]",
-      gap: "gap-1.5",
-      px: "px-3",
     };
   }
   return {
-    cardMinH: "min-h-[76px]",
-    topH: "h-[38px]",
-    rowPy: "py-1",
-    rankW: "w-[20px]",
+    ...monthlyPodiumLayoutStable,
+    rankW: "w-[24px]",
     rankText: "text-[24px]",
-    avatar: "h-[36px] w-[36px]",
-    avatarText: "text-[14px]",
+    ...avatar,
     nameText: "text-[19px]",
-    scoreW: "w-[58px]",
+    scoreW: "min-w-[50px]",
     scoreMain: "text-[22px]",
     scoreSub: "text-[11px]",
-    gap: "gap-1",
-    px: "px-2.5",
   };
 }
 
@@ -384,23 +386,6 @@ function ScoreText({
 }
 
 /* =========================
- * Card motion
- * ========================= */
-const cardFx: Variants = {
-  hidden: { opacity: 0, y: 14, scale: 0.99 },
-  show: (delay: number) => ({
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      duration: 0.42,
-      delay,
-      ease: [0.22, 1, 0.36, 1],
-    },
-  }),
-};
-
-/* =========================
  * MonthlyTopPodium
  * ========================= */
 export default function MonthlyTopPodium({
@@ -412,6 +397,31 @@ export default function MonthlyTopPodium({
   metric: MobileMetric;
   language?: Language;
 }) {
+  const reduceMotion = useReducedMotion();
+  /** 1位→2位→3位の順に入場（step = rank - 1） */
+  const cardFx = useMemo<Variants>(
+    () => ({
+      hidden: {
+        opacity: 0,
+        y: reduceMotion ? 0 : 14,
+        scale: reduceMotion ? 1 : 0.99,
+      },
+      show: (step: number) => ({
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: reduceMotion
+          ? { duration: 0 }
+          : {
+              duration: 0.45,
+              delay: step * 0.18,
+              ease: [0.22, 1, 0.36, 1],
+            },
+      }),
+    }),
+    [reduceMotion]
+  );
+
   const pathname = usePathname() ?? "";
   const base =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/")
@@ -478,9 +488,9 @@ export default function MonthlyTopPodium({
                   ].join(", "),
                 }}
                 variants={cardFx}
-                initial="hidden"
+                initial={reduceMotion ? "show" : "hidden"}
                 animate="show"
-                custom={(rank - 1) * 0.05}
+                custom={rank - 1}
               >
                 <FadedFlagBg rank={rank} countryCode={countryCode} />
 
@@ -523,24 +533,29 @@ export default function MonthlyTopPodium({
                 />
 
                 <div className={["relative z-10", s.px, s.rowPy].join(" ")}>
-                  <div className={["flex items-center", s.gap, s.topH].join(" ")}>
+                  <div
+                    className={["flex items-center", s.gap, s.rowMinH].join(" ")}
+                  >
                     <div
                       className={[
-                        "shrink-0 text-center font-black leading-none",
+                        "flex shrink-0 items-center justify-center text-center font-black leading-none",
                         alfa.className,
                         s.rankW,
                         s.rankText,
                       ].join(" ")}
-                      style={rank === 2 ? ink.solidStyle : ink.gradStyle}
+                      style={{
+                        ...(rank === 2 ? ink.solidStyle : ink.gradStyle),
+                        filter: rankDigitGlow(rank),
+                      }}
                     >
                       {rank}
                     </div>
 
-                    <div className={rank === 1 ? "-translate-y-[5px]" : "-translate-y-[2px]"}>
+                    <div className="ml-2.5 flex shrink-0 items-center justify-center">
                       <AvatarCircle row={row} rank={rank} />
                     </div>
 
-                    <div className="min-w-0 flex-1 flex items-center justify-center">
+                    <div className="flex min-w-0 flex-1 items-center justify-center">
                       <div
                         className={[
                           "truncate text-center font-black leading-none tracking-[0.005em]",
@@ -566,7 +581,7 @@ export default function MonthlyTopPodium({
 
                     <div
                       className={[
-                        "shrink-0 flex flex-col items-end justify-center",
+                        "flex shrink-0 flex-col items-end justify-center",
                         s.scoreW,
                       ].join(" ")}
                     >

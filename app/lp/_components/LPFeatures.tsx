@@ -55,10 +55,10 @@ export default function LPFeatures() {
             data-lp-stagger-variant="up"
             data-lp-stagger-step="0.13"
           >
-            <div className="relative h-full rounded-[31px] bg-[linear-gradient(180deg,rgba(8,18,30,0.92),rgba(6,16,26,0.86))] p-4 sm:p-6">
+            <div className="relative flex flex-col gap-5 rounded-[31px] bg-[linear-gradient(180deg,rgba(8,18,30,0.92),rgba(6,16,26,0.86))] p-4 sm:p-6">
               <div className="pointer-events-none absolute inset-[1px] rounded-[30px] ring-1 ring-inset ring-white/6" />
 
-              <div className="flex items-center justify-between gap-3">
+              <div className="relative flex items-center justify-between gap-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-300/75 sm:tracking-[0.24em]">
                   Ranking Flow Movie
                 </div>
@@ -67,7 +67,7 @@ export default function LPFeatures() {
                 </div>
               </div>
 
-              <div className="relative mt-4 overflow-hidden rounded-2xl border border-cyan-400/18 bg-black shadow-[0_0_48px_-8px_rgba(34,211,238,0.22)]">
+              <div className="relative overflow-hidden rounded-2xl border border-cyan-400/18 bg-black shadow-[0_0_48px_-8px_rgba(34,211,238,0.22)]">
                 <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br from-cyan-400/20 via-transparent to-emerald-400/10 opacity-50 blur-sm" />
                 <div className="relative overflow-hidden rounded-2xl">
                   {predictionFlowDemo.enabled && predictionFlowDemo.src ? (
@@ -102,7 +102,7 @@ export default function LPFeatures() {
               </div>
 
               {/* ステップは1行のミニマルタイムライン（全部並べすぎない） */}
-              <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+              <div className="relative flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
                 <span className="shrink-0 text-[9px] font-bold uppercase tracking-[0.2em] text-cyan-400/45">
                   Flow
                 </span>

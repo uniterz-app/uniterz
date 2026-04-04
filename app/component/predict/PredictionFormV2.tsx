@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { auth } from "@/lib/firebase";
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import { toast } from "@/app/component/ui/toast";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -67,6 +67,7 @@ export default function PredictionFormV2({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isMobile =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix = isMobile ? "/mobile" : "/web";
@@ -108,6 +109,12 @@ export default function PredictionFormV2({
     },
     [onStandingsOpenChange]
   );
+
+  // チーム詳細から戻ったとき ?standings=1 でスタンディングを開いた状態にする
+  useEffect(() => {
+    if (searchParams.get("standings") !== "1") return;
+    setStandingsState(true);
+  }, [searchParams, setStandingsState]);
 
   function getMobileTeamLabel(
     league: MatchCardProps["league"],
@@ -165,8 +172,6 @@ export default function PredictionFormV2({
 
   const toolButtonBase =
     "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
-
-  const standingsHrefBase = isMobile ? "/mobile/teams" : "/web/teams";
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -460,10 +465,7 @@ export default function PredictionFormV2({
             </div>
             <div className="border-t border-white/10 pt-3">
               {showStandings ? (
-                <NbaStandingsPanel
-                  teamHrefBase={standingsHrefBase}
-                  compact={isMobile}
-                />
+                <NbaStandingsPanel compact={isMobile} />
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-4 text-sm text-white/65">
                   {isEn

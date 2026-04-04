@@ -153,8 +153,9 @@ useGLTF.preload("/logo/uniterz-logo.glb");
 
 export default function UniterzLogo3DBackground() {
   return (
-    <div className="pointer-events-none fixed inset-0 z-0">
+    <div className="pointer-events-none absolute inset-0 z-0 h-full w-full">
       <Canvas
+        className="h-full w-full"
         dpr={[1, 1.5]}
         gl={{
           antialias: true,
