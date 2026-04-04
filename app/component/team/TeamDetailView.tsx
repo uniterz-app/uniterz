@@ -11,11 +11,13 @@ import { Anton } from "next/font/google";
 const anton = Anton({ weight: "400", subsets: ["latin"] });
 
 import { useSearchParams } from "next/navigation";
+import { compareLastGamesByTime } from "@/lib/teamLastGameAt";
 
 type TeamDetail = any;
 type Props = { team: TeamDetail };
 type Game = {
   date: string;
+  sortAtMs?: number;
   home: boolean;
   vs: string;
   score: string;
@@ -129,9 +131,7 @@ function Last10List({ games }: { games: any[] }) {
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [frontIndex, setFrontIndex] = useState<number | null>(null);
 const [expanded, setExpanded] = useState(false);
-const sortedGames = [...games].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+const sortedGames = [...games].sort(compareLastGamesByTime);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -200,7 +200,7 @@ const sortedGames = [...games].sort(
       <div
         ref={containerRef}
         className="
-          relative overflow-y-auto px-2
+          relative overflow-y-auto overflow-x-clip px-1 sm:px-2
           [-ms-overflow-style:none] [scrollbar-width:none]
           [&::-webkit-scrollbar]:hidden
         "
@@ -215,7 +215,7 @@ const sortedGames = [...games].sort(
         {/* 端のカードも“手前”に来るための余白（増量） */}
         <div style={{ height: "44px" }} />
 
-        {[...games].reverse().map((g, i) => {
+        {[...sortedGames].reverse().map((g, i) => {
           const isFront = i === frontIndex;
           const win = g.result === "W";
 
@@ -226,9 +226,9 @@ const sortedGames = [...games].sort(
                 itemRefs.current[i] = el;
               }}
               className="
-                w-full
-                relative flex items-center justify-between
-                rounded-md px-3 py-2.5   /* ← 枠を小さく */
+                w-full min-w-0
+                relative flex items-center justify-between gap-2
+                rounded-md px-2.5 py-2.5 sm:px-3
                 bg-white/6 backdrop-blur-md
                 transition-[transform,filter,opacity,box-shadow,border] duration-200
               "
@@ -258,7 +258,9 @@ const sortedGames = [...games].sort(
               }}
             >
               {/* 左 */}
-              <div className={`text-[13px] font-medium ${isFront ? "text-white" : "text-white/70"}`}>
+              <div
+                className={`min-w-0 flex-1 truncate text-[13px] font-medium ${isFront ? "text-white" : "text-white/70"}`}
+              >
                 {g.date} {g.home ? "vs" : "@"} {g.vs}
               </div>
 
@@ -804,8 +806,8 @@ useEffect(() => {
 
 
 {/* ===== Last Games ===== */}
-<motion.div variants={item}>
-  <DepthCard accent={team.colors.primary} classNameOverride="p-4 h-auto">
+<motion.div variants={item} className="min-w-0">
+  <DepthCard accent={team.colors.primary} classNameOverride="p-4 h-auto overflow-visible">
     {/* タイトル部分 */}
     <div
       className="text-xs text-white/70 mb-2 cursor-pointer select-none"
@@ -818,11 +820,9 @@ useEffect(() => {
     {team.last10.games?.length ? (
       expanded ? (
         /* 展開時は横2列グリッド */
-        <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto px-2 py-2">
+        <div className="grid min-w-0 grid-cols-2 gap-3 max-h-[400px] overflow-y-auto overflow-x-clip px-1 py-2 sm:px-2">
           {(() => {
-            const sorted = [...team.last10.games].sort(
-              (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-            );
+            const sorted = [...team.last10.games].sort(compareLastGamesByTime);
 
             let leftColumn: Game[] = [];
             let rightColumn: Game[] = [];
@@ -868,7 +868,7 @@ useEffect(() => {
                     y: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
                     boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
                   }}
-                  className="flex flex-col justify-between px-3 py-2 rounded-lg bg-gray-900/40 backdrop-blur-sm cursor-pointer"
+                  className="flex min-w-0 flex-col justify-between px-2 py-2 sm:px-3 rounded-lg bg-gray-900/40 backdrop-blur-sm cursor-pointer"
                   style={{
                     border: win
                       ? "1px solid rgba(80,200,255,.7)"
@@ -879,7 +879,7 @@ useEffect(() => {
                   }}
                 >
                   {/* 上段：日付 + VS + チーム */}
-                  <div className="text-[12px] font-medium text-white/70 mb-1">
+                  <div className="min-w-0 truncate text-[12px] font-medium text-white/70 mb-1">
                     {g.date} {g.home ? "vs" : "@"} {g.vs}
                   </div>
 
@@ -899,9 +899,7 @@ useEffect(() => {
         </div>
       ) : (
         <Last10List
-          games={[...team.last10.games].sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-          )}
+          games={[...team.last10.games].sort(compareLastGamesByTime)}
         />
       )
     ) : (

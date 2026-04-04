@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 type UserHit = {
   id: string;
@@ -30,8 +30,9 @@ export async function GET(req: Request) {
     const end = q + "\uf8ff";
 
     // displayName / handle の前方一致
+    const db = getAdminDb();
     const [byNameSnap, byHandleSnap] = await Promise.all([
-      adminDb
+      db
         .collection("users")
         .orderBy("displayName")
         .startAt(q)
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
         .limit(12)
         .get(),
 
-      adminDb
+      db
         .collection("users")
         .orderBy("handle")
         .startAt(q)

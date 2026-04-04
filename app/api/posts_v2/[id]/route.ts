@@ -2,7 +2,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse, NextRequest } from "next/server";
-import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
+import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
 /* ========= 認証 ========= */
@@ -14,7 +14,7 @@ async function requireUid(req: NextRequest): Promise<string> {
   const token = authz?.startsWith("Bearer ") ? authz.slice(7) : null;
   if (!token) throw new Error("unauthorized");
 
-  const decoded = await adminAuth.verifyIdToken(token);
+  const decoded = await getAdminAuth().verifyIdToken(token);
   return decoded.uid;
 }
 
@@ -26,7 +26,7 @@ async function getPostForDelete(uid: string, postId: string) {
     throw err;
   }
 
-  const ref = adminDb.collection("posts").doc(postId);
+  const ref = getAdminDb().collection("posts").doc(postId);
   const snap = await ref.get();
 
   if (!snap.exists) {
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest, ctx: any) {
   try {
     const uid = await requireUid(req);
 
-    const ref = adminDb.collection("posts").doc(params.id);
+    const ref = getAdminDb().collection("posts").doc(params.id);
     const snap = await ref.get();
 
     if (!snap.exists) {
@@ -93,7 +93,7 @@ export async function PATCH(req: NextRequest, ctx: any) {
   try {
     const uid = await requireUid(req);
 
-    const ref = adminDb.collection("posts").doc(params.id);
+    const ref = getAdminDb().collection("posts").doc(params.id);
     const snap = await ref.get();
 
     if (!snap.exists)

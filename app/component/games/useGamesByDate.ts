@@ -44,7 +44,8 @@ export function useGamesByDate(
       if (!dayDate || !range) {
         if (!alive) return;
         setErr(null);
-        setLoading(true);
+        setGames([]);
+        setLoading(false);
         return;
       }
 

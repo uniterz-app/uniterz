@@ -1,18 +1,181 @@
+export type LPMediaType = "image" | "video";
+
+export type LPMediaAsset = {
+  type: LPMediaType;
+  src: string;
+  poster?: string;
+  alt: string;
+  imagePosition?: string;
+  /** 動画デコード前の黒つぶれ対策（ネイティブ img で即表示） */
+  videoBackdropSrc?: string;
+};
+
+export type LPFlowMediaSlot = {
+  enabled: boolean;
+  type: LPMediaType;
+  src: string;
+  poster?: string;
+  alt: string;
+};
+
+export type LPSlotMedia = {
+  id: string;
+  badge: string;
+  title: string;
+  type: LPMediaType;
+  enabled: boolean;
+  src: string;
+  poster?: string;
+  alt: string;
+};
+
+export type LPPlanScreenshot = {
+  tier: "free" | "pro";
+  title: string;
+  enabled: boolean;
+  src: string;
+  alt: string;
+};
+
+export type LPPredictionFlowDemo = {
+  enabled: boolean;
+  type: LPMediaType;
+  src: string;
+  /** 同名ファイルを差し替えたときに変えるとブラウザキャッシュを避けられる */
+  cacheKey?: string;
+  poster?: string;
+  alt: string;
+  steps: readonly string[];
+};
+
+export const heroMediaViews = [
+  {
+    key: "ranking",
+    label: "Ranking",
+    title: "ランキングで、世界と競え。",
+    desc: "ランキングは毎日更新。世界中のユーザーと競いながら、自分の実力を磨ける。",
+    chip: "Daily Ranking",
+    media: {
+      type: "video",
+      src: "/lp/ranking-v2.MP4",
+      poster: "/lp/ranking-v2.PNG",
+      videoBackdropSrc: "/lp/ranking-v2.PNG",
+      alt: "ランキング画面",
+      imagePosition: "center 68%",
+    } satisfies LPMediaAsset,
+  },
+  {
+    key: "games",
+    label: "Games",
+    title: "現在はNBA中心、順次拡張。",
+    desc: "まずはNBAを中心に熱く競う。今後はBリーグやサッカー、国際大会へ順次拡張予定。",
+    chip: "NBA First",
+    media: {
+      type: "image",
+      src: "/lp/games-v2.PNG",
+      poster: "/lp/games-v2.PNG",
+      alt: "試合一覧画面",
+      imagePosition: "center 32%",
+    } satisfies LPMediaAsset,
+  },
+  {
+    key: "post",
+    label: "Post",
+    title: "月間1位は、ユニフォーム贈呈。",
+    desc: "スコア制度で順位を競い、月間1位にはユニフォームを贈呈。観戦に報酬の熱狂を追加する。",
+    chip: "Rank Rewards",
+    media: {
+      type: "image",
+      src: "/lp/predict-v2.PNG",
+      poster: "/lp/predict-v2.PNG",
+      alt: "予想投稿画面",
+      imagePosition: "center 32%",
+    } satisfies LPMediaAsset,
+  },
+] as const;
+
+export const mediaSlots: readonly LPSlotMedia[] = [
+  {
+    id: "hero-main",
+    badge: "RANK SNAPSHOT",
+    title: "世界ランキングの現在地",
+    type: "video",
+    enabled: false,
+    src: "/lp/ranking-v2.MP4",
+    poster: "/lp/ranking-v2.PNG",
+    alt: "世界ランキングのスクリーンショット",
+  },
+  {
+    id: "flow-loop",
+    badge: "DAILY UPDATE",
+    title: "毎日更新ランキングの推移",
+    type: "video",
+    enabled: false,
+    src: "",
+    poster: "/lp/games-v2.PNG",
+    alt: "毎日更新ランキングの推移動画",
+  },
+  {
+    id: "reward-proof",
+    badge: "TOP REWARD",
+    title: "月間1位ユニフォーム贈呈",
+    type: "image",
+    enabled: false,
+    src: "",
+    poster: "/lp/predict-v2.PNG",
+    alt: "月間1位報酬のスクリーンショット",
+  },
+] as const;
+
+export const planScreenshots: readonly LPPlanScreenshot[] = [
+  {
+    tier: "free",
+    title: "Free プラン画面",
+    enabled: false,
+    src: "",
+    alt: "Free プランのスクリーンショット",
+  },
+  {
+    tier: "pro",
+    title: "Pro プラン画面",
+    enabled: false,
+    src: "",
+    alt: "Pro プランのスクリーンショット",
+  },
+] as const;
+
+/** フロー動画は public/lp/prediction-flow.mp4（同名で上書きしたら cacheKey を変える） */
+export const predictionFlowDemo: LPPredictionFlowDemo = {
+  enabled: true,
+  type: "video",
+  src: "/lp/prediction-flow.mp4",
+  cacheKey: "14",
+  poster: "/lp/games-v2.PNG",
+  alt: "試合選択から当たり外れまでのフロー動画",
+  steps: [
+    "試合選択",
+    "数値入力",
+    "投稿",
+    "当たり外れ判定",
+    "ランキング反映",
+  ],
+} as const;
+
 export const heroHighlights = [
   {
     label: "INPUT",
     value: "試合選択",
-    sub: "気になる試合を開いて予想開始",
+    sub: "Bリーグ中心の試合から予想開始",
   },
   {
     label: "TRACKING",
-    value: "自動集計",
-    sub: "結果反映までそのままつながる",
+    value: "毎日更新",
+    sub: "ランキングが毎日変動して熱量が続く",
   },
   {
-    label: "ANALYTICS",
-    value: "4指標分析",
-    sub: "予想の質を立体的に可視化",
+    label: "RANKING",
+    value: "世界と競争",
+    sub: "自分のコミュニティから世界上位を目指せる",
   },
 ] as const;
 
@@ -29,18 +192,18 @@ export const featureCards = [
   },
   {
     eyebrow: "STEP 03",
-    title: "ランキングで現在地が見える",
-    text: "他ユーザーとの比較を通して、自分の順位や立ち位置をすぐに確認できる。",
+    title: "毎日更新ランキングで競う",
+    text: "他ユーザーとの比較で現在地を把握し、世界と競うモチベーションにつながる。",
   },
   {
     eyebrow: "STEP 04",
-    title: "4指標で予想力を分解する",
-    text: "勝率、スコア精度、アップセット得点、総合得点から強みと弱みを見返せる。",
+    title: "自分のコミュニティで熱狂を作る",
+    text: "仲間と順位を競い合い、観戦体験にゲームの熱狂を加える。",
   },
   {
     eyebrow: "STEP 05",
-    title: "日次・月次の推移を追う",
-    text: "一時的な好不調ではなく、継続して強いか、伸びているかまで確認できる。",
+    title: "月間1位ユニフォーム贈呈を狙う",
+    text: "スコア制度で積み上げ、月間トップを取ってユニフォーム贈呈を目指す。",
   },
 ] as const;
 
@@ -49,67 +212,70 @@ export const flowNodes = [
     id: "pick",
     label: "PICK",
     title: "試合選択",
-    text: "日付ごとに試合を見て、予想するカードを選ぶ。",
+    text: "注目カードを選んで予想を始める。",
+    media: {
+      enabled: false,
+      type: "video",
+      src: "",
+      poster: "",
+      alt: "STEP 01 クリップ",
+    } satisfies LPFlowMediaSlot,
   },
   {
     id: "input",
     label: "INPUT",
     title: "予想入力",
-    text: "勝敗とスコアを記録する。",
+    text: "勝敗とスコアを入力する。",
+    media: {
+      enabled: false,
+      type: "video",
+      src: "",
+      poster: "",
+      alt: "STEP 02 クリップ",
+    } satisfies LPFlowMediaSlot,
   },
   {
     id: "sync",
     label: "SYNC",
     title: "結果反映",
-    text: "試合終了後に成績へ自動反映される。",
+    text: "試合終了後に自動で反映。",
+    media: {
+      enabled: false,
+      type: "video",
+      src: "",
+      poster: "",
+      alt: "STEP 03 クリップ",
+    } satisfies LPFlowMediaSlot,
   },
   {
     id: "rank",
     label: "RANK",
-    title: "順位比較",
-    text: "ランキングで自分の現在地を確認する。",
+    title: "毎日順位更新",
+    text: "毎日更新ランキングで現在地を把握。",
+    media: {
+      enabled: false,
+      type: "video",
+      src: "",
+      poster: "",
+      alt: "STEP 04 クリップ",
+    } satisfies LPFlowMediaSlot,
   },
   {
     id: "analyze",
-    label: "ANALYZE",
-    title: "分析",
-    text: "4指標と推移で予想力を見返す。",
+    label: "REWARD",
+    title: "月間報酬",
+    text: "月間1位でユニフォーム贈呈。",
+    media: {
+      enabled: false,
+      type: "video",
+      src: "",
+      poster: "",
+      alt: "STEP 05 クリップ",
+    } satisfies LPFlowMediaSlot,
   },
 ] as const;
 
-export const metrics = [
-  {
-    key: "winRate",
-    short: "WIN",
-    title: "勝率",
-    text: "どれだけ勝敗を当てたか。ベースとなる基本指標。",
-  },
-  {
-    key: "scorePrecision",
-    short: "SCORE",
-    title: "スコア精度",
-    text: "試合展開や点差までどれだけ近く読めたかを評価。",
-  },
-  {
-    key: "upsetPoints",
-    short: "UPSET",
-    title: "アップセット得点",
-    text: "難しい試合を当てた価値を反映し、簡単な的中と区別する。",
-  },
-  {
-    key: "totalPoints",
-    short: "TOTAL",
-    title: "総合得点",
-    text: "各指標を横断して、総合的な予想力を評価。",
-  },
-] as const;
-
-export const metricRadar = [
-  { label: "勝率", value: 84 },
-  { label: "スコア精度", value: 78 },
-  { label: "アップセット", value: 69 },
-  { label: "総合得点", value: 81 },
-] as const;
+export type LPConnectedFlowNode = (typeof flowNodes)[number];
 
 export const steps = [
   {
@@ -120,12 +286,12 @@ export const steps = [
   {
     no: "02",
     title: "結果が自動で記録",
-    text: "試合終了後、成績や各種指標に自動で反映される。",
+    text: "試合終了後、成績とスコアが自動で反映される。",
   },
   {
     no: "03",
-    title: "順位と分析を見る",
-    text: "ランキング、4指標、推移データから自分の現在地を確認できる。",
+    title: "毎日更新ランキングで競う",
+    text: "コミュニティから世界ランキングへ挑み、1位を目指せる。",
   },
 ] as const;
 
@@ -149,29 +315,31 @@ export const planComparisonRows = [
     pro: "full" satisfies PlanComparisonAccess,
   },
   {
-    feature: "勝率・スコア精度・アップセット・総合の4指標ビュー",
+    feature: "ランキング詳細ビュー",
     free: "limited" satisfies PlanComparisonAccess,
     pro: "full" satisfies PlanComparisonAccess,
   },
   {
-    feature: "日次・月次の推移トレンド",
+    feature: "ランキング推移トレンド",
     free: "none" satisfies PlanComparisonAccess,
     pro: "full" satisfies PlanComparisonAccess,
   },
   {
-    feature: "詳細な比較・分析画面",
+    feature: "コミュニティ比較・世界順位ビュー",
     free: "none" satisfies PlanComparisonAccess,
     pro: "full" satisfies PlanComparisonAccess,
   },
 ] as const;
 
 export const planTrustLines = [
+  "ランキングは毎日更新され、最新の順位で競えます。",
+  "月間1位にはユニフォームを贈呈します。",
   "料金の確認・契約・解約はアプリ内の設定からいつでも行えます。",
   "まずは Free で参加し、必要になったタイミングで Pro に切り替えられます。",
 ] as const;
 
 /** Pro を検討しやすいユーザーの目安（LP 用短文） */
-export const planProGuide = "週に何試合も予想したり、推移や4指標で振り返したい人向き。";
+export const planProGuide = "毎日ランキングを追い、コミュニティ比較や世界順位まで深く見たい人向き。";
 
 export const plans = [
   {
@@ -181,9 +349,9 @@ export const plans = [
     /** メイン価格行の直下に表示する補足（期待値の明確化） */
     priceNote: "ずっと無料",
     subtitle: "参加無料",
-    caption: "まず参加して記録する",
+    caption: "まず参加してランキングに挑む",
     summaryLines: [
-      "ランキングと基本成績で立ち位置を把握できる",
+      "毎日更新ランキングと基本成績で立ち位置を把握できる",
       "予想への参加は Free のままでも問題ありません",
     ],
     ctaHref: "#signup",
@@ -194,11 +362,11 @@ export const plans = [
     name: "Pro",
     price: "月額プラン",
     priceNote: "金額はアプリ内で表示",
-    subtitle: "分析をフルで使う",
-    caption: "推移と4指標で予想力を深く見返す",
+    subtitle: "ランキング機能をフルで使う",
+    caption: "推移・比較・世界順位まで使って上位を狙う",
     summaryLines: [
-      "日次・月次の推移で継続力や伸びを追える",
-      "詳細ビューで他者との比較まで踏み込める",
+      "ランキング推移で継続力や伸びを追える",
+      "コミュニティ比較と世界順位ビューで差を詰められる",
     ],
     ctaHref: "#signup",
     button: "登録後、アプリで Pro を確認",
@@ -206,10 +374,10 @@ export const plans = [
 ] as const;
 
 export const stats = [
-  { label: "Metrics", value: "4" },
-  { label: "Flow", value: "Pick → Rank" },
+  { label: "Update", value: "Daily" },
+  { label: "Reward", value: "Top1 Uniform" },
   { label: "Mode", value: "Free / Pro" },
-  { label: "Focus", value: "NBA First" },
+  { label: "Focus", value: "B League First" },
 ] as const;
 
 export const rankingRows = [
@@ -229,11 +397,11 @@ export const signupPoints = [
     sub: "試合終了後、成績や得点が自動で反映される。",
   },
   {
-    title: "ランキングで現在地が見える",
-    sub: "他ユーザーとの比較で、自分の立ち位置が分かる。",
+    title: "毎日更新ランキングで競える",
+    sub: "自分のコミュニティの仲間と、世界中のユーザーとも競いながら立ち位置が分かる。",
   },
   {
-    title: "4指標で予想の質を分析できる",
-    sub: "勝率、スコア精度、アップセット得点、総合得点を見返せる。",
+    title: "月間1位ユニフォーム贈呈を狙える",
+    sub: "スコア制度で順位を上げ、月間トップ報酬の獲得に挑戦できる。",
   },
 ] as const;

@@ -2,7 +2,7 @@
 // ロールアップキャッシュ利用で Firestore read を削減
 
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
   buildWindowCacheForUser,
   isWindowCacheStale,
@@ -100,6 +100,7 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
 }
 
 async function aggregateFromDaily(uid: string, days: number): Promise<SummaryForCards> {
+  const adminDb = getAdminDb();
   const today = new Date();
   const dates = Array.from({ length: days }, (_, i) => {
     const d = new Date(today);
@@ -126,6 +127,7 @@ async function aggregateFromDaily(uid: string, days: number): Promise<SummaryFor
 
 export async function GET(req: Request) {
   try {
+    const adminDb = getAdminDb();
     const { searchParams } = new URL(req.url);
     const uid = searchParams.get("uid");
     const forceRefresh = searchParams.get("refresh") === "1";

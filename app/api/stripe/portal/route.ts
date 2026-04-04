@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 /* =====================
    Stripe（遅延初期化）
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "uid required" }, { status: 400 });
     }
 
-    const userSnap = await adminDb.collection("users").doc(uid).get();
+    const userSnap = await getAdminDb().collection("users").doc(uid).get();
 
     if (!userSnap.exists) {
       return NextResponse.json({ error: "user not found" }, { status: 404 });

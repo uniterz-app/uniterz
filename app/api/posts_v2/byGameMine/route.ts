@@ -3,12 +3,12 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
+import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 
 async function requireUid(req: Request): Promise<string> {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) throw new Error("unauthorized");
-  const decoded = await adminAuth.verifyIdToken(token);
+  const decoded = await getAdminAuth().verifyIdToken(token);
   return decoded.uid;
 }
 
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     }
 
     // 該当する v2 投稿を探す
-    const q = await adminDb
+    const q = await getAdminDb()
       .collection("posts")
       .where("authorUid", "==", uid)
       .where("gameId", "==", gameId)
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
       .get();
 
     // 試合開始時刻取得
-    const gameSnap = await adminDb.collection("games").doc(gameId).get();
+    const gameSnap = await getAdminDb().collection("games").doc(gameId).get();
     const g = gameSnap.exists ? gameSnap.data() : {};
     const startAtMillis: number | null =
       typeof g?.startAtMillis === "number"

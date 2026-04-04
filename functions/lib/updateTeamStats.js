@@ -146,11 +146,16 @@ awayWins, // ★ 追加
     await batch.commit();
     // ===== currentStreak / lastGames =====
     const now = firestore_1.Timestamp.now();
+    const playedAtForEntry = game.playedAt && typeof game.playedAt.toMillis === "function"
+        ? game.playedAt
+        : now;
     const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-    function calcIsB2B(lastGames) {
-        const prevAt = lastGames.length > 0 ? lastGames[lastGames.length - 1].at : null;
-        return (prevAt != null &&
-            now.toMillis() - prevAt.toMillis() <= ONE_DAY_MS);
+    function calcIsB2B(lastGames, currentPlayedAt) {
+        var _a;
+        const prevAt = lastGames.length > 0 ? (_a = lastGames[lastGames.length - 1]) === null || _a === void 0 ? void 0 : _a.at : null;
+        if (prevAt == null || typeof prevAt.toMillis !== "function")
+            return false;
+        return (Math.abs(currentPlayedAt.toMillis() - prevAt.toMillis()) <= ONE_DAY_MS);
     }
     // HOME
     await db.runTransaction(async (tx) => {
@@ -158,7 +163,7 @@ awayWins, // ★ 追加
         const snap = await tx.get(homeRef);
         const current = (_a = snap.get("currentStreak")) !== null && _a !== void 0 ? _a : 0;
         const lastGames = ((_b = snap.get("lastGames")) !== null && _b !== void 0 ? _b : []);
-        const isB2B = calcIsB2B(lastGames);
+        const isB2B = calcIsB2B(lastGames, playedAtForEntry);
         let nextStreak = 0;
         if (homeWin)
             nextStreak = current > 0 ? current + 1 : 1;
@@ -171,7 +176,8 @@ awayWins, // ★ 追加
             lastGames: [
                 ...lastGames,
                 {
-                    at: now,
+                    at: playedAtForEntry,
+                    playedAt: playedAtForEntry,
                     homeAway: "home",
                     isWin: homeWin,
                     teamScore: game.homeScore,
@@ -196,7 +202,7 @@ awayWins, // ★ 追加
             nextStreak = current > 0 ? current + 1 : 1;
         else if (!isDraw)
             nextStreak = current < 0 ? current - 1 : -1;
-        const isB2B = calcIsB2B(lastGames);
+        const isB2B = calcIsB2B(lastGames, playedAtForEntry);
         tx.set(awayRef, {
             currentStreak: nextStreak,
             b2bGames: firestore_1.FieldValue.increment(isB2B ? 1 : 0),
@@ -204,7 +210,8 @@ awayWins, // ★ 追加
             lastGames: [
                 ...lastGames,
                 {
-                    at: now,
+                    at: playedAtForEntry,
+                    playedAt: playedAtForEntry,
                     homeAway: "away",
                     isWin: awayWin,
                     teamScore: game.awayScore,

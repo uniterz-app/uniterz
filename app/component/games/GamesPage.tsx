@@ -108,9 +108,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
-  const [leagueReady, setLeagueReady] = useState(false);
   const didInitLeague = useRef(false);
 
+  // user_stats は後追いのみ。初回描画をブロックしない（試合カレンダーと並列で速く見せる）
   useEffect(() => {
     let alive = true;
 
@@ -121,8 +121,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       if (!user) {
         if (!alive) return;
         didInitLeague.current = true;
-        setLeague("nba");
-        setLeagueReady(true);
         return;
       }
 
@@ -130,10 +128,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
         if (!alive) return;
 
+        didInitLeague.current = true;
+
         if (!snap.exists()) {
-          didInitLeague.current = true;
-          setLeague("nba");
-          setLeagueReady(true);
           return;
         }
 
@@ -145,19 +142,17 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           j1: data?.leagues?.j1?.posts ?? 0,
         };
 
-        const sorted = (Object.entries(leaguePosts) as [League, number][])
-          .sort((a, b) => b[1] - a[1]);
+        const sorted = (Object.entries(leaguePosts) as [League, number][]).sort(
+          (a, b) => b[1] - a[1]
+        );
 
-        const [topLeague, topCount] = sorted[0];
-
-        didInitLeague.current = true;
-        setLeague(topCount > 0 ? topLeague : "nba");
-        setLeagueReady(true);
+        const [, topCount] = sorted[0];
+        if (topCount > 0) {
+          setLeague(sorted[0][0]);
+        }
       } catch {
         if (!alive) return;
         didInitLeague.current = true;
-        setLeague("nba");
-        setLeagueReady(true);
       }
     };
 
@@ -189,8 +184,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
      初期選択日を render 中に確定
   ========================= */
   const selected = useMemo(() => {
-    if (!leagueReady) return null;
-
     return findInitialGameDay({
       gameDays,
       stateSelected: selectedByLeague[league] ?? null,
@@ -198,21 +191,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       todayKey,
       timeZone: dayTimeZone,
     });
-  }, [
-    leagueReady,
-    gameDays,
-    selectedByLeague,
-    league,
-    dateParam,
-    todayKey,
-    dayTimeZone,
-  ]);
+  }, [gameDays, selectedByLeague, league, dateParam, todayKey, dayTimeZone]);
 
   /* =========================
      state に保存
   ========================= */
   useEffect(() => {
-    if (!leagueReady) return;
     if (!selected) return;
     if (selectedByLeague[league]) return;
 
@@ -220,7 +204,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ...prev,
       [league]: selected,
     }));
-  }, [leagueReady, selected, selectedByLeague, league]);
+  }, [selected, selectedByLeague, league]);
 
   /* =========================
      URL同期

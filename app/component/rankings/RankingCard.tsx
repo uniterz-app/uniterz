@@ -179,7 +179,7 @@ function ValueText({
           "inline-flex items-baseline justify-center leading-none",
           rankHudNumClass,
         ].join(" ")}
-        style={glowStyle}
+        style={valueStyle}
       >
         <span className={baseTextClass}>{Math.round(counted)}</span>
         <span

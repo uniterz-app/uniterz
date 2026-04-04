@@ -1,5 +1,6 @@
 // functions/src/fetchGameContext.ts
 import { Firestore } from "firebase-admin/firestore";
+import type { Timestamp } from "firebase-admin/firestore";
 
 /* =========================
  * Types
@@ -15,6 +16,8 @@ export type NormalizedGame = {
   final: boolean;
   homeRank: number | null;
   awayRank: number | null;
+  /** 試合開始（lastGames の日時用。JST 優先） */
+  playedAt?: Timestamp | null;
 };
 
 export type GameContext = {
@@ -44,6 +47,7 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     final: !!after?.final,
     homeRank: null,
     awayRank: null,
+    playedAt: after?.startAtJst ?? after?.startAt ?? null,
   };
 }
 
