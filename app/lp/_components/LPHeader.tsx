@@ -5,12 +5,16 @@ import Link from "next/link";
 
 const NAV_ITEMS = [
   { label: "Features", href: "#features" },
-  { label: "Metrics", href: "#metrics" },
   { label: "Plans", href: "#plans" },
   { label: "Contact", href: "#signup" },
 ] as const;
 
-export default function LPHeader() {
+type LPHeaderProps = {
+  /** ロゴの遷移先（モバイル LP は `/mobile/lp` を指定） */
+  homeHref?: string;
+};
+
+export default function LPHeader({ homeHref = "/lp" }: LPHeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-cyan-300/10 bg-[rgba(3,7,15,0.72)] backdrop-blur-2xl">
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/28 to-transparent" />
@@ -19,7 +23,7 @@ export default function LPHeader() {
 
       <div className="relative mx-auto flex h-[72px] w-full max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-10">
         <Link
-          href="/lp"
+          href={homeHref}
           className="group flex shrink-0 items-center gap-3 sm:gap-4"
         >
           <div className="relative h-8 w-8 shrink-0 sm:h-9 sm:w-9">
@@ -36,9 +40,6 @@ export default function LPHeader() {
           <div className="flex flex-col leading-none">
             <span className="text-[21px] font-semibold tracking-[-0.03em] text-white">
               Uniterz
-            </span>
-            <span className="hidden text-[10px] font-medium uppercase tracking-[0.22em] text-cyan-200/48 sm:block">
-              Sports Prediction Platform
             </span>
           </div>
         </Link>

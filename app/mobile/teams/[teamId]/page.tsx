@@ -11,6 +11,8 @@ import TeamDetailView from "@/app/component/team/TeamDetailView";
 import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import { teamColorsNBA } from "@/lib/teams-nba";
 import { TEAM_SHORT } from "@/lib/team-short";
+import { lastGameAtMillis } from "@/lib/teamLastGameAt";
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 
 const FALLBACK_COLORS = {
   primary: "#555555",
@@ -59,17 +61,15 @@ export default function TeamPage() {
 
       const last10Games = lastGamesRaw
         .slice()
-        .sort((a: any, b: any) => {
-          const atA = a?.at?.toDate?.()?.getTime?.() ?? 0;
-          const atB = b?.at?.toDate?.()?.getTime?.() ?? 0;
-          return atB - atA; // 新しい順
-        })
+        .sort((a: any, b: any) => lastGameAtMillis(b) - lastGameAtMillis(a))
         .slice(0, 10)
         .map((g: any) => {
           const oppTeamId = (g.oppTeamId ?? "") as string;
+          const rawTs = g.playedAt ?? g.at;
 
           return {
-            date: toMD(g.at), // 1/24
+            date: toMD(rawTs),
+            sortAtMs: lastGameAtMillis(g),
             vs: TEAM_SHORT[oppTeamId] ?? oppTeamId ?? "UNK",
             home: g.homeAway === "home",
             score: `${g.teamScore ?? 0}-${g.oppScore ?? 0}`,
@@ -81,15 +81,30 @@ export default function TeamPage() {
       const w10 = last10Games.filter((x: any) => x.result === "W").length;
       const l10 = last10Games.filter((x: any) => x.result === "L").length;
 
+      const homeWins = d.homeWins ?? 0;
+      const awayWins = d.awayWins ?? 0;
+      const rs = nbaRegularSeasonWinsLosses({
+        wins: d.wins ?? 0,
+        losses: d.losses ?? 0,
+        homeGames,
+        homeWins,
+        awayGames,
+        awayWins,
+        cupFinalWins: d.cupFinalWins ?? 0,
+        cupFinalLosses: d.cupFinalLosses ?? 0,
+      });
+      const rsTotal = rs.wins + rs.losses;
+      const rsWinRate = rsTotal > 0 ? (rs.wins / rsTotal) * 100 : 0;
+
       const teamDetail = {
         id: teamId,
         name: NBA_TEAM_NAME_BY_ID[teamId] ?? d.name ?? teamId,
         conference: d.conference,
         rank: d.rank,
 
-        wins: d.wins ?? 0,
-        losses: d.losses ?? 0,
-        winRate: (d.winRate ?? 0) * 100,
+        wins: rs.wins,
+        losses: rs.losses,
+        winRate: rsWinRate,
 
         avgPointsFor: gp > 0 ? (d.pointsForTotal ?? 0) / gp : 0,
         avgPointsAgainst: gp > 0 ? (d.pointsAgainstTotal ?? 0) / gp : 0,
@@ -100,15 +115,15 @@ export default function TeamPage() {
         // ✅ home/away 平均得点・平均失点
         homeAway: {
           home: {
-            wins: d.homeWins ?? 0,
-            losses: Math.max(0, homeGames - (d.homeWins ?? 0)),
+            wins: homeWins,
+            losses: Math.max(0, homeGames - homeWins),
             avgFor: homeGames > 0 ? (d.homePointsForTotal ?? 0) / homeGames : 0,
             avgAgainst:
               homeGames > 0 ? (d.homePointsAgainstTotal ?? 0) / homeGames : 0,
           },
           away: {
-            wins: d.awayWins ?? 0,
-            losses: Math.max(0, awayGames - (d.awayWins ?? 0)),
+            wins: awayWins,
+            losses: Math.max(0, awayGames - awayWins),
             avgFor: awayGames > 0 ? (d.awayPointsForTotal ?? 0) / awayGames : 0,
             avgAgainst:
               awayGames > 0 ? (d.awayPointsAgainstTotal ?? 0) / awayGames : 0,

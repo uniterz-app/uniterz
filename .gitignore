@@ -33,6 +33,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# 一時的にキーを貼って .env.local に移す用（コミットしない）
+.env.paste-temp
+env-paste-temp.txt
 
 # vercel
 .vercel

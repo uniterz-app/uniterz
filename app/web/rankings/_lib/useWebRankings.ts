@@ -9,7 +9,9 @@ import type {
 import {
   METRICS,
 } from "@/app/component/rankings/_data/mockRows";
+import { padRankingRowsForDev } from "@/lib/rankings/rankingDevMocks";
 import { toMobileRows } from "@/lib/rankings/rankingTransform";
+import type { RankingMetric, RankingRow } from "@/lib/rankings/useRanking";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
@@ -57,6 +59,36 @@ function mergeRowsWithMeta(
       totalPosts: totalPostsByUid.get(row.uid),
     }))
   );
+}
+
+/** バルク取得後に指標ごとに UI 行を並べ替え（モック追補後も順位が正しく見えるように） */
+function sortWebRankingRows(
+  metric: MobileMetric,
+  rows: WebRankingRow[]
+): WebRankingRow[] {
+  const copy = [...rows];
+  switch (metric) {
+    case "totalScore":
+      copy.sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0));
+      break;
+    case "winRate":
+      copy.sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0));
+      break;
+    case "marginPrecision":
+      copy.sort((a, b) =>
+        (b.marginPrecisionScore ?? 0) - (a.marginPrecisionScore ?? 0)
+      );
+      break;
+    case "upsetScore":
+      copy.sort((a, b) => (b.upsetScore ?? 0) - (a.upsetScore ?? 0));
+      break;
+    case "streak":
+      copy.sort((a, b) => (b.streak ?? 0) - (a.streak ?? 0));
+      break;
+    default:
+      break;
+  }
+  return copy;
 }
 
 export function useWebRankings() {
@@ -123,7 +155,11 @@ export function useWebRankings() {
             const apiMetric = apiMetricByMobile[m];
             const data = byMetric[apiMetric];
             const rawRows = Array.isArray(data?.rows) ? data.rows : [];
-            next[m] = mergeRowsWithMeta(m, rawRows);
+            const padded = padRankingRowsForDev(
+              rawRows as RankingRow[],
+              apiMetric as RankingMetric
+            );
+            next[m] = sortWebRankingRows(m, mergeRowsWithMeta(m, padded));
           }
           return next;
         });

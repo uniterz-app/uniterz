@@ -14,16 +14,21 @@ export default function EventGate() {
   const [uid, setUid] = useState<string | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const pathname = usePathname();
+  const isPublicLp = pathname === "/lp" || pathname === "/mobile/lp";
 
   useEffect(() => {
+    if (isPublicLp) return;
+
     const unsub = onAuthStateChanged(auth, (user) => {
       setUid(user ? user.uid : null);
     });
 
     return () => unsub();
-  }, []);
+  }, [isPublicLp]);
 
   useEffect(() => {
+    if (isPublicLp) return;
+
     if (!uid) {
       setOnboardingComplete(false);
       return;
@@ -41,9 +46,10 @@ export default function EventGate() {
     });
 
     return () => unsub();
-  }, [uid]);
+  }, [isPublicLp, uid]);
 
   useEffect(() => {
+    if (isPublicLp) return;
     if (!uid) return;
     if (!onboardingComplete) return;
 
@@ -57,7 +63,7 @@ export default function EventGate() {
     if (localStorage.getItem(key)) return;
 
     setOpen(true);
-  }, [uid, onboardingComplete, pathname]);
+  }, [isPublicLp, uid, onboardingComplete, pathname]);
 
   const close = () => {
     localStorage.setItem(
@@ -66,6 +72,8 @@ export default function EventGate() {
     );
     setOpen(false);
   };
+
+  if (isPublicLp) return null;
 
   if (!open) return null;
 

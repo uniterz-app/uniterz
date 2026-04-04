@@ -1,10 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
   src: string;
   alt: string;
+  mediaType?: "image" | "video";
+  posterSrc?: string;
   widthClassName?: string;
   glowClassName?: string;
   imageClassName?: string;
@@ -16,11 +19,17 @@ type Props = {
   bezelClassName?: string;
   notchClassName?: string;
   imagePosition?: string;
+  /** スクショ上部の時刻・電波などをマスク（LP 用） */
+  maskScreenshotStatusBar?: boolean;
+  /** 動画の待機中に敷く画像（ネイティブ img／黒画面防止） */
+  videoBackdropSrc?: string;
 };
 
 export default function PhoneMock({
   src,
   alt,
+  mediaType = "image",
+  posterSrc,
   widthClassName = "w-[320px]",
   glowClassName = "from-cyan-400/12 via-sky-400/8 to-emerald-300/10",
   imageClassName = "",
@@ -32,7 +41,26 @@ export default function PhoneMock({
   bezelClassName = "rounded-[39px]",
   notchClassName = "top-[7px] h-[24px] w-[40%]",
   imagePosition = "center top",
+  maskScreenshotStatusBar = false,
+  videoBackdropSrc,
 }: Props) {
+  const [videoFailed, setVideoFailed] = useState(false);
+  /** デコード完了までポスターを見せ、切り替え時の黒画面を防ぐ */
+  const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const fallbackImageSrc = useMemo(() => posterSrc || src, [posterSrc, src]);
+  const shouldRenderVideo = mediaType === "video" && !videoFailed && !!src;
+
+  useEffect(() => {
+    setVideoFailed(false);
+    setVideoReady(false);
+  }, [src, mediaType]);
+
+  useEffect(() => {
+    if (!shouldRenderVideo || !videoRef.current) return;
+    videoRef.current.load();
+  }, [shouldRenderVideo, src]);
+
   return (
     <div className={`relative mx-auto ${widthClassName}`}>
       <div
@@ -71,18 +99,89 @@ export default function PhoneMock({
             screenClassName,
           ].join(" ")}
         >
-          <Image
-            src={src}
-            alt={alt}
-            fill
-            priority={priority}
-            sizes="(max-width: 768px) 72vw, 320px"
-            className={["object-cover select-none", imageClassName].join(" ")}
-            style={{ objectPosition: imagePosition }}
-          />
+          {shouldRenderVideo ? (
+            <div className="relative h-full w-full bg-black">
+              {/* videoBackdropSrc があるときは img で即描画（Next/Image の遅延で黒くならない） */}
+              {videoBackdropSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element -- LP 動画待機用の即時表示
+                <img
+                  key={videoBackdropSrc}
+                  src={videoBackdropSrc}
+                  alt=""
+                  className={[
+                    "absolute inset-0 z-0 h-full w-full object-cover select-none transition-opacity duration-200",
+                    imageClassName,
+                    videoReady ? "opacity-0" : "opacity-100",
+                  ].join(" ")}
+                  style={{ objectPosition: imagePosition }}
+                  aria-hidden
+                />
+              ) : (
+                <Image
+                  key={fallbackImageSrc}
+                  src={fallbackImageSrc}
+                  alt=""
+                  fill
+                  priority={priority}
+                  sizes="(max-width: 768px) 72vw, 320px"
+                  className={[
+                    "object-cover select-none transition-opacity duration-200",
+                    imageClassName,
+                    videoReady ? "opacity-0" : "opacity-100",
+                  ].join(" ")}
+                  style={{ objectPosition: imagePosition }}
+                  aria-hidden
+                />
+              )}
+              <video
+                key={src}
+                ref={videoRef}
+                src={src}
+                poster={videoBackdropSrc ?? fallbackImageSrc}
+                aria-label={alt}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                onError={() => setVideoFailed(true)}
+                onLoadedData={() => setVideoReady(true)}
+                onCanPlay={() => setVideoReady(true)}
+                className={[
+                  "absolute inset-0 z-[1] h-full w-full object-cover select-none transition-opacity duration-200",
+                  imageClassName,
+                  videoReady ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+                style={{ objectPosition: imagePosition }}
+              />
+            </div>
+          ) : (
+            <div className="relative h-full w-full bg-black">
+              <Image
+                key={fallbackImageSrc}
+                src={fallbackImageSrc}
+                alt={alt}
+                fill
+                priority={priority}
+                sizes="(max-width: 768px) 72vw, 320px"
+                className={["object-cover select-none", imageClassName].join(
+                  " "
+                )}
+                style={{ objectPosition: imagePosition }}
+              />
+            </div>
+          )}
 
           {!hideStatusBar ? (
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[36px] bg-[linear-gradient(180deg,rgba(0,0,0,0.24)_0%,rgba(0,0,0,0.08)_45%,rgba(0,0,0,0)_100%)]" />
+          ) : null}
+
+          {/* スクショに含まれる時刻・ステータス行を塗りつぶし（ノッチ下までなじませる） */}
+          {maskScreenshotStatusBar ? (
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 z-[22] h-[min(12.5%,52px)] bg-gradient-to-b from-[#05080c] from-[55%] via-[#05080c]/88 to-transparent"
+              aria-hidden
+            />
           ) : null}
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[16%] bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.016)_24%,rgba(255,255,255,0)_56%)]" />

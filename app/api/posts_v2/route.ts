@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
+import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */
@@ -93,138 +93,170 @@ async function requireUid(req: Request): Promise<string> {
   const token = authz?.startsWith("Bearer ") ? authz.slice(7) : null;
   if (!token) throw new Error("unauthorized");
 
-  const decoded = await adminAuth.verifyIdToken(token);
+  const decoded = await getAdminAuth().verifyIdToken(token);
   return decoded.uid;
 }
 
 /* ========= POST /api/posts_v2 ========= */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  if (!body) {
-    return NextResponse.json(
-      { ok: false, error: "invalid json" },
-      { status: 400 }
-    );
-  }
-
-  const parsed = sanitizeBodyV2(body);
-  if (!parsed.ok) {
-    return NextResponse.json(
-      { ok: false, error: parsed.error },
-      { status: 400 }
-    );
-  }
-
-  let uid: string;
   try {
-    uid = await requireUid(req);
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "unauthorized" },
-      { status: 401 }
-    );
-  }
-
-  let authorDisplayName = "ユーザー";
-  let authorPhotoURL: string | null = null;
-  let authorHandle: string | null = null;
-
-  try {
-    const userDoc = await adminDb.collection("users").doc(uid).get();
-    if (userDoc.exists) {
-      const u = userDoc.data() || {};
-      authorDisplayName = u.displayName || authorDisplayName;
-      authorPhotoURL = u.photoURL || u.avatarUrl || null;
-      authorHandle = u.handle || u.username || u.slug || null;
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json(
+        { ok: false, error: "invalid json" },
+        { status: 400 }
+      );
     }
-  } catch {}
 
-  const gameSnap = await adminDb.collection("games").doc(parsed.gameId).get();
-  if (!gameSnap.exists) {
-    return NextResponse.json(
-      { ok: false, error: "game not found" },
-      { status: 404 }
-    );
-  }
+    const parsed = sanitizeBodyV2(body);
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { ok: false, error: parsed.error },
+        { status: 400 }
+      );
+    }
 
-  const g = gameSnap.data() as any;
-  const league: League = normalizeLeague(g?.league);
+    let uid: string;
+    try {
+      uid = await requireUid(req);
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+      if (msg === "unauthorized") {
+        return NextResponse.json(
+          { ok: false, error: "unauthorized" },
+          { status: 401 }
+        );
+      }
+      console.error("[POST /api/posts_v2] auth", e);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "auth_config",
+          message:
+            process.env.NODE_ENV === "development"
+              ? msg
+              : "サーバー設定を確認してください（Firebase Admin）",
+        },
+        { status: 500 }
+      );
+    }
 
-  const startAtTs =
-    toAdminTimestamp(g?.startAtJst) ??
-    toAdminTimestamp(g?.startAt) ??
-    null;
+    const adminDb = getAdminDb();
 
-  if (!startAtTs) {
-    return NextResponse.json(
-      { ok: false, error: "invalid game startAt" },
-      { status: 500 }
-    );
-  }
+    let authorDisplayName = "ユーザー";
+    let authorPhotoURL: string | null = null;
+    let authorHandle: string | null = null;
 
-  const startAtMillis = startAtTs.toMillis();
-  const startAtIso = new Date(startAtMillis).toISOString();
+    try {
+      const userDoc = await adminDb.collection("users").doc(uid).get();
+      if (userDoc.exists) {
+        const u = userDoc.data() || {};
+        authorDisplayName = u.displayName || authorDisplayName;
+        authorPhotoURL = u.photoURL || u.avatarUrl || null;
+        authorHandle = u.handle || u.username || u.slug || null;
+      }
+    } catch {}
 
-  if (Date.now() >= startAtMillis) {
-    return NextResponse.json(
-      { ok: false, error: "locked: game started" },
-      { status: 403 }
-    );
-  }
+    const gameSnap = await adminDb.collection("games").doc(parsed.gameId).get();
+    if (!gameSnap.exists) {
+      return NextResponse.json(
+        { ok: false, error: "game not found" },
+        { status: 404 }
+      );
+    }
 
-  const dup = await adminDb
-    .collection("posts")
-    .where("authorUid", "==", uid)
-    .where("gameId", "==", parsed.gameId)
-    .where("schemaVersion", "==", 2)
-    .limit(1)
-    .get();
+    const g = gameSnap.data() as any;
+    const league: League = normalizeLeague(g?.league);
 
-  if (!dup.empty) {
-    return NextResponse.json(
-      { ok: false, error: "duplicate", existingId: dup.docs[0].id },
-      { status: 409 }
-    );
-  }
+    const startAtTs =
+      toAdminTimestamp(g?.startAtJst) ??
+      toAdminTimestamp(g?.startAt) ??
+      null;
 
-  const data = {
-    schemaVersion: 2,
+    if (!startAtTs) {
+      return NextResponse.json(
+        { ok: false, error: "invalid game startAt" },
+        { status: 500 }
+      );
+    }
 
-    authorUid: uid,
-    authorDisplayName,
-    authorPhotoURL,
-    authorHandle,
+    const startAtMillis = startAtTs.toMillis();
+    const startAtIso = new Date(startAtMillis).toISOString();
 
-    gameId: parsed.gameId,
-    league,
-    home: g?.home ?? null,
-    away: g?.away ?? null,
-    status: (g?.status as Status) || "scheduled",
+    if (Date.now() >= startAtMillis) {
+      return NextResponse.json(
+        { ok: false, error: "locked: game started" },
+        { status: 403 }
+      );
+    }
 
-    startAt: startAtTs,
-    startAtMillis,
-    startAtIso,
+    const dup = await adminDb
+      .collection("posts")
+      .where("authorUid", "==", uid)
+      .where("gameId", "==", parsed.gameId)
+      .where("schemaVersion", "==", 2)
+      .limit(1)
+      .get();
 
-    prediction: parsed.prediction,
-    comment: parsed.comment,
+    if (!dup.empty) {
+      return NextResponse.json(
+        { ok: false, error: "duplicate", existingId: dup.docs[0].id },
+        { status: 409 }
+      );
+    }
 
-    result: null,
-    stats: null as any,
+    const data = {
+      schemaVersion: 2,
 
-    likeCount: 0,
-    saveCount: 0,
+      authorUid: uid,
+      authorDisplayName,
+      authorPhotoURL,
+      authorHandle,
 
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
+      gameId: parsed.gameId,
+      league,
+      home: g?.home ?? null,
+      away: g?.away ?? null,
+      status: (g?.status as Status) || "scheduled",
 
-  try {
-    const ref = await adminDb.collection("posts").add(data);
-    return NextResponse.json({ ok: true, id: ref.id }, { status: 201 });
+      startAt: startAtTs,
+      startAtMillis,
+      startAtIso,
+
+      prediction: parsed.prediction,
+      comment: parsed.comment,
+
+      result: null,
+      stats: null as any,
+
+      likeCount: 0,
+      saveCount: 0,
+
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    try {
+      const ref = await adminDb.collection("posts").add(data);
+      return NextResponse.json({ ok: true, id: ref.id }, { status: 201 });
+    } catch (e: any) {
+      console.error("[POST /api/posts_v2]", e?.message ?? e);
+      return NextResponse.json(
+        { ok: false, error: "write failed" },
+        { status: 500 }
+      );
+    }
   } catch (e: any) {
-    console.error("[POST /api/posts_v2]", e?.message ?? e);
+    console.error("[POST /api/posts_v2] fatal", e);
     return NextResponse.json(
-      { ok: false, error: "write failed" },
+      {
+        ok: false,
+        error: "server_error",
+        message:
+          process.env.NODE_ENV === "development"
+            ? String(e?.message ?? e)
+            : undefined,
+      },
       { status: 500 }
     );
   }

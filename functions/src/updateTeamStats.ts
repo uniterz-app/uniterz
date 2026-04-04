@@ -27,6 +27,7 @@ export async function updateTeamStats({
     awayScore: number;
     homeRank: number | null;
     awayRank: number | null;
+    playedAt?: Timestamp | null;
   };
   homeConference?: "east" | "west";
   awayConference?: "east" | "west";
@@ -236,25 +237,28 @@ vsGroupLowerBigWins: FieldValue.increment(
 
   // ===== currentStreak / lastGames =====
   const now = Timestamp.now();
+  const playedAtForEntry: Timestamp =
+    game.playedAt && typeof game.playedAt.toMillis === "function"
+      ? game.playedAt
+      : now;
 
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-function calcIsB2B(lastGames: any[]) {
-  const prevAt =
-    lastGames.length > 0 ? lastGames[lastGames.length - 1].at : null;
-
-  return (
-    prevAt != null &&
-    now.toMillis() - prevAt.toMillis() <= ONE_DAY_MS
-  );
-}
+  function calcIsB2B(lastGames: any[], currentPlayedAt: Timestamp) {
+    const prevAt =
+      lastGames.length > 0 ? lastGames[lastGames.length - 1]?.at : null;
+    if (prevAt == null || typeof prevAt.toMillis !== "function") return false;
+    return (
+      Math.abs(currentPlayedAt.toMillis() - prevAt.toMillis()) <= ONE_DAY_MS
+    );
+  }
 
   // HOME
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(homeRef);
     const current = snap.get("currentStreak") ?? 0;
     const lastGames = (snap.get("lastGames") ?? []) as any[];
-    const isB2B = calcIsB2B(lastGames);
+    const isB2B = calcIsB2B(lastGames, playedAtForEntry);
 
     let nextStreak = 0;
     if (homeWin) nextStreak = current > 0 ? current + 1 : 1;
@@ -271,7 +275,8 @@ tx.set(
     lastGames: [
       ...lastGames,
       {
-        at: now,
+        at: playedAtForEntry,
+        playedAt: playedAtForEntry,
         homeAway: "home",
         isWin: homeWin,
         teamScore: game.homeScore,
@@ -297,8 +302,7 @@ tx.set(
     let nextStreak = 0;
     if (awayWin) nextStreak = current > 0 ? current + 1 : 1;
     else if (!isDraw) nextStreak = current < 0 ? current - 1 : -1;
-    const isB2B = calcIsB2B(lastGames);
-
+    const isB2B = calcIsB2B(lastGames, playedAtForEntry);
 
 tx.set(
   awayRef,
@@ -311,7 +315,8 @@ tx.set(
     lastGames: [
       ...lastGames,
       {
-        at: now,
+        at: playedAtForEntry,
+        playedAt: playedAtForEntry,
         homeAway: "away",
         isWin: awayWin,
         teamScore: game.awayScore,

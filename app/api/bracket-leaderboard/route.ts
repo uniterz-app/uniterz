@@ -1,7 +1,7 @@
 // app/api/bracket-leaderboard/route.ts
 
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +27,7 @@ type ApiResponse = {
 
 export async function GET(req: Request) {
   try {
+    const adminDb = getAdminDb();
     const { searchParams } = new URL(req.url);
     const season = searchParams.get("season") ?? "";
 

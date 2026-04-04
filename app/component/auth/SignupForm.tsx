@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -21,21 +21,30 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
 
   const router = useRouter();
 
-  const osIsJa =
-    typeof navigator !== "undefined" &&
-    navigator.language?.toLowerCase().startsWith("ja");
+  // SSR と初回クライアントで同じ文言にする（navigator はマウント後に反映）
+  const [isJa, setIsJa] = useState(true);
 
-  const ui = {
-    title: osIsJa ? "アカウント作成" : "Create Account",
-    emailPlaceholder: osIsJa ? "メールアドレス" : "Email Address",
-    passwordPlaceholder: osIsJa ? "パスワード" : "Password",
-    signupCta: osIsJa ? "サインアップ" : "SIGN UP",
-    alreadyText: osIsJa
-      ? "すでにアカウントをお持ちの方は"
-      : "Already have an account?",
-    loginText: osIsJa ? "ログイン" : "Log in",
-    signupFailed: osIsJa ? "サインアップに失敗しました" : "Signup failed",
-  };
+  useEffect(() => {
+    setIsJa(
+      typeof navigator !== "undefined" &&
+        navigator.language?.toLowerCase().startsWith("ja")
+    );
+  }, []);
+
+  const ui = useMemo(
+    () => ({
+      title: isJa ? "アカウント作成" : "Create Account",
+      emailPlaceholder: isJa ? "メールアドレス" : "Email Address",
+      passwordPlaceholder: isJa ? "パスワード" : "Password",
+      signupCta: isJa ? "サインアップ" : "SIGN UP",
+      alreadyText: isJa
+        ? "すでにアカウントをお持ちの方は"
+        : "Already have an account?",
+      loginText: isJa ? "ログイン" : "Log in",
+      signupFailed: isJa ? "サインアップに失敗しました" : "Signup failed",
+    }),
+    [isJa]
+  );
 
   // ==== サインアップ処理（修正版） ====
   const handleSignup = async (e: React.FormEvent) => {
@@ -78,8 +87,9 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
     <form onSubmit={handleSignup}>
       <div
         style={{
-          width: formWidth,
-          padding: 24,
+          width: "100%",
+          maxWidth: formWidth,
+          padding: variant === "mobile" ? 20 : 24,
           backgroundColor: "rgba(255,255,255,0.08)",
           borderRadius: 12,
           textAlign: "center",
@@ -190,7 +200,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
             cursor: submitting ? "not-allowed" : "pointer",
           }}
         >
-          <span>{submitting ? (osIsJa ? "作成中..." : "Creating...") : ui.signupCta}</span>
+          <span>{submitting ? (isJa ? "作成中..." : "Creating...") : ui.signupCta}</span>
           <span style={{ fontSize: 18 }}>↗</span>
         </button>
 

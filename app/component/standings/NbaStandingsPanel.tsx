@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 
 /* ================= util ================= */
 
@@ -71,6 +72,11 @@ type Team = {
   rank?: number;
   cupFinalWins?: number;
   cupFinalLosses?: number;
+  /** 詳細スタッツと同じ集計元（onGameFinalV2 → updateTeamStats） */
+  homeGames?: number;
+  homeWins?: number;
+  awayGames?: number;
+  awayWins?: number;
 };
 
 type Props = {
@@ -172,10 +178,8 @@ function Conference({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const sorted = [...teams].sort((a, b) => {
-    const aw = (a.wins ?? 0) - (a.cupFinalWins ?? 0);
-    const al = (a.losses ?? 0) - (a.cupFinalLosses ?? 0);
-    const bw = (b.wins ?? 0) - (b.cupFinalWins ?? 0);
-    const bl = (b.losses ?? 0) - (b.cupFinalLosses ?? 0);
+    const { wins: aw, losses: al } = nbaRegularSeasonWinsLosses(a);
+    const { wins: bw, losses: bl } = nbaRegularSeasonWinsLosses(b);
 
     const ar = aw + al > 0 ? aw / (aw + al) : 0;
     const br = bw + bl > 0 ? bw / (bw + bl) : 0;
@@ -244,13 +248,12 @@ function TeamRow({
 }) {
   const [rate, setRate] = useState(0);
 
-  const teamWins = (team.wins ?? 0) - (team.cupFinalWins ?? 0);
-  const teamLosses = (team.losses ?? 0) - (team.cupFinalLosses ?? 0);
+  const { wins: teamWins, losses: teamLosses } = nbaRegularSeasonWinsLosses(team);
   const games = teamWins + teamLosses;
   const winRateCalc = games > 0 ? teamWins / games : 0;
 
-  const leaderWins = (leader.wins ?? 0) - (leader.cupFinalWins ?? 0);
-  const leaderLosses = (leader.losses ?? 0) - (leader.cupFinalLosses ?? 0);
+  const { wins: leaderWins, losses: leaderLosses } =
+    nbaRegularSeasonWinsLosses(leader);
 
   const gb =
     team.id === leader.id

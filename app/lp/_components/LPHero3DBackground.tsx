@@ -1,14 +1,29 @@
 "use client";
 
-export default function LPHero3DBackground() {
+type LPHero3DBackgroundProps = {
+  /** 重いアニメ・フィルタを省略（モバイルLPの安定化用） */
+  lite?: boolean;
+};
+
+export default function LPHero3DBackground({
+  lite = false,
+}: LPHero3DBackgroundProps) {
+  if (lite) {
+    return (
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[#05070d]" />
+        <div className="absolute inset-x-0 top-0 h-[62vh] bg-[radial-gradient(circle_at_50%_20%,rgba(34,211,238,0.08),transparent_62%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-[52vh] bg-[linear-gradient(180deg,rgba(5,7,13,0)_0%,rgba(5,7,13,0.66)_34%,rgba(5,7,13,0.9)_100%)]" />
+      </div>
+    );
+  }
+
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <div className="absolute inset-0 bg-[#05070d]" />
-      <div className="absolute inset-x-0 top-0 h-[62vh] bg-[radial-gradient(circle_at_50%_20%,rgba(34,211,238,0.28),transparent_62%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_52%_48%,rgba(34,211,238,0.2),transparent_22%),radial-gradient(circle_at_64%_56%,rgba(167,139,250,0.14),transparent_26%),radial-gradient(circle_at_32%_36%,rgba(59,130,246,0.12),transparent_28%)]" />
+      <div className="absolute inset-x-0 top-0 h-[62vh] bg-[radial-gradient(circle_at_50%_20%,rgba(34,211,238,0.1),transparent_62%)]" />
       <div className="lp-depth-far absolute inset-0" />
       <div className="lp-depth-mid absolute inset-0" />
-      <div className="lp-depth-near absolute inset-0" />
       <div className="lp-hud-beam lp-hud-beam-a absolute inset-y-0 left-[-18%] w-[36%]" />
       <div className="lp-hud-beam lp-hud-beam-b absolute inset-y-0 right-[-20%] w-[40%]" />
       <div className="lp-hud-grid absolute inset-0" />
@@ -54,15 +69,6 @@ export default function LPHero3DBackground() {
             rgba(0, 0, 0, 0) 100%
           );
           animation: lp-depth-mid-slide 11s linear infinite;
-        }
-
-        .lp-depth-near {
-          opacity: 0.14;
-          background-image:
-            radial-gradient(circle at 50% 48%, rgba(34, 211, 238, 0.26), rgba(34, 211, 238, 0) 44%),
-            radial-gradient(circle at 50% 48%, rgba(167, 139, 250, 0.18), rgba(167, 139, 250, 0) 52%);
-          filter: blur(12px);
-          animation: lp-depth-near-breathe 8.5s ease-in-out infinite;
         }
 
         .lp-hud-scan {
@@ -162,17 +168,6 @@ export default function LPHero3DBackground() {
           }
         }
 
-        @keyframes lp-depth-near-breathe {
-          0%, 100% {
-            opacity: 0.1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.22;
-            transform: scale(1.07);
-          }
-        }
-
         @keyframes lp-hud-beam-sweep-a {
           0%, 100% {
             transform: translateX(0) skewX(-16deg);
@@ -252,9 +247,6 @@ export default function LPHero3DBackground() {
             opacity: 0.08;
             background-size: 84px 84px;
           }
-          .lp-depth-near {
-            opacity: 0.06;
-          }
           .lp-hud-grid {
             opacity: 0.12;
             background-size: 74px 74px;
@@ -275,7 +267,6 @@ export default function LPHero3DBackground() {
         @media (prefers-reduced-motion: reduce) {
           .lp-depth-far,
           .lp-depth-mid,
-          .lp-depth-near,
           .lp-hud-scan,
           .lp-hud-glitch,
           .lp-hud-beam,

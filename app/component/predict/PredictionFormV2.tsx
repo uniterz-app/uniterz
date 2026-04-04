@@ -253,15 +253,26 @@ export default function PredictionFormV2({
 
       const raw = await res.text().catch(() => "");
 
-      if (!res.ok) {
-        throw new Error(raw || `投稿失敗 (${res.status})`);
-      }
-
       let json: any = {};
       try {
         json = raw ? JSON.parse(raw) : {};
       } catch {
-        throw new Error(`APIがJSONではなくHTMLを返しました (${res.status})`);
+        if (!res.ok) {
+          throw new Error(
+            raw?.slice(0, 200) || `投稿失敗 (${res.status})`
+          );
+        }
+        throw new Error(
+          `APIがJSONではなくHTMLを返しました (${res.status})`
+        );
+      }
+
+      if (!res.ok) {
+        const detail =
+          (typeof json?.message === "string" && json.message) ||
+          (typeof json?.error === "string" && json.error) ||
+          raw?.slice(0, 200);
+        throw new Error(detail || `投稿失敗 (${res.status})`);
       }
 
       toast.success(isEn ? "Prediction submitted." : "予想を投稿しました");

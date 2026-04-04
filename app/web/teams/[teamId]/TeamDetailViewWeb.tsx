@@ -7,8 +7,12 @@ import { Home, Plane, ChevronDown } from "lucide-react";
 import WireframeBg from "@/app/component/background/WireframeBg";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import {
+  CONFERENCE_RECORD_STYLE,
+  enOrdinal,
+} from "@/lib/teamDetailConference";
+import { compareLastGamesByTime } from "@/lib/teamLastGameAt";
 
 import { Alfa_Slab_One, Bebas_Neue } from "next/font/google";
 
@@ -21,6 +25,7 @@ type Props = { team: TeamDetail };
 
 type Game = {
   date: string;
+  sortAtMs?: number;
   home: boolean;
   vs: string;
   score: string;
@@ -157,9 +162,7 @@ function Last10List({ games }: { games: any[] }) {
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [frontIndex, setFrontIndex] = useState<number | null>(null);
 const [expanded, setExpanded] = useState(false);
-const sortedGames = [...games].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+const sortedGames = [...games].sort(compareLastGamesByTime);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -228,7 +231,7 @@ const sortedGames = [...games].sort(
       <div
         ref={containerRef}
         className="
-          relative overflow-y-auto px-2
+          relative overflow-y-auto overflow-x-clip px-1 sm:px-2
           [-ms-overflow-style:none] [scrollbar-width:none]
           [&::-webkit-scrollbar]:hidden
         "
@@ -243,7 +246,7 @@ const sortedGames = [...games].sort(
         {/* 端のカードも“手前”に来るための余白（増量） */}
         <div style={{ height: "44px" }} />
 
-        {[...games].reverse().map((g, i) => {
+        {[...sortedGames].reverse().map((g, i) => {
           const isFront = i === frontIndex;
           const win = g.result === "W";
 
@@ -254,9 +257,9 @@ const sortedGames = [...games].sort(
                 itemRefs.current[i] = el;
               }}
               className="
-                w-full
-                relative flex items-center justify-between
-                rounded-md px-3 py-2.5   /* ← 枠を小さく */
+                w-full min-w-0
+                relative flex items-center justify-between gap-2
+                rounded-md px-2.5 py-2.5 sm:px-3
                 bg-white/6 backdrop-blur-md
                 transition-[transform,filter,opacity,box-shadow,border] duration-200
               "
@@ -286,7 +289,9 @@ const sortedGames = [...games].sort(
               }}
             >
               {/* 左 */}
-              <div className={`text-[13px] font-medium ${isFront ? "text-white" : "text-white/70"}`}>
+              <div
+                className={`min-w-0 flex-1 truncate text-[13px] font-medium ${isFront ? "text-white" : "text-white/70"}`}
+              >
                 {g.date} {g.home ? "vs" : "@"} {g.vs}
               </div>
 
@@ -327,13 +332,7 @@ export default function TeamDetailViewWeb({ team }: Props) {
   const [frontIndex, setFrontIndex] = useState<number | null>(null);
 
 
-  
-const conference = team.conference.toLowerCase() as "east" | "west";
-
-const [conferenceRank, setConferenceRank] = useState<number | null>(null);
-
-
-  
+  const [conferenceRank, setConferenceRank] = useState<number | null>(null);
 
   const [expanded, setExpanded] = useState(false);
   const [mode, setMode] = useState<"total" | "home" | "away">("total");
@@ -341,13 +340,19 @@ const [conferenceRank, setConferenceRank] = useState<number | null>(null);
     team.conference === "EAST" || team.conference === "east" ? "east" : "west"
   );
 
+  const conferenceLabel: "east" | "west" =
+    team.conference === "EAST" || team.conference === "east"
+      ? "east"
+      : "west";
+
   const ptsForCount = useMotionValue(0);
   const ptsAgainstCount = useMotionValue(0);
   const rateCount = useMotionValue(0);
 
   const ptsForDisplay = useTransform(ptsForCount, v => v.toFixed(1));
   const ptsAgainstDisplay = useTransform(ptsAgainstCount, v => v.toFixed(1));
-  const rateDisplay = useTransform(rateCount, v => `${(v * 100).toFixed(1)}%`);
+  // team.winRate は 0–100（page 組み立てとモバイルと同じ）
+  const rateDisplay = useTransform(rateCount, v => `${v.toFixed(1)}%`);
 
 
   const home = team.homeAway?.home;
@@ -400,41 +405,46 @@ const [conferenceRank, setConferenceRank] = useState<number | null>(null);
     };
   }, [mode, team]);
 
-useEffect(() => {
-  async function calcRank() {
-    const q = query(
-      collection(db, "teams"),
-      where("league", "==", "nba"),
-      where("conference", "==", team.conference)
-    );
-
-    const snap = await getDocs(q);
-
-    const list = snap.docs.map(d => ({
-      id: d.id,
-      ...(d.data() as any),
-    }));
-
-    const sorted = [...list].sort((a, b) => {
-      const aw = a.wins - (a.cupFinalWins ?? 0);
-      const al = a.losses - (a.cupFinalLosses ?? 0);
-      const bw = b.wins - (b.cupFinalWins ?? 0);
-      const bl = b.losses - (b.cupFinalLosses ?? 0);
-
-      const ar = aw / (aw + al);
-      const br = bw / (bw + bl);
-
-      if (ar !== br) return br - ar;
-      if (aw !== bw) return bw - aw;
-      return 0;
-    });
-
-    const idx = sorted.findIndex(t => t.id === team.id);
-    if (idx !== -1) setConferenceRank(idx + 1);
-  }
-
-  calcRank();
-}, [team.id, team.conference]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!team.conference) {
+        setConferenceRank(null);
+        return;
+      }
+      try {
+        const q = query(
+          collection(db, "teams"),
+          where("league", "==", "nba"),
+          where("conference", "==", team.conference)
+        );
+        const snap = await getDocs(q);
+        const list = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Record<string, unknown>),
+        }));
+        const sorted = [...list].sort((a, b) => {
+          const ar = nbaRegularSeasonWinsLosses(a);
+          const br = nbaRegularSeasonWinsLosses(b);
+          const ag = ar.wins + ar.losses;
+          const bg = br.wins + br.losses;
+          const arate = ag > 0 ? ar.wins / ag : 0;
+          const brate = bg > 0 ? br.wins / bg : 0;
+          if (brate !== arate) return brate - arate;
+          if (br.wins !== ar.wins) return br.wins - ar.wins;
+          return 0;
+        });
+        const idx = sorted.findIndex((t) => t.id === team.id);
+        if (alive && idx !== -1) setConferenceRank(idx + 1);
+        else if (alive) setConferenceRank(null);
+      } catch {
+        if (alive) setConferenceRank(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [team.id, team.conference]);
 
 return (
   <div>
@@ -455,42 +465,23 @@ return (
           {/* はみ出し防止 */}
           <div className="relative overflow-hidden rounded-2xl">
         
-            {/* ===== 上段：バッジ（左寄せ・非absolute） ===== */}
-            <div className="flex items-center justify-start px-4 pt-2">
-              <motion.div
-          className="
-            inline-flex items-center gap-1
-            px-2 py-[2px] rounded-md
-            text-[11px] font-semibold tracking-wide text-cyan-300
-          "
-          animate={{
-            boxShadow: [
-              "0 0 0 1px rgba(80,200,255,.45), 0 0 6px rgba(80,200,255,.25)",
-              "0 0 0 1px rgba(80,200,255,.75), 0 0 10px rgba(80,200,255,.45)",
-              "0 0 0 1px rgba(80,200,255,.45), 0 0 6px rgba(80,200,255,.25)",
-            ],
-          }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(80,200,255,.20), rgba(80,200,255,.05))",
-          }}
-        >
-          {/* 王冠は1位だけ */}
-        {conferenceRank === 1 && <span>👑</span>}
-        
-        {conferenceRank !== null && (
-  <>
-    #{conferenceRank} IN {team.conference.toUpperCase()}
-  </>
-)}
-
-        </motion.div>
-        
+            {/* カンファレンス順位（モバイルと同じ EAST 1st 形式） */}
+            <div className="flex justify-start px-4 pt-2">
+              <p
+                className={`${bebas.className} w-full text-left text-base tracking-wide sm:text-xl`}
+              >
+                <span style={CONFERENCE_RECORD_STYLE[conferenceLabel]}>
+                  {conferenceLabel.toUpperCase()}
+                </span>
+                <span className="text-white/55">
+                  {" "}
+                  {conferenceRank != null ? enOrdinal(conferenceRank) : "—"}
+                </span>
+              </p>
             </div>
-        
+
             {/* ===== 中央：チーム名（被らない） ===== */}
-            <div className="mt-0.5 flex justify-center px-4">
+            <div className="mt-1 flex justify-center px-4">
               <h1
                 className={`${bebas.className}
             text-[34px]         /* 1行に収まる最大サイズ */
@@ -641,9 +632,7 @@ return (
             <div className="flex items-end justify-between gap-2">
               <div
                 className={`${alfa.className} text-3xl font-bold tabular-nums`}
-                style={{
-                  color: confMode === "east" ? "#F87171" : "#5AC8FA",
-                }}
+                style={CONFERENCE_RECORD_STYLE[confMode]}
               >
                 {confMode === "east"
                   ? `${team.conferenceRecord.vsEast.wins}-${team.conferenceRecord.vsEast.losses}`
@@ -673,10 +662,12 @@ return (
         </div>
       </motion.div>
 
-      {/* Last10 */}
-      <motion.div variants={item}>
-        <motion.div variants={item}>
-          <DepthCard accent={team.colors.primary} classNameOverride="p-4 h-auto">
+      {/* Last10（「まだ見切れ」対応の大きな高さ変更・マスク削除は入れない） */}
+      <motion.div variants={item} className="min-w-0">
+        <DepthCard
+          accent={team.colors.primary}
+          classNameOverride="p-4 h-auto overflow-visible"
+        >
             {/* タイトル部分 */}
             <div
               className="text-xs text-white/70 mb-2 cursor-pointer select-none"
@@ -688,11 +679,10 @@ return (
             {/* ゲームリスト */}
             {team.last10.games?.length ? (
               expanded ? (
-                /* 展開時は横2列グリッド */
-                <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto px-2 py-2">
+                <div className="grid min-w-0 grid-cols-2 gap-3 max-h-[400px] overflow-y-auto overflow-x-clip px-1 py-2 sm:px-2">
                   {(() => {
                     const sorted = [...team.last10.games].sort(
-                      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+                      compareLastGamesByTime
                     );
         
                     let leftColumn: Game[] = [];
@@ -739,7 +729,7 @@ return (
                             y: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
                             boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
                           }}
-                          className="flex flex-col justify-between px-3 py-2 rounded-lg bg-gray-900/40 backdrop-blur-sm cursor-pointer"
+                          className="flex min-w-0 flex-col justify-between px-2 py-2 sm:px-3 rounded-lg bg-gray-900/40 backdrop-blur-sm cursor-pointer"
                           style={{
                             border: win
                               ? "1px solid rgba(80,200,255,.7)"
@@ -750,7 +740,7 @@ return (
                           }}
                         >
                           {/* 上段：日付 + VS + チーム */}
-                          <div className="text-[12px] font-medium text-white/70 mb-1">
+                          <div className="min-w-0 truncate text-[12px] font-medium text-white/70 mb-1">
                             {g.date} {g.home ? "vs" : "@"} {g.vs}
                           </div>
         
@@ -770,16 +760,13 @@ return (
                 </div>
               ) : (
                 <Last10List
-                  games={[...team.last10.games].sort(
-                    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-                  )}
+                  games={[...team.last10.games].sort(compareLastGamesByTime)}
                 />
               )
             ) : (
               <div className="text-xs text-white/40">No games</div>
             )}
-          </DepthCard>
-        </motion.div>
+        </DepthCard>
       </motion.div>
 
 

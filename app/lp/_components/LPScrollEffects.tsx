@@ -12,9 +12,19 @@ function registerPluginOnce() {
   isRegistered = true;
 }
 
-export default function LPScrollEffects() {
+type LPScrollEffectsProps = {
+  /** true のとき GSAP を一切起動しない（モバイルLPの安定化用） */
+  disabled?: boolean;
+};
+
+export default function LPScrollEffects({ disabled = false }: LPScrollEffectsProps) {
   useLayoutEffect(() => {
+    if (disabled) return;
     if (typeof window === "undefined") return;
+
+    // 読み込み直後は常にページ先頭から（features 付近に飛ぶ・中途半端な復元を防ぐ）
+    window.history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
@@ -40,8 +50,15 @@ export default function LPScrollEffects() {
         items.forEach((item) => groupedItems.add(item));
 
         const variant = group.dataset.lpStaggerVariant ?? "up";
-        const duration = isMobile ? 0.42 : 0.52;
+        const isFlow = variant === "flow";
         const step = Number(group.dataset.lpStaggerStep ?? "0.08");
+        const duration = isFlow
+          ? isMobile
+            ? 0.58
+            : 0.74
+          : isMobile
+            ? 0.48
+            : 0.58;
         const fromState: gsap.TweenVars = {
           opacity: 0,
           y: isMobile ? 14 : 20,
@@ -64,34 +81,53 @@ export default function LPScrollEffects() {
           fromState.y = isMobile ? 8 : 12;
         }
 
+        // Connected Flow：左から順に光＋スケールアップ
+        if (isFlow) {
+          fromState.x = 0;
+          fromState.y = isMobile ? 18 : 24;
+          fromState.scale = 0.86;
+          fromState.boxShadow = "0 0 0 rgba(34,211,238,0)";
+        }
+
+        const staggerMs = Number.isFinite(step)
+          ? Math.max(step, isFlow ? 0.11 : 0.05)
+          : isFlow
+            ? 0.13
+            : 0.08;
+
         items.forEach((item) => {
-          item.style.willChange = "transform, opacity";
+          item.style.willChange = isFlow
+            ? "transform, opacity, box-shadow"
+            : "transform, opacity";
         });
 
-        gsap.fromTo(
-          items,
-          fromState,
-          {
-            opacity: 1,
-            y: 0,
-            x: 0,
-            scale: 1,
-            duration,
-            ease: "power2.out",
-            stagger: Number.isFinite(step) ? Math.max(step, 0.03) : 0.08,
-            scrollTrigger: {
-              trigger: group,
-              start: isMobile ? "top 88%" : "top 82%",
-              toggleActions: "play none none none",
-              once: true,
-            },
-            onComplete: () => {
-              items.forEach((item) => {
-                item.style.willChange = "auto";
-              });
-            },
-          }
-        );
+        const toVars: gsap.TweenVars = {
+          opacity: 1,
+          y: 0,
+          x: 0,
+          scale: 1,
+          duration,
+          ease: isFlow ? "back.out(1.45)" : "power2.out",
+          stagger: staggerMs,
+          scrollTrigger: {
+            trigger: group,
+            start: isMobile ? "top 88%" : "top 82%",
+            toggleActions: "play none none none",
+            once: true,
+          },
+          onComplete: () => {
+            items.forEach((item) => {
+              item.style.willChange = "auto";
+            });
+          },
+        };
+
+        if (isFlow) {
+          toVars.boxShadow =
+            "0 0 28px rgba(103,232,249,0.45), 0 0 72px rgba(34,211,238,0.18)";
+        }
+
+        gsap.fromTo(items, fromState, toVars);
       });
 
       const targets = gsap
@@ -137,7 +173,7 @@ export default function LPScrollEffects() {
             scale: 1,
             rotateX: 0,
             duration,
-            delay: Math.min(index * 0.03, 0.12),
+            delay: Math.min(index * 0.05, 0.2),
             ease: "power2.out",
             scrollTrigger: {
               trigger: target,
@@ -156,7 +192,7 @@ export default function LPScrollEffects() {
     return () => {
       ctx.revert();
     };
-  }, []);
+  }, [disabled]);
 
   return null;
 }
