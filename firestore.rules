@@ -1,7 +1,4 @@
-<<<<<<< Updated upstream
-=======
 // Firestore Security Rules（アプリの参照元と整合）
->>>>>>> Stashed changes
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -14,12 +11,9 @@ service cloud.firestore {
 
     // ========================================================================
     // users
-<<<<<<< Updated upstream
     // 参照: AuthProvider, SignupForm, OnboardingForm, Profile 設定, useProfile(handle),
     //       useUserLanguage, follow.ts, ContactForm, EventGate, ensureSlug 連携,
     //       users/{uid}/reads/*（お知らせ既読）, users/{uid}/groups/*（コミュAPIミラー）
-=======
->>>>>>> Stashed changes
     // ========================================================================
     match /users/{userId} {
       allow read: if true;
@@ -78,15 +72,12 @@ service cloud.firestore {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create, update, delete: if false;
       }
-<<<<<<< Updated upstream
-=======
 
       // admin/badges から users/{uid}/badges/{id} へ付与
       match /badges/{badgeId} {
         allow read: if true;
         allow write: if isAdmin();
       }
->>>>>>> Stashed changes
     }
 
     // ========================================================================
@@ -103,10 +94,7 @@ service cloud.firestore {
 
     // ========================================================================
     // posts — 一覧・予想カード表示。本文の作成/更新/削除は API（Admin SDK）
-<<<<<<< Updated upstream
     // likes/saves: PredictionPostCardV2
-=======
->>>>>>> Stashed changes
     // ========================================================================
     match /posts/{postId} {
       allow read: if true;
@@ -126,12 +114,8 @@ service cloud.firestore {
     }
 
     // ========================================================================
-<<<<<<< Updated upstream
     // games / teams — ScheduleList, useGameDays, predict 画面, 結果UI 等（読取）
     // 管理画面 games-import / team-init は isAdmin
-=======
-    // games / teams
->>>>>>> Stashed changes
     // ========================================================================
     match /games/{gameId} {
       allow read: if true;
@@ -139,7 +123,6 @@ service cloud.firestore {
     }
 
     match /teams/{teamId} {
-<<<<<<< Updated upstream
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
@@ -178,8 +161,6 @@ service cloud.firestore {
 
     // ========================================================================
     // 統計 v2 — GamesPage, ProAnalysis, useUserDailyTrendV2 / Monthly*
-    // 日次: クエリが日付範囲のみのため「ログイン済みなら読取可」（他ユーザーの日次が見える）
-    //       厳密にする場合はクライアントを docId プレフィックス付きクエリ or API に変更
     // ========================================================================
     match /user_stats_v2/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -191,7 +172,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ProAnalysis 等で他ユーザーの {uid}_{month} も読むためログイン済みに開放
     match /user_stats_v2_monthly/{docId} {
       allow read: if request.auth != null;
       allow write: if false;
@@ -246,116 +226,6 @@ service cloud.firestore {
 
     // ========================================================================
     // analytics — functions/src/analytics/_core.ts → analytics/daily/stats/{dateKey}
-    // 管理ダッシュボードは isAdmin のみ読取（クライアント SDK）
-    // ========================================================================
-    match /analytics/{analyticsDocId} {
-      match /stats/{statId} {
-        allow read: if isAdmin();
-        allow write: if false;
-      }
-=======
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // ========================================================================
-    // お知らせ
-    // ========================================================================
-    match /announcements/{id} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // ========================================================================
-    // お問い合わせ
-    // ========================================================================
-    match /contacts/{contactId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if isAdmin();
-    }
-
-    // ========================================================================
-    // バッジ
-    // ========================================================================
-    match /master_badges/{bid} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /user_badges/{uid} {
-      match /badges/{badgeId} {
-        allow read: if true;
-        allow write: if false;
-      }
-    }
-
-    // ========================================================================
-    // 統計 v2
-    // ========================================================================
-    match /user_stats_v2/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if false;
-    }
-
-    match /user_stats_v2_daily/{docId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-
-    match /user_stats_v2_monthly/{docId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-
-    match /monthly_global_stats_v2/{month} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    // ========================================================================
-    // プレーオフ
-    // ========================================================================
-    match /playoffBracketMarket/{season} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    match /playoffResults/{season} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
-    }
-
-    match /playoffBrackets/{docId} {
-      allow read: if true;
-
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.season is string
-        && request.resource.data.bracket is map
-        && docId == request.resource.data.season + '_' + request.auth.uid;
-
-      allow update: if request.auth != null
-        && resource.data.uid == request.auth.uid
-        && docId == resource.data.season + '_' + request.auth.uid;
-
-      allow delete: if request.auth != null
-        && resource.data.uid == request.auth.uid
-        && docId == resource.data.season + '_' + request.auth.uid;
-    }
-
-    // ========================================================================
-    // コミュニティ（クライアント直叩き禁止）
-    // ========================================================================
-    match /groups/{groupId} {
-      allow read, write: if false;
-
-      match /members/{memberId} {
-        allow read, write: if false;
-      }
-    }
-
-    // ========================================================================
-    // analytics — 管理ダッシュボード
     // ========================================================================
     match /analytics/{analyticsDocId} {
       match /stats/{statId} {
@@ -365,7 +235,7 @@ service cloud.firestore {
     }
 
     // ========================================================================
-    // イベントログ（B1/J1）— クライアント create のみ
+    // イベントログ（B1/J1/NBA）— クライアント create のみ
     // ========================================================================
     match /events_game/{eventId} {
       allow create: if
@@ -391,11 +261,10 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // trend_cache（集計キャッシュ・旧参照があれば読取可）
+    // trend_cache（集計キャッシュ）
     match /trend_cache/{docId} {
       allow read: if true;
       allow write: if false;
->>>>>>> Stashed changes
     }
   }
 }
