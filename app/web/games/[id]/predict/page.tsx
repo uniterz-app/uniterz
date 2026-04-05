@@ -3,7 +3,7 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { toMatchCardProps } from "@/lib/games/transform";
@@ -126,5 +126,15 @@ export default function Page() {
     verified: !!fUser.emailVerified,
   };
 
-  return <PredictionForm game={gameState.game} user={user} />;
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: 16 }}>
+          {isEn ? "Loading..." : "読み込み中…"}
+        </div>
+      }
+    >
+      <PredictionForm game={gameState.game} user={user} />
+    </Suspense>
+  );
 }

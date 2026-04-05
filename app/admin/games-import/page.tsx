@@ -196,9 +196,9 @@ function normalizeRow(r: RawGame): Preview {
     const jsDate = new Date(ts.toMillis());
 
     const season =
-  typeof r.season === "string" && r.season.trim()
-    ? r.season.trim()
-    : seasonFromDateByLeague(league, jsDate);
+      typeof r.season === "string" && r.season.trim()
+        ? r.season.trim()
+        : seasonFromDateByLeague(league, jsDate);
 
     const status = ((): "scheduled" | "live" | "final" => {
       const s = String(r?.status ?? "scheduled").toLowerCase();

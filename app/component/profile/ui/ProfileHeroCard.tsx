@@ -217,9 +217,11 @@ export default function ProfileHeroCard({
     shellInnerStartedRef.current = false;
   }, [playEntrance, displayProfile.displayName, displayProfile.handle]);
 
-  const staticHero = !playEntrance || reduceMotion;
+  // useReducedMotion は SSR 直後などで null になり得る → その間はアニメ許可
+  const prefersReducedMotion = reduceMotion === true;
+  const staticHero = !playEntrance || prefersReducedMotion;
   const heroEntranceAnim =
-    playEntrance && !reduceMotion && !staticHero;
+    playEntrance && !prefersReducedMotion && !staticHero;
 
   const [innerPhase, setInnerPhase] = useState(staticHero);
 

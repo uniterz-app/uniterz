@@ -81,9 +81,9 @@ export const heroMediaViews = [
   {
     key: "post",
     label: "Post",
-    title: "月間1位は、ユニフォーム贈呈。",
-    desc: "スコア制度で順位を競い、月間1位にはユニフォームを贈呈。観戦に報酬の熱狂を追加する。",
-    chip: "Rank Rewards",
+    title: "かんたんに、すぐ投稿。",
+    desc: "日付から試合を選び、勝敗とスコアを入力するだけ。迷わず投稿できるシンプルな流れ。",
+    chip: "Easy Post",
     media: {
       type: "image",
       src: "/lp/predict-v2.PNG",
@@ -100,30 +100,10 @@ export const mediaSlots: readonly LPSlotMedia[] = [
     badge: "RANK SNAPSHOT",
     title: "世界ランキングの現在地",
     type: "video",
-    enabled: false,
-    src: "/lp/ranking-v2.MP4",
-    poster: "/lp/ranking-v2.PNG",
-    alt: "世界ランキングのスクリーンショット",
-  },
-  {
-    id: "flow-loop",
-    badge: "DAILY UPDATE",
-    title: "毎日更新ランキングの推移",
-    type: "video",
-    enabled: false,
-    src: "",
-    poster: "/lp/games-v2.PNG",
-    alt: "毎日更新ランキングの推移動画",
-  },
-  {
-    id: "reward-proof",
-    badge: "TOP REWARD",
-    title: "月間1位ユニフォーム贈呈",
-    type: "image",
-    enabled: false,
-    src: "",
-    poster: "/lp/predict-v2.PNG",
-    alt: "月間1位報酬のスクリーンショット",
+    enabled: true,
+    src: "/lp/LP3.mp4",
+    poster: "/lp/ranking-v2.png",
+    alt: "世界ランキング画面のデモ動画",
   },
 ] as const;
 
@@ -202,8 +182,8 @@ export const featureCards = [
   },
   {
     eyebrow: "STEP 05",
-    title: "月間1位ユニフォーム贈呈を狙う",
-    text: "スコア制度で積み上げ、月間トップを取ってユニフォーム贈呈を目指す。",
+    title: "月間トップの豪華なプレゼントを狙う",
+    text: "スコア制度で積み上げ、月間トップを取って豪華なプレゼントを目指す。",
   },
 ] as const;
 
@@ -264,7 +244,7 @@ export const flowNodes = [
     id: "analyze",
     label: "REWARD",
     title: "月間報酬",
-    text: "月間1位でユニフォーム贈呈。",
+    text: "月間トップで豪華なプレゼント。",
     media: {
       enabled: false,
       type: "video",
@@ -333,7 +313,7 @@ export const planComparisonRows = [
 
 export const planTrustLines = [
   "ランキングは毎日更新され、最新の順位で競えます。",
-  "月間1位にはユニフォームを贈呈します。",
+  "月間トップには豪華なプレゼントがあります。",
   "料金の確認・契約・解約はアプリ内の設定からいつでも行えます。",
   "まずは Free で参加し、必要になったタイミングで Pro に切り替えられます。",
 ] as const;
@@ -375,7 +355,7 @@ export const plans = [
 
 export const stats = [
   { label: "Update", value: "Daily" },
-  { label: "Reward", value: "Top1 Uniform" },
+  { label: "Reward", value: "Top1 Gift" },
   { label: "Mode", value: "Free / Pro" },
   { label: "Focus", value: "B League First" },
 ] as const;
@@ -401,7 +381,7 @@ export const signupPoints = [
     sub: "自分のコミュニティの仲間と、世界中のユーザーとも競いながら立ち位置が分かる。",
   },
   {
-    title: "月間1位ユニフォーム贈呈を狙える",
+    title: "月間トップの豪華なプレゼントを狙える",
     sub: "スコア制度で順位を上げ、月間トップ報酬の獲得に挑戦できる。",
   },
 ] as const;

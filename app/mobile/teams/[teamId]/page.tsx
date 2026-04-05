@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { doc, getDoc, Timestamp } from "firebase/firestore";
 
@@ -111,6 +111,8 @@ export default function TeamPage() {
 
         avgForRank: d.ppgRank ?? null,
         avgAgainstRank: d.papgRank ?? null,
+        ppgRank: typeof d.ppgRank === "number" ? d.ppgRank : null,
+        papgRank: typeof d.papgRank === "number" ? d.papgRank : null,
 
         // ✅ home/away 平均得点・平均失点
         homeAway: {
@@ -163,5 +165,9 @@ export default function TeamPage() {
   }, [teamId]);
 
   if (!team) return null;
-  return <TeamDetailView team={team} />;
+  return (
+    <Suspense fallback={null}>
+      <TeamDetailView team={team} />
+    </Suspense>
+  );
 }

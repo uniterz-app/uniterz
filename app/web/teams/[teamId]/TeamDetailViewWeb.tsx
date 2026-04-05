@@ -2,8 +2,9 @@
 
 import type { Variants } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { Home, Plane, ChevronDown } from "lucide-react";
+import { Home, Plane, ChevronDown, ChevronLeft } from "lucide-react";
 import WireframeBg from "@/app/component/background/WireframeBg";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -66,17 +67,13 @@ const item: Variants = {
 
 function GlassHeroCard({ children }: { children: React.ReactNode }) {
   return (
-    // ① 動かす箱（丸角・overflowを持たせない）
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="relative"
     >
-      {/* ② 切り抜き専用の箱 */}
       <div className="relative overflow-hidden rounded-2xl p-3 border border-white/10 bg-white/5 backdrop-blur">
-
-        {/* ネオン */}
         <motion.div
           className="pointer-events-none absolute inset-0"
           animate={{ opacity: [0.25, 0.45, 0.25] }}
@@ -89,7 +86,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* スキャンライン */}
         <motion.div
           className="pointer-events-none absolute inset-0"
           animate={{ backgroundPositionY: ["0%", "100%"] }}
@@ -101,7 +97,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* シマー（insetは0固定） */}
         <motion.div
           className="pointer-events-none absolute inset-0"
           animate={{ x: ["-120%", "120%"] }}
@@ -113,7 +108,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* 枠（外グロー禁止、insetのみ） */}
         <div
           className="pointer-events-none absolute inset-0 rounded-2xl"
           style={{
@@ -121,7 +115,6 @@ function GlassHeroCard({ children }: { children: React.ReactNode }) {
           }}
         />
 
-        {/* コンテンツ */}
         <div className="relative z-10">{children}</div>
       </div>
     </motion.div>
@@ -329,8 +322,23 @@ const sortedGames = [...games].sort(compareLastGamesByTime);
 
 /* ================= Page ================= */
 
+function isSafeFirestoreDocId(id: string | null): id is string {
+  return id != null && /^[a-zA-Z0-9_-]{1,128}$/.test(id);
+}
+
 export default function TeamDetailViewWeb({ team }: Props) {
-  
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromPredict = searchParams.get("fromPredict");
+  const fallbackStandingsHref = "/web/standings";
+
+  const goBackFromTeamDetail = () => {
+    if (isSafeFirestoreDocId(fromPredict)) {
+      router.push(`/web/games/${fromPredict}/predict?standings=1`);
+      return;
+    }
+    router.push(fallbackStandingsHref);
+  };
 
   const [frontIndex, setFrontIndex] = useState<number | null>(null);
 
@@ -462,12 +470,21 @@ return (
       animate="show"
       className="relative z-10 min-h-screen px-4 pt-4 pb-bottom-nav space-y-5 text-white overflow-hidden"
     >
+      <div className="flex items-center -mt-1 mb-0.5">
+        <button
+          type="button"
+          onClick={goBackFromTeamDetail}
+          className="rounded-full p-2 text-white/85 transition-colors hover:bg-white/12 hover:text-white active:scale-95"
+          aria-label="試合予想のスタンディングへ戻る"
+        >
+          <ChevronLeft className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+        </button>
+      </div>
+
       {/* Hero */}
       <motion.div variants={item}>
         <GlassHeroCard>
-          {/* はみ出し防止 */}
           <div className="relative overflow-hidden rounded-2xl">
-        
             {/* カンファレンス順位（モバイルと同じ EAST 1st 形式） */}
             <div className="flex justify-start px-4 pt-2">
               <p
@@ -484,7 +501,7 @@ return (
             </div>
 
             {/* ===== 中央：チーム名（被らない） ===== */}
-            <div className="mt-1 flex justify-center px-4">
+            <div className="mt-1 flex justify-center px-4 pb-4">
               <h1
                 className={`${bebas.className}
             text-[34px]         /* 1行に収まる最大サイズ */
@@ -498,34 +515,7 @@ return (
                 {team.name}
               </h1>
             </div>
-        
-            {/* ===== PPG ===== */}
-            <div className="mt-2 flex items-center justify-center gap-3 pb-4">
-          <span className="text-[11px] text-white/50 tracking-widest">
-            PPG
-          </span>
-        
-          <motion.span
-            animate={{
-              textShadow: [
-                "0 0 8px rgba(255,255,255,.20)",
-                "0 0 14px rgba(120,200,255,.40)",
-                "0 0 8px rgba(255,255,255,.20)",
-              ],
-            }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-            className={`${alfa.className} text-[40px] font-bold tabular-nums leading-none`}
-          >
-            {team.avgPointsFor.toFixed(1)}
-          </motion.span>
-        
-          {typeof team.ppgRank === "number" && (
-            <span className="text-[10px] text-white/60">
-              #{team.ppgRank} in NBA
-            </span>
-          )}
-        </div>
-        </div>
+          </div>
         </GlassHeroCard>
       </motion.div>
       

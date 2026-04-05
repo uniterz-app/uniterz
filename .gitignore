@@ -46,3 +46,6 @@ next-env.d.ts
 
 # firebase admin service account
 service-account.json
+
+# GitHub 100MB 制限超の LP 動画（ローカル・デプロイ先に配置）
+public/lp/LP3.mp4

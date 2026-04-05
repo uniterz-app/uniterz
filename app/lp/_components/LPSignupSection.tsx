@@ -46,7 +46,7 @@ export default function LPSignupSection() {
           </h2>
 
           <p className="mx-auto mt-3 max-w-[36rem] text-center text-sm leading-6 text-white/68 sm:max-w-2xl sm:text-base sm:leading-7">
-            無料で始めて、毎日更新ランキングに参加。自分のコミュニティを作って仲間と競い、月間1位のユニフォーム贈呈を狙おう。
+            無料で始めて、毎日更新ランキングに参加。自分のコミュニティを作って仲間と競い、月間トップの豪華なプレゼントを狙おう。
           </p>
 
           <div className="mx-auto mt-4 w-fit rounded-full border border-cyan-300/14 bg-cyan-300/5 px-4 py-2 text-xs font-medium tracking-[0.06em] text-cyan-100/78">

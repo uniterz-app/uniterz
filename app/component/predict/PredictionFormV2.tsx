@@ -12,7 +12,8 @@ import { createPortal } from "react-dom";
 import { auth } from "@/lib/firebase";
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import { toast } from "@/app/component/ui/toast";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
@@ -82,6 +83,7 @@ export default function PredictionFormV2({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isMobile =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix = isMobile ? "/mobile" : "/web";
@@ -127,6 +129,13 @@ export default function PredictionFormV2({
       setMarketChartKey((k) => k + 1);
     }
   }, [toolsTab]);
+
+  // チーム詳細から戻ったとき ?standings=1 でスタンディングを開いた状態にする
+  useEffect(() => {
+    if (searchParams.get("standings") !== "1") return;
+    if (!showStandings) return;
+    setToolsTab("standings");
+  }, [searchParams, showStandings]);
 
   function getMobileTeamLabel(
     league: MatchCardProps["league"],
@@ -194,8 +203,6 @@ export default function PredictionFormV2({
   const toolButtonBase = isMobile
     ? "flex h-9 w-full items-center justify-center rounded-xl border px-1.5 text-xs font-semibold transition-all duration-200"
     : "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
-
-  const standingsHrefBase = isMobile ? "/mobile/teams" : "/web/teams";
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -557,7 +564,7 @@ export default function PredictionFormV2({
             >
               {showStandings ? (
                 <NbaStandingsPanel
-                  teamHrefBase={standingsHrefBase}
+                  teamHrefBase={`${prefix}/teams`}
                   compact={isMobile}
                 />
               ) : (

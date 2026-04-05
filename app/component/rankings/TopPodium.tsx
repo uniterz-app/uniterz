@@ -120,60 +120,54 @@ function rankInk(rank: 1 | 2 | 3) {
 /* =========================
  * Size presets
  * ========================= */
+/** 枠・行の高さを 1〜3 位で揃え、出現アニメ時にレイアウトが伸び縮みしないようにする */
+const podiumLayoutStable = {
+  cardMinH: "min-h-[92px]",
+  bottomH: "h-[14px]",
+  rowPy: "py-1.5",
+  rowMinH: "min-h-[50px]",
+  gap: "gap-2",
+  px: "px-3",
+} as const;
+
 function rankPreset(rank: 1 | 2 | 3) {
+  /** 1〜3位はアバターサイズ統一。順位数字は左列・縦中央 */
+  const avatar = { avatar: "h-[40px] w-[40px]", avatarText: "text-[16px]" };
   if (rank === 1) {
     return {
-      cardMinH: "min-h-[84px]",
-      topH: "h-[44px]",
-      bottomH: "h-[14px]",
-      rowPy: "py-1.5",
-      rankW: "w-[24px]",
+      ...podiumLayoutStable,
+      rankW: "w-[28px]",
       rankText: "text-[28px]",
-      avatar: "h-[40px] w-[40px]",
-      avatarText: "text-[17px]",
+      ...avatar,
       nameText: "text-[22px]",
-      scoreW: "w-[66px]",
+      scoreW: "min-w-[58px]",
       scoreMain: "text-[28px]",
       scoreSub: "text-[12px]",
-      gap: "gap-1.5",
-      px: "px-3",
       badgeSize: "h-[13px] w-[13px]",
     };
   }
   if (rank === 2) {
     return {
-      cardMinH: "min-h-[80px]",
-      topH: "h-[42px]",
-      bottomH: "h-[14px]",
-      rowPy: "py-1.5",
-      rankW: "w-[22px]",
+      ...podiumLayoutStable,
+      rankW: "w-[26px]",
       rankText: "text-[26px]",
-      avatar: "h-[38px] w-[38px]",
-      avatarText: "text-[15px]",
+      ...avatar,
       nameText: "text-[19px]",
-      scoreW: "w-[62px]",
+      scoreW: "min-w-[54px]",
       scoreMain: "text-[25px]",
       scoreSub: "text-[11px]",
-      gap: "gap-1.5",
-      px: "px-3",
       badgeSize: "h-[12px] w-[12px]",
     };
   }
   return {
-    cardMinH: "min-h-[76px]",
-    topH: "h-[38px]",
-    bottomH: "h-[14px]",
-    rowPy: "py-1",
-    rankW: "w-[20px]",
+    ...podiumLayoutStable,
+    rankW: "w-[24px]",
     rankText: "text-[24px]",
-    avatar: "h-[36px] w-[36px]",
-    avatarText: "text-[14px]",
+    ...avatar,
     nameText: "text-[17px]",
-    scoreW: "w-[58px]",
+    scoreW: "min-w-[50px]",
     scoreMain: "text-[22px]",
     scoreSub: "text-[11px]",
-    gap: "gap-1",
-    px: "px-2.5",
     badgeSize: "h-[11px] w-[11px]",
   };
 }
@@ -391,16 +385,17 @@ export default function TopPodium({
   rows,
   metric,
   onTopCountDone,
-  intro = false,
   language = "ja",
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
   onTopCountDone?: () => void;
+  /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
   language?: Language;
 }) {
   const reduceMotion = useReducedMotion();
+  /** 順位 1,2,3 に対応した遅延（上から順番に入る） */
   const cardVariants = useMemo<Variants>(
     () => ({
       hidden: {
@@ -409,7 +404,7 @@ export default function TopPodium({
         x: reduceMotion ? 0 : -8,
         scale: reduceMotion ? 1 : 0.987,
       },
-      show: (i: number) => ({
+      show: (step: number) => ({
         opacity: 1,
         y: 0,
         x: 0,
@@ -417,7 +412,7 @@ export default function TopPodium({
         transition: reduceMotion
           ? { duration: 0 }
           : {
-              delay: i * 0.11,
+              delay: step * 0.18,
               type: "spring",
               stiffness: 86,
               damping: 19,
@@ -462,7 +457,7 @@ export default function TopPodium({
   return (
     <div className="px-3 pt-5 pb-1">
       <div className="flex flex-col gap-3">
-        {topRows.map(({ rank, row, value }, index) => {
+        {topRows.map(({ rank, row, value }) => {
           const ink = rankInk(rank);
           const m = medal(rank);
           const s = rankPreset(rank);
@@ -495,9 +490,9 @@ export default function TopPodium({
                   ].join(", "),
                 }}
                 variants={cardVariants}
-                initial={intro && reduceMotion !== true ? "hidden" : "show"}
+                initial={reduceMotion ? "show" : "hidden"}
                 animate="show"
-                custom={index}
+                custom={rank - 1}
               >
                 <FadedFlagBg rank={rank} countryCode={countryCode} />
 
@@ -540,10 +535,12 @@ export default function TopPodium({
                 />
 
                 <div className={["relative z-10", s.px, s.rowPy].join(" ")}>
-                  <div className={["flex items-center", s.gap, s.topH].join(" ")}>
+                  <div
+                    className={["flex items-center", s.gap, s.rowMinH].join(" ")}
+                  >
                     <div
                       className={[
-                        "shrink-0 text-center leading-none",
+                        "flex shrink-0 items-center justify-center text-center leading-none",
                         rankHudNumClass,
                         s.rankW,
                         s.rankText,
@@ -556,19 +553,17 @@ export default function TopPodium({
                       {rank}
                     </div>
 
-                    <div className={rank === 1 ? "-translate-y-[5px]" : "-translate-y-[2px]"}>
+                    <div className="ml-2.5 flex shrink-0 items-center justify-center">
                       <RankingsAvatarCircle
                         photoURL={row.photoURL}
-                        displayName={
-                          row.displayName ?? row.handle ?? "?"
-                        }
+                        displayName={row.displayName ?? row.handle ?? "?"}
                         boxClassName={s.avatar}
                         initialTextClassName={s.avatarText}
                         gateReady
                       />
                     </div>
 
-                    <div className="min-w-0 flex-1 flex items-center justify-center">
+                    <div className="flex min-w-0 flex-1 items-center justify-center">
                       <div
                         className={[
                           "truncate text-center font-black leading-none tracking-[0.005em]",
@@ -594,7 +589,7 @@ export default function TopPodium({
 
                     <div
                       className={[
-                        "shrink-0 flex flex-col items-end justify-center",
+                        "flex shrink-0 flex-col items-end justify-center",
                         s.scoreW,
                       ].join(" ")}
                     >

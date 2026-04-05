@@ -78,13 +78,13 @@ export type PredictionPostV2 = {
   prediction: {
     winner: "home" | "away" | "draw";
     score: { home: number; away: number };
-    /** 旧データ・任意 */
+    /** UI 用（任意）。旧データは null の場合あり */
     confidence?: number | null;
   };
 
   note?: string;
 
-  /** 一覧用キャッシュ（サブコレ likes/saves と併用可） */
+  /** 一覧用キャッシュ（サブコレ likes/saves と同期しない場合あり） */
   likeCount?: number;
   saveCount?: number;
 

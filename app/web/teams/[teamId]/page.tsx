@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { doc, getDoc, Timestamp } from "firebase/firestore";
 
@@ -240,5 +240,9 @@ export default function TeamPage() {
   if (loading) return null;
   if (!team) return null;
 
-  return <TeamDetailViewWeb team={team} />;
+  return (
+    <Suspense fallback={null}>
+      <TeamDetailViewWeb team={team} />
+    </Suspense>
+  );
 }

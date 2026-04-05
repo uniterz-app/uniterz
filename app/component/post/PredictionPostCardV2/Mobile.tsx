@@ -365,7 +365,9 @@ const winnerBgColor = (() => {
   <div className="col-span-3 bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-center">
     <div className="text-xs opacity-60 text-center">自信度</div>
     <div className="mt-1 text-sm font-extrabold">
-      {post.prediction.confidence}%
+      {typeof post.prediction.confidence === "number"
+        ? `${post.prediction.confidence}%`
+        : "—"}
     </div>
   </div>
 

@@ -2,7 +2,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -92,5 +92,9 @@ export default function Page() {
     verified: !!fUser.emailVerified,
   };
 
-  return <PredictionForm dense game={gameProps} user={user} />;
+  return (
+    <Suspense fallback={null}>
+      <PredictionForm dense game={gameProps} user={user} />
+    </Suspense>
+  );
 }

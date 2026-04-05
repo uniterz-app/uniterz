@@ -34,13 +34,13 @@ const posterBlurStyle = (posterUrl: string): CSSProperties => ({
   transform: "translateZ(0) scale(1.35)",
 });
 
-/** 左右の細い黒帯だけ抑えつつ、上下の見切れを減らす（以前 1.38 は強すぎた） */
-const foregroundZoomClass =
-  "absolute inset-0 h-full w-full origin-center object-cover object-center scale-[1.08] sm:scale-[1.06] motion-reduce:scale-100";
+/** aspect-video 枠にぴったり収める（過剰ズームなし） */
+const foregroundClass =
+  "absolute inset-0 h-full w-full object-cover object-center";
 
 /**
  * LP 用フロー動画（想定：PC の横型スクリーンレコーディング）。
- * 背面：ポスターぼかし ＋ 同動画のぼかし。前面：object-cover ＋ 軽いズームでピラーボックスを切る。
+ * 背面：ポスターぼかし ＋ 同動画のぼかし。前面：枠いっぱいの object-cover。
  */
 export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Props) {
   const [failed, setFailed] = useState(false);
@@ -59,7 +59,7 @@ export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Prop
             alt={alt}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className={foregroundZoomClass}
+            className={foregroundClass}
           />
         </div>
       ) : (
@@ -94,7 +94,7 @@ export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Prop
           </div>
 
           {/* 前面：ズームでフレーム内の左右黒をクリップ（上下もわずかに切れる） */}
-          <div className="absolute inset-0 z-2 overflow-hidden">
+          <div className="absolute inset-0 z-[2] overflow-hidden">
             <video
               key={videoSrc}
               src={videoSrc}
@@ -106,7 +106,7 @@ export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Prop
               playsInline
               preload="auto"
               onError={() => setFailed(true)}
-              className={foregroundZoomClass}
+              className={foregroundClass}
             />
           </div>
         </>
