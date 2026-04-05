@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { mediaSlots } from "./lp-data";
+import LPMediaSlotVideo from "./LPMediaSlotVideo";
 
 export default function LPMediaSlots() {
   return (
@@ -9,13 +10,13 @@ export default function LPMediaSlots() {
       className="lp-section-shell"
     >
       <div className="lp-section-rail">
-        <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
+        <div className="mx-auto h-px w-full max-w-6xl bg-linear-to-r from-transparent via-cyan-300/40 to-transparent" />
         <div className="mx-auto h-24 w-[70%] max-w-4xl bg-cyan-300/7 blur-3xl" />
       </div>
 
       <div className="relative">
         <div className="inline-flex items-center gap-3">
-          <div className="h-px w-10 bg-gradient-to-r from-cyan-300/70 to-transparent" />
+          <div className="h-px w-10 bg-linear-to-r from-cyan-300/70 to-transparent" />
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/82 sm:tracking-[0.28em]">
             Ranking Proof
           </div>
@@ -28,7 +29,7 @@ export default function LPMediaSlots() {
         </p>
 
         <p className="mb-3 mt-8 flex items-center gap-2 text-[11px] font-medium text-cyan-200/76 md:hidden">
-          <span className="inline-block h-1 w-8 rounded-full bg-gradient-to-r from-cyan-300/70 to-transparent" />
+          <span className="inline-block h-1 w-8 rounded-full bg-linear-to-r from-cyan-300/70 to-transparent" />
           カードを横にスワイプして比較
         </p>
         <div
@@ -40,18 +41,18 @@ export default function LPMediaSlots() {
           {mediaSlots.map((slot) => (
             <article
               key={slot.id}
-              className="relative min-w-[min(300px,88vw)] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-[1px] md:min-w-0 md:shrink md:snap-none"
+              className="relative min-w-[min(300px,88vw)] shrink-0 snap-center overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-px md:min-w-0 md:shrink md:snap-none"
               data-lp-stagger-item
             >
               <div className="relative rounded-[25px] bg-[linear-gradient(180deg,rgba(8,18,30,0.9),rgba(6,16,26,0.84))] p-3.5 sm:p-4">
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/36 to-transparent" />
-                <div className="pointer-events-none absolute inset-[1px] rounded-[24px] ring-1 ring-inset ring-white/6" />
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-200/36 to-transparent" />
+                <div className="pointer-events-none absolute inset-px rounded-[24px] ring-1 ring-inset ring-white/6" />
 
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300/72 sm:tracking-[0.22em]">
                     {slot.badge}
                   </div>
-                  <div className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-2.5 py-1 text-[10px] font-semibold text-cyan-100/80">
+                  <div className="rounded-full border border-cyan-300/20 bg-cyan-300/8 px-2.5 py-1 text-[10px] font-semibold text-cyan-100/80">
                     {slot.type === "video" ? "VIDEO" : "IMAGE"}
                   </div>
                 </div>
@@ -63,16 +64,10 @@ export default function LPMediaSlots() {
                 <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
                   {slot.enabled && slot.src ? (
                     slot.type === "video" ? (
-                      <video
+                      <LPMediaSlotVideo
                         src={slot.src}
                         poster={slot.poster}
-                        aria-label={slot.alt}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        className="h-48 w-full object-cover min-[390px]:h-52 sm:h-64"
+                        alt={slot.alt}
                       />
                     ) : (
                       <div className="relative h-48 w-full min-[390px]:h-52 sm:h-64">

@@ -115,6 +115,12 @@ export default function ScheduleList({
     return propsList.map((p) => String(p.id));
   }, [propsList]);
 
+  /** 当日オーバーレイ内で、すでに予想済みの試合（次試合モーダルでスキップ） */
+  const overlayPredictedGameIds = useMemo(
+    () => gameIds.filter((id) => Boolean(myPostMap[id])),
+    [gameIds, myPostMap]
+  );
+
   const teamIds = useMemo(() => {
     return Array.from(
       new Set(
@@ -483,6 +489,7 @@ export default function ScheduleList({
                     inOverlay
                     overlayScheduleGameIds={gameIds}
                     overlayScheduleGames={propsList}
+                    overlayPredictedGameIds={overlayPredictedGameIds}
                     onClosePredictOverlay={close}
                     onSwitchOverlayGame={(id) => {
                       setOpenGameId(String(id));
@@ -523,6 +530,7 @@ export default function ScheduleList({
                     inOverlay
                     overlayScheduleGameIds={gameIds}
                     overlayScheduleGames={propsList}
+                    overlayPredictedGameIds={overlayPredictedGameIds}
                     onClosePredictOverlay={close}
                     onSwitchOverlayGame={(id) => {
                       setOpenGameId(String(id));

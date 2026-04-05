@@ -20,11 +20,16 @@ import GamePredictionDistribution from "@/app/component/predict/GamePredictionDi
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
-import { getNextScheduledGameIdOnSameDay } from "@/lib/games/nextPredictGame";
+import {
+  findNextUnpredictedScheduledGameInList,
+  getNextScheduledGameIdOnSameDay,
+} from "@/lib/games/nextPredictGame";
 import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "@/lib/predict/nextGameModalPrefs";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 /* ======================
    Motion
@@ -55,6 +60,8 @@ type Props = {
   overlayScheduleGameIds?: string[];
   /** 当日の試合一覧（次試合のチーム名・カラー表示用） */
   overlayScheduleGames?: MatchCardProps[];
+  /** 当日リストのうち、すでに自分が予想投稿済みの gameId（次試合モーダルでスキップ） */
+  overlayPredictedGameIds?: string[];
 };
 
 type Winner = "home" | "away" | "draw";
@@ -71,6 +78,7 @@ export default function PredictionFormV2({
   onSwitchOverlayGame,
   overlayScheduleGameIds,
   overlayScheduleGames,
+  overlayPredictedGameIds,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -132,6 +140,7 @@ export default function PredictionFormV2({
 
   const homeLabel = getMobileTeamLabel(game.league, homeL1, homeL2);
   const awayLabel = getMobileTeamLabel(game.league, awayL1, awayL2);
+  const predictTeamNameTy = bracketMarketTeamTypography(isMobile);
 
   useEffect(() => {
     const h = Number(scoreHome);
@@ -169,8 +178,10 @@ export default function PredictionFormV2({
     !!winner && !submitting && scoreHome !== "" && scoreAway !== "";
 
   const scoreInputClass = [
-    "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left font-medium text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
-    isMobile ? "px-3.5 py-2.5 text-[15px]" : "px-4 py-3 text-base",
+    "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
+    resultStatsMetricNumClass,
+    // iOS Safari: 16px 未満だとフォーカス時に自動ズームする
+    isMobile ? "px-3.5 py-2.5 text-base" : "px-4 py-3 text-base",
   ].join(" ");
 
   const glassCard =
@@ -286,13 +297,26 @@ export default function PredictionFormV2({
         if (readPredictNextGameModalSkip()) {
           onClosePredictOverlay?.();
         } else {
+          const skip = new Set(
+            (overlayPredictedGameIds ?? []).map((id) => String(id))
+          );
+          const currentId = String((game as any).id);
+
           let nextId: string | null = null;
-          if (game.startAtJst) {
+          if (overlayScheduleGames?.length) {
+            nextId = findNextUnpredictedScheduledGameInList(
+              overlayScheduleGames,
+              currentId,
+              game.league,
+              skip
+            );
+          } else if (game.startAtJst) {
             try {
               nextId = await getNextScheduledGameIdOnSameDay({
-                currentGameId: String((game as any).id),
+                currentGameId: currentId,
                 league: game.league,
                 dayAnchor: game.startAtJst,
+                skipGameIds: skip,
               });
             } catch {
               /* ignore */
@@ -554,7 +578,10 @@ export default function PredictionFormV2({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="mb-2 text-sm font-semibold text-white/88">
+              <div
+                className="mb-2 text-sm font-bold text-white/88"
+                style={predictTeamNameTy}
+              >
                 {homeLabel}
               </div>
               <input
@@ -568,7 +595,10 @@ export default function PredictionFormV2({
             </div>
 
             <div>
-              <div className="mb-2 text-sm font-semibold text-white/88">
+              <div
+                className="mb-2 text-sm font-bold text-white/88"
+                style={predictTeamNameTy}
+              >
                 {awayLabel}
               </div>
               <input

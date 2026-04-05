@@ -1,5 +1,6 @@
 "use client";
 
+import { PrefixProvider } from "@/app/PrefixContext";
 import { FirebaseUserProvider } from "@/lib/useFirebaseUser";
 
 export default function AppProviders({
@@ -7,5 +8,9 @@ export default function AppProviders({
 }: {
   children: React.ReactNode;
 }) {
-  return <FirebaseUserProvider>{children}</FirebaseUserProvider>;
+  return (
+    <FirebaseUserProvider>
+      <PrefixProvider>{children}</PrefixProvider>
+    </FirebaseUserProvider>
+  );
 }

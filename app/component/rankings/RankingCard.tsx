@@ -6,6 +6,7 @@ import type { RankingRowWithCountry, MobileMetric } from "./_data/mockRows";
 import { jp, summaryMetricNumClass } from "@/lib/fonts";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import { metricNum, getMetricSubText } from "@/lib/rankings/metric";
+import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
@@ -134,6 +135,7 @@ function ValueText({
   language: Language;
 }) {
   const m = medal(rank);
+  const justifyRow = isTop3 ? "justify-center" : "justify-end";
 
   const baseTextClass =
     rank === 1 ? "text-[32px]" : isTop3 ? "text-[28px]" : "text-[20px]";
@@ -158,7 +160,8 @@ function ValueText({
     return (
       <div
         className={[
-          "inline-flex items-baseline justify-center gap-0.5 leading-none",
+          "inline-flex max-w-full items-baseline gap-0.5 leading-none",
+          justifyRow,
           rankHudNumClass,
           baseTextClass,
         ].join(" ")}
@@ -176,7 +179,8 @@ function ValueText({
     return (
       <div
         className={[
-          "inline-flex items-baseline justify-center leading-none",
+          "inline-flex max-w-full items-baseline leading-none",
+          justifyRow,
           rankHudNumClass,
         ].join(" ")}
         style={valueStyle}
@@ -200,14 +204,22 @@ function ValueText({
   return (
     <div
       className={[
-        "inline-flex items-baseline justify-center gap-1 leading-none",
+        "inline-flex max-w-full items-baseline gap-1 leading-none",
+        justifyRow,
         rankHudNumClass,
         baseTextClass,
       ].join(" ")}
       style={valueStyle}
     >
-      <span>{counted.toFixed(1)}</span>
-      <span className={rank === 1 ? "text-[15px]" : isTop3 ? "text-[13px]" : "text-[9px]"}>
+      <span className="shrink-0 tabular-nums">
+        {formatMetricDecimals(counted, 1)}
+      </span>
+      <span
+        className={[
+          "shrink-0",
+          rank === 1 ? "text-[15px]" : isTop3 ? "text-[13px]" : "text-[9px]",
+        ].join(" ")}
+      >
         pts
       </span>
     </div>
@@ -254,7 +266,7 @@ export default function RankingCard({
   return (
     <Link
       href={`${base}/u/${handleOrUid}`}
-      className={["block", isTop3 ? "mb-1.5" : "mb-2"].join(" ")}
+      className={["block min-w-0", isTop3 ? "mb-1.5" : "mb-2"].join(" ")}
     >
       <div
         className={[
@@ -317,10 +329,10 @@ export default function RankingCard({
 
         <div
           className={[
-            "relative z-10 grid items-center gap-2.5 px-2.5",
+            "relative z-10 grid min-w-0 items-center gap-2.5 px-2.5",
             isTop3
               ? "grid-cols-[32px_56px_minmax(0,1fr)_84px] py-4"
-              : "grid-cols-[22px_36px_minmax(0,1fr)_50px] py-3",
+              : "grid-cols-[22px_36px_minmax(0,1fr)_auto] py-3",
           ].join(" ")}
         >
           <div className="flex items-center justify-center">
@@ -373,8 +385,20 @@ export default function RankingCard({
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <div className="flex min-w-[68px] flex-col items-center justify-center text-center">
+          <div
+            className={[
+              "min-w-0",
+              isTop3 ? "flex justify-center" : "flex justify-end",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "flex min-w-0 max-w-full flex-col",
+                isTop3
+                  ? "min-w-[68px] items-center text-center"
+                  : "items-end text-right",
+              ].join(" ")}
+            >
               <ValueText
                 rank={rank}
                 metric={metric}
@@ -384,14 +408,21 @@ export default function RankingCard({
               />
               {showSubText &&
                 (showPostsUnderAvg ? (
-                  <div className="mt-0.5 inline-flex items-center gap-1 text-[9px] leading-none text-white/40">
-                    <span>{subText}</span>
-                    <span>
+                  <div
+                    className={[
+                      "mt-0.5 max-w-full text-[9px] leading-none text-white/40",
+                      isTop3
+                        ? "inline-flex items-center justify-center gap-1"
+                        : "inline-flex flex-wrap items-center justify-end gap-x-1 gap-y-0",
+                    ].join(" ")}
+                  >
+                    <span className="truncate">{subText}</span>
+                    <span className="shrink-0">
                       {postsLabel(language)}:{r.posts ?? 0}
                     </span>
                   </div>
                 ) : (
-                  <div className="mt-0.5 text-[9px] leading-none text-white/40">
+                  <div className="mt-0.5 max-w-full truncate text-[9px] leading-none text-white/40">
                     {subText}
                   </div>
                 ))}

@@ -4,7 +4,6 @@
 
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
-import { padRankingRowsForDev } from "@/lib/rankings/rankingDevMocks";
 
 export type RankingMetric =
   | "winRate"
@@ -67,18 +66,9 @@ export function useRanking(metric: RankingMetric) {
 
         if (!cancelled) {
           const raw = (json?.rows ?? []) as RankingRow[];
-          const padded = padRankingRowsForDev(raw, metric);
-          setRows(padded);
-          // モックを混ぜた場合は並びが変わるため、API の myRank ではなく再計算する
-          const didPad = padded.length > raw.length;
-          if (didPad) {
-            const idx = myUid ? padded.findIndex((r) => r.uid === myUid) : -1;
-            setMyRank(idx >= 0 ? idx + 1 : null);
-            setMyRow(idx >= 0 ? padded[idx]! : null);
-          } else {
-            setMyRank(json?.myRank ?? null);
-            setMyRow(json?.myRow ?? null);
-          }
+          setRows(raw);
+          setMyRank(json?.myRank ?? null);
+          setMyRow(json?.myRow ?? null);
         }
       } catch {
         if (!cancelled) {

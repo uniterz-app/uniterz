@@ -53,7 +53,7 @@ export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Prop
   return (
     <div className={shellClass}>
       {failed ? (
-        <div className="absolute inset-0 z-[2] overflow-hidden">
+        <div className="absolute inset-0 z-2 overflow-hidden">
           <Image
             src={fallbackSrc}
             alt={alt}
@@ -78,7 +78,7 @@ export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Prop
           ) : null}
 
           {/* 背面動画：拡大＋ぼかし（暗くしない） */}
-          <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden motion-reduce:hidden">
+          <div className="pointer-events-none absolute inset-0 z-1 overflow-hidden motion-reduce:hidden">
             <video
               key={`${videoSrc}-bg`}
               aria-hidden
@@ -94,7 +94,7 @@ export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Prop
           </div>
 
           {/* 前面：ズームでフレーム内の左右黒をクリップ（上下もわずかに切れる） */}
-          <div className="absolute inset-0 z-[2] overflow-hidden">
+          <div className="absolute inset-0 z-2 overflow-hidden">
             <video
               key={videoSrc}
               src={videoSrc}
@@ -113,7 +113,7 @@ export default function PredictionFlowVideo({ src, poster, alt, cacheKey }: Prop
       )}
 
       <div
-        className="pointer-events-none absolute inset-0 z-[3] bg-[radial-gradient(ellipse_at_50%_50%,transparent_58%,rgba(0,0,0,0.06)_100%)]"
+        className="pointer-events-none absolute inset-0 z-3 bg-[radial-gradient(ellipse_at_50%_50%,transparent_58%,rgba(0,0,0,0.06)_100%)]"
         aria-hidden
       />
     </div>

@@ -1,12 +1,15 @@
 "use client";
 import React from "react";
-import type { League } from "@/lib/leagues";  // ← これが重要
+import type { League } from "@/lib/leagues"; // ← これが重要
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 type Props = {
-  value: League;                // ← LeagueV2 → League に変更
+  value: League; // ← LeagueV2 → League に変更
   onChange: (v: League) => void;
   className?: string;
   size?: "sm" | "md" | "lg";
+  /** Web / Mobile でチーム名と同じタブ用トーン */
+  layoutMobile?: boolean;
 };
 
 const sizeMap = {
@@ -31,7 +34,9 @@ export default function LeagueTabsV2({
   onChange,
   className,
   size = "md",
+  layoutMobile = false,
 }: Props) {
+  const tabFont = bracketMarketTeamTypography(layoutMobile);
   return (
     <div className={`flex gap-2 ${className ?? ""}`}>
       {DISPLAY_ITEMS.map((it) => {
@@ -40,9 +45,10 @@ export default function LeagueTabsV2({
           <button
             key={it.v}
             onClick={() => onChange(it.v)}
+            style={tabFont}
             className={[
               sizeMap[size],
-              "border transition-colors",
+              "border font-bold uppercase transition-colors",
               active
                 ? "bg-white/10 border-white/20 text-white"
                 : "bg-transparent border-white/10 text-white/80 hover:bg-white/5",

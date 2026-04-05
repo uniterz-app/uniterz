@@ -13,6 +13,8 @@ type Bucket = {
   upsetPointsSum: number;
   scorePrecisionSum: number;
   pointsSumV3: number;
+  upsetBonusSum: number;
+  streakBonusSum: number;
 };
 
 type SummaryForCards = {
@@ -25,6 +27,9 @@ type SummaryForCards = {
   pointsSumV3: number;
   upsetChanceCount: number;
   upsetHitCount: number;
+  upsetBonusSum: number;
+  streakBonusSum: number;
+  basePointsSum: number;
 };
 
 const empty = (): Bucket => ({
@@ -36,6 +41,8 @@ const empty = (): Bucket => ({
   upsetPointsSum: 0,
   scorePrecisionSum: 0,
   pointsSumV3: 0,
+  upsetBonusSum: 0,
+  streakBonusSum: 0,
 });
 
 function safeNum(v: unknown): number {
@@ -66,21 +73,33 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   base.upsetPointsSum += safeNum(v.upsetPointsSum);
   base.scorePrecisionSum += safeNum(v.scorePrecisionSum);
   base.pointsSumV3 += safeNum(v.pointsSumV3);
+  base.upsetBonusSum += safeNum(v.upsetBonusSum);
+  base.streakBonusSum += safeNum(v.streakBonusSum);
   return base;
 }
 
 function computeForCards(b: Bucket): Omit<SummaryForCards, "fullPosts"> {
   const posts = safeInt(b.posts);
   const wins = safeInt(b.wins);
+  const pointsSumV3 = safeNum(b.pointsSumV3);
+  const upsetBonusSum = safeNum(b.upsetBonusSum);
+  const streakBonusSum = safeNum(b.streakBonusSum);
+  const basePointsSum = Math.max(
+    0,
+    pointsSumV3 - upsetBonusSum - streakBonusSum
+  );
   return {
     posts,
     wins,
     winRate: posts ? wins / posts : 0,
     scorePrecisionSum: safeNum(b.scorePrecisionSum),
     upsetPointsSum: safeNum(b.upsetPointsSum),
-    pointsSumV3: safeNum(b.pointsSumV3),
+    pointsSumV3,
     upsetChanceCount: safeInt(b.upsetOpportunityCount),
     upsetHitCount: safeInt(b.upsetHitCount),
+    upsetBonusSum,
+    streakBonusSum,
+    basePointsSum,
   };
 }
 

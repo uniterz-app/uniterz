@@ -25,6 +25,7 @@ async function updateUserStreak({ db, gameId, final, }) {
     for (const [uid, didWin] of userResult.entries()) {
         const userRef = db.doc(`user_stats_v2/${uid}`);
         const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
+        const publicUserRef = db.doc(`users/${uid}`);
         const updated = await db.runTransaction(async (tx) => {
             var _a, _b, _c;
             const snap = await tx.get(userRef);
@@ -43,11 +44,18 @@ async function updateUserStreak({ db, gameId, final, }) {
                 }
             }
             const activeWinStreak = current > 0 ? current : 0;
-            // user_stats_v2 更新
+            // user_stats_v2 更新（maxStreak はプロフィール等の既存名と揃えたエイリアス）
             tx.set(userRef, {
                 currentStreak: current,
                 maxWinStreak: maxWin,
                 maxLoseStreak: maxLose,
+                maxStreak: maxWin,
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            // 公開プロフィール（useProfile）と整合：試合確定と同時に連勝をミラー
+            tx.set(publicUserRef, {
+                currentStreak: current,
+                maxStreak: maxWin,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
             // cumulative_stats 更新

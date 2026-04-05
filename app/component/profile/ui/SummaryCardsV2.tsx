@@ -22,6 +22,7 @@ import {
 } from "@/lib/stats/thresholdsV2";
 import SummaryCardReveal from "./SummaryCardReveal";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 export type SummaryDataV2 = {
   posts: number;
@@ -75,8 +76,9 @@ export default function SummaryCardsV2({
   const winRateCount = useCountUp(winRateValue, 700, shouldAnimate);
   const winRatePct = `${winRateCount}%`;
 
-  const scorePrecisionSumValue = Number(
-    (data.scorePrecisionSum ?? 0).toFixed(1)
+  const scorePrecisionSumValue = roundMetricDecimals(
+    data.scorePrecisionSum ?? 0,
+    1
   );
   const scorePrecisionSumCount = useCountUp(
     scorePrecisionSumValue,
@@ -84,11 +86,11 @@ export default function SummaryCardsV2({
     shouldAnimate,
     1
   );
-  const scorePrecisionSumText = scorePrecisionSumCount.toFixed(1);
+  const scorePrecisionSumText = formatMetricDecimals(scorePrecisionSumCount, 1);
 
   const upsetPointsValue = Math.max(
     0,
-    Number((data.upsetPointsSum ?? 0).toFixed(1))
+    roundMetricDecimals(data.upsetPointsSum ?? 0, 1)
   );
   const upsetPointsCount = useCountUp(
     upsetPointsValue,
@@ -96,7 +98,7 @@ export default function SummaryCardsV2({
     shouldAnimate,
     1
   );
-  const upsetPointsText = upsetPointsCount.toFixed(1);
+  const upsetPointsText = formatMetricDecimals(upsetPointsCount, 1);
 
   const maxStreakValue = Math.max(0, Math.round(data.maxStreak || 0));
   const maxStreakCount = useCountUp(maxStreakValue, 700, shouldAnimate);
@@ -104,7 +106,7 @@ export default function SummaryCardsV2({
 
   const totalPointsValue = Math.max(
     0,
-    Number((data.pointsSumV3 ?? 0).toFixed(1))
+    roundMetricDecimals(data.pointsSumV3 ?? 0, 1)
   );
   const totalPointsCount = useCountUp(
     totalPointsValue,
@@ -112,7 +114,7 @@ export default function SummaryCardsV2({
     shouldAnimate,
     1
   );
-  const totalPointsText = totalPointsCount.toFixed(1);
+  const totalPointsText = formatMetricDecimals(totalPointsCount, 1);
 
   const enoughPosts = (data.recent3Posts ?? 0) >= MIN_RECENT3_POSTS;
 
@@ -133,13 +135,15 @@ export default function SummaryCardsV2({
   const hTotal =
     hTotalRaw.level === "none" ? hTotalRaw : { level: "yellow" as const };
 
-  const padCls = compact ? "p-1.5 md:p-3" : "p-4";
-  const gapCls = compact ? "gap-1.5 md:gap-3" : "gap-3";
+  const padCls = compact
+    ? "px-2 pt-[5px] pb-[7px] md:px-2.5 md:pt-1.5 md:pb-2"
+    : "p-4";
+  const gapCls = compact ? "gap-1.5 md:gap-2.5" : "gap-3";
   const labelCls = compact
-    ? "text-[10px] md:text-[13px] tracking-tight"
+    ? "text-[11px] md:text-[14px] tracking-tight"
     : "text-[14px]";
   const valueCls = compact
-    ? "text-[14px] md:text-[24px] tracking-tight"
+    ? "text-[15px] md:text-[24px] tracking-tight"
     : "text-[20px] md:text-[28px]";
   const iconSize = compact ? 13 : 20;
 
@@ -257,7 +261,7 @@ export default function SummaryCardsV2({
   if (isMobile) {
     return (
       <>
-        <div className={`mt-6 grid grid-cols-2 ${gapCls}`}>
+        <div className={`mt-3 grid grid-cols-2 items-start ${gapCls}`}>
           {wrap(
             0,
             <Card
@@ -490,7 +494,7 @@ function Card({
   return (
     <div className={`${shell} ${padCls}`}>
       <div
-        className={`flex items-center justify-center gap-1.5 text-white/85 md:gap-2 ${compactShell ? "mb-0.5 md:mb-1" : "mb-1"}`}
+        className={`flex items-center justify-center gap-1 text-white/85 md:gap-1.5 ${compactShell ? "mb-1 md:mb-1.5" : "mb-1"}`}
       >
         {icon && <span className="inline-flex">{icon}</span>}
         <span className={`${labelCls} font-semibold tracking-[0.2px]`}>

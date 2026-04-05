@@ -17,7 +17,7 @@ type LPHeaderProps = {
 export default function LPHeader({ homeHref = "/lp" }: LPHeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-cyan-300/10 bg-[rgba(3,7,15,0.72)] backdrop-blur-2xl">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-300/28 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-cyan-300/28 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
       <div className="pointer-events-none absolute left-0 top-0 h-full w-[26%] bg-[radial-gradient(circle_at_left,rgba(34,211,238,0.10),transparent_70%)]" />
 
@@ -69,7 +69,7 @@ export default function LPHeader({ homeHref = "/lp" }: LPHeaderProps) {
 
             <Link
               href="#signup"
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/12 bg-white px-5 text-[14px] font-semibold tracking-[-0.01em] text-[#05070b] shadow-[0_8px_30px_rgba(255,255,255,0.14)] transition duration-200 hover:-translate-y-[1px] hover:bg-white/92"
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/12 bg-white px-5 text-[14px] font-semibold tracking-[-0.01em] text-[#05070b] shadow-[0_8px_30px_rgba(255,255,255,0.14)] transition duration-200 hover:-translate-y-px hover:bg-white/92"
             >
               Sign up
             </Link>

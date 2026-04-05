@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   month: Date | null;
@@ -45,9 +46,6 @@ export default function MonthHeader({
     year: "numeric",
   }).format(month);
 
-  // Fallback for Japanese label; still roughly correct even if the local TZ differs.
-  const jaLabel = `${y}年 ${m}月`;
-
   return (
     <div className={`flex items-center justify-between ${className ?? ""}`}>
       <button
@@ -61,9 +59,16 @@ export default function MonthHeader({
       <button
         type="button"
         onClick={onCenterClick}
-        className="text-lg font-bold text-white transition hover:text-white/85"
+        className="text-lg text-white transition hover:text-white/85"
       >
-        {isEn ? enMonthLabel : jaLabel}
+        {isEn ? (
+          <span className={resultStatsMetricNumClass}>{enMonthLabel}</span>
+        ) : (
+          <>
+            <span className={resultStatsMetricNumClass}>{y}</span>年{" "}
+            <span className={resultStatsMetricNumClass}>{m}</span>月
+          </>
+        )}
       </button>
 
       <button

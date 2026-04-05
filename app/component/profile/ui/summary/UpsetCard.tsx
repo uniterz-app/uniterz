@@ -7,6 +7,7 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 type Props = {
   upsetPointsSum: number;
@@ -128,7 +129,7 @@ export default function UpsetCard({
             "leading-none text-center",
           ].join(" ")}
         >
-          {cuPoints.toFixed(1)}
+          {formatMetricDecimals(cuPoints, 1)}
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
             pts
           </span>

@@ -51,6 +51,37 @@ function paletteForRatio(r: number): BarPalette {
   };
 }
 
+/** ランキング podium 等：トラックとフィルともにコントラスト高め */
+function paletteContrastForRatio(r: number): BarPalette {
+  const x = clamp01(r);
+  if (x < 0.28) {
+    return {
+      core: "rgba(34,211,238,0.98)",
+      edge: "rgba(8,145,178,1)",
+      shadow: "0 0 10px rgba(34,211,238,0.55)",
+    };
+  }
+  if (x < 0.52) {
+    return {
+      core: "rgba(52,211,153,0.96)",
+      edge: "rgba(5,150,105,1)",
+      shadow: "0 0 12px rgba(52,211,153,0.5)",
+    };
+  }
+  if (x < 0.76) {
+    return {
+      core: "rgba(250,204,21,0.96)",
+      edge: "rgba(202,138,4,1)",
+      shadow: "0 0 12px rgba(250,204,21,0.45)",
+    };
+  }
+  return {
+    core: "rgba(251,113,133,0.98)",
+    edge: "rgba(225,29,72,1)",
+    shadow: "0 0 14px rgba(251,113,133,0.55)",
+  };
+}
+
 const WHITE = { r: 255, g: 255, b: 255 };
 const BLACK = { r: 0, g: 0, b: 0 };
 
@@ -106,6 +137,8 @@ export type ResultStatRatingBarProps = {
   animateMs?: number;
   delayMs?: number;
   size?: "sm" | "md";
+  /** contrast: トラック明るめ＋シアン→緑→黄→赤の高コントラスト帯 */
+  tone?: "default" | "contrast";
   /** 指定時はセグメントごとにチーム色を左（やや明るめ）→右（濃く）へ変化 */
   teamBaseHex?: string;
   /** セグメント本数（既定 5＝20%×5、10＝10%×10） */
@@ -121,11 +154,15 @@ export default function ResultStatRatingBar({
   size = "md",
   teamBaseHex,
   segmentCount = DEFAULT_SEGMENTS,
+  tone = "default",
 }: ResultStatRatingBarProps) {
   const n = segmentCount;
   const r = clamp01(ratio);
-  const cyberPal = paletteForRatio(r);
+  const cyberPal =
+    tone === "contrast" ? paletteContrastForRatio(r) : paletteForRatio(r);
   const h = size === "sm" ? "h-[7px]" : "h-[9px]";
+  const trackBg =
+    tone === "contrast" ? "bg-white/14" : "bg-white/[0.06]";
   const rootRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
 
@@ -167,7 +204,8 @@ export default function ResultStatRatingBar({
             <div
               key={i}
               className={[
-                "min-w-0 flex-1 overflow-hidden rounded-[2px] bg-white/[0.06]",
+                "min-w-0 flex-1 overflow-hidden rounded-[2px]",
+                trackBg,
                 h,
               ].join(" ")}
             >

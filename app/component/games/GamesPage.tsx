@@ -23,6 +23,7 @@ import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 /* =========================
    Date Utils
@@ -347,7 +348,9 @@ const isSwitchingDate = !!selected && loading;
   ========================= */
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  const isMobile = pathname?.startsWith("/mobile");
+  const isMobile = Boolean(
+    pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
+  );
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
   const playoffViewHref = isMobile
     ? "/mobile/playoff-bracket/view"
@@ -394,17 +397,19 @@ const isSwitchingDate = !!selected && loading;
           value={league}
           onChange={setLeague}
           size={dense ? "md" : "lg"}
+          layoutMobile={isMobile}
         />
 
         {league === "nba" && (
           <button
             type="button"
             onClick={handleBracketClick}
+            style={bracketMarketTeamTypography(isMobile)}
             className={[
               dense
                 ? "rounded-lg px-3 py-1.5 text-sm"
                 : "rounded-xl px-4 py-2 text-base",
-              "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-semibold text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
+              "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
             ].join(" ")}
           >
             Bracket

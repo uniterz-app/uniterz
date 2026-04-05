@@ -12,6 +12,7 @@ import {
   Tooltip,
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 
 /**
  * 日別データ
@@ -57,11 +58,6 @@ function clampNum(v: any) {
 function toInt(v: any) {
   const n = Math.floor(clampNum(v));
   return n < 0 ? 0 : n;
-}
-
-function toFixed1(v: any) {
-  const n = clampNum(v);
-  return Number.isFinite(n) ? Math.round(n * 10) / 10 : 0;
 }
 
 /** 累積計算 */
@@ -252,7 +248,6 @@ export default function DailyTrendCard({
                   key={composedChartKey}
                   data={chartData}
                   margin={{ top: 6, right: 10, left: 2, bottom: -6 }}
-                  isAnimationActive={rechartsAnimActive}
                 >
                   <CartesianGrid
                     stroke="rgba(148,163,184,0.15)"
@@ -293,7 +288,7 @@ export default function DailyTrendCard({
                     tickFormatter={(v) => {
                       const n = clampNum(v);
                       return pointsTop < 20
-                        ? `${toFixed1(n)}`
+                        ? formatMetricDecimals(n, 1)
                         : `${toInt(n)}`;
                     }}
                   />
@@ -314,7 +309,7 @@ export default function DailyTrendCard({
                       if (label === postsLabel || label === hitsLabel) {
                         return [`${toInt(n)} ${unitCount}`, label];
                       }
-                      return [`${toFixed1(n)} ${unitPts}`, label];
+                      return [`${formatMetricDecimals(n, 1)} ${unitPts}`, label];
                     }}
                   />
 

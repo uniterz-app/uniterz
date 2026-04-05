@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import DonutChart from "./DonutChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { auth } from "@/lib/firebase";
 import { PieChart } from "lucide-react";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 type Props = {
   gameId: string;
@@ -92,6 +95,10 @@ export default function GamePredictionDistribution({
   chartReplayKey = 0,
   fallbackMarketBias,
 }: Props) {
+  const pathname = usePathname() ?? "";
+  const layoutMobile =
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/");
+  const teamNameTy = bracketMarketTeamTypography(layoutMobile);
   const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
   const isEn = language === "en";
   const [homeCount, setHomeCount] = useState(0);
@@ -202,7 +209,7 @@ export default function GamePredictionDistribution({
             {!fromFallback ? (
               <div className="mb-1 text-center text-[11px] text-white/70">
                 {isEn ? "Total predictions: " : "総予想数："}
-                <span className="tabular-nums">{total}</span>
+                <span className={resultStatsMetricNumClass}>{total}</span>
               </div>
             ) : (
               <div className="text-center text-[10px] leading-snug text-white/55">
@@ -220,10 +227,17 @@ export default function GamePredictionDistribution({
                   className="h-3 w-3 rounded-sm"
                   style={{ backgroundColor: seg.color }}
                 />
-                <span className="max-w-[58%] truncate text-xs text-white/85">
+                <span
+                  className="max-w-[58%] truncate text-xs font-bold text-white/85"
+                  style={teamNameTy}
+                >
                   {seg.label}
                 </span>
-                <span className="tabular-nums text-white/70">
+                <span
+                  className={[resultStatsMetricNumClass, "text-white/70"].join(
+                    " "
+                  )}
+                >
                   {(seg.value * 100).toFixed(1)}%
                 </span>
               </div>
@@ -249,7 +263,7 @@ export default function GamePredictionDistribution({
         <div className="space-y-3 text-sm md:space-y-4 md:text-base">
           <div className="mb-2 text-center text-xs text-white/70 md:text-left md:text-sm">
             {isEn ? "Total predictions: " : "総分析数："}
-            <span className="tabular-nums">{total}</span>
+            <span className={resultStatsMetricNumClass}>{total}</span>
           </div>
 
           <div className="flex items-center justify-center gap-3 md:justify-start">
@@ -257,8 +271,13 @@ export default function GamePredictionDistribution({
               className="h-3 w-3 rounded-sm"
               style={{ backgroundColor: homeColor }}
             />
-            <span className="whitespace-nowrap">{homeName}</span>
-            <span className="tabular-nums">
+            <span
+              className="whitespace-nowrap font-bold"
+              style={teamNameTy}
+            >
+              {homeName}
+            </span>
+            <span className={resultStatsMetricNumClass}>
               {((homeCount / total) * 100).toFixed(1)}%
             </span>
           </div>
@@ -268,8 +287,13 @@ export default function GamePredictionDistribution({
               className="h-3 w-3 rounded-sm"
               style={{ backgroundColor: awayColor }}
             />
-            <span className="whitespace-nowrap">{awayName}</span>
-            <span className="tabular-nums">
+            <span
+              className="whitespace-nowrap font-bold"
+              style={teamNameTy}
+            >
+              {awayName}
+            </span>
+            <span className={resultStatsMetricNumClass}>
               {((awayCount / total) * 100).toFixed(1)}%
             </span>
           </div>
@@ -277,10 +301,13 @@ export default function GamePredictionDistribution({
           {isSoccer && (
             <div className="flex items-center justify-center gap-3 md:justify-start">
               <span className="h-3 w-3 rounded-sm bg-gray-400" />
-              <span className="whitespace-nowrap">
+              <span
+                className="whitespace-nowrap font-bold"
+                style={teamNameTy}
+              >
                 {isEn ? "Draw" : "引き分け"}
               </span>
-              <span className="tabular-nums">
+              <span className={resultStatsMetricNumClass}>
                 {((drawCount / total) * 100).toFixed(1)}%
               </span>
             </div>

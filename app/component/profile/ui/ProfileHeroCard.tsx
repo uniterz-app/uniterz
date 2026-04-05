@@ -326,7 +326,7 @@ export default function ProfileHeroCard({
   const showHandle = useHandleScramble(
     displayProfile.handle,
     handleScrambleActive,
-    staticHero,
+    Boolean(staticHero),
     HANDLE_MS_PER_CHAR,
     onScrambleDoneRef
   );

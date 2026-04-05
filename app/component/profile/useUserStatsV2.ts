@@ -23,6 +23,11 @@ export type SummaryForCardsV2 = {
   // ④ 総合得点（期間合計）
   pointsSumV3: number;
 
+  /** 総合得点の内訳（pointsV3 = base + upsetBonus + streakBonus） */
+  basePointsSum: number;
+  upsetBonusSum: number;
+  streakBonusSum: number;
+
   // Upset補助
   upsetChanceCount: number;
   upsetHitCount: number;

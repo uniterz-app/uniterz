@@ -5,6 +5,7 @@ import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import type { Language } from "@/lib/i18n/language";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
+import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -27,7 +28,7 @@ function formatValue(metric: MobileMetric, value: number) {
   if (metric === "streak") {
     return `${Math.round(value)}`;
   }
-  return `${value.toFixed(1)} pts`;
+  return `${formatMetricDecimals(value, 1)} pts`;
 }
 
 function getRankStyle(rank: number | null, loading: boolean) {
@@ -218,7 +219,7 @@ export default function MyRankCard({
             <div
               className={[numClass, "leading-none"].join(" ")}
               style={{
-                fontSize: 24,
+                fontSize: 18,
                 color: rankStyle.color,
                 textShadow: rankStyle.textShadow,
               }}
@@ -229,7 +230,7 @@ export default function MyRankCard({
           <div className="flex flex-col items-end">
             {loading ? (
               <div
-                className={[numClass, "text-[20px] leading-none text-white/90"].join(
+                className={[numClass, "text-[17px] leading-none text-white/90"].join(
                   " "
                 )}
               >
@@ -246,12 +247,12 @@ export default function MyRankCard({
                   textShadow: "0 0 10px rgba(255,255,255,0.08)",
                 }}
               >
-                <span className={[numClass, "text-[20px]"].join(" ")}>
+                <span className={[numClass, "text-[17px]"].join(" ")}>
                   {Math.round(value)}
                 </span>
                 <span
                   style={{
-                    fontSize: 14,
+                    fontSize: 12,
                     letterSpacing: "0.03em",
                     transform: "translateY(-1px)",
                   }}
@@ -261,7 +262,7 @@ export default function MyRankCard({
               </div>
             ) : (
               <div
-                className={[numClass, "text-[20px] leading-none text-white/90"].join(
+                className={[numClass, "text-[17px] leading-none text-white/90"].join(
                   " "
                 )}
               >
@@ -369,7 +370,7 @@ export default function MyRankCard({
           <div
             className={[numClass, "leading-none"].join(" ")}
             style={{
-              fontSize: 24,
+              fontSize: 18,
               color: rankStyle.color,
               textShadow: rankStyle.textShadow,
             }}
@@ -389,7 +390,7 @@ export default function MyRankCard({
         >
           {loading ? (
             <div
-              className={[numClass, "text-[20px] leading-none text-white/90"].join(
+              className={[numClass, "text-[17px] leading-none text-white/90"].join(
                 " "
               )}
             >
@@ -406,12 +407,12 @@ export default function MyRankCard({
                 textShadow: "0 0 10px rgba(255,255,255,0.08)",
               }}
             >
-              <span className={[numClass, "text-[20px]"].join(" ")}>
+              <span className={[numClass, "text-[17px]"].join(" ")}>
                 {Math.round(valueCount)}
               </span>
               <span
                 style={{
-                  fontSize: 14,
+                  fontSize: 12,
                   letterSpacing: "0.03em",
                   transform: "translateY(-1px)",
                 }}
@@ -421,7 +422,7 @@ export default function MyRankCard({
             </div>
           ) : (
             <div
-              className={[numClass, "text-[20px] leading-none text-white/90"].join(
+              className={[numClass, "text-[17px] leading-none text-white/90"].join(
                 " "
               )}
             >

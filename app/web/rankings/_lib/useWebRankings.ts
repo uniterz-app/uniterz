@@ -4,23 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   MobileMetric,
   RankingRowWithCountry,
-  CountryCode,
 } from "@/app/component/rankings/_data/mockRows";
 import {
   METRICS,
 } from "@/app/component/rankings/_data/mockRows";
-import { padRankingRowsForDev } from "@/lib/rankings/rankingDevMocks";
 import { toMobileRows } from "@/lib/rankings/rankingTransform";
-import type { RankingMetric, RankingRow } from "@/lib/rankings/useRanking";
+import type { RankingRow } from "@/lib/rankings/useRanking";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
-};
-
-const FALLBACK_COUNTRY_BY_UID: Record<string, CountryCode> = {
-  u1: "US",
-  u2: "CN",
-  u3: "JP",
 };
 
 const AVAILABLE_METRICS: MobileMetric[] = [
@@ -30,16 +22,6 @@ const AVAILABLE_METRICS: MobileMetric[] = [
   "upsetScore",
   "streak",
 ];
-
-function withCountryFallback(rows: WebRankingRow[]): WebRankingRow[] {
-  return rows.map((row, index) => ({
-    ...row,
-    countryCode:
-      row.countryCode ??
-      FALLBACK_COUNTRY_BY_UID[row.uid] ??
-      (index === 0 ? "US" : index === 1 ? "CN" : "JP"),
-  }));
-}
 
 function mergeRowsWithMeta(
   metric: MobileMetric,
@@ -53,15 +35,13 @@ function mergeRowsWithMeta(
     totalPostsByUid.set(row.uid, row.totalPosts ?? 0);
   }
 
-  return withCountryFallback(
-    uiRows.map((row) => ({
-      ...row,
-      totalPosts: totalPostsByUid.get(row.uid),
-    }))
-  );
+  return uiRows.map((row) => ({
+    ...row,
+    totalPosts: totalPostsByUid.get(row.uid),
+  }));
 }
 
-/** バルク取得後に指標ごとに UI 行を並べ替え（モック追補後も順位が正しく見えるように） */
+/** バルク取得後に指標ごとに UI 行を並べ替え */
 function sortWebRankingRows(
   metric: MobileMetric,
   rows: WebRankingRow[]
@@ -155,11 +135,10 @@ export function useWebRankings() {
             const apiMetric = apiMetricByMobile[m];
             const data = byMetric[apiMetric];
             const rawRows = Array.isArray(data?.rows) ? data.rows : [];
-            const padded = padRankingRowsForDev(
-              rawRows as RankingRow[],
-              apiMetric as RankingMetric
+            next[m] = sortWebRankingRows(
+              m,
+              mergeRowsWithMeta(m, rawRows as RankingRow[])
             );
-            next[m] = sortWebRankingRows(m, mergeRowsWithMeta(m, padded));
           }
           return next;
         });

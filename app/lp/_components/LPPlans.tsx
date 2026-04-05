@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -62,14 +62,14 @@ export default function LPPlans() {
       className="lp-section-shell"
     >
       <div className="lp-section-rail">
-        <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-cyan-300/38 to-transparent" />
+        <div className="mx-auto h-px w-full max-w-6xl bg-linear-to-r from-transparent via-cyan-300/38 to-transparent" />
         <div className="mx-auto h-24 w-[68%] max-w-4xl bg-cyan-300/7 blur-3xl" />
       </div>
 
       <div className="relative grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-stretch lg:gap-12">
         <div className="flex min-h-0 max-w-3xl flex-col lg:flex-1">
           <div className="inline-flex items-center gap-3">
-            <div className="h-px w-10 bg-gradient-to-r from-cyan-300/70 to-transparent" />
+            <div className="h-px w-10 bg-linear-to-r from-cyan-300/70 to-transparent" />
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/82 sm:tracking-[0.28em]">
               Plans
             </div>
@@ -83,17 +83,17 @@ export default function LPPlans() {
             迷ったらまずFree。ランキングを継続して追い、上位を本気で狙うならPro。
           </p>
 
-          <p className="mt-3 max-w-[42rem] text-sm leading-relaxed text-white/52">
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/52">
             <span className="font-semibold text-cyan-200/88">Pro向き：</span>
             {planProGuide}
           </p>
 
-          <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-[1px] backdrop-blur-xl">
+          <div className="mt-8 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-px backdrop-blur-xl">
             <div className="relative flex min-h-0 flex-1 flex-col rounded-[31px] bg-[linear-gradient(180deg,rgba(8,18,30,0.92),rgba(6,16,26,0.86))] p-4 sm:p-7">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/38 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-200/38 to-transparent" />
               <div className="pointer-events-none absolute inset-x-[10%] top-0 h-24 rounded-full bg-cyan-300/8 blur-3xl" />
-              <div className="pointer-events-none absolute inset-[1px] rounded-[30px] ring-1 ring-inset ring-white/6" />
-              <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(120,220,255,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(120,220,255,0.18)_1px,transparent_1px)] [background-size:34px_34px]" />
+              <div className="pointer-events-none absolute inset-px rounded-[30px] ring-1 ring-inset ring-white/6" />
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(120,220,255,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(120,220,255,0.18)_1px,transparent_1px)] bg-size-[34px_34px] opacity-[0.06]" />
 
               <div className="relative flex min-h-0 flex-1 flex-col">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-300/74 sm:tracking-[0.24em]">
@@ -104,13 +104,13 @@ export default function LPPlans() {
                   機能の違いを一覧で比較。
                 </div>
 
-                <p className="mt-3 max-w-[34rem] text-sm leading-7 text-white/58">
+                <p className="mt-3 max-w-136 text-sm leading-7 text-white/58">
                   表の「一部」は Free
                   で概要のみ／制限ありを表します。詳細は右のプランカードとアプリ内表示をご確認ください。
                 </p>
 
                 <p className="mt-3 flex items-center gap-2 text-[11px] font-medium text-cyan-200/70 lg:hidden">
-                  <span className="inline-block h-1 w-6 rounded-full bg-gradient-to-r from-cyan-300/60 to-transparent" />
+                  <span className="inline-block h-1 w-6 rounded-full bg-linear-to-r from-cyan-300/60 to-transparent" />
                   比較表は横にスクロール
                 </p>
 
@@ -128,19 +128,19 @@ export default function LPPlans() {
                       <tr>
                         <th
                           scope="col"
-                          className="rounded-tl-2xl border border-b-0 border-white/10 bg-white/[0.04] px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/52 sm:px-4 sm:text-[10px] sm:tracking-[0.2em]"
+                          className="rounded-tl-2xl border border-b-0 border-white/10 bg-white/4 px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/52 sm:px-4 sm:text-[10px] sm:tracking-[0.2em]"
                         >
                           機能
                         </th>
                         <th
                           scope="col"
-                          className="border border-b-0 border-l-0 border-white/10 bg-white/[0.04] px-2.5 py-3 text-center text-[11px] font-black tracking-tight text-white/78 sm:px-3"
+                          className="border border-b-0 border-l-0 border-white/10 bg-white/4 px-2.5 py-3 text-center text-[11px] font-black tracking-tight text-white/78 sm:px-3"
                         >
                           Free
                         </th>
                         <th
                           scope="col"
-                          className="rounded-tr-2xl border border-b-0 border-l-0 border-cyan-300/22 bg-cyan-300/[0.07] px-2.5 py-3 text-center text-[11px] font-black tracking-tight text-cyan-100/88 sm:px-3"
+                          className="rounded-tr-2xl border border-b-0 border-l-0 border-cyan-300/22 bg-cyan-300/7 px-2.5 py-3 text-center text-[11px] font-black tracking-tight text-cyan-100/88 sm:px-3"
                         >
                           Pro
                         </th>
@@ -153,21 +153,21 @@ export default function LPPlans() {
                           <tr key={row.feature} data-lp-stagger-item>
                             <th
                               scope="row"
-                              className={`border border-white/10 bg-white/[0.025] px-3 py-3 text-left text-[13px] font-semibold leading-snug text-white/78 sm:px-4 ${
+                              className={`border border-white/10 bg-white/2.5 px-3 py-3 text-left text-[13px] font-semibold leading-snug text-white/78 sm:px-4 ${
                                 isLast ? "rounded-bl-2xl border-b" : "border-b-0"
                               }`}
                             >
                               {row.feature}
                             </th>
                             <td
-                              className={`border border-l-0 border-white/10 bg-white/[0.02] text-center ${
+                              className={`border border-l-0 border-white/10 bg-white/2 text-center ${
                                 isLast ? "border-b" : "border-b-0"
                               }`}
                             >
                               {comparisonCell(row.free, "free")}
                             </td>
                             <td
-                              className={`border border-l-0 border-cyan-300/16 bg-cyan-300/[0.03] text-center ${
+                              className={`border border-l-0 border-cyan-300/16 bg-cyan-300/3 text-center ${
                                 isLast ? "rounded-br-2xl border-b border-cyan-300/22" : "border-b-0"
                               }`}
                             >
@@ -209,7 +209,7 @@ export default function LPPlans() {
             data-lp-stagger-variant="up"
             data-lp-stagger-step="0.13"
           >
-            <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+            <div className="inline-flex w-full rounded-2xl border border-white/10 bg-white/3 p-1">
               <button
                 type="button"
                 onClick={() => setActiveTier("free")}
@@ -226,7 +226,7 @@ export default function LPPlans() {
                 onClick={() => setActiveTier("pro")}
                 className={`inline-flex flex-1 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold transition ${
                   activeTier === "pro"
-                    ? "bg-gradient-to-r from-cyan-400 via-sky-500 to-teal-400 text-slate-950"
+                    ? "bg-linear-to-r from-cyan-400 via-sky-500 to-teal-400 text-slate-950"
                     : "text-white/72 hover:text-white"
                 }`}
               >
@@ -236,7 +236,7 @@ export default function LPPlans() {
 
             <div
               key={activeSlot.tier}
-              className={`group relative overflow-hidden rounded-[28px] border p-[1px] ${
+              className={`group relative overflow-hidden rounded-[28px] border p-px ${
                 activeSlot.tier === "pro"
                   ? "border-cyan-300/40 bg-[linear-gradient(165deg,rgba(45,232,255,0.18),rgba(255,255,255,0.05))]"
                   : "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]"
@@ -280,8 +280,8 @@ export default function LPPlans() {
                     href="#signup"
                     className={`inline-flex min-h-[46px] w-full items-center justify-center rounded-2xl px-3.5 py-3 text-sm font-bold transition ${
                       activeSlot.tier === "pro"
-                        ? "border border-cyan-200/30 bg-gradient-to-r from-cyan-400 via-sky-500 to-teal-400 text-slate-950"
-                        : "border border-white/14 bg-white/[0.07] text-white/92"
+                        ? "border border-cyan-200/30 bg-linear-to-r from-cyan-400 via-sky-500 to-teal-400 text-slate-950"
+                        : "border border-white/14 bg-white/7 text-white/92"
                     }`}
                   >
                     {activeSlot.tier === "pro"

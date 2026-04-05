@@ -148,7 +148,7 @@ export default function RadarChart({ value }: RadarChartProps) {
       </div>
 
       {openInfo && (
-        <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <div className="mt-3 rounded-xl border border-white/10 bg-white/3 p-3">
           <div className="space-y-1.5 text-[11px] leading-relaxed text-white/65 lg:text-[13px]">
             <p>
               <span className="font-semibold text-white/80">勝率：</span>

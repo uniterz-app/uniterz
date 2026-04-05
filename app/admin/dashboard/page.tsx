@@ -38,22 +38,22 @@ export default function AdminDashboard() {
         <div className="text-white/40">まだ集計データがありません</div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-xl bg-white/[0.05] p-4">
+          <div className="rounded-xl bg-white/5 p-4">
             <div className="text-sm text-white/60">新規登録</div>
             <div className="text-2xl">{stats.newUsers}</div>
           </div>
 
-          <div className="rounded-xl bg-white/[0.05] p-4">
+          <div className="rounded-xl bg-white/5 p-4">
             <div className="text-sm text-white/60">投稿数</div>
             <div className="text-2xl">{stats.newPosts}</div>
           </div>
 
-          <div className="rounded-xl bg-white/[0.05] p-4">
+          <div className="rounded-xl bg-white/5 p-4">
             <div className="text-sm text-white/60">DAU</div>
             <div className="text-2xl">{stats.dau}</div>
           </div>
 
-          <div className="rounded-xl bg-white/[0.05] p-4">
+          <div className="rounded-xl bg-white/5 p-4">
             <div className="text-sm text-white/60">累計ユーザー</div>
             <div className="text-2xl">{stats.totalUsers}</div>
           </div>

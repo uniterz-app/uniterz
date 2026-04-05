@@ -11,7 +11,7 @@ import LPMediaSlots from "@/app/lp/_components/LPMediaSlots";
 
 export default function MobileLPPage() {
   return (
-    <main className="mobile-lp-root lp-root relative min-h-screen overflow-x-hidden bg-transparent text-white [animation:lp-page-enter_.75s_cubic-bezier(.22,.61,.36,1)_both]">
+    <main className="mobile-lp-root lp-root relative min-h-screen overflow-x-hidden bg-transparent text-white animate-[lp-page-enter_.75s_cubic-bezier(.22,.61,.36,1)_both]">
       <MobileLPScrollToTop />
       <LPScrollEffects disabled />
       <LPHero3DBackground lite />
@@ -24,7 +24,7 @@ export default function MobileLPPage() {
       <MobileLPQuickNav />
       <LPHero />
       <div
-        className="mx-4 h-px max-w-7xl bg-gradient-to-r from-transparent via-cyan-300/22 to-transparent lg:mx-auto lg:hidden"
+        className="mx-4 h-px max-w-7xl bg-linear-to-r from-transparent via-cyan-300/22 to-transparent lg:mx-auto lg:hidden"
         aria-hidden
       />
       <LPFeatures />

@@ -20,6 +20,7 @@ export type Profile = {
   counts: { posts: number; followers: number; following: number };
   currentStreak: number;
   maxStreak: number;
+  plan: "free" | "pro";
 };
 
 type Counts = {
@@ -35,6 +36,7 @@ type UserState = {
   photoURL?: string;
   currentStreak?: number;
   maxStreak?: number;
+  plan?: "free" | "pro";
 } | null;
 
 const EMPTY_COUNTS: Counts = {
@@ -50,6 +52,7 @@ const BASE_PROFILE: Omit<Profile, "handle"> & { handle?: string } = {
   counts: EMPTY_COUNTS,
   currentStreak: 0,
   maxStreak: 0,
+  plan: "free",
 };
 
 export function useProfile(handle: string) {
@@ -100,6 +103,10 @@ export function useProfile(handle: string) {
             : EMPTY_COUNTS
         );
 
+        const rawPlan = d.plan;
+        const plan: "free" | "pro" =
+          rawPlan === "pro" ? "pro" : "free";
+
         setUser({
           displayName: d.displayName ?? "",
           handle: d.handle ?? decodedHandle,
@@ -107,6 +114,7 @@ export function useProfile(handle: string) {
           photoURL: d.photoURL ?? "",
           currentStreak: d.currentStreak ?? 0,
           maxStreak: d.maxStreak ?? 0,
+          plan,
         });
       } finally {
         if (!cancelled) setLoading(false);
@@ -154,6 +162,7 @@ export function useProfile(handle: string) {
       counts,
       currentStreak: u.currentStreak ?? 0,
       maxStreak: u.maxStreak ?? 0,
+      plan: u.plan ?? "free",
     };
   }, [user, decodedHandle, counts]);
 

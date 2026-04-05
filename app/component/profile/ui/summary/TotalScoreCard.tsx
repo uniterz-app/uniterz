@@ -2,16 +2,16 @@
 
 import React, {
   useEffect,
-  useMemo,
   useRef,
   useState,
-  useId,
 } from "react";
 import { Crown } from "lucide-react";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import DonutChart from "@/app/component/predict/DonutChart";
+import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 
 type Props = {
   totalPoints: number;
@@ -28,54 +28,10 @@ type Props = {
 const TOTAL_SCORE_TOOLTIP =
   "勝者的中・点差/合計点の近さで決まる基本点に、アップセットボーナスと連勝ボーナスを加えた包括スコア。";
 
-function polarToCartesian(
-  cx: number,
-  cy: number,
-  r: number,
-  angleDeg: number
-) {
-  const rad = ((angleDeg - 90) * Math.PI) / 180;
-  return {
-    x: cx + r * Math.cos(rad),
-    y: cy + r * Math.sin(rad),
-  };
-}
-
-function describeSlice(
-  cx: number,
-  cy: number,
-  r: number,
-  startAngle: number,
-  endAngle: number
-) {
-  const start = polarToCartesian(cx, cy, r, endAngle);
-  const end = polarToCartesian(cx, cy, r, startAngle);
-  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-
-  return [
-    `M ${cx} ${cy}`,
-    `L ${end.x} ${end.y}`,
-    `A ${r} ${r} 0 ${largeArcFlag} 1 ${start.x} ${start.y}`,
-    "Z",
-  ].join(" ");
-}
-
-function describeRevealSector(
-  cx: number,
-  cy: number,
-  r: number,
-  progress: number
-) {
-  const clamped = Math.max(0, Math.min(1, progress));
-  const endAngle = clamped * 360;
-
-  if (clamped <= 0) return "";
-  if (clamped >= 0.999999) {
-    return `M ${cx} ${cy} m -${r}, 0 a ${r},${r} 0 1,0 ${r * 2},0 a ${r},${r} 0 1,0 -${r * 2},0`;
-  }
-
-  return describeSlice(cx, cy, r, 0, endAngle);
-}
+/** DonutChart のグラデ混色を踏まえ、暗背景でも隣接セグメントが判別しやすい色相差 */
+const SEG_BASE = "#2dd4bf"; // teal-400
+const SEG_UPSET = "#fb923c"; // orange-400
+const SEG_STREAK = "#a78bfa"; // violet-400
 
 export default function TotalScoreCard({
   totalPoints,
@@ -83,21 +39,28 @@ export default function TotalScoreCard({
   basePoints = 0,
   upsetBonusPoints = 0,
   streakBonusPoints = 0,
-  periodLabel,
-  compact = true,
+  periodLabel: _periodLabel,
+  compact: _compact = true,
   className = "",
   language = "ja",
 }: Props) {
   const isEn = language === "en";
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
-  const [pieProgress, setPieProgress] = useState(0);
-  const maskId = useId();
+  const [wide, setWide] = useState(false);
 
   const [tooltip, setTooltip] = useState<{
     rect: DOMRect | null;
     message: string;
   } | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const apply = () => setWide(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -116,30 +79,6 @@ export default function TotalScoreCard({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!inView) return;
-
-    let rafId = 0;
-    let startTime: number | null = null;
-    const duration = 1100;
-
-    const animate = (timestamp: number) => {
-      if (startTime === null) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const t = Math.min(elapsed / duration, 1);
-
-      const eased = 1 - Math.pow(1 - t, 3);
-      setPieProgress(eased);
-
-      if (t < 1) {
-        rafId = window.requestAnimationFrame(animate);
-      }
-    };
-
-    rafId = window.requestAnimationFrame(animate);
-    return () => window.cancelAnimationFrame(rafId);
-  }, [inView]);
-
   function openTooltip(e: React.MouseEvent, message: string) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setTooltip({ rect, message });
@@ -155,42 +94,32 @@ export default function TotalScoreCard({
   const upsetCu = useCountUp(upset, 1000, inView, 1);
   const streakCu = useCountUp(streak, 1000, inView, 1);
 
-  const avg = analyses > 0 ? (totalPoints / analyses).toFixed(1) : "0";
+  const avg =
+    analyses > 0
+      ? formatMetricDecimals(totalPoints / analyses, 1)
+      : "0";
 
   const tooltipMsg = isEn
     ? "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
     : TOTAL_SCORE_TOOLTIP;
 
-  const slices = useMemo(() => {
-    const sum = Math.max(total, 1);
+  const denom = Math.max(total, 1e-6);
+  const segments = [
+    { label: "base", value: Math.min(base, total) / denom, color: SEG_BASE },
+    {
+      label: "upset",
+      value: Math.min(upset, total) / denom,
+      color: SEG_UPSET,
+    },
+    {
+      label: "streak",
+      value: Math.min(streak, total) / denom,
+      color: SEG_STREAK,
+    },
+  ].filter((s) => s.value > 1e-9);
 
-    const items = [
-      { key: "base", value: Math.min(base, sum), color: "#f8fafc" },
-      { key: "upset", value: Math.min(upset, sum), color: "#fb923c" },
-      { key: "streak", value: Math.min(streak, sum), color: "#fde047" },
-    ];
-
-    let currentAngle = 0;
-
-    return items.map((item) => {
-      const sweep = (item.value / sum) * 360;
-      const startAngle = currentAngle;
-      const endAngle = currentAngle + sweep;
-      currentAngle = endAngle;
-
-      return {
-        ...item,
-        path:
-          item.value > 0
-            ? describeSlice(50, 50, 36, startAngle, endAngle)
-            : null,
-      };
-    });
-  }, [total, base, upset, streak]);
-
-  const revealPath = useMemo(() => {
-    return describeRevealSector(50, 50, 36, pieProgress);
-  }, [pieProgress]);
+  const chartSize = wide ? 150 : 88;
+  const chartThickness = wide ? 48 : 28;
 
   return (
     <>
@@ -221,9 +150,9 @@ export default function TotalScoreCard({
           </button>
         </div>
 
-        <div className="grid grid-cols-[1.15fr_0.85fr_1fr] items-center gap-2 md:gap-8">
-          {/* 左：合計得点 */}
-          <div className="min-w-0 pl-1 md:pl-4">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 md:gap-6">
+          {/* 左：合計・AVG（カード中央寄り） */}
+          <div className="flex min-w-0 flex-col items-center justify-center text-center md:translate-x-1">
             <div
               className={[
                 summaryMetricNumClass,
@@ -231,7 +160,7 @@ export default function TotalScoreCard({
                 "leading-none",
               ].join(" ")}
             >
-              {totalCu.toFixed(1)}
+              {formatMetricDecimals(totalCu, 1)}
               <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-xl">
                 pts
               </span>
@@ -242,87 +171,83 @@ export default function TotalScoreCard({
             </div>
           </div>
 
-          {/* 中央：円グラフ */}
-          <div className="flex items-center justify-center">
-            <div className="relative h-[88px] w-[88px] md:h-[150px] md:w-[150px]">
-              <svg viewBox="0 0 100 100" className="h-full w-full">
-                <defs>
-                  <mask id={maskId}>
-                    <rect x="0" y="0" width="100" height="100" fill="black" />
-                    {revealPath ? <path d={revealPath} fill="white" /> : null}
-                  </mask>
-                </defs>
-
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="36"
-                  fill="rgba(255,255,255,0.08)"
-                />
-
-                <g
-                  mask={`url(#${maskId})`}
-                  style={{
-                    opacity: inView ? 1 : 0,
-                    transition: "opacity 180ms linear",
-                  }}
-                >
-                  {slices.map(
-                    (item) =>
-                      item.path && (
-                        <path
-                          key={item.key}
-                          d={item.path}
-                          fill={item.color}
-                        />
-                      )
-                  )}
-                </g>
-              </svg>
-            </div>
+          {/* 中央：内訳ドーナツ */}
+          <div className="flex items-center justify-center md:-translate-x-0.5">
+            {inView ? (
+              <DonutChart
+                key={`${total}-${base}-${upset}-${streak}`}
+                segments={
+                  segments.length > 0
+                    ? segments
+                    : [
+                        {
+                          label: "empty",
+                          value: 1,
+                          color: "rgba(148,163,184,0.35)",
+                        },
+                      ]
+                }
+                size={chartSize}
+                thickness={chartThickness}
+                ariaLabel={
+                  isEn
+                    ? "Total points breakdown: base, upset bonus, streak bonus"
+                    : "総合得点の内訳：基本点・アップセット・連勝ボーナス"
+                }
+              />
+            ) : (
+              <div
+                className="rounded-full bg-white/6"
+                style={{
+                  width: chartSize,
+                  height: chartSize,
+                }}
+                aria-hidden
+              />
+            )}
           </div>
 
-          {/* 右：内訳 */}
-          <div className="min-w-0 space-y-1.5 md:space-y-3">
+          {/* 右：内訳（色はドーナツと対応） */}
+          <div className="min-w-0 space-y-1.5 md:space-y-3 md:-translate-x-0.5">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[8px] tracking-tight text-white/55 md:text-[14px]">
+              <span className="text-[8px] tracking-tight text-teal-200/80 md:text-[14px]">
                 {isEn ? "Base Points" : "基本点"}
               </span>
               <span
                 className={[
                   summaryMetricNumClass,
-                  "tabular-nums text-xs tracking-tight text-white md:text-[22px]",
+                  "tabular-nums text-xs tracking-tight text-teal-200 md:text-[22px]",
                 ].join(" ")}
               >
-                {baseCu.toFixed(1)}
+                {formatMetricDecimals(baseCu, 1)}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[8px] tracking-tight text-white/55 md:text-[14px]">
+              <span className="text-[8px] tracking-tight text-orange-200/80 md:text-[14px]">
                 Upset Bonus
               </span>
               <span
                 className={[
                   summaryMetricNumClass,
-                  "tabular-nums text-xs tracking-tight text-orange-300 md:text-[22px]",
+                  "tabular-nums text-xs tracking-tight text-orange-200 md:text-[22px]",
                 ].join(" ")}
               >
-                {upsetCu.toFixed(1)}
+                {formatMetricDecimals(upsetCu, 1)}
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[8px] tracking-tight text-white/55 md:text-[14px]">
+              <span className="text-[8px] tracking-tight text-violet-200/80 md:text-[14px]">
                 {isEn ? "Win Streak Bonus" : "連勝ボーナス"}
               </span>
               <span
                 className={[
                   summaryMetricNumClass,
-                  "tabular-nums text-xs tracking-tight text-yellow-300 md:text-[22px]",
+                  "tabular-nums text-xs tracking-tight text-violet-200 md:text-[22px]",
                 ].join(" ")}
               >
-                {streakCu.toFixed(1)}
+                {formatMetricDecimals(streakCu, 1)}
               </span>
             </div>
           </div>

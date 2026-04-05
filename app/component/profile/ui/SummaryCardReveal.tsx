@@ -12,6 +12,11 @@ type Props = {
   className?: string;
   /** motion の入場が終わったとき（1回）。アニメ無効時はマウント直後に呼ぶ */
   onAnimationComplete?: () => void;
+  /**
+   * `fade` … ほぼフェードのみ＋わずかな段差（Pro サマリー用）
+   * 未指定 … 従来の下から浮き上がり
+   */
+  enterVariant?: "default" | "fade";
 };
 
 /** 下から「にじみ出す」ように、透明度・位置・スケールを同じカーブで立ち上げる */
@@ -21,6 +26,10 @@ const EMERGE_EASE: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
 /**
  * プロフィールサマリーカード用: 下からふわっと浮かび、透過→不透明・スケールが段々大きくなる
  */
+const FADE_DURATION = 0.52;
+const FADE_FIRST_DELAY = 0.04;
+const FADE_STEP = 0.072;
+
 export default function SummaryCardReveal({
   index,
   total: _total,
@@ -28,6 +37,7 @@ export default function SummaryCardReveal({
   className,
   children,
   onAnimationComplete,
+  enterVariant = "default",
 }: Props) {
   const reduceMotion = useReducedMotion();
   const completeRef = useRef(onAnimationComplete);
@@ -52,6 +62,25 @@ export default function SummaryCardReveal({
 
   if (!enabled || reduceMotion) {
     return <div className={className}>{children}</div>;
+  }
+
+  if (enterVariant === "fade") {
+    const delay = FADE_FIRST_DELAY + index * FADE_STEP;
+    return (
+      <motion.div
+        className={className}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          delay,
+          duration: FADE_DURATION,
+          ease: [0.22, 0.61, 0.36, 1],
+        }}
+        onAnimationComplete={onAnimationComplete ? fireComplete : undefined}
+      >
+        {children}
+      </motion.div>
+    );
   }
 
   const firstStart = 0.05;

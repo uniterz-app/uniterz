@@ -5,12 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
 import { motion } from "framer-motion";
-import { Alfa_Slab_One } from "next/font/google";
-
-const alfa = Alfa_Slab_One({
-  subsets: ["latin"],
-  weight: ["400"],
-});
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 const ROW_STAGGER = 0.09;
 const BAR_DURATION = 0.72;
@@ -444,14 +439,14 @@ function SymmetricalCompareRow({
   const rowAnimDelay = barDelay;
 
   const leftNumClass = [
-    alfa.className,
-    "text-right text-sm tabular-nums font-bold md:text-base",
+    resultStatsMetricNumClass,
+    "text-right text-sm md:text-base",
     "text-[#5cf0b5]",
   ].join(" ");
 
   const rightNumClass = [
-    alfa.className,
-    "text-left text-sm tabular-nums font-bold md:text-base",
+    resultStatsMetricNumClass,
+    "text-left text-sm md:text-base",
     "text-[#b388ff]",
   ].join(" ");
 
@@ -473,8 +468,8 @@ function SymmetricalCompareRow({
           />
           <span
             className={[
-              alfa.className,
-              "w-9 shrink-0 text-right text-[10px] tabular-nums text-white/38 md:w-10 md:text-[11px]",
+              resultStatsMetricNumClass,
+              "w-9 shrink-0 text-right text-[10px] text-white/38 md:w-10 md:text-[11px]",
             ].join(" ")}
           >
             {left.rank ?? ""}
@@ -493,8 +488,8 @@ function SymmetricalCompareRow({
             {left.recordBelow ? (
               <span
                 className={[
-                  alfa.className,
-                  "text-[10px] tabular-nums text-white/45 md:text-[11px]",
+                  resultStatsMetricNumClass,
+                  "text-[10px] text-white/45 md:text-[11px]",
                 ].join(" ")}
               >
                 {left.recordBelow}
@@ -525,8 +520,8 @@ function SymmetricalCompareRow({
             {right.recordBelow ? (
               <span
                 className={[
-                  alfa.className,
-                  "text-[10px] tabular-nums text-white/45 md:text-[11px]",
+                  resultStatsMetricNumClass,
+                  "text-[10px] text-white/45 md:text-[11px]",
                 ].join(" ")}
               >
                 {right.recordBelow}
@@ -535,8 +530,8 @@ function SymmetricalCompareRow({
           </div>
           <span
             className={[
-              alfa.className,
-              "w-9 shrink-0 text-left text-[10px] tabular-nums text-white/38 md:w-10 md:text-[11px]",
+              resultStatsMetricNumClass,
+              "w-9 shrink-0 text-left text-[10px] text-white/38 md:w-10 md:text-[11px]",
             ].join(" ")}
           >
             {right.rank ?? ""}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 export function useCountUp(
   target: number,
@@ -10,17 +11,16 @@ export function useCountUp(
 
   useEffect(() => {
     if (!enabled) {
-      setValue(target);
+      setValue(roundMetricDecimals(target, decimals));
       return;
     }
 
     const startTime = performance.now();
-    const p = Math.pow(10, decimals);
 
     const tick = (now: number) => {
       const progress = Math.min((now - startTime) / duration, 1);
       const next = target * progress;
-      setValue(Math.round(next * p) / p);
+      setValue(roundMetricDecimals(next, decimals));
 
       if (progress < 1) {
         requestAnimationFrame(tick);

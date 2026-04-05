@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useRef, Fragment } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
@@ -92,6 +95,9 @@ export default function NbaStandingsPanel({
   compact = false,
   className = "",
 }: Props) {
+  const pathname = usePathname() ?? "";
+  const layoutMobile =
+    pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const [teams, setTeams] = useState<Team[]>([]);
   const [tab, setTab] = useState<"east" | "west">("east");
   const [loading, setLoading] = useState(true);
@@ -156,6 +162,7 @@ export default function NbaStandingsPanel({
           conference={tab}
           teamHrefBase={teamHrefBase}
           compact={compact}
+          layoutMobile={layoutMobile}
         />
       )}
     </div>
@@ -169,11 +176,13 @@ function Conference({
   conference,
   teamHrefBase,
   compact,
+  layoutMobile,
 }: {
   teams: Team[];
   conference: "east" | "west";
   teamHrefBase: string;
   compact: boolean;
+  layoutMobile: boolean;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -207,6 +216,7 @@ function Conference({
             conference={conference}
             teamHrefBase={teamHrefBase}
             compact={compact}
+            layoutMobile={layoutMobile}
           />
 
           {(index + 1 === 6 || index + 1 === 10) && (
@@ -234,6 +244,7 @@ function TeamRow({
   conference,
   teamHrefBase,
   compact,
+  layoutMobile,
 }: {
   team: Team;
   leader: Team;
@@ -245,7 +256,9 @@ function TeamRow({
   conference: "east" | "west";
   teamHrefBase: string;
   compact: boolean;
+  layoutMobile: boolean;
 }) {
+  const teamNameTy = bracketMarketTeamTypography(layoutMobile);
   const [rate, setRate] = useState(0);
 
   const { wins: teamWins, losses: teamLosses } = nbaRegularSeasonWinsLosses(team);
@@ -325,7 +338,7 @@ function TeamRow({
             >
               <span
                 className={[
-                  "font-mono",
+                  resultStatsMetricNumClass,
                   compact ? "w-5 text-[10px]" : "w-6 text-xs",
                   rankNumberClass(rank),
                 ].join(" ")}
@@ -334,9 +347,12 @@ function TeamRow({
               </span>
               <span
                 className={[
-                  "truncate font-semibold text-white",
-                  compact ? "text-[13px] leading-tight" : "",
+                  "min-w-0 truncate font-bold text-white",
+                  compact
+                    ? "text-[13px] leading-tight"
+                    : "text-sm leading-tight md:text-base",
                 ].join(" ")}
+                style={teamNameTy}
               >
                 {team.name}
               </span>
@@ -344,7 +360,8 @@ function TeamRow({
 
             <div
               className={[
-                "flex items-center font-mono tabular-nums shrink-0",
+                "flex shrink-0 items-center",
+                resultStatsMetricNumClass,
                 compact ? "gap-2 text-[9px]" : "gap-4 text-[11px]",
               ].join(" ")}
             >

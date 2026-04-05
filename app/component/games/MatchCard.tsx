@@ -20,6 +20,8 @@ import { auth } from "@/lib/firebase";
 import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 
 
@@ -95,15 +97,6 @@ const fmtKickoff = (d: Date | null, timeZone: string) =>
         hour12: false,
       })
     : "--:--";
-const fmtRecordWithRank = (
-  r: { wins: number; losses: number; rank?: number } | null
-) => {
-  if (!r) return "(0-0)";
-  const record = `(${r.wins}-${r.losses})`;
-  if (!r.rank) return record;
-  return `${record} :${r.rank}${ordinal(r.rank)}`;
-};
-
 function ordinal(n: number) {
   if (n % 100 >= 11 && n % 100 <= 13) return "th";
   switch (n % 10) {
@@ -112,6 +105,51 @@ function ordinal(n: number) {
     case 3: return "rd";
     default: return "th";
   }
+}
+
+/** ResultMatchHeader の予想スコア数字と同じスタック */
+const RESULT_CARD_NUM_FONT =
+  'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif';
+
+/** BracketCardWeb / BracketCardMobile のチーム短名と同じ系統 */
+function bracketMarketTeamNameStyle(isMobile: boolean): React.CSSProperties {
+  return isMobile
+    ? {
+        fontFamily: '"Bebas Neue", sans-serif',
+        letterSpacing: "0.08em",
+      }
+    : {
+        fontFamily: "Oswald, Bebas Neue, sans-serif",
+        letterSpacing: "0.06em",
+      };
+}
+
+/** ResultStatsCard「総合得点」等と同じ数値フォント（Oxanium） */
+function RecordWithRank({
+  r,
+}: {
+  r: { wins: number; losses: number; rank?: number } | null;
+}) {
+  if (!r) {
+    return (
+      <span className={[resultStatsMetricNumClass, "opacity-70"].join(" ")}>
+        (0-0)
+      </span>
+    );
+  }
+  const record = `(${r.wins}-${r.losses})`;
+  if (!r.rank) {
+    return (
+      <span className={[resultStatsMetricNumClass, "opacity-70"].join(" ")}>
+        {record}
+      </span>
+    );
+  }
+  return (
+    <span className={[resultStatsMetricNumClass, "opacity-85"].join(" ")}>
+      {`${record} :${r.rank}${ordinal(r.rank)}`}
+    </span>
+  );
 }
 
 /** ルートから Web/Mobile の prefix を決定 */
@@ -167,6 +205,7 @@ const isPredicted = !!myPostId;
  // ✅ 追加（既存の useSectionPrefix を使う）
 const prefix = useSectionPrefix();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
+  const teamNameFont = bracketMarketTeamTypography(isMobile);
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
   function getDisplayName(league: League, l1: string, l2: string): string {
@@ -233,7 +272,7 @@ const marketMajority = useMemo(() => {
     : "w-12 h-12 md:w-16 md:h-16";
 
   // Tailwind に text-1.xl は無いので既に修正済み
-  const scoreText = dense ? "text-2xl md:text-5xl" : "text-2xl md:text-6xl";
+  const scoreText = dense ? "text-xl md:text-4xl" : "text-xl md:text-5xl";
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
   const Icon =
@@ -272,12 +311,10 @@ const isLive =
 let center: React.ReactNode = inPredictOverlay ? (
   <div className="flex min-h-[72px] items-center justify-center md:min-h-[88px]">
     <div
-      className="text-4xl md:text-6xl leading-none font-black tracking-[0.06em] text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
-      style={{
-        fontFamily:
-          'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-        fontWeight: 800,
-      }}
+      className={[
+        "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+        resultStatsMetricNumClass,
+      ].join(" ")}
     >
       VS
     </div>
@@ -291,12 +328,9 @@ let center: React.ReactNode = inPredictOverlay ? (
     </span>
   ) : (
     <div
-      className={`${scoreText} leading-none font-black tabular-nums`}
-      style={{
-        fontFamily:
-          'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-        fontWeight: 800,
-      }}
+      className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
+        " "
+      )}
     >
       {fmtKickoff(startAtJst, displayTimeZone)}
     </div>
@@ -314,12 +348,9 @@ let center: React.ReactNode = inPredictOverlay ? (
           LIVE
         </span>
         <div
-          className={`${scoreText} font-black tabular-nums leading-none`}
-          style={{
-            fontFamily:
-              'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-            fontWeight: 800,
-          }}
+          className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
+            " "
+          )}
         >
           {score.home} <span className="opacity-70">–</span> {score.away}
         </div>
@@ -337,17 +368,15 @@ let center: React.ReactNode = inPredictOverlay ? (
     center = (
       <div className="flex flex-col items-center gap-1">
         <div
-          className={`${scoreText} font-black tabular-nums leading-none`}
-          style={{
-            fontFamily:
-              'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-            fontWeight: 800,
-          }}
+          className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
+            " "
+          )}
         >
           {score.home} <span className="opacity-70">–</span> {score.away}
         </div>
-        <div className="text-xs opacity-80">
-          Final{finalMeta?.ot ? " (OT)" : ""}
+        <div className="text-xs opacity-80" style={teamNameFont}>
+          {isEn ? "Final" : "試合終了"}
+          {finalMeta?.ot ? " (OT)" : ""}
         </div>
       </div>
     );
@@ -597,10 +626,13 @@ background:
   } ${inPredictOverlay ? "pb-0" : ""}`}
 >
         {!!roundLabel && (
-  <div className="mc-round text-center font-bold text-l md:text-2xl mb-1">
-    {roundLabel}
-  </div>
-)}
+          <div
+            className="mc-round mb-1 text-center text-lg font-bold md:text-2xl"
+            style={teamNameFont}
+          >
+            {roundLabel}
+          </div>
+        )}
 
 <div className="h-4 md:h-5"></div>
       </div>
@@ -613,10 +645,13 @@ background:
         {/* HOME */}
 <div className="mc-home flex flex-col items-center -mt-5 md:mt-0">
 
-  {/* HOME ラベル：mobile 小 / web 通常 */}
-  <div className="text-xs md:text-sm font-bold uppercase tracking-wide opacity-85 mb-1">
-  HOME
-</div>
+  {/* HOME：チーム名と同じブラケット系フォント */}
+  <div
+    className="mb-1 text-center text-xs font-bold uppercase opacity-85 md:text-sm"
+    style={teamNameFont}
+  >
+    HOME
+  </div>
 
   <Icon
   className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
@@ -631,11 +666,8 @@ background:
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[12px] md:text-base"
-          style={{
-            fontFamily:
-              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-          }}
+          className="text-[13px] font-bold md:text-[17px]"
+          style={teamNameFont}
         >
           {homeL2 || homeL1}
         </div>
@@ -643,20 +675,14 @@ background:
         // ★ Bリーグ（mobile）→ 2行表示
         <>
           <div
-            className="text-[12px] md:text-base"
-            style={{
-              fontFamily:
-                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-            }}
+            className="text-[13px] font-bold md:text-[17px]"
+            style={teamNameFont}
           >
             {homeL1}
           </div>
           <div
-            className="text-[12px] md:text-base"
-            style={{
-              fontFamily:
-                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-            }}
+            className="text-[13px] font-bold md:text-[17px]"
+            style={teamNameFont}
           >
             {homeL2}
           </div>
@@ -664,24 +690,18 @@ background:
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[12px] md:text-base"
-          style={{
-            fontFamily:
-              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-          }}
+          className="text-[13px] font-bold md:text-[17px]"
+          style={teamNameFont}
         >
           {homeL1} {homeL2}
         </div>
       )}
     </>
   ) : (
-    // ★ PC(web) → 従来どおり1行表示
+    // ★ PC(web) → 1行表示（ブラケットマーケットのチーム名フォント）
     <div
-      className="text-[12px] md:text-base"
-      style={{
-        fontFamily:
-          '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-      }}
+      className="text-[13px] font-bold md:text-[17px]"
+      style={teamNameFont}
     >
       {homeL1} {homeL2}
     </div>
@@ -689,9 +709,9 @@ background:
 </div>
 
 
-  {/* 戦績（record）は mobile 小・web 通常でOK） */}
-<div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
-  {fmtRecordWithRank(homeRecord)}
+  {/* 戦績・順位：総合得点などと同じ Oxanium */}
+<div className="mc-record mt-0.5 text-[11px] leading-none md:text-[15px]">
+  <RecordWithRank r={homeRecord} />
 </div>
 
 {/* ★ ここに挿入 */}
@@ -740,10 +760,12 @@ background:
         {/* AWAY */}
 <div className="mc-away flex flex-col items-center -mt-5 md:mt-0">
 
-  {/* AWAY ラベル：mobile 小 / web 通常 */}
- <div className="text-xs md:text-sm font-bold uppercase tracking-wide opacity-85 mb-1">
-  AWAY
-</div>
+  <div
+    className="mb-1 text-center text-xs font-bold uppercase opacity-85 md:text-sm"
+    style={teamNameFont}
+  >
+    AWAY
+  </div>
 
   {/* アイコン：mobile大きく / webそのまま */}
   <Icon
@@ -759,11 +781,8 @@ background:
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[12px] md:text-base"
-          style={{
-            fontFamily:
-              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-          }}
+          className="text-[13px] font-bold md:text-[17px]"
+          style={teamNameFont}
         >
           {awayL2 || awayL1}
         </div>
@@ -771,20 +790,14 @@ background:
         // ★ Bリーグ（mobile）→ 2行
         <>
           <div
-            className="text-[12px] md:text-base"
-            style={{
-              fontFamily:
-                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-            }}
+            className="text-[13px] font-bold md:text-[17px]"
+            style={teamNameFont}
           >
             {awayL1}
           </div>
           <div
-            className="text-[12px] md:text-base"
-            style={{
-              fontFamily:
-                '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-            }}
+            className="text-[13px] font-bold md:text-[17px]"
+            style={teamNameFont}
           >
             {awayL2}
           </div>
@@ -792,24 +805,17 @@ background:
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[12px] md:text-base"
-          style={{
-            fontFamily:
-              '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-          }}
+          className="text-[13px] font-bold md:text-[17px]"
+          style={teamNameFont}
         >
           {awayL1} {awayL2}
         </div>
       )}
     </>
   ) : (
-    // ★ PC（web）は従来どおり  
     <div
-      className="text-[12px] md:text-base"
-      style={{
-        fontFamily:
-          '"Hiragino Kaku Gothic Std","ヒラギノ角ゴ Std","Hiragino Kaku Gothic ProN","Hiragino Kaku Gothic Pro",Meiryo,"Noto Sans JP",sans-serif',
-      }}
+      className="text-[13px] font-bold md:text-[17px]"
+      style={teamNameFont}
     >
       {awayL1} {awayL2}
     </div>
@@ -817,8 +823,8 @@ background:
 </div>
 
 
-<div className="mc-record text-[10px] md:text-sm opacity-70 mt-0.5 leading-none tracking-tight">
-  {fmtRecordWithRank(awayRecord)}
+<div className="mc-record mt-0.5 text-[11px] leading-none md:text-[15px]">
+  <RecordWithRank r={awayRecord} />
 </div>
 
 {/* ★ ここに挿入 */}

@@ -3,10 +3,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Gauge } from "lucide-react";
+import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 type Props = {
   scorePrecisionSum: number;
@@ -63,7 +65,7 @@ export default function ScorePrecisionCard({
   }
 
   const sum = useMemo(
-    () => Number((scorePrecisionSum || 0).toFixed(1)),
+    () => roundMetricDecimals(scorePrecisionSum || 0, 1),
     [scorePrecisionSum]
   );
 
@@ -73,10 +75,9 @@ export default function ScorePrecisionCard({
   );
 
   const sumCu = useCountUp(sum, 1000, visible, 1);
-  const avgCu = useCountUp(Number(avg.toFixed(1)), 1000, visible, 1);
+  const avgCu = useCountUp(roundMetricDecimals(avg, 1), 1000, visible, 1);
 
   const bar01 = clamp01(avg / 10);
-  const barPct = `${Math.round(bar01 * 100)}%`;
 
   const tooltipMsg = isEn
     ? "Evaluate how close your predicted score is to the actual score on a 0–10 scale, summed within the selected period. The bar below visualizes your per-match average (0–10)."
@@ -119,7 +120,7 @@ export default function ScorePrecisionCard({
             "leading-none text-center",
           ].join(" ")}
         >
-          {sumCu.toFixed(1)}
+          {formatMetricDecimals(sumCu, 1)}
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
             pts
           </span>
@@ -131,18 +132,17 @@ export default function ScorePrecisionCard({
             <span
               className={[summaryMetricNumClass, "tabular-nums"].join(" ")}
             >
-              {avgCu.toFixed(1)}{" "}
+              {formatMetricDecimals(avgCu, 1)}{" "}
               <span className="text-white/45">/ 10</span>
             </span>
           </div>
 
-          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10 md:mt-3 md:h-3">
-            <div
-              className="h-1.5 rounded-full bg-blue-500 transition-all ease-out md:h-3"
-              style={{
-                width: visible ? barPct : "0%",
-                transitionDuration: "900ms",
-              }}
+          <div className="mt-1.5 flex w-full md:mt-3">
+            <ResultStatRatingBar
+              ratio={bar01}
+              animateMs={900}
+              delayMs={visible ? 80 : 0}
+              size={compact ? "sm" : "md"}
             />
           </div>
         </div>

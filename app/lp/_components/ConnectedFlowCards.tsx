@@ -64,7 +64,7 @@ export default function ConnectedFlowCards({
                 className={[
                   "relative flex h-full min-h-[240px] flex-col overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-4 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.18)] transition-[transform,box-shadow,border-color,opacity] duration-500 ease-out max-lg:min-h-[248px] lg:min-h-0 lg:px-2.5 lg:py-3 xl:px-3 xl:py-3.5",
                   isActive
-                    ? "z-[1] scale-[1.03] border-cyan-300/50 shadow-[0_0_28px_rgba(103,232,249,0.42),0_0_72px_rgba(34,211,238,0.14)] opacity-100"
+                    ? "z-1 scale-[1.03] border-cyan-300/50 shadow-[0_0_28px_rgba(103,232,249,0.42),0_0_72px_rgba(34,211,238,0.14)] opacity-100"
                     : "z-0 scale-100 border-white/10 opacity-[0.88]",
                 ].join(" ")}
               >
@@ -81,13 +81,13 @@ export default function ConnectedFlowCards({
                 </div>
 
                 <div className="mt-2 min-h-0 flex-1 text-center text-[13px] leading-snug text-white/56 lg:text-[9px] lg:leading-tight xl:text-[10px] xl:leading-snug">
-                  <span className="line-clamp-4 lg:line-clamp-[5] xl:line-clamp-[6]">
+                  <span className="line-clamp-4 lg:line-clamp-5 xl:line-clamp-6">
                     {node.text}
                   </span>
                 </div>
 
                 {node.media.enabled ? (
-                  <div className="mt-auto overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] p-0.5 pt-2 lg:rounded-md lg:pt-1.5">
+                  <div className="mt-auto overflow-hidden rounded-lg border border-white/10 bg-white/3 p-0.5 pt-2 lg:rounded-md lg:pt-1.5">
                     {node.media.type === "video" ? (
                       <video
                         src={node.media.src}
@@ -120,7 +120,7 @@ export default function ConnectedFlowCards({
       </div>
 
       <div className="relative mt-5 lg:mt-4" aria-hidden>
-        <div className="h-px w-full bg-gradient-to-r from-cyan-300/50 via-cyan-300/20 to-transparent" />
+        <div className="h-px w-full bg-linear-to-r from-cyan-300/50 via-cyan-300/20 to-transparent" />
       </div>
     </>
   );

@@ -11,6 +11,7 @@ import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
+import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 
 /* =========================
  * Flag map
@@ -120,10 +121,10 @@ function rankPreset(rank: 1 | 2 | 3) {
       rankText: "text-[28px]",
       avatar: "h-[40px] w-[40px]",
       avatarText: "text-[17px]",
-      nameText: "text-[24px]",
+      nameText: "text-[22px]",
       scoreW: "w-[66px]",
-      scoreMain: "text-[28px]",
-      scoreSub: "text-[12px]",
+      scoreMain: "text-[26px]",
+      scoreSub: "text-[11px]",
       gap: "gap-1.5",
       px: "px-3",
     };
@@ -137,10 +138,10 @@ function rankPreset(rank: 1 | 2 | 3) {
       rankText: "text-[26px]",
       avatar: "h-[38px] w-[38px]",
       avatarText: "text-[15px]",
-      nameText: "text-[21px]",
+      nameText: "text-[19px]",
       scoreW: "w-[62px]",
-      scoreMain: "text-[25px]",
-      scoreSub: "text-[11px]",
+      scoreMain: "text-[23px]",
+      scoreSub: "text-[10px]",
       gap: "gap-1.5",
       px: "px-3",
     };
@@ -153,10 +154,10 @@ function rankPreset(rank: 1 | 2 | 3) {
     rankText: "text-[24px]",
     avatar: "h-[36px] w-[36px]",
     avatarText: "text-[14px]",
-    nameText: "text-[19px]",
+    nameText: "text-[17px]",
     scoreW: "w-[58px]",
-    scoreMain: "text-[22px]",
-    scoreSub: "text-[11px]",
+    scoreMain: "text-[20px]",
+    scoreSub: "text-[10px]",
     gap: "gap-1",
     px: "px-2.5",
   };
@@ -293,7 +294,7 @@ function ScoreText({
           ].join(" ")}
         >
           <span className={s.scoreMain} style={scoreStyle}>
-            {n.toFixed(1)}
+            {formatMetricDecimals(n, 1)}
           </span>
           <span
             className={s.scoreSub}
@@ -308,7 +309,10 @@ function ScoreText({
 
         {showMeta && (
           <span className="mt-1 inline-flex items-center gap-1 text-[11px] leading-none text-white/40">
-            <span>avg {avg?.toFixed(1) ?? "0.0"}</span>
+            <span>
+              avg{" "}
+              {avg != null ? formatMetricDecimals(avg, 1) : "0.0"}
+            </span>
             <span>
               {postsLabel(language)}:{row.posts ?? 0}
             </span>

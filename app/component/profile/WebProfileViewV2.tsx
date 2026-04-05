@@ -69,7 +69,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     isProView,
   } = useProfilePlan({
     targetUid,
-    profilePlan: (displayProfile as any).plan,
+    profilePlan: displayProfile.plan,
   });
 
   const forceProView = false;
@@ -100,6 +100,12 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const wins = (summary as any)?.wins ?? 0;
   const totalPoints = summary?.pointsSumV3 ?? 0;
 
+  const upsetBonusSum = summary?.upsetBonusSum ?? 0;
+  const streakBonusSum = summary?.streakBonusSum ?? 0;
+  const basePointsSum =
+    summary?.basePointsSum ??
+    Math.max(0, totalPoints - upsetBonusSum - streakBonusSum);
+
   const upsetPointsSum = summary?.upsetPointsSum ?? 0;
   const upsetChanceCount = (summary as any)?.upsetChanceCount ?? 0;
   const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
@@ -117,7 +123,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       ? "All"
       : "All";
 
-  const maxStreak = (displayProfile as any)?.maxStreak ?? 0;
+  const maxStreak = displayProfile.maxStreak ?? 0;
   const currentStreak = Math.max(
     0,
     (displayProfile as any)?.currentStreak ?? 0
@@ -225,6 +231,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                       index={0}
                       total={proSummaryTotal}
                       enabled={playSummaryEntrance}
+                      enterVariant="fade"
                       className="min-w-0"
                     >
                       <AnalysisWinCard
@@ -249,6 +256,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                       index={2}
                       total={proSummaryTotal}
                       enabled={playSummaryEntrance}
+                      enterVariant="fade"
                       className="min-w-0"
                     >
                       <ScorePrecisionCard
@@ -265,6 +273,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                       index={3}
                       total={proSummaryTotal}
                       enabled={playSummaryEntrance}
+                      enterVariant="fade"
                       className="min-w-0"
                     >
                       <UpsetCard
@@ -280,6 +289,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                       index={4}
                       total={proSummaryTotal}
                       enabled={playSummaryEntrance}
+                      enterVariant="fade"
                       className="min-w-0"
                     >
                       <TotalScoreCard
@@ -287,6 +297,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                         periodLabel={periodLabel}
                         totalPoints={totalPoints}
                         analyses={posts}
+                        basePoints={basePointsSum}
+                        upsetBonusPoints={upsetBonusSum}
+                        streakBonusPoints={streakBonusSum}
                         language={language}
                       />
                     </SummaryCardReveal>

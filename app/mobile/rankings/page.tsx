@@ -102,15 +102,7 @@ export default function MobileRankingsPage() {
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length > 0) {
-      const base = toMobileRows(metric, rawRows);
-      // API側で countryCode が欠けているケースがあるため、先にUS/CN/JPでフォールバックして表示を成立させる
-      // （Firestore から countryCode を取得でき次第、正しい値で上書き）
-      return base.map((r, idx) => {
-        if (r.countryCode) return r;
-        const fallback =
-          idx % 3 === 0 ? "US" : idx % 3 === 1 ? "CN" : ("JP" as string);
-        return { ...r, countryCode: fallback };
-      });
+      return toMobileRows(metric, rawRows);
     }
     return [];
   }, [metric, rawRows]);

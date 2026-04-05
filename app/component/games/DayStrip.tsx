@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef } from "react";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 type Props = {
@@ -206,7 +207,7 @@ export default function DayStrip({
                   />
 
                   <span
-                    className={`relative z-10 font-bold ${sz.num}`}
+                    className={`relative z-10 ${resultStatsMetricNumClass} ${sz.num}`}
                     style={{
                       color: selected ? "#071006" : "#ffffff",
                       textShadow: selected

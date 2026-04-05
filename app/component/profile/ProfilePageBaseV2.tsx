@@ -38,21 +38,35 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     return { ...p, avatarUrl: merged };
   }, [profile]);
 
-  const mergedProfile = useMemo<Profile>(
-    () => ({
+  const mergedProfile = useMemo<Profile>(() => {
+    // 現在連勝：user_stats_v2.currentStreak を正（試合終了時に updateUserStreak で更新）
+    const currentStreak = (() => {
+      if (stats != null) {
+        const v = Number((stats as Record<string, unknown>).currentStreak);
+        if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
+      }
+      const u = Number(normalizedProfile?.currentStreak);
+      return Number.isFinite(u) ? Math.max(0, Math.floor(u)) : 0;
+    })();
+
+    // 最高連勝：maxWinStreak が正。maxStreak はレガシー／エイリアス
+    const maxStreak = (() => {
+      if (stats != null) {
+        const raw = (stats as Record<string, unknown>).maxWinStreak;
+        const legacy = (stats as Record<string, unknown>).maxStreak;
+        const v = Number(raw ?? legacy);
+        if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
+      }
+      const u = Number(normalizedProfile?.maxStreak);
+      return Number.isFinite(u) ? Math.max(0, Math.floor(u)) : 0;
+    })();
+
+    return {
       ...normalizedProfile!,
-      // `useUserStatsV2` の `stats` は型的に unknown 扱いなので、安全に number 化する
-      currentStreak: (() => {
-        const n = Number((stats as any)?.currentStreak ?? 0);
-        return Number.isFinite(n) ? n : 0;
-      })(),
-      maxStreak: (() => {
-        const n = Number((stats as any)?.maxStreak ?? 0);
-        return Number.isFinite(n) ? n : 0;
-      })(),
-    }),
-    [normalizedProfile, stats]
-  );
+      currentStreak,
+      maxStreak,
+    };
+  }, [normalizedProfile, stats]);
 
   const summaryV2: SummaryForCardsV2 | undefined = useMemo(() => {
     return summaries?.[range];

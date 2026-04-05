@@ -53,6 +53,24 @@ type RawGame = {
   finalMeta?: any;
 };
 
+function resolveCountsForRanking(r: RawGame): {
+  countsForRanking: boolean;
+  seasonPhase?: SeasonPhase;
+} {
+  const seasonPhase = r.seasonPhase;
+  if (typeof r.countsForRanking === "boolean") {
+    return {
+      countsForRanking: r.countsForRanking,
+      ...(seasonPhase ? { seasonPhase } : {}),
+    };
+  }
+  const countsForRanking = seasonPhase !== "play_in";
+  return {
+    countsForRanking,
+    ...(seasonPhase ? { seasonPhase } : {}),
+  };
+}
+
 type Preview =
   | { ok: false; reason: string }
   | {
