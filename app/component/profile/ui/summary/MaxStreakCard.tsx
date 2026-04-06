@@ -7,6 +7,7 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type Props = {
   maxStreak: number;
@@ -86,13 +87,19 @@ export default function MaxStreakCard({
       <div
         ref={ref}
         className={[
-          "rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
+          "relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
           "p-2 md:p-6",
           "shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
           "flex h-full flex-col",
           className,
         ].join(" ")}
       >
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.36]"
+          style={PROFILE_SHELL_GRID_STYLE}
+          aria-hidden
+        />
+        <div className="relative z-1 flex h-full flex-col">
         <div className="mb-1.5 flex items-center justify-center gap-1.5 text-[10px] font-semibold tracking-tight text-white md:mb-4 md:gap-2 md:text-[18px]">
           <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black md:h-8 md:w-8">
             <Flame className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
@@ -124,6 +131,7 @@ export default function MaxStreakCard({
           <div className="mt-2 text-[9px] text-white/60 text-center leading-snug tracking-tight md:mt-3 md:text-[15px]">
             {subtitle}
           </div>
+        </div>
         </div>
       </div>
 

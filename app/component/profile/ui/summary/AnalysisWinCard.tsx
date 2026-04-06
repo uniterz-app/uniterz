@@ -4,6 +4,7 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type Props = {
   totalAnalyses?: number;
@@ -285,9 +286,14 @@ export default function AnalysisWinCard({ language = "ja", ...props }: Props) {
   return (
     <div
       ref={ref}
-      className="rounded-lg border border-white/15 bg-[#050814]/80 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:rounded-xl md:border-white/10 md:p-5 md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+      className="relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:rounded-xl md:border-white/10 md:p-5 md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
     >
-      <div className="flex items-center justify-center gap-5 pl-1 md:gap-10 md:pl-2">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.36]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="relative z-1 flex items-center justify-center gap-5 pl-1 md:gap-10 md:pl-2">
         <div className="flex min-w-0 flex-col items-center md:translate-x-1.5">
           <div className="text-[9px] tracking-tight text-white/60 md:text-[16px]">
             {hitLabel}

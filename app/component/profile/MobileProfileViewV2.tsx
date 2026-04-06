@@ -16,6 +16,7 @@ import ScoringRulesChangeNoticeModal from "@/app/component/profile/ScoringRulesC
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
 import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
+import StreakTrackerCard from "@/app/component/profile/ui/StreakTrackerCard";
 
 import AnalysisWinCard from "./ui/summary/AnalysisWinCard";
 import TotalScoreCard from "./ui/summary/TotalScoreCard";
@@ -337,10 +338,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               <PeriodToggle value={range} onChange={setRange} language={language} />
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <SummaryCardReveal
                 index={5}
-                total={6}
+                total={7}
                 enabled={playSummaryEntrance}
                 className="min-w-0 overflow-hidden"
                 onAnimationComplete={onChartRevealComplete}
@@ -355,6 +356,14 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                     !playSummaryEntrance || chartEntranceDone
                   }
                 />
+              </SummaryCardReveal>
+              <SummaryCardReveal
+                index={6}
+                total={7}
+                enabled={playSummaryEntrance}
+                className="min-w-0 overflow-hidden"
+              >
+                <StreakTrackerCard uid={resolvedUid} language={language} />
               </SummaryCardReveal>
             </div>
               </>

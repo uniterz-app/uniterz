@@ -14,6 +14,7 @@ import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
 import ScoringRulesChangeNoticeModal from "@/app/component/profile/ScoringRulesChangeNoticeModal";
 
 import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
+import StreakTrackerCard from "@/app/component/profile/ui/StreakTrackerCard";
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
 
@@ -326,10 +327,10 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               )}
               </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <SummaryCardReveal
                 index={5}
-                total={6}
+                total={7}
                 enabled={playSummaryEntrance}
                 className="min-w-0 overflow-hidden"
                 onAnimationComplete={onChartRevealComplete}
@@ -343,6 +344,19 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   rechartsAfterEntrance={
                     !playSummaryEntrance || chartEntranceDone
                   }
+                />
+              </SummaryCardReveal>
+              <SummaryCardReveal
+                index={6}
+                total={7}
+                enabled={playSummaryEntrance}
+                className="min-w-0 overflow-hidden"
+              >
+                <StreakTrackerCard
+                  uid={resolvedUid}
+                  language={language}
+                  layout="web"
+                  entranceReady={!playSummaryEntrance || chartEntranceDone}
                 />
               </SummaryCardReveal>
             </div>

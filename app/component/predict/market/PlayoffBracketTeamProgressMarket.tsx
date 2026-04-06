@@ -9,6 +9,7 @@ import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
 import type { Language } from "@/lib/i18n/language";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type MarketCountMap = Record<string, number>;
 
@@ -156,8 +157,14 @@ function TeamCard({
         delay: cardIndex * 0.05,
         ease: [0.22, 1, 0.36, 1],
       }}
-      className="w-full rounded-2xl border border-white/15 bg-[#050814]/80 px-3 py-3 text-left text-white md:px-4 md:py-4"
+      className="relative overflow-hidden w-full rounded-2xl border border-white/15 bg-[#050814]/80 px-3 py-3 text-left text-white md:px-4 md:py-4"
     >
+      <div
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="relative z-1">
       <div className="grid grid-cols-[auto_auto_1fr] items-center gap-x-3 gap-y-2">
         <div className="text-center">
           <div className="text-[10px] text-white/45 md:text-[11px]">SEED</div>
@@ -204,6 +211,7 @@ function TeamCard({
         open={open}
         language={language}
       />
+      </div>
     </motion.div>
   );
 }
@@ -301,8 +309,15 @@ export default function PlayoffBracketTeamProgressMarket({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-        {language === "en" ? "No data available" : "データがありません"}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+        <div
+          className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+          style={PROFILE_SHELL_GRID_STYLE}
+          aria-hidden
+        />
+        <div className="relative z-1">
+          {language === "en" ? "No data available" : "データがありません"}
+        </div>
       </div>
     );
   }

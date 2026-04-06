@@ -22,6 +22,7 @@ import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 
 
@@ -531,11 +532,14 @@ dense
   willChange: "transform",
 }}
 >
-
-
+      <div
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
 
 {showMarketBias && marketBias && (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+  <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
     {/* HOME 側バー */}
     <div
       className="absolute left-0 top-0 h-full"
@@ -645,9 +649,14 @@ background:
         {/* HOME */}
 <div className="mc-home flex flex-col items-center -mt-5 md:mt-0">
 
-  {/* HOME：チーム名と同じブラケット系フォント */}
+  {/* HOME：Web はラベルを大きく */}
   <div
-    className="mb-1 text-center text-xs font-bold uppercase opacity-85 md:text-sm"
+    className={[
+      "mb-1 text-center font-bold uppercase opacity-85",
+      isMobile
+        ? "text-xs md:text-sm"
+        : "text-sm md:text-base lg:text-lg",
+    ].join(" ")}
     style={teamNameFont}
   >
     HOME
@@ -698,9 +707,8 @@ background:
       )}
     </>
   ) : (
-    // ★ PC(web) → 1行表示（ブラケットマーケットのチーム名フォント）
     <div
-      className="text-[13px] font-bold md:text-[17px]"
+      className="text-base font-bold leading-tight md:text-xl lg:text-2xl"
       style={teamNameFont}
     >
       {homeL1} {homeL2}
@@ -761,7 +769,12 @@ background:
 <div className="mc-away flex flex-col items-center -mt-5 md:mt-0">
 
   <div
-    className="mb-1 text-center text-xs font-bold uppercase opacity-85 md:text-sm"
+    className={[
+      "mb-1 text-center font-bold uppercase opacity-85",
+      isMobile
+        ? "text-xs md:text-sm"
+        : "text-sm md:text-base lg:text-lg",
+    ].join(" ")}
     style={teamNameFont}
   >
     AWAY
@@ -814,7 +827,7 @@ background:
     </>
   ) : (
     <div
-      className="text-[13px] font-bold md:text-[17px]"
+      className="text-base font-bold leading-tight md:text-xl lg:text-2xl"
       style={teamNameFont}
     >
       {awayL1} {awayL2}

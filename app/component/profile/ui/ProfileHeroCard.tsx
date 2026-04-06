@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import type { Language } from "@/lib/i18n/language";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type DisplayProfile = {
   displayName: string;
@@ -361,8 +362,8 @@ export default function ProfileHeroCard({
   const isWeb = layout === "web";
 
   const shellClass = isWeb
-    ? "relative min-h-[128px] rounded-xl border border-white/10 bg-[#050814]/80 p-5 shadow-[0_8px_22px_rgba(0,0,0,0.38)]"
-    : "relative isolate rounded-xl border border-white/10 bg-[#050814]/80 p-3 shadow-[0_8px_22px_rgba(0,0,0,0.38)]";
+    ? "relative isolate min-h-[128px] overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-5 shadow-[0_8px_22px_rgba(0,0,0,0.38)]"
+    : "relative isolate overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-3 shadow-[0_8px_22px_rgba(0,0,0,0.38)]";
 
   /** innerPhase 以降に img を載せて読み込み、準備できてから円ごとフェード */
   const showAvatarMedia = staticHero || innerPhase;
@@ -618,6 +619,11 @@ export default function ProfileHeroCard({
         heroEntranceAnim ? handleShellComplete : undefined
       }
     >
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.38]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
       {body}
     </motion.div>
   );

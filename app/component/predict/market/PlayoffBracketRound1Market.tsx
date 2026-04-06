@@ -11,6 +11,7 @@ import {
 } from "@/lib/playoff-bracket-config";
 import type { SeriesId } from "@/lib/playoff-bracket";
 import PlayoffBracketSeriesGamesTab from "./PlayoffBracketSeriesGamesTab";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type MarketCountMap = Record<string, number>;
 
@@ -251,11 +252,17 @@ function SeriesCard({
         ease: [0.22, 1, 0.36, 1],
       }}
       className="
-        w-full rounded-2xl border border-white/15 bg-[#050814]/80
+        relative overflow-hidden w-full rounded-2xl border border-white/15 bg-[#050814]/80
         px-3 py-3 text-left text-white
         md:rounded-3xl md:px-4 md:py-4
       "
     >
+      <div
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32] md:rounded-3xl"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="relative z-1">
       <div className="grid grid-cols-3 items-center">
         <div className="flex flex-col items-center">
           <div className="mb-1 text-[10px] text-white/50 md:text-[11px]">
@@ -324,6 +331,7 @@ function SeriesCard({
           <PlayoffBracketSeriesGamesTab gamesPickCounts={gamesCounts} />
         </div>
       )}
+      </div>
     </motion.div>
   );
 }
