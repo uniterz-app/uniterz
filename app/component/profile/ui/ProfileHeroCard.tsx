@@ -13,6 +13,7 @@ import {
 
 import type { Language } from "@/lib/i18n/language";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { profileHeroCardShadowClass } from "@/lib/ui/profileCardEdgeGlow";
 
 type DisplayProfile = {
   displayName: string;
@@ -362,8 +363,8 @@ export default function ProfileHeroCard({
   const isWeb = layout === "web";
 
   const shellClass = isWeb
-    ? "relative isolate min-h-[128px] overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-5 shadow-[0_8px_22px_rgba(0,0,0,0.38)]"
-    : "relative isolate overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-3 shadow-[0_8px_22px_rgba(0,0,0,0.38)]";
+    ? `relative isolate min-h-[128px] overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-5 ${profileHeroCardShadowClass}`
+    : `relative isolate overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-3 ${profileHeroCardShadowClass}`;
 
   /** innerPhase 以降に img を載せて読み込み、準備できてから円ごとフェード */
   const showAvatarMedia = staticHero || innerPhase;

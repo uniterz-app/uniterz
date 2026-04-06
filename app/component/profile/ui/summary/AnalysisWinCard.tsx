@@ -5,6 +5,10 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import {
+  summaryCardShadowLgClass,
+  summaryCardShadowSmClass,
+} from "@/lib/ui/profileCardEdgeGlow";
 
 type Props = {
   totalAnalyses?: number;
@@ -286,7 +290,12 @@ export default function AnalysisWinCard({ language = "ja", ...props }: Props) {
   return (
     <div
       ref={ref}
-      className="relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 p-2 shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:rounded-xl md:border-white/10 md:p-5 md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+      className={[
+        "relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 p-2",
+        summaryCardShadowSmClass,
+        "md:rounded-xl md:border-white/10 md:p-5",
+        summaryCardShadowLgClass,
+      ].join(" ")}
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.36]"

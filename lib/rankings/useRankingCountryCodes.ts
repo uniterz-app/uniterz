@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * 累積ランキングのスナップショット行には通常 countryCode が含まれるため、
+ * ランキング画面ではクライアントからの N 回 getDoc は不要。他画面で必要な場合のみ利用。
+ */
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";

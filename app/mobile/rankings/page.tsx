@@ -14,13 +14,14 @@ import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import Header from "@/app/component/Header";
-import { toMobileRows } from "@/lib/rankings/rankingTransform";
 import {
-  useRanking,
-  type RankingRow,
-} from "@/lib/rankings/useRanking";
+  API_METRIC_BY_MOBILE,
+  type RankingApiRow,
+  toMobileRows,
+} from "@/lib/rankings/rankingTransform";
+import type { RankingRow } from "@/lib/rankings/useRanking";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
-import { useRankingCountryCodes } from "@/lib/rankings/useRankingCountryCodes";
+import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   TIMEZONE_ET,
@@ -51,22 +52,6 @@ function formatRankingsUpdateTimeEn() {
   }).format(new Date(jstUpdateMs));
 }
 
-function toHookMetric(metric: MobileMetric) {
-  if (metric === "winRate") return "winRate";
-  if (metric === "totalScore") return "totalPoints";
-  if (metric === "marginPrecision") return "totalPrecision";
-  if (metric === "upsetScore") return "totalUpset";
-  return "activeWinStreak";
-}
-
-function findMyRow(
-  rows: RankingRow[],
-  myUid: string | null
-): RankingRow | null {
-  if (!myUid) return null;
-  return rows.find((r) => r.uid === myUid) ?? null;
-}
-
 export default function MobileRankingsPage() {
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
 
@@ -89,46 +74,30 @@ export default function MobileRankingsPage() {
     [visibleMetrics]
   );
 
-  const rankingMetric = toHookMetric(metric);
-  const {
-    loading,
-    rows: rawRows,
-    myRank,
-    myUid,
-  } = useRanking(rankingMetric);
+  const { listReady, personalPending, myUid, byMetric } =
+    useCumulativeRankingsBulk();
 
-  const { user, loading: userLoading } = useMyRankingUser(myUid);
+  const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
 
+  const apiKey = API_METRIC_BY_MOBILE[metric];
+  const bundle = byMetric?.[apiKey];
+  const rawRows = useMemo(
+    () =>
+      Array.isArray(bundle?.rows) ? (bundle.rows as RankingApiRow[]) : [],
+    [bundle?.rows]
+  );
+
+  const myRank = bundle?.myRank ?? null;
+  const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
+
   const rows: RankingRowWithCountry[] = useMemo(() => {
-    if (rawRows.length > 0) {
-      return toMobileRows(metric, rawRows);
-    }
-    return [];
+    if (rawRows.length === 0) return [];
+    return toMobileRows(metric, rawRows);
   }, [metric, rawRows]);
 
-  const uidsForCountry = useMemo(() => rawRows.map((r) => r.uid ?? "").filter(Boolean), [rawRows]);
-  const { loading: countryLoading, countryCodeByUid } = useRankingCountryCodes(uidsForCountry);
-
-  const rowsWithCountry: RankingRowWithCountry[] = useMemo(() => {
-    if (countryLoading) return rows;
-    return rows.map((r) => {
-      // 取得できた場合は上書き。未設定(null)なら undefined にしてフラグ非表示にする。
-      if (Object.prototype.hasOwnProperty.call(countryCodeByUid, r.uid)) {
-        const code = countryCodeByUid[r.uid];
-        if (typeof code === "string") {
-          return { ...r, countryCode: code };
-        }
-        return r;
-      }
-      return r;
-    });
-  }, [rows, countryCodeByUid, countryLoading]);
-
-  const top3 = rowsWithCountry.slice(0, 3);
-  const restRows = rowsWithCountry.slice(3);
-
-  const myRawRow = useMemo(() => findMyRow(rawRows, myUid), [rawRows, myUid]);
+  const top3 = rows.slice(0, 3);
+  const restRows = rows.slice(3);
 
   const myValue = useMemo(() => {
     if (!myRawRow) return 0;
@@ -136,7 +105,10 @@ export default function MobileRankingsPage() {
     if (metric === "totalScore") return myRawRow.totalPoints ?? 0;
     if (metric === "marginPrecision") return myRawRow.totalPrecision ?? 0;
     if (metric === "upsetScore") return myRawRow.totalUpset ?? 0;
-    if (metric === "winRate") return Math.round((myRawRow.winRate ?? 0) * 100);
+    if (metric === "winRate") {
+      const raw = myRawRow.winRate ?? 0;
+      return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
+    }
     return myRawRow.activeWinStreak ?? 0;
   }, [metric, myRawRow]);
 
@@ -189,8 +161,13 @@ export default function MobileRankingsPage() {
             displayName={user.displayName || "You"}
             photoURL={user.photoURL || null}
             handle={user.handle || null}
-            totalPosts={myRawRow?.totalPosts}
-            loading={loading || userLoading}
+            totalPosts={
+              typeof myRawRow?.totalPosts === "number"
+                ? myRawRow.totalPosts
+                : undefined
+            }
+            loading={!listReady}
+            statsScramble={listReady && personalPending}
             language={language}
           />
 
@@ -202,7 +179,7 @@ export default function MobileRankingsPage() {
           />
         </div>
 
-        {loading && (
+        {!listReady && (
           <div className="px-3 pt-2 text-[11px] text-white/40">
             loading...
           </div>

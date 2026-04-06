@@ -12,6 +12,7 @@ import {
 import type { SeriesId } from "@/lib/playoff-bracket";
 import PlayoffBracketSeriesGamesTab from "./PlayoffBracketSeriesGamesTab";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 
 type MarketCountMap = Record<string, number>;
 
@@ -265,38 +266,56 @@ function SeriesCard({
       <div className="relative z-1">
       <div className="grid grid-cols-3 items-center">
         <div className="flex flex-col items-center">
-          <div className="mb-1 text-[10px] text-white/50 md:text-[11px]">
+          <div className="text-[10px] text-white/45 md:text-[11px]">SEED</div>
+          <div className="mt-0.5 text-sm font-bold tabular-nums text-white md:text-base">
             #{series.teams[0].seed}
           </div>
           <Jersey
-            className="h-8 w-8 md:h-10 md:w-10"
+            className="mt-1 h-8 w-8 md:h-10 md:w-10"
             fill={colorA}
             stroke="#fff"
           />
-          <div className="mt-1 text-xs font-bold md:text-sm">{teamA}</div>
+          <div
+            className={`${nameBebas.className} mt-1 max-w-full truncate text-center text-[18px] leading-none tracking-[0.14em] text-white md:text-[26px]`}
+          >
+            {teamA}
+          </div>
         </div>
 
-        <div className="text-center text-sm font-bold md:text-base">VS</div>
+        <div
+          className={`${nameBebas.className} text-center text-base tracking-[0.14em] text-white/85 md:text-xl`}
+        >
+          VS
+        </div>
 
         <div className="flex flex-col items-center">
-          <div className="mb-1 text-[10px] text-white/50 md:text-[11px]">
+          <div className="text-[10px] text-white/45 md:text-[11px]">SEED</div>
+          <div className="mt-0.5 text-sm font-bold tabular-nums text-white md:text-base">
             #{series.teams[1].seed}
           </div>
           <Jersey
-            className="h-8 w-8 md:h-10 md:w-10"
+            className="mt-1 h-8 w-8 md:h-10 md:w-10"
             fill={colorB}
             stroke="#fff"
           />
-          <div className="mt-1 text-xs font-bold md:text-sm">{teamB}</div>
+          <div
+            className={`${nameBebas.className} mt-1 max-w-full truncate text-center text-[18px] leading-none tracking-[0.14em] text-white md:text-[26px]`}
+          >
+            {teamB}
+          </div>
         </div>
       </div>
 
       <div className="mt-2 md:mt-3">
         <div className="mb-1 flex justify-between gap-2 text-[10px] font-semibold md:text-xs">
-          <span className={`min-w-0 flex-1 text-center ${pctClassA}`}>
+          <span
+            className={`min-w-0 flex-1 text-center ${pctClassA} ${resultStatsMetricNumClass}`}
+          >
             {total > 0 ? `${teamAPct}%` : "--"}
           </span>
-          <span className={`min-w-0 flex-1 text-center ${pctClassB}`}>
+          <span
+            className={`min-w-0 flex-1 text-center ${pctClassB} ${resultStatsMetricNumClass}`}
+          >
             {total > 0 ? `${teamBPct}%` : "--"}
           </span>
         </div>

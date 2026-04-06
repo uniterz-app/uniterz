@@ -23,6 +23,11 @@ import {
 import SummaryCardReveal from "./SummaryCardReveal";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import {
+  summaryCardShadowDesktopClass,
+  summaryCardShadowLgClass,
+  summaryCardShadowSmClass,
+} from "@/lib/ui/profileCardEdgeGlow";
 import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 export type SummaryDataV2 = {
@@ -489,8 +494,16 @@ function Card({
   compactShell?: boolean;
 }) {
   const shell = compactShell
-    ? "relative min-w-0 overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 text-center shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:rounded-xl md:border-white/10 md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
-    : "relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)]";
+    ? [
+        "relative min-w-0 overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 text-center",
+        summaryCardShadowSmClass,
+        "md:rounded-xl md:border-white/10",
+        summaryCardShadowLgClass,
+      ].join(" ")
+    : [
+        "relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 text-center",
+        summaryCardShadowDesktopClass,
+      ].join(" ");
 
   return (
     <div className={`${shell} ${padCls}`}>

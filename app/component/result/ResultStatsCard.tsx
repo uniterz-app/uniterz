@@ -8,6 +8,7 @@ import type { Language } from "@/lib/i18n/language";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
   post: PredictionPostV2;
@@ -127,18 +128,18 @@ export default function ResultStatsCard({
   const barStaggerMs = 90;
 
   const shell = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} p-5`
-    : "rounded-2xl border border-white/15 bg-[#050814]/80 p-5 shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
+    ? `${MATCH_OVERLAY_GLASS_PANEL} relative overflow-hidden p-5`
+    : "relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-5 shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
 
   const showUpsetBonus = upsetBonus > 1e-6;
   const showStreakBonus = streakBonus > 1e-6;
 
   return (
     <div className={[shell, minHeightClassName ?? "min-h-[320px]"].join(" ")}>
-      <div className="mb-4 flex items-center gap-2 text-base font-semibold text-white">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-black">
-          <LineChart className="h-3 w-3 text-orange-400" />
-        </div>
+      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <div className="relative z-1">
+      <div className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
+        <LineChart className="h-5 w-5 shrink-0 text-orange-400 sm:h-6 sm:w-6" aria-hidden />
         <span>Performance Stats</span>
       </div>
 
@@ -154,8 +155,8 @@ export default function ResultStatsCard({
               key={r.key}
               className="flex items-center gap-2.5 sm:gap-3"
             >
-              <div className="flex w-[7.25rem] min-w-0 shrink-0 sm:w-[7.75rem]">
-                <span className="truncate text-[12px] font-semibold text-white sm:text-[13px]">
+              <div className="flex w-32 min-w-0 shrink-0 sm:w-34">
+                <span className="truncate text-[13px] font-semibold text-white sm:text-[15px]">
                   {r.label}
                 </span>
               </div>
@@ -168,7 +169,7 @@ export default function ResultStatsCard({
               />
 
               <div
-                className={`w-11 shrink-0 text-right text-[12px] text-white sm:w-12 sm:text-[13px] ${resultStatsMetricNumClass}`}
+                className={`w-12 shrink-0 text-right text-[14px] text-white sm:w-14 sm:text-[16px] ${resultStatsMetricNumClass}`}
               >
                 {display}
               </div>
@@ -177,18 +178,28 @@ export default function ResultStatsCard({
         })}
       </div>
 
-      <div className="mt-3 rounded-lg border border-white/8 bg-white/4 px-3 py-2">
-        <p className="text-center text-[11px] font-medium leading-snug text-white/75 sm:text-[12px]">
+      <div className="mt-3 rounded-lg border border-white/8 bg-white/4 px-3 py-2.5 sm:px-3.5 sm:py-3">
+        <p className="text-center text-[12px] font-medium leading-snug text-white/75 sm:text-[14px]">
           <span className="text-white/90">
             {isEn ? "Base points" : "基本点"}{" "}
-            <span className={resultStatsMetricNumClass}>{fmt1(basePoints)}</span>
+            <span
+              className={[resultStatsMetricNumClass, "text-[13px] sm:text-[16px]"].join(
+                " "
+              )}
+            >
+              {fmt1(basePoints)}
+            </span>
           </span>
           {showUpsetBonus && (
             <>
               <span className="text-white/35"> + </span>
               <span className="text-white/90">
                 {isEn ? "Upset bonus" : "UPSETボーナス"}{" "}
-                <span className={resultStatsMetricNumClass}>
+                <span
+                  className={[resultStatsMetricNumClass, "text-[13px] sm:text-[16px]"].join(
+                    " "
+                  )}
+                >
                   {fmt1(upsetBonus)}
                 </span>
               </span>
@@ -199,14 +210,23 @@ export default function ResultStatsCard({
               <span className="text-white/35"> + </span>
               <span className="text-white/90">
                 {isEn ? "Win streak bonus" : "連勝ボーナス"}{" "}
-                <span className={resultStatsMetricNumClass}>
+                <span
+                  className={[resultStatsMetricNumClass, "text-[13px] sm:text-[16px]"].join(
+                    " "
+                  )}
+                >
                   {fmt1(streakBonus)}
                 </span>
               </span>
             </>
           )}
           <span className="text-white/35"> = </span>
-          <span className={[resultStatsMetricNumClass, "text-orange-200/95"].join(" ")}>
+          <span
+            className={[
+              resultStatsMetricNumClass,
+              "text-orange-200/95 text-[15px] sm:text-[18px]",
+            ].join(" ")}
+          >
             {totalPoints.toFixed(1)}
           </span>
         </p>
@@ -214,7 +234,10 @@ export default function ResultStatsCard({
 
       <div className="mt-4 space-y-2">
         {rows.map((r) => (
-          <div key={`${r.key}-desc`} className="text-[11px] leading-snug sm:text-[12px]">
+          <div
+            key={`${r.key}-desc`}
+            className="text-[12px] leading-snug sm:text-[13px]"
+          >
             <span className="font-semibold text-white/80">{r.label}：</span>
             <span className="text-white/55">{r.desc}</span>
           </div>
@@ -224,12 +247,13 @@ export default function ResultStatsCard({
       <div className="mt-4 border-t border-white/10 pt-3 text-center">
         <Link
           href="/web/help"
-          className="text-[11px] text-cyan-300 underline decoration-cyan-400/60 underline-offset-2 hover:text-cyan-200 sm:text-[12px]"
+          className="text-[12px] text-cyan-300 underline decoration-cyan-400/60 underline-offset-2 hover:text-cyan-200 sm:text-[13px]"
         >
           {isEn
             ? "See scoring logic on the Help page"
             : "得点の計算方法はヘルプページを参照"}
         </Link>
+      </div>
       </div>
     </div>
   );

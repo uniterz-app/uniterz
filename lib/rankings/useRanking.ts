@@ -3,6 +3,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 export type RankingMetric =
@@ -32,22 +33,24 @@ export type RankingRow = {
 };
 
 export function useRanking(metric: RankingMetric) {
+  const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<RankingRow[]>([]);
-  const [myUid, setMyUid] = useState<string | null>(
-    auth.currentUser?.uid ?? null
-  );
+  const [myUid, setMyUid] = useState<string | null>(null);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myRow, setMyRow] = useState<RankingRow | null>(null);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => {
+    const unsub = onAuthStateChanged(auth, (user) => {
       setMyUid(user?.uid ?? null);
+      setAuthReady(true);
     });
     return () => unsub();
   }, []);
 
   useEffect(() => {
+    if (!authReady) return;
+
     let cancelled = false;
 
     async function run() {
@@ -55,12 +58,10 @@ export function useRanking(metric: RankingMetric) {
 
       try {
         const url = myUid
-          ? `/api/cumulative-ranking?metric=${metric}&uid=${myUid}`
+          ? `/api/cumulative-ranking?metric=${metric}&uid=${encodeURIComponent(myUid)}`
           : `/api/cumulative-ranking?metric=${metric}`;
 
-        const res = await fetch(url, {
-          cache: "no-store",
-        });
+        const res = await fetch(url);
 
         const json = await res.json();
 
@@ -81,12 +82,12 @@ export function useRanking(metric: RankingMetric) {
       }
     }
 
-    run();
+    void run();
 
     return () => {
       cancelled = true;
     };
-  }, [metric, myUid]);
+  }, [metric, myUid, authReady]);
 
   return {
     loading,

@@ -9,6 +9,10 @@ import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import {
+  summaryCardShadowLgClass,
+  summaryCardShadowSmClass,
+} from "@/lib/ui/profileCardEdgeGlow";
 import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 type Props = {
@@ -91,7 +95,8 @@ export default function ScorePrecisionCard({
         className={[
           "relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
           "p-2 md:p-6",
-          "shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
+          summaryCardShadowSmClass,
+          summaryCardShadowLgClass,
           "flex flex-col items-center justify-start",
           "h-full",
           className,

@@ -9,7 +9,11 @@ import {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
-import { LayoutGroup, motion } from "framer-motion";
+import {
+  LayoutGroup,
+  motion,
+  useReducedMotion,
+} from "framer-motion";
 import { X } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -19,6 +23,10 @@ import ResultCard from "@/app/component/result/ResultCard";
 import ResultDetail from "@/app/component/result/ResultDetail";
 import MobileResultDetail from "@/app/component/result/mobile/MobileResultDetail";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import {
+  parseGamePointsDistributionV1,
+  type GamePointsDistributionV1,
+} from "@/lib/results/gamePointsDistribution";
 
 type PostWithMillis = PredictionPostV2 & {
   createdAtMillis?: number | null;
@@ -47,6 +55,70 @@ type Props = {
   language: Language;
 };
 
+const CARD_ENTER_EASE = [0.22, 1, 0.36, 1] as const;
+/** フェード・位置・発光（ブラーより短く、先に形が見える） */
+const CARD_ENTER_DURATION = 0.5;
+/** ブラーはキーフレームで徐々にシャープに（フェードより少し長め） */
+const CARD_BLUR_DURATION = 0.88;
+const CARD_STAGGER_SEC = 0.055;
+const CARD_STAGGER_CAP_SEC = 0.58;
+
+const CARD_BLUR_KEYFRAMES = [
+  "blur(22px) brightness(0.88) saturate(0.82)",
+  "blur(14px) brightness(0.93) saturate(0.9)",
+  "blur(7px) brightness(0.97) saturate(0.96)",
+  "blur(2px) brightness(0.99) saturate(0.99)",
+  "blur(0px) brightness(1) saturate(1)",
+] as const;
+
+const CARD_BLUR_TIMES = [0, 0.22, 0.42, 0.64, 1] as const;
+
+/** リザルト一覧: フェード + 上スライド + ブラー段階解除 + エッジ発光（マウント時のみ） */
+function ResultCardReveal({
+  delay,
+  children,
+}: {
+  delay: number;
+  children: React.ReactNode;
+}) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) {
+    return <>{children}</>;
+  }
+  return (
+    <motion.div
+      className="block w-full rounded-2xl"
+      initial={{
+        opacity: 0,
+        y: 22,
+        filter: CARD_BLUR_KEYFRAMES[0],
+        boxShadow:
+          "0 0 0 1px rgba(186,230,253,0.48), 0 0 36px rgba(34,211,238,0.4), 0 0 72px rgba(56,189,248,0.16), 0 0 100px rgba(14,165,233,0.07)",
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        filter: [...CARD_BLUR_KEYFRAMES],
+        boxShadow:
+          "0 0 0 0px rgba(0,0,0,0), 0 0 0px rgba(0,0,0,0), 0 0 0px rgba(0,0,0,0), 0 0 0px rgba(0,0,0,0)",
+      }}
+      transition={{
+        delay,
+        opacity: { duration: CARD_ENTER_DURATION, ease: CARD_ENTER_EASE },
+        y: { duration: CARD_ENTER_DURATION + 0.04, ease: CARD_ENTER_EASE },
+        filter: {
+          duration: CARD_BLUR_DURATION,
+          ease: "linear",
+          times: [...CARD_BLUR_TIMES],
+        },
+        boxShadow: { duration: 0.68, ease: CARD_ENTER_EASE },
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function ResultListWithOverlay({
   grouped,
   loading,
@@ -56,10 +128,28 @@ export default function ResultListWithOverlay({
 }: Props) {
   const [openPostId, setOpenPostId] = useState<string | null>(null);
   const [market, setMarket] = useState<MarketData | null>(null);
+  const [pointsDistribution, setPointsDistribution] =
+    useState<GamePointsDistributionV1 | null>(null);
 
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
   const scrollYRef = useRef(0);
+
+  const cardEnterDelayByPostId = useMemo(() => {
+    const map = new Map<string, number>();
+    let n = 0;
+    for (const day of grouped) {
+      for (const p of day.pending) {
+        map.set(p.id, Math.min(n * CARD_STAGGER_SEC, CARD_STAGGER_CAP_SEC));
+        n += 1;
+      }
+      for (const p of day.final) {
+        map.set(p.id, Math.min(n * CARD_STAGGER_SEC, CARD_STAGGER_CAP_SEC));
+        n += 1;
+      }
+    }
+    return map;
+  }, [grouped]);
 
   const selectedPost = useMemo(() => {
     if (!openPostId) return null;
@@ -78,11 +168,13 @@ export default function ResultListWithOverlay({
     }
     setOpenPostId(post.id);
     setMarket(null);
+    setPointsDistribution(null);
   }, []);
 
   const close = useCallback(() => {
     setOpenPostId(null);
     setMarket(null);
+    setPointsDistribution(null);
   }, []);
 
   useEffect(() => {
@@ -102,6 +194,11 @@ export default function ResultListWithOverlay({
             drawRate: gameData?.market?.drawRate ?? 0,
             total: gameData?.market?.total ?? 0,
           });
+          setPointsDistribution(
+            parseGamePointsDistributionV1(gameData?.pointsDistribution)
+          );
+        } else {
+          setPointsDistribution(null);
         }
       } catch (e) {
         console.error(e);
@@ -195,7 +292,15 @@ export default function ResultListWithOverlay({
                         className={isOpen ? "pointer-events-none opacity-0" : ""}
                         aria-hidden={isOpen}
                       >
-                        <ResultCard post={post} onOpen={open} language={language} />
+                        <ResultCardReveal
+                          delay={cardEnterDelayByPostId.get(post.id) ?? 0}
+                        >
+                          <ResultCard
+                            post={post}
+                            onOpen={open}
+                            language={language}
+                          />
+                        </ResultCardReveal>
                       </div>
                     );
                   })}
@@ -212,7 +317,15 @@ export default function ResultListWithOverlay({
                         className={isOpen ? "pointer-events-none opacity-0" : ""}
                         aria-hidden={isOpen}
                       >
-                        <ResultCard post={post} onOpen={open} language={language} />
+                        <ResultCardReveal
+                          delay={cardEnterDelayByPostId.get(post.id) ?? 0}
+                        >
+                          <ResultCard
+                            post={post}
+                            onOpen={open}
+                            language={language}
+                          />
+                        </ResultCardReveal>
                       </div>
                     );
                   })}
@@ -312,6 +425,7 @@ export default function ResultListWithOverlay({
                   <MobileResultDetail
                     post={selectedPost}
                     market={market ?? undefined}
+                    pointsDistribution={pointsDistribution}
                     language={language}
                     inOverlay
                   />
@@ -319,6 +433,7 @@ export default function ResultListWithOverlay({
                   <ResultDetail
                     post={selectedPost}
                     market={market ?? undefined}
+                    pointsDistribution={pointsDistribution}
                     language={language}
                     inOverlay
                   />

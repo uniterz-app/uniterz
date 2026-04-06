@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Jersey from "@/app/component/games/icons/Jersey";
-import { nameBebas } from "@/lib/fonts";
+import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
@@ -115,7 +115,9 @@ function TeamProgressDetails({
               <span className="tracking-[0.02em] text-white/70">
                 {item.label}
               </span>
-              <span className="font-semibold text-white/90">
+              <span
+                className={`font-semibold text-white/90 ${resultStatsMetricNumClass}`}
+              >
                 {item.pct > 0 ? `${item.pct}%` : "--"}
               </span>
             </div>
@@ -190,7 +192,11 @@ function TeamCard({
 
           <div className="mt-1 text-[11px] text-white/65 md:text-xs">
             {row.bestLabel}{" "}
-            <span className="font-semibold text-cyan-300">{row.bestPct}%</span>
+            <span
+              className={`font-semibold text-cyan-300 ${resultStatsMetricNumClass}`}
+            >
+              {row.bestPct}%
+            </span>
           </div>
         </div>
       </div>

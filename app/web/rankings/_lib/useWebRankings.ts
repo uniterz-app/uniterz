@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type {
   MobileMetric,
   RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
+import { METRICS } from "@/app/component/rankings/_data/mockRows";
 import {
-  METRICS,
-} from "@/app/component/rankings/_data/mockRows";
-import { toMobileRows } from "@/lib/rankings/rankingTransform";
+  API_METRIC_BY_MOBILE,
+  type RankingApiRow,
+  toMobileRows,
+} from "@/lib/rankings/rankingTransform";
 import type { RankingRow } from "@/lib/rankings/useRanking";
+import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
@@ -25,7 +28,7 @@ const AVAILABLE_METRICS: MobileMetric[] = [
 
 function mergeRowsWithMeta(
   metric: MobileMetric,
-  rawRows: any[]
+  rawRows: RankingApiRow[]
 ): WebRankingRow[] {
   const uiRows = toMobileRows(metric, rawRows);
 
@@ -41,7 +44,6 @@ function mergeRowsWithMeta(
   }));
 }
 
-/** バルク取得後に指標ごとに UI 行を並べ替え */
 function sortWebRankingRows(
   metric: MobileMetric,
   rows: WebRankingRow[]
@@ -55,8 +57,9 @@ function sortWebRankingRows(
       copy.sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0));
       break;
     case "marginPrecision":
-      copy.sort((a, b) =>
-        (b.marginPrecisionScore ?? 0) - (a.marginPrecisionScore ?? 0)
+      copy.sort(
+        (a, b) =>
+          (b.marginPrecisionScore ?? 0) - (a.marginPrecisionScore ?? 0)
       );
       break;
     case "upsetScore":
@@ -70,6 +73,14 @@ function sortWebRankingRows(
   }
   return copy;
 }
+
+const EMPTY_MAP: Record<MobileMetric, WebRankingRow[]> = {
+  totalScore: [],
+  winRate: [],
+  marginPrecision: [],
+  upsetScore: [],
+  streak: [],
+};
 
 export function useWebRankings() {
   const visibleMetrics = useMemo(
@@ -85,95 +96,47 @@ export function useWebRankings() {
     }
   }, [metric]);
 
-  const [rowsMap, setRowsMap] = useState<Record<MobileMetric, WebRankingRow[]>>(
-    {
-      totalScore: [],
-      winRate: [],
-      marginPrecision: [],
-      upsetScore: [],
-      streak: [],
+  const { listReady, personalPending, myUid, byMetric } =
+    useCumulativeRankingsBulk();
+
+  const rowsMap = useMemo(() => {
+    if (!byMetric) return EMPTY_MAP;
+
+    const next = { ...EMPTY_MAP };
+    for (const m of AVAILABLE_METRICS) {
+      const apiMetric = API_METRIC_BY_MOBILE[m];
+      const data = byMetric[apiMetric];
+      const rawRows = Array.isArray(data?.rows)
+        ? (data.rows as RankingApiRow[])
+        : [];
+      next[m] = sortWebRankingRows(
+        m,
+        mergeRowsWithMeta(m, rawRows)
+      );
     }
-  );
-
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      setLoading(true);
-
-      try {
-        const res = await fetch("/api/cumulative-ranking/bulk", {
-          method: "GET",
-          cache: "no-store",
-        });
-
-        if (!res.ok) {
-          throw new Error("bulk fetch failed");
-        }
-
-        const json = await res.json();
-        if (!json?.ok || !json?.byMetric) {
-          throw new Error("invalid bulk response");
-        }
-
-        if (cancelled) return;
-
-        const byMetric = json.byMetric as Record<string, { rows?: unknown[] }>;
-        const apiMetricByMobile: Record<MobileMetric, string> = {
-          totalScore: "totalPoints",
-          winRate: "winRate",
-          marginPrecision: "totalPrecision",
-          upsetScore: "totalUpset",
-          streak: "activeWinStreak",
-        };
-
-        setRowsMap((prev) => {
-          const next = { ...prev };
-          for (const m of AVAILABLE_METRICS) {
-            const apiMetric = apiMetricByMobile[m];
-            const data = byMetric[apiMetric];
-            const rawRows = Array.isArray(data?.rows) ? data.rows : [];
-            next[m] = sortWebRankingRows(
-              m,
-              mergeRowsWithMeta(m, rawRows as RankingRow[])
-            );
-          }
-          return next;
-        });
-      } catch {
-        if (cancelled) return;
-        setRowsMap({
-          totalScore: [],
-          winRate: [],
-          marginPrecision: [],
-          upsetScore: [],
-          streak: [],
-        });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    return next;
+  }, [byMetric]);
 
   const rows = rowsMap[metric] ?? [];
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
 
+  const apiKey = API_METRIC_BY_MOBILE[metric];
+  const bundle = byMetric?.[apiKey];
+  const myRank = bundle?.myRank ?? null;
+  const myRow = (bundle?.myRow ?? null) as RankingRow | null;
+
   return {
-    loading,
+    listReady,
+    personalPending,
     metric,
     setMetric,
     visibleMetrics,
     rows,
     top3,
     restRows,
+    myUid,
+    myRank,
+    myRow,
   };
 }

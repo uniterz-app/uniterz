@@ -16,6 +16,11 @@ type Props = {
   rotationDeg?: number;
   center?: React.ReactNode;
   ariaLabel?: string;
+  /**
+   * マウント後、ここまで待ってから円周の stroke-dash 描画を開始（リザルト詳細の入場と同期）。
+   * `prefers-reduced-motion` では無視して即時フル表示。
+   */
+  drawDelayMs?: number;
 };
 
 function clamp01(x: number) {
@@ -45,6 +50,9 @@ function buildSegmentGradientStops(baseHex: string) {
   return { light, base: baseHex, dark };
 }
 
+const SEGMENT_DRAW_TRANSITION =
+  "stroke-dasharray 1.2s cubic-bezier(0.22, 1, 0.36, 1)";
+
 export default function DonutChart({
   segments,
   size = 220,
@@ -52,6 +60,7 @@ export default function DonutChart({
   rotationDeg = 0,
   center,
   ariaLabel = "donut chart",
+  drawDelayMs = 0,
 }: Props) {
   const radius = size / 2;
 
@@ -59,12 +68,33 @@ export default function DonutChart({
   const R = radius - thickness / 2; // ← 円弧の描画半径（過去コードと同じ）
   const innerR = radius - thickness; // ← 過去コードと同じ穴半径
 
-  // ★ アニメーション
+  const segmentsKey = React.useMemo(
+    () => segments.map((s) => `${s.value}-${s.color}`).join("|"),
+    [segments]
+  );
+
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 10);
-    return () => clearTimeout(t);
-  }, []);
+    let cancelled = false;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reduced) {
+      setMounted(true);
+      return;
+    }
+
+    setMounted(false);
+    const ms = 10 + Math.max(0, drawDelayMs);
+    const t = window.setTimeout(() => {
+      if (!cancelled) setMounted(true);
+    }, ms);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [drawDelayMs, segmentsKey]);
 
   // 座標
   const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => {
@@ -79,9 +109,13 @@ export default function DonutChart({
     return `M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${e.x} ${e.y}`;
   };
 
+  /** 360° 近傍は単一弧パスが始点＝終点で潰れるため <circle> で描く */
+  const FULL_RING_THRESHOLD_DEG = 359.5;
+  const circ = 2 * Math.PI * R;
+
   // 円弧描画
   let acc = 0;
-  const arcs = segments.map((seg, i) => {
+  const arcs = segments.flatMap((seg, i) => {
     const ratio = clamp01(seg.value);
     const deg = ratio * 360;
 
@@ -89,28 +123,44 @@ export default function DonutChart({
     const end = acc + deg;
     acc = end;
 
-    // ① グラデーション（各セグメントごと）
-    const gradId = `seg-grad-${i}`;
-    const { light, base, dark } = buildSegmentGradientStops(seg.color);
+    if (ratio <= 0) return [];
 
-    return (
+    const gradId = `seg-grad-${i}`;
+
+    const strokeStyle: React.CSSProperties = {
+      strokeDasharray: mounted ? `${ratio * circ} ${circ}` : `0 ${circ}`,
+      transition: SEGMENT_DRAW_TRANSITION,
+      filter: "drop-shadow(0 0 10px rgba(255,255,255,0.06))",
+    };
+
+    if (deg >= FULL_RING_THRESHOLD_DEG) {
+      return [
+        <circle
+          key={i}
+          cx={radius}
+          cy={radius}
+          r={R}
+          fill="none"
+          stroke={`url(#${gradId})`}
+          strokeWidth={thickness}
+          strokeLinecap="butt"
+          transform={`rotate(${-90 + rotationDeg} ${radius} ${radius})`}
+          style={strokeStyle}
+        />,
+      ];
+    }
+
+    return [
       <path
         key={i}
-        d={describeArc(radius, radius, R, start, end)} // ← ★ 過去コードと完全一致
+        d={describeArc(radius, radius, R, start, end)}
         stroke={`url(#${gradId})`}
         strokeWidth={thickness}
         fill="none"
         strokeLinecap="butt"
-        style={{
-          strokeDasharray: mounted
-            ? `${ratio * 2 * Math.PI * R} ${2 * Math.PI * R}`
-            : `0 ${2 * Math.PI * R}`,
-          transition: "stroke-dasharray 1.1s ease",
-          // ② ガラス風（軽いグロー）
-          filter: "drop-shadow(0 0 10px rgba(255,255,255,0.06))",
-        }}
-      />
-    );
+        style={strokeStyle}
+      />,
+    ];
   });
 
   return (

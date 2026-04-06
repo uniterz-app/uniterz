@@ -14,8 +14,14 @@ import {
 
 import type { League } from "@/lib/leagues";
 import { normalizeLeague } from "@/lib/leagues";
-import { getDayRangeInTimeZone } from "@/lib/time/zonedTime";
+import { getDayRangeInTimeZone, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+
+const GAMES_BY_DAY_CACHE_TTL_MS = 5 * 60 * 1000;
+const gamesByDayCache = new Map<
+  string,
+  { games: any[]; savedAt: number }
+>();
 
 export function useGamesByDate(
   rawLeague: League,
@@ -49,8 +55,21 @@ export function useGamesByDate(
         return;
       }
 
-      setLoading(true);
       setErr(null);
+
+      const dayKey = toDateKeyInTimeZone(dayDate, timeZone);
+      const cacheKey = `${league}|${dayKey}`;
+      const hit = gamesByDayCache.get(cacheKey);
+      const cacheFresh =
+        hit && Date.now() - hit.savedAt < GAMES_BY_DAY_CACHE_TTL_MS;
+      if (cacheFresh) {
+        if (!alive) return;
+        setGames(hit.games);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
 
       try {
         const ref = collection(db, "games");
@@ -74,6 +93,7 @@ export function useGamesByDate(
           ...d.data(),
         }));
 
+        gamesByDayCache.set(cacheKey, { games: rows, savedAt: Date.now() });
         setGames(rows);
         setLoading(false);
       } catch (e: any) {
@@ -88,7 +108,7 @@ export function useGamesByDate(
     return () => {
       alive = false;
     };
-  }, [league, dayDate, range]);
+  }, [league, dayDate, range, timeZone]);
 
   return { loading, error, games };
 }

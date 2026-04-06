@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import LeagueTabs from "./LeagueTabs";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
@@ -24,6 +25,10 @@ import {
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+
+const GAMES_CONTENT_EASE = [0.22, 1, 0.36, 1] as const;
+/** 日付ピックのあと試合リストの入場を少しずらす（秒） */
+const GAMES_LIST_STAGGER_SEC = 0.12;
 
 /* =========================
    Date Utils
@@ -93,6 +98,7 @@ function findInitialGameDay(params: {
 }
 
 export default function GamesPage({ dense = false }: { dense?: boolean }) {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -382,6 +388,11 @@ const isSwitchingDate = !!selected && loading;
 
   const monthValue = selected ?? null;
 
+  const selectedDayKey = useMemo(
+    () => (selected ? toDateKeyInTimeZone(selected, dayTimeZone) : ""),
+    [selected, dayTimeZone]
+  );
+
   return (
     <div
       ref={pageRef}
@@ -454,26 +465,47 @@ const isSwitchingDate = !!selected && loading;
   </>
 ) : (
   <>
-    <DayStrip
-      dates={gameDays}
-      selectedDate={selected}
-      onSelect={setSelectedAndSync}
-      size={dense ? "md" : "lg"}
-      visibleCount={visibleCount}
-      autoScrollOnInit={false}
-      timeZone={dayTimeZone}
-      isEn={isEn}
+    <motion.div
+      key={`day-strip-${league}`}
       className="mb-4"
-    />
-
-    <div
-      className={[
-        "transition-opacity duration-150",
-        isSwitchingDate ? "opacity-85" : "opacity-100",
-      ].join(" ")}
+      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: reduceMotion ? 0 : 0.42,
+        ease: GAMES_CONTENT_EASE,
+      }}
     >
-      <ScheduleList games={games} dense={dense} />
-    </div>
+      <DayStrip
+        dates={gameDays}
+        selectedDate={selected}
+        onSelect={setSelectedAndSync}
+        size={dense ? "md" : "lg"}
+        visibleCount={visibleCount}
+        autoScrollOnInit={false}
+        timeZone={dayTimeZone}
+        isEn={isEn}
+      />
+    </motion.div>
+
+    <motion.div
+      key={`sched-${selectedDayKey}-${loading ? "l" : "d"}`}
+      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: reduceMotion ? 0 : 0.42,
+        delay: reduceMotion ? 0 : GAMES_LIST_STAGGER_SEC,
+        ease: GAMES_CONTENT_EASE,
+      }}
+    >
+      <div
+        className={[
+          "transition-opacity duration-150",
+          isSwitchingDate ? "opacity-85" : "opacity-100",
+        ].join(" ")}
+      >
+        <ScheduleList games={games} dense={dense} loading={loading} />
+      </div>
+    </motion.div>
   </>
 )}
 

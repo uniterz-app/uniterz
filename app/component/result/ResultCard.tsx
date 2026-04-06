@@ -15,6 +15,8 @@ import type { Language } from "@/lib/i18n/language";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -149,6 +151,7 @@ export default function ResultCard({
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
+  const teamNameFont = bracketMarketTeamTypography(isMobile);
   const isEn = language === "en";
   const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
 
@@ -249,7 +252,6 @@ export default function ResultCard({
     frame = "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
   }
 
-  const finalScoreClass = isMobile ? "text-[12px]" : "text-[16px]";
   const nameMt = isMobile ? "mt-1" : "mt-1.5";
   const mobileBadgeClass = isMobile
     ? "text-[10px] px-1.5 py-0.5"
@@ -294,54 +296,68 @@ export default function ResultCard({
   const barAnimateMs = isMobile ? 480 : 520;
   const barStaggerMs = isMobile ? 80 : 90;
 
+  const contentPad = isMobile ? "px-4 pb-3 pt-8" : "px-8 pb-6 pt-10";
+
   return (
     <div
       onClick={handle}
       className={[
-        "relative max-w-[1200px] mx-auto w-full overflow-hidden text-white",
+        "group relative max-w-[1200px] mx-auto w-full overflow-hidden text-white",
         "active:scale-[0.98] transition-transform cursor-pointer select-none",
         MATCH_OVERLAY_GLASS_PANEL,
-        isMobile ? "px-4 py-3" : "px-8 py-6",
         frame,
       ].join(" ")}
     >
-      {badge === "streak" && streakBadge && (
+      <div
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2 sm:px-3 sm:pt-2.5">
         <span
-          className={`absolute right-3 top-3 z-10 inline-flex items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-        >
-          {!isMobile && (
-            <Flame
-              className={`${mobileStreakIconClass} ${streakBadge.iconClassName}`}
-            />
-          )}
-          {streakBadge.label}
-        </span>
-      )}
-      {badge === "hit" && (
-        <span className={`absolute right-3 top-3 z-10 bg-yellow-400 text-black rounded-md font-extrabold shadow-md ${mobileBadgeClass}`}>
-          HIT
-        </span>
-      )}
-      {badge === "upset" && (
-        <span className={`absolute right-3 top-3 z-10 bg-red-500 text-white rounded-md font-extrabold shadow-md ${mobileBadgeClass}`}>
-          UPSET
-        </span>
-      )}
-      {badge === "miss" && (
-        <span className={`absolute right-3 top-3 z-10 bg-gray-500 text-white rounded-md font-extrabold shadow-md ${mobileBadgeClass}`}>
-          MISS
-        </span>
-      )}
-
-      <div className="absolute left-3 top-3 z-10">
-        <span
-          className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide"
-          style={{ backgroundColor: pillBg }}
+          className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest sm:text-[11px]"
+          style={{ backgroundColor: pillBg, ...teamNameFont }}
         >
           {pillText}
         </span>
+        <div className="flex min-w-0 flex-1 justify-end">
+          {badge === "streak" && streakBadge && (
+            <span
+              className={`pointer-events-auto inline-flex max-w-full items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+            >
+              {!isMobile && (
+                <Flame
+                  className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
+                />
+              )}
+              <span className="min-w-0 truncate">{streakBadge.label}</span>
+            </span>
+          )}
+          {badge === "hit" && (
+            <span
+              className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+            >
+              HIT
+            </span>
+          )}
+          {badge === "upset" && (
+            <span
+              className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+            >
+              UPSET
+            </span>
+          )}
+          {badge === "miss" && (
+            <span
+              className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+            >
+              MISS
+            </span>
+          )}
+        </div>
       </div>
 
+      <div className={`relative z-10 ${contentPad}`}>
       <div
         className={`grid items-center ${
           isMobile ? "grid-cols-3" : "grid-cols-3 gap-8"
@@ -353,36 +369,42 @@ export default function ResultCard({
             fill={homeColor}
             stroke="#fff"
           />
-          <div
-            className={`${nameMt} font-bold leading-tight text-center ${
-              isMobile ? "text-[12px]" : "text-[16px]"
-            }`}
-          >
-            {getMobileTeamName(
-              post.league,
-              post.home?.name ?? "",
-              homeL1,
-              homeL2
-            )}
-          </div>
+          {!isMobile ? (
+            <div
+              className={`${nameMt} text-center text-base font-bold leading-tight md:text-xl lg:text-2xl`}
+              style={teamNameFont}
+            >
+              {homeL1} {homeL2}
+            </div>
+          ) : (
+            <div
+              className={`${nameMt} text-center text-[13px] font-bold leading-tight md:text-[17px]`}
+              style={teamNameFont}
+            >
+              {getMobileTeamName(
+                post.league,
+                post.home?.name ?? "",
+                homeL1,
+                homeL2
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-col items-center justify-center mt-3">
+        <div className="mt-3 flex flex-col items-center justify-center">
           <div
-            className={`font-black tracking-tight leading-none tabular-nums ${
-              isMobile ? "text-2xl" : "text-4xl"
-            }`}
-            style={{
-              fontFamily:
-                'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-            }}
+            className={[
+              "leading-none tracking-tight tabular-nums text-xl md:text-5xl",
+              resultStatsMetricNumClass,
+              "font-black",
+            ].join(" ")}
           >
             {predictedScore}
           </div>
 
           {finalScore && (
             <div
-              className={`mt-2 font-extrabold tabular-nums opacity-85 ${finalScoreClass}`}
+              className={`mt-2 tabular-nums opacity-85 text-sm font-bold md:text-base ${resultStatsMetricNumClass}`}
             >
               {finalScore}
             </div>
@@ -395,18 +417,26 @@ export default function ResultCard({
             fill={awayColor}
             stroke="#fff"
           />
-          <div
-            className={`${nameMt} font-bold leading-tight text-center ${
-              isMobile ? "text-[12px]" : "text-[16px]"
-            }`}
-          >
-            {getMobileTeamName(
-              post.league,
-              post.away?.name ?? "",
-              awayL1,
-              awayL2
-            )}
-          </div>
+          {!isMobile ? (
+            <div
+              className={`${nameMt} text-center text-base font-bold leading-tight md:text-xl lg:text-2xl`}
+              style={teamNameFont}
+            >
+              {awayL1} {awayL2}
+            </div>
+          ) : (
+            <div
+              className={`${nameMt} text-center text-[13px] font-bold leading-tight md:text-[17px]`}
+              style={teamNameFont}
+            >
+              {getMobileTeamName(
+                post.league,
+                post.away?.name ?? "",
+                awayL1,
+                awayL2
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -442,8 +472,8 @@ export default function ResultCard({
               <div
                 className={
                   isMobile
-                    ? "w-[6.5rem] min-w-0 shrink-0"
-                    : "flex w-[7.25rem] min-w-0 shrink-0 sm:w-[7.75rem]"
+                    ? "w-26 min-w-0 shrink-0"
+                    : "flex w-29 min-w-0 shrink-0 sm:w-31"
                 }
               >
                 <span
@@ -477,6 +507,7 @@ export default function ResultCard({
           );
         })}
       </div>
+    </div>
     </div>
   );
 }

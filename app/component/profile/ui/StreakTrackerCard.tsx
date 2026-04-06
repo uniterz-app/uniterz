@@ -431,7 +431,7 @@ export default function StreakTrackerCard({
                         aria-hidden
                       />
                       <motion.div
-                        className="pointer-events-none absolute left-0 right-0 top-1/2 z-[2] h-px -translate-y-1/2 bg-cyan-200/45"
+                        className="pointer-events-none absolute left-0 right-0 top-1/2 z-2 h-px -translate-y-1/2 bg-cyan-200/45"
                         initial={false}
                         animate={
                           axesReady
@@ -449,7 +449,7 @@ export default function StreakTrackerCard({
 
                       {reduceMotion ? (
                         <div
-                          className={`relative z-[3] flex h-full items-stretch justify-start ${S.colGap}`}
+                          className={`relative z-3 flex h-full items-stretch justify-start ${S.colGap}`}
                         >
                           {points.map((p, i) => (
                             <StreakColumn
@@ -468,18 +468,18 @@ export default function StreakTrackerCard({
                         </div>
                       ) : wantsScrollAnim && !chartInView ? (
                         <div
-                          className={`relative z-[3] flex h-full items-stretch justify-start ${S.colGap}`}
+                          className={`relative z-3 flex h-full items-stretch justify-start ${S.colGap}`}
                           aria-hidden
                         />
                       ) : canAnimate && !blocksReady ? (
                         <div
-                          className={`relative z-[3] flex h-full items-stretch justify-start ${S.colGap}`}
+                          className={`relative z-3 flex h-full items-stretch justify-start ${S.colGap}`}
                           aria-hidden
                         />
                       ) : (
                         <motion.div
                           key={`blk-${animMountKey}`}
-                          className={`relative z-[3] flex h-full items-stretch justify-start ${S.colGap}`}
+                          className={`relative z-3 flex h-full items-stretch justify-start ${S.colGap}`}
                           initial={canAnimate ? "hidden" : false}
                           animate="show"
                           variants={{
@@ -565,7 +565,7 @@ export default function StreakTrackerCard({
                 .filter(Boolean)
                 .join(" ")}
             >
-              <div className="order-1 flex min-h-[3.25rem] items-center justify-between gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] px-3 py-2.5 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
+              <div className="order-1 flex min-h-13 items-center justify-between gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] px-3 py-2.5 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <TrendingUp
                     className="h-4 w-4 shrink-0 text-emerald-300 sm:h-5 sm:w-5"
@@ -589,7 +589,7 @@ export default function StreakTrackerCard({
                   {stats.maxWinStreak}
                 </div>
               </div>
-              <div className="order-2 flex min-h-[3.25rem] items-center justify-between gap-2 rounded-xl border border-rose-400/25 bg-rose-500/[0.07] px-3 py-2.5 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
+              <div className="order-2 flex min-h-13 items-center justify-between gap-2 rounded-xl border border-rose-400/25 bg-rose-500/[0.07] px-3 py-2.5 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <TrendingDown
                     className="h-4 w-4 shrink-0 text-rose-300 sm:h-5 sm:w-5"
@@ -613,7 +613,7 @@ export default function StreakTrackerCard({
                   {stats.maxLossStreak}
                 </div>
               </div>
-              <div className="order-3 col-span-2 flex min-h-[3.25rem] items-center justify-between gap-2 rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-3 py-2.5 sm:col-span-1 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
+              <div className="order-3 col-span-2 flex min-h-13 items-center justify-between gap-2 rounded-xl border border-sky-400/20 bg-sky-500/6 px-3 py-2.5 sm:col-span-1 sm:min-h-0 sm:gap-3 sm:px-3.5 sm:py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <BarChart3
                     className="h-4 w-4 shrink-0 text-sky-300 sm:h-5 sm:w-5"

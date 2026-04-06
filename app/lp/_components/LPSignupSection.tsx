@@ -45,7 +45,7 @@ export default function LPSignupSection() {
             ここから、ランキングで世界に挑む。
           </h2>
 
-          <p className="mx-auto mt-3 max-w-[36rem] text-center text-sm leading-6 text-white/68 sm:max-w-2xl sm:text-base sm:leading-7">
+          <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-6 text-white/68 sm:max-w-2xl sm:text-base sm:leading-7">
             無料で始めて、毎日更新ランキングに参加。自分のコミュニティを作って仲間と競い、月間トップの豪華なプレゼントを狙おう。
           </p>
 
@@ -195,7 +195,7 @@ export default function LPSignupSection() {
                 <div className="pointer-events-none absolute -right-10 top-[22%] h-36 w-36 rounded-full bg-cyan-300/12 blur-3xl" />
                 <div className="pointer-events-none absolute -left-6 bottom-[16%] h-24 w-24 rounded-full bg-emerald-300/8 blur-3xl" />
 
-                <div className="relative w-full max-w-full sm:max-w-[360px] [filter:drop-shadow(0_14px_28px_rgba(34,211,238,0.12))]">
+                <div className="relative w-full max-w-full sm:max-w-[360px] filter-[drop-shadow(0_14px_28px_rgba(34,211,238,0.12))]">
                   <SignupForm variant="web" />
                 </div>
               </div>

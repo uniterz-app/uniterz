@@ -321,7 +321,7 @@ export default function ProfileEditSheet({
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      className="fixed inset-0 z-[1000001] flex items-end justify-center bg-transparent p-3 backdrop-blur-2xl sm:items-center sm:p-4"
+      className="fixed inset-0 z-1000001 flex items-end justify-center bg-transparent p-3 backdrop-blur-2xl sm:items-center sm:p-4"
       style={{ WebkitBackdropFilter: "blur(24px)" }}
     >
       {panel}

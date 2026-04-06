@@ -215,10 +215,10 @@ export default function DayStrip({
                         : "0 0 3px rgba(255,255,255,0.04)",
                     }}
                   >
-                  {new Intl.DateTimeFormat("en-US", {
-                    timeZone,
-                    day: "numeric",
-                  }).format(d)}
+                    {new Intl.DateTimeFormat("en-US", {
+                      timeZone,
+                      day: "numeric",
+                    }).format(d)}
                   </span>
                 </div>
               </button>

@@ -31,6 +31,7 @@ import {
 } from "@/lib/predict/nextGameModalPrefs";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 /* ======================
    Motion
@@ -194,10 +195,10 @@ export default function PredictionFormV2({
   ].join(" ");
 
   const glassCard =
-    "rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
+    "relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
 
   const glassCardStatsPanel = isMobile
-    ? "rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
+    ? "relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
     : glassCard;
 
   const toolButtonBase = isMobile
@@ -502,6 +503,10 @@ export default function PredictionFormV2({
 
         {toolsTab === "stats" && (
           <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <ShellGridOverlay
+              roundedClassName={isMobile ? "rounded-xl" : "rounded-2xl"}
+            />
+            <div className="relative z-1">
             <div
               className={
                 isMobile
@@ -525,11 +530,16 @@ export default function PredictionFormV2({
                 language={language}
               />
             </div>
+            </div>
           </motion.div>
         )}
 
         {toolsTab === "market" && (
           <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <ShellGridOverlay
+              roundedClassName={isMobile ? "rounded-xl" : "rounded-2xl"}
+            />
+            <div className="relative z-1">
             <GamePredictionDistribution
               gameId={(game as { id: string }).id}
               league={game.league}
@@ -541,11 +551,16 @@ export default function PredictionFormV2({
               chartReplayKey={marketChartKey}
               fallbackMarketBias={game.marketBias}
             />
+            </div>
           </motion.div>
         )}
 
         {toolsTab === "standings" && (
           <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <ShellGridOverlay
+              roundedClassName={isMobile ? "rounded-xl" : "rounded-2xl"}
+            />
+            <div className="relative z-1">
             <div
               className={
                 isMobile
@@ -574,6 +589,7 @@ export default function PredictionFormV2({
                     : "このリーグでは Standings はまだ未対応です。"}
                 </div>
               )}
+            </div>
             </div>
           </motion.div>
         )}

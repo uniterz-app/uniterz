@@ -14,6 +14,9 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { Language } from "@/lib/i18n/language";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   post: PredictionPostV2;
@@ -143,8 +146,9 @@ function getStreakBadgeForMobile(
 export default function MobileResultMatchHeader({
   post,
   language = "ja",
-  inOverlay = false,
+  inOverlay: _inOverlay = false,
 }: Props) {
+  const teamNameFont = bracketMarketTeamTypography(true);
   const normalizedLeague = normalizeLeague(post.league);
   const isEn = language === "en";
   const Icon =
@@ -222,48 +226,56 @@ export default function MobileResultMatchHeader({
       "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
   }
 
-  const cardBase = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} text-white overflow-hidden`
-    : "rounded-2xl border border-white/15 bg-[#050814]/80 text-white overflow-hidden shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
+  const cardBase = `${MATCH_OVERLAY_GLASS_PANEL} overflow-hidden text-white`;
 
   return (
-    <div className={`relative ${cardBase} ${frame} px-4 py-5`}>
-      <div className="absolute left-2.5 top-2.5 z-10">
+    <div className={`relative ${cardBase} ${frame}`}>
+      <div
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2">
         <span
-          className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide"
-          style={{ backgroundColor: pillBg }}
+          className="inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
+          style={{ backgroundColor: pillBg, ...teamNameFont }}
         >
           {pillText}
         </span>
+        <div className="flex min-w-0 flex-1 justify-end">
+          {badge === "streak" && streakBadge && (
+            <span
+              className={`inline-flex max-w-full items-center rounded-md px-1.5 py-0.5 text-[9px] font-extrabold shadow-md ${streakBadge.className}`}
+            >
+              <span className="min-w-0 truncate">{streakBadge.label}</span>
+            </span>
+          )}
+          {badge === "hit" && (
+            <span className="shrink-0 rounded-md bg-yellow-400 px-1.5 py-0.5 text-[10px] font-extrabold text-black shadow-md">
+              HIT
+            </span>
+          )}
+          {badge === "upset" && (
+            <span className="shrink-0 rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
+              UPSET
+            </span>
+          )}
+          {badge === "miss" && (
+            <span className="shrink-0 rounded-md bg-gray-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
+              MISS
+            </span>
+          )}
+        </div>
       </div>
 
-      {badge === "streak" && streakBadge && (
-        <span
-          className={`absolute right-3 top-3 z-10 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md ${streakBadge.className}`}
-        >
-          {streakBadge.label}
-        </span>
-      )}
-      {badge === "hit" && (
-        <span className="absolute right-3 top-3 z-10 bg-yellow-400 text-black text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md">
-          HIT
-        </span>
-      )}
-      {badge === "upset" && (
-        <span className="absolute right-3 top-3 z-10 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md">
-          UPSET
-        </span>
-      )}
-      {badge === "miss" && (
-        <span className="absolute right-3 top-3 z-10 bg-gray-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-extrabold shadow-md">
-          MISS
-        </span>
-      )}
-
-      <div className="grid grid-cols-3 items-center pt-6">
+      <div className="relative z-10 px-4 pb-5 pt-9">
+      <div className="grid grid-cols-3 items-center pt-1">
         <div className="flex flex-col items-center">
-          <Icon className="w-10 h-10" fill={homeColor} stroke="#fff" />
-          <div className="mt-1 text-[12px] text-center leading-tight font-bold">
+          <Icon className="h-10 w-10" fill={homeColor} stroke="#fff" />
+          <div
+            className="mt-1 text-center text-[13px] font-bold leading-tight md:text-[17px]"
+            style={teamNameFont}
+          >
             {getMobileTeamName(
               post.league,
               post.home?.name ?? "",
@@ -271,37 +283,53 @@ export default function MobileResultMatchHeader({
               homeL2
             )}
           </div>
-          <div className="mt-0.5 text-[9px] opacity-70 leading-none tracking-tight text-center">
+          <div
+            className={`mt-0.5 text-center text-[9px] leading-none tracking-tight opacity-70 ${resultStatsMetricNumClass}`}
+          >
             {fmtRecordWithRank(homeRecord)}
           </div>
         </div>
 
         <div className="flex flex-col items-center justify-center">
-          {matchDate && <div className="text-[10px] opacity-80 mb-0.5">{matchDate}</div>}
+          {matchDate && (
+            <div
+              className="mb-0.5 text-[10px] opacity-80"
+              style={teamNameFont}
+            >
+              {matchDate}
+            </div>
+          )}
 
           <div
-            className="font-black tracking-tight leading-none tabular-nums text-[24px]"
-            style={{
-              fontFamily:
-                'Impact,"Anton","Arial Black",Inter,ui-sans-serif,system-ui,sans-serif',
-            }}
+            className={[
+              "font-black leading-none tracking-tight tabular-nums text-xl md:text-5xl",
+              resultStatsMetricNumClass,
+            ].join(" ")}
           >
             {predictedScore}
           </div>
 
           {finalScore && (
-            <div className="mt-1 flex flex-col items-center tabular-nums opacity-85">
-              <div className="text-[9px] font-extrabold uppercase tracking-wide">
+            <div
+              className={`mt-1 flex flex-col items-center tabular-nums opacity-85 ${resultStatsMetricNumClass}`}
+            >
+              <div
+                className="text-[9px] font-bold uppercase tracking-wide"
+                style={teamNameFont}
+              >
                 Final
               </div>
-              <div className="text-[11px] font-extrabold">{finalScore}</div>
+              <div className="text-sm font-bold md:text-base">{finalScore}</div>
             </div>
           )}
         </div>
 
         <div className="flex flex-col items-center">
-          <Icon className="w-9 h-9" fill={awayColor} stroke="#fff" />
-          <div className="mt-0.5 text-[11px] text-center leading-tight font-bold">
+          <Icon className="h-10 w-10" fill={awayColor} stroke="#fff" />
+          <div
+            className="mt-0.5 text-center text-[13px] font-bold leading-tight md:text-[17px]"
+            style={teamNameFont}
+          >
             {getMobileTeamName(
               post.league,
               post.away?.name ?? "",
@@ -309,11 +337,14 @@ export default function MobileResultMatchHeader({
               awayL2
             )}
           </div>
-          <div className="mt-0.5 text-[9px] opacity-70 leading-none tracking-tight text-center">
+          <div
+            className={`mt-0.5 text-center text-[9px] leading-none tracking-tight opacity-70 ${resultStatsMetricNumClass}`}
+          >
             {fmtRecordWithRank(awayRecord)}
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

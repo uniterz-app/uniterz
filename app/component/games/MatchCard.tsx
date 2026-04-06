@@ -277,9 +277,7 @@ const marketMajority = useMemo(() => {
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
   const Icon =
-  league === "nba" || league === "bj"
-    ? Jersey
-    : Soccer;
+    league === "nba" || league === "bj" ? Jersey : Soccer;
 
 
   // 現在のルートから /m or /web を決める & lg を引き継ぎ
@@ -539,7 +537,7 @@ dense
       />
 
 {showMarketBias && marketBias && (
-  <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
+  <div className="pointer-events-none absolute inset-0 z-1 overflow-hidden rounded-2xl">
     {/* HOME 側バー */}
     <div
       className="absolute left-0 top-0 h-full"
@@ -675,7 +673,7 @@ background:
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {homeL2 || homeL1}
@@ -684,13 +682,13 @@ background:
         // ★ Bリーグ（mobile）→ 2行表示
         <>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {homeL1}
           </div>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {homeL2}
@@ -699,7 +697,7 @@ background:
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {homeL1} {homeL2}
@@ -794,7 +792,7 @@ background:
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {awayL2 || awayL1}
@@ -803,13 +801,13 @@ background:
         // ★ Bリーグ（mobile）→ 2行
         <>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {awayL1}
           </div>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {awayL2}
@@ -818,7 +816,7 @@ background:
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {awayL1} {awayL2}
