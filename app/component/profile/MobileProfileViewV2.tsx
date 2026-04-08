@@ -15,8 +15,8 @@ import ScoringRulesChangeNoticeModal from "@/app/component/profile/ScoringRulesC
 
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
-import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
 import StreakTrackerCard from "@/app/component/profile/ui/StreakTrackerCard";
+import ProfileDailyTrendChart from "@/app/component/profile/ui/ProfileDailyTrendChart";
 
 import AnalysisWinCard from "./ui/summary/AnalysisWinCard";
 import TotalScoreCard from "./ui/summary/TotalScoreCard";
@@ -31,8 +31,8 @@ import {
   useProfileBadges,
   type ResolvedBadge,
 } from "@/lib/profile/useProfileBadges";
-import { useProfileDailyTrend } from "@/lib/profile/useProfileDailyTrend";
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
+import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 
@@ -46,25 +46,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
-  const isTargetGuestProfile = !targetUid;
 
   const { language } = useUserLanguage(resolvedUid);
-
-  const displayProfile = isTargetGuestProfile
-    ? {
-        ...profile,
-        displayName: "Guest User",
-        handle: "@guest",
-        bio:
-          language === "en"
-            ? "Log in to create your profile."
-            : "ログインするとプロフィールを作成できます",
-        counts: { followers: 0, following: 0 },
-        currentStreak: 0,
-        maxStreak: 0,
-        plan: "free",
-      }
-    : profile;
 
   const {
     myPlan,
@@ -75,7 +58,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     isProView,
   } = useProfilePlan({
     targetUid,
-    profilePlan: displayProfile.plan,
+    profilePlan: profile.plan,
   });
 
   const forceProView = false;
@@ -84,7 +67,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const { resolvedBadges } = useProfileBadges(resolvedUid);
 
   const { chartData: dailyTrendForChart, loading: dailyTrendLoading } =
-    useProfileDailyTrend(resolvedUid);
+    useProfileDailyTrendChart(resolvedUid);
 
   const {
     loading: playoffBracketLoading,
@@ -97,8 +80,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(null);
+  const [bracketReveal, setBracketReveal] = useState(false);
 
-  const canOpenSettings = isMe || isTargetGuestProfile;
+  const canOpenSettings = isMe;
 
   const posts = summary?.posts ?? 0;
   const wins = (summary as any)?.wins ?? 0;
@@ -127,16 +111,16 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       ? "All"
       : "All";
 
-  const maxStreak = displayProfile.maxStreak ?? 0;
+  const maxStreak = profile.maxStreak ?? 0;
   const currentStreak = Math.max(
     0,
-    (displayProfile as any)?.currentStreak ?? 0
+    (profile as any)?.currentStreak ?? 0
   );
   const showCurrentStreakBadge = currentStreak >= 3;
 
   const proSummaryTotal = 5;
-  const summaryMountKey = `profile-summary-${resolvedUid ?? "guest"}-${range}`;
-  /** ログイン時は成績APIと日次トレンドの両方が揃うまでサマリー・グラフとも出さない（グラフだけ先に出るのを防ぐ） */
+  const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-${range}`;
+  /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
   const overviewReady =
     !resolvedUid || (!statsLoading && !dailyTrendLoading);
 
@@ -144,6 +128,15 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
     if (tab !== "overview") summaryEntranceLockedRef.current = true;
   }, [tab]);
+  useEffect(() => {
+    if (tab !== "bracket") {
+      setBracketReveal(false);
+      return;
+    }
+    setBracketReveal(false);
+    const id = window.requestAnimationFrame(() => setBracketReveal(true));
+    return () => window.cancelAnimationFrame(id);
+  }, [tab, playoffDisplayData?.season]);
   const playSummaryEntrance =
     !summaryEntranceLockedRef.current && !statsLoading && overviewReady;
 
@@ -160,7 +153,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     if (!playSummaryEntrance) setChartEntranceDone(true);
   }, [playSummaryEntrance]);
 
-  const heroUidKey = resolvedUid ?? "guest";
+  const heroUidKey = resolvedUid ?? "x";
   const prevHeroUidRef = useRef(heroUidKey);
   const [heroEntranceLocked, setHeroEntranceLocked] = useState(false);
   useEffect(() => {
@@ -184,10 +177,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         onEntranceComplete={() => setHeroEntranceLocked(true)}
         language={language}
         displayProfile={{
-          displayName: displayProfile.displayName,
-          handle: displayProfile.handle,
-          bio: displayProfile.bio,
-          avatarUrl: displayProfile.avatarUrl,
+          displayName: profile.displayName,
+          handle: profile.handle,
+          bio: profile.bio,
+          avatarUrl: profile.avatarUrl,
         }}
         showCurrentStreakBadge={showCurrentStreakBadge}
         currentStreak={currentStreak}
@@ -346,7 +339,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 className="min-w-0 overflow-hidden"
                 onAnimationComplete={onChartRevealComplete}
               >
-                <DailyTrendCard
+                <ProfileDailyTrendChart
                   data={dailyTrendForChart}
                   range={range}
                   allowAll={currentIsProView}
@@ -363,22 +356,18 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 enabled={playSummaryEntrance}
                 className="min-w-0 overflow-hidden"
               >
-                <StreakTrackerCard uid={resolvedUid} language={language} />
+                <StreakTrackerCard
+                  uid={resolvedUid}
+                  language={language}
+                  entranceReady={!playSummaryEntrance || chartEntranceDone}
+                />
               </SummaryCardReveal>
             </div>
               </>
             ) : null}
           </>
         ) : tab === "bracket" ? (
-          isTargetGuestProfile ? (
-            <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
-              <p className="text-sm text-white/70">
-                {language === "en"
-                  ? "Guest profiles can't view the bracket."
-                  : "ゲストプロフィールではブラケットを表示できません。"}
-              </p>
-            </div>
-          ) : playoffBracketLoading ? (
+          playoffBracketLoading ? (
             <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
               <p className="text-sm text-white/70">loading...</p>
             </div>
@@ -391,7 +380,16 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               </p>
             </div>
           ) : (
-            <div className="relative mt-4 overflow-visible">
+            <div
+              className="relative mt-4 overflow-visible transition-all duration-500 ease-out"
+              style={{
+                opacity: bracketReveal ? 1 : 0,
+                transform: bracketReveal
+                  ? "translateY(0px)"
+                  : "translateY(14px)",
+                filter: bracketReveal ? "blur(0px)" : "blur(10px)",
+              }}
+            >
               <PlayoffFullBracketMobile
                 league="nba"
                 score={playoffScore}
@@ -412,8 +410,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               />
             </div>
           )
-        ) : isTargetGuestProfile ? (
-          <ProPreview />
         ) : currentIsProView ? (
           <ProAnalysis />
         ) : isMe ? (

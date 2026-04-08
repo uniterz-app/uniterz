@@ -60,6 +60,11 @@ export default function Page() {
       return;
     }
 
+    if (status === "guest") {
+      router.replace(isMobile ? "/mobile/lp" : "/lp");
+      return;
+    }
+
     router.replace(isMobile ? "/mobile/games" : "/web/games");
   }, [
     showIntroSplash,

@@ -1,133 +1,64 @@
 // functions/src/stats/analysis/judgeAnalysisType.ts
-import { LevelSummary } from "./judgeLevel";
-import { AnalysisTypeId } from "./types";
+import type { LevelSummary } from "./judgeLevel";
+import type { AnalysisTypeId } from "./types";
 
-export function judgeAnalysisType(
-  summary: LevelSummary
-): AnalysisTypeId {
-  const { levels, counts } = summary;
-  const { S, M, W } = counts;
+/**
+ * 分析タイプは勝率・投稿量・精度・Upset・耐性の 5 軸のみで判定する（pointsV3 は含めない）。
+ */
+export function judgeAnalysisType(summary: LevelSummary): AnalysisTypeId {
+  const { levels } = summary;
+  const W = levels.winRate === "S";
+  const V = levels.volume === "S";
+  const P = levels.precision === "S";
+  const U = levels.upset === "S";
+  const T = levels.streak === "S";
 
-  if (S >= 5) {
+  const sCount = [W, V, P, U, T].filter(Boolean).length;
+
+  if (sCount === 5) {
     return "COMPLETE_PLAYER";
   }
 
-  if (S === 4) {
-    return "ELITE_ALLROUNDER";
+  if (sCount === 4) {
+    return U ? "CHEAT_CODE" : "ELITE_ALLROUNDER";
   }
 
-  if (S === 3) {
-    if (
-      levels.winRate === "S" &&
-      levels.precision === "S" &&
-      levels.streak === "S"
-    ) {
-      return "ELITE_CLOSER";
-    }
-
-    if (
-      levels.winRate === "S" &&
-      levels.precision === "S" &&
-      levels.volume === "S"
-    ) {
-      return "RELIABLE_PRO";
-    }
-
-    if (
-      levels.winRate === "S" &&
-      levels.streak === "S" &&
-      levels.volume === "S"
-    ) {
-      return "IRON_RUNNER";
-    }
-
-    if (
-      levels.precision === "S" &&
-      levels.volume === "S" &&
-      levels.streak === "S"
-    ) {
-      return "DATA_GRINDER";
-    }
-
-    if (
-      levels.upset === "S" &&
-      levels.winRate === "S" &&
-      levels.streak === "S"
-    ) {
-      return "GIANT_SLAYER";
-    }
-
-    if (
-      levels.upset === "S" &&
-      levels.precision === "S" &&
-      levels.streak === "S"
-    ) {
-      return "SHARP_UPSETTER";
-    }
-
-    if (
-      levels.upset === "S" &&
-      levels.volume === "S" &&
-      levels.streak === "S"
-    ) {
-      return "CHAOS_ENGINE";
-    }
-
+  if (sCount === 3) {
+    if (W && U && T) return "GIANT_SLAYER";
+    if (W && V && U) return "GIANT_SLAYER";
+    if (V && U && T) return "GIANT_SLAYER";
+    if (V && P && U) return "HOT_HAND";
+    if (W && P && U) return "UNICORN";
+    if (W && P && T) return "ASSASSIN";
+    if (W && P && V) return "KILLER_INSTINCT";
+    if (W && V && T) return "SWISS_ARMY_KNIFE";
+    if (P && U && T) return "TECHNICIAN";
+    if (V && P && T) return "IRON_ENGINE";
+    return "PROSPECT";
   }
 
-  if (S === 2) {
-    if (levels.winRate === "S" && levels.precision === "S") {
-      return "SHARP_EXECUTOR";
-    }
-
-    if (levels.winRate === "S" && levels.streak === "S") {
-      return "MOMENTUM_EDGE";
-    }
-
-    if (levels.winRate === "S" && levels.volume === "S") {
-      return "RELENTLESS_OUTPUT";
-    }
-
-    if (levels.precision === "S" && levels.volume === "S") {
-      return "DATA_FORGE";
-    }
-
-    if (levels.precision === "S" && levels.streak === "S") {
-      return "RHYTHM_BLADE";
-    }
-
-    if (levels.upset === "S" && levels.winRate === "S") {
-      return "BOLD_STRIKER";
-    }
-
-    if (levels.upset === "S" && levels.precision === "S") {
-      return "EDGE_HUNTER";
-    }
-
-    if (levels.upset === "S" && levels.streak === "S") {
-      return "CHAOS_SURGE";
-    }
-
-    if (levels.volume === "S" && levels.streak === "S") {
-      return "ENDURANCE_CORE";
-    }
-
+  if (sCount === 2) {
+    if (W && P && !V && !U && !T) return "TWO_WAY_PLAYER";
+    if (P && V && !W && !U && !T) return "DEEP_BAG";
+    if (V && T && !W && !P && !U) return "SPARK_PLUG";
+    if (W && U && !V && !P && !T) return "BIG_GAME_HUNTER";
+    if (P && T && !W && !V && !U) return "SHARPSHOOTER";
+    if (P && U && !W && !V && !T) return "CLUTCH";
+    if (V && U && !W && !P && !T) return "CHAOS_RUNNER";
+    if (W && V && !P && !U && !T) return "WALKING_BUCKET";
+    if (W && T && !V && !P && !U) return "BULLDOG";
+    if (U && T && !W && !V && !P) return "SCRAPPER";
+    return "PROSPECT";
   }
 
-  if (S === 1) {
-    if (levels.winRate === "S") return "CLEAN_HIT";
-    if (levels.precision === "S") return "SHARP_EYE";
-    if (levels.upset === "S") return "CHAOS_TAKER";
-    if (levels.volume === "S") return "HIGH_ACTIVITY";
-    if (levels.streak === "S") return "HOT_PHASE";
+  if (sCount === 1) {
+    if (W && !V && !P && !U && !T) return "FINISHER";
+    if (P && !W && !V && !U && !T) return "LASER";
+    if (V && !W && !P && !U && !T) return "HIGH_MOTOR";
+    if (U && !W && !V && !P && !T) return "CHAOS_TAKER";
+    if (T && !W && !V && !P && !U) return "IRON_MAN";
+    return "PROSPECT";
   }
 
-  if (S === 0) {
-    if (W >= 4) return "RAW";
-    if (W >= 3) return "UNSTABLE";
-    if (M >= 4) return "FOUNDATION";
-    return "BASELINE";
-  }
-
-  return "WILD_CARD";
+  return "PROSPECT";
 }

@@ -17,7 +17,7 @@ import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 /**
  * 日別データ
  */
-export type DailyTrendStat = {
+export type ProfileDailyTrendPoint = {
   date: string;
   posts: number;
   wins: number;
@@ -27,7 +27,7 @@ export type DailyTrendStat = {
 };
 
 type Props = {
-  data: DailyTrendStat[];
+  data: ProfileDailyTrendPoint[];
   range?: "7d" | "30d" | "all";
   allowAll?: boolean;
   language?: Language;
@@ -61,7 +61,7 @@ function toInt(v: any) {
 }
 
 /** 累積計算 */
-function buildCumulative(rows: DailyTrendStat[]) {
+function buildCumulative(rows: ProfileDailyTrendPoint[]) {
   let p = 0;
   let sp = 0;
 
@@ -145,7 +145,7 @@ function buildPointsAxis(chartRows: ReturnType<typeof buildCumulative>) {
   return { domain: [0, top] as [number, number], ticks, top };
 }
 
-export default function DailyTrendCard({
+export default function ProfileDailyTrendChart({
   data,
   range = "7d",
   allowAll = false,

@@ -352,8 +352,6 @@ const isSwitchingDate = !!selected && loading;
   /* =========================
      Paths
   ========================= */
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-
   const isMobile = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
@@ -361,15 +359,10 @@ const isSwitchingDate = !!selected && loading;
   const playoffViewHref = isMobile
     ? "/mobile/playoff-bracket/view"
     : "/web/playoff-bracket/view";
-  const signupHref = isMobile ? "/mobile/signup" : "/web/signup";
-
   async function handleBracketClick() {
     const user = auth.currentUser;
 
-    if (!user) {
-      setLoginModalOpen(true);
-      return;
-    }
+    if (!user) return;
 
     const saved = await loadPlayoffBracket(user.uid, season);
 
@@ -379,11 +372,6 @@ const isSwitchingDate = !!selected && loading;
     }
 
     router.push(`${playoffHref}?season=${encodeURIComponent(season)}`);
-  }
-
-  function handleGoSignup() {
-    setLoginModalOpen(false);
-    router.push(signupHref);
   }
 
   const monthValue = selected ?? null;
@@ -509,53 +497,6 @@ const isSwitchingDate = !!selected && loading;
   </>
 )}
 
-      {loginModalOpen && (
-        <div className="fixed inset-0 z-200 flex items-center justify-center px-4">
-          <button
-            type="button"
-            aria-label="Close modal"
-            onClick={() => setLoginModalOpen(false)}
-            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
-          />
-
-          <div className="relative z-201 w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d1015] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-            <div className="text-[18px] font-semibold text-white">
-              {isEn ? "Please log in" : "ログインしてください"}
-            </div>
-
-            <div className="mt-4 space-y-2 text-[14px] leading-relaxed text-white/78">
-              <p>
-                {isEn
-                  ? "An account is required to use the Bracket feature."
-                  : "ブラケット機能を使うにはアカウントが必要です。"}
-              </p>
-              <p>
-                {isEn
-                  ? "After creating an account, you can create brackets."
-                  : "アカウント作成後にブラケットを作成できます。"}
-              </p>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setLoginModalOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleGoSignup}
-                className="rounded-xl bg-[#163a5f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1d4c78]"
-              >
-                {isEn ? "Create account" : "アカウント作成"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

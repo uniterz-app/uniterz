@@ -74,10 +74,7 @@ export default function ProfileEditPage() {
   const handleUpload = async () => {
     if (!selectedFile) return undefined;
     const user = auth.currentUser;
-    if (!user) {
-      alert(isEn ? "Login is required." : "ログインが必要です");
-      return undefined;
-    }
+    if (!user) return undefined;
 
     try {
       setUploading(true);
@@ -104,10 +101,7 @@ export default function ProfileEditPage() {
     e.preventDefault();
 
     const user = auth.currentUser;
-    if (!user) {
-      alert(isEn ? "Login is required." : "ログインが必要です");
-      return;
-    }
+    if (!user) return;
 
     let photoURL: string | null = currentPhotoURL;
 

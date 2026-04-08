@@ -209,10 +209,7 @@ export default function PredictionFormV2({
     if (!canSubmit) return;
 
     const me = auth.currentUser;
-    if (!me) {
-      alert(isEn ? "Login is required." : "ログインが必要です");
-      return;
-    }
+    if (!me) return;
 
     const h = Number(scoreHome);
     const a = Number(scoreAway);

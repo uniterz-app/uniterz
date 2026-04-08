@@ -34,12 +34,11 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.onFollowingRemoved = exports.onFollowingAdded = exports.onFollowerRemoved = exports.onFollowerAdded = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
-const firestore_1 = require("firebase-functions/v2/firestore");
-const firestore_2 = require("firebase-admin/firestore");
+const firestore_1 = require("firebase-admin/firestore");
 const firebase_1 = require("./firebase");
 const _core_1 = require("./analytics/_core");
 const functions = __importStar(require("firebase-functions"));
@@ -79,45 +78,6 @@ Object.defineProperty(exports, "rebuildUserMonthlyStatsMonthCronV2", { enumerabl
 // ===============================
 (0, options_1.setGlobalOptions)({ region: "asia-northeast1", maxInstances: 10 });
 const db = firebase_1.admin.firestore();
-/* ============================================================================
- * followers / following
- * ==========================================================================*/
-exports.onFollowerAdded = (0, firestore_1.onDocumentCreated)("users/{uid}/followers/{followerUid}", async (event) => {
-    const { uid } = event.params;
-    try {
-        await db.doc(`users/${uid}`).set({ counts: { followers: firestore_2.FieldValue.increment(1) } }, { merge: true });
-    }
-    catch (e) {
-        console.error("[onFollowerAdded] failed:", e);
-    }
-});
-exports.onFollowerRemoved = (0, firestore_1.onDocumentDeleted)("users/{uid}/followers/{followerUid}", async (event) => {
-    const { uid } = event.params;
-    try {
-        await db.doc(`users/${uid}`).set({ counts: { followers: firestore_2.FieldValue.increment(-1) } }, { merge: true });
-    }
-    catch (e) {
-        console.error("[onFollowerRemoved] failed:", e);
-    }
-});
-exports.onFollowingAdded = (0, firestore_1.onDocumentCreated)("users/{ownerUid}/following/{targetUid}", async (event) => {
-    const { ownerUid } = event.params;
-    try {
-        await db.doc(`users/${ownerUid}`).set({ counts: { following: firestore_2.FieldValue.increment(1) } }, { merge: true });
-    }
-    catch (e) {
-        console.error("[onFollowingAdded] failed:", e);
-    }
-});
-exports.onFollowingRemoved = (0, firestore_1.onDocumentDeleted)("users/{ownerUid}/following/{targetUid}", async (event) => {
-    const { ownerUid } = event.params;
-    try {
-        await db.doc(`users/${ownerUid}`).set({ counts: { following: firestore_2.FieldValue.increment(-1) } }, { merge: true });
-    }
-    catch (e) {
-        console.error("[onFollowingRemoved] failed:", e);
-    }
-});
 /* ============================================================================
  * posts
  * ==========================================================================*/
@@ -193,7 +153,7 @@ exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
     await db.collection("users").doc(user.uid).set({
         plan: "free",
         proUntil: null,
-        createdAt: firestore_2.FieldValue.serverTimestamp(),
+        createdAt: firestore_1.FieldValue.serverTimestamp(),
     });
 });
 //# sourceMappingURL=index.js.map

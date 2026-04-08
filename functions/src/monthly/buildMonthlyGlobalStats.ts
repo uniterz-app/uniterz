@@ -10,7 +10,26 @@ type MonthlyGlobalRow = {
   avgPointsV3: number;
   upsetPointsSum: number;
   posts: number;
+  /** 月内 pointsV3 合計（リザルト集計と同じ） */
+  pointsSumV3: number;
 };
+
+function sortedFinite(nums: number[]): number[] {
+  return nums.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+}
+
+/** 線形補間分位数（0–1）。ソート済み配列を想定 */
+function quantileLinear(sortedAsc: number[], q: number): number {
+  if (sortedAsc.length === 0) return 0;
+  if (sortedAsc.length === 1) return sortedAsc[0]!;
+  const qq = Math.max(0, Math.min(1, q));
+  const pos = (sortedAsc.length - 1) * qq;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  if (lo === hi) return sortedAsc[lo]!;
+  const w = pos - lo;
+  return sortedAsc[lo]! * (1 - w) + sortedAsc[hi]! * w;
+}
 
 export async function buildMonthlyGlobalStats(
   rows: MonthlyGlobalRow[],
@@ -72,6 +91,14 @@ export async function buildMonthlyGlobalStats(
   );
   const byVolume = [...rows].sort((a, b) => a.posts - b.posts);
 
+  const sumSorted = sortedFinite(rows.map((r) => r.pointsSumV3));
+  const pointsSumV3Benchmarks = {
+    mean: avg(rows.map((r) => r.pointsSumV3)),
+    median: quantileLinear(sumSorted, 0.5),
+    p90: quantileLinear(sumSorted, 0.9),
+    max: sumSorted.length > 0 ? sumSorted[sumSorted.length - 1]! : 0,
+  };
+
   const doc = {
     month,
     raw: {
@@ -95,6 +122,8 @@ export async function buildMonthlyGlobalStats(
     },
     users: rows.length,
     top10EligibleUsers: rowsForTop.length,
+    /** 月次総合得点（合計）の基準（当月に投稿があるユーザー＝ avg と同じ母集団） */
+    pointsSumV3Benchmarks,
     updatedAt: FieldValue.serverTimestamp(),
   };
 

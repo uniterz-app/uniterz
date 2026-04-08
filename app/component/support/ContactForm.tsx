@@ -141,10 +141,7 @@ export default function ContactForm({ variant }: { variant: Variant }) {
     e.preventDefault();
 
     if (!validate()) return;
-    if (!user?.uid) {
-      setSubmitError(isEn ? "Login is required." : "ログインが必要です。");
-      return;
-    }
+    if (!user?.uid) return;
 
     setSubmitting(true);
     setSubmitError(null);

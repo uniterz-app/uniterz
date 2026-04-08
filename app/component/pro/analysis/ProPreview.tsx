@@ -2,29 +2,26 @@
 
 import { useState, useEffect } from "react";
 import ProAnalysisView from "@/app/component/pro/analysis/ProAnalysisView";
+import type { RadarAxisLevels } from "@/app/component/pro/analysis/radarLevelUtils";
 import { useRouter } from "next/navigation";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
 const MONTHS = ["2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
 
-const COMPARISON_USER_COUNT = 300;
-const COMPARISON_TOP10_USER_COUNT = 120;
+const PREVIEW_RADAR_LEVELS: RadarAxisLevels = {
+  winRate: "M",
+  precision: "M",
+  upset: "M",
+  volume: "S",
+  streak: "M",
+};
 
 export default function ProPreviewPage() {
   const router = useRouter();
   const { language } = useUserLanguage(null);
-  const [month, setMonth] = useState("2025-01");
+  const [month, setMonth] = useState("2026-01");
   const [pressed, setPressed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  const postsLabel = language === "en" ? "Posts" : "投稿数";
-  const winRateLabel = language === "en" ? "Win Rate" : "勝率";
-  const scorePrecisionLabel =
-    language === "en" ? "Score Precision" : "スコア精度";
-  const totalPointsLabel =
-    language === "en" ? "Total Points" : "総合得点";
-  const upsetIndexLabel =
-    language === "en" ? "Upset Index" : "Upset指数";
 
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
@@ -72,6 +69,64 @@ export default function ProPreviewPage() {
 
       <ProAnalysisView
         isSample
+        language={language === "en" ? "en" : "ja"}
+        prevMonthSummary={{
+          monthKey: "2025-12",
+          stats: {
+            raw: {
+              posts: 38,
+              wins: 24,
+              winRate: 24 / 38,
+              avgPrecision: 6.2,
+              avgPointsV3: 7.85,
+              scorePrecisionSum: 6.2 * 38,
+              pointsSumV3: 7.85 * 38,
+              basePointsSum: 240,
+              upsetBonusSum: 42,
+              streakBonusSum: 16.3,
+              upsetPointsSum: 4.2,
+              upsetHit: 5,
+              pointsSumV3Rank: 12,
+              leaguePosts: { nba: 25, bj: 13 },
+            },
+            percentiles: {
+              winRate: 88,
+              precision: 71,
+              pointsV3: 79,
+              upset: 58,
+              volume: 92,
+            },
+          },
+          olderStats: {
+            raw: {
+              posts: 29,
+              wins: 16,
+              winRate: 16 / 29,
+              avgPrecision: 5.9,
+              avgPointsV3: 6.4,
+              scorePrecisionSum: 5.9 * 29,
+              pointsSumV3: 6.4 * 29,
+              basePointsSum: 168,
+              upsetBonusSum: 12,
+              streakBonusSum: 5.6,
+              upsetPointsSum: 3.1,
+              upsetHit: 3,
+            },
+            percentiles: {
+              winRate: 72,
+              precision: 65,
+              pointsV3: 61,
+              upset: 52,
+              volume: 81,
+            },
+          },
+        }}
+        prevMonthPointsSumBenchmarks={{
+          mean: 172.4,
+          median: 154.8,
+          p90: 398.2,
+          max: 881.0,
+        }}
         month={month}
         months={MONTHS}
         onChangeMonth={setMonth}
@@ -82,7 +137,9 @@ export default function ProPreviewPage() {
           volume: 9,
           streak: 6,
           upsetValid: true,
+          radarEligible: true,
         }}
+        radarAxisLevels={PREVIEW_RADAR_LEVELS}
         analysisTypeId="COMPLETE_PLAYER"
         percentiles={{
           winRate: 92,
@@ -93,46 +150,6 @@ export default function ProPreviewPage() {
         }}
         streak={{ maxWin: 10, maxLose: 6 }}
         prevStreak={{ maxWin: 4, maxLose: 5 }}
-        comparisonRows={[
-          {
-            label: postsLabel,
-            format: (v: number) => `${v}`,
-            self: 42,
-            avg: 18,
-            top10: 61,
-          },
-          {
-            label: winRateLabel,
-            format: (v: number) => `${Math.round(v * 100)}%`,
-            self: 0.66,
-            avg: 0.54,
-            top10: 0.72,
-          },
-
-          {
-            label: scorePrecisionLabel,
-            format: (v: number) => `${Math.round(v * 100)}%`,
-            self: 0.71,
-            avg: 0.63,
-            top10: 0.78,
-          },
-          {
-            label: totalPointsLabel,
-            format: (v: number) => v.toFixed(1),
-            self: 8.4,
-            avg: 5.9,
-            top10: 9.2,
-          },
-          {
-            label: upsetIndexLabel,
-            format: (v: number) => v.toFixed(2),
-            self: 4.8,
-            avg: 2.3,
-            top10: 6.1,
-          },
-        ]}
-        comparisonUserCount={COMPARISON_USER_COUNT}
-        comparisonTop10UserCount={COMPARISON_TOP10_USER_COUNT}
         homeAway={{
           homeRate: 0.71,
           awayRate: 0.58,

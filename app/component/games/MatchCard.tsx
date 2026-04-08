@@ -17,7 +17,6 @@ import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
-import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
@@ -191,7 +190,6 @@ function MatchCard({
   disableCardMotion = false,
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
-  const [showLoginRequired, setShowLoginRequired] = useState(false);
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
@@ -392,10 +390,7 @@ let center: React.ReactNode = inPredictOverlay ? (
     if (myPostId) return;
 
     const me = auth.currentUser;
-    if (!me) {
-      setShowLoginRequired(true);
-      return;
-    }
+    if (!me) return;
 
     // 試合開始後は遷移しない（predictions/post ページは使わない）
     if (isGameStarted) {
@@ -417,10 +412,7 @@ setNavigating(true);
   const me = auth.currentUser;
 
   // ★ 追加：未ログインならモーダルを出して終了
-  if (!me) {
-    setShowLoginRequired(true);
-    return;
-  }
+  if (!me) return;
 
   try {
     const token = await me.getIdToken();
@@ -462,7 +454,7 @@ setNavigating(true);
       }
 
       if (res.status === 401 || res.status === 403) {
-        alert(isEn ? "Please sign in." : "ログインが必要です。");
+        router.push(isMobile ? "/mobile/login" : "/web/login");
         return;
       }
 
@@ -925,11 +917,6 @@ background:
 </button>
         </div>
       )}
-      <LoginRequiredModal
-  open={showLoginRequired}
-  onClose={() => setShowLoginRequired(false)}
-  variant={isMobile ? "mobile" : "web"}
-/>
     </motion.div>
   );
 }

@@ -1,8 +1,8 @@
-// app/lib/profile/useProfileDailyTrend.ts
+// lib/profile/useProfileDailyTrendChart.ts
 "use client";
 
 import { useMemo } from "react";
-import { useUserDailyTrendV2 } from "@/lib/stats/useUserDailyTrendV2";
+import { useUserStatsDailyTrend } from "@/lib/stats/useUserStatsDailyTrend";
 
 export type ProfileDailyTrendChartRow = {
   date: string;
@@ -13,13 +13,13 @@ export type ProfileDailyTrendChartRow = {
   upsetPoints: number;
 };
 
-export function useProfileDailyTrend(targetUid: string | null) {
+export function useProfileDailyTrendChart(targetUid: string | null) {
   const uidForDailyTrend = targetUid ?? undefined;
 
   const {
     data: dailyTrend,
     loading,
-  } = useUserDailyTrendV2(uidForDailyTrend);
+  } = useUserStatsDailyTrend(uidForDailyTrend);
 
   const chartData: ProfileDailyTrendChartRow[] = useMemo(() => {
     return (dailyTrend ?? []).map((row: any) => ({

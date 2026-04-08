@@ -14,9 +14,10 @@ type Props = {
   onAnimationComplete?: () => void;
   /**
    * `fade` … ほぼフェードのみ＋わずかな段差（Pro サマリー用）
+   * `blurUp` … フェードアップ＋ブラー解除（Pro Stats タブ用）
    * 未指定 … 従来の下から浮き上がり
    */
-  enterVariant?: "default" | "fade";
+  enterVariant?: "default" | "fade" | "blurUp";
 };
 
 /** 下から「にじみ出す」ように、透明度・位置・スケールを同じカーブで立ち上げる */
@@ -29,6 +30,10 @@ const EMERGE_EASE: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
 const FADE_DURATION = 0.52;
 const FADE_FIRST_DELAY = 0.04;
 const FADE_STEP = 0.072;
+
+const BLUR_UP_DURATION = 0.78;
+const BLUR_UP_FIRST_DELAY = 0.06;
+const BLUR_UP_STEP = 0.1;
 
 export default function SummaryCardReveal({
   index,
@@ -74,6 +79,25 @@ export default function SummaryCardReveal({
         transition={{
           delay,
           duration: FADE_DURATION,
+          ease: [0.22, 0.61, 0.36, 1],
+        }}
+        onAnimationComplete={onAnimationComplete ? fireComplete : undefined}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
+  if (enterVariant === "blurUp") {
+    const delay = BLUR_UP_FIRST_DELAY + index * BLUR_UP_STEP;
+    return (
+      <motion.div
+        className={className}
+        initial={{ opacity: 0, y: 28, filter: "blur(14px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{
+          delay,
+          duration: BLUR_UP_DURATION,
           ease: [0.22, 0.61, 0.36, 1],
         }}
         onAnimationComplete={onAnimationComplete ? fireComplete : undefined}

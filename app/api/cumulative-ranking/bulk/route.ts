@@ -1,5 +1,5 @@
 // app/api/cumulative-ranking/bulk/route.ts
-// 5指標を1回のAPI呼び出しで取得（サーバー側 unstable_cache で Function への負荷を抑制）
+// 指標をまとめて取得（metrics 省略時は全5指標）。サーバー側 unstable_cache で Function 負荷を抑制。
 
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
@@ -7,7 +7,7 @@ import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRank
 
 export const runtime = "nodejs";
 
-const METRICS = [
+const BULK_METRICS = [
   "totalPoints",
   "totalPrecision",
   "totalUpset",
@@ -15,7 +15,32 @@ const METRICS = [
   "winRate",
 ] as const;
 
-async function fetchBulkFromFunctions(uid: string | undefined) {
+type BulkRankingMetric = (typeof BULK_METRICS)[number];
+
+const METRIC_SET = new Set<string>(BULK_METRICS);
+
+function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
+  if (!raw?.trim()) return [...BULK_METRICS];
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const picked: BulkRankingMetric[] = [];
+  for (const p of parts) {
+    if (METRIC_SET.has(p)) picked.push(p as BulkRankingMetric);
+  }
+  if (picked.length === 0) return [...BULK_METRICS];
+  return [...new Set(picked)].sort() as BulkRankingMetric[];
+}
+
+function metricsToKey(metrics: BulkRankingMetric[]): string {
+  return [...new Set(metrics)].sort().join(",");
+}
+
+async function fetchBulkFromFunctions(
+  uid: string | undefined,
+  metrics: BulkRankingMetric[]
+) {
   const baseUrl =
     process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
     process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
@@ -25,7 +50,7 @@ async function fetchBulkFromFunctions(uid: string | undefined) {
   }
 
   const results = await Promise.all(
-    METRICS.map(async (metric) => {
+    metrics.map(async (metric) => {
       const url = new URL(baseUrl);
       url.searchParams.set("metric", metric);
       if (uid) url.searchParams.set("uid", uid);
@@ -64,11 +89,17 @@ async function fetchBulkFromFunctions(uid: string | undefined) {
 }
 
 const getCachedBulk = unstable_cache(
-  async (uidKey: string) => {
+  async (uidKey: string, metricsKey: string) => {
     const uid = uidKey === "__anon__" ? undefined : uidKey;
-    return fetchBulkFromFunctions(uid);
+    const parts = metricsKey
+      .split(",")
+      .filter((m): m is BulkRankingMetric => METRIC_SET.has(m));
+    const metrics = (
+      parts.length ? parts : [...BULK_METRICS]
+    ) as BulkRankingMetric[];
+    return fetchBulkFromFunctions(uid, metrics);
   },
-  ["cumulative-ranking-bulk-v1"],
+  ["cumulative-ranking-bulk-v2"],
   { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
 );
 
@@ -76,6 +107,8 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const uid = searchParams.get("uid") ?? undefined;
+    const metricsList = parseMetricsParam(searchParams.get("metrics"));
+    const metricsKey = metricsToKey(metricsList);
 
     const baseUrl =
       process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -88,7 +121,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const data = await getCachedBulk(uid ?? "__anon__");
+    const data = await getCachedBulk(uid ?? "__anon__", metricsKey);
 
     const maxAge = Math.min(120, CUMULATIVE_RANKING_REVALIDATE_SEC);
     const cacheControl = uid

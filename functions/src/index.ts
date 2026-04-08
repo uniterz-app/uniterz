@@ -3,11 +3,6 @@
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import {
-  onDocumentCreated,
-  onDocumentDeleted,
-} from "firebase-functions/v2/firestore";
-
 import { FieldValue } from "firebase-admin/firestore";
 import { admin } from "./firebase";
 import { dailyAnalyticsCore } from "./analytics/_core";
@@ -49,70 +44,6 @@ export {
 // ===============================
 setGlobalOptions({ region: "asia-northeast1", maxInstances: 10 });
 const db = admin.firestore();
-
-/* ============================================================================
- * followers / following
- * ==========================================================================*/
-
-export const onFollowerAdded = onDocumentCreated(
-  "users/{uid}/followers/{followerUid}",
-  async (event) => {
-    const { uid } = event.params;
-    try {
-      await db.doc(`users/${uid}`).set(
-        { counts: { followers: FieldValue.increment(1) } },
-        { merge: true }
-      );
-    } catch (e) {
-      console.error("[onFollowerAdded] failed:", e);
-    }
-  }
-);
-
-export const onFollowerRemoved = onDocumentDeleted(
-  "users/{uid}/followers/{followerUid}",
-  async (event) => {
-    const { uid } = event.params;
-    try {
-      await db.doc(`users/${uid}`).set(
-        { counts: { followers: FieldValue.increment(-1) } },
-        { merge: true }
-      );
-    } catch (e) {
-      console.error("[onFollowerRemoved] failed:", e);
-    }
-  }
-);
-
-export const onFollowingAdded = onDocumentCreated(
-  "users/{ownerUid}/following/{targetUid}",
-  async (event) => {
-    const { ownerUid } = event.params;
-    try {
-      await db.doc(`users/${ownerUid}`).set(
-        { counts: { following: FieldValue.increment(1) } },
-        { merge: true }
-      );
-    } catch (e) {
-      console.error("[onFollowingAdded] failed:", e);
-    }
-  }
-);
-
-export const onFollowingRemoved = onDocumentDeleted(
-  "users/{ownerUid}/following/{targetUid}",
-  async (event) => {
-    const { ownerUid } = event.params;
-    try {
-      await db.doc(`users/${ownerUid}`).set(
-        { counts: { following: FieldValue.increment(-1) } },
-        { merge: true }
-      );
-    } catch (e) {
-      console.error("[onFollowingRemoved] failed:", e);
-    }
-  }
-);
 
 /* ============================================================================
  * posts

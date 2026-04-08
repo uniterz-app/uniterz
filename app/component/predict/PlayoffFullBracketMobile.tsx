@@ -320,6 +320,16 @@ export default function PlayoffFullBracketMobile({
     viewScale;
 
   const round1InitialTeams = useMemo(() => getRound1InitialTeams(season), [season]);
+  const championRouletteTeams = useMemo(() => {
+    return Array.from(
+      new Set(
+        Object.values(round1InitialTeams)
+          .flat()
+          .map((id) => String(id ?? "").trim().toUpperCase())
+          .filter((id) => id.length > 0)
+      )
+    );
+  }, [round1InitialTeams]);
 
   const seriesStatusMap = useMemo(() => {
     const map = {} as Record<SeriesId, BracketCardHitStatus>;
@@ -410,6 +420,7 @@ export default function PlayoffFullBracketMobile({
               teamId={champion?.teamId}
               league={league}
               hitStatus={championHitStatus}
+              rouletteTeamIds={championRouletteTeams}
             />
           </div>
 

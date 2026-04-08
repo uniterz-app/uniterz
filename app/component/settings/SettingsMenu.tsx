@@ -39,7 +39,6 @@ import {
   doc,
 } from "firebase/firestore";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
-import LoginRequiredModal from "../modals/LoginRequiredModal";
 import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 
 type Variant = "mobile" | "web";
@@ -68,17 +67,8 @@ export default function SettingsMenu({
   const { language } = useUserLanguage(user?.uid ?? null);
   const isEn = language === "en";
 
-  const requireLogin = (action: () => void) => {
-    if (!user) {
-      setShowLoginRequired(true);
-      return;
-    }
-    action();
-  };
-
   // ===== state =====
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [showPlanInfoModal, setShowPlanInfoModal] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
@@ -175,10 +165,6 @@ export default function SettingsMenu({
   }, []);
 
   const openProfileEditOverlay = () => {
-    if (!user) {
-      setShowLoginRequired(true);
-      return;
-    }
     onRequestCloseMenu?.();
     setShowProfileEdit(true);
   };
@@ -212,11 +198,11 @@ export default function SettingsMenu({
           <User size={16} /> {isEn ? "Edit Profile" : "プロフィール編集"}
         </button>
 
-        <button className={itemClasses} onClick={() => requireLogin(() => router.push(p("/web/badges", "/mobile/badges")))}>
+        <button className={itemClasses} onClick={() => router.push(p("/web/badges", "/mobile/badges"))}>
           <Award size={16} /> {isEn ? "Badge Palette" : "バッジパレット"}
         </button>
 
-        <button className={itemClasses} onClick={() => requireLogin(() => router.push(announcementsPath))}>
+        <button className={itemClasses} onClick={() => router.push(announcementsPath)}>
           <Megaphone size={16} /> {isEn ? "Announcements" : "お知らせ"}
           {unreadCount > 0 && <span className="ml-auto text-xs bg-red-500 px-2 rounded-full">{unreadCount}</span>}
         </button>
@@ -226,16 +212,14 @@ export default function SettingsMenu({
         <button
           className={itemClasses}
           onClick={() =>
-            requireLogin(() =>
-              router.push(
-                resolvedVariant === "web"
-                  ? plan === "pro"
-                    ? "/web/plan-status"
-                    : "/web/pro/subscribe"
-                  : plan === "pro"
-                    ? "/mobile/plan-status"
-                    : "/mobile/pro/subscribe"
-              )
+            router.push(
+              resolvedVariant === "web"
+                ? plan === "pro"
+                  ? "/web/plan-status"
+                  : "/web/pro/subscribe"
+                : plan === "pro"
+                  ? "/mobile/plan-status"
+                  : "/mobile/pro/subscribe"
             )
           }
         >
@@ -300,12 +284,6 @@ export default function SettingsMenu({
           </button>
         </div>
       </nav>
-
-      <LoginRequiredModal
-        open={showLoginRequired}
-        onClose={() => setShowLoginRequired(false)}
-        variant={resolvedVariant}
-      />
 
       <LogoutConfirmModal
         open={showLogoutModal}

@@ -128,10 +128,7 @@ export default function ProfileEditSheet({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user) {
-      alert(isEn ? "Login is required." : "ログインが必要です");
-      return;
-    }
+    if (!user) return;
 
     let photoURL: string | null = currentPhotoURL;
     if (selectedFile) {

@@ -17,8 +17,6 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     profile,
     loading,
     targetUid,
-    isFollowing,
-    setIsFollowing,
   } = useProfile(handle);
 
   const [tab, setTab] = useState<"overview" | "stats" | "bracket">("overview");
@@ -77,8 +75,6 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
   const viewProps = {
     profile: mergedProfile,
-    isFollowing,
-    onToggleFollow: () => setIsFollowing((v) => !v),
     tab,
     setTab,
     range,
@@ -97,8 +93,6 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
 export type ProfileViewPropsV2 = {
   profile: Profile;
-  isFollowing: boolean;
-  onToggleFollow: () => void;
 
   tab: "overview" | "stats" | "bracket";
   setTab: (v: "overview" | "stats" | "bracket") => void;

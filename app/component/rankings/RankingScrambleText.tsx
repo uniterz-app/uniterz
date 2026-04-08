@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const GLYPHS =
-  "0123456789░▒▓█▀▄╱╲ΞØ§¤∆0123456789";
+const GLYPHS = "01234567890123456789";
 
 type Props = {
   active: boolean;

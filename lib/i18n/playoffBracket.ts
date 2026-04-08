@@ -21,7 +21,6 @@ export type PlayoffBracketStrings = {
   submitLine1: string;
   submitLine2: string;
   submitLine3: string;
-  alertLoginRequired: string;
   alertAlreadySubmitted: string;
   alertSubmittedOk: string;
   alertSubmitFailed: string;
@@ -54,7 +53,6 @@ const en: PlayoffBracketStrings = {
   submitLine1: "Submit your bracket with these picks.",
   submitLine2: "Each user can submit once.",
   submitLine3: "Your bracket is scored out of 100 points.",
-  alertLoginRequired: "Please sign in to continue.",
   alertAlreadySubmitted: "You have already submitted a bracket.",
   alertSubmittedOk: "Your bracket has been submitted.",
   alertSubmitFailed: "Submission failed.",
@@ -86,7 +84,6 @@ const ja: PlayoffBracketStrings = {
   submitLine1: "この内容でブラケットを提出します。",
   submitLine2: "ブラケットの提出は1人1回です。",
   submitLine3: "100点満点で採点されます。",
-  alertLoginRequired: "ログインが必要です",
   alertAlreadySubmitted: "ブラケットはすでに提出済みです",
   alertSubmittedOk: "ブラケットを提出しました",
   alertSubmitFailed: "提出に失敗しました",

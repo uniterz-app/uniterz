@@ -266,7 +266,7 @@ export default function MyRankCard({
               {loading
                 ? "--"
                 : statsScramble
-                  ? "#···"
+                  ? "#000"
                   : rank
                     ? `#${rank}`
                     : "-"}
@@ -287,7 +287,7 @@ export default function MyRankCard({
                   " "
                 )}
               >
-                ···
+                000
               </div>
             ) : metric === "streak" ? (
               <div

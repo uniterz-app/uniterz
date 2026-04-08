@@ -6,7 +6,7 @@ import { PROFILE_SCORING_RULES_NOTICE_STORAGE_KEY } from "@/lib/profile/scoringR
 
 type Props = {
   language: Language;
-  /** ゲストプロフィールなどでは false */
+  /** 対象 UID が無いときは false */
   enabled: boolean;
 };
 
