@@ -1,7 +1,7 @@
 "use client";
 
 import type { RankingRow } from "@/lib/rankings/types";
-import { alfa, jp } from "@/lib/fonts";
+import { jp, summaryMetricNumClass } from "@/lib/fonts";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -12,6 +12,8 @@ import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import { Crown } from "lucide-react";
 
 /* =========================
  * Flag map
@@ -61,6 +63,57 @@ const medal = (rank: 1 | 2 | 3) => {
   };
 };
 
+function PodiumCornerFrame({ rank }: { rank: 1 | 2 | 3 }) {
+  const tone =
+    rank === 1
+      ? { c: "rgba(255,214,90,0.8)", g: "rgba(255,214,90,0.28)" }
+      : rank === 2
+        ? { c: "rgba(233,237,246,0.8)", g: "rgba(226,232,240,0.24)" }
+        : { c: "rgba(213,154,90,0.8)", g: "rgba(213,154,90,0.24)" };
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30">
+      {rank === 1 ? (
+        <>
+          <div
+            className="absolute left-[0.5px] top-[0.5px] bottom-[0.5px]"
+            style={{ width: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
+          />
+          <div
+            className="absolute right-[0.5px] top-[0.5px] bottom-[0.5px]"
+            style={{ width: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
+          />
+          <div
+            className="absolute bottom-[0.5px] left-[0.5px] right-[0.5px]"
+            style={{ height: "0.6px", background: tone.c, boxShadow: `0 0 12px ${tone.g}` }}
+          />
+          <div
+            className="absolute top-[0.5px] left-[0.5px]"
+            style={{ width: "38px", height: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
+          />
+          <div
+            className="absolute top-[0.5px]"
+            style={{ left: "92px", right: "0.5px", height: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
+          />
+        </>
+      ) : (
+        <div
+          className="absolute inset-0 border"
+          style={{
+            inset: "0.5px",
+            borderColor: tone.c,
+            borderWidth: 0.6,
+            boxShadow: `0 0 12px ${tone.g}`,
+          }}
+        />
+      )}
+      <div className="absolute left-0 top-0 h-5 w-5 border-l-[2.5px] border-t-[2.5px]" style={{ borderColor: tone.c }} />
+      <div className="absolute right-0 top-0 h-5 w-5 border-r-[2.5px] border-t-[2.5px]" style={{ borderColor: tone.c }} />
+      <div className="absolute bottom-0 left-0 h-5 w-5 border-b-[2.5px] border-l-[2.5px]" style={{ borderColor: tone.c }} />
+      <div className="absolute bottom-0 right-0 h-5 w-5 border-b-[2.5px] border-r-[2.5px]" style={{ borderColor: tone.c }} />
+    </div>
+  );
+}
+
 function rankInk(rank: 1 | 2 | 3) {
   const m = medal(rank);
 
@@ -89,22 +142,37 @@ function rankInk(rank: 1 | 2 | 3) {
 function podiumScoreStyle(rank: 1 | 2 | 3) {
   if (rank === 1) {
     return {
-      color: "#FFD65A",
+      backgroundImage:
+        "linear-gradient(180deg, #FFFDE8 0%, #FFE38A 22%, #FFBE3B 52%, #A65A00 100%)",
+      WebkitBackgroundClip: "text",
+      backgroundClip: "text",
+      color: "transparent",
       textShadow:
-        "0 0 10px rgba(255,215,90,0.65), 0 0 22px rgba(255,193,7,0.45), 0 0 40px rgba(234,179,8,0.25)",
+        "0 0 8px rgba(255,215,90,0.48), 0 0 16px rgba(255,193,7,0.30), 0 0 28px rgba(234,179,8,0.16)",
+      display: "inline-block",
     } as const;
   }
   if (rank === 2) {
     return {
-      color: "#E9EDF6",
+      backgroundImage:
+        "linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 24%, #C7D2E0 54%, #6B778A 100%)",
+      WebkitBackgroundClip: "text",
+      backgroundClip: "text",
+      color: "transparent",
       textShadow:
-        "0 0 10px rgba(230,238,250,0.55), 0 0 22px rgba(203,213,225,0.38), 0 0 38px rgba(148,163,184,0.22)",
+        "0 0 8px rgba(230,238,250,0.40), 0 0 16px rgba(203,213,225,0.26), 0 0 26px rgba(148,163,184,0.14)",
+      display: "inline-block",
     } as const;
   }
   return {
-    color: "#D59A5A",
+    backgroundImage:
+      "linear-gradient(180deg, #FFF0DD 0%, #F3B97E 22%, #D07A2E 52%, #6F3410 100%)",
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
     textShadow:
-      "0 0 10px rgba(222,150,90,0.6), 0 0 22px rgba(180,95,50,0.38), 0 0 38px rgba(146,85,40,0.22)",
+      "0 0 8px rgba(222,150,90,0.42), 0 0 16px rgba(180,95,50,0.26), 0 0 26px rgba(146,85,40,0.14)",
+    display: "inline-block",
   } as const;
 }
 
@@ -114,54 +182,56 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
 function rankPreset(rank: 1 | 2 | 3) {
   if (rank === 1) {
     return {
-      cardMinH: "min-h-[84px]",
-      topH: "h-[44px]",
-      rowPy: "py-1.5",
+      cardMinH: "min-h-[68px] lg:min-h-[78px]",
+      topH: "h-[42px]",
+      rowPy: "py-1",
       rankW: "w-[24px]",
-      rankText: "text-[28px]",
-      avatar: "h-[40px] w-[40px]",
-      avatarText: "text-[17px]",
-      nameText: "text-[22px]",
-      scoreW: "w-[66px]",
-      scoreMain: "text-[26px]",
-      scoreSub: "text-[11px]",
+      rankText: "text-[26px] lg:text-[33px]",
+      avatar: "h-[40px] w-[40px] lg:h-[48px] lg:w-[48px]",
+      avatarText: "text-[16px] lg:text-[20px]",
+      nameText: "text-[16px] lg:text-[20px]",
+      scoreW: "w-[68px]",
+      scoreMain: "text-[25px] lg:text-[32px]",
+      scoreSub: "text-[9px] lg:text-[13px]",
       gap: "gap-1.5",
       px: "px-3",
     };
   }
   if (rank === 2) {
     return {
-      cardMinH: "min-h-[80px]",
-      topH: "h-[42px]",
-      rowPy: "py-1.5",
+      cardMinH: "min-h-[62px] lg:min-h-[72px]",
+      topH: "h-[39px]",
+      rowPy: "py-1",
       rankW: "w-[22px]",
-      rankText: "text-[26px]",
-      avatar: "h-[38px] w-[38px]",
-      avatarText: "text-[15px]",
-      nameText: "text-[19px]",
+      rankText: "text-[22px] lg:text-[29px]",
+      avatar: "h-[38px] w-[38px] lg:h-[44px] lg:w-[44px]",
+      avatarText: "text-[15px] lg:text-[18px]",
+      nameText: "text-[16px] lg:text-[19px]",
       scoreW: "w-[62px]",
-      scoreMain: "text-[23px]",
-      scoreSub: "text-[10px]",
+      scoreMain: "text-[19px] lg:text-[27px]",
+      scoreSub: "text-[8px] lg:text-[12px]",
       gap: "gap-1.5",
       px: "px-3",
     };
   }
   return {
-    cardMinH: "min-h-[76px]",
-    topH: "h-[38px]",
-    rowPy: "py-1",
+    cardMinH: "min-h-[56px] lg:min-h-[66px]",
+    topH: "h-[36px]",
+    rowPy: "py-0.5",
     rankW: "w-[20px]",
-    rankText: "text-[24px]",
-    avatar: "h-[36px] w-[36px]",
-    avatarText: "text-[14px]",
-    nameText: "text-[17px]",
+    rankText: "text-[20px] lg:text-[26px]",
+    avatar: "h-[36px] w-[36px] lg:h-[41px] lg:w-[41px]",
+    avatarText: "text-[14px] lg:text-[17px]",
+    nameText: "text-[16px] lg:text-[18px]",
     scoreW: "w-[58px]",
-    scoreMain: "text-[20px]",
-    scoreSub: "text-[10px]",
+    scoreMain: "text-[16px] lg:text-[24px]",
+    scoreSub: "text-[8px] lg:text-[11px]",
     gap: "gap-1",
     px: "px-2.5",
   };
 }
+
+const rankHudNumClass = summaryMetricNumClass;
 
 function AvatarCircle({ row, rank }: { row: RankingRow; rank: 1 | 2 | 3 }) {
   const m = medal(rank);
@@ -197,7 +267,7 @@ function AvatarCircle({ row, rank }: { row: RankingRow; rank: 1 | 2 | 3 }) {
           <div
             className={[
               "grid h-full w-full place-items-center font-black",
-              alfa.className,
+              rankHudNumClass,
               s.avatarText,
             ].join(" ")}
           >
@@ -284,13 +354,12 @@ function ScoreText({
         : metric === "marginPrecision"
         ? row.avgMarginPrecision
         : null;
-
     return (
       <div className="flex flex-col items-end leading-none">
         <div
           className={[
             "inline-flex items-baseline justify-end gap-1 font-black tabular-nums leading-none",
-            alfa.className,
+          rankHudNumClass,
           ].join(" ")}
         >
           <span className={s.scoreMain} style={scoreStyle}>
@@ -306,12 +375,10 @@ function ScoreText({
             pts
           </span>
         </div>
-
         {showMeta && (
           <span className="mt-1 inline-flex items-center gap-1 text-[11px] leading-none text-white/40">
             <span>
-              avg{" "}
-              {avg != null ? formatMetricDecimals(avg, 1) : "0.0"}
+              avg {avg != null ? formatMetricDecimals(avg, 1) : "0.0"}
             </span>
             <span>
               {postsLabel(language)}:{row.posts ?? 0}
@@ -345,7 +412,6 @@ function ScoreText({
             {streakShortLabel(language)}
           </span>
         </div>
-
         <span className="mt-1 text-[11px] leading-none text-white/40">
           {postsLabel(language)} {row.posts ?? 0}
         </span>
@@ -359,13 +425,12 @@ function ScoreText({
         <div
           className={[
             "inline-flex items-baseline justify-end font-black tabular-nums leading-none",
-            alfa.className,
+          rankHudNumClass,
           ].join(" ")}
         >
           <span className={s.scoreMain} style={scoreStyle}>
             {Math.round(n)}
           </span>
-
           <span
             className={[s.scoreSub, "ml-0.5"].join(" ")}
             style={{
@@ -376,7 +441,6 @@ function ScoreText({
             %
           </span>
         </div>
-
         <span className="mt-1 text-[11px] leading-none text-white/40">
           {postsLabel(language)} {row.posts ?? 0}
         </span>
@@ -391,15 +455,15 @@ function ScoreText({
  * Card motion
  * ========================= */
 const cardFx: Variants = {
-  hidden: { opacity: 0, y: 14, scale: 0.99 },
+  hidden: { opacity: 0, y: 12, filter: "blur(10px)" },
   show: (delay: number) => ({
     opacity: 1,
     y: 0,
-    scale: 1,
+    filter: "blur(0px)",
     transition: {
-      duration: 0.42,
-      delay,
-      ease: [0.22, 1, 0.36, 1],
+      duration: 0.62,
+      delay: 0.12 + delay,
+      ease: [0.16, 0.82, 0.32, 1],
     },
   }),
 };
@@ -459,16 +523,33 @@ export default function MonthlyTopPodium({
             <Link
               key={row.uid}
               href={`${base}/u/${row.handle || row.uid}`}
-              className="block"
+              className="relative block"
             >
+              {rank === 1 ? (
+                <motion.div
+                  className="pointer-events-none absolute left-[49px] top-[-9px] z-40 lg:left-[51px] lg:top-[-12px]"
+                  initial={{ opacity: 0, y: 4, scale: 0.92 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.42, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Crown
+                    className="h-[18px] w-[24px] text-[#F4C542] lg:h-[21px] lg:w-[29px]"
+                    fill="currentColor"
+                    stroke="currentColor"
+                    strokeWidth={1.7}
+                    aria-hidden
+                  />
+                </motion.div>
+              ) : null}
               <motion.div
                 className={[
-                  "relative overflow-hidden rounded-[10px] border",
+                  "relative overflow-hidden rounded-none border",
                   s.cardMinH,
                 ].join(" ")}
                 style={{
                   borderColor: m.ring,
-                  backgroundColor: "rgba(255,255,255,0.055)",
+                  background:
+                    "linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.045) 42%, rgba(8,13,24,0.86) 100%)",
                   boxShadow: [
                     rank === 1
                       ? "0 12px 30px rgba(0,0,0,0.24)"
@@ -486,6 +567,8 @@ export default function MonthlyTopPodium({
                 animate="show"
                 custom={(rank - 1) * 0.05}
               >
+                <PodiumCornerFrame rank={rank} />
+                <ShellGridOverlay roundedClassName="rounded-none" />
                 <FadedFlagBg rank={rank} countryCode={countryCode} />
 
                 <div
@@ -526,51 +609,59 @@ export default function MonthlyTopPodium({
                   }}
                 />
 
-                <div className={["relative z-10", s.px, s.rowPy].join(" ")}>
-                  <div className={["flex items-center", s.gap, s.topH].join(" ")}>
-                    <div
-                      className={[
-                        "shrink-0 text-center font-black leading-none",
-                        alfa.className,
-                        s.rankW,
-                        s.rankText,
-                      ].join(" ")}
-                      style={rank === 2 ? ink.solidStyle : ink.gradStyle}
-                    >
-                      {rank}
-                    </div>
-
-                    <div className={rank === 1 ? "-translate-y-[5px]" : "-translate-y-[2px]"}>
-                      <AvatarCircle row={row} rank={rank} />
-                    </div>
-
-                    <div className="min-w-0 flex-1 flex items-center justify-center">
+                <div
+                  className={[
+                    "relative z-10 flex h-full items-center",
+                    s.px,
+                    s.rowPy,
+                  ].join(" ")}
+                >
+                  <div className={["flex w-full items-center justify-between", s.topH].join(" ")}>
+                    <div className={["flex min-w-0 items-center", s.gap].join(" ")}>
                       <div
                         className={[
-                          "truncate text-center font-black leading-none tracking-[0.005em]",
-                          jp.className,
-                          s.nameText,
+                          "shrink-0 translate-y-[7px] text-center font-black leading-none",
+                        rankHudNumClass,
+                          s.rankW,
+                          s.rankText,
                         ].join(" ")}
-                        style={{
-                          color: "rgba(255,255,255,0.94)",
-                        }}
+                        style={rank === 2 ? ink.solidStyle : ink.gradStyle}
                       >
-                        <span
+                        {rank}
+                      </div>
+
+                      <div className="flex translate-y-[6px] items-center justify-center">
+                        <AvatarCircle row={row} rank={rank} />
+                      </div>
+
+                      <div className="min-w-0">
+                        <div
+                          className={[
+                            "truncate font-black leading-none tracking-[0.005em]",
+                            jp.className,
+                            s.nameText,
+                          ].join(" ")}
                           style={{
-                            textShadow: [
-                              "0 1px 1px rgba(0,0,0,0.32)",
-                              "0 2px 4px rgba(0,0,0,0.18)",
-                            ].join(", "),
+                            color: "rgba(255,255,255,0.94)",
                           }}
                         >
-                          {row.displayName ?? row.handle ?? "Unknown"}
-                        </span>
+                          <span
+                            style={{
+                              textShadow: [
+                                "0 1px 1px rgba(0,0,0,0.32)",
+                                "0 2px 4px rgba(0,0,0,0.18)",
+                              ].join(", "),
+                            }}
+                          >
+                            {row.displayName ?? row.handle ?? "Unknown"}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <div
                       className={[
-                        "shrink-0 flex flex-col items-end justify-center",
+                        "shrink-0 flex translate-y-[5px] flex-col items-end justify-center",
                         s.scoreW,
                       ].join(" ")}
                     >

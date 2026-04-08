@@ -403,7 +403,7 @@ className={cn("rounded-3xl p-1 cursor-pointer relative", frame)}
         className="w-10 h-10 flex items-center justify-center"
         onClick={async (e) => {
           e.stopPropagation();
-          if (!uid) return toast.error("ログインが必要です");
+          if (!uid) return;
           const ref = doc(db, "posts", post.id, "likes", uid);
           const snap = await getDoc(ref);
           snap.exists()

@@ -6,6 +6,7 @@ import { fetchGameContext } from "./fetchGameContext";
 import { marketCalculator } from "./marketCalculator";
 import { upsetJudge } from "./upsetJudge";
 import { finalizePost } from "./finalizePost";
+import { aggregateGamePointsDistributionFromPostsSnap } from "./aggregateGamePointsDistribution";
 import { updateUserStreak } from "./updateUserStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
@@ -163,6 +164,18 @@ export const onGameFinalV2 = onDocumentWritten(
       });
     }
 
+    const pointsDistribution = aggregateGamePointsDistributionFromPostsSnap({
+      postsSnap,
+      game: {
+        homeScore: game.homeScore!,
+        awayScore: game.awayScore!,
+        league: game.league,
+      },
+      market,
+      hadUpsetGame,
+      streakResultMap,
+    });
+
     await batch.commit();
     await Promise.all(userUpdateTasks);
 
@@ -180,6 +193,10 @@ export const onGameFinalV2 = onDocumentWritten(
 
     await db().doc(`games/${gameId}`).set(
       {
+        pointsDistribution: {
+          ...pointsDistribution,
+          updatedAtMillis: Date.now(),
+        },
         "game.status": "final",
         "game.finalScore": {
           home: game.homeScore,

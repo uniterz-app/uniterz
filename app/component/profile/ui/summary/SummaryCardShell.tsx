@@ -3,6 +3,8 @@
 
 import React from "react";
 
+import { summaryCardShellShadowClass } from "@/lib/ui/profileCardEdgeGlow";
+
 type Props = {
   children: React.ReactNode;
   className?: string;
@@ -21,8 +23,10 @@ export default function SummaryCardShell({
   onClick,
 }: Props) {
   const pad = compact ? "p-3" : "p-4";
-  const base =
-    "relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl";
+  const base = [
+    "relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl",
+    summaryCardShellShadowClass,
+  ].join(" ");
 
   if (onClick) {
     return (

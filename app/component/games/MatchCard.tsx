@@ -17,11 +17,11 @@ import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
-import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
 import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 
 
@@ -190,7 +190,6 @@ function MatchCard({
   disableCardMotion = false,
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
-  const [showLoginRequired, setShowLoginRequired] = useState(false);
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
@@ -276,9 +275,7 @@ const marketMajority = useMemo(() => {
   const teamText = dense ? "text-sm md:text-base" : "text-base md:text-xl";
   const recordText = dense ? "text-[12px]" : "text-sm";
   const Icon =
-  league === "nba" || league === "bj"
-    ? Jersey
-    : Soccer;
+    league === "nba" || league === "bj" ? Jersey : Soccer;
 
 
   // 現在のルートから /m or /web を決める & lg を引き継ぎ
@@ -393,10 +390,7 @@ let center: React.ReactNode = inPredictOverlay ? (
     if (myPostId) return;
 
     const me = auth.currentUser;
-    if (!me) {
-      setShowLoginRequired(true);
-      return;
-    }
+    if (!me) return;
 
     // 試合開始後は遷移しない（predictions/post ページは使わない）
     if (isGameStarted) {
@@ -418,10 +412,7 @@ setNavigating(true);
   const me = auth.currentUser;
 
   // ★ 追加：未ログインならモーダルを出して終了
-  if (!me) {
-    setShowLoginRequired(true);
-    return;
-  }
+  if (!me) return;
 
   try {
     const token = await me.getIdToken();
@@ -463,7 +454,7 @@ setNavigating(true);
       }
 
       if (res.status === 401 || res.status === 403) {
-        alert(isEn ? "Please sign in." : "ログインが必要です。");
+        router.push(isMobile ? "/mobile/login" : "/web/login");
         return;
       }
 
@@ -531,11 +522,14 @@ dense
   willChange: "transform",
 }}
 >
-
-
+      <div
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
 
 {showMarketBias && marketBias && (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+  <div className="pointer-events-none absolute inset-0 z-1 overflow-hidden rounded-2xl">
     {/* HOME 側バー */}
     <div
       className="absolute left-0 top-0 h-full"
@@ -645,9 +639,14 @@ background:
         {/* HOME */}
 <div className="mc-home flex flex-col items-center -mt-5 md:mt-0">
 
-  {/* HOME：チーム名と同じブラケット系フォント */}
+  {/* HOME：Web はラベルを大きく */}
   <div
-    className="mb-1 text-center text-xs font-bold uppercase opacity-85 md:text-sm"
+    className={[
+      "mb-1 text-center font-bold uppercase opacity-85",
+      isMobile
+        ? "text-xs md:text-sm"
+        : "text-sm md:text-base lg:text-lg",
+    ].join(" ")}
     style={teamNameFont}
   >
     HOME
@@ -666,7 +665,7 @@ background:
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {homeL2 || homeL1}
@@ -675,13 +674,13 @@ background:
         // ★ Bリーグ（mobile）→ 2行表示
         <>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {homeL1}
           </div>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {homeL2}
@@ -690,7 +689,7 @@ background:
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {homeL1} {homeL2}
@@ -698,9 +697,8 @@ background:
       )}
     </>
   ) : (
-    // ★ PC(web) → 1行表示（ブラケットマーケットのチーム名フォント）
     <div
-      className="text-[13px] font-bold md:text-[17px]"
+      className="text-base font-bold leading-tight md:text-xl lg:text-2xl"
       style={teamNameFont}
     >
       {homeL1} {homeL2}
@@ -761,7 +759,12 @@ background:
 <div className="mc-away flex flex-col items-center -mt-5 md:mt-0">
 
   <div
-    className="mb-1 text-center text-xs font-bold uppercase opacity-85 md:text-sm"
+    className={[
+      "mb-1 text-center font-bold uppercase opacity-85",
+      isMobile
+        ? "text-xs md:text-sm"
+        : "text-sm md:text-base lg:text-lg",
+    ].join(" ")}
     style={teamNameFont}
   >
     AWAY
@@ -781,7 +784,7 @@ background:
       {league === "nba" ? (
         // ★ NBA（mobile）→ nickname(line2) だけ
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {awayL2 || awayL1}
@@ -790,13 +793,13 @@ background:
         // ★ Bリーグ（mobile）→ 2行
         <>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {awayL1}
           </div>
           <div
-            className="text-[13px] font-bold md:text-[17px]"
+            className="text-[15px] font-bold md:text-[18px]"
             style={teamNameFont}
           >
             {awayL2}
@@ -805,7 +808,7 @@ background:
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[13px] font-bold md:text-[17px]"
+          className="text-[15px] font-bold md:text-[18px]"
           style={teamNameFont}
         >
           {awayL1} {awayL2}
@@ -814,7 +817,7 @@ background:
     </>
   ) : (
     <div
-      className="text-[13px] font-bold md:text-[17px]"
+      className="text-base font-bold leading-tight md:text-xl lg:text-2xl"
       style={teamNameFont}
     >
       {awayL1} {awayL2}
@@ -914,11 +917,6 @@ background:
 </button>
         </div>
       )}
-      <LoginRequiredModal
-  open={showLoginRequired}
-  onClose={() => setShowLoginRequired(false)}
-  variant={isMobile ? "mobile" : "web"}
-/>
     </motion.div>
   );
 }

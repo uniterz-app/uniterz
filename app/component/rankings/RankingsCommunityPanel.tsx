@@ -84,7 +84,6 @@ export default function RankingsCommunityPanel({ language, variant }: Props) {
     () =>
       language === "en"
         ? {
-            needLogin: "Sign in to create or join a community.",
             createOpen: "Create group",
             joinTitle: "Join with invite code",
             codePh: "Invite code",
@@ -94,12 +93,10 @@ export default function RankingsCommunityPanel({ language, variant }: Props) {
             owner: "Owner",
             member: "Member",
             loading: "Loading…",
-            login: "Log in",
             tapRanking: "Open ranking",
             competeLabel: "Competing on",
           }
         : {
-            needLogin: "グループの作成・参加にはログインが必要です。",
             createOpen: "グループを作成",
             joinTitle: "招待コードで参加",
             codePh: "招待コード",
@@ -109,7 +106,6 @@ export default function RankingsCommunityPanel({ language, variant }: Props) {
             owner: "オーナー",
             member: "メンバー",
             loading: "読み込み中…",
-            login: "ログイン",
             tapRanking: "ランキングを見る",
             competeLabel: "競争項目",
           },
@@ -162,24 +158,6 @@ export default function RankingsCommunityPanel({ language, variant }: Props) {
       setJoinBusy(false);
     }
   }, [joinCode, language, fetchList]);
-
-  const loginHref = variant === "web" ? "/web/login" : "/mobile/login";
-
-  if (!uid) {
-    return (
-      <div
-        className={`mx-auto max-w-[860px] space-y-3 px-1 py-6 text-center text-sm text-white/70 ${jp.className}`}
-      >
-        <p>{t.needLogin}</p>
-        <a
-          href={loginHref}
-          className="inline-block text-cyan-300 underline underline-offset-2"
-        >
-          {t.login}
-        </a>
-      </div>
-    );
-  }
 
   return (
     <div

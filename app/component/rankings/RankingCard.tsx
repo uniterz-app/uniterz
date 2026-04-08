@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 import type { RankingRowWithCountry, MobileMetric } from "./_data/mockRows";
 import { jp, summaryMetricNumClass } from "@/lib/fonts";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
-import { metricNum, getMetricSubText } from "@/lib/rankings/metric";
+import { metricNum } from "@/lib/rankings/metric";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
-import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
+import { streakShortLabel } from "@/lib/i18n/rankings";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 const FLAG_SRC: Record<string, string> = {
   US: "/flags/us.png",
@@ -83,6 +84,30 @@ function cardTone(rank: number) {
     border: "rgba(255,255,255,0.14)",
     outerGlow: "rgba(255,255,255,0.035)",
   };
+}
+
+function MonoCornerFrame() {
+  const color = "rgba(226,232,240,0.72)";
+  const glow = "rgba(226,232,240,0.16)";
+  return (
+    <>
+      <div className="pointer-events-none absolute inset-0 z-30">
+        <div
+          className="absolute inset-0 border"
+          style={{
+            inset: "0.5px",
+            borderColor: color,
+            borderWidth: 0.6,
+            boxShadow: `0 0 10px ${glow}`,
+          }}
+        />
+        <div className="absolute left-0 top-0 h-4 w-4 border-l-[2.5px] border-t-[2.5px]" style={{ borderColor: color }} />
+        <div className="absolute right-0 top-0 h-4 w-4 border-r-[2.5px] border-t-[2.5px]" style={{ borderColor: color }} />
+        <div className="absolute bottom-0 left-0 h-4 w-4 border-b-[2.5px] border-l-[2.5px]" style={{ borderColor: color }} />
+        <div className="absolute bottom-0 right-0 h-4 w-4 border-b-[2.5px] border-r-[2.5px]" style={{ borderColor: color }} />
+      </div>
+    </>
+  );
 }
 
 function FadedFlagBg({
@@ -258,10 +283,6 @@ export default function RankingCard({
     true,
     rank === 1 ? onCountDone : undefined
   );
-  const subText = getMetricSubText(r, metric, language);
-  const showPostsUnderAvg =
-    metric === "totalScore" || metric === "marginPrecision";
-  const showSubText = metric !== "upsetScore";
 
   return (
     <Link
@@ -270,12 +291,13 @@ export default function RankingCard({
     >
       <div
         className={[
-          "relative overflow-hidden rounded-2xl border",
-          isTop3 ? "min-h-[92px]" : "min-h-[63px]",
+          "relative overflow-hidden rounded-none border",
+          isTop3 ? "min-h-[76px]" : "min-h-[50px]",
         ].join(" ")}
         style={{
           borderColor: tone.border,
-          backgroundColor: "rgba(255,255,255,0.055)",
+          background:
+            "linear-gradient(160deg, rgba(255,255,255,0.095) 0%, rgba(255,255,255,0.04) 44%, rgba(8,13,24,0.86) 100%)",
           boxShadow: [
             isTop3
               ? "0 12px 28px rgba(0,0,0,0.22)"
@@ -287,6 +309,8 @@ export default function RankingCard({
           ].join(", "),
         }}
       >
+        <MonoCornerFrame />
+        <ShellGridOverlay roundedClassName="rounded-none" />
         <FadedFlagBg rank={rank} countryCode={countryCode} />
 
         <div
@@ -331,8 +355,8 @@ export default function RankingCard({
           className={[
             "relative z-10 grid min-w-0 items-center gap-2.5 px-2.5",
             isTop3
-              ? "grid-cols-[32px_56px_minmax(0,1fr)_84px] py-4"
-              : "grid-cols-[22px_36px_minmax(0,1fr)_auto] py-3",
+              ? "grid-cols-[32px_56px_minmax(0,1fr)_84px] py-2.5"
+              : "grid-cols-[22px_36px_minmax(0,1fr)_auto] py-2",
           ].join(" ")}
         >
           <div className="flex items-center justify-center">
@@ -406,26 +430,6 @@ export default function RankingCard({
                 isTop3={isTop3}
                 language={language}
               />
-              {showSubText &&
-                (showPostsUnderAvg ? (
-                  <div
-                    className={[
-                      "mt-0.5 max-w-full text-[9px] leading-none text-white/40",
-                      isTop3
-                        ? "inline-flex items-center justify-center gap-1"
-                        : "inline-flex flex-wrap items-center justify-end gap-x-1 gap-y-0",
-                    ].join(" ")}
-                  >
-                    <span className="truncate">{subText}</span>
-                    <span className="shrink-0">
-                      {postsLabel(language)}:{r.posts ?? 0}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="mt-0.5 max-w-full truncate text-[9px] leading-none text-white/40">
-                    {subText}
-                  </div>
-                ))}
             </div>
           </div>
         </div>

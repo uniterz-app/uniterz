@@ -12,11 +12,7 @@ export default function ProfileV2PreviewPage() {
   }
 
   if (!fUser) {
-    return (
-      <div className="text-white p-6">
-        プレビューにはログインが必要です。
-      </div>
-    );
+    return <div className="text-white p-6">Loading…</div>;
   }
 
   // Firestore の handle ではなく、プレビュー用の仮 handle を使う

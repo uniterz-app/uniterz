@@ -13,7 +13,8 @@ import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
 import ScoringRulesChangeNoticeModal from "@/app/component/profile/ScoringRulesChangeNoticeModal";
 
-import DailyTrendCard from "@/app/component/pro/analysis/DailyTrendCard";
+import StreakTrackerCard from "@/app/component/profile/ui/StreakTrackerCard";
+import ProfileDailyTrendChart from "@/app/component/profile/ui/ProfileDailyTrendChart";
 import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
 import ProPreview from "@/app/component/pro/analysis/ProPreview";
 
@@ -30,8 +31,8 @@ import {
   useProfileBadges,
   type ResolvedBadge,
 } from "@/lib/profile/useProfileBadges";
-import { useProfileDailyTrend } from "@/lib/profile/useProfileDailyTrend";
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
+import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 
@@ -40,25 +41,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
-  const isTargetGuestProfile = !targetUid;
 
   const { language } = useUserLanguage(resolvedUid);
-
-  const displayProfile = isTargetGuestProfile
-    ? {
-        ...profile,
-        displayName: "Guest User",
-        handle: "@guest",
-        bio:
-          language === "en"
-            ? "Log in to create your profile."
-            : "ログインするとプロフィールを作成できます",
-        counts: { followers: 0, following: 0 },
-        currentStreak: 0,
-        maxStreak: 0,
-        plan: "free",
-      }
-    : profile;
 
   const {
     myPlan,
@@ -69,7 +53,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     isProView,
   } = useProfilePlan({
     targetUid,
-    profilePlan: displayProfile.plan,
+    profilePlan: profile.plan,
   });
 
   const forceProView = false;
@@ -78,7 +62,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { resolvedBadges } = useProfileBadges(resolvedUid);
 
   const { chartData, loading: dailyTrendLoading } =
-    useProfileDailyTrend(resolvedUid);
+    useProfileDailyTrendChart(resolvedUid);
 
   const {
     loading: playoffBracketLoading,
@@ -93,8 +77,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     null
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [bracketReveal, setBracketReveal] = useState(false);
 
-  const canOpenSettings = isMe || isTargetGuestProfile;
+  const canOpenSettings = isMe;
 
   const posts = summary?.posts ?? 0;
   const wins = (summary as any)?.wins ?? 0;
@@ -123,15 +108,16 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       ? "All"
       : "All";
 
-  const maxStreak = displayProfile.maxStreak ?? 0;
+  const maxStreak = profile.maxStreak ?? 0;
   const currentStreak = Math.max(
     0,
-    (displayProfile as any)?.currentStreak ?? 0
+    (profile as any)?.currentStreak ?? 0
   );
   const showCurrentStreakBadge = currentStreak >= 3;
 
   const proSummaryTotal = 5;
-  const summaryMountKey = `profile-summary-${resolvedUid ?? "guest"}-${range}`;
+  const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-${range}`;
+  /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
   const overviewReady =
     !resolvedUid || (!statsLoading && !dailyTrendLoading);
 
@@ -139,6 +125,15 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
     if (tab !== "overview") summaryEntranceLockedRef.current = true;
   }, [tab]);
+  useEffect(() => {
+    if (tab !== "bracket") {
+      setBracketReveal(false);
+      return;
+    }
+    setBracketReveal(false);
+    const id = window.requestAnimationFrame(() => setBracketReveal(true));
+    return () => window.cancelAnimationFrame(id);
+  }, [tab, playoffDisplayData?.season]);
   const playSummaryEntrance =
     !summaryEntranceLockedRef.current && !statsLoading && overviewReady;
 
@@ -155,7 +150,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     if (!playSummaryEntrance) setChartEntranceDone(true);
   }, [playSummaryEntrance]);
 
-  const heroUidKey = resolvedUid ?? "guest";
+  const heroUidKey = resolvedUid ?? "x";
   const prevHeroUidRef = useRef(heroUidKey);
   const [heroEntranceLocked, setHeroEntranceLocked] = useState(false);
   useEffect(() => {
@@ -179,10 +174,10 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         onEntranceComplete={() => setHeroEntranceLocked(true)}
         language={language}
         displayProfile={{
-          displayName: displayProfile.displayName,
-          handle: displayProfile.handle,
-          bio: displayProfile.bio,
-          avatarUrl: displayProfile.avatarUrl,
+          displayName: profile.displayName,
+          handle: profile.handle,
+          bio: profile.bio,
+          avatarUrl: profile.avatarUrl,
         }}
         showCurrentStreakBadge={showCurrentStreakBadge}
         currentStreak={currentStreak}
@@ -326,15 +321,15 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               )}
               </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-4">
               <SummaryCardReveal
                 index={5}
-                total={6}
+                total={7}
                 enabled={playSummaryEntrance}
                 className="min-w-0 overflow-hidden"
                 onAnimationComplete={onChartRevealComplete}
               >
-                <DailyTrendCard
+                <ProfileDailyTrendChart
                   data={chartData}
                   range={range}
                   allowAll={currentIsProView}
@@ -345,18 +340,25 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   }
                 />
               </SummaryCardReveal>
+              <SummaryCardReveal
+                index={6}
+                total={7}
+                enabled={playSummaryEntrance}
+                className="min-w-0 overflow-hidden"
+              >
+                <StreakTrackerCard
+                  uid={resolvedUid}
+                  language={language}
+                  layout="web"
+                  entranceReady={!playSummaryEntrance || chartEntranceDone}
+                />
+              </SummaryCardReveal>
             </div>
               </>
             ) : null}
           </>
         ) : tab === "bracket" ? (
-          isTargetGuestProfile ? (
-            <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
-              {language === "en"
-                ? "Guests can't view the bracket."
-                : "ゲストは不可"}
-            </div>
-          ) : playoffBracketLoading ? (
+          playoffBracketLoading ? (
             <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
               loading...
             </div>
@@ -365,7 +367,16 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               {language === "en" ? "Not submitted" : "未提出"}
             </div>
           ) : (
-            <div className="mt-2 overflow-visible sm:mt-0">
+            <div
+              className="mt-2 overflow-visible transition-all duration-500 ease-out sm:mt-0"
+              style={{
+                opacity: bracketReveal ? 1 : 0,
+                transform: bracketReveal
+                  ? "translateY(0px)"
+                  : "translateY(14px)",
+                filter: bracketReveal ? "blur(0px)" : "blur(10px)",
+              }}
+            >
               <PlayoffFullBracketWeb
                 league="nba"
                 score={playoffScore}
@@ -377,8 +388,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               />
             </div>
           )
-        ) : isTargetGuestProfile ? (
-          <ProPreview />
         ) : currentIsProView ? (
           <ProAnalysis />
         ) : isMe ? (

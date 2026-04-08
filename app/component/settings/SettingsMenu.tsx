@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import cn from "clsx";
 import {
   User,
@@ -38,15 +39,20 @@ import {
   doc,
 } from "firebase/firestore";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
-import LoginRequiredModal from "../modals/LoginRequiredModal";
+import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 
 type Variant = "mobile" | "web";
 type SettingsMenuProps = {
   variant?: Variant; // 互換用に残す（ロジックでは使わない）
   className?: string;
+  /** プロフィール編集オーバーレイを開く前にサイドメニューを閉じる */
+  onRequestCloseMenu?: () => void;
 };
 
-export default function SettingsMenu({ className }: SettingsMenuProps) {
+export default function SettingsMenu({
+  className,
+  onRequestCloseMenu,
+}: SettingsMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -61,18 +67,11 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
   const { language } = useUserLanguage(user?.uid ?? null);
   const isEn = language === "en";
 
-  const requireLogin = (action: () => void) => {
-    if (!user) {
-      setShowLoginRequired(true);
-      return;
-    }
-    action();
-  };
-
   // ===== state =====
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showLoginRequired, setShowLoginRequired] = useState(false);
   const [showPlanInfoModal, setShowPlanInfoModal] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
 
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -90,10 +89,6 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
   const p = (web: string, mobile: string) =>
     resolvedVariant === "web" ? web : mobile;
 
-  const profileEditPath = p(
-    "/web/settings/profile",
-    "/mobile/settings/profile"
-  );
   const announcementsPath = p(
     "/web/announcements",
     "/mobile/announcements"
@@ -165,6 +160,15 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
     return () => { alive = false; };
   }, [user?.uid]);
 
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  const openProfileEditOverlay = () => {
+    onRequestCloseMenu?.();
+    setShowProfileEdit(true);
+  };
+
   const isAdmin = user?.uid === ADMIN_UID;
 
   // ===== styles =====
@@ -186,15 +190,19 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
       <nav className={containerClasses}>
         <p className={groupTitleClasses}>{isEn ? "Main" : "メイン"}</p>
 
-        <button className={itemClasses} onClick={() => requireLogin(() => router.push(profileEditPath))}>
+        <button
+          type="button"
+          className={itemClasses}
+          onClick={openProfileEditOverlay}
+        >
           <User size={16} /> {isEn ? "Edit Profile" : "プロフィール編集"}
         </button>
 
-        <button className={itemClasses} onClick={() => requireLogin(() => router.push(p("/web/badges", "/mobile/badges")))}>
+        <button className={itemClasses} onClick={() => router.push(p("/web/badges", "/mobile/badges"))}>
           <Award size={16} /> {isEn ? "Badge Palette" : "バッジパレット"}
         </button>
 
-        <button className={itemClasses} onClick={() => requireLogin(() => router.push(announcementsPath))}>
+        <button className={itemClasses} onClick={() => router.push(announcementsPath)}>
           <Megaphone size={16} /> {isEn ? "Announcements" : "お知らせ"}
           {unreadCount > 0 && <span className="ml-auto text-xs bg-red-500 px-2 rounded-full">{unreadCount}</span>}
         </button>
@@ -204,16 +212,14 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
         <button
           className={itemClasses}
           onClick={() =>
-            requireLogin(() =>
-              router.push(
-                resolvedVariant === "web"
-                  ? plan === "pro"
-                    ? "/web/plan-status"
-                    : "/web/pro/subscribe"
-                  : plan === "pro"
-                    ? "/mobile/plan-status"
-                    : "/mobile/pro/subscribe"
-              )
+            router.push(
+              resolvedVariant === "web"
+                ? plan === "pro"
+                  ? "/web/plan-status"
+                  : "/web/pro/subscribe"
+                : plan === "pro"
+                  ? "/mobile/plan-status"
+                  : "/mobile/pro/subscribe"
             )
           }
         >
@@ -279,18 +285,19 @@ export default function SettingsMenu({ className }: SettingsMenuProps) {
         </div>
       </nav>
 
-      <LoginRequiredModal
-        open={showLoginRequired}
-        onClose={() => setShowLoginRequired(false)}
-        variant={resolvedVariant}
-      />
-
       <LogoutConfirmModal
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
         language={language}
       />
+
+      {portalReady &&
+        showProfileEdit &&
+        createPortal(
+          <ProfileEditSheet onClose={() => setShowProfileEdit(false)} />,
+          document.body
+        )}
     </>
   );
 }

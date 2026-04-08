@@ -19,7 +19,7 @@ function toDateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function useUserDailyTrendV2(uid?: string) {
+export function useUserStatsDailyTrend(uid?: string) {
   const [data, setData] = useState<DailyTrendRow[]>([]);
   const [loading, setLoading] = useState(true);
 

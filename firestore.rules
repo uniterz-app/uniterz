@@ -12,7 +12,7 @@ service cloud.firestore {
     // ========================================================================
     // users
     // 参照: AuthProvider, SignupForm, OnboardingForm, Profile 設定, useProfile(handle),
-    //       useUserLanguage, follow.ts, ContactForm, EventGate, ensureSlug 連携,
+    //       useUserLanguage, ContactForm, EventGate, ensureSlug 連携,
     //       users/{uid}/reads/*（お知らせ既読）, users/{uid}/groups/*（コミュAPIミラー）
     // ========================================================================
     match /users/{userId} {
@@ -49,20 +49,6 @@ service cloud.firestore {
             || request.resource.data.language == 'en');
 
       allow delete: if request.auth != null && request.auth.uid == userId;
-
-      match /followers/{followerId} {
-        allow read: if true;
-        allow create: if request.auth != null && request.auth.uid == followerId;
-        allow delete: if request.auth != null && request.auth.uid == followerId;
-        allow update: if false;
-      }
-
-      match /following/{followingId} {
-        allow read: if true;
-        allow create: if request.auth != null && request.auth.uid == userId;
-        allow delete: if request.auth != null && request.auth.uid == userId;
-        allow update: if false;
-      }
 
       match /reads/{announcementId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -160,7 +146,7 @@ service cloud.firestore {
     }
 
     // ========================================================================
-    // 統計 v2 — GamesPage, ProAnalysis, useUserDailyTrendV2 / Monthly*
+    // 統計 v2 — GamesPage, ProAnalysis, useUserStatsDailyTrend（プロフィール日次）, 月次リスト等
     // ========================================================================
     match /user_stats_v2/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;

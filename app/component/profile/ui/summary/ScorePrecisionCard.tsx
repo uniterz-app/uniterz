@@ -8,6 +8,11 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import {
+  summaryCardShadowLgClass,
+  summaryCardShadowSmClass,
+} from "@/lib/ui/profileCardEdgeGlow";
 import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 type Props = {
@@ -88,14 +93,21 @@ export default function ScorePrecisionCard({
       <div
         ref={ref}
         className={[
-          "rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
+          "relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
           "p-2 md:p-6",
-          "shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
+          summaryCardShadowSmClass,
+          summaryCardShadowLgClass,
           "flex flex-col items-center justify-start",
           "h-full",
           className,
         ].join(" ")}
       >
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.36]"
+          style={PROFILE_SHELL_GRID_STYLE}
+          aria-hidden
+        />
+        <div className="relative z-1 flex w-full flex-col items-center justify-start">
         <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold tracking-tight text-white md:mb-4 md:gap-2 md:text-[18px]">
           <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-black md:h-8 md:w-8">
             <Gauge className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
@@ -145,6 +157,7 @@ export default function ScorePrecisionCard({
               size={compact ? "sm" : "md"}
             />
           </div>
+        </div>
         </div>
       </div>
 

@@ -1,16 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { getAuth } from "firebase/auth";
-import LoginRequiredModal from "@/app/component/modals/LoginRequiredModal";
-
 type Plan = "monthly" | "annual";
 
 export default function ProSubscribePage() {
-  const router = useRouter();
   const [plan, setPlan] = useState<Plan>("monthly");
-  const [showLoginRequired, setShowLoginRequired] = useState(false);
 
   const PAYMENT_ENABLED = false; // 決済準備完了まで false
 
@@ -111,10 +106,7 @@ export default function ProSubscribePage() {
             const auth = getAuth();
             const user = auth.currentUser;
 
-            if (!user) {
-              setShowLoginRequired(true);
-              return;
-            }
+            if (!user) return;
 
             const res = await fetch("/api/checkout", {
               method: "POST",
@@ -191,11 +183,6 @@ export default function ProSubscribePage() {
           </p>
         </div>
 
-        <LoginRequiredModal
-          open={showLoginRequired}
-          onClose={() => setShowLoginRequired(false)}
-          variant="mobile" // web版なら "web"
-        />
       </div>
     </div>
   );

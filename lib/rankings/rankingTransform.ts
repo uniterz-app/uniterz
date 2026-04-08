@@ -1,7 +1,16 @@
 import type {
   MobileMetric,
   RankingRowWithCountry,
-}from "@/app/component/rankings/_data/mockRows";
+} from "@/app/component/rankings/_data/mockRows";
+
+/** モバイル指標キー → cumulative API の metric クエリ値 */
+export const API_METRIC_BY_MOBILE: Record<MobileMetric, string> = {
+  totalScore: "totalPoints",
+  winRate: "winRate",
+  marginPrecision: "totalPrecision",
+  upsetScore: "totalUpset",
+  streak: "activeWinStreak",
+};
 
 export type RankingApiRow = {
   uid: string;
@@ -19,11 +28,7 @@ export type RankingApiRow = {
 };
 
 export function toApiMetric(metric: MobileMetric) {
-  if (metric === "winRate") return "winRate";
-  if (metric === "totalScore") return "totalPoints";
-  if (metric === "marginPrecision") return "totalPrecision";
-  if (metric === "upsetScore") return "totalUpset";
-  return "activeWinStreak";
+  return API_METRIC_BY_MOBILE[metric];
 }
 
 export function toMobileRows(

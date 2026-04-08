@@ -9,15 +9,15 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 
 /**
  * 日別データ
  */
-export type DailyTrendStat = {
+export type ProfileDailyTrendPoint = {
   date: string;
   posts: number;
   wins: number;
@@ -27,7 +27,7 @@ export type DailyTrendStat = {
 };
 
 type Props = {
-  data: DailyTrendStat[];
+  data: ProfileDailyTrendPoint[];
   range?: "7d" | "30d" | "all";
   allowAll?: boolean;
   language?: Language;
@@ -61,7 +61,7 @@ function toInt(v: any) {
 }
 
 /** 累積計算 */
-function buildCumulative(rows: DailyTrendStat[]) {
+function buildCumulative(rows: ProfileDailyTrendPoint[]) {
   let p = 0;
   let sp = 0;
 
@@ -145,7 +145,7 @@ function buildPointsAxis(chartRows: ReturnType<typeof buildCumulative>) {
   return { domain: [0, top] as [number, number], ticks, top };
 }
 
-export default function DailyTrendCard({
+export default function ProfileDailyTrendChart({
   data,
   range = "7d",
   allowAll = false,
@@ -191,11 +191,6 @@ export default function DailyTrendCard({
   const chartVisible = entranceSync || ioVisible;
 
   const rechartsAnimActive = !entranceSync || rechartsAfterEntrance;
-  const composedChartKey = entranceSync
-    ? rechartsAfterEntrance
-      ? "trend-rc-on"
-      : "trend-rc-hold"
-    : "trend-io";
 
   const limitedData = useMemo(() => {
     const rows = Array.isArray(data) ? data : [];
@@ -203,9 +198,18 @@ export default function DailyTrendCard({
     if (range === "7d") return rows.slice(-7);
     if (range === "30d") return rows.slice(-30);
     if (range === "all" && allowAll) return rows;
+    /** 非 Pro の ALL はロック表示の下に直近30日を描画（空画面にならない） */
+    if (range === "all" && !allowAll) return rows.slice(-30);
 
     return [];
   }, [data, range, allowAll]);
+
+  /** range 切り替えで Recharts が内部状態を持ち越さないようキーに含める */
+  const composedChartKey = entranceSync
+    ? rechartsAfterEntrance
+      ? `trend-rc-on-${range}-${limitedData.length}`
+      : `trend-rc-hold-${range}-${limitedData.length}`
+    : `trend-io-${range}-${limitedData.length}`;
 
   const chartData = useMemo(() => buildCumulative(limitedData), [limitedData]);
 
@@ -225,15 +229,53 @@ export default function DailyTrendCard({
       };
     }, [chartData]);
 
+  const [detailDate, setDetailDate] = useState<string | null>(null);
+
+  const detailRow = useMemo(
+    () => limitedData.find((r) => r.date === detailDate) ?? null,
+    [limitedData, detailDate]
+  );
+
+  const detailSelectHint = isEn
+    ? "Tap the chart to select a day."
+    : "グラフをタップで日付を選択";
+
+  const handleComposedChartClick = (
+    state: { activeLabel?: string | number },
+    _e?: unknown
+  ) => {
+    const label = state?.activeLabel;
+    if (label == null || label === "") return;
+    setDetailDate(String(label));
+  };
+
+  const handleBarClick = (item: { payload?: { date?: string } }) => {
+    const d = item?.payload?.date as string | undefined;
+    if (d != null && d !== "") setDetailDate(String(d));
+  };
+
+  useEffect(() => {
+    if (!detailDate) return;
+    if (!limitedData.some((r) => r.date === detailDate)) {
+      setDetailDate(null);
+    }
+  }, [detailDate, limitedData]);
+
   return (
     <div
       ref={ref}
       className={[
-        "relative rounded-xl border border-white/10 bg-[#050814]/80 p-3",
+        "relative overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-3",
         "shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
       ].join(" ")}
     >
-      <div className="relative h-48 sm:h-52 overflow-hidden rounded-2xl">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.38]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="relative z-1">
+      <div className="relative h-48 sm:h-52 cursor-pointer overflow-hidden rounded-2xl">
         {isEmpty ? (
           <div className="absolute inset-0 grid place-items-center border border-white/10 bg-black/20">
             <div className="text-sm font-semibold text-white/80">
@@ -248,6 +290,7 @@ export default function DailyTrendCard({
                   key={composedChartKey}
                   data={chartData}
                   margin={{ top: 6, right: 10, left: 2, bottom: -6 }}
+                  onClick={handleComposedChartClick}
                 >
                   <CartesianGrid
                     stroke="rgba(148,163,184,0.15)"
@@ -293,26 +336,6 @@ export default function DailyTrendCard({
                     }}
                   />
 
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#020617",
-                      borderRadius: 12,
-                      border: "1px solid rgba(148,163,184,0.3)",
-                      fontSize: 11,
-                    }}
-                    labelStyle={{ color: "rgba(248,250,252,0.9)" }}
-                    labelFormatter={(label) => formatDateLabel(String(label))}
-                    formatter={(value: any, name: any) => {
-                      const n = clampNum(value);
-                      const label = String(name);
-
-                      if (label === postsLabel || label === hitsLabel) {
-                        return [`${toInt(n)} ${unitCount}`, label];
-                      }
-                      return [`${formatMetricDecimals(n, 1)} ${unitPts}`, label];
-                    }}
-                  />
-
                   <Bar
                     yAxisId="count"
                     dataKey="posts"
@@ -322,6 +345,7 @@ export default function DailyTrendCard({
                     radius={[3, 3, 0, 0]}
                     barSize={8}
                     isAnimationActive={rechartsAnimActive}
+                    onClick={handleBarClick}
                   />
                   <Bar
                     yAxisId="count"
@@ -332,6 +356,7 @@ export default function DailyTrendCard({
                     radius={[3, 3, 0, 0]}
                     barSize={8}
                     isAnimationActive={rechartsAnimActive}
+                    onClick={handleBarClick}
                   />
 
                   <Line
@@ -373,11 +398,58 @@ export default function DailyTrendCard({
         )}
       </div>
 
+      {!isEmpty && (
+        <div
+          className="mt-2 rounded-xl border border-white/10 px-3 py-2.5 sm:px-3.5"
+          style={{
+            backgroundColor: "#020617",
+            borderColor: "rgba(148,163,184,0.3)",
+          }}
+        >
+          {detailDate && detailRow ? (
+            <div className="space-y-1 text-[11px] font-medium leading-relaxed sm:text-xs">
+              <div className="mb-1 font-semibold tabular-nums text-slate-100">
+                {formatDateLabel(detailDate)}
+              </div>
+              <p style={{ color: COLORS.score }}>
+                {scorePrecisionLabel} :{" "}
+                <span className="tabular-nums">
+                  {formatMetricDecimals(detailRow.scorePrecision, 1)} {unitPts}
+                </span>
+              </p>
+              <p style={{ color: COLORS.posts }}>
+                {postsLabel} :{" "}
+                <span className="tabular-nums">
+                  {toInt(detailRow.posts)} {unitCount}
+                </span>
+              </p>
+              <p style={{ color: COLORS.wins }}>
+                {hitsLabel} :{" "}
+                <span className="tabular-nums">
+                  {toInt(detailRow.wins)} {unitCount}
+                </span>
+              </p>
+              <p style={{ color: COLORS.total }}>
+                {totalLabel} :{" "}
+                <span className="tabular-nums">
+                  {formatMetricDecimals(detailRow.pointsV3, 1)} {unitPts}
+                </span>
+              </p>
+            </div>
+          ) : (
+            <p className="text-[10px] leading-snug text-slate-500 sm:text-[11px]">
+              {detailSelectHint}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-white/80">
         <Chip label={postsLabel} hex={COLORS.posts} />
         <Chip label={hitsLabel} hex={COLORS.wins} />
         <Chip label={totalLabel} hex={COLORS.total} />
         <Chip label={scorePrecisionLabel} hex={COLORS.score} />
+      </div>
       </div>
     </div>
   );

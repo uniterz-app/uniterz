@@ -1,6 +1,9 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 type TeamStat = {
   teamId: string;
@@ -15,14 +18,23 @@ type Props = {
 };
 
 export default function TeamAffinityCard({ strong, weak }: Props) {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-      <div className="mb-3 text-sm font-semibold text-white">
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+      whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#050814]/85 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55),0_0_22px_rgba(34,211,238,0.08)]"
+    >
+      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <div className="relative z-1 mb-3 text-sm font-semibold text-white lg:text-base">
         チーム別パフォーマンス
       </div>
 
       {/* 横並び */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="relative z-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TeamList
           title="相性の良いチーム"
           color="emerald"
@@ -34,7 +46,7 @@ export default function TeamAffinityCard({ strong, weak }: Props) {
           data={weak}
         />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -53,6 +65,7 @@ function TeamList({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!ref.current) return;
@@ -72,11 +85,21 @@ function TeamList({
   }, []);
 
   const textColor =
-    color === "emerald" ? "text-emerald-400" : "text-rose-400";
-  const barColor =
+    color === "emerald" ? "text-cyan-300" : "text-fuchsia-400";
+  const barStyle =
     color === "emerald"
-      ? "bg-linear-to-r from-emerald-400 to-emerald-500"
-      : "bg-linear-to-r from-rose-400 to-rose-500";
+      ? {
+          background:
+            "linear-gradient(90deg, rgba(34,211,238,0.98) 0%, rgba(45,212,191,0.9) 55%, rgba(56,189,248,0.75) 100%)",
+          boxShadow:
+            "0 0 12px rgba(103,232,249,0.4), inset 0 0 6px rgba(255,255,255,0.12)",
+        }
+      : {
+          background:
+            "linear-gradient(90deg, rgba(217,70,239,0.95) 0%, rgba(236,72,153,0.9) 55%, rgba(251,113,133,0.85) 100%)",
+          boxShadow:
+            "0 0 12px rgba(232,121,249,0.42), inset 0 0 6px rgba(255,255,255,0.12)",
+        };
 
   return (
     <div ref={ref}>
@@ -100,26 +123,33 @@ function TeamList({
             const rate = Math.round(t.winRate * 100);
 
             return (
-              <div
+              <motion.div
                 key={t.teamId}
-                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                animate={visible ? { opacity: 1, y: 0 } : undefined}
+                transition={{
+                  duration: 0.35,
+                  delay: 0.08 + index * 0.08,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                className="rounded-lg border border-cyan-300/15 bg-white/4 px-3 py-2"
               >
                 {/* 上段 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-white/40">
+                    <span className={`text-xs text-white/40 ${resultStatsMetricNumClass}`}>
                       {index + 1}
                     </span>
-                    <span className="text-sm font-semibold text-white">
+                    <span className={`text-sm font-semibold text-white lg:text-base ${resultStatsMetricNumClass}`}>
                       {t.teamName}
                     </span>
                   </div>
 
-                  <div className="text-right text-xs">
-                    <div className="text-white/60">
+                  <div className={`text-right text-xs ${resultStatsMetricNumClass}`}>
+                    <div className="text-white/60 lg:text-sm">
                       {t.games}試合
                     </div>
-                    <div className={`font-semibold ${textColor}`}>
+                    <div className={`font-semibold lg:text-base ${textColor}`}>
                       {rate}%
                     </div>
                   </div>
@@ -128,17 +158,18 @@ function TeamList({
                 {/* バー */}
                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
                   <div
-                    className={`h-2 rounded-full ${barColor} transition-all ease-out`}
+                    className="h-2 rounded-full transition-all ease-out"
                     style={{
                       width: visible ? `${rate}%` : "0%",
                       transitionDuration: "1600ms",
                       transitionDelay: `${index * 240}ms`,
+                      ...barStyle,
                     }}
                   />
                 </div>
 
                 {/* ひとこと */}
-                <div className="mt-1 text-[10px] text-white/40">
+                <div className={`mt-1 text-[10px] text-white/40 lg:text-xs ${resultStatsMetricNumClass}`}>
                   {rate >= 70
                     ? "安定して勝てている"
                     : rate >= 55
@@ -147,7 +178,7 @@ function TeamList({
                     ? "五分の相性"
                     : "相性が悪い"}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

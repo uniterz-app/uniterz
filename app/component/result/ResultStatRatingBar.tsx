@@ -143,6 +143,11 @@ export type ResultStatRatingBarProps = {
   teamBaseHex?: string;
   /** セグメント本数（既定 5＝20%×5、10＝10%×10） */
   segmentCount?: 5 | 10;
+  /**
+   * 指定時は内部の IntersectionObserver を使わず、true になったタイミングでフィルアニメ開始
+   *（親カードのビューポート検知と同期する用）
+   */
+  animationActive?: boolean;
 };
 
 const SKEW_DEG = -14;
@@ -155,6 +160,7 @@ export default function ResultStatRatingBar({
   teamBaseHex,
   segmentCount = DEFAULT_SEGMENTS,
   tone = "default",
+  animationActive,
 }: ResultStatRatingBarProps) {
   const n = segmentCount;
   const r = clamp01(ratio);
@@ -164,9 +170,12 @@ export default function ResultStatRatingBar({
   const trackBg =
     tone === "contrast" ? "bg-white/14" : "bg-white/[0.06]";
   const rootRef = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
+  const [ioInView, setIoInView] = useState(false);
+  const controlled = animationActive !== undefined;
+  const inView = controlled ? animationActive : ioInView;
 
   useEffect(() => {
+    if (controlled) return;
     const el = rootRef.current;
     if (!el) return;
 
@@ -174,7 +183,7 @@ export default function ResultStatRatingBar({
       (entries) => {
         const e = entries[0];
         if (e?.isIntersecting) {
-          setInView(true);
+          setIoInView(true);
           obs.disconnect();
         }
       },
@@ -183,7 +192,7 @@ export default function ResultStatRatingBar({
 
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [controlled]);
 
   const paletteAt = (i: number): BarPalette =>
     teamBaseHex ? teamSegmentPalette(teamBaseHex, i, n) : cyberPal;

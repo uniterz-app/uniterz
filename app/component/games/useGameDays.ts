@@ -19,6 +19,13 @@ import {
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 
+/** 同一セッション内の getDocs 回数削減（リーグ単位・TTL 内は再取得しない） */
+const GAME_DAYS_ROWS_CACHE_TTL_MS = 5 * 60 * 1000;
+const gameDaysRowsCache = new Map<
+  string,
+  { rows: any[]; savedAt: number }
+>();
+
 export function useGameDays(rawLeague: League, timeZone: string) {
   const league = normalizeLeague(rawLeague);
 
@@ -30,8 +37,19 @@ export function useGameDays(rawLeague: League, timeZone: string) {
     let alive = true;
 
     async function load() {
-      setLoading(true);
       setErr(null);
+
+      const cached = gameDaysRowsCache.get(league);
+      const fresh =
+        cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;
+      if (fresh) {
+        if (!alive) return;
+        setRows(cached.rows);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
 
       try {
         const ref = collection(db, "games");
@@ -48,6 +66,7 @@ export function useGameDays(rawLeague: League, timeZone: string) {
         if (!alive) return;
 
         const list = snap.docs.map((d) => d.data());
+        gameDaysRowsCache.set(league, { rows: list, savedAt: Date.now() });
         setRows(list);
       } catch (e: any) {
         if (!alive) return;

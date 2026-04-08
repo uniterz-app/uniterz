@@ -12,8 +12,6 @@ import MyRankCard from "@/app/component/rankings/MyRankCard";
 import Header from "@/app/component/Header";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useWebRankings } from "../_lib/useWebRankings";
-import { useRanking, type RankingRow } from "@/lib/rankings/useRanking";
-import { useRankingCountryCodes } from "@/lib/rankings/useRankingCountryCodes";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   TIMEZONE_ET,
@@ -35,22 +33,6 @@ function getMyMetricValue(metric: MobileMetric, row: any): number {
   }
 
   return row.activeWinStreak ?? 0;
-}
-
-function toHookMetric(metric: MobileMetric) {
-  if (metric === "winRate") return "winRate";
-  if (metric === "totalScore") return "totalPoints";
-  if (metric === "marginPrecision") return "totalPrecision";
-  if (metric === "upsetScore") return "totalUpset";
-  return "activeWinStreak";
-}
-
-function findMyRow(
-  rows: RankingRow[],
-  myUid: string | null
-): RankingRow | null {
-  if (!myUid) return null;
-  return rows.find((r) => r.uid === myUid) ?? null;
 }
 
 function RankingInfoNotice({ language }: { language: "ja" | "en" }) {
@@ -91,47 +73,22 @@ function RankingInfoNotice({ language }: { language: "ja" | "en" }) {
 }
 
 export default function WebRankingsShell() {
-  const { loading, metric, setMetric, visibleMetrics, rows, top3, restRows } =
-    useWebRankings();
+  const {
+    listReady,
+    personalPending,
+    metric,
+    setMetric,
+    visibleMetrics,
+    rows,
+    top3,
+    restRows,
+    myRank,
+    myRow,
+    myUid,
+  } = useWebRankings();
 
-  const uidsForCountry = useMemo(
-    () => [...top3, ...restRows].map((r) => r.uid ?? "").filter(Boolean),
-    [top3, restRows]
-  );
-  const { loading: countryLoading, countryCodeByUid } = useRankingCountryCodes(
-    uidsForCountry
-  );
-
-  const top3WithCountry = useMemo(() => {
-    if (countryLoading) return top3;
-    return top3.map((r) => {
-      if (!Object.prototype.hasOwnProperty.call(countryCodeByUid, r.uid)) return r;
-      const code = countryCodeByUid[r.uid];
-      if (typeof code === "string") {
-        return { ...r, countryCode: code };
-      }
-      return r;
-    });
-  }, [top3, countryCodeByUid, countryLoading]);
-
-  const restRowsWithCountry = useMemo(() => {
-    if (countryLoading) return restRows;
-    return restRows.map((r) => {
-      if (!Object.prototype.hasOwnProperty.call(countryCodeByUid, r.uid)) return r;
-      const code = countryCodeByUid[r.uid];
-      if (typeof code === "string") {
-        return { ...r, countryCode: code };
-      }
-      return r;
-    });
-  }, [restRows, countryCodeByUid, countryLoading]);
-
-  const rankingMetric = toHookMetric(metric);
-  const { loading: myRankingLoading, rows: rawRows, myRank, myUid } =
-    useRanking(rankingMetric);
-  const { user, loading: userLoading } = useMyRankingUser(myUid);
+  const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
-  const myRow = useMemo(() => findMyRow(rawRows, myUid), [rawRows, myUid]);
 
   const myValue = useMemo(() => {
     return getMyMetricValue(metric as MobileMetric, myRow);
@@ -181,7 +138,8 @@ export default function WebRankingsShell() {
             photoURL={user.photoURL || null}
             handle={user.handle || null}
             totalPosts={myRow?.totalPosts}
-            loading={myRankingLoading || userLoading}
+            loading={!listReady}
+            statsScramble={listReady && personalPending}
             language={language}
           />
 
@@ -193,24 +151,24 @@ export default function WebRankingsShell() {
           />
         </div>
 
-        {loading && (
+        {!listReady && (
           <div className="mx-auto max-w-[860px] px-3 pt-4 text-sm text-white/40">
             {language === "en" ? "loading..." : "読み込み中..."}
           </div>
         )}
 
-        {rows.length === 0 ? (
+        {listReady && rows.length === 0 ? (
             <div className="mx-auto max-w-[860px] px-3 pt-6 text-sm text-white/50">
               {language === "en"
                 ? "Ranking data not found"
                 : "ランキングデータが見つかりません"}
             </div>
-          ) : (
+          ) : listReady ? (
             <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
                 <div className="mx-auto max-w-[860px] px-2 pt-3">
                   <TopPodium
-                    rows={top3WithCountry}
+                    rows={top3}
                     metric={metric}
                     onTopCountDone={handleTopCountDone}
                     intro={intro}
@@ -229,7 +187,7 @@ export default function WebRankingsShell() {
                 >
                   {restRows.length > 0 && (
                     <div className="space-y-2 pt-0.5">
-                      {restRowsWithCountry.map((r, i) => (
+                      {restRows.map((r, i) => (
                         <motion.div
                           key={`${metric}-${r.uid}`}
                           variants={restItem}
@@ -248,7 +206,7 @@ export default function WebRankingsShell() {
                 </motion.div>
               </motion.div>
             </AnimatePresence>
-          )}
+          ) : null}
       </div>
     </div>
   );

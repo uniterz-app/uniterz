@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import {
   collection,
   query,
@@ -10,14 +10,13 @@ import {
   getDocs,
   limit,
 } from "firebase/firestore";
-import { getIsFollowing } from "@/lib/follow";
 
 export type Profile = {
   displayName: string;
   handle: string;
   bio: string;
   avatarUrl: string;
-  counts: { posts: number; followers: number; following: number };
+  counts: { posts: number };
   currentStreak: number;
   maxStreak: number;
   plan: "free" | "pro";
@@ -25,8 +24,6 @@ export type Profile = {
 
 type Counts = {
   posts: number;
-  followers: number;
-  following: number;
 };
 
 type UserState = {
@@ -41,8 +38,6 @@ type UserState = {
 
 const EMPTY_COUNTS: Counts = {
   posts: 0,
-  followers: 0,
-  following: 0,
 };
 
 const BASE_PROFILE: Omit<Profile, "handle"> & { handle?: string } = {
@@ -61,7 +56,6 @@ export function useProfile(handle: string) {
   const [user, setUser] = useState<UserState>(null);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Counts>(EMPTY_COUNTS);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [targetUid, setTargetUid] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,7 +78,6 @@ export function useProfile(handle: string) {
           setTargetUid(null);
           setUser(null);
           setCounts(EMPTY_COUNTS);
-          setIsFollowing(false);
           return;
         }
 
@@ -93,15 +86,9 @@ export function useProfile(handle: string) {
 
         setTargetUid(docSnap.id);
 
-        setCounts(
-          d.counts
-            ? {
-                posts: d.counts.posts ?? 0,
-                followers: d.counts.followers ?? 0,
-                following: d.counts.following ?? 0,
-              }
-            : EMPTY_COUNTS
-        );
+        setCounts({
+          posts: d.counts?.posts ?? 0,
+        });
 
         const rawPlan = d.plan;
         const plan: "free" | "pro" =
@@ -126,31 +113,6 @@ export function useProfile(handle: string) {
     };
   }, [decodedHandle]);
 
-  useEffect(() => {
-    if (!targetUid) {
-      setIsFollowing(false);
-      return;
-    }
-
-    const me = auth.currentUser;
-    if (!me) {
-      setIsFollowing(false);
-      return;
-    }
-
-    let mounted = true;
-
-    getIsFollowing(targetUid)
-      .then((v) => {
-        if (mounted) setIsFollowing(v);
-      })
-      .catch(() => {});
-
-    return () => {
-      mounted = false;
-    };
-  }, [targetUid]);
-
   const profile: Profile = useMemo(() => {
     const u = user ?? {};
 
@@ -170,8 +132,6 @@ export function useProfile(handle: string) {
     profile,
     loading,
     counts,
-    isFollowing,
-    setIsFollowing,
     targetUid,
   };
 }

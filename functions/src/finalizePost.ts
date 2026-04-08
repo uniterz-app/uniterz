@@ -1,86 +1,8 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
 import { buildWindowCacheForUser } from "./stats/buildUserStatsWindowCache";
-import { calcPostResult } from "./calcPostResult";
-import { calcUpsetPoints } from "./calcUpsetPoints";
-import { calcStreakBonus } from "./calcStreakBonus";
+import { computePostSettlement } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
-
-function lerpByRange(
-  value: number,
-  min: number,
-  max: number,
-  start: number,
-  end: number
-) {
-  if (value <= min) return start;
-  if (value >= max) return end;
-  const t = (value - min) / (max - min);
-  return start + (end - start) * t;
-}
-
-function calcDiffPointsGradient(diffError: number) {
-  if (diffError <= 0) return 4;
-  if (diffError <= 3) return lerpByRange(diffError, 0, 3, 4, 3);
-  if (diffError <= 6) return lerpByRange(diffError, 3, 6, 3, 2);
-  if (diffError <= 10) return lerpByRange(diffError, 6, 10, 2, 1);
-  if (diffError <= 14) return lerpByRange(diffError, 10, 14, 1, 0);
-  return 0;
-}
-
-function calcPointsV3({
-  predHome,
-  predAway,
-  finalHome,
-  finalAway,
-}: {
-  predHome: number;
-  predAway: number;
-  finalHome: number;
-  finalAway: number;
-}) {
-  const finalDiff = finalHome - finalAway;
-  const predDiff = predHome - predAway;
-
-  const winnerCorrect =
-    (finalDiff > 0 && predDiff > 0) || (finalDiff < 0 && predDiff < 0);
-
-  const diffError = Math.abs(finalDiff - predDiff);
-  const totalError = Math.abs((finalHome + finalAway) - (predHome + predAway));
-
-  if (!winnerCorrect) {
-    return {
-      points: 0,
-      basePoints: 0,
-      winnerCorrect: false,
-      winPoints: 0,
-      diffPoints: 0,
-      totalPoints: 0,
-      diffError,
-      totalError,
-    };
-  }
-
-  const winPoints = 4;
-  const diffPoints = calcDiffPointsGradient(diffError);
-
-  let totalPoints = 0;
-  if (totalError <= 3) totalPoints = 2;
-  else if (totalError <= 7) totalPoints = 1;
-
-  const basePoints = winPoints + diffPoints + totalPoints; // max 10
-
-  return {
-    points: basePoints,
-    basePoints,
-    winnerCorrect: true,
-    winPoints,
-    diffPoints,
-    totalPoints,
-    diffError,
-    totalError,
-  };
-}
 
 export async function finalizePost({
   postDoc,
@@ -106,51 +28,28 @@ export async function finalizePost({
 
   const final = { home: game.homeScore!, away: game.awayScore! };
 
-  const result = calcPostResult({
-    prediction: p.prediction,
-    final,
+  const {
+    totalPoints,
+    result,
+    baseScore,
+    upsetPoints,
+    upsetBonus,
+    streakBonus,
+    activeWinStreak,
+  } = computePostSettlement({
+    p,
+    game: {
+      homeScore: final.home,
+      awayScore: final.away,
+      league: game.league,
+    },
     market,
     hadUpsetGame,
-    league: game.league,
+    streakResultMap,
   });
-
-  // 従来の upset 指標
-  const upsetPoints = result.upsetHit
-    ? calcUpsetPoints(market.majorityRatio)
-    : 0;
-
-  // 総合得点用ボーナス
-  const upsetBonus = result.upsetHit ? 2 : 0;
-
-  const predHome = p.prediction?.score?.home;
-  const predAway = p.prediction?.score?.away;
-  const canScore = Number.isFinite(predHome) && Number.isFinite(predAway);
-
-  const baseScore = canScore
-    ? calcPointsV3({
-        predHome,
-        predAway,
-        finalHome: final.home,
-        finalAway: final.away,
-      })
-    : {
-        points: 0,
-        basePoints: 0,
-        winnerCorrect: false,
-        winPoints: 0,
-        diffPoints: 0,
-        totalPoints: 0,
-        diffError: null,
-        totalError: null,
-      };
-
-  const streakInfo = p.authorUid ? streakResultMap.get(p.authorUid) : undefined;
-  const activeWinStreak = streakInfo?.activeWinStreak ?? 0;
-  const streakBonus = calcStreakBonus(activeWinStreak);
 
   const countsForRanking = game?.countsForRanking !== false;
 
-  const totalPoints = baseScore.basePoints + upsetBonus + streakBonus;
   const now = Timestamp.now();
 
   batch.update(postDoc.ref, {

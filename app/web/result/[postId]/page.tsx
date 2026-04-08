@@ -8,6 +8,10 @@ import { auth, db } from "@/lib/firebase";
 import ResultDetail from "@/app/component/result/ResultDetail";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import {
+  parseGamePointsDistributionV1,
+  type GamePointsDistributionV1,
+} from "@/lib/results/gamePointsDistribution";
 
 export default function WebResultPostPage() {
   const params = useParams();
@@ -21,6 +25,8 @@ export default function WebResultPostPage() {
     drawRate?: number;
     total?: number;
   } | null>(null);
+  const [pointsDistribution, setPointsDistribution] =
+    useState<GamePointsDistributionV1 | null>(null);
   const [loading, setLoading] = useState(true);
 
   const { language } = useUserLanguage(uid);
@@ -61,6 +67,11 @@ export default function WebResultPostPage() {
             drawRate: gameData?.market?.drawRate ?? 0,
             total: gameData?.market?.total ?? 0,
           });
+          setPointsDistribution(
+            parseGamePointsDistributionV1(gameData?.pointsDistribution)
+          );
+        } else {
+          setPointsDistribution(null);
         }
 
         setLoading(false);
@@ -93,7 +104,12 @@ export default function WebResultPostPage() {
 
   return (
     <div className="px-4 py-4">
-      <ResultDetail post={post} market={market ?? undefined} language={language} />
+      <ResultDetail
+        post={post}
+        market={market ?? undefined}
+        pointsDistribution={pointsDistribution}
+        language={language}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import type { Language } from "@/lib/i18n/language";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
   post: PredictionPostV2;
@@ -126,18 +127,18 @@ export default function MobileResultStatsCard({
   const barStaggerMs = 80;
 
   const shell = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} p-4 text-white`
-    : "rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)] text-white";
+    ? `${MATCH_OVERLAY_GLASS_PANEL} relative overflow-hidden p-4 text-white`
+    : "relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)] text-white";
 
   const showUpsetBonus = upsetBonus > 1e-6;
   const showStreakBonus = streakBonus > 1e-6;
 
   return (
     <div className={[shell, minHeightClassName ?? "min-h-[280px]"].join(" ")}>
-      <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-white">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-black">
-          <LineChart className="h-3 w-3 text-orange-400" />
-        </div>
+      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <div className="relative z-1">
+      <div className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-white">
+        <LineChart className="h-5 w-5 shrink-0 text-orange-400" aria-hidden />
         <span>Performance Stats</span>
       </div>
 
@@ -150,8 +151,8 @@ export default function MobileResultStatsCard({
 
           return (
             <div key={r.key} className="flex items-center gap-2">
-              <div className="w-[6.5rem] min-w-0 shrink-0">
-                <span className="truncate text-[11px] font-semibold leading-tight">
+              <div className="w-29 min-w-0 shrink-0">
+                <span className="truncate text-[13px] font-semibold leading-tight">
                   {r.label}
                 </span>
               </div>
@@ -160,11 +161,11 @@ export default function MobileResultStatsCard({
                 ratio={ratio}
                 animateMs={barAnimateMs}
                 delayMs={index * barStaggerMs}
-                size="sm"
+                size="md"
               />
 
               <div
-                className={`w-10 shrink-0 text-right text-[11px] ${resultStatsMetricNumClass}`}
+                className={`w-11 shrink-0 text-right text-[13px] ${resultStatsMetricNumClass}`}
               >
                 {display}
               </div>
@@ -210,7 +211,7 @@ export default function MobileResultStatsCard({
 
       <div className="mt-3 space-y-1.5">
         {rows.map((r) => (
-          <div key={`${r.key}-desc`} className="text-[10px] leading-snug">
+          <div key={`${r.key}-desc`} className="text-[11px] leading-snug">
             <span className="font-semibold text-white/80">{r.label}：</span>
             <span className="text-white/55">{r.desc}</span>
           </div>
@@ -220,12 +221,13 @@ export default function MobileResultStatsCard({
       <div className="mt-3 border-t border-white/10 pt-2.5 text-center">
         <Link
           href="/mobile/help"
-          className="text-[10px] text-cyan-300 underline decoration-cyan-400/60 underline-offset-2 hover:text-cyan-200"
+          className="text-[11px] text-cyan-300 underline decoration-cyan-400/60 underline-offset-2 hover:text-cyan-200"
         >
           {isEn
             ? "See scoring logic on the Help page"
             : "得点の計算方法はヘルプページを参照"}
         </Link>
+      </div>
       </div>
     </div>
   );

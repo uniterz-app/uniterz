@@ -28,7 +28,7 @@ export default function WebOrMobileSplash({
 
   if (isWeb) {
     return (
-      <AuthGate>
+      <AuthGate platform="web">
         <SplashWrapper>
           <div id="app-root">{children}</div>
           <NavBar />
@@ -38,9 +38,11 @@ export default function WebOrMobileSplash({
   }
 
   return (
-    <SplashWrapper>
-      <div id="app-root">{children}</div>
-      <NavBar />
-    </SplashWrapper>
+    <AuthGate platform="mobile">
+      <SplashWrapper>
+        <div id="app-root">{children}</div>
+        <NavBar />
+      </SplashWrapper>
+    </AuthGate>
   );
 }

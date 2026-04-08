@@ -1,36 +1,65 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
-export default function AuthGate({ children }: { children: React.ReactNode }) {
-  const { status, fUser } = useFirebaseUser();
+function gateSplash() {
+  return (
+    <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
+      <div className="mt-27 ml-4 animate-pulse text-sm text-white/80">
+        Loading...
+      </div>
+    </div>
+  );
+}
+
+function isWebPublicPath(pathname: string | null): boolean {
+  if (!pathname?.startsWith("/web")) return false;
+  if (pathname === "/web/login" || pathname === "/web/signup") return true;
+  if (pathname.startsWith("/web/reset")) return true;
+  return false;
+}
+
+function isMobilePublicPath(pathname: string | null): boolean {
+  if (!pathname?.startsWith("/mobile")) return false;
+  if (pathname === "/mobile/login" || pathname === "/mobile/signup") return true;
+  if (pathname.startsWith("/mobile/reset")) return true;
+  return false;
+}
+
+type AuthGateProps = {
+  children: React.ReactNode;
+  platform: "web" | "mobile";
+};
+
+/**
+ * /web/* /mobile/* のうち、ログイン不要なのは login / signup / reset のみ。
+ * 未ログインは各プラットフォームの LP へ送る。
+ */
+export default function AuthGate({ children, platform }: AuthGateProps) {
+  const { status } = useFirebaseUser();
   const pathname = usePathname();
   const router = useRouter();
 
-  const [handle, setHandle] = useState<string | null>(null);
+  const isPublic =
+    platform === "web"
+      ? isWebPublicPath(pathname)
+      : isMobilePublicPath(pathname);
 
-  const isAuthPage =
-    pathname === "/mobile/login" || pathname === "/mobile/signup";
+  const lpHref = platform === "web" ? "/lp" : "/mobile/lp";
 
-  const isDesktop =
-    typeof window !== "undefined" && window.innerWidth >= 768;
+  const mustBlockForGuest = status === "guest" && !isPublic;
+  const blocking = status === "loading" || mustBlockForGuest;
 
-  /* ---- handle 読み込み ---- */
   useEffect(() => {
-    if (!fUser) return;
+    if (status !== "guest" || isPublic) return;
+    router.replace(lpHref);
+  }, [status, isPublic, lpHref, router]);
 
-    const load = async () => {
-      const snap = await getDoc(doc(db, "users", fUser.uid));
-      const h = snap.data()?.handle || snap.data()?.slug || null;
-      setHandle(h);
-    };
-
-    load();
-  }, [fUser]);
+  if (blocking) {
+    return gateSplash();
+  }
 
   return <>{children}</>;
 }

@@ -64,7 +64,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
           bio: "",
           photoURL: user.photoURL ?? "",
           createdAt: serverTimestamp(),
-          counts: { followers: 0, following: 0, posts: 0 },
+          counts: { posts: 0 },
         },
         { merge: true }
       );

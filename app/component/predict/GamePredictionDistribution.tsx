@@ -7,7 +7,6 @@ import { db } from "@/lib/firebase";
 import DonutChart from "./DonutChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { auth } from "@/lib/firebase";
-import { PieChart } from "lucide-react";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
@@ -185,10 +184,7 @@ export default function GamePredictionDistribution({
   if (variant === "predictForm") {
     return (
       <div className="text-white">
-        <div className="mb-3 flex items-center justify-center gap-2 md:mb-4">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-black">
-            <PieChart className="h-3 w-3 text-orange-400" />
-          </div>
+        <div className="mb-3 flex items-center justify-center md:mb-4">
           <span className="text-sm font-semibold md:text-base">
             {isEn ? "Market bias" : "市場の偏り"}
           </span>

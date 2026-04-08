@@ -10,6 +10,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
+import RankingScrambleText from "@/app/component/rankings/RankingScrambleText";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
   rank: number | null;
@@ -20,8 +22,16 @@ type Props = {
   handle?: string | null;
   totalPosts?: number;
   loading?: boolean;
+  /** 一覧はあるが自分順位・数値だけ未取得のときの解読風演出 */
+  statsScramble?: boolean;
   language?: Language;
 };
+
+function scrambleValueLength(metric: MobileMetric): number {
+  if (metric === "winRate") return 4;
+  if (metric === "streak") return 2;
+  return 7;
+}
 
 function formatValue(metric: MobileMetric, value: number) {
   if (metric === "winRate") return `${Math.round(value)}%`;
@@ -68,6 +78,23 @@ const CARD_SHELL = {
 } as const;
 
 const numClass = summaryMetricNumClass;
+
+/** ResultCardReveal と同系：ブラー段階解除＋初回エッジ発光 */
+const MY_RANK_ENTER_EASE = [0.22, 1, 0.36, 1] as const;
+const MY_RANK_ENTER_DURATION = 0.5;
+const MY_RANK_BLUR_DURATION = 0.88;
+const MY_RANK_BLUR_KEYFRAMES = [
+  "blur(22px) brightness(0.88) saturate(0.82)",
+  "blur(14px) brightness(0.93) saturate(0.9)",
+  "blur(7px) brightness(0.97) saturate(0.96)",
+  "blur(2px) brightness(0.99) saturate(0.99)",
+  "blur(0px) brightness(1) saturate(1)",
+] as const;
+const MY_RANK_BLUR_TIMES = [0, 0.22, 0.42, 0.64, 1] as const;
+const MY_RANK_EDGE_GLOW_INITIAL =
+  "0 0 0 1px rgba(186,230,253,0.48), 0 0 36px rgba(34,211,238,0.4), 0 0 72px rgba(56,189,248,0.16), 0 0 100px rgba(14,165,233,0.07)";
+const MY_RANK_EDGE_GLOW_CLEAR =
+  "0 0 0 0px rgba(0,0,0,0), 0 0 0px rgba(0,0,0,0), 0 0 0px rgba(0,0,0,0), 0 0 0px rgba(0,0,0,0)";
 
 const identityEase: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
 /** アバター・名前フェード */
@@ -118,11 +145,13 @@ export default function MyRankCard({
   handle,
   totalPosts,
   loading = false,
+  statsScramble = false,
   language = "ja",
 }: Props) {
   const reduceMotion = useReducedMotion();
   const ready = !loading;
-  const rankStyle = getRankStyle(rank, loading);
+  const rankStyle = getRankStyle(rank, loading || statsScramble);
+  const showScramble = statsScramble && !loading && reduceMotion !== true;
 
   const [avatarMediaOk, setAvatarMediaOk] = useState(false);
   const avatarFadeReady = avatarMediaOk;
@@ -166,23 +195,33 @@ export default function MyRankCard({
     rank ?? 0,
     700,
     0,
-    ready && showSideColumns && rank != null
+    ready && showSideColumns && rank != null && !statsScramble
   );
 
   const valueCount = useRankCountUp(
     value,
     720,
     valueDecimals,
-    ready && showSideColumns
+    ready && showSideColumns && !statsScramble
   );
 
   if (reduceMotion === true) {
     return (
       <div className="px-3 pt-3">
         <div
-          className="relative flex items-center justify-between rounded-[18px] border px-4 py-3"
+          className="relative overflow-hidden rounded-[18px] border px-4 py-3"
           style={CARD_SHELL}
+          aria-busy={statsScramble || undefined}
         >
+          <ShellGridOverlay roundedClassName="rounded-[18px]" />
+          {statsScramble && !loading && (
+            <span className="sr-only">
+              {language === "en"
+                ? "Loading your rank and stats"
+                : "順位とスコアを読み込み中"}
+            </span>
+          )}
+          <div className="relative z-1 flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <RankingsAvatarCircle
               photoURL={photoURL}
@@ -224,7 +263,13 @@ export default function MyRankCard({
                 textShadow: rankStyle.textShadow,
               }}
             >
-              {loading ? "--" : rank ? `#${rank}` : "-"}
+              {loading
+                ? "--"
+                : statsScramble
+                  ? "#000"
+                  : rank
+                    ? `#${rank}`
+                    : "-"}
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -235,6 +280,14 @@ export default function MyRankCard({
                 )}
               >
                 --
+              </div>
+            ) : statsScramble ? (
+              <div
+                className={[numClass, "text-[17px] leading-none text-cyan-200/55"].join(
+                  " "
+                )}
+              >
+                000
               </div>
             ) : metric === "streak" ? (
               <div
@@ -275,8 +328,9 @@ export default function MyRankCard({
               </div>
             )}
           </div>
+          </div>
           <div
-            className="pointer-events-none absolute inset-0 rounded-[18px]"
+            className="pointer-events-none absolute inset-0 z-2 rounded-[18px]"
             style={{ boxShadow: "0 0 40px rgba(0,255,255,0.06)" }}
           />
         </div>
@@ -286,6 +340,15 @@ export default function MyRankCard({
 
   const centerContent = loading ? (
     "--"
+  ) : showScramble ? (
+    <span className="inline-flex items-baseline gap-px">
+      <span>#</span>
+      <RankingScrambleText
+        active
+        length={3}
+        className="inline-block min-w-[2.25ch] text-left tracking-tight text-cyan-200/75"
+      />
+    </span>
   ) : rank == null ? (
     "-"
   ) : (
@@ -293,10 +356,43 @@ export default function MyRankCard({
   );
 
   return (
-    <div className="overflow-visible px-3 pt-3">
+    <motion.div
+      key={`my-rank-reveal-${metric}`}
+      className="overflow-visible px-3 pt-3"
+      initial={{
+        opacity: 0,
+        y: 22,
+        filter: MY_RANK_BLUR_KEYFRAMES[0],
+        boxShadow: MY_RANK_EDGE_GLOW_INITIAL,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        filter: [...MY_RANK_BLUR_KEYFRAMES],
+        boxShadow: MY_RANK_EDGE_GLOW_CLEAR,
+      }}
+      transition={{
+        opacity: { duration: MY_RANK_ENTER_DURATION, ease: MY_RANK_ENTER_EASE },
+        y: { duration: MY_RANK_ENTER_DURATION + 0.04, ease: MY_RANK_ENTER_EASE },
+        filter: {
+          duration: MY_RANK_BLUR_DURATION,
+          ease: "linear",
+          times: [...MY_RANK_BLUR_TIMES],
+        },
+        boxShadow: { duration: 0.68, ease: MY_RANK_ENTER_EASE },
+      }}
+    >
+      {statsScramble && !loading && (
+        <span className="sr-only">
+          {language === "en"
+            ? "Loading your rank and stats"
+            : "順位とスコアを読み込み中"}
+        </span>
+      )}
       <motion.div
         key={metric}
-        className="relative flex items-center justify-between rounded-[18px] border px-4 py-3 will-change-[clip-path]"
+        className="relative overflow-hidden rounded-[18px] border px-4 py-3 will-change-[clip-path,filter]"
+        aria-busy={statsScramble || undefined}
         style={{
           ...CARD_SHELL,
           transformOrigin: "50% 50%",
@@ -316,6 +412,8 @@ export default function MyRankCard({
           ease: [0.2, 0.88, 0.32, 1],
         }}
       >
+        <ShellGridOverlay roundedClassName="rounded-[18px]" />
+        <div className="relative z-1 flex items-center justify-between">
         <motion.div
           key={`id-${metric}`}
           className="flex min-w-0 items-center gap-3"
@@ -396,6 +494,51 @@ export default function MyRankCard({
             >
               --
             </div>
+          ) : showScramble ? (
+            metric === "streak" ? (
+              <div
+                className={[
+                  "inline-flex items-baseline justify-end gap-1 leading-none",
+                  jp.className,
+                ].join(" ")}
+                style={{
+                  color: "rgba(255,255,255,0.9)",
+                  textShadow: "0 0 10px rgba(255,255,255,0.08)",
+                }}
+              >
+                <span className={[numClass, "text-[17px] tabular-nums"].join(" ")}>
+                  <RankingScrambleText
+                    active
+                    length={scrambleValueLength(metric)}
+                  />
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    letterSpacing: "0.03em",
+                    transform: "translateY(-1px)",
+                  }}
+                >
+                  {streakShortLabel(language)}
+                </span>
+              </div>
+            ) : (
+              <div
+                className={[numClass, "text-[17px] leading-none text-cyan-200/75"].join(
+                  " "
+                )}
+              >
+                <span className="inline-flex items-baseline gap-0.5">
+                  <RankingScrambleText
+                    active
+                    length={scrambleValueLength(metric)}
+                  />
+                  {metric === "winRate" ? (
+                    <span className="text-[13px] text-white/45">%</span>
+                  ) : null}
+                </span>
+              </div>
+            )
           ) : metric === "streak" ? (
             <div
               className={[
@@ -429,18 +572,22 @@ export default function MyRankCard({
               {formatValue(metric, valueCount)}
             </div>
           )}
-          {metric === "winRate" && totalPosts !== undefined && !loading && (
+          {metric === "winRate" &&
+            totalPosts !== undefined &&
+            !loading &&
+            !statsScramble && (
             <div className="text-[11px] text-white/40">
               {postsLabel(language)} {totalPosts}
             </div>
           )}
         </motion.div>
+        </div>
 
         <div
-          className="pointer-events-none absolute inset-0 rounded-[18px]"
+          className="pointer-events-none absolute inset-0 z-2 rounded-[18px]"
           style={{ boxShadow: "0 0 40px rgba(0,255,255,0.06)" }}
         />
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

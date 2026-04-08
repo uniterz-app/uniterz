@@ -22,6 +22,12 @@ import {
 } from "@/lib/stats/thresholdsV2";
 import SummaryCardReveal from "./SummaryCardReveal";
 import { summaryMetricNumClass } from "@/lib/fonts";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import {
+  summaryCardShadowDesktopClass,
+  summaryCardShadowLgClass,
+  summaryCardShadowSmClass,
+} from "@/lib/ui/profileCardEdgeGlow";
 import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
 
 export type SummaryDataV2 = {
@@ -488,23 +494,38 @@ function Card({
   compactShell?: boolean;
 }) {
   const shell = compactShell
-    ? "min-w-0 rounded-lg md:rounded-xl border border-white/15 md:border-white/10 bg-[#050814]/80 text-center shadow-[0_2px_10px_rgba(0,0,0,0.28)] md:shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
-    : "min-w-0 rounded-xl border border-white/10 bg-[#050814]/80 text-center shadow-[0_10px_30px_rgba(0,0,0,0.45)]";
+    ? [
+        "relative min-w-0 overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 text-center",
+        summaryCardShadowSmClass,
+        "md:rounded-xl md:border-white/10",
+        summaryCardShadowLgClass,
+      ].join(" ")
+    : [
+        "relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 text-center",
+        summaryCardShadowDesktopClass,
+      ].join(" ");
 
   return (
     <div className={`${shell} ${padCls}`}>
       <div
-        className={`flex items-center justify-center gap-1 text-white/85 md:gap-1.5 ${compactShell ? "mb-1 md:mb-1.5" : "mb-1"}`}
-      >
-        {icon && <span className="inline-flex">{icon}</span>}
-        <span className={`${labelCls} font-semibold tracking-[0.2px]`}>
-          {label}
-        </span>
-      </div>
+        className="pointer-events-none absolute inset-0 opacity-[0.36]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="relative z-1">
+        <div
+          className={`flex items-center justify-center gap-1 text-white/85 md:gap-1.5 ${compactShell ? "mb-1 md:mb-1.5" : "mb-1"}`}
+        >
+          {icon && <span className="inline-flex">{icon}</span>}
+          <span className={`${labelCls} font-semibold tracking-[0.2px]`}>
+            {label}
+          </span>
+        </div>
 
-      <div className="flex items-center justify-center truncate leading-none">
-        <span className={`${valueCls} truncate`}>{value}</span>
-        {afterIcon}
+        <div className="flex items-center justify-center truncate leading-none">
+          <span className={`${valueCls} truncate`}>{value}</span>
+          {afterIcon}
+        </div>
       </div>
     </div>
   );

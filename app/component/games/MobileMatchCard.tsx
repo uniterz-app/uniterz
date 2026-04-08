@@ -128,7 +128,7 @@ export default function MobileMatchCard(props: MatchCardProps) {
             fill={homeColor}
             stroke="#fff"
           />
-          <div className="mt-1 text-[12px] text-center leading-tight font-bold">
+          <div className="mt-1 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, home.name, homeL1, homeL2)}
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function MobileMatchCard(props: MatchCardProps) {
             fill={awayColor}
             stroke="#fff"
           />
-          <div className="mt-1 text-[12px] text-center leading-tight font-bold">
+          <div className="mt-1 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, away.name, awayL1, awayL2)}
           </div>
         </div>

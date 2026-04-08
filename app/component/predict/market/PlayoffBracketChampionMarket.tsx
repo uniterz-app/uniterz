@@ -7,6 +7,7 @@ import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import type { Language } from "@/lib/i18n/language";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type MarketCountMap = Record<string, number>;
 
@@ -101,15 +102,27 @@ export default function PlayoffBracketChampionMarket({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
-        {isEn ? "No data available" : "データがありません"}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+        <div
+          className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+          style={PROFILE_SHELL_GRID_STYLE}
+          aria-hidden
+        />
+        <div className="relative z-1">
+          {isEn ? "No data available" : "データがありません"}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.55)]">
-      <div>
+    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.55)]">
+      <div
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="relative z-1">
         {visibleRows.map((row, index) => {
           const s = getRowStyle(index);
           const ratio = totalEntries > 0 ? row.pct / 100 : 0;

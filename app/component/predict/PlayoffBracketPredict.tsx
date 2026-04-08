@@ -127,10 +127,7 @@ export default function PlayoffBracketPredict() {
   async function handleSubmit() {
     const me = auth.currentUser;
 
-    if (!me) {
-      alert(t.alertLoginRequired);
-      return;
-    }
+    if (!me) return;
 
     if (!isComplete || submitting) return;
 

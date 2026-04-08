@@ -12,27 +12,21 @@ export const topCard: Variants = {
 };
 
 export const restContainer: Variants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 1 },
   show: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      when: "beforeChildren",
-    },
   },
 };
 
 export const restItem: Variants = {
-  hidden: { opacity: 0, y: 20, scale: 0.988 },
-  show: {
+  hidden: { opacity: 0, y: 10 },
+  show: (i: number = 0) => ({
     opacity: 1,
     y: 0,
-    scale: 1,
     transition: {
-      type: "spring",
-      stiffness: 82,
-      damping: 18,
-      mass: 0.92,
+      duration: 0.34,
+      delay: 0.08 + Math.min(i * 0.07, 0.45),
+      ease: [0.22, 1, 0.36, 1],
     },
-  },
+  }),
 };

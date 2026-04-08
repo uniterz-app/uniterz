@@ -8,6 +8,7 @@ const fetchGameContext_1 = require("./fetchGameContext");
 const marketCalculator_1 = require("./marketCalculator");
 const upsetJudge_1 = require("./upsetJudge");
 const finalizePost_1 = require("./finalizePost");
+const aggregateGamePointsDistribution_1 = require("./aggregateGamePointsDistribution");
 const updateUserStreak_1 = require("./updateUserStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
 const updateTeamSeasonRecord_1 = require("./updateTeamSeasonRecord");
@@ -123,6 +124,17 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             streakResultMap,
         });
     }
+    const pointsDistribution = (0, aggregateGamePointsDistribution_1.aggregateGamePointsDistributionFromPostsSnap)({
+        postsSnap,
+        game: {
+            homeScore: game.homeScore,
+            awayScore: game.awayScore,
+            league: game.league,
+        },
+        market,
+        hadUpsetGame,
+        streakResultMap,
+    });
     await batch.commit();
     await Promise.all(userUpdateTasks);
     /* ===== ⑤ finalize game ===== */
@@ -134,6 +146,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         }, { merge: true });
     }
     await db().doc(`games/${gameId}`).set({
+        pointsDistribution: Object.assign(Object.assign({}, pointsDistribution), { updatedAtMillis: Date.now() }),
         "game.status": "final",
         "game.finalScore": {
             home: game.homeScore,
