@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { alfa, jp } from "@/lib/fonts";
 import type { BracketLeaderboardRow } from "@/lib/leaderboards/useBracketLeaderboard";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
   row: BracketLeaderboardRow;
@@ -15,10 +16,10 @@ export default function BracketUserCard({ row, onClick }: Props) {
   const initial = displayName.charAt(0).toUpperCase();
   const handle = row.handle ?? null;
   const baseCardClass =
-    "relative flex items-center justify-between rounded-[14px] border px-3 py-2";
+    "relative overflow-hidden rounded-[14px] border px-3 py-2";
 
   const content = (
-    <>
+    <div className="relative z-10 flex items-center justify-between">
       <div className="flex min-w-0 items-center gap-2">
         <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/20 bg-black">
           {avatarUrl ? (
@@ -81,7 +82,7 @@ export default function BracketUserCard({ row, onClick }: Props) {
           {row.totalScore} pts
         </div>
       </div>
-    </>
+    </div>
   );
 
   const shellStyle = {
@@ -103,6 +104,7 @@ export default function BracketUserCard({ row, onClick }: Props) {
         ].join(" ")}
         style={shellStyle}
       >
+        <ShellGridOverlay roundedClassName="rounded-[14px]" />
         {content}
       </button>
     );
@@ -110,6 +112,7 @@ export default function BracketUserCard({ row, onClick }: Props) {
 
   return (
     <div className={baseCardClass} style={shellStyle}>
+      <ShellGridOverlay roundedClassName="rounded-[14px]" />
       {content}
     </div>
   );

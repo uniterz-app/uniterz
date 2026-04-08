@@ -23,6 +23,7 @@ export const onGameFinalV2 = onDocumentWritten(
     region: "asia-northeast1",
   },
   async (event) => {
+    const firestore = db();
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
     if (!after) return;
@@ -30,15 +31,11 @@ export const onGameFinalV2 = onDocumentWritten(
     const gameId = event.params.gameId;
 
     const becameFinal = !before?.final && !!after?.final;
-    const scoreChanged =
-      before?.homeScore !== after?.homeScore ||
-      before?.awayScore !== after?.awayScore;
-
-    if (!becameFinal && !scoreChanged) return;
+    if (!becameFinal) return;
 
     /* ===== ① context 取得 ===== */
     const ctx = await fetchGameContext({
-      db: db(),
+      db: firestore,
       gameId,
       after,
     });
@@ -64,13 +61,13 @@ export const onGameFinalV2 = onDocumentWritten(
 
     if (becameFinal) {
       streakResultMap = await updateUserStreak({
-        db: db(),
+        db: firestore,
         gameId,
         final: { home: game.homeScore, away: game.awayScore },
       });
 
       await updateTeamSeasonRecord({
-        db: db(),
+        db: firestore,
         league: game.league,
         homeTeamId: game.homeTeamId,
         awayTeamId: game.awayTeamId,
@@ -79,7 +76,7 @@ export const onGameFinalV2 = onDocumentWritten(
       });
 
       await updateTeamStats({
-        db: db(),
+        db: firestore,
         game: {
           ...game,
           homeRank,
@@ -96,22 +93,6 @@ export const onGameFinalV2 = onDocumentWritten(
     let hadUpsetGame = false;
 
     const market = marketCalculator(picks);
-
-    await db().doc(`games/${gameId}`).set(
-      {
-        market: {
-          homeCount: market.homeCount,
-          awayCount: market.awayCount,
-          drawCount: market.drawCount,
-          total: market.total,
-          homeRate: market.homeRate,
-          awayRate: market.awayRate,
-          majority: market.majoritySide,
-          majorityRatio: market.majorityRatio,
-        },
-      },
-      { merge: true }
-    );
 
     const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
 
@@ -132,23 +113,8 @@ export const onGameFinalV2 = onDocumentWritten(
 
     hadUpsetGame = upset.isUpsetGame;
 
-    if (upset.isUpsetGame && upset.meta) {
-      await db().doc(`games/${gameId}`).set(
-        {
-          upsetMeta: {
-            homeRank,
-            awayRank,
-            homeWins,
-            awayWins,
-            ...upset.meta,
-          },
-        },
-        { merge: true }
-      );
-    }
-
     /* ===== ④ finalize posts ===== */
-    const batch = db().batch();
+    const batch = firestore.batch();
     const userUpdateTasks: Promise<any>[] = [];
 
     for (const doc of postsSnap.docs) {
@@ -180,8 +146,43 @@ export const onGameFinalV2 = onDocumentWritten(
     await Promise.all(userUpdateTasks);
 
     /* ===== ⑤ finalize game ===== */
+    const gamePatch: Record<string, any> = {
+      market: {
+        homeCount: market.homeCount,
+        awayCount: market.awayCount,
+        drawCount: market.drawCount,
+        total: market.total,
+        homeRate: market.homeRate,
+        awayRate: market.awayRate,
+        majority: market.majoritySide,
+        majorityRatio: market.majorityRatio,
+      },
+      pointsDistribution: {
+        ...pointsDistribution,
+        updatedAtMillis: Date.now(),
+      },
+      "game.status": "final",
+      "game.finalScore": {
+        home: game.homeScore,
+        away: game.awayScore,
+      },
+      resultComputedAtV2: FieldValue.serverTimestamp(),
+    };
+
+    if (upset.isUpsetGame && upset.meta) {
+      gamePatch.upsetMeta = {
+        homeRank,
+        awayRank,
+        homeWins,
+        awayWins,
+        ...upset.meta,
+      };
+    }
+
+    await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
+
     if (becameFinal) {
-      await db().doc("trend_jobs/users").set(
+      await firestore.doc("trend_jobs/users").set(
         {
           needsRebuild: true,
           requestedAt: FieldValue.serverTimestamp(),
@@ -190,21 +191,5 @@ export const onGameFinalV2 = onDocumentWritten(
         { merge: true }
       );
     }
-
-    await db().doc(`games/${gameId}`).set(
-      {
-        pointsDistribution: {
-          ...pointsDistribution,
-          updatedAtMillis: Date.now(),
-        },
-        "game.status": "final",
-        "game.finalScore": {
-          home: game.homeScore,
-          away: game.awayScore,
-        },
-        resultComputedAtV2: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
   }
 );

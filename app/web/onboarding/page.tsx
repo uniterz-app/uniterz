@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import AuthBackdrop from "@/app/component/auth/AuthBackdrop";
 import OnboardingForm from "@/app/component/auth/OnboardingForm";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 export default function WebOnboardingPage() {
   const router = useRouter();
@@ -22,8 +21,7 @@ export default function WebOnboardingPage() {
         return;
       }
 
-      const snap = await getDoc(doc(db, "users", fUser.uid));
-      const data = snap.data() as any;
+      const data = (await getUserDocDataCached(fUser.uid)) as any;
 
       const hasHandle = Boolean(data?.handle || data?.slug);
       const hasLanguage = data?.language === "ja" || data?.language === "en";

@@ -5,8 +5,7 @@ import LoginForm from "@/app/component/auth/LoginForm";
 import AuthBackdrop from "@/app/component/auth/AuthBackdrop";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 export default function MobileLoginPage() {
   const { status, fUser } = useFirebaseUser();
@@ -21,10 +20,10 @@ export default function MobileLoginPage() {
     if (!fUser) return;
 
     const loadHandle = async () => {
-      const snap = await getDoc(doc(db, "users", fUser.uid));
-      const h = snap.data()?.handle || snap.data()?.slug;
+      const data = await getUserDocDataCached(fUser.uid);
+      const h = data?.handle || data?.slug;
       setHandle(h || null);
-      const lang = snap.data()?.language;
+      const lang = data?.language;
       setLanguage(lang === "ja" || lang === "en" ? lang : null);
     };
 

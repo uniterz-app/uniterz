@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 export default function ProSuccessPage({ plan }: { plan: "monthly" | "annual" }) {
   const router = useRouter();
@@ -17,8 +16,8 @@ export default function ProSuccessPage({ plan }: { plan: "monthly" | "annual" })
   if (!user) return;
 
   (async () => {
-    const snap = await getDoc(doc(db, "users", user.uid));
-    const h = snap.data()?.handle;
+    const data = await getUserDocDataCached(user.uid);
+    const h = data?.handle;
     if (h) setHandle(h);
   })();
 }, []);

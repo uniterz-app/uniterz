@@ -5,9 +5,10 @@ import { Camera, ArrowLeft } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Language = "ja" | "en";
 const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
@@ -35,9 +36,8 @@ export default function ProfileEditPage() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (snap.exists()) {
-        const d = snap.data() as any;
+      const d = (await getUserDocDataCached(user.uid)) as any;
+      if (d) {
         setName(d.displayName ?? "");
         setBio(d.bio ?? "");
         setCurrentPhotoURL(d.photoURL ?? null);

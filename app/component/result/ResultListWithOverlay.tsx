@@ -254,19 +254,11 @@ export default function ResultListWithOverlay({
 
   return (
     <LayoutGroup id="result-list">
-      <motion.div
+      <div
         className={[
           "space-y-6",
           openPostId ? "pointer-events-none" : "",
         ].join(" ")}
-        animate={{
-          scale: openPostId ? 0.988 : 1,
-          opacity: openPostId ? 0.94 : 1,
-        }}
-        transition={{
-          duration: 0.28,
-          ease: [0.22, 1, 0.36, 1],
-        }}
       >
         {grouped.map((day) => (
           <div key={day.dateLabel}>
@@ -351,97 +343,73 @@ export default function ResultListWithOverlay({
             {language === "en" ? "No more posts" : "これ以上ありません"}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {openPostId && selectedPost && (
-        <motion.div
+        <div
           key="result-overlay"
           className={[
             "fixed inset-0 overflow-hidden",
             isMobile ? "z-100000" : "z-99999",
           ].join(" ")}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{
-            duration: 0.2,
-            ease: [0.22, 1, 0.36, 1],
-          }}
         >
-          <div
-            className="absolute inset-0 z-0 bg-black/35 backdrop-blur-md pointer-events-auto"
-            onClick={close}
-          />
-
-          <div
-            className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
-            style={{
-              WebkitOverflowScrolling: "touch",
-              overscrollBehaviorY: "contain",
-              overscrollBehaviorX: "none",
-              touchAction: "pan-y",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
             <div
-              className={[
-                "mx-auto w-full overflow-x-hidden",
-                isMobile
-                  ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
-                  : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
-              ].join(" ")}
-            >
-              <motion.div
-                className="relative w-full overflow-x-hidden"
-                initial={{
-                  opacity: 0,
-                  y: 18,
-                  scale: 0.972,
-                  filter: "blur(10px)",
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                  filter: "blur(0px)",
-                }}
-                transition={{
-                  duration: 0.42,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label={language === "en" ? "Close" : "閉じる"}
-                  className="absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    close();
-                  }}
-                >
-                  <X size={18} strokeWidth={2.4} />
-                </button>
+              className="absolute inset-0 z-0 bg-black/35 backdrop-blur-md pointer-events-auto"
+              onClick={close}
+            />
 
-                {isMobile ? (
-                  <MobileResultDetail
-                    post={selectedPost}
-                    market={market ?? undefined}
-                    pointsDistribution={pointsDistribution}
-                    language={language}
-                    inOverlay
-                  />
-                ) : (
-                  <ResultDetail
-                    post={selectedPost}
-                    market={market ?? undefined}
-                    pointsDistribution={pointsDistribution}
-                    language={language}
-                    inOverlay
-                  />
-                )}
-              </motion.div>
+            <div
+              className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                overscrollBehaviorY: "contain",
+                overscrollBehaviorX: "none",
+                touchAction: "pan-y",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className={[
+                  "mx-auto w-full overflow-x-hidden",
+                  isMobile
+                    ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
+                    : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
+                ].join(" ")}
+              >
+                <div className="relative w-full overflow-x-hidden">
+                  <button
+                    type="button"
+                    aria-label={language === "en" ? "Close" : "閉じる"}
+                    className="absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      close();
+                    }}
+                  >
+                    <X size={18} strokeWidth={2.4} />
+                  </button>
+
+                  {isMobile ? (
+                    <MobileResultDetail
+                      post={selectedPost}
+                      market={market ?? undefined}
+                      pointsDistribution={pointsDistribution}
+                      language={language}
+                      inOverlay
+                    />
+                  ) : (
+                    <ResultDetail
+                      post={selectedPost}
+                      market={market ?? undefined}
+                      pointsDistribution={pointsDistribution}
+                      language={language}
+                      inOverlay
+                    />
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </motion.div>
+        </div>
       )}
     </LayoutGroup>
   );

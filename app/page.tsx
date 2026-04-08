@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 function EntrySplash() {
   return (
@@ -37,9 +36,9 @@ export default function Page() {
     setHandleResolved(false);
     let cancelled = false;
     (async () => {
-      const snap = await getDoc(doc(db, "users", fUser.uid));
+      const data = await getUserDocDataCached(fUser.uid);
       if (cancelled) return;
-      const h = snap.data()?.handle || snap.data()?.slug || null;
+      const h = data?.handle || data?.slug || null;
       setHandle(h);
       setHandleResolved(true);
     })();
