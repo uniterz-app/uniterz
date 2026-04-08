@@ -88,14 +88,21 @@ export default function RankingsMetricRow({
           className={[
             "relative z-10",
             "flex h-[40px] min-w-[120px] max-w-[56%] items-center justify-center",
-            "rounded-xl border border-white/14 bg-white/7 px-3",
+            "rounded-xl border bg-white/7 px-3",
             "text-sm font-black tracking-[0.04em] text-white",
             "shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]",
             "backdrop-blur-md sm:h-[46px] sm:min-w-[150px] sm:text-base",
             jp.className,
           ].join(" ")}
           style={{
-            textShadow: "0 0 14px rgba(0,255,255,0.10)",
+            borderColor: "rgba(57,255,136,0.72)",
+            textShadow: "0 0 10px rgba(57,255,136,0.18)",
+            boxShadow: [
+              "0 8px 24px rgba(0,0,0,0.22)",
+              "inset 0 1px 0 rgba(255,255,255,0.14)",
+              "0 0 0 1px rgba(57,255,136,0.22)",
+              "0 0 10px rgba(57,255,136,0.14)",
+            ].join(", "),
           }}
         >
           <span className="truncate">

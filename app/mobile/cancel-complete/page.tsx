@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 export default function CancelCompletePage() {
   const router = useRouter();
@@ -19,10 +18,8 @@ export default function CancelCompletePage() {
       const user = auth.currentUser;
       if (!user) return;
 
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (!snap.exists()) return;
-
-      const data = snap.data();
+      const data = await getUserDocDataCached(user.uid);
+      if (!data) return;
 
       if (data.handle) {
         setHandle(data.handle);

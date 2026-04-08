@@ -5,8 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type LoginFormProps = {
   variant?: "web" | "mobile"; // 渡されても良いし、未指定なら pathname で判定
@@ -58,8 +58,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
       );
       const user = userCredential.user;
 
-      const snap = await getDoc(doc(db, "users", user.uid));
-      const d = snap.data() as any;
+      const d = (await getUserDocDataCached(user.uid)) as any;
 
       const handle = d?.handle || d?.username;
       const hasLanguage = d?.language === "ja" || d?.language === "en";

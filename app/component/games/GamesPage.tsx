@@ -470,6 +470,7 @@ const isSwitchingDate = !!selected && loading;
         size={dense ? "md" : "lg"}
         visibleCount={visibleCount}
         autoScrollOnInit={false}
+        snapSelectOnScroll={isMobile}
         timeZone={dayTimeZone}
         isEn={isEn}
       />

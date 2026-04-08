@@ -11,6 +11,7 @@ type Props = {
   size?: "sm" | "md" | "lg";
   visibleCount?: number;
   autoScrollOnInit?: boolean;
+  snapSelectOnScroll?: boolean;
   timeZone: string;
   isEn?: boolean;
 };
@@ -29,6 +30,7 @@ export default function DayStrip({
   size = "lg",
   visibleCount,
   autoScrollOnInit = false,
+  snapSelectOnScroll = true,
   timeZone,
   isEn = false,
 }: Props) {
@@ -48,11 +50,16 @@ export default function DayStrip({
     const wrap = listRef.current;
     const el = selRef.current;
     const left = el.offsetLeft - wrap.clientWidth / 2 + el.clientWidth / 2;
+    scrollingByCode.current = true;
+    if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
 
     wrap.scrollTo({
       left,
       behavior: !didInit.current && !autoScrollOnInit ? "auto" : "smooth",
     });
+    window.setTimeout(() => {
+      scrollingByCode.current = false;
+    }, 280);
 
     didInit.current = true;
   }, [dates, selectedDate, autoScrollOnInit]);
@@ -96,6 +103,7 @@ export default function DayStrip({
   };
 
   useEffect(() => {
+    if (!snapSelectOnScroll) return;
     const wrap = listRef.current;
     if (!wrap) return;
 
@@ -110,7 +118,7 @@ export default function DayStrip({
       wrap.removeEventListener("scroll", onScroll);
       if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
     };
-  }, [dates]);
+  }, [dates, snapSelectOnScroll]);
 
   const sz = sizeMap[size];
   const gapPx = size === "lg" ? 12 : 8;
@@ -124,7 +132,7 @@ export default function DayStrip({
   return (
     <div
       ref={listRef}
-      className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} snap-x snap-mandatory`}
+      className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-mandatory" : ""}`}
     >
       <div className={`flex ${sz.gap} py-2`}>
         {dates.map((d, i) => {
@@ -142,7 +150,10 @@ export default function DayStrip({
           return (
             <div
               key={toDateKeyInTimeZone(d, timeZone)}
-              className="shrink-0 flex justify-center snap-center"
+              className={[
+                "shrink-0 flex justify-center",
+                snapSelectOnScroll ? "snap-center" : "",
+              ].join(" ")}
               style={basis}
             >
               <button
@@ -150,7 +161,15 @@ export default function DayStrip({
                   if (el) btnRefs.current[i] = el;
                   if (selected) selRef.current = el;
                 }}
-                onClick={() => onSelect(d)}
+                onClick={() => {
+                  // Click selection should win over scroll-snap callbacks.
+                  scrollingByCode.current = true;
+                  if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
+                  onSelect(d);
+                  window.setTimeout(() => {
+                    scrollingByCode.current = false;
+                  }, 280);
+                }}
                 className="flex flex-col items-center"
                 type="button"
               >

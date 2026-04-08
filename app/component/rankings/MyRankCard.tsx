@@ -10,7 +10,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
-import RankingScrambleText from "@/app/component/rankings/RankingScrambleText";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
@@ -26,12 +25,6 @@ type Props = {
   statsScramble?: boolean;
   language?: Language;
 };
-
-function scrambleValueLength(metric: MobileMetric): number {
-  if (metric === "winRate") return 4;
-  if (metric === "streak") return 2;
-  return 7;
-}
 
 function formatValue(metric: MobileMetric, value: number) {
   if (metric === "winRate") return `${Math.round(value)}%`;
@@ -151,7 +144,6 @@ export default function MyRankCard({
   const reduceMotion = useReducedMotion();
   const ready = !loading;
   const rankStyle = getRankStyle(rank, loading || statsScramble);
-  const showScramble = statsScramble && !loading && reduceMotion !== true;
 
   const [avatarMediaOk, setAvatarMediaOk] = useState(false);
   const avatarFadeReady = avatarMediaOk;
@@ -195,14 +187,14 @@ export default function MyRankCard({
     rank ?? 0,
     700,
     0,
-    ready && showSideColumns && rank != null && !statsScramble
+    ready && showSideColumns && rank != null
   );
 
   const valueCount = useRankCountUp(
     value,
     720,
     valueDecimals,
-    ready && showSideColumns && !statsScramble
+    ready && showSideColumns
   );
 
   if (reduceMotion === true) {
@@ -265,9 +257,7 @@ export default function MyRankCard({
             >
               {loading
                 ? "--"
-                : statsScramble
-                  ? "#000"
-                  : rank
+                : rank
                     ? `#${rank}`
                     : "-"}
             </div>
@@ -280,14 +270,6 @@ export default function MyRankCard({
                 )}
               >
                 --
-              </div>
-            ) : statsScramble ? (
-              <div
-                className={[numClass, "text-[17px] leading-none text-cyan-200/55"].join(
-                  " "
-                )}
-              >
-                000
               </div>
             ) : metric === "streak" ? (
               <div
@@ -340,15 +322,6 @@ export default function MyRankCard({
 
   const centerContent = loading ? (
     "--"
-  ) : showScramble ? (
-    <span className="inline-flex items-baseline gap-px">
-      <span>#</span>
-      <RankingScrambleText
-        active
-        length={3}
-        className="inline-block min-w-[2.25ch] text-left tracking-tight text-cyan-200/75"
-      />
-    </span>
   ) : rank == null ? (
     "-"
   ) : (
@@ -494,51 +467,6 @@ export default function MyRankCard({
             >
               --
             </div>
-          ) : showScramble ? (
-            metric === "streak" ? (
-              <div
-                className={[
-                  "inline-flex items-baseline justify-end gap-1 leading-none",
-                  jp.className,
-                ].join(" ")}
-                style={{
-                  color: "rgba(255,255,255,0.9)",
-                  textShadow: "0 0 10px rgba(255,255,255,0.08)",
-                }}
-              >
-                <span className={[numClass, "text-[17px] tabular-nums"].join(" ")}>
-                  <RankingScrambleText
-                    active
-                    length={scrambleValueLength(metric)}
-                  />
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    letterSpacing: "0.03em",
-                    transform: "translateY(-1px)",
-                  }}
-                >
-                  {streakShortLabel(language)}
-                </span>
-              </div>
-            ) : (
-              <div
-                className={[numClass, "text-[17px] leading-none text-cyan-200/75"].join(
-                  " "
-                )}
-              >
-                <span className="inline-flex items-baseline gap-0.5">
-                  <RankingScrambleText
-                    active
-                    length={scrambleValueLength(metric)}
-                  />
-                  {metric === "winRate" ? (
-                    <span className="text-[13px] text-white/45">%</span>
-                  ) : null}
-                </span>
-              </div>
-            )
           ) : metric === "streak" ? (
             <div
               className={[
@@ -574,8 +502,7 @@ export default function MyRankCard({
           )}
           {metric === "winRate" &&
             totalPosts !== undefined &&
-            !loading &&
-            !statsScramble && (
+            !loading && (
             <div className="text-[11px] text-white/40">
               {postsLabel(language)} {totalPosts}
             </div>

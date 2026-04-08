@@ -13,10 +13,10 @@ import {
 } from "@/lib/support/contactTypes";
 import { submitContact } from "@/lib/support/submitContact";
 
-import { storage, db } from "@/lib/firebase";
+import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { doc, getDoc } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Variant = "web" | "mobile";
 
@@ -42,8 +42,7 @@ export default function ContactForm({ variant }: { variant: Variant }) {
     if (!user?.uid) return;
 
     const fetchHandle = async () => {
-      const snap = await getDoc(doc(db, "users", user.uid));
-      const data = snap.data();
+      const data = await getUserDocDataCached(user.uid);
       setHandle(data?.handle ?? null);
     };
 

@@ -6,7 +6,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Language = "ja" | "en";
 
@@ -77,9 +78,8 @@ export default function ProfileEditSheet({
         setReady(false);
         return;
       }
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (snap.exists()) {
-        const d = snap.data() as Record<string, unknown>;
+      const d = (await getUserDocDataCached(user.uid)) as Record<string, unknown> | null;
+      if (d) {
         setName(typeof d.displayName === "string" ? d.displayName : "");
         setBio(typeof d.bio === "string" ? d.bio : "");
         setCurrentPhotoURL(typeof d.photoURL === "string" ? d.photoURL : null);

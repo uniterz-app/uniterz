@@ -9,9 +9,9 @@ import { Brain } from "lucide-react";
 import { useEffect, useLayoutEffect, useState, CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 import { PiChartBarFill } from "react-icons/pi";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Item = {
   href: string;
@@ -213,8 +213,8 @@ export default function NavBar() {
       }
 
       try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        const h = snap.data()?.handle || snap.data()?.slug;
+        const data = await getUserDocDataCached(user.uid);
+        const h = data?.handle || data?.slug;
         setMyHref(
           h ? `${prefix}/u/${encodeURIComponent(h)}` : `${prefix}/mypage`
         );

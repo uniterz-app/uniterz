@@ -193,15 +193,22 @@ export default function ResultPointsDistributionCard({
     margin: "0px 0px -12% 0px",
   });
 
-  const useSamplePeers = distribution == null;
-  const dist = useSamplePeers ? DUMMY_GAME_POINTS_DISTRIBUTION : distribution;
+  const isMatchFinal =
+    typeof post.result?.home === "number" && typeof post.result?.away === "number";
+  const useSamplePeers = isMatchFinal && distribution == null;
+  const dist = isMatchFinal
+    ? useSamplePeers
+      ? DUMMY_GAME_POINTS_DISTRIBUTION
+      : distribution
+    : null;
 
   const myScoreRaw = post.stats?.pointsV3;
   const myScore =
     typeof myScoreRaw === "number" && Number.isFinite(myScoreRaw) ? myScoreRaw : null;
 
   const dots = useMemo(
-    () => buildDotsFromDistribution(dist, myScore, compact ? 220 : 320),
+    () =>
+      dist ? buildDotsFromDistribution(dist, myScore, compact ? 220 : 320) : [],
     [dist, myScore, compact]
   );
 
@@ -216,8 +223,8 @@ export default function ResultPointsDistributionCard({
 
   const animMountKey = useMemo(
     () =>
-      `${dist.n}-${peerDots.length}-${myScore ?? "x"}-${compact ? "c" : "w"}`,
-    [dist.n, peerDots.length, myScore, compact]
+      `${dist?.n ?? "na"}-${peerDots.length}-${myScore ?? "x"}-${compact ? "c" : "w"}`,
+    [dist?.n, peerDots.length, myScore, compact]
   );
 
   const [axesReady, setAxesReady] = useState(false);
@@ -281,14 +288,20 @@ export default function ResultPointsDistributionCard({
       ].join(" ");
 
   const title = isEn ? "Score distribution" : "得点の分布";
-  const subtitle = useSamplePeers
+  const subtitle = !isMatchFinal
+    ? isEn
+      ? "Waiting for final score. Distribution stats will appear after settlement."
+      : "試合終了後に得点分布の統計が表示されます。"
+    : useSamplePeers
     ? isEn
       ? "Sample layout — real matches show aggregated scores from this game."
       : "表示イメージ用のサンプルです。本番はこの試合の集計が入ります。"
     : isEn
       ? "All scored posts for this match (same rules as your result)."
       : "この試合の採点済み予想の分布（あなたの得点と同じルール）";
-  const scoringNote = useSamplePeers
+  const scoringNote = !isMatchFinal
+    ? null
+    : useSamplePeers
     ? isEn
       ? "Chart vertical scale tops out at 10; higher scores are drawn at the ceiling."
       : "縦軸の表示上限は 10。それより高い得点はグラフ上端にまとめて表示します。"
@@ -313,27 +326,27 @@ export default function ResultPointsDistributionCard({
   const countDuration = compact ? 640 : 780;
   const countActive = statsInView;
   const nDisplay = useMetricCountUp(
-    dist.n,
+    dist?.n ?? 0,
     0,
-    countActive,
+    countActive && isMatchFinal,
     countDuration,
     !!reduceMotion,
     0
   );
-  const medianTarget = dist.median ?? 0;
+  const medianTarget = dist?.median ?? 0;
   const medianDisplay = useMetricCountUp(
     medianTarget,
     2,
-    countActive && dist.median != null,
+    countActive && dist?.median != null,
     countDuration,
     !!reduceMotion,
     compact ? 55 : 70
   );
-  const meanTarget = dist.mean ?? 0;
+  const meanTarget = dist?.mean ?? 0;
   const meanDisplay = useMetricCountUp(
     meanTarget,
     2,
-    countActive && dist.mean != null,
+    countActive && dist?.mean != null,
     countDuration,
     !!reduceMotion,
     compact ? 110 : 140
@@ -385,41 +398,37 @@ export default function ResultPointsDistributionCard({
         <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
           <span className="font-medium">{nLabel}:</span>
           <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
-            {nDisplay}
+            {isMatchFinal ? nDisplay : "--"}
           </span>
         </span>
-        {dist.median != null && (
-          <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
-            <span
-              className={[
-                "mb-px shrink-0 self-center rounded-full",
-                compact ? "h-[2px] w-3.5 sm:w-4" : "h-[2.5px] w-4 sm:w-[18px]",
-              ].join(" ")}
-              style={{ backgroundColor: MEDIAN_LEGEND_FILL }}
-              aria-hidden
-            />
-            <span className="font-medium">{medianLabel}:</span>
-            <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
-              {medianDisplay.toFixed(2)}
-            </span>
+        <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
+          <span
+            className={[
+              "mb-px shrink-0 self-center rounded-full",
+              compact ? "h-[2px] w-3.5 sm:w-4" : "h-[2.5px] w-4 sm:w-[18px]",
+            ].join(" ")}
+            style={{ backgroundColor: MEDIAN_LEGEND_FILL }}
+            aria-hidden
+          />
+          <span className="font-medium">{medianLabel}:</span>
+          <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
+            {isMatchFinal && dist?.median != null ? medianDisplay.toFixed(2) : "--"}
           </span>
-        )}
-        {dist.mean != null && (
-          <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
-            <span
-              className={[
-                "mb-px shrink-0 self-center rounded-full",
-                compact ? "h-[2px] w-3.5 sm:w-4" : "h-[2.5px] w-4 sm:w-[18px]",
-              ].join(" ")}
-              style={{ backgroundColor: MEAN_LEGEND_FILL }}
-              aria-hidden
-            />
-            <span className="font-medium">{meanLabel}:</span>
-            <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
-              {meanDisplay.toFixed(2)}
-            </span>
+        </span>
+        <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
+          <span
+            className={[
+              "mb-px shrink-0 self-center rounded-full",
+              compact ? "h-[2px] w-3.5 sm:w-4" : "h-[2.5px] w-4 sm:w-[18px]",
+            ].join(" ")}
+            style={{ backgroundColor: MEAN_LEGEND_FILL }}
+            aria-hidden
+          />
+          <span className="font-medium">{meanLabel}:</span>
+          <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
+            {isMatchFinal && dist?.mean != null ? meanDisplay.toFixed(2) : "--"}
           </span>
-        )}
+        </span>
       </div>
 
       <div
@@ -555,7 +564,7 @@ export default function ResultPointsDistributionCard({
             );
           })}
 
-          {dist.median != null && Number.isFinite(dist.median) && (
+          {dist?.median != null && Number.isFinite(dist.median) && (
             <motion.line
               x1={PAD_L}
               x2={CHART_W - PAD_R}
@@ -579,7 +588,7 @@ export default function ResultPointsDistributionCard({
               }}
             />
           )}
-          {dist.mean != null && Number.isFinite(dist.mean) && (
+          {dist?.mean != null && Number.isFinite(dist.mean) && (
             <motion.line
               x1={PAD_L}
               x2={CHART_W - PAD_R}
@@ -708,45 +717,49 @@ export default function ResultPointsDistributionCard({
           >
             {axisLabel}（{axisFoot}）
           </motion.text>
-        </svg>
+          </svg>
       </div>
 
-      <p className="mt-2 text-center text-[10px] leading-snug text-white/45 sm:text-[11px]">
-        {scoringNote}
-      </p>
+      {scoringNote && (
+        <p className="mt-2 text-center text-[10px] leading-snug text-white/45 sm:text-[11px]">
+          {scoringNote}
+        </p>
+      )}
 
-      <div
-        className={[
-          "mt-4 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1",
-          compact ? "mt-3" : "",
-        ].join(" ")}
-      >
-        <span className="inline-flex items-center gap-2">
-          <span
-            className={[
-              "shrink-0 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]",
-              compact ? "h-2.5 w-2.5" : "h-3 w-3",
-            ].join(" ")}
-            aria-hidden
-          />
-          <span className={`font-medium ${statsLabelClass}`}>{youLabel}:</span>
-        </span>
-        {myScore != null && (
-          <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
-            {myScore.toFixed(2)}
-            {myScore > SCORE_CHART_MAX + 1e-6 && (
-              <span
-                className={[
-                  "ml-1.5 font-normal text-white/50",
-                  compact ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm",
-                ].join(" ")}
-              >
-                {isEn ? "· on chart: 10+" : "· 図上は10+"}
-              </span>
-            )}
+      {isMatchFinal && dist && (
+        <div
+          className={[
+            "mt-4 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1",
+            compact ? "mt-3" : "",
+          ].join(" ")}
+        >
+          <span className="inline-flex items-center gap-2">
+            <span
+              className={[
+                "shrink-0 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]",
+                compact ? "h-2.5 w-2.5" : "h-3 w-3",
+              ].join(" ")}
+              aria-hidden
+            />
+            <span className={`font-medium ${statsLabelClass}`}>{youLabel}:</span>
           </span>
-        )}
-      </div>
+          {myScore != null && (
+            <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
+              {myScore.toFixed(2)}
+              {myScore > SCORE_CHART_MAX + 1e-6 && (
+                <span
+                  className={[
+                    "ml-1.5 font-normal text-white/50",
+                    compact ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm",
+                  ].join(" ")}
+                >
+                  {isEn ? "· on chart: 10+" : "· 図上は10+"}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+      )}
       </div>
     </div>
   );

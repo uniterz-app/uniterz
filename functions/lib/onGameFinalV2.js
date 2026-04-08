@@ -21,19 +21,18 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     region: "asia-northeast1",
 }, async (event) => {
     var _a, _b, _c, _d;
+    const firestore = db();
     const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
     const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
     if (!after)
         return;
     const gameId = event.params.gameId;
     const becameFinal = !(before === null || before === void 0 ? void 0 : before.final) && !!(after === null || after === void 0 ? void 0 : after.final);
-    const scoreChanged = (before === null || before === void 0 ? void 0 : before.homeScore) !== (after === null || after === void 0 ? void 0 : after.homeScore) ||
-        (before === null || before === void 0 ? void 0 : before.awayScore) !== (after === null || after === void 0 ? void 0 : after.awayScore);
-    if (!becameFinal && !scoreChanged)
+    if (!becameFinal)
         return;
     /* ===== ① context 取得 ===== */
     const ctx = await (0, fetchGameContext_1.fetchGameContext)({
-        db: db(),
+        db: firestore,
         gameId,
         after,
     });
@@ -48,12 +47,12 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     let streakResultMap = new Map();
     if (becameFinal) {
         streakResultMap = await (0, updateUserStreak_1.updateUserStreak)({
-            db: db(),
+            db: firestore,
             gameId,
             final: { home: game.homeScore, away: game.awayScore },
         });
         await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
-            db: db(),
+            db: firestore,
             league: game.league,
             homeTeamId: game.homeTeamId,
             awayTeamId: game.awayTeamId,
@@ -61,7 +60,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             awayScore: game.awayScore,
         });
         await (0, updateTeamStats_1.updateTeamStats)({
-            db: db(),
+            db: firestore,
             game: Object.assign(Object.assign({}, game), { homeRank,
                 awayRank }),
             homeConference,
@@ -73,18 +72,6 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     /* ===== ③ market / upset ===== */
     let hadUpsetGame = false;
     const market = (0, marketCalculator_1.marketCalculator)(picks);
-    await db().doc(`games/${gameId}`).set({
-        market: {
-            homeCount: market.homeCount,
-            awayCount: market.awayCount,
-            drawCount: market.drawCount,
-            total: market.total,
-            homeRate: market.homeRate,
-            awayRate: market.awayRate,
-            majority: market.majoritySide,
-            majorityRatio: market.majorityRatio,
-        },
-    }, { merge: true });
     const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
     const upset = (0, upsetJudge_1.upsetJudge)({
         market: {
@@ -101,16 +88,8 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         },
     });
     hadUpsetGame = upset.isUpsetGame;
-    if (upset.isUpsetGame && upset.meta) {
-        await db().doc(`games/${gameId}`).set({
-            upsetMeta: Object.assign({ homeRank,
-                awayRank,
-                homeWins,
-                awayWins }, upset.meta),
-        }, { merge: true });
-    }
     /* ===== ④ finalize posts ===== */
-    const batch = db().batch();
+    const batch = firestore.batch();
     const userUpdateTasks = [];
     for (const doc of postsSnap.docs) {
         await (0, finalizePost_1.finalizePost)({
@@ -138,14 +117,17 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     await batch.commit();
     await Promise.all(userUpdateTasks);
     /* ===== ⑤ finalize game ===== */
-    if (becameFinal) {
-        await db().doc("trend_jobs/users").set({
-            needsRebuild: true,
-            requestedAt: firestore_2.FieldValue.serverTimestamp(),
-            gameId,
-        }, { merge: true });
-    }
-    await db().doc(`games/${gameId}`).set({
+    const gamePatch = {
+        market: {
+            homeCount: market.homeCount,
+            awayCount: market.awayCount,
+            drawCount: market.drawCount,
+            total: market.total,
+            homeRate: market.homeRate,
+            awayRate: market.awayRate,
+            majority: market.majoritySide,
+            majorityRatio: market.majorityRatio,
+        },
         pointsDistribution: Object.assign(Object.assign({}, pointsDistribution), { updatedAtMillis: Date.now() }),
         "game.status": "final",
         "game.finalScore": {
@@ -153,6 +135,20 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             away: game.awayScore,
         },
         resultComputedAtV2: firestore_2.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    };
+    if (upset.isUpsetGame && upset.meta) {
+        gamePatch.upsetMeta = Object.assign({ homeRank,
+            awayRank,
+            homeWins,
+            awayWins }, upset.meta);
+    }
+    await firestore.doc(`games/${gameId}`).set(gamePatch, { merge: true });
+    if (becameFinal) {
+        await firestore.doc("trend_jobs/users").set({
+            needsRebuild: true,
+            requestedAt: firestore_2.FieldValue.serverTimestamp(),
+            gameId,
+        }, { merge: true });
+    }
 });
 //# sourceMappingURL=onGameFinalV2.js.map

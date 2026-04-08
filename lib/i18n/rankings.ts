@@ -26,7 +26,7 @@ export function upsetShortLabel(lang: Language): string {
 }
 
 export function streakShortLabel(lang: Language): string {
-  return lang === "en" ? "Win Streak" : "連勝";
+  return lang === "en" ? "Win Streak" : "連勝中";
 }
 
 export function postsLabel(lang: Language): string {

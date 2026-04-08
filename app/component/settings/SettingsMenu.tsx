@@ -31,15 +31,14 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   collection,
   getDocs,
-  getDoc,
   query,
   where,
   orderBy,
   limit,
-  doc,
 } from "firebase/firestore";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
 import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Variant = "mobile" | "web";
 type SettingsMenuProps = {
@@ -152,9 +151,9 @@ export default function SettingsMenu({
   useEffect(() => {
     if (!user?.uid) return;
     let alive = true;
-    getDoc(doc(db, "users", user.uid)).then((snap) => {
+    getUserDocDataCached(user.uid).then((data) => {
       if (!alive) return;
-      const p = snap.data()?.plan;
+      const p = data?.plan;
       setPlan(p === "pro" ? "pro" : "free");
     });
     return () => { alive = false; };

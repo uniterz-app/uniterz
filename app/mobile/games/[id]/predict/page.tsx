@@ -9,6 +9,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 const PredictionForm = dynamic(
   () => import("@/app/component/predict/PredictionFormV2"),
@@ -53,9 +54,8 @@ export default function Page() {
     if (!fUser?.uid) return;
     (async () => {
       try {
-        const snap = await getDoc(doc(db, "users", fUser.uid));
-        if (snap.exists()) {
-          const d = snap.data() as any;
+        const d = (await getUserDocDataCached(fUser.uid)) as any;
+        if (d) {
           setProfile({
             displayName: d.displayName ?? undefined,
             photoURL: d.photoURL ?? undefined,
