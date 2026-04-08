@@ -68,7 +68,9 @@ function getTeamUiColor(league: League, teamId?: string | null) {
 
 function getShortName(teamId?: string | null) {
   if (!teamId) return "TBD";
-  return TEAM_SHORT[teamId] ?? teamId.toUpperCase();
+  const raw = String(teamId).trim();
+  const normalized = raw.toLowerCase().replace(/\s+/g, "-");
+  return TEAM_SHORT[raw] ?? TEAM_SHORT[normalized] ?? raw.toUpperCase();
 }
 
 function isFourWins(wins?: number | string) {

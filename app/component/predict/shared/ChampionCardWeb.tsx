@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
@@ -11,6 +12,7 @@ type Props = {
   teamId?: string | null;
   league?: League;
   hitStatus?: ChampionCardHitStatus;
+  rouletteTeamIds?: string[];
 };
 
 const SCALE = 1.6;
@@ -20,7 +22,9 @@ const CARD_H = 54 * SCALE;
 
 function getShortName(teamId?: string | null) {
   if (!teamId) return "TBD";
-  return TEAM_SHORT[teamId] ?? teamId.toUpperCase();
+  const raw = String(teamId).trim();
+  const normalized = raw.toLowerCase().replace(/\s+/g, "-");
+  return TEAM_SHORT[raw] ?? TEAM_SHORT[normalized] ?? raw.toUpperCase();
 }
 
 function getHitColors(hitStatus: ChampionCardHitStatus) {
@@ -96,9 +100,49 @@ export default function ChampionCardWeb({
   teamId,
   league = "nba",
   hitStatus = "none",
+  rouletteTeamIds = [],
 }: Props) {
   const color = getTeamPrimaryColor(league, teamId);
-  const name = getShortName(teamId);
+  const [displayTeamId, setDisplayTeamId] = useState<string | null | undefined>(
+    teamId
+  );
+
+  const roulettePool = useMemo(() => {
+    const unique = Array.from(
+      new Set(
+        rouletteTeamIds
+          .map((id) => String(id ?? "").trim().toUpperCase())
+          .filter((id) => id.length > 0)
+      )
+    );
+    return unique;
+  }, [rouletteTeamIds]);
+
+  useEffect(() => {
+    const target = String(teamId ?? "").trim().toUpperCase();
+    if (!target || roulettePool.length === 0) {
+      setDisplayTeamId(teamId);
+      return;
+    }
+
+    const order = [...roulettePool].sort(() => Math.random() - 0.5);
+    let idx = 0;
+    setDisplayTeamId(order[0] ?? target);
+
+    const id = window.setInterval(() => {
+      idx += 1;
+      if (idx < order.length) {
+        setDisplayTeamId(order[idx]);
+        return;
+      }
+      window.clearInterval(id);
+      setDisplayTeamId(target);
+    }, 72);
+
+    return () => window.clearInterval(id);
+  }, [teamId, roulettePool]);
+
+  const name = getShortName(displayTeamId ?? teamId);
 
   return (
     <div

@@ -2,12 +2,33 @@
 "use client";
 
 import { Flame, CloudRain } from "lucide-react";
-import { Alfa_Slab_One } from "next/font/google";
+import { useEffect, useState } from "react";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { roundMetricDecimals } from "@/lib/format/metricDecimals";
+import { useInViewOnce } from "@/lib/hooks/useInViewOnce";
 
-const alfa = Alfa_Slab_One({
-  weight: "400",
-  subsets: ["latin"],
-});
+function useVisibleCountUp(target: number, enabled: boolean, duration = 700) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (!enabled) {
+      setValue(0);
+      return;
+    }
+    const start = performance.now();
+    let rafId = 0;
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      setValue(roundMetricDecimals(target * progress, 0));
+      if (progress < 1) rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [target, enabled, duration]);
+
+  return value;
+}
 
 type Props = {
   maxWinStreak: number;
@@ -17,25 +38,6 @@ type Props = {
   lastMaxLoseStreak?: number;
 };
 
-function buildComment(maxWin: number, maxLose: number): string {
-  if (maxWin >= 6 && maxWin > maxLose) {
-    return "大きな連勝を作れた月。流れと市場判断が噛み合い、精度の高い選択が続きました。";
-  }
-  if (maxLose >= 6 && maxLose > maxWin) {
-    return "連敗が目立った月。流れを外した後の修正が遅れ、判断が噛み合わない場面が続きました。";
-  }
-  if (maxWin >= 4 && maxLose >= 4) {
-    return "連勝と連敗を繰り返した波の大きい月。ハマる場面と外す場面がはっきり分かれました。";
-  }
-  if (maxWin >= 3 && maxLose <= 2) {
-    return "大きく崩れず安定した月。無理をしない判断で、堅実な推移を維持できています。";
-  }
-  if (maxWin <= 2 && maxLose <= 2) {
-    return "目立った連勝・連敗のない静かな月。慎重なスタンスで様子を見る判断が中心でした。";
-  }
-  return "大きな波はなく平均的な月。安定感はあるため、勝負所の見極めが次の課題です。";
-}
-
 export default function StreakSummaryCard({
   maxWinStreak,
   maxLoseStreak,
@@ -43,77 +45,70 @@ export default function StreakSummaryCard({
   lastMaxWinStreak,
   lastMaxLoseStreak,
 }: Props) {
-  const comment = buildComment(maxWinStreak, maxLoseStreak);
+  const iv = useInViewOnce({ threshold: 0.2 });
+  const cuWin = useVisibleCountUp(maxWinStreak, iv.inView, 760);
+  const cuLose = useVisibleCountUp(maxLoseStreak, iv.inView, 760);
 
   return (
-    <div className="rounded-2xl bg-[#050814]/80 p-3 border border-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-      {/* タイトル */}
-      <div className="mb-2 text-[11px] md:text-[14px] text-white/60">
-        {periodLabel ? `${periodLabel} の連勝 / 連敗` : "今月の連勝 / 連敗"}
-      </div>
-
-      {/* 数値 */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* 最大連勝 */}
-        <div className="rounded-xl bg-[#050814]/60 p-3 border border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-black/60 flex items-center justify-center ring-1 ring-white/10">
-              <Flame className="h-3.5 w-3.5 md:h-4 md:w-4 text-yellow-400" />
-            </div>
-            <div className="text-xs md:text-[15px] text-white/70">
-              最大連勝
-            </div>
-          </div>
-
-          <div
-            className={[
-              alfa.className,
-              "mt-2 text-3xl md:text-4xl tabular-nums text-yellow-400",
-            ].join(" ")}
-          >
-            {maxWinStreak}
-          </div>
-
-          {lastMaxWinStreak !== undefined && (
-            <div className="mt-0.5 text-[11px] md:text-[13px] text-white/45">
-              先月 {lastMaxWinStreak}
-            </div>
-          )}
+    <div
+      ref={iv.ref}
+      className="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#050814]/85 p-3 shadow-[0_14px_40px_rgba(0,0,0,0.55),0_0_20px_rgba(34,211,238,0.08)]"
+    >
+      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <div className="relative z-1">
+        <div className="mb-2 text-[11px] text-white/60 md:text-[14px]">
+          {periodLabel ? `${periodLabel} の連勝 / 連敗` : "今月の連勝 / 連敗"}
         </div>
 
-        {/* 最大連敗 */}
-        <div className="rounded-xl bg-[#050814]/60 p-3 border border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-black/60 flex items-center justify-center ring-1 ring-white/10">
-              <CloudRain className="h-3.5 w-3.5 md:h-4 md:w-4 text-rose-500" />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl border border-fuchsia-300/20 bg-[#050814]/65 p-3 shadow-[0_0_14px_rgba(217,70,239,0.08)]">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 ring-1 ring-white/10 md:h-8 md:w-8">
+                <Flame className="h-3.5 w-3.5 text-cyan-300 md:h-4 md:w-4" />
+              </div>
+              <div className="text-xs text-white/70 md:text-[15px]">最大連勝</div>
             </div>
-            <div className="text-xs md:text-[15px] text-white/70">
-              最大連敗
+
+            <div
+              className={[
+                resultStatsMetricNumClass,
+                "mt-2 text-[1.7rem] tabular-nums text-cyan-300 md:text-[2rem]",
+              ].join(" ")}
+            >
+              {cuWin}
             </div>
+
+            {lastMaxWinStreak !== undefined && (
+              <div className="mt-0.5 text-[11px] text-white/45 md:text-[13px]">
+                先月 {lastMaxWinStreak}
+              </div>
+            )}
           </div>
 
-          <div
-            className={[
-              alfa.className,
-              "mt-2 text-3xl md:text-4xl tabular-nums text-rose-500",
-            ].join(" ")}
-          >
-            {maxLoseStreak}
-          </div>
-
-          {lastMaxLoseStreak !== undefined && (
-            <div className="mt-0.5 text-[11px] md:text-[13px] text-white/45">
-              先月 {lastMaxLoseStreak}
+          <div className="rounded-xl border border-cyan-300/20 bg-[#050814]/65 p-3 shadow-[0_0_14px_rgba(34,211,238,0.08)]">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 ring-1 ring-white/10 md:h-8 md:w-8">
+                <CloudRain className="h-3.5 w-3.5 text-fuchsia-400 md:h-4 md:w-4" />
+              </div>
+              <div className="text-xs text-white/70 md:text-[15px]">最大連敗</div>
             </div>
-          )}
+
+            <div
+              className={[
+                resultStatsMetricNumClass,
+                "mt-2 text-[1.7rem] tabular-nums text-fuchsia-400 md:text-[2rem]",
+              ].join(" ")}
+            >
+              {cuLose}
+            </div>
+
+            {lastMaxLoseStreak !== undefined && (
+              <div className="mt-0.5 text-[11px] text-white/45 md:text-[13px]">
+                先月 {lastMaxLoseStreak}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* コメント */}
-      <div className="mt-2 rounded-xl bg-white/5 border border-white/10 p-2 md:p-3">
-        <p className="text-sm md:text-[14px] leading-relaxed text-white/75">
-          {comment}
-        </p>
       </div>
     </div>
   );
