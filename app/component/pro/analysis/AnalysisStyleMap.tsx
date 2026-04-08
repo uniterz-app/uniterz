@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Crosshair } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
+import { useInViewOnce } from "@/lib/hooks/useInViewOnce";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type StylePoint = {
   homeAwayBias: number;
@@ -81,45 +82,34 @@ function buildStyleComment(p: StylePoint) {
 }
 
 export default function AnalysisStyleMap({ points }: Props) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [isInView, setIsInView] = useState(false);
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.35 }
-    );
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
+  const iv = useInViewOnce({ threshold: 0.2, rootMargin: "0px 0px -4% 0px" });
+  const isInView = iv.inView;
 
   if (!points || points.length === 0) return null;
 
   const lastIndex = points.length - 1;
   const latest = points[lastIndex];
-  const comment = buildStyleComment(latest);
+  const comment = useMemo(() => buildStyleComment(latest), [latest]);
 
   return (
-    <div
-      ref={ref}
-      className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 space-y-3 shadow-[0_14px_40px_rgba(0,0,0,0.55)]"
+    <motion.div
+      ref={iv.ref}
+      initial={{ opacity: 0, y: 12, filter: "blur(8px)" }}
+      animate={
+        isInView
+          ? { opacity: 1, y: 0, filter: "blur(0px)" }
+          : { opacity: 0, y: 12, filter: "blur(8px)" }
+      }
+      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      className="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#050814]/85 p-4 space-y-3 shadow-[0_14px_40px_rgba(0,0,0,0.55),0_0_24px_rgba(34,211,238,0.08)]"
     >
+      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <div className="relative z-1 space-y-3">
       {/* タイトル */}
-      <div className="flex items-center gap-2 text-sm font-semibold text-white">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-black">
-          <Crosshair className="h-3 w-3 text-orange-400" />
-        </div>
-        <span>分析スタイル</span>
-      </div>
+      <div className="text-sm font-semibold text-white lg:text-base">あなたの分析スタイル</div>
 
       {/* マップ */}
-      <div className="relative h-48 rounded-xl overflow-hidden bg-[#050814]/40">
+      <div className="relative h-48 rounded-xl overflow-hidden bg-[#050814]/40 lg:h-56">
         {/* 方眼 */}
         <motion.div
           className="absolute inset-0"
@@ -231,6 +221,7 @@ export default function AnalysisStyleMap({ points }: Props) {
         <br />
         点の大きさ：勝率（40–85%・6段階）
       </p>
-    </div>
+      </div>
+    </motion.div>
   );
 }

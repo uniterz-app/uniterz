@@ -2,19 +2,18 @@
 
 import RadarChart from "@/app/component/pro/analysis/RadarChart";
 import AnalysisTypeCard from "@/app/component/pro/analysis/AnalysisTypeCard";
-import PercentileList from "@/app/component/pro/analysis/PercentileList";
-import MonthlyComparisonCard from "@/app/component/pro/analysis/MonthlyComparisonCard";
 import TeamAffinityCard from "@/app/component/pro/analysis/TeamAffinityCard";
 import HomeAwayWinRateBar from "@/app/component/pro/analysis/HomeAwayWinRateBar";
 import type { AnalysisTypeId } from "@/shared/analysis/types";
+import type { RadarAxisLevels } from "@/app/component/pro/analysis/radarLevelUtils";
 import MarketBiasBars from "@/app/component/pro/analysis/MarketBiasSemiDonut";
 import StreakSummaryWithComment from "@/app/component/pro/analysis/StreakSummaryWithComment";
 import AnalysisStyleMap from "@/app/component/pro/analysis/AnalysisStyleMap";
 
-import {
-  buildMonthlySummary,
-  buildMonthlyImprovement,
-} from "@/app/component/pro/analysis/summaryRules";
+import { buildMonthlyImprovement } from "@/app/component/pro/analysis/summaryRules";
+import PrevMonthSummaryCard from "@/app/component/pro/analysis/PrevMonthSummaryCard";
+import SummaryCardReveal from "@/app/component/profile/ui/SummaryCardReveal";
+import type { Language } from "@/lib/i18n/language";
 
 function SampleNotice() {
   return (
@@ -26,6 +25,20 @@ function SampleNotice() {
 
 type Props = {
   isSample?: boolean;
+  language?: Language;
+  /** 選択月のひとつ前の月のサマリー（先頭カード） */
+  prevMonthSummary?: {
+    monthKey: string;
+    stats: any;
+    olderStats: any | null;
+  } | null;
+  /** 先月サマリー月の総合得点（合計）母集団基準（monthly_global_stats_v2.pointsSumV3Benchmarks） */
+  prevMonthPointsSumBenchmarks?: {
+    mean: number;
+    median: number;
+    p90: number;
+    max: number;
+  } | null;
   month: string;
   months: string[];
   onChangeMonth: (m: string) => void;
@@ -37,7 +50,11 @@ type Props = {
     volume: number;
     streak: number;
     upsetValid: boolean;
+    radarEligible?: boolean;
   };
+
+  /** レーダー各軸の S/M/W（未指定ならチャート右の評価パネルなし） */
+  radarAxisLevels?: RadarAxisLevels | null;
 
   analysisTypeId: AnalysisTypeId;
 
@@ -48,10 +65,6 @@ type Props = {
     upset: number;
     volume: number;
   };
-
-  comparisonRows: any[];
-  comparisonUserCount: number;
-  comparisonTop10UserCount?: number;
 
   styleMapPoints: {
     homeAwayBias: number;
@@ -88,31 +101,31 @@ type Props = {
     strong: any[];
     weak: any[];
   };
+
+  /** Pro Stats タブ入場時のセクション演出（フェードアップ＋ブラー解除） */
+  playSectionEntrance?: boolean;
 };
 
 export default function ProAnalysisView({
   isSample,
+  language = "ja",
+  prevMonthSummary,
+  prevMonthPointsSumBenchmarks = null,
   month,
   months,
   onChangeMonth,
   radar,
+  radarAxisLevels,
   analysisTypeId,
   percentiles,
-  comparisonRows,
-  comparisonUserCount,
-  comparisonTop10UserCount,
   streak,
   prevStreak,
   styleMapPoints,
   homeAway,
   marketBias,
   teamAffinity,
+  playSectionEntrance = true,
 }: Props) {
-  const summaries = buildMonthlySummary({
-    month,
-    percentiles,
-  });
-
   const improvements = buildMonthlyImprovement({
     month,
     percentiles,
@@ -128,8 +141,22 @@ export default function ProAnalysisView({
       ? months[currentMonthIndex + 1]
       : null;
 
+  const hasPrevMonth = !!prevMonthSummary;
+  let revealK = hasPrevMonth ? 1 : 0;
+  const revealPrev = hasPrevMonth ? 0 : -1;
+  const revealRadar = revealK++;
+  const revealAnalysis = revealK++;
+  const revealStyleMap = revealK++;
+  const revealHomeAway = revealK++;
+  const revealMarket = revealK++;
+  const revealStreak = revealK++;
+  const revealTeam = revealK++;
+  const revealImprovements =
+    improvements.length > 0 ? revealK++ : -1;
+  const revealTotal = revealK;
+
   return (
-    <div className="space-y-4 p-4">
+    <div className="w-full space-y-4 py-4">
       <div className="flex items-center justify-center gap-4">
         <button
           disabled={!prevMonth}
@@ -153,100 +180,211 @@ export default function ProAnalysisView({
       {isSample && <SampleNotice />}
 
       <div className="space-y-4">
+        {prevMonthSummary ? (
+          <SummaryCardReveal
+            index={revealPrev}
+            total={revealTotal}
+            enabled={playSectionEntrance}
+            enterVariant="blurUp"
+            className="w-full"
+          >
+            <PrevMonthSummaryCard
+              language={language}
+              summaryMonthKey={prevMonthSummary.monthKey}
+              stats={prevMonthSummary.stats}
+              olderStats={prevMonthSummary.olderStats}
+              pointsSumBenchmarks={prevMonthPointsSumBenchmarks}
+            />
+          </SummaryCardReveal>
+        ) : null}
+
         {/* 1段目: レーダー + 分析タイプ */}
         <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
-          <RadarChart value={radar} />
-          <AnalysisTypeCard analysisTypeId={analysisTypeId} />
+          <SummaryCardReveal
+            index={revealRadar}
+            total={revealTotal}
+            enabled={playSectionEntrance}
+            enterVariant="blurUp"
+            className="min-h-0 min-w-0"
+          >
+            <RadarChart
+              value={radar}
+              axisLevels={radarAxisLevels ?? undefined}
+              language={language}
+            />
+          </SummaryCardReveal>
+          <SummaryCardReveal
+            index={revealAnalysis}
+            total={revealTotal}
+            enabled={playSectionEntrance}
+            enterVariant="blurUp"
+            className="min-h-0 min-w-0"
+          >
+            <div className="flex min-h-0 min-w-0 flex-col gap-4">
+              <AnalysisTypeCard
+                key={`${month}-${analysisTypeId}`}
+                analysisTypeId={analysisTypeId}
+                axisLevels={radarAxisLevels}
+              />
+              <div className="hidden lg:block">
+                <StreakSummaryWithComment
+                  maxWinStreak={streak.maxWin}
+                  maxLoseStreak={streak.maxLose}
+                  lastMaxWinStreak={prevStreak?.maxWin}
+                  lastMaxLoseStreak={prevStreak?.maxLose}
+                  periodLabel={month}
+                />
+              </div>
+            </div>
+          </SummaryCardReveal>
         </div>
 
         {isSample && <SampleNotice />}
 
-        {/* 2段目: パーセンタイル + 月間比較 */}
-        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
-          <PercentileList percentiles={percentiles} />
-
-          <MonthlyComparisonCard
-            monthLabel={month}
-            userCount={comparisonUserCount}
-            top10UserCount={comparisonTop10UserCount}
-            rows={comparisonRows}
+        {/* mobile: 連勝連敗は分析タイプの直下に戻す */}
+        <SummaryCardReveal
+          index={revealStreak}
+          total={revealTotal}
+          enabled={playSectionEntrance}
+          enterVariant="blurUp"
+          className="w-full lg:hidden"
+        >
+          <StreakSummaryWithComment
+            maxWinStreak={streak.maxWin}
+            maxLoseStreak={streak.maxLose}
+            lastMaxWinStreak={prevStreak?.maxWin}
+            lastMaxLoseStreak={prevStreak?.maxLose}
+            periodLabel={month}
           />
-        </div>
+        </SummaryCardReveal>
 
-        {/* 3段目: 今月の傾向サマリー */}
-        {summaries.length > 0 && (
-          <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-            <div className="mb-2 text-sm font-semibold text-white md:text-lg">
-              今月の傾向サマリー
-            </div>
+        {/* mobile: 従来順に戻す（分析スタイル -> Home/Away -> 市場志向） */}
+        <SummaryCardReveal
+          index={revealStyleMap}
+          total={revealTotal}
+          enabled={playSectionEntrance}
+          enterVariant="blurUp"
+          className="w-full lg:hidden"
+        >
+          <AnalysisStyleMap points={styleMapPoints} />
+        </SummaryCardReveal>
 
-            <ul className="space-y-1">
-              {summaries.map((text, i) => (
-                <li
-                  key={i}
-                  className="text-[12px] font-semibold leading-relaxed text-white md:text-[15px]"
-                >
-                  • {text}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* 4段目: 連勝連敗 */}
-        <StreakSummaryWithComment
-          maxWinStreak={streak.maxWin}
-          maxLoseStreak={streak.maxLose}
-          lastMaxWinStreak={prevStreak?.maxWin}
-          lastMaxLoseStreak={prevStreak?.maxLose}
-          periodLabel={month}
-        />
-
-        {/* 5段目: Home/Away + 市場傾向 */}
-        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+        <SummaryCardReveal
+          index={revealHomeAway}
+          total={revealTotal}
+          enabled={playSectionEntrance}
+          enterVariant="blurUp"
+          className="w-full lg:hidden"
+        >
           <HomeAwayWinRateBar
             homeRate={homeAway.homeRate}
             awayRate={homeAway.awayRate}
             homeShare={homeAway.homeShare}
             awayShare={homeAway.awayShare}
           />
+        </SummaryCardReveal>
 
+        <SummaryCardReveal
+          index={revealMarket}
+          total={revealTotal}
+          enabled={playSectionEntrance}
+          enterVariant="blurUp"
+          className="w-full lg:hidden"
+        >
           <MarketBiasBars
             favorableWinRate={marketBias.favorableWinRate}
             contrarianWinRate={marketBias.contrarianWinRate}
             favorableShare={marketBias.favorableShare}
             contrarianShare={marketBias.contrarianShare}
           />
+        </SummaryCardReveal>
+
+        {/* web: 現在レイアウトは維持 */}
+        <div className="hidden items-stretch gap-4 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <SummaryCardReveal
+            index={revealStyleMap}
+            total={revealTotal}
+            enabled={playSectionEntrance}
+            enterVariant="blurUp"
+            className="w-full lg:row-span-2"
+          >
+            <AnalysisStyleMap points={styleMapPoints} />
+          </SummaryCardReveal>
+
+          <SummaryCardReveal
+            index={revealHomeAway}
+            total={revealTotal}
+            enabled={playSectionEntrance}
+            enterVariant="blurUp"
+            className="w-full"
+          >
+            <HomeAwayWinRateBar
+              homeRate={homeAway.homeRate}
+              awayRate={homeAway.awayRate}
+              homeShare={homeAway.homeShare}
+              awayShare={homeAway.awayShare}
+            />
+          </SummaryCardReveal>
+
+          <SummaryCardReveal
+            index={revealMarket}
+            total={revealTotal}
+            enabled={playSectionEntrance}
+            enterVariant="blurUp"
+            className="w-full"
+          >
+            <MarketBiasBars
+              favorableWinRate={marketBias.favorableWinRate}
+              contrarianWinRate={marketBias.contrarianWinRate}
+              favorableShare={marketBias.favorableShare}
+              contrarianShare={marketBias.contrarianShare}
+            />
+          </SummaryCardReveal>
         </div>
 
-        {/* 6段目: 改善ポイント */}
-        {improvements.length > 0 && (
-          <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-            <div className="mb-2 text-sm font-semibold text-white md:text-lg">
-              今月の改善ポイント
-            </div>
+        {/* 次段: チーム別 */}
+        <SummaryCardReveal
+          index={revealTeam}
+          total={revealTotal}
+          enabled={playSectionEntrance}
+          enterVariant="blurUp"
+          className="w-full"
+        >
+          <TeamAffinityCard
+            strong={teamAffinity.strong}
+            weak={teamAffinity.weak}
+          />
+        </SummaryCardReveal>
 
-            <ul className="space-y-1">
-              {improvements.map((text, i) => (
-                <li
-                  key={i}
-                  className="text-[12px] font-semibold leading-relaxed text-white md:text-[15px]"
-                >
-                  • {text}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* 8段目: 改善ポイント */}
+        {improvements.length > 0 ? (
+          <SummaryCardReveal
+            index={revealImprovements}
+            total={revealTotal}
+            enabled={playSectionEntrance}
+            enterVariant="blurUp"
+            className="w-full"
+          >
+            <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
+              <div className="mb-2 text-sm font-semibold text-white md:text-lg">
+                今月の改善ポイント
+              </div>
+
+              <ul className="space-y-1">
+                {improvements.map((text, i) => (
+                  <li
+                    key={i}
+                    className="text-[12px] font-semibold leading-relaxed text-white md:text-[15px]"
+                  >
+                    • {text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </SummaryCardReveal>
+        ) : null}
 
         {isSample && <SampleNotice />}
-
-        <AnalysisStyleMap points={styleMapPoints} />
-
-        <TeamAffinityCard
-          strong={teamAffinity.strong}
-          weak={teamAffinity.weak}
-        />
       </div>
     </div>
   );
