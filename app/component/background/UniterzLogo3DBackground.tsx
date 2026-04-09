@@ -360,6 +360,7 @@ export default function UniterzLogo3DBackground() {
       <div
         className="absolute inset-0"
         style={{
+          /* 画面中央で帯状に明るくならないよう、広げて弱める */
           background: `
             radial-gradient(circle at 50% 22%, ${THEME.overlayGradA} 0%, rgba(0,0,0,0) 24%),
             radial-gradient(circle at 50% 58%, ${THEME.overlayGradB} 0%, rgba(0,0,0,0) 30%),
@@ -367,8 +368,8 @@ export default function UniterzLogo3DBackground() {
           `,
         }}
       />
-      <div className="absolute inset-0 bg-black/18" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,8,14,0.10)_58%,rgba(0,0,0,0.30)_100%)]" />
+      <div className="absolute inset-0 bg-black/12" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(8,17,22,0.08)_55%,rgba(8,17,22,0.22)_100%)]" />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 export default function Header() {
   return (
-    <header className="relative overflow-hidden bg-app px-6 py-2 md:px-10 md:py-4 text-white shadow-[0_10px_30px_rgba(0,0,0,0.62)]">
+    <header className="relative z-10 overflow-hidden bg-app px-6 py-2 md:px-10 md:py-4 text-white shadow-[0_10px_30px_rgba(0,0,0,0.62)]">
       {/* background glow */}
       <div className="pointer-events-none absolute inset-0 opacity-40">
         <div className="absolute left-0 top-0 h-full w-full bg-[radial-gradient(circle_at_top,rgba(255,140,60,0.16),transparent_58%)]" />

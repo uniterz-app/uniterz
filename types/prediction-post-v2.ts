@@ -120,6 +120,8 @@ export type PredictionPostV2 = {
       upsetBonus: number;
       diffError: number | null;
       totalError: number | null;
+      /** 当時点の連勝数（finalizePost / UI バッジと同期） */
+      activeWinStreak?: number;
     } | null;
 
     rankingReady?: boolean;
