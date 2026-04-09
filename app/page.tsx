@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import SplashLoadingIndicator from "@/app/component/common/SplashLoadingIndicator";
 
 function EntrySplash() {
   return (
     <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
-      <div className="mt-27 ml-4 animate-pulse text-sm text-white/80">
-        Loading...
+      <div className="mt-27 ml-4">
+        <SplashLoadingIndicator />
       </div>
     </div>
   );

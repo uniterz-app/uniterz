@@ -20,7 +20,7 @@ export default function MobileLPPage() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(4,244,255,0.04),transparent_42%)]" />
       <div className="pointer-events-none fixed inset-y-0 left-[-34%] z-1 w-[42%] bg-[linear-gradient(90deg,transparent,rgba(148,241,255,0.06),transparent)] blur-2xl [animation:lp-impact-sweep_1.05s_cubic-bezier(.2,.7,.3,1)_both]" />
 
-      <LPHeader homeHref="/mobile/lp" />
+      <LPHeader homeHref="/mobile/lp" signupHref="/mobile/signup" />
       <MobileLPQuickNav />
       <LPHero />
       <div

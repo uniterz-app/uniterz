@@ -26,6 +26,7 @@ const FLOW_STEPS = [
 export default function LPHero() {
   const pathname = usePathname();
   const isMobileLp = pathname?.includes("/mobile/lp") ?? false;
+  const signupHref = isMobileLp ? "/mobile/signup" : "/web/signup";
   const [activeView, setActiveView] = useState<HeroView>("ranking");
 
   const activeIndex = heroMediaViews.findIndex((v) => v.key === activeView);
@@ -200,7 +201,7 @@ export default function LPHero() {
 
             <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-4 animate-[lp-enter-soft_.65s_ease-out_.72s_both]">
               <Link
-                href="#signup"
+                href={signupHref}
                 className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-linear-to-r from-cyan-300 via-sky-400 to-cyan-100 px-5 py-3.5 text-sm font-bold text-slate-950 shadow-[0_0_28px_rgba(34,211,238,0.20)] transition duration-200 hover:scale-[1.02] whitespace-nowrap sm:px-6"
               >
                 無料でランキング参戦

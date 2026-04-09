@@ -3,12 +3,13 @@
 import { useEffect } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { usePathname, useRouter } from "next/navigation";
+import SplashLoadingIndicator from "@/app/component/common/SplashLoadingIndicator";
 
 function gateSplash() {
   return (
     <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
-      <div className="mt-27 ml-4 animate-pulse text-sm text-white/80">
-        Loading...
+      <div className="mt-27 ml-4">
+        <SplashLoadingIndicator />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import SplashLoadingIndicator from "@/app/component/common/SplashLoadingIndicator";
 
 type SplashWrapperProps = {
   children?: React.ReactNode;
@@ -49,8 +50,8 @@ export default function SplashWrapper({
   if (showSplashUi) {
     return (
       <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
-        <div className="mt-27 ml-4 animate-pulse text-sm text-white/80">
-          Loading...
+        <div className="mt-27 ml-4">
+          <SplashLoadingIndicator />
         </div>
       </div>
     );

@@ -51,6 +51,85 @@ export default function AuthBackdrop({ children, accent = "blueMagenta" }: Props
           opacity: 0.95,
         }}
       />
+      {/* Quiet pulse blobs (4 layers, staggered) */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          mixBlendMode: "screen",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: "-8%",
+            bottom: "8%",
+            width: "44vw",
+            maxWidth: 520,
+            minWidth: 220,
+            aspectRatio: "1 / 1",
+            borderRadius: "9999px",
+            background: `radial-gradient(circle, ${palette.main} 0%, rgba(0,0,0,0) 72%)`,
+            filter: "blur(30px)",
+            opacity: 0.3,
+            animation: "auth-blob-pulse-a 5.2s ease-in-out infinite",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            right: "-10%",
+            bottom: "6%",
+            width: "42vw",
+            maxWidth: 500,
+            minWidth: 210,
+            aspectRatio: "1 / 1",
+            borderRadius: "9999px",
+            background: `radial-gradient(circle, ${palette.sub} 0%, rgba(0,0,0,0) 72%)`,
+            filter: "blur(32px)",
+            opacity: 0.28,
+            animation: "auth-blob-pulse-b 5.8s ease-in-out infinite",
+            animationDelay: "-1.5s",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            right: "10%",
+            top: "2%",
+            width: "28vw",
+            maxWidth: 340,
+            minWidth: 160,
+            aspectRatio: "1 / 1",
+            borderRadius: "9999px",
+            background: `radial-gradient(circle, ${palette.acc} 0%, rgba(0,0,0,0) 72%)`,
+            filter: "blur(26px)",
+            opacity: 0.24,
+            animation: "auth-blob-pulse-c 6.4s ease-in-out infinite",
+            animationDelay: "-2.7s",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: "8%",
+            top: "18%",
+            width: "20vw",
+            maxWidth: 240,
+            minWidth: 120,
+            aspectRatio: "1 / 1",
+            borderRadius: "9999px",
+            background:
+              "radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0) 72%)",
+            filter: "blur(20px)",
+            opacity: 0.18,
+            animation: "auth-blob-pulse-d 4.8s ease-in-out infinite",
+            animationDelay: "-0.9s",
+          }}
+        />
+      </div>
       {/* 微細ドット＋ビネット（視線を中央へ） */}
       <div
         aria-hidden
@@ -79,6 +158,33 @@ export default function AuthBackdrop({ children, accent = "blueMagenta" }: Props
       >
         {children}
       </div>
+      <style>{`
+        @keyframes auth-blob-pulse-a {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.22; }
+          45% { transform: translate3d(0, -16px, 0) scale(1.2); opacity: 0.42; }
+          70% { transform: translate3d(5px, 5px, 0) scale(0.9); opacity: 0.26; }
+        }
+        @keyframes auth-blob-pulse-b {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.2; }
+          42% { transform: translate3d(-5px, -14px, 0) scale(1.18); opacity: 0.38; }
+          72% { transform: translate3d(5px, 5px, 0) scale(0.9); opacity: 0.24; }
+        }
+        @keyframes auth-blob-pulse-c {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.16; }
+          48% { transform: translate3d(0, -11px, 0) scale(1.16); opacity: 0.31; }
+          74% { transform: translate3d(4px, 4px, 0) scale(0.9); opacity: 0.2; }
+        }
+        @keyframes auth-blob-pulse-d {
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.12; }
+          50% { transform: translate3d(0, -9px, 0) scale(1.14); opacity: 0.26; }
+          78% { transform: translate3d(4px, 4px, 0) scale(0.9); opacity: 0.16; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [style*="auth-blob-pulse"] {
+            animation: none !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }

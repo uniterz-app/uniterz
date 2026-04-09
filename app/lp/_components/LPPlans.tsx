@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
   planComparisonRows,
@@ -49,6 +50,9 @@ function comparisonCell(access: PlanComparisonAccess, variant: "free" | "pro") {
 }
 
 export default function LPPlans() {
+  const pathname = usePathname();
+  const signupHref =
+    pathname?.includes("/mobile/lp") ? "/mobile/signup" : "/web/signup";
   const [activeTier, setActiveTier] = useState<"free" | "pro">("free");
   const activeSlot = useMemo(
     () => planScreenshots.find((slot) => slot.tier === activeTier) ?? planScreenshots[0],
@@ -277,7 +281,7 @@ export default function LPPlans() {
 
                 <div className="mt-4">
                   <Link
-                    href="#signup"
+                    href={signupHref}
                     className={`inline-flex min-h-[46px] w-full items-center justify-center rounded-2xl px-3.5 py-3 text-sm font-bold transition ${
                       activeSlot.tier === "pro"
                         ? "border border-cyan-200/30 bg-linear-to-r from-cyan-400 via-sky-500 to-teal-400 text-slate-950"

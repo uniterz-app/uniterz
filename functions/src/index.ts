@@ -84,6 +84,35 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
   { schedule: "55 15 * * *", timeZone: "Asia/Tokyo" },
   async () => {
     await buildCumulativeRankingSnapshot();
+    const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
+    const token = process.env.INTERNAL_REVALIDATE_SECRET;
+    if (!revalidateUrl || !token) {
+      console.warn(
+        "[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)"
+      );
+      return;
+    }
+
+    try {
+      const res = await fetch(revalidateUrl, {
+        method: "POST",
+        headers: { "x-revalidate-token": token },
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error(
+          `[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`
+        );
+      } else {
+        console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
+      }
+    } catch (err: any) {
+      console.error(
+        `[buildCumulativeRankingSnapshotCron] revalidate error: ${String(
+          err?.message ?? err
+        )}`
+      );
+    }
   }
 );
 

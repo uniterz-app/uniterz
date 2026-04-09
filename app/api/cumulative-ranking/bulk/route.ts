@@ -100,7 +100,10 @@ const getCachedBulk = unstable_cache(
     return fetchBulkFromFunctions(uid, metrics);
   },
   ["cumulative-ranking-bulk-v2"],
-  { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
+  {
+    revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
+    tags: ["cumulative-ranking"],
+  }
 );
 
 export async function GET(req: Request) {
@@ -123,7 +126,7 @@ export async function GET(req: Request) {
 
     const data = await getCachedBulk(uid ?? "__anon__", metricsKey);
 
-    const maxAge = Math.min(120, CUMULATIVE_RANKING_REVALIDATE_SEC);
+    const maxAge = 0;
     const cacheControl = uid
       ? `private, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
       : `public, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;

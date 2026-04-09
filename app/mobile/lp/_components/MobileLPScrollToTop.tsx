@@ -8,15 +8,6 @@ import { useLayoutEffect } from "react";
  */
 export default function MobileLPScrollToTop() {
   useLayoutEffect(() => {
-    // #signup などアンカー付き URL はブラウザのジャンプを優先する
-    if (
-      typeof window !== "undefined" &&
-      window.location.hash &&
-      window.location.hash !== "#"
-    ) {
-      return;
-    }
-
     const scrollTop = () => {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       document.documentElement.scrollTop = 0;
@@ -25,6 +16,16 @@ export default function MobileLPScrollToTop() {
 
     const prev = window.history.scrollRestoration;
     window.history.scrollRestoration = "manual";
+
+    // モバイル LP は初期表示を常にトップ固定にする。
+    // 以前の #features などが URL に残っていても自動ジャンプを防ぐ。
+    if (window.location.hash && window.location.hash !== "#") {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + window.location.search
+      );
+    }
 
     scrollTop();
     const raf = requestAnimationFrame(scrollTop);

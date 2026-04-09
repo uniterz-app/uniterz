@@ -38,6 +38,8 @@ export default function ConnectedFlowCards({
   useEffect(() => {
     if (reduceMotion) return;
     if (typeof window === "undefined" || window.innerWidth >= 1024) return;
+    // mobile LP は初期表示時の縦位置を固定したいので自動スクロールを無効化
+    if (window.location.pathname.startsWith("/mobile/lp")) return;
     if (skipScrollIntoViewOnce.current) {
       skipScrollIntoViewOnce.current = false;
       return;
