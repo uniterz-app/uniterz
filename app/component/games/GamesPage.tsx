@@ -23,41 +23,18 @@ import {
   getTodayKeyInTimeZone,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
+  shiftCalendarMonthStart,
 } from "@/lib/time/zonedTime";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
 
 const GAMES_CONTENT_EASE = [0.22, 1, 0.36, 1] as const;
-/** 日付ピックのあと試合リストの入場を少しずらす（秒） */
-const GAMES_LIST_STAGGER_SEC = 0.12;
+/** 日付ストリップの後にリストを出すまでの待ち（秒） */
+const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.22;
 
 /* =========================
    Date Utils
 ========================= */
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
-function findMonthFirstGame(
-  gameDays: Date[],
-  baseDate: Date,
-  offset: number,
-  timeZone: string
-) {
-  const baseKey = toDateKeyInTimeZone(baseDate, timeZone);
-  const [yStr, mStr] = baseKey.slice(0, 7).split("-");
-  const y = Number(yStr);
-  const m0 = Number(mStr) - 1;
-
-  const target = new Date(Date.UTC(y, m0 + offset, 1));
-  const targetMonthKey = `${target.getUTCFullYear()}-${pad2(
-    target.getUTCMonth() + 1
-  )}`;
-
-  return (
-    gameDays.find((d) =>
-      toDateKeyInTimeZone(d, timeZone).startsWith(targetMonthKey)
-    ) ?? null
-  );
-}
-
 function findInitialGameDay(params: {
   gameDays: Date[];
   stateSelected: Date | null;
@@ -70,22 +47,34 @@ function findInitialGameDay(params: {
   if (!gameDays.length) return null;
 
   if (stateSelected) {
+    const wantedKey = toDateKeyInTimeZone(stateSelected, timeZone);
     const hit = gameDays.find(
-      (d) =>
-        toDateKeyInTimeZone(d, timeZone) ===
-        toDateKeyInTimeZone(stateSelected, timeZone)
+      (d) => toDateKeyInTimeZone(d, timeZone) === wantedKey
     );
     if (hit) return hit;
+    const monthPrefix = wantedKey.slice(0, 7);
+    const inMonth = gameDays
+      .filter((d) =>
+        toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix)
+      )
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (inMonth.length) return inMonth[0];
   }
 
   const parsedUrlDate = parseDateKeyInTimeZone(urlDate ?? "", timeZone);
   if (parsedUrlDate) {
+    const wantedKey = toDateKeyInTimeZone(parsedUrlDate, timeZone);
     const hit = gameDays.find(
-      (d) =>
-        toDateKeyInTimeZone(d, timeZone) ===
-        toDateKeyInTimeZone(parsedUrlDate, timeZone)
+      (d) => toDateKeyInTimeZone(d, timeZone) === wantedKey
     );
     if (hit) return hit;
+    const monthPrefix = wantedKey.slice(0, 7);
+    const inMonth = gameDays
+      .filter((d) =>
+        toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix)
+      )
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (inMonth.length) return inMonth[0];
   }
 
   const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
@@ -171,11 +160,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, []);
 
   /* =========================
-     Game days
-  ========================= */
-  const { gameDays, loading: loadingDays } = useGameDays(league, dayTimeZone);
-
-  /* =========================
      League ごとの選択日
   ========================= */
   const [selectedByLeague, setSelectedByLeague] = useState<
@@ -187,13 +171,35 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [dayTimeZone]
   );
 
+  /** 取得ウィンドウ（暦月）の基準日：選択中 → URL → 今日 */
+  const anchorForGameDays = useMemo(() => {
+    const fromUrl = parseDateKeyInTimeZone(dateParam ?? "", dayTimeZone);
+    const stored = selectedByLeague[league];
+    if (stored) return stored;
+    if (fromUrl) return fromUrl;
+    return parseDateKeyInTimeZone(todayKey, dayTimeZone) ?? new Date();
+  }, [dateParam, dayTimeZone, league, selectedByLeague, todayKey]);
+
+  /* =========================
+     Game days（暦月単位で取得）
+  ========================= */
+  const { gameDays, loading: loadingDays } = useGameDays(
+    league,
+    dayTimeZone,
+    anchorForGameDays
+  );
+
   /* =========================
      初期選択日を render 中に確定
   ========================= */
   const selected = useMemo(() => {
+    const stored = selectedByLeague[league] ?? null;
+    if (!gameDays.length) {
+      return stored;
+    }
     return findInitialGameDay({
       gameDays,
-      stateSelected: selectedByLeague[league] ?? null,
+      stateSelected: stored,
       urlDate: dateParam,
       todayKey,
       timeZone: dayTimeZone,
@@ -244,19 +250,64 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [league, router, searchParams]
   );
 
+  /** 隣接暦月に試合があるか（月送りの可否） */
+  const [adjacentMonthHasGames, setAdjacentMonthHasGames] = useState<{
+    prev: boolean;
+    next: boolean;
+    loading: boolean;
+  }>({ prev: true, next: true, loading: true });
+
+  useEffect(() => {
+    if (!selected) {
+      setAdjacentMonthHasGames({ prev: false, next: false, loading: false });
+      return;
+    }
+    let cancelled = false;
+    setAdjacentMonthHasGames((s) => ({ ...s, loading: true }));
+    const prevAnchor = shiftCalendarMonthStart(selected, -1, dayTimeZone);
+    const nextAnchor = shiftCalendarMonthStart(selected, 1, dayTimeZone);
+    Promise.all([
+      fetchMonthHasGames({
+        league,
+        monthAnchor: prevAnchor,
+        timeZone: dayTimeZone,
+      }),
+      fetchMonthHasGames({
+        league,
+        monthAnchor: nextAnchor,
+        timeZone: dayTimeZone,
+      }),
+    ])
+      .then(([hasPrev, hasNext]) => {
+        if (!cancelled) {
+          setAdjacentMonthHasGames({
+            prev: hasPrev,
+            next: hasNext,
+            loading: false,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAdjacentMonthHasGames({ prev: true, next: true, loading: false });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, league, dayTimeZone]);
+
   /* =========================
-     today へ戻す
+     today へ戻す（試合のある日のみ。今日以降で最も近い日、なければ最終日）
   ========================= */
   const moveToToday = useCallback(() => {
     if (!gameDays.length) return;
-
     const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
-    const target =
-      sorted.find((d) => toDateKeyInTimeZone(d, dayTimeZone) >= todayKey) ??
-      sorted[sorted.length - 1];
-
-    if (!target) return;
-    setSelectedAndSync(target);
+    const pick =
+      sorted.find(
+        (d) => toDateKeyInTimeZone(d, dayTimeZone) >= todayKey
+      ) ?? sorted[sorted.length - 1];
+    if (pick) setSelectedAndSync(pick);
   }, [gameDays, todayKey, dayTimeZone, setSelectedAndSync]);
 
   /* =========================
@@ -347,7 +398,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const visibleCount = dense ? 7 : 10;
   const pagePad = dense ? "px-3" : "px-4 md:px-6";
   const isInitialLoading = loadingDays || !selected;
-const isSwitchingDate = !!selected && loading;
+  const isSwitchingDate = !!selected && loading;
 
   /* =========================
      Paths
@@ -392,52 +443,89 @@ const isSwitchingDate = !!selected && loading;
       style={{ touchAction: "pan-y" }}
     >
       <div className="mb-2 mt-3 flex items-center justify-between gap-3">
-        <LeagueTabs
-          value={league}
-          onChange={setLeague}
-          size={dense ? "md" : "lg"}
-          layoutMobile={isMobile}
-        />
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{
+            duration: reduceMotion ? 0 : 0.38,
+            ease: GAMES_CONTENT_EASE,
+          }}
+        >
+          <LeagueTabs
+            value={league}
+            onChange={setLeague}
+            size={dense ? "md" : "lg"}
+            layoutMobile={isMobile}
+          />
+        </motion.div>
 
         {league === "nba" && (
-          <button
-            type="button"
-            onClick={handleBracketClick}
-            style={bracketMarketTeamTypography(isMobile)}
-            className={[
-              dense
-                ? "rounded-lg px-3 py-1.5 text-sm"
-                : "rounded-xl px-4 py-2 text-base",
-              "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
-            ].join(" ")}
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, x: 18 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{
+              duration: reduceMotion ? 0 : 0.4,
+              delay: reduceMotion ? 0 : 0.06,
+              ease: GAMES_CONTENT_EASE,
+            }}
           >
-            Bracket
-          </button>
+            <button
+              type="button"
+              onClick={handleBracketClick}
+              style={bracketMarketTeamTypography(isMobile)}
+              className={[
+                dense
+                  ? "rounded-lg px-3 py-1.5 text-sm"
+                  : "rounded-xl px-4 py-2 text-base",
+                "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
+              ].join(" ")}
+            >
+              Bracket
+            </button>
+          </motion.div>
         )}
       </div>
 
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: -10, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{
+          duration: reduceMotion ? 0 : 0.42,
+          delay: reduceMotion ? 0 : 0.05,
+          ease: GAMES_CONTENT_EASE,
+        }}
+        className="mb-2"
+      >
       <MonthHeader
         month={monthValue}
         onPrev={() => {
           if (!selected) return;
-          const prev = findMonthFirstGame(
-            gameDays,
-            selected,
-            -1,
-            dayTimeZone
+          if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.prev) {
+            return;
+          }
+          setSelectedAndSync(
+            shiftCalendarMonthStart(selected, -1, dayTimeZone)
           );
-          if (prev) setSelectedAndSync(prev);
         }}
         onNext={() => {
           if (!selected) return;
-          const next = findMonthFirstGame(gameDays, selected, 1, dayTimeZone);
-          if (next) setSelectedAndSync(next);
+          if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.next) {
+            return;
+          }
+          setSelectedAndSync(
+            shiftCalendarMonthStart(selected, 1, dayTimeZone)
+          );
         }}
-        onCenterClick={moveToToday}
+        onCenterDoubleClick={moveToToday}
+        canPrev={adjacentMonthHasGames.prev}
+        canNext={adjacentMonthHasGames.next}
+        navBusy={adjacentMonthHasGames.loading}
+        centerDisabled={!gameDays.length}
         timeZone={dayTimeZone}
         isEn={isEn}
-        className="mb-2"
+        className="mb-0"
       />
+      </motion.div>
 
 {isInitialLoading ? (
   <>
@@ -456,10 +544,11 @@ const isSwitchingDate = !!selected && loading;
     <motion.div
       key={`day-strip-${league}`}
       className="mb-4"
-      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{
-        duration: reduceMotion ? 0 : 0.42,
+        duration: reduceMotion ? 0 : 0.28,
+        delay: reduceMotion ? 0 : 0.1,
         ease: GAMES_CONTENT_EASE,
       }}
     >
@@ -478,11 +567,11 @@ const isSwitchingDate = !!selected && loading;
 
     <motion.div
       key={`sched-${selectedDayKey}-${loading ? "l" : "d"}`}
-      initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 26 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: reduceMotion ? 0 : 0.42,
-        delay: reduceMotion ? 0 : GAMES_LIST_STAGGER_SEC,
+        duration: reduceMotion ? 0 : 0.48,
+        delay: reduceMotion ? 0 : GAMES_LIST_AFTER_DAY_STRIP_SEC,
         ease: GAMES_CONTENT_EASE,
       }}
     >
@@ -492,7 +581,12 @@ const isSwitchingDate = !!selected && loading;
           isSwitchingDate ? "opacity-85" : "opacity-100",
         ].join(" ")}
       >
-        <ScheduleList games={games} dense={dense} loading={loading} />
+        <ScheduleList
+          games={games}
+          dense={dense}
+          loading={loading}
+          league={league}
+        />
       </div>
     </motion.div>
   </>

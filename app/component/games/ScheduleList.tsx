@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { LayoutGroup, motion } from "framer-motion";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import type { League } from "@/lib/leagues";
 import { X } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -58,6 +59,8 @@ function readTeamRecordCacheFromSession(): Record<string, TeamRecord> {
   }
 }
 
+const SCHEDULE_STAGGER_EASE = [0.22, 1, 0.36, 1] as const;
+
 function writeTeamRecordCacheToSession(next: Record<string, TeamRecord>) {
   if (typeof window === "undefined") return;
 
@@ -76,10 +79,13 @@ export default function ScheduleList({
   games,
   dense = false,
   loading = false,
+  league: leagueProp,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
   loading?: boolean;
+  /** 入場アニメの区切り（リーグ切替で再スタッガー） */
+  league?: League;
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
@@ -135,6 +141,52 @@ export default function ScheduleList({
     if (!openGameId) return null;
     return propsList.find((p) => String(p.id) === String(openGameId)) ?? null;
   }, [propsList, openGameId]);
+
+  const reduceMotion = useReducedMotion();
+  const leagueAnimKey =
+    leagueProp ?? (propsList[0]?.league as League | undefined) ?? "nba";
+
+  const scheduleContainer = useMemo(
+    () => ({
+      hidden: {},
+      show: {
+        transition: {
+          staggerChildren: reduceMotion ? 0 : 0.1,
+          delayChildren: reduceMotion ? 0 : 0.06,
+        },
+      },
+    }),
+    [reduceMotion]
+  );
+
+  const scheduleItem = useMemo(
+    () => ({
+      hidden: reduceMotion
+        ? { opacity: 1, y: 0, scale: 1, skewX: 0, filter: "none", clipPath: "none" }
+        : {
+            opacity: 0,
+            y: 20,
+            scale: 0.94,
+            skewX: 2,
+            filter: "saturate(1.35) brightness(1.12) blur(8px)",
+            clipPath: "inset(0 100% 0 0)",
+          },
+      show: (i: number) => ({
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        skewX: 0,
+        filter: "saturate(1) brightness(1) blur(0px)",
+        clipPath: "inset(0 0% 0 0)",
+        transition: {
+          duration: reduceMotion ? 0 : 0.52,
+          ease: SCHEDULE_STAGGER_EASE,
+          delay: reduceMotion ? 0 : i * 0.05,
+        },
+      }),
+    }),
+    [reduceMotion]
+  );
 
   const open = useCallback((gameId: string) => {
     scrollYRef.current = window.scrollY;
@@ -562,10 +614,7 @@ export default function ScheduleList({
   return (
     <LayoutGroup id="schedule-list">
       <motion.div
-        className={[
-          "grid gap-6 px-4 md:px-6 lg:px-8",
-          openGameId ? "pointer-events-none" : "",
-        ].join(" ")}
+        className={openGameId ? "pointer-events-none" : ""}
         animate={{
           scale: openGameId && !isMobile ? 0.985 : 1,
           opacity: 1,
@@ -575,15 +624,52 @@ export default function ScheduleList({
           ease: [0.22, 1, 0.36, 1],
         }}
       >
-        {propsList.map((props) => {
+        <motion.div
+          key={leagueAnimKey}
+          className="grid gap-6 px-4 md:px-6 lg:px-8"
+          variants={scheduleContainer}
+          initial={reduceMotion ? false : "hidden"}
+          animate="show"
+        >
+        {propsList.map((props, idx) => {
           const isOpen = !!selectedProps && String(selectedProps.id) === String(props.id);
 
           return (
-            <div
+            <motion.div
               key={props.id}
-              className={isOpen ? "pointer-events-none" : ""}
+              custom={idx}
+              variants={scheduleItem}
+              className={[
+                "relative",
+                isOpen ? "pointer-events-none" : "",
+              ].join(" ")}
               aria-hidden={isOpen}
             >
+              {!reduceMotion && (
+                <motion.div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-2xl"
+                  initial={false}
+                >
+                  <motion.div
+                    className="absolute left-0 right-0 w-full"
+                    style={{
+                      height: "42%",
+                      background:
+                        "linear-gradient(180deg, transparent 0%, rgba(34,211,238,0.08) 40%, rgba(180,250,255,0.5) 50%, rgba(34,211,238,0.1) 60%, transparent 100%)",
+                      mixBlendMode: "screen",
+                      filter: "blur(1px)",
+                    }}
+                    initial={{ opacity: 0, y: "-40%" }}
+                    animate={{ opacity: [0, 0.92, 0], y: ["-35%", "108%"] }}
+                    transition={{
+                      duration: 0.48,
+                      delay: 0.1 + idx * 0.055,
+                      ease: SCHEDULE_STAGGER_EASE,
+                    }}
+                  />
+                </motion.div>
+              )}
               <MatchCard
                 {...props}
                 myPostId={myPostMap[String(props.id)] ?? null}
@@ -610,9 +696,10 @@ export default function ScheduleList({
                   isMobile || (!!openGameId && !isOpen)
                 }
               />
-            </div>
+            </motion.div>
           );
         })}
+        </motion.div>
       </motion.div>
 
       {overlayContent &&

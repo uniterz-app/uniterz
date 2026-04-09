@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
@@ -22,6 +23,8 @@ const sizeMap = {
   lg: { circle: "w-14 h-14", num: "text-base", gap: "gap-3", padX: "px-3" },
 } as const;
 
+const DAY_STRIP_EASE = [0.22, 1, 0.36, 1] as const;
+
 export default function DayStrip({
   dates,
   selectedDate,
@@ -34,22 +37,44 @@ export default function DayStrip({
   timeZone,
   isEn = false,
 }: Props) {
+  const reduceMotion = useReducedMotion();
   const listRef = useRef<HTMLDivElement>(null);
   const selRef = useRef<HTMLButtonElement>(null);
   const btnRefs = useRef<HTMLButtonElement[]>([]);
   const didInit = useRef(false);
+  /** 初回だけ「今日」があればその丸が見える位置へ（以降は選択日へ追従） */
+  const firstAlignRef = useRef(true);
   const scrollTimer = useRef<number | null>(null);
   const scrollingByCode = useRef(false);
 
   const selectedKey = toDateKeyInTimeZone(selectedDate, timeZone);
   const todayKey = toDateKeyInTimeZone(new Date(), timeZone);
 
-  useEffect(() => {
-    if (!listRef.current || !selRef.current) return;
+  useLayoutEffect(() => {
+    if (!listRef.current || dates.length === 0) return;
 
     const wrap = listRef.current;
-    const el = selRef.current;
-    const left = el.offsetLeft - wrap.clientWidth / 2 + el.clientWidth / 2;
+    const keys = dates.map((d) => toDateKeyInTimeZone(d, timeZone));
+
+    let scrollKey: string;
+    if (firstAlignRef.current && keys.includes(todayKey)) {
+      scrollKey = todayKey;
+      firstAlignRef.current = false;
+    } else {
+      scrollKey = selectedKey;
+      if (firstAlignRef.current) firstAlignRef.current = false;
+    }
+
+    const idx = keys.indexOf(scrollKey);
+    const el = idx >= 0 ? btnRefs.current[idx] : null;
+    if (!el) return;
+
+    const rawLeft = el.offsetLeft - wrap.clientWidth / 2 + el.clientWidth / 2;
+    const left = Math.max(
+      0,
+      Math.min(rawLeft, Math.max(0, wrap.scrollWidth - wrap.clientWidth))
+    );
+
     scrollingByCode.current = true;
     if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
 
@@ -62,7 +87,7 @@ export default function DayStrip({
     }, 280);
 
     didInit.current = true;
-  }, [dates, selectedDate, autoScrollOnInit]);
+  }, [dates, selectedDate, selectedKey, todayKey, timeZone, autoScrollOnInit]);
 
   const snapToNearest = () => {
     const wrap = listRef.current;
@@ -129,12 +154,42 @@ export default function DayStrip({
       weekday: "short",
     }).format(d);
 
+  const dayStripContainer = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: reduceMotion ? 0 : 0.038,
+        delayChildren: reduceMotion ? 0 : 0.06,
+      },
+    },
+  };
+
+  const dayStripItem = {
+    hidden: reduceMotion
+      ? { opacity: 1, y: 0, scale: 1 }
+      : { opacity: 0, y: 10, scale: 0.94 },
+    show: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: reduceMotion ? 0 : 0.32,
+        ease: DAY_STRIP_EASE,
+      },
+    },
+  };
+
   return (
     <div
       ref={listRef}
       className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-mandatory" : ""}`}
     >
-      <div className={`flex ${sz.gap} py-2`}>
+      <motion.div
+        className={`flex ${sz.gap} py-2`}
+        variants={dayStripContainer}
+        initial={reduceMotion ? false : "hidden"}
+        animate="show"
+      >
         {dates.map((d, i) => {
           const dayKey = toDateKeyInTimeZone(d, timeZone);
           const selected = dayKey === selectedKey;
@@ -148,13 +203,14 @@ export default function DayStrip({
               : undefined;
 
           return (
-            <div
+            <motion.div
               key={toDateKeyInTimeZone(d, timeZone)}
               className={[
                 "shrink-0 flex justify-center",
                 snapSelectOnScroll ? "snap-center" : "",
               ].join(" ")}
               style={basis}
+              variants={dayStripItem}
             >
               <button
                 ref={(el) => {
@@ -241,10 +297,10 @@ export default function DayStrip({
                   </span>
                 </div>
               </button>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }

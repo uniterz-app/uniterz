@@ -184,3 +184,57 @@ export function getDayRangeInTimeZone(date: Date, timeZone: string): { start: Da
   return { start: new Date(startMs), end: new Date(endMs) };
 }
 
+/**
+ * 指定タイムゾーンにおける「暦月」の [start, end)（end は翌月1日0時・排他）。
+ * Firestore の startAtJst 範囲クエリ用。
+ */
+export function getCalendarMonthRangeInTimeZone(
+  anchor: Date,
+  timeZone: string
+): { start: Date; end: Date } {
+  const { year, month } = getZonedYMD(anchor, timeZone);
+  const startMs = zonedTimeToUtcMs({
+    year,
+    month,
+    day: 1,
+    timeZone,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  });
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const endMs = zonedTimeToUtcMs({
+    year: nextYear,
+    month: nextMonth,
+    day: 1,
+    timeZone,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  });
+  return { start: new Date(startMs), end: new Date(endMs) };
+}
+
+/** 指定タイムゾーンで anchor の暦月の「1日0時」を delta ヶ月シフトした日 */
+export function shiftCalendarMonthStart(
+  anchor: Date,
+  deltaMonths: number,
+  timeZone: string
+): Date {
+  const { year, month } = getZonedYMD(anchor, timeZone);
+  const m0 = month - 1 + deltaMonths;
+  const y = year + Math.floor(m0 / 12);
+  const m = ((m0 % 12) + 12) % 12;
+  const ms = zonedTimeToUtcMs({
+    year: y,
+    month: m + 1,
+    day: 1,
+    timeZone,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  });
+  return new Date(ms);
+}
+
