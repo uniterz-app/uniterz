@@ -1261,7 +1261,9 @@ export default function ResultListWithOverlay({
                 >
                   <motion.div
                     className={[
-                      "flex min-h-dvh w-full flex-col overflow-hidden rounded-none border-x-0 border-b-0 border-t border-white/14 bg-black/80 shadow-none backdrop-blur-xl backdrop-saturate-150",
+                      // 不透明度を下げつつ blur でガラス調（背面が透ける）
+                      "flex min-h-dvh w-full flex-col overflow-hidden rounded-none border-x-0 border-b-0 border-t border-white/22",
+                      "bg-black/32 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-2xl backdrop-saturate-[1.4]",
                       "pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]",
                     ].join(" ")}
                     style={detailPanelStyle}
@@ -1291,7 +1293,7 @@ export default function ResultListWithOverlay({
                       <motion.button
                         type="button"
                         aria-label={language === "en" ? "Close" : "閉じる"}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white/90 backdrop-blur-md transition hover:bg-white/15"
                         onClick={(e) => {
                           e.stopPropagation();
                           close();
