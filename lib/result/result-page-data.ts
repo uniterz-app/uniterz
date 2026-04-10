@@ -121,18 +121,14 @@ export function groupPostsByResultDay(
   const days = Array.from(dayMap.values()).sort((a, b) => b.dateMs - a.dateMs);
 
   days.forEach((day) => {
-    // 未確定: 予想の新しさ（作成・キックオフのフォールバック）。新しいほど上。
-    day.pending.sort((a, b) => {
-      const ae = a.createdAtMillis ?? a.startAtMillis ?? 0;
-      const be = b.createdAtMillis ?? b.startAtMillis ?? 0;
+    // リザルトは「結果を入力した順」に揃える（settledAtMillis 基準）。
+    const byResultInputOrder = (a: PostWithMillis, b: PostWithMillis): number => {
+      const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
+      const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
       return be - ae;
-    });
-    // 確定済み: 試合結果が確定した時刻のみ。先に確定したカードほど下（新しい確定ほど上）。
-    day.final.sort((a, b) => {
-      const ae = a.settledAtMillis ?? 0;
-      const be = b.settledAtMillis ?? 0;
-      return be - ae;
-    });
+    };
+    day.pending.sort(byResultInputOrder);
+    day.final.sort(byResultInputOrder);
   });
 
   return days;
