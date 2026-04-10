@@ -27,10 +27,13 @@ function toNumber(v: unknown, fallback = 0) {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
+export type ResultCardOpenAnchor = { clientX: number; clientY: number };
+
 type Props = {
   post: PredictionPostV2;
   href?: string;
-  onOpen?: (post: PredictionPostV2) => void;
+  /** 一覧オーバーレイ用：タップ位置付近に詳細を出すため座標を渡す */
+  onOpen?: (post: PredictionPostV2, anchor: ResultCardOpenAnchor) => void;
   language?: Language;
   /** 指定時は pathname ではなくこれでモバイル表示を決める（リザルトのルート固定用） */
   platform?: ResultPlatform;
@@ -205,9 +208,9 @@ export function ResultCardPresentation({
     ? `${post.result!.home} - ${post.result!.away}`
     : null;
 
-  const handle = () => {
+  const handle = (e: React.MouseEvent<HTMLDivElement>) => {
     if (onOpen) {
-      onOpen(post);
+      onOpen(post, { clientX: e.clientX, clientY: e.clientY });
     } else if (href && onNavigate) {
       onNavigate(href);
     }

@@ -509,8 +509,8 @@ className={[
 disableCardMotion
   ? ""
   : [
-      "transition-transform duration-300",
-      navigating ? "scale-[0.992] opacity-95" : "",
+      "transition-opacity duration-200",
+      navigating ? "opacity-90" : "",
     ].join(" "),
 dense
   ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"

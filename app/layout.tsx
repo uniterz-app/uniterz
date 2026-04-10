@@ -32,6 +32,14 @@ export default function RootLayout({
 
   return (
     <html lang="ja">
+      <head>
+        <link
+          rel="preload"
+          href="/logo/uniterz-logo.glb"
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body
         className={jp.className}
         style={{

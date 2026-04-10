@@ -24,6 +24,9 @@ export type ResultDayPointsHeader =
       prefix: string;
       unit: string;
       aria: string;
+      /** 勝者予想が判定できた試合のうち的中数 / 判定済み件数（中央に hit N/M で表示） */
+      hitWins?: number;
+      hitTotal?: number;
     };
 
 type Props = {
@@ -45,8 +48,11 @@ function AnimatedDayPointsValue({
   const target = Number.parseFloat(value);
   const safeTarget = Number.isFinite(target) ? target : 0;
   const decimals = value.includes(".") ? value.split(".")[1]?.length ?? 0 : 0;
-  const [display, setDisplay] = useState<number>(safeTarget);
-  const fromRef = useRef<number>(safeTarget);
+  // 初回は 0 から数えて合計点のカウントアップを見せる（from=目標だと変化がゼロになる）
+  const [display, setDisplay] = useState<number>(() =>
+    reducedMotion ? safeTarget : 0
+  );
+  const fromRef = useRef<number>(reducedMotion ? safeTarget : 0);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -80,6 +86,51 @@ function AnimatedDayPointsValue({
 
   if (!Number.isFinite(target)) return <>{value}</>;
   return <>{display.toFixed(decimals)}</>;
+}
+
+function AnimatedIntegerValue({
+  value,
+  reducedMotion,
+}: {
+  value: number;
+  reducedMotion: boolean;
+}) {
+  const safeTarget = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  const [display, setDisplay] = useState<number>(() =>
+    reducedMotion ? safeTarget : 0
+  );
+  const fromRef = useRef<number>(reducedMotion ? safeTarget : 0);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      fromRef.current = safeTarget;
+      setDisplay(safeTarget);
+      return;
+    }
+
+    const from = fromRef.current;
+    const to = safeTarget;
+    const durationMs = 620;
+    let rafId = 0;
+    const start = performance.now();
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const next = from + (to - from) * eased;
+      setDisplay(next);
+      if (t < 1) {
+        rafId = window.requestAnimationFrame(step);
+      } else {
+        fromRef.current = to;
+      }
+    };
+
+    rafId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [safeTarget, reducedMotion]);
+
+  return <>{Math.round(display)}</>;
 }
 
 /**
@@ -205,10 +256,8 @@ export function ResultDayPipeGroup({
 
                 <div
                   className={[
-                    "relative flex min-w-0 flex-row items-center",
-                    isMobile
-                      ? "justify-between gap-2"
-                      : "justify-between gap-6",
+                    "relative flex min-w-0 flex-row items-center gap-2",
+                    isMobile ? "sm:gap-3" : "gap-4 sm:gap-6",
                   ].join(" ")}
                   aria-label={
                     dayPoints?.variant === "total"
@@ -230,12 +279,52 @@ export function ResultDayPipeGroup({
                     </p>
                   </div>
 
+                  {dayPoints?.variant === "total" &&
+                    typeof dayPoints.hitTotal === "number" &&
+                    dayPoints.hitTotal > 0 && (
+                      <div className="min-w-0 flex-1 px-1 text-center">
+                        <div
+                          className={[
+                            "inline-flex items-baseline gap-1 whitespace-nowrap",
+                            "leading-none tracking-tight tabular-nums font-black text-white/92",
+                            resultStatsMetricNumClass,
+                            isMobile
+                              ? "text-[clamp(0.95rem,3.7vw,1.15rem)]"
+                              : "text-base md:text-xl",
+                          ].join(" ")}
+                        >
+                          <span className={isMobile ? "text-[11px]" : "text-xs sm:text-sm"}>
+                            hit
+                          </span>
+                          <span>
+                            <AnimatedIntegerValue
+                              value={dayPoints.hitWins ?? 0}
+                              reducedMotion={reducedMotion}
+                            />
+                          </span>
+                          <span>/</span>
+                          <span>
+                            <AnimatedIntegerValue
+                              value={dayPoints.hitTotal}
+                              reducedMotion={reducedMotion}
+                            />
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                   {dayPoints?.variant === "total" && (
                     <div
                       className={[
-                        "flex min-w-0 flex-col items-end justify-center text-right",
+                        "flex min-w-0 shrink-0 flex-col items-end justify-center text-right",
+                        !(
+                          typeof dayPoints.hitTotal === "number" &&
+                          dayPoints.hitTotal > 0
+                        )
+                          ? "ml-auto"
+                          : "",
                         isMobile
-                          ? "min-w-0 flex-1 pl-1"
+                          ? "min-w-0 pl-1"
                           : "min-w-[8.5rem]",
                       ].join(" ")}
                     >
@@ -252,20 +341,32 @@ export function ResultDayPipeGroup({
                           </span>
                         ) : null}
                         {/* ResultCard 中央スコアと同じ数値タイポ（Oxanium + サイズ階層） */}
-                        <span
+                        <motion.span
                           className={[
-                            "whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white",
+                            "inline-block whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white",
                             isMobile
                               ? "text-[clamp(1.05rem,4.2vw,1.35rem)]"
                               : "text-xl md:text-5xl",
                             resultStatsMetricNumClass,
                           ].join(" ")}
+                          initial={
+                            reducedMotion
+                              ? false
+                              : { scale: 0.88, opacity: 0.55 }
+                          }
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 420,
+                            damping: 26,
+                            mass: 0.55,
+                          }}
                         >
                           <AnimatedDayPointsValue
                             value={dayPoints.value}
                             reducedMotion={reducedMotion}
                           />
-                        </span>
+                        </motion.span>
                         <span
                           className={
                             isMobile
