@@ -1073,6 +1073,11 @@ export default function ResultListWithOverlay({
         {filteredGrouped.map((day, dayIndex) => {
           const pendingShown = day.pending;
           const finalShown = day.final;
+          const displayPosts = [...pendingShown, ...finalShown].sort((a, b) => {
+            const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
+            const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
+            return ae - be;
+          });
           const dayPts = dayPointsHeaderForList(
             finalShown,
             pendingShown,
@@ -1110,98 +1115,48 @@ export default function ResultListWithOverlay({
                 reducedMotion={Boolean(prefersReducedMotion)}
                 dayPoints={dayPts}
               >
-                <div className={isMobile ? "space-y-3" : "space-y-4"}>
-                  {pendingShown.length > 0 && (
-                    <div
-                      className={
-                        isMobile
-                          ? "space-y-3"
-                          : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+                <div
+                  className={
+                    isMobile
+                      ? "space-y-3"
+                      : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+                  }
+                >
+                  {displayPosts.map((post, i) => (
+                    <motion.div
+                      key={post.id}
+                      className="w-full"
+                      initial={
+                        off ?? {
+                          opacity: 0,
+                          y: 22,
+                          scale: 0.97,
+                        }
                       }
-                    >
-                      {pendingShown.map((post, i) => (
-                        <motion.div
-                          key={post.id}
-                          className="w-full"
-                          initial={
-                            off ?? {
-                              opacity: 0,
-                              y: 22,
-                              scale: 0.97,
+                      whileInView={
+                        prefersReducedMotion
+                          ? undefined
+                          : {
+                              opacity: 1,
+                              y: 0,
+                              scale: 1,
+                              transition: {
+                                duration: 0.42,
+                                ease: easeOut,
+                                delay: i * 0.055,
+                              },
                             }
-                          }
-                          whileInView={
-                            prefersReducedMotion
-                              ? undefined
-                              : {
-                                  opacity: 1,
-                                  y: 0,
-                                  scale: 1,
-                                  transition: {
-                                    duration: 0.42,
-                                    ease: easeOut,
-                                    delay: i * 0.055,
-                                  },
-                                }
-                          }
-                          viewport={{ once: true, amount: 0.15, margin: "0px 0px -48px 0px" }}
-                        >
-                          <ResultCard
-                            post={post}
-                            onOpen={open}
-                            language={language}
-                            platform={platform}
-                          />
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                  {finalShown.length > 0 && (
-                    <div
-                      className={
-                        isMobile
-                          ? "space-y-3"
-                          : "grid grid-cols-1 gap-4 sm:grid-cols-2"
                       }
+                      viewport={{ once: true, amount: 0.15, margin: "0px 0px -48px 0px" }}
                     >
-                      {finalShown.map((post, i) => (
-                        <motion.div
-                          key={post.id}
-                          className="w-full"
-                          initial={
-                            off ?? {
-                              opacity: 0,
-                              y: 22,
-                              scale: 0.97,
-                            }
-                          }
-                          whileInView={
-                            prefersReducedMotion
-                              ? undefined
-                              : {
-                                  opacity: 1,
-                                  y: 0,
-                                  scale: 1,
-                                  transition: {
-                                    duration: 0.42,
-                                    ease: easeOut,
-                                    delay:
-                                      (pendingShown.length + i) * 0.055,
-                                  },
-                                }
-                          }
-                          viewport={{ once: true, amount: 0.15, margin: "0px 0px -48px 0px" }}
-                        >
-                          <ResultCard
-                            post={post}
-                            onOpen={open}
-                            language={language}
-                            platform={platform}
-                          />
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
+                      <ResultCard
+                        post={post}
+                        onOpen={open}
+                        language={language}
+                        platform={platform}
+                      />
+                    </motion.div>
+                  ))}
                 </div>
               </ResultDayPipeGroup>
             </motion.div>
