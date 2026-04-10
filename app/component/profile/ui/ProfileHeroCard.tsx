@@ -516,7 +516,7 @@ export default function ProfileHeroCard({
       type="button"
       className={
         isWeb
-          ? "h-9 w-9 shrink-0 rounded-lg border border-white/10 bg-white/5"
+          ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5"
           : "absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10"
       }
       onClick={onOpenSettings}
