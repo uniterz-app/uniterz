@@ -567,10 +567,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
     <motion.div
       key={`sched-${selectedDayKey}-${loading ? "l" : "d"}`}
-      initial={reduceMotion ? false : { opacity: 0, y: 26 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: reduceMotion ? 0 : 0.48,
+        duration: reduceMotion ? 0 : 0.32,
         delay: reduceMotion ? 0 : GAMES_LIST_AFTER_DAY_STRIP_SEC,
         ease: GAMES_CONTENT_EASE,
       }}

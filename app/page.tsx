@@ -1,32 +1,33 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AnimatedSplashScreen from "@/app/component/splash/AnimatedSplashScreen";
+import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
+import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplashVisible";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
-import SplashLoadingIndicator from "@/app/component/common/SplashLoadingIndicator";
-
-function EntrySplash() {
-  return (
-    <div className="relative flex h-screen w-screen items-center justify-center splash-screen-bg">
-      <div className="mt-27 ml-4">
-        <SplashLoadingIndicator />
-      </div>
-    </div>
-  );
-}
 
 export default function Page() {
   const router = useRouter();
   const { status, fUser } = useFirebaseUser();
-  const [showIntroSplash, setShowIntroSplash] = useState(true);
+  const [introVisible, setIntroVisible] = useState(true);
+  const [introExitDone, setIntroExitDone] = useState(false);
   const [handle, setHandle] = useState<string | null>(null);
   const [handleResolved, setHandleResolved] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setShowIntroSplash(false), 1200);
+    const t = setTimeout(() => setIntroVisible(false), MIN_SPLASH_DURATION_MS);
     return () => clearTimeout(t);
   }, []);
+
+  const secondPhaseNeedSplash = Boolean(
+    introExitDone &&
+      (status === "loading" ||
+        (status === "ready" && fUser != null && !handleResolved))
+  );
+  const showSecondSplash = useMinimumSplashVisible(secondPhaseNeedSplash);
 
   useEffect(() => {
     if (!fUser) {
@@ -49,7 +50,7 @@ export default function Page() {
   }, [fUser]);
 
   useEffect(() => {
-    if (showIntroSplash) return;
+    if (!introExitDone) return;
     if (status === "loading") return;
     if (status === "ready" && fUser && !handleResolved) return;
 
@@ -67,7 +68,7 @@ export default function Page() {
 
     router.replace(isMobile ? "/mobile/games" : "/web/games");
   }, [
-    showIntroSplash,
+    introExitDone,
     status,
     fUser,
     handle,
@@ -75,12 +76,25 @@ export default function Page() {
     router,
   ]);
 
-  if (showIntroSplash) {
-    return <EntrySplash />;
+  if (!introExitDone) {
+    return (
+      <AnimatePresence onExitComplete={() => setIntroExitDone(true)}>
+        {introVisible && (
+          <motion.div
+            key="root-intro-splash"
+            className="fixed inset-0 z-[100]"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <AnimatedSplashScreen />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
   }
 
-  if (status === "loading" || (status === "ready" && fUser && !handleResolved)) {
-    return <EntrySplash />;
+  if (showSecondSplash) {
+    return <AnimatedSplashScreen />;
   }
 
   return null;

@@ -56,9 +56,9 @@ export function formatResultDateLabel(
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
 
-/** 日付見出しの並び用（試合日。欠損時は投稿日でフォールバック） */
+/** 日付見出しの並び用（結果入力時刻。未確定は予想入力時刻にフォールバック） */
 export function getGroupDateMillis(post: PostWithMillis): number {
-  return post.startAtMillis ?? post.createdAtMillis ?? 0;
+  return post.settledAtMillis ?? post.createdAtMillis ?? post.startAtMillis ?? 0;
 }
 
 export function isFinalResultPost(post: PostWithMillis): boolean {
@@ -121,17 +121,14 @@ export function groupPostsByResultDay(
   const days = Array.from(dayMap.values()).sort((a, b) => b.dateMs - a.dateMs);
 
   days.forEach((day) => {
-    day.pending.sort((a, b) => {
-      const ae = a.startAtMillis ?? a.createdAtMillis ?? 0;
-      const be = b.startAtMillis ?? b.createdAtMillis ?? 0;
+    // リザルトは「結果を入力した順」に揃える（settledAtMillis 基準）。
+    const byResultInputOrder = (a: PostWithMillis, b: PostWithMillis): number => {
+      const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
+      const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
       return ae - be;
-    });
-
-    day.final.sort((a, b) => {
-      const ae = a.startAtMillis ?? a.settledAtMillis ?? 0;
-      const be = b.startAtMillis ?? b.settledAtMillis ?? 0;
-      return ae - be;
-    });
+    };
+    day.pending.sort(byResultInputOrder);
+    day.final.sort(byResultInputOrder);
   });
 
   return days;

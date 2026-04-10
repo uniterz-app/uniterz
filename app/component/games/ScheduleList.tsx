@@ -151,37 +151,27 @@ export default function ScheduleList({
       hidden: {},
       show: {
         transition: {
-          staggerChildren: reduceMotion ? 0 : 0.1,
-          delayChildren: reduceMotion ? 0 : 0.06,
+          staggerChildren: reduceMotion ? 0 : 0.04,
+          delayChildren: reduceMotion ? 0 : 0.03,
         },
       },
     }),
     [reduceMotion]
   );
 
+  /** ブラー・斜め・クリップワイプは重いので、軽いフェード＋短い下方向のみ */
   const scheduleItem = useMemo(
     () => ({
       hidden: reduceMotion
-        ? { opacity: 1, y: 0, scale: 1, skewX: 0, filter: "none", clipPath: "none" }
-        : {
-            opacity: 0,
-            y: 20,
-            scale: 0.94,
-            skewX: 2,
-            filter: "saturate(1.35) brightness(1.12) blur(8px)",
-            clipPath: "inset(0 100% 0 0)",
-          },
+        ? { opacity: 1, y: 0 }
+        : { opacity: 0, y: 10 },
       show: (i: number) => ({
         opacity: 1,
         y: 0,
-        scale: 1,
-        skewX: 0,
-        filter: "saturate(1) brightness(1) blur(0px)",
-        clipPath: "inset(0 0% 0 0)",
         transition: {
-          duration: reduceMotion ? 0 : 0.52,
+          duration: reduceMotion ? 0 : 0.3,
           ease: SCHEDULE_STAGGER_EASE,
-          delay: reduceMotion ? 0 : i * 0.05,
+          delay: reduceMotion ? 0 : Math.min(i * 0.028, 0.12),
         },
       }),
     }),
@@ -616,11 +606,11 @@ export default function ScheduleList({
       <motion.div
         className={openGameId ? "pointer-events-none" : ""}
         animate={{
-          scale: openGameId && !isMobile ? 0.985 : 1,
+          scale: openGameId && !isMobile ? 0.995 : 1,
           opacity: 1,
         }}
         transition={{
-          duration: 0.28,
+          duration: 0.22,
           ease: [0.22, 1, 0.36, 1],
         }}
       >
@@ -631,13 +621,13 @@ export default function ScheduleList({
           initial={reduceMotion ? false : "hidden"}
           animate="show"
         >
-        {propsList.map((props, idx) => {
+        {propsList.map((props, index) => {
           const isOpen = !!selectedProps && String(selectedProps.id) === String(props.id);
 
           return (
             <motion.div
               key={props.id}
-              custom={idx}
+              custom={index}
               variants={scheduleItem}
               className={[
                 "relative",
@@ -645,31 +635,6 @@ export default function ScheduleList({
               ].join(" ")}
               aria-hidden={isOpen}
             >
-              {!reduceMotion && (
-                <motion.div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-2xl"
-                  initial={false}
-                >
-                  <motion.div
-                    className="absolute left-0 right-0 w-full"
-                    style={{
-                      height: "42%",
-                      background:
-                        "linear-gradient(180deg, transparent 0%, rgba(34,211,238,0.08) 40%, rgba(180,250,255,0.5) 50%, rgba(34,211,238,0.1) 60%, transparent 100%)",
-                      mixBlendMode: "screen",
-                      filter: "blur(1px)",
-                    }}
-                    initial={{ opacity: 0, y: "-40%" }}
-                    animate={{ opacity: [0, 0.92, 0], y: ["-35%", "108%"] }}
-                    transition={{
-                      duration: 0.48,
-                      delay: 0.1 + idx * 0.055,
-                      ease: SCHEDULE_STAGGER_EASE,
-                    }}
-                  />
-                </motion.div>
-              )}
               <MatchCard
                 {...props}
                 myPostId={myPostMap[String(props.id)] ?? null}

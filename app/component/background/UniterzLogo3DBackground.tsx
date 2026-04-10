@@ -170,7 +170,7 @@ type GlowMat = THREE.MeshBasicMaterial & {
   };
 };
 
-function Logo3D() {
+function Logo3D({ scale = SCALE }: { scale?: number }) {
   const spinRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
   const emissiveMatsRef = useRef<NeonMat[]>([]);
@@ -284,7 +284,7 @@ function Logo3D() {
   });
 
   return (
-    <group position={POSITION} scale={SCALE}>
+    <group position={POSITION} scale={scale}>
       <group ref={spinRef}>
         <group ref={orientRef}>
           <Center>
@@ -298,12 +298,46 @@ function Logo3D() {
 
 useGLTF.preload("/logo/uniterz-logo.glb");
 
-export default function UniterzLogo3DBackground() {
+const SPLASH_LOGO_SCALE = 5.15;
+
+/** 初回レンダループ後に1回だけ（スプラッシュで装飾より先に3Dを見せる用） */
+function FirstFrameSignal({ onFirstFrame }: { onFirstFrame?: () => void }) {
+  const fired = useRef(false);
+  useFrame(() => {
+    if (fired.current || !onFirstFrame) return;
+    fired.current = true;
+    onFirstFrame();
+  });
+  return null;
+}
+
+export type UniterzLogo3DBackgroundProps = {
+  /** page: ランキング等の背景。splash: 起動スプラッシュ用（やや大きめ・DPR 抑制） */
+  variant?: "page" | "splash";
+  className?: string;
+  /** splash 向け: WebGL 初回描画後に1回だけ呼ぶ */
+  onFirstFrame?: () => void;
+};
+
+export default function UniterzLogo3DBackground({
+  variant = "page",
+  className,
+  onFirstFrame,
+}: UniterzLogo3DBackgroundProps) {
+  const isSplash = variant === "splash";
+  const logoScale = isSplash ? SPLASH_LOGO_SCALE : SCALE;
+  const dpr: [number, number] = isSplash ? [1, 1.25] : [1, 1.5];
+
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 h-full w-full">
+    <div
+      className={[
+        "pointer-events-none absolute inset-0 z-0 h-full w-full",
+        className ?? "",
+      ].join(" ")}
+    >
       <Canvas
         className="h-full w-full"
-        dpr={[1, 1.5]}
+        dpr={dpr}
         gl={{
           antialias: true,
           alpha: true,
@@ -343,7 +377,7 @@ export default function UniterzLogo3DBackground() {
           distance={18}
         />
 
-        <Logo3D />
+        <Logo3D scale={logoScale} />
         <Environment preset="city" />
 
         <EffectComposer multisampling={0}>
@@ -355,21 +389,28 @@ export default function UniterzLogo3DBackground() {
             mipmapBlur
           />
         </EffectComposer>
+
+        {onFirstFrame ? <FirstFrameSignal onFirstFrame={onFirstFrame} /> : null}
       </Canvas>
 
-      <div
-        className="absolute inset-0"
-        style={{
-          /* 画面中央で帯状に明るくならないよう、広げて弱める */
-          background: `
+      {/* splash では Canvas の上に HTML を重ねず、まず3Dだけを見せる（装飾は AnimatedSplashScreen 側） */}
+      {variant === "page" && (
+        <>
+          <div
+            className="absolute inset-0"
+            style={{
+              /* 画面中央で帯状に明るくならないよう、広げて弱める */
+              background: `
             radial-gradient(circle at 50% 22%, ${THEME.overlayGradA} 0%, rgba(0,0,0,0) 24%),
             radial-gradient(circle at 50% 58%, ${THEME.overlayGradB} 0%, rgba(0,0,0,0) 30%),
             radial-gradient(circle at 50% 42%, ${THEME.overlayGradC} 0%, rgba(0,0,0,0) 50%)
           `,
-        }}
-      />
-      <div className="absolute inset-0 bg-black/12" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(8,17,22,0.08)_55%,rgba(8,17,22,0.22)_100%)]" />
+            }}
+          />
+          <div className="absolute inset-0 bg-black/12" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(8,17,22,0.08)_55%,rgba(8,17,22,0.22)_100%)]" />
+        </>
+      )}
     </div>
   );
 }

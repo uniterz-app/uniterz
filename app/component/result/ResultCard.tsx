@@ -27,10 +27,13 @@ function toNumber(v: unknown, fallback = 0) {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
+export type ResultCardOpenAnchor = { clientX: number; clientY: number };
+
 type Props = {
   post: PredictionPostV2;
   href?: string;
-  onOpen?: (post: PredictionPostV2) => void;
+  /** 一覧オーバーレイ用：タップ位置付近に詳細を出すため座標を渡す */
+  onOpen?: (post: PredictionPostV2, anchor: ResultCardOpenAnchor) => void;
   language?: Language;
   /** 指定時は pathname ではなくこれでモバイル表示を決める（リザルトのルート固定用） */
   platform?: ResultPlatform;
@@ -205,9 +208,9 @@ export function ResultCardPresentation({
     ? `${post.result!.home} - ${post.result!.away}`
     : null;
 
-  const handle = () => {
+  const handle = (e: React.MouseEvent<HTMLDivElement>) => {
     if (onOpen) {
-      onOpen(post);
+      onOpen(post, { clientX: e.clientX, clientY: e.clientY });
     } else if (href && onNavigate) {
       onNavigate(href);
     }
@@ -415,13 +418,13 @@ export function ResultCardPresentation({
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
                 <span
-                  className="pointer-events-auto absolute -left-1 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                  className="pointer-events-auto absolute -left-2 -top-2 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
                   style={{ backgroundColor: pillBg, ...teamNameFont }}
                 >
                   {pillText}
                 </span>
                 <Icon
-                  className="h-10 w-10 shrink-0"
+                  className="h-10 w-10 shrink-0 ml-1"
                   fill={homeColor}
                   stroke="#fff"
                 />
@@ -494,13 +497,13 @@ export function ResultCardPresentation({
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
                 <Icon
-                  className="h-10 w-10 shrink-0"
+                  className="h-10 w-10 shrink-0 mr-1"
                   fill={awayColor}
                   stroke="#fff"
                 />
                 {badge === "streak" && streakBadge && (
                   <span
-                    className={`pointer-events-auto absolute -right-1 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+                    className={`pointer-events-auto absolute -right-2 -top-2 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
                   >
                     <Flame
                       className={`h-2 w-2 shrink-0 ${streakBadge.iconClassName}`}
@@ -512,21 +515,21 @@ export function ResultCardPresentation({
                 )}
                 {badge === "hit" && (
                   <span
-                    className={`pointer-events-auto absolute -right-1 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
                   >
                     HIT
                   </span>
                 )}
                 {badge === "upset" && (
                   <span
-                    className={`pointer-events-auto absolute -right-1 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
                   >
                     UPSET
                   </span>
                 )}
                 {badge === "miss" && (
                   <span
-                    className={`pointer-events-auto absolute -right-1 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
                   >
                     MISS
                   </span>
