@@ -125,7 +125,7 @@ export function groupPostsByResultDay(
     const byResultInputOrder = (a: PostWithMillis, b: PostWithMillis): number => {
       const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
       const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
-      return ae - be;
+      return be - ae;
     };
     day.pending.sort(byResultInputOrder);
     day.final.sort(byResultInputOrder);

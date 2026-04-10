@@ -1076,7 +1076,7 @@ export default function ResultListWithOverlay({
           const displayPosts = [...pendingShown, ...finalShown].sort((a, b) => {
             const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
             const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
-            return ae - be;
+            return be - ae;
           });
           const dayPts = dayPointsHeaderForList(
             finalShown,
