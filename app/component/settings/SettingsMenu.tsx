@@ -172,21 +172,27 @@ export default function SettingsMenu({
 
   // ===== styles =====
   const containerClasses = cn(
-    "bg-[#050509] rounded-3xl text-white flex flex-col",
-    isMobile ? "w-full p-4" : "w-80 p-6",
+    "relative text-white flex flex-col",
+    isMobile ? "w-full p-4" : "w-full p-6",
     className
   );
 
-  const groupTitleClasses =
-    "text-xs font-semibold uppercase tracking-wide text-gray-400 mt-4 mb-2";
-  const itemClasses =
-    "flex items-center gap-3 rounded-2xl px-3 py-3 text-sm hover:bg-white/10 transition";
-  const subItemClasses =
-    "flex items-center gap-3 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-white/5";
+  const groupTitleClasses = cn(
+    "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300/55 mt-4 mb-2",
+    isMobile ? "pl-7" : "pl-5"
+  );
+  const itemClasses = cn(
+    "group relative flex items-center gap-3 border-b border-white/8 py-3 text-sm text-white/88 transition hover:bg-slate-200/[0.05]",
+    isMobile ? "pl-7 pr-3" : "px-5"
+  );
+  const subItemClasses = cn(
+    "group relative flex items-center gap-3 border-b border-white/8 py-2 text-xs text-slate-300/75 transition hover:bg-slate-200/[0.04] hover:text-white",
+    isMobile ? "pl-7 pr-3" : "px-5"
+  );
 
   return (
     <>
-      <nav className={containerClasses}>
+      <nav className={cn(containerClasses, "overflow-x-hidden")}>
         <p className={groupTitleClasses}>{isEn ? "Main" : "メイン"}</p>
 
         <button
@@ -251,7 +257,7 @@ export default function SettingsMenu({
           <>
             <p className={groupTitleClasses}>{isEn ? "Admin" : "管理"}</p>
 
-            <button className={itemClasses} onClick={() => router.push("/admin")}>
+        <button className={itemClasses} onClick={() => router.push("/admin")}>
               <LayoutDashboard size={16} /> {isEn ? "Admin Dashboard" : "管理ダッシュボード"}
             </button>
 

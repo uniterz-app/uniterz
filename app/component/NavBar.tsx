@@ -139,10 +139,10 @@ const BarStyle = {
   wrap: {
     position: "fixed",
     left: "50%",
-    bottom: "calc(12px + env(safe-area-inset-bottom))",
+    bottom: "calc(10px + env(safe-area-inset-bottom))",
     transform: "translateX(-50%)",
     zIndex: 999999,
-    width: "min(960px, 92vw)",
+    width: "min(960px, 94vw)",
     pointerEvents: "none",
   } as CSSProperties,
 
@@ -151,18 +151,18 @@ const BarStyle = {
     position: "relative",
     overflow: "hidden",
     background:
-      "linear-gradient(180deg, rgba(18,22,32,0.48) 0%, rgba(8,10,16,0.52) 100%)",
-    borderRadius: 0,
-    clipPath: NAV_DOCK_CLIP,
-    padding: "9px 20px",
+      "linear-gradient(180deg, rgba(18,24,36,0.52) 0%, rgba(10,14,24,0.58) 100%)",
+    borderRadius: 22,
+    clipPath: "none",
+    padding: "8px 14px",
     display: "grid",
     gridTemplateColumns: "repeat(5, 1fr)",
-    gap: 12,
-    border: "none",
+    gap: 6,
+    border: "1px solid rgba(148,163,184,0.14)",
     boxShadow:
-      "0 14px 36px rgba(0,0,0,0.55), 0 0 32px rgba(34,211,238,0.14)",
-    backdropFilter: "saturate(105%) blur(10px)",
-    WebkitBackdropFilter: "saturate(105%) blur(10px)",
+      "0 14px 24px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)",
+    backdropFilter: "saturate(106%) blur(10px)",
+    WebkitBackdropFilter: "saturate(106%) blur(10px)",
     pointerEvents: "auto",
     isolation: "isolate",
   } as CSSProperties,
@@ -193,7 +193,7 @@ const BarStyle = {
     borderRadius: "inherit",
     pointerEvents: "none",
     background:
-      "linear-gradient(180deg, rgba(79,247,244,0.06) 0%, rgba(255,255,255,0.02) 35%, rgba(255,255,255,0.00) 55%)",
+      "linear-gradient(180deg, rgba(79,247,244,0.03) 0%, rgba(255,255,255,0.01) 35%, rgba(255,255,255,0.00) 55%)",
   } as CSSProperties,
 
   bottomGlow: {
@@ -213,8 +213,8 @@ const BarStyle = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "8px 0",
-    borderRadius: 6,
+    padding: "6px 0",
+    borderRadius: 12,
     textDecoration: "none",
     transition: "transform .15s ease-out, background-color .2s ease",
     background: "transparent",
@@ -242,9 +242,9 @@ const BarStyle = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: 38,
-    height: 38,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 9999,
     overflow: "visible",
     lineHeight: 0,
   } as CSSProperties,
@@ -488,6 +488,19 @@ export default function NavBar() {
             filter: blur(0) drop-shadow(0 0 0 rgba(103, 232, 249, 0));
           }
         }
+        @keyframes utzMobileActiveGlow {
+          0%,
+          100% {
+            box-shadow:
+              0 0 0 rgba(103, 232, 249, 0),
+              inset 0 0 0 rgba(255, 255, 255, 0);
+          }
+          50% {
+            box-shadow:
+              0 0 16px rgba(103, 232, 249, 0.25),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          }
+        }
       `}</style>
 
       <nav
@@ -500,7 +513,7 @@ export default function NavBar() {
         <div
           style={{
             ...(isMobile ? BarStyle.barMobile : BarStyle.barWeb),
-            ...(playDockIntro
+            ...(playDockIntro && !isMobile
               ? {
                   animation:
                     "utzNavDockIn 0.84s cubic-bezier(0.15, 1, 0.28, 1) both",
@@ -509,8 +522,8 @@ export default function NavBar() {
               : {}),
           }}
         >
-          <NavHudFrame intro={playDockIntro && !reduceMotion} />
-          {playDockIntro ? (
+          {!isMobile && <NavHudFrame intro={playDockIntro && !reduceMotion} />}
+          {playDockIntro && !isMobile ? (
             <div
               aria-hidden
               style={{
@@ -539,7 +552,15 @@ export default function NavBar() {
               />
             </div>
           ) : null}
-          <div style={{ ...BarStyle.bottomGlow, zIndex: 1 }} />
+          <div
+            style={{
+              ...BarStyle.bottomGlow,
+              zIndex: 1,
+              ...(isMobile
+                ? { left: "14%", right: "14%", bottom: -13, height: 22, opacity: 0.3 }
+                : {}),
+            }}
+          />
           <div style={{ ...BarStyle.glassSheen, zIndex: 1 }} />
 
           {items.map((item, index) => {
@@ -550,12 +571,18 @@ export default function NavBar() {
 
             const iconStyle: CSSProperties = active
               ? {
-                  animation:
-                    "popActive 0.28s cubic-bezier(0.34, 1.45, 0.64, 1) both",
-                  transform: "scale(1.08)",
+                  animation: isMobile
+                    ? "none"
+                    : "popActive 0.28s cubic-bezier(0.34, 1.45, 0.64, 1) both",
+                  transform: isMobile ? "scale(1.04)" : "scale(1.08)",
                   position: "relative",
                   zIndex: 2,
                   opacity: 1,
+                  ...(isMobile
+                    ? {
+                        filter: "drop-shadow(0 0 6px rgba(186,230,253,0.42))",
+                      }
+                    : {}),
                 }
               : {
                   transform: "scale(0.92)",
@@ -584,16 +611,23 @@ export default function NavBar() {
                     alignItems: "center",
                     justifyContent: "center",
                     ...BarStyle.iconWrap,
-                    ...(playDockIntro
+                    ...(playDockIntro && !isMobile
                       ? {
                           animation: `utzNavIconIn 0.62s cubic-bezier(0.2, 0.92, 0.24, 1.08) ${iconEnterDelay}s both`,
+                        }
+                      : {}),
+                    ...(isMobile && active
+                      ? {
+                          background: "transparent",
+                          border: "none",
+                          animation: "none",
                         }
                       : {}),
                   }}
                 >
                   <Icon
-                    size={isMobile ? 26 : 24}
-                    color={active ? "#ffffff" : "rgba(255,255,255,0.38)"}
+                    size={isMobile ? 23 : 24}
+                    color={active ? "#ffffff" : "rgba(226,232,240,0.42)"}
                     style={iconStyle}
                   />
                 </span>
