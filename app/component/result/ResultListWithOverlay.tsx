@@ -1073,11 +1073,8 @@ export default function ResultListWithOverlay({
         {filteredGrouped.map((day, dayIndex) => {
           const pendingShown = day.pending;
           const finalShown = day.final;
-          const displayPosts = [...pendingShown, ...finalShown].sort((a, b) => {
-            const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
-            const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
-            return ae - be;
-          });
+          // 並びは groupPostsByResultDay に任せる（確定が新しいほど上・先に確定したものは下。pending は先に並ぶ）
+          const displayPosts = [...pendingShown, ...finalShown];
           const dayPts = dayPointsHeaderForList(
             finalShown,
             pendingShown,
