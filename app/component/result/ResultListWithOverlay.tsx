@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
@@ -285,58 +286,24 @@ function postMatchesFilters(post: PostWithMillis, f: ResultListFilters): boolean
   return true;
 }
 
-/** 投稿カードのタップ位置付近に詳細パネルを置く（はみ出しは画面内にクランプ） */
-function detailPopoverStyle(
-  anchor: ResultCardOpenAnchor | null,
-  isMobile: boolean
+/** 全画面詳細オーバーレイ。transformOrigin をタップ座標にして「押した位置から」拡大する */
+function detailFullscreenPanelStyle(
+  anchor: ResultCardOpenAnchor | null
 ): CSSProperties {
-  const margin = 12;
-  if (typeof window === "undefined") {
-    return {
-      position: "fixed",
-      left: "50%",
-      top: margin,
-      transform: "translateX(-50%)",
-      width: "min(560px, calc(100vw - 24px))",
-      maxHeight: "min(72dvh, calc(100dvh - 24px))",
-      pointerEvents: "auto",
-      zIndex: 10,
-    };
-  }
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const panelW = Math.min(isMobile ? vw - margin * 2 : 560, 560);
-  const halfW = panelW / 2;
-  const maxH = "min(72dvh, calc(100dvh - env(safe-area-inset-bottom, 0px) - 24px))";
-
-  if (anchor == null) {
-    return {
-      position: "fixed",
-      left: "50%",
-      top: Math.max(margin, 24),
-      transform: "translateX(-50%)",
-      width: panelW,
-      maxHeight: maxH,
-      pointerEvents: "auto",
-      zIndex: 10,
-    };
-  }
-
-  let left = anchor.clientX;
-  left = Math.max(margin + halfW, Math.min(left, vw - margin - halfW));
-  const offsetY = 10;
-  let top = anchor.clientY + offsetY;
-  const minTop = margin + 4;
-  const maxTop = vh - margin - 100;
-  top = Math.max(minTop, Math.min(top, maxTop));
+  const origin =
+    anchor != null
+      ? `${anchor.clientX}px ${anchor.clientY}px`
+      : "50% 50%";
 
   return {
     position: "fixed",
-    left,
-    top,
-    transform: "translateX(-50%)",
-    width: panelW,
-    maxHeight: maxH,
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    maxWidth: "none",
+    maxHeight: "none",
+    margin: 0,
+    transformOrigin: origin,
     pointerEvents: "auto",
     zIndex: 10,
   };
@@ -365,8 +332,6 @@ export default function ResultListWithOverlay({
   const [detailAnchor, setDetailAnchor] = useState<ResultCardOpenAnchor | null>(
     null
   );
-  /** リサイズ時にタップ基準のパネル位置を再計算する */
-  const [detailLayoutTick, setDetailLayoutTick] = useState(0);
   const [market, setMarket] = useState<MarketData | null>(null);
   const [pointsDistribution, setPointsDistribution] =
     useState<GamePointsDistributionV1 | null>(null);
@@ -492,16 +457,27 @@ export default function ResultListWithOverlay({
   );
 
   const detailPanelStyle = useMemo(
-    () => detailPopoverStyle(detailAnchor, isMobile),
-    [detailAnchor, isMobile, detailLayoutTick]
+    () => detailFullscreenPanelStyle(detailAnchor),
+    [detailAnchor]
   );
 
   useEffect(() => {
     if (!openPostId) return;
-    const onResize = () => setDetailLayoutTick((t) => t + 1);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [openPostId]);
+
+  useEffect(() => {
+    if (!openPostId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openPostId, close]);
 
   useEffect(() => {
     if (!openPostId) return;
@@ -540,6 +516,12 @@ export default function ResultListWithOverlay({
       cancelled = true;
     };
   }, [openPostId, selectedPost]);
+
+  /** ルートの perspective 等が fixed の包含ブロックになるため、オーバーレイは body 直下に描画 */
+  const [overlayPortalReady, setOverlayPortalReady] = useState(false);
+  useEffect(() => {
+    setOverlayPortalReady(true);
+  }, []);
 
   const fc =
     language === "en"
@@ -1262,100 +1244,103 @@ export default function ResultListWithOverlay({
         )}
       </motion.div>
 
-      <AnimatePresence>
-        {openPostId && selectedPost && (
-          <motion.div
-            key="result-overlay"
-            className={[
-              "fixed inset-0 pointer-events-none",
-              isMobile ? "z-100000" : "z-99999",
-            ].join(" ")}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: easeOut }}
-          >
-            {/* 背面の暗転は見た目のみ。タッチは一覧のスクロールに通す */}
-            <div
-              className="absolute inset-0 z-0 bg-black/35 backdrop-blur-md pointer-events-none"
-              aria-hidden
-            />
-            <motion.div
-              className="flex flex-col overflow-hidden rounded-2xl border border-white/18 bg-black/45 shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-xl backdrop-saturate-150"
-              style={detailPanelStyle}
-              initial={
-                prefersReducedMotion
-                  ? false
-                  : { opacity: 0, y: 14, scale: 0.98 }
-              }
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={
-                prefersReducedMotion
-                  ? undefined
-                  : { opacity: 0, y: 10, scale: 0.99 }
-              }
-              transition={{
-                duration: 0.34,
-                ease: easeOut,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                className={[
-                  "flex shrink-0 items-center justify-end border-b border-white/10 px-2 pt-2",
-                  isMobile ? "min-h-10 pb-1" : "min-h-11 pb-1.5",
-                ].join(" ")}
-              >
-                <motion.button
-                  type="button"
-                  aria-label={language === "en" ? "Close" : "閉じる"}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    close();
-                  }}
-                  initial={prefersReducedMotion ? false : { opacity: 0, rotate: -90 }}
-                  animate={{ opacity: 1, rotate: 0 }}
-                  transition={{ delay: 0.06, duration: 0.35, ease: easeOut }}
-                  whileTap={prefersReducedMotion ? undefined : { scale: 0.92 }}
+      {overlayPortalReady
+        ? createPortal(
+            <AnimatePresence>
+              {openPostId && selectedPost && (
+                <motion.div
+                  key="result-overlay"
+                  className={[
+                    "fixed inset-0 pointer-events-auto",
+                    isMobile ? "z-[100000]" : "z-[99999]",
+                  ].join(" ")}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.22, ease: easeOut }}
                 >
-                  <X size={18} strokeWidth={2.4} />
-                </motion.button>
-              </div>
-              <div
-                className={[
-                  "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pt-1 sm:px-4",
-                  isMobile ? "pb-bottom-nav" : "pb-8",
-                ].join(" ")}
-                style={{
-                  WebkitOverflowScrolling: "touch",
-                  overscrollBehaviorY: "contain",
-                  overscrollBehaviorX: "none",
-                  touchAction: "pan-y",
-                }}
-              >
-                {isMobile ? (
-                  <MobileResultDetail
-                    post={selectedPost}
-                    market={market ?? undefined}
-                    pointsDistribution={pointsDistribution}
-                    language={language}
-                    inOverlay
-                  />
-                ) : (
-                  <ResultDetail
-                    post={selectedPost}
-                    market={market ?? undefined}
-                    pointsDistribution={pointsDistribution}
-                    language={language}
-                    inOverlay
-                  />
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <motion.div
+                    className={[
+                      "flex min-h-dvh w-full flex-col overflow-hidden rounded-none border-x-0 border-b-0 border-t border-white/14 bg-black/80 shadow-none backdrop-blur-xl backdrop-saturate-150",
+                      "pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]",
+                    ].join(" ")}
+                    style={detailPanelStyle}
+                    initial={
+                      prefersReducedMotion
+                        ? false
+                        : { opacity: 0, scale: 0.94 }
+                    }
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={
+                      prefersReducedMotion
+                        ? undefined
+                        : { opacity: 0, scale: 0.97 }
+                    }
+                    transition={{
+                      duration: 0.36,
+                      ease: easeOut,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div
+                      className={[
+                        "flex shrink-0 items-center justify-end border-b border-white/10 px-2 pt-2",
+                        isMobile ? "min-h-10 pb-1" : "min-h-11 pb-1.5",
+                      ].join(" ")}
+                    >
+                      <motion.button
+                        type="button"
+                        aria-label={language === "en" ? "Close" : "閉じる"}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          close();
+                        }}
+                        initial={prefersReducedMotion ? false : { opacity: 0, rotate: -90 }}
+                        animate={{ opacity: 1, rotate: 0 }}
+                        transition={{ delay: 0.06, duration: 0.35, ease: easeOut }}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.92 }}
+                      >
+                        <X size={18} strokeWidth={2.4} />
+                      </motion.button>
+                    </div>
+                    <div
+                      className={[
+                        "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pt-1 sm:px-4",
+                        isMobile ? "pb-bottom-nav" : "pb-8",
+                      ].join(" ")}
+                      style={{
+                        WebkitOverflowScrolling: "touch",
+                        overscrollBehaviorY: "contain",
+                        overscrollBehaviorX: "none",
+                        touchAction: "pan-y",
+                      }}
+                    >
+                      {isMobile ? (
+                        <MobileResultDetail
+                          post={selectedPost}
+                          market={market ?? undefined}
+                          pointsDistribution={pointsDistribution}
+                          language={language}
+                          inOverlay
+                        />
+                      ) : (
+                        <ResultDetail
+                          post={selectedPost}
+                          market={market ?? undefined}
+                          pointsDistribution={pointsDistribution}
+                          language={language}
+                          inOverlay
+                        />
+                      )}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )
+        : null}
     </>
   );
 }
