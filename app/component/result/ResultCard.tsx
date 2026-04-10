@@ -12,6 +12,7 @@ import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
+import type { ResultPlatform } from "@/lib/result/result-platform";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
@@ -31,6 +32,16 @@ type Props = {
   href?: string;
   onOpen?: (post: PredictionPostV2) => void;
   language?: Language;
+  /** 指定時は pathname ではなくこれでモバイル表示を決める（リザルトのルート固定用） */
+  platform?: ResultPlatform;
+};
+
+/** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
+export type ResultCardPresentationProps = Props & {
+  isMobile: boolean;
+  onNavigate?: (href: string) => void;
+  /** 3D テーブル配置時など、一覧の日付グループと揃えたラベルを出す */
+  listDateLabel?: string;
 };
 
 const leaguePillBg: Record<string, string> = {
@@ -142,15 +153,15 @@ function getStreakBadgeForMobile(
   };
 }
 
-export default function ResultCard({
+export function ResultCardPresentation({
   post,
   href,
   onOpen,
   language = "ja",
-}: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const isMobile = pathname?.startsWith("/mobile");
+  isMobile,
+  onNavigate,
+  listDateLabel,
+}: ResultCardPresentationProps) {
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const isEn = language === "en";
   const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
@@ -197,8 +208,8 @@ export default function ResultCard({
   const handle = () => {
     if (onOpen) {
       onOpen(post);
-    } else if (href) {
-      router.push(href);
+    } else if (href && onNavigate) {
+      onNavigate(href);
     }
   };
 
@@ -296,7 +307,12 @@ export default function ResultCard({
   const barAnimateMs = isMobile ? 480 : 520;
   const barStaggerMs = isMobile ? 80 : 90;
 
-  const contentPad = isMobile ? "px-4 pb-3 pt-8" : "px-8 pb-6 pt-10";
+  // モバイルはリーグ／ステータスをグリッド内に入れるため、日付バッジ分だけ上余白
+  const contentPad = isMobile
+    ? listDateLabel
+      ? "px-4 pb-3 pt-7"
+      : "px-4 pb-3 pt-4"
+    : "px-8 pb-6 pt-10";
 
   return (
     <div
@@ -313,90 +329,142 @@ export default function ResultCard({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2 sm:px-3 sm:pt-2.5">
-        <span
-          className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest sm:text-[11px]"
-          style={{ backgroundColor: pillBg, ...teamNameFont }}
+      {listDateLabel ? (
+        <div
+          className={[
+            "pointer-events-none absolute top-2 z-30 max-w-[78%] truncate text-left",
+            isMobile ? "left-4" : "left-8",
+          ].join(" ")}
         >
-          {pillText}
-        </span>
-        <div className="flex min-w-0 flex-1 justify-end">
-          {badge === "streak" && streakBadge && (
-            <span
-              className={`pointer-events-auto inline-flex max-w-full items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-            >
-              {!isMobile && (
+          <span
+            className={[
+              "inline-block rounded-full border border-cyan-300/40 bg-black/65 font-semibold tracking-wide text-cyan-50/95 shadow-[0_0_12px_rgba(34,211,238,0.15)] backdrop-blur-sm",
+              isMobile ? "px-2.5 py-0.5 text-[9px]" : "px-3 py-1 text-[10px]",
+            ].join(" ")}
+          >
+            {listDateLabel}
+          </span>
+        </div>
+      ) : null}
+      {/* デスクトップ：上部にリーグ＋ステータス。モバイルはユニ横に配置 */}
+      {!isMobile && (
+        <div
+          className={[
+            "pointer-events-none absolute inset-x-0 z-20 flex items-start justify-between gap-2 px-2 sm:px-3",
+            listDateLabel ? "top-7 pt-1 sm:top-8 sm:pt-1.5" : "top-0 pt-2 sm:pt-2.5",
+          ].join(" ")}
+        >
+          <span
+            className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest sm:text-[11px]"
+            style={{ backgroundColor: pillBg, ...teamNameFont }}
+          >
+            {pillText}
+          </span>
+          <div className="flex min-w-0 flex-1 justify-end">
+            {badge === "streak" && streakBadge && (
+              <span
+                className={`pointer-events-auto inline-flex max-w-full items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+              >
                 <Flame
                   className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
                 />
-              )}
-              <span className="min-w-0 truncate">{streakBadge.label}</span>
-            </span>
-          )}
-          {badge === "hit" && (
-            <span
-              className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
-            >
-              HIT
-            </span>
-          )}
-          {badge === "upset" && (
-            <span
-              className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-            >
-              UPSET
-            </span>
-          )}
-          {badge === "miss" && (
-            <span
-              className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-            >
-              MISS
-            </span>
-          )}
+                <span className="min-w-0 truncate">{streakBadge.label}</span>
+              </span>
+            )}
+            {badge === "hit" && (
+              <span
+                className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+              >
+                HIT
+              </span>
+            )}
+            {badge === "upset" && (
+              <span
+                className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+              >
+                UPSET
+              </span>
+            )}
+            {badge === "miss" && (
+              <span
+                className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+              >
+                MISS
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className={`relative z-10 ${contentPad}`}>
       <div
         className={`grid items-center ${
-          isMobile ? "grid-cols-3" : "grid-cols-3 gap-8"
+          isMobile
+            ? "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-1.5"
+            : "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-8"
         }`}
       >
-        <div className="flex flex-col items-center ml-3">
-          <Icon
-            className={isMobile ? "w-10 h-10" : "w-14 h-14"}
-            fill={homeColor}
-            stroke="#fff"
-          />
-          {!isMobile ? (
-            <div
-              className={`${nameMt} text-center text-base font-bold leading-tight md:text-xl lg:text-2xl`}
-              style={teamNameFont}
-            >
-              {homeL1} {homeL2}
-            </div>
+        <div
+          className={
+            isMobile
+              ? "flex min-w-0 flex-col items-stretch"
+              : "flex min-w-0 flex-col items-center ml-1 sm:ml-3"
+          }
+        >
+          {isMobile ? (
+            <>
+              <div className="relative flex w-full min-w-0 items-center justify-center">
+                <span
+                  className="pointer-events-auto absolute -left-1 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                  style={{ backgroundColor: pillBg, ...teamNameFont }}
+                >
+                  {pillText}
+                </span>
+                <Icon
+                  className="h-10 w-10 shrink-0"
+                  fill={homeColor}
+                  stroke="#fff"
+                />
+              </div>
+              <div
+                className={`${nameMt} w-full max-w-full truncate text-center text-[13px] font-bold leading-tight md:text-[17px]`}
+                style={teamNameFont}
+              >
+                {getMobileTeamName(
+                  post.league,
+                  post.home?.name ?? "",
+                  homeL1,
+                  homeL2
+                )}
+              </div>
+            </>
           ) : (
-            <div
-              className={`${nameMt} text-center text-[13px] font-bold leading-tight md:text-[17px]`}
-              style={teamNameFont}
-            >
-              {getMobileTeamName(
-                post.league,
-                post.home?.name ?? "",
-                homeL1,
-                homeL2
-              )}
-            </div>
+            <>
+              <Icon
+                className="h-14 w-14"
+                fill={homeColor}
+                stroke="#fff"
+              />
+              <div
+                className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
+                style={teamNameFont}
+              >
+                <span className="line-clamp-2 break-words">
+                  {homeL1} {homeL2}
+                </span>
+              </div>
+            </>
           )}
         </div>
 
-        <div className="mt-3 flex flex-col items-center justify-center">
+        <div className="mt-3 flex max-w-full shrink-0 flex-col items-center justify-center px-0.5">
           <div
             className={[
-              "leading-none tracking-tight tabular-nums text-xl md:text-5xl",
+              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black",
+              isMobile
+                ? "text-[clamp(1.2rem,5vw,1.6rem)]"
+                : "text-xl md:text-5xl",
               resultStatsMetricNumClass,
-              "font-black",
             ].join(" ")}
           >
             {predictedScore}
@@ -404,38 +472,94 @@ export default function ResultCard({
 
           {finalScore && (
             <div
-              className={`mt-2 tabular-nums opacity-85 text-sm font-bold md:text-base ${resultStatsMetricNumClass}`}
+              className={`mt-1.5 whitespace-nowrap tabular-nums opacity-85 md:mt-2 ${
+                isMobile
+                  ? "text-xs font-bold leading-tight"
+                  : "text-sm font-bold md:text-base"
+              } ${resultStatsMetricNumClass}`}
             >
               {finalScore}
             </div>
           )}
         </div>
 
-        <div className="flex flex-col items-center -ml-3">
-          <Icon
-            className={isMobile ? "w-10 h-10" : "w-14 h-14"}
-            fill={awayColor}
-            stroke="#fff"
-          />
-          {!isMobile ? (
-            <div
-              className={`${nameMt} text-center text-base font-bold leading-tight md:text-xl lg:text-2xl`}
-              style={teamNameFont}
-            >
-              {awayL1} {awayL2}
-            </div>
+        <div
+          className={
+            isMobile
+              ? "flex min-w-0 flex-col items-stretch"
+              : "flex min-w-0 flex-col items-center mr-1 sm:mr-3"
+          }
+        >
+          {isMobile ? (
+            <>
+              <div className="relative flex w-full min-w-0 items-center justify-center">
+                <Icon
+                  className="h-10 w-10 shrink-0"
+                  fill={awayColor}
+                  stroke="#fff"
+                />
+                {badge === "streak" && streakBadge && (
+                  <span
+                    className={`pointer-events-auto absolute -right-1 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+                  >
+                    <Flame
+                      className={`h-2 w-2 shrink-0 ${streakBadge.iconClassName}`}
+                    />
+                    <span className="min-w-0 truncate text-[9px] leading-tight">
+                      {streakBadge.label}
+                    </span>
+                  </span>
+                )}
+                {badge === "hit" && (
+                  <span
+                    className={`pointer-events-auto absolute -right-1 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+                  >
+                    HIT
+                  </span>
+                )}
+                {badge === "upset" && (
+                  <span
+                    className={`pointer-events-auto absolute -right-1 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                  >
+                    UPSET
+                  </span>
+                )}
+                {badge === "miss" && (
+                  <span
+                    className={`pointer-events-auto absolute -right-1 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                  >
+                    MISS
+                  </span>
+                )}
+              </div>
+              <div
+                className={`${nameMt} w-full max-w-full truncate text-center text-[13px] font-bold leading-tight md:text-[17px]`}
+                style={teamNameFont}
+              >
+                {getMobileTeamName(
+                  post.league,
+                  post.away?.name ?? "",
+                  awayL1,
+                  awayL2
+                )}
+              </div>
+            </>
           ) : (
-            <div
-              className={`${nameMt} text-center text-[13px] font-bold leading-tight md:text-[17px]`}
-              style={teamNameFont}
-            >
-              {getMobileTeamName(
-                post.league,
-                post.away?.name ?? "",
-                awayL1,
-                awayL2
-              )}
-            </div>
+            <>
+              <Icon
+                className="h-14 w-14"
+                fill={awayColor}
+                stroke="#fff"
+              />
+              <div
+                className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
+                style={teamNameFont}
+              >
+                <span className="line-clamp-2 break-words">
+                  {awayL1} {awayL2}
+                </span>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -509,5 +633,23 @@ export default function ResultCard({
       </div>
     </div>
     </div>
+  );
+}
+
+export default function ResultCard(props: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const isMobile =
+    props.platform !== undefined
+      ? props.platform === "mobile"
+      : pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
+  const { platform: _p, ...rest } = props;
+  void _p;
+  return (
+    <ResultCardPresentation
+      {...rest}
+      isMobile={isMobile}
+      onNavigate={(href) => router.push(href)}
+    />
   );
 }

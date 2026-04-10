@@ -6,7 +6,8 @@ import { GiCrossedSwords } from "react-icons/gi";
 import { FaTrophy } from "react-icons/fa";
 import { FiUser } from "react-icons/fi";
 import { Brain } from "lucide-react";
-import { useEffect, useLayoutEffect, useState, CSSProperties } from "react";
+import { useEffect, useId, useLayoutEffect, useState, CSSProperties } from "react";
+import { useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -24,6 +25,99 @@ type Item = {
   }>;
 };
 
+/** 角ばったチャンファー枠：外周を1本のHUD線として描画（CSS枠と二重にしない） */
+function NavHudFrame({ intro = false }: { intro?: boolean }) {
+  const uid = useId().replace(/:/g, "");
+  const filterId = `navHudGlow-${uid}`;
+  const gradId = `navHudFill-${uid}`;
+
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 1000 120"
+      preserveAspectRatio="none"
+      className={intro ? "nav-hud-frame--intro" : undefined}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        zIndex: 2,
+        overflow: "visible",
+      }}
+    >
+      <defs>
+        <filter id={filterId} x="-15%" y="-20%" width="130%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.1" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4ff7f4" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#14d9e7" stopOpacity="0.88" />
+        </linearGradient>
+      </defs>
+
+      {/* 外周：八角チャンファー（単一の連続線・pathLength でストローク描画） */}
+      <path
+        className="nav-hud-outer"
+        pathLength={1}
+        d="M 18 0 L 982 0 L 1000 18 L 1000 102 L 982 120 L 18 120 L 0 102 L 0 18 Z"
+        fill="none"
+        stroke="#31eef6"
+        strokeWidth="2.2"
+        vectorEffect="nonScalingStroke"
+        filter={`url(#${filterId})`}
+      />
+      {/* 内側の細線（同形状・面取り内側） */}
+      <path
+        className="nav-hud-inner"
+        pathLength={1}
+        d="M 28 10 L 972 10 L 986 24 L 986 96 L 972 110 L 28 110 L 14 96 L 14 24 Z"
+        fill="none"
+        stroke="rgba(49, 238, 246, 0.45)"
+        strokeWidth="1"
+        vectorEffect="nonScalingStroke"
+      />
+
+      {/* 上中央タブ */}
+      <path
+        className="nav-hud-decor"
+        d="M 458 0 L 542 0 L 528 13 L 472 13 Z"
+        fill="rgba(79, 247, 244, 0.2)"
+        stroke="#49f4f0"
+        strokeWidth="0.9"
+        vectorEffect="nonScalingStroke"
+      />
+
+      {/* 左右ブラケット（角ばった短冊） */}
+      <polygon
+        className="nav-hud-decor"
+        points="8,44 20,44 20,76 8,76"
+        fill={`url(#${gradId})`}
+        opacity={0.88}
+      />
+      <polygon
+        className="nav-hud-decor"
+        points="980,44 992,44 992,76 980,76"
+        fill={`url(#${gradId})`}
+        opacity={0.88}
+      />
+
+      {/* 下中央アクセント */}
+      <path
+        className="nav-hud-decor"
+        d="M 400 100 L 600 100 L 612 118 L 388 118 Z"
+        fill={`url(#${gradId})`}
+        opacity={0.88}
+      />
+    </svg>
+  );
+}
+
 const items: Item[] = [
   { key: "games", href: "/games", label: "試合", icon: GiCrossedSwords },
   { key: "home", href: "/result", label: "リザルト", icon: Brain },
@@ -36,6 +130,10 @@ const items: Item[] = [
   },
   { key: "mypage", href: "/mypage", label: "マイページ", icon: FiUser },
 ];
+
+/** ドック本体の面取りシルエット（角張り） */
+const NAV_DOCK_CLIP =
+  "polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px)";
 
 const BarStyle = {
   wrap: {
@@ -53,15 +151,16 @@ const BarStyle = {
     position: "relative",
     overflow: "hidden",
     background:
-      "linear-gradient(180deg, rgba(32,36,48,0.78) 0%, rgba(14,16,22,0.86) 100%)",
-    borderRadius: 30,
+      "linear-gradient(180deg, rgba(18,22,32,0.48) 0%, rgba(8,10,16,0.52) 100%)",
+    borderRadius: 0,
+    clipPath: NAV_DOCK_CLIP,
     padding: "9px 20px",
     display: "grid",
     gridTemplateColumns: "repeat(5, 1fr)",
     gap: 12,
-    border: "1px solid rgba(255,255,255,0.09)",
+    border: "none",
     boxShadow:
-      "0 12px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
+      "0 14px 36px rgba(0,0,0,0.55), 0 0 32px rgba(34,211,238,0.14)",
     backdropFilter: "saturate(105%) blur(10px)",
     WebkitBackdropFilter: "saturate(105%) blur(10px)",
     pointerEvents: "auto",
@@ -72,15 +171,16 @@ const BarStyle = {
     position: "relative",
     overflow: "hidden",
     background:
-      "linear-gradient(180deg, rgba(32,36,48,0.74) 0%, rgba(14,16,22,0.84) 100%)",
-    borderRadius: 28,
+      "linear-gradient(180deg, rgba(18,22,32,0.45) 0%, rgba(8,10,16,0.50) 100%)",
+    borderRadius: 0,
+    clipPath: NAV_DOCK_CLIP,
     padding: "10px 16px",
     display: "grid",
     gridTemplateColumns: "repeat(5, 1fr)",
     gap: 8,
-    border: "1px solid rgba(255,255,255,0.085)",
+    border: "none",
     boxShadow:
-      "0 12px 32px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.055)",
+      "0 14px 36px rgba(0,0,0,0.52), 0 0 30px rgba(34,211,238,0.12)",
     backdropFilter: "saturate(105%) blur(9px)",
     WebkitBackdropFilter: "saturate(105%) blur(9px)",
     pointerEvents: "auto",
@@ -93,27 +193,7 @@ const BarStyle = {
     borderRadius: "inherit",
     pointerEvents: "none",
     background:
-      "linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.018) 30%, rgba(255,255,255,0.00) 48%)",
-  } as CSSProperties,
-
-  glowRing: {
-    position: "absolute",
-    inset: 0,
-    borderRadius: "inherit",
-    pointerEvents: "none",
-    boxShadow:
-      "inset 0 0 0 1px rgba(255,255,255,0.05), inset 0 0 14px rgba(0,0,0,0.25)",
-  } as CSSProperties,
-
-  edgeGlow: {
-    position: "absolute",
-    inset: 0,
-    borderRadius: "inherit",
-    pointerEvents: "none",
-    background:
-      "radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 24%, rgba(255,255,255,0.00) 58%)",
-    filter: "blur(10px)",
-    opacity: 0.65,
+      "linear-gradient(180deg, rgba(79,247,244,0.06) 0%, rgba(255,255,255,0.02) 35%, rgba(255,255,255,0.00) 55%)",
   } as CSSProperties,
 
   bottomGlow: {
@@ -134,7 +214,7 @@ const BarStyle = {
     alignItems: "center",
     justifyContent: "center",
     padding: "8px 0",
-    borderRadius: 16,
+    borderRadius: 6,
     textDecoration: "none",
     transition: "transform .15s ease-out, background-color .2s ease",
     background: "transparent",
@@ -148,7 +228,7 @@ const BarStyle = {
     alignItems: "center",
     justifyContent: "center",
     padding: "6px 0",
-    borderRadius: 16,
+    borderRadius: 6,
     textDecoration: "none",
     transition: "transform .15s ease-out, background-color .2s ease",
     background: "transparent",
@@ -164,7 +244,7 @@ const BarStyle = {
     justifyContent: "center",
     width: 38,
     height: 38,
-    borderRadius: "50%",
+    borderRadius: 8,
     overflow: "visible",
     lineHeight: 0,
   } as CSSProperties,
@@ -172,6 +252,7 @@ const BarStyle = {
 
 export default function NavBar() {
   const pathname = usePathname() ?? "";
+  const reduceMotion = useReducedMotion();
 
   const isMobile =
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
@@ -255,6 +336,62 @@ export default function NavBar() {
   const navEl = (
     <>
       <style>{`
+        @keyframes navHudStrokeDraw {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        @keyframes navHudDecorIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 0.88;
+          }
+        }
+        @keyframes navHudSvgPulse {
+          0%,
+          100% {
+            filter: drop-shadow(0 0 0 rgba(49, 238, 246, 0));
+          }
+          45% {
+            filter: drop-shadow(0 0 12px rgba(49, 238, 246, 0.55));
+          }
+          70% {
+            filter: drop-shadow(0 0 5px rgba(49, 238, 246, 0.28));
+          }
+        }
+        .nav-hud-frame--intro {
+          animation: navHudSvgPulse 1.05s ease-out 0.72s 1 both;
+        }
+        .nav-hud-frame--intro .nav-hud-outer {
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+          animation: navHudStrokeDraw 0.88s cubic-bezier(0.15, 1, 0.28, 1) forwards;
+        }
+        .nav-hud-frame--intro .nav-hud-inner {
+          stroke-dasharray: 1;
+          stroke-dashoffset: 1;
+          animation: navHudStrokeDraw 0.88s cubic-bezier(0.15, 1, 0.28, 1) 0.1s forwards;
+        }
+        .nav-hud-frame--intro .nav-hud-decor {
+          opacity: 0;
+          animation: navHudDecorIn 0.38s ease-out 0.52s forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nav-hud-frame--intro {
+            animation: none !important;
+          }
+          .nav-hud-frame--intro .nav-hud-outer,
+          .nav-hud-frame--intro .nav-hud-inner {
+            animation: none !important;
+            stroke-dashoffset: 0 !important;
+          }
+          .nav-hud-frame--intro .nav-hud-decor {
+            animation: none !important;
+            opacity: 0.88 !important;
+          }
+        }
         @keyframes popActive {
           0% {
             transform: scale(0.88);
@@ -272,7 +409,6 @@ export default function NavBar() {
         @keyframes utzNavDockIn {
           0% {
             opacity: 0;
-            clip-path: inset(18% 40% 18% 40% round 999px);
             transform: translateY(48px) scale(0.88) rotateX(10deg);
             filter: blur(12px) saturate(0.85);
             box-shadow:
@@ -282,17 +418,16 @@ export default function NavBar() {
           }
           28% {
             opacity: 1;
-            clip-path: inset(4% 8% 4% 8% round 28px);
             filter: blur(3px) saturate(1.05);
             transform: translateY(-8px) scale(1.04) rotateX(2deg);
             box-shadow:
               0 24px 56px rgba(0, 0, 0, 0.45),
               0 0 56px rgba(34, 211, 238, 0.38),
               0 0 100px rgba(56, 189, 248, 0.15),
+              0 0 0 1px rgba(34, 211, 238, 0.22),
               inset 0 1px 0 rgba(255, 255, 255, 0.1);
           }
           48% {
-            clip-path: inset(0 0 0 0 round 28px);
             filter: blur(0) saturate(1.02);
             transform: translateY(4px) scale(0.985) rotateX(0deg);
             box-shadow:
@@ -309,7 +444,6 @@ export default function NavBar() {
           }
           100% {
             opacity: 1;
-            clip-path: inset(0 0 0 0 round 28px);
             filter: blur(0) saturate(1);
             transform: translateY(0) scale(1) rotateX(0deg);
             box-shadow:
@@ -319,14 +453,14 @@ export default function NavBar() {
         }
         @keyframes utzNavDockSweep {
           0% {
-            transform: translateX(-130%) skewX(-20deg);
+            transform: translateX(-130%) skewX(-28deg);
             opacity: 0;
           }
-          8% {
+          10% {
             opacity: 1;
           }
           100% {
-            transform: translateX(240%) skewX(-20deg);
+            transform: translateX(240%) skewX(-28deg);
             opacity: 0;
           }
         }
@@ -376,15 +510,16 @@ export default function NavBar() {
               : {}),
           }}
         >
+          <NavHudFrame intro={playDockIntro && !reduceMotion} />
           {playDockIntro ? (
             <div
               aria-hidden
               style={{
                 position: "absolute",
                 inset: 0,
-                borderRadius: "inherit",
+                borderRadius: 0,
                 pointerEvents: "none",
-                zIndex: 1,
+                zIndex: 3,
                 overflow: "hidden",
               }}
             >
@@ -398,16 +533,15 @@ export default function NavBar() {
                   background:
                     "linear-gradient(100deg, transparent 0%, rgba(165, 240, 255, 0.12) 38%, rgba(255, 255, 255, 0.55) 50%, rgba(165, 240, 255, 0.14) 62%, transparent 100%)",
                   mixBlendMode: "plus-lighter",
+                  zIndex: 3,
                   animation:
                     "utzNavDockSweep 0.72s cubic-bezier(0.33, 0.82, 0.2, 0.98) 0.22s both",
                 }}
               />
             </div>
           ) : null}
-          <div style={BarStyle.edgeGlow} />
-          <div style={BarStyle.bottomGlow} />
-          <div style={BarStyle.glassSheen} />
-          <div style={BarStyle.glowRing} />
+          <div style={{ ...BarStyle.bottomGlow, zIndex: 1 }} />
+          <div style={{ ...BarStyle.glassSheen, zIndex: 1 }} />
 
           {items.map((item, index) => {
             const href =

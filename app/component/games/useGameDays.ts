@@ -9,6 +9,7 @@ import {
   orderBy,
   getDocs,
   Timestamp,
+  limit,
 } from "firebase/firestore";
 
 import type { League } from "@/lib/leagues";
@@ -16,18 +17,37 @@ import { normalizeLeague } from "@/lib/leagues";
 import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
+  getZonedYMD,
+  getCalendarMonthRangeInTimeZone,
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 
-/** 同一セッション内の getDocs 回数削減（リーグ単位・TTL 内は再取得しない） */
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+/** 同一セッション内の getDocs 回数削減（リーグ＋暦月・TTL 内は再取得しない） */
 const GAME_DAYS_ROWS_CACHE_TTL_MS = 5 * 60 * 1000;
 const gameDaysRowsCache = new Map<
   string,
   { rows: any[]; savedAt: number }
 >();
 
-export function useGameDays(rawLeague: League, timeZone: string) {
+/**
+ * 試合がある日の一覧（日付ストリップ用）。
+ * シーズン全件ではなく、windowAnchor の「暦月」内の試合のみ取得して初回ロードを軽くする。
+ */
+export function useGameDays(
+  rawLeague: League,
+  timeZone: string,
+  windowAnchor: Date
+) {
   const league = normalizeLeague(rawLeague);
+
+  const windowKey = useMemo(() => {
+    const { year, month } = getZonedYMD(windowAnchor, timeZone);
+    return `${year}-${pad2(month)}`;
+  }, [windowAnchor, timeZone]);
 
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +59,8 @@ export function useGameDays(rawLeague: League, timeZone: string) {
     async function load() {
       setErr(null);
 
-      const cached = gameDaysRowsCache.get(league);
+      const cacheKey = `${league}|${windowKey}`;
+      const cached = gameDaysRowsCache.get(cacheKey);
       const fresh =
         cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;
       if (fresh) {
@@ -53,12 +74,19 @@ export function useGameDays(rawLeague: League, timeZone: string) {
 
       try {
         const ref = collection(db, "games");
+        const { start, end } = getCalendarMonthRangeInTimeZone(
+          windowAnchor,
+          timeZone
+        );
 
         const q = query(
           ref,
           where("league", "==", league),
           where("season", "==", GAME_SCHEDULE_SEASON),
-          orderBy("startAtJst", "asc")
+          where("startAtJst", ">=", Timestamp.fromDate(start)),
+          where("startAtJst", "<", Timestamp.fromDate(end)),
+          orderBy("startAtJst", "asc"),
+          limit(500)
         );
 
         const snap = await getDocs(q);
@@ -66,7 +94,7 @@ export function useGameDays(rawLeague: League, timeZone: string) {
         if (!alive) return;
 
         const list = snap.docs.map((d) => d.data());
-        gameDaysRowsCache.set(league, { rows: list, savedAt: Date.now() });
+        gameDaysRowsCache.set(cacheKey, { rows: list, savedAt: Date.now() });
         setRows(list);
       } catch (e: any) {
         if (!alive) return;
@@ -81,7 +109,7 @@ export function useGameDays(rawLeague: League, timeZone: string) {
     return () => {
       alive = false;
     };
-  }, [league]);
+  }, [league, timeZone, windowKey]);
 
   const gameDays = useMemo(() => {
     if (!rows.length) return [];

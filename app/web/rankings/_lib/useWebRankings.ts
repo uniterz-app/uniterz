@@ -44,6 +44,7 @@ function mergeRowsWithMeta(
   }));
 }
 
+/** バルク取得後に指標ごとに UI 行を並べ替え */
 function sortWebRankingRows(
   metric: MobileMetric,
   rows: WebRankingRow[]
