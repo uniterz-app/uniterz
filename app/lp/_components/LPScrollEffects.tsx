@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect } from "react";
+import { useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -18,13 +18,9 @@ type LPScrollEffectsProps = {
 };
 
 export default function LPScrollEffects({ disabled = false }: LPScrollEffectsProps) {
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (disabled) return;
     if (typeof window === "undefined") return;
-
-    // 読み込み直後は常にページ先頭から（features 付近に飛ぶ・中途半端な復元を防ぐ）
-    window.history.scrollRestoration = "manual";
-    window.scrollTo(0, 0);
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
@@ -35,7 +31,9 @@ export default function LPScrollEffects({ disabled = false }: LPScrollEffectsPro
 
     registerPluginOnce();
 
-    const ctx = gsap.context(() => {
+    let ctx: ReturnType<typeof gsap.context> | null = null;
+    const raf = window.requestAnimationFrame(() => {
+      ctx = gsap.context(() => {
       const staggerGroups = gsap.utils.toArray<HTMLElement>(
         "[data-lp-stagger-group]"
       );
@@ -187,10 +185,13 @@ export default function LPScrollEffects({ disabled = false }: LPScrollEffectsPro
           }
         );
       });
+      });
+      ScrollTrigger.refresh();
     });
 
     return () => {
-      ctx.revert();
+      window.cancelAnimationFrame(raf);
+      ctx?.revert();
     };
   }, [disabled]);
 

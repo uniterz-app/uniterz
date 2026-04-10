@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Alfa_Slab_One } from "next/font/google";
+
+const alfa = Alfa_Slab_One({ weight: "400", subsets: ["latin"] });
 
 const NAV_ITEMS = [
   { label: "Features", href: "#features" },
@@ -26,58 +29,68 @@ export default function LPHeader({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
       <div className="pointer-events-none absolute left-0 top-0 h-full w-[26%] bg-[radial-gradient(circle_at_left,rgba(34,211,238,0.10),transparent_70%)]" />
 
-      <div className="relative mx-auto flex h-[72px] w-full max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-10">
-        <Link
-          href={homeHref}
-          className="group flex shrink-0 items-center gap-3 sm:gap-4"
-        >
-          <div className="relative h-8 w-8 shrink-0 sm:h-9 sm:w-9">
-            <div className="absolute inset-0 rounded-full bg-cyan-300/10 blur-md transition duration-300 group-hover:bg-cyan-300/16" />
-            <Image
-              src="/logo/logo.png"
-              alt="Uniterz logo"
-              fill
-              priority
-              className="object-contain drop-shadow-[0_0_18px_rgba(34,211,238,0.28)] transition duration-300 group-hover:scale-[1.03]"
-            />
-          </div>
+      <div className="relative mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-10">
+        <div className="flex h-[72px] items-center justify-between">
+          <Link
+            href={homeHref}
+            className="group flex shrink-0 items-center gap-3 sm:gap-4"
+          >
+            <div className="relative h-8 w-8 shrink-0 sm:h-9 sm:w-9">
+              <div className="absolute inset-0 rounded-full bg-cyan-300/10 blur-md transition duration-300 group-hover:bg-cyan-300/16" />
+              <Image
+                src="/logo/logo.png"
+                alt="Uniterz logo"
+                fill
+                priority
+                className="object-contain drop-shadow-[0_0_18px_rgba(34,211,238,0.28)] transition duration-300 group-hover:scale-[1.03]"
+              />
+            </div>
 
-          <div className="flex flex-col leading-none">
-            <span className="text-[21px] font-semibold tracking-[-0.03em] text-white">
-              Uniterz
-            </span>
-          </div>
-        </Link>
+            <div className="flex flex-col leading-none">
+              <span className="text-[21px] font-semibold tracking-[-0.03em] text-white">
+                Uniterz
+              </span>
+            </div>
+          </Link>
 
-        <div className="ml-auto flex items-center gap-6 lg:gap-8">
-          <nav className="hidden items-center gap-7 lg:flex">
-            {NAV_ITEMS.map((item) => (
+          <div className="ml-auto flex items-center gap-6 lg:gap-8">
+            <nav className="hidden items-center gap-7 lg:flex">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="relative text-[14px] font-medium tracking-[-0.01em] text-white/64 transition duration-200 hover:text-white"
+                >
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+
+            <div className="hidden h-6 w-px bg-white/10 lg:block" />
+
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link
-                key={item.label}
-                href={item.href}
-                className="relative text-[14px] font-medium tracking-[-0.01em] text-white/64 transition duration-200 hover:text-white"
+                href="/web/login"
+                className="hidden text-[14px] font-medium tracking-[-0.01em] text-white/68 transition duration-200 hover:text-white sm:inline-flex"
               >
-                <span>{item.label}</span>
+                Log in
               </Link>
-            ))}
-          </nav>
 
-          <div className="hidden h-6 w-px bg-white/10 lg:block" />
+              <Link
+                href={signupHref}
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/12 bg-white px-5 text-[14px] font-semibold tracking-[-0.01em] text-[#05070b] shadow-[0_8px_30px_rgba(255,255,255,0.14)] transition duration-200 hover:-translate-y-px hover:bg-white/92"
+              >
+                Sign up
+              </Link>
+            </div>
+          </div>
+        </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link
-              href="/web/login"
-              className="hidden text-[14px] font-medium tracking-[-0.01em] text-white/68 transition duration-200 hover:text-white sm:inline-flex"
-            >
-              Log in
-            </Link>
-
-            <Link
-              href={signupHref}
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/12 bg-white px-5 text-[14px] font-semibold tracking-[-0.01em] text-[#05070b] shadow-[0_8px_30px_rgba(255,255,255,0.14)] transition duration-200 hover:-translate-y-px hover:bg-white/92"
-            >
-              Sign up
-            </Link>
+        <div className="pb-2">
+          <div
+            className={`text-center text-[30px] tracking-[0.14em] text-cyan-100/90 sm:text-[34px] lg:text-[50px] ${alfa.className}`}
+          >
+            UNITERZ
           </div>
         </div>
       </div>

@@ -14,15 +14,12 @@ export default function WebOrMobileSplash({
   const isWeb = pathname?.startsWith("/web");
 
   // 公開LPは Firebase 待ちのスプラッシュを出さない（開けないように見えるのを防ぐ）
-  if (pathname === "/mobile/lp") {
+  if (pathname === "/mobile/lp" || pathname === "/mobile/lp-v2") {
     return <div id="app-root">{children}</div>;
   }
-  if (pathname === "/lp") {
+  if (pathname === "/lp" || pathname === "/lp-v2") {
     return (
-      <>
-        <div id="app-root">{children}</div>
-        <NavBar />
-      </>
+      <div id="app-root">{children}</div>
     );
   }
 

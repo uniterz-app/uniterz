@@ -10,7 +10,9 @@ export default function AppChrome() {
   const shouldHideAll =
     pathname === "/" ||
     pathname === "/lp" ||
+    pathname === "/lp-v2" ||
     pathname === "/mobile/lp" ||
+    pathname === "/mobile/lp-v2" ||
     pathname === "/web" ||
     pathname === "/mobile" ||
     pathname === "/web/login" ||

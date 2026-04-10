@@ -9,8 +9,10 @@ const STEP_MS = 2200;
 
 export default function ConnectedFlowCards({
   nodes,
+  animated = true,
 }: {
   nodes: readonly LPConnectedFlowNode[];
+  animated?: boolean;
 }) {
   const [active, setActive] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -27,16 +29,16 @@ export default function ConnectedFlowCards({
   }, []);
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion || !animated) return;
     const id = window.setInterval(() => {
       setActive((i) => (i + 1) % nodes.length);
     }, STEP_MS);
     return () => clearInterval(id);
-  }, [nodes.length, reduceMotion]);
+  }, [nodes.length, reduceMotion, animated]);
 
   // モバイル横スクロール時、アクティブカードが見える位置へ（LP 初回表示では実行しない）
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion || !animated) return;
     if (typeof window === "undefined" || window.innerWidth >= 1024) return;
     // mobile LP は初期表示時の縦位置を固定したいので自動スクロールを無効化
     if (window.location.pathname.startsWith("/mobile/lp")) return;
