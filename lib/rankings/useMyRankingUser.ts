@@ -9,12 +9,14 @@ export type MyRankingUser = {
   displayName: string;
   handle: string;
   photoURL: string;
+  plan: "free" | "pro";
 };
 
 const EMPTY_USER: MyRankingUser = {
   displayName: "",
   handle: "",
   photoURL: "",
+  plan: "free",
 };
 
 export function useMyRankingUser(uid: string | null | undefined) {
@@ -40,6 +42,7 @@ export function useMyRankingUser(uid: string | null | undefined) {
               displayName?: string;
               handle?: string;
               photoURL?: string;
+              plan?: string;
             }
           | undefined;
 
@@ -53,6 +56,7 @@ export function useMyRankingUser(uid: string | null | undefined) {
           displayName: d.displayName?.trim() || "",
           handle: d.handle?.trim() || "",
           photoURL: d.photoURL?.trim() || "",
+          plan: d.plan === "pro" ? "pro" : "free",
         });
         setLoading(false);
       },

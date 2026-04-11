@@ -132,6 +132,7 @@ export async function buildCumulativeStats() {
           handle: user.handle ?? null,
           photoURL: user.photoURL ?? null,
           countryCode: user.countryCode ?? null,
+          plan: user.plan === "pro" ? "pro" : "free",
 
           totalPosts: nextPosts,
           totalWins: nextWins,

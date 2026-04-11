@@ -18,6 +18,7 @@ export type RankingRow = {
   displayName: string;
   handle: string | null;
   photoURL: string | null;
+  plan?: "free" | "pro";
 
   totalPosts: number;
   totalWins: number;

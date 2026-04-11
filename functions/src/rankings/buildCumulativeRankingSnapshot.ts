@@ -79,6 +79,7 @@ export async function buildCumulativeRankingSnapshot() {
       handle: d.handle ?? null,
       photoURL: d.photoURL ?? null,
       countryCode: d.countryCode ?? null,
+      plan: d.plan === "pro" ? "pro" : "free",
 
       totalPosts: r.totalPosts,
       totalWins: r.totalWins,

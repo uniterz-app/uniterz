@@ -13,6 +13,10 @@ import type { Language } from "@/lib/i18n/language";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
 import { Crown } from "lucide-react";
 
 /* =========================
@@ -634,27 +638,40 @@ export default function MonthlyTopPodium({
                         <AvatarCircle row={row} rank={rank} />
                       </div>
 
-                      <div className="min-w-0">
-                        <div
-                          className={[
-                            "truncate font-black leading-none tracking-[0.005em]",
-                            jp.className,
-                            s.nameText,
-                          ].join(" ")}
-                          style={{
-                            color: "rgba(255,255,255,0.94)",
-                          }}
-                        >
-                          <span
-                            style={{
-                              textShadow: [
-                                "0 1px 1px rgba(0,0,0,0.32)",
-                                "0 2px 4px rgba(0,0,0,0.18)",
-                              ].join(", "),
-                            }}
-                          >
-                            {row.displayName ?? row.handle ?? "Unknown"}
-                          </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 max-w-full items-center gap-1">
+                          <div className="min-w-0 flex-1 overflow-hidden">
+                            <div
+                              className={[
+                                "truncate font-black leading-none tracking-[0.005em]",
+                                jp.className,
+                                s.nameText,
+                              ].join(" ")}
+                              style={{
+                                color: "rgba(255,255,255,0.94)",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  textShadow: [
+                                    "0 1px 1px rgba(0,0,0,0.32)",
+                                    "0 2px 4px rgba(0,0,0,0.18)",
+                                  ].join(", "),
+                                }}
+                              >
+                                {row.displayName ?? row.handle ?? "Unknown"}
+                              </span>
+                            </div>
+                          </div>
+                          {row.plan === "pro" ? (
+                            <ProCyberBadge
+                              {...proBadgeStaticMotion}
+                              compact
+                              ariaLabel={
+                                language === "en" ? "Pro member" : "Pro 会員"
+                              }
+                            />
+                          ) : null}
                         </div>
                       </div>
                     </div>

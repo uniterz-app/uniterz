@@ -7,6 +7,7 @@ export type BracketLeaderboardRow = {
   displayName: string;
   handle: string | null;
   photoURL: string | null;
+  plan?: "free" | "pro";
   totalScore: number;
   winnerPoints: number;
   gamesPoints: number;

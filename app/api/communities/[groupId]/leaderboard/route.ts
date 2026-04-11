@@ -40,6 +40,7 @@ export async function GET(req: Request, ctx: Ctx) {
       displayName: r.displayName,
       handle: r.handle,
       photoURL: r.photoURL,
+      plan: r.plan,
       countryCode: r.countryCode,
       totalPosts: r.totalPosts,
       totalWins: r.totalWins,

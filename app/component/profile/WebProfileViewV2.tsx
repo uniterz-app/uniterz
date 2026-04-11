@@ -179,6 +179,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           bio: profile.bio,
           avatarUrl: profile.avatarUrl,
         }}
+        showProBadge={isProView}
         showCurrentStreakBadge={showCurrentStreakBadge}
         currentStreak={currentStreak}
         canOpenSettings={canOpenSettings}

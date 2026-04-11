@@ -4,6 +4,7 @@
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
+import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 
 export const runtime = "nodejs";
 
@@ -121,7 +122,12 @@ export async function GET(req: Request) {
       );
     }
 
-    const data = await getCachedBulk(uid ?? "__anon__", metricsKey);
+    const cached = await getCachedBulk(uid ?? "__anon__", metricsKey);
+    const data =
+      typeof structuredClone === "function"
+        ? structuredClone(cached)
+        : (JSON.parse(JSON.stringify(cached)) as typeof cached);
+    await mergeUserPlansIntoBulkByMetric(data.byMetric);
 
     const maxAge = Math.min(120, CUMULATIVE_RANKING_REVALIDATE_SEC);
     const cacheControl = uid

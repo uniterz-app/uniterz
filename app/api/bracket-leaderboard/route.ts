@@ -11,6 +11,7 @@ export type BracketLeaderboardRow = {
   displayName: string;
   handle: string | null;
   photoURL: string | null;
+  plan: "free" | "pro";
   totalScore: number;
   winnerPoints: number;
   gamesPoints: number;
@@ -67,7 +68,15 @@ export async function GET(req: Request) {
     brackets.sort((a, b) => b.totalScore - a.totalScore);
 
     const uids = [...new Set(brackets.map((b) => b.uid))];
-    const userMap = new Map<string, { displayName: string; handle: string | null; photoURL: string | null }>();
+    const userMap = new Map<
+      string,
+      {
+        displayName: string;
+        handle: string | null;
+        photoURL: string | null;
+        plan: "free" | "pro";
+      }
+    >();
 
     // Firestore getAll は最大 100 件まで。バッチで取得
     const BATCH_SIZE = 100;
@@ -79,11 +88,20 @@ export async function GET(req: Request) {
       snaps.forEach((snap, idx) => {
         const uid = batch[idx];
         if (!uid) return;
-        const u = snap.data() as { displayName?: string; handle?: string; photoURL?: string; avatarUrl?: string } | undefined;
+        const u = snap.data() as
+          | {
+              displayName?: string;
+              handle?: string;
+              photoURL?: string;
+              avatarUrl?: string;
+              plan?: string;
+            }
+          | undefined;
         userMap.set(uid, {
           displayName: u?.displayName?.trim() ?? "User",
           handle: u?.handle?.trim() ?? null,
           photoURL: u?.photoURL ?? u?.avatarUrl ?? null,
+          plan: u?.plan === "pro" ? "pro" : "free",
         });
       });
     }
@@ -95,6 +113,7 @@ export async function GET(req: Request) {
         displayName: user?.displayName ?? "User",
         handle: user?.handle ?? null,
         photoURL: user?.photoURL ?? null,
+        plan: user?.plan ?? "free",
         totalScore: b.totalScore,
         winnerPoints: b.winnerPoints,
         gamesPoints: b.gamesPoints,

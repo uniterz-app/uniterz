@@ -182,6 +182,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
             >
               <BracketUserCard
                 row={row}
+                language={language}
                 onClick={() => openDetail(row)}
               />
             </motion.div>
@@ -231,6 +232,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
               <div className="sticky top-0 z-10 shrink-0 border-b border-white/12 bg-black/25 px-4 py-3 backdrop-blur-md">
                 <BracketUserCard
                   row={selectedRow}
+                  language={language}
                   onClick={() => openProfileFromSheet(selectedRow)}
                 />
               </div>

@@ -18,6 +18,8 @@ export type RankingRow = {
   handle: string; // ← これを追加
   displayName: string;
   photoURL?: string;
+  /** 累積ランキング API などで付与（未設定は free 扱い） */
+  plan?: "free" | "pro";
 
   posts: number; // 期間内投稿数
   winRate?: number; // 0..1

@@ -227,6 +227,60 @@ body.splash-bg {
   animation: splash-hud-pulse 2.8s ease-in-out infinite;
 }
 
+/* スプラッシュ：0% → 100% までトラックを埋めるプログレスバー（所要は TS 側で ms 指定） */
+@keyframes splash-loading-fill {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.splash-loading-track {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(103, 232, 249, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 20px rgba(34, 211, 238, 0.25),
+    0 0 40px rgba(34, 211, 238, 0.08);
+}
+
+.splash-loading-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    rgba(6, 182, 212, 0.55) 0%,
+    rgba(34, 211, 238, 1) 42%,
+    rgb(186, 250, 255) 50%,
+    rgba(34, 211, 238, 1) 58%,
+    rgba(6, 182, 212, 0.55) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(103, 232, 249, 0.75),
+    0 0 24px rgba(34, 211, 238, 0.45);
+  animation-name: splash-loading-fill;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: forwards;
+  /* animation-duration は AnimatedSplashScreen の inline で指定 */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-loading-fill {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
 /* ============================================================
    バッジ光エフェクト
    ============================================================ */

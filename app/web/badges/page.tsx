@@ -8,6 +8,7 @@ import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import BadgeDetailModal from "./BadgeDetailModal";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
+import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
@@ -49,6 +50,7 @@ export default function WebBadgesPage() {
 
   return (
     <div className="min-h-screen px-6 py-10 text-white bg-[#08111A]">
+      <FloatingCloseButton />
       {/* Header */}
       <h1 className="text-3xl font-extrabold mb-6 tracking-wide">
         {language === "en" ? "Badge Palette" : "バッジパレット"}

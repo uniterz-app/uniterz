@@ -19,6 +19,11 @@ import { v4 as uuidv4 } from "uuid";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Variant = "web" | "mobile";
+type ContactFormProps = {
+  variant: Variant;
+  initialType?: ContactType;
+  hideTypeSelect?: boolean;
+};
 
 const CONTACT_TYPE_OPTIONS_EN: Record<ContactType, string> = {
   bug: "Bug report",
@@ -27,7 +32,11 @@ const CONTACT_TYPE_OPTIONS_EN: Record<ContactType, string> = {
   other: "Other",
 };
 
-export default function ContactForm({ variant }: { variant: Variant }) {
+export default function ContactForm({
+  variant,
+  initialType = "bug",
+  hideTypeSelect = false,
+}: ContactFormProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -50,7 +59,7 @@ export default function ContactForm({ variant }: { variant: Variant }) {
   }, [user]);
 
   const [form, setForm] = useState({
-    type: "bug" as ContactType,
+    type: initialType,
     email: "",
     message: "",
     screenshotUrl: "",
@@ -65,6 +74,10 @@ export default function ContactForm({ variant }: { variant: Variant }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, type: initialType }));
+  }, [initialType]);
 
   const baseContainerClass =
     "w-full rounded-2xl bg-slate-900/50 border border-white/5 shadow-xl backdrop-blur-sm";
@@ -161,7 +174,7 @@ export default function ContactForm({ variant }: { variant: Variant }) {
       });
 
       setSubmitted(true);
-      setForm({ type: "bug", email: "", message: "", screenshotUrl: "" });
+      setForm({ type: initialType, email: "", message: "", screenshotUrl: "" });
       setPreviewUrl(null);
       setSelectedFile(null);
 
@@ -227,24 +240,25 @@ export default function ContactForm({ variant }: { variant: Variant }) {
         </div>
       )}
 
-      {/* 種別 */}
-      <div className="space-y-1.5">
-        <label className="text-xs md:text-sm text-sky-100">
-          {isEn ? "Type of inquiry" : "お問い合わせの種類"}
-        </label>
+      {!hideTypeSelect && (
+        <div className="space-y-1.5">
+          <label className="text-xs md:text-sm text-sky-100">
+            {isEn ? "Type of inquiry" : "お問い合わせの種類"}
+          </label>
 
-        <select
-          value={form.type}
-          onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}
-          className="w-full rounded-xl bg-slate-900/80 border border-white/10 px-3 py-3 text-sm text-slate-50"
-        >
-          {contactTypeOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </div>
+          <select
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}
+            className="w-full rounded-xl bg-slate-900/80 border border-white/10 px-3 py-3 text-sm text-slate-50"
+          >
+            {contactTypeOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* メール */}
       <div className="space-y-1.5">
@@ -313,8 +327,12 @@ export default function ContactForm({ variant }: { variant: Variant }) {
               ? "Sending..."
               : "送信中..."
             : isEn
-              ? "Send inquiry"
-              : "お問い合わせを送信する"}
+              ? form.type === "feature"
+                ? "Send request"
+                : "Send inquiry"
+              : form.type === "feature"
+                ? "要望を送信する"
+                : "お問い合わせを送信する"}
         </button>
       </div>
     </form>

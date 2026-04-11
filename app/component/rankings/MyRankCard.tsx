@@ -11,6 +11,10 @@ import type { Variants } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
 
 type Props = {
   rank: number | null;
@@ -24,6 +28,10 @@ type Props = {
   /** 一覧はあるが自分順位・数値だけ未取得のときの解読風演出 */
   statsScramble?: boolean;
   language?: Language;
+  /** Pro プラン（users.plan）— 自分カードにバッジ */
+  isPro?: boolean;
+  /** モバイルランキング用：外側パディングを抑えてカードを横に少し広げる */
+  mobileWide?: boolean;
 };
 
 function formatValue(metric: MobileMetric, value: number) {
@@ -140,6 +148,8 @@ export default function MyRankCard({
   loading = false,
   statsScramble = false,
   language = "ja",
+  isPro = false,
+  mobileWide = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const ready = !loading;
@@ -197,11 +207,21 @@ export default function MyRankCard({
     ready && showSideColumns
   );
 
+  /** 親の横パディングに食い込んでカードを横に広げる（sm 以上は通常レイアウト） */
+  const outerPad = mobileWide
+    ? "overflow-visible -mx-1.5 px-0 pt-3 sm:mx-0 sm:px-3"
+    : "overflow-visible px-3 pt-3";
+  const innerPad = mobileWide ? "px-4 py-2.5 sm:py-3" : "px-4 py-3";
+  /** モバイルランキング：名前をアイコン寄りに */
+  const identityGap = mobileWide ? "gap-1" : "gap-3";
+
   if (reduceMotion === true) {
     return (
-      <div className="px-3 pt-3">
+      <div className={outerPad}>
         <div
-          className="relative overflow-hidden rounded-[18px] border px-4 py-3"
+          className={["relative overflow-hidden rounded-[18px] border", innerPad].join(
+            " "
+          )}
           style={CARD_SHELL}
           aria-busy={statsScramble || undefined}
         >
@@ -214,7 +234,7 @@ export default function MyRankCard({
             </span>
           )}
           <div className="relative z-1 flex items-center justify-between">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className={["flex min-w-0 items-center", identityGap].join(" ")}>
             <RankingsAvatarCircle
               photoURL={photoURL}
               displayName={displayName}
@@ -223,13 +243,24 @@ export default function MyRankCard({
               onDisplayReadyChange={handleAvatarReady}
             />
             <div className="min-w-0">
-              <div
-                className={[
-                  "truncate font-black text-[16px] leading-none text-white",
-                  jp.className,
-                ].join(" ")}
-              >
-                {displayName}
+              <div className="flex w-fit min-w-0 max-w-full items-center gap-1 overflow-hidden">
+                <div
+                  className={[
+                    "min-w-0 truncate font-black text-[16px] leading-none text-white",
+                    jp.className,
+                  ].join(" ")}
+                >
+                  {displayName}
+                </div>
+                {isPro ? (
+                  <ProCyberBadge
+                    {...proBadgeStaticMotion}
+                    compact
+                    ariaLabel={
+                      language === "en" ? "Pro member" : "Pro 会員"
+                    }
+                  />
+                ) : null}
               </div>
               {handle && (
                 <div className="truncate text-[12px] text-white/50">
@@ -250,7 +281,7 @@ export default function MyRankCard({
             <div
               className={[numClass, "leading-none"].join(" ")}
               style={{
-                fontSize: 18,
+                fontSize: 21,
                 color: rankStyle.color,
                 textShadow: rankStyle.textShadow,
               }}
@@ -265,7 +296,7 @@ export default function MyRankCard({
           <div className="flex flex-col items-end">
             {loading ? (
               <div
-                className={[numClass, "text-[17px] leading-none text-white/90"].join(
+                className={[numClass, "text-[19px] leading-none text-white/90"].join(
                   " "
                 )}
               >
@@ -282,12 +313,12 @@ export default function MyRankCard({
                   textShadow: "0 0 10px rgba(255,255,255,0.08)",
                 }}
               >
-                <span className={[numClass, "text-[17px]"].join(" ")}>
+                <span className={[numClass, "text-[19px]"].join(" ")}>
                   {Math.round(value)}
                 </span>
                 <span
                   style={{
-                    fontSize: 12,
+                    fontSize: 13,
                     letterSpacing: "0.03em",
                     transform: "translateY(-1px)",
                   }}
@@ -297,7 +328,7 @@ export default function MyRankCard({
               </div>
             ) : (
               <div
-                className={[numClass, "text-[17px] leading-none text-white/90"].join(
+                className={[numClass, "text-[19px] leading-none text-white/90"].join(
                   " "
                 )}
               >
@@ -331,7 +362,7 @@ export default function MyRankCard({
   return (
     <motion.div
       key={`my-rank-reveal-${metric}`}
-      className="overflow-visible px-3 pt-3"
+      className={outerPad}
       initial={{
         opacity: 0,
         y: 22,
@@ -364,7 +395,10 @@ export default function MyRankCard({
       )}
       <motion.div
         key={metric}
-        className="relative overflow-hidden rounded-[18px] border px-4 py-3 will-change-[clip-path,filter]"
+        className={[
+          "relative overflow-hidden rounded-[18px] border will-change-[clip-path,filter]",
+          innerPad,
+        ].join(" ")}
         aria-busy={statsScramble || undefined}
         style={{
           ...CARD_SHELL,
@@ -389,7 +423,7 @@ export default function MyRankCard({
         <div className="relative z-1 flex items-center justify-between">
         <motion.div
           key={`id-${metric}`}
-          className="flex min-w-0 items-center gap-3"
+          className={["flex min-w-0 items-center", identityGap].join(" ")}
           variants={identityContainer}
           initial="hidden"
           animate={avatarFadeReady ? "show" : "hidden"}
@@ -405,13 +439,24 @@ export default function MyRankCard({
           </motion.div>
 
           <motion.div variants={nameIdentityItem} className="min-w-0">
-            <div
-              className={[
-                "truncate font-black text-[16px] leading-none text-white",
-                jp.className,
-              ].join(" ")}
-            >
-              {displayName}
+            <div className="flex w-fit min-w-0 max-w-full items-center gap-1 overflow-hidden">
+              <div
+                className={[
+                  "min-w-0 truncate font-black text-[16px] leading-none text-white",
+                  jp.className,
+                ].join(" ")}
+              >
+                {displayName}
+              </div>
+              {isPro ? (
+                <ProCyberBadge
+                  {...proBadgeStaticMotion}
+                  compact
+                  ariaLabel={
+                    language === "en" ? "Pro member" : "Pro 会員"
+                  }
+                />
+              ) : null}
             </div>
             {handle && (
               <div className="truncate text-[12px] text-white/50">
@@ -441,7 +486,7 @@ export default function MyRankCard({
           <div
             className={[numClass, "leading-none"].join(" ")}
             style={{
-              fontSize: 18,
+              fontSize: 21,
               color: rankStyle.color,
               textShadow: rankStyle.textShadow,
             }}
@@ -461,7 +506,7 @@ export default function MyRankCard({
         >
           {loading ? (
             <div
-              className={[numClass, "text-[17px] leading-none text-white/90"].join(
+              className={[numClass, "text-[19px] leading-none text-white/90"].join(
                 " "
               )}
             >
@@ -478,12 +523,12 @@ export default function MyRankCard({
                 textShadow: "0 0 10px rgba(255,255,255,0.08)",
               }}
             >
-              <span className={[numClass, "text-[17px]"].join(" ")}>
+              <span className={[numClass, "text-[19px]"].join(" ")}>
                 {Math.round(valueCount)}
               </span>
               <span
                 style={{
-                  fontSize: 12,
+                  fontSize: 13,
                   letterSpacing: "0.03em",
                   transform: "translateY(-1px)",
                 }}
@@ -493,7 +538,7 @@ export default function MyRankCard({
             </div>
           ) : (
             <div
-              className={[numClass, "text-[17px] leading-none text-white/90"].join(
+              className={[numClass, "text-[19px] leading-none text-white/90"].join(
                 " "
               )}
             >
