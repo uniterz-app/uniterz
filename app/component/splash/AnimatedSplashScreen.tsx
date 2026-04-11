@@ -1,7 +1,8 @@
 "use client";
 
 import "@fontsource/dseg14-classic";
-import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import UniterzLogo3DBackground from "@/app/component/background/UniterzLogo3DBackground";
 import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
 import { nameRajdhani } from "@/lib/fonts";
@@ -12,9 +13,15 @@ import { nameRajdhani } from "@/lib/fonts";
  */
 export default function AnimatedSplashScreen() {
   const [decorationsReady, setDecorationsReady] = useState(false);
-  /** プログレスバー用 0〜100（CSS 充填と同期） */
-  const [loadPercent, setLoadPercent] = useState(0);
+  /** 0〜1。バー（scaleX）と数字（%）の単一ソース */
+  const [loadProgress01, setLoadProgress01] = useState(0);
   const loadRafRef = useRef<number | null>(null);
+  const reduceMotion = useReducedMotion();
+
+  const loadPercent = useMemo(
+    () => Math.min(100, Math.round(loadProgress01 * 100)),
+    [loadProgress01],
+  );
 
   useEffect(() => {
     // WebGL 失敗時も永久に真っ暗にならないようフォールバック
@@ -23,11 +30,16 @@ export default function AnimatedSplashScreen() {
   }, []);
 
   useEffect(() => {
-    setLoadPercent(0);
+    if (reduceMotion) {
+      setLoadProgress01(1);
+      return;
+    }
+
+    setLoadProgress01(0);
     const start = performance.now();
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / MIN_SPLASH_DURATION_MS);
-      setLoadPercent(Math.round(t * 100));
+      setLoadProgress01(t);
       if (t < 1) {
         loadRafRef.current = requestAnimationFrame(tick);
       } else {
@@ -40,7 +52,7 @@ export default function AnimatedSplashScreen() {
         cancelAnimationFrame(loadRafRef.current);
       }
     };
-  }, []);
+  }, [reduceMotion]);
 
   return (
     <div className="relative flex h-full min-h-dvh w-full flex-col items-center justify-center overflow-hidden bg-app">
@@ -95,7 +107,7 @@ export default function AnimatedSplashScreen() {
             <div
               className="splash-loading-fill"
               style={{
-                animationDuration: `${MIN_SPLASH_DURATION_MS}ms`,
+                transform: `scaleX(${loadProgress01})`,
               }}
             />
           </div>
