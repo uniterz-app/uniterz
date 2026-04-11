@@ -3,7 +3,14 @@ import ConnectedFlowCards from "./ConnectedFlowCards";
 import { flowNodes, predictionFlowDemo } from "./lp-data";
 import PredictionFlowVideo from "./PredictionFlowVideo";
 
-export default function LPFeatures() {
+type LPFeaturesProps = {
+  /** true のとき Connected Flow の自動ハイライト切替を止める（モバイル LP 向け） */
+  disableConnectedFlowAnimation?: boolean;
+};
+
+export default function LPFeatures({
+  disableConnectedFlowAnimation = false,
+}: LPFeaturesProps) {
   return (
     <section
       id="features"
@@ -40,11 +47,16 @@ export default function LPFeatures() {
               </div>
 
               <div className="mt-4 lg:mt-5">
-                <p className="mb-3 flex items-center gap-2 text-[11px] font-medium text-cyan-200/76 lg:hidden">
-                  <span className="inline-block h-1 w-8 rounded-full bg-linear-to-r from-cyan-300/70 to-transparent" />
-                  カードを横にスワイプ
-                </p>
-                <ConnectedFlowCards nodes={flowNodes} />
+                {!disableConnectedFlowAnimation ? (
+                  <p className="mb-3 flex items-center gap-2 text-[11px] font-medium text-cyan-200/76 lg:hidden">
+                    <span className="inline-block h-1 w-8 rounded-full bg-linear-to-r from-cyan-300/70 to-transparent" />
+                    カードを横にスワイプ
+                  </p>
+                ) : null}
+                <ConnectedFlowCards
+                  nodes={flowNodes}
+                  autoAdvance={!disableConnectedFlowAnimation}
+                />
               </div>
             </div>
           </div>

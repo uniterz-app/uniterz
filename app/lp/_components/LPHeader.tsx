@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useMemo } from "react";
 
 const NAV_ITEMS = [
   { label: "Features", href: "#features" },
@@ -15,6 +16,14 @@ type LPHeaderProps = {
 };
 
 export default function LPHeader({ homeHref = "/lp" }: LPHeaderProps) {
+  /** LP が web / mobile のどちらかでログイン・新規作成のパスを切り替える */
+  const { loginHref, signupHref } = useMemo(() => {
+    const mobile = homeHref.startsWith("/mobile");
+    return {
+      loginHref: mobile ? "/mobile/login" : "/web/login",
+      signupHref: mobile ? "/mobile/signup" : "/web/signup",
+    };
+  }, [homeHref]);
   return (
     <header className="sticky top-0 z-50 border-b border-cyan-300/10 bg-[rgba(3,7,15,0.72)] backdrop-blur-2xl">
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-cyan-300/28 to-transparent" />
@@ -61,14 +70,14 @@ export default function LPHeader({ homeHref = "/lp" }: LPHeaderProps) {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <Link
-              href="/web/login"
-              className="hidden text-[14px] font-medium tracking-[-0.01em] text-white/68 transition duration-200 hover:text-white sm:inline-flex"
+              href={loginHref}
+              className="inline-flex text-[13px] font-medium tracking-[-0.01em] text-white/68 transition duration-200 hover:text-white sm:text-[14px]"
             >
               Log in
             </Link>
 
             <Link
-              href="#signup"
+              href={signupHref}
               className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/12 bg-white px-5 text-[14px] font-semibold tracking-[-0.01em] text-[#05070b] shadow-[0_8px_30px_rgba(255,255,255,0.14)] transition duration-200 hover:-translate-y-px hover:bg-white/92"
             >
               Sign up

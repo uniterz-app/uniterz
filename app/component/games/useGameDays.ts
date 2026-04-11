@@ -22,6 +22,35 @@ import {
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 
+/** 月内の games 行から、タイムゾーン基準の「試合がある日」を重複なく昇順で返す */
+export function monthRowsToSortedGameDays(
+  rows: any[],
+  timeZone: string,
+): Date[] {
+  if (!rows.length) return [];
+
+  const map = new Map<string, Date>();
+
+  for (const g of rows) {
+    const t = g.startAtJst;
+    if (!t) continue;
+
+    let d: Date | null = null;
+    if (t instanceof Timestamp) d = t.toDate();
+    else if (typeof t?.toDate === "function") d = t.toDate();
+    else if (t instanceof Date) d = t;
+    if (!d) continue;
+
+    const key = toDateKeyInTimeZone(d, timeZone);
+    if (!map.has(key)) {
+      const dayStart = parseDateKeyInTimeZone(key, timeZone);
+      if (dayStart) map.set(key, dayStart);
+    }
+  }
+
+  return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
+}
+
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -111,30 +140,10 @@ export function useGameDays(
     };
   }, [league, timeZone, windowKey]);
 
-  const gameDays = useMemo(() => {
-    if (!rows.length) return [];
+  const gameDays = useMemo(
+    () => monthRowsToSortedGameDays(rows, timeZone),
+    [rows, timeZone],
+  );
 
-    const map = new Map<string, Date>();
-
-    for (const g of rows) {
-      const t = g.startAtJst;
-      if (!t) continue;
-
-      let d: Date | null = null;
-      if (t instanceof Timestamp) d = t.toDate();
-      else if (typeof t?.toDate === "function") d = t.toDate();
-      else if (t instanceof Date) d = t;
-      if (!d) continue;
-
-      const key = toDateKeyInTimeZone(d, timeZone);
-      if (!map.has(key)) {
-        const dayStart = parseDateKeyInTimeZone(key, timeZone);
-        if (dayStart) map.set(key, dayStart);
-      }
-    }
-
-    return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
-  }, [rows, timeZone]);
-
-  return { gameDays, loading, error };
+  return { gameDays, monthRows: rows, loading, error };
 }

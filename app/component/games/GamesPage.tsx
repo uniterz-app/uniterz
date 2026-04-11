@@ -3,12 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import LeagueTabs from "./LeagueTabs";
+import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
 import { useGamesByDate } from "./useGamesByDate";
-import { useGameDays } from "./useGameDays";
+import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { League } from "@/lib/leagues";
@@ -27,6 +28,19 @@ import {
 } from "@/lib/time/zonedTime";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
+import {
+  gameInvolvesAnyTeam,
+  gameIsHeadToHeadBetween,
+  parseTeamFilterMode,
+  parseTeamFilterParam,
+  serializeTeamFilterParam,
+  type TeamFilterMatchMode,
+} from "@/lib/games/gameTeamFilter";
+import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
+import {
+  gameMatchesMarginBounds,
+  parseMarginBoundParam,
+} from "@/lib/games/marginFilter";
 
 const GAMES_CONTENT_EASE = [0.22, 1, 0.36, 1] as const;
 /** 日付ストリップの後にリストを出すまでの待ち（秒） */
@@ -183,28 +197,171 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Game days（暦月単位で取得）
   ========================= */
-  const { gameDays, loading: loadingDays } = useGameDays(
+  const { gameDays, monthRows, loading: loadingDays } = useGameDays(
     league,
     dayTimeZone,
     anchorForGameDays
   );
+
+  const { teams, nameById } = useScheduleTeams(league);
+
+  const teamFilterIds = useMemo(
+    () => parseTeamFilterParam(searchParams.get("team")),
+    [searchParams],
+  );
+
+  const teamFilterMatchMode: TeamFilterMatchMode = useMemo(() => {
+    if (teamFilterIds.length < 2) return "any";
+    return parseTeamFilterMode(searchParams.get("team_mode"));
+  }, [teamFilterIds, searchParams]);
+
+  const marginMin = useMemo(() => {
+    const a = parseMarginBoundParam(searchParams.get("margin_min"));
+    if (a != null) return a;
+    const legacy = parseMarginBoundParam(searchParams.get("margin"));
+    return legacy;
+  }, [searchParams]);
+
+  const marginMax = useMemo(() => {
+    const b = parseMarginBoundParam(searchParams.get("margin_max"));
+    if (b != null) return b;
+    const legacy = parseMarginBoundParam(searchParams.get("margin"));
+    if (
+      legacy != null &&
+      searchParams.get("margin_min") == null &&
+      searchParams.get("margin_max") == null
+    ) {
+      return legacy;
+    }
+    return null;
+  }, [searchParams]);
+
+  const teamFilterKey = useMemo(
+    () =>
+      [
+        serializeTeamFilterParam(teamFilterIds) ?? "all",
+        teamFilterIds.length === 2 ? teamFilterMatchMode : "na",
+        marginMin ?? "x",
+        marginMax ?? "x",
+      ].join("-"),
+    [teamFilterIds, teamFilterMatchMode, marginMin, marginMax],
+  );
+
+  useEffect(() => {
+    if (teamFilterIds.length >= 2) return;
+    if (!searchParams.has("team_mode")) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("team_mode");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [teamFilterIds.length, searchParams, router]);
+
+  const setTeamFilterIds = useCallback(
+    (next: string[]) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const s = serializeTeamFilterParam(next);
+      if (s) params.set("team", s);
+      else params.delete("team");
+      if (next.length < 2) params.delete("team_mode");
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  const setTeamFilterMatchMode = useCallback(
+    (mode: TeamFilterMatchMode) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (teamFilterIds.length === 2 && mode === "h2h") {
+        params.set("team_mode", "h2h");
+      } else {
+        params.delete("team_mode");
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams, teamFilterIds.length],
+  );
+
+  const setMarginMinMax = useCallback(
+    (nextMin: number | null, nextMax: number | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("margin");
+      if (nextMin == null) params.delete("margin_min");
+      else params.set("margin_min", String(nextMin));
+      if (nextMax == null) params.delete("margin_max");
+      else params.set("margin_max", String(nextMax));
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
+
+  const clearAllTeamAndMarginFilters = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("team");
+    params.delete("team_mode");
+    params.delete("margin");
+    params.delete("margin_min");
+    params.delete("margin_max");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
+
+  const passesTeamFilterRow = useCallback(
+    (game: Record<string, unknown>) => {
+      if (!teamFilterIds.length) return true;
+      if (teamFilterIds.length === 2 && teamFilterMatchMode === "h2h") {
+        return gameIsHeadToHeadBetween(game, teamFilterIds, nameById);
+      }
+      return gameInvolvesAnyTeam(game, teamFilterIds, nameById);
+    },
+    [teamFilterIds, teamFilterMatchMode, nameById],
+  );
+
+  /** 日付ストリップ用。チーム・点差の両方を反映 */
+  const gameDaysForStrip = useMemo(() => {
+    const needTeam = teamFilterIds.length > 0;
+    const needMargin = marginMin != null || marginMax != null;
+    if (!needTeam && !needMargin) return gameDays;
+
+    const filteredRows = monthRows.filter((g) => {
+      const game = g as Record<string, unknown>;
+      if (needTeam && !passesTeamFilterRow(game)) return false;
+      if (needMargin && !gameMatchesMarginBounds(game, marginMin, marginMax)) {
+        return false;
+      }
+      return true;
+    });
+    return monthRowsToSortedGameDays(filteredRows, dayTimeZone);
+  }, [
+    teamFilterIds.length,
+    passesTeamFilterRow,
+    marginMin,
+    marginMax,
+    monthRows,
+    gameDays,
+    dayTimeZone,
+  ]);
 
   /* =========================
      初期選択日を render 中に確定
   ========================= */
   const selected = useMemo(() => {
     const stored = selectedByLeague[league] ?? null;
-    if (!gameDays.length) {
+    if (!gameDaysForStrip.length) {
       return stored;
     }
     return findInitialGameDay({
-      gameDays,
+      gameDays: gameDaysForStrip,
       stateSelected: stored,
       urlDate: dateParam,
       todayKey,
       timeZone: dayTimeZone,
     });
-  }, [gameDays, selectedByLeague, league, dateParam, todayKey, dayTimeZone]);
+  }, [
+    gameDaysForStrip,
+    selectedByLeague,
+    league,
+    dateParam,
+    todayKey,
+    dayTimeZone,
+  ]);
 
   /* =========================
      state に保存
@@ -301,14 +458,16 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
      today へ戻す（試合のある日のみ。今日以降で最も近い日、なければ最終日）
   ========================= */
   const moveToToday = useCallback(() => {
-    if (!gameDays.length) return;
-    const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
+    if (!gameDaysForStrip.length) return;
+    const sorted = [...gameDaysForStrip].sort(
+      (a, b) => a.getTime() - b.getTime(),
+    );
     const pick =
       sorted.find(
         (d) => toDateKeyInTimeZone(d, dayTimeZone) >= todayKey
       ) ?? sorted[sorted.length - 1];
     if (pick) setSelectedAndSync(pick);
-  }, [gameDays, todayKey, dayTimeZone, setSelectedAndSync]);
+  }, [gameDaysForStrip, todayKey, dayTimeZone, setSelectedAndSync]);
 
   /* =========================
      Swipe
@@ -318,22 +477,22 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const moveToPrevDay = useCallback(() => {
     if (!selected) return;
     const key = toDateKeyInTimeZone(selected, dayTimeZone);
-    const idx = gameDays.findIndex(
+    const idx = gameDaysForStrip.findIndex(
       (d) => toDateKeyInTimeZone(d, dayTimeZone) === key
     );
-    if (idx > 0) setSelectedAndSync(gameDays[idx - 1]);
-  }, [selected, gameDays, dayTimeZone, setSelectedAndSync]);
+    if (idx > 0) setSelectedAndSync(gameDaysForStrip[idx - 1]);
+  }, [selected, gameDaysForStrip, dayTimeZone, setSelectedAndSync]);
 
   const moveToNextDay = useCallback(() => {
     if (!selected) return;
     const key = toDateKeyInTimeZone(selected, dayTimeZone);
-    const idx = gameDays.findIndex(
+    const idx = gameDaysForStrip.findIndex(
       (d) => toDateKeyInTimeZone(d, dayTimeZone) === key
     );
-    if (idx >= 0 && idx < gameDays.length - 1) {
-      setSelectedAndSync(gameDays[idx + 1]);
+    if (idx >= 0 && idx < gameDaysForStrip.length - 1) {
+      setSelectedAndSync(gameDaysForStrip[idx + 1]);
     }
-  }, [selected, gameDays, dayTimeZone, setSelectedAndSync]);
+  }, [selected, gameDaysForStrip, dayTimeZone, setSelectedAndSync]);
 
   usePageSwipe(pageRef, {
     onSwipeRight: moveToPrevDay,
@@ -346,6 +505,47 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
      Games
   ========================= */
   const { loading, games } = useGamesByDate(league, selected, dayTimeZone);
+
+  const gamesAfterTeamFilter = useMemo(() => {
+    const raw = games ?? [];
+    if (!teamFilterIds.length) return raw;
+    if (
+      teamFilterIds.length === 2 &&
+      teamFilterMatchMode === "h2h"
+    ) {
+      return raw.filter((g: Record<string, unknown>) =>
+        gameIsHeadToHeadBetween(g, teamFilterIds, nameById),
+      );
+    }
+    return raw.filter((g: Record<string, unknown>) =>
+      gameInvolvesAnyTeam(g, teamFilterIds, nameById),
+    );
+  }, [games, teamFilterIds, teamFilterMatchMode, nameById]);
+
+  const filteredGames = useMemo(() => {
+    if (marginMin == null && marginMax == null) return gamesAfterTeamFilter;
+    return gamesAfterTeamFilter.filter((g: Record<string, unknown>) =>
+      gameMatchesMarginBounds(g, marginMin, marginMax),
+    );
+  }, [gamesAfterTeamFilter, marginMin, marginMax]);
+
+  const hasAnyListFilter =
+    teamFilterIds.length > 0 || marginMin != null || marginMax != null;
+
+  const scheduleEmptyHint =
+    hasAnyListFilter && !loading && filteredGames.length === 0
+      ? isEn
+        ? teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
+          ? "No head-to-head between these teams on this date."
+          : teamFilterIds.length > 0
+            ? "No games for the selected team(s) on this date."
+            : "No games match the score margin range on this date."
+        : teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
+          ? "この日は、この2チームの直接対決はありません。"
+          : teamFilterIds.length > 0
+            ? "この日は、選択したチームの試合がありません。"
+            : "この日付では、指定した点差の範囲に合う試合はありません。"
+      : null;
 
   /* =========================
      全試合終了判定
@@ -364,9 +564,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!selected) return null;
     const key = toDateKeyInTimeZone(selected, dayTimeZone);
     return (
-      gameDays.find((d) => toDateKeyInTimeZone(d, dayTimeZone) > key) ?? null
+      gameDaysForStrip.find(
+        (d) => toDateKeyInTimeZone(d, dayTimeZone) > key,
+      ) ?? null
     );
-  }, [gameDays, selected, dayTimeZone]);
+  }, [gameDaysForStrip, selected, dayTimeZone]);
 
   /* =========================
      auto advance
@@ -453,37 +655,73 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         >
           <LeagueTabs
             value={league}
-            onChange={setLeague}
+            onChange={(next) => {
+              setLeague(next);
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("team");
+              params.delete("team_mode");
+              params.delete("margin");
+              params.delete("margin_min");
+              params.delete("margin_max");
+              router.replace(`?${params.toString()}`, { scroll: false });
+            }}
             size={dense ? "md" : "lg"}
             layoutMobile={isMobile}
           />
         </motion.div>
 
-        {league === "nba" && (
+        <div className="flex shrink-0 items-center gap-2">
           <motion.div
-            initial={reduceMotion ? false : { opacity: 0, x: 18 }}
+            initial={reduceMotion ? false : { opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{
-              duration: reduceMotion ? 0 : 0.4,
-              delay: reduceMotion ? 0 : 0.06,
+              duration: reduceMotion ? 0 : 0.34,
+              delay: reduceMotion ? 0 : 0.05,
               ease: GAMES_CONTENT_EASE,
             }}
           >
-            <button
-              type="button"
-              onClick={handleBracketClick}
-              style={bracketMarketTeamTypography(isMobile)}
-              className={[
-                dense
-                  ? "rounded-lg px-3 py-1.5 text-sm"
-                  : "rounded-xl px-4 py-2 text-base",
-                "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
-              ].join(" ")}
-            >
-              Bracket
-            </button>
+            <GamesTeamFilterPanel
+              teams={teams}
+              selectedIds={teamFilterIds}
+              onChange={setTeamFilterIds}
+              matchMode={teamFilterMatchMode}
+              onMatchModeChange={setTeamFilterMatchMode}
+              marginMin={marginMin}
+              marginMax={marginMax}
+              onMarginMinMaxChange={setMarginMinMax}
+              onClearAllFilters={clearAllTeamAndMarginFilters}
+              dense={dense}
+              isEn={isEn}
+              layoutMobile={isMobile}
+            />
           </motion.div>
-        )}
+
+          {league === "nba" && (
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                duration: reduceMotion ? 0 : 0.4,
+                delay: reduceMotion ? 0 : 0.06,
+                ease: GAMES_CONTENT_EASE,
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleBracketClick}
+                style={bracketMarketTeamTypography(isMobile)}
+                className={[
+                  dense
+                    ? "rounded-lg px-3 py-1.5 text-sm"
+                    : "rounded-xl px-4 py-2 text-base",
+                  "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
+                ].join(" ")}
+              >
+                Bracket
+              </button>
+            </motion.div>
+          )}
+        </div>
       </div>
 
       <motion.div
@@ -520,7 +758,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         canPrev={adjacentMonthHasGames.prev}
         canNext={adjacentMonthHasGames.next}
         navBusy={adjacentMonthHasGames.loading}
-        centerDisabled={!gameDays.length}
+        centerDisabled={!gameDaysForStrip.length}
         timeZone={dayTimeZone}
         isEn={isEn}
         className="mb-0"
@@ -542,7 +780,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 ) : (
   <>
     <motion.div
-      key={`day-strip-${league}`}
+      key={`day-strip-${league}-${teamFilterKey}`}
       className="mb-4"
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -553,7 +791,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       }}
     >
       <DayStrip
-        dates={gameDays}
+        dates={gameDaysForStrip}
         selectedDate={selected}
         onSelect={setSelectedAndSync}
         size={dense ? "md" : "lg"}
@@ -566,7 +804,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     </motion.div>
 
     <motion.div
-      key={`sched-${selectedDayKey}-${loading ? "l" : "d"}`}
+      key={`sched-${selectedDayKey}-${teamFilterKey}-${loading ? "l" : "d"}`}
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -582,10 +820,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         ].join(" ")}
       >
         <ScheduleList
-          games={games}
+          games={filteredGames}
           dense={dense}
           loading={loading}
           league={league}
+          emptyHint={scheduleEmptyHint}
         />
       </div>
     </motion.div>

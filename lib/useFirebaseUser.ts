@@ -9,7 +9,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, authInitialization } from "@/lib/firebase";
 
 export type FirebaseAuthStatus = "loading" | "guest" | "ready";
 
@@ -31,10 +31,7 @@ function readInitialAuth(): FirebaseUserContextValue {
       status: snapshotUser ? "ready" : "guest",
     };
   }
-  const u = auth.currentUser;
-  if (u) {
-    return { fUser: u, status: "ready" };
-  }
+  // persistence / authStateReady 前に currentUser だけ見て ready にしない（誤 LP 遷移防止）
   return { fUser: null, status: "loading" };
 }
 
@@ -44,13 +41,26 @@ export function FirebaseUserProvider({ children }: { children: ReactNode }) {
   const [fUser, setFUser] = useState<User | null>(initial.fUser);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    let unsub: (() => void) | undefined;
+    let cancelled = false;
+
+    const apply = (u: User | null) => {
       authListenerResolved = true;
       snapshotUser = u;
       setFUser(u);
       setStatus(u ? "ready" : "guest");
+    };
+
+    void authInitialization.then(() => {
+      if (cancelled) return;
+      apply(auth.currentUser);
+      unsub = onAuthStateChanged(auth, apply);
     });
-    return () => unsub();
+
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
   }, []);
 
   const value = useMemo(

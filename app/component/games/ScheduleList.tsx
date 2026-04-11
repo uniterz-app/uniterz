@@ -80,12 +80,15 @@ export default function ScheduleList({
   dense = false,
   loading = false,
   league: leagueProp,
+  /** 絞り込み等で 0 件のときに表示する文言（未指定時は null のまま何も出さない） */
+  emptyHint = null,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
   loading?: boolean;
   /** 入場アニメの区切り（リーグ切替で再スタッガー） */
   league?: League;
+  emptyHint?: string | null;
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
@@ -411,6 +414,13 @@ export default function ScheduleList({
   }
 
   if (!propsList.length) {
+    if (emptyHint) {
+      return (
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-12 text-center text-sm leading-relaxed text-white/55 md:px-6">
+          {emptyHint}
+        </div>
+      );
+    }
     return null;
   }
 

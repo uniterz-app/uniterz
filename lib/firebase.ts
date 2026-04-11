@@ -36,12 +36,18 @@ const app: FirebaseApp =
 // --- Auth 初期化 ---
 export const auth: Auth = getAuth(app);
 
-// 🔥 永続ログイン設定（PWA / Safari で毎回ログアウトになる問題の修正）
-if (typeof window !== "undefined") {
-  setPersistence(auth, browserLocalPersistence).catch((e) => {
-    console.error("Auth persistence set error:", e);
-  });
-}
+/**
+ * 永続化の適用と初期セッション復元が終わるまで待つ Promise。
+ * これより前に guest と判定すると、ログイン済みでも一瞬 LP へ飛ぶことがある（特にモバイル）。
+ */
+export const authInitialization: Promise<void> =
+  typeof window !== "undefined"
+    ? setPersistence(auth, browserLocalPersistence)
+        .catch((e) => {
+          console.error("Auth persistence set error:", e);
+        })
+        .then(() => auth.authStateReady())
+    : Promise.resolve();
 
 export const storage: FirebaseStorage = getStorage(app);
 export const db: Firestore = getFirestore(app);
