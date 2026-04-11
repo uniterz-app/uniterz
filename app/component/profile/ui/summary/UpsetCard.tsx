@@ -1,7 +1,7 @@
 // app/component/profile/ui/summary/UpsetCard.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Zap } from "lucide-react";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
@@ -32,7 +32,7 @@ function clampInt(v: number) {
   return Math.max(0, Math.round(v));
 }
 
-export default function UpsetCard({
+function UpsetCard({
   upsetPointsSum,
   analyses,
   upsetChanceCount,
@@ -165,3 +165,5 @@ export default function UpsetCard({
     </>
   );
 }
+
+export default memo(UpsetCard);

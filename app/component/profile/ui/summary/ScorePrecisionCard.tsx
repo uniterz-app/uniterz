@@ -1,7 +1,7 @@
 // app/component/profile/ui/summary/ScorePrecisionCard.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Gauge } from "lucide-react";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { useCountUp } from "@/lib/hooks/useCountUp";
@@ -31,7 +31,7 @@ function clamp01(v: number) {
   return Math.max(0, Math.min(1, v));
 }
 
-export default function ScorePrecisionCard({
+function ScorePrecisionCard({
   scorePrecisionSum,
   analyses,
   compact = true,
@@ -171,3 +171,5 @@ export default function ScorePrecisionCard({
     </>
   );
 }
+
+export default memo(ScorePrecisionCard);

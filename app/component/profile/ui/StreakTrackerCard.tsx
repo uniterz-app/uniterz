@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { m, useInView, useReducedMotion } from "framer-motion";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   useProfileStreakTracker,
@@ -257,7 +257,7 @@ export default function StreakTrackerCard({
 
   return (
     <div className={[shellCls, S.outerPad].join(" ")}>
-      <motion.div
+      <m.div
         className="pointer-events-none absolute inset-0"
         style={PROFILE_SHELL_GRID_STYLE}
         initial={false}
@@ -385,7 +385,7 @@ export default function StreakTrackerCard({
               <div className={S.loadingEmptyH} aria-hidden />
             ) : (
               <div className={`flex items-start ${S.chartInnerPad}`}>
-                <motion.div
+                <m.div
                   className={`flex ${S.yAxis} ${S.plotH} text-right`}
                   initial={false}
                   animate={
@@ -406,7 +406,7 @@ export default function StreakTrackerCard({
                       {formatTick(t)}
                     </span>
                   ))}
-                </motion.div>
+                </m.div>
 
                 <div className="relative min-h-0 min-w-0 flex-1 overflow-x-auto">
                   <div
@@ -416,7 +416,7 @@ export default function StreakTrackerCard({
                     }}
                   >
                     <div className={`relative ${S.plotH} shrink-0`}>
-                      <motion.div
+                      <m.div
                         className="pointer-events-none absolute inset-0 rounded-lg"
                         style={CHART_GRID_STYLE}
                         initial={false}
@@ -430,7 +430,7 @@ export default function StreakTrackerCard({
                         }}
                         aria-hidden
                       />
-                      <motion.div
+                      <m.div
                         className="pointer-events-none absolute left-0 right-0 top-1/2 z-2 h-px -translate-y-1/2 bg-cyan-200/45"
                         initial={false}
                         animate={
@@ -477,7 +477,7 @@ export default function StreakTrackerCard({
                           aria-hidden
                         />
                       ) : (
-                        <motion.div
+                        <m.div
                           key={`blk-${animMountKey}`}
                           className={`relative z-3 flex h-full items-stretch justify-start ${S.colGap}`}
                           initial={canAnimate ? "hidden" : false}
@@ -506,7 +506,7 @@ export default function StreakTrackerCard({
                               blockStagger={blockStagger}
                             />
                           ))}
-                        </motion.div>
+                        </m.div>
                       )}
                     </div>
 
@@ -522,7 +522,7 @@ export default function StreakTrackerCard({
                             maxWidth: S.colMaxW,
                           }}
                         >
-                          <motion.span
+                          <m.span
                             className={`tabular-nums text-slate-500 ${S.indexLbl}`}
                             initial={false}
                             animate={axesReady ? { opacity: 1 } : { opacity: 0 }}
@@ -533,7 +533,7 @@ export default function StreakTrackerCard({
                             }}
                           >
                             {i + 1}
-                          </motion.span>
+                          </m.span>
                         </div>
                       ))}
                     </div>
@@ -545,7 +545,7 @@ export default function StreakTrackerCard({
         </div>
 
         {points.length > 0 && gateOpen ? (
-          <motion.div
+          <m.div
             className={S.footer}
             initial={false}
             animate={
@@ -638,7 +638,7 @@ export default function StreakTrackerCard({
                 </div>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         ) : null}
       </div>
     </div>
@@ -721,7 +721,7 @@ function StreakColumn({
         {s > 0 &&
           blocks.map((i) =>
             mode === "animate" ? (
-              <motion.div
+              <m.div
                 key={i}
                 className={`w-[82%] shrink-0 rounded-[2px] bg-emerald-400/92 shadow-[0_0_6px_rgba(52,211,153,0.22)] ${maxW}`}
                 style={{
@@ -746,7 +746,7 @@ function StreakColumn({
         {s < 0 &&
           blocks.map((i) =>
             mode === "animate" ? (
-              <motion.div
+              <m.div
                 key={i}
                 className={`w-[82%] shrink-0 rounded-[2px] bg-rose-400/92 shadow-[0_0_6px_rgba(251,113,133,0.18)] ${maxW}`}
                 style={{
@@ -788,7 +788,7 @@ function StreakColumn({
   }
 
   return (
-    <motion.div
+    <m.div
       className="group flex h-full min-h-0 flex-1 flex-col"
       style={{
         minWidth: S.colMinW,
@@ -800,6 +800,6 @@ function StreakColumn({
       title={titleStr}
     >
       {plot}
-    </motion.div>
+    </m.div>
   );
 }

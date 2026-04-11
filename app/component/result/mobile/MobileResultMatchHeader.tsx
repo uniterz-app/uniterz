@@ -1,7 +1,7 @@
 // app/component/result/mobile/MobileResultMatchHeader.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -143,7 +143,7 @@ function getStreakBadgeForMobile(
   };
 }
 
-export default function MobileResultMatchHeader({
+function MobileResultMatchHeader({
   post,
   language = "ja",
   inOverlay: _inOverlay = false,
@@ -348,3 +348,5 @@ export default function MobileResultMatchHeader({
     </div>
   );
 }
+
+export default memo(MobileResultMatchHeader);

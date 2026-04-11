@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import NavBar from "@/app/component/NavBar";
 import Header from "@/app/component/Header";
+import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 
 export default function AppChrome() {
   const pathname = usePathname() ?? "";
@@ -18,7 +19,8 @@ export default function AppChrome() {
     pathname === "/web/login" ||
     pathname === "/web/signup" ||
     pathname === "/mobile/login" ||
-    pathname === "/mobile/signup";
+    pathname === "/mobile/signup" ||
+    isGuestLegalPath(pathname);
 
   const shouldHideHeader =
     pathname === "/web/rankings" ||

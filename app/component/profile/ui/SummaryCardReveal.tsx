@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, type ReactNode } from "react";
 
 type Props = {
@@ -72,7 +72,7 @@ export default function SummaryCardReveal({
   if (enterVariant === "fade") {
     const delay = FADE_FIRST_DELAY + index * FADE_STEP;
     return (
-      <motion.div
+      <m.div
         className={className}
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -84,14 +84,14 @@ export default function SummaryCardReveal({
         onAnimationComplete={onAnimationComplete ? fireComplete : undefined}
       >
         {children}
-      </motion.div>
+      </m.div>
     );
   }
 
   if (enterVariant === "blurUp") {
     const delay = BLUR_UP_FIRST_DELAY + index * BLUR_UP_STEP;
     return (
-      <motion.div
+      <m.div
         className={className}
         initial={{ opacity: 0, y: 28, filter: "blur(14px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -103,7 +103,7 @@ export default function SummaryCardReveal({
         onAnimationComplete={onAnimationComplete ? fireComplete : undefined}
       >
         {children}
-      </motion.div>
+      </m.div>
     );
   }
 
@@ -112,7 +112,7 @@ export default function SummaryCardReveal({
   const delay = firstStart + index * step;
 
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, y: 52, scale: 0.86 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -124,6 +124,6 @@ export default function SummaryCardReveal({
       onAnimationComplete={onAnimationComplete ? fireComplete : undefined}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

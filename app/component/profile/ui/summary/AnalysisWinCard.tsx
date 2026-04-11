@@ -1,7 +1,7 @@
 "use client";
 
 import { useCountUp } from "@/lib/hooks/useCountUp";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { Language } from "@/lib/i18n/language";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
@@ -19,7 +19,7 @@ type Props = {
   language?: Language;
 };
 
-export default function AnalysisWinCard({ language = "ja", ...props }: Props) {
+function AnalysisWinCard({ language = "ja", ...props }: Props) {
   const isEn = language === "en";
 
   const hitLabel = isEn ? "Correct Picks" : "的中";
@@ -121,3 +121,5 @@ export default function AnalysisWinCard({ language = "ja", ...props }: Props) {
     </div>
   );
 }
+
+export default memo(AnalysisWinCard);

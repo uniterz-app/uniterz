@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import SplashWrapper from "@/app/SplashWrapper";
 import AuthGate from "@/app/AuthGate";
 import NavBar from "@/app/component/NavBar";
+import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 
 export default function WebOrMobileSplash({
   children,
@@ -28,7 +29,7 @@ export default function WebOrMobileSplash({
       <AuthGate platform="web">
         <SplashWrapper>
           <div id="app-root">{children}</div>
-          <NavBar />
+          {!isGuestLegalPath(pathname) ? <NavBar /> : null}
         </SplashWrapper>
       </AuthGate>
     );
@@ -38,7 +39,7 @@ export default function WebOrMobileSplash({
     <AuthGate platform="mobile">
       <SplashWrapper>
         <div id="app-root">{children}</div>
-        <NavBar />
+        {!isGuestLegalPath(pathname) ? <NavBar /> : null}
       </SplashWrapper>
     </AuthGate>
   );

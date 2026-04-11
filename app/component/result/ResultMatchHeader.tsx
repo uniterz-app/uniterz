@@ -1,7 +1,7 @@
 // app/component/result/ResultMatchHeader.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Flame } from "lucide-react";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -149,7 +149,7 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): {
     };
 }
 
-export default function ResultMatchHeader({
+function ResultMatchHeader({
   post,
   language = "ja",
   inOverlay: _inOverlay = false,
@@ -375,3 +375,5 @@ export default function ResultMatchHeader({
     </div>
   );
 }
+
+export default memo(ResultMatchHeader);

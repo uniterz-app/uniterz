@@ -1,17 +1,14 @@
 // app/component/result/ResultPointsDistributionCard.tsx
 "use client";
 
-import React, { useEffect, useId, useMemo, useRef, useState } from "react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import React, { memo, useEffect, useId, useMemo, useRef, useState } from "react";
+import { m, useInView, useReducedMotion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
-import {
-  type GamePointsDistributionV1,
-  DUMMY_GAME_POINTS_DISTRIBUTION,
-} from "@/lib/results/gamePointsDistribution";
+import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { roundMetricDecimals } from "@/lib/format/metricDecimals";
 
@@ -56,8 +53,10 @@ function useMetricCountUp(
 
 type Props = {
   post: PredictionPostV2;
-  /** 未指定・null はダミー（UI 確認用）。games.pointsDistribution を渡す */
+  /** games.pointsDistribution を parse したもの（試合未終了時は不要） */
   distribution?: GamePointsDistributionV1 | null;
+  /** games 取得中（オバーレイなど） */
+  distributionLoading?: boolean;
   language?: Language;
   inOverlay?: boolean;
   compact?: boolean;
@@ -170,9 +169,10 @@ const PLOT_BOTTOM = CHART_H - PAD_B;
 const AXIS_V_LEN = PLOT_BOTTOM - PAD_T;
 const AXIS_H_LEN = PLOT_W;
 
-export default function ResultPointsDistributionCard({
+function ResultPointsDistributionCard({
   post,
   distribution,
+  distributionLoading = false,
   language = "ja",
   inOverlay = false,
   compact = false,
@@ -195,12 +195,9 @@ export default function ResultPointsDistributionCard({
 
   const isMatchFinal =
     typeof post.result?.home === "number" && typeof post.result?.away === "number";
-  const useSamplePeers = isMatchFinal && distribution == null;
-  const dist = isMatchFinal
-    ? useSamplePeers
-      ? DUMMY_GAME_POINTS_DISTRIBUTION
-      : distribution
-    : null;
+  const distLoading = Boolean(distributionLoading);
+  const showChart = isMatchFinal && !distLoading && distribution != null;
+  const dist = showChart ? distribution : null;
 
   const myScoreRaw = post.stats?.pointsV3;
   const myScore =
@@ -290,24 +287,24 @@ export default function ResultPointsDistributionCard({
   const title = isEn ? "Score distribution" : "得点の分布";
   const subtitle = !isMatchFinal
     ? isEn
-      ? "Waiting for final score. Distribution stats will appear after settlement."
-      : "試合終了後に得点分布の統計が表示されます。"
-    : useSamplePeers
+      ? "Score distribution appears after the match ends."
+      : "試合が終了したら、得点の分布が表示されます。"
+    : distLoading
+      ? isEn
+        ? "Loading…"
+        : "読み込み中…"
+      : distribution == null
+        ? isEn
+          ? "Could not load score distribution for this match."
+          : "この試合の得点分布を表示できません。"
+        : isEn
+          ? "All scored posts for this match (same rules as your result)."
+          : "この試合の採点済み予想の分布（あなたの得点と同じルール）";
+  const scoringNote = showChart
     ? isEn
-      ? "Sample layout — real matches show aggregated scores from this game."
-      : "表示イメージ用のサンプルです。本番はこの試合の集計が入ります。"
-    : isEn
-      ? "All scored posts for this match (same rules as your result)."
-      : "この試合の採点済み予想の分布（あなたの得点と同じルール）";
-  const scoringNote = !isMatchFinal
-    ? null
-    : useSamplePeers
-    ? isEn
-      ? "Chart vertical scale tops out at 10; higher scores are drawn at the ceiling."
-      : "縦軸の表示上限は 10。それより高い得点はグラフ上端にまとめて表示します。"
-    : isEn
       ? "Wrong winner → 0. Hits start at 4; streak/upset bonuses can exceed 10. Chart caps at 10 (ceiling). No 1–3."
-      : "勝者を外すと0点。的中は4点から。連勝・アップセットで10点超もあり得ますが、分布図の縦軸は10で頭打ち表示。1〜3点は出ません。";
+      : "勝者を外すと0点。的中は4点から。連勝・アップセットで10点超もあり得ますが、分布図の縦軸は10で頭打ち表示。1〜3点は出ません。"
+    : null;
   const axisLabel = isEn ? "pointsV3" : "総合点 (pointsV3)";
   const youLabel = isEn ? "You" : "あなた";
   const medianLabel = isEn ? "Median" : "中央値";
@@ -328,7 +325,7 @@ export default function ResultPointsDistributionCard({
   const nDisplay = useMetricCountUp(
     dist?.n ?? 0,
     0,
-    countActive && isMatchFinal,
+    countActive && showChart,
     countDuration,
     !!reduceMotion,
     0
@@ -337,7 +334,7 @@ export default function ResultPointsDistributionCard({
   const medianDisplay = useMetricCountUp(
     medianTarget,
     2,
-    countActive && dist?.median != null,
+    countActive && showChart && dist?.median != null,
     countDuration,
     !!reduceMotion,
     compact ? 55 : 70
@@ -346,7 +343,7 @@ export default function ResultPointsDistributionCard({
   const meanDisplay = useMetricCountUp(
     meanTarget,
     2,
-    countActive && dist?.mean != null,
+    countActive && showChart && dist?.mean != null,
     countDuration,
     !!reduceMotion,
     compact ? 110 : 140
@@ -398,7 +395,7 @@ export default function ResultPointsDistributionCard({
         <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
           <span className="font-medium">{nLabel}:</span>
           <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
-            {isMatchFinal ? nDisplay : "--"}
+                       {showChart ? nDisplay : "--"}
           </span>
         </span>
         <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
@@ -412,7 +409,7 @@ export default function ResultPointsDistributionCard({
           />
           <span className="font-medium">{medianLabel}:</span>
           <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
-            {isMatchFinal && dist?.median != null ? medianDisplay.toFixed(2) : "--"}
+            {showChart && dist?.median != null ? medianDisplay.toFixed(2) : "--"}
           </span>
         </span>
         <span className={`inline-flex items-baseline gap-2 ${statsLabelClass}`}>
@@ -426,15 +423,19 @@ export default function ResultPointsDistributionCard({
           />
           <span className="font-medium">{meanLabel}:</span>
           <span className={`${statsNumClass} ${resultStatsMetricNumClass}`}>
-            {isMatchFinal && dist?.mean != null ? meanDisplay.toFixed(2) : "--"}
+            {showChart && dist?.mean != null ? meanDisplay.toFixed(2) : "--"}
           </span>
         </span>
       </div>
 
       <div
         ref={chartSectionRef}
-        className="flex justify-center overflow-x-auto"
+        className={[
+          "flex justify-center overflow-x-auto",
+          !showChart ? "min-h-[100px] items-center" : "",
+        ].join(" ")}
       >
+        {showChart ? (
         <svg
           width={CHART_W}
           height={CHART_H}
@@ -454,7 +455,7 @@ export default function ResultPointsDistributionCard({
           </defs>
 
           {/* 縦軸（プロット左縁）— 下から伸ばす（dash で描画） */}
-          <motion.line
+          <m.line
             x1={PAD_L}
             y1={PLOT_BOTTOM}
             x2={PAD_L}
@@ -473,7 +474,7 @@ export default function ResultPointsDistributionCard({
           />
 
           {/* 横軸（プロット下縁）— 左から伸ばす */}
-          <motion.line
+          <m.line
             x1={PAD_L}
             y1={PLOT_BOTTOM}
             x2={CHART_W - PAD_R}
@@ -491,7 +492,7 @@ export default function ResultPointsDistributionCard({
             transition={{ duration: 0.88, delay: 0.14, ease: FLOW_EASE }}
           />
 
-          <motion.rect
+          <m.rect
             x={PAD_L}
             y={PAD_T}
             width={PLOT_W}
@@ -513,7 +514,7 @@ export default function ResultPointsDistributionCard({
           {gridYs.map((g, gi) => {
             const ny = scoreToY(g);
             return (
-              <motion.line
+              <m.line
                 key={`g-${g}`}
                 x1={PAD_L}
                 x2={CHART_W - PAD_R}
@@ -540,7 +541,7 @@ export default function ResultPointsDistributionCard({
           {gridYs.map((g, gi) => {
             const ny = scoreToY(g);
             return (
-              <motion.text
+              <m.text
                 key={`t-${g}`}
                 x={PAD_L - 6}
                 y={ny + 3}
@@ -560,12 +561,12 @@ export default function ResultPointsDistributionCard({
                 }}
               >
                 {g === SCORE_CHART_MAX ? `${g}+` : g}
-              </motion.text>
+              </m.text>
             );
           })}
 
           {dist?.median != null && Number.isFinite(dist.median) && (
-            <motion.line
+            <m.line
               x1={PAD_L}
               x2={CHART_W - PAD_R}
               y1={scoreToY(clampChartScore(dist.median))}
@@ -589,7 +590,7 @@ export default function ResultPointsDistributionCard({
             />
           )}
           {dist?.mean != null && Number.isFinite(dist.mean) && (
-            <motion.line
+            <m.line
               x1={PAD_L}
               x2={CHART_W - PAD_R}
               y1={scoreToY(clampChartScore(dist.mean))}
@@ -616,7 +617,7 @@ export default function ResultPointsDistributionCard({
           {showPeers &&
             peerDots.map((d, i) => (
               <g key={`p-${animMountKey}-${i}`} transform={`translate(${d.x},${d.y})`}>
-                <motion.circle
+                <m.circle
                   cx={0}
                   cy={0}
                   r={2.1}
@@ -639,7 +640,7 @@ export default function ResultPointsDistributionCard({
 
           {youDot && showYou && (
             <g transform={`translate(${youDot.x},${youDot.y})`}>
-              <motion.g
+              <m.g
                 initial={wantsAnim ? { scale: 0.28, opacity: 0 } : false}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{
@@ -648,7 +649,7 @@ export default function ResultPointsDistributionCard({
                   damping: 28,
                 }}
               >
-                <motion.circle
+                <m.circle
                   cx={0}
                   cy={0}
                   r={7}
@@ -672,7 +673,7 @@ export default function ResultPointsDistributionCard({
                         }
                   }
                 />
-                <motion.circle
+                <m.circle
                   cx={0}
                   cy={0}
                   r={4.2}
@@ -699,11 +700,11 @@ export default function ResultPointsDistributionCard({
                         }
                   }
                 />
-              </motion.g>
+              </m.g>
             </g>
           )}
 
-          <motion.text
+          <m.text
             x={PAD_L + PLOT_W / 2}
             y={CHART_H - 6}
             textAnchor="middle"
@@ -716,8 +717,9 @@ export default function ResultPointsDistributionCard({
             transition={{ duration: 0.62, delay: 0.2, ease: FLOW_EASE }}
           >
             {axisLabel}（{axisFoot}）
-          </motion.text>
+          </m.text>
           </svg>
+        ) : null}
       </div>
 
       {scoringNote && (
@@ -726,7 +728,7 @@ export default function ResultPointsDistributionCard({
         </p>
       )}
 
-      {isMatchFinal && dist && (
+      {isMatchFinal && myScore != null && (
         <div
           className={[
             "mt-4 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1",
@@ -764,3 +766,5 @@ export default function ResultPointsDistributionCard({
     </div>
   );
 }
+
+export default memo(ResultPointsDistributionCard);

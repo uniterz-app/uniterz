@@ -18,6 +18,17 @@ export type LPFlowMediaSlot = {
   alt: string;
 };
 
+/** ConnectedFlowCards 用アイコンキー（下部ナビ由来 + LP フロー��用） */
+export type LPFlowNavIconKey =
+  | "games"
+  | "home"
+  | "ranking"
+  | "leaderboards"
+  | "mypage"
+  | "pen"
+  | "resultSync"
+  | "medal";
+
 export type LPSlotMedia = {
   id: string;
   badge: string;
@@ -190,9 +201,9 @@ export const featureCards = [
 export const flowNodes = [
   {
     id: "pick",
-    label: "PICK",
     title: "試合選択",
-    text: "注目カードを選んで予想を始める。",
+    text: "試合カードを選んで予想を始める。",
+    navIconKey: "games" satisfies LPFlowNavIconKey,
     media: {
       enabled: false,
       type: "video",
@@ -203,9 +214,9 @@ export const flowNodes = [
   },
   {
     id: "input",
-    label: "INPUT",
     title: "予想入力",
     text: "勝敗とスコアを入力する。",
+    navIconKey: "pen" satisfies LPFlowNavIconKey,
     media: {
       enabled: false,
       type: "video",
@@ -216,9 +227,9 @@ export const flowNodes = [
   },
   {
     id: "sync",
-    label: "SYNC",
     title: "結果反映",
     text: "試合終了後に自動で反映。",
+    navIconKey: "resultSync" satisfies LPFlowNavIconKey,
     media: {
       enabled: false,
       type: "video",
@@ -229,9 +240,9 @@ export const flowNodes = [
   },
   {
     id: "rank",
-    label: "RANK",
-    title: "毎日順位更新",
-    text: "毎日更新ランキングで現在地を把握。",
+    title: "現在地の確認",
+    text: "毎日更新されるランキングで、今の順位を確認。",
+    navIconKey: "ranking" satisfies LPFlowNavIconKey,
     media: {
       enabled: false,
       type: "video",
@@ -242,9 +253,9 @@ export const flowNodes = [
   },
   {
     id: "analyze",
-    label: "REWARD",
     title: "月間報酬",
-    text: "月間トップで豪華なプレゼント。",
+    text: "月間トップで\n豪華なプレゼント。",
+    navIconKey: "medal" satisfies LPFlowNavIconKey,
     media: {
       enabled: false,
       type: "video",

@@ -1,6 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.scorePlayoffBracket = scorePlayoffBracket;
+/** 公式結果として採点に使う（winner 非空かつ試合数 4–7）。プレースホルダーは除外 */
+function isRecordedOfficialResult(result) {
+    var _a;
+    if (result == null)
+        return false;
+    const w = String((_a = result.winner) !== null && _a !== void 0 ? _a : "").trim();
+    const g = Number(result.games);
+    if (!w)
+        return false;
+    if (!Number.isFinite(g) || g < 4 || g > 7)
+        return false;
+    return true;
+}
 const PLAYOFF_BRACKET_STRUCTURE = {
     R2_E1: ["R1_E1", "R1_E2"],
     R2_E2: ["R1_E3", "R1_E4"],
@@ -52,6 +65,8 @@ function scorePlayoffBracket(prediction, results) {
         const result = results[id];
         const pred = prediction[id];
         if (!result || !pred)
+            continue;
+        if (!isRecordedOfficialResult(result))
             continue;
         if (!isSeriesValid(id, prediction))
             continue;

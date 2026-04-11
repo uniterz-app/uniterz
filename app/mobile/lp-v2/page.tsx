@@ -6,9 +6,11 @@ import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import ConnectedFlowCards from "@/app/lp/_components/ConnectedFlowCards";
 import { flowNodes } from "@/app/lp/_components/lp-data";
-import PerspectiveGridBackground from "@/app/lp-v2/_components/PerspectiveGridBackground";
+import LpV2PhotoBackground from "@/app/lp-v2/_components/LpV2PhotoBackground";
 import LPV2TopActions from "@/app/lp-v2/_components/LPV2TopActions";
 import EasyPostShowcase from "@/app/lp-v2/_components/EasyPostShowcase";
+import LpV2RankingFeature from "@/app/lp-v2/_components/LpV2RankingFeature";
+import LpV2Footer from "@/app/lp-v2/_components/LpV2Footer";
 
 export default function MobileLPV2Page() {
   const [mounted, setMounted] = useState(false);
@@ -22,27 +24,29 @@ export default function MobileLPV2Page() {
   );
   const ctaFontStyle = bracketMarketTeamTypography(true);
 
-  const handleGridRevealComplete = () => {
-    setShowTitle(false);
-    setStartTopScramble(false);
-    setShowContent(false);
-    requestAnimationFrame(() => {
-      setShowTitle(true);
-      setTimeout(() => setStartTopScramble(true), 220);
-      setTimeout(() => setShowContent(true), 320);
-    });
-  };
+  useEffect(() => {
+    const runIntro = () => {
+      setShowTitle(false);
+      setStartTopScramble(false);
+      setShowContent(false);
+      requestAnimationFrame(() => {
+        setShowTitle(true);
+        setTimeout(() => setStartTopScramble(true), 220);
+        setTimeout(() => setShowContent(true), 320);
+      });
+    };
+    runIntro();
+    window.addEventListener("pageshow", runIntro);
+    return () => window.removeEventListener("pageshow", runIntro);
+  }, []);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-app text-white">
-      <PerspectiveGridBackground
-        mobileOptimized
-        onRevealComplete={handleGridRevealComplete}
-      />
+    <main className="relative min-h-screen overflow-hidden bg-[#080a0d] text-white">
+      <LpV2PhotoBackground />
       <LPV2TopActions mobile />
       <div className="relative z-10 mx-auto flex w-full flex-col items-center px-4 pt-24">
         <div
-          className={`text-[12px] tracking-[0.17em] text-cyan-200/72 uppercase text-center transition-all duration-500 ${
+          className={`mt-2 text-[12px] tracking-[0.17em] text-cyan-200/72 uppercase text-center transition-all duration-500 ${
             startTopScramble ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
           }`}
         >
@@ -88,7 +92,7 @@ export default function MobileLPV2Page() {
               を。
             </span>
           </h1>
-          <p className="mx-auto mt-3 max-w-[92%] text-center text-[12px] leading-6 text-white/72">
+          <p className="mx-auto mt-1 max-w-[92%] text-center text-[12px] leading-6 text-white/72">
             UNITERZでは、試合予想をスコア化し、その結果に基づくデータやランキングを通じて、他のユーザーと競えます。
           </p>
           <div className="mt-4 flex justify-center">
@@ -131,10 +135,12 @@ export default function MobileLPV2Page() {
         >
           遊び方
         </h2>
-        <div className="rounded-2xl border border-white/10 bg-white/4 p-3 backdrop-blur-xl shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
-          <ConnectedFlowCards nodes={flowNodes} animated={false} />
-        </div>
+        <ConnectedFlowCards nodes={flowNodes} animated={false} />
       </section>
+
+      <LpV2RankingFeature mobile />
+
+      <LpV2Footer mobile />
     </main>
   );
 }

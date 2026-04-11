@@ -155,10 +155,12 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     return (
       <div className="space-y-2 px-3 pt-2">
         {titleBlock}
-        <div className="py-16 text-center text-white/60">
-          {language === "en"
-            ? "No bracket entries for this season."
-            : "このシーズンのブラケットはまだありません"}
+        <div className="flex min-h-[min(50vh,420px)] flex-col items-center justify-center px-4 text-center">
+          <p className="text-[15px] text-white/80">
+            {language === "en"
+              ? "No brackets have been submitted yet."
+              : "ブラケットはまだ提出されていません"}
+          </p>
         </div>
       </div>
     );

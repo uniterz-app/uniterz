@@ -1,6 +1,6 @@
 /**
  * pointsV3 ヒストグラム（games.pointsDistribution 用）。
- * ビン境界は lib/results/gamePointsDistribution.ts の DUMMY と同じ並びに合わせる。
+ * ビン境界は lib/results/gamePointsDistribution.ts のクライアント型と同じ並びに合わせる。
  */
 
 export type PointsDistBinOut = { lo: number; hi: number; count: number };

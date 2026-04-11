@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { Flame, Menu } from "lucide-react";
 import {
   useCallback,
@@ -379,7 +379,7 @@ export default function ProfileHeroCard({
 
   const avatarBlock = (
     <div className="relative shrink-0">
-      <motion.div
+      <m.div
         className={
           isWeb
             ? "h-20 w-20 overflow-hidden rounded-full bg-[#0f2d35] ring-2 ring-[#0f2d35]"
@@ -413,10 +413,10 @@ export default function ProfileHeroCard({
             onLoad={() => setAvatarLoaded(true)}
           />
         ) : null}
-      </motion.div>
+      </m.div>
 
       {showCurrentStreakBadge && (
-        <motion.div
+        <m.div
           className={
             isWeb
               ? "absolute left-1/2 -bottom-1.5 -translate-x-1/2"
@@ -442,14 +442,14 @@ export default function ProfileHeroCard({
               {language === "en" ? "Win streak" : "連勝中"}
             </span>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </div>
   );
 
   const textBlock = (
     <div className="min-w-0">
-      <motion.h1
+      <m.h1
         className={
           isWeb
             ? "text-2xl font-extrabold leading-tight"
@@ -474,7 +474,7 @@ export default function ProfileHeroCard({
         }}
       >
         {displayProfile.displayName}
-      </motion.h1>
+      </m.h1>
 
       <p
         className={
@@ -488,7 +488,7 @@ export default function ProfileHeroCard({
       </p>
 
       {displayProfile.bio ? (
-        <motion.p
+        <m.p
           className={
             isWeb
               ? "mt-1.5 text-[13px] leading-snug text-white/85"
@@ -506,13 +506,13 @@ export default function ProfileHeroCard({
           }}
         >
           {displayProfile.bio}
-        </motion.p>
+        </m.p>
       ) : null}
     </div>
   );
 
   const settingsBtn = canOpenSettings && (
-    <motion.button
+    <m.button
       type="button"
       className={
         isWeb
@@ -540,7 +540,7 @@ export default function ProfileHeroCard({
       aria-label="Menu"
     >
       <Menu className={isWeb ? "h-5 w-5" : "h-4 w-4"} />
-    </motion.button>
+    </m.button>
   );
 
   const hasBadgeSlot = children != null && children !== false;
@@ -558,7 +558,7 @@ export default function ProfileHeroCard({
       ].join(" ")}
       aria-hidden={badgesHidden}
     >
-      <motion.div
+      <m.div
         initial={
           staticHero ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }
         }
@@ -574,7 +574,7 @@ export default function ProfileHeroCard({
         }}
       >
         {children}
-      </motion.div>
+      </m.div>
     </div>
   ) : null;
 
@@ -604,7 +604,7 @@ export default function ProfileHeroCard({
    * 差し替えで子（img・バッジ）が再マウントして「黒くなって再描画」していた。
    */
   return (
-    <motion.div
+    <m.div
       className={shellClass}
       initial={heroEntranceAnim ? { opacity: 0, y: 7 } : false}
       animate={{ opacity: 1, y: 0 }}
@@ -626,6 +626,6 @@ export default function ProfileHeroCard({
         aria-hidden
       />
       {body}
-    </motion.div>
+    </m.div>
   );
 }

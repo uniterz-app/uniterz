@@ -19,11 +19,17 @@ function toDateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function useUserStatsDailyTrend(uid?: string) {
+export function useUserStatsDailyTrend(uid?: string, enabled: boolean = true) {
   const [data, setData] = useState<DailyTrendRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
+
     if (!uid) {
       setData([]);
       setLoading(false);
@@ -78,7 +84,7 @@ export function useUserStatsDailyTrend(uid?: string) {
     }
 
     fetchDaily();
-  }, [uid]);
+  }, [uid, enabled]);
 
   return { data, loading };
 }

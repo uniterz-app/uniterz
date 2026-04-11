@@ -185,6 +185,41 @@ export function getDayRangeInTimeZone(date: Date, timeZone: string): { start: Da
 }
 
 /**
+ * アンカー日（そのタイムゾーンの暦日）を中心に前後 plusMinus 日を含む [start, end)。
+ * 例: plusMinus=3 → ローカルで 7 日分（アンカー-3 の 0:00 〜 アンカー+4 日の 0:00 未満）。
+ * Firestore の startAtJst 範囲クエリ用。
+ */
+export function getPlusMinusDaysRangeInTimeZone(
+  anchor: Date,
+  timeZone: string,
+  plusMinus: number
+): { start: Date; end: Date } {
+  const ymd = getZonedYMD(anchor, timeZone);
+  const startYmd = addDaysToYmd(ymd, -plusMinus);
+  const endExclusiveYmd = addDaysToYmd(ymd, plusMinus + 1);
+
+  const startMs = zonedTimeToUtcMs({
+    year: startYmd.year,
+    month: startYmd.month,
+    day: startYmd.day,
+    timeZone,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  });
+  const endMs = zonedTimeToUtcMs({
+    year: endExclusiveYmd.year,
+    month: endExclusiveYmd.month,
+    day: endExclusiveYmd.day,
+    timeZone,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  });
+  return { start: new Date(startMs), end: new Date(endMs) };
+}
+
+/**
  * 指定タイムゾーンにおける「暦月」の [start, end)（end は翌月1日0時・排他）。
  * Firestore の startAtJst 範囲クエリ用。
  */

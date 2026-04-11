@@ -13,21 +13,37 @@ import {
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResults";
 
-export function useProfilePlayoffBracket(targetUid: string | null) {
+export function useProfilePlayoffBracket(
+  targetUid: string | null,
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true;
   const [loading, setLoading] = useState(false);
   const [playoffBracketDoc, setPlayoffBracketDoc] =
     useState<PlayoffBracketDoc | null>(null);
 
   const season = getCurrentPlayoffSeason();
 
-  const officialResults = usePlayoffOfficialResults(targetUid ? season : null);
+  const officialResults = usePlayoffOfficialResults(
+    enabled && targetUid ? season : null
+  );
+
+  useEffect(() => {
+    if (!targetUid) {
+      setPlayoffBracketDoc(null);
+    }
+  }, [targetUid]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchPlayoffBracket() {
       if (!targetUid) {
-        setPlayoffBracketDoc(null);
+        setLoading(false);
+        return;
+      }
+
+      if (!enabled) {
         setLoading(false);
         return;
       }
@@ -51,7 +67,7 @@ export function useProfilePlayoffBracket(targetUid: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [targetUid, season]);
+  }, [targetUid, season, enabled]);
 
   const playoffDisplayData: PlayoffDisplayData | null = useMemo(() => {
     if (!playoffBracketDoc?.bracket || !playoffBracketDoc?.season) return null;

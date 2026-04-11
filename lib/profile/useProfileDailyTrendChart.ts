@@ -13,13 +13,17 @@ export type ProfileDailyTrendChartRow = {
   upsetPoints: number;
 };
 
-export function useProfileDailyTrendChart(targetUid: string | null) {
+export function useProfileDailyTrendChart(
+  targetUid: string | null,
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true;
   const uidForDailyTrend = targetUid ?? undefined;
 
   const {
     data: dailyTrend,
     loading,
-  } = useUserStatsDailyTrend(uidForDailyTrend);
+  } = useUserStatsDailyTrend(uidForDailyTrend, enabled);
 
   const chartData: ProfileDailyTrendChartRow[] = useMemo(() => {
     return (dailyTrend ?? []).map((row: any) => ({

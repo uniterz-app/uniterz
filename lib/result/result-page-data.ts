@@ -195,4 +195,7 @@ export function flattenResultDayGroups(
   return out;
 }
 
-export const RESULT_PAGE_SIZE = 20;
+/** リザルト一覧：初回に読む件数 */
+export const RESULT_INITIAL_PAGE_SIZE = 20;
+/** リザルト一覧：下スクロール時に追加で読む件数（2ページ目以降） */
+export const RESULT_NEXT_PAGE_SIZE = 10;

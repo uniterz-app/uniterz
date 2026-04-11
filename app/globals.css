@@ -563,6 +563,7 @@ body.splash-bg {
     transform: translateZ(-260px) translateY(-30px) scale(1.3);
   }
 }
+
 body::before {
   content: "";
   position: fixed;
@@ -573,4 +574,44 @@ body::before {
   background-image:
     radial-gradient(rgba(255,255,255,0.08) 0.6px, transparent 0.6px);
   background-size: 6px 6px;
+}
+
+/* Profile NBA map: チーム点を時間差でポツポツ表示（親 g はレイヤー用） */
+.nba-map-markers-layer {
+  pointer-events: none;
+}
+
+.nba-map-dot-burst {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.nba-map-dot-burst.nba-map-dot-burst--in {
+  pointer-events: auto;
+  animation: nbaMapDotPop 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.nba-map-dot-burst.nba-map-dot-burst--in.nba-map-dot-burst--instant {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes nbaMapDotPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nba-map-dot-burst.nba-map-dot-burst--in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

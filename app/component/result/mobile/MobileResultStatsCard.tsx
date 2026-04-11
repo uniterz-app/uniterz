@@ -1,7 +1,7 @@
 // app/component/result/mobile/MobileResultStatsCard.tsx
 "use client";
 
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import Link from "next/link";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { LineChart } from "lucide-react";
@@ -36,7 +36,7 @@ function toNumber(v: unknown, fallback = 0) {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
-export default function MobileResultStatsCard({
+function MobileResultStatsCard({
   post,
   minHeightClassName,
   language = "ja",
@@ -232,3 +232,5 @@ export default function MobileResultStatsCard({
     </div>
   );
 }
+
+export default memo(MobileResultStatsCard);

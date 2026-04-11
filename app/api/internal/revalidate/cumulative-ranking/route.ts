@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  revalidateTag("cumulative-ranking");
+  revalidateTag("cumulative-ranking", {});
   return NextResponse.json({ ok: true, tag: "cumulative-ranking" }, { status: 200 });
 }
 

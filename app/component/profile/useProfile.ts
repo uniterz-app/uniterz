@@ -50,21 +50,35 @@ const BASE_PROFILE: Omit<Profile, "handle"> & { handle?: string } = {
   plan: "free",
 };
 
+type ProfileLoadState = {
+  loading: boolean;
+  targetUid: string | null;
+  user: UserState;
+  counts: Counts;
+};
+
+const initialLoadState: ProfileLoadState = {
+  loading: true,
+  targetUid: null,
+  user: null,
+  counts: EMPTY_COUNTS,
+};
+
 export function useProfile(handle: string) {
   const decodedHandle = useMemo(() => decodeURIComponent(handle), [handle]);
 
-  const [user, setUser] = useState<UserState>(null);
-  const [loading, setLoading] = useState(true);
-  const [counts, setCounts] = useState<Counts>(EMPTY_COUNTS);
-  const [targetUid, setTargetUid] = useState<string | null>(null);
+  const [state, setState] = useState<ProfileLoadState>(initialLoadState);
 
   useEffect(() => {
     let cancelled = false;
 
+    setState({
+      ...initialLoadState,
+      loading: true,
+    });
+
     (async () => {
       try {
-        setLoading(true);
-
         const qref = query(
           collection(db, "users"),
           where("handle", "==", decodedHandle),
@@ -75,36 +89,41 @@ export function useProfile(handle: string) {
         if (cancelled) return;
 
         if (snap.empty) {
-          setTargetUid(null);
-          setUser(null);
-          setCounts(EMPTY_COUNTS);
+          setState({
+            loading: false,
+            targetUid: null,
+            user: null,
+            counts: EMPTY_COUNTS,
+          });
           return;
         }
 
         const docSnap = snap.docs[0];
         const d = docSnap.data() as any;
 
-        setTargetUid(docSnap.id);
-
-        setCounts({
-          posts: d.counts?.posts ?? 0,
-        });
-
         const rawPlan = d.plan;
-        const plan: "free" | "pro" =
-          rawPlan === "pro" ? "pro" : "free";
+        const plan: "free" | "pro" = rawPlan === "pro" ? "pro" : "free";
 
-        setUser({
-          displayName: d.displayName ?? "",
-          handle: d.handle ?? decodedHandle,
-          bio: d.bio ?? "",
-          photoURL: d.photoURL ?? "",
-          currentStreak: d.currentStreak ?? 0,
-          maxStreak: d.maxStreak ?? 0,
-          plan,
+        setState({
+          loading: false,
+          targetUid: docSnap.id,
+          counts: {
+            posts: d.counts?.posts ?? 0,
+          },
+          user: {
+            displayName: d.displayName ?? "",
+            handle: d.handle ?? decodedHandle,
+            bio: d.bio ?? "",
+            photoURL: d.photoURL ?? "",
+            currentStreak: d.currentStreak ?? 0,
+            maxStreak: d.maxStreak ?? 0,
+            plan,
+          },
         });
-      } finally {
-        if (!cancelled) setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setState((prev) => ({ ...prev, loading: false }));
+        }
       }
     })();
 
@@ -112,6 +131,8 @@ export function useProfile(handle: string) {
       cancelled = true;
     };
   }, [decodedHandle]);
+
+  const { user, counts, targetUid, loading } = state;
 
   const profile: Profile = useMemo(() => {
     const u = user ?? {};

@@ -2,7 +2,7 @@
 "use client";
 
 import React from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import ResultMatchHeader from "@/app/component/result/ResultMatchHeader";
 import ResultMarketCard from "@/app/component/result/ResultMarketCard";
@@ -21,8 +21,8 @@ type Props = {
     drawRate?: number;
     total?: number;
   };
-  /** games.pointsDistribution（無ければチャートはサンプル） */
   pointsDistribution?: GamePointsDistributionV1 | null;
+  pointsDistributionLoading?: boolean;
   language?: Language;
   /** 一覧オーバーレイ内（試合の予想オーバーレイと同じガラス＋透過背景用） */
   inOverlay?: boolean;
@@ -32,6 +32,7 @@ export default function ResultDetail({
   post,
   market,
   pointsDistribution,
+  pointsDistributionLoading = false,
   language = "ja",
   inOverlay = false,
 }: Props) {
@@ -67,48 +68,51 @@ export default function ResultDetail({
             : "p-6",
       ].join(" ")}
     >
-      <React.Fragment key={post.id}>
-        <motion.div {...fadeUp(E.delayHeader)}>
-          <ResultMatchHeader post={post} language={language} inOverlay={inOverlay} />
-        </motion.div>
+      <LazyMotion features={domAnimation}>
+        <React.Fragment key={post.id}>
+          <m.div {...fadeUp(E.delayHeader)}>
+            <ResultMatchHeader post={post} language={language} inOverlay={inOverlay} />
+          </m.div>
 
-        <div
-          className={[
-            "grid grid-cols-1",
-            isMobile ? "gap-4 mt-4" : "md:grid-cols-2 md:gap-8 mt-10 gap-4",
-          ].join(" ")}
-        >
-          <motion.div {...fadeUp(E.delayMarket)}>
-            <ResultMarketCard
-              post={post}
-              market={market}
-              inOverlay={inOverlay}
-              sideBySideLayout={!isMobile}
-              donutDrawDelayMs={donutDelay}
-            />
-          </motion.div>
-          <motion.div {...fadeUp(E.delayDistribution)}>
-            <ResultPointsDistributionCard
-              post={post}
-              distribution={pointsDistribution}
-              language={language}
-              inOverlay={inOverlay}
-              compact={isMobile}
-            />
-          </motion.div>
-          <motion.div
-            className={isMobile ? undefined : "md:col-span-2"}
-            {...fadeUp(E.delayStats)}
+          <div
+            className={[
+              "grid grid-cols-1",
+              isMobile ? "gap-4 mt-4" : "md:grid-cols-2 md:gap-8 mt-10 gap-4",
+            ].join(" ")}
           >
-            <ResultStatsCard
-              post={post}
-              minHeightClassName={isMobile ? "min-h-[360px]" : "min-h-[400px]"}
-              language={language}
-              inOverlay={inOverlay}
-            />
-          </motion.div>
-        </div>
-      </React.Fragment>
+            <m.div {...fadeUp(E.delayMarket)}>
+              <ResultMarketCard
+                post={post}
+                market={market}
+                inOverlay={inOverlay}
+                sideBySideLayout={!isMobile}
+                donutDrawDelayMs={donutDelay}
+              />
+            </m.div>
+            <m.div {...fadeUp(E.delayDistribution)}>
+              <ResultPointsDistributionCard
+                post={post}
+                distribution={pointsDistribution}
+                distributionLoading={pointsDistributionLoading}
+                language={language}
+                inOverlay={inOverlay}
+                compact={isMobile}
+              />
+            </m.div>
+            <m.div
+              className={isMobile ? undefined : "md:col-span-2"}
+              {...fadeUp(E.delayStats)}
+            >
+              <ResultStatsCard
+                post={post}
+                minHeightClassName={isMobile ? "min-h-[360px]" : "min-h-[400px]"}
+                language={language}
+                inOverlay={inOverlay}
+              />
+            </m.div>
+          </div>
+        </React.Fragment>
+      </LazyMotion>
     </div>
   );
 }

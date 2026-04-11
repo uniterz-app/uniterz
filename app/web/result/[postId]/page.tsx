@@ -2,32 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import ResultDetail from "@/app/component/result/ResultDetail";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
-  parseGamePointsDistributionV1,
-  type GamePointsDistributionV1,
-} from "@/lib/results/gamePointsDistribution";
+  loadResultPostDetailClient,
+  type ResultPostDetailMarket,
+} from "@/lib/result/loadResultPostDetailClient";
+import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
+
+type DetailState =
+  | { status: "loading" }
+  | { status: "missing" }
+  | {
+      status: "ready";
+      post: PredictionPostV2;
+      market: ResultPostDetailMarket | null;
+      pointsDistribution: GamePointsDistributionV1 | null;
+    };
 
 export default function WebResultPostPage() {
   const params = useParams();
   const postId = params?.postId as string;
 
   const [uid, setUid] = useState<string | null>(null);
-  const [post, setPost] = useState<PredictionPostV2 | null>(null);
-  const [market, setMarket] = useState<{
-    homeRate: number;
-    awayRate: number;
-    drawRate?: number;
-    total?: number;
-  } | null>(null);
-  const [pointsDistribution, setPointsDistribution] =
-    useState<GamePointsDistributionV1 | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<DetailState>({ status: "loading" });
 
   const { language } = useUserLanguage(uid);
 
@@ -40,44 +41,25 @@ export default function WebResultPostPage() {
     if (!postId) return;
 
     let alive = true;
+    setState({ status: "loading" });
 
     (async () => {
       try {
-        const postSnap = await getDoc(doc(db, "posts", postId));
+        const r = await loadResultPostDetailClient(postId);
         if (!alive) return;
-        if (!postSnap.exists()) {
-          setLoading(false);
+        if (!r.ok) {
+          setState({ status: "missing" });
           return;
         }
-
-        const postData = {
-          id: postSnap.id,
-          ...postSnap.data(),
-        } as PredictionPostV2;
-
-        setPost(postData);
-
-        const gameSnap = await getDoc(doc(db, "games", postData.gameId));
-        if (!alive) return;
-        if (gameSnap.exists()) {
-          const gameData: any = gameSnap.data();
-          setMarket({
-            homeRate: gameData?.market?.homeRate ?? 0,
-            awayRate: gameData?.market?.awayRate ?? 0,
-            drawRate: gameData?.market?.drawRate ?? 0,
-            total: gameData?.market?.total ?? 0,
-          });
-          setPointsDistribution(
-            parseGamePointsDistributionV1(gameData?.pointsDistribution)
-          );
-        } else {
-          setPointsDistribution(null);
-        }
-
-        setLoading(false);
+        setState({
+          status: "ready",
+          post: r.post,
+          market: r.market,
+          pointsDistribution: r.pointsDistribution,
+        });
       } catch (e) {
         console.error(e);
-        setLoading(false);
+        if (alive) setState({ status: "missing" });
       }
     })();
 
@@ -86,7 +68,7 @@ export default function WebResultPostPage() {
     };
   }, [postId]);
 
-  if (loading) {
+  if (state.status === "loading") {
     return (
       <div className="min-h-screen grid place-items-center text-white">
         Loading...
@@ -94,7 +76,7 @@ export default function WebResultPostPage() {
     );
   }
 
-  if (!post) {
+  if (state.status === "missing") {
     return (
       <div className="min-h-screen grid place-items-center text-white">
         Post not found
@@ -105,9 +87,9 @@ export default function WebResultPostPage() {
   return (
     <div className="px-4 py-4">
       <ResultDetail
-        post={post}
-        market={market ?? undefined}
-        pointsDistribution={pointsDistribution}
+        post={state.post}
+        market={state.market ?? undefined}
+        pointsDistribution={state.pointsDistribution}
         language={language}
       />
     </div>

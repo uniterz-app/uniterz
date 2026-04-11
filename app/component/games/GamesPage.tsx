@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import LeagueTabs from "./LeagueTabs";
 import MonthHeader from "./MonthHeader";
@@ -144,7 +151,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
         const [, topCount] = sorted[0];
         if (topCount > 0) {
-          setLeague(sorted[0][0]);
+          const top = sorted[0][0];
+          /** B リーグタブ非表示中は初期リーグに bj を選ばない */
+          if (top === "bj") {
+            const fallback = sorted.find(([k, c]) => k !== "bj" && c > 0);
+            if (fallback) setLeague(fallback[0]);
+          } else {
+            setLeague(top);
+          }
         }
       } catch {
         if (!alive) return;
@@ -158,6 +172,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       alive = false;
     };
   }, []);
+
+  /** B リーグタブ非表示中は bj を選べない。状態が bj のままなら NBA に戻す */
+  useLayoutEffect(() => {
+    if (league !== "bj") return;
+    setLeague("nba");
+  }, [league]);
 
   /* =========================
      League ごとの選択日

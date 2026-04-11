@@ -106,8 +106,10 @@ export default function PlayoffBracketMarket({
 
   if (!market) {
     return (
-      <div className="mx-auto w-full max-w-5xl text-white">
-        {isEn ? "No market data available" : "マーケットデータがありません"}
+      <div className="mx-auto flex min-h-[min(50vh,420px)] w-full max-w-5xl flex-col items-center justify-center px-4 text-center text-white">
+        <p className="text-[15px] text-white/85">
+          {isEn ? "No market data yet." : "まだマーケットデータがありません"}
+        </p>
       </div>
     );
   }

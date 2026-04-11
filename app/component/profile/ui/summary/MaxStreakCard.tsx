@@ -1,7 +1,7 @@
 // app/component/profile/ui/summary/MaxStreakCard.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Flame } from "lucide-react";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
@@ -35,7 +35,7 @@ function getStreakColor(v: number) {
   return "text-white";
 }
 
-export default function MaxStreakCard({
+function MaxStreakCard({
   maxStreak,
   compact = true,
   className = "",
@@ -150,3 +150,5 @@ export default function MaxStreakCard({
     </>
   );
 }
+
+export default memo(MaxStreakCard);

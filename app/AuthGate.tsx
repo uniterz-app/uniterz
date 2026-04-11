@@ -7,18 +7,37 @@ import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplash
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { usePathname, useRouter } from "next/navigation";
 
+const WEB_GUEST_LEGAL_PREFIXES = [
+  "/web/help",
+  "/web/privacy",
+  "/web/terms",
+  "/web/contact",
+  "/web/contacts",
+] as const;
+
+const MOBILE_GUEST_LEGAL_PREFIXES = [
+  "/mobile/help",
+  "/mobile/privacy",
+  "/mobile/terms",
+  "/mobile/contact",
+] as const;
+
 function isWebPublicPath(pathname: string | null): boolean {
   if (!pathname?.startsWith("/web")) return false;
   if (pathname === "/web/login" || pathname === "/web/signup") return true;
   if (pathname.startsWith("/web/reset")) return true;
-  return false;
+  return WEB_GUEST_LEGAL_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
 }
 
 function isMobilePublicPath(pathname: string | null): boolean {
   if (!pathname?.startsWith("/mobile")) return false;
   if (pathname === "/mobile/login" || pathname === "/mobile/signup") return true;
   if (pathname.startsWith("/mobile/reset")) return true;
-  return false;
+  return MOBILE_GUEST_LEGAL_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
 }
 
 type AuthGateProps = {
@@ -27,8 +46,7 @@ type AuthGateProps = {
 };
 
 /**
- * /web/* /mobile/* のうち、ログイン不要なのは login / signup / reset のみ。
- * 未ログインは各プラットフォームの LP へ送る。
+ * /web/* /mobile/* のうち、ログイン不要なのは login / signup / reset、およびヘルプ・法務・お問い合わせなど。未ログインのそれ以外は各プラットフォームのサインアップへ送る。
  */
 export default function AuthGate({ children, platform }: AuthGateProps) {
   const { status } = useFirebaseUser();
@@ -40,7 +58,8 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
       ? isWebPublicPath(pathname)
       : isMobilePublicPath(pathname);
 
-  const lpHref = platform === "web" ? "/lp" : "/mobile/lp";
+  const guestSignupHref =
+    platform === "web" ? "/web/signup" : "/mobile/signup";
 
   const mustBlockForGuest = status === "guest" && !isPublic;
   const blocking = status === "loading" || mustBlockForGuest;
@@ -48,8 +67,8 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
 
   useEffect(() => {
     if (status !== "guest" || isPublic) return;
-    router.replace(lpHref);
-  }, [status, isPublic, lpHref, router]);
+    router.replace(guestSignupHref);
+  }, [status, isPublic, guestSignupHref, router]);
 
   return (
     <AnimatePresence mode="wait">

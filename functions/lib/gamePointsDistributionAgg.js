@@ -1,7 +1,7 @@
 "use strict";
 /**
  * pointsV3 ヒストグラム（games.pointsDistribution 用）。
- * ビン境界は lib/results/gamePointsDistribution.ts の DUMMY と同じ並びに合わせる。
+ * ビン境界は lib/results/gamePointsDistribution.ts のクライアント型と同じ並びに合わせる。
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildGamePointsDistributionAgg = buildGamePointsDistributionAgg;

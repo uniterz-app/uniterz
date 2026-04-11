@@ -1,8 +1,72 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { LazyMotion, domAnimation } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
+
+const ProfileDailyTrendChartLazy = dynamic(
+  () => import("@/app/component/profile/ui/ProfileDailyTrendChart"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[200px] rounded-2xl bg-white/5" aria-hidden />
+    ),
+  }
+);
+
+const StreakTrackerCardLazy = dynamic(
+  () => import("@/app/component/profile/ui/StreakTrackerCard"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[248px] rounded-2xl bg-white/5" aria-hidden />
+    ),
+  }
+);
+
+const ProAnalysisLazy = dynamic(
+  () => import("@/app/component/pro/analysis/ProAnalysis"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-6 text-center text-white/60">loading...</div>
+    ),
+  }
+);
+
+const ProPreviewLazy = dynamic(
+  () => import("@/app/component/pro/analysis/ProPreview"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-6 text-center text-white/60">loading...</div>
+    ),
+  }
+);
+
+const PlayoffFullBracketWebLazy = dynamic(
+  () => import("@/app/component/predict/PlayoffFullBracketWeb"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[320px] rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center text-white/60">
+        loading...
+      </div>
+    ),
+  }
+);
+
+const ProfileNbaPredictionMapLazy = dynamic(
+  () => import("@/app/component/profile/ui/ProfileNbaPredictionMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[360px] rounded-2xl bg-white/5" aria-hidden />
+    ),
+  }
+);
 
 import Tabs from "./ui/Tabs";
 import PeriodToggle from "./ui/PeriodToggle";
@@ -13,18 +77,11 @@ import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
 import ScoringRulesChangeNoticeModal from "@/app/component/profile/ScoringRulesChangeNoticeModal";
 
-import StreakTrackerCard from "@/app/component/profile/ui/StreakTrackerCard";
-import ProfileDailyTrendChart from "@/app/component/profile/ui/ProfileDailyTrendChart";
-import ProAnalysis from "@/app/component/pro/analysis/ProAnalysis";
-import ProPreview from "@/app/component/pro/analysis/ProPreview";
-
 import AnalysisWinCard from "./ui/summary/AnalysisWinCard";
 import TotalScoreCard from "./ui/summary/TotalScoreCard";
 import ScorePrecisionCard from "./ui/summary/ScorePrecisionCard";
 import UpsetCard from "./ui/summary/UpsetCard";
 import MaxStreakCard from "./ui/summary/MaxStreakCard";
-
-import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb";
 
 import { useProfilePlan } from "@/lib/profile/useProfilePlan";
 import {
@@ -59,10 +116,15 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const forceProView = false;
   const currentIsProView = forceProView || isProView;
 
+  const fetchOverviewExtras = tab === "overview";
+  const fetchBracketData = tab === "bracket";
+
   const { resolvedBadges } = useProfileBadges(resolvedUid);
 
   const { chartData, loading: dailyTrendLoading } =
-    useProfileDailyTrendChart(resolvedUid);
+    useProfileDailyTrendChart(resolvedUid, {
+      enabled: fetchOverviewExtras,
+    });
 
   const {
     loading: playoffBracketLoading,
@@ -70,7 +132,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     playoffScore,
     playoffBracketDoc,
     officialResults,
-  } = useProfilePlayoffBracket(resolvedUid);
+  } = useProfilePlayoffBracket(resolvedUid, { enabled: fetchBracketData });
 
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadge | null>(
@@ -166,6 +228,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   }
 
   return (
+    <LazyMotion features={domAnimation}>
     <div className="mx-auto w-full max-w-[1200px] px-4 py-6 pb-bottom-nav text-white">
       <ProfileHeroCard
         key={heroUidKey}
@@ -324,12 +387,12 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             <div className="mt-6 space-y-4">
               <SummaryCardReveal
                 index={5}
-                total={7}
+                total={8}
                 enabled={playSummaryEntrance}
                 className="min-w-0 overflow-hidden"
                 onAnimationComplete={onChartRevealComplete}
               >
-                <ProfileDailyTrendChart
+                <ProfileDailyTrendChartLazy
                   data={chartData}
                   range={range}
                   allowAll={currentIsProView}
@@ -342,16 +405,29 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               </SummaryCardReveal>
               <SummaryCardReveal
                 index={6}
-                total={7}
+                total={8}
                 enabled={playSummaryEntrance}
                 className="min-w-0 overflow-hidden"
               >
-                <StreakTrackerCard
+                <StreakTrackerCardLazy
                   uid={resolvedUid}
                   language={language}
                   layout="web"
                   entranceReady={!playSummaryEntrance || chartEntranceDone}
                 />
+              </SummaryCardReveal>
+              <SummaryCardReveal
+                index={7}
+                total={8}
+                enabled={playSummaryEntrance}
+                className="min-w-0 overflow-hidden"
+              >
+                <div className="pt-0">
+                  <ProfileNbaPredictionMapLazy
+                    uid={resolvedUid}
+                    language={language}
+                  />
+                </div>
               </SummaryCardReveal>
             </div>
               </>
@@ -377,7 +453,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                 filter: bracketReveal ? "blur(0px)" : "blur(10px)",
               }}
             >
-              <PlayoffFullBracketWeb
+              <PlayoffFullBracketWebLazy
                 league="nba"
                 score={playoffScore}
                 {...playoffDisplayData}
@@ -389,11 +465,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             </div>
           )
         ) : currentIsProView ? (
-          <ProAnalysis />
+          <ProAnalysisLazy />
         ) : isMe ? (
-          myPlan === "pro" ? <ProAnalysis /> : <ProPreview />
+          myPlan === "pro" ? <ProAnalysisLazy /> : <ProPreviewLazy />
         ) : isMyPro && isTargetPro ? (
-          <ProAnalysis />
+          <ProAnalysisLazy />
         ) : (
           <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
             {language === "en"
@@ -420,5 +496,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         />
       )}
     </div>
+    </LazyMotion>
   );
 }

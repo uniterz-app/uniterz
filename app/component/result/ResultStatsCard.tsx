@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import Link from "next/link";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { LineChart } from "lucide-react";
@@ -37,7 +37,7 @@ function toNumber(v: unknown, fallback = 0) {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
-export default function ResultStatsCard({
+function ResultStatsCard({
   post,
   minHeightClassName,
   language = "ja",
@@ -258,3 +258,5 @@ export default function ResultStatsCard({
     </div>
   );
 }
+
+export default memo(ResultStatsCard);

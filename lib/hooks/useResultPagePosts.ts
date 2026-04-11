@@ -24,7 +24,8 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import {
   groupPostsByResultDay,
   mapDocToPostWithMillis,
-  RESULT_PAGE_SIZE,
+  RESULT_INITIAL_PAGE_SIZE,
+  RESULT_NEXT_PAGE_SIZE,
   RESULT_POSTS_MAX_CACHED,
   type PostWithMillis,
   type ResultDayGroup,
@@ -82,10 +83,12 @@ export function useResultPagePosts(): {
 
       setLoading(true);
       try {
+        if (!reset && !lastDoc) return;
+        const pageLimit = reset ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE;
         const base = [
           where("authorUid", "==", uid),
           orderBy("createdAt", "desc"),
-          limit(RESULT_PAGE_SIZE),
+          limit(pageLimit),
         ] as const;
 
         const q = reset
@@ -125,7 +128,9 @@ export function useResultPagePosts(): {
 
         setLastDoc(newLast);
         const cappedAfterLoad = nextPostsLength >= RESULT_POSTS_MAX_CACHED;
-        setHasMore(!cappedAfterLoad && snap.docs.length === RESULT_PAGE_SIZE);
+        const fullPage =
+          snap.docs.length === (reset ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE);
+        setHasMore(!cappedAfterLoad && fullPage);
       } finally {
         setLoading(false);
       }
@@ -153,7 +158,7 @@ export function useResultPagePosts(): {
         if (!hasMore) return;
         void loadPage();
       },
-      { root: null, rootMargin: "600px 0px", threshold: 0 }
+      { root: null, rootMargin: "240px 0px", threshold: 0 }
     );
 
     obs.observe(el);

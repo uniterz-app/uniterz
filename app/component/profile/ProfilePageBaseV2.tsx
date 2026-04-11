@@ -19,7 +19,9 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     targetUid,
   } = useProfile(handle);
 
-  const [tab, setTab] = useState<"overview" | "stats" | "bracket">("overview");
+  const [tab, setTab] = useState<"overview" | "stats" | "bracket">(
+    "overview"
+  );
   const [range, setRange] = useState<"7d" | "30d" | "all">("7d");
 
   const { stats, summaries, loading: statsLoading } = useUserStatsV2(targetUid);

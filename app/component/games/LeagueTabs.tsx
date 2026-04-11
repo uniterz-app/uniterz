@@ -24,8 +24,8 @@ const sizeMap = {
  */
 const DISPLAY_ITEMS: Array<{ v: League; label: string }> = [
   { v: "nba", label: "NBA" },
-  { v: "bj", label: "B.LEAGUE" },
-  // { v: "pl", label: "Premier League" }, ← 一旦非表示
+  // { v: "bj", label: "B.LEAGUE" }, ← 一旦非表示
+  // { v: "pl", label: "Premier League" },
   // { v: "j1", label: "J1" },
 ];
 
@@ -61,4 +61,3 @@ export default function LeagueTabsV2({
     </div>
   );
 }
-

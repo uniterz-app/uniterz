@@ -102,7 +102,30 @@ exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({ schedule: "40 1
  * Cumulative Ranking Snapshot (15:55)
  * ==========================================================================*/
 exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "55 15 * * *", timeZone: "Asia/Tokyo" }, async () => {
+    var _a;
     await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
+    const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
+    const token = process.env.INTERNAL_REVALIDATE_SECRET;
+    if (!revalidateUrl || !token) {
+        console.warn("[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)");
+        return;
+    }
+    try {
+        const res = await fetch(revalidateUrl, {
+            method: "POST",
+            headers: { "x-revalidate-token": token },
+        });
+        if (!res.ok) {
+            const body = await res.text().catch(() => "");
+            console.error(`[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`);
+        }
+        else {
+            console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
+        }
+    }
+    catch (err) {
+        console.error(`[buildCumulativeRankingSnapshotCron] revalidate error: ${String((_a = err === null || err === void 0 ? void 0 : err.message) !== null && _a !== void 0 ? _a : err)}`);
+    }
 });
 /* ============================================================================
  * Monthly Leaderboard Snapshot（★追加）

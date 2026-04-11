@@ -102,6 +102,22 @@ function findMyRow(
   return rows.find((row) => row.uid === myUid) ?? null;
 }
 
+function monthlyLeaderboardErrorMessage(
+  error: string,
+  language: Language
+): string {
+  const lower = error.toLowerCase();
+  if (
+    lower.includes("monthly leaderboard snapshot not found") ||
+    lower.includes("monthly leaderboard not found")
+  ) {
+    return language === "en"
+      ? "No leaderboard data for this month."
+      : "この月のデータはありません";
+  }
+  return error;
+}
+
 export default function MonthlyLeaderboardSection({
   league = "nba",
   month,
@@ -234,43 +250,49 @@ export default function MonthlyLeaderboardSection({
         )}
 
         {!loading && error && (
-          <div className="px-3 pt-2 text-[11px] text-red-300/80">{error}</div>
+          <div className="flex min-h-[min(45vh,380px)] flex-col items-center justify-center px-4 pb-10 text-center">
+            <p className="text-[15px] text-white/80">
+              {monthlyLeaderboardErrorMessage(error, language)}
+            </p>
+          </div>
         )}
 
-        <AnimatePresence mode="wait">
-          <motion.div key={pageKey} className="relative">
-            <div className="relative z-10">
-              <MonthlyTopPodium rows={top3} metric={metric} language={language} />
-              <div className="h-[2px]" />
-            </div>
+        {!loading && !error && (
+          <AnimatePresence mode="wait">
+            <motion.div key={pageKey} className="relative">
+              <div className="relative z-10">
+                <MonthlyTopPodium rows={top3} metric={metric} language={language} />
+                <div className="h-[2px]" />
+              </div>
 
-            <div key={`rest-${pageKey}`} className="px-2 pt-4">
-              {restRows.length > 0 && (
-                <div className="space-y-2 pt-0.5">
-                  {restRows.map((row, i) => (
-                    <motion.div
-                      key={`${metric}-${row.uid}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: 0.34,
-                        delay: 0.08 + Math.min((3 + i) * 0.07, 0.45),
-                        ease: [0.22, 1, 0.36, 1],
-                      }}
-                    >
-                      <RankingCard
-                        row={row}
-                        rank={i + 4}
-                        metric={metric}
-                        language={language}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </AnimatePresence>
+              <div key={`rest-${pageKey}`} className="px-2 pt-4">
+                {restRows.length > 0 && (
+                  <div className="space-y-2 pt-0.5">
+                    {restRows.map((row, i) => (
+                      <motion.div
+                        key={`${metric}-${row.uid}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.34,
+                          delay: 0.08 + Math.min((3 + i) * 0.07, 0.45),
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                      >
+                        <RankingCard
+                          row={row}
+                          rank={i + 4}
+                          metric={metric}
+                          language={language}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );

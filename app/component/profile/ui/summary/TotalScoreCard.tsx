@@ -1,6 +1,7 @@
 "use client";
 
 import React, {
+  memo,
   useEffect,
   useRef,
   useState,
@@ -38,7 +39,7 @@ const SEG_BASE = "#2dd4bf"; // teal-400
 const SEG_UPSET = "#fb923c"; // orange-400
 const SEG_STREAK = "#a78bfa"; // violet-400
 
-export default function TotalScoreCard({
+function TotalScoreCard({
   totalPoints,
   analyses,
   basePoints = 0,
@@ -277,3 +278,5 @@ export default function TotalScoreCard({
     </>
   );
 }
+
+export default memo(TotalScoreCard);

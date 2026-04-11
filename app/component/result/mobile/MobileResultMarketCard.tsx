@@ -1,7 +1,7 @@
 // app/component/result/mobile/MobileResultMarketCard.tsx
 "use client";
 
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import DonutChart from "@/app/component/predict/DonutChart";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
@@ -37,7 +37,7 @@ type Props = {
   donutDrawDelayMs?: number;
 };
 
-export default function MobileResultMarketCard({
+function MobileResultMarketCard({
   post,
   market,
   inOverlay = false,
@@ -197,3 +197,5 @@ export default function MobileResultMarketCard({
     </div>
   );
 }
+
+export default memo(MobileResultMarketCard);

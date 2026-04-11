@@ -1,7 +1,7 @@
 // app/component/result/ResultMarketCard.tsx
 "use client";
 
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import DonutChart from "@/app/component/predict/DonutChart";
 import { normalizeLeague, type League } from "@/lib/leagues";
@@ -46,7 +46,7 @@ type Props = {
   donutDrawDelayMs?: number;
 };
 
-export default function ResultMarketCard({
+function ResultMarketCard({
   post,
   market,
   inOverlay = false,
@@ -198,3 +198,5 @@ export default function ResultMarketCard({
     </div>
   );
 }
+
+export default memo(ResultMarketCard);

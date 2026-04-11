@@ -62,7 +62,7 @@ export default function Page() {
     }
 
     if (status === "guest") {
-      router.replace(isMobile ? "/mobile/lp" : "/lp");
+      router.replace(isMobile ? "/mobile/signup" : "/web/signup");
       return;
     }
 

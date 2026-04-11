@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 /** 日付行右側の得点表示（確定合計 or 未確定） */
@@ -213,7 +213,7 @@ export function ResultDayPipeGroup({
             {/* 日付・PTS のみ画面中央（カード一覧は下で全幅） */}
             <div className="mx-auto w-full max-w-xl sm:max-w-5xl">
               <div className="flex w-full flex-col items-center gap-2">
-              <motion.div
+              <m.div
                 className={[
                   "group relative w-full max-w-full overflow-hidden",
                   "border border-cyan-400/70 bg-[#030308]/95",
@@ -341,7 +341,7 @@ export function ResultDayPipeGroup({
                           </span>
                         ) : null}
                         {/* ResultCard 中央スコアと同じ数値タイポ（Oxanium + サイズ階層） */}
-                        <motion.span
+                        <m.span
                           className={[
                             "inline-block whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white",
                             isMobile
@@ -366,7 +366,7 @@ export function ResultDayPipeGroup({
                             value={dayPoints.value}
                             reducedMotion={reducedMotion}
                           />
-                        </motion.span>
+                        </m.span>
                         <span
                           className={
                             isMobile
@@ -394,7 +394,7 @@ export function ResultDayPipeGroup({
                     </div>
                   )}
                 </div>
-              </motion.div>
+              </m.div>
 
               </div>
             </div>

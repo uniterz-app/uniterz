@@ -1,7 +1,7 @@
 // app/component/result/ResultCard.tsx
 "use client";
 
-import React, { useMemo } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Flame } from "lucide-react";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -156,7 +156,7 @@ function getStreakBadgeForMobile(
   };
 }
 
-export function ResultCardPresentation({
+function ResultCardPresentationImpl({
   post,
   href,
   onOpen,
@@ -639,9 +639,18 @@ export function ResultCardPresentation({
   );
 }
 
+export const ResultCardPresentation = memo(ResultCardPresentationImpl);
+ResultCardPresentation.displayName = "ResultCardPresentation";
+
 export default function ResultCard(props: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const onNavigate = useCallback(
+    (href: string) => {
+      void router.push(href);
+    },
+    [router]
+  );
   const isMobile =
     props.platform !== undefined
       ? props.platform === "mobile"
@@ -652,7 +661,7 @@ export default function ResultCard(props: Props) {
     <ResultCardPresentation
       {...rest}
       isMobile={isMobile}
-      onNavigate={(href) => router.push(href)}
+      onNavigate={onNavigate}
     />
   );
 }

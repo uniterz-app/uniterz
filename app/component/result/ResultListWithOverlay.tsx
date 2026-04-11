@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   useCallback,
   useEffect,
@@ -8,7 +9,7 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -16,8 +17,12 @@ import type { Language } from "@/lib/i18n/language";
 import ResultCard, {
   type ResultCardOpenAnchor,
 } from "@/app/component/result/ResultCard";
-import ResultDetail from "@/app/component/result/ResultDetail";
-import MobileResultDetail from "@/app/component/result/mobile/MobileResultDetail";
+const ResultDetail = dynamic(
+  () => import("@/app/component/result/ResultDetail")
+);
+const MobileResultDetail = dynamic(
+  () => import("@/app/component/result/mobile/MobileResultDetail")
+);
 import {
   ResultDayPipeGroup,
   type ResultDayPointsHeader,
@@ -33,6 +38,7 @@ import {
 } from "@/lib/result/result-page-data";
 import {
   parseGamePointsDistributionV1,
+  rawPointsDistributionFromGameDoc,
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
 import type { League } from "@/lib/leagues";
@@ -335,6 +341,8 @@ export default function ResultListWithOverlay({
   const [market, setMarket] = useState<MarketData | null>(null);
   const [pointsDistribution, setPointsDistribution] =
     useState<GamePointsDistributionV1 | null>(null);
+  const [pointsDistributionLoading, setPointsDistributionLoading] =
+    useState(false);
   const [filters, setFilters] = useState<ResultListFilters>(() => ({
     ...DEFAULT_RESULT_FILTERS,
   }));
@@ -444,6 +452,7 @@ export default function ResultListWithOverlay({
     setDetailAnchor(null);
     setMarket(null);
     setPointsDistribution(null);
+    setPointsDistributionLoading(false);
   }, []);
 
   const open = useCallback(
@@ -452,6 +461,7 @@ export default function ResultListWithOverlay({
       setDetailAnchor(anchor);
       setMarket(null);
       setPointsDistribution(null);
+      setPointsDistributionLoading(false);
     },
     []
   );
@@ -482,16 +492,28 @@ export default function ResultListWithOverlay({
   useEffect(() => {
     if (!openPostId) return;
     const post = selectedPost;
-    if (!post?.gameId) return;
+    if (!post?.gameId) {
+      setPointsDistributionLoading(false);
+      setPointsDistribution(null);
+      return;
+    }
 
     let cancelled = false;
+    setPointsDistributionLoading(true);
     (async () => {
       try {
         const snap = await getDoc(doc(db, "games", post.gameId));
-        if (!snap.exists() || cancelled) return;
+        if (cancelled) return;
+        if (!snap.exists()) {
+          if (!cancelled) {
+            setMarket(null);
+            setPointsDistribution(null);
+          }
+          return;
+        }
         const d = snap.data() as Record<string, unknown>;
         const marketRaw = d.market as Record<string, unknown> | undefined;
-        const pdRaw = d.pointsDistributionV1 as Record<string, unknown> | undefined;
+        const pdRaw = rawPointsDistributionFromGameDoc(d);
         if (!cancelled) {
           if (marketRaw) {
             setMarket({
@@ -509,6 +531,8 @@ export default function ResultListWithOverlay({
           setMarket(null);
           setPointsDistribution(null);
         }
+      } finally {
+        if (!cancelled) setPointsDistributionLoading(false);
       }
     })();
 
@@ -621,8 +645,9 @@ export default function ResultListWithOverlay({
     : undefined;
 
   return (
+    <LazyMotion features={domAnimation}>
     <>
-      <motion.div
+      <m.div
         className={[
           "relative z-20",
           isMobile ? "space-y-3" : "space-y-4",
@@ -664,7 +689,7 @@ export default function ResultListWithOverlay({
           </button>
 
           {filterPanelOpen ? (
-        <motion.div
+        <m.div
           className={[
             "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain rounded-2xl border border-white/18 bg-black/30 px-3 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-xl backdrop-saturate-150 sm:px-4 sm:py-3.5",
             isMobile ? "pb-2" : "pb-3",
@@ -718,7 +743,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "win", "loss"] as const).map((k) => (
-                <motion.button
+                <m.button
                   key={k}
                   type="button"
                   aria-pressed={filters.outcome === k}
@@ -743,7 +768,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.outcome === k)}
                 >
                   {fc.outcomeOpt[k]}
-                </motion.button>
+                </m.button>
               ))}
             </div>
           </div>
@@ -847,7 +872,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "pending", "final"] as const).map((k) => (
-                <motion.button
+                <m.button
                   key={k}
                   type="button"
                   aria-pressed={filters.settlement === k}
@@ -872,7 +897,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.settlement === k)}
                 >
                   {fc.settlementOpt[k]}
-                </motion.button>
+                </m.button>
               ))}
             </div>
           </div>
@@ -883,7 +908,7 @@ export default function ResultListWithOverlay({
                 {fc.league}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <motion.button
+                <m.button
                   type="button"
                   aria-pressed={filters.league === "all"}
                   onClick={() => setFilters((s) => ({ ...s, league: "all" }))}
@@ -905,9 +930,9 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.league === "all")}
                 >
                   {fc.leagueAll}
-                </motion.button>
+                </m.button>
                 {LEAGUE_ORDER.map((lg) => (
-                  <motion.button
+                  <m.button
                     key={lg}
                     type="button"
                     aria-pressed={filters.league === lg}
@@ -930,7 +955,7 @@ export default function ResultListWithOverlay({
                     className={filterChipClass(filters.league === lg)}
                   >
                     {LEAGUE_DISPLAY[lg]}
-                  </motion.button>
+                  </m.button>
                 ))}
               </div>
             </div>
@@ -942,7 +967,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["none", "upsetBonus"] as const).map((k) => (
-                <motion.button
+                <m.button
                   key={k}
                   type="button"
                   aria-pressed={filters.specialty === k}
@@ -967,7 +992,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.specialty === k)}
                 >
                   {fc.upsetOpt[k]}
-                </motion.button>
+                </m.button>
               ))}
             </div>
           </div>
@@ -978,7 +1003,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "high", "mid", "low"] as const).map((k) => (
-                <motion.button
+                <m.button
                   key={`sp-${k}`}
                   type="button"
                   aria-pressed={filters.scorePrecisionTier === k}
@@ -1003,7 +1028,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.scorePrecisionTier === k)}
                 >
                   {fc.tierOpt[k]}
-                </motion.button>
+                </m.button>
               ))}
             </div>
           </div>
@@ -1014,7 +1039,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "high", "mid", "low"] as const).map((k) => (
-                <motion.button
+                <m.button
                   key={`ts-${k}`}
                   type="button"
                   aria-pressed={filters.pointsTier === k}
@@ -1039,14 +1064,14 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.pointsTier === k)}
                 >
                   {fc.tierOpt[k]}
-                </motion.button>
+                </m.button>
               ))}
             </div>
           </div>
               </div>
             ) : null}
           </div>
-        </motion.div>
+        </m.div>
           ) : null}
         </div>
 
@@ -1054,7 +1079,7 @@ export default function ResultListWithOverlay({
           {totalLoaded > 0 &&
             filteredGrouped.length === 0 &&
             !isDefaultResultFilters(filters) && (
-            <motion.div
+            <m.div
               key="empty-filter"
               role="status"
               initial={off ?? { opacity: 0, y: 12, scale: 0.98 }}
@@ -1066,7 +1091,7 @@ export default function ResultListWithOverlay({
               {language === "en"
                 ? "No results for this filter."
                 : "この条件に合うリザルトがありません。"}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
@@ -1085,7 +1110,7 @@ export default function ResultListWithOverlay({
           );
 
           return (
-            <motion.div
+            <m.div
               key={day.dateLabel}
               initial={
                 off ?? {
@@ -1123,9 +1148,9 @@ export default function ResultListWithOverlay({
                   }
                 >
                   {displayPosts.map((post, i) => (
-                    <motion.div
+                    <m.div
                       key={post.id}
-                      className="w-full"
+                      className="w-full [content-visibility:auto] [contain-intrinsic-size:auto_220px]"
                       initial={
                         off ?? {
                           opacity: 0,
@@ -1143,7 +1168,7 @@ export default function ResultListWithOverlay({
                               transition: {
                                 duration: 0.42,
                                 ease: easeOut,
-                                delay: i * 0.055,
+                                delay: Math.min(i, 12) * 0.055,
                               },
                             }
                       }
@@ -1155,11 +1180,11 @@ export default function ResultListWithOverlay({
                         language={language}
                         platform={platform}
                       />
-                    </motion.div>
+                    </m.div>
                   ))}
                 </div>
               </ResultDayPipeGroup>
-            </motion.div>
+            </m.div>
           );
         })}
 
@@ -1168,7 +1193,7 @@ export default function ResultListWithOverlay({
         )}
 
         {loading && (
-          <motion.div
+          <m.div
             className="py-6 text-center text-white/60 text-sm"
             initial={prefersReducedMotion ? false : { opacity: 0.4 }}
             animate={
@@ -1183,10 +1208,10 @@ export default function ResultListWithOverlay({
             }
           >
             {language === "en" ? "Loading…" : "読み込み中…"}
-          </motion.div>
+          </m.div>
         )}
         {postsCacheCapped && (
-          <motion.div
+          <m.div
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: easeOut }}
@@ -1195,15 +1220,15 @@ export default function ResultListWithOverlay({
             {language === "en"
               ? `Showing latest ${RESULT_POSTS_MAX_CACHED} results to keep the page responsive.`
               : `動作を軽く保つため、最新 ${RESULT_POSTS_MAX_CACHED} 件まで表示しています。`}
-          </motion.div>
+          </m.div>
         )}
-      </motion.div>
+      </m.div>
 
       {overlayPortalReady
         ? createPortal(
             <AnimatePresence>
               {openPostId && selectedPost && (
-                <motion.div
+                <m.div
                   key="result-overlay"
                   className={[
                     "fixed inset-0 pointer-events-auto",
@@ -1214,7 +1239,7 @@ export default function ResultListWithOverlay({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.22, ease: easeOut }}
                 >
-                  <motion.div
+                  <m.div
                     className={[
                       // 不透明度を下げつつ blur でガラス調（背面が透ける）
                       "flex min-h-dvh w-full flex-col overflow-hidden rounded-none border-x-0 border-b-0 border-t border-white/22",
@@ -1245,7 +1270,7 @@ export default function ResultListWithOverlay({
                         isMobile ? "min-h-10 pb-1" : "min-h-11 pb-1.5",
                       ].join(" ")}
                     >
-                      <motion.button
+                      <m.button
                         type="button"
                         aria-label={language === "en" ? "Close" : "閉じる"}
                         className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white/90 backdrop-blur-md transition hover:bg-white/15"
@@ -1259,7 +1284,7 @@ export default function ResultListWithOverlay({
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.92 }}
                       >
                         <X size={18} strokeWidth={2.4} />
-                      </motion.button>
+                      </m.button>
                     </div>
                     <div
                       className={[
@@ -1278,6 +1303,7 @@ export default function ResultListWithOverlay({
                           post={selectedPost}
                           market={market ?? undefined}
                           pointsDistribution={pointsDistribution}
+                          pointsDistributionLoading={pointsDistributionLoading}
                           language={language}
                           inOverlay
                         />
@@ -1286,18 +1312,20 @@ export default function ResultListWithOverlay({
                           post={selectedPost}
                           market={market ?? undefined}
                           pointsDistribution={pointsDistribution}
+                          pointsDistributionLoading={pointsDistributionLoading}
                           language={language}
                           inOverlay
                         />
                       )}
                     </div>
-                  </motion.div>
-                </motion.div>
+                  </m.div>
+                </m.div>
               )}
             </AnimatePresence>,
             document.body
           )
         : null}
     </>
+    </LazyMotion>
   );
 }

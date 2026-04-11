@@ -17,16 +17,14 @@ import { normalizeLeague } from "@/lib/leagues";
 import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
-  getZonedYMD,
-  getCalendarMonthRangeInTimeZone,
+  getPlusMinusDaysRangeInTimeZone,
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 
-function pad2(n: number) {
-  return String(n).padStart(2, "0");
-}
+/** 日付ストリップ用に、アンカー日の前後何日まで試合を取るか（合計 2*n+1 日） */
+const GAME_DAYS_PLUS_MINUS = 3;
 
-/** 同一セッション内の getDocs 回数削減（リーグ＋暦月・TTL 内は再取得しない） */
+/** 同一セッション内の getDocs 回数削減（リーグ＋アンカー日・TTL 内は再取得しない） */
 const GAME_DAYS_ROWS_CACHE_TTL_MS = 5 * 60 * 1000;
 const gameDaysRowsCache = new Map<
   string,
@@ -35,7 +33,7 @@ const gameDaysRowsCache = new Map<
 
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * シーズン全件ではなく、windowAnchor の「暦月」内の試合のみ取得して初回ロードを軽くする。
+ * windowAnchor の暦日を中心に前後 GAME_DAYS_PLUS_MINUS 日だけ取得して読み込みを軽くする。
  */
 export function useGameDays(
   rawLeague: League,
@@ -45,8 +43,7 @@ export function useGameDays(
   const league = normalizeLeague(rawLeague);
 
   const windowKey = useMemo(() => {
-    const { year, month } = getZonedYMD(windowAnchor, timeZone);
-    return `${year}-${pad2(month)}`;
+    return toDateKeyInTimeZone(windowAnchor, timeZone);
   }, [windowAnchor, timeZone]);
 
   const [rows, setRows] = useState<any[]>([]);
@@ -74,9 +71,10 @@ export function useGameDays(
 
       try {
         const ref = collection(db, "games");
-        const { start, end } = getCalendarMonthRangeInTimeZone(
+        const { start, end } = getPlusMinusDaysRangeInTimeZone(
           windowAnchor,
-          timeZone
+          timeZone,
+          GAME_DAYS_PLUS_MINUS
         );
 
         const q = query(
@@ -86,7 +84,7 @@ export function useGameDays(
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(500)
+          limit(200)
         );
 
         const snap = await getDocs(q);

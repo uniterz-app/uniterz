@@ -1,56 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import ConnectedFlowCards from "@/app/lp/_components/ConnectedFlowCards";
 import { flowNodes } from "@/app/lp/_components/lp-data";
-import PerspectiveGridBackground from "./_components/PerspectiveGridBackground";
+import LpV2PhotoBackground from "./_components/LpV2PhotoBackground";
 import LPV2TopActions from "./_components/LPV2TopActions";
 import EasyPostShowcase from "./_components/EasyPostShowcase";
+import LpV2RankingFeature from "./_components/LpV2RankingFeature";
+import LpV2Footer from "./_components/LpV2Footer";
 
 export default function LPV2Page() {
-  const [mounted, setMounted] = useState(false);
-  const [showTitle, setShowTitle] = useState(false);
-  const [startTopScramble, setStartTopScramble] = useState(false);
-  const [showContent, setShowContent] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const topLine = useScrambleDecode(
-    "Score-Based Sports Prediction Game",
-    mounted && startTopScramble
-  );
+  const topLine = "Score-Based Sports Prediction Game";
   const ctaFontStyle = bracketMarketTeamTypography(false);
 
-  const handleGridRevealComplete = () => {
-    setShowTitle(false);
-    setStartTopScramble(false);
-    setShowContent(false);
-    requestAnimationFrame(() => {
-      setShowTitle(true);
-      setTimeout(() => setStartTopScramble(true), 220);
-      setTimeout(() => setShowContent(true), 320);
-    });
-  };
-
   return (
-    <main className="relative min-h-screen overflow-hidden bg-app text-white">
-      <PerspectiveGridBackground onRevealComplete={handleGridRevealComplete} />
+    <main className="relative min-h-screen overflow-hidden bg-[#080a0d] text-white">
+      <LpV2PhotoBackground />
       <LPV2TopActions />
       <div className="relative z-10 mx-auto flex w-full max-w-[1360px] flex-col items-center px-6 pt-20 lg:px-10">
-        <div
-          className={`text-[18px] sm:text-[22px] tracking-[0.18em] text-cyan-200/72 uppercase transition-all duration-500 ${
-            startTopScramble ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
-          }`}
-        >
+        <div className="text-[18px] sm:text-[22px] tracking-[0.18em] text-cyan-200/72 uppercase">
           {topLine}
         </div>
         <div
-          className={`mt-2 text-[64px] sm:text-[82px] tracking-[0.12em] text-cyan-100/90 transition-all duration-500 ease-out ${
-            showTitle
-              ? "translate-y-0 scale-100 opacity-100"
-              : "translate-y-3 scale-[0.985] opacity-0"
-          }`}
+          className="mt-2 text-[64px] sm:text-[82px] tracking-[0.12em] text-cyan-100/90"
           style={{ fontFamily: '"Bebas Neue", sans-serif' }}
         >
           UNITERZ
@@ -58,11 +31,7 @@ export default function LPV2Page() {
       </div>
 
       <div className="relative z-10 mx-auto grid w-full max-w-[1360px] grid-cols-1 items-center gap-8 px-6 pt-4 pb-10 lg:grid-cols-2 lg:gap-12 lg:px-10">
-        <div
-          className={`order-1 lg:-mt-[250px] transition-all duration-700 ${
-            showContent ? "translate-y-0 opacity-100" : "translate-y-5 opacity-0"
-          }`}
-        >
+        <div className="order-1 lg:-mt-[250px]">
           <h1
             className="text-[42px] font-black leading-[1.03] tracking-[-0.03em] text-cyan-100 sm:text-[56px] lg:text-[68px]"
             style={{ fontFamily: '"Bebas Neue", sans-serif' }}
@@ -111,11 +80,7 @@ export default function LPV2Page() {
             </span>
           </Link>
         </div>
-        <div
-          className={`order-2 lg:-mt-[70px] transition-all duration-700 ${
-            showContent ? "translate-y-0 opacity-100" : "translate-y-5 opacity-0"
-          }`}
-        >
+        <div className="order-2 lg:-mt-[70px]">
           <EasyPostShowcase />
         </div>
       </div>
@@ -127,16 +92,12 @@ export default function LPV2Page() {
           遊び方
         </h2>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
-          <div className="min-w-0 rounded-2xl border border-white/10 bg-white/4 p-4 backdrop-blur-xl shadow-[0_18px_40px_rgba(0,0,0,0.18)] sm:p-5">
-            <ConnectedFlowCards nodes={flowNodes} animated={false} />
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/3 p-6">
-            <p className="text-sm text-white/60">配点説明エリア（次で追加）</p>
-          </div>
-        </div>
+        <ConnectedFlowCards nodes={flowNodes} animated={false} />
       </section>
+
+      <LpV2RankingFeature />
+
+      <LpV2Footer />
     </main>
   );
 }

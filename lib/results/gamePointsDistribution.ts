@@ -45,22 +45,17 @@ export type GamePointsDistributionV1 = {
   updatedAtMillis?: number;
 };
 
-/** UI 確認用（本番では games から読み替え）。外れ0＋的中4〜10 のダミー。 */
-export const DUMMY_GAME_POINTS_DISTRIBUTION: GamePointsDistributionV1 = {
-  v: 1,
-  n: 382,
-  median: 5.05,
-  mean: 3.35,
-  bins: [
-    { lo: 0, hi: 0, count: 165 },
-    { lo: 4, hi: 4.5, count: 24 },
-    { lo: 4.5, hi: 5.5, count: 72 },
-    { lo: 5.5, hi: 6.5, count: 68 },
-    { lo: 6.5, hi: 7.5, count: 38 },
-    { lo: 7.5, hi: 8.5, count: 12 },
-    { lo: 8.5, hi: 10.02, count: 3 },
-  ],
-};
+/** gamesドキュメント上のどちらのフィールド名でも受け取る（CF は `pointsDistribution`） */
+export function rawPointsDistributionFromGameDoc(
+  gameData: Record<string, unknown> | null | undefined
+): unknown {
+  if (!gameData || typeof gameData !== "object") return null;
+  return (
+    gameData.pointsDistribution ??
+    gameData.pointsDistributionV1 ??
+    null
+  );
+}
 
 function isFiniteNum(x: unknown): x is number {
   return typeof x === "number" && Number.isFinite(x);
