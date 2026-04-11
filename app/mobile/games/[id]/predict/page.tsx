@@ -2,7 +2,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -11,9 +11,20 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
+/** データ待ち・JS チャンク待ちでもレイアウトが飛ばないよう、一覧と同系の背景で埋める */
+function PredictRouteShell() {
+  return (
+    <div
+      className="min-h-svh w-full bg-app"
+      aria-busy="true"
+      aria-label="読み込み中"
+    />
+  );
+}
+
 const PredictionForm = dynamic(
   () => import("@/app/component/predict/PredictionFormV2"),
-  { ssr: false }
+  { ssr: false, loading: PredictRouteShell }
 );
 
 // 生の games ドキュメント型（transform の入力に合わせる）
@@ -29,6 +40,12 @@ export default function Page() {
   const [profile, setProfile] = useState<{ displayName?: string; photoURL?: string } | null>(null);
   const [rawGame, setRawGame] = useState<GameDoc | null>(null);
   const [loading, setLoading] = useState(true);
+
+  /** 一覧からのスクロール位置が残ると 1 フレームだけズレて見えるため、描画直前に先頭へ */
+  useLayoutEffect(() => {
+    if (loading || !rawGame) return;
+    window.scrollTo(0, 0);
+  }, [loading, rawGame, id]);
 
   // ---- ① games/{id} を1回取得（Firestore）----
   useEffect(() => {
@@ -71,10 +88,10 @@ export default function Page() {
   }, [fUser?.uid]);
 
   // ---- ③ ガード（早期 return は Hook の後）----
-  if (status !== "ready") return null; // 認証準備待ち
-  if (!fUser || !id) return null;      // 未ログイン/IDなし
-  if (loading) return null;            // ローディング中
-  if (!rawGame) return null;           // 404相当
+  if (status !== "ready") return <PredictRouteShell />; // 認証準備待ち
+  if (!fUser || !id) return null; // 未ログイン/IDなし
+  if (loading) return <PredictRouteShell />; // Firestore 取得中
+  if (!rawGame) return null; // 404相当（存在しない試合）
 
   // ---- ④ 表示用に整形（Hookは使わない：ただの変数）----
   const gameProps = toMatchCardProps(rawGame, { dense: true });
@@ -93,7 +110,7 @@ export default function Page() {
   };
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PredictRouteShell />}>
       <PredictionForm dense game={gameProps} user={user} />
     </Suspense>
   );

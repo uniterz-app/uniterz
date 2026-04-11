@@ -295,6 +295,73 @@
   }
 }
 
+/* 複数行入力（プロフィールの自己紹介など） */
+.fieldPodaMultiline {
+  min-height: 132px;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.textarea {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 112px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 10px;
+  background-color: #010201;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.45;
+  padding: 14px 16px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.textarea::placeholder {
+  color: #c0b9c0;
+}
+
+.textarea:focus {
+  outline: none;
+}
+
+/* ネイティブ select（発光枠内・右に矢印） */
+.selectEl {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 10px;
+  background-color: #010201;
+  color: #fff;
+  font-size: 16px;
+  padding-left: 16px;
+  padding-right: 44px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.selectEl:focus {
+  outline: none;
+}
+
+.selectChevron {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* ログインカード内のグリッド（Uiverse .grid 相当） */
 .pageGrid {
   position: absolute;

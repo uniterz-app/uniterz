@@ -244,7 +244,7 @@ const BarStyle = {
     justifyContent: "center",
     width: 34,
     height: 34,
-    borderRadius: 9999,
+    borderRadius: 0,
     overflow: "visible",
     lineHeight: 0,
   } as CSSProperties,
@@ -486,19 +486,6 @@ export default function NavBar() {
             opacity: 1;
             transform: translateY(0) scale(1) rotate(0deg);
             filter: blur(0) drop-shadow(0 0 0 rgba(103, 232, 249, 0));
-          }
-        }
-        @keyframes utzMobileActiveGlow {
-          0%,
-          100% {
-            box-shadow:
-              0 0 0 rgba(103, 232, 249, 0),
-              inset 0 0 0 rgba(255, 255, 255, 0);
-          }
-          50% {
-            box-shadow:
-              0 0 16px rgba(103, 232, 249, 0.25),
-              inset 0 1px 0 rgba(255, 255, 255, 0.1);
           }
         }
       `}</style>

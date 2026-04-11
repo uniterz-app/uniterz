@@ -5,6 +5,9 @@
 /** メイン：素早く加速して末端でキリッと止まる */
 export const GAMES_CYBER_EASE = [0.16, 0.82, 0.22, 1] as const;
 
+/** 日付切替一覧：減速を長めに取ったスムーズなアウト */
+export const GAMES_DAY_SWITCH_EASE = [0.22, 1, 0.36, 1] as const;
+
 /** リスト落下など、より機械的なスナップ */
 export const GAMES_CYBER_EASE_SNAP = [0.32, 0, 0.18, 1] as const;
 

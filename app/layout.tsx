@@ -1,6 +1,13 @@
 import "@/app/globals.css";
 import type { Metadata, Viewport } from "next";
+import { Bebas_Neue } from "next/font/google";
 import { jp } from "@/lib/fonts";
+
+const authCondensed = Bebas_Neue({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-auth-condensed",
+});
 import AppProviders from "@/app/AppProviders";
 import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
@@ -41,7 +48,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={jp.className}
+        className={`${jp.className} ${authCondensed.variable}`}
         style={{
           backgroundColor: "#081116",
           margin: 0,

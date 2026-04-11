@@ -27,7 +27,7 @@ import {
   shiftCalendarMonthStart,
 } from "@/lib/time/zonedTime";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
-import { GAMES_CYBER_EASE } from "./cyberMotion";
+import { GAMES_CYBER_EASE, GAMES_DAY_SWITCH_EASE } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
 import {
   gameInvolvesAnyTeam,
@@ -855,20 +855,25 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             ? { opacity: 1, y: 0 }
             : { opacity: 1 }
       }
-      transition={{
-        duration: reduceMotion ? 0 : richScheduleMotion ? 0.28 : 0.2,
-        delay:
-          reduceMotion
-            ? 0
-            : richScheduleMotion
-              ? GAMES_LIST_AFTER_DAY_STRIP_SEC
-              : 0.04,
-        ease: GAMES_CYBER_EASE,
-      }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : richScheduleMotion
+            ? {
+                duration: 0.28,
+                delay: GAMES_LIST_AFTER_DAY_STRIP_SEC,
+                ease: GAMES_CYBER_EASE,
+              }
+            : {
+                duration: 0.46,
+                delay: 0.06,
+                ease: GAMES_DAY_SWITCH_EASE,
+              }
+      }
     >
       <div
         className={[
-          "transition-opacity duration-150",
+          "transition-opacity duration-300 ease-out",
           isSwitchingDate ? "opacity-85" : "opacity-100",
         ].join(" ")}
       >

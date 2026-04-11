@@ -36,9 +36,17 @@ import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 /* ======================
    Motion
 ====================== */
+/** hidden で親を不透明にして、子の initial が効く前の 1 フレーム露出を防ぐ（モバイル遷移のカクつき対策） */
 const pageContainer: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.05 } },
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      opacity: { duration: 0.16, ease: "easeOut" },
+      staggerChildren: 0.045,
+      delayChildren: 0.03,
+    },
+  },
 };
 
 const fadeUp: Variants = {
@@ -404,11 +412,16 @@ export default function PredictionFormV2({
         "mx-auto w-full max-w-[900px] overflow-x-hidden text-white",
         embedded
           ? "min-h-0 overflow-y-visible pb-2"
-          : "min-h-screen overflow-y-auto overflow-x-hidden overscroll-none pb-bottom-nav",
+          : [
+              isMobile ? "min-h-svh" : "min-h-screen",
+              "overflow-y-auto overflow-x-hidden overscroll-none pb-bottom-nav",
+            ].join(" "),
       ].join(" ")}
       style={{
         overscrollBehaviorX: "none",
         touchAction: "pan-y",
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
       }}
       onTouchStartCapture={(e) => {
         const t = e.touches[0];

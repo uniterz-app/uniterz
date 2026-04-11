@@ -10,7 +10,11 @@ import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
-import { GAMES_CYBER_EASE, GAMES_CYBER_EASE_SNAP } from "./cyberMotion";
+import {
+  GAMES_CYBER_EASE,
+  GAMES_CYBER_EASE_SNAP,
+  GAMES_DAY_SWITCH_EASE,
+} from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
 import PredictionRulesIntroModal from "../predict/PredictionRulesIntroModal";
@@ -83,7 +87,7 @@ export default function ScheduleList({
   league: leagueProp,
   /** 絞り込み等で 0 件のときに表示する文言（未指定時は null のまま何も出さない） */
   emptyHint = null,
-  /** page=先頭のみ派手入場。daySwitch=フェードのみ想定でスタッガー・カード入場オフ（試合一覧の既定） */
+  /** page=先頭のみ派手入場。daySwitch=日付切替時は先頭カードから順に上方向からフェードイン */
   listShellIntro = "daySwitch",
 }: {
   games: GameItemRaw[];
@@ -170,23 +174,38 @@ export default function ScheduleList({
     [reduceMotion, isDaySwitchShell]
   );
 
-  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch 時は即表示（外枠のフェード用） */
+  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch は先頭から順に（遅延に上限あり） */
   const scheduleItem = useMemo(
     () => ({
       hidden: (i: number) => {
-        if (reduceMotion || isDaySwitchShell) {
+        if (reduceMotion) {
           return { opacity: 1, y: 0, scale: 1 };
+        }
+        if (isDaySwitchShell) {
+          return { opacity: 0, y: -11, scale: 1 };
         }
         if (i >= 3) return { opacity: 1, y: 0, scale: 1 };
         return { opacity: 0, y: -22, scale: 0.985 };
       },
       show: (i: number) => {
-        if (reduceMotion || isDaySwitchShell) {
+        if (reduceMotion) {
           return {
             opacity: 1,
             y: 0,
             scale: 1,
             transition: { duration: 0 },
+          };
+        }
+        if (isDaySwitchShell) {
+          return {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: {
+              opacity: { duration: 0.52, ease: GAMES_DAY_SWITCH_EASE },
+              y: { duration: 0.56, ease: GAMES_DAY_SWITCH_EASE },
+              delay: Math.min(i * 0.038, 0.28),
+            },
           };
         }
         if (i >= 3) {
@@ -664,9 +683,7 @@ export default function ScheduleList({
               : "gap-6 px-4 md:px-6 lg:px-8",
           ].join(" ")}
           variants={scheduleContainer}
-          initial={
-            reduceMotion || isDaySwitchShell ? false : "hidden"
-          }
+          initial={reduceMotion ? false : "hidden"}
           animate="show"
         >
         {propsList.map((props, index) => {

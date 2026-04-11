@@ -8,7 +8,9 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import CyberAuthField from "./CyberAuthField";
+import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
+import { authDisplayHeading, authDisplayButton } from "./authEnglishDisplay";
 
 type LoginFormProps = {
   variant?: "web" | "mobile";
@@ -30,22 +32,24 @@ export default function LoginForm({ variant }: LoginFormProps) {
     return "web";
   }, [variant, pathname]);
 
-  const osIsJa =
-    typeof navigator !== "undefined" &&
-    navigator.language?.toLowerCase().startsWith("ja");
+  /** 見出し・主ボタン＝Bebas 系コンデンス（バナー英字）／補助文・日本語＝Geist */
+  const bodySans =
+    "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
   const ui = {
-    title: osIsJa ? "ログイン" : "Login",
-    emailPlaceholder: osIsJa ? "メールアドレス" : "Email Address",
-    passwordPlaceholder: osIsJa ? "パスワード" : "Password",
-    loginCta: osIsJa ? "ログイン" : "LOG IN",
-    forgotText: osIsJa ? "パスワードをお忘れの方は" : "Forgot your password?",
-    hereText: osIsJa ? "こちら" : "Reset it",
-    signupPrefix: osIsJa ? "アカウントを" : "Create an account",
-    signupCta: osIsJa ? "新規作成" : "Sign Up",
-    showPw: osIsJa ? "パスワードを表示" : "Show password",
-    hidePw: osIsJa ? "パスワードを隠す" : "Hide password",
+    title: "LOGIN",
+    emailPlaceholder: "Email Address",
+    passwordPlaceholder: "Password",
+    loginCta: "LOG IN",
+    forgotLead: "パスワードをお忘れの方は",
+    forgotLink: "こちら",
+    createAccount: "Create Account",
+    backLp: "Back to LP",
+    showPw: "Show password",
+    hidePw: "Hide password",
   };
+
+  const lpHref = v === "mobile" ? "/mobile/lp" : "/lp";
 
   const formWidth = v === "mobile" ? 320 : 380;
 
@@ -88,14 +92,13 @@ export default function LoginForm({ variant }: LoginFormProps) {
   return (
     <form onSubmit={handleLogin}>
       <div
-        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 py-7 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 pb-7 pt-4 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:pt-5"
         style={{ width: formWidth, maxWidth: "100%" }}
       >
         <div className={cyberFieldStyles.pageGrid} aria-hidden />
         <div className="relative z-10">
-        <h1 className="text-2xl font-bold tracking-tight text-white md:text-[1.75rem]">
-          {ui.title}
-        </h1>
+        <AuthFormBranding />
+        <h1 className={`mt-1 ${authDisplayHeading}`}>{ui.title}</h1>
 
         <div className="mt-5 space-y-3 text-left">
           <CyberAuthField
@@ -150,7 +153,8 @@ export default function LoginForm({ variant }: LoginFormProps) {
           onPointerUp={() => setPressed(false)}
           onPointerCancel={() => setPressed(false)}
           className={[
-            "mt-5 flex w-full items-center justify-center gap-2.5 rounded-[14px] border-0 px-3.5 py-3 font-bold tracking-wide text-white",
+            "mt-5 flex w-full items-center justify-center rounded-[14px] border-0 px-3.5 py-3",
+            authDisplayButton,
             "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
             "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
             "transition-[transform,filter,opacity] duration-100 ease-out",
@@ -158,33 +162,34 @@ export default function LoginForm({ variant }: LoginFormProps) {
             submitting ? "cursor-not-allowed opacity-60" : "cursor-pointer",
           ].join(" ")}
         >
-          <span>
-            {submitting
-              ? osIsJa
-                ? "ログイン中..."
-                : "Logging in..."
-              : ui.loginCta}
-          </span>
-          <span className="text-lg leading-none">↗</span>
+          {submitting ? "Logging in…" : ui.loginCta}
         </button>
 
-        <p className="mt-3 text-sm text-white/85">
-          {ui.forgotText}{" "}
+        <p className={`mt-4 ${bodySans}`}>
+          {ui.forgotLead}
           <Link
             href={v === "mobile" ? "/mobile/reset" : "/web/reset"}
-            className="font-bold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
+            className="font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
           >
-            {ui.hereText}
+            {ui.forgotLink}
           </Link>
         </p>
 
-        <p className="mt-2.5 text-sm text-white/90">
-          {ui.signupPrefix}{" "}
+        <p className="mt-3">
           <Link
             href={v === "mobile" ? "/mobile/signup" : "/web/signup"}
-            className="font-bold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
+            className={`${bodySans} font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200`}
           >
-            {ui.signupCta}
+            {ui.createAccount}
+          </Link>
+        </p>
+
+        <p className="mt-4">
+          <Link
+            href={lpHref}
+            className="font-[family-name:var(--font-geist-sans)] text-xs text-white/70 underline decoration-white/35 underline-offset-2 hover:text-white/90"
+          >
+            {ui.backLp}
           </Link>
         </p>
         </div>

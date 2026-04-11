@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -8,7 +8,9 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import CyberAuthField from "./CyberAuthField";
+import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
+import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -22,31 +24,25 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const [pressed, setPressed] = useState(false);
 
   const router = useRouter();
+  const lpHref = variant === "mobile" ? "/mobile/lp" : "/lp";
 
-  const [isJa, setIsJa] = useState(true);
-
-  useEffect(() => {
-    setIsJa(
-      typeof navigator !== "undefined" &&
-        navigator.language?.toLowerCase().startsWith("ja")
-    );
-  }, []);
+  const bodySans =
+    "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
   const ui = useMemo(
     () => ({
-      title: isJa ? "アカウント作成" : "Create Account",
-      emailPlaceholder: isJa ? "メールアドレス" : "Email Address",
-      passwordPlaceholder: isJa ? "パスワード" : "Password",
-      signupCta: isJa ? "サインアップ" : "SIGN UP",
-      alreadyText: isJa
-        ? "すでにアカウントをお持ちの方は"
-        : "Already have an account?",
-      loginText: isJa ? "ログイン" : "Log in",
-      signupFailed: isJa ? "サインアップに失敗しました" : "Signup failed",
-      showPw: isJa ? "パスワードを表示" : "Show password",
-      hidePw: isJa ? "パスワードを隠す" : "Hide password",
+      title: "CREATE ACCOUNT",
+      emailPlaceholder: "Email Address",
+      passwordPlaceholder: "Password",
+      signupCta: "SIGN UP",
+      alreadyLead: "すでにアカウントをお持ちの方は",
+      loginText: "Login",
+      backLp: "Back to LP",
+      signupFailed: "Signup failed",
+      showPw: "Show password",
+      hidePw: "Hide password",
     }),
-    [isJa]
+    []
   );
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -89,14 +85,13 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   return (
     <form onSubmit={handleSignup}>
       <div
-        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 py-7 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 pb-7 pt-4 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:pt-5"
         style={{ width: formWidth, maxWidth: "100%" }}
       >
         <div className={cyberFieldStyles.pageGrid} aria-hidden />
         <div className="relative z-10">
-          <h1 className="text-2xl font-bold tracking-tight text-white md:text-[1.75rem]">
-            {ui.title}
-          </h1>
+          <AuthFormBranding />
+          <h1 className={`mt-1 ${authDisplayHeadingLong}`}>{ui.title}</h1>
 
           <div className="mt-5 space-y-3 text-left">
             <CyberAuthField
@@ -151,7 +146,8 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
             onPointerUp={() => setPressed(false)}
             onPointerCancel={() => setPressed(false)}
             className={[
-              "mt-5 flex w-full items-center justify-center gap-2.5 rounded-[14px] border-0 px-3.5 py-3 font-bold tracking-wide text-white",
+              "mt-5 flex w-full items-center justify-center rounded-[14px] border-0 px-3.5 py-3",
+              authDisplayButton,
               "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
               "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
               "transition-[transform,filter,opacity] duration-100 ease-out",
@@ -159,23 +155,25 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
               submitting ? "cursor-not-allowed opacity-60" : "cursor-pointer",
             ].join(" ")}
           >
-            <span>
-              {submitting
-                ? isJa
-                  ? "作成中..."
-                  : "Creating..."
-                : ui.signupCta}
-            </span>
-            <span className="text-lg leading-none">↗</span>
+            {submitting ? "Creating…" : ui.signupCta}
           </button>
 
-          <p className="mt-5 text-sm text-white/85">
-            {ui.alreadyText}{" "}
+          <p className={`mt-5 ${bodySans}`}>
+            {ui.alreadyLead}{" "}
             <Link
               href={variant === "mobile" ? "/mobile/login" : "/web/login"}
-              className="font-bold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
+              className="font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
             >
               {ui.loginText}
+            </Link>
+          </p>
+
+          <p className="mt-4">
+            <Link
+              href={lpHref}
+              className="font-[family-name:var(--font-geist-sans)] text-xs text-white/70 underline decoration-white/35 underline-offset-2 hover:text-white/90"
+            >
+              {ui.backLp}
             </Link>
           </p>
         </div>
