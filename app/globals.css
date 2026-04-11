@@ -281,6 +281,35 @@ body.splash-bg {
   }
 }
 
+/* スプラッシュ：DSEG14（14セグメント風ディスプレイ） */
+.splash-seven-seg {
+  font-family: "DSEG14 Classic", ui-monospace, monospace;
+  font-weight: 400;
+}
+
+/* スプラッシュ：LOADING キャプションの呼吸光 */
+@keyframes splash-loading-caption {
+  0%,
+  100% {
+    opacity: 0.52;
+  }
+
+  50% {
+    opacity: 0.96;
+  }
+}
+
+.splash-loading-caption {
+  animation: splash-loading-caption 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-loading-caption {
+    animation: none;
+    opacity: 0.82;
+  }
+}
+
 /* ============================================================
    バッジ光エフェクト
    ============================================================ */

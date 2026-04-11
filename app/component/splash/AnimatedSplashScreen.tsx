@@ -1,5 +1,6 @@
 "use client";
 
+import "@fontsource/dseg14-classic";
 import { useEffect, useRef, useState } from "react";
 import UniterzLogo3DBackground from "@/app/component/background/UniterzLogo3DBackground";
 import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
@@ -89,7 +90,7 @@ export default function AnimatedSplashScreen() {
             aria-valuemax={100}
             aria-valuenow={loadPercent}
             aria-valuetext={`${loadPercent}%`}
-            aria-label="読み込み中"
+            aria-label="Loading"
           >
             <div
               className="splash-loading-fill"
@@ -98,6 +99,31 @@ export default function AnimatedSplashScreen() {
               }}
             />
           </div>
+        </div>
+
+        <div className="mt-3 flex w-full max-w-md flex-col items-center gap-2 px-1">
+          <div className="flex w-full items-center justify-center gap-3 sm:gap-4">
+            <span
+              className="h-px flex-1 max-w-[3.5rem] bg-gradient-to-r from-transparent to-cyan-400/55"
+              aria-hidden
+            />
+            <p
+              className="splash-loading-caption splash-seven-seg shrink-0 text-center text-[clamp(0.7rem,2.8vw,0.95rem)] font-normal uppercase tracking-[0.14em] text-cyan-100 drop-shadow-[0_0_10px_rgba(34,211,238,0.55),0_0_22px_rgba(6,182,212,0.2)] sm:tracking-[0.18em]"
+              aria-live="polite"
+            >
+              Loading
+            </p>
+            <span
+              className="h-px flex-1 max-w-[3.5rem] bg-gradient-to-l from-transparent to-cyan-400/55"
+              aria-hidden
+            />
+          </div>
+          <span
+            className="splash-seven-seg splash-loading-caption text-[clamp(1.05rem,4.2vw,1.55rem)] font-normal tabular-nums tracking-[0.22em] text-cyan-200/90 drop-shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:tracking-[0.28em]"
+            aria-hidden
+          >
+            {String(loadPercent).padStart(3, "0")}
+          </span>
         </div>
       </div>
 
