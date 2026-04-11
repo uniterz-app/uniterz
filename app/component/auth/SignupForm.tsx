@@ -7,6 +7,8 @@ import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import CyberAuthField from "./CyberAuthField";
+import cyberFieldStyles from "./cyberAuthField.module.css";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -21,7 +23,6 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
 
   const router = useRouter();
 
-  // SSR と初回クライアントで同じ文言にする（navigator はマウント後に反映）
   const [isJa, setIsJa] = useState(true);
 
   useEffect(() => {
@@ -42,21 +43,24 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
         : "Already have an account?",
       loginText: isJa ? "ログイン" : "Log in",
       signupFailed: isJa ? "サインアップに失敗しました" : "Signup failed",
+      showPw: isJa ? "パスワードを表示" : "Show password",
+      hidePw: isJa ? "パスワードを隠す" : "Hide password",
     }),
     [isJa]
   );
 
-  // ==== サインアップ処理（修正版） ====
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (submitting) return;
       setSubmitting(true);
-      // ① Firebase Auth でユーザー作成
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
       const user = cred.user;
 
-      // ② users/{uid} を作成（オンボーディング前の最小情報）
       await setDoc(
         doc(db, "users", user.uid),
         {
@@ -69,7 +73,6 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
         { merge: true }
       );
 
-      // ③ オンボーディングへ遷移
       const onboardingPath =
         variant === "mobile" ? "/mobile/onboarding" : "/web/onboarding";
       router.replace(onboardingPath);
@@ -81,142 +84,101 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
     }
   };
 
-  const formWidth = variant === "mobile" ? 320 : 360;
+  const formWidth = variant === "mobile" ? 320 : 380;
 
   return (
     <form onSubmit={handleSignup}>
       <div
-        style={{
-          width: "100%",
-          maxWidth: formWidth,
-          padding: variant === "mobile" ? 20 : 24,
-          backgroundColor: "rgba(255,255,255,0.08)",
-          borderRadius: 12,
-          textAlign: "center",
-          boxShadow: "0 0 30px rgba(0,0,0,0.3)",
-        }}
+        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 py-7 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+        style={{ width: formWidth, maxWidth: "100%" }}
       >
-        <h1 style={{ fontWeight: "bold", fontSize: "1.7rem" }}>{ui.title}</h1>
+        <div className={cyberFieldStyles.pageGrid} aria-hidden />
+        <div className="relative z-10">
+          <h1 className="text-2xl font-bold tracking-tight text-white md:text-[1.75rem]">
+            {ui.title}
+          </h1>
 
-        {/* Email */}
-        <div style={{ position: "relative", marginTop: 10 }}>
-          <input
-            type="email"
-            placeholder={ui.emailPlaceholder}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 40px 12px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(255,255,255,0.12)",
-              color: "white",
-              outline: "none",
-            }}
-          />
-          <FaEnvelope
-            style={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              opacity: 0.9,
-            }}
-          />
-        </div>
-
-        {/* Password */}
-        <div style={{ position: "relative", marginTop: 10 }}>
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder={ui.passwordPlaceholder}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 40px 12px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(255,255,255,0.12)",
-              color: "white",
-              outline: "none",
-            }}
-          />
-
-          {showPassword ? (
-            <FaEye
-              onClick={() => setShowPassword(false)}
-              style={{
-                position: "absolute",
-                right: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                opacity: 0.9,
-                cursor: "pointer",
+          <div className="mt-5 space-y-3 text-left">
+            <CyberAuthField
+              inputProps={{
+                type: "email",
+                name: "email",
+                autoComplete: "email",
+                placeholder: ui.emailPlaceholder,
+                value: email,
+                onChange: (e) => setEmail(e.target.value),
+                required: true,
               }}
+              rightSlot={
+                <span className="flex items-center justify-center text-[15px] text-white/85">
+                  <FaEnvelope aria-hidden />
+                </span>
+              }
             />
-          ) : (
-            <FaEyeSlash
-              onClick={() => setShowPassword(true)}
-              style={{
-                position: "absolute",
-                right: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                opacity: 0.9,
-                cursor: "pointer",
+
+            <CyberAuthField
+              rightSlotAnimated
+              inputProps={{
+                type: showPassword ? "text" : "password",
+                name: "password",
+                autoComplete: "new-password",
+                placeholder: ui.passwordPlaceholder,
+                value: password,
+                onChange: (e) => setPassword(e.target.value),
+                required: true,
               }}
+              rightSlot={
+                <button
+                  type="button"
+                  className="flex size-full items-center justify-center text-[15px] text-white/90"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? ui.hidePw : ui.showPw}
+                >
+                  {showPassword ? (
+                    <FaEye aria-hidden />
+                  ) : (
+                    <FaEyeSlash aria-hidden />
+                  )}
+                </button>
+              }
             />
-          )}
-        </div>
+          </div>
 
-        {/* === Gradient Button === */}
-        <button
-          disabled={submitting}
-          type="submit"
-          onPointerDown={() => setPressed(true)}
-          onPointerUp={() => setPressed(false)}
-          onPointerCancel={() => setPressed(false)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-            padding: "12px 14px",
-            marginTop: 16,
-            border: "none",
-            borderRadius: 14,
-            color: "white",
-            fontWeight: 700,
-            letterSpacing: 0.4,
-            background:
-              "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #06B6D4 100%)",
-            boxShadow:
-              "0 10px 30px rgba(124,58,237,0.25), 0 12px 34px rgba(6,182,212,0.22)",
-            transform: pressed ? "scale(0.97)" : "scale(1)",
-            opacity: submitting ? 0.65 : 1,
-            cursor: submitting ? "not-allowed" : "pointer",
-          }}
-        >
-          <span>{submitting ? (isJa ? "作成中..." : "Creating...") : ui.signupCta}</span>
-          <span style={{ fontSize: 18 }}>↗</span>
-        </button>
-
-        <p style={{ marginTop: 20, fontSize: "0.85rem" }}>
-          {ui.alreadyText}{" "}
-          <Link
-            href={variant === "mobile" ? "/mobile/login" : "/web/login"}
-            style={{
-              color: "#7DD3FC",
-              textDecoration: "underline",
-              fontWeight: "bold",
-            }}
+          <button
+            type="submit"
+            disabled={submitting}
+            onPointerDown={() => setPressed(true)}
+            onPointerUp={() => setPressed(false)}
+            onPointerCancel={() => setPressed(false)}
+            className={[
+              "mt-5 flex w-full items-center justify-center gap-2.5 rounded-[14px] border-0 px-3.5 py-3 font-bold tracking-wide text-white",
+              "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
+              "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
+              "transition-[transform,filter,opacity] duration-100 ease-out",
+              pressed ? "scale-[0.97]" : "scale-100",
+              submitting ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+            ].join(" ")}
           >
-            {ui.loginText}
-          </Link>
-        </p>
+            <span>
+              {submitting
+                ? isJa
+                  ? "作成中..."
+                  : "Creating..."
+                : ui.signupCta}
+            </span>
+            <span className="text-lg leading-none">↗</span>
+          </button>
+
+          <p className="mt-5 text-sm text-white/85">
+            {ui.alreadyText}{" "}
+            <Link
+              href={variant === "mobile" ? "/mobile/login" : "/web/login"}
+              className="font-bold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
+            >
+              {ui.loginText}
+            </Link>
+          </p>
+        </div>
       </div>
     </form>
   );

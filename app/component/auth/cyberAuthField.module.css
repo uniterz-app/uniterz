@@ -1,0 +1,333 @@
+/* Uiverse / Lakshay-art 系の発光枠をログイン用に調整 */
+
+.fieldMain {
+  position: relative;
+  width: 100%;
+}
+
+.fieldMain:focus-within .inputMask {
+  display: none;
+}
+
+.fieldPoda {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.fieldPoda:hover .pinkMask {
+  opacity: 0;
+}
+
+/* 外周グロー（重ね順：奥 → 手前） */
+.glow,
+.darkBorderBg,
+.border,
+.white {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.glow {
+  filter: blur(20px);
+  opacity: 0.38;
+  max-height: none;
+  max-width: none;
+  inset: -4px;
+}
+
+.darkBorderBg {
+  filter: blur(1px);
+  max-height: none;
+  max-width: none;
+}
+
+.border {
+  filter: blur(0.5px);
+  inset: 2px;
+  border-radius: 11px;
+}
+
+.white {
+  filter: blur(2px);
+  inset: 3px;
+  border-radius: 10px;
+}
+
+.glow::before,
+.darkBorderBg::before,
+.border::before,
+.white::before {
+  content: "";
+  z-index: -2;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 600px;
+  height: 600px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  transition: transform 2s ease;
+}
+
+.white::before {
+  transform: translate(-50%, -50%) rotate(83deg);
+  filter: brightness(1.35);
+  background-image: conic-gradient(
+    rgba(0, 0, 0, 0) 0%,
+    #a099d8,
+    rgba(0, 0, 0, 0) 8%,
+    rgba(0, 0, 0, 0) 50%,
+    #dfa2da,
+    rgba(0, 0, 0, 0) 58%
+  );
+}
+
+.border::before {
+  transform: translate(-50%, -50%) rotate(70deg);
+  filter: brightness(1.25);
+  background-image: conic-gradient(
+    #1c191c,
+    #402fb5 5%,
+    #1c191c 14%,
+    #1c191c 50%,
+    #cf30aa 60%,
+    #1c191c 64%
+  );
+}
+
+.darkBorderBg::before {
+  transform: translate(-50%, -50%) rotate(82deg);
+  background-image: conic-gradient(
+    rgba(0, 0, 0, 0),
+    #18116a,
+    rgba(0, 0, 0, 0) 10%,
+    rgba(0, 0, 0, 0) 50%,
+    #6e1b60,
+    rgba(0, 0, 0, 0) 60%
+  );
+}
+
+.glow::before {
+  transform: translate(-50%, -50%) rotate(60deg);
+  width: 999px;
+  height: 999px;
+  background-image: conic-gradient(
+    #000,
+    #402fb5 5%,
+    #000 38%,
+    #000 50%,
+    #cf30aa 60%,
+    #000 87%
+  );
+}
+
+.fieldPoda:hover .darkBorderBg::before {
+  transform: translate(-50%, -50%) rotate(262deg);
+}
+.fieldPoda:hover .glow::before {
+  transform: translate(-50%, -50%) rotate(240deg);
+}
+.fieldPoda:hover .white::before {
+  transform: translate(-50%, -50%) rotate(263deg);
+}
+.fieldPoda:hover .border::before {
+  transform: translate(-50%, -50%) rotate(250deg);
+}
+
+.fieldMain:focus-within .darkBorderBg::before {
+  transform: translate(-50%, -50%) rotate(442deg);
+  transition: transform 3.5s ease;
+}
+.fieldMain:focus-within .glow::before {
+  transform: translate(-50%, -50%) rotate(420deg);
+  transition: transform 3.5s ease;
+}
+.fieldMain:focus-within .white::before {
+  transform: translate(-50%, -50%) rotate(443deg);
+  transition: transform 3.5s ease;
+}
+.fieldMain:focus-within .border::before {
+  transform: translate(-50%, -50%) rotate(430deg);
+  transition: transform 3.5s ease;
+}
+
+.input {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 10px;
+  background-color: #010201;
+  color: #fff;
+  font-size: 16px;
+  padding-left: 16px;
+  padding-right: 48px;
+}
+
+.inputWithLeft {
+  padding-left: 48px;
+}
+
+.input::placeholder {
+  color: #c0b9c0;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.inputMask {
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  width: 100px;
+  height: 20px;
+  top: 50%;
+  margin-top: -10px;
+  left: 52px;
+  background: linear-gradient(90deg, transparent, #010201);
+}
+
+.pinkMask {
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  width: 28px;
+  height: 18px;
+  top: 50%;
+  margin-top: -14px;
+  left: 10px;
+  background: #cf30aa;
+  filter: blur(16px);
+  opacity: 0.75;
+  transition: opacity 2s ease;
+}
+
+.leftIcon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 15px;
+}
+
+.rightSlot {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #161329, #000000, #1d1b4b);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.rightSlotInner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+}
+
+.rightSlotInner[data-static="true"] {
+  cursor: default;
+}
+
+.rightBorderSpin {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rightBorderSpin::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  transform: translate(-50%, -50%) rotate(90deg);
+  background-image: conic-gradient(
+    rgba(0, 0, 0, 0),
+    #3d3a4f,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0) 50%,
+    #3d3a4f,
+    rgba(0, 0, 0, 0) 100%
+  );
+  filter: brightness(1.2);
+  animation: cyberSpin 5s linear infinite;
+}
+
+@keyframes cyberSpin {
+  100% {
+    transform: translate(-50%, -50%) rotate(450deg);
+  }
+}
+
+/* ログインカード内のグリッド（Uiverse .grid 相当） */
+.pageGrid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: linear-gradient(to right, #0f0f10 1px, transparent 1px),
+    linear-gradient(to bottom, #0f0f10 1px, transparent 1px);
+  background-size: 1rem 1rem;
+  background-position: center center;
+  filter: blur(1px);
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow::before,
+  .darkBorderBg::before,
+  .border::before,
+  .white::before {
+    transition: none;
+  }
+  .fieldPoda:hover .darkBorderBg::before,
+  .fieldPoda:hover .glow::before,
+  .fieldPoda:hover .white::before,
+  .fieldPoda:hover .border::before,
+  .fieldMain:focus-within .darkBorderBg::before,
+  .fieldMain:focus-within .glow::before,
+  .fieldMain:focus-within .white::before,
+  .fieldMain:focus-within .border::before {
+    transform: translate(-50%, -50%) rotate(82deg);
+  }
+  .rightBorderSpin::before {
+    animation: none;
+  }
+}
