@@ -27,6 +27,7 @@ import {
   shiftCalendarMonthStart,
 } from "@/lib/time/zonedTime";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { GAMES_CYBER_EASE } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
 import {
   gameInvolvesAnyTeam,
@@ -42,9 +43,8 @@ import {
   parseMarginBoundParam,
 } from "@/lib/games/marginFilter";
 
-const GAMES_CONTENT_EASE = [0.22, 1, 0.36, 1] as const;
 /** 日付ストリップの後にリストを出すまでの待ち（秒） */
-const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.22;
+const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.14;
 
 /* =========================
    Date Utils
@@ -636,6 +636,33 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [selected, dayTimeZone]
   );
 
+  /** 初回だけリッチなリスト入場。日付変更・一定時間後はシンプルに */
+  const [playRichScheduleIntro, setPlayRichScheduleIntro] = useState(true);
+  const lastScheduleDayKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setPlayRichScheduleIntro(true);
+    lastScheduleDayKeyRef.current = null;
+  }, [league]);
+
+  useEffect(() => {
+    if (!selectedDayKey || isInitialLoading) return;
+    const prev = lastScheduleDayKeyRef.current;
+    lastScheduleDayKeyRef.current = selectedDayKey;
+    if (prev !== null && prev !== selectedDayKey) {
+      setPlayRichScheduleIntro(false);
+    }
+  }, [selectedDayKey, isInitialLoading]);
+
+  useEffect(() => {
+    if (isInitialLoading || !selectedDayKey || !playRichScheduleIntro) return;
+    const id = window.setTimeout(() => setPlayRichScheduleIntro(false), 900);
+    return () => window.clearTimeout(id);
+  }, [isInitialLoading, selectedDayKey, playRichScheduleIntro]);
+
+  const richScheduleMotion =
+    playRichScheduleIntro && !reduceMotion;
+
   return (
     <div
       ref={pageRef}
@@ -651,8 +678,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           initial={reduceMotion ? false : { opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{
-            duration: reduceMotion ? 0 : 0.38,
-            ease: GAMES_CONTENT_EASE,
+            duration: reduceMotion ? 0 : 0.32,
+            ease: GAMES_CYBER_EASE,
           }}
         >
           <LeagueTabs
@@ -677,9 +704,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             initial={reduceMotion ? false : { opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{
-              duration: reduceMotion ? 0 : 0.34,
-              delay: reduceMotion ? 0 : 0.05,
-              ease: GAMES_CONTENT_EASE,
+              duration: reduceMotion ? 0 : 0.28,
+              delay: reduceMotion ? 0 : 0.04,
+              ease: GAMES_CYBER_EASE,
             }}
           >
             <GamesTeamFilterPanel
@@ -703,9 +730,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               initial={reduceMotion ? false : { opacity: 0, x: 18 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{
-                duration: reduceMotion ? 0 : 0.4,
-                delay: reduceMotion ? 0 : 0.06,
-                ease: GAMES_CONTENT_EASE,
+                duration: reduceMotion ? 0 : 0.32,
+                delay: reduceMotion ? 0 : 0.05,
+                ease: GAMES_CYBER_EASE,
               }}
             >
               <button
@@ -730,9 +757,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         initial={reduceMotion ? false : { opacity: 0, y: -10, scale: 0.985 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{
-          duration: reduceMotion ? 0 : 0.42,
-          delay: reduceMotion ? 0 : 0.05,
-          ease: GAMES_CONTENT_EASE,
+          duration: reduceMotion ? 0 : 0.34,
+          delay: reduceMotion ? 0 : 0.04,
+          ease: GAMES_CYBER_EASE,
         }}
         className="mb-2"
       >
@@ -793,9 +820,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{
-        duration: reduceMotion ? 0 : 0.28,
-        delay: reduceMotion ? 0 : 0.1,
-        ease: GAMES_CONTENT_EASE,
+        duration: reduceMotion ? 0 : 0.24,
+        delay: reduceMotion ? 0 : 0.06,
+        ease: GAMES_CYBER_EASE,
       }}
     >
       <DayStrip
@@ -808,17 +835,35 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         snapSelectOnScroll={isMobile}
         timeZone={dayTimeZone}
         isEn={isEn}
+        wideItemGap={isMobile}
       />
     </motion.div>
 
     <motion.div
       key={`sched-${selectedDayKey}-${teamFilterKey}-${loading ? "l" : "d"}`}
-      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={
+        reduceMotion
+          ? false
+          : richScheduleMotion
+            ? { opacity: 0, y: 10 }
+            : { opacity: 0 }
+      }
+      animate={
+        reduceMotion
+          ? { opacity: 1 }
+          : richScheduleMotion
+            ? { opacity: 1, y: 0 }
+            : { opacity: 1 }
+      }
       transition={{
-        duration: reduceMotion ? 0 : 0.32,
-        delay: reduceMotion ? 0 : GAMES_LIST_AFTER_DAY_STRIP_SEC,
-        ease: GAMES_CONTENT_EASE,
+        duration: reduceMotion ? 0 : richScheduleMotion ? 0.28 : 0.2,
+        delay:
+          reduceMotion
+            ? 0
+            : richScheduleMotion
+              ? GAMES_LIST_AFTER_DAY_STRIP_SEC
+              : 0.04,
+        ease: GAMES_CYBER_EASE,
       }}
     >
       <div
@@ -833,6 +878,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           loading={loading}
           league={league}
           emptyHint={scheduleEmptyHint}
+          listShellIntro={richScheduleMotion ? "page" : "daySwitch"}
         />
       </div>
     </motion.div>

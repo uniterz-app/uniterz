@@ -11,6 +11,10 @@ export type HalftoneJerseyMarkProps = {
   accentEnd?: string;
   /** 枠のサイズ（従来の Jersey SVG と同じユーティリティを渡す） */
   className?: string;
+  /** 試合カード用：ドットを裾から一度だけ現す */
+  enableDotReveal?: boolean;
+  /** ドット開幕のディレイ（ms） */
+  dotRevealDelayMs?: number;
 };
 
 type Rgb = { r: number; g: number; b: number };
@@ -63,6 +67,8 @@ export default function HalftoneJerseyMark({
   accent,
   accentEnd,
   className,
+  enableDotReveal = false,
+  dotRevealDelayMs = 0,
 }: HalftoneJerseyMarkProps) {
   const glowFilter = useMemo(() => {
     const { r, g, b } = accentRgbForGlow(accent, accentEnd);
@@ -80,7 +86,12 @@ export default function HalftoneJerseyMark({
       style={{ filter: glowFilter }}
       aria-hidden
     >
-      <DotJerseyCanvas accent={accent} accentEnd={accentEnd} />
+      <DotJerseyCanvas
+        accent={accent}
+        accentEnd={accentEnd}
+        enableDotReveal={enableDotReveal}
+        dotRevealDelayMs={dotRevealDelayMs}
+      />
     </div>
   );
 }

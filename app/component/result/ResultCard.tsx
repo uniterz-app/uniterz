@@ -362,8 +362,8 @@ export function ResultCardPresentation({
       {!isMobile && (
         <div
           className={[
-            "pointer-events-none absolute inset-x-0 z-20 flex items-start justify-between gap-2 px-2 sm:px-3",
-            listDateLabel ? "top-7 pt-1 sm:top-8 sm:pt-1.5" : "top-0 pt-2 sm:pt-2.5",
+            "pointer-events-none absolute inset-x-0 z-20 flex items-start justify-between gap-1 px-1 sm:px-1.5",
+            listDateLabel ? "top-6 pt-0.5 sm:top-7 sm:pt-1" : "top-0 pt-1 sm:pt-1.5",
           ].join(" ")}
         >
           <span
@@ -419,15 +419,15 @@ export function ResultCardPresentation({
         <div
           className={
             isMobile
-              ? "flex min-w-0 flex-col items-stretch"
-              : "flex min-w-0 flex-col items-center ml-1 sm:ml-3"
+              ? "flex min-w-0 flex-col items-stretch pt-2.5 translate-x-1.5"
+              : "flex min-w-0 flex-col items-center ml-1 translate-x-2 pt-3 sm:ml-3 sm:translate-x-2.5 sm:pt-4"
           }
         >
           {isMobile ? (
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
                 <span
-                  className="pointer-events-auto absolute -left-2 -top-2 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                  className="pointer-events-auto absolute -left-3.5 -top-3 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
                   style={{ backgroundColor: pillBg, ...teamNameFont }}
                 >
                   {pillText}
@@ -486,8 +486,8 @@ export function ResultCardPresentation({
             className={[
               "whitespace-nowrap leading-none tracking-tight tabular-nums font-black",
               isMobile
-                ? "text-[clamp(1.2rem,5vw,1.6rem)]"
-                : "text-xl md:text-5xl",
+                ? "text-[clamp(1.32rem,5.4vw,1.78rem)]"
+                : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
               resultStatsMetricNumClass,
             ].join(" ")}
           >
@@ -498,8 +498,8 @@ export function ResultCardPresentation({
             <div
               className={`mt-1.5 whitespace-nowrap tabular-nums opacity-85 md:mt-2 ${
                 isMobile
-                  ? "text-xs font-bold leading-tight"
-                  : "text-sm font-bold md:text-base"
+                  ? "text-[13px] font-bold leading-tight"
+                  : "text-base font-bold md:text-lg"
               } ${resultStatsMetricNumClass}`}
             >
               {finalScore}
@@ -510,8 +510,8 @@ export function ResultCardPresentation({
         <div
           className={
             isMobile
-              ? "flex min-w-0 flex-col items-stretch"
-              : "flex min-w-0 flex-col items-center mr-1 sm:mr-3"
+              ? "flex min-w-0 flex-col items-stretch pt-2.5 -translate-x-1.5"
+              : "flex min-w-0 flex-col items-center mr-1 -translate-x-2 pt-3 sm:mr-3 sm:-translate-x-2.5 sm:pt-4"
           }
         >
           {isMobile ? (
@@ -532,7 +532,7 @@ export function ResultCardPresentation({
                 )}
                 {badge === "streak" && streakBadge && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
                   >
                     <Flame
                       className={`h-2 w-2 shrink-0 ${streakBadge.iconClassName}`}
@@ -544,21 +544,21 @@ export function ResultCardPresentation({
                 )}
                 {badge === "hit" && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
                   >
                     HIT
                   </span>
                 )}
                 {badge === "upset" && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
                   >
                     UPSET
                   </span>
                 )}
                 {badge === "miss" && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
                   >
                     MISS
                   </span>

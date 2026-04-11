@@ -3,6 +3,7 @@ import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { GAMES_CYBER_EASE } from "./cyberMotion";
 
 type Props = {
   dates: Date[];
@@ -15,6 +16,8 @@ type Props = {
   snapSelectOnScroll?: boolean;
   timeZone: string;
   isEn?: boolean;
+  /** true のとき日付セル間を一段広げる（モバイル向け） */
+  wideItemGap?: boolean;
 };
 
 const sizeMap = {
@@ -23,7 +26,7 @@ const sizeMap = {
   lg: { circle: "w-14 h-14", num: "text-base", gap: "gap-3", padX: "px-3" },
 } as const;
 
-const DAY_STRIP_EASE = [0.22, 1, 0.36, 1] as const;
+const DAY_STRIP_EASE = GAMES_CYBER_EASE;
 
 export default function DayStrip({
   dates,
@@ -36,6 +39,7 @@ export default function DayStrip({
   snapSelectOnScroll = true,
   timeZone,
   isEn = false,
+  wideItemGap = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const listRef = useRef<HTMLDivElement>(null);
@@ -186,7 +190,21 @@ export default function DayStrip({
   };
 
   const sz = sizeMap[size];
-  const gapPx = size === "lg" ? 12 : 8;
+  /** flex gap と visibleCount 用の basis 計算を一致させる */
+  const gapClass = wideItemGap
+    ? size === "lg"
+      ? "gap-4"
+      : size === "md"
+        ? "gap-3"
+        : "gap-3"
+    : sz.gap;
+  const gapPx = wideItemGap
+    ? size === "lg"
+      ? 16
+      : 12
+    : size === "lg"
+      ? 12
+      : 8;
 
   const weekday = (d: Date) =>
     new Intl.DateTimeFormat(isEn ? "en-US" : "ja-JP", {
@@ -198,8 +216,8 @@ export default function DayStrip({
     hidden: {},
     show: {
       transition: {
-        staggerChildren: reduceMotion ? 0 : 0.038,
-        delayChildren: reduceMotion ? 0 : 0.06,
+        staggerChildren: reduceMotion ? 0 : 0.028,
+        delayChildren: reduceMotion ? 0 : 0.04,
       },
     },
   };
@@ -207,13 +225,13 @@ export default function DayStrip({
   const dayStripItem = {
     hidden: reduceMotion
       ? { opacity: 1, y: 0, scale: 1 }
-      : { opacity: 0, y: 10, scale: 0.94 },
+      : { opacity: 0, y: 12, scale: 0.93 },
     show: {
       opacity: 1,
       y: 0,
       scale: 1,
       transition: {
-        duration: reduceMotion ? 0 : 0.32,
+        duration: reduceMotion ? 0 : 0.28,
         ease: DAY_STRIP_EASE,
       },
     },
@@ -225,7 +243,7 @@ export default function DayStrip({
       className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-proximity" : ""}`}
     >
       <motion.div
-        className={`flex ${sz.gap} py-2`}
+        className={`flex ${gapClass} py-2`}
         variants={dayStripContainer}
         initial={reduceMotion ? false : "hidden"}
         animate="show"
@@ -279,7 +297,7 @@ export default function DayStrip({
                   ].join(" ")}
                   style={{
                     textShadow: selected
-                      ? "0 0 4px rgba(255,255,255,0.10)"
+                      ? "0 0 10px rgba(34,211,238,0.45), 0 0 2px rgba(255,255,255,0.2)"
                       : undefined,
                     transform: selected ? "translateY(-1px)" : undefined,
                   }}
@@ -299,17 +317,17 @@ export default function DayStrip({
                       ? "translateY(-1px) scale(1.02)"
                       : "translateY(0) scale(1)",
                     borderColor: selected
-                      ? "rgba(132,204,22,0.54)"
+                      ? "rgba(34,211,238,0.62)"
                       : isTodayDate
-                        ? "rgba(132,204,22,0.42)"
+                        ? "rgba(34,211,238,0.38)"
                         : "rgba(255,255,255,0.16)",
                     background: selected
-                      ? "linear-gradient(180deg, rgba(132,204,22,0.86) 0%, rgba(101,163,13,0.82) 100%)"
+                      ? "linear-gradient(180deg, rgba(34,211,238,0.42) 0%, rgba(8,145,178,0.36) 100%)"
                       : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
                     boxShadow: selected
-                      ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(132,204,22,0.12), 0 0 4px rgba(132,204,22,0.08)"
+                      ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 1px rgba(34,211,238,0.2), 0 0 14px rgba(34,211,238,0.28)"
                       : isTodayDate
-                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 3px rgba(132,204,22,0.05)"
+                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 8px rgba(34,211,238,0.12)"
                         : "inset 0 1px 0 rgba(255,255,255,0.06)",
                     isolation: "isolate",
                   }}
@@ -327,9 +345,9 @@ export default function DayStrip({
                   <span
                     className={`relative z-10 ${resultStatsMetricNumClass} ${sz.num}`}
                     style={{
-                      color: selected ? "#071006" : "#ffffff",
+                      color: selected ? "#ecfeff" : "#ffffff",
                       textShadow: selected
-                        ? "0 1px 0 rgba(255,255,255,0.08)"
+                        ? "0 0 10px rgba(34,211,238,0.55), 0 1px 0 rgba(0,0,0,0.35)"
                         : "0 0 3px rgba(255,255,255,0.04)",
                     }}
                   >

@@ -212,9 +212,9 @@ export default function GamesTeamFilterPanel({
           }
           transition={{
             type: "spring",
-            stiffness: 420,
-            damping: 36,
-            mass: 0.85,
+            stiffness: 520,
+            damping: 38,
+            mass: 0.72,
           }}
           onClick={(e) => e.stopPropagation()}
         >

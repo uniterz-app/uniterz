@@ -6,6 +6,20 @@ import { JERSEY_PATH_D } from "@/app/component/games/icons/Jersey";
 const VIEWBOX_W = 87.76;
 const VIEWBOX_H = 114.88;
 
+/** 末端が一気に埋まる＝デジタルスキャン風 */
+function easeOutExpo(t: number): number {
+  const u = Math.max(0, Math.min(1, t));
+  return u >= 1 ? 1 : 1 - Math.pow(2, -12 * u);
+}
+
+/** 裾（vby 大）から肩へ向かって波前が進むときのドット不透明度（0〜1） */
+function dotRevealAlpha(reveal: number, vby: number): number {
+  const threshold = VIEWBOX_H * (1 - reveal);
+  const band = VIEWBOX_H * 0.16;
+  const raw = (vby - threshold + band * 0.45) / band;
+  return Math.max(0, Math.min(1, raw));
+}
+
 /** 描画・クリップ・縁取りで共用（SSR では Path2D が無いことがあるため遅延生成） */
 let jerseyPath2dCached: Path2D | null | undefined;
 function getJerseyPath2d(): Path2D | null {
@@ -137,6 +151,10 @@ export type DotJerseyCanvasProps = {
   accentEnd?: string;
   /** ドットの基調（未指定時は accent とシアン系を混ぜる） */
   dotColor?: string;
+  /** true のときマウント後一度だけ、裾→肩へドットを現す（試合カード用） */
+  enableDotReveal?: boolean;
+  /** ドット開幕のディレイ（ms）。一覧のスタッガーと揃える */
+  dotRevealDelayMs?: number;
 };
 
 /**
@@ -147,9 +165,13 @@ export default function DotJerseyCanvas({
   accent = "#22d3ee",
   accentEnd,
   dotColor,
+  enableDotReveal = false,
+  dotRevealDelayMs = 0,
 }: DotJerseyCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const maskRef = useRef<MaskCache | null>(null);
+  /** 0 = 未表示、1 = 完了。enableDotReveal でないときは常に 1 扱い */
+  const revealProgressRef = useRef(enableDotReveal ? 0 : 1);
 
   const gradientMode = useJerseyGradient(accent, accentEnd);
 
@@ -176,6 +198,8 @@ export default function DotJerseyCanvas({
       maskRef.current = mask;
     }
     if (!mask) return;
+
+    const reveal = enableDotReveal ? revealProgressRef.current : 1;
 
     const rect = canvas.getBoundingClientRect();
     const cssW = rect.width;
@@ -206,6 +230,9 @@ export default function DotJerseyCanvas({
         const vbx = (gx - ox) / s;
         const vby = (gy - oy) / s;
         if (!isInsideJersey(mask, vbx, vby)) continue;
+        const dotAlpha = dotRevealAlpha(reveal, vby);
+        if (dotAlpha <= 0.001) continue;
+
         const shade = halftoneShade01(vbx, vby);
         const r = rMin + shade * (rMax - rMin);
         if (gradientRgb) {
@@ -224,9 +251,11 @@ export default function DotJerseyCanvas({
         } else {
           ctx.fillStyle = resolvedDotColor ?? blendAccentForDots(accent);
         }
+        ctx.globalAlpha = dotAlpha;
         ctx.beginPath();
         ctx.arc(gx, gy, r, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1;
       }
     }
 
@@ -248,14 +277,53 @@ export default function DotJerseyCanvas({
       ctx.translate(ox, oy);
       ctx.scale(s, s);
       ctx.globalCompositeOperation = "source-over";
-      ctx.strokeStyle = "rgba(255,255,255,0.52)";
+      const strokeA = 0.58 * Math.min(1, reveal * 1.18);
+      /** 白＋シアンのハイライト縁 */
+      ctx.strokeStyle = `rgba(200,248,255,${strokeA})`;
       ctx.lineWidth = Math.max(1.1, 2.1 / (dpr * s));
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.stroke(jerseyPath);
       ctx.restore();
     }
-  }, [accent, resolvedDotColor, gradientRgb]);
+  }, [accent, resolvedDotColor, gradientRgb, enableDotReveal]);
+
+  /** 試合カード用：マウント時一度だけ下→上のドット出現 */
+  useEffect(() => {
+    if (!enableDotReveal) {
+      revealProgressRef.current = 1;
+      paint();
+      return;
+    }
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      revealProgressRef.current = 1;
+      paint();
+      return;
+    }
+
+    revealProgressRef.current = 0;
+    paint();
+
+    /** 下からドットが埋まる時間 */
+    const durationMs = 520;
+    const t0 = performance.now() + Math.max(0, dotRevealDelayMs);
+    const rafRef = { id: 0 };
+
+    const tick = (now: number) => {
+      const u = Math.min(1, Math.max(0, (now - t0) / durationMs));
+      revealProgressRef.current = easeOutExpo(u);
+      paint();
+      if (u < 1) {
+        rafRef.id = requestAnimationFrame(tick);
+      } else {
+        revealProgressRef.current = 1;
+        paint();
+      }
+    };
+    rafRef.id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.id);
+  }, [enableDotReveal, dotRevealDelayMs, paint]);
 
   useEffect(() => {
     paint();

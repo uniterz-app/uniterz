@@ -10,6 +10,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
+import { GAMES_CYBER_EASE, GAMES_CYBER_EASE_SNAP } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
 import PredictionRulesIntroModal from "../predict/PredictionRulesIntroModal";
@@ -59,7 +60,7 @@ function readTeamRecordCacheFromSession(): Record<string, TeamRecord> {
   }
 }
 
-const SCHEDULE_STAGGER_EASE = [0.22, 1, 0.36, 1] as const;
+const SCHEDULE_STAGGER_EASE = GAMES_CYBER_EASE_SNAP;
 
 function writeTeamRecordCacheToSession(next: Record<string, TeamRecord>) {
   if (typeof window === "undefined") return;
@@ -82,6 +83,8 @@ export default function ScheduleList({
   league: leagueProp,
   /** 絞り込み等で 0 件のときに表示する文言（未指定時は null のまま何も出さない） */
   emptyHint = null,
+  /** page=先頭のみ派手入場。daySwitch=フェードのみ想定でスタッガー・カード入場オフ（試合一覧の既定） */
+  listShellIntro = "daySwitch",
 }: {
   games: GameItemRaw[];
   dense?: boolean;
@@ -89,6 +92,7 @@ export default function ScheduleList({
   /** 入場アニメの区切り（リーグ切替で再スタッガー） */
   league?: League;
   emptyHint?: string | null;
+  listShellIntro?: "page" | "daySwitch";
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
@@ -149,36 +153,63 @@ export default function ScheduleList({
   const leagueAnimKey =
     leagueProp ?? (propsList[0]?.league as League | undefined) ?? "nba";
 
+  const isDaySwitchShell = listShellIntro === "daySwitch";
+
   const scheduleContainer = useMemo(
     () => ({
       hidden: {},
       show: {
         transition: {
-          staggerChildren: reduceMotion ? 0 : 0.04,
-          delayChildren: reduceMotion ? 0 : 0.03,
+          staggerChildren:
+            reduceMotion || isDaySwitchShell ? 0 : 0.032,
+          delayChildren:
+            reduceMotion || isDaySwitchShell ? 0 : 0.022,
         },
       },
     }),
-    [reduceMotion]
+    [reduceMotion, isDaySwitchShell]
   );
 
-  /** ブラー・斜め・クリップワイプは重いので、軽いフェード＋短い下方向のみ */
+  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch 時は即表示（外枠のフェード用） */
   const scheduleItem = useMemo(
     () => ({
-      hidden: reduceMotion
-        ? { opacity: 1, y: 0 }
-        : { opacity: 0, y: 10 },
-      show: (i: number) => ({
-        opacity: 1,
-        y: 0,
-        transition: {
-          duration: reduceMotion ? 0 : 0.3,
-          ease: SCHEDULE_STAGGER_EASE,
-          delay: reduceMotion ? 0 : Math.min(i * 0.028, 0.12),
-        },
-      }),
+      hidden: (i: number) => {
+        if (reduceMotion || isDaySwitchShell) {
+          return { opacity: 1, y: 0, scale: 1 };
+        }
+        if (i >= 3) return { opacity: 1, y: 0, scale: 1 };
+        return { opacity: 0, y: -22, scale: 0.985 };
+      },
+      show: (i: number) => {
+        if (reduceMotion || isDaySwitchShell) {
+          return {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: { duration: 0 },
+          };
+        }
+        if (i >= 3) {
+          return {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: { duration: 0 },
+          };
+        }
+        return {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: {
+            duration: 0.26,
+            ease: SCHEDULE_STAGGER_EASE,
+            delay: Math.min(i * 0.024, 0.1),
+          },
+        };
+      },
     }),
-    [reduceMotion]
+    [reduceMotion, isDaySwitchShell]
   );
 
   const open = useCallback((gameId: string) => {
@@ -568,9 +599,9 @@ export default function ScheduleList({
                   initial={{ opacity: 1, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
-                    duration: 0.32,
-                    delay: 0.08,
-                    ease: [0.22, 1, 0.36, 1],
+                    duration: 0.26,
+                    delay: 0.05,
+                    ease: GAMES_CYBER_EASE,
                   }}
                   className="mt-2 overflow-x-hidden px-0 py-0"
                 >
@@ -620,8 +651,8 @@ export default function ScheduleList({
           opacity: 1,
         }}
         transition={{
-          duration: 0.22,
-          ease: [0.22, 1, 0.36, 1],
+          duration: 0.2,
+          ease: GAMES_CYBER_EASE,
         }}
       >
         <motion.div
@@ -633,7 +664,9 @@ export default function ScheduleList({
               : "gap-6 px-4 md:px-6 lg:px-8",
           ].join(" ")}
           variants={scheduleContainer}
-          initial={reduceMotion ? false : "hidden"}
+          initial={
+            reduceMotion || isDaySwitchShell ? false : "hidden"
+          }
           animate="show"
         >
         {propsList.map((props, index) => {
@@ -652,6 +685,8 @@ export default function ScheduleList({
             >
               <MatchCard
                 {...props}
+                scheduleEntryIndex={index}
+                heavyListEntry={!isDaySwitchShell}
                 myPostId={myPostMap[String(props.id)] ?? null}
                 homeRecord={
                   props.home?.teamId
