@@ -160,7 +160,6 @@ export default function MobileRankingsPage() {
             value={myValue}
             displayName={user.displayName || "You"}
             photoURL={user.photoURL || null}
-            handle={user.handle || null}
             totalPosts={
               typeof myRawRow?.totalPosts === "number"
                 ? myRawRow.totalPosts

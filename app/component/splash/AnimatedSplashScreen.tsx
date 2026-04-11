@@ -1,6 +1,5 @@
 "use client";
 
-import "@fontsource/dseg14-classic";
 import { useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import UniterzLogo3DBackground from "@/app/component/background/UniterzLogo3DBackground";
@@ -66,7 +65,7 @@ export default function AnimatedSplashScreen() {
       {/* ワードマーク＋ローディングバー（名前の少し下にバー。装飾前も同じ縦帯でバーだけ表示） */}
       <div
         className={[
-          "pointer-events-none absolute left-1/2 top-[calc(50%+clamp(1.5rem,6.5vh,3.75rem))] z-[200] flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-[clamp(0.75rem,3.25vh,2rem)] flex-col items-center gap-1.5",
+          "pointer-events-none absolute left-1/2 top-[calc(50%+clamp(1.5rem,6.5vh,3.75rem))] z-200 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-[clamp(0.75rem,3.25vh,2rem)] flex-col items-center gap-1.5",
           nameRajdhani.className,
         ].join(" ")}
       >
@@ -74,13 +73,13 @@ export default function AnimatedSplashScreen() {
           <>
             <span
               className={[
-                "bg-gradient-to-b from-cyan-50 via-cyan-200 to-cyan-500/90 bg-clip-text text-[clamp(1.75rem,6.5vw,2.85rem)] font-semibold uppercase tracking-[0.28em] text-transparent",
+                "bg-linear-to-b from-cyan-50 via-cyan-200 to-cyan-500/90 bg-clip-text text-[clamp(1.75rem,6.5vw,2.85rem)] font-semibold uppercase tracking-[0.28em] text-transparent",
                 "drop-shadow-[0_0_24px_rgba(34,211,238,0.4)]",
               ].join(" ")}
             >
               Uniterz
             </span>
-            <div className="h-px w-[min(10.5rem,68vw)] max-w-full bg-gradient-to-r from-transparent via-cyan-400/75 to-transparent shadow-[0_0_10px_rgba(34,211,238,0.45)]" />
+            <div className="h-px w-[min(10.5rem,68vw)] max-w-full bg-linear-to-r from-transparent via-cyan-400/75 to-transparent shadow-[0_0_10px_rgba(34,211,238,0.45)]" />
           </>
         ) : (
           /* タイトル未表示時もバー位置が大きく跳ばないよう高さを確保 */
@@ -116,7 +115,7 @@ export default function AnimatedSplashScreen() {
         <div className="mt-3 flex w-full max-w-md flex-col items-center gap-2 px-1">
           <div className="flex w-full items-center justify-center gap-3 sm:gap-4">
             <span
-              className="h-px flex-1 max-w-[3.5rem] bg-gradient-to-r from-transparent to-cyan-400/55"
+              className="h-px flex-1 max-w-14 bg-linear-to-r from-transparent to-cyan-400/55"
               aria-hidden
             />
             <p
@@ -126,7 +125,7 @@ export default function AnimatedSplashScreen() {
               Loading
             </p>
             <span
-              className="h-px flex-1 max-w-[3.5rem] bg-gradient-to-l from-transparent to-cyan-400/55"
+              className="h-px flex-1 max-w-14 bg-linear-to-l from-transparent to-cyan-400/55"
               aria-hidden
             />
           </div>
@@ -164,7 +163,7 @@ export default function AnimatedSplashScreen() {
             <div className="splash-cyber-scanlines absolute inset-0 mix-blend-overlay opacity-45" />
 
             <div
-              className="splash-cyber-beam absolute left-[5%] right-[5%] top-0 h-[2px] rounded-full bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent shadow-[0_0_24px_rgba(34,211,238,0.85),0_0_48px_rgba(34,211,238,0.25)]"
+              className="splash-cyber-beam absolute left-[5%] right-[5%] top-0 h-[2px] rounded-full bg-linear-to-r from-transparent via-cyan-300/90 to-transparent shadow-[0_0_24px_rgba(34,211,238,0.85),0_0_48px_rgba(34,211,238,0.25)]"
             />
 
             <div
@@ -184,8 +183,8 @@ export default function AnimatedSplashScreen() {
               style={{ animationDelay: "1.05s" }}
             />
 
-            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
-            <div className="absolute bottom-5 left-6 right-6 h-px bg-gradient-to-r from-transparent via-cyan-400/45 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-black/50 to-transparent" />
+            <div className="absolute bottom-5 left-6 right-6 h-px bg-linear-to-r from-transparent via-cyan-400/45 to-transparent" />
             <div
               className="absolute bottom-6 left-6 right-6 h-3 opacity-40"
               style={{

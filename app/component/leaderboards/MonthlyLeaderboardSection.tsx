@@ -230,7 +230,6 @@ export default function MonthlyLeaderboardSection({
             value={myValue}
             displayName={user.displayName || "You"}
             photoURL={user.photoURL || null}
-            handle={user.handle || null}
             totalPosts={myRawRow?.posts}
             loading={loading || userLoading}
             language={language}

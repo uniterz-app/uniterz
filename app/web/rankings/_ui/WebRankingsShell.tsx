@@ -136,7 +136,6 @@ export default function WebRankingsShell() {
             value={myValue}
             displayName={user.displayName || "You"}
             photoURL={user.photoURL || null}
-            handle={user.handle || null}
             totalPosts={myRow?.totalPosts}
             loading={!listReady}
             statsScramble={listReady && personalPending}

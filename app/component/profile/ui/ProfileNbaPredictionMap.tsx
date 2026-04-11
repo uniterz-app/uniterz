@@ -2,12 +2,7 @@
 
 import { ComposableMap, Geographies, Marker } from "react-simple-maps";
 import { motion, useReducedMotion } from "framer-motion";
-import type {
-  CSSProperties,
-  Dispatch,
-  ReactNode,
-  SetStateAction,
-} from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import {
   useCallback,
   useEffect,
@@ -148,6 +143,18 @@ function visibleNbaMapFillHex(baseHex: string): string {
   return baseHex;
 }
 
+/** チーム内訳の見出し色用（#000 主役は secondary） */
+function selectionLinkColor(teamId: string | null): string | undefined {
+  if (!teamId) return undefined;
+  const c = teamColorsNBA[teamId];
+  if (!c) return "#6EA8FE";
+  if (isHexBlack(c.primary)) {
+    if (c.secondary && !isHexWhite(c.secondary)) return c.secondary;
+    return "#94a3b8";
+  }
+  return c.primary;
+}
+
 function dotStrokeForLuminance(lum: number, isSel: boolean): {
   stroke: string;
   strokeWidth: number;
@@ -258,30 +265,21 @@ function nbaMapDotBurstClass(show: boolean, reduceMotion: boolean): string {
     .join(" ");
 }
 
-/** マップとチーム内訳をつなぐアクセント用（#000 主役は secondary） */
-function selectionLinkColor(teamId: string | null): string | undefined {
-  if (!teamId) return undefined;
-  const c = teamColorsNBA[teamId];
-  if (!c) return "#6EA8FE";
-  if (isHexBlack(c.primary)) {
-    if (c.secondary && !isHexWhite(c.secondary)) return c.secondary;
-    return "#94a3b8";
-  }
-  return c.primary;
-}
-
 function CountUpStatValue({
   target,
   kind,
   durationMs,
   active,
   reduceMotion,
+  sizeClassName = "",
 }: {
   target: number;
   kind: "int" | "percent" | "float1";
   durationMs: number;
   active: boolean;
   reduceMotion: boolean;
+  /** Web などで数値だけ大きくする用（例: lg:text-2xl lg:font-semibold） */
+  sizeClassName?: string;
 }) {
   const [v, setV] = useState(reduceMotion ? target : 0);
 
@@ -309,19 +307,14 @@ function CountUpStatValue({
     return () => cancelAnimationFrame(raf);
   }, [target, active, durationMs, reduceMotion]);
 
+  const numCn = ["tabular-nums text-white/90", sizeClassName].filter(Boolean).join(" ");
   if (kind === "int") {
-    return (
-      <span className="tabular-nums text-white/90">{Math.round(v)}</span>
-    );
+    return <span className={numCn}>{Math.round(v)}</span>;
   }
   if (kind === "percent") {
-    return (
-      <span className="tabular-nums text-white/90">{`${v.toFixed(1)}%`}</span>
-    );
+    return <span className={numCn}>{`${v.toFixed(1)}%`}</span>;
   }
-  return (
-    <span className="tabular-nums text-white/90">{v.toFixed(1)}</span>
-  );
+  return <span className={numCn}>{v.toFixed(1)}</span>;
 }
 
 type Props = {
@@ -651,29 +644,11 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
     [selectedTeamId]
   );
 
-  const mapPanelLinkStyle = useMemo((): CSSProperties | undefined => {
-    if (!linkColor) return undefined;
-    if (narrowViewport) {
-      return {
-        boxShadow: `inset 0 -3px 0 0 ${linkColor}, 0 14px 36px -18px ${linkColor}45`,
-      };
-    }
-    return {
-      boxShadow: `inset -3px 0 0 0 ${linkColor}, 14px 0 40px -20px ${linkColor}40`,
-    };
-  }, [linkColor, narrowViewport]);
-
-  const asideLinkStyle = useMemo((): CSSProperties | undefined => {
-    if (!linkColor) return undefined;
-    if (narrowViewport) {
-      return {
-        boxShadow: `inset 0 3px 0 0 ${linkColor}, 0 -12px 32px -14px ${linkColor}35`,
-      };
-    }
-    return {
-      boxShadow: `inset 3px 0 0 0 ${linkColor}, -12px 0 36px -16px ${linkColor}38`,
-    };
-  }, [linkColor, narrowViewport]);
+  /** Web（lg〜）でチーム内訳の数値・ラベルを拡大 */
+  const webLargeTeamStats = !narrowViewport;
+  const webStatValueClass = webLargeTeamStats
+    ? "lg:text-2xl lg:font-semibold"
+    : "";
 
   useEffect(() => {
     if (!selectedTeamId || !narrowViewport) return;
@@ -705,8 +680,7 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
         variants={profileMapStaggerParent}
       >
         <motion.div
-          className="min-w-0 flex-1 overflow-x-hidden rounded-2xl border border-cyan-500/20 bg-[#040a10]/95 p-2 transition-shadow duration-300 max-lg:p-1.5"
-          style={mapPanelLinkStyle}
+          className="min-w-0 flex-1 overflow-x-hidden rounded-2xl border border-cyan-500/20 bg-[#040a10]/95 p-2 max-lg:p-1.5"
           variants={staggerInner}
         >
           <motion.div
@@ -730,7 +704,7 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
               setSelectedTeamId={setSelectedTeamId}
               labelFn={divisionTabLabel}
               className="hidden max-w-full min-w-0 flex-1 justify-end gap-x-1.5 gap-y-1.5 lg:flex lg:items-center"
-              pillClassName="rounded-full px-2.5 py-1 text-[12px] sm:px-3 sm:py-1 sm:text-[13px]"
+              pillClassName="rounded-full px-2.5 py-1 text-[12px] sm:px-3 sm:py-1 sm:text-[13px] lg:px-4 lg:py-2 lg:text-base"
             />
           </motion.div>
           {loading ? (
@@ -984,27 +958,11 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
           </motion.div>
         </motion.div>
 
-        {linkColor ? (
-          <div
-            className="relative hidden w-0 shrink-0 self-stretch lg:block lg:w-3"
-            aria-hidden
-          >
-            <div
-              className="absolute top-10 bottom-10 left-1/2 w-px -translate-x-1/2 rounded-full"
-              style={{
-                background: `linear-gradient(180deg, transparent 0%, ${linkColor} 35%, ${linkColor} 65%, transparent 100%)`,
-                boxShadow: `0 0 18px ${linkColor}66`,
-              }}
-            />
-          </div>
-        ) : null}
-
         <motion.aside
           className={[
             nameRajdhani.className,
-            "w-full shrink-0 rounded-2xl border border-white/10 bg-black/35 p-4 transition-shadow duration-300 lg:w-[300px]",
+            "w-full shrink-0 rounded-2xl border border-white/10 bg-black/35 p-4 lg:w-[300px]",
           ].join(" ")}
-          style={asideLinkStyle}
           variants={fadeItem}
         >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5 max-lg:pb-3 lg:pb-3">
@@ -1016,15 +974,16 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
             >
               {language === "en" ? "Team detail" : "チーム内訳"}
             </div>
-            <div className="flex shrink-0 gap-1 lg:gap-1">
+            <div className="flex shrink-0 gap-1 max-lg:gap-1 lg:gap-2">
               {(["7d", "30d"] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setMapRange(r)}
                   className={[
-                    "rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums transition-colors duration-150 ease-out",
-                    "max-lg:px-2.5 max-lg:py-1 max-lg:text-[13px]",
+                    "rounded-md font-semibold tabular-nums transition-colors duration-150 ease-out",
+                    "px-2.5 py-1 text-[13px] max-lg:px-2.5 max-lg:py-1 max-lg:text-[13px]",
+                    "lg:rounded-lg lg:px-4 lg:py-2 lg:text-base",
                     mapRange === r
                       ? "bg-sky-500/35 text-sky-100"
                       : "bg-white/5 text-white/45 hover:bg-white/10 hover:text-white/75",
@@ -1044,11 +1003,11 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
           ) : (
             <div
               ref={statsDetailRef}
-              className="mt-3 space-y-2 text-sm max-lg:mt-2 max-lg:space-y-1"
+              className="mt-3 space-y-2 text-sm max-lg:mt-2 max-lg:space-y-1 lg:mt-4 lg:space-y-2.5 lg:text-base"
             >
               <div
                 className={[
-                  "text-base font-semibold leading-snug max-lg:text-lg max-lg:leading-tight",
+                  "text-base font-semibold leading-snug max-lg:text-lg max-lg:leading-tight lg:text-xl",
                   linkColor ? "" : "text-white",
                 ].join(" ")}
                 style={
@@ -1067,6 +1026,7 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
                   <Row
                     label={language === "en" ? "Picks (as winner)" : "予想数（勝者）"}
                     largeValues={narrowViewport}
+                    desktopLarge={webLargeTeamStats}
                     valueNode={
                       <CountUpStatValue
                         target={selectedRow.predictions}
@@ -1074,12 +1034,14 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
                         durationMs={700}
                         active={statsCountActive}
                         reduceMotion={!!reduceMotion}
+                        sizeClassName={webStatValueClass}
                       />
                     }
                   />
                   <Row
                     label={language === "en" ? "Hits" : "的中数"}
                     largeValues={narrowViewport}
+                    desktopLarge={webLargeTeamStats}
                     valueNode={
                       <CountUpStatValue
                         target={selectedRow.wins}
@@ -1087,12 +1049,14 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
                         durationMs={720}
                         active={statsCountActive}
                         reduceMotion={!!reduceMotion}
+                        sizeClassName={webStatValueClass}
                       />
                     }
                   />
                   <Row
                     label={language === "en" ? "Hit rate" : "的中率"}
                     largeValues={narrowViewport}
+                    desktopLarge={webLargeTeamStats}
                     valueNode={
                       selectedRow.predictions > 0 ? (
                         <CountUpStatValue
@@ -1104,15 +1068,24 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
                           durationMs={780}
                           active={statsCountActive}
                           reduceMotion={!!reduceMotion}
+                          sizeClassName={webStatValueClass}
                         />
                       ) : (
-                        <span className="tabular-nums text-white/90">—</span>
+                        <span
+                          className={[
+                            "tabular-nums text-white/90",
+                            webStatValueClass,
+                          ].join(" ")}
+                        >
+                          —
+                        </span>
                       )
                     }
                   />
                   <Row
                     label={language === "en" ? "Points (sum)" : "得点合計"}
                     largeValues={narrowViewport}
+                    desktopLarge={webLargeTeamStats}
                     valueNode={
                       Number.isFinite(selectedRow.pointsSum) ? (
                         <CountUpStatValue
@@ -1121,9 +1094,17 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
                           durationMs={760}
                           active={statsCountActive}
                           reduceMotion={!!reduceMotion}
+                          sizeClassName={webStatValueClass}
                         />
                       ) : (
-                        <span className="tabular-nums text-white/90">—</span>
+                        <span
+                          className={[
+                            "tabular-nums text-white/90",
+                            webStatValueClass,
+                          ].join(" ")}
+                        >
+                          —
+                        </span>
                       )
                     }
                   />
@@ -1148,17 +1129,21 @@ function Row({
   value,
   valueNode,
   largeValues,
+  desktopLarge,
 }: {
   label: string;
   value?: string;
   valueNode?: ReactNode;
   largeValues?: boolean;
+  /** lg 以上でラベル・数値を読みやすく拡大（NBA マップのチーム内訳用） */
+  desktopLarge?: boolean;
 }) {
   const display = valueNode ?? (
     <span
       className={[
         "tabular-nums text-white/90",
         largeValues ? "max-lg:text-lg max-lg:font-semibold" : "",
+        desktopLarge ? "lg:text-2xl lg:font-semibold" : "",
       ].join(" ")}
     >
       {value}
@@ -1169,12 +1154,14 @@ function Row({
       className={[
         "flex items-baseline justify-between gap-3 border-b border-white/5 py-1.5",
         largeValues ? "max-lg:py-1" : "max-lg:py-2",
+        desktopLarge ? "lg:py-2.5" : "",
       ].join(" ")}
     >
       <span
         className={[
           "text-white/50",
           largeValues ? "max-lg:text-sm" : "",
+          desktopLarge ? "lg:text-lg lg:leading-snug lg:text-white/60" : "",
         ].join(" ")}
       >
         {label}

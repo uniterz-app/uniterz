@@ -36,6 +36,7 @@ import {
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { GAMES_CYBER_EASE, GAMES_DAY_SWITCH_EASE } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
+import { fetchNextGameDayAfterLocalDay } from "@/lib/games/fetchNextGameDayAfter";
 import {
   gameInvolvesAnyTeam,
   gameIsHeadToHeadBetween,
@@ -205,7 +206,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [dayTimeZone]
   );
 
-  /** 取得ウィンドウ（暦月）の基準日：選択中 → URL → 今日 */
+  /** 取得ウィンドウ（アンカー暦日の前後数日）の基準日：選択中 → URL → 今日 */
   const anchorForGameDays = useMemo(() => {
     const fromUrl = parseDateKeyInTimeZone(dateParam ?? "", dayTimeZone);
     const stored = selectedByLeague[league];
@@ -215,7 +216,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [dateParam, dayTimeZone, league, selectedByLeague, todayKey]);
 
   /* =========================
-     Game days（暦月単位で取得）
+     Game days（アンカー日前後数日で取得）
   ========================= */
   const { gameDays, monthRows, loading: loadingDays } = useGameDays(
     league,
@@ -599,11 +600,32 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!selected) return;
     if (toDateKeyInTimeZone(selected, dayTimeZone) !== todayKey) return;
     if (!allFinished) return;
-    if (!nextGameDay) return;
     if (didAutoAdvance.current[league]) return;
 
-    didAutoAdvance.current[league] = true;
-    setSelectedAndSync(nextGameDay);
+    if (nextGameDay) {
+      didAutoAdvance.current[league] = true;
+      setSelectedAndSync(nextGameDay);
+      return;
+    }
+
+    let cancelled = false;
+    fetchNextGameDayAfterLocalDay({
+      league,
+      timeZone: dayTimeZone,
+      day: selected,
+    })
+      .then((d) => {
+        if (cancelled) return;
+        didAutoAdvance.current[league] = true;
+        if (d) setSelectedAndSync(d);
+      })
+      .catch(() => {
+        if (!cancelled) didAutoAdvance.current[league] = true;
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     selected,
     todayKey,

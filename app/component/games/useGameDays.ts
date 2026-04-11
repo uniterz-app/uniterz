@@ -17,10 +17,12 @@ import { normalizeLeague } from "@/lib/leagues";
 import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
-  getZonedYMD,
-  getCalendarMonthRangeInTimeZone,
+  getPlusMinusDaysRangeInTimeZone,
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+
+/** アンカー暦日の前後に読み込む日数（Firestore はこの範囲の試合のみ） */
+const GAME_DAYS_PLUS_MINUS = 3;
 
 /** 月内の games 行から、タイムゾーン基準の「試合がある日」を重複なく昇順で返す */
 export function monthRowsToSortedGameDays(
@@ -51,11 +53,7 @@ export function monthRowsToSortedGameDays(
   return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
 }
 
-function pad2(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-/** 同一セッション内の getDocs 回数削減（リーグ＋暦月・TTL 内は再取得しない） */
+/** 同一セッション内の getDocs 回数削減（リーグ＋アンカー日＋TTL 内は再取得しない） */
 const GAME_DAYS_ROWS_CACHE_TTL_MS = 5 * 60 * 1000;
 const gameDaysRowsCache = new Map<
   string,
@@ -64,7 +62,7 @@ const gameDaysRowsCache = new Map<
 
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * シーズン全件ではなく、windowAnchor の「暦月」内の試合のみ取得して初回ロードを軽くする。
+ * windowAnchor のタイムゾーン暦日を中心に前後数日の試合のみ取得し、日付を動かすたびに再取得する。
  */
 export function useGameDays(
   rawLeague: League,
@@ -73,10 +71,10 @@ export function useGameDays(
 ) {
   const league = normalizeLeague(rawLeague);
 
-  const windowKey = useMemo(() => {
-    const { year, month } = getZonedYMD(windowAnchor, timeZone);
-    return `${year}-${pad2(month)}`;
-  }, [windowAnchor, timeZone]);
+  const windowKey = useMemo(
+    () => toDateKeyInTimeZone(windowAnchor, timeZone),
+    [windowAnchor, timeZone]
+  );
 
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,9 +101,10 @@ export function useGameDays(
 
       try {
         const ref = collection(db, "games");
-        const { start, end } = getCalendarMonthRangeInTimeZone(
+        const { start, end } = getPlusMinusDaysRangeInTimeZone(
           windowAnchor,
-          timeZone
+          timeZone,
+          GAME_DAYS_PLUS_MINUS
         );
 
         const q = query(
@@ -115,7 +114,7 @@ export function useGameDays(
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(500)
+          limit(200)
         );
 
         const snap = await getDocs(q);

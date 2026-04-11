@@ -1,3 +1,6 @@
+/* DSEG14（スプラッシュの 7 セグ風数字）— @import は全ルールより先に必要（tailwind より上） */
+@import url("https://cdn.jsdelivr.net/npm/@fontsource/dseg14-classic@5.2.5/index.css");
+
 @import "tailwindcss";
 
 @theme {

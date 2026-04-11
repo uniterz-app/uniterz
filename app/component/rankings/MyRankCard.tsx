@@ -22,7 +22,6 @@ type Props = {
   value: number;
   displayName: string;
   photoURL?: string | null;
-  handle?: string | null;
   totalPosts?: number;
   loading?: boolean;
   /** 一覧はあるが自分順位・数値だけ未取得のときの解読風演出 */
@@ -143,7 +142,6 @@ export default function MyRankCard({
   value,
   displayName,
   photoURL,
-  handle,
   totalPosts,
   loading = false,
   statsScramble = false,
@@ -217,15 +215,10 @@ export default function MyRankCard({
   const identityGap = mobileWide ? "gap-1" : "gap-3";
   /** モバイルランキング：アイコン＋名前ブロックを少し左へ */
   const identityRowNudge = mobileWide ? "-translate-x-2" : "";
-  /** 名前の下に ID：列全体を少し上へ */
+  /** 表示名＋バッジ列：全体を少し上へ */
   const identityTextColClass = mobileWide
     ? "min-w-0 flex flex-1 flex-col gap-0 -translate-y-1"
     : "min-w-0 flex flex-1 flex-col gap-0 -translate-y-0.5";
-  /** 名前直下の ID（負マージンで詰める） */
-  const handleRowClass = mobileWide
-    ? "truncate text-[10px] leading-none text-white/32 -mt-1.5"
-    : "truncate text-[12px] leading-none text-white/50 -mt-1";
-
   if (reduceMotion === true) {
     return (
       <div className={outerPad}>
@@ -277,9 +270,6 @@ export default function MyRankCard({
                   />
                 ) : null}
               </div>
-              {handle ? (
-                <div className={handleRowClass}>{handle}</div>
-              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-center justify-center">
@@ -473,9 +463,6 @@ export default function MyRankCard({
                 />
               ) : null}
             </div>
-            {handle ? (
-              <div className={handleRowClass}>{handle}</div>
-            ) : null}
           </motion.div>
         </motion.div>
 
