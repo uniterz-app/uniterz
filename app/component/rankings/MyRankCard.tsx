@@ -211,9 +211,20 @@ export default function MyRankCard({
   const outerPad = mobileWide
     ? "overflow-visible -mx-1.5 px-0 pt-3 sm:mx-0 sm:px-3"
     : "overflow-visible px-3 pt-3";
-  const innerPad = mobileWide ? "px-4 py-2.5 sm:py-3" : "px-4 py-3";
+  /** 縦方向を少し厚く */
+  const innerPad = "px-4 py-3.5";
   /** モバイルランキング：名前をアイコン寄りに */
   const identityGap = mobileWide ? "gap-1" : "gap-3";
+  /** モバイルランキング：アイコン＋名前ブロックを少し左へ */
+  const identityRowNudge = mobileWide ? "-translate-x-2" : "";
+  /** 名前の下に ID：列全体を少し上へ */
+  const identityTextColClass = mobileWide
+    ? "min-w-0 flex flex-1 flex-col gap-0 -translate-y-1"
+    : "min-w-0 flex flex-1 flex-col gap-0 -translate-y-0.5";
+  /** 名前直下の ID（負マージンで詰める） */
+  const handleRowClass = mobileWide
+    ? "truncate text-[10px] leading-none text-white/32 -mt-1.5"
+    : "truncate text-[12px] leading-none text-white/50 -mt-1";
 
   if (reduceMotion === true) {
     return (
@@ -234,7 +245,11 @@ export default function MyRankCard({
             </span>
           )}
           <div className="relative z-1 flex items-center justify-between">
-          <div className={["flex min-w-0 items-center", identityGap].join(" ")}>
+          <div
+            className={["flex min-w-0 items-center", identityGap, identityRowNudge]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <RankingsAvatarCircle
               photoURL={photoURL}
               displayName={displayName}
@@ -242,8 +257,8 @@ export default function MyRankCard({
               gateReady={ready}
               onDisplayReadyChange={handleAvatarReady}
             />
-            <div className="min-w-0">
-              <div className="flex w-fit min-w-0 max-w-full items-center gap-1 overflow-hidden">
+            <div className={identityTextColClass}>
+              <div className="flex w-full min-w-0 items-center gap-1 overflow-hidden">
                 <div
                   className={[
                     "min-w-0 truncate font-black text-[16px] leading-none text-white",
@@ -262,11 +277,9 @@ export default function MyRankCard({
                   />
                 ) : null}
               </div>
-              {handle && (
-                <div className="truncate text-[12px] text-white/50">
-                  @{handle}
-                </div>
-              )}
+              {handle ? (
+                <div className={handleRowClass}>{handle}</div>
+              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-center justify-center">
@@ -423,7 +436,9 @@ export default function MyRankCard({
         <div className="relative z-1 flex items-center justify-between">
         <motion.div
           key={`id-${metric}`}
-          className={["flex min-w-0 items-center", identityGap].join(" ")}
+          className={["flex min-w-0 items-center", identityGap, identityRowNudge]
+            .filter(Boolean)
+            .join(" ")}
           variants={identityContainer}
           initial="hidden"
           animate={avatarFadeReady ? "show" : "hidden"}
@@ -438,8 +453,8 @@ export default function MyRankCard({
             />
           </motion.div>
 
-          <motion.div variants={nameIdentityItem} className="min-w-0">
-            <div className="flex w-fit min-w-0 max-w-full items-center gap-1 overflow-hidden">
+          <motion.div variants={nameIdentityItem} className={identityTextColClass}>
+            <div className="flex w-full min-w-0 items-center gap-1 overflow-hidden">
               <div
                 className={[
                   "min-w-0 truncate font-black text-[16px] leading-none text-white",
@@ -458,11 +473,9 @@ export default function MyRankCard({
                 />
               ) : null}
             </div>
-            {handle && (
-              <div className="truncate text-[12px] text-white/50">
-                @{handle}
-              </div>
-            )}
+            {handle ? (
+              <div className={handleRowClass}>{handle}</div>
+            ) : null}
           </motion.div>
         </motion.div>
 
