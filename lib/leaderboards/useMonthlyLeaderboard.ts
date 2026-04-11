@@ -31,6 +31,8 @@ export type MonthlyLeaderboardRow = {
 
   // rankings に表示するフラッグ用（未設定は null/undefined）
   countryCode?: string | null;
+  /** 月間 API が返す場合のみ（累積ランキング用 plan と同じ意味） */
+  plan?: "free" | "pro" | string | null;
 };
 
 type MonthlyLeaderboardApiResponse = {

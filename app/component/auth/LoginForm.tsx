@@ -7,10 +7,13 @@ import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import CyberAuthField from "./CyberAuthField";
+import AuthFormBranding from "./AuthFormBranding";
+import cyberFieldStyles from "./cyberAuthField.module.css";
+import { authDisplayHeading, authDisplayButton } from "./authEnglishDisplay";
 
 type LoginFormProps = {
-  variant?: "web" | "mobile"; // 渡されても良いし、未指定なら pathname で判定
+  variant?: "web" | "mobile";
 };
 
 export default function LoginForm({ variant }: LoginFormProps) {
@@ -23,36 +26,32 @@ export default function LoginForm({ variant }: LoginFormProps) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // variant 未指定ならURLから自動判定
   const v: "web" | "mobile" = useMemo(() => {
     if (variant) return variant;
     if (pathname?.startsWith("/mobile")) return "mobile";
     return "web";
   }, [variant, pathname]);
 
-  const osIsJa =
-    typeof navigator !== "undefined" &&
-    navigator.language?.toLowerCase().startsWith("ja");
+  /** 見出し・主ボタン＝Bebas 系コンデンス（バナー英字）／補助文・日本語＝Geist */
+  const bodySans =
+    "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
   const ui = {
-    title: "Login",
+    title: "LOGIN",
     emailPlaceholder: "Email Address",
     passwordPlaceholder: "Password",
     loginCta: "LOG IN",
-    forgotText: osIsJa ? "パスワードをお忘れの方は" : "Forgot your password?",
-    hereText: osIsJa ? "こちら" : "Reset it",
-    signupPrefix: "",
-    signupCta: "Create Account",
-    backToLp: "Back to LP",
+    forgotLead: "パスワードをお忘れの方は",
+    forgotLink: "こちら",
+    createAccount: "Create Account",
+    backLp: "Back to LP",
+    showPw: "Show password",
+    hidePw: "Hide password",
   };
 
-  const formWidth = v === "mobile" ? 286 : 420;
-  const isMobile = v === "mobile";
-  const titleSize = isMobile ? "1.62rem" : "2.2rem";
-  const inputTextSize = isMobile ? "0.9rem" : "1rem";
-  const buttonTextSize = isMobile ? "1.08rem" : "1.22rem";
-  const helperTextSize = isMobile ? "0.74rem" : "0.9rem";
-  const teamFontStyle = bracketMarketTeamTypography(isMobile);
+  const lpHref = v === "mobile" ? "/mobile/lp" : "/lp";
+
+  const formWidth = v === "mobile" ? 320 : 380;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +70,6 @@ export default function LoginForm({ variant }: LoginFormProps) {
       const handle = d?.handle || d?.username;
       const hasLanguage = d?.language === "ja" || d?.language === "en";
 
-      // 遷移先を v で確実に分岐
       const base = v === "mobile" ? "/mobile/u" : "/web/u";
       const onboardingPath =
         v === "mobile" ? "/mobile/onboarding" : "/web/onboarding";
@@ -81,7 +79,6 @@ export default function LoginForm({ variant }: LoginFormProps) {
       } else if (!hasLanguage) {
         router.replace(onboardingPath);
       } else {
-        // handle 無い場合の保険（必要なら好きに）
         router.replace(onboardingPath);
       }
     } catch (error: any) {
@@ -95,142 +92,58 @@ export default function LoginForm({ variant }: LoginFormProps) {
   return (
     <form onSubmit={handleLogin}>
       <div
-        style={{
-          width: formWidth,
-          padding: isMobile ? 18 : 24,
-          backgroundColor: "rgba(255,255,255,0.08)",
-          borderRadius: 12,
-          textAlign: "center",
-          boxShadow: "0 0 30px rgba(0,0,0,0.3)",
-          boxSizing: "border-box",
-        }}
+        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 pb-7 pt-4 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:pt-5"
+        style={{ width: formWidth, maxWidth: "100%" }}
       >
-        <div style={{ marginBottom: isMobile ? 10 : 14 }}>
-          <div
-            style={{
-              fontFamily: '"Bebas Neue", sans-serif',
-              letterSpacing: isMobile ? "0.26em" : "0.32em",
-              fontSize: isMobile ? "1.2rem" : "1.45rem",
-              color: "rgba(255,237,213,0.9)",
-              textAlign: "center",
-              marginBottom: 6,
-            }}
-          >
-            UNITERZ
-          </div>
-          <div style={{ position: "relative", width: "100%" }}>
-            <div
-              style={{
-                position: "relative",
-                zIndex: 1,
-                height: 2,
-                width: "100%",
-                overflow: "hidden",
-                borderRadius: 9999,
-              }}
-            >
-              <div className="absolute inset-0 bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-95" />
-              <div
-                className="animate-header-cyber-sweep pointer-events-none absolute inset-y-0 left-0 w-[42%] max-w-[220px] opacity-90 will-change-transform"
-                style={{
-                  background:
-                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 35%, rgba(224,255,255,0.95) 50%, rgba(255,255,255,0.35) 65%, transparent 100%)",
-                }}
-                aria-hidden
-              />
-            </div>
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[2px] bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-70 blur-sm"
-              aria-hidden
-            />
-          </div>
-        </div>
+        <div className={cyberFieldStyles.pageGrid} aria-hidden />
+        <div className="relative z-10">
+        <AuthFormBranding />
+        <h1 className={`mt-1 ${authDisplayHeading}`}>{ui.title}</h1>
 
-        <h1
-          style={{
-            ...teamFontStyle,
-            fontWeight: "bold",
-            fontSize: titleSize,
-            letterSpacing: isMobile ? "0.08em" : "0.06em",
-          }}
-        >
-          {ui.title}
-        </h1>
-
-        {/* Email */}
-        <div style={{ position: "relative", marginTop: isMobile ? 14 : 18 }}>
-          <input
-            type="email"
-            placeholder={ui.emailPlaceholder}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{
-              width: "100%",
-              padding: isMobile ? "10px 36px 10px 11px" : "12px 40px 12px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(255,255,255,0.12)",
-              color: "white",
-              outline: "none",
-              boxSizing: "border-box",
-              fontSize: inputTextSize,
+        <div className="mt-5 space-y-3 text-left">
+          <CyberAuthField
+            inputProps={{
+              type: "email",
+              name: "email",
+              autoComplete: "email",
+              placeholder: ui.emailPlaceholder,
+              value: email,
+              onChange: (e) => setEmail(e.target.value),
+              required: true,
             }}
-          />
-          <FaEnvelope
-            style={{
-              position: "absolute",
-              right: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              opacity: 0.9,
-            }}
-          />
-        </div>
-
-        {/* Password */}
-        <div style={{ position: "relative", marginTop: isMobile ? 9 : 12 }}>
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder={ui.passwordPlaceholder}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{
-              width: "100%",
-              padding: isMobile ? "10px 36px 10px 11px" : "12px 40px 12px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(255,255,255,0.12)",
-              color: "white",
-              outline: "none",
-              fontSize: inputTextSize,
-            }}
+            rightSlot={
+              <span className="flex items-center justify-center text-[15px] text-white/85">
+                <FaEnvelope aria-hidden />
+              </span>
+            }
           />
 
-          {showPassword ? (
-            <FaEye
-              onClick={() => setShowPassword(false)}
-              style={{
-                position: "absolute",
-                right: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                opacity: 0.9,
-                cursor: "pointer",
-              }}
-            />
-          ) : (
-            <FaEyeSlash
-              onClick={() => setShowPassword(true)}
-              style={{
-                position: "absolute",
-                right: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                opacity: 0.9,
-                cursor: "pointer",
-              }}
-            />
-          )}
+          <CyberAuthField
+            rightSlotAnimated
+            inputProps={{
+              type: showPassword ? "text" : "password",
+              name: "password",
+              autoComplete: "current-password",
+              placeholder: ui.passwordPlaceholder,
+              value: password,
+              onChange: (e) => setPassword(e.target.value),
+              required: true,
+            }}
+            rightSlot={
+              <button
+                type="button"
+                className="flex size-full items-center justify-center text-[15px] text-white/90"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? ui.hidePw : ui.showPw}
+              >
+                {showPassword ? (
+                  <FaEye aria-hidden />
+                ) : (
+                  <FaEyeSlash aria-hidden />
+                )}
+              </button>
+            }
+          />
         </div>
 
         <button
@@ -239,84 +152,47 @@ export default function LoginForm({ variant }: LoginFormProps) {
           onPointerDown={() => setPressed(true)}
           onPointerUp={() => setPressed(false)}
           onPointerCancel={() => setPressed(false)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "100%",
-            padding: isMobile ? "10px 12px" : "12px 14px",
-            marginTop: isMobile ? 14 : 18,
-            border: "none",
-            borderRadius: 14,
-            color: "white",
-            fontWeight: 700,
-            letterSpacing: 0.4,
-            background:
-              "linear-gradient(90deg, #0E7490 0%, #9D174D 50%, #4C1D95 100%)",
-            boxShadow:
-              "0 10px 30px rgba(14,116,144,0.22), 0 12px 34px rgba(76,29,149,0.2)",
-            transition: "transform .06s ease, filter .15s ease, box-shadow .15s ease",
-            transform: pressed ? "scale(0.97)" : "scale(1)",
-            opacity: submitting ? 0.65 : 1,
-            cursor: submitting ? "not-allowed" : "pointer",
-          }}
+          className={[
+            "mt-5 flex w-full items-center justify-center rounded-[14px] border-0 px-3.5 py-3",
+            authDisplayButton,
+            "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
+            "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
+            "transition-[transform,filter,opacity] duration-100 ease-out",
+            pressed ? "scale-[0.97]" : "scale-100",
+            submitting ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+          ].join(" ")}
         >
-          <span
-            style={{
-              ...teamFontStyle,
-              letterSpacing: isMobile ? "0.08em" : "0.06em",
-              textTransform: "uppercase",
-              fontSize: buttonTextSize,
-            }}
-          >
-            {submitting
-              ? "LOGGING IN..."
-              : ui.loginCta}
-          </span>
+          {submitting ? "Logging in…" : ui.loginCta}
         </button>
 
-        {/* Reset */}
-        <p style={{ marginTop: isMobile ? 11 : 14, fontSize: helperTextSize, opacity: 0.9 }}>
-          {ui.forgotText}{" "}
+        <p className={`mt-4 ${bodySans}`}>
+          {ui.forgotLead}
           <Link
             href={v === "mobile" ? "/mobile/reset" : "/web/reset"}
-            style={{
-              color: "#7DD3FC",
-              textDecoration: "underline",
-              fontWeight: "bold",
-            }}
+            className="font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
           >
-            {ui.hereText}
+            {ui.forgotLink}
           </Link>
         </p>
 
-        {/* Signup */}
-        <p style={{ marginTop: isMobile ? 8 : 10, fontSize: helperTextSize }}>
-          {ui.signupPrefix}
+        <p className="mt-3">
           <Link
             href={v === "mobile" ? "/mobile/signup" : "/web/signup"}
-            style={{
-              color: "#7DD3FC",
-              textDecoration: "underline",
-              fontWeight: "bold",
-            }}
+            className={`${bodySans} font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200`}
           >
-            {ui.signupCta}
+            {ui.createAccount}
           </Link>
         </p>
 
-        <p style={{ marginTop: isMobile ? 10 : 12, fontSize: helperTextSize }}>
+        <p className="mt-4">
           <Link
-            href={v === "mobile" ? "/mobile/lp" : "/lp"}
-            style={{
-              color: "rgba(255,255,255,0.72)",
-              textDecoration: "underline",
-              textUnderlineOffset: "2px",
-            }}
+            href={lpHref}
+            className="font-[family-name:var(--font-geist-sans)] text-xs text-white/70 underline decoration-white/35 underline-offset-2 hover:text-white/90"
           >
-            {ui.backToLp}
+            {ui.backLp}
           </Link>
         </p>
+        </div>
       </div>
     </form>
   );

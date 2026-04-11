@@ -1,6 +1,6 @@
 "use client";
 
-import { m, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Flame, Menu } from "lucide-react";
 import {
   useCallback,
@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
 import type { Language } from "@/lib/i18n/language";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { profileHeroCardShadowClass } from "@/lib/ui/profileCardEdgeGlow";
@@ -28,6 +29,8 @@ type Props = {
   onEntranceComplete?: () => void;
   language: Language;
   displayProfile: DisplayProfile;
+  /** Firestore / 自分閲覧時の最新プランに基づき、課金ユーザー名の横に PRO を出す */
+  showProBadge?: boolean;
   showCurrentStreakBadge: boolean;
   currentStreak: number;
   canOpenSettings: boolean;
@@ -196,6 +199,7 @@ export default function ProfileHeroCard({
   onEntranceComplete,
   language,
   displayProfile,
+  showProBadge = false,
   showCurrentStreakBadge,
   currentStreak,
   canOpenSettings,
@@ -379,11 +383,20 @@ export default function ProfileHeroCard({
 
   const avatarBlock = (
     <div className="relative shrink-0">
-      <m.div
+      {/* アバター周りの軽い装飾（グリッド系 UI に合わせたシアン枠＋内側ハイライト） */}
+      <span
+        className="pointer-events-none absolute -inset-[5px] z-0 rounded-full border border-cyan-400/22 shadow-[0_0_18px_rgba(34,211,238,0.14)]"
+        aria-hidden
+      />
+      <span
+        className="pointer-events-none absolute -inset-[2px] z-[1] rounded-full border border-white/[0.09]"
+        aria-hidden
+      />
+      <motion.div
         className={
           isWeb
-            ? "h-20 w-20 overflow-hidden rounded-full bg-[#0f2d35] ring-2 ring-[#0f2d35]"
-            : "h-14 w-14 overflow-hidden rounded-full bg-[#0f2d35] ring-2 ring-[#0f2d35]"
+            ? "relative z-[2] h-20 w-20 overflow-hidden rounded-full bg-[#0f2d35] ring-2 ring-[#0f2d35]/90 ring-offset-0"
+            : "relative z-[2] h-14 w-14 overflow-hidden rounded-full bg-[#0f2d35] ring-2 ring-[#0f2d35]/90 ring-offset-0"
         }
         initial={
           heroEntranceAnim ? { opacity: 0, scale: 0.94 } : false
@@ -413,10 +426,10 @@ export default function ProfileHeroCard({
             onLoad={() => setAvatarLoaded(true)}
           />
         ) : null}
-      </m.div>
+      </motion.div>
 
       {showCurrentStreakBadge && (
-        <m.div
+        <motion.div
           className={
             isWeb
               ? "absolute left-1/2 -bottom-1.5 -translate-x-1/2"
@@ -442,39 +455,51 @@ export default function ProfileHeroCard({
               {language === "en" ? "Win streak" : "連勝中"}
             </span>
           </div>
-        </m.div>
+        </motion.div>
       )}
     </div>
   );
 
+  const nameMotion = {
+    initial:
+      playEntrance && !reduceMotion ? ({ opacity: 0, y: 5 } as const) : false,
+    animate: innerMotionOn
+      ? { opacity: 1, y: 0 }
+      : playEntrance && !reduceMotion
+        ? { opacity: 0, y: 5 }
+        : { opacity: 1, y: 0 },
+    transition: {
+      delay: INNER_DELAY + 0.02,
+      duration: NAME_DURATION,
+      ease: [0.16, 0.82, 0.32, 1] as const,
+    },
+  };
+
   const textBlock = (
     <div className="min-w-0">
-      <m.h1
-        className={
-          isWeb
-            ? "text-2xl font-extrabold leading-tight"
-            : "truncate text-[16px] font-extrabold leading-tight"
-        }
-        initial={
-          playEntrance && !reduceMotion
-            ? { opacity: 0, y: 5 }
-            : false
-        }
-        animate={
-          innerMotionOn
-            ? { opacity: 1, y: 0 }
-            : playEntrance && !reduceMotion
-              ? { opacity: 0, y: 5 }
-              : { opacity: 1, y: 0 }
-        }
-        transition={{
-          delay: INNER_DELAY + 0.02,
-          duration: NAME_DURATION,
-          ease: [0.16, 0.82, 0.32, 1],
-        }}
-      >
-        {displayProfile.displayName}
-      </m.h1>
+      {/* w-fit: 名前の直後にバッジを寄せる（flex-1 だと列いっぱいに伸びて右端にバッジが飛ぶ） */}
+      <div className="flex w-fit min-w-0 max-w-full items-center gap-2 overflow-hidden">
+        <motion.h1
+          className={
+            isWeb
+              ? "min-w-0 truncate text-2xl font-extrabold leading-tight"
+              : "min-w-0 truncate text-[16px] font-extrabold leading-tight"
+          }
+          initial={nameMotion.initial}
+          animate={nameMotion.animate}
+          transition={nameMotion.transition}
+        >
+          {displayProfile.displayName}
+        </motion.h1>
+        {showProBadge ? (
+          <ProCyberBadge
+            initial={nameMotion.initial}
+            animate={nameMotion.animate}
+            transition={nameMotion.transition}
+            ariaLabel={language === "en" ? "Pro member" : "Pro 会員"}
+          />
+        ) : null}
+      </div>
 
       <p
         className={
@@ -488,7 +513,7 @@ export default function ProfileHeroCard({
       </p>
 
       {displayProfile.bio ? (
-        <m.p
+        <motion.p
           className={
             isWeb
               ? "mt-1.5 text-[13px] leading-snug text-white/85"
@@ -506,17 +531,17 @@ export default function ProfileHeroCard({
           }}
         >
           {displayProfile.bio}
-        </m.p>
+        </motion.p>
       ) : null}
     </div>
   );
 
   const settingsBtn = canOpenSettings && (
-    <m.button
+    <motion.button
       type="button"
       className={
         isWeb
-          ? "h-9 w-9 shrink-0 rounded-lg border border-white/10 bg-white/5"
+          ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5"
           : "absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10"
       }
       onClick={onOpenSettings}
@@ -540,7 +565,7 @@ export default function ProfileHeroCard({
       aria-label="Menu"
     >
       <Menu className={isWeb ? "h-5 w-5" : "h-4 w-4"} />
-    </m.button>
+    </motion.button>
   );
 
   const hasBadgeSlot = children != null && children !== false;
@@ -558,7 +583,7 @@ export default function ProfileHeroCard({
       ].join(" ")}
       aria-hidden={badgesHidden}
     >
-      <m.div
+      <motion.div
         initial={
           staticHero ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }
         }
@@ -574,7 +599,7 @@ export default function ProfileHeroCard({
         }}
       >
         {children}
-      </m.div>
+      </motion.div>
     </div>
   ) : null;
 
@@ -604,7 +629,7 @@ export default function ProfileHeroCard({
    * 差し替えで子（img・バッジ）が再マウントして「黒くなって再描画」していた。
    */
   return (
-    <m.div
+    <motion.div
       className={shellClass}
       initial={heroEntranceAnim ? { opacity: 0, y: 7 } : false}
       animate={{ opacity: 1, y: 0 }}
@@ -626,6 +651,6 @@ export default function ProfileHeroCard({
         aria-hidden
       />
       {body}
-    </m.div>
+    </motion.div>
   );
 }

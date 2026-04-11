@@ -8,6 +8,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Image from "next/image";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 type PlanType = "monthly" | "annual" | null;
 
@@ -66,6 +67,7 @@ export default function PlanStatusPage() {
 
   return (
     <div className="min-h-screen bg-app flex items-center justify-center px-4">
+      <FloatingCloseButton />
       <div className="w-full max-w-md rounded-3xl bg-black/80 border border-white/10 px-6 py-8 shadow-[0_0_40px_rgba(0,255,255,0.08)]">
         {/* ロゴ + 開始日（Proのみ） */}
         <div className="mb-4 flex items-center gap-3">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getAuth } from "firebase/auth";
+import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 type Plan = "monthly" | "annual";
 
 export default function ProSubscribePage() {
@@ -11,6 +12,7 @@ export default function ProSubscribePage() {
 
   return (
     <div className="min-h-screen bg-app px-4 py-10 flex justify-center">
+      <FloatingCloseButton />
       <div
         className="
           w-full max-w-3xl

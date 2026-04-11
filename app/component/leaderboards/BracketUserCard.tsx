@@ -4,13 +4,24 @@ import Image from "next/image";
 import { alfa, jp } from "@/lib/fonts";
 import type { BracketLeaderboardRow } from "@/lib/leaderboards/useBracketLeaderboard";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   row: BracketLeaderboardRow;
+  language?: Language;
   onClick?: () => void;
 };
 
-export default function BracketUserCard({ row, onClick }: Props) {
+export default function BracketUserCard({
+  row,
+  language = "ja",
+  onClick,
+}: Props) {
+  const isPro = row.plan === "pro";
   const avatarUrl = row.photoURL ?? null;
   const displayName = row.displayName || "User";
   const initial = displayName.charAt(0).toUpperCase();
@@ -21,35 +32,60 @@ export default function BracketUserCard({ row, onClick }: Props) {
   const content = (
     <div className="relative z-10 flex items-center justify-between">
       <div className="flex min-w-0 items-center gap-2">
-        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/20 bg-black">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt=""
-              fill
-              sizes="36px"
-              className="object-cover"
-            />
-          ) : (
-            <div
-              className={[
-                "grid h-full w-full place-items-center font-black text-[15px] text-white/50",
-                alfa.className,
-              ].join(" ")}
-            >
-              {initial}
-            </div>
-          )}
+        <div className="relative h-9 w-9 shrink-0">
+          {isPro ? (
+            <>
+              <span
+                className="pointer-events-none absolute -inset-[3px] z-0 rounded-full border border-cyan-400/25 shadow-[0_0_12px_rgba(34,211,238,0.18)]"
+                aria-hidden
+              />
+              <span
+                className="pointer-events-none absolute -inset-px z-[1] rounded-full border border-white/[0.1]"
+                aria-hidden
+              />
+            </>
+          ) : null}
+          <div className="relative z-[2] h-9 w-9 overflow-hidden rounded-full border border-white/20 bg-black">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt=""
+                fill
+                sizes="36px"
+                className="object-cover"
+              />
+            ) : (
+              <div
+                className={[
+                  "grid h-full w-full place-items-center font-black text-[15px] text-white/50",
+                  alfa.className,
+                ].join(" ")}
+              >
+                {initial}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="min-w-0">
-          <div
-            className={[
-              "truncate font-black text-[14px] leading-tight text-white",
-              jp.className,
-            ].join(" ")}
-          >
-            {displayName}
+          <div className="flex min-w-0 max-w-full items-center gap-1 overflow-hidden">
+            <div
+              className={[
+                "min-w-0 truncate font-black text-[14px] leading-tight text-white",
+                jp.className,
+              ].join(" ")}
+            >
+              {displayName}
+            </div>
+            {isPro ? (
+              <ProCyberBadge
+                {...proBadgeStaticMotion}
+                compact
+                ariaLabel={
+                  language === "en" ? "Pro member" : "Pro 会員"
+                }
+              />
+            ) : null}
           </div>
           {handle && (
             <div className="truncate text-[11px] leading-tight text-white/50">

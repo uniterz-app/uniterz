@@ -17,14 +17,45 @@ import { normalizeLeague } from "@/lib/leagues";
 import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
-  getPlusMinusDaysRangeInTimeZone,
+  getZonedYMD,
+  getCalendarMonthRangeInTimeZone,
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 
-/** 日付ストリップ用に、アンカー日の前後何日まで試合を取るか（合計 2*n+1 日） */
-const GAME_DAYS_PLUS_MINUS = 3;
+/** 月内の games 行から、タイムゾーン基準の「試合がある日」を重複なく昇順で返す */
+export function monthRowsToSortedGameDays(
+  rows: any[],
+  timeZone: string,
+): Date[] {
+  if (!rows.length) return [];
 
-/** 同一セッション内の getDocs 回数削減（リーグ＋アンカー日・TTL 内は再取得しない） */
+  const map = new Map<string, Date>();
+
+  for (const g of rows) {
+    const t = g.startAtJst;
+    if (!t) continue;
+
+    let d: Date | null = null;
+    if (t instanceof Timestamp) d = t.toDate();
+    else if (typeof t?.toDate === "function") d = t.toDate();
+    else if (t instanceof Date) d = t;
+    if (!d) continue;
+
+    const key = toDateKeyInTimeZone(d, timeZone);
+    if (!map.has(key)) {
+      const dayStart = parseDateKeyInTimeZone(key, timeZone);
+      if (dayStart) map.set(key, dayStart);
+    }
+  }
+
+  return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
+}
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+/** 同一セッション内の getDocs 回数削減（リーグ＋暦月・TTL 内は再取得しない） */
 const GAME_DAYS_ROWS_CACHE_TTL_MS = 5 * 60 * 1000;
 const gameDaysRowsCache = new Map<
   string,
@@ -33,7 +64,7 @@ const gameDaysRowsCache = new Map<
 
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * windowAnchor の暦日を中心に前後 GAME_DAYS_PLUS_MINUS 日だけ取得して読み込みを軽くする。
+ * シーズン全件ではなく、windowAnchor の「暦月」内の試合のみ取得して初回ロードを軽くする。
  */
 export function useGameDays(
   rawLeague: League,
@@ -43,7 +74,8 @@ export function useGameDays(
   const league = normalizeLeague(rawLeague);
 
   const windowKey = useMemo(() => {
-    return toDateKeyInTimeZone(windowAnchor, timeZone);
+    const { year, month } = getZonedYMD(windowAnchor, timeZone);
+    return `${year}-${pad2(month)}`;
   }, [windowAnchor, timeZone]);
 
   const [rows, setRows] = useState<any[]>([]);
@@ -71,10 +103,9 @@ export function useGameDays(
 
       try {
         const ref = collection(db, "games");
-        const { start, end } = getPlusMinusDaysRangeInTimeZone(
+        const { start, end } = getCalendarMonthRangeInTimeZone(
           windowAnchor,
-          timeZone,
-          GAME_DAYS_PLUS_MINUS
+          timeZone
         );
 
         const q = query(
@@ -84,7 +115,7 @@ export function useGameDays(
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(200)
+          limit(500)
         );
 
         const snap = await getDocs(q);
@@ -109,30 +140,10 @@ export function useGameDays(
     };
   }, [league, timeZone, windowKey]);
 
-  const gameDays = useMemo(() => {
-    if (!rows.length) return [];
+  const gameDays = useMemo(
+    () => monthRowsToSortedGameDays(rows, timeZone),
+    [rows, timeZone],
+  );
 
-    const map = new Map<string, Date>();
-
-    for (const g of rows) {
-      const t = g.startAtJst;
-      if (!t) continue;
-
-      let d: Date | null = null;
-      if (t instanceof Timestamp) d = t.toDate();
-      else if (typeof t?.toDate === "function") d = t.toDate();
-      else if (t instanceof Date) d = t;
-      if (!d) continue;
-
-      const key = toDateKeyInTimeZone(d, timeZone);
-      if (!map.has(key)) {
-        const dayStart = parseDateKeyInTimeZone(key, timeZone);
-        if (dayStart) map.set(key, dayStart);
-      }
-    }
-
-    return [...map.values()].sort((a, b) => a.getTime() - b.getTime());
-  }, [rows, timeZone]);
-
-  return { gameDays, loading, error };
+  return { gameDays, monthRows: rows, loading, error };
 }

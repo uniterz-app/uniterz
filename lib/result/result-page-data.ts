@@ -56,9 +56,9 @@ export function formatResultDateLabel(
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
 
-/** 日付見出しの並び用（結果入力時刻。未確定は予想入力時刻にフォールバック） */
+/** 日付見出し・日別グループの基準。試合キックオフ日（startAt）。未取得のときだけ投稿日にフォールバック。 */
 export function getGroupDateMillis(post: PostWithMillis): number {
-  return post.settledAtMillis ?? post.createdAtMillis ?? post.startAtMillis ?? 0;
+  return post.startAtMillis ?? post.createdAtMillis ?? 0;
 }
 
 export function isFinalResultPost(post: PostWithMillis): boolean {

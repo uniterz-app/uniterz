@@ -20,6 +20,7 @@ type RankingRow = {
   handle: string | null;
   photoURL: string | null;
   countryCode?: string | null;
+  plan?: "free" | "pro";
 
   totalPosts: number;
   totalWins: number;
@@ -84,9 +85,35 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
       .doc(metric)
       .get();
 
-    const rows: RankingRow[] = snapDoc.exists
+    const rawRows: RankingRow[] = snapDoc.exists
       ? (snapDoc.data()?.rows ?? [])
       : [];
+    let rows: RankingRow[] = rawRows.map((row) => ({
+      ...row,
+      plan: row.plan === "pro" ? "pro" : "free",
+    }));
+
+    // スナップショットが plan 未保存の世代でも、users.plan で Pro バッジを正しく出す
+    const rowUids = rows.map((r) => r.uid).filter(Boolean);
+    const planByUid = new Map<string, "free" | "pro">();
+    if (rowUids.length > 0) {
+      const refs = rowUids.map((id) => db().collection("users").doc(id));
+      const userSnaps = await db().getAll(...refs);
+      userSnaps.forEach((s, i) => {
+        const id = rowUids[i];
+        if (!id) return;
+        if (!s.exists) {
+          planByUid.set(id, "free");
+          return;
+        }
+        const u = s.data() as { plan?: string };
+        planByUid.set(id, u?.plan === "pro" ? "pro" : "free");
+      });
+      rows = rows.map((r) => ({
+        ...r,
+        plan: planByUid.get(r.uid) ?? r.plan,
+      }));
+    }
 
     let myRank: number | null = null;
     let myRow: RankingRow | null = null;
@@ -132,12 +159,24 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
 
         myRank = (higherSnap.data().count ?? 0) + 1;
 
+        // トップ20外のユーザーはバッチに含まれないため、必要時のみ users を参照
+        let myPlanResolved: "free" | "pro" =
+          planByUid.get(uid) ?? (me.plan === "pro" ? "pro" : "free");
+        if (!planByUid.has(uid)) {
+          const uSnap = await db().collection("users").doc(uid).get();
+          if (uSnap.exists) {
+            const u = uSnap.data() as { plan?: string };
+            myPlanResolved = u?.plan === "pro" ? "pro" : "free";
+          }
+        }
+
         myRow = {
           uid,
           displayName: me.displayName ?? "",
           handle: me.handle ?? null,
           photoURL: me.photoURL ?? null,
           countryCode: me.countryCode ?? null,
+          plan: myPlanResolved,
 
           totalPosts: rk.totalPosts,
           totalWins: rk.totalWins,

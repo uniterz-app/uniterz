@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import DotJerseyCanvas from "@/app/component/games/DotJerseyCanvas";
 import { jp } from "@/lib/fonts";
 
 type Props = {
@@ -26,6 +27,34 @@ export default function HalftoneBgPreviewPage({ variant }: Props) {
           縦方向のシアン〜ネイビーグラデに、静止のドット格子を CSS のみで重ねています。
           画像アセットは使っていません。
         </p>
+
+        <section
+          className="rounded-2xl border border-white/12 bg-black/25 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
+          aria-label="Canvas でドット表現したユニフォームのサンプル"
+        >
+          <h2 className="text-sm font-semibold text-white/90">
+            Canvas · ドット・ユニフォーム
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-white/50">
+            NBA 用のユニフォーム SVG と同じ path をマスクにし、シルエット内だけに円を打ちます。径は擬似ライトで変化させています。
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="relative aspect-[87.76/114.88] w-full max-w-[16rem] overflow-hidden rounded-xl border border-white/10 bg-black/35 sm:max-w-[18rem]">
+                <DotJerseyCanvas accent="#FDB927" accentEnd="#552583" />
+              </div>
+              <span className="text-[10px] text-white/40">
+                二色グラデ（黄→紫）
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="relative aspect-[87.76/114.88] w-full max-w-[16rem] overflow-hidden rounded-xl border border-white/10 bg-black/35 sm:max-w-[18rem]">
+                <DotJerseyCanvas accent="#007A33" />
+              </div>
+              <span className="text-[10px] text-white/40">accent 例（緑）</span>
+            </div>
+          </div>
+        </section>
 
         <div className="rounded-2xl border border-white/12 bg-white/5 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-[2px]">
           <p className="text-sm font-semibold text-white/90">

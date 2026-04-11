@@ -8,6 +8,10 @@ import { jp } from "@/lib/fonts";
 import { toast } from "@/app/component/ui/toast";
 import type { CommunityMetric } from "@/lib/communities/types";
 import { metricLabel, periodLabel } from "@/lib/communities/labels";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -34,6 +38,7 @@ type LBRow = {
   displayName: string;
   handle: string | null;
   photoURL: string | null;
+  plan?: "free" | "pro";
   sortValue: number;
   winRate: number;
   activeWinStreak: number;
@@ -404,26 +409,56 @@ export default function CommunityGroupDetailView({
                     >
                       <td className="px-2 py-2 font-mono text-xs">{r.rank}</td>
                       <td className="px-2 py-2">
-                        <div className="flex items-center gap-2">
-                          {r.photoURL ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={r.photoURL}
-                              alt=""
-                              className="h-7 w-7 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-7 w-7 rounded-full bg-white/10" />
-                          )}
-                          <span className="truncate text-xs">
-                            {r.displayName}
-                            {r.handle ? (
-                              <span className="text-white/40">
-                                {" "}
-                                @{r.handle}
-                              </span>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="relative h-7 w-7 shrink-0">
+                            {r.plan === "pro" ? (
+                              <>
+                                <span
+                                  className="pointer-events-none absolute -inset-[2px] z-0 rounded-full border border-cyan-400/22 shadow-[0_0_10px_rgba(34,211,238,0.14)]"
+                                  aria-hidden
+                                />
+                                <span
+                                  className="pointer-events-none absolute inset-0 z-[1] rounded-full border border-white/[0.08]"
+                                  aria-hidden
+                                />
+                              </>
                             ) : null}
-                          </span>
+                            <div className="relative z-[2] h-full w-full overflow-hidden rounded-full">
+                              {r.photoURL ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={r.photoURL}
+                                  alt=""
+                                  className="h-7 w-7 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-7 w-7 rounded-full bg-white/10" />
+                              )}
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 max-w-full items-center gap-1 overflow-hidden">
+                              <span className="truncate text-xs font-medium text-white/90">
+                                {r.displayName}
+                              </span>
+                              {r.plan === "pro" ? (
+                                <ProCyberBadge
+                                  {...proBadgeStaticMotion}
+                                  compact
+                                  ariaLabel={
+                                    language === "en"
+                                      ? "Pro member"
+                                      : "Pro 会員"
+                                  }
+                                />
+                              ) : null}
+                            </div>
+                            {r.handle ? (
+                              <div className="truncate text-[11px] text-white/40">
+                                @{r.handle}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-xs">

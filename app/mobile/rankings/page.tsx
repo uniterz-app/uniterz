@@ -169,6 +169,8 @@ export default function MobileRankingsPage() {
             loading={!listReady}
             statsScramble={listReady && personalPending}
             language={language}
+            isPro={user.plan === "pro"}
+            mobileWide
           />
 
           <RankingsMetricRow

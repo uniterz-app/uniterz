@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import Jersey from "@/app/component/games/icons/Jersey";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import {
   getPlayoffBracketConfig,
@@ -237,6 +237,8 @@ function SeriesCard({
     getTeamPrimaryColor("nba", NBA_TEAM_ID_BY_CODE[teamA]) ?? "#3b82f6";
   const colorB =
     getTeamPrimaryColor("nba", NBA_TEAM_ID_BY_CODE[teamB]) ?? "#ef4444";
+  const colorAEnd = getTeamSecondaryColor("nba", NBA_TEAM_ID_BY_CODE[teamA]);
+  const colorBEnd = getTeamSecondaryColor("nba", NBA_TEAM_ID_BY_CODE[teamB]);
 
   const pctClassA = getPctTextClass(teamAPct, teamBPct, total > 0);
   const pctClassB = getPctTextClass(teamBPct, teamAPct, total > 0);
@@ -270,10 +272,10 @@ function SeriesCard({
           <div className="mt-0.5 text-sm font-bold tabular-nums text-white md:text-base">
             #{series.teams[0].seed}
           </div>
-          <Jersey
-            className="mt-1 h-8 w-8 md:h-10 md:w-10"
-            fill={colorA}
-            stroke="#fff"
+          <HalftoneJerseyMark
+            accent={colorA}
+            accentEnd={colorAEnd}
+            className="mt-1 h-14 w-14 md:h-20 md:w-20"
           />
           <div
             className={`${nameBebas.className} mt-1 max-w-full truncate text-center text-[18px] leading-none tracking-[0.14em] text-white md:text-[26px]`}
@@ -293,10 +295,10 @@ function SeriesCard({
           <div className="mt-0.5 text-sm font-bold tabular-nums text-white md:text-base">
             #{series.teams[1].seed}
           </div>
-          <Jersey
-            className="mt-1 h-8 w-8 md:h-10 md:w-10"
-            fill={colorB}
-            stroke="#fff"
+          <HalftoneJerseyMark
+            accent={colorB}
+            accentEnd={colorBEnd}
+            className="mt-1 h-14 w-14 md:h-20 md:w-20"
           />
           <div
             className={`${nameBebas.className} mt-1 max-w-full truncate text-center text-[18px] leading-none tracking-[0.14em] text-white md:text-[26px]`}

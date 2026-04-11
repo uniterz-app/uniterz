@@ -4,10 +4,11 @@
 import React, { memo, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Flame } from "lucide-react";
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -156,6 +157,10 @@ function ResultMatchHeader({
 }: Props) {
   const pathname = usePathname();
   const isMobileRoute = pathname?.startsWith("/mobile") ?? false;
+  /** モバイルルートではユニ（Canvas）だけ一段大きく */
+  const jerseyMarkClass = isMobileRoute
+    ? "h-[5.25rem] w-[5.25rem] sm:h-24 sm:w-24"
+    : "h-20 w-20 sm:h-24 sm:w-24";
   const teamNameFont = bracketMarketTeamTypography(isMobileRoute);
   const normalizedLeague = normalizeLeague(post.league);
   const isEn = language === "en";
@@ -169,6 +174,14 @@ function ResultMatchHeader({
     getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#f43f5e";
+  const homeSecondaryColor = getTeamSecondaryColor(
+    normalizedLeague,
+    post.home?.teamId
+  );
+  const awaySecondaryColor = getTeamSecondaryColor(
+    normalizedLeague,
+    post.away?.teamId
+  );
 
   const [homeL1, homeL2] = splitTeamNameByLeague(
     post.league,
@@ -286,7 +299,15 @@ function ResultMatchHeader({
       <div className="relative z-10 px-5 pb-5 pt-10 sm:px-6 sm:pb-6 sm:pt-11">
       <div className="grid grid-cols-3 items-center gap-1 sm:gap-2">
         <div className="flex flex-col items-center">
-          <Icon className="h-11 w-11 sm:h-12 sm:w-12" fill={homeColor} stroke="#fff" />
+          {Icon === Jersey ? (
+            <HalftoneJerseyMark
+              accent={homeColor}
+              accentEnd={homeSecondaryColor}
+              className={jerseyMarkClass}
+            />
+          ) : (
+            <Icon className="h-20 w-20 sm:h-24 sm:w-24" fill={homeColor} stroke="#fff" />
+          )}
           {!isMobileRoute ? (
             <div
               className="mt-1.5 text-center text-base font-bold leading-tight sm:mt-2 md:text-xl lg:text-2xl"
@@ -343,7 +364,15 @@ function ResultMatchHeader({
         </div>
 
         <div className="flex flex-col items-center">
-          <Icon className="h-11 w-11 sm:h-12 sm:w-12" fill={awayColor} stroke="#fff" />
+          {Icon === Jersey ? (
+            <HalftoneJerseyMark
+              accent={awayColor}
+              accentEnd={awaySecondaryColor}
+              className={jerseyMarkClass}
+            />
+          ) : (
+            <Icon className="h-20 w-20 sm:h-24 sm:w-24" fill={awayColor} stroke="#fff" />
+          )}
           {!isMobileRoute ? (
             <div
               className="mt-1.5 text-center text-base font-bold leading-tight sm:mt-2 md:text-xl lg:text-2xl"

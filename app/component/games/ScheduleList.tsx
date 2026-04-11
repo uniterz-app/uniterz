@@ -10,6 +10,11 @@ import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
+import {
+  GAMES_CYBER_EASE,
+  GAMES_CYBER_EASE_SNAP,
+  GAMES_DAY_SWITCH_EASE,
+} from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
 import PredictionRulesIntroModal from "../predict/PredictionRulesIntroModal";
@@ -59,7 +64,7 @@ function readTeamRecordCacheFromSession(): Record<string, TeamRecord> {
   }
 }
 
-const SCHEDULE_STAGGER_EASE = [0.22, 1, 0.36, 1] as const;
+const SCHEDULE_STAGGER_EASE = GAMES_CYBER_EASE_SNAP;
 
 function writeTeamRecordCacheToSession(next: Record<string, TeamRecord>) {
   if (typeof window === "undefined") return;
@@ -80,12 +85,18 @@ export default function ScheduleList({
   dense = false,
   loading = false,
   league: leagueProp,
+  /** 絞り込み等で 0 件のときに表示する文言（未指定時は null のまま何も出さない） */
+  emptyHint = null,
+  /** page=先頭のみ派手入場。daySwitch=日付切替時は先頭カードから順に上方向からフェードイン */
+  listShellIntro = "daySwitch",
 }: {
   games: GameItemRaw[];
   dense?: boolean;
   loading?: boolean;
   /** 入場アニメの区切り（リーグ切替で再スタッガー） */
   league?: League;
+  emptyHint?: string | null;
+  listShellIntro?: "page" | "daySwitch";
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
@@ -146,36 +157,78 @@ export default function ScheduleList({
   const leagueAnimKey =
     leagueProp ?? (propsList[0]?.league as League | undefined) ?? "nba";
 
+  const isDaySwitchShell = listShellIntro === "daySwitch";
+
   const scheduleContainer = useMemo(
     () => ({
       hidden: {},
       show: {
         transition: {
-          staggerChildren: reduceMotion ? 0 : 0.04,
-          delayChildren: reduceMotion ? 0 : 0.03,
+          staggerChildren:
+            reduceMotion || isDaySwitchShell ? 0 : 0.032,
+          delayChildren:
+            reduceMotion || isDaySwitchShell ? 0 : 0.022,
         },
       },
     }),
-    [reduceMotion]
+    [reduceMotion, isDaySwitchShell]
   );
 
-  /** ブラー・斜め・クリップワイプは重いので、軽いフェード＋短い下方向のみ */
+  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch は先頭から順に（遅延に上限あり） */
   const scheduleItem = useMemo(
     () => ({
-      hidden: reduceMotion
-        ? { opacity: 1, y: 0 }
-        : { opacity: 0, y: 10 },
-      show: (i: number) => ({
-        opacity: 1,
-        y: 0,
-        transition: {
-          duration: reduceMotion ? 0 : 0.3,
-          ease: SCHEDULE_STAGGER_EASE,
-          delay: reduceMotion ? 0 : Math.min(i * 0.028, 0.12),
-        },
-      }),
+      hidden: (i: number) => {
+        if (reduceMotion) {
+          return { opacity: 1, y: 0, scale: 1 };
+        }
+        if (isDaySwitchShell) {
+          return { opacity: 0, y: -11, scale: 1 };
+        }
+        if (i >= 3) return { opacity: 1, y: 0, scale: 1 };
+        return { opacity: 0, y: -22, scale: 0.985 };
+      },
+      show: (i: number) => {
+        if (reduceMotion) {
+          return {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: { duration: 0 },
+          };
+        }
+        if (isDaySwitchShell) {
+          return {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: {
+              opacity: { duration: 0.52, ease: GAMES_DAY_SWITCH_EASE },
+              y: { duration: 0.56, ease: GAMES_DAY_SWITCH_EASE },
+              delay: Math.min(i * 0.038, 0.28),
+            },
+          };
+        }
+        if (i >= 3) {
+          return {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            transition: { duration: 0 },
+          };
+        }
+        return {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: {
+            duration: 0.26,
+            ease: SCHEDULE_STAGGER_EASE,
+            delay: Math.min(i * 0.024, 0.1),
+          },
+        };
+      },
     }),
-    [reduceMotion]
+    [reduceMotion, isDaySwitchShell]
   );
 
   const open = useCallback((gameId: string) => {
@@ -411,6 +464,13 @@ export default function ScheduleList({
   }
 
   if (!propsList.length) {
+    if (emptyHint) {
+      return (
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-12 text-center text-sm leading-relaxed text-white/55 md:px-6">
+          {emptyHint}
+        </div>
+      );
+    }
     return null;
   }
 
@@ -558,9 +618,9 @@ export default function ScheduleList({
                   initial={{ opacity: 1, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
-                    duration: 0.32,
-                    delay: 0.08,
-                    ease: [0.22, 1, 0.36, 1],
+                    duration: 0.26,
+                    delay: 0.05,
+                    ease: GAMES_CYBER_EASE,
                   }}
                   className="mt-2 overflow-x-hidden px-0 py-0"
                 >
@@ -610,13 +670,18 @@ export default function ScheduleList({
           opacity: 1,
         }}
         transition={{
-          duration: 0.22,
-          ease: [0.22, 1, 0.36, 1],
+          duration: 0.2,
+          ease: GAMES_CYBER_EASE,
         }}
       >
         <motion.div
           key={leagueAnimKey}
-          className="grid gap-6 px-4 md:px-6 lg:px-8"
+          className={[
+            "grid",
+            isMobile && dense
+              ? "gap-4 px-1.5"
+              : "gap-6 px-4 md:px-6 lg:px-8",
+          ].join(" ")}
           variants={scheduleContainer}
           initial={reduceMotion ? false : "hidden"}
           animate="show"
@@ -637,6 +702,8 @@ export default function ScheduleList({
             >
               <MatchCard
                 {...props}
+                scheduleEntryIndex={index}
+                heavyListEntry={!isDaySwitchShell}
                 myPostId={myPostMap[String(props.id)] ?? null}
                 homeRecord={
                   props.home?.teamId

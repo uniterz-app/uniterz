@@ -88,6 +88,36 @@ export const toScore = (s: any): { home: number; away: number } | null =>
       : null
     : null;
 
+/**
+ * Firestore の games 生データからスコアを取得（MatchCard / 絞り込みで共通）。
+ * score オブジェクトに無い場合は homeScore / awayScore を参照する。
+ */
+export function getResolvedGameScore(
+  raw: Record<string, unknown> | null | undefined,
+): { home: number; away: number } | null {
+  if (!raw) return null;
+  let score = toScore(raw.score);
+  if (!score && raw.score && typeof raw.score === "object") {
+    const fin = (raw.score as { final?: { home?: unknown; away?: unknown } })
+      .final;
+    if (
+      fin &&
+      typeof fin.home === "number" &&
+      typeof fin.away === "number"
+    ) {
+      score = { home: fin.home, away: fin.away };
+    }
+  }
+  if (!score) {
+    const hs = raw.homeScore;
+    const as = raw.awayScore;
+    if (typeof hs === "number" && typeof as === "number") {
+      score = { home: hs, away: as };
+    }
+  }
+  return score;
+}
+
 /** LIVE / FINAL メタは不要なので常に null にする */
 export const toLiveMeta = (_m: any) => null;
 export const toFinalMeta = (_m: any) => null;
@@ -157,16 +187,7 @@ export function toMatchCardProps(
   // --------------------------------------------------------
   // スコア補完
   // --------------------------------------------------------
-  let score = toScore(raw?.score);
-
-  if (!score) {
-    const hs = raw?.homeScore;
-    const as = raw?.awayScore;
-
-    if (typeof hs === "number" && typeof as === "number") {
-      score = { home: hs, away: as };
-    }
-  }
+  const score = getResolvedGameScore(raw as Record<string, unknown>);
 
   const liveMeta = toLiveMeta(raw?.liveMeta);
   const finalMeta = toFinalMeta(raw?.finalMeta);

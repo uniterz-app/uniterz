@@ -3,6 +3,7 @@
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
+import { mergeUserPlansIntoSingleRanking } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 
 export const runtime = "nodejs";
 
@@ -64,10 +65,7 @@ const getCachedSingle = unstable_cache(
     return fetchSingleRanking(metric, uid);
   },
   ["cumulative-ranking-single-v1"],
-  {
-    revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
-    tags: ["cumulative-ranking"],
-  }
+  { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
 );
 
 export async function GET(req: Request) {
@@ -104,7 +102,16 @@ export async function GET(req: Request) {
       );
     }
 
-    const maxAge = 0;
+    const body =
+      typeof structuredClone === "function"
+        ? structuredClone(payload)
+        : (JSON.parse(JSON.stringify(payload)) as typeof payload);
+    await mergeUserPlansIntoSingleRanking({
+      rows: body.rows,
+      myRow: body.myRow,
+    });
+
+    const maxAge = Math.min(120, CUMULATIVE_RANKING_REVALIDATE_SEC);
     const cacheControl = uid
       ? `private, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
       : `public, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
@@ -112,11 +119,11 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         ok: true,
-        metric: payload.metric,
-        count: payload.count,
-        rows: payload.rows,
-        myRank: payload.myRank,
-        myRow: payload.myRow,
+        metric: body.metric,
+        count: body.count,
+        rows: body.rows,
+        myRank: body.myRank,
+        myRow: body.myRow,
       },
       { status: 200, headers: { "Cache-Control": cacheControl } }
     );

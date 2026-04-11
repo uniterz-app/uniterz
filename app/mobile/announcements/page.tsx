@@ -16,6 +16,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 type Announcement = {
   id: string;
@@ -110,6 +111,7 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="relative min-h-screen text-white">
+      <FloatingCloseButton />
       {/* ダークネオン背景（放射+グラデ） */}
       <div className="absolute inset-0 -z-10 bg-[#0B0F17]" />
       <div className="pointer-events-none absolute inset-0 -z-10 opacity-70"
@@ -211,23 +213,6 @@ export default function AnnouncementsPage() {
             );
           })}
       </div>
-      {/* 戻るボタン（右下固定） */}
-<button
-  onClick={() => window.history.back()}
-  className="
-    fixed bottom-6 right-6 z-50 
-    h-12 w-12 rounded-full 
-    bg-white/10 backdrop-blur 
-    border border-white/20 
-    flex items-center justify-center 
-    active:scale-95 transition 
-    hover:bg-white/20
-  "
-  aria-label={isEn ? "Close" : "閉じる"}
->
-  <span className="text-white text-xl font-bold leading-none">×</span>
-</button>
-
     </div>
   );
 }

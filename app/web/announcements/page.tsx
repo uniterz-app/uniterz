@@ -16,6 +16,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 type Announcement = {
   id: string;
@@ -104,6 +105,7 @@ export default function WebAnnouncementsPage() {
 
   return (
     <div className="relative min-h-screen text-white">
+      <FloatingCloseButton />
       {/* background */}
       <div className="absolute inset-0 -z-10 bg-[#0B0F17]" />
       <div

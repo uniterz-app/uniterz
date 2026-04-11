@@ -17,6 +17,7 @@ export type RankingApiRow = {
   handle?: string | null;
   displayName?: string;
   photoURL?: string | null;
+  plan?: string | null;
   totalPosts?: number;
   totalWins?: number;
   totalPoints?: number;
@@ -47,6 +48,7 @@ export function toMobileRows(
       handle: row.handle ?? "",
       displayName: row.displayName ?? "user",
       photoURL: row.photoURL ?? undefined,
+      plan: row.plan === "pro" ? "pro" : "free",
 
       totalScore: totalPoints,
       avgTotalScore: totalPosts > 0 ? totalPoints / totalPosts : 0,

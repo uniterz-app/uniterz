@@ -86,6 +86,8 @@ export type CumulativeRow = {
   handle: string | null;
   photoURL: string | null;
   countryCode: string | null;
+  /** cumulative_stats / users 由来の表示用プラン */
+  plan: "free" | "pro";
   totalPosts: number;
   totalWins: number;
   winRate: number;
@@ -140,6 +142,7 @@ export async function buildMemberLeaderboard(
     handle: string | null;
     photoURL: string | null;
     countryCode: string | null;
+    plan: "free" | "pro";
     totalPosts: number;
     totalWins: number;
     winRate: number;
@@ -168,6 +171,7 @@ export async function buildMemberLeaderboard(
       handle: (d.handle as string) ?? null,
       photoURL: (d.photoURL as string) ?? null,
       countryCode: (d.countryCode as string) ?? null,
+      plan: d.plan === "pro" ? "pro" : "free",
       totalPosts: Number(d.totalPosts ?? 0),
       totalWins: Number(d.totalWins ?? 0),
       winRate: Number(d.winRate ?? 0),
@@ -191,6 +195,7 @@ export async function buildMemberLeaderboard(
     const handle = c?.handle ?? null;
     const photoURL = c?.photoURL ?? null;
     const countryCode = c?.countryCode ?? null;
+    const plan = c?.plan ?? "free";
 
     if (period === "all_time" && c) {
       const sortValue = sortValueFromCumulative(c, metric);
@@ -200,6 +205,7 @@ export async function buildMemberLeaderboard(
         handle,
         photoURL,
         countryCode,
+        plan,
         totalPosts: c.totalPosts,
         totalWins: c.totalWins,
         winRate: c.winRate,
@@ -221,6 +227,7 @@ export async function buildMemberLeaderboard(
       handle,
       photoURL,
       countryCode,
+      plan,
       totalPosts: agg.totalPosts,
       totalWins: agg.totalWins,
       winRate,

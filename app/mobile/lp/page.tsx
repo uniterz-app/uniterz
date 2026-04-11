@@ -27,7 +27,7 @@ export default function MobileLPPage() {
         className="mx-4 h-px max-w-7xl bg-linear-to-r from-transparent via-cyan-300/22 to-transparent lg:mx-auto lg:hidden"
         aria-hidden
       />
-      <LPFeatures />
+      <LPFeatures disableConnectedFlowAnimation />
       <LPPlans />
       <LPMediaSlots />
       <LPSignupSection />

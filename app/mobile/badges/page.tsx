@@ -10,6 +10,7 @@ import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
+import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 import BadgeDetailModal from "./BadgeDetailModal";
 
@@ -54,6 +55,7 @@ export default function MobileBadgesPage() {
 
   return (
     <div className="min-h-screen px-4 py-6 text-white bg-[#0A1118]">
+      <FloatingCloseButton />
       {/* Header */}
       <div className="flex items-center mb-6">
         <button

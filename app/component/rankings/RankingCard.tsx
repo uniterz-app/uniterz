@@ -11,6 +11,10 @@ import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { streakShortLabel } from "@/lib/i18n/rankings";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import {
+  ProCyberBadge,
+  proBadgeStaticMotion,
+} from "@/app/component/common/ProCyberBadge";
 
 const FLAG_SRC: Record<string, string> = {
   US: "/flags/us.png",
@@ -394,18 +398,31 @@ export default function RankingCard({
           </div>
 
           <div className="min-w-0">
-            <div
-              className={[
-                "truncate font-black tracking-[0.01em]",
-                jp.className,
-                rank === 1 ? "text-[20px]" : isTop3 ? "text-[17px]" : "text-[13px]",
-              ].join(" ")}
-              style={{
-                color: "rgba(255,255,255,0.92)",
-                textShadow: "0 2px 12px rgba(0,0,0,0.35)",
-              }}
-            >
-              {r.displayName ?? r.handle ?? "Unknown"}
+            <div className="flex min-w-0 max-w-full items-center gap-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <div
+                  className={[
+                    "truncate font-black tracking-[0.01em]",
+                    jp.className,
+                    rank === 1 ? "text-[20px]" : isTop3 ? "text-[17px]" : "text-[13px]",
+                  ].join(" ")}
+                  style={{
+                    color: "rgba(255,255,255,0.92)",
+                    textShadow: "0 2px 12px rgba(0,0,0,0.35)",
+                  }}
+                >
+                  {r.displayName ?? r.handle ?? "Unknown"}
+                </div>
+              </div>
+              {r.plan === "pro" ? (
+                <ProCyberBadge
+                  {...proBadgeStaticMotion}
+                  compact
+                  ariaLabel={
+                    language === "en" ? "Pro member" : "Pro 会員"
+                  }
+                />
+              ) : null}
             </div>
           </div>
 

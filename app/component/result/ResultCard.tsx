@@ -4,10 +4,11 @@
 import React, { memo, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Flame } from "lucide-react";
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -178,6 +179,14 @@ function ResultCardPresentationImpl({
     getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#f43f5e";
+  const homeSecondaryColor = useMemo(
+    () => getTeamSecondaryColor(normalizedLeague, post.home?.teamId),
+    [normalizedLeague, post.home?.teamId]
+  );
+  const awaySecondaryColor = useMemo(
+    () => getTeamSecondaryColor(normalizedLeague, post.away?.teamId),
+    [normalizedLeague, post.away?.teamId]
+  );
 
   const [homeL1, homeL2] = splitTeamNameByLeague(
     post.league,
@@ -353,8 +362,8 @@ function ResultCardPresentationImpl({
       {!isMobile && (
         <div
           className={[
-            "pointer-events-none absolute inset-x-0 z-20 flex items-start justify-between gap-2 px-2 sm:px-3",
-            listDateLabel ? "top-7 pt-1 sm:top-8 sm:pt-1.5" : "top-0 pt-2 sm:pt-2.5",
+            "pointer-events-none absolute inset-x-0 z-20 flex items-start justify-between gap-1 px-1 sm:px-1.5",
+            listDateLabel ? "top-6 pt-0.5 sm:top-7 sm:pt-1" : "top-0 pt-1 sm:pt-1.5",
           ].join(" ")}
         >
           <span
@@ -410,24 +419,32 @@ function ResultCardPresentationImpl({
         <div
           className={
             isMobile
-              ? "flex min-w-0 flex-col items-stretch"
-              : "flex min-w-0 flex-col items-center ml-1 sm:ml-3"
+              ? "flex min-w-0 flex-col items-stretch pt-2.5 translate-x-1.5"
+              : "flex min-w-0 flex-col items-center ml-1 translate-x-2 pt-3 sm:ml-3 sm:translate-x-2.5 sm:pt-4"
           }
         >
           {isMobile ? (
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
                 <span
-                  className="pointer-events-auto absolute -left-2 -top-2 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                  className="pointer-events-auto absolute -left-3.5 -top-3 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
                   style={{ backgroundColor: pillBg, ...teamNameFont }}
                 >
                   {pillText}
                 </span>
-                <Icon
-                  className="h-10 w-10 shrink-0 ml-1"
-                  fill={homeColor}
-                  stroke="#fff"
-                />
+                {Icon === Jersey ? (
+                  <HalftoneJerseyMark
+                    accent={homeColor}
+                    accentEnd={homeSecondaryColor}
+                    className="ml-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                  />
+                ) : (
+                  <Icon
+                    className="ml-1 h-16 w-16 shrink-0"
+                    fill={homeColor}
+                    stroke="#fff"
+                  />
+                )}
               </div>
               <div
                 className={`${nameMt} w-full max-w-full truncate text-center text-[13px] font-bold leading-tight md:text-[17px]`}
@@ -443,11 +460,15 @@ function ResultCardPresentationImpl({
             </>
           ) : (
             <>
-              <Icon
-                className="h-14 w-14"
-                fill={homeColor}
-                stroke="#fff"
-              />
+              {Icon === Jersey ? (
+                <HalftoneJerseyMark
+                  accent={homeColor}
+                  accentEnd={homeSecondaryColor}
+                  className="h-20 w-20"
+                />
+              ) : (
+                <Icon className="h-20 w-20" fill={homeColor} stroke="#fff" />
+              )}
               <div
                 className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
                 style={teamNameFont}
@@ -465,8 +486,8 @@ function ResultCardPresentationImpl({
             className={[
               "whitespace-nowrap leading-none tracking-tight tabular-nums font-black",
               isMobile
-                ? "text-[clamp(1.2rem,5vw,1.6rem)]"
-                : "text-xl md:text-5xl",
+                ? "text-[clamp(1.32rem,5.4vw,1.78rem)]"
+                : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
               resultStatsMetricNumClass,
             ].join(" ")}
           >
@@ -477,8 +498,8 @@ function ResultCardPresentationImpl({
             <div
               className={`mt-1.5 whitespace-nowrap tabular-nums opacity-85 md:mt-2 ${
                 isMobile
-                  ? "text-xs font-bold leading-tight"
-                  : "text-sm font-bold md:text-base"
+                  ? "text-[13px] font-bold leading-tight"
+                  : "text-base font-bold md:text-lg"
               } ${resultStatsMetricNumClass}`}
             >
               {finalScore}
@@ -489,21 +510,29 @@ function ResultCardPresentationImpl({
         <div
           className={
             isMobile
-              ? "flex min-w-0 flex-col items-stretch"
-              : "flex min-w-0 flex-col items-center mr-1 sm:mr-3"
+              ? "flex min-w-0 flex-col items-stretch pt-2.5 -translate-x-1.5"
+              : "flex min-w-0 flex-col items-center mr-1 -translate-x-2 pt-3 sm:mr-3 sm:-translate-x-2.5 sm:pt-4"
           }
         >
           {isMobile ? (
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
-                <Icon
-                  className="h-10 w-10 shrink-0 mr-1"
-                  fill={awayColor}
-                  stroke="#fff"
-                />
+                {Icon === Jersey ? (
+                  <HalftoneJerseyMark
+                    accent={awayColor}
+                    accentEnd={awaySecondaryColor}
+                    className="mr-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                  />
+                ) : (
+                  <Icon
+                    className="mr-1 h-16 w-16 shrink-0"
+                    fill={awayColor}
+                    stroke="#fff"
+                  />
+                )}
                 {badge === "streak" && streakBadge && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
                   >
                     <Flame
                       className={`h-2 w-2 shrink-0 ${streakBadge.iconClassName}`}
@@ -515,21 +544,21 @@ function ResultCardPresentationImpl({
                 )}
                 {badge === "hit" && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
                   >
                     HIT
                   </span>
                 )}
                 {badge === "upset" && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
                   >
                     UPSET
                   </span>
                 )}
                 {badge === "miss" && (
                   <span
-                    className={`pointer-events-auto absolute -right-2 -top-2 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
                   >
                     MISS
                   </span>
@@ -549,11 +578,15 @@ function ResultCardPresentationImpl({
             </>
           ) : (
             <>
-              <Icon
-                className="h-14 w-14"
-                fill={awayColor}
-                stroke="#fff"
-              />
+              {Icon === Jersey ? (
+                <HalftoneJerseyMark
+                  accent={awayColor}
+                  accentEnd={awaySecondaryColor}
+                  className="h-20 w-20"
+                />
+              ) : (
+                <Icon className="h-20 w-20" fill={awayColor} stroke="#fff" />
+              )}
               <div
                 className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
                 style={teamNameFont}

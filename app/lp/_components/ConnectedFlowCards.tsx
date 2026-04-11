@@ -1,127 +1,132 @@
 "use client";
 
 import Image from "next/image";
-import { type ComponentType } from "react";
-import { Brain, PenLine, RefreshCw } from "lucide-react";
-import { GiCrossedSwords } from "react-icons/gi";
-import { FaMedal, FaTrophy } from "react-icons/fa";
-import { FiUser } from "react-icons/fi";
-import { PiChartBarFill } from "react-icons/pi";
-import { resultStatsMetricNumClass } from "@/lib/fonts";
-import type { LPConnectedFlowNode, LPFlowNavIconKey } from "./lp-data";
-import { LpFlowPodiumShell } from "./LpFlowPodiumShell";
+import { useEffect, useRef, useState } from "react";
+import type { LPConnectedFlowNode } from "./lp-data";
 
-const FLOW_NAV_ICONS: Record<
-  LPFlowNavIconKey,
-  ComponentType<{ className?: string; size?: number }>
-> = {
-  games: GiCrossedSwords,
-  home: Brain,
-  ranking: FaTrophy,
-  leaderboards: PiChartBarFill,
-  mypage: FiUser,
-  pen: PenLine,
-  resultSync: RefreshCw,
-  medal: FaMedal,
-};
+/** 1 ステップあたりの表示時間（ms） */
+const STEP_MS = 2200;
 
 export default function ConnectedFlowCards({
   nodes,
-  animated: _animated = true,
+  /** false のときカードの自動切替・横スクロール追従を止める（モバイル LP 用） */
+  autoAdvance = true,
 }: {
   nodes: readonly LPConnectedFlowNode[];
-  animated?: boolean;
+  autoAdvance?: boolean;
 }) {
-  void _animated;
+  const [active, setActive] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  /** 初回マウントの scrollIntoView でページ縦スクロールがずれるのを防ぐ */
+  const skipScrollIntoViewOnce = useRef(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduceMotion(mq.matches);
+    const onChange = () => setReduceMotion(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!autoAdvance || reduceMotion) return;
+    const id = window.setInterval(() => {
+      setActive((i) => (i + 1) % nodes.length);
+    }, STEP_MS);
+    return () => clearInterval(id);
+  }, [autoAdvance, nodes.length, reduceMotion]);
+
+  // モバイル横スクロール時、アクティブカードが見える位置へ（LP 初回表示では実行しない）
+  useEffect(() => {
+    if (!autoAdvance || reduceMotion) return;
+    if (typeof window === "undefined" || window.innerWidth >= 1024) return;
+    if (skipScrollIntoViewOnce.current) {
+      skipScrollIntoViewOnce.current = false;
+      return;
+    }
+    const el = itemRefs.current[active];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [active, autoAdvance, reduceMotion]);
+
   return (
     <>
-      <div className="flex min-w-0 items-stretch gap-2 overflow-x-auto overflow-y-visible py-6 pb-8 -mx-4 px-4 scrollbar-none snap-x snap-mandatory sm:gap-2.5 lg:mx-0 lg:w-full lg:gap-3 lg:overflow-x-visible lg:overflow-y-visible lg:px-0 lg:py-10 lg:pb-12 lg:snap-none xl:gap-3.5">
+      <div className="flex gap-3 overflow-x-auto pb-6 -mx-4 px-4 scrollbar-none snap-x snap-mandatory max-lg:min-h-[248px] lg:mx-0 lg:aspect-video lg:w-full lg:min-h-0 lg:gap-2 lg:overflow-visible lg:px-0 lg:pb-0 lg:snap-none xl:gap-2.5">
         {nodes.map((node, index) => {
-          const isStaggerUp = index % 2 === 0;
-          const NavIcon =
-            "navIconKey" in node && node.navIconKey
-              ? FLOW_NAV_ICONS[node.navIconKey]
-              : null;
-          const staggerClass = isStaggerUp
-            ? "-translate-y-5 sm:-translate-y-6 lg:-translate-y-12 xl:-translate-y-14"
-            : "translate-y-5 sm:translate-y-6 lg:translate-y-12 xl:translate-y-14";
+          const isActive = autoAdvance && active === index;
+          const cardSurface = !autoAdvance
+            ? "z-0 scale-100 border-white/12 opacity-100 shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
+            : isActive
+              ? "z-1 scale-[1.03] border-cyan-300/50 shadow-[0_0_28px_rgba(103,232,249,0.42),0_0_72px_rgba(34,211,238,0.14)] opacity-100"
+              : "z-0 scale-100 border-white/10 opacity-[0.88] shadow-[0_18px_40px_rgba(0,0,0,0.18)]";
           return (
             <div
               key={node.id}
-              className={[
-                "relative flex min-h-0 min-w-[min(240px,82vw)] shrink-0 snap-center flex-col max-lg:max-w-[min(260px,82vw)] transition-transform duration-500 ease-out will-change-transform lg:min-w-0 lg:flex-1 lg:basis-0 lg:shrink lg:snap-none",
-                staggerClass,
-              ].join(" ")}
+              ref={(el) => {
+                itemRefs.current[index] = el;
+              }}
+              className="relative min-w-[min(260px,85vw)] shrink-0 snap-center rounded-[22px] max-lg:max-w-[min(280px,85vw)] lg:min-w-0 lg:flex-1 lg:shrink lg:snap-none"
             >
               <div
                 className={[
-                  "mb-1.5 text-center leading-none text-[26px] sm:text-[28px] lg:mb-1.5 lg:text-[44px] xl:text-[52px]",
-                  resultStatsMetricNumClass,
-                  "bg-linear-to-b from-cyan-100 via-sky-200 to-cyan-500 bg-clip-text text-transparent",
-                  "drop-shadow-[0_0_14px_rgba(56,189,248,0.28)]",
+                  "relative flex h-full min-h-[240px] flex-col overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-4 py-5 transition-[transform,box-shadow,border-color,opacity] duration-500 ease-out max-lg:min-h-[248px] lg:min-h-0 lg:px-2.5 lg:py-3 xl:px-3 xl:py-3.5",
+                  cardSurface,
                 ].join(" ")}
               >
-                {String(index + 1).padStart(2, "0")}
-              </div>
-              <LpFlowPodiumShell>
-                <div className="flex min-h-0 flex-1 flex-col px-3.5 py-3.5 sm:px-4 sm:py-4 lg:px-5 lg:py-5 xl:px-6 xl:py-5">
-                  <div className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-cyan-200 sm:h-11 sm:w-11 lg:h-12 lg:w-12 xl:h-14 xl:w-14">
-                    {NavIcon ? (
-                      <NavIcon
-                        className="size-[20px] shrink-0 text-cyan-200 sm:size-[22px] lg:size-[26px] xl:size-[30px]"
-                        aria-hidden
+                <div className="mx-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-[12px] font-bold tracking-[0.18em] text-cyan-200 lg:h-8 lg:w-8 lg:text-[10px] xl:h-9 xl:w-9 xl:text-[11px]">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+
+                <div className="mt-3 text-center text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300/74 sm:tracking-[0.22em] lg:mt-2 lg:text-[8px] lg:tracking-[0.12em] xl:text-[9px]">
+                  {node.label}
+                </div>
+
+                <div className="mt-2 min-h-0 text-center text-base font-bold leading-tight text-white lg:text-[11px] xl:text-xs xl:leading-snug">
+                  <span className="line-clamp-3">{node.title}</span>
+                </div>
+
+                <div className="mt-2 min-h-0 flex-1 text-center text-[13px] leading-snug text-white/56 lg:text-[9px] lg:leading-tight xl:text-[10px] xl:leading-snug">
+                  <span className="line-clamp-4 lg:line-clamp-5 xl:line-clamp-6">
+                    {node.text}
+                  </span>
+                </div>
+
+                {node.media.enabled ? (
+                  <div className="mt-auto overflow-hidden rounded-lg border border-white/10 bg-white/3 p-0.5 pt-2 lg:rounded-md lg:pt-1.5">
+                    {node.media.type === "video" ? (
+                      <video
+                        src={node.media.src}
+                        poster={node.media.poster}
+                        aria-label={node.media.alt}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        className="h-20 w-full rounded-md object-cover lg:h-12 xl:h-14"
                       />
                     ) : (
-                      <span className="text-xs font-bold tracking-[0.18em] text-cyan-200 sm:text-[13px] lg:text-sm xl:text-base">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
+                      <div className="relative h-20 w-full overflow-hidden rounded-md lg:h-12 xl:h-14">
+                        <Image
+                          src={node.media.src}
+                          alt={node.media.alt}
+                          fill
+                          sizes="160px"
+                          className="object-cover"
+                        />
+                      </div>
                     )}
                   </div>
-
-                  <div className="mt-2.5 min-h-0 text-center text-[16px] font-bold leading-snug text-white sm:mt-3 sm:text-[17px] lg:mt-3.5 lg:text-[18px] xl:mt-4 xl:text-[20px] xl:leading-snug">
-                    <span className="line-clamp-2 whitespace-pre-line">
-                      {node.title}
-                    </span>
-                  </div>
-
-                  <div className="mt-2 min-h-0 flex-1 text-center text-[14px] leading-snug text-white/60 sm:text-[14px] sm:leading-snug lg:mt-2.5 lg:text-[15px] lg:leading-snug xl:text-[16px] xl:leading-snug">
-                    <span className="line-clamp-3 whitespace-pre-line lg:line-clamp-4">
-                      {node.text}
-                    </span>
-                  </div>
-
-                  {node.media.enabled ? (
-                    <div className="mt-auto overflow-hidden rounded-lg border border-white/10 bg-white/3 p-0.5 pt-2 lg:rounded-md lg:pt-1.5">
-                      {node.media.type === "video" ? (
-                        <video
-                          src={node.media.src}
-                          poster={node.media.poster}
-                          aria-label={node.media.alt}
-                          autoPlay
-                          muted
-                          loop
-                          playsInline
-                          preload="metadata"
-                          className="h-20 w-full rounded-md object-cover lg:h-12 xl:h-14"
-                        />
-                      ) : (
-                        <div className="relative h-20 w-full overflow-hidden rounded-md lg:h-12 xl:h-14">
-                          <Image
-                            src={node.media.src}
-                            alt={node.media.alt}
-                            fill
-                            sizes="160px"
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-              </LpFlowPodiumShell>
+                ) : null}
+              </div>
             </div>
           );
         })}
+      </div>
+
+      <div className="relative mt-5 lg:mt-4" aria-hidden>
+        <div className="h-px w-full bg-linear-to-r from-cyan-300/50 via-cyan-300/20 to-transparent" />
       </div>
     </>
   );

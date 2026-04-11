@@ -90,6 +90,7 @@ function toDisplayRows(
 
       value,
       countryCode: row.countryCode ?? undefined,
+      plan: row.plan === "pro" ? "pro" : "free",
     } as RankingRowWithCountry;
   });
 }
@@ -233,6 +234,7 @@ export default function MonthlyLeaderboardSection({
             totalPosts={myRawRow?.posts}
             loading={loading || userLoading}
             language={language}
+            isPro={user.plan === "pro"}
           />
 
           <RankingsMetricRow

@@ -3,6 +3,7 @@ import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { GAMES_CYBER_EASE } from "./cyberMotion";
 
 type Props = {
   dates: Date[];
@@ -15,6 +16,8 @@ type Props = {
   snapSelectOnScroll?: boolean;
   timeZone: string;
   isEn?: boolean;
+  /** true のとき日付セル間を一段広げる（モバイル向け） */
+  wideItemGap?: boolean;
 };
 
 const sizeMap = {
@@ -23,7 +26,7 @@ const sizeMap = {
   lg: { circle: "w-14 h-14", num: "text-base", gap: "gap-3", padX: "px-3" },
 } as const;
 
-const DAY_STRIP_EASE = [0.22, 1, 0.36, 1] as const;
+const DAY_STRIP_EASE = GAMES_CYBER_EASE;
 
 export default function DayStrip({
   dates,
@@ -36,6 +39,7 @@ export default function DayStrip({
   snapSelectOnScroll = true,
   timeZone,
   isEn = false,
+  wideItemGap = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const listRef = useRef<HTMLDivElement>(null);
@@ -46,6 +50,10 @@ export default function DayStrip({
   const firstAlignRef = useRef(true);
   const scrollTimer = useRef<number | null>(null);
   const scrollingByCode = useRef(false);
+  /** ストリップ上の日をタップした直後は、smooth スクロールや snap と二重にならないよう整列・スナップ選択を抑止 */
+  const skipProgrammaticAlignUntil = useRef(0);
+  /** scrollIntoView 直後〜motion の子が落ち着くまで scroll 由来の snap 選択を無効化（初回オープン時の誤日付へ寄るのを防ぐ） */
+  const suppressSnapPickUntil = useRef(0);
 
   const selectedKey = toDateKeyInTimeZone(selectedDate, timeZone);
   const todayKey = toDateKeyInTimeZone(new Date(), timeZone);
@@ -53,7 +61,6 @@ export default function DayStrip({
   useLayoutEffect(() => {
     if (!listRef.current || dates.length === 0) return;
 
-    const wrap = listRef.current;
     const keys = dates.map((d) => toDateKeyInTimeZone(d, timeZone));
 
     let scrollKey: string;
@@ -69,39 +76,65 @@ export default function DayStrip({
     const el = idx >= 0 ? btnRefs.current[idx] : null;
     if (!el) return;
 
-    const rawLeft = el.offsetLeft - wrap.clientWidth / 2 + el.clientWidth / 2;
-    const left = Math.max(
-      0,
-      Math.min(rawLeft, Math.max(0, wrap.scrollWidth - wrap.clientWidth))
-    );
+    // タップで選んだ日は既に画面内にあるので中央寄せしない（端の日で snap / smooth が残りスクロールと競合するのを防ぐ）
+    if (Date.now() < skipProgrammaticAlignUntil.current) {
+      didInit.current = true;
+      return;
+    }
 
     scrollingByCode.current = true;
     if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
 
-    wrap.scrollTo({
-      left,
-      behavior: !didInit.current && !autoScrollOnInit ? "auto" : "smooth",
+    // motion の transform 付き祖先があると button.offsetLeft が横並び全体に対して信頼できないため、
+    // スクロールコンテナ内でセルを中央に寄せるには scrollIntoView が確実
+    // モバイル snap ありでは smooth が終わる前に scrollingByCode が切れて snapToNearest が割り込むため常に auto
+    const behavior: ScrollBehavior =
+      snapSelectOnScroll || (!didInit.current && !autoScrollOnInit)
+        ? "auto"
+        : "smooth";
+    el.scrollIntoView({
+      inline: "center",
+      block: "nearest",
+      behavior,
     });
+    // 初回表示でも motion の stagger 中は矩形がずれて snapToNearest が別日を選ぶことがあるため、しばらくスナップ選択を止める
+    suppressSnapPickUntil.current =
+      Date.now() + (snapSelectOnScroll ? 820 : 380);
+    const settleMs = behavior === "smooth" ? 720 : 120;
     window.setTimeout(() => {
       scrollingByCode.current = false;
-    }, 280);
+    }, settleMs);
 
     didInit.current = true;
-  }, [dates, selectedDate, selectedKey, todayKey, timeZone, autoScrollOnInit]);
+  }, [
+    dates,
+    selectedDate,
+    selectedKey,
+    todayKey,
+    timeZone,
+    autoScrollOnInit,
+    snapSelectOnScroll,
+  ]);
 
   const snapToNearest = () => {
     const wrap = listRef.current;
     if (!wrap) return;
 
-    const center = wrap.scrollLeft + wrap.clientWidth / 2;
+    if (Date.now() < suppressSnapPickUntil.current) return;
+    if (Date.now() < skipProgrammaticAlignUntil.current) return;
+
+    // offsetLeft は transform 付き祖先では列全体に対する座標にならないため、ビューポート基準で中央に近い日を選ぶ
+    const wrapRect = wrap.getBoundingClientRect();
+    const stripCenterX = wrapRect.left + wrapRect.width / 2;
 
     let bestIdx = 0;
     let bestDist = Infinity;
 
     btnRefs.current.forEach((el, i) => {
       if (!el) return;
-      const cx = el.offsetLeft + el.clientWidth / 2;
-      const dist = Math.abs(cx - center);
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const dist = Math.abs(cx - stripCenterX);
       if (dist < bestDist) {
         bestDist = dist;
         bestIdx = i;
@@ -111,20 +144,27 @@ export default function DayStrip({
     const nearestDate = dates[bestIdx];
     if (!nearestDate) return;
 
+    const nearestKey = toDateKeyInTimeZone(nearestDate, timeZone);
+    // 既に選択と一致していれば二重の onSelect / 中央寄せスクロールを避ける（端の日タップ後の「戻り」を防ぐ）
+    if (nearestKey === selectedKey) return;
+
     scrollingByCode.current = true;
     onSelect(nearestDate);
 
     const target = btnRefs.current[bestIdx];
     if (target) {
-      wrap.scrollTo({
-        left: target.offsetLeft - (wrap.clientWidth - target.clientWidth) / 2,
-        behavior: "smooth",
+      target.scrollIntoView({
+        inline: "center",
+        block: "nearest",
+        behavior: snapSelectOnScroll ? "auto" : "smooth",
       });
+      suppressSnapPickUntil.current =
+        Date.now() + (snapSelectOnScroll ? 450 : 280);
     }
 
     window.setTimeout(() => {
       scrollingByCode.current = false;
-    }, 250);
+    }, snapSelectOnScroll ? 120 : 280);
   };
 
   useEffect(() => {
@@ -143,10 +183,28 @@ export default function DayStrip({
       wrap.removeEventListener("scroll", onScroll);
       if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
     };
-  }, [dates, snapSelectOnScroll]);
+  }, [dates, snapSelectOnScroll, selectedKey, timeZone]);
+
+  const markStripPointerPick = () => {
+    skipProgrammaticAlignUntil.current = Date.now() + 520;
+  };
 
   const sz = sizeMap[size];
-  const gapPx = size === "lg" ? 12 : 8;
+  /** flex gap と visibleCount 用の basis 計算を一致させる */
+  const gapClass = wideItemGap
+    ? size === "lg"
+      ? "gap-4"
+      : size === "md"
+        ? "gap-3"
+        : "gap-3"
+    : sz.gap;
+  const gapPx = wideItemGap
+    ? size === "lg"
+      ? 16
+      : 12
+    : size === "lg"
+      ? 12
+      : 8;
 
   const weekday = (d: Date) =>
     new Intl.DateTimeFormat(isEn ? "en-US" : "ja-JP", {
@@ -158,8 +216,8 @@ export default function DayStrip({
     hidden: {},
     show: {
       transition: {
-        staggerChildren: reduceMotion ? 0 : 0.038,
-        delayChildren: reduceMotion ? 0 : 0.06,
+        staggerChildren: reduceMotion ? 0 : 0.028,
+        delayChildren: reduceMotion ? 0 : 0.04,
       },
     },
   };
@@ -167,13 +225,13 @@ export default function DayStrip({
   const dayStripItem = {
     hidden: reduceMotion
       ? { opacity: 1, y: 0, scale: 1 }
-      : { opacity: 0, y: 10, scale: 0.94 },
+      : { opacity: 0, y: 12, scale: 0.93 },
     show: {
       opacity: 1,
       y: 0,
       scale: 1,
       transition: {
-        duration: reduceMotion ? 0 : 0.32,
+        duration: reduceMotion ? 0 : 0.28,
         ease: DAY_STRIP_EASE,
       },
     },
@@ -182,10 +240,10 @@ export default function DayStrip({
   return (
     <div
       ref={listRef}
-      className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-mandatory" : ""}`}
+      className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-proximity" : ""}`}
     >
       <motion.div
-        className={`flex ${sz.gap} py-2`}
+        className={`flex ${gapClass} py-2`}
         variants={dayStripContainer}
         initial={reduceMotion ? false : "hidden"}
         animate="show"
@@ -217,6 +275,9 @@ export default function DayStrip({
                   if (el) btnRefs.current[i] = el;
                   if (selected) selRef.current = el;
                 }}
+                onPointerDown={() => {
+                  markStripPointerPick();
+                }}
                 onClick={() => {
                   // Click selection should win over scroll-snap callbacks.
                   scrollingByCode.current = true;
@@ -224,7 +285,7 @@ export default function DayStrip({
                   onSelect(d);
                   window.setTimeout(() => {
                     scrollingByCode.current = false;
-                  }, 280);
+                  }, 320);
                 }}
                 className="flex flex-col items-center"
                 type="button"
@@ -236,7 +297,7 @@ export default function DayStrip({
                   ].join(" ")}
                   style={{
                     textShadow: selected
-                      ? "0 0 4px rgba(255,255,255,0.10)"
+                      ? "0 0 10px rgba(34,211,238,0.45), 0 0 2px rgba(255,255,255,0.2)"
                       : undefined,
                     transform: selected ? "translateY(-1px)" : undefined,
                   }}
@@ -256,17 +317,17 @@ export default function DayStrip({
                       ? "translateY(-1px) scale(1.02)"
                       : "translateY(0) scale(1)",
                     borderColor: selected
-                      ? "rgba(132,204,22,0.54)"
+                      ? "rgba(34,211,238,0.62)"
                       : isTodayDate
-                        ? "rgba(132,204,22,0.42)"
+                        ? "rgba(34,211,238,0.38)"
                         : "rgba(255,255,255,0.16)",
                     background: selected
-                      ? "linear-gradient(180deg, rgba(132,204,22,0.86) 0%, rgba(101,163,13,0.82) 100%)"
+                      ? "linear-gradient(180deg, rgba(34,211,238,0.42) 0%, rgba(8,145,178,0.36) 100%)"
                       : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
                     boxShadow: selected
-                      ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(132,204,22,0.12), 0 0 4px rgba(132,204,22,0.08)"
+                      ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 1px rgba(34,211,238,0.2), 0 0 14px rgba(34,211,238,0.28)"
                       : isTodayDate
-                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 3px rgba(132,204,22,0.05)"
+                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 8px rgba(34,211,238,0.12)"
                         : "inset 0 1px 0 rgba(255,255,255,0.06)",
                     isolation: "isolate",
                   }}
@@ -284,9 +345,9 @@ export default function DayStrip({
                   <span
                     className={`relative z-10 ${resultStatsMetricNumClass} ${sz.num}`}
                     style={{
-                      color: selected ? "#071006" : "#ffffff",
+                      color: selected ? "#ecfeff" : "#ffffff",
                       textShadow: selected
-                        ? "0 1px 0 rgba(255,255,255,0.08)"
+                        ? "0 0 10px rgba(34,211,238,0.55), 0 1px 0 rgba(0,0,0,0.35)"
                         : "0 0 3px rgba(255,255,255,0.04)",
                     }}
                   >

@@ -2,19 +2,27 @@
 "use client";
 
 
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useState, useMemo, useCallback } from "react";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+  GAMES_CYBER_EASE,
+  GAMES_CYBER_ENTRY_DURATION_MS,
+  GAMES_CYBER_ENTRY_DURATION_SEC,
+  GAMES_CYBER_LEAD_IN_SEC,
+  GAMES_CYBER_SLOT_GAP_SEC,
+} from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 import type { League } from "@/lib/leagues";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
@@ -70,12 +78,16 @@ homeRecord?: {
   rank?: number;
   lastGames?: { at?: any; isWin?: boolean }[];
 } | null;
-awayRecord?: {
+  awayRecord?: {
   wins: number;
   losses: number;
   rank?: number;
   lastGames?: { at?: any; isWin?: boolean }[];
 } | null;
+  /** 一覧の何枚目か（入場スタッガーに合わせたドット開幕ディレイ用） */
+  scheduleEntryIndex?: number;
+  /** false のとき派手な一覧入場・ユニドット開幕を出さない（日付切替など） */
+  heavyListEntry?: boolean;
 };
 
 
@@ -188,6 +200,8 @@ function MatchCard({
   sharedLayoutId,
   onOpenPredict,
   disableCardMotion = false,
+  scheduleEntryIndex,
+  heavyListEntry = true,
 }: MatchCardProps & { className?: string }) {
   const router = useRouter();
 
@@ -204,6 +218,8 @@ const isPredicted = !!myPostId;
  // ✅ 追加（既存の useSectionPrefix を使う）
 const prefix = useSectionPrefix();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
+  /** モバイルの試合一覧（dense）：カード幅・ラウンド帯のレイアウト調整用 */
+  const mobileDense = dense && isMobile;
   const teamNameFont = bracketMarketTeamTypography(isMobile);
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
@@ -256,6 +272,15 @@ const awayColor = useMemo(
   () => getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e",
   [normalizedLeague, away.teamId]
 );
+
+const homeSecondaryColor = useMemo(
+  () => getTeamSecondaryColor(normalizedLeague, home.teamId),
+  [normalizedLeague, home.teamId]
+);
+const awaySecondaryColor = useMemo(
+  () => getTeamSecondaryColor(normalizedLeague, away.teamId),
+  [normalizedLeague, away.teamId]
+);
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
 const awayBiasPct = Math.max(0, Math.min(100, marketBias?.awayPct ?? 32));
 
@@ -266,9 +291,18 @@ const marketMajority = useMemo(() => {
 
 
 
-  const jerseyCls = dense
-    ? "w-8 h-8 md:w-14 md:h-14"
-    : "w-12 h-12 md:w-16 md:h-16";
+  /** サッカーボール等（従来サイズ） */
+  const teamMarkSizeSoccer = dense
+    ? "jersey-icon w-16 h-16 md:w-20 md:h-20"
+    : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
+  /** Canvas ユニのみモバイルルートでやや大きめ */
+  const teamMarkSizeJersey = dense
+    ? isMobile
+      ? "jersey-icon w-[4.5rem] h-[4.5rem] md:w-20 md:h-20"
+      : "jersey-icon w-16 h-16 md:w-20 md:h-20"
+    : isMobile
+      ? "jersey-icon w-[4.75rem] h-[4.75rem] md:w-24 md:h-24"
+      : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
 
   // Tailwind に text-1.xl は無いので既に修正済み
   const scoreText = dense ? "text-xl md:text-4xl" : "text-xl md:text-5xl";
@@ -277,6 +311,52 @@ const marketMajority = useMemo(() => {
   const Icon =
     league === "nba" || league === "bj" ? Jersey : Soccer;
 
+  const reduceMotion = useReducedMotion();
+  /** 一覧は先頭3枚のみ入場。オーバーレイは除外。単体ページは index 未指定で対象 */
+  const showContentEntry =
+    heavyListEntry &&
+    !inPredictOverlay &&
+    (scheduleEntryIndex === undefined || scheduleEntryIndex < 3);
+  /** オーバーレイ複製 or 4枚目以降ではドット開幕も出さない */
+  const jerseyDotRevealEnabled =
+    showContentEntry && (league === "nba" || league === "bj");
+
+  const entryTransition = useMemo(() => {
+    if (!showContentEntry || reduceMotion) return null;
+    const listStagger =
+      scheduleEntryIndex !== undefined
+        ? Math.min(scheduleEntryIndex * 0.032, 0.14)
+        : 0;
+    const ease = GAMES_CYBER_EASE;
+    const duration = GAMES_CYBER_ENTRY_DURATION_SEC;
+    /** 狭めのスロット間＝データが順にロックオンする感じ */
+    const slotGap = GAMES_CYBER_SLOT_GAP_SEC;
+    const leadIn = GAMES_CYBER_LEAD_IN_SEC;
+    return (slot: number) => ({
+      delay: listStagger + leadIn + slot * slotGap,
+      duration,
+      ease,
+    });
+  }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
+
+  /**
+   * ドットは最終要素の後ではなく、各チーム列（HOME=4 / AWAY=6）の入場に同期
+   */
+  const { jerseyDotHomeDelayMs, jerseyDotAwayDelayMs } = useMemo(() => {
+    if (!jerseyDotRevealEnabled || reduceMotion || !entryTransition) {
+      return { jerseyDotHomeDelayMs: 0, jerseyDotAwayDelayMs: 0 };
+    }
+    const entryItemDurationMs = GAMES_CYBER_ENTRY_DURATION_MS;
+    /** 列の入場が始まってから少し経ってからドット開始 */
+    const duringColumnMs = Math.round(entryItemDurationMs * 0.32);
+    const tailMs = 28;
+    const msForSlot = (slot: number) =>
+      Math.round(entryTransition(slot).delay * 1000) + duringColumnMs + tailMs;
+    return {
+      jerseyDotHomeDelayMs: msForSlot(4),
+      jerseyDotAwayDelayMs: msForSlot(6),
+    };
+  }, [jerseyDotRevealEnabled, reduceMotion, entryTransition]);
 
   // 現在のルートから /m or /web を決める & lg を引き継ぎ
   const sp = useSearchParams();
@@ -306,7 +386,13 @@ const isLive =
     Date.now() >= startAtJst.getTime());
 
 let center: React.ReactNode = inPredictOverlay ? (
-  <div className="flex min-h-[72px] items-center justify-center md:min-h-[88px]">
+  <div
+    className={
+      mobileDense
+        ? "flex min-h-[52px] items-center justify-center md:min-h-[68px]"
+        : "flex min-h-[72px] items-center justify-center md:min-h-[88px]"
+    }
+  >
     <div
       className={[
         "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
@@ -337,7 +423,13 @@ let center: React.ReactNode = inPredictOverlay ? (
 
     if (!inPredictOverlay && status === "live" && score) {
     center = (
-      <div className="flex flex-col items-center gap-1">
+      <div
+        className={
+          mobileDense
+            ? "flex flex-col items-center gap-0.5"
+            : "flex flex-col items-center gap-1"
+        }
+      >
         <span
           className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
           style={{ fontSize: dense ? 10 : 11 }}
@@ -363,7 +455,13 @@ let center: React.ReactNode = inPredictOverlay ? (
 
   if (!inPredictOverlay && status === "final" && score) {
     center = (
-      <div className="flex flex-col items-center gap-1">
+      <div
+        className={
+          mobileDense
+            ? "flex flex-col items-center gap-0.5"
+            : "flex flex-col items-center gap-1"
+        }
+      >
         <div
           className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
             " "
@@ -503,6 +601,27 @@ return (
 <motion.div
   layout={!disableCardMotion}
   layoutId={sharedLayoutId}
+  initial={entryTransition ? { scale: 0.972, opacity: 0.92 } : false}
+  animate={entryTransition ? { scale: 1, opacity: 1 } : undefined}
+  transition={{
+    layout: { duration: 0.22 },
+    ...(entryTransition
+      ? {
+          scale: {
+            type: "tween" as const,
+            delay: entryTransition(0).delay,
+            duration: entryTransition(0).duration + 0.06,
+            ease: entryTransition(0).ease,
+          },
+          opacity: {
+            type: "tween" as const,
+            delay: entryTransition(0).delay,
+            duration: entryTransition(0).duration * 0.55,
+            ease: entryTransition(0).ease,
+          },
+        }
+      : {}),
+  }}
 className={[
   "group relative overflow-hidden text-white",
   "max-w-[1200px] mx-auto",
@@ -515,15 +634,26 @@ disableCardMotion
 dense
   ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
-    hideLine ? "pb-3 md:pb-4" : "",
+    hideLine
+      ? mobileDense
+        ? "pb-2 md:pb-2"
+        : "pb-2 md:pb-3"
+      : "",
     className || "",
   ].join(" ")}
  style={{
   willChange: "transform",
 }}
 >
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl"
+        initial={entryTransition ? { opacity: 0, y: 8 } : false}
+        animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+        transition={entryTransition ? entryTransition(1) : undefined}
+        aria-hidden
+      >
       <div
-        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-[0.32]"
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
@@ -601,48 +731,82 @@ background:
   "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.008) 26%, rgba(255,255,255,0.00) 46%)",
   }}
 />
+      </motion.div>
       {(() => {
   const tag = getGameEventTag(roundLabel);
   if (!tag) return null;
 
   return (
-    
-    <div className="absolute top-2 right-2 z-20">
+    <motion.div
+      className="absolute top-2 right-2 z-20"
+      initial={entryTransition ? { opacity: 0, y: 8 } : false}
+      animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+      transition={entryTransition ? entryTransition(2) : undefined}
+    >
       <EventPill label={tag.label} color={tag.color} />
-    </div>
+    </motion.div>
   );
 })()}
 
 
-      <div
-  className={`${
-    dense ? "px-3 pt-3 mb-1" : "px-4 pt-3 mb-1"
-  } ${inPredictOverlay ? "pb-0" : ""}`}
->
+      <motion.div
+        className={[
+          mobileDense
+            ? "mb-0 px-2.5 pb-0 pt-0.5"
+            : dense
+              ? "mb-0.5 px-3 pt-2"
+              : "mb-0.5 px-4 pt-2",
+          inPredictOverlay ? "pb-0" : "",
+        ].join(" ")}
+        initial={entryTransition ? { opacity: 0, y: 10 } : false}
+        animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+        transition={entryTransition ? entryTransition(3) : undefined}
+      >
         {!!roundLabel && (
           <div
-            className="mc-round mb-1 text-center text-lg font-bold md:text-2xl"
+            className={[
+              "mc-round text-center font-bold",
+              mobileDense
+                ? "mt-2.5 mb-0 text-xl leading-snug md:text-2xl"
+                : "mt-2 mb-0.5 text-lg md:text-2xl",
+            ].join(" ")}
             style={teamNameFont}
           >
             {roundLabel}
           </div>
         )}
 
-<div className="h-4 md:h-5"></div>
-      </div>
+        <div
+          className={mobileDense ? "h-0.5 md:h-1" : "h-2.5 md:h-3.5"}
+          aria-hidden
+        />
+      </motion.div>
 
       <div
         className={`grid grid-cols-3 ${
-          dense ? "items-start gap-1 px-3 py-0" : "items-center gap-2 px-4 py-4"
+          mobileDense
+            ? "items-center gap-0.5 px-2.5 py-0"
+            : dense
+              ? "items-start gap-1 px-3 py-0"
+              : "items-center gap-2 px-4 py-2.5"
         }`}
       >
         {/* HOME */}
-<div className="mc-home flex flex-col items-center -mt-5 md:mt-0">
+        <motion.div
+          className={[
+            "mc-home flex flex-col items-center",
+            mobileDense ? "mt-0" : "-mt-5 md:mt-0",
+          ].join(" ")}
+          initial={entryTransition ? { opacity: 0, y: 12 } : false}
+          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+          transition={entryTransition ? entryTransition(4) : undefined}
+        >
 
   {/* HOME：Web はラベルを大きく */}
   <div
     className={[
-      "mb-1 text-center font-bold uppercase opacity-85",
+      mobileDense ? "mb-0.5" : "mb-1",
+      "text-center font-bold uppercase opacity-85",
       isMobile
         ? "text-xs md:text-sm"
         : "text-sm md:text-base lg:text-lg",
@@ -652,14 +816,29 @@ background:
     HOME
   </div>
 
-  <Icon
-  className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
-  fill={homeColor}
-  stroke="#fff"
-/>
+  {Icon === Jersey ? (
+    <HalftoneJerseyMark
+      accent={homeColor}
+      accentEnd={homeSecondaryColor}
+      className={teamMarkSizeJersey}
+      enableDotReveal={jerseyDotRevealEnabled}
+      dotRevealDelayMs={jerseyDotHomeDelayMs}
+    />
+  ) : (
+    <Icon
+      className={teamMarkSizeSoccer}
+      fill={homeColor}
+      stroke="#fff"
+    />
+  )}
 
   {/* チーム名：mobile小さく / webそのまま */}
-  <div className="mc-name mt-1 text-center leading-tight">
+  <div
+    className={[
+      "mc-name text-center leading-tight",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
   {isMobile ? (
     <>
       {league === "nba" ? (
@@ -708,13 +887,23 @@ background:
 
 
   {/* 戦績・順位：総合得点などと同じ Oxanium */}
-<div className="mc-record mt-0.5 text-[11px] leading-none md:text-[15px]">
+<div
+  className={[
+    "mc-record text-[11px] leading-none md:text-[15px]",
+    mobileDense ? "mt-0" : "mt-0.5",
+  ].join(" ")}
+>
   <RecordWithRank r={homeRecord} />
 </div>
 
 {/* ★ ここに挿入 */}
 {showRecentForm && homeForm.length > 0 && (
-  <div className="mt-1 w-full flex justify-center">
+  <div
+    className={[
+      "w-full flex justify-center",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
     <div className="flex items-center gap-1">
       <div className="flex gap-[3px]">
         {homeForm.map((result, idx) => {
@@ -743,24 +932,40 @@ background:
   </div>
 )}
 
-</div>
+</motion.div>
 
 
-        {/* CENTER */}
-<div
-  className={`mc-center flex flex-col items-center justify-center ${
-    inPredictOverlay ? "-mt-2 md:-mt-3" : "mt-4 md:mt-1"
-  }`}
->
-  {center}
-</div>
+        {/* CENTER（モバイル dense は行の垂直中央にスコアを置く） */}
+        <motion.div
+          className={`mc-center flex w-full min-w-0 flex-col items-center justify-center text-center ${
+            inPredictOverlay
+              ? "-mt-2 md:-mt-3"
+              : mobileDense
+                ? ""
+                : "mt-4 md:mt-1"
+          }`}
+          initial={entryTransition ? { opacity: 0, y: 12 } : false}
+          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+          transition={entryTransition ? entryTransition(5) : undefined}
+        >
+          {center}
+        </motion.div>
 
         {/* AWAY */}
-<div className="mc-away flex flex-col items-center -mt-5 md:mt-0">
+        <motion.div
+          className={[
+            "mc-away flex flex-col items-center",
+            mobileDense ? "mt-0" : "-mt-5 md:mt-0",
+          ].join(" ")}
+          initial={entryTransition ? { opacity: 0, y: 12 } : false}
+          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+          transition={entryTransition ? entryTransition(6) : undefined}
+        >
 
   <div
     className={[
-      "mb-1 text-center font-bold uppercase opacity-85",
+      mobileDense ? "mb-0.5" : "mb-1",
+      "text-center font-bold uppercase opacity-85",
       isMobile
         ? "text-xs md:text-sm"
         : "text-sm md:text-base lg:text-lg",
@@ -771,14 +976,29 @@ background:
   </div>
 
   {/* アイコン：mobile大きく / webそのまま */}
-  <Icon
-  className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
-  fill={awayColor}
-  stroke="#fff"
-/>
+  {Icon === Jersey ? (
+    <HalftoneJerseyMark
+      accent={awayColor}
+      accentEnd={awaySecondaryColor}
+      className={teamMarkSizeJersey}
+      enableDotReveal={jerseyDotRevealEnabled}
+      dotRevealDelayMs={jerseyDotAwayDelayMs}
+    />
+  ) : (
+    <Icon
+      className={teamMarkSizeSoccer}
+      fill={awayColor}
+      stroke="#fff"
+    />
+  )}
 
   {/* チーム名：mobile小さく / webそのまま */}
-  <div className="mc-name mt-1 text-center leading-tight">
+  <div
+    className={[
+      "mc-name text-center leading-tight",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
   {isMobile ? (
     <>
       {league === "nba" ? (
@@ -826,13 +1046,23 @@ background:
 </div>
 
 
-<div className="mc-record mt-0.5 text-[11px] leading-none md:text-[15px]">
+<div
+  className={[
+    "mc-record text-[11px] leading-none md:text-[15px]",
+    mobileDense ? "mt-0" : "mt-0.5",
+  ].join(" ")}
+>
   <RecordWithRank r={awayRecord} />
 </div>
 
 {/* ★ ここに挿入 */}
 {showRecentForm && awayForm.length > 0 && (
-  <div className="mt-1 w-full flex justify-center">
+  <div
+    className={[
+      "w-full flex justify-center",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
     <div className="flex items-center gap-1">
       <span className="text-[10px] md:text-[11px] text-cyan-200/70">←</span>
       <div className="flex gap-[3px]">
@@ -861,26 +1091,60 @@ background:
   </div>
 )}
 
-</div>
+</motion.div>
 
       </div>
 
       {/* 仕切り線 */}
 {!hideLine && (
-  <div
+  <motion.div
     className={
       dense
-        ? "h-[2px] w-full mt-2 md:mt-2" 
-        : "h-[3px] w-full mt-3 md:mt-3" 
+        ? mobileDense
+          ? "h-[2px] w-full mt-1 md:mt-1"
+          : "h-[2px] w-full mt-1.5 md:mt-1.5"
+        : "h-[3px] w-full mt-2 md:mt-2"
     }
-    style={{ backgroundColor: leagueLineColor[league] }}
+    style={{
+      backgroundColor: leagueLineColor[league],
+      transformOrigin: "50% 50%",
+    }}
     aria-hidden={true}
+    initial={
+      entryTransition
+        ? {
+            opacity: 0,
+            scaleX: 0.06,
+            boxShadow: "0 0 0 rgba(34,211,238,0)",
+          }
+        : false
+    }
+    animate={
+      entryTransition
+        ? {
+            opacity: 1,
+            scaleX: 1,
+            boxShadow:
+              "0 0 16px rgba(34,211,238,0.5), 0 0 5px rgba(94,234,212,0.35)",
+          }
+        : undefined
+    }
+    transition={entryTransition ? entryTransition(7) : undefined}
   />
 )}
 
       {/* ボタン行 */}
       {!hideActions && (
-        <div className="grid grid-cols-1 gap-2 px-3 py-2 md:gap-3 md:px-4 md:py-3">
+        <motion.div
+          className={
+            mobileDense
+              ? "grid grid-cols-1 gap-1.5 px-2.5 py-1 md:gap-3 md:px-4 md:py-3"
+              : "grid grid-cols-1 gap-2 px-3 py-1.5 md:gap-3 md:px-4 md:py-2.5"
+          }
+          initial={entryTransition ? { opacity: 0, y: 10 } : false}
+          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+          transition={entryTransition ? entryTransition(8) : undefined}
+        >
           {/* ▼ 試合別タイムラインへ */}
           {/* ▼ 予想作成ページへ（自分の投稿があれば詳細へ／開始後は未投稿なら“見る”へ） */}
           {/* ▼ 予想をする / 予想済み */}
@@ -915,7 +1179,7 @@ background:
   ? "Predict"
   : "予想をする"}
 </button>
-        </div>
+        </motion.div>
       )}
     </motion.div>
   );

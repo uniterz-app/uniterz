@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import "@fontsource/dseg14-classic";
+import { useReducedMotion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import UniterzLogo3DBackground from "@/app/component/background/UniterzLogo3DBackground";
+import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
 import { nameRajdhani } from "@/lib/fonts";
 
 /**
@@ -10,12 +13,46 @@ import { nameRajdhani } from "@/lib/fonts";
  */
 export default function AnimatedSplashScreen() {
   const [decorationsReady, setDecorationsReady] = useState(false);
+  /** 0〜1。バー（scaleX）と数字（%）の単一ソース */
+  const [loadProgress01, setLoadProgress01] = useState(0);
+  const loadRafRef = useRef<number | null>(null);
+  const reduceMotion = useReducedMotion();
+
+  const loadPercent = useMemo(
+    () => Math.min(100, Math.round(loadProgress01 * 100)),
+    [loadProgress01],
+  );
 
   useEffect(() => {
     // WebGL 失敗時も永久に真っ暗にならないようフォールバック
     const t = setTimeout(() => setDecorationsReady(true), 4000);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setLoadProgress01(1);
+      return;
+    }
+
+    setLoadProgress01(0);
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / MIN_SPLASH_DURATION_MS);
+      setLoadProgress01(t);
+      if (t < 1) {
+        loadRafRef.current = requestAnimationFrame(tick);
+      } else {
+        loadRafRef.current = null;
+      }
+    };
+    loadRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (loadRafRef.current != null) {
+        cancelAnimationFrame(loadRafRef.current);
+      }
+    };
+  }, [reduceMotion]);
 
   return (
     <div className="relative flex h-full min-h-dvh w-full flex-col items-center justify-center overflow-hidden bg-app">
@@ -26,15 +63,15 @@ export default function AnimatedSplashScreen() {
         />
       </div>
 
-      {decorationsReady && (
-        <>
-          {/* 3D ロゴ（画面中央付近）のすぐ下 */}
-          <div
-            className={[
-              "pointer-events-none absolute left-1/2 top-[calc(50%+clamp(1.5rem,6.5vh,3.75rem))] z-20 flex -translate-x-1/2 -translate-y-[clamp(0.75rem,3.25vh,2rem)] flex-col items-center gap-1.5",
-              nameRajdhani.className,
-            ].join(" ")}
-          >
+      {/* ワードマーク＋ローディングバー（名前の少し下にバー。装飾前も同じ縦帯でバーだけ表示） */}
+      <div
+        className={[
+          "pointer-events-none absolute left-1/2 top-[calc(50%+clamp(1.5rem,6.5vh,3.75rem))] z-[200] flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-[clamp(0.75rem,3.25vh,2rem)] flex-col items-center gap-1.5",
+          nameRajdhani.className,
+        ].join(" ")}
+      >
+        {decorationsReady ? (
+          <>
             <span
               className={[
                 "bg-gradient-to-b from-cyan-50 via-cyan-200 to-cyan-500/90 bg-clip-text text-[clamp(1.75rem,6.5vw,2.85rem)] font-semibold uppercase tracking-[0.28em] text-transparent",
@@ -44,8 +81,66 @@ export default function AnimatedSplashScreen() {
               Uniterz
             </span>
             <div className="h-px w-[min(10.5rem,68vw)] max-w-full bg-gradient-to-r from-transparent via-cyan-400/75 to-transparent shadow-[0_0_10px_rgba(34,211,238,0.45)]" />
+          </>
+        ) : (
+          /* タイトル未表示時もバー位置が大きく跳ばないよう高さを確保 */
+          <div
+            className="flex w-full flex-col items-center gap-1.5 opacity-0"
+            aria-hidden
+          >
+            <span className="text-[clamp(1.75rem,6.5vw,2.85rem)] font-semibold uppercase tracking-[0.28em]">
+              Uniterz
+            </span>
+            <div className="h-px w-[min(10.5rem,68vw)] max-w-full" />
           </div>
+        )}
+        <div className="mt-2 w-full max-w-md px-1">
+          <div
+            className="splash-loading-track w-full"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={loadPercent}
+            aria-valuetext={`${loadPercent}%`}
+            aria-label="Loading"
+          >
+            <div
+              className="splash-loading-fill"
+              style={{
+                transform: `scaleX(${loadProgress01})`,
+              }}
+            />
+          </div>
+        </div>
 
+        <div className="mt-3 flex w-full max-w-md flex-col items-center gap-2 px-1">
+          <div className="flex w-full items-center justify-center gap-3 sm:gap-4">
+            <span
+              className="h-px flex-1 max-w-[3.5rem] bg-gradient-to-r from-transparent to-cyan-400/55"
+              aria-hidden
+            />
+            <p
+              className="splash-loading-caption splash-seven-seg shrink-0 text-center text-[clamp(0.7rem,2.8vw,0.95rem)] font-normal uppercase tracking-[0.14em] text-cyan-100 drop-shadow-[0_0_10px_rgba(34,211,238,0.55),0_0_22px_rgba(6,182,212,0.2)] sm:tracking-[0.18em]"
+              aria-live="polite"
+            >
+              Loading
+            </p>
+            <span
+              className="h-px flex-1 max-w-[3.5rem] bg-gradient-to-l from-transparent to-cyan-400/55"
+              aria-hidden
+            />
+          </div>
+          <span
+            className="splash-seven-seg splash-loading-caption text-[clamp(1.05rem,4.2vw,1.55rem)] font-normal tabular-nums tracking-[0.22em] text-cyan-200/90 drop-shadow-[0_0_14px_rgba(34,211,238,0.45)] sm:tracking-[0.28em]"
+            aria-hidden
+          >
+            {String(loadPercent).padStart(3, "0")}
+          </span>
+        </div>
+      </div>
+
+      {decorationsReady && (
+        <>
           {/* サイバー風オーバーレイ */}
           <div className="pointer-events-none absolute inset-0 z-10">
             <div
