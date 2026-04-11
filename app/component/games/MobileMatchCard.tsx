@@ -2,10 +2,11 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import type { MatchCardProps } from "./MatchCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -64,6 +65,14 @@ export default function MobileMatchCard(props: MatchCardProps) {
     getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e";
+  const homeSecondaryColor = getTeamSecondaryColor(
+    normalizedLeague,
+    home.teamId
+  );
+  const awaySecondaryColor = getTeamSecondaryColor(
+    normalizedLeague,
+    away.teamId
+  );
 
   const kickoff =
     startAtJst instanceof Date
@@ -123,11 +132,15 @@ export default function MobileMatchCard(props: MatchCardProps) {
 
         {/* HOME */}
         <div className="flex flex-col items-center">
-          <Icon
-            className="w-10 h-10"
-            fill={homeColor}
-            stroke="#fff"
-          />
+          {Icon === Jersey ? (
+            <HalftoneJerseyMark
+              accent={homeColor}
+              accentEnd={homeSecondaryColor}
+              className="h-[4.5rem] w-[4.5rem]"
+            />
+          ) : (
+            <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
+          )}
           <div className="mt-1 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, home.name, homeL1, homeL2)}
           </div>
@@ -152,11 +165,15 @@ export default function MobileMatchCard(props: MatchCardProps) {
 
         {/* AWAY */}
         <div className="flex flex-col items-center">
-          <Icon
-            className="w-10 h-10"
-            fill={awayColor}
-            stroke="#fff"
-          />
+          {Icon === Jersey ? (
+            <HalftoneJerseyMark
+              accent={awayColor}
+              accentEnd={awaySecondaryColor}
+              className="h-[4.5rem] w-[4.5rem]"
+            />
+          ) : (
+            <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
+          )}
           <div className="mt-1 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, away.name, awayL1, awayL2)}
           </div>

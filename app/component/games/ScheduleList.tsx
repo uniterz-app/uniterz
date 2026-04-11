@@ -626,7 +626,12 @@ export default function ScheduleList({
       >
         <motion.div
           key={leagueAnimKey}
-          className="grid gap-6 px-4 md:px-6 lg:px-8"
+          className={[
+            "grid",
+            isMobile && dense
+              ? "gap-4 px-1.5"
+              : "gap-6 px-4 md:px-6 lg:px-8",
+          ].join(" ")}
           variants={scheduleContainer}
           initial={reduceMotion ? false : "hidden"}
           animate="show"

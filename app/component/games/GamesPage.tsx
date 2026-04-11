@@ -595,19 +595,21 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ]);
 
   /* =========================
-     UI
-  ========================= */
-  const visibleCount = dense ? 7 : 10;
-  const pagePad = dense ? "px-3" : "px-4 md:px-6";
-  const isInitialLoading = loadingDays || !selected;
-  const isSwitchingDate = !!selected && loading;
-
-  /* =========================
-     Paths
+     Paths（pagePad より先に必要）
   ========================= */
   const isMobile = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
+
+  /* =========================
+     UI
+  ========================= */
+  const visibleCount = dense ? 7 : 10;
+  /** モバイル試合一覧はカード横幅を広げるため左右を詰める */
+  const pagePad =
+    dense && isMobile ? "px-2" : dense ? "px-3" : "px-4 md:px-6";
+  const isInitialLoading = loadingDays || !selected;
+  const isSwitchingDate = !!selected && loading;
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
   const playoffViewHref = isMobile
     ? "/mobile/playoff-bracket/view"
@@ -771,7 +773,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       <div className="h-14 rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
     </div>
 
-    <div className="grid gap-6 px-4 md:px-6 lg:px-8">
+    <div
+      className={
+        dense && isMobile
+          ? "grid gap-4 px-1.5"
+          : "grid gap-6 px-4 md:px-6 lg:px-8"
+      }
+    >
       <SkeletonCard />
       <SkeletonCard />
       <SkeletonCard />

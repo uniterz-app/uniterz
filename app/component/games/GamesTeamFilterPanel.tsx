@@ -57,6 +57,12 @@ export default function GamesTeamFilterPanel({
 }: Props) {
   const reduceMotion = useReducedMotion();
   const tabFont = bracketMarketTeamTypography(layoutMobile);
+  /** モバイルで number/search 入力にフォーカスしたとき、16px 未満だと iOS がページを拡大するのを防ぐ */
+  const filterInputTextClass = layoutMobile
+    ? "text-[16px] leading-normal"
+    : dense
+      ? "text-xs"
+      : "text-sm";
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -270,7 +276,7 @@ export default function GamesTeamFilterPanel({
                   placeholder="—"
                   className={cn(
                     "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
-                    dense ? "text-xs" : "text-sm",
+                    filterInputTextClass,
                   )}
                   style={tabFont}
                 />
@@ -291,7 +297,7 @@ export default function GamesTeamFilterPanel({
                   placeholder="—"
                   className={cn(
                     "w-full rounded-lg border border-white/12 bg-black/40 px-2 py-2 text-white/90 outline-none focus:border-cyan-400/40",
-                    dense ? "text-xs" : "text-sm",
+                    filterInputTextClass,
                   )}
                   style={tabFont}
                 />
@@ -371,7 +377,7 @@ export default function GamesTeamFilterPanel({
                 placeholder={isEn ? "Search teams…" : "チーム名で検索…"}
                 className={cn(
                   "w-full rounded-xl border border-white/12 bg-black/40 py-2.5 pl-9 pr-3 text-white/90 outline-none ring-0 transition placeholder:text-white/35 focus:border-cyan-400/40 focus:bg-black/50",
-                  dense ? "text-xs" : "text-sm",
+                  filterInputTextClass,
                 )}
                 style={tabFont}
               />

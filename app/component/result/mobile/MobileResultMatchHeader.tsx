@@ -2,10 +2,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -158,6 +159,14 @@ export default function MobileResultMatchHeader({
     getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#f43f5e";
+  const homeSecondaryColor = getTeamSecondaryColor(
+    normalizedLeague,
+    post.home?.teamId
+  );
+  const awaySecondaryColor = getTeamSecondaryColor(
+    normalizedLeague,
+    post.away?.teamId
+  );
 
   const [homeL1, homeL2] = splitTeamNameByLeague(
     post.league,
@@ -271,7 +280,15 @@ export default function MobileResultMatchHeader({
       <div className="relative z-10 px-4 pb-5 pt-9">
       <div className="grid grid-cols-3 items-center pt-1">
         <div className="flex flex-col items-center">
-          <Icon className="h-10 w-10" fill={homeColor} stroke="#fff" />
+          {Icon === Jersey ? (
+            <HalftoneJerseyMark
+              accent={homeColor}
+              accentEnd={homeSecondaryColor}
+              className="h-[4.5rem] w-[4.5rem]"
+            />
+          ) : (
+            <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
+          )}
           <div
             className="mt-1 text-center text-[13px] font-bold leading-tight md:text-[17px]"
             style={teamNameFont}
@@ -325,7 +342,15 @@ export default function MobileResultMatchHeader({
         </div>
 
         <div className="flex flex-col items-center">
-          <Icon className="h-10 w-10" fill={awayColor} stroke="#fff" />
+          {Icon === Jersey ? (
+            <HalftoneJerseyMark
+              accent={awayColor}
+              accentEnd={awaySecondaryColor}
+              className="h-[4.5rem] w-[4.5rem]"
+            />
+          ) : (
+            <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
+          )}
           <div
             className="mt-0.5 text-center text-[13px] font-bold leading-tight md:text-[17px]"
             style={teamNameFont}

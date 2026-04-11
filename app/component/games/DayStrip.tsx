@@ -46,6 +46,10 @@ export default function DayStrip({
   const firstAlignRef = useRef(true);
   const scrollTimer = useRef<number | null>(null);
   const scrollingByCode = useRef(false);
+  /** ストリップ上の日をタップした直後は、smooth スクロールや snap と二重にならないよう整列・スナップ選択を抑止 */
+  const skipProgrammaticAlignUntil = useRef(0);
+  /** scrollIntoView 直後〜motion の子が落ち着くまで scroll 由来の snap 選択を無効化（初回オープン時の誤日付へ寄るのを防ぐ） */
+  const suppressSnapPickUntil = useRef(0);
 
   const selectedKey = toDateKeyInTimeZone(selectedDate, timeZone);
   const todayKey = toDateKeyInTimeZone(new Date(), timeZone);
@@ -53,7 +57,6 @@ export default function DayStrip({
   useLayoutEffect(() => {
     if (!listRef.current || dates.length === 0) return;
 
-    const wrap = listRef.current;
     const keys = dates.map((d) => toDateKeyInTimeZone(d, timeZone));
 
     let scrollKey: string;
@@ -69,39 +72,65 @@ export default function DayStrip({
     const el = idx >= 0 ? btnRefs.current[idx] : null;
     if (!el) return;
 
-    const rawLeft = el.offsetLeft - wrap.clientWidth / 2 + el.clientWidth / 2;
-    const left = Math.max(
-      0,
-      Math.min(rawLeft, Math.max(0, wrap.scrollWidth - wrap.clientWidth))
-    );
+    // タップで選んだ日は既に画面内にあるので中央寄せしない（端の日で snap / smooth が残りスクロールと競合するのを防ぐ）
+    if (Date.now() < skipProgrammaticAlignUntil.current) {
+      didInit.current = true;
+      return;
+    }
 
     scrollingByCode.current = true;
     if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
 
-    wrap.scrollTo({
-      left,
-      behavior: !didInit.current && !autoScrollOnInit ? "auto" : "smooth",
+    // motion の transform 付き祖先があると button.offsetLeft が横並び全体に対して信頼できないため、
+    // スクロールコンテナ内でセルを中央に寄せるには scrollIntoView が確実
+    // モバイル snap ありでは smooth が終わる前に scrollingByCode が切れて snapToNearest が割り込むため常に auto
+    const behavior: ScrollBehavior =
+      snapSelectOnScroll || (!didInit.current && !autoScrollOnInit)
+        ? "auto"
+        : "smooth";
+    el.scrollIntoView({
+      inline: "center",
+      block: "nearest",
+      behavior,
     });
+    // 初回表示でも motion の stagger 中は矩形がずれて snapToNearest が別日を選ぶことがあるため、しばらくスナップ選択を止める
+    suppressSnapPickUntil.current =
+      Date.now() + (snapSelectOnScroll ? 820 : 380);
+    const settleMs = behavior === "smooth" ? 720 : 120;
     window.setTimeout(() => {
       scrollingByCode.current = false;
-    }, 280);
+    }, settleMs);
 
     didInit.current = true;
-  }, [dates, selectedDate, selectedKey, todayKey, timeZone, autoScrollOnInit]);
+  }, [
+    dates,
+    selectedDate,
+    selectedKey,
+    todayKey,
+    timeZone,
+    autoScrollOnInit,
+    snapSelectOnScroll,
+  ]);
 
   const snapToNearest = () => {
     const wrap = listRef.current;
     if (!wrap) return;
 
-    const center = wrap.scrollLeft + wrap.clientWidth / 2;
+    if (Date.now() < suppressSnapPickUntil.current) return;
+    if (Date.now() < skipProgrammaticAlignUntil.current) return;
+
+    // offsetLeft は transform 付き祖先では列全体に対する座標にならないため、ビューポート基準で中央に近い日を選ぶ
+    const wrapRect = wrap.getBoundingClientRect();
+    const stripCenterX = wrapRect.left + wrapRect.width / 2;
 
     let bestIdx = 0;
     let bestDist = Infinity;
 
     btnRefs.current.forEach((el, i) => {
       if (!el) return;
-      const cx = el.offsetLeft + el.clientWidth / 2;
-      const dist = Math.abs(cx - center);
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const dist = Math.abs(cx - stripCenterX);
       if (dist < bestDist) {
         bestDist = dist;
         bestIdx = i;
@@ -111,20 +140,27 @@ export default function DayStrip({
     const nearestDate = dates[bestIdx];
     if (!nearestDate) return;
 
+    const nearestKey = toDateKeyInTimeZone(nearestDate, timeZone);
+    // 既に選択と一致していれば二重の onSelect / 中央寄せスクロールを避ける（端の日タップ後の「戻り」を防ぐ）
+    if (nearestKey === selectedKey) return;
+
     scrollingByCode.current = true;
     onSelect(nearestDate);
 
     const target = btnRefs.current[bestIdx];
     if (target) {
-      wrap.scrollTo({
-        left: target.offsetLeft - (wrap.clientWidth - target.clientWidth) / 2,
-        behavior: "smooth",
+      target.scrollIntoView({
+        inline: "center",
+        block: "nearest",
+        behavior: snapSelectOnScroll ? "auto" : "smooth",
       });
+      suppressSnapPickUntil.current =
+        Date.now() + (snapSelectOnScroll ? 450 : 280);
     }
 
     window.setTimeout(() => {
       scrollingByCode.current = false;
-    }, 250);
+    }, snapSelectOnScroll ? 120 : 280);
   };
 
   useEffect(() => {
@@ -143,7 +179,11 @@ export default function DayStrip({
       wrap.removeEventListener("scroll", onScroll);
       if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
     };
-  }, [dates, snapSelectOnScroll]);
+  }, [dates, snapSelectOnScroll, selectedKey, timeZone]);
+
+  const markStripPointerPick = () => {
+    skipProgrammaticAlignUntil.current = Date.now() + 520;
+  };
 
   const sz = sizeMap[size];
   const gapPx = size === "lg" ? 12 : 8;
@@ -182,7 +222,7 @@ export default function DayStrip({
   return (
     <div
       ref={listRef}
-      className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-mandatory" : ""}`}
+      className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-proximity" : ""}`}
     >
       <motion.div
         className={`flex ${sz.gap} py-2`}
@@ -217,6 +257,9 @@ export default function DayStrip({
                   if (el) btnRefs.current[i] = el;
                   if (selected) selRef.current = el;
                 }}
+                onPointerDown={() => {
+                  markStripPointerPick();
+                }}
                 onClick={() => {
                   // Click selection should win over scroll-snap callbacks.
                   scrollingByCode.current = true;
@@ -224,7 +267,7 @@ export default function DayStrip({
                   onSelect(d);
                   window.setTimeout(() => {
                     scrollingByCode.current = false;
-                  }, 280);
+                  }, 320);
                 }}
                 className="flex flex-col items-center"
                 type="button"

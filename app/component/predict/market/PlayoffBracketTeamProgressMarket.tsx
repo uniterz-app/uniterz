@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import Jersey from "@/app/component/games/icons/Jersey";
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
 import type { Language } from "@/lib/i18n/language";
@@ -33,6 +33,7 @@ type TeamRow = {
   seed: number | null;
   conference: "east" | "west" | null;
   color: string;
+  colorEnd: string;
   r2: number;
   cf: number;
   finals: number;
@@ -176,10 +177,10 @@ function TeamCard({
         </div>
 
         <div className="flex justify-center">
-          <Jersey
-            className="h-9 w-9 md:h-10 md:w-10"
-            fill={color}
-            stroke="#fff"
+          <HalftoneJerseyMark
+            accent={color}
+            accentEnd={row.colorEnd}
+            className="h-14 w-14 md:h-20 md:w-20"
           />
         </div>
 
@@ -299,6 +300,7 @@ export default function PlayoffBracketTeamProgressMarket({
               ? ("west" as const)
               : null,
           color: getTeamPrimaryColor("nba", teamId) ?? "#3b82f6",
+          colorEnd: getTeamSecondaryColor("nba", teamId),
           ...rowBase,
           bestLabel: best.label,
           bestPct: best.pct,

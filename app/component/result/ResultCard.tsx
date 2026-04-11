@@ -4,10 +4,11 @@
 import React, { useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Flame } from "lucide-react";
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -178,6 +179,14 @@ export function ResultCardPresentation({
     getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#f43f5e";
+  const homeSecondaryColor = useMemo(
+    () => getTeamSecondaryColor(normalizedLeague, post.home?.teamId),
+    [normalizedLeague, post.home?.teamId]
+  );
+  const awaySecondaryColor = useMemo(
+    () => getTeamSecondaryColor(normalizedLeague, post.away?.teamId),
+    [normalizedLeague, post.away?.teamId]
+  );
 
   const [homeL1, homeL2] = splitTeamNameByLeague(
     post.league,
@@ -423,11 +432,19 @@ export function ResultCardPresentation({
                 >
                   {pillText}
                 </span>
-                <Icon
-                  className="h-10 w-10 shrink-0 ml-1"
-                  fill={homeColor}
-                  stroke="#fff"
-                />
+                {Icon === Jersey ? (
+                  <HalftoneJerseyMark
+                    accent={homeColor}
+                    accentEnd={homeSecondaryColor}
+                    className="ml-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                  />
+                ) : (
+                  <Icon
+                    className="ml-1 h-16 w-16 shrink-0"
+                    fill={homeColor}
+                    stroke="#fff"
+                  />
+                )}
               </div>
               <div
                 className={`${nameMt} w-full max-w-full truncate text-center text-[13px] font-bold leading-tight md:text-[17px]`}
@@ -443,11 +460,15 @@ export function ResultCardPresentation({
             </>
           ) : (
             <>
-              <Icon
-                className="h-14 w-14"
-                fill={homeColor}
-                stroke="#fff"
-              />
+              {Icon === Jersey ? (
+                <HalftoneJerseyMark
+                  accent={homeColor}
+                  accentEnd={homeSecondaryColor}
+                  className="h-20 w-20"
+                />
+              ) : (
+                <Icon className="h-20 w-20" fill={homeColor} stroke="#fff" />
+              )}
               <div
                 className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
                 style={teamNameFont}
@@ -496,11 +517,19 @@ export function ResultCardPresentation({
           {isMobile ? (
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
-                <Icon
-                  className="h-10 w-10 shrink-0 mr-1"
-                  fill={awayColor}
-                  stroke="#fff"
-                />
+                {Icon === Jersey ? (
+                  <HalftoneJerseyMark
+                    accent={awayColor}
+                    accentEnd={awaySecondaryColor}
+                    className="mr-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                  />
+                ) : (
+                  <Icon
+                    className="mr-1 h-16 w-16 shrink-0"
+                    fill={awayColor}
+                    stroke="#fff"
+                  />
+                )}
                 {badge === "streak" && streakBadge && (
                   <span
                     className={`pointer-events-auto absolute -right-2 -top-2 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
@@ -549,11 +578,15 @@ export function ResultCardPresentation({
             </>
           ) : (
             <>
-              <Icon
-                className="h-14 w-14"
-                fill={awayColor}
-                stroke="#fff"
-              />
+              {Icon === Jersey ? (
+                <HalftoneJerseyMark
+                  accent={awayColor}
+                  accentEnd={awaySecondaryColor}
+                  className="h-20 w-20"
+                />
+              ) : (
+                <Icon className="h-20 w-20" fill={awayColor} stroke="#fff" />
+              )}
               <div
                 className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
                 style={teamNameFont}

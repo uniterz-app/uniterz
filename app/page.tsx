@@ -1,33 +1,21 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AnimatedSplashScreen from "@/app/component/splash/AnimatedSplashScreen";
 import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
-import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplashVisible";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 export default function Page() {
   const router = useRouter();
   const { status, fUser } = useFirebaseUser();
-  const [introVisible, setIntroVisible] = useState(true);
-  const [introExitDone, setIntroExitDone] = useState(false);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashExitDone, setSplashExitDone] = useState(false);
+  const openedAtRef = useRef(Date.now());
   const [handle, setHandle] = useState<string | null>(null);
   const [handleResolved, setHandleResolved] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setIntroVisible(false), MIN_SPLASH_DURATION_MS);
-    return () => clearTimeout(t);
-  }, []);
-
-  const secondPhaseNeedSplash = Boolean(
-    introExitDone &&
-      (status === "loading" ||
-        (status === "ready" && fUser != null && !handleResolved))
-  );
-  const showSecondSplash = useMinimumSplashVisible(secondPhaseNeedSplash);
 
   useEffect(() => {
     if (!fUser) {
@@ -49,10 +37,26 @@ export default function Page() {
     };
   }, [fUser]);
 
+  /** Firebase とハンドル解決が終わり、遷移先が決められる状態 */
+  const navigateReady =
+    status !== "loading" &&
+    !(status === "ready" && fUser != null && !handleResolved);
+
+  // 1 枚のスプラッシュで待つ：遷移可能になってから最低 MIN_SPLASH_DURATION_MS 経過後にフェードアウト
   useEffect(() => {
-    if (!introExitDone) return;
-    if (status === "loading") return;
-    if (status === "ready" && fUser && !handleResolved) return;
+    if (!splashVisible) return;
+    if (!navigateReady) return;
+
+    const elapsed = Date.now() - openedAtRef.current;
+    const wait = Math.max(0, MIN_SPLASH_DURATION_MS - elapsed);
+    const t = setTimeout(() => {
+      setSplashVisible(false);
+    }, wait);
+    return () => clearTimeout(t);
+  }, [navigateReady, splashVisible]);
+
+  useEffect(() => {
+    if (!splashExitDone) return;
 
     const isMobile = window.innerWidth < 768;
 
@@ -67,35 +71,21 @@ export default function Page() {
     }
 
     router.replace(isMobile ? "/mobile/games" : "/web/games");
-  }, [
-    introExitDone,
-    status,
-    fUser,
-    handle,
-    handleResolved,
-    router,
-  ]);
+  }, [splashExitDone, status, fUser, handle, router]);
 
-  if (!introExitDone) {
-    return (
-      <AnimatePresence onExitComplete={() => setIntroExitDone(true)}>
-        {introVisible && (
-          <motion.div
-            key="root-intro-splash"
-            className="fixed inset-0 z-[100]"
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <AnimatedSplashScreen />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    );
-  }
-
-  if (showSecondSplash) {
-    return <AnimatedSplashScreen />;
-  }
-
-  return null;
+  return (
+    <AnimatePresence onExitComplete={() => setSplashExitDone(true)}>
+      {splashVisible && (
+        <motion.div
+          key="root-splash"
+          className="fixed inset-0 z-[100]"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <AnimatedSplashScreen />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }

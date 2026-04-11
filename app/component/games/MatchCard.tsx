@@ -2,6 +2,7 @@
 "use client";
 
 
+import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
@@ -14,7 +15,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 import type { League } from "@/lib/leagues";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
@@ -204,6 +205,8 @@ const isPredicted = !!myPostId;
  // ✅ 追加（既存の useSectionPrefix を使う）
 const prefix = useSectionPrefix();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
+  /** モバイルの試合一覧（dense）：カード幅・ラウンド帯のレイアウト調整用 */
+  const mobileDense = dense && isMobile;
   const teamNameFont = bracketMarketTeamTypography(isMobile);
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
@@ -256,6 +259,15 @@ const awayColor = useMemo(
   () => getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e",
   [normalizedLeague, away.teamId]
 );
+
+const homeSecondaryColor = useMemo(
+  () => getTeamSecondaryColor(normalizedLeague, home.teamId),
+  [normalizedLeague, home.teamId]
+);
+const awaySecondaryColor = useMemo(
+  () => getTeamSecondaryColor(normalizedLeague, away.teamId),
+  [normalizedLeague, away.teamId]
+);
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
 const awayBiasPct = Math.max(0, Math.min(100, marketBias?.awayPct ?? 32));
 
@@ -266,9 +278,18 @@ const marketMajority = useMemo(() => {
 
 
 
-  const jerseyCls = dense
-    ? "w-8 h-8 md:w-14 md:h-14"
-    : "w-12 h-12 md:w-16 md:h-16";
+  /** サッカーボール等（従来サイズ） */
+  const teamMarkSizeSoccer = dense
+    ? "jersey-icon w-16 h-16 md:w-20 md:h-20"
+    : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
+  /** Canvas ユニのみモバイルルートでやや大きめ */
+  const teamMarkSizeJersey = dense
+    ? isMobile
+      ? "jersey-icon w-[4.5rem] h-[4.5rem] md:w-20 md:h-20"
+      : "jersey-icon w-16 h-16 md:w-20 md:h-20"
+    : isMobile
+      ? "jersey-icon w-[4.75rem] h-[4.75rem] md:w-24 md:h-24"
+      : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
 
   // Tailwind に text-1.xl は無いので既に修正済み
   const scoreText = dense ? "text-xl md:text-4xl" : "text-xl md:text-5xl";
@@ -306,7 +327,13 @@ const isLive =
     Date.now() >= startAtJst.getTime());
 
 let center: React.ReactNode = inPredictOverlay ? (
-  <div className="flex min-h-[72px] items-center justify-center md:min-h-[88px]">
+  <div
+    className={
+      mobileDense
+        ? "flex min-h-[52px] items-center justify-center md:min-h-[68px]"
+        : "flex min-h-[72px] items-center justify-center md:min-h-[88px]"
+    }
+  >
     <div
       className={[
         "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
@@ -337,7 +364,13 @@ let center: React.ReactNode = inPredictOverlay ? (
 
     if (!inPredictOverlay && status === "live" && score) {
     center = (
-      <div className="flex flex-col items-center gap-1">
+      <div
+        className={
+          mobileDense
+            ? "flex flex-col items-center gap-0.5"
+            : "flex flex-col items-center gap-1"
+        }
+      >
         <span
           className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
           style={{ fontSize: dense ? 10 : 11 }}
@@ -363,7 +396,13 @@ let center: React.ReactNode = inPredictOverlay ? (
 
   if (!inPredictOverlay && status === "final" && score) {
     center = (
-      <div className="flex flex-col items-center gap-1">
+      <div
+        className={
+          mobileDense
+            ? "flex flex-col items-center gap-0.5"
+            : "flex flex-col items-center gap-1"
+        }
+      >
         <div
           className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
             " "
@@ -515,7 +554,11 @@ disableCardMotion
 dense
   ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
-    hideLine ? "pb-3 md:pb-4" : "",
+    hideLine
+      ? mobileDense
+        ? "pb-2 md:pb-2"
+        : "pb-2 md:pb-3"
+      : "",
     className || "",
   ].join(" ")}
  style={{
@@ -615,34 +658,57 @@ background:
 
 
       <div
-  className={`${
-    dense ? "px-3 pt-3 mb-1" : "px-4 pt-3 mb-1"
-  } ${inPredictOverlay ? "pb-0" : ""}`}
->
+        className={[
+          mobileDense
+            ? "mb-0 px-2.5 pb-0 pt-0.5"
+            : dense
+              ? "mb-0.5 px-3 pt-2"
+              : "mb-0.5 px-4 pt-2",
+          inPredictOverlay ? "pb-0" : "",
+        ].join(" ")}
+      >
         {!!roundLabel && (
           <div
-            className="mc-round mb-1 text-center text-lg font-bold md:text-2xl"
+            className={[
+              "mc-round text-center font-bold",
+              mobileDense
+                ? "mt-2.5 mb-0 text-xl leading-snug md:text-2xl"
+                : "mt-2 mb-0.5 text-lg md:text-2xl",
+            ].join(" ")}
             style={teamNameFont}
           >
             {roundLabel}
           </div>
         )}
 
-<div className="h-4 md:h-5"></div>
+        <div
+          className={mobileDense ? "h-0.5 md:h-1" : "h-2.5 md:h-3.5"}
+          aria-hidden
+        />
       </div>
 
       <div
         className={`grid grid-cols-3 ${
-          dense ? "items-start gap-1 px-3 py-0" : "items-center gap-2 px-4 py-4"
+          mobileDense
+            ? "items-center gap-0.5 px-2.5 py-0"
+            : dense
+              ? "items-start gap-1 px-3 py-0"
+              : "items-center gap-2 px-4 py-2.5"
         }`}
       >
         {/* HOME */}
-<div className="mc-home flex flex-col items-center -mt-5 md:mt-0">
+        <div
+          className={[
+            "mc-home flex flex-col items-center",
+            mobileDense ? "mt-0" : "-mt-5 md:mt-0",
+          ].join(" ")}
+        >
 
   {/* HOME：Web はラベルを大きく */}
   <div
     className={[
-      "mb-1 text-center font-bold uppercase opacity-85",
+      mobileDense ? "mb-0.5" : "mb-1",
+      "text-center font-bold uppercase opacity-85",
       isMobile
         ? "text-xs md:text-sm"
         : "text-sm md:text-base lg:text-lg",
@@ -652,14 +718,27 @@ background:
     HOME
   </div>
 
-  <Icon
-  className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
-  fill={homeColor}
-  stroke="#fff"
-/>
+  {Icon === Jersey ? (
+    <HalftoneJerseyMark
+      accent={homeColor}
+      accentEnd={homeSecondaryColor}
+      className={teamMarkSizeJersey}
+    />
+  ) : (
+    <Icon
+      className={teamMarkSizeSoccer}
+      fill={homeColor}
+      stroke="#fff"
+    />
+  )}
 
   {/* チーム名：mobile小さく / webそのまま */}
-  <div className="mc-name mt-1 text-center leading-tight">
+  <div
+    className={[
+      "mc-name text-center leading-tight",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
   {isMobile ? (
     <>
       {league === "nba" ? (
@@ -708,13 +787,23 @@ background:
 
 
   {/* 戦績・順位：総合得点などと同じ Oxanium */}
-<div className="mc-record mt-0.5 text-[11px] leading-none md:text-[15px]">
+<div
+  className={[
+    "mc-record text-[11px] leading-none md:text-[15px]",
+    mobileDense ? "mt-0" : "mt-0.5",
+  ].join(" ")}
+>
   <RecordWithRank r={homeRecord} />
 </div>
 
 {/* ★ ここに挿入 */}
 {showRecentForm && homeForm.length > 0 && (
-  <div className="mt-1 w-full flex justify-center">
+  <div
+    className={[
+      "w-full flex justify-center",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
     <div className="flex items-center gap-1">
       <div className="flex gap-[3px]">
         {homeForm.map((result, idx) => {
@@ -746,21 +835,31 @@ background:
 </div>
 
 
-        {/* CENTER */}
-<div
-  className={`mc-center flex flex-col items-center justify-center ${
-    inPredictOverlay ? "-mt-2 md:-mt-3" : "mt-4 md:mt-1"
-  }`}
->
-  {center}
-</div>
+        {/* CENTER（モバイル dense は行の垂直中央にスコアを置く） */}
+        <div
+          className={`mc-center flex w-full min-w-0 flex-col items-center justify-center text-center ${
+            inPredictOverlay
+              ? "-mt-2 md:-mt-3"
+              : mobileDense
+                ? ""
+                : "mt-4 md:mt-1"
+          }`}
+        >
+          {center}
+        </div>
 
         {/* AWAY */}
-<div className="mc-away flex flex-col items-center -mt-5 md:mt-0">
+        <div
+          className={[
+            "mc-away flex flex-col items-center",
+            mobileDense ? "mt-0" : "-mt-5 md:mt-0",
+          ].join(" ")}
+        >
 
   <div
     className={[
-      "mb-1 text-center font-bold uppercase opacity-85",
+      mobileDense ? "mb-0.5" : "mb-1",
+      "text-center font-bold uppercase opacity-85",
       isMobile
         ? "text-xs md:text-sm"
         : "text-sm md:text-base lg:text-lg",
@@ -771,14 +870,27 @@ background:
   </div>
 
   {/* アイコン：mobile大きく / webそのまま */}
-  <Icon
-  className={`jersey-icon w-11 h-11 md:${jerseyCls}`}
-  fill={awayColor}
-  stroke="#fff"
-/>
+  {Icon === Jersey ? (
+    <HalftoneJerseyMark
+      accent={awayColor}
+      accentEnd={awaySecondaryColor}
+      className={teamMarkSizeJersey}
+    />
+  ) : (
+    <Icon
+      className={teamMarkSizeSoccer}
+      fill={awayColor}
+      stroke="#fff"
+    />
+  )}
 
   {/* チーム名：mobile小さく / webそのまま */}
-  <div className="mc-name mt-1 text-center leading-tight">
+  <div
+    className={[
+      "mc-name text-center leading-tight",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
   {isMobile ? (
     <>
       {league === "nba" ? (
@@ -826,13 +938,23 @@ background:
 </div>
 
 
-<div className="mc-record mt-0.5 text-[11px] leading-none md:text-[15px]">
+<div
+  className={[
+    "mc-record text-[11px] leading-none md:text-[15px]",
+    mobileDense ? "mt-0" : "mt-0.5",
+  ].join(" ")}
+>
   <RecordWithRank r={awayRecord} />
 </div>
 
 {/* ★ ここに挿入 */}
 {showRecentForm && awayForm.length > 0 && (
-  <div className="mt-1 w-full flex justify-center">
+  <div
+    className={[
+      "w-full flex justify-center",
+      mobileDense ? "mt-0.5" : "mt-1",
+    ].join(" ")}
+  >
     <div className="flex items-center gap-1">
       <span className="text-[10px] md:text-[11px] text-cyan-200/70">←</span>
       <div className="flex gap-[3px]">
@@ -870,8 +992,10 @@ background:
   <div
     className={
       dense
-        ? "h-[2px] w-full mt-2 md:mt-2" 
-        : "h-[3px] w-full mt-3 md:mt-3" 
+        ? mobileDense
+          ? "h-[2px] w-full mt-1 md:mt-1"
+          : "h-[2px] w-full mt-1.5 md:mt-1.5"
+        : "h-[3px] w-full mt-2 md:mt-2"
     }
     style={{ backgroundColor: leagueLineColor[league] }}
     aria-hidden={true}
@@ -880,7 +1004,13 @@ background:
 
       {/* ボタン行 */}
       {!hideActions && (
-        <div className="grid grid-cols-1 gap-2 px-3 py-2 md:gap-3 md:px-4 md:py-3">
+        <div
+          className={
+            mobileDense
+              ? "grid grid-cols-1 gap-1.5 px-2.5 py-1 md:gap-3 md:px-4 md:py-3"
+              : "grid grid-cols-1 gap-2 px-3 py-1.5 md:gap-3 md:px-4 md:py-2.5"
+          }
+        >
           {/* ▼ 試合別タイムラインへ */}
           {/* ▼ 予想作成ページへ（自分の投稿があれば詳細へ／開始後は未投稿なら“見る”へ） */}
           {/* ▼ 予想をする / 予想済み */}
