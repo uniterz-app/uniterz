@@ -6,7 +6,7 @@ import ResetForm from "@/app/component/auth/ResetForm";
 
 export default function WebResetPage() {
   return (
-    <AuthBackdrop accent="blueMagenta">
+    <AuthBackdrop>
       <ResetForm variant="web" />
     </AuthBackdrop>
   );

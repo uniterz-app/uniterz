@@ -10,7 +10,7 @@ import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import CyberAuthField from "./CyberAuthField";
 import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
-import { authDisplayHeading, authDisplayButton } from "./authEnglishDisplay";
+import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
 
 type LoginFormProps = {
   variant?: "web" | "mobile";
@@ -44,12 +44,9 @@ export default function LoginForm({ variant }: LoginFormProps) {
     forgotLead: "パスワードをお忘れの方は",
     forgotLink: "こちら",
     createAccount: "Create Account",
-    backLp: "Back to LP",
     showPw: "Show password",
     hidePw: "Hide password",
   };
-
-  const lpHref = v === "mobile" ? "/mobile/lp" : "/lp";
 
   const formWidth = v === "mobile" ? 320 : 380;
 
@@ -98,7 +95,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
         <div className={cyberFieldStyles.pageGrid} aria-hidden />
         <div className="relative z-10">
         <AuthFormBranding />
-        <h1 className={`mt-1 ${authDisplayHeading}`}>{ui.title}</h1>
+        <h1 className={`mt-1 ${authDisplayHeadingLong}`}>{ui.title}</h1>
 
         <div className="mt-5 space-y-3 text-left">
           <CyberAuthField
@@ -181,15 +178,6 @@ export default function LoginForm({ variant }: LoginFormProps) {
             className={`${bodySans} font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200`}
           >
             {ui.createAccount}
-          </Link>
-        </p>
-
-        <p className="mt-4">
-          <Link
-            href={lpHref}
-            className="font-[family-name:var(--font-geist-sans)] text-xs text-white/70 underline decoration-white/35 underline-offset-2 hover:text-white/90"
-          >
-            {ui.backLp}
           </Link>
         </p>
         </div>

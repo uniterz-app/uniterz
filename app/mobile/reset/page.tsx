@@ -6,7 +6,7 @@ import ResetForm from "@/app/component/auth/ResetForm";
 
 export default function MobileResetPage() {
   return (
-    <AuthBackdrop accent="blueMagenta">
+    <AuthBackdrop>
       <ResetForm variant="mobile" />
     </AuthBackdrop>
   );

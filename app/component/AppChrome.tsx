@@ -20,6 +20,8 @@ export default function AppChrome() {
     pathname === "/web/signup" ||
     pathname === "/mobile/login" ||
     pathname === "/mobile/signup" ||
+    pathname === "/web/reset" ||
+    pathname === "/mobile/reset" ||
     isGuestLegalPath(pathname);
 
   const shouldHideHeader =

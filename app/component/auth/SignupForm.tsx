@@ -24,7 +24,6 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const [pressed, setPressed] = useState(false);
 
   const router = useRouter();
-  const lpHref = variant === "mobile" ? "/mobile/lp" : "/lp";
 
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
@@ -37,7 +36,6 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
       signupCta: "SIGN UP",
       alreadyLead: "すでにアカウントをお持ちの方は",
       loginText: "Login",
-      backLp: "Back to LP",
       signupFailed: "Signup failed",
       showPw: "Show password",
       hidePw: "Hide password",
@@ -165,15 +163,6 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
               className="font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
             >
               {ui.loginText}
-            </Link>
-          </p>
-
-          <p className="mt-4">
-            <Link
-              href={lpHref}
-              className="font-[family-name:var(--font-geist-sans)] text-xs text-white/70 underline decoration-white/35 underline-offset-2 hover:text-white/90"
-            >
-              {ui.backLp}
             </Link>
           </p>
         </div>

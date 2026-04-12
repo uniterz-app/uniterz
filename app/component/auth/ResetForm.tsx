@@ -1,49 +1,67 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { FaEnvelope } from "react-icons/fa";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import CyberAuthField from "./CyberAuthField";
+import AuthFormBranding from "./AuthFormBranding";
+import cyberFieldStyles from "./cyberAuthField.module.css";
+import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
 
 type Props = {
   variant?: "web" | "mobile";
 };
 
 export default function ResetForm({ variant = "web" }: Props) {
-  const { fUser: user } = useFirebaseUser();
-  const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
-
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pressed, setPressed] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const formWidth = variant === "mobile" ? 320 : 360;
+  const formWidth = variant === "mobile" ? 320 : 380;
+
+  const bodySans =
+    "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
+
+  const ui = {
+    title: "RESET PASSWORD",
+    lead: "登録したメールアドレスにリセット用のリンクをお送りします。",
+    leadNote: "＊迷惑フォルダもご確認ください。",
+    emailPlaceholder: "Email Address",
+    sendCta: "SEND RESET LINK",
+    sending: "Sending…",
+    backLead: "Back to ",
+    loginLink: "Log in",
+    enterEmail: "Please enter your email address.",
+    success:
+      "If this email is registered, we sent a reset link. Check spam if you don't see it.",
+    timeout:
+      "Request timed out. In DevTools → Network, check identitytoolkit / sendOobCode.",
+    tooMany: "Too many attempts. Please try again later.",
+    network: "Network error. Check your connection.",
+    failed: "Failed to send. Please try again in a moment.",
+  };
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (busy) return; // 二重送信防止
+    if (busy) return;
 
     const trimmed = email.trim();
     setMsg(null);
     setErr(null);
 
     if (!trimmed) {
-      setErr(
-        isEn ? "Please enter your email address." : "メールアドレスを入力してください。"
-      );
+      setErr(ui.enterEmail);
       return;
     }
 
     try {
       setBusy(true);
 
-      console.log("[reset] before sendPasswordResetEmail", { email: trimmed });
-
-      // 10秒でタイムアウトさせて「止まってる」を可視化
       await Promise.race([
         sendPasswordResetEmail(auth, trimmed),
         new Promise((_, reject) =>
@@ -51,148 +69,100 @@ export default function ResetForm({ variant = "web" }: Props) {
         ),
       ]);
 
-      console.log("[reset] success");
-      setMsg(
-        isEn
-          ? "If this email is registered, we sent a reset link. Check spam if you don't see it."
-          : "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
-      );
+      setMsg(ui.success);
     } catch (e: any) {
       const code = e?.code as string | undefined;
 
-      console.log("[reset] catch", code, e);
-
       if (e?.message === "timeout") {
-        setErr(
-          isEn
-            ? "Request timed out. In DevTools → Network, check identitytoolkit / sendOobCode."
-            : "送信処理がタイムアウトしました。DevToolsのNetworkで identitytoolkit / sendOobCode のリクエストを確認してください。"
-        );
+        setErr(ui.timeout);
       } else if (code === "auth/user-not-found" || code === "auth/invalid-email") {
-        // 存在可否は伏せる：未登録でも成功表示
-        setMsg(
-          isEn
-            ? "If this email is registered, we sent a reset link. Check spam if you don't see it."
-            : "リセット用メールを送信しました。届かない場合は迷惑メールをご確認ください。"
-        );
+        setMsg(ui.success);
       } else if (code === "auth/too-many-requests") {
-        setErr(
-          isEn
-            ? "Too many attempts. Please try again later."
-            : "送信回数が多すぎます。時間をおいて再度お試しください。"
-        );
+        setErr(ui.tooMany);
       } else if (code === "auth/network-request-failed") {
-        setErr(
-          isEn
-            ? "Network error. Check your connection."
-            : "通信に失敗しました。ネットワーク接続をご確認ください。"
-        );
+        setErr(ui.network);
       } else {
-        setErr(
-          isEn
-            ? "Failed to send. Please try again in a moment."
-            : "送信に失敗しました。しばらくしてから再度お試しください。"
-        );
+        setErr(ui.failed);
       }
 
       console.error("[reset] sendPasswordResetEmail error:", code, e);
     } finally {
-      console.log("[reset] finally");
       setBusy(false);
     }
   }
 
+  const loginHref = variant === "mobile" ? "/mobile/login" : "/web/login";
+
   return (
     <form onSubmit={onSubmit}>
       <div
-        style={{
-          width: formWidth,
-          padding: 24,
-          backgroundColor: "rgba(255,255,255,0.08)",
-          borderRadius: 12,
-          textAlign: "center",
-          boxShadow: "0 0 30px rgba(0,0,0,0.3)",
-          color: "white",
-        }}
+        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 pb-7 pt-4 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:pt-5"
+        style={{ width: formWidth, maxWidth: "100%" }}
       >
-        <h1 style={{ fontWeight: 800, fontSize: "1.6rem", marginBottom: 6 }}>
-          {isEn ? "Reset password" : "パスワードをリセット"}
-        </h1>
-        <p style={{ margin: 0, opacity: 0.8, fontSize: 14 }}>
-          {isEn
-            ? "We'll email a reset link to your registered address."
-            : "登録メールアドレスにリセットリンクを送ります。"}
-        </p>
+        <div className={cyberFieldStyles.pageGrid} aria-hidden />
+        <div className="relative z-10">
+          <AuthFormBranding />
+          <h1 className={`mt-1 ${authDisplayHeadingLong}`}>{ui.title}</h1>
 
-        <div style={{ position: "relative", marginTop: 16 }}>
-          <input
-            type="email"
-            placeholder={isEn ? "Email address" : "メールアドレス"}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+          <div className={`mt-3 space-y-2 ${bodySans}`}>
+            <p>{ui.lead}</p>
+            <p className="text-white/75">{ui.leadNote}</p>
+          </div>
+
+          <div className="mt-5 space-y-3 text-left">
+            <CyberAuthField
+              inputProps={{
+                type: "email",
+                name: "email",
+                autoComplete: "email",
+                placeholder: ui.emailPlaceholder,
+                value: email,
+                onChange: (e) => setEmail(e.target.value),
+                required: true,
+                disabled: busy,
+              }}
+              rightSlot={
+                <span className="flex items-center justify-center text-[15px] text-white/85">
+                  <FaEnvelope aria-hidden />
+                </span>
+              }
+            />
+          </div>
+
+          <button
+            type="submit"
             disabled={busy}
-            autoComplete="email"
-            inputMode="email"
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(255,255,255,0.12)",
-              color: "white",
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={busy}
-          style={{
-            width: "100%",
-            padding: "12px",
-            marginTop: 16,
-            border: "none",
-            borderRadius: 9999,
-            cursor: busy ? "not-allowed" : "pointer",
-            fontWeight: 700,
-            letterSpacing: 0.3,
-            color: "white",
-            background:
-              "linear-gradient(90deg, #7C3AED 0%, #6D28D9 20%, #4F46E5 50%, #06B6D4 100%)",
-            boxShadow:
-              "0 10px 30px rgba(124,58,237,.25), 0 0 0 1px rgba(255,255,255,.08) inset",
-            transition: "transform .06s ease",
-          }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = "translateY(1px)")}
-          onMouseUp={(e) => (e.currentTarget.style.transform = "translateY(0)")}
-        >
-          {busy
-            ? isEn
-              ? "Sending…"
-              : "送信中…"
-            : isEn
-              ? "Send reset link"
-              : "リセットリンクを送信"}
-        </button>
-
-        {msg && (
-          <div style={{ marginTop: 12, fontSize: 13, color: "#A7F3D0" }}>{msg}</div>
-        )}
-        {err && (
-          <div style={{ marginTop: 12, fontSize: 13, color: "#FCA5A5" }}>{err}</div>
-        )}
-
-        <p style={{ marginTop: 18, fontSize: 13, opacity: 0.85 }}>
-          {isEn ? "Back to " : "ログイン画面へ戻る: "}
-          <a
-            href={variant === "mobile" ? "/mobile/login" : "/web/login"}
-            style={{ color: "#86e5ff", textDecoration: "underline", fontWeight: 700 }}
+            onPointerDown={() => setPressed(true)}
+            onPointerUp={() => setPressed(false)}
+            onPointerCancel={() => setPressed(false)}
+            className={[
+              "mt-5 flex w-full items-center justify-center rounded-[14px] border-0 px-3.5 py-3",
+              authDisplayButton,
+              "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
+              "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
+              "transition-[transform,filter,opacity] duration-100 ease-out",
+              pressed ? "scale-[0.97]" : "scale-100",
+              busy ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+            ].join(" ")}
           >
-            {isEn ? "Log in" : "ログイン"}
-          </a>
-        </p>
+            {busy ? ui.sending : ui.sendCta}
+          </button>
+
+          {msg && (
+            <p className={`mt-4 ${bodySans} text-emerald-300/95`}>{msg}</p>
+          )}
+          {err && <p className={`mt-4 ${bodySans} text-red-300/95`}>{err}</p>}
+
+          <p className={`mt-5 ${bodySans}`}>
+            {ui.backLead}
+            <Link
+              href={loginHref}
+              className="font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
+            >
+              {ui.loginLink}
+            </Link>
+          </p>
+        </div>
       </div>
     </form>
   );
