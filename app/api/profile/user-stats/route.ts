@@ -2,6 +2,7 @@
 // ロールアップキャッシュ利用で Firestore read を削減
 
 import { NextResponse } from "next/server";
+import { FieldPath } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
   buildWindowCacheForUser,
@@ -145,6 +146,25 @@ async function aggregateFromDaily(uid: string, days: number): Promise<SummaryFor
   return { fullPosts: computed.posts, ...computed };
 }
 
+/** 全期間：日次 `all` の合算（user_stats_v2_all_cache は未整備のため使わない） */
+async function aggregateAllFromDaily(uid: string): Promise<SummaryForCards> {
+  const adminDb = getAdminDb();
+  const snap = await adminDb
+    .collection("user_stats_v2_daily")
+    .where(FieldPath.documentId(), ">=", `${uid}_`)
+    .where(FieldPath.documentId(), "<", `${uid}_\uf8ff`)
+    .get();
+
+  const bucket = empty();
+  snap.forEach((doc) => {
+    const raw = doc.data()?.all as Partial<Bucket> | undefined;
+    mergeBucket(bucket, raw ?? null);
+  });
+
+  const computed = computeForCards(bucket);
+  return { fullPosts: computed.posts, ...computed };
+}
+
 export async function GET(req: Request) {
   try {
     const adminDb = getAdminDb();
@@ -159,19 +179,12 @@ export async function GET(req: Request) {
       );
     }
 
-    const [statsSnap, allSnap, windowSnap] = await Promise.all([
+    const [statsSnap, windowSnap] = await Promise.all([
       adminDb.collection("user_stats_v2").doc(uid).get(),
-      adminDb.collection("user_stats_v2_all_cache").doc(uid).get(),
       adminDb.collection("user_stats_v2_window_cache").doc(uid).get(),
     ]);
 
     const stats = statsSnap.exists ? statsSnap.data() : null;
-
-    const allRaw = allSnap.exists
-      ? (allSnap.data() as Partial<Bucket>)
-      : {};
-    const allBucket: Bucket = { ...empty(), ...(allRaw as Record<string, unknown>) };
-    const allComputed = computeForCards(allBucket);
 
     const windowData = windowSnap.exists ? windowSnap.data() : null;
     const updatedAt = windowData?.updatedAt;
@@ -189,10 +202,12 @@ export async function GET(req: Request) {
 
     // window cache は更新トリガー用途に留め、レスポンスは daily 実集計を返す
     // （7d 初回だけ 0 になる不整合を防ぐ）
-    const [recent3, seven, thirty] = await Promise.all([
+    // all も日次 all の合算（キャッシュ doc は未整備で空になりがちなため）
+    const [recent3, seven, thirty, allSummary] = await Promise.all([
       aggregateFromDaily(uid, 3),
       aggregateFromDaily(uid, 7),
       aggregateFromDaily(uid, 30),
+      aggregateAllFromDaily(uid),
     ]);
 
     const recent3Posts = recent3.fullPosts;
@@ -200,7 +215,7 @@ export async function GET(req: Request) {
     const summaries = {
       "7d": { ...seven, recent3Posts },
       "30d": { ...thirty, recent3Posts },
-      all: { fullPosts: allComputed.posts, ...allComputed, recent3Posts },
+      all: { ...allSummary, recent3Posts },
     };
 
     return NextResponse.json({
