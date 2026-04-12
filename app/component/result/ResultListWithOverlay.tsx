@@ -4,13 +4,22 @@ import dynamic from "next/dynamic";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
-import { ChevronDown, X } from "lucide-react";
+import {
+  AnimatePresence,
+  LazyMotion,
+  domAnimation,
+  m,
+  useReducedMotion,
+  type Variants,
+} from "framer-motion";
+import { CalendarRange, Check, ChevronDown, X } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Language } from "@/lib/i18n/language";
@@ -43,6 +52,11 @@ import {
 } from "@/lib/results/gamePointsDistribution";
 import type { League } from "@/lib/leagues";
 import { LEAGUE_DISPLAY, LEAGUES } from "@/lib/leagues";
+import {
+  GAMES_CYBER_EASE,
+  GAMES_CYBER_ENTRY_DURATION_SEC,
+  GAMES_CYBER_SLOT_GAP_SEC,
+} from "@/app/component/games/cyberMotion";
 
 /** 一覧の複合フィルター（デフォルトはすべて通過） */
 export type ResultListFilters = {
@@ -375,6 +389,89 @@ export default function ResultListWithOverlay({
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [detailFiltersOpen, setDetailFiltersOpen] = useState(false);
 
+  /** 試合日の開始／終了用カスタムピッカー（どちらを開いているか） */
+  const [matchDayPickerOpen, setMatchDayPickerOpen] = useState<null | "from" | "to">(
+    null
+  );
+  const matchDayPickerRootRef = useRef<HTMLDivElement>(null);
+  const matchDayListboxPortalRef = useRef<HTMLDivElement>(null);
+  const fromDateTriggerRef = useRef<HTMLButtonElement>(null);
+  const toDateTriggerRef = useRef<HTMLButtonElement>(null);
+
+  /** 試合日リストボックスを body 固定配置する矩形（パネル overflow ではみ出し防止） */
+  const [matchDayListboxBox, setMatchDayListboxBox] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    maxH: number;
+  } | null>(null);
+
+  const updateMatchDayListboxBox = useCallback(() => {
+    if (matchDayPickerOpen == null) {
+      setMatchDayListboxBox(null);
+      return;
+    }
+    const btn =
+      matchDayPickerOpen === "from"
+        ? fromDateTriggerRef.current
+        : toDateTriggerRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const gap = 6;
+    const margin = 10;
+    const maxH = Math.min(
+      15 * 16,
+      Math.max(120, window.innerHeight - r.bottom - gap - margin)
+    );
+    const width = Math.max(r.width, 168);
+    const maxLeft = window.innerWidth - width - margin;
+    const left = Math.max(margin, Math.min(r.left, maxLeft));
+    setMatchDayListboxBox({
+      top: r.bottom + gap,
+      left,
+      width,
+      maxH,
+    });
+  }, [matchDayPickerOpen]);
+
+  useLayoutEffect(() => {
+    updateMatchDayListboxBox();
+    if (matchDayPickerOpen == null) return;
+    const onScrollOrResize = () => updateMatchDayListboxBox();
+    window.addEventListener("resize", onScrollOrResize);
+    window.addEventListener("scroll", onScrollOrResize, true);
+    return () => {
+      window.removeEventListener("resize", onScrollOrResize);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+    };
+  }, [matchDayPickerOpen, updateMatchDayListboxBox]);
+
+  useEffect(() => {
+    if (matchDayPickerOpen == null) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const root = matchDayPickerRootRef.current;
+      const menu = matchDayListboxPortalRef.current;
+      const t = e.target as Node;
+      if (root?.contains(t) || menu?.contains(t)) return;
+      setMatchDayPickerOpen(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [matchDayPickerOpen]);
+
+  useEffect(() => {
+    if (matchDayPickerOpen == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMatchDayPickerOpen(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [matchDayPickerOpen]);
+
+  useEffect(() => {
+    if (!filterPanelOpen) setMatchDayPickerOpen(null);
+  }, [filterPanelOpen]);
+
   const availableDayKeysAsc = useMemo(() => {
     const set = new Set<string>();
     for (const d of grouped) {
@@ -433,6 +530,16 @@ export default function ResultListWithOverlay({
       }))
       .filter((day) => day.pending.length + day.final.length > 0);
   }, [grouped, filters]);
+
+  /** フィルター適用後の件数（少件数時の入場アニメ・content-visibility 制御に使用） */
+  const filteredTotalLoaded = useMemo(
+    () =>
+      filteredGrouped.reduce(
+        (a, d) => a + d.pending.length + d.final.length,
+        0
+      ),
+    [filteredGrouped]
+  );
 
   const selectedPost = useMemo(() => {
     if (!openPostId) return null;
@@ -644,17 +751,76 @@ export default function ResultListWithOverlay({
     ? { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }
     : undefined;
 
+  /** 日付帯→複数カードのスタッガーが終わる目安で次の日ブロックをずらす */
+  const resultListDayStaggerSec =
+    GAMES_CYBER_SLOT_GAP_SEC + GAMES_CYBER_ENTRY_DURATION_SEC * 2.12;
+
+  const resultListCyberRoot: Variants = prefersReducedMotion
+    ? { hidden: {}, show: {} }
+    : {
+        hidden: {},
+        show: {
+          transition: {
+            staggerChildren: resultListDayStaggerSec,
+            delayChildren: 0.04,
+          },
+        },
+      };
+
+  const resultListCyberDaySlot: Variants = prefersReducedMotion
+    ? { hidden: {}, show: {} }
+    : {
+        hidden: { opacity: 0, y: -10, filter: "blur(4px)" },
+        show: {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          transition: { duration: 0.22, ease: GAMES_CYBER_EASE },
+        },
+      };
+
+  /** 同一日内：各 Result カードを上から順に（DOM 順＝グリッドでは左→右・上→下） */
+  const resultCardsCyberOrch: Variants = prefersReducedMotion
+    ? { hidden: {}, show: {} }
+    : {
+        hidden: {},
+        show: {
+          transition: {
+            staggerChildren: GAMES_CYBER_SLOT_GAP_SEC * 0.88,
+            delayChildren: 0.02,
+          },
+        },
+      };
+
+  const resultCardCyberItem: Variants = prefersReducedMotion
+    ? { hidden: {}, show: {} }
+    : {
+        hidden: {
+          opacity: 0,
+          y: -12,
+          scale: 0.99,
+          filter: "blur(5px)",
+        },
+        show: {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          filter: "blur(0px)",
+          transition: {
+            duration: GAMES_CYBER_ENTRY_DURATION_SEC * 0.92,
+            ease: GAMES_CYBER_EASE,
+          },
+        },
+      };
+
   return (
     <LazyMotion features={domAnimation}>
     <>
-      <m.div
+      <div
         className={[
           "relative z-20",
           isMobile ? "space-y-3" : "space-y-4",
         ].join(" ")}
-        initial={off ?? { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: easeOut }}
       >
         <div className="relative z-30 isolate mb-2">
           <button
@@ -774,60 +940,131 @@ export default function ResultListWithOverlay({
           </div>
 
           <div className="mb-3">
-            <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
-              {fc.matchDaySection}
+            <div className="mb-2 flex items-center gap-2">
+              <CalendarRange
+                className="h-3.5 w-3.5 shrink-0 text-cyan-400/75"
+                aria-hidden
+              />
+              <div className="text-[10px] font-medium text-white/40 sm:text-[11px]">
+                {fc.matchDaySection}
+              </div>
             </div>
             {availableDayKeysAsc.length === 0 ? (
               <p className="text-[10px] leading-relaxed text-white/45">
                 {fc.noDaysYet}
               </p>
             ) : (
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-                <label className="flex min-w-[9rem] flex-1 flex-col gap-0.5">
-                  <span className="text-[10px] text-white/45 sm:text-[11px]">
+              <div
+                ref={matchDayPickerRootRef}
+                className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
+              >
+                <div className="min-w-0 flex-1 sm:min-w-[10rem]">
+                  <span className="mb-1 block text-[10px] font-medium tracking-wide text-cyan-200/45 sm:text-[11px]">
                     {fc.dateFromLabel}
                   </span>
-                  <select
-                    value={filters.dateFrom ?? ""}
-                    onChange={(e) => setFilterDateFrom(e.target.value)}
-                    className="min-h-9 w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1.5 text-[11px] text-white outline-none [color-scheme:dark] focus:border-cyan-400/40 sm:text-sm"
+                  <button
+                    ref={fromDateTriggerRef}
+                    type="button"
+                    id="result-filter-date-from-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded={matchDayPickerOpen === "from"}
+                    aria-controls="result-filter-date-from-listbox"
+                    className={[
+                      "flex w-full min-h-[2.75rem] items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:text-[13px]",
+                      "border-white/[0.12] bg-gradient-to-b from-white/[0.08] to-black/50 text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md",
+                      "hover:border-cyan-400/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45",
+                      matchDayPickerOpen === "from"
+                        ? "border-cyan-400/50 shadow-[0_0_28px_rgba(34,211,238,0.18)]"
+                        : "",
+                    ].join(" ")}
+                    onClick={() =>
+                      setMatchDayPickerOpen((o) => (o === "from" ? null : "from"))
+                    }
                   >
-                    <option value="">{fc.datePlaceholder}</option>
-                    {dateFromOptions.map((k) => (
-                      <option key={k} value={k}>
-                        {dateLabelForDayKey(grouped, k)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <span
-                  className="hidden self-center pb-2 text-white/35 sm:inline"
+                    <span
+                      className={
+                        filters.dateFrom
+                          ? "tabular-nums text-white"
+                          : "text-white/45"
+                      }
+                    >
+                      {filters.dateFrom
+                        ? dateLabelForDayKey(grouped, filters.dateFrom)
+                        : fc.datePlaceholder}
+                    </span>
+                    <ChevronDown
+                      className={[
+                        "h-4 w-4 shrink-0 text-cyan-300/75 transition-transform duration-200",
+                        matchDayPickerOpen === "from" ? "rotate-180" : "",
+                      ].join(" ")}
+                      aria-hidden
+                    />
+                  </button>
+                </div>
+
+                <div
+                  className="flex shrink-0 items-center justify-center sm:self-center sm:pb-1"
                   aria-hidden
                 >
-                  〜
-                </span>
-                <label className="flex min-w-[9rem] flex-1 flex-col gap-0.5">
-                  <span className="text-[10px] text-white/45 sm:text-[11px]">
+                  <span className="rounded-lg border border-cyan-500/20 bg-gradient-to-b from-cyan-500/10 to-transparent px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.2em] text-cyan-200/55">
+                    〜
+                  </span>
+                </div>
+
+                <div className="min-w-0 flex-1 sm:min-w-[10rem]">
+                  <span className="mb-1 block text-[10px] font-medium tracking-wide text-cyan-200/45 sm:text-[11px]">
                     {fc.dateToLabel}
                   </span>
-                  <select
-                    value={filters.dateTo ?? ""}
-                    onChange={(e) => setFilterDateTo(e.target.value)}
-                    className="min-h-9 w-full rounded-lg border border-white/15 bg-black/50 px-2 py-1.5 text-[11px] text-white outline-none [color-scheme:dark] focus:border-cyan-400/40 sm:text-sm"
+                  <button
+                    ref={toDateTriggerRef}
+                    type="button"
+                    id="result-filter-date-to-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded={matchDayPickerOpen === "to"}
+                    aria-controls="result-filter-date-to-listbox"
+                    className={[
+                      "flex w-full min-h-[2.75rem] items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:text-[13px]",
+                      "border-white/[0.12] bg-gradient-to-b from-white/[0.08] to-black/50 text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md",
+                      "hover:border-cyan-400/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45",
+                      matchDayPickerOpen === "to"
+                        ? "border-cyan-400/50 shadow-[0_0_28px_rgba(34,211,238,0.18)]"
+                        : "",
+                    ].join(" ")}
+                    onClick={() =>
+                      setMatchDayPickerOpen((o) => (o === "to" ? null : "to"))
+                    }
                   >
-                    <option value="">{fc.datePlaceholder}</option>
-                    {dateToOptions.map((k) => (
-                      <option key={k} value={k}>
-                        {dateLabelForDayKey(grouped, k)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <span
+                      className={
+                        filters.dateTo
+                          ? "tabular-nums text-white"
+                          : "text-white/45"
+                      }
+                    >
+                      {filters.dateTo
+                        ? dateLabelForDayKey(grouped, filters.dateTo)
+                        : fc.datePlaceholder}
+                    </span>
+                    <ChevronDown
+                      className={[
+                        "h-4 w-4 shrink-0 text-cyan-300/75 transition-transform duration-200",
+                        matchDayPickerOpen === "to" ? "rotate-180" : "",
+                      ].join(" ")}
+                      aria-hidden
+                    />
+                  </button>
+                </div>
+
                 {filters.dateFrom != null || filters.dateTo != null ? (
                   <button
                     type="button"
-                    className="rounded-lg border border-white/14 bg-white/[0.06] px-2.5 py-1.5 text-[11px] font-semibold text-white/80 transition hover:border-cyan-400/30 hover:text-white"
-                    onClick={clearDateRangeOnly}
+                    className="rounded-xl border border-white/14 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-fuchsia-400/35 hover:bg-fuchsia-500/10 hover:text-white sm:shrink-0"
+                    onClick={() => {
+                      clearDateRangeOnly();
+                      setMatchDayPickerOpen(null);
+                    }}
                   >
                     {fc.clearDateRange}
                   </button>
@@ -1075,6 +1312,12 @@ export default function ResultListWithOverlay({
           ) : null}
         </div>
 
+        <m.div
+          className={["flex flex-col", isMobile ? "gap-3" : "gap-4"].join(" ")}
+          variants={resultListCyberRoot}
+          initial={prefersReducedMotion ? false : "hidden"}
+          animate="show"
+        >
         <AnimatePresence mode="wait">
           {totalLoaded > 0 &&
             filteredGrouped.length === 0 &&
@@ -1095,7 +1338,7 @@ export default function ResultListWithOverlay({
           )}
         </AnimatePresence>
 
-        {filteredGrouped.map((day, dayIndex) => {
+        {filteredGrouped.map((day) => {
           const pendingShown = day.pending;
           const finalShown = day.final;
           const displayPosts = [...pendingShown, ...finalShown].sort((a, b) => {
@@ -1103,8 +1346,6 @@ export default function ResultListWithOverlay({
             const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
             return be - ae;
           });
-          /** 1〜2枚だけの日はビューポート内に収まり whileInView が弱いので、下から animate で入場 */
-          const fewPostsThisDay = displayPosts.length <= 2;
           const dayPts = dayPointsHeaderForList(
             finalShown,
             pendingShown,
@@ -1114,124 +1355,72 @@ export default function ResultListWithOverlay({
           return (
             <m.div
               key={day.dateLabel}
-              initial={
-                off ??
-                (fewPostsThisDay
-                  ? { opacity: 0, y: 24 }
-                  : { opacity: 0, y: 36 })
-              }
-              animate={
-                prefersReducedMotion || !fewPostsThisDay
-                  ? undefined
-                  : {
-                      opacity: 1,
-                      y: 0,
-                      transition: {
-                        duration: 0.45,
-                        ease: easeOut,
-                        delay: Math.min(dayIndex * 0.04, 0.15),
-                      },
-                    }
-              }
-              whileInView={
-                prefersReducedMotion || fewPostsThisDay
-                  ? undefined
-                  : {
-                      opacity: 1,
-                      y: 0,
-                      transition: {
-                        duration: 0.55,
-                        ease: easeOut,
-                        delay: Math.min(dayIndex * 0.04, 0.2),
-                      },
-                    }
-              }
-              viewport={
-                prefersReducedMotion || fewPostsThisDay
-                  ? undefined
-                  : { once: true, amount: 0.12, margin: "0px 0px -72px 0px" }
-              }
-              transition={prefersReducedMotion ? undefined : { duration: 0.5, ease: easeOut }}
+              variants={resultListCyberDaySlot}
+              className="w-full"
             >
               <ResultDayPipeGroup
                 dateLabel={day.dateLabel}
                 isMobile={isMobile}
                 reducedMotion={Boolean(prefersReducedMotion)}
                 dayPoints={dayPts}
-                headerImpressionImmediate={fewPostsThisDay}
+                listCyberStagger={!prefersReducedMotion}
+                listCyberCardStagger={!prefersReducedMotion}
               >
-                <div
-                  className={
-                    isMobile
-                      ? "space-y-3"
-                      : "grid grid-cols-1 gap-4 sm:grid-cols-2"
-                  }
-                >
-                  {displayPosts.map((post, i) => (
-                    <m.div
-                      key={post.id}
-                      className="w-full [content-visibility:auto] [contain-intrinsic-size:auto_220px]"
-                      initial={
-                        off ??
-                        (fewPostsThisDay
-                          ? {
-                              opacity: 0,
-                              y: 56,
-                              scale: 0.98,
-                            }
-                          : {
-                              opacity: 0,
-                              y: 22,
-                              scale: 0.97,
-                            })
-                      }
-                      animate={
-                        prefersReducedMotion || !fewPostsThisDay
-                          ? undefined
-                          : {
-                              opacity: 1,
-                              y: 0,
-                              scale: 1,
-                              transition: {
-                                duration: 0.52,
-                                ease: easeOut,
-                                delay: i * 0.1,
-                              },
-                            }
-                      }
-                      whileInView={
-                        prefersReducedMotion || fewPostsThisDay
-                          ? undefined
-                          : {
-                              opacity: 1,
-                              y: 0,
-                              scale: 1,
-                              transition: {
-                                duration: 0.42,
-                                ease: easeOut,
-                                delay: Math.min(i, 12) * 0.055,
-                              },
-                            }
-                      }
-                      viewport={
-                        prefersReducedMotion || fewPostsThisDay
-                          ? undefined
-                          : { once: true, amount: 0.15, margin: "0px 0px -48px 0px" }
-                      }
-                    >
-                      <ResultCard
-                        post={post}
-                        onOpen={open}
-                        language={language}
-                        platform={platform}
-                      />
-                    </m.div>
-                  ))}
-                </div>
+                {prefersReducedMotion ? (
+                  <div
+                    className={
+                      isMobile
+                        ? "space-y-3 pt-2"
+                        : "grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
+                    }
+                  >
+                    {displayPosts.map((post) => (
+                      <div key={post.id} className="w-full">
+                        <ResultCard
+                          post={post}
+                          onOpen={open}
+                          language={language}
+                          platform={platform}
+                          scheduleDense={isMobile}
+                          ratingBarsImmediate={filteredTotalLoaded === 1}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <m.div
+                    className={
+                      isMobile
+                        ? "flex min-w-0 w-full flex-col gap-3 pt-2"
+                        : "grid min-w-0 w-full grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
+                    }
+                    variants={resultCardsCyberOrch}
+                    initial="hidden"
+                    animate="show"
+                  >
+                    {displayPosts.map((post) => (
+                      <m.div
+                        key={post.id}
+                        variants={resultCardCyberItem}
+                        className="w-full"
+                      >
+                        <ResultCard
+                          post={post}
+                          onOpen={open}
+                          language={language}
+                          platform={platform}
+                          scheduleDense={isMobile}
+                          ratingBarsImmediate={filteredTotalLoaded === 1}
+                        />
+                      </m.div>
+                    ))}
+                  </m.div>
+                )}
               </ResultDayPipeGroup>
             </m.div>
           );
         })}
+        </m.div>
 
         {!postsCacheCapped && hasMore && (
           <div ref={sentinelRef} className="h-10" />
@@ -1267,7 +1456,168 @@ export default function ResultListWithOverlay({
               : `動作を軽く保つため、最新 ${RESULT_POSTS_MAX_CACHED} 件まで表示しています。`}
           </m.div>
         )}
-      </m.div>
+      </div>
+
+      {overlayPortalReady &&
+      matchDayPickerOpen &&
+      matchDayListboxBox
+        ? createPortal(
+            <AnimatePresence>
+              <m.div
+                key={matchDayPickerOpen}
+                ref={matchDayListboxPortalRef}
+                id={
+                  matchDayPickerOpen === "from"
+                    ? "result-filter-date-from-listbox"
+                    : "result-filter-date-to-listbox"
+                }
+                role="listbox"
+                aria-labelledby={
+                  matchDayPickerOpen === "from"
+                    ? "result-filter-date-from-trigger"
+                    : "result-filter-date-to-trigger"
+                }
+                style={{
+                  position: "fixed",
+                  top: matchDayListboxBox.top,
+                  left: matchDayListboxBox.left,
+                  width: matchDayListboxBox.width,
+                  maxHeight: matchDayListboxBox.maxH,
+                }}
+                initial={
+                  prefersReducedMotion
+                    ? false
+                    : { opacity: 0, y: -8, scale: 0.98 }
+                }
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={
+                  prefersReducedMotion
+                    ? undefined
+                    : { opacity: 0, y: -6, scale: 0.98 }
+                }
+                transition={{ duration: 0.2, ease: easeOut }}
+                className="z-[92000] overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-cyan-500/25 bg-zinc-950/95 py-1 shadow-[0_20px_56px_rgba(0,0,0,0.72)] backdrop-blur-xl backdrop-saturate-150"
+              >
+                {matchDayPickerOpen === "from" ? (
+                  <>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={filters.dateFrom == null}
+                      className={[
+                        "flex w-full items-center gap-2 border-b border-white/[0.07] px-3 py-2.5 text-left text-[11px] transition sm:text-xs",
+                        filters.dateFrom == null
+                          ? "bg-cyan-500/14 text-cyan-50"
+                          : "text-white/50 hover:bg-white/[0.06] hover:text-white/88",
+                      ].join(" ")}
+                      onClick={() => {
+                        setFilterDateFrom("");
+                        setMatchDayPickerOpen(null);
+                      }}
+                    >
+                      <span className="min-w-0 flex-1">{fc.datePlaceholder}</span>
+                      {filters.dateFrom == null ? (
+                        <Check
+                          className="h-3.5 w-3.5 shrink-0 text-cyan-300"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </button>
+                    {dateFromOptions.map((k) => {
+                      const sel = filters.dateFrom === k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          role="option"
+                          aria-selected={sel}
+                          className={[
+                            "flex w-full items-center gap-2 border-b border-white/[0.05] px-3 py-2.5 text-left text-[11px] tabular-nums transition last:border-b-0 sm:text-xs",
+                            sel
+                              ? "bg-cyan-500/16 text-white"
+                              : "text-white/85 hover:bg-cyan-500/10 hover:text-white",
+                          ].join(" ")}
+                          onClick={() => {
+                            setFilterDateFrom(k);
+                            setMatchDayPickerOpen(null);
+                          }}
+                        >
+                          <span className="min-w-0 flex-1">
+                            {dateLabelForDayKey(grouped, k)}
+                          </span>
+                          {sel ? (
+                            <Check
+                              className="h-3.5 w-3.5 shrink-0 text-cyan-300"
+                              aria-hidden
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={filters.dateTo == null}
+                      className={[
+                        "flex w-full items-center gap-2 border-b border-white/[0.07] px-3 py-2.5 text-left text-[11px] transition sm:text-xs",
+                        filters.dateTo == null
+                          ? "bg-cyan-500/14 text-cyan-50"
+                          : "text-white/50 hover:bg-white/[0.06] hover:text-white/88",
+                      ].join(" ")}
+                      onClick={() => {
+                        setFilterDateTo("");
+                        setMatchDayPickerOpen(null);
+                      }}
+                    >
+                      <span className="min-w-0 flex-1">{fc.datePlaceholder}</span>
+                      {filters.dateTo == null ? (
+                        <Check
+                          className="h-3.5 w-3.5 shrink-0 text-cyan-300"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </button>
+                    {dateToOptions.map((k) => {
+                      const sel = filters.dateTo === k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          role="option"
+                          aria-selected={sel}
+                          className={[
+                            "flex w-full items-center gap-2 border-b border-white/[0.05] px-3 py-2.5 text-left text-[11px] tabular-nums transition last:border-b-0 sm:text-xs",
+                            sel
+                              ? "bg-cyan-500/16 text-white"
+                              : "text-white/85 hover:bg-cyan-500/10 hover:text-white",
+                          ].join(" ")}
+                          onClick={() => {
+                            setFilterDateTo(k);
+                            setMatchDayPickerOpen(null);
+                          }}
+                        >
+                          <span className="min-w-0 flex-1">
+                            {dateLabelForDayKey(grouped, k)}
+                          </span>
+                          {sel ? (
+                            <Check
+                              className="h-3.5 w-3.5 shrink-0 text-cyan-300"
+                              aria-hidden
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+              </m.div>
+            </AnimatePresence>,
+            document.body
+          )
+        : null}
 
       {overlayPortalReady
         ? createPortal(

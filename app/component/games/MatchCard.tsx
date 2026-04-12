@@ -29,6 +29,10 @@ import EventPill from "@/app/component/common/EventPill";
 import { getGameEventTag } from "@/lib/events/eventRules";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import {
+  MOBILE_LIST_CARD_OUTER_CLASS,
+  MOBILE_LIST_CARD_PANEL_DENSE,
+} from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 
@@ -158,8 +162,14 @@ function RecordWithRank({
     );
   }
   return (
-    <span className={[resultStatsMetricNumClass, "opacity-85"].join(" ")}>
-      {`${record} :${r.rank}${ordinal(r.rank)}`}
+    <span
+      className={[
+        resultStatsMetricNumClass,
+        "inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-2 opacity-85",
+      ].join(" ")}
+    >
+      <span className="tabular-nums">{record}</span>
+      <span className="tabular-nums whitespace-nowrap">{`:${r.rank}${ordinal(r.rank)}`}</span>
     </span>
   );
 }
@@ -298,10 +308,10 @@ const marketMajority = useMemo(() => {
   /** Canvas ユニのみモバイルルートでやや大きめ */
   const teamMarkSizeJersey = dense
     ? isMobile
-      ? "jersey-icon w-[4.5rem] h-[4.5rem] md:w-20 md:h-20"
+      ? "jersey-icon w-[3.875rem] h-[3.875rem] md:w-20 md:h-20"
       : "jersey-icon w-16 h-16 md:w-20 md:h-20"
     : isMobile
-      ? "jersey-icon w-[4.75rem] h-[4.75rem] md:w-24 md:h-24"
+      ? "jersey-icon w-[4.125rem] h-[4.125rem] md:w-24 md:h-24"
       : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
 
   // Tailwind に text-1.xl は無いので既に修正済み
@@ -389,7 +399,7 @@ let center: React.ReactNode = inPredictOverlay ? (
   <div
     className={
       mobileDense
-        ? "flex min-h-[52px] items-center justify-center md:min-h-[68px]"
+        ? "flex min-h-[44px] items-center justify-center md:min-h-[68px]"
         : "flex min-h-[72px] items-center justify-center md:min-h-[88px]"
     }
   >
@@ -624,7 +634,7 @@ return (
   }}
 className={[
   "group relative overflow-hidden text-white",
-  "max-w-[1200px] mx-auto",
+  mobileDense ? MOBILE_LIST_CARD_OUTER_CLASS : "mx-auto max-w-[1200px] w-full",
 disableCardMotion
   ? ""
   : [
@@ -632,11 +642,11 @@ disableCardMotion
       navigating ? "opacity-90" : "",
     ].join(" "),
 dense
-  ? "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.025)_42%,rgba(255,255,255,0.015)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.04)]"
+  ? MOBILE_LIST_CARD_PANEL_DENSE
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
     hideLine
       ? mobileDense
-        ? "pb-2 md:pb-2"
+        ? "pb-1 md:pb-2"
         : "pb-2 md:pb-3"
       : "",
     className || "",
@@ -738,7 +748,7 @@ background:
 
   return (
     <motion.div
-      className="absolute top-2 right-2 z-20"
+      className={mobileDense ? "absolute top-1 right-1 z-20" : "absolute top-2 right-2 z-20"}
       initial={entryTransition ? { opacity: 0, y: 8 } : false}
       animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
       transition={entryTransition ? entryTransition(2) : undefined}
@@ -752,7 +762,7 @@ background:
       <motion.div
         className={[
           mobileDense
-            ? "mb-0 px-2.5 pb-0 pt-0.5"
+            ? "mb-0 px-2 pb-0 pt-0"
             : dense
               ? "mb-0.5 px-3 pt-2"
               : "mb-0.5 px-4 pt-2",
@@ -767,7 +777,7 @@ background:
             className={[
               "mc-round text-center font-bold",
               mobileDense
-                ? "mt-2.5 mb-0 text-xl leading-snug md:text-2xl"
+                ? "mt-3 mb-0 text-xl leading-snug md:text-2xl"
                 : "mt-2 mb-0.5 text-lg md:text-2xl",
             ].join(" ")}
             style={teamNameFont}
@@ -777,7 +787,7 @@ background:
         )}
 
         <div
-          className={mobileDense ? "h-0.5 md:h-1" : "h-2.5 md:h-3.5"}
+          className={mobileDense ? "h-0 md:h-1" : "h-2.5 md:h-3.5"}
           aria-hidden
         />
       </motion.div>
@@ -785,7 +795,7 @@ background:
       <div
         className={`grid grid-cols-3 ${
           mobileDense
-            ? "items-center gap-0.5 px-2.5 py-0"
+            ? "items-center gap-0 px-2 py-0"
             : dense
               ? "items-start gap-1 px-3 py-0"
               : "items-center gap-2 px-4 py-2.5"
@@ -805,7 +815,7 @@ background:
   {/* HOME：Web はラベルを大きく */}
   <div
     className={[
-      mobileDense ? "mb-0.5" : "mb-1",
+      mobileDense ? "mb-0 -mt-3" : "mb-1",
       "text-center font-bold uppercase opacity-85",
       isMobile
         ? "text-xs md:text-sm"
@@ -816,6 +826,8 @@ background:
     HOME
   </div>
 
+  {/* ユニ・チーム名・戦績（モバイル dense 時もラッパーでまとめるのみ） */}
+  <div className="flex w-full flex-col items-center">
   {Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={homeColor}
@@ -832,11 +844,11 @@ background:
     />
   )}
 
-  {/* チーム名：mobile小さく / webそのまま */}
+  {/* チーム名：mobile小さく / webそのまま（ユニ直下との間はほんの少しだけ空ける） */}
   <div
     className={[
       "mc-name text-center leading-tight",
-      mobileDense ? "mt-0.5" : "mt-1",
+      mobileDense ? "-mt-0.5" : "mt-1.5",
     ].join(" ")}
   >
   {isMobile ? (
@@ -886,22 +898,23 @@ background:
 </div>
 
 
-  {/* 戦績・順位：総合得点などと同じ Oxanium */}
+  {/* 戦績・順位：総合得点などと同じ Oxanium（下のリーグ線用の下パディングのみ） */}
 <div
   className={[
     "mc-record text-[11px] leading-none md:text-[15px]",
-    mobileDense ? "mt-0" : "mt-0.5",
+    mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
   <RecordWithRank r={homeRecord} />
 </div>
+  </div>
 
 {/* ★ ここに挿入 */}
 {showRecentForm && homeForm.length > 0 && (
   <div
     className={[
       "w-full flex justify-center",
-      mobileDense ? "mt-0.5" : "mt-1",
+      mobileDense ? "mt-0" : "mt-1",
     ].join(" ")}
   >
     <div className="flex items-center gap-1">
@@ -964,7 +977,7 @@ background:
 
   <div
     className={[
-      mobileDense ? "mb-0.5" : "mb-1",
+      mobileDense ? "mb-0 -mt-3" : "mb-1",
       "text-center font-bold uppercase opacity-85",
       isMobile
         ? "text-xs md:text-sm"
@@ -975,6 +988,8 @@ background:
     AWAY
   </div>
 
+  {/* ユニ・チーム名・戦績（モバイル dense 時もラッパーでまとめるのみ） */}
+  <div className="flex w-full flex-col items-center">
   {/* アイコン：mobile大きく / webそのまま */}
   {Icon === Jersey ? (
     <HalftoneJerseyMark
@@ -992,11 +1007,11 @@ background:
     />
   )}
 
-  {/* チーム名：mobile小さく / webそのまま */}
+  {/* チーム名：mobile小さく / webそのまま（ユニ直下との間はほんの少しだけ空ける） */}
   <div
     className={[
       "mc-name text-center leading-tight",
-      mobileDense ? "mt-0.5" : "mt-1",
+      mobileDense ? "-mt-0.5" : "mt-1.5",
     ].join(" ")}
   >
   {isMobile ? (
@@ -1049,18 +1064,19 @@ background:
 <div
   className={[
     "mc-record text-[11px] leading-none md:text-[15px]",
-    mobileDense ? "mt-0" : "mt-0.5",
+    mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
   <RecordWithRank r={awayRecord} />
 </div>
+  </div>
 
 {/* ★ ここに挿入 */}
 {showRecentForm && awayForm.length > 0 && (
   <div
     className={[
       "w-full flex justify-center",
-      mobileDense ? "mt-0.5" : "mt-1",
+      mobileDense ? "mt-0" : "mt-1",
     ].join(" ")}
   >
     <div className="flex items-center gap-1">
@@ -1101,9 +1117,9 @@ background:
     className={
       dense
         ? mobileDense
-          ? "h-[2px] w-full mt-1 md:mt-1"
-          : "h-[2px] w-full mt-1.5 md:mt-1.5"
-        : "h-[3px] w-full mt-2 md:mt-2"
+          ? "h-[2px] w-full mt-1.5 md:mt-2"
+          : "h-[2px] w-full mt-2 md:mt-2.5"
+        : "h-[3px] w-full mt-2.5 md:mt-3"
     }
     style={{
       backgroundColor: leagueLineColor[league],
@@ -1138,7 +1154,7 @@ background:
         <motion.div
           className={
             mobileDense
-              ? "grid grid-cols-1 gap-1.5 px-2.5 py-1 md:gap-3 md:px-4 md:py-3"
+              ? "grid grid-cols-1 gap-1 px-2 py-0.5 md:gap-3 md:px-4 md:py-3"
               : "grid grid-cols-1 gap-2 px-3 py-1.5 md:gap-3 md:px-4 md:py-2.5"
           }
           initial={entryTransition ? { opacity: 0, y: 10 } : false}

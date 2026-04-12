@@ -19,6 +19,10 @@ import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import {
+  MOBILE_LIST_CARD_PANEL_DENSE,
+  MOBILE_RESULT_CARD_OUTER_CLASS,
+} from "@/lib/games/mobileListCardLayout";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -38,6 +42,12 @@ type Props = {
   language?: Language;
   /** 指定時は pathname ではなくこれでモバイル表示を決める（リザルトのルート固定用） */
   platform?: ResultPlatform;
+  /** true かつモバイル表示時のみ、試合一覧 dense の MatchCard に近い枠・密度にする */
+  scheduleDense?: boolean;
+  /**
+   * 一覧が1件だけのとき true。下部の評価バーがビューポート判定で動かないのを避ける
+   */
+  ratingBarsImmediate?: boolean;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -165,7 +175,10 @@ function ResultCardPresentationImpl({
   isMobile,
   onNavigate,
   listDateLabel,
+  scheduleDense = false,
+  ratingBarsImmediate = false,
 }: ResultCardPresentationProps) {
+  const mobileScheduleDense = Boolean(isMobile && scheduleDense);
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const isEn = language === "en";
   const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
@@ -275,7 +288,11 @@ function ResultCardPresentationImpl({
     frame = "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
   }
 
-  const nameMt = isMobile ? "mt-1" : "mt-1.5";
+  const nameMt = mobileScheduleDense
+    ? "mt-0.5"
+    : isMobile
+      ? "mt-1"
+      : "mt-1.5";
   const mobileBadgeClass = isMobile
     ? "text-[10px] px-1.5 py-0.5"
     : "text-[11px] px-2 py-0.5";
@@ -320,19 +337,29 @@ function ResultCardPresentationImpl({
   const barStaggerMs = isMobile ? 80 : 90;
 
   // モバイルはリーグ／ステータスをグリッド内に入れるため、日付バッジ分だけ上余白
-  const contentPad = isMobile
-    ? listDateLabel
-      ? "px-4 pb-3 pt-7"
-      : "px-4 pb-3 pt-4"
-    : "px-8 pb-6 pt-10";
+  const contentPad = (() => {
+    if (!isMobile) return "px-8 pb-5 pt-9";
+    if (mobileScheduleDense) {
+      // 角のリーグ／HIT バッジ分の上余白（日付ラベルありは2段）
+      return listDateLabel ? "px-2 pb-1.5 pt-10" : "px-2 pb-1.5 pt-7";
+    }
+    return listDateLabel ? "px-2 pb-2 pt-11" : "px-2 pb-2 pt-9";
+  })();
+
+  const listPanelClass = mobileScheduleDense
+    ? MOBILE_LIST_CARD_PANEL_DENSE
+    : MATCH_OVERLAY_GLASS_PANEL;
 
   return (
     <div
       onClick={handle}
       className={[
-        "group relative max-w-[1200px] mx-auto w-full overflow-hidden text-white",
+        "group relative overflow-hidden text-white",
+        isMobile
+          ? MOBILE_RESULT_CARD_OUTER_CLASS
+          : "mx-auto w-full max-w-[1200px]",
         "active:scale-[0.98] transition-transform cursor-pointer select-none",
-        MATCH_OVERLAY_GLASS_PANEL,
+        listPanelClass,
         frame,
       ].join(" ")}
     >
@@ -345,12 +372,12 @@ function ResultCardPresentationImpl({
         <div
           className={[
             "pointer-events-none absolute top-2 z-30 max-w-[78%] truncate text-left",
-            isMobile ? "left-4" : "left-8",
+            isMobile ? "left-2" : "left-8",
           ].join(" ")}
         >
           <span
             className={[
-              "inline-block rounded-full border border-cyan-300/40 bg-black/65 font-semibold tracking-wide text-cyan-50/95 shadow-[0_0_12px_rgba(34,211,238,0.15)] backdrop-blur-sm",
+              "inline-block rounded-full border border-cyan-300/35 bg-black/65 font-semibold tracking-wide text-cyan-50/95 shadow-[0_0_6px_rgba(34,211,238,0.08)] backdrop-blur-sm",
               isMobile ? "px-2.5 py-0.5 text-[9px]" : "px-3 py-1 text-[10px]",
             ].join(" ")}
           >
@@ -358,8 +385,59 @@ function ResultCardPresentationImpl({
           </span>
         </div>
       ) : null}
-      {/* デスクトップ：上部にリーグ＋ステータス。モバイルはユニ横に配置 */}
-      {!isMobile && (
+      {/* モバイル：左上にリーグ、右上に HIT 等（日付ラベルあり時はリーグのみ一段下げ） */}
+      {isMobile ? (
+        <>
+          <div className="pointer-events-none absolute right-2 top-2 z-20 flex max-w-[min(100%,11rem)] items-start justify-end gap-1">
+            {badge === "streak" && streakBadge && (
+              <span
+                className={`pointer-events-auto inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+              >
+                <Flame
+                  className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
+                />
+                <span className="min-w-0 truncate text-[9px] leading-tight">
+                  {streakBadge.label}
+                </span>
+              </span>
+            )}
+            {badge === "hit" && (
+              <span
+                className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+              >
+                HIT
+              </span>
+            )}
+            {badge === "upset" && (
+              <span
+                className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+              >
+                UPSET
+              </span>
+            )}
+            {badge === "miss" && (
+              <span
+                className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+              >
+                MISS
+              </span>
+            )}
+          </div>
+          <div
+            className={[
+              "pointer-events-none absolute left-2 z-20",
+              listDateLabel ? "top-10" : "top-2",
+            ].join(" ")}
+          >
+            <span
+              className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+              style={{ backgroundColor: pillBg, ...teamNameFont }}
+            >
+              {pillText}
+            </span>
+          </div>
+        </>
+      ) : (
         <div
           className={[
             "pointer-events-none absolute inset-x-0 z-20 flex items-start justify-between gap-1 px-1 sm:px-1.5",
@@ -419,35 +497,43 @@ function ResultCardPresentationImpl({
         <div
           className={
             isMobile
-              ? "flex min-w-0 flex-col items-stretch pt-2.5 translate-x-1.5"
-              : "flex min-w-0 flex-col items-center ml-1 translate-x-2 pt-3 sm:ml-3 sm:translate-x-2.5 sm:pt-4"
+              ? mobileScheduleDense
+                ? "flex min-w-0 flex-col items-stretch pt-0"
+                : "flex min-w-0 flex-col items-stretch pt-1.5"
+              : "flex min-w-0 flex-col items-center ml-1 translate-x-2 pt-2.5 sm:ml-3 sm:translate-x-2.5 sm:pt-3.5"
           }
         >
           {isMobile ? (
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
-                <span
-                  className="pointer-events-auto absolute -left-3.5 -top-3 inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
-                  style={{ backgroundColor: pillBg, ...teamNameFont }}
-                >
-                  {pillText}
-                </span>
                 {Icon === Jersey ? (
                   <HalftoneJerseyMark
                     accent={homeColor}
                     accentEnd={homeSecondaryColor}
-                    className="ml-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                    className={
+                      mobileScheduleDense
+                        ? "jersey-icon ml-1 h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
+                        : "ml-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                    }
                   />
                 ) : (
                   <Icon
-                    className="ml-1 h-16 w-16 shrink-0"
+                    className={
+                      mobileScheduleDense
+                        ? "jersey-icon ml-1 h-16 w-16 shrink-0 md:h-20 md:w-20"
+                        : "ml-1 h-16 w-16 shrink-0"
+                    }
                     fill={homeColor}
                     stroke="#fff"
                   />
                 )}
               </div>
               <div
-                className={`${nameMt} w-full max-w-full truncate text-center text-[13px] font-bold leading-tight md:text-[17px]`}
+                className={`${nameMt} w-full max-w-full truncate text-center font-bold leading-tight ${
+                  mobileScheduleDense
+                    ? "text-[15px] md:text-[18px]"
+                    : "text-[13px] md:text-[17px]"
+                }`}
                 style={teamNameFont}
               >
                 {getMobileTeamName(
@@ -470,7 +556,7 @@ function ResultCardPresentationImpl({
                 <Icon className="h-20 w-20" fill={homeColor} stroke="#fff" />
               )}
               <div
-                className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
+                className={`${nameMt} flex h-[2.65rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.1rem] md:text-xl lg:text-2xl`}
                 style={teamNameFont}
               >
                 <span className="line-clamp-2 break-words">
@@ -481,12 +567,20 @@ function ResultCardPresentationImpl({
           )}
         </div>
 
-        <div className="mt-3 flex max-w-full shrink-0 flex-col items-center justify-center px-0.5">
+        <div
+          className={
+            mobileScheduleDense
+              ? "mt-0 flex max-w-full shrink-0 flex-col items-center justify-center px-0.5"
+              : "mt-2 flex max-w-full shrink-0 flex-col items-center justify-center px-0.5"
+          }
+        >
           <div
             className={[
               "whitespace-nowrap leading-none tracking-tight tabular-nums font-black",
               isMobile
-                ? "text-[clamp(1.32rem,5.4vw,1.78rem)]"
+                ? mobileScheduleDense
+                  ? "text-xl md:text-4xl"
+                  : "text-[clamp(1.32rem,5.4vw,1.78rem)]"
                 : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
               resultStatsMetricNumClass,
             ].join(" ")}
@@ -496,7 +590,7 @@ function ResultCardPresentationImpl({
 
           {finalScore && (
             <div
-              className={`mt-1.5 whitespace-nowrap tabular-nums opacity-85 md:mt-2 ${
+              className={`mt-1 whitespace-nowrap tabular-nums opacity-85 md:mt-1.5 ${
                 isMobile
                   ? "text-[13px] font-bold leading-tight"
                   : "text-base font-bold md:text-lg"
@@ -510,8 +604,10 @@ function ResultCardPresentationImpl({
         <div
           className={
             isMobile
-              ? "flex min-w-0 flex-col items-stretch pt-2.5 -translate-x-1.5"
-              : "flex min-w-0 flex-col items-center mr-1 -translate-x-2 pt-3 sm:mr-3 sm:-translate-x-2.5 sm:pt-4"
+              ? mobileScheduleDense
+                ? "flex min-w-0 flex-col items-stretch pt-0"
+                : "flex min-w-0 flex-col items-stretch pt-1.5"
+              : "flex min-w-0 flex-col items-center mr-1 -translate-x-2 pt-2.5 sm:mr-3 sm:-translate-x-2.5 sm:pt-3.5"
           }
         >
           {isMobile ? (
@@ -521,51 +617,30 @@ function ResultCardPresentationImpl({
                   <HalftoneJerseyMark
                     accent={awayColor}
                     accentEnd={awaySecondaryColor}
-                    className="mr-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                    className={
+                      mobileScheduleDense
+                        ? "jersey-icon mr-1 h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
+                        : "mr-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                    }
                   />
                 ) : (
                   <Icon
-                    className="mr-1 h-16 w-16 shrink-0"
+                    className={
+                      mobileScheduleDense
+                        ? "jersey-icon mr-1 h-16 w-16 shrink-0 md:h-20 md:w-20"
+                        : "mr-1 h-16 w-16 shrink-0"
+                    }
                     fill={awayColor}
                     stroke="#fff"
                   />
                 )}
-                {badge === "streak" && streakBadge && (
-                  <span
-                    className={`pointer-events-auto absolute -right-3.5 -top-3 inline-flex max-w-[min(100%,7rem)] min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-                  >
-                    <Flame
-                      className={`h-2 w-2 shrink-0 ${streakBadge.iconClassName}`}
-                    />
-                    <span className="min-w-0 truncate text-[9px] leading-tight">
-                      {streakBadge.label}
-                    </span>
-                  </span>
-                )}
-                {badge === "hit" && (
-                  <span
-                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
-                  >
-                    HIT
-                  </span>
-                )}
-                {badge === "upset" && (
-                  <span
-                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-                  >
-                    UPSET
-                  </span>
-                )}
-                {badge === "miss" && (
-                  <span
-                    className={`pointer-events-auto absolute -right-3.5 -top-3 shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-                  >
-                    MISS
-                  </span>
-                )}
               </div>
               <div
-                className={`${nameMt} w-full max-w-full truncate text-center text-[13px] font-bold leading-tight md:text-[17px]`}
+                className={`${nameMt} w-full max-w-full truncate text-center font-bold leading-tight ${
+                  mobileScheduleDense
+                    ? "text-[15px] md:text-[18px]"
+                    : "text-[13px] md:text-[17px]"
+                }`}
                 style={teamNameFont}
               >
                 {getMobileTeamName(
@@ -588,7 +663,7 @@ function ResultCardPresentationImpl({
                 <Icon className="h-20 w-20" fill={awayColor} stroke="#fff" />
               )}
               <div
-                className={`${nameMt} flex h-[2.9rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.4rem] md:text-xl lg:text-2xl`}
+                className={`${nameMt} flex h-[2.65rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.1rem] md:text-xl lg:text-2xl`}
                 style={teamNameFont}
               >
                 <span className="line-clamp-2 break-words">
@@ -600,9 +675,17 @@ function ResultCardPresentationImpl({
         </div>
       </div>
 
-      <div className="mt-4 border-t border-dashed border-white/15" />
+      <div
+        className={
+          mobileScheduleDense
+            ? "mt-1.5 border-t border-dashed border-white/15"
+            : "mt-3 border-t border-dashed border-white/15"
+        }
+      />
 
-      <div className={`mt-2.5 ${isMobile ? "space-y-0.5" : "space-y-1"}`}>
+      <div
+        className={`${mobileScheduleDense ? "mt-1" : "mt-2"} ${isMobile ? "space-y-0.5" : "space-y-1"}`}
+      >
         {statRows.map((r, index) => {
           const cap = r.barMax;
           const ratio =
@@ -652,6 +735,9 @@ function ResultCardPresentationImpl({
                 animateMs={barAnimateMs}
                 delayMs={index * barStaggerMs}
                 size={isMobile ? "sm" : "md"}
+                animationActive={
+                  ratingBarsImmediate ? true : undefined
+                }
               />
 
               <div

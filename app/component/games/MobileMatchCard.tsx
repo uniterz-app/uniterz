@@ -218,7 +218,7 @@ export default function MobileMatchCard(props: MatchCardProps) {
           ) : (
             <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
           )}
-          <div className="mt-1 text-[14px] text-center leading-tight font-bold">
+          <div className="mt-1.5 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, home.name, homeL1, homeL2)}
           </div>
         </motion.div>
@@ -263,7 +263,7 @@ export default function MobileMatchCard(props: MatchCardProps) {
           ) : (
             <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
           )}
-          <div className="mt-1 text-[14px] text-center leading-tight font-bold">
+          <div className="mt-1.5 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, away.name, awayL1, awayL2)}
           </div>
         </motion.div>

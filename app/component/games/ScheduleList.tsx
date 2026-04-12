@@ -679,7 +679,7 @@ export default function ScheduleList({
           className={[
             "grid",
             isMobile && dense
-              ? "gap-4 px-1.5"
+              ? "gap-2.5 px-1"
               : "gap-6 px-4 md:px-6 lg:px-8",
           ].join(" ")}
           variants={scheduleContainer}

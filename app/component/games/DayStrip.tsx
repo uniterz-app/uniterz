@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useLayoutEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import cn from "clsx";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 import { GAMES_CYBER_EASE } from "./cyberMotion";
@@ -15,9 +16,12 @@ type Props = {
   autoScrollOnInit?: boolean;
   snapSelectOnScroll?: boolean;
   timeZone: string;
-  isEn?: boolean;
+  /** スクリーンリーダー用ラベルのロケール（曜日は表示しないが aria に含める） */
+  a11yLocale?: string;
   /** true のとき日付セル間を一段広げる（モバイル向け） */
   wideItemGap?: boolean;
+  /** true のときウェブ版のみ日付セル間を詰める（モバイルは wideItemGap のまま） */
+  compactWebGap?: boolean;
 };
 
 const sizeMap = {
@@ -38,8 +42,9 @@ export default function DayStrip({
   autoScrollOnInit = false,
   snapSelectOnScroll = true,
   timeZone,
-  isEn = false,
+  a11yLocale = "ja-JP",
   wideItemGap = false,
+  compactWebGap = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const listRef = useRef<HTMLDivElement>(null);
@@ -197,20 +202,38 @@ export default function DayStrip({
       : size === "md"
         ? "gap-3"
         : "gap-3"
-    : sz.gap;
+    : compactWebGap
+      ? size === "lg"
+        ? "gap-2"
+        : size === "md"
+          ? "gap-1.5"
+          : "gap-1"
+      : sz.gap;
   const gapPx = wideItemGap
     ? size === "lg"
       ? 16
       : 12
-    : size === "lg"
-      ? 12
-      : 8;
+    : compactWebGap
+      ? size === "lg"
+        ? 8
+        : size === "md"
+          ? 6
+          : 4
+      : size === "lg"
+        ? 12
+        : 8;
 
-  const weekday = (d: Date) =>
-    new Intl.DateTimeFormat(isEn ? "en-US" : "ja-JP", {
-      timeZone,
-      weekday: "short",
-    }).format(d);
+  /** 試合日が visibleCount 未満だと「100%/n」幅のセルが並ばず右に大きな空きが出るため、均等配置に切り替える */
+  const distributeFewDays = useMemo(
+    () =>
+      Boolean(
+        visibleCount &&
+          visibleCount > 0 &&
+          dates.length > 0 &&
+          dates.length < visibleCount,
+      ),
+    [visibleCount, dates.length],
+  );
 
   const dayStripContainer = {
     hidden: {},
@@ -243,7 +266,10 @@ export default function DayStrip({
       className={`overflow-x-auto no-scrollbar ${sz.padX} ${className ?? ""} ${snapSelectOnScroll ? "snap-x snap-proximity" : ""}`}
     >
       <motion.div
-        className={`flex ${gapClass} py-2`}
+        className={cn(
+          `flex ${gapClass} pt-1 pb-2`,
+          distributeFewDays && "min-w-full justify-evenly",
+        )}
         variants={dayStripContainer}
         initial={reduceMotion ? false : "hidden"}
         animate="show"
@@ -254,7 +280,9 @@ export default function DayStrip({
           const isTodayDate = dayKey === todayKey;
 
           const basis =
-            visibleCount && visibleCount > 0
+            visibleCount &&
+            visibleCount > 0 &&
+            !distributeFewDays
               ? ({
                   flex: `0 0 calc((100% - ${(visibleCount - 1) * gapPx}px) / ${visibleCount})`,
                 } as const)
@@ -287,24 +315,16 @@ export default function DayStrip({
                     scrollingByCode.current = false;
                   }, 320);
                 }}
-                className="flex flex-col items-center"
+                className="flex flex-col items-center justify-center"
                 type="button"
+                aria-label={new Intl.DateTimeFormat(a11yLocale, {
+                  timeZone,
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }).format(d)}
               >
-                <span
-                  className={[
-                    "mb-1 text-[11px] transition-all duration-200",
-                    selected ? "text-white/95" : "text-white/70",
-                  ].join(" ")}
-                  style={{
-                    textShadow: selected
-                      ? "0 0 10px rgba(34,211,238,0.45), 0 0 2px rgba(255,255,255,0.2)"
-                      : undefined,
-                    transform: selected ? "translateY(-1px)" : undefined,
-                  }}
-                >
-                  {weekday(d)}
-                </span>
-
                 <div
                   className={[
                     "relative grid place-items-center rounded-full border-2",
@@ -325,9 +345,9 @@ export default function DayStrip({
                       ? "linear-gradient(180deg, rgba(34,211,238,0.42) 0%, rgba(8,145,178,0.36) 100%)"
                       : "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)",
                     boxShadow: selected
-                      ? "inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 1px rgba(34,211,238,0.2), 0 0 14px rgba(34,211,238,0.28)"
+                      ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(34,211,238,0.14), 0 0 7px rgba(34,211,238,0.14)"
                       : isTodayDate
-                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 8px rgba(34,211,238,0.12)"
+                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 4px rgba(34,211,238,0.07)"
                         : "inset 0 1px 0 rgba(255,255,255,0.06)",
                     isolation: "isolate",
                   }}
@@ -347,8 +367,8 @@ export default function DayStrip({
                     style={{
                       color: selected ? "#ecfeff" : "#ffffff",
                       textShadow: selected
-                        ? "0 0 10px rgba(34,211,238,0.55), 0 1px 0 rgba(0,0,0,0.35)"
-                        : "0 0 3px rgba(255,255,255,0.04)",
+                        ? "0 0 5px rgba(34,211,238,0.22), 0 1px 0 rgba(0,0,0,0.32)"
+                        : "0 1px 0 rgba(0,0,0,0.22)",
                     }}
                   >
                     {new Intl.DateTimeFormat("en-US", {

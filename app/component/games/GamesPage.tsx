@@ -15,7 +15,10 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
-import { useGamesByDate } from "./useGamesByDate";
+import {
+  gameRowStartDateKeyInTimeZone,
+  useGamesByCalendarMonth,
+} from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -206,7 +209,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [dayTimeZone]
   );
 
-  /** 取得ウィンドウ（アンカー暦日の前後数日）の基準日：選択中 → URL → 今日 */
+  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → URL → 今日 */
   const anchorForGameDays = useMemo(() => {
     const fromUrl = parseDateKeyInTimeZone(dateParam ?? "", dayTimeZone);
     const stored = selectedByLeague[league];
@@ -216,7 +219,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [dateParam, dayTimeZone, league, selectedByLeague, todayKey]);
 
   /* =========================
-     Game days（アンカー日前後数日で取得）
+     Game days（アンカー日の暦月1ヶ月分を取得）
   ========================= */
   const { gameDays, monthRows, loading: loadingDays } = useGameDays(
     league,
@@ -523,9 +526,20 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   });
 
   /* =========================
-     Games
+     Games（開いた暦月をまとめて取得し、選択日で絞り込み）
   ========================= */
-  const { loading, games } = useGamesByDate(league, selected, dayTimeZone);
+  const { loading: loadingMonthGames, games: gamesInCalendarMonth } =
+    useGamesByCalendarMonth(league, anchorForGameDays, dayTimeZone);
+
+  const games = useMemo(() => {
+    if (!selected) return [];
+    const dayKey = toDateKeyInTimeZone(selected, dayTimeZone);
+    return gamesInCalendarMonth.filter(
+      (g) => gameRowStartDateKeyInTimeZone(g, dayTimeZone) === dayKey,
+    );
+  }, [gamesInCalendarMonth, selected, dayTimeZone]);
+
+  const loading = loadingMonthGames;
 
   const gamesAfterTeamFilter = useMemo(() => {
     const raw = games ?? [];
@@ -646,10 +660,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      UI
   ========================= */
-  const visibleCount = dense ? 7 : 10;
+  /** DayStrip の1行に割り当てるマス数（多いほど同時に見える日が増える） */
+  const visibleCount = dense ? 6 : 10;
   /** モバイル試合一覧はカード横幅を広げるため左右を詰める */
   const pagePad =
-    dense && isMobile ? "px-2" : dense ? "px-3" : "px-4 md:px-6";
+    dense && isMobile ? "px-0" : dense ? "px-3" : "px-4 md:px-6";
   const isInitialLoading = loadingDays || !selected;
   const isSwitchingDate = !!selected && loading;
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
@@ -803,7 +818,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           delay: reduceMotion ? 0 : 0.04,
           ease: GAMES_CYBER_EASE,
         }}
-        className="mb-2"
+        className="mb-1"
       >
       <MonthHeader
         month={monthValue}
@@ -838,14 +853,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
 {isInitialLoading ? (
   <>
-    <div className="mb-4">
+    <div className="mb-2">
       <div className="h-14 rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
     </div>
 
     <div
       className={
         dense && isMobile
-          ? "grid gap-4 px-1.5"
+          ? "grid gap-2.5 px-0"
           : "grid gap-6 px-4 md:px-6 lg:px-8"
       }
     >
@@ -858,7 +873,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   <>
     <motion.div
       key={`day-strip-${league}-${teamFilterKey}`}
-      className="mb-4"
+      className="mb-2"
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{
@@ -876,8 +891,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         autoScrollOnInit={false}
         snapSelectOnScroll={isMobile}
         timeZone={dayTimeZone}
-        isEn={isEn}
+        a11yLocale={isEn ? "en-US" : "ja-JP"}
         wideItemGap={isMobile}
+        compactWebGap={!isMobile}
       />
     </motion.div>
 

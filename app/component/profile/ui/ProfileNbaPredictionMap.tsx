@@ -39,6 +39,7 @@ import {
   NbaHudMapLayer,
   type NbaHudGeography,
 } from "@/app/component/profile/ui/NbaHudMapLayer";
+import uvStyles from "@/app/component/profile/ui/profileNbaMapUiverse.module.css";
 import { postalFromUsAtlasFips } from "@/lib/nba/usStateFipsToPostal";
 import { teamColorsNBA } from "@/lib/teams-nba";
 
@@ -439,12 +440,21 @@ function projectionForMobile(
   };
 }
 
+/** 看板ホバー解除の猶予（ドット→看板へ移動しても消えにくくする） */
+const NBA_MAP_SIGN_HOVER_CLEAR_MS = 110;
+
 function InteractiveTeamDot({
   teamId,
   selectedTeamId,
   setSelectedTeamId,
   narrowViewport,
   divisionMode,
+  language,
+  reduceMotion,
+  mapLayer,
+  mapHoveredTeamId,
+  onMapHoverEnterTeam,
+  onMapHoverScheduleClear,
 }: {
   teamId: string;
   selectedTeamId: string | null;
@@ -452,6 +462,13 @@ function InteractiveTeamDot({
   narrowViewport: boolean;
   /** 単一ディビジョン表示時は円を大きく */
   divisionMode: boolean;
+  language: Language;
+  reduceMotion: boolean;
+  /** dots=ヒット円のみ / sign=看板のみ（最上層で他チームのドットより上） */
+  mapLayer: "dots" | "sign";
+  mapHoveredTeamId: string | null;
+  onMapHoverEnterTeam: (teamId: string) => void;
+  onMapHoverScheduleClear: () => void;
 }) {
   const fill = visibleNbaMapFillHex(nbaMapDotHex(teamId));
   const fillRgb = parseHexRgb(fill);
@@ -473,35 +490,105 @@ function InteractiveTeamDot({
     setSelectedTeamId((prev) => (prev === teamId ? null : teamId));
   const { stroke, strokeWidth } = dotStrokeForLuminance(fillLum, isSel);
   const sw = narrowViewport ? strokeWidth * 1.08 : strokeWidth;
-  return (
-    <g className="cursor-pointer touch-manipulation">
-      <circle
-        r={hitR}
-        fill="transparent"
-        stroke="none"
-        pointerEvents="all"
-        onClick={(e) => {
-          e.stopPropagation();
-          select();
-        }}
-      />
-      {!isSel && fillLum < 0.32 ? (
+  const rawLabel = teamLabel(teamId, language);
+  const labelMax = narrowViewport ? 11 : 13;
+  const signLabelText =
+    rawLabel.length > labelMax
+      ? `${rawLabel.slice(0, labelMax - 1)}…`
+      : rawLabel;
+  const signW = Math.min(
+    168,
+    Math.max(56, 16 + signLabelText.length * (narrowViewport ? 7.1 : 7.8))
+  );
+  const signLift = r + 34;
+
+  if (mapLayer === "dots") {
+    return (
+      <g
+        className="cursor-pointer touch-manipulation"
+        onPointerEnter={() => onMapHoverEnterTeam(teamId)}
+        onPointerLeave={() => onMapHoverScheduleClear()}
+      >
         <circle
-          r={r + 1.35}
-          fill="none"
-          stroke="rgba(255,255,255,0.14)"
-          strokeWidth={narrowViewport ? 1.1 : 0.95}
-          pointerEvents="none"
+          r={hitR}
+          fill="transparent"
+          stroke="none"
+          pointerEvents="all"
+          onClick={(e) => {
+            e.stopPropagation();
+            select();
+          }}
         />
-      ) : null}
-      <circle
-        r={r}
-        fill={fill}
-        stroke={stroke}
-        strokeWidth={sw}
-        pointerEvents="none"
-        style={{ transition: "stroke-width 0.15s ease" }}
+        {!isSel && fillLum < 0.32 ? (
+          <circle
+            r={r + 1.35}
+            fill="none"
+            stroke="rgba(255,255,255,0.14)"
+            strokeWidth={narrowViewport ? 1.1 : 0.95}
+            pointerEvents="none"
+          />
+        ) : null}
+        <circle
+          r={r}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={sw}
+          pointerEvents="none"
+          style={{ transition: "stroke-width 0.15s ease" }}
+        />
+      </g>
+    );
+  }
+
+  const signActive = mapHoveredTeamId === teamId;
+  const bridgePad = 8;
+  const bridgeX = -signW / 2 - bridgePad;
+  const bridgeY = -signLift - 26;
+  const bridgeW = signW + bridgePad * 2;
+  const bridgeH = 30;
+
+  return (
+    <g
+      className={reduceMotion ? uvStyles.signReduce : undefined}
+      aria-hidden
+    >
+      {/* 下に置き pointer-events でホバー継続（看板より下なので透過で拾う） */}
+      <rect
+        x={bridgeX}
+        y={bridgeY}
+        width={bridgeW}
+        height={bridgeH}
+        fill="transparent"
+        pointerEvents="all"
+        onPointerEnter={() => onMapHoverEnterTeam(teamId)}
+        onPointerLeave={() => onMapHoverScheduleClear()}
       />
+      <g
+        className={[
+          uvStyles.signGroup,
+          signActive ? uvStyles.signGroupActive : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        transform={`translate(0,${-signLift})`}
+        style={{ pointerEvents: "none" }}
+      >
+        <rect
+          x={-signW / 2}
+          y={-22}
+          width={signW}
+          height={24}
+          rx={4}
+          className={uvStyles.signRect}
+          fill={fill}
+          style={{
+            filter: "drop-shadow(0 0 2px rgba(0,0,0,0.55))",
+          }}
+        />
+        <text x={0} y={-10} className={uvStyles.signLabel}>
+          {signLabelText}
+        </text>
+      </g>
     </g>
   );
 }
@@ -511,6 +598,9 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
   const { loading, agg } = useNbaPredictionMapData(uid, mapRange);
   const [division, setDivision] = useState<NbaDivisionId | "all">("all");
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  /** 看板レイヤー用：どのチームの看板を出すか（ドットより上に描くため状態管理） */
+  const [mapHoveredTeamId, setMapHoveredTeamId] = useState<string | null>(null);
+  const mapHoverClearTimerRef = useRef<number | null>(null);
   const [narrowViewport, setNarrowViewport] = useState(false);
   const [mapGeoReady, setMapGeoReady] = useState(false);
   const [mapGeographies, setMapGeographies] = useState<NbaHudGeography[]>([]);
@@ -518,6 +608,31 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
   const onSyncedGeographies = useCallback((g: NbaHudGeography[]) => {
     setMapGeographies(g);
   }, []);
+
+  const cancelMapHoverClearTimer = useCallback(() => {
+    if (mapHoverClearTimerRef.current) {
+      clearTimeout(mapHoverClearTimerRef.current);
+      mapHoverClearTimerRef.current = null;
+    }
+  }, []);
+
+  const onMapHoverEnterTeam = useCallback(
+    (teamId: string) => {
+      cancelMapHoverClearTimer();
+      setMapHoveredTeamId(teamId);
+    },
+    [cancelMapHoverClearTimer]
+  );
+
+  const onMapHoverScheduleClear = useCallback(() => {
+    cancelMapHoverClearTimer();
+    mapHoverClearTimerRef.current = window.setTimeout(() => {
+      setMapHoveredTeamId(null);
+      mapHoverClearTimerRef.current = null;
+    }, NBA_MAP_SIGN_HOVER_CLEAR_MS);
+  }, [cancelMapHoverClearTimer]);
+
+  useEffect(() => () => cancelMapHoverClearTimer(), [cancelMapHoverClearTimer]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -575,6 +690,11 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
   useEffect(() => {
     setMapGeographies([]);
   }, [mapKey]);
+
+  useEffect(() => {
+    cancelMapHoverClearTimer();
+    setMapHoveredTeamId(null);
+  }, [mapKey, cancelMapHoverClearTimer]);
 
   const singleTeamStateHits = useMemo(() => {
     if (division === "all") return [];
@@ -758,128 +878,7 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
                 )}
               </Geographies>
 
-              <g className="nba-map-markers-layer">
-                {(() => {
-                  let stagger = 0;
-                  const showDots = markersReveal && mapGeoReady;
-                  return (
-                    <>
-                      {teamIdsInView.map((teamId) => {
-                        if (calloutSkipIds.has(teamId)) return null;
-                        const coord = getTeamMarkerCoordinate(teamId);
-                        if (!coord) return null;
-                        const si = stagger++;
-                        return (
-                          <Marker
-                            key={teamId}
-                            coordinates={[coord.lng, coord.lat]}
-                          >
-                            <g
-                              className={nbaMapDotBurstClass(
-                                showDots,
-                                !!reduceMotion
-                              )}
-                              style={
-                                !reduceMotion && showDots
-                                  ? {
-                                      animationDelay: `${si * NBA_MAP_DOT_STAGGER_MS}ms`,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              <InteractiveTeamDot
-                                teamId={teamId}
-                                selectedTeamId={selectedTeamId}
-                                setSelectedTeamId={setSelectedTeamId}
-                                narrowViewport={narrowViewport}
-                                divisionMode={divisionMode}
-                              />
-                            </g>
-                          </Marker>
-                        );
-                      })}
-
-                      {NBA_MARKET_CALLOUTS.map((pair) => {
-                        if (!pair.teamIds.every((id) => teamIdsInView.includes(id))) {
-                          return null;
-                        }
-                        const k = narrowViewport ? 1.12 : 1;
-                        const laShiftX =
-                          pair.key === "la" && narrowViewport ? 28 : 0;
-                        return (
-                          <Marker
-                            key={pair.key}
-                            coordinates={[pair.anchor.lng, pair.anchor.lat]}
-                            className="touch-manipulation"
-                          >
-                            <g>
-                              <g pointerEvents="none">
-                                <circle
-                                  cx={0}
-                                  cy={0}
-                                  r={3}
-                                  fill="rgba(0, 230, 255, 0.45)"
-                                />
-                                {pair.endpoints.map((ep) => {
-                                  const x = ep.x * k + laShiftX;
-                                  const y = ep.y * k;
-                                  return (
-                                    <line
-                                      key={`${pair.key}-line-${ep.teamId}`}
-                                      x1={0}
-                                      y1={0}
-                                      x2={x}
-                                      y2={y}
-                                      stroke="rgba(0, 220, 255, 0.5)"
-                                      strokeWidth={narrowViewport ? 1.4 : 1.15}
-                                      strokeLinecap="round"
-                                      strokeDasharray="5 5"
-                                    />
-                                  );
-                                })}
-                              </g>
-                              {pair.endpoints.map((ep) => {
-                                const x = ep.x * k + laShiftX;
-                                const y = ep.y * k;
-                                const si = stagger++;
-                                return (
-                                  <g
-                                    key={`${pair.key}-dot-${ep.teamId}`}
-                                    transform={`translate(${x},${y})`}
-                                  >
-                                    <g
-                                      className={nbaMapDotBurstClass(
-                                        showDots,
-                                        !!reduceMotion
-                                      )}
-                                      style={
-                                        !reduceMotion && showDots
-                                          ? {
-                                              animationDelay: `${si * NBA_MAP_DOT_STAGGER_MS}ms`,
-                                            }
-                                          : undefined
-                                      }
-                                    >
-                                      <InteractiveTeamDot
-                                        teamId={ep.teamId}
-                                        selectedTeamId={selectedTeamId}
-                                        setSelectedTeamId={setSelectedTeamId}
-                                        narrowViewport={narrowViewport}
-                                        divisionMode={divisionMode}
-                                      />
-                                    </g>
-                                  </g>
-                                );
-                              })}
-                            </g>
-                          </Marker>
-                        );
-                      })}
-                    </>
-                  );
-                })()}
-              </g>
-
+              {/* 州ヒットはマーカーより下に置く（ディビジョン拡大時もドット／看板のホバーが効く） */}
               {divisionMode &&
                 mapGeographies.length > 0 &&
                 singleTeamStateHits.length > 0 && (
@@ -911,6 +910,241 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
                     })}
                   </g>
                 )}
+
+              <g className="nba-map-markers-layer">
+                {(() => {
+                  let dotStagger = 0;
+                  let signStagger = 0;
+                  const showDots = markersReveal && mapGeoReady;
+                  const hoverProps = {
+                    mapHoveredTeamId,
+                    onMapHoverEnterTeam,
+                    onMapHoverScheduleClear,
+                  };
+                  return (
+                    <>
+                      <g className="nba-map-markers-dots">
+                        {teamIdsInView.map((teamId) => {
+                          if (calloutSkipIds.has(teamId)) return null;
+                          const coord = getTeamMarkerCoordinate(teamId);
+                          if (!coord) return null;
+                          const si = dotStagger++;
+                          return (
+                            <Marker
+                              key={teamId}
+                              coordinates={[coord.lng, coord.lat]}
+                            >
+                              <g
+                                className={nbaMapDotBurstClass(
+                                  showDots,
+                                  !!reduceMotion
+                                )}
+                                style={
+                                  !reduceMotion && showDots
+                                    ? {
+                                        animationDelay: `${si * NBA_MAP_DOT_STAGGER_MS}ms`,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <InteractiveTeamDot
+                                  teamId={teamId}
+                                  selectedTeamId={selectedTeamId}
+                                  setSelectedTeamId={setSelectedTeamId}
+                                  narrowViewport={narrowViewport}
+                                  divisionMode={divisionMode}
+                                  language={language}
+                                  reduceMotion={!!reduceMotion}
+                                  mapLayer="dots"
+                                  {...hoverProps}
+                                />
+                              </g>
+                            </Marker>
+                          );
+                        })}
+
+                        {NBA_MARKET_CALLOUTS.map((pair) => {
+                          if (!pair.teamIds.every((id) => teamIdsInView.includes(id))) {
+                            return null;
+                          }
+                          const k = narrowViewport ? 1.12 : 1;
+                          const laShiftX =
+                            pair.key === "la" && narrowViewport ? 28 : 0;
+                          return (
+                            <Marker
+                              key={pair.key}
+                              coordinates={[pair.anchor.lng, pair.anchor.lat]}
+                              className="touch-manipulation"
+                            >
+                              <g>
+                                <g pointerEvents="none">
+                                  <circle
+                                    cx={0}
+                                    cy={0}
+                                    r={3}
+                                    fill="rgba(0, 230, 255, 0.45)"
+                                  />
+                                  {pair.endpoints.map((ep) => {
+                                    const x = ep.x * k + laShiftX;
+                                    const y = ep.y * k;
+                                    return (
+                                      <line
+                                        key={`${pair.key}-line-${ep.teamId}`}
+                                        x1={0}
+                                        y1={0}
+                                        x2={x}
+                                        y2={y}
+                                        stroke="rgba(0, 220, 255, 0.5)"
+                                        strokeWidth={narrowViewport ? 1.4 : 1.15}
+                                        strokeLinecap="round"
+                                        strokeDasharray="5 5"
+                                      />
+                                    );
+                                  })}
+                                </g>
+                                {pair.endpoints.map((ep) => {
+                                  const x = ep.x * k + laShiftX;
+                                  const y = ep.y * k;
+                                  const si = dotStagger++;
+                                  return (
+                                    <g
+                                      key={`${pair.key}-dot-${ep.teamId}`}
+                                      transform={`translate(${x},${y})`}
+                                    >
+                                      <g
+                                        className={nbaMapDotBurstClass(
+                                          showDots,
+                                          !!reduceMotion
+                                        )}
+                                        style={
+                                          !reduceMotion && showDots
+                                            ? {
+                                                animationDelay: `${si * NBA_MAP_DOT_STAGGER_MS}ms`,
+                                              }
+                                            : undefined
+                                        }
+                                      >
+                                        <InteractiveTeamDot
+                                          teamId={ep.teamId}
+                                          selectedTeamId={selectedTeamId}
+                                          setSelectedTeamId={setSelectedTeamId}
+                                          narrowViewport={narrowViewport}
+                                          divisionMode={divisionMode}
+                                          language={language}
+                                          reduceMotion={!!reduceMotion}
+                                          mapLayer="dots"
+                                          {...hoverProps}
+                                        />
+                                      </g>
+                                    </g>
+                                  );
+                                })}
+                              </g>
+                            </Marker>
+                          );
+                        })}
+                      </g>
+
+                      <g className="nba-map-markers-signs">
+                        {teamIdsInView.map((teamId) => {
+                          if (calloutSkipIds.has(teamId)) return null;
+                          const coord = getTeamMarkerCoordinate(teamId);
+                          if (!coord) return null;
+                          const si = signStagger++;
+                          return (
+                            <Marker
+                              key={`${teamId}-sign`}
+                              coordinates={[coord.lng, coord.lat]}
+                            >
+                              <g
+                                className={nbaMapDotBurstClass(
+                                  showDots,
+                                  !!reduceMotion
+                                )}
+                                style={
+                                  !reduceMotion && showDots
+                                    ? {
+                                        animationDelay: `${si * NBA_MAP_DOT_STAGGER_MS}ms`,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <InteractiveTeamDot
+                                  teamId={teamId}
+                                  selectedTeamId={selectedTeamId}
+                                  setSelectedTeamId={setSelectedTeamId}
+                                  narrowViewport={narrowViewport}
+                                  divisionMode={divisionMode}
+                                  language={language}
+                                  reduceMotion={!!reduceMotion}
+                                  mapLayer="sign"
+                                  {...hoverProps}
+                                />
+                              </g>
+                            </Marker>
+                          );
+                        })}
+
+                        {NBA_MARKET_CALLOUTS.map((pair) => {
+                          if (!pair.teamIds.every((id) => teamIdsInView.includes(id))) {
+                            return null;
+                          }
+                          const k = narrowViewport ? 1.12 : 1;
+                          const laShiftX =
+                            pair.key === "la" && narrowViewport ? 28 : 0;
+                          return (
+                            <Marker
+                              key={`${pair.key}-sign`}
+                              coordinates={[pair.anchor.lng, pair.anchor.lat]}
+                              className="touch-manipulation"
+                            >
+                              <g>
+                                {pair.endpoints.map((ep) => {
+                                  const x = ep.x * k + laShiftX;
+                                  const y = ep.y * k;
+                                  const si = signStagger++;
+                                  return (
+                                    <g
+                                      key={`${pair.key}-sign-${ep.teamId}`}
+                                      transform={`translate(${x},${y})`}
+                                    >
+                                      <g
+                                        className={nbaMapDotBurstClass(
+                                          showDots,
+                                          !!reduceMotion
+                                        )}
+                                        style={
+                                          !reduceMotion && showDots
+                                            ? {
+                                                animationDelay: `${si * NBA_MAP_DOT_STAGGER_MS}ms`,
+                                              }
+                                            : undefined
+                                        }
+                                      >
+                                        <InteractiveTeamDot
+                                          teamId={ep.teamId}
+                                          selectedTeamId={selectedTeamId}
+                                          setSelectedTeamId={setSelectedTeamId}
+                                          narrowViewport={narrowViewport}
+                                          divisionMode={divisionMode}
+                                          language={language}
+                                          reduceMotion={!!reduceMotion}
+                                          mapLayer="sign"
+                                          {...hoverProps}
+                                        />
+                                      </g>
+                                    </g>
+                                  );
+                                })}
+                              </g>
+                            </Marker>
+                          );
+                        })}
+                      </g>
+                    </>
+                  );
+                })()}
+              </g>
             </ComposableMap>
             </motion.div>
           )}

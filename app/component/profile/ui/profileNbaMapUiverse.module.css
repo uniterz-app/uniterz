@@ -1,0 +1,42 @@
+/**
+ * NBA 予測マップ用 — ホバー看板（Uiverse 由来の看板スタイルを SVG で再現）。
+ * CSS Modules。
+ */
+
+/* 看板（フェードイン — 表示は JS で mapHoveredTeamId と同期） */
+.signGroup {
+  --nba-uv-sign-color-font: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition:
+    opacity 300ms ease-out,
+    transform 300ms ease-out;
+}
+
+.signGroupActive {
+  opacity: 1;
+  pointer-events: none;
+  transform: translateY(0);
+}
+
+/* アニメーション省略時 */
+.signReduce .signGroup,
+.signReduce .signGroupActive {
+  transition-duration: 120ms;
+}
+
+/* 看板背景 */
+.signRect {
+  stroke: var(--nba-uv-sign-color-font);
+  stroke-width: 1.35;
+}
+
+/* 看板ラベル（中央） */
+.signLabel {
+  dominant-baseline: middle;
+  fill: var(--nba-uv-sign-color-font);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-anchor: middle;
+}
