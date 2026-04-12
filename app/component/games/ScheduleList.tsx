@@ -24,6 +24,12 @@ import {
 } from "@/lib/predict/predictionRulesIntroPrefs";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import { nbaConferenceRankByTeamId } from "@/lib/nbaConferenceStandingsRank";
+import {
+  SCHEDULE_MY_POST_DELETED_EVENT,
+  type ScheduleMyPostDeletedDetail,
+} from "@/lib/games/scheduleMyPostSyncEvents";
 
 export type GameItemRaw = any;
 
@@ -34,8 +40,14 @@ type TeamRecord = {
   lastGames?: { at?: any; isWin?: boolean }[];
 };
 
-const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v2";
+/** パースロジック変更時に上げてセッションキャッシュを無効化 */
+const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v3";
 const TEAM_RECORD_CACHE_TTL_MS = 1000 * 60 * 30;
+/** in-memory は teamId 単体だと古い勝敗が残るためバージョン付きキー */
+const TEAM_RECORD_MEM_VER = 2;
+function teamRecordMemKey(teamId: string) {
+  return `${teamId}:v${TEAM_RECORD_MEM_VER}`;
+}
 
 const memoryTeamRecordCache = new Map<string, TeamRecord>();
 
@@ -316,6 +328,24 @@ export default function ScheduleList({
     };
   }, [gameIds]);
 
+  /** リザルト一覧などで自分の投稿を削除したとき、試合一覧の「予想済み」表示を外す */
+  useEffect(() => {
+    const onDeleted = (e: Event) => {
+      const d = (e as CustomEvent<ScheduleMyPostDeletedDetail>).detail;
+      const gid = d?.gameId ? String(d.gameId) : "";
+      if (!gid) return;
+      setMyPostMap((prev) => {
+        if (!prev[gid]) return prev;
+        const next = { ...prev };
+        delete next[gid];
+        return next;
+      });
+    };
+    window.addEventListener(SCHEDULE_MY_POST_DELETED_EVENT, onDeleted);
+    return () =>
+      window.removeEventListener(SCHEDULE_MY_POST_DELETED_EVENT, onDeleted);
+  }, []);
+
   useEffect(() => {
     let alive = true;
 
@@ -329,7 +359,7 @@ export default function ScheduleList({
 
       const immediateMap: Record<string, TeamRecord> = {};
       for (const teamId of teamIds) {
-        const mem = memoryTeamRecordCache.get(teamId);
+        const mem = memoryTeamRecordCache.get(teamRecordMemKey(teamId));
         const ses = sessionCache[teamId];
         const cached = mem ?? ses ?? null;
         if (cached) immediateMap[teamId] = cached;
@@ -338,51 +368,103 @@ export default function ScheduleList({
       if (alive) setTeamRecordMap(immediateMap);
 
       const missingTeamIds = teamIds.filter(
-        (teamId) => !memoryTeamRecordCache.has(teamId) && !sessionCache[teamId]
+        (teamId) =>
+          !memoryTeamRecordCache.has(teamRecordMemKey(teamId)) &&
+          !sessionCache[teamId]
       );
 
-      if (missingTeamIds.length === 0) return;
+      let merged: Record<string, TeamRecord> = { ...immediateMap };
+      let nextSessionCache: Record<string, TeamRecord> = { ...sessionCache };
 
       try {
-        const chunks: string[][] = [];
-        for (let i = 0; i < missingTeamIds.length; i += 10) {
-          chunks.push(missingTeamIds.slice(i, i + 10));
+        if (missingTeamIds.length > 0) {
+          const chunks: string[][] = [];
+          for (let i = 0; i < missingTeamIds.length; i += 10) {
+            chunks.push(missingTeamIds.slice(i, i + 10));
+          }
+
+          const snaps = await Promise.all(
+            chunks.map((chunk) =>
+              getDocs(
+                query(collection(db, "teams"), where("__name__", "in", chunk))
+              )
+            )
+          );
+
+          if (!alive) return;
+
+          merged = { ...immediateMap };
+          nextSessionCache = { ...sessionCache };
+
+          snaps.forEach((snap) => {
+            snap.docs.forEach((docSnap) => {
+              const d = docSnap.data() as any;
+              const teamId = docSnap.id;
+              const isNbaTeam = String(d.league ?? "") === "nba";
+              const wl = isNbaTeam
+                ? nbaRegularSeasonWinsLosses(d)
+                : {
+                    wins: Number(d.wins ?? 0),
+                    losses: Number(d.losses ?? 0),
+                  };
+
+              const value: TeamRecord = {
+                wins: wl.wins,
+                losses: wl.losses,
+                rank: isNbaTeam
+                  ? undefined
+                  : typeof d.rank === "number"
+                    ? d.rank
+                    : undefined,
+                lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+              };
+
+              memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
+              nextSessionCache[teamId] = value;
+              merged[teamId] = value;
+            });
+          });
         }
 
-        const snaps = await Promise.all(
-          chunks.map((chunk) =>
-            getDocs(
-              query(collection(db, "teams"), where("__name__", "in", chunk))
-            )
-          )
-        );
-
-        if (!alive) return;
-
-        const merged: Record<string, TeamRecord> = { ...immediateMap };
-        const nextSessionCache: Record<string, TeamRecord> = { ...sessionCache };
-
-        snaps.forEach((snap) => {
-          snap.docs.forEach((docSnap) => {
-            const d = docSnap.data() as any;
-
-            const value: TeamRecord = {
-              wins: d.wins ?? 0,
-              losses: d.losses ?? 0,
-              rank: d.rank,
-              lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+        // NBA: スタンディングと同じレギュラー勝敗＋カンファレンス内順位（teams の生 wins とズレることがある）
+        if (leagueAnimKey === "nba" && teamIds.length > 0) {
+          const nbaSnap = await getDocs(
+            query(collection(db, "teams"), where("league", "==", "nba"))
+          );
+          if (!alive) return;
+          const rows = nbaSnap.docs.map((d) => ({
+            id: d.id,
+            ...(d.data() as Record<string, unknown>),
+          }));
+          const rankById = nbaConferenceRankByTeamId(rows);
+          const wlById: Record<string, { wins: number; losses: number }> = {};
+          for (const row of rows) {
+            wlById[row.id] = nbaRegularSeasonWinsLosses(row);
+          }
+          for (const tid of teamIds) {
+            const wl = wlById[tid];
+            if (!wl) continue;
+            const base = merged[tid] ?? {
+              wins: 0,
+              losses: 0,
+              lastGames: [] as TeamRecord["lastGames"],
             };
+            const nextRow: TeamRecord = {
+              ...base,
+              wins: wl.wins,
+              losses: wl.losses,
+              rank: rankById[tid] ?? base.rank,
+            };
+            merged[tid] = nextRow;
+            memoryTeamRecordCache.set(teamRecordMemKey(tid), nextRow);
+            nextSessionCache[tid] = nextRow;
+          }
+        }
 
-            const teamId = docSnap.id;
-
-            memoryTeamRecordCache.set(teamId, value);
-            nextSessionCache[teamId] = value;
-            merged[teamId] = value;
-          });
-        });
-
-        writeTeamRecordCacheToSession(nextSessionCache);
-        setTeamRecordMap(merged);
+        if (missingTeamIds.length > 0 || leagueAnimKey === "nba") {
+          writeTeamRecordCacheToSession(nextSessionCache);
+          if (alive) setTeamRecordMap(merged);
+        }
       } catch {
         if (alive) setTeamRecordMap(immediateMap);
       }
@@ -393,7 +475,7 @@ export default function ScheduleList({
     return () => {
       alive = false;
     };
-  }, [teamIds]);
+  }, [teamIds, leagueAnimKey]);
 
   useEffect(() => {
     if (!openGameId) return;

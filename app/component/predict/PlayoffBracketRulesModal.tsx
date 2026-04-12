@@ -20,15 +20,16 @@ export default function PlayoffBracketRulesModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-200 flex items-center justify-center px-4">
-      <button
-        type="button"
-        aria-label="Close modal"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/72 backdrop-blur-[3px]"
-      />
+    <div className="fixed inset-0 z-200 overflow-y-auto overscroll-contain">
+      <div className="relative flex min-h-full w-full items-center justify-center px-4 py-8">
+        <button
+          type="button"
+          aria-label="Close modal"
+          onClick={onClose}
+          className="absolute inset-0 min-h-full bg-black/72 backdrop-blur-[3px]"
+        />
 
-      <div className="relative z-201 w-full max-w-md rounded-2xl border border-white/10 bg-[#0d1015] p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+        <div className="relative z-10 my-4 w-full max-w-md rounded-2xl border border-white/10 bg-[#0d1015] p-5 text-white shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
         <div className="text-[20px] font-semibold tracking-[0.02em] text-white">
           {t.rulesTitle}
         </div>
@@ -80,6 +81,7 @@ export default function PlayoffBracketRulesModal({
         >
           {t.rulesConfirmButton}
         </button>
+        </div>
       </div>
     </div>
   );

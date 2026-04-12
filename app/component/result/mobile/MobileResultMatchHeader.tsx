@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Flame } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
@@ -13,6 +14,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import type { Language } from "@/lib/i18n/language";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
@@ -83,10 +85,14 @@ function useTeamRecord(teamId?: string) {
     getDoc(ref).then((snap) => {
       if (!snap.exists()) return;
       const d = snap.data() as any;
+      const isNba = String(d.league ?? "") === "nba";
+      const wl = isNba
+        ? nbaRegularSeasonWinsLosses(d)
+        : { wins: Number(d.wins ?? 0), losses: Number(d.losses ?? 0) };
       setRec({
-        wins: d.wins ?? 0,
-        losses: d.losses ?? 0,
-        rank: d.rank,
+        wins: wl.wins,
+        losses: wl.losses,
+        rank: typeof d.rank === "number" ? d.rank : undefined,
       });
     });
   }, [teamId]);
@@ -106,13 +112,14 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
-/** Mobile用: 文字白・視認性重視・3/5/7で色階層 */
-function getStreakBadgeForMobile(
+/** Web の ResultMatchHeader と同じ配色（モバイルは下の JSX で文字・アイコンサイズのみ調整） */
+function getStreakBadge(
   activeWinStreak: unknown,
   isEn: boolean
 ): {
   label: string;
   className: string;
+  iconClassName: string;
 } | null {
   const v =
     typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
@@ -125,7 +132,8 @@ function getStreakBadgeForMobile(
     return {
       label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
-        "bg-linear-to-r from-[#180f2b] via-[#312e81] to-[#0f172a] text-white border border-violet-400/60 shadow-[0_0_14px_rgba(167,139,250,0.5)]",
+        "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
+      iconClassName: "text-yellow-200",
     };
   }
 
@@ -133,14 +141,16 @@ function getStreakBadgeForMobile(
     return {
       label: isEn ? `${v} Win Streak` : `${v}連勝`,
       className:
-        "bg-linear-to-r from-[#0a1628] via-[#0e7490] to-[#052e2b] text-white border border-cyan-400/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]",
+        "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
+      iconClassName: "text-yellow-100",
     };
   }
 
   return {
     label: isEn ? `${v} Win Streak` : `${v}連勝`,
     className:
-      "bg-linear-to-r from-[#0b1f1a] via-[#166534] to-[#0f172a] text-white border border-emerald-400/60 shadow-[0_0_10px_rgba(52,211,153,0.4)]",
+      "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
+    iconClassName: "text-red-500",
   };
 }
 
@@ -204,7 +214,7 @@ export default function MobileResultMatchHeader({
 
   const activeWinStreak =
     toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getStreakBadgeForMobile(activeWinStreak, isEn);
+  const streakBadge = getStreakBadge(activeWinStreak, isEn);
 
   let badge: "hit" | "upset" | "miss" | "streak" | null = null;
   if ((post.stats as any)?.upsetHit) badge = "upset";
@@ -219,13 +229,13 @@ export default function MobileResultMatchHeader({
   } else if (badge === "streak") {
     if (activeWinStreak >= 7) {
       frame =
-        "border border-violet-400/80 ring-2 ring-violet-400/70 shadow-[0_0_22px_rgba(167,139,250,0.5)]";
+        "border border-red-400 ring-2 ring-red-400/70 shadow-[0_0_22px_rgba(239,68,68,0.45)]";
     } else if (activeWinStreak >= 5) {
       frame =
-        "border border-cyan-400/80 ring-2 ring-cyan-400/70 shadow-[0_0_18px_rgba(34,211,238,0.45)]";
+        "border border-orange-300 ring-2 ring-orange-300/60 shadow-[0_0_18px_rgba(249,115,22,0.38)]";
     } else {
       frame =
-        "border border-emerald-400/80 ring-1 ring-emerald-400/70 shadow-[0_0_16px_rgba(52,211,153,0.42)]";
+        "border border-yellow-300 ring-1 ring-yellow-300/60 shadow-[0_0_16px_rgba(250,204,21,0.32)]";
     }
   } else if (badge === "hit") {
     frame =
@@ -254,9 +264,15 @@ export default function MobileResultMatchHeader({
         <div className="flex min-w-0 flex-1 justify-end">
           {badge === "streak" && streakBadge && (
             <span
-              className={`inline-flex max-w-full items-center rounded-md px-1.5 py-0.5 text-[9px] font-extrabold shadow-md ${streakBadge.className}`}
+              className={`inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold shadow-md ${streakBadge.className}`}
             >
-              <span className="min-w-0 truncate">{streakBadge.label}</span>
+              <Flame
+                className={`h-2.5 w-2.5 shrink-0 ${streakBadge.iconClassName}`}
+                aria-hidden
+              />
+              <span className="min-w-0 truncate leading-tight">
+                {streakBadge.label}
+              </span>
             </span>
           )}
           {badge === "hit" && (

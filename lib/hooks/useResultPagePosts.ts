@@ -43,6 +43,7 @@ export function useResultPagePosts(): {
   setInfiniteScrollEnabled: (enabled: boolean) => void;
   sentinelRef: RefObject<HTMLDivElement | null>;
   grouped: ResultDayGroup[];
+  refreshPosts: () => Promise<void>;
 } {
   const [uid, setUid] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -173,6 +174,10 @@ export function useResultPagePosts(): {
 
   const postsCacheCapped = posts.length >= RESULT_POSTS_MAX_CACHED;
 
+  const refreshPosts = useCallback(async () => {
+    await loadPage({ reset: true });
+  }, [loadPage]);
+
   return {
     uid,
     authReady,
@@ -184,5 +189,6 @@ export function useResultPagePosts(): {
     setInfiniteScrollEnabled,
     sentinelRef,
     grouped,
+    refreshPosts,
   };
 }

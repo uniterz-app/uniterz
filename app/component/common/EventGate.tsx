@@ -8,6 +8,7 @@ import EventModal from "@/app/component/modals/EventModal";
 import { CURRENT_EVENT } from "@/lib/events/currentEvent";
 import { doc, onSnapshot } from "firebase/firestore";
 import { usePathname } from "next/navigation";
+import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 
 export default function EventGate() {
   const [open, setOpen] = useState(false);
@@ -54,10 +55,7 @@ export default function EventGate() {
     if (!onboardingComplete) return;
 
     // オンボーディング中はモーダルを出さない
-    const isOnboarding =
-      pathname === "/web/onboarding" ||
-      pathname === "/mobile/onboarding";
-    if (isOnboarding) return;
+    if (isProfileSetupRoute(pathname)) return;
 
     const key = `event_seen_${CURRENT_EVENT.id}`;
     if (localStorage.getItem(key)) return;

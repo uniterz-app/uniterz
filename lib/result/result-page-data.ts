@@ -47,6 +47,40 @@ export function toStartAtMillis(p: unknown): number | null {
   return null;
 }
 
+/**
+ * リザルト一覧の「キックオフ前のみ一覧から除外」が可能か。
+ * 開始時刻が取れない投稿は除外操作不可（誤消去防止）。
+ */
+export function canDismissResultListPostNow(
+  post: PostWithMillis,
+  nowMs: number = Date.now()
+): boolean {
+  const start = post.startAtMillis;
+  if (typeof start !== "number" || !Number.isFinite(start)) return false;
+  return nowMs < start;
+}
+
+/**
+ * キックオフ済みの投稿は除外セットから外す（試合後にカードを再表示する）。
+ */
+export function pruneDismissedResultListPostIds(
+  ids: Set<string>,
+  posts: readonly PostWithMillis[],
+  nowMs: number
+): Set<string> {
+  const byId = new Map(posts.map((p) => [p.id, p] as const));
+  const next = new Set<string>();
+  for (const id of ids) {
+    const p = byId.get(id);
+    if (!p) {
+      next.add(id);
+      continue;
+    }
+    if (canDismissResultListPostNow(p, nowMs)) next.add(id);
+  }
+  return next;
+}
+
 export function formatResultDateLabel(
   ms: number | null | undefined,
   lang: Language

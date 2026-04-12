@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
 import { nameBebas, jp } from "@/lib/fonts";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -155,11 +156,18 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     return (
       <div className="space-y-2 px-3 pt-2">
         {titleBlock}
-        <div className="flex min-h-[min(50vh,420px)] flex-col items-center justify-center px-4 text-center">
-          <p className="text-[15px] text-white/80">
-            {language === "en"
-              ? "No brackets have been submitted yet."
-              : "ブラケットはまだ提出されていません"}
+        <div
+          role="status"
+          className="flex min-h-[min(70dvh,620px)] flex-col items-center justify-center px-4 text-center"
+        >
+          <p
+            className={[
+              nameBebas.className,
+              "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+            ].join(" ")}
+            style={cyberNoDataLabelStyle}
+          >
+            NO DATA
           </p>
         </div>
       </div>

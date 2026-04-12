@@ -15,6 +15,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import type { Language } from "@/lib/i18n/language";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
@@ -89,10 +90,14 @@ function useTeamRecord(teamId?: string) {
     getDoc(ref).then((snap) => {
       if (!snap.exists()) return;
       const d = snap.data() as any;
+      const isNba = String(d.league ?? "") === "nba";
+      const wl = isNba
+        ? nbaRegularSeasonWinsLosses(d)
+        : { wins: Number(d.wins ?? 0), losses: Number(d.losses ?? 0) };
       setRec({
-        wins: d.wins ?? 0,
-        losses: d.losses ?? 0,
-        rank: d.rank,
+        wins: wl.wins,
+        losses: wl.losses,
+        rank: typeof d.rank === "number" ? d.rank : undefined,
       });
     });
   }, [teamId]);

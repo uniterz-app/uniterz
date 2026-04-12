@@ -130,18 +130,22 @@ export default function PredictionRulesIntroModal({
 
   return (
     <div
-      className="fixed inset-0 z-100020 flex min-h-dvh items-center justify-center bg-black/75 p-3 sm:p-4"
+      className="fixed inset-0 z-100020 overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal
       aria-labelledby="rules-intro-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
     >
+      {/* min-h-full + items-center でビューポート内の縦中央を安定させる（長文時は外側スクロール） */}
       <div
-        className={`flex max-h-[min(520px,88dvh)] w-full max-w-sm flex-col rounded-2xl border border-white/15 bg-[#0c1419] shadow-xl shadow-black/40 sm:max-w-md ${jp.className}`}
-        onClick={(e) => e.stopPropagation()}
+        className="flex min-h-full w-full items-center justify-center bg-black/75 p-3 sm:p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onCancel();
+        }}
       >
+        <div
+          className={`my-4 flex max-h-[min(520px,88dvh)] w-full max-w-sm flex-col rounded-2xl border border-white/15 bg-[#0c1419] shadow-xl shadow-black/40 sm:max-w-md ${jp.className}`}
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
           <h2
             id="rules-intro-title"
@@ -189,6 +193,7 @@ export default function PredictionRulesIntroModal({
           >
             {t.cancel}
           </button>
+        </div>
         </div>
       </div>
     </div>

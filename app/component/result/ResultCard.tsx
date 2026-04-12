@@ -3,7 +3,7 @@
 
 import React, { memo, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Flame } from "lucide-react";
+import { Flame, Trash2 } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
@@ -48,6 +48,10 @@ type Props = {
    * 一覧が1件だけのとき true。下部の評価バーがビューポート判定で動かないのを避ける
    */
   ratingBarsImmediate?: boolean;
+  /** 試合キックオフ前のみ true：右上に一覧から除外する操作を出す */
+  showPreKickoffDismiss?: boolean;
+  /** 一覧から除外（サーバー削除含む場合あり）。キックオフ後は呼ばれない想定 */
+  onPreKickoffDismiss?: () => void | Promise<void>;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -125,48 +129,6 @@ function getStreakBadge(
   };
 }
 
-/** Mobile用: 文字白・視認性重視・3/5/7で色階層 */
-function getStreakBadgeForMobile(
-  activeWinStreak: unknown,
-  isEn: boolean
-): {
-  label: string;
-  className: string;
-  iconClassName: string;
-} | null {
-  const v =
-    typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
-      ? Math.floor(activeWinStreak)
-      : 0;
-
-  if (v < 3) return null;
-
-  if (v >= 7) {
-    return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
-      className:
-        "bg-linear-to-r from-[#180f2b] via-[#312e81] to-[#0f172a] text-white border border-violet-400/60 shadow-[0_0_14px_rgba(167,139,250,0.5)]",
-      iconClassName: "text-white/90",
-    };
-  }
-
-  if (v >= 5) {
-    return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
-      className:
-        "bg-linear-to-r from-[#0a1628] via-[#0e7490] to-[#052e2b] text-white border border-cyan-400/60 shadow-[0_0_12px_rgba(34,211,238,0.45)]",
-      iconClassName: "text-white/90",
-    };
-  }
-
-  return {
-    label: isEn ? `${v} Win Streak` : `${v}連勝`,
-    className:
-      "bg-linear-to-r from-[#0b1f1a] via-[#166534] to-[#0f172a] text-white border border-emerald-400/60 shadow-[0_0_10px_rgba(52,211,153,0.4)]",
-    iconClassName: "text-white/90",
-  };
-}
-
 function ResultCardPresentationImpl({
   post,
   href,
@@ -177,6 +139,8 @@ function ResultCardPresentationImpl({
   listDateLabel,
   scheduleDense = false,
   ratingBarsImmediate = false,
+  showPreKickoffDismiss = false,
+  onPreKickoffDismiss,
 }: ResultCardPresentationProps) {
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
   const teamNameFont = bracketMarketTeamTypography(isMobile);
@@ -246,9 +210,7 @@ function ResultCardPresentationImpl({
     (post.stats as any)?.pointsV3Detail?.activeWinStreak
   ) ?? 0;
 
-  const streakBadge = isMobile
-    ? getStreakBadgeForMobile(activeWinStreak, isEn)
-    : getStreakBadge(activeWinStreak, isEn);
+  const streakBadge = getStreakBadge(activeWinStreak, isEn);
 
   const scorePrecisionValueClass = isYellow10pt(post.stats?.scorePrecision)
     ? "text-yellow-300"
@@ -368,6 +330,26 @@ function ResultCardPresentationImpl({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
+      {showPreKickoffDismiss && onPreKickoffDismiss ? (
+        <button
+          type="button"
+          className={[
+            "pointer-events-auto absolute z-40 rounded-lg border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-red-400/45 hover:bg-red-950/35 hover:text-red-100",
+            isMobile ? "right-2 top-2 p-1.5" : "right-3 top-3 p-1.5 sm:right-4 sm:top-4",
+          ].join(" ")}
+          aria-label={isEn ? "Remove from list" : "一覧から除外"}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onPreKickoffDismiss();
+          }}
+        >
+          <Trash2
+            className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"}
+            aria-hidden
+          />
+        </button>
+      ) : null}
       {listDateLabel ? (
         <div
           className={[
@@ -388,7 +370,12 @@ function ResultCardPresentationImpl({
       {/* モバイル：左上にリーグ、右上に HIT 等（日付ラベルあり時はリーグのみ一段下げ） */}
       {isMobile ? (
         <>
-          <div className="pointer-events-none absolute right-2 top-2 z-20 flex max-w-[min(100%,11rem)] items-start justify-end gap-1">
+          <div
+            className={[
+              "pointer-events-none absolute top-2 z-20 flex max-w-[min(100%,11rem)] items-start justify-end gap-1",
+              showPreKickoffDismiss && onPreKickoffDismiss ? "right-11" : "right-2",
+            ].join(" ")}
+          >
             {badge === "streak" && streakBadge && (
               <span
                 className={`pointer-events-auto inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
@@ -450,7 +437,12 @@ function ResultCardPresentationImpl({
           >
             {pillText}
           </span>
-          <div className="flex min-w-0 flex-1 justify-end">
+          <div
+            className={[
+              "flex min-w-0 flex-1 justify-end",
+              showPreKickoffDismiss && onPreKickoffDismiss ? "pr-10 sm:pr-11" : "",
+            ].join(" ")}
+          >
             {badge === "streak" && streakBadge && (
               <span
                 className={`pointer-events-auto inline-flex max-w-full items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}

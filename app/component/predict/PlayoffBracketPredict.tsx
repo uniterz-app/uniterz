@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import {
   isPlayoffBracketComplete,
@@ -312,10 +313,15 @@ export default function PlayoffBracketPredict() {
         loading={submitting}
       />
 
-      <PlayoffBracketRulesModal
-        open={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-      />
+      {rulesOpen && typeof document !== "undefined"
+        ? createPortal(
+            <PlayoffBracketRulesModal
+              open
+              onClose={() => setRulesOpen(false)}
+            />,
+            document.body
+          )
+        : null}
     </div>
   );
 }

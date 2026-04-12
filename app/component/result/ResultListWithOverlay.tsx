@@ -21,8 +21,11 @@ import {
 } from "framer-motion";
 import { CalendarRange, Check, ChevronDown, X } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { SCHEDULE_MY_POST_DELETED_EVENT } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
+import { nameBebas } from "@/lib/fonts";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import ResultCard, {
   type ResultCardOpenAnchor,
 } from "@/app/component/result/ResultCard";
@@ -39,12 +42,19 @@ import {
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { ResultPlatform } from "@/lib/result/result-platform";
 import {
+  canDismissResultListPostNow,
+  flattenResultDayGroups,
   isFinalResultPost,
+  pruneDismissedResultListPostIds,
   RESULT_POSTS_MAX_CACHED,
   sumDayPointsV3,
   type PostWithMillis,
   type ResultDayGroup,
 } from "@/lib/result/result-page-data";
+import {
+  readDismissedResultPostIds,
+  writeDismissedResultPostIds,
+} from "@/lib/result/resultListDismissedPostIds";
 import {
   parseGamePointsDistributionV1,
   rawPointsDistributionFromGameDoc,
@@ -153,6 +163,8 @@ type Props = {
   hasMore: boolean;
   sentinelRef: React.RefObject<HTMLDivElement | null>;
   setInfiniteScrollEnabled?: (enabled: boolean) => void;
+  /** 自分の投稿を削除したあと一覧を取り直す（省略可） */
+  refreshResultPosts?: () => void | Promise<void>;
   language: Language;
   platform: ResultPlatform;
   postsCacheCapped?: boolean;
@@ -344,6 +356,7 @@ export default function ResultListWithOverlay({
   hasMore,
   sentinelRef,
   setInfiniteScrollEnabled,
+  refreshResultPosts,
   language,
   platform,
   postsCacheCapped = false,
@@ -360,6 +373,12 @@ export default function ResultListWithOverlay({
   const [filters, setFilters] = useState<ResultListFilters>(() => ({
     ...DEFAULT_RESULT_FILTERS,
   }));
+  /** キックオフ前後でゴミ箱表示を切り替えるための現在時刻（30 秒ごと更新） */
+  const [listNowTick, setListNowTick] = useState(() => Date.now());
+  const [dismissedPostIds, setDismissedPostIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const dismissedFromStorageLoadedRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
 
   const isMobile = platform === "mobile";
@@ -520,6 +539,33 @@ export default function ResultListWithOverlay({
     setInfiniteScrollEnabled?.(!postsCacheCapped);
   }, [postsCacheCapped, setInfiniteScrollEnabled]);
 
+  useEffect(() => {
+    const id = window.setInterval(() => setListNowTick(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const flat = flattenResultDayGroups(grouped);
+    setDismissedPostIds((prev) => {
+      const base = dismissedFromStorageLoadedRef.current
+        ? prev
+        : readDismissedResultPostIds();
+      dismissedFromStorageLoadedRef.current = true;
+      const pruned = pruneDismissedResultListPostIds(
+        base,
+        flat,
+        listNowTick
+      );
+      const unchanged =
+        pruned.size === prev.size &&
+        [...pruned].every((x) => prev.has(x)) &&
+        [...prev].every((x) => pruned.has(x));
+      if (unchanged) return prev;
+      writeDismissedResultPostIds(pruned);
+      return pruned;
+    });
+  }, [grouped, listNowTick]);
+
   const filteredGrouped = useMemo(() => {
     return grouped
       .filter((day) => dayMatchesDateRange(day, filters))
@@ -531,14 +577,26 @@ export default function ResultListWithOverlay({
       .filter((day) => day.pending.length + day.final.length > 0);
   }, [grouped, filters]);
 
-  /** フィルター適用後の件数（少件数時の入場アニメ・content-visibility 制御に使用） */
+  const visibleGrouped = useMemo(
+    () =>
+      filteredGrouped
+        .map((day) => ({
+          ...day,
+          pending: day.pending.filter((p) => !dismissedPostIds.has(p.id)),
+          final: day.final.filter((p) => !dismissedPostIds.has(p.id)),
+        }))
+        .filter((day) => day.pending.length + day.final.length > 0),
+    [filteredGrouped, dismissedPostIds]
+  );
+
+  /** フィルター＋一覧除外適用後の件数（少件数時の入場アニメ・content-visibility 制御に使用） */
   const filteredTotalLoaded = useMemo(
     () =>
-      filteredGrouped.reduce(
+      visibleGrouped.reduce(
         (a, d) => a + d.pending.length + d.final.length,
         0
       ),
-    [filteredGrouped]
+    [visibleGrouped]
   );
 
   const selectedPost = useMemo(() => {
@@ -561,6 +619,53 @@ export default function ResultListWithOverlay({
     setPointsDistribution(null);
     setPointsDistributionLoading(false);
   }, []);
+
+  const dismissPostFromList = useCallback(
+    async (post: PostWithMillis) => {
+      if (!canDismissResultListPostNow(post, Date.now())) return;
+      const user = auth.currentUser;
+      if (!user) return;
+
+      let deleted = false;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(
+          `/api/posts_v2/${encodeURIComponent(post.id)}`,
+          {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: "include",
+          }
+        );
+        if (res.status === 403) return;
+        deleted = res.ok || res.status === 404;
+      } catch {
+        return;
+      }
+      if (!deleted) return;
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent(SCHEDULE_MY_POST_DELETED_EVENT, {
+            detail: { gameId: post.gameId },
+          })
+        );
+      }
+
+      if (openPostId === post.id) close();
+
+      setDismissedPostIds((prev) => {
+        if (!prev.has(post.id)) return prev;
+        const next = new Set(prev);
+        next.delete(post.id);
+        writeDismissedResultPostIds(next);
+        return next;
+      });
+
+      await refreshResultPosts?.();
+    },
+    [close, openPostId, refreshResultPosts]
+  );
 
   const open = useCallback(
     (post: PredictionPostV2 | PostWithMillis, anchor: ResultCardOpenAnchor) => {
@@ -1338,21 +1443,29 @@ export default function ResultListWithOverlay({
           )}
         </AnimatePresence>
 
-        {/* リザルト投稿が一件もないとき（文言は英語のまま） */}
+        {/* リザルト投稿が一件もないとき：背景なし・グロー付き NO DATA をエリア中央に */}
         {!loading && totalLoaded === 0 ? (
           <m.div
             key="empty-no-posts"
             role="status"
-            initial={off ?? { opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            initial={off ?? { opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.35, ease: easeOut }}
-            className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/55"
+            className="flex min-h-[min(70dvh,620px)] w-full items-center justify-center px-4"
           >
-            No data
+            <p
+              className={[
+                nameBebas.className,
+                "text-center text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+              ].join(" ")}
+              style={cyberNoDataLabelStyle}
+            >
+              NO DATA
+            </p>
           </m.div>
         ) : null}
 
-        {filteredGrouped.map((day) => {
+        {visibleGrouped.map((day) => {
           const pendingShown = day.pending;
           const finalShown = day.final;
           const displayPosts = [...pendingShown, ...finalShown].sort((a, b) => {
@@ -1397,6 +1510,13 @@ export default function ResultListWithOverlay({
                           platform={platform}
                           scheduleDense={isMobile}
                           ratingBarsImmediate={filteredTotalLoaded === 1}
+                          showPreKickoffDismiss={canDismissResultListPostNow(
+                            post,
+                            listNowTick
+                          )}
+                          onPreKickoffDismiss={() =>
+                            dismissPostFromList(post)
+                          }
                         />
                       </div>
                     ))}
@@ -1425,6 +1545,13 @@ export default function ResultListWithOverlay({
                           platform={platform}
                           scheduleDense={isMobile}
                           ratingBarsImmediate={filteredTotalLoaded === 1}
+                          showPreKickoffDismiss={canDismissResultListPostNow(
+                            post,
+                            listNowTick
+                          )}
+                          onPreKickoffDismiss={() =>
+                            dismissPostFromList(post)
+                          }
                         />
                       </m.div>
                     ))}

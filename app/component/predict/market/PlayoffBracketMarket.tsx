@@ -13,6 +13,8 @@ import PlayoffBracketChampionMarket from "@/app/component/predict/market/Playoff
 import PlayoffBracketTeamProgressMarket from "@/app/component/predict/market/PlayoffBracketTeamProgressMarket";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
+import { nameBebas } from "@/lib/fonts";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 
 type MarketCountMap = Record<string, number>;
 
@@ -106,9 +108,18 @@ export default function PlayoffBracketMarket({
 
   if (!market) {
     return (
-      <div className="mx-auto flex min-h-[min(50vh,420px)] w-full max-w-5xl flex-col items-center justify-center px-4 text-center text-white">
-        <p className="text-[15px] text-white/85">
-          {isEn ? "No market data yet." : "まだマーケットデータがありません"}
+      <div
+        role="status"
+        className="mx-auto flex min-h-[70dvh] w-full max-w-5xl items-center justify-center px-4 text-white"
+      >
+        <p
+          className={[
+            nameBebas.className,
+            "text-center text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+          ].join(" ")}
+          style={cyberNoDataLabelStyle}
+        >
+          NO DATA
         </p>
       </div>
     );

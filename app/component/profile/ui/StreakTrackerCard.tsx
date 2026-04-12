@@ -10,6 +10,7 @@ import {
 } from "@/lib/profile/useProfileStreakTracker";
 import type { Language } from "@/lib/i18n/language";
 import { jp, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { BarChart3, TrendingDown, TrendingUp } from "lucide-react";
 
@@ -228,9 +229,6 @@ export default function StreakTrackerCard({
             ? "—"
             : "—";
 
-  const emptyMsg = isEn
-    ? `No settled picks in the last ${STREAK_TRACKER_LAST_N} yet.`
-    : `直近${STREAK_TRACKER_LAST_N}試合に確定済みの投稿がありません。`;
   const loadingMsg = isEn ? "Loading…" : "読み込み中…";
 
   const winLabel = isEn ? "Win" : "的中";
@@ -377,9 +375,18 @@ export default function StreakTrackerCard({
               </div>
             ) : points.length === 0 ? (
               <div
-                className={`grid place-items-center px-4 text-center text-sm text-white/65 ${S.loadingEmptyH}`}
+                role="status"
+                className={`grid place-items-center px-4 text-center ${S.loadingEmptyH}`}
               >
-                {emptyMsg}
+                <p
+                  className={[
+                    nameRajdhani.className,
+                    "font-semibold tracking-[0.14em] text-[clamp(1rem,3.2vw,1.5rem)]",
+                  ].join(" ")}
+                  style={cyberNoDataLabelStyle}
+                >
+                  NO DATA
+                </p>
               </div>
             ) : !gateOpen ? (
               <div className={S.loadingEmptyH} aria-hidden />

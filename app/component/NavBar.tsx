@@ -13,6 +13,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { PiChartBarFill } from "react-icons/pi";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 
 type Item = {
   href: string;
@@ -267,7 +268,8 @@ export default function NavBar() {
     pathname === "/web/login" ||
     pathname === "/web/signup" ||
     pathname === "/mobile/login" ||
-    pathname === "/mobile/signup";
+    pathname === "/mobile/signup" ||
+    isProfileSetupRoute(pathname);
 
   const [mounted, setMounted] = useState(false);
   const [myHref, setMyHref] = useState<string | null>(null);

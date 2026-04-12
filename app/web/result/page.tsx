@@ -14,6 +14,7 @@ export default function ResultPage() {
     postsCacheCapped,
     sentinelRef,
     setInfiniteScrollEnabled,
+    refreshPosts,
   } = useResultPagePosts();
 
   if (!authReady || !uid) return null;
@@ -27,6 +28,7 @@ export default function ResultPage() {
         postsCacheCapped={postsCacheCapped}
         sentinelRef={sentinelRef}
         setInfiniteScrollEnabled={setInfiniteScrollEnabled}
+        refreshResultPosts={refreshPosts}
         language={language}
         platform="web"
       />

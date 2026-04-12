@@ -11,6 +11,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import { nameBebas } from "@/lib/fonts";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 
@@ -155,7 +157,6 @@ export default function ProfileDailyTrendChart({
 }: Props) {
   const isEn = language === "en";
 
-  const emptyMsg = isEn ? "No data available" : "データがありません";
   const lockedMsg = isEn
     ? "Pro lets you view monthly trends."
     : "Proでは月ごとの推移が確認できます";
@@ -277,10 +278,19 @@ export default function ProfileDailyTrendChart({
       <div className="relative z-1">
       <div className="relative h-48 sm:h-52 cursor-pointer overflow-hidden rounded-2xl">
         {isEmpty ? (
-          <div className="absolute inset-0 grid place-items-center border border-white/10 bg-black/20">
-            <div className="text-sm font-semibold text-white/80">
-              {emptyMsg}
-            </div>
+          <div
+            role="status"
+            className="absolute inset-0 grid place-items-center px-3"
+          >
+            <p
+              className={[
+                nameBebas.className,
+                "text-center text-[clamp(1.25rem,4.2vw,2.1rem)] leading-none tracking-[0.2em]",
+              ].join(" ")}
+              style={cyberNoDataLabelStyle}
+            >
+              NO DATA
+            </p>
           </div>
         ) : (
           <>
