@@ -1,8 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
+import { authDisplayButton } from "../auth/authEnglishDisplay";
+import cyberFieldStyles from "../auth/cyberAuthField.module.css";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 type Props = {
   open: boolean;
@@ -17,81 +22,114 @@ export default function LogoutConfirmModal({
   onConfirm,
   language = "ja",
 }: Props) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const isEn = language === "en";
   const title = isEn ? "Log out?" : "ログアウトしますか？";
-  const cancelLabel = isEn ? "Cancel" : "キャンセル";
-  const confirmLabel = isEn ? "Log out" : "ログアウト";
+  const cancelLabel = "Cancel";
+  const confirmLabel = "Log out";
 
-  return (
+  const titleClass =
+    "font-[family-name:var(--font-geist-sans)] text-sm leading-snug text-white/85 sm:text-[0.9375rem]";
+
+  const baseBtn =
+    "flex flex-1 items-center justify-center rounded-[14px] border-0 px-3 py-3 transition-[transform,filter,opacity] duration-100 ease-out";
+
+  const tree = (
     <AnimatePresence>
       {open && (
         <>
-          {/* 背景フェード */}
           <motion.div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
 
-          {/* モーダル */}
           <motion.div
-            className="fixed z-50 inset-0 flex items-center justify-center"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: "spring", duration: 0.4 }}
           >
-            <div className="bg-neutral-900 text-white rounded-2xl p-6 w-[90%] max-w-sm shadow-2xl border border-white/10">
-              <div className="flex flex-col items-center text-center space-y-4">
-                
-                {/* アイコンをスライドイン表示 */}
+            <div
+              className={[
+                "relative isolate w-[90%] max-w-sm overflow-hidden rounded-2xl border border-white/12 p-6 text-white",
+                "bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)]",
+                "backdrop-blur-xl",
+                "shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
+              ].join(" ")}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+                style={PROFILE_SHELL_GRID_STYLE}
+                aria-hidden
+              />
+              <div className="relative z-10 flex flex-col items-center space-y-4 text-center">
                 <motion.div
-                  className="p-4 rounded-full bg-neutral-800"
-                  initial={{ opacity: 0, y: -15 }}
+                  className="relative flex justify-center"
+                  initial={{ opacity: 0, y: -12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1, duration: 0.4 }}
+                  transition={{ delay: 0.08, duration: 0.35 }}
                 >
-                  <motion.div
-                    initial={{ rotate: -30 }}
-                    animate={{ rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 120, damping: 10 }}
-                  >
-                    <LogOut className="w-10 h-10 text-red-400" />
-                  </motion.div>
+                  {/* サインアップのメール欄 rightSlot と同系の枠 */}
+                  <div className={cyberFieldStyles.rightSlot} style={{ position: "relative", inset: "auto", transform: "none" }}>
+                    <div
+                      className={cyberFieldStyles.rightSlotInner}
+                      data-static="true"
+                    >
+                      <LogOut className="size-[18px] text-red-400/95" aria-hidden strokeWidth={2.25} />
+                    </div>
+                  </div>
                 </motion.div>
 
-                {/* タイトル */}
                 <motion.h2
-                  className="text-lg font-semibold"
-                  initial={{ opacity: 0, y: 10 }}
+                  className={titleClass}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15, duration: 0.4 }}
+                  transition={{ delay: 0.12, duration: 0.35 }}
                 >
                   {title}
                 </motion.h2>
 
-                {/* ボタン */}
                 <motion.div
-                  className="flex gap-3 w-full mt-4"
-                  initial={{ opacity: 0, y: 10 }}
+                  className="mt-1 flex w-full gap-3"
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25, duration: 0.4 }}
+                  transition={{ delay: 0.2, duration: 0.35 }}
                 >
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={onClose}
-                    className="flex-1 py-2 rounded-lg bg-neutral-800 text-gray-300 hover:bg-neutral-700 transition"
+                    className={[
+                      baseBtn,
+                      authDisplayButton,
+                      "cursor-pointer border border-white/14 bg-white/[0.07] backdrop-blur-md",
+                      "shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_8px_24px_rgba(0,0,0,0.3)]",
+                      "hover:bg-white/[0.11]",
+                    ].join(" ")}
                   >
                     {cancelLabel}
                   </motion.button>
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={onConfirm}
-                    className="flex-1 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition"
+                    className={[
+                      baseBtn,
+                      authDisplayButton,
+                      "cursor-pointer",
+                      "bg-gradient-to-r from-red-600 via-rose-600 to-red-500",
+                      "shadow-[0_10px_30px_rgba(220,38,38,0.38),0_12px_34px_rgba(244,63,94,0.22),inset_0_1px_0_rgba(255,255,255,0.12)]",
+                      "ring-1 ring-inset ring-red-300/35",
+                    ].join(" ")}
                   >
                     {confirmLabel}
                   </motion.button>
@@ -103,4 +141,7 @@ export default function LogoutConfirmModal({
       )}
     </AnimatePresence>
   );
+
+  if (!mounted) return null;
+  return createPortal(tree, document.body);
 }

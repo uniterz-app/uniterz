@@ -83,15 +83,14 @@ export default function SideMenuDrawer({
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50",
+          "fixed left-0 top-0 z-50 flex max-h-[100dvh] flex-col py-3 pl-0 pr-2 sm:py-4 sm:pr-3",
           "transition-transform duration-300 ease-out",
           open ? (isMobile ? "-translate-x-4" : "-translate-x-2") : "-translate-x-full",
         )}
       >
-        <div className="h-full pl-0 pr-2 pt-3 pb-0 sm:pr-3 sm:pt-4 sm:pb-0">
           <div
             className={cn(
-              "relative h-full overflow-y-auto overflow-x-hidden border border-white/12 bg-[#071326]/68 shadow-[0_22px_56px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl",
+              "relative max-h-[calc(100dvh-24px)] min-h-0 overflow-y-auto overflow-x-hidden border border-white/12 bg-[#071326]/68 shadow-[0_22px_56px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl",
               isMobile ? "w-[52vw] min-w-[280px] max-w-[340px] -ml-2" : "w-[min(420px,38vw)]",
             )}
             style={{
@@ -157,7 +156,6 @@ export default function SideMenuDrawer({
             />
             <SettingsMenu onRequestCloseMenu={onClose} />
           </div>
-        </div>
       </div>
     </>
   );

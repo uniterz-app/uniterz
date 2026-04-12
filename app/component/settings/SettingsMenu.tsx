@@ -288,8 +288,12 @@ export default function SettingsMenu({
           </>
         )}
 
-        <div className="mt-5 border-t border-white/10 pt-3">
-          <button className={itemClasses} onClick={() => setShowLogoutModal(true)}>
+        <div className="mt-5 border-t border-white/10 pt-3 pb-3">
+          <button
+            type="button"
+            className={cn(itemClasses, "border-b-0")}
+            onClick={() => setShowLogoutModal(true)}
+          >
             <LogOut size={16} /> {isEn ? "Logout" : "ログアウト"}
           </button>
         </div>
