@@ -1338,6 +1338,20 @@ export default function ResultListWithOverlay({
           )}
         </AnimatePresence>
 
+        {/* リザルト投稿が一件もないとき（文言は英語のまま） */}
+        {!loading && totalLoaded === 0 ? (
+          <m.div
+            key="empty-no-posts"
+            role="status"
+            initial={off ?? { opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.35, ease: easeOut }}
+            className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/55"
+          >
+            No data
+          </m.div>
+        ) : null}
+
         {filteredGrouped.map((day) => {
           const pendingShown = day.pending;
           const finalShown = day.final;
