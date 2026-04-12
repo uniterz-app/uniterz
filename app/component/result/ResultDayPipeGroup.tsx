@@ -36,6 +36,11 @@ type Props = {
   reducedMotion?: boolean;
   dayPoints?: ResultDayPointsHeader;
   children: ReactNode;
+  /**
+   * true のとき日付ヘッダーを whileInView ではなくマウント時 animate。
+   * その日の投稿が少ないとビューポート判定が遅れがちなため。
+   */
+  headerImpressionImmediate?: boolean;
 };
 
 function AnimatedDayPointsValue({
@@ -143,6 +148,7 @@ export function ResultDayPipeGroup({
   reducedMotion = false,
   dayPoints = null,
   children,
+  headerImpressionImmediate = false,
 }: Props) {
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [spineTopPx, setSpineTopPx] = useState<number | null>(null);
@@ -176,16 +182,26 @@ export function ResultDayPipeGroup({
   const easeOut = [0.22, 1, 0.36, 1] as const;
   const headerMotion = reducedMotion
     ? {}
-    : {
-        initial: { opacity: 0, x: -14, filter: "blur(4px)" },
-        whileInView: {
-          opacity: 1,
-          x: 0,
-          filter: "blur(0px)",
-          transition: { duration: 0.45, ease: easeOut },
-        },
-        viewport: { once: true, amount: 0.5 },
-      };
+    : headerImpressionImmediate
+      ? {
+          initial: { opacity: 0, x: -14, filter: "blur(4px)" },
+          animate: {
+            opacity: 1,
+            x: 0,
+            filter: "blur(0px)",
+            transition: { duration: 0.45, ease: easeOut },
+          },
+        }
+      : {
+          initial: { opacity: 0, x: -14, filter: "blur(4px)" },
+          whileInView: {
+            opacity: 1,
+            x: 0,
+            filter: "blur(0px)",
+            transition: { duration: 0.45, ease: easeOut },
+          },
+          viewport: { once: true, amount: 0.5 },
+        };
 
   return (
     <div className="relative">

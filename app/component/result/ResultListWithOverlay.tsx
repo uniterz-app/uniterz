@@ -1103,6 +1103,8 @@ export default function ResultListWithOverlay({
             const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
             return be - ae;
           });
+          /** 1〜2枚だけの日はビューポート内に収まり whileInView が弱いので、下から animate で入場 */
+          const fewPostsThisDay = displayPosts.length <= 2;
           const dayPts = dayPointsHeaderForList(
             finalShown,
             pendingShown,
@@ -1113,13 +1115,26 @@ export default function ResultListWithOverlay({
             <m.div
               key={day.dateLabel}
               initial={
-                off ?? {
-                  opacity: 0,
-                  y: 36,
-                }
+                off ??
+                (fewPostsThisDay
+                  ? { opacity: 0, y: 24 }
+                  : { opacity: 0, y: 36 })
+              }
+              animate={
+                prefersReducedMotion || !fewPostsThisDay
+                  ? undefined
+                  : {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.45,
+                        ease: easeOut,
+                        delay: Math.min(dayIndex * 0.04, 0.15),
+                      },
+                    }
               }
               whileInView={
-                prefersReducedMotion
+                prefersReducedMotion || fewPostsThisDay
                   ? undefined
                   : {
                       opacity: 1,
@@ -1131,7 +1146,11 @@ export default function ResultListWithOverlay({
                       },
                     }
               }
-              viewport={{ once: true, amount: 0.12, margin: "0px 0px -72px 0px" }}
+              viewport={
+                prefersReducedMotion || fewPostsThisDay
+                  ? undefined
+                  : { once: true, amount: 0.12, margin: "0px 0px -72px 0px" }
+              }
               transition={prefersReducedMotion ? undefined : { duration: 0.5, ease: easeOut }}
             >
               <ResultDayPipeGroup
@@ -1139,6 +1158,7 @@ export default function ResultListWithOverlay({
                 isMobile={isMobile}
                 reducedMotion={Boolean(prefersReducedMotion)}
                 dayPoints={dayPts}
+                headerImpressionImmediate={fewPostsThisDay}
               >
                 <div
                   className={
@@ -1152,14 +1172,35 @@ export default function ResultListWithOverlay({
                       key={post.id}
                       className="w-full [content-visibility:auto] [contain-intrinsic-size:auto_220px]"
                       initial={
-                        off ?? {
-                          opacity: 0,
-                          y: 22,
-                          scale: 0.97,
-                        }
+                        off ??
+                        (fewPostsThisDay
+                          ? {
+                              opacity: 0,
+                              y: 56,
+                              scale: 0.98,
+                            }
+                          : {
+                              opacity: 0,
+                              y: 22,
+                              scale: 0.97,
+                            })
+                      }
+                      animate={
+                        prefersReducedMotion || !fewPostsThisDay
+                          ? undefined
+                          : {
+                              opacity: 1,
+                              y: 0,
+                              scale: 1,
+                              transition: {
+                                duration: 0.52,
+                                ease: easeOut,
+                                delay: i * 0.1,
+                              },
+                            }
                       }
                       whileInView={
-                        prefersReducedMotion
+                        prefersReducedMotion || fewPostsThisDay
                           ? undefined
                           : {
                               opacity: 1,
@@ -1172,7 +1213,11 @@ export default function ResultListWithOverlay({
                               },
                             }
                       }
-                      viewport={{ once: true, amount: 0.15, margin: "0px 0px -48px 0px" }}
+                      viewport={
+                        prefersReducedMotion || fewPostsThisDay
+                          ? undefined
+                          : { once: true, amount: 0.15, margin: "0px 0px -48px 0px" }
+                      }
                     >
                       <ResultCard
                         post={post}
