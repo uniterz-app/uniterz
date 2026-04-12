@@ -6,11 +6,13 @@ import AuthGate from "@/app/AuthGate";
 import NavBar from "@/app/component/NavBar";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 
-/** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィールセットアップ） */
+/** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィール・パスワードリセット） */
 function shouldShowBottomNavBar(pathname: string | null | undefined): boolean {
   if (!pathname) return true;
   if (isGuestLegalPath(pathname)) return false;
   if (pathname === "/web/onboarding" || pathname === "/mobile/onboarding")
+    return false;
+  if (pathname.startsWith("/web/reset") || pathname.startsWith("/mobile/reset"))
     return false;
   return true;
 }
