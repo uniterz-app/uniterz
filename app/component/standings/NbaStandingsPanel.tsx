@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef, Fragment } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
@@ -83,7 +82,6 @@ type Team = {
 };
 
 type Props = {
-  teamHrefBase: string;
   compact?: boolean;
   className?: string;
 };
@@ -91,7 +89,6 @@ type Props = {
 /* ================= main ================= */
 
 export default function NbaStandingsPanel({
-  teamHrefBase,
   compact = false,
   className = "",
 }: Props) {
@@ -160,7 +157,6 @@ export default function NbaStandingsPanel({
         <Conference
           teams={filtered}
           conference={tab}
-          teamHrefBase={teamHrefBase}
           compact={compact}
           layoutMobile={layoutMobile}
         />
@@ -174,13 +170,11 @@ export default function NbaStandingsPanel({
 function Conference({
   teams,
   conference,
-  teamHrefBase,
   compact,
   layoutMobile,
 }: {
   teams: Team[];
   conference: "east" | "west";
-  teamHrefBase: string;
   compact: boolean;
   layoutMobile: boolean;
 }) {
@@ -214,7 +208,6 @@ function Conference({
             onEnter={() => setHoveredId(team.id)}
             onLeave={() => setHoveredId(null)}
             conference={conference}
-            teamHrefBase={teamHrefBase}
             compact={compact}
             layoutMobile={layoutMobile}
           />
@@ -242,7 +235,6 @@ function TeamRow({
   onEnter,
   onLeave,
   conference,
-  teamHrefBase,
   compact,
   layoutMobile,
 }: {
@@ -254,7 +246,6 @@ function TeamRow({
   onEnter: () => void;
   onLeave: () => void;
   conference: "east" | "west";
-  teamHrefBase: string;
   compact: boolean;
   layoutMobile: boolean;
 }) {
@@ -295,20 +286,19 @@ function TeamRow({
   }, [hovered, winRateCalc]);
 
   return (
-    <Link href={`${teamHrefBase}/${team.id}`} scroll={false}>
-      <motion.div
-        initial={{ opacity: 0, y: 28, rotateX: 14, z: -120, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, rotateX: 0, z: 0, scale: 1 }}
-        transition={{
-          duration: 0.7,
-          delay: index * 0.07,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-        style={{ perspective: "1400px" }}
-        className={compact ? "mb-1" : "mb-2"}
-        onMouseEnter={onEnter}
-        onMouseLeave={onLeave}
-      >
+    <motion.div
+      initial={{ opacity: 0, y: 28, rotateX: 14, z: -120, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, rotateX: 0, z: 0, scale: 1 }}
+      transition={{
+        duration: 0.7,
+        delay: index * 0.07,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      style={{ perspective: "1400px" }}
+      className={[compact ? "mb-1" : "mb-2", "cursor-default"].join(" ")}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+    >
         <motion.div
           className={[
             "relative overflow-hidden transition hover:scale-[1.03] hover:shadow-[0_22px_70px_rgba(0,0,0,0.65)]",
@@ -387,7 +377,6 @@ function TeamRow({
           </div>
         </motion.div>
       </motion.div>
-    </Link>
   );
 }
 

@@ -1,13 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Camera } from "lucide-react";
+import { FaUser } from "react-icons/fa";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, auth, storage } from "@/lib/firebase";
 import { ensureUserSlug } from "@/lib/ensureSlug";
 import { COUNTRY_OPTIONS, FLAG_SRC } from "@/lib/rankings/country";
+import CyberAuthField from "./CyberAuthField";
+import CyberAuthSelect from "./CyberAuthSelect";
+import AuthFormBranding from "./AuthFormBranding";
+import cyberFieldStyles from "./cyberAuthField.module.css";
+import {
+  authDisplayHeadingLong,
+  authDisplayButton,
+} from "./authEnglishDisplay";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -34,14 +43,29 @@ export default function OnboardingForm({ variant }: Props) {
   }, [variant, pathname]);
 
   const [displayName, setDisplayName] = useState("");
-  const [language, setLanguage] = useState<Language | "">(osIsJa ? "ja" : "en");
+  const [language, setLanguage] = useState<Language>(() =>
+    osIsJa ? "ja" : "en"
+  );
   const [countryCode, setCountryCode] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [pressed, setPressed] = useState(false);
 
+  const avatarPreviewUrl = useMemo(() => {
+    if (!avatarFile) return null;
+    return URL.createObjectURL(avatarFile);
+  }, [avatarFile]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    };
+  }, [avatarPreviewUrl]);
+
+  const bodySans =
+    "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
+
   const ui = {
-    title: osIsJa ? "プロフィール設定" : "Set Up Profile",
     subtitle: osIsJa
       ? "ユーザーネームと言語を設定すると次へ進めます（必須）"
       : "Set your username and language to continue (required)",
@@ -57,16 +81,11 @@ export default function OnboardingForm({ variant }: Props) {
     countryNoteLater: osIsJa
       ? "（一部の国は今後フラッグ画像を追加予定）"
       : "(Some flags may be added later.)",
-    continueCta: osIsJa ? "次へ" : "CONTINUE",
-    savingCta: osIsJa ? "保存中..." : "SAVING...",
-    selectLanguagePlaceholder: osIsJa
-      ? "選択してください"
-      : "Select",
     selectCountryPlaceholder: osIsJa ? "未設定" : "Not set",
   } as const;
 
-  const canSubmit = displayName.trim().length > 0 && (language === "ja" || language === "en");
-  const formWidth = resolvedVariant === "mobile" ? 328 : 390;
+  const canSubmit = displayName.trim().length > 0;
+  const formWidth = resolvedVariant === "mobile" ? 320 : 380;
   const selectedCountryHasFlag = countryCode ? Boolean(FLAG_SRC[countryCode]) : false;
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +103,7 @@ export default function OnboardingForm({ variant }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user || !canSubmit || !language) return;
+    if (!user || !canSubmit) return;
 
     try {
       setSaving(true);
@@ -130,182 +149,139 @@ export default function OnboardingForm({ variant }: Props) {
     }
   };
 
+  const primaryCtaClass =
+    language === "en"
+      ? authDisplayButton
+      : "font-[family-name:var(--font-geist-sans)] text-base font-bold tracking-wide text-[#e6e4de]";
+
   return (
     <form onSubmit={handleSubmit}>
       <div
-        style={{
-          width: formWidth,
-          padding: 24,
-          backgroundColor: "rgba(255,255,255,0.08)",
-          borderRadius: 12,
-          boxShadow: "0 0 30px rgba(0,0,0,0.3)",
-          color: "white",
-        }}
+        className="relative isolate mx-auto overflow-hidden rounded-2xl border border-white/10 bg-black/55 px-6 pb-7 pt-4 text-center shadow-[0_0_40px_rgba(0,0,0,0.45)] backdrop-blur-md sm:pt-5"
+        style={{ width: formWidth, maxWidth: "100%" }}
       >
-        <h1
-          style={{ fontWeight: "bold", fontSize: "1.45rem", textAlign: "center" }}
-        >
-          {ui.title}
-        </h1>
-        <p
-          style={{
-            marginTop: 6,
-            textAlign: "center",
-            opacity: 0.75,
-            fontSize: "0.86rem",
-          }}
-        >
-          {ui.subtitle}
-        </p>
+        <div className={cyberFieldStyles.pageGrid} aria-hidden />
+        <div className="relative z-10">
+          <AuthFormBranding />
+          <h1 className={`mt-1 ${authDisplayHeadingLong}`}>PROFILE SETUP</h1>
+          <p className={`mt-2 ${bodySans}`}>{ui.subtitle}</p>
 
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
-          <label style={{ position: "relative", cursor: "pointer" }}>
-            <div
-              style={{
-                width: 92,
-                height: 92,
-                borderRadius: "9999px",
-                overflow: "hidden",
-                border: "1px solid rgba(255,255,255,0.18)",
-                background: "rgba(255,255,255,0.08)",
-              }}
-            >
-              {avatarFile ? (
-                <img
-                  src={URL.createObjectURL(avatarFile)}
-                  alt="avatar preview"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : null}
+          <div className="mt-4 flex justify-center">
+            <label className="relative cursor-pointer">
+              <div
+                className="relative h-[92px] w-[92px] overflow-hidden rounded-full border border-white/10 bg-black/40 ring-1 ring-white/5"
+              >
+                {avatarPreviewUrl ? (
+                  <img
+                    src={avatarPreviewUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
+              <span
+                className="absolute -bottom-0.5 -right-1 flex h-[30px] w-[30px] items-center justify-center rounded-full border border-white/10 bg-[#0a0a0c] text-white/90 shadow-md"
+                aria-hidden
+              >
+                <Camera className="h-[15px] w-[15px]" strokeWidth={2} />
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 space-y-3 text-left">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-white/75">
+                {ui.usernameLabel}
+              </label>
+              <CyberAuthField
+                inputProps={{
+                  type: "text",
+                  name: "username",
+                  autoComplete: "username",
+                  placeholder: ui.usernamePlaceholder,
+                  value: displayName,
+                  onChange: (e) => setDisplayName(e.target.value),
+                }}
+                rightSlot={
+                  <span className="flex items-center justify-center text-[15px] text-white/85">
+                    <FaUser aria-hidden />
+                  </span>
+                }
+              />
             </div>
-            <span
-              style={{
-                position: "absolute",
-                right: -4,
-                bottom: -2,
-                width: 30,
-                height: 30,
-                borderRadius: "9999px",
-                background: "#111",
-                display: "grid",
-                placeItems: "center",
-              }}
-            >
-              <Camera size={15} />
-            </span>
-            <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
-          </label>
-        </div>
 
-        <div style={{ marginTop: 12 }}>
-          <label style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>
-            {ui.usernameLabel}
-          </label>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder={ui.usernamePlaceholder}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.18)",
-              background: "rgba(255,255,255,0.12)",
-              color: "white",
-              outline: "none",
-            }}
-          />
-        </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-white/75">
+                {ui.languageLabel}
+              </label>
+              <CyberAuthSelect
+                selectProps={{
+                  value: language,
+                  onChange: (e) => setLanguage(e.target.value as Language),
+                }}
+              >
+                <option value="ja">{osIsJa ? "日本語" : "Japanese"}</option>
+                <option value="en">English</option>
+              </CyberAuthSelect>
+            </div>
 
-        <div style={{ marginTop: 10 }}>
-          <label style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>
-            {ui.languageLabel}
-          </label>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as Language)}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.18)",
-              background: "rgba(17,24,39,0.95)",
-              color: "white",
-              outline: "none",
-            }}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-white/75">
+                {ui.countryLabel}
+              </label>
+              <CyberAuthSelect
+                selectProps={{
+                  value: countryCode,
+                  onChange: (e) => setCountryCode(e.target.value),
+                }}
+              >
+                <option value="">{ui.selectCountryPlaceholder}</option>
+                {COUNTRY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {language === "en" ? c.labelEn : c.labelJa}
+                  </option>
+                ))}
+              </CyberAuthSelect>
+              <p className="mt-1 font-[family-name:var(--font-geist-sans)] text-xs leading-relaxed text-white/60">
+                {ui.countryNote}
+                {countryCode && !selectedCountryHasFlag
+                  ? ui.countryNoteLater
+                  : ""}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={!canSubmit || saving}
+            onPointerDown={() => setPressed(true)}
+            onPointerUp={() => setPressed(false)}
+            onPointerCancel={() => setPressed(false)}
+            className={[
+              "mt-5 flex w-full items-center justify-center rounded-[14px] border-0 px-3.5 py-3",
+              primaryCtaClass,
+              "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
+              "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
+              "transition-[transform,filter,opacity] duration-100 ease-out",
+              pressed ? "scale-[0.97]" : "scale-100",
+              !canSubmit || saving ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+            ].join(" ")}
           >
-            <option value="">{ui.selectLanguagePlaceholder}</option>
-            <option value="ja">{osIsJa ? "日本語" : "Japanese"}</option>
-            <option value="en">English</option>
-          </select>
+            {saving
+              ? language === "en"
+                ? "SAVING..."
+                : "保存中..."
+              : language === "en"
+                ? "CONTINUE"
+                : "次へ"}
+          </button>
         </div>
-
-        <div style={{ marginTop: 10 }}>
-          <label style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>
-            {ui.countryLabel}
-          </label>
-          <select
-            value={countryCode}
-            onChange={(e) => setCountryCode(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.18)",
-              background: "rgba(17,24,39,0.95)",
-              color: "white",
-              outline: "none",
-            }}
-          >
-            <option value="">{ui.selectCountryPlaceholder}</option>
-            {COUNTRY_OPTIONS.map((c) => (
-              <option key={c.code} value={c.code}>
-                {osIsJa ? c.labelJa : c.labelEn}
-              </option>
-            ))}
-          </select>
-          <p style={{ marginTop: 6, fontSize: "0.75rem", opacity: 0.65 }}>
-            {ui.countryNote}
-            {countryCode && !selectedCountryHasFlag
-              ? ui.countryNoteLater
-              : ""}
-          </p>
-        </div>
-
-        <button
-          type="submit"
-          disabled={!canSubmit || saving}
-          onPointerDown={() => setPressed(true)}
-          onPointerUp={() => setPressed(false)}
-          onPointerCancel={() => setPressed(false)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            width: "100%",
-            padding: "12px 14px",
-            marginTop: 16,
-            border: "none",
-            borderRadius: 14,
-            color: "white",
-            fontWeight: 700,
-            letterSpacing: 0.4,
-            background:
-              "linear-gradient(90deg, #7C3AED 0%, #EC4899 50%, #06B6D4 100%)",
-            boxShadow:
-              "0 10px 30px rgba(124,58,237,0.25), 0 12px 34px rgba(6,182,212,0.22)",
-            opacity: !canSubmit || saving ? 0.65 : 1,
-            cursor: !canSubmit || saving ? "not-allowed" : "pointer",
-            transform: pressed ? "scale(0.97)" : "scale(1)",
-          }}
-        >
-          <span>
-            {saving ? ui.savingCta : `${ui.continueCta}`}
-          </span>
-          <span style={{ fontSize: 18 }}>↗</span>
-        </button>
       </div>
     </form>
   );

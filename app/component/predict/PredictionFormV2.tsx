@@ -588,10 +588,7 @@ export default function PredictionFormV2({
               }
             >
               {showStandings ? (
-                <NbaStandingsPanel
-                  teamHrefBase={`${prefix}/teams`}
-                  compact={isMobile}
-                />
+                <NbaStandingsPanel compact={isMobile} />
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-4 text-sm text-white/65">
                   {isEn

@@ -7,7 +7,6 @@ import cn from "clsx";
 import {
   User,
   Megaphone,
-  FilePlus2,
   Package,
   HelpCircle,
   LogOut,
@@ -103,7 +102,6 @@ export default function SettingsMenu({
     "/mobile/community-guidelines"
   );
   const contactPath = p("/web/contact", "/mobile/contact");
-  const featureRequestPath = p("/web/feature-request", "/mobile/feature-request");
 
   // ===== announcements unread =====
   useEffect(() => {
@@ -252,10 +250,6 @@ export default function SettingsMenu({
 
         <button className={subItemClasses} onClick={() => router.push(contactPath)}>
           <Mail size={14} /> {isEn ? "Contact" : "お問い合わせ"}
-        </button>
-
-        <button className={subItemClasses} onClick={() => router.push(featureRequestPath)}>
-          <FilePlus2 size={14} /> {isEn ? "Feature Request" : "要望を送る"}
         </button>
 
         {isAdmin && (

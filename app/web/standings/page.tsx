@@ -8,7 +8,7 @@ export default function WebStandingsPage() {
       <h1 className="mb-4 text-lg font-semibold tracking-wide text-white/90">
         スタンディング
       </h1>
-      <NbaStandingsPanel teamHrefBase="/web/teams" />
+      <NbaStandingsPanel />
     </main>
   );
 }

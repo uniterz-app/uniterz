@@ -542,15 +542,9 @@ export default function ScheduleList({
               <button
                 type="button"
                 aria-label={isEn ? "Close" : "閉じる"}
-                className={[
-                  "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55",
-                  standingsOpenInOverlay
-                    ? "pointer-events-none opacity-0"
-                    : "",
-                ].join(" ")}
+                className="absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (standingsOpenInOverlay) return;
                   close();
                 }}
               >
