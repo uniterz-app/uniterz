@@ -13,10 +13,12 @@ import { auth } from "@/lib/firebase";
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import { toast } from "@/app/component/ui/toast";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { BarChart2, ChevronDown, Swords } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
+import NbaPostseasonMatchupPanel from "@/app/component/predict/NbaPostseasonMatchupPanel";
+import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -122,6 +124,10 @@ export default function PredictionFormV2({
 
   const isSoccer = game.league === "pl" || game.league === "j1";
   const showStandings = game.league === "nba";
+  /** Playoffs only: Matchup + Market (2 tabs). Play-In uses regular 3 tabs. */
+  const nbaPlayoffsTwoTabUi =
+    game.league === "nba" && game.seasonPhase === "playoffs";
+  const showStandingsTab = showStandings && !nbaPlayoffsTwoTabUi;
 
   const homeSafe = game?.home ?? { name: "Home", colorHex: "#ef4444" };
   const awaySafe = game?.away ?? { name: "Away", colorHex: "#3b82f6" };
@@ -129,9 +135,32 @@ export default function PredictionFormV2({
   const [homeL1, homeL2] = splitTeamNameByLeague(game.league, homeSafe.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(game.league, awaySafe.name);
 
+  const nbaH2HPack = useMemo(() => {
+    if (!nbaPlayoffsTwoTabUi || game.league !== "nba") return null;
+    return resolveNbaH2HPack(
+      game.home.teamId,
+      game.away.teamId,
+      game.home.name,
+      game.away.name
+    );
+  }, [
+    nbaPlayoffsTwoTabUi,
+    game.league,
+    game.home.teamId,
+    game.away.teamId,
+    game.home.name,
+    game.away.name,
+  ]);
+
   useEffect(() => {
     onStandingsOpenChange?.(toolsTab === "standings");
   }, [toolsTab, onStandingsOpenChange]);
+
+  useEffect(() => {
+    if (nbaPlayoffsTwoTabUi && toolsTab === "standings") {
+      setToolsTab(null);
+    }
+  }, [nbaPlayoffsTwoTabUi, toolsTab]);
 
   useLayoutEffect(() => {
     if (toolsTab === "market") {
@@ -142,9 +171,9 @@ export default function PredictionFormV2({
   // チーム詳細から戻ったとき ?standings=1 でスタンディングを開いた状態にする
   useEffect(() => {
     if (searchParams.get("standings") !== "1") return;
-    if (!showStandings) return;
+    if (!showStandingsTab) return;
     setToolsTab("standings");
-  }, [searchParams, showStandings]);
+  }, [searchParams, showStandingsTab]);
 
   function getMobileTeamLabel(
     league: MatchCardProps["league"],
@@ -212,6 +241,9 @@ export default function PredictionFormV2({
   const toolButtonBase = isMobile
     ? "flex h-9 w-full items-center justify-center rounded-xl border px-1.5 text-xs font-semibold transition-all duration-200"
     : "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
+
+  /** Match tab label font size (text-xs / text-sm). */
+  const postseasonTabIconClass = "h-[1em] w-[1em] shrink-0 opacity-90";
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -451,9 +483,10 @@ export default function PredictionFormV2({
       <div className="space-y-4 overflow-x-hidden">
         <motion.div
           variants={fadeUp}
-          className={["grid grid-cols-3", isMobile ? "gap-1.5" : "gap-2"].join(
-            " "
-          )}
+          className={[
+            nbaPlayoffsTwoTabUi ? "grid grid-cols-2" : "grid grid-cols-3",
+            isMobile ? "gap-1.5" : "gap-2",
+          ].join(" ")}
         >
           <button
             type="button"
@@ -467,8 +500,28 @@ export default function PredictionFormV2({
                 : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
             ].join(" ")}
           >
-            <span className={isMobile ? "truncate" : ""}>
-              {isEn ? "Stats" : "詳細スタッツ"}
+            <span
+              className={[
+                "inline-flex max-w-full items-center justify-center gap-1.5",
+                isMobile ? "min-w-0" : "",
+              ].join(" ")}
+            >
+              {nbaPlayoffsTwoTabUi && (
+                <Swords
+                  className={postseasonTabIconClass}
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+              )}
+              <span className={isMobile ? "truncate" : ""}>
+                {nbaPlayoffsTwoTabUi
+                  ? isEn
+                    ? "Matchup"
+                    : "直接対決"
+                  : isEn
+                    ? "Stats"
+                    : "詳細スタッツ"}
+              </span>
             </span>
           </button>
 
@@ -484,31 +537,47 @@ export default function PredictionFormV2({
                 : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
             ].join(" ")}
           >
-            <span className={isMobile ? "truncate" : ""}>
-              {isEn ? "Market" : "市場"}
+            <span
+              className={[
+                "inline-flex max-w-full items-center justify-center gap-1.5",
+                isMobile ? "min-w-0" : "",
+              ].join(" ")}
+            >
+              {nbaPlayoffsTwoTabUi && (
+                <BarChart2
+                  className={postseasonTabIconClass}
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+              )}
+              <span className={isMobile ? "truncate" : ""}>
+                {isEn ? "Market" : "市場"}
+              </span>
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (!showStandings) return;
-              setToolsTab((t) => (t === "standings" ? null : "standings"));
-            }}
-            disabled={!showStandings}
-            className={[
-              toolButtonBase,
-              toolsTab === "standings"
-                ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                : showStandings
-                  ? "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6"
-                  : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
-            ].join(" ")}
-          >
-            <span className={isMobile ? "truncate" : ""}>
-              {isEn ? "Standings" : "順位表"}
-            </span>
-          </button>
+          {!nbaPlayoffsTwoTabUi && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!showStandings) return;
+                setToolsTab((t) => (t === "standings" ? null : "standings"));
+              }}
+              disabled={!showStandings}
+              className={[
+                toolButtonBase,
+                toolsTab === "standings"
+                  ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                  : showStandings
+                    ? "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6"
+                    : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
+              ].join(" ")}
+            >
+              <span className={isMobile ? "truncate" : ""}>
+                {isEn ? "Standings" : "順位表"}
+              </span>
+            </button>
+          )}
         </motion.div>
 
         {toolsTab === "stats" && (
@@ -518,13 +587,92 @@ export default function PredictionFormV2({
             />
             <div className="relative z-1">
             <div
-              className={
-                isMobile
-                  ? "mb-2 text-xs font-semibold text-white/90"
-                  : "mb-3 text-sm font-semibold text-white/90"
-              }
+              className={[
+                nbaPlayoffsTwoTabUi
+                  ? isMobile
+                    ? "mb-2 space-y-1.5"
+                    : "mb-3 space-y-2"
+                  : isMobile
+                    ? "mb-2"
+                    : "mb-3",
+                nbaPlayoffsTwoTabUi ? "text-center" : "",
+              ].join(" ")}
             >
-              {isEn ? "Stats" : "詳細スタッツ"}
+              <div
+                className={[
+                  isMobile ? "text-xs" : "text-sm",
+                  "font-semibold text-white/90",
+                ].join(" ")}
+              >
+                {nbaPlayoffsTwoTabUi
+                  ? isEn
+                    ? "Season head-to-head"
+                    : "今季の直接対決"
+                  : isEn
+                    ? "Stats"
+                    : "詳細スタッツ"}
+              </div>
+              {nbaPlayoffsTwoTabUi && nbaH2HPack?.seriesRecord ? (
+                <div
+                  className={[
+                    resultStatsMetricNumClass,
+                    "flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-1 text-sm text-white/85 sm:text-base md:gap-x-2 md:text-lg",
+                  ].join(" ")}
+                >
+                  <span className="max-w-[46%] truncate sm:max-w-none">
+                    {nbaH2HPack.seriesRecord.leftTeamDisplay}
+                  </span>
+                  <span
+                    className={[
+                      resultStatsMetricNumClass,
+                      "inline-flex shrink-0 items-baseline font-bold tabular-nums text-xl sm:text-2xl md:text-3xl",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={
+                        nbaH2HPack.seriesRecord.leftWins >
+                        nbaH2HPack.seriesRecord.rightWins
+                          ? "text-yellow-300"
+                          : "text-white"
+                      }
+                      style={
+                        nbaH2HPack.seriesRecord.leftWins >
+                        nbaH2HPack.seriesRecord.rightWins
+                          ? {
+                              textShadow:
+                                "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {nbaH2HPack.seriesRecord.leftWins}
+                    </span>
+                    <span className="mx-1 text-white/55 sm:mx-1.5">–</span>
+                    <span
+                      className={
+                        nbaH2HPack.seriesRecord.rightWins >
+                        nbaH2HPack.seriesRecord.leftWins
+                          ? "text-yellow-300"
+                          : "text-white"
+                      }
+                      style={
+                        nbaH2HPack.seriesRecord.rightWins >
+                        nbaH2HPack.seriesRecord.leftWins
+                          ? {
+                              textShadow:
+                                "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                            }
+                          : undefined
+                      }
+                    >
+                      {nbaH2HPack.seriesRecord.rightWins}
+                    </span>
+                  </span>
+                  <span className="max-w-[46%] truncate sm:max-w-none">
+                    {nbaH2HPack.seriesRecord.rightTeamDisplay}
+                  </span>
+                </div>
+              ) : null}
             </div>
             <div
               className={
@@ -533,12 +681,20 @@ export default function PredictionFormV2({
                   : "border-t border-white/10 pt-3"
               }
             >
-              <GameTeamStats
-                league={game.league}
-                homeTeamId={game.home.teamId ?? ""}
-                awayTeamId={game.away.teamId ?? ""}
-                language={language}
-              />
+              {nbaPlayoffsTwoTabUi ? (
+                <NbaPostseasonMatchupPanel
+                  isEn={isEn}
+                  seriesGames={nbaH2HPack?.games}
+                  h2hAverages={nbaH2HPack?.h2hAverages}
+                />
+              ) : (
+                <GameTeamStats
+                  league={game.league}
+                  homeTeamId={game.home.teamId ?? ""}
+                  awayTeamId={game.away.teamId ?? ""}
+                  language={language}
+                />
+              )}
             </div>
             </div>
           </motion.div>

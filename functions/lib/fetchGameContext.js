@@ -5,7 +5,7 @@ exports.fetchGameContext = fetchGameContext;
  * Helpers
  * ========================= */
 function normalizeGame(after, gameId) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     return {
         id: gameId,
         league: after === null || after === void 0 ? void 0 : after.league,
@@ -17,6 +17,7 @@ function normalizeGame(after, gameId) {
         homeRank: null,
         awayRank: null,
         playedAt: (_f = (_e = after === null || after === void 0 ? void 0 : after.startAtJst) !== null && _e !== void 0 ? _e : after === null || after === void 0 ? void 0 : after.startAt) !== null && _f !== void 0 ? _f : null,
+        seasonPhase: (_g = after === null || after === void 0 ? void 0 : after.seasonPhase) !== null && _g !== void 0 ? _g : null,
     };
 }
 /* =========================

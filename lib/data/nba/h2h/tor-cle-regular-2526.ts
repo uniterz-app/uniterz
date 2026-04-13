@@ -1,0 +1,150 @@
+import type {
+  NbaH2HGameCard,
+  NbaH2HAverages,
+} from "@/app/component/predict/NbaPostseasonMatchupPanel";
+
+export const TOR_CLE_TEAM_IDS = ["nba-raptors", "nba-cavaliers"] as const;
+
+/** H2H カードは左=キャブス、右=ラプターズで固定 */
+const H2H_LEFT = "Cavaliers";
+const H2H_RIGHT = "Raptors";
+
+/** 2025-26 レギュラー・ラプターズ対キャブス（3試合） */
+export const torCleH2HGames: NbaH2HGameCard[] = [
+  {
+    id: "h2h-tor-cle-2025-10-31",
+    dateEt: "2025-10-31",
+    dateJst: "2025-11-01",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 101,
+    scoreRight: 112,
+    homeTeamSide: "left",
+    injuriesLeft: [
+      "D. Mitchell",
+      "J. Allen",
+      "M. Strus",
+      "D. Garland",
+      "S. Merrill",
+    ],
+    injuriesRight: ["J. Poeltl"],
+  },
+  {
+    id: "h2h-tor-cle-2025-11-13",
+    dateEt: "2025-11-13",
+    dateJst: "2025-11-14",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 113,
+    scoreRight: 126,
+    homeTeamSide: "left",
+    injuriesLeft: ["L. Ball", "D. Garland", "M. Strus", "J. Tyson"],
+    injuriesRight: ["O. Agbaji", "J. Mogbo"],
+  },
+  {
+    id: "h2h-tor-cle-2025-11-24",
+    dateEt: "2025-11-24",
+    dateJst: "2025-11-25",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 99,
+    scoreRight: 110,
+    homeTeamSide: "right",
+    injuriesLeft: [
+      "J. Allen",
+      "D. Garland",
+      "D. Hunter",
+      "S. Merrill",
+      "C. Porter Jr.",
+      "M. Strus",
+      "D. Wade",
+      "I. Okoro",
+    ],
+    injuriesRight: ["R. Barrett"],
+  },
+];
+
+/** 左=CLE・右=TOR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
+function torCleH2HStatsFromGames(games: NbaH2HGameCard[]): {
+  cavsPpg: number;
+  raptorsPpg: number;
+  cavsPapg: number;
+  raptorsPapg: number;
+  cavsNet: number;
+  raptorsNet: number;
+} {
+  let clePts = 0;
+  let torPts = 0;
+  for (const g of games) {
+    if (g.scoreLeft == null || g.scoreRight == null) {
+      throw new Error(`torCleH2H: missing scores for ${g.id}`);
+    }
+    clePts += g.scoreLeft;
+    torPts += g.scoreRight;
+  }
+  const n = games.length;
+  const r1 = (x: number) => Number(x.toFixed(1));
+  const cavsPpg = r1(clePts / n);
+  const raptorsPpg = r1(torPts / n);
+  /** 相手が取った得点 = 自チームの失点 */
+  const cavsPapg = raptorsPpg;
+  const raptorsPapg = cavsPpg;
+  const raptorsNet = r1(raptorsPpg - raptorsPapg);
+  const cavsNet = r1(cavsPpg - cavsPapg);
+  return {
+    cavsPpg,
+    raptorsPpg,
+    cavsPapg,
+    raptorsPapg,
+    cavsNet,
+    raptorsNet,
+  };
+}
+
+/** 上記3試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+export function torCleH2HAveragesForSides({
+  homeTeamId,
+  awayTeamId,
+}: {
+  homeTeamId: string;
+  awayTeamId: string;
+}): NbaH2HAverages | null {
+  const ids = new Set([homeTeamId, awayTeamId]);
+  if (
+    !ids.has("nba-raptors") ||
+    !ids.has("nba-cavaliers")
+  ) {
+    return null;
+  }
+
+  const {
+    cavsPpg,
+    raptorsPpg,
+    cavsPapg,
+    raptorsPapg,
+    cavsNet,
+    raptorsNet,
+  } = torCleH2HStatsFromGames(torCleH2HGames);
+
+  if (homeTeamId === "nba-raptors") {
+    return {
+      homeAvgPts: raptorsPpg,
+      awayAvgPts: cavsPpg,
+      homeAvgPtsAllowed: raptorsPapg,
+      awayAvgPtsAllowed: cavsPapg,
+      homeNetRtg: raptorsNet,
+      awayNetRtg: cavsNet,
+    };
+  }
+  if (homeTeamId === "nba-cavaliers") {
+    return {
+      homeAvgPts: cavsPpg,
+      awayAvgPts: raptorsPpg,
+      homeAvgPtsAllowed: cavsPapg,
+      awayAvgPtsAllowed: raptorsPapg,
+      homeNetRtg: cavsNet,
+      awayNetRtg: raptorsNet,
+    };
+  }
+  return null;
+}

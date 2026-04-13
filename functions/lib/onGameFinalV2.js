@@ -12,6 +12,7 @@ const aggregateGamePointsDistribution_1 = require("./aggregateGamePointsDistribu
 const updateUserStreak_1 = require("./updateUserStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
 const updateTeamSeasonRecord_1 = require("./updateTeamSeasonRecord");
+const teamStandingsSeasonPhase_1 = require("./teamStandingsSeasonPhase");
 const db = () => (0, firestore_2.getFirestore)();
 const MIN_MARKET = 10;
 const UPSET_MARKET_RATIO = 0.6;
@@ -51,23 +52,48 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             gameId,
             final: { home: game.homeScore, away: game.awayScore },
         });
-        await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
-            db: firestore,
-            league: game.league,
-            homeTeamId: game.homeTeamId,
-            awayTeamId: game.awayTeamId,
-            homeScore: game.homeScore,
-            awayScore: game.awayScore,
-        });
-        await (0, updateTeamStats_1.updateTeamStats)({
-            db: firestore,
-            game: Object.assign(Object.assign({}, game), { homeRank,
-                awayRank }),
-            homeConference,
-            awayConference,
-            homeWins,
-            awayWins,
-        });
+        if ((0, teamStandingsSeasonPhase_1.countsTowardRegularSeasonTeamStats)(game.seasonPhase)) {
+            await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
+                db: firestore,
+                league: game.league,
+                homeTeamId: game.homeTeamId,
+                awayTeamId: game.awayTeamId,
+                homeScore: game.homeScore,
+                awayScore: game.awayScore,
+                target: "regular",
+            });
+            await (0, updateTeamStats_1.updateTeamStats)({
+                db: firestore,
+                game: Object.assign(Object.assign({}, game), { homeRank,
+                    awayRank }),
+                homeConference,
+                awayConference,
+                homeWins,
+                awayWins,
+                target: "regular",
+            });
+        }
+        if ((0, teamStandingsSeasonPhase_1.countsTowardPlayoffTeamStats)(game.seasonPhase)) {
+            await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
+                db: firestore,
+                league: game.league,
+                homeTeamId: game.homeTeamId,
+                awayTeamId: game.awayTeamId,
+                homeScore: game.homeScore,
+                awayScore: game.awayScore,
+                target: "playoffs",
+            });
+            await (0, updateTeamStats_1.updateTeamStats)({
+                db: firestore,
+                game: Object.assign(Object.assign({}, game), { homeRank,
+                    awayRank }),
+                homeConference,
+                awayConference,
+                homeWins,
+                awayWins,
+                target: "playoffs",
+            });
+        }
     }
     /* ===== ③ market / upset ===== */
     let hadUpsetGame = false;

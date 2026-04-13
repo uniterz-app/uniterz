@@ -122,6 +122,15 @@ export function getResolvedGameScore(
 export const toLiveMeta = (_m: any) => null;
 export const toFinalMeta = (_m: any) => null;
 
+function normalizeSeasonPhase(
+  raw: unknown
+): MatchCardProps["seasonPhase"] {
+  if (raw === "regular" || raw === "play_in" || raw === "playoffs") {
+    return raw;
+  }
+  return null;
+}
+
 /** startAt を JST Date に寄せる */
 export const normalizeStartAtJst = (g: any): Date | null => {
   return (
@@ -164,6 +173,7 @@ export type GameDoc = {
   };
   homePct?: number;
   awayPct?: number;
+  seasonPhase?: unknown;
 };
 
 /** MatchCardProps へ整形 */
@@ -239,6 +249,7 @@ export function toMatchCardProps(
   return {
     id,
     league,
+    seasonPhase: normalizeSeasonPhase(raw?.seasonPhase),
     venue: raw?.venue ?? "",
     roundLabel: raw?.roundLabel ?? "",
     startAtJst,

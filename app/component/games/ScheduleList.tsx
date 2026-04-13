@@ -26,10 +26,6 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import {
-  nbaConferenceRankByTeamId,
-  type NbaTeamDocForConferenceRank,
-} from "@/lib/nbaConferenceStandingsRank";
-import {
   SCHEDULE_MY_POST_DELETED_EVENT,
   type ScheduleMyPostDeletedDetail,
 } from "@/lib/games/scheduleMyPostSyncEvents";
@@ -44,10 +40,10 @@ type TeamRecord = {
 };
 
 /** パースロジック変更時に上げてセッションキャッシュを無効化 */
-const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v3";
+const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v4";
 const TEAM_RECORD_CACHE_TTL_MS = 1000 * 60 * 30;
 /** in-memory は teamId 単体だと古い勝敗が残るためバージョン付きキー */
-const TEAM_RECORD_MEM_VER = 2;
+const TEAM_RECORD_MEM_VER = 3;
 function teamRecordMemKey(teamId: string) {
   return `${teamId}:v${TEAM_RECORD_MEM_VER}`;
 }
@@ -370,11 +366,15 @@ export default function ScheduleList({
 
       if (alive) setTeamRecordMap(immediateMap);
 
-      const missingTeamIds = teamIds.filter(
-        (teamId) =>
-          !memoryTeamRecordCache.has(teamRecordMemKey(teamId)) &&
-          !sessionCache[teamId]
-      );
+      /** NBA: always refetch team docs so MatchCard rank matches updateTeamRankings */
+      const missingTeamIds =
+        leagueAnimKey === "nba"
+          ? teamIds
+          : teamIds.filter(
+              (teamId) =>
+                !memoryTeamRecordCache.has(teamRecordMemKey(teamId)) &&
+                !sessionCache[teamId]
+            );
 
       let merged: Record<string, TeamRecord> = { ...immediateMap };
       let nextSessionCache: Record<string, TeamRecord> = { ...sessionCache };
@@ -414,11 +414,7 @@ export default function ScheduleList({
               const value: TeamRecord = {
                 wins: wl.wins,
                 losses: wl.losses,
-                rank: isNbaTeam
-                  ? undefined
-                  : typeof d.rank === "number"
-                    ? d.rank
-                    : undefined,
+                rank: typeof d.rank === "number" ? d.rank : undefined,
                 lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
               };
 
@@ -427,47 +423,7 @@ export default function ScheduleList({
               merged[teamId] = value;
             });
           });
-        }
 
-        // NBA: スタンディングと同じレギュラー勝敗＋カンファレンス内順位（teams の生 wins とズレることがある）
-        if (leagueAnimKey === "nba" && teamIds.length > 0) {
-          const nbaSnap = await getDocs(
-            query(collection(db, "teams"), where("league", "==", "nba"))
-          );
-          if (!alive) return;
-          const rows: NbaTeamDocForConferenceRank[] = nbaSnap.docs.map(
-            (d) =>
-              ({
-                id: d.id,
-                ...(d.data() as Record<string, unknown>),
-              }) as NbaTeamDocForConferenceRank
-          );
-          const rankById = nbaConferenceRankByTeamId(rows);
-          const wlById: Record<string, { wins: number; losses: number }> = {};
-          for (const row of rows) {
-            wlById[row.id] = nbaRegularSeasonWinsLosses(row);
-          }
-          for (const tid of teamIds) {
-            const wl = wlById[tid];
-            if (!wl) continue;
-            const base = merged[tid] ?? {
-              wins: 0,
-              losses: 0,
-              lastGames: [] as TeamRecord["lastGames"],
-            };
-            const nextRow: TeamRecord = {
-              ...base,
-              wins: wl.wins,
-              losses: wl.losses,
-              rank: rankById[tid] ?? base.rank,
-            };
-            merged[tid] = nextRow;
-            memoryTeamRecordCache.set(teamRecordMemKey(tid), nextRow);
-            nextSessionCache[tid] = nextRow;
-          }
-        }
-
-        if (missingTeamIds.length > 0 || leagueAnimKey === "nba") {
           writeTeamRecordCacheToSession(nextSessionCache);
           if (alive) setTeamRecordMap(merged);
         }

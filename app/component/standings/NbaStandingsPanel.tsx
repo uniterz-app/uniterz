@@ -8,6 +8,7 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import { compareNbaStandingsSortRows } from "@/lib/nba/compareNbaStandingsSort";
 
 /* ================= util ================= */
 
@@ -72,6 +73,7 @@ type Team = {
   losses: number;
   winRate?: number;
   rank?: number;
+  standingsTiebreakOrder?: number;
   cupFinalWins?: number;
   cupFinalLosses?: number;
   /** 詳細スタッツと同じ集計元（onGameFinalV2 → updateTeamStats） */
@@ -180,17 +182,7 @@ function Conference({
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const sorted = [...teams].sort((a, b) => {
-    const { wins: aw, losses: al } = nbaRegularSeasonWinsLosses(a);
-    const { wins: bw, losses: bl } = nbaRegularSeasonWinsLosses(b);
-
-    const ar = aw + al > 0 ? aw / (aw + al) : 0;
-    const br = bw + bl > 0 ? bw / (bw + bl) : 0;
-
-    if (ar !== br) return br - ar;
-    if (aw !== bw) return bw - aw;
-    return 0;
-  });
+  const sorted = [...teams].sort(compareNbaStandingsSortRows);
 
   const leader = sorted[0];
   if (!leader) return null;

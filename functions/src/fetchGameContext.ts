@@ -18,6 +18,8 @@ export type NormalizedGame = {
   awayRank: number | null;
   /** 試合開始（lastGames の日時用。JST 優先） */
   playedAt?: Timestamp | null;
+  /** regular | play_in | playoffs; omitted/null treated as regular for standings. */
+  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
 };
 
 export type GameContext = {
@@ -48,6 +50,7 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     homeRank: null,
     awayRank: null,
     playedAt: after?.startAtJst ?? after?.startAt ?? null,
+    seasonPhase: after?.seasonPhase ?? null,
   };
 }
 

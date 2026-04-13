@@ -1,11 +1,11 @@
 import { FieldValue } from "firebase-admin/firestore";
 
+export type TeamSeasonRecordTarget = "regular" | "playoffs";
+
 /**
  * 試合確定時に teams のシーズン通算（wins / losses / draws）を更新する。
- * updateTeamStats と同様、onGameFinalV2 の becameFinal のときだけ呼ぶこと（スコア訂正の再計算は未対応）。
- *
- * - j1 / pl: 引き分けは draws を +1（updateTeamRankings と同じ draws フィールド）
- * - それ以外（nba, bj 等）: 勝ち負けのみ。同点は想定外のためログしてスキップ
+ * - target regular: ルートの wins / losses / draws（レギュラー・ランキング用）
+ * - target playoffs: playoff.wins / playoff.losses / playoff.draws
  */
 export async function updateTeamSeasonRecord({
   db,
@@ -14,6 +14,7 @@ export async function updateTeamSeasonRecord({
   awayTeamId,
   homeScore,
   awayScore,
+  target = "regular",
 }: {
   db: FirebaseFirestore.Firestore;
   league?: string;
@@ -21,6 +22,7 @@ export async function updateTeamSeasonRecord({
   awayTeamId: string;
   homeScore: number;
   awayScore: number;
+  target?: TeamSeasonRecordTarget;
 }): Promise<void> {
   if (!league) {
     console.warn("[updateTeamSeasonRecord] missing league, skip");
@@ -32,6 +34,10 @@ export async function updateTeamSeasonRecord({
   const awayRef = db.doc(`teams/${awayTeamId}`);
   const ts = FieldValue.serverTimestamp();
 
+  const wk = target === "playoffs" ? "playoff.wins" : "wins";
+  const lk = target === "playoffs" ? "playoff.losses" : "losses";
+  const dk = target === "playoffs" ? "playoff.draws" : "draws";
+
   if (homeScore === awayScore) {
     if (!isSoccer) {
       console.warn("[updateTeamSeasonRecord] tie in non-soccer game, skip", {
@@ -42,19 +48,19 @@ export async function updateTeamSeasonRecord({
       return;
     }
     const batch = db.batch();
-    batch.update(homeRef, { draws: FieldValue.increment(1), updatedAt: ts });
-    batch.update(awayRef, { draws: FieldValue.increment(1), updatedAt: ts });
+    batch.update(homeRef, { [dk]: FieldValue.increment(1), updatedAt: ts });
+    batch.update(awayRef, { [dk]: FieldValue.increment(1), updatedAt: ts });
     await batch.commit();
     return;
   }
 
   const batch = db.batch();
   if (homeScore > awayScore) {
-    batch.update(homeRef, { wins: FieldValue.increment(1), updatedAt: ts });
-    batch.update(awayRef, { losses: FieldValue.increment(1), updatedAt: ts });
+    batch.update(homeRef, { [wk]: FieldValue.increment(1), updatedAt: ts });
+    batch.update(awayRef, { [lk]: FieldValue.increment(1), updatedAt: ts });
   } else {
-    batch.update(awayRef, { wins: FieldValue.increment(1), updatedAt: ts });
-    batch.update(homeRef, { losses: FieldValue.increment(1), updatedAt: ts });
+    batch.update(awayRef, { [wk]: FieldValue.increment(1), updatedAt: ts });
+    batch.update(homeRef, { [lk]: FieldValue.increment(1), updatedAt: ts });
   }
   await batch.commit();
 }

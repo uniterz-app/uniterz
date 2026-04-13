@@ -10,6 +10,10 @@ import { aggregateGamePointsDistributionFromPostsSnap } from "./aggregateGamePoi
 import { updateUserStreak } from "./updateUserStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
+import {
+  countsTowardPlayoffTeamStats,
+  countsTowardRegularSeasonTeamStats,
+} from "./teamStandingsSeasonPhase";
 
 const db = () => getFirestore();
 
@@ -66,27 +70,57 @@ export const onGameFinalV2 = onDocumentWritten(
         final: { home: game.homeScore, away: game.awayScore },
       });
 
-      await updateTeamSeasonRecord({
-        db: firestore,
-        league: game.league,
-        homeTeamId: game.homeTeamId,
-        awayTeamId: game.awayTeamId,
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
-      });
+      if (countsTowardRegularSeasonTeamStats(game.seasonPhase)) {
+        await updateTeamSeasonRecord({
+          db: firestore,
+          league: game.league,
+          homeTeamId: game.homeTeamId,
+          awayTeamId: game.awayTeamId,
+          homeScore: game.homeScore,
+          awayScore: game.awayScore,
+          target: "regular",
+        });
 
-      await updateTeamStats({
-        db: firestore,
-        game: {
-          ...game,
-          homeRank,
-          awayRank,
-        },
-        homeConference,
-        awayConference,
-        homeWins,
-        awayWins,
-      });
+        await updateTeamStats({
+          db: firestore,
+          game: {
+            ...game,
+            homeRank,
+            awayRank,
+          },
+          homeConference,
+          awayConference,
+          homeWins,
+          awayWins,
+          target: "regular",
+        });
+      }
+
+      if (countsTowardPlayoffTeamStats(game.seasonPhase)) {
+        await updateTeamSeasonRecord({
+          db: firestore,
+          league: game.league,
+          homeTeamId: game.homeTeamId,
+          awayTeamId: game.awayTeamId,
+          homeScore: game.homeScore,
+          awayScore: game.awayScore,
+          target: "playoffs",
+        });
+
+        await updateTeamStats({
+          db: firestore,
+          game: {
+            ...game,
+            homeRank,
+            awayRank,
+          },
+          homeConference,
+          awayConference,
+          homeWins,
+          awayWins,
+          target: "playoffs",
+        });
+      }
     }
 
     /* ===== ③ market / upset ===== */

@@ -86,11 +86,11 @@ Object.defineProperty(exports, "onPostCreatedV2", { enumerable: true, get: funct
 var onPostDeleted_1 = require("./onPostDeleted");
 Object.defineProperty(exports, "onPostDeletedV2", { enumerable: true, get: function () { return onPostDeleted_1.onPostDeletedV2; } });
 /* ============================================================================
- * Team Rankings (Daily)
+ * Team Rankings (16:00 JST — only when NBA has games that calendar day)
  * ==========================================================================*/
-const updateTeamRankings_1 = require("./team-standing/updateTeamRankings");
-exports.updateTeamRankingsDaily = (0, scheduler_1.onSchedule)({ schedule: "0 0 * * *", timeZone: "Asia/Tokyo" }, async () => {
-    await (0, updateTeamRankings_1.updateTeamRankings)();
+const runTeamRankingsCron_1 = require("./team-standing/runTeamRankingsCron");
+exports.updateTeamRankingsDaily = (0, scheduler_1.onSchedule)({ schedule: "0 16 * * *", timeZone: "Asia/Tokyo" }, async () => {
+    await (0, runTeamRankingsCron_1.runTeamRankingsCronIfNbaGamesToday)();
 });
 /* ============================================================================
  * Cumulative Stats (15:40)

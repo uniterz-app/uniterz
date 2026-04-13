@@ -48,6 +48,8 @@ export type TeamSide = {
 export type MatchCardProps = {
   id: string;
   league: League;
+  /** regular | play_in | playoffs; omitted/null = regular. */
+  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
   venue?: string;
   roundLabel?: string;
   startAtJst: Date | null;

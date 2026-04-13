@@ -53,15 +53,15 @@ export { onPostCreatedV2 } from "./onPostCreated";
 export { onPostDeletedV2 } from "./onPostDeleted";
 
 /* ============================================================================
- * Team Rankings (Daily)
+ * Team Rankings (16:00 JST — only when NBA has games that calendar day)
  * ==========================================================================*/
 
-import { updateTeamRankings } from "./team-standing/updateTeamRankings";
+import { runTeamRankingsCronIfNbaGamesToday } from "./team-standing/runTeamRankingsCron";
 
 export const updateTeamRankingsDaily = onSchedule(
-  { schedule: "0 0 * * *", timeZone: "Asia/Tokyo" },
+  { schedule: "0 16 * * *", timeZone: "Asia/Tokyo" },
   async () => {
-    await updateTeamRankings();
+    await runTeamRankingsCronIfNbaGamesToday();
   }
 );
 

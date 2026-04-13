@@ -1,0 +1,1 @@
+{"version":3,"file":"teamStandingsSeasonPhase.js","sourceRoot":"","sources":["../src/teamStandingsSeasonPhase.ts"],"names":[],"mappings":";;AAGA,gFAGC;AAKD,oEAEC;AAbD;;GAEG;AACH,SAAgB,kCAAkC,CAAC,KAAc;IAC/D,IAAI,KAAK,KAAK,SAAS,IAAI,KAAK,KAAK,UAAU;QAAE,OAAO,KAAK,CAAC;IAC9D,OAAO,IAAI,CAAC;AACd,CAAC;AAED;;GAEG;AACH,SAAgB,4BAA4B,CAAC,KAAc;IACzD,OAAO,KAAK,KAAK,UAAU,CAAC;AAC9B,CAAC"}
