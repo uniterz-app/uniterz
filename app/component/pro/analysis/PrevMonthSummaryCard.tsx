@@ -182,6 +182,14 @@ function MetaBits({ children }: { children: ReactNode }) {
   );
 }
 
+function EmptyMetricPlaceholder({ language }: { language: Language }) {
+  return (
+    <p className="py-5 text-center text-sm text-white/55">
+      {language === "en" ? "No data available" : "データがありません"}
+    </p>
+  );
+}
+
 function LeaguePostCountUp({
   count,
   enabled,
@@ -246,6 +254,7 @@ export default function PrevMonthSummaryCard({
   const oldRaw = olderStats?.raw ?? {};
 
   const posts = raw.posts ?? 0;
+  const showEmptyMetrics = posts === 0;
   const postsOld = oldRaw.posts ?? null;
 
   const leaguePostLines = Object.entries(raw.leaguePosts ?? {})
@@ -380,7 +389,7 @@ export default function PrevMonthSummaryCard({
 
   const [benchOpen, setBenchOpen] = useState(false);
   const benchSectionId = useId().replace(/:/g, "");
-  const hasBench = pointsSumBenchmarks != null;
+  const hasBench = pointsSumBenchmarks != null && !showEmptyMetrics;
 
   const totalShellClass = [
     CARD_SHELL,
@@ -417,183 +426,200 @@ export default function PrevMonthSummaryCard({
         >
         <ShellGridOverlay roundedClassName="rounded-2xl" />
         <div className="relative z-1">
-          {showTotalPointsRankBadge && totalPointsRankRaw !== null ? (
+          {showEmptyMetrics ? (
             <>
-              <div
-                className={[
-                  "pointer-events-none absolute left-2 top-2 z-[2] flex h-[3.25rem] w-[3.25rem] flex-col items-center justify-center rounded-full",
-                  "border border-amber-300/40 bg-gradient-to-b from-amber-400/20 to-white/[0.06]",
-                  "shadow-[0_0_22px_rgba(251,191,36,0.18)]",
-                  "sm:left-3 sm:top-3 sm:h-14 sm:w-14",
-                ].join(" ")}
-                aria-hidden
-              >
-                <span
-                  className={[
-                    resultStatsMetricNumClass,
-                    "leading-none text-white",
-                    totalPointsRankRaw >= 100
-                      ? "text-sm sm:text-base lg:text-lg"
-                      : "text-base sm:text-lg lg:text-xl",
-                  ].join(" ")}
-                >
-                  {cuRank}
-                </span>
-                <span
-                  className={[
-                    resultStatsMetricNumClass,
-                    "mt-0.5 text-[9px] font-bold uppercase leading-none tracking-wide text-amber-100/75 sm:text-[10px] lg:text-xs",
-                  ].join(" ")}
-                >
-                  {ordinalSuffixEn(totalPointsRankRaw)}
-                </span>
-              </div>
-              <span className="sr-only">
-                {language === "en"
-                  ? `Rank ${totalPointsRankRaw}${ordinalSuffixEn(totalPointsRankRaw)} by total points`
-                  : `総合得点 ${totalPointsRankRaw}${ordinalSuffixEn(totalPointsRankRaw)}`}
-              </span>
-            </>
-          ) : null}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Crown
-              className="h-4 w-4 shrink-0 text-amber-200/90 lg:h-[1.35rem] lg:w-[1.35rem]"
-              strokeWidth={2}
-            />
-            <span className="text-sm font-semibold text-white/90 lg:text-lg">
-              {lb.totalPts}
-            </span>
-          </div>
-
-          <div className="mt-3 flex w-full justify-center px-1">
-            <div className="flex translate-x-8 items-center gap-x-4 sm:translate-x-0 sm:gap-x-5">
-              <span className="inline-flex shrink-0 items-baseline gap-1.5">
-                <span
-                  className={`text-2xl leading-none text-white sm:text-3xl lg:text-[2.55rem] ${resultStatsMetricNumClass}`}
-                >
-                  {formatMetricDecimals(cuPoints, 1)}
-                </span>
-                <span
-                  className={`text-base leading-none text-white/65 sm:text-lg lg:text-[1.35rem] ${resultStatsMetricNumClass}`}
-                >
-                  pts
-                </span>
-              </span>
-              <div className="flex shrink-0 flex-col items-end justify-center gap-0.5 text-right">
-                <span className="text-[10px] leading-tight text-white/40 lg:text-sm">
-                  {lb.priorMoM}
-                </span>
-                <DeltaBadge
-                  language={language}
-                  deltaPct={null}
-                  deltaPts={
-                    pointsSumOld == null
-                      ? null
-                      : pointsSum - pointsSumOld
-                  }
-                  higherIsBetter
-                  absoluteDecimals={1}
-                  absoluteSuffix="pts"
-                  textSizeClass="text-[10px] lg:text-[15px]"
-                  iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Crown
+                  className="h-4 w-4 shrink-0 text-amber-200/90 lg:h-[1.35rem] lg:w-[1.35rem]"
+                  strokeWidth={2}
                 />
+                <span className="text-sm font-semibold text-white/90 lg:text-lg">
+                  {lb.totalPts}
+                </span>
               </div>
-            </div>
-          </div>
-
-          <div className="mt-2 grid grid-cols-3 gap-2 sm:gap-4">
-            <div className="min-w-0 text-center sm:text-left">
-              <div className="text-[10px] font-medium text-white/45 lg:text-[15px]">{lb.base}</div>
-              <div
-                className={`mt-1 text-base leading-none text-white sm:text-lg lg:text-[1.4rem] ${resultStatsMetricNumClass}`}
-              >
-                {formatMetricDecimals(cuBase, 1)}
-              </div>
-            </div>
-            <div className="min-w-0 text-center sm:text-left">
-              <div className="text-[10px] font-medium text-white/45 lg:text-[15px]">{lb.streakB}</div>
-              <div
-                className={`mt-1 text-base leading-none text-sky-100 sm:text-lg lg:text-[1.4rem] ${resultStatsMetricNumClass}`}
-              >
-                {formatMetricDecimals(cuStreakB, 1)}
-              </div>
-            </div>
-            <div className="min-w-0 text-center sm:text-left">
-              <div className="text-[10px] font-medium text-white/45 lg:text-[15px]">{lb.upsetB}</div>
-              <div
-                className={`mt-1 text-base leading-none text-amber-100 sm:text-lg lg:text-[1.4rem] ${resultStatsMetricNumClass}`}
-              >
-                {formatMetricDecimals(cuUpsetB, 1)}
-              </div>
-            </div>
-          </div>
-
-          {hasBench ? (
-            <div className="mt-2 flex items-center justify-center gap-1 text-[9px] text-white/38 sm:justify-between sm:pr-0.5 lg:text-xs">
-              <span>{lb.benchHint}</span>
-              <ChevronDown
-                className={`h-3.5 w-3.5 shrink-0 text-white/45 transition-transform ${benchOpen ? "rotate-180" : ""}`}
-                aria-hidden
-              />
-            </div>
-          ) : null}
-
-          <AnimatePresence initial={false}>
-            {benchOpen && hasBench && pointsSumBenchmarks ? (
-              <motion.div
-                id={benchSectionId}
-                key="bench"
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                className="mt-2 border-t border-white/10 pt-3"
-              >
-                <div className="grid grid-cols-2 gap-x-2 gap-y-2.5 sm:grid-cols-4 sm:gap-4">
-                  <div className="min-w-0 text-center sm:text-left">
-                    <div className="text-[10px] font-medium text-white/45 lg:text-xs">
-                      {lb.benchMean}
-                    </div>
-                    <div
-                      className={`mt-1 text-base leading-none text-white sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
+              <EmptyMetricPlaceholder language={language} />
+            </>
+          ) : (
+            <>
+              {showTotalPointsRankBadge && totalPointsRankRaw !== null ? (
+                <>
+                  <div
+                    className={[
+                      "pointer-events-none absolute left-2 top-2 z-[2] flex h-[3.25rem] w-[3.25rem] flex-col items-center justify-center rounded-full",
+                      "border border-amber-300/40 bg-gradient-to-b from-amber-400/20 to-white/[0.06]",
+                      "shadow-[0_0_22px_rgba(251,191,36,0.18)]",
+                      "sm:left-3 sm:top-3 sm:h-14 sm:w-14",
+                    ].join(" ")}
+                    aria-hidden
+                  >
+                    <span
+                      className={[
+                        resultStatsMetricNumClass,
+                        "leading-none text-white",
+                        totalPointsRankRaw >= 100
+                          ? "text-sm sm:text-base lg:text-lg"
+                          : "text-base sm:text-lg lg:text-xl",
+                      ].join(" ")}
                     >
-                      {formatMetricDecimals(pointsSumBenchmarks.mean, 1)}
-                    </div>
+                      {cuRank}
+                    </span>
+                    <span
+                      className={[
+                        resultStatsMetricNumClass,
+                        "mt-0.5 text-[9px] font-bold uppercase leading-none tracking-wide text-amber-100/75 sm:text-[10px] lg:text-xs",
+                      ].join(" ")}
+                    >
+                      {ordinalSuffixEn(totalPointsRankRaw)}
+                    </span>
                   </div>
-                  <div className="min-w-0 text-center sm:text-left">
-                    <div className="text-[10px] font-medium text-white/45 lg:text-xs">
-                      {lb.benchMed}
-                    </div>
-                    <div
-                      className={`mt-1 text-base leading-none text-white sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
+                  <span className="sr-only">
+                    {language === "en"
+                      ? `Rank ${totalPointsRankRaw}${ordinalSuffixEn(totalPointsRankRaw)} by total points`
+                      : `総合得点 ${totalPointsRankRaw}${ordinalSuffixEn(totalPointsRankRaw)}`}
+                  </span>
+                </>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Crown
+                  className="h-4 w-4 shrink-0 text-amber-200/90 lg:h-[1.35rem] lg:w-[1.35rem]"
+                  strokeWidth={2}
+                />
+                <span className="text-sm font-semibold text-white/90 lg:text-lg">
+                  {lb.totalPts}
+                </span>
+              </div>
+
+              <div className="mt-3 flex w-full justify-center px-1">
+                <div className="flex translate-x-8 items-center gap-x-4 sm:translate-x-0 sm:gap-x-5">
+                  <span className="inline-flex shrink-0 items-baseline gap-1.5">
+                    <span
+                      className={`text-2xl leading-none text-white sm:text-3xl lg:text-[2.55rem] ${resultStatsMetricNumClass}`}
                     >
-                      {formatMetricDecimals(pointsSumBenchmarks.median, 1)}
-                    </div>
-                  </div>
-                  <div className="min-w-0 text-center sm:text-left">
-                    <div className="text-[10px] font-medium text-white/45 lg:text-xs">
-                      {lb.benchP90}
-                    </div>
-                    <div
-                      className={`mt-1 text-base leading-none text-violet-200/95 sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
+                      {formatMetricDecimals(cuPoints, 1)}
+                    </span>
+                    <span
+                      className={`text-base leading-none text-white/65 sm:text-lg lg:text-[1.35rem] ${resultStatsMetricNumClass}`}
                     >
-                      {formatMetricDecimals(pointsSumBenchmarks.p90, 1)}
-                    </div>
-                  </div>
-                  <div className="min-w-0 text-center sm:text-left">
-                    <div className="text-[10px] font-medium text-white/45 lg:text-xs">
-                      {lb.benchMax}
-                    </div>
-                    <div
-                      className={`mt-1 text-base leading-none text-amber-100 sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
-                    >
-                      {formatMetricDecimals(pointsSumBenchmarks.max, 1)}
-                    </div>
+                      pts
+                    </span>
+                  </span>
+                  <div className="flex shrink-0 flex-col items-end justify-center gap-0.5 text-right">
+                    <span className="text-[10px] leading-tight text-white/40 lg:text-sm">
+                      {lb.priorMoM}
+                    </span>
+                    <DeltaBadge
+                      language={language}
+                      deltaPct={null}
+                      deltaPts={
+                        pointsSumOld == null
+                          ? null
+                          : pointsSum - pointsSumOld
+                      }
+                      higherIsBetter
+                      absoluteDecimals={1}
+                      absoluteSuffix="pts"
+                      textSizeClass="text-[10px] lg:text-[15px]"
+                      iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
+                    />
                   </div>
                 </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+              </div>
+
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="min-w-0 text-center sm:text-left">
+                  <div className="text-[10px] font-medium text-white/45 lg:text-[15px]">{lb.base}</div>
+                  <div
+                    className={`mt-1 text-base leading-none text-white sm:text-lg lg:text-[1.4rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {formatMetricDecimals(cuBase, 1)}
+                  </div>
+                </div>
+                <div className="min-w-0 text-center sm:text-left">
+                  <div className="text-[10px] font-medium text-white/45 lg:text-[15px]">{lb.streakB}</div>
+                  <div
+                    className={`mt-1 text-base leading-none text-sky-100 sm:text-lg lg:text-[1.4rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {formatMetricDecimals(cuStreakB, 1)}
+                  </div>
+                </div>
+                <div className="min-w-0 text-center sm:text-left">
+                  <div className="text-[10px] font-medium text-white/45 lg:text-[15px]">{lb.upsetB}</div>
+                  <div
+                    className={`mt-1 text-base leading-none text-amber-100 sm:text-lg lg:text-[1.4rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {formatMetricDecimals(cuUpsetB, 1)}
+                  </div>
+                </div>
+              </div>
+
+              {hasBench ? (
+                <div className="mt-2 flex items-center justify-center gap-1 text-[9px] text-white/38 sm:justify-between sm:pr-0.5 lg:text-xs">
+                  <span>{lb.benchHint}</span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 text-white/45 transition-transform ${benchOpen ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
+                </div>
+              ) : null}
+
+              <AnimatePresence initial={false}>
+                {benchOpen && hasBench && pointsSumBenchmarks ? (
+                  <motion.div
+                    id={benchSectionId}
+                    key="bench"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                    className="mt-2 border-t border-white/10 pt-3"
+                  >
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-2.5 sm:grid-cols-4 sm:gap-4">
+                      <div className="min-w-0 text-center sm:text-left">
+                        <div className="text-[10px] font-medium text-white/45 lg:text-xs">
+                          {lb.benchMean}
+                        </div>
+                        <div
+                          className={`mt-1 text-base leading-none text-white sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
+                        >
+                          {formatMetricDecimals(pointsSumBenchmarks.mean, 1)}
+                        </div>
+                      </div>
+                      <div className="min-w-0 text-center sm:text-left">
+                        <div className="text-[10px] font-medium text-white/45 lg:text-xs">
+                          {lb.benchMed}
+                        </div>
+                        <div
+                          className={`mt-1 text-base leading-none text-white sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
+                        >
+                          {formatMetricDecimals(pointsSumBenchmarks.median, 1)}
+                        </div>
+                      </div>
+                      <div className="min-w-0 text-center sm:text-left">
+                        <div className="text-[10px] font-medium text-white/45 lg:text-xs">
+                          {lb.benchP90}
+                        </div>
+                        <div
+                          className={`mt-1 text-base leading-none text-violet-200/95 sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
+                        >
+                          {formatMetricDecimals(pointsSumBenchmarks.p90, 1)}
+                        </div>
+                      </div>
+                      <div className="min-w-0 text-center sm:text-left">
+                        <div className="text-[10px] font-medium text-white/45 lg:text-xs">
+                          {lb.benchMax}
+                        </div>
+                        <div
+                          className={`mt-1 text-base leading-none text-amber-100 sm:text-lg lg:text-xl ${resultStatsMetricNumClass}`}
+                        >
+                          {formatMetricDecimals(pointsSumBenchmarks.max, 1)}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </>
+          )}
         </div>
       </div>
         <div className="hidden min-h-0 min-w-0 lg:block">
@@ -602,36 +628,40 @@ export default function PrevMonthSummaryCard({
             icon={<Target className="h-4 w-4" />}
             title={language === "en" ? "Win rate" : "勝率"}
           >
-            <div className="flex items-center justify-start gap-6 sm:gap-5">
-              <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:gap-x-3">
-                <span className="self-baseline text-xs font-medium text-orange-300/95 sm:text-xs lg:text-[15px]">
-                  Hit
-                </span>
-                <span
-                  className={`w-full self-baseline text-right text-2xl tabular-nums text-white sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
-                >
-                  {cuWins}
-                </span>
-                <span className="self-baseline text-xs font-medium text-zinc-400 sm:text-xs lg:text-[15px]">
-                  Miss
-                </span>
-                <span
-                  className={`w-full self-baseline text-right text-2xl tabular-nums text-white/45 sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
-                >
-                  {cuLosses}
-                </span>
+            {showEmptyMetrics ? (
+              <EmptyMetricPlaceholder language={language} />
+            ) : (
+              <div className="flex items-center justify-start gap-6 sm:gap-5">
+                <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:gap-x-3">
+                  <span className="self-baseline text-xs font-medium text-orange-300/95 sm:text-xs lg:text-[15px]">
+                    Hit
+                  </span>
+                  <span
+                    className={`w-full self-baseline text-right text-2xl tabular-nums text-white sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {cuWins}
+                  </span>
+                  <span className="self-baseline text-xs font-medium text-zinc-400 sm:text-xs lg:text-[15px]">
+                    Miss
+                  </span>
+                  <span
+                    className={`w-full self-baseline text-right text-2xl tabular-nums text-white/45 sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {cuLosses}
+                  </span>
+                </div>
+                <WinRateOverviewDonut
+                  ratio01={winRate}
+                  percentDisplay={cuWinPct}
+                  language={language}
+                  compact
+                  animationEnabled={winIvWeb.inView}
+                  className="ml-1 shrink-0 scale-[0.84] max-sm:translate-x-0 sm:ml-1 sm:scale-[0.86] lg:ml-6 lg:translate-x-4 lg:scale-[1.25]"
+                  percentTextClassName="lg:!text-[1.35rem]"
+                  labelTextClassName="lg:!text-[10px]"
+                />
               </div>
-              <WinRateOverviewDonut
-                ratio01={winRate}
-                percentDisplay={cuWinPct}
-                language={language}
-                compact
-                animationEnabled={winIvWeb.inView}
-                className="ml-1 shrink-0 scale-[0.84] max-sm:translate-x-0 sm:ml-1 sm:scale-[0.86] lg:ml-6 lg:translate-x-4 lg:scale-[1.25]"
-                percentTextClassName="lg:!text-[1.35rem]"
-                labelTextClassName="lg:!text-[10px]"
-              />
-            </div>
+            )}
           </MetricCard>
         </div>
       </div>
@@ -643,48 +673,54 @@ export default function PrevMonthSummaryCard({
             icon={<BarChart3 className="h-4 w-4" />}
             title={language === "en" ? "Total posts" : "投稿総数"}
           >
-            <div className="flex items-end justify-between gap-2">
-              <div
-                className={`text-3xl leading-none text-white sm:text-4xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
-              >
-                {cuPosts}
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-0.5 pb-0.5 text-right">
-                <span className="text-[10px] leading-tight text-white/40 lg:text-[13px]">
-                  {lb.priorMoM}
-                </span>
-                <DeltaBadge
-                  language={language}
-                  deltaPct={null}
-                  deltaPts={
-                    postsOld == null ? null : posts - postsOld
-                  }
-                  higherIsBetter
-                  absoluteDecimals={0}
-                  textSizeClass="text-[10px] lg:text-[15px]"
-                  iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
-                />
-              </div>
-            </div>
-            {leaguePostLines.length > 0 ? (
-              <div className="mt-3 border-t border-white/10 pt-2">
-                <ul className="space-y-1">
-                  {leaguePostLines.map(({ key, label, count }) => (
-                    <li
-                      key={key}
-                      className={`text-[11px] leading-snug text-white/80 lg:text-[1.05rem] ${resultStatsMetricNumClass}`}
-                    >
-                      <span className="text-white/55">{label}</span>
-                      <span className="text-white/40">:</span>
-                      <LeaguePostCountUp
-                        count={count}
-                        enabled={postsIv.inView}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            {showEmptyMetrics ? (
+              <EmptyMetricPlaceholder language={language} />
+            ) : (
+              <>
+                <div className="flex items-end justify-between gap-2">
+                  <div
+                    className={`text-3xl leading-none text-white sm:text-4xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {cuPosts}
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-0.5 pb-0.5 text-right">
+                    <span className="text-[10px] leading-tight text-white/40 lg:text-[13px]">
+                      {lb.priorMoM}
+                    </span>
+                    <DeltaBadge
+                      language={language}
+                      deltaPct={null}
+                      deltaPts={
+                        postsOld == null ? null : posts - postsOld
+                      }
+                      higherIsBetter
+                      absoluteDecimals={0}
+                      textSizeClass="text-[10px] lg:text-[15px]"
+                      iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
+                    />
+                  </div>
+                </div>
+                {leaguePostLines.length > 0 ? (
+                  <div className="mt-3 border-t border-white/10 pt-2">
+                    <ul className="space-y-1">
+                      {leaguePostLines.map(({ key, label, count }) => (
+                        <li
+                          key={key}
+                          className={`text-[11px] leading-snug text-white/80 lg:text-[1.05rem] ${resultStatsMetricNumClass}`}
+                        >
+                          <span className="text-white/55">{label}</span>
+                          <span className="text-white/40">:</span>
+                          <LeaguePostCountUp
+                            count={count}
+                            enabled={postsIv.inView}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </>
+            )}
           </MetricCard>
         </div>
         <div className="min-h-0 min-w-0 lg:hidden">
@@ -693,36 +729,40 @@ export default function PrevMonthSummaryCard({
             icon={<Target className="h-4 w-4" />}
             title={language === "en" ? "Win rate" : "勝率"}
           >
-            <div className="flex items-center justify-start gap-6 sm:gap-5">
-              <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:gap-x-3">
-                <span className="self-baseline text-xs font-medium text-orange-300/95 sm:text-xs lg:text-[15px]">
-                  Hit
-                </span>
-                <span
-                  className={`w-full self-baseline text-right text-2xl tabular-nums text-white sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
-                >
-                  {cuWins}
-                </span>
-                <span className="self-baseline text-xs font-medium text-zinc-400 sm:text-xs lg:text-[15px]">
-                  Miss
-                </span>
-                <span
-                  className={`w-full self-baseline text-right text-2xl tabular-nums text-white/45 sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
-                >
-                  {cuLosses}
-                </span>
+            {showEmptyMetrics ? (
+              <EmptyMetricPlaceholder language={language} />
+            ) : (
+              <div className="flex items-center justify-start gap-6 sm:gap-5">
+                <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 sm:gap-x-3">
+                  <span className="self-baseline text-xs font-medium text-orange-300/95 sm:text-xs lg:text-[15px]">
+                    Hit
+                  </span>
+                  <span
+                    className={`w-full self-baseline text-right text-2xl tabular-nums text-white sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {cuWins}
+                  </span>
+                  <span className="self-baseline text-xs font-medium text-zinc-400 sm:text-xs lg:text-[15px]">
+                    Miss
+                  </span>
+                  <span
+                    className={`w-full self-baseline text-right text-2xl tabular-nums text-white/45 sm:text-3xl lg:text-[2.5rem] ${resultStatsMetricNumClass}`}
+                  >
+                    {cuLosses}
+                  </span>
+                </div>
+                <WinRateOverviewDonut
+                  ratio01={winRate}
+                  percentDisplay={cuWinPct}
+                  language={language}
+                  compact
+                  animationEnabled={winIvMobile.inView}
+                  className="ml-3 shrink-0 max-sm:translate-x-0.5 sm:ml-2 sm:translate-x-0 lg:ml-6 lg:translate-x-4 lg:scale-[1.25]"
+                  percentTextClassName="lg:!text-[1.35rem]"
+                  labelTextClassName="lg:!text-[10px]"
+                />
               </div>
-              <WinRateOverviewDonut
-                ratio01={winRate}
-                percentDisplay={cuWinPct}
-                language={language}
-                compact
-                animationEnabled={winIvMobile.inView}
-                className="ml-3 shrink-0 max-sm:translate-x-0.5 sm:ml-2 sm:translate-x-0 lg:ml-6 lg:translate-x-4 lg:scale-[1.25]"
-                percentTextClassName="lg:!text-[1.35rem]"
-                labelTextClassName="lg:!text-[10px]"
-              />
-            </div>
+            )}
           </MetricCard>
         </div>
         <div className="col-span-2 grid grid-cols-2 items-stretch gap-2 sm:gap-3 lg:col-span-1 lg:contents">
@@ -732,59 +772,65 @@ export default function PrevMonthSummaryCard({
             icon={<Crosshair className="h-4 w-4" />}
             title={language === "en" ? "Score precision" : "スコア精度"}
           >
-            <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-              <div>
-                <div className="text-[10px] text-white/45 lg:text-[13px]">{lb.sumTotal}</div>
-                <span className="inline-flex items-baseline gap-1">
+            {showEmptyMetrics ? (
+              <EmptyMetricPlaceholder language={language} />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <div>
+                    <div className="text-[10px] text-white/45 lg:text-[13px]">{lb.sumTotal}</div>
+                    <span className="inline-flex items-baseline gap-1">
+                      <span
+                        className={`text-xl leading-none text-white sm:text-2xl lg:text-[2.25rem] ${resultStatsMetricNumClass}`}
+                      >
+                        {formatMetricDecimals(cuPrecSum, 1)}
+                      </span>
+                      <span
+                        className={`text-sm leading-none text-white/60 sm:text-base lg:text-xl ${resultStatsMetricNumClass}`}
+                      >
+                        pts
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-start gap-0.5 pb-0.5">
+                    <span className="text-[10px] leading-tight text-white/40 lg:text-[13px]">
+                      {lb.priorMoM}
+                    </span>
+                    <DeltaBadge
+                      language={language}
+                      deltaPct={null}
+                      deltaPts={
+                        scorePrecisionSumOld == null
+                          ? null
+                          : scorePrecisionSum - scorePrecisionSumOld
+                      }
+                      higherIsBetter
+                      absoluteDecimals={1}
+                      absoluteSuffix="pts"
+                      textSizeClass="text-[10px] lg:text-[15px]"
+                      iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 flex w-full min-w-0 items-center gap-2 sm:gap-3">
+                  <ResultStatRatingBar
+                    ratio={precisionBarRatio}
+                    animateMs={520}
+                    delayMs={0}
+                    size="md"
+                    animationActive={precIv.inView}
+                  />
                   <span
-                    className={`text-xl leading-none text-white sm:text-2xl lg:text-[2.25rem] ${resultStatsMetricNumClass}`}
+                    className={`shrink-0 whitespace-nowrap text-[13px] sm:text-[15px] lg:text-xl ${resultStatsMetricNumClass}`}
                   >
-                    {formatMetricDecimals(cuPrecSum, 1)}
+                    <span className="text-white/50">avg </span>
+                    <span className="text-white">
+                      {formatMetricDecimals(cuAvgPrec, posts > 0 ? 2 : 1)}
+                    </span>
                   </span>
-                  <span
-                    className={`text-sm leading-none text-white/60 sm:text-base lg:text-xl ${resultStatsMetricNumClass}`}
-                  >
-                    pts
-                  </span>
-                </span>
-              </div>
-              <div className="flex flex-col items-start gap-0.5 pb-0.5">
-                <span className="text-[10px] leading-tight text-white/40 lg:text-[13px]">
-                  {lb.priorMoM}
-                </span>
-                <DeltaBadge
-                  language={language}
-                  deltaPct={null}
-                  deltaPts={
-                    scorePrecisionSumOld == null
-                      ? null
-                      : scorePrecisionSum - scorePrecisionSumOld
-                  }
-                  higherIsBetter
-                  absoluteDecimals={1}
-                  absoluteSuffix="pts"
-                  textSizeClass="text-[10px] lg:text-[15px]"
-                  iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
-                />
-              </div>
-            </div>
-            <div className="mt-3 flex w-full min-w-0 items-center gap-2 sm:gap-3">
-              <ResultStatRatingBar
-                ratio={precisionBarRatio}
-                animateMs={520}
-                delayMs={0}
-                size="md"
-                animationActive={precIv.inView}
-              />
-              <span
-                className={`shrink-0 whitespace-nowrap text-[13px] sm:text-[15px] lg:text-xl ${resultStatsMetricNumClass}`}
-              >
-                <span className="text-white/50">avg </span>
-                <span className="text-white">
-                  {formatMetricDecimals(cuAvgPrec, posts > 0 ? 2 : 1)}
-                </span>
-              </span>
-            </div>
+                </div>
+              </>
+            )}
           </MetricCard>
           </div>
           <div className="min-h-0 min-w-0">
@@ -793,58 +839,64 @@ export default function PrevMonthSummaryCard({
             icon={<Zap className="h-4 w-4" />}
             title={language === "en" ? "Upset points" : "アップセット得点"}
           >
-            <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-              <div>
-                <div className="text-[10px] text-white/45 lg:text-[13px]">{lb.sumTotal}</div>
-                <span className="inline-flex items-baseline gap-1">
-                  <span
-                    className={`text-xl leading-none text-white sm:text-2xl lg:text-[2.25rem] ${resultStatsMetricNumClass}`}
-                  >
-                    {formatMetricDecimals(cuUpsetSum, 2)}
-                  </span>
-                  <span
-                    className={`text-sm leading-none text-white/60 sm:text-base lg:text-xl ${resultStatsMetricNumClass}`}
-                  >
-                    pts
-                  </span>
-                </span>
-              </div>
-              <div className="flex flex-col items-start gap-0.5 pb-0.5">
-                <span className="text-[10px] leading-tight text-white/40 lg:text-[13px]">
-                  {lb.priorMoM}
-                </span>
-                <DeltaBadge
-                  language={language}
-                  deltaPct={null}
-                  deltaPts={
-                    upsetSumOld == null
-                      ? null
-                      : upsetSum - upsetSumOld
-                  }
-                  higherIsBetter
-                  absoluteDecimals={2}
-                  absoluteSuffix="pts"
-                  textSizeClass="text-[10px] lg:text-[15px]"
-                  iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
-                />
-              </div>
-            </div>
-            {upsetHitCount !== null ? (
-              <div className="mt-3 border-t border-white/10 pt-2">
-                <p
-                  className={`text-[11px] leading-snug text-white/80 lg:text-sm ${resultStatsMetricNumClass}`}
-                >
-                  <span className="text-white/55">{lb.upsetHitLabel}</span>
-                  <span className="text-white/40"> : </span>
-                  <span className="tabular-nums text-white/90">
-                    {cuUpsetHit}
-                  </span>
-                  {language === "en" ? null : (
-                    <span className="text-white/55">件</span>
-                  )}
-                </p>
-              </div>
-            ) : null}
+            {showEmptyMetrics ? (
+              <EmptyMetricPlaceholder language={language} />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <div>
+                    <div className="text-[10px] text-white/45 lg:text-[13px]">{lb.sumTotal}</div>
+                    <span className="inline-flex items-baseline gap-1">
+                      <span
+                        className={`text-xl leading-none text-white sm:text-2xl lg:text-[2.25rem] ${resultStatsMetricNumClass}`}
+                      >
+                        {formatMetricDecimals(cuUpsetSum, 2)}
+                      </span>
+                      <span
+                        className={`text-sm leading-none text-white/60 sm:text-base lg:text-xl ${resultStatsMetricNumClass}`}
+                      >
+                        pts
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-start gap-0.5 pb-0.5">
+                    <span className="text-[10px] leading-tight text-white/40 lg:text-[13px]">
+                      {lb.priorMoM}
+                    </span>
+                    <DeltaBadge
+                      language={language}
+                      deltaPct={null}
+                      deltaPts={
+                        upsetSumOld == null
+                          ? null
+                          : upsetSum - upsetSumOld
+                      }
+                      higherIsBetter
+                      absoluteDecimals={2}
+                      absoluteSuffix="pts"
+                      textSizeClass="text-[10px] lg:text-[15px]"
+                      iconSizeClass="h-3 w-3 lg:h-4 lg:w-4"
+                    />
+                  </div>
+                </div>
+                {upsetHitCount !== null ? (
+                  <div className="mt-3 border-t border-white/10 pt-2">
+                    <p
+                      className={`text-[11px] leading-snug text-white/80 lg:text-sm ${resultStatsMetricNumClass}`}
+                    >
+                      <span className="text-white/55">{lb.upsetHitLabel}</span>
+                      <span className="text-white/40"> : </span>
+                      <span className="tabular-nums text-white/90">
+                        {cuUpsetHit}
+                      </span>
+                      {language === "en" ? null : (
+                        <span className="text-white/55">件</span>
+                      )}
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            )}
           </MetricCard>
           </div>
         </div>

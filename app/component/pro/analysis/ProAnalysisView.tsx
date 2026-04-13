@@ -10,7 +10,6 @@ import MarketBiasBars from "@/app/component/pro/analysis/MarketBiasSemiDonut";
 import StreakSummaryWithComment from "@/app/component/pro/analysis/StreakSummaryWithComment";
 import AnalysisStyleMap from "@/app/component/pro/analysis/AnalysisStyleMap";
 
-import { buildMonthlyImprovement } from "@/app/component/pro/analysis/summaryRules";
 import PrevMonthSummaryCard from "@/app/component/pro/analysis/PrevMonthSummaryCard";
 import SummaryCardReveal from "@/app/component/profile/ui/SummaryCardReveal";
 import type { Language } from "@/lib/i18n/language";
@@ -58,14 +57,6 @@ type Props = {
 
   analysisTypeId: AnalysisTypeId;
 
-  percentiles: {
-    winRate: number;
-    precision: number;
-    pointsV3: number;
-    upset: number;
-    volume: number;
-  };
-
   styleMapPoints: {
     homeAwayBias: number;
     marketBias: number;
@@ -102,6 +93,9 @@ type Props = {
     weak: any[];
   };
 
+  /** 選択月の user_stats_v2_monthly が無いときでもカードを出し、メッセージを表示 */
+  noMonthlyData?: boolean;
+
   /** Pro Stats タブ入場時のセクション演出（フェードアップ＋ブラー解除） */
   playSectionEntrance?: boolean;
 };
@@ -117,20 +111,15 @@ export default function ProAnalysisView({
   radar,
   radarAxisLevels,
   analysisTypeId,
-  percentiles,
   streak,
   prevStreak,
   styleMapPoints,
   homeAway,
   marketBias,
   teamAffinity,
+  noMonthlyData = false,
   playSectionEntrance = true,
 }: Props) {
-  const improvements = buildMonthlyImprovement({
-    month,
-    percentiles,
-  });
-
   const currentMonthIndex = months.indexOf(month);
 
   const prevMonth =
@@ -151,8 +140,6 @@ export default function ProAnalysisView({
   const revealMarket = revealK++;
   const revealStreak = revealK++;
   const revealTeam = revealK++;
-  const revealImprovements =
-    improvements.length > 0 ? revealK++ : -1;
   const revealTotal = revealK;
 
   return (
@@ -178,6 +165,12 @@ export default function ProAnalysisView({
       </div>
 
       {isSample && <SampleNotice />}
+
+      {noMonthlyData ? (
+        <div className="rounded-2xl border border-white/15 bg-[#050814]/80 px-4 py-3 text-center text-sm text-white/70">
+          {language === "en" ? "No data available" : "データがありません"}
+        </div>
+      ) : null}
 
       <div className="space-y-4">
         {prevMonthSummary ? (
@@ -225,6 +218,7 @@ export default function ProAnalysisView({
                 key={`${month}-${analysisTypeId}`}
                 analysisTypeId={analysisTypeId}
                 axisLevels={radarAxisLevels}
+                language={language}
               />
               <div className="hidden lg:block">
                 <StreakSummaryWithComment
@@ -355,34 +349,6 @@ export default function ProAnalysisView({
             weak={teamAffinity.weak}
           />
         </SummaryCardReveal>
-
-        {/* 8段目: 改善ポイント */}
-        {improvements.length > 0 ? (
-          <SummaryCardReveal
-            index={revealImprovements}
-            total={revealTotal}
-            enabled={playSectionEntrance}
-            enterVariant="blurUp"
-            className="w-full"
-          >
-            <div className="rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)]">
-              <div className="mb-2 text-sm font-semibold text-white md:text-lg">
-                今月の改善ポイント
-              </div>
-
-              <ul className="space-y-1">
-                {improvements.map((text, i) => (
-                  <li
-                    key={i}
-                    className="text-[12px] font-semibold leading-relaxed text-white md:text-[15px]"
-                  >
-                    • {text}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </SummaryCardReveal>
-        ) : null}
 
         {isSample && <SampleNotice />}
       </div>

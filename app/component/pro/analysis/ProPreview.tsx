@@ -141,13 +141,6 @@ export default function ProPreviewPage() {
         }}
         radarAxisLevels={PREVIEW_RADAR_LEVELS}
         analysisTypeId="COMPLETE_PLAYER"
-        percentiles={{
-          winRate: 92,
-          precision: 74,
-          pointsV3: 81,
-          upset: 61,
-          volume: 97,
-        }}
         streak={{ maxWin: 10, maxLose: 6 }}
         prevStreak={{ maxWin: 4, maxLose: 5 }}
         homeAway={{

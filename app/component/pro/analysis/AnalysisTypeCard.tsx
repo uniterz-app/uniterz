@@ -12,7 +12,7 @@ import {
 
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { ANALYSIS_TYPE_META_JA } from "@/shared/analysis/analysisTypeMeta";
-import type { AnalysisTypeId } from "@/shared/analysis/types";
+import type { AnalysisTypeId, AnalysisTypeMeta } from "@/shared/analysis/types";
 import { ANALYSIS_TYPE_COLOR } from "@/shared/analysis/analysisTypeColor";
 import type { RadarAxisLevels } from "@/app/component/pro/analysis/radarLevelUtils";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
@@ -20,10 +20,12 @@ import {
   summaryCardShadowSmClass,
   summaryCardShadowLgClass,
 } from "@/lib/ui/profileCardEdgeGlow";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   analysisTypeId: AnalysisTypeId;
   axisLevels?: RadarAxisLevels | null;
+  language?: Language;
 };
 
 const ALL_TYPE_IDS = Object.keys(ANALYSIS_TYPE_META_JA) as AnalysisTypeId[];
@@ -62,6 +64,8 @@ const AXIS_LABEL_JA: Record<keyof RadarAxisLevels, string> = {
   streak: "継続力",
 };
 
+const SPIN_META_FALLBACK: AnalysisTypeMeta = { label: "···", description: "" };
+
 function randomTypeId(): AnalysisTypeId {
   return ALL_TYPE_IDS[Math.floor(Math.random() * ALL_TYPE_IDS.length)]!;
 }
@@ -87,7 +91,11 @@ function buildDynamicLine(
   return `さらに上を目指すには、平均レベルの指標をもう一段引き上げること。ここが伸びると、${strongLabel}がつながり、オールラウンダーへと近づいていける。`;
 }
 
-export default function AnalysisTypeCard({ analysisTypeId, axisLevels }: Props) {
+export default function AnalysisTypeCard({
+  analysisTypeId,
+  axisLevels,
+  language = "ja",
+}: Props) {
   const meta = ANALYSIS_TYPE_META_JA[analysisTypeId];
   const rootRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -105,12 +113,13 @@ export default function AnalysisTypeCard({ analysisTypeId, axisLevels }: Props) 
 
   const spinMeta = useMemo(() => {
     if (spinId == null) {
-      return { label: "···", description: "" };
+      return SPIN_META_FALLBACK;
     }
-    return ANALYSIS_TYPE_META_JA[spinId] ?? meta;
+    return ANALYSIS_TYPE_META_JA[spinId] ?? meta ?? SPIN_META_FALLBACK;
   }, [spinId, meta]);
 
   const renderedDescription = useMemo(() => {
+    if (!meta?.description) return "";
     const mode = S2_TYPE_IDS.has(analysisTypeId)
       ? "S2"
       : S1_TYPE_IDS.has(analysisTypeId)
@@ -121,7 +130,7 @@ export default function AnalysisTypeCard({ analysisTypeId, axisLevels }: Props) 
     if (lines.length < 4) return meta.description;
     lines[2] = buildDynamicLine(axisLevels, mode);
     return lines.join("\n");
-  }, [analysisTypeId, axisLevels, meta.description]);
+  }, [analysisTypeId, axisLevels, meta]);
 
   const onCardEnterComplete = useCallback(() => {
     if (isInView && !reduceMotion) setEnterDone(true);
@@ -170,15 +179,13 @@ export default function AnalysisTypeCard({ analysisTypeId, axisLevels }: Props) 
     return () => window.clearTimeout(t);
   }, [isInView, reduceMotion, enterDone]);
 
-  if (!meta) {
-    return null;
-  }
-
   const cardEase: [number, number, number, number] = [0.22, 0.61, 0.36, 1];
+  const noTypeMeta = !meta;
   const dotColor =
     spinId != null
       ? (ANALYSIS_TYPE_COLOR[spinId] ?? ANALYSIS_TYPE_COLOR.PROSPECT)
       : "rgba(148,163,184,0.45)";
+  const emptyLabel = language === "en" ? "No data available" : "データがありません";
 
   return (
     <motion.div
@@ -217,7 +224,7 @@ export default function AnalysisTypeCard({ analysisTypeId, axisLevels }: Props) 
               )}
               style={{ color: dotColor }}
             >
-              {spinMeta.label}
+              {noTypeMeta ? "—" : spinMeta.label}
             </div>
           </div>
         </div>
@@ -226,7 +233,7 @@ export default function AnalysisTypeCard({ analysisTypeId, axisLevels }: Props) 
           className="whitespace-pre-line text-sm leading-relaxed text-white/80"
           initial={false}
           animate={
-            reduceMotion
+            noTypeMeta || reduceMotion
               ? { opacity: 1, y: 0 }
               : rouletteDone
                 ? { opacity: 1, y: 0 }
@@ -238,7 +245,7 @@ export default function AnalysisTypeCard({ analysisTypeId, axisLevels }: Props) 
             delay: reduceMotion ? 0 : 0.06,
           }}
         >
-          {renderedDescription}
+          {noTypeMeta ? emptyLabel : renderedDescription}
         </motion.p>
       </div>
     </motion.div>
