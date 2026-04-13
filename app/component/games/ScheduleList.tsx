@@ -25,7 +25,10 @@ import {
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
-import { nbaConferenceRankByTeamId } from "@/lib/nbaConferenceStandingsRank";
+import {
+  nbaConferenceRankByTeamId,
+  type NbaTeamDocForConferenceRank,
+} from "@/lib/nbaConferenceStandingsRank";
 import {
   SCHEDULE_MY_POST_DELETED_EVENT,
   type ScheduleMyPostDeletedDetail,
@@ -432,10 +435,13 @@ export default function ScheduleList({
             query(collection(db, "teams"), where("league", "==", "nba"))
           );
           if (!alive) return;
-          const rows = nbaSnap.docs.map((d) => ({
-            id: d.id,
-            ...(d.data() as Record<string, unknown>),
-          }));
+          const rows: NbaTeamDocForConferenceRank[] = nbaSnap.docs.map(
+            (d) =>
+              ({
+                id: d.id,
+                ...(d.data() as Record<string, unknown>),
+              }) as NbaTeamDocForConferenceRank
+          );
           const rankById = nbaConferenceRankByTeamId(rows);
           const wlById: Record<string, { wins: number; losses: number }> = {};
           for (const row of rows) {

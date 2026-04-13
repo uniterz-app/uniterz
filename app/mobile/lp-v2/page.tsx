@@ -135,7 +135,7 @@ export default function MobileLPV2Page() {
         >
           遊び方
         </h2>
-        <ConnectedFlowCards nodes={flowNodes} animated={false} />
+        <ConnectedFlowCards nodes={flowNodes} autoAdvance={false} />
       </section>
 
       <LpV2RankingFeature mobile />

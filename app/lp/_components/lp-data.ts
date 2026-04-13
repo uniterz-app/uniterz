@@ -201,6 +201,7 @@ export const featureCards = [
 export const flowNodes = [
   {
     id: "pick",
+    label: "STEP 01",
     title: "試合選択",
     text: "試合カードを選んで予想を始める。",
     navIconKey: "games" satisfies LPFlowNavIconKey,
@@ -214,6 +215,7 @@ export const flowNodes = [
   },
   {
     id: "input",
+    label: "STEP 02",
     title: "予想入力",
     text: "勝敗とスコアを入力する。",
     navIconKey: "pen" satisfies LPFlowNavIconKey,
@@ -227,6 +229,7 @@ export const flowNodes = [
   },
   {
     id: "sync",
+    label: "STEP 03",
     title: "結果反映",
     text: "試合終了後に自動で反映。",
     navIconKey: "resultSync" satisfies LPFlowNavIconKey,
@@ -240,6 +243,7 @@ export const flowNodes = [
   },
   {
     id: "rank",
+    label: "STEP 04",
     title: "現在地の確認",
     text: "毎日更新されるランキングで、今の順位を確認。",
     navIconKey: "ranking" satisfies LPFlowNavIconKey,
@@ -253,6 +257,7 @@ export const flowNodes = [
   },
   {
     id: "analyze",
+    label: "STEP 05",
     title: "月間報酬",
     text: "月間トップで\n豪華なプレゼント。",
     navIconKey: "medal" satisfies LPFlowNavIconKey,
