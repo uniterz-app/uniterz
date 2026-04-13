@@ -35,31 +35,31 @@ function JaRulesBody() {
   return (
     <ul className="space-y-2 text-[10px] leading-relaxed text-white/72 sm:text-[11px]">
       <li className="rounded-lg border border-white/[0.07] bg-linear-to-r from-rose-500/6 to-transparent px-2.5 py-2">
-        <Em>勝者を外した</Em>試合は <Zero>0点</Zero> です（基本点もボーナスも付きません）。
+        <Em>勝者を外した</Em>試合は <Zero>0点</Zero> です（<Em>ボーナスもなし</Em>）。
       </li>
       <li className="space-y-1.5 rounded-lg border border-white/[0.07] bg-linear-to-r from-cyan-500/7 to-transparent px-2.5 py-2">
         <p>
-          <Em>勝者を当てた</Em>ら、まず <Num>+4点</Num>。
+          <Em>勝者を当てた</Em>ら <Num>+4点</Num>。
         </p>
         <p>
-          <Em>点差</Em>（実際の得失点差と、予想した得失点差のズレ）: ズレが小さいほど高く{" "}
-          <Num>0〜4点</Num>。ぴったり一致なら <Num>+4点</Num>。
+          <Em>試合の得失点差</Em>： ぴったりなら <Num>+4点</Num>。ズレが小さいほど得点が高く、
+          <Num>0〜4点</Num>のレンジで配点され、ズレが <Num>14</Num> 以上は <Num>0点</Num> です。
         </p>
         <p>
-          <Em>両チームの合計得点</Em>（ホーム＋アウェイの合計）のズレ: <Num>最大+2点</Num>
-          。合計が近いほど高く、ズレが大きいと <Num>+1</Num> や <Num>0</Num> になります。
+          <Em>両チームの合計得点</Em>のズレ: <Num>最大+2点</Num>。合計が近いほど高く、ズレが大きいと{" "}
+          <Num>+1</Num> や <Num>0</Num> になります。
         </p>
         <p>
           上記３つを足した <Em>基本点</Em>の上限は <Num>10点</Num> です。
         </p>
         <p className="border-t border-white/10 pt-1.5 text-white/68">
-          <Em>ボーナス</Em>（基本点に上乗せ）: <Em>アップセット</Em> <Num>+2点</Num>。
-          <Em>連勝</Em>は <Num>3〜4連勝で+1</Num>、<Num>5〜6で+2</Num>、
-          <Num>7連勝以上で+3</Num>（<Num>2連勝以下</Num>は <Num>0</Num>）。
+          <Em>ボーナス</Em>: <Em>アップセット</Em> <Num>+2点</Num>。<Em>連勝</Em>は{" "}
+          <Num>3〜4連勝で+1</Num>、<Num>5〜6で+2</Num>、<Num>7連勝以上で+3</Num>（
+          <Num>2連勝以下</Num>は <Num>0</Num>）。
         </p>
       </li>
       <li className="rounded-lg border border-white/[0.07] bg-linear-to-r from-violet-500/6 to-transparent px-2.5 py-2">
-        全試合の得点を足したものが<Em>総合スコア</Em>。ランキングはこの累計順です。
+        <Em>基本点</Em>に<Em>ボーナス</Em>を足したものが<Em>総合得点</Em>です。
       </li>
     </ul>
   );
@@ -69,31 +69,30 @@ function EnRulesBody() {
   return (
     <ul className="space-y-2 text-[10px] leading-relaxed text-white/72 sm:text-[11px]">
       <li className="rounded-lg border border-white/[0.07] bg-linear-to-r from-rose-500/6 to-transparent px-2.5 py-2">
-        If you miss the <Em>winner</Em>, that game scores <Zero>0</Zero> (no base, no bonuses).
+        If you miss the <Em>winner</Em>, that game scores <Zero>0</Zero> (<Em>no bonuses</Em>).
       </li>
       <li className="space-y-1.5 rounded-lg border border-white/[0.07] bg-linear-to-r from-cyan-500/7 to-transparent px-2.5 py-2">
         <p>
-          Get the <Em>winner</Em> right: <Num>+4</Num> first.
+          Get the <Em>winner</Em> right: <Num>+4</Num>.
         </p>
         <p>
-          <Em>Margin</Em> (error between predicted and actual point differential):{" "}
-          <Num>0–4</Num> pts—smaller error scores higher; exact match = <Num>+4</Num>.
+          <Em>Game point differential</Em>: exact = <Num>+4</Num>;
+          smaller error scores higher within <Num>0–4</Num>; error <Num>≥14</Num> = <Num>0</Num>.
         </p>
         <p>
-          <Em>Combined total goals</Em> (home+away) closeness: up to <Num>+2</Num>; farther off drops
-          to <Num>+1</Num> or <Num>0</Num>.
+          <Em>Combined total score</Em> (home+away) error: up to <Num>+2</Num>; farther off drops to{" "}
+          <Num>+1</Num> or <Num>0</Num>.
         </p>
         <p>
           Those three parts sum to <Em>base points</Em>, capped at <Num>10</Num>.
         </p>
         <p className="border-t border-white/10 pt-1.5 text-white/68">
-          <Em>Bonuses</Em> (on top of base): <Em>upset</Em> <Num>+2</Num>.{" "}
-          <Em>Win streak</Em>: <Num>+1</Num> at 3–4, <Num>+2</Num> at 5–6, <Num>+3</Num> at 7+ (
-          <Num>0</Num> under 3).
+          <Em>Bonuses</Em>: <Em>upset</Em> <Num>+2</Num>. <Em>Win streak</Em>: <Num>+1</Num> at 3–4,{" "}
+          <Num>+2</Num> at 5–6, <Num>+3</Num> at 7+ (<Num>0</Num> at 2 or below).
         </p>
       </li>
       <li className="rounded-lg border border-white/[0.07] bg-linear-to-r from-violet-500/6 to-transparent px-2.5 py-2">
-        Sum of all game points = your <Em>total score</Em>. Rankings order that cumulative total.
+        <Em>Total points</Em> = <Em>base points</Em> + <Em>bonuses</Em>.
       </li>
     </ul>
   );

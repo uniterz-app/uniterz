@@ -6,7 +6,7 @@ const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 const computePostSettlement_1 = require("./computePostSettlement");
 async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
-    var _a, _b;
+    var _a, _b, _c;
     const p = postDoc.data();
     if (p.settledAt)
         return;
@@ -79,6 +79,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         streakBonus,
         points: totalPoints,
         countsForRanking,
+        seasonPhase: (_c = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _c !== void 0 ? _c : null,
     }).then(() => (0, buildUserStatsWindowCache_1.buildWindowCacheForUser)(uid)));
 }
 //# sourceMappingURL=finalizePost.js.map

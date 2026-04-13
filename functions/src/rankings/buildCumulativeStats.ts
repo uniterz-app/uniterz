@@ -21,6 +21,34 @@ function getTodayJST() {
   return toDateKeyJST(new Date());
 }
 
+type RankingTotals = {
+  totalPosts: number;
+  totalWins: number;
+  totalPoints: number;
+  totalUpset: number;
+  totalPrecision: number;
+  winRate: number;
+};
+
+function addRankingTotals(
+  base: Omit<RankingTotals, "winRate">,
+  inc: {
+    posts?: number;
+    wins?: number;
+    pointsSumV3?: number;
+    upsetPointsSum?: number;
+    scorePrecisionSum?: number;
+  }
+): Omit<RankingTotals, "winRate"> {
+  return {
+    totalPosts: base.totalPosts + (inc.posts ?? 0),
+    totalWins: base.totalWins + (inc.wins ?? 0),
+    totalPoints: base.totalPoints + (inc.pointsSumV3 ?? 0),
+    totalUpset: base.totalUpset + (inc.upsetPointsSum ?? 0),
+    totalPrecision: base.totalPrecision + (inc.scorePrecisionSum ?? 0),
+  };
+}
+
 /* =========================================================
  * Main
  * =======================================================*/
@@ -43,8 +71,9 @@ export async function buildCumulativeStats() {
     const statsAll = data.all;
     if (!statsAll) continue;
 
-    /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
+      /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
     const statsRanking = data.ranking ?? data.all;
+      const statsByPhase = data.rankingByPhase ?? {};
 
     const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
     const userRef = db().doc(`users/${uid}`);
@@ -123,6 +152,58 @@ export async function buildCumulativeStats() {
       const nextRPrecision = bootPrecision + addRPrecision;
       const winRateRanking = nextRPosts > 0 ? nextRWins / nextRPosts : 0;
 
+      /* =========================
+       * フェーズ別ランキング累積（play_in / playoffs）
+       * =======================*/
+      const prevByPhase = (cumulativeSnap.get("rankingByPhase") ??
+        {}) as Record<string, RankingTotals | undefined>;
+      const prevPlayIn = prevByPhase.play_in ?? {
+        totalPosts: 0,
+        totalWins: 0,
+        totalPoints: 0,
+        totalUpset: 0,
+        totalPrecision: 0,
+        winRate: 0,
+      };
+      const prevPlayoffs = prevByPhase.playoffs ?? {
+        totalPosts: 0,
+        totalWins: 0,
+        totalPoints: 0,
+        totalUpset: 0,
+        totalPrecision: 0,
+        winRate: 0,
+      };
+
+      const nextPlayInRaw = addRankingTotals(prevPlayIn, {
+        posts: statsByPhase.play_in?.posts ?? 0,
+        wins: statsByPhase.play_in?.wins ?? 0,
+        pointsSumV3: statsByPhase.play_in?.pointsSumV3 ?? 0,
+        upsetPointsSum: statsByPhase.play_in?.upsetPointsSum ?? 0,
+        scorePrecisionSum: statsByPhase.play_in?.scorePrecisionSum ?? 0,
+      });
+      const nextPlayoffsRaw = addRankingTotals(prevPlayoffs, {
+        posts: statsByPhase.playoffs?.posts ?? 0,
+        wins: statsByPhase.playoffs?.wins ?? 0,
+        pointsSumV3: statsByPhase.playoffs?.pointsSumV3 ?? 0,
+        upsetPointsSum: statsByPhase.playoffs?.upsetPointsSum ?? 0,
+        scorePrecisionSum: statsByPhase.playoffs?.scorePrecisionSum ?? 0,
+      });
+
+      const nextPlayIn: RankingTotals = {
+        ...nextPlayInRaw,
+        winRate:
+          nextPlayInRaw.totalPosts > 0
+            ? nextPlayInRaw.totalWins / nextPlayInRaw.totalPosts
+            : 0,
+      };
+      const nextPlayoffs: RankingTotals = {
+        ...nextPlayoffsRaw,
+        winRate:
+          nextPlayoffsRaw.totalPosts > 0
+            ? nextPlayoffsRaw.totalWins / nextPlayoffsRaw.totalPosts
+            : 0,
+      };
+
       tx.set(
         cumulativeRef,
         {
@@ -149,6 +230,10 @@ export async function buildCumulativeStats() {
             totalUpset: nextRUpset,
             totalPrecision: nextRPrecision,
             winRate: winRateRanking,
+          },
+          rankingByPhase: {
+            play_in: nextPlayIn,
+            playoffs: nextPlayoffs,
           },
 
           lastAggregatedDate: dateKey,

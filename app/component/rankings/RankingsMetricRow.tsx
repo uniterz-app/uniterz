@@ -13,6 +13,7 @@ type Props = {
   metric: MobileMetric;
   setMetric: (v: MobileMetric) => void;
   language?: Language;
+  compactMobile?: boolean;
 };
 
 function wrapIndex(index: number, length: number) {
@@ -29,6 +30,7 @@ export default function RankingsMetricRow({
   metric,
   setMetric,
   language = "ja",
+  compactMobile = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const currentIndex = metrics.findIndex((m) => m.key === metric);
@@ -55,7 +57,14 @@ export default function RankingsMetricRow({
             }
       }
     >
-      <div className="relative flex h-[52px] w-full max-w-[320px] items-center justify-center sm:h-[58px] sm:max-w-[420px]">
+      <div
+        className={[
+          "relative flex w-full items-center justify-center sm:max-w-[420px]",
+          compactMobile
+            ? "h-[44px] max-w-[300px] sm:h-[50px]"
+            : "h-[52px] max-w-[320px] sm:h-[58px]",
+        ].join(" ")}
+      >
         {/* 左右は scale を外さないとレイアウト高さと見た目がズレる */}
         {/* LEFT */}
         {metrics.length > 1 && (
@@ -64,9 +73,13 @@ export default function RankingsMetricRow({
             onClick={() => setMetric(prevMetric.key)}
             className={[
               "absolute left-0 z-0",
-              "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
+              compactMobile
+                ? "box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none"
+                : "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
               "rounded-xl border border-white/10 bg-white/[0.035] px-2",
-              "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
+              compactMobile
+                ? "text-[9px] text-white/35 sm:h-[40px] sm:min-w-[90px] sm:text-[11px]"
+                : "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
               "shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md",
               "opacity-70",
               jp.className,
@@ -88,11 +101,17 @@ export default function RankingsMetricRow({
           onClick={() => setMetric(nextMetric.key)}
           className={[
             "relative z-10",
-            "box-border flex h-[44px] min-w-[120px] max-w-[56%] items-center justify-center leading-none",
+            compactMobile
+              ? "box-border flex h-[38px] min-w-[106px] max-w-[54%] items-center justify-center leading-none"
+              : "box-border flex h-[44px] min-w-[120px] max-w-[56%] items-center justify-center leading-none",
             "rounded-xl border bg-white/7 px-3",
-            "text-sm font-black tracking-[0.04em] text-white",
+            compactMobile
+              ? "text-[12px] font-black tracking-[0.03em] text-white"
+              : "text-sm font-black tracking-[0.04em] text-white",
             "shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]",
-            "backdrop-blur-md sm:h-[50px] sm:min-w-[150px] sm:text-base",
+            compactMobile
+              ? "backdrop-blur-md sm:h-[44px] sm:min-w-[132px] sm:text-[14px]"
+              : "backdrop-blur-md sm:h-[50px] sm:min-w-[150px] sm:text-base",
             jp.className,
           ].join(" ")}
           style={{
@@ -118,9 +137,13 @@ export default function RankingsMetricRow({
             onClick={() => setMetric(nextMetric.key)}
             className={[
               "absolute right-0 z-0",
-              "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
+              compactMobile
+                ? "box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none"
+                : "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
               "rounded-xl border border-white/10 bg-white/[0.035] px-2",
-              "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
+              compactMobile
+                ? "text-[9px] text-white/35 sm:h-[40px] sm:min-w-[90px] sm:text-[11px]"
+                : "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
               "shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md",
               "opacity-70",
               jp.className,

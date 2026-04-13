@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { nameRajdhani } from "@/lib/fonts";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 export type Tab = "overview" | "stats" | "bracket";
 
@@ -23,6 +23,7 @@ export default function Tabs({
   showStats = true,
   size = "md",
 }: Props) {
+  const teamNameFont = bracketMarketTeamTypography(size !== "lg");
   const items: Tab[] = showStats
     ? ["overview", "stats", "bracket"]
     : ["overview", "bracket"];
@@ -36,9 +37,9 @@ export default function Tabs({
   return (
     <div
       className={[
-        nameRajdhani.className,
         "flex gap-8 border-b border-white/10",
       ].join(" ")}
+      style={teamNameFont}
     >
       {items.map((t) => {
         const active = value === t;

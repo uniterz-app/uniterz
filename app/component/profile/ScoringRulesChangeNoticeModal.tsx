@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Language } from "@/lib/i18n/language";
 import { PROFILE_SCORING_RULES_NOTICE_STORAGE_KEY } from "@/lib/profile/scoringRulesChangeNotice";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
 type Props = {
   language: Language;
@@ -15,22 +16,25 @@ export default function ScoringRulesChangeNoticeModal({
   enabled,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const { fUser } = useFirebaseUser();
+  const viewerUid = fUser?.uid ?? null;
+  const storageKey = viewerUid
+    ? `${PROFILE_SCORING_RULES_NOTICE_STORAGE_KEY}:${viewerUid}`
+    : PROFILE_SCORING_RULES_NOTICE_STORAGE_KEY;
 
   useEffect(() => {
-    if (!enabled || typeof window === "undefined") return;
+    if (!enabled || !viewerUid || typeof window === "undefined") return;
     try {
-      const dismissed = window.localStorage.getItem(
-        PROFILE_SCORING_RULES_NOTICE_STORAGE_KEY
-      );
+      const dismissed = window.localStorage.getItem(storageKey);
       if (!dismissed) setOpen(true);
     } catch {
       setOpen(true);
     }
-  }, [enabled]);
+  }, [enabled, viewerUid, storageKey]);
 
   const dismiss = () => {
     try {
-      window.localStorage.setItem(PROFILE_SCORING_RULES_NOTICE_STORAGE_KEY, "1");
+      window.localStorage.setItem(storageKey, "1");
     } catch {
       /* ignore */
     }

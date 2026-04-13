@@ -24,6 +24,7 @@ export type PlayoffBracketStrings = {
   alertAlreadySubmitted: string;
   alertSubmittedOk: string;
   alertSubmitFailed: string;
+  alertSubmissionLockedBySeeding: string;
   submitCancel: string;
   submitConfirm: string;
   submitSubmitting: string;
@@ -56,6 +57,8 @@ const en: PlayoffBracketStrings = {
   alertAlreadySubmitted: "You have already submitted a bracket.",
   alertSubmittedOk: "Your bracket has been submitted.",
   alertSubmitFailed: "Submission failed.",
+  alertSubmissionLockedBySeeding:
+    "Standings are not finalized yet, so submission is disabled.",
   submitCancel: "Cancel",
   submitConfirm: "Confirm",
   submitSubmitting: "Submitting...",
@@ -87,6 +90,7 @@ const ja: PlayoffBracketStrings = {
   alertAlreadySubmitted: "ブラケットはすでに提出済みです",
   alertSubmittedOk: "ブラケットを提出しました",
   alertSubmitFailed: "提出に失敗しました",
+  alertSubmissionLockedBySeeding: "まだ順位が決まってないので提出はできません",
   submitCancel: "キャンセル",
   submitConfirm: "確定",
   submitSubmitting: "送信中...",

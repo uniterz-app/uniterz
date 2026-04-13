@@ -7,6 +7,11 @@ const firestore_1 = require("firebase-admin/firestore");
 function shouldCountForRanking(v) {
     return v !== false;
 }
+function normalizeSeasonPhase(v) {
+    if (!v)
+        return null;
+    return v === "play_in" || v === "playoffs" ? v : null;
+}
 const db = () => (0, firestore_1.getFirestore)();
 const LEAGUES = ["bj", "j1", "nba", "pl"];
 /* =========================================================
@@ -68,8 +73,9 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, seasonPhase, } = opts;
     const forRanking = shouldCountForRanking(countsForRanking);
+    const phaseKey = normalizeSeasonPhase(seasonPhase);
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
@@ -92,7 +98,7 @@ async function applyPostToUserStatsV2(opts) {
             upsetBonusSum: firestore_1.FieldValue.increment(upsetBonus),
             streakBonusSum: firestore_1.FieldValue.increment(streakBonus),
         };
-        const update = Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {}));
+        const update = Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {}));
         if (leagueKey) {
             update.leagues = Object.assign(Object.assign({}, (update.leagues || {})), { [leagueKey]: inc });
             tx.set(userStatsRef, {

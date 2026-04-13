@@ -58,8 +58,10 @@ export default function PlayoffBracketPredict() {
 
   const isComplete = isPlayoffBracketComplete(bracket as any);
 
+  const config = useMemo(() => getPlayoffBracketConfig(season), [season]);
+  const allowSubmission = config.allowSubmission !== false;
+
   const { eastR1, westR1 } = useMemo(() => {
-    const config = getPlayoffBracketConfig(season);
     const { eastR1, westR1 } = buildRound1Series(config);
 
     return {
@@ -72,7 +74,7 @@ export default function PlayoffBracketPredict() {
         teams: series as [Team, Team],
       })),
     };
-  }, [season]);
+  }, [config]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +133,10 @@ export default function PlayoffBracketPredict() {
     if (!me) return;
 
     if (!isComplete || submitting) return;
+    if (!allowSubmission) {
+      alert(t.alertSubmissionLockedBySeeding);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -154,6 +160,14 @@ export default function PlayoffBracketPredict() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleOpenSubmitModal() {
+    if (!allowSubmission) {
+      alert(t.alertSubmissionLockedBySeeding);
+      return;
+    }
+    setSubmitOpen(true);
   }
 
   function setWinner(seriesId: SeriesId, team: string) {
@@ -300,7 +314,7 @@ export default function PlayoffBracketPredict() {
         canEditBracket={canEditBracket}
         onSelectWinner={setWinner}
         onSelectGames={setGames}
-        onSubmitClick={() => setSubmitOpen(true)}
+        onSubmitClick={handleOpenSubmitModal}
       />
 
       <SubmitBracketModal

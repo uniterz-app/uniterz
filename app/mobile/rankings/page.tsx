@@ -13,6 +13,7 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
+import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
 import Header from "@/app/component/Header";
 import {
   API_METRIC_BY_MOBILE,
@@ -23,12 +24,15 @@ import type { RankingRow } from "@/lib/rankings/useRanking";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
   TIMEZONE_ET,
   TIMEZONE_JST,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { nameBebas } from "@/lib/fonts";
 
 function formatRankingsUpdateTimeEn() {
   // Ranking update is scheduled at 16:00 in JST.
@@ -53,6 +57,7 @@ function formatRankingsUpdateTimeEn() {
 }
 
 export default function MobileRankingsPage() {
+  const [phase, setPhase] = useState<RankingPhase>("playoffs");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
 
   const visibleMetrics: MobileMetric[] = [
@@ -75,7 +80,7 @@ export default function MobileRankingsPage() {
   );
 
   const { listReady, personalPending, myUid, byMetric } =
-    useCumulativeRankingsBulk();
+    useCumulativeRankingsBulk(phase);
 
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
@@ -121,7 +126,7 @@ export default function MobileRankingsPage() {
 
   const [topDone, setTopDone] = useState(false);
 
-  const pageKey = metric;
+  const pageKey = `${phase}-${metric}`;
   const pageKeyRef = useRef(pageKey);
   pageKeyRef.current = pageKey;
 
@@ -150,33 +155,41 @@ export default function MobileRankingsPage() {
             <p className="text-[12px] text-white/60">
               {language === "en"
                 ? `Rankings are updated daily at ${formatRankingsUpdateTimeEn()} / Scores are cumulative.`
-                : "ランキングは毎日16:00に更新 / スコアは累積です"}
+                : "ランキングは毎日16:00に更新 / スコアは累積"}
             </p>
           </div>
+          <div className="space-y-0.5">
+            <RankingPhaseTabs
+              phase={phase}
+              onChange={setPhase}
+              isMobile
+            />
 
-          <MyRankCard
-            rank={myRank}
-            metric={metric}
-            value={myValue}
-            displayName={user.displayName || "You"}
-            photoURL={user.photoURL || null}
-            totalPosts={
-              typeof myRawRow?.totalPosts === "number"
-                ? myRawRow.totalPosts
-                : undefined
-            }
-            loading={!listReady}
-            statsScramble={listReady && personalPending}
-            language={language}
-            isPro={user.plan === "pro"}
-            mobileWide
-          />
+            <MyRankCard
+              rank={myRank}
+              metric={metric}
+              value={myValue}
+              displayName={user.displayName || "You"}
+              photoURL={user.photoURL || null}
+              totalPosts={
+                typeof myRawRow?.totalPosts === "number"
+                  ? myRawRow.totalPosts
+                  : undefined
+              }
+              loading={!listReady}
+              statsScramble={listReady && personalPending}
+              language={language}
+              isPro={user.plan === "pro"}
+              mobileWide
+            />
+          </div>
 
           <RankingsMetricRow
             metrics={metricItems}
             metric={metric}
             setMetric={setMetric}
             language={language}
+            compactMobile
           />
         </div>
 
@@ -186,6 +199,22 @@ export default function MobileRankingsPage() {
           </div>
         )}
 
+        {listReady && rows.length === 0 ? (
+          <div
+            role="status"
+            className="flex min-h-[min(62dvh,520px)] items-center justify-center px-4 text-center"
+          >
+            <p
+              className={[
+                nameBebas.className,
+                "text-[clamp(1.75rem,10vw,2.7rem)] leading-none tracking-[0.22em]",
+              ].join(" ")}
+              style={cyberNoDataLabelStyle}
+            >
+              NO DATA
+            </p>
+          </div>
+        ) : (
         <AnimatePresence mode="wait">
             <motion.div key={pageKey} className="relative">
               <div className="relative z-10">
@@ -228,6 +257,7 @@ export default function MobileRankingsPage() {
               </motion.div>
             </motion.div>
         </AnimatePresence>
+        )}
       </div>
     </div>
   );

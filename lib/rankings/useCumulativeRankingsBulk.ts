@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 export type BulkMetricPayload = {
   ok: boolean;
@@ -54,10 +55,12 @@ function mergeMetricBundles(
 
 async function fetchBulkMetrics(
   metrics: string,
-  uid: string | null
+  uid: string | null,
+  phase: RankingPhase
 ): Promise<Record<string, BulkMetricPayload> | null> {
   const params = new URLSearchParams();
   params.set("metrics", metrics);
+  params.set("phase", phase);
   if (uid) params.set("uid", uid);
   const res = await fetch(`/api/cumulative-ranking/bulk?${params.toString()}`);
   const json = await res.json();
@@ -65,7 +68,7 @@ async function fetchBulkMetrics(
   return json.byMetric as Record<string, BulkMetricPayload>;
 }
 
-export function useCumulativeRankingsBulk() {
+export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
   const [authReady, setAuthReady] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +92,7 @@ export function useCumulativeRankingsBulk() {
       const g = ++mountPrimaryGenRef.current;
       setLoading(true);
       try {
-        const partial = await fetchBulkMetrics(PRIMARY_METRICS, null);
+        const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase);
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         if (partial) {
           setByMetric((p) => mergeMetricBundles(p, partial));
@@ -120,7 +123,7 @@ export function useCumulativeRankingsBulk() {
         const g = ++mountPrimaryGenRef.current;
         void (async () => {
           try {
-            const partial = await fetchBulkMetrics(PRIMARY_METRICS, null);
+            const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase);
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             if (partial) {
               setByMetric((p) => mergeMetricBundles(p, partial));
@@ -136,7 +139,7 @@ export function useCumulativeRankingsBulk() {
       const uq = ++uidPrimarySeqRef.current;
       void (async () => {
         try {
-          const partial = await fetchBulkMetrics(PRIMARY_METRICS, uid);
+          const partial = await fetchBulkMetrics(PRIMARY_METRICS, uid, phase);
           if (cancelled || uq !== uidPrimarySeqRef.current) return;
           if (partial) {
             setByMetric((p) => mergeMetricBundles(p, partial));
@@ -152,7 +155,7 @@ export function useCumulativeRankingsBulk() {
       cancelled = true;
       unsub();
     };
-  }, []);
+  }, [phase]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -162,7 +165,7 @@ export function useCumulativeRankingsBulk() {
       if (appliedTotalPointsUid !== myUid) return;
     } else if (appliedTotalPointsUid !== ANON_KEY) return;
 
-    const restKey = myUid ?? ANON_KEY;
+    const restKey = `${phase}:${myUid ?? ANON_KEY}`;
     if (lastRestKeyRef.current === restKey) return;
 
     const gen = ++restGenRef.current;
@@ -172,7 +175,7 @@ export function useCumulativeRankingsBulk() {
     const cancelIdle = scheduleIdle(() => {
       void (async () => {
         try {
-          const partial = await fetchBulkMetrics(REST_METRICS, uidForRest);
+          const partial = await fetchBulkMetrics(REST_METRICS, uidForRest, phase);
           if (gen !== restGenRef.current) return;
           if (partial) {
             setByMetric((p) => mergeMetricBundles(p, partial));
@@ -185,7 +188,7 @@ export function useCumulativeRankingsBulk() {
     });
 
     return cancelIdle;
-  }, [authReady, byMetric?.totalPoints, myUid, appliedTotalPointsUid]);
+  }, [authReady, byMetric?.totalPoints, myUid, appliedTotalPointsUid, phase]);
 
   const listReady = byMetric?.totalPoints != null;
   const personalPending =

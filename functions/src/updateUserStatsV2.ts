@@ -61,10 +61,19 @@ type ApplyOptsV2 = {
 
   /** false のとき（例: プレーイン）はランキング用日次・累積に含めない。未設定は従来どおり true */
   countsForRanking?: boolean;
+  /** シーズンフェーズ別ランキング集計用 */
+  seasonPhase?: "regular" | "play_in" | "playoffs" | null;
 };
 
 function shouldCountForRanking(v: boolean | undefined) {
   return v !== false;
+}
+
+function normalizeSeasonPhase(
+  v: ApplyOptsV2["seasonPhase"]
+): "play_in" | "playoffs" | null {
+  if (!v) return null;
+  return v === "play_in" || v === "playoffs" ? v : null;
 }
 
 const db = () => getFirestore();
@@ -161,9 +170,11 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     upsetBonus,
     streakBonus,
     countsForRanking,
+    seasonPhase,
   } = opts;
 
   const forRanking = shouldCountForRanking(countsForRanking);
+  const phaseKey = normalizeSeasonPhase(seasonPhase);
 
   const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
@@ -200,6 +211,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       updatedAt: FieldValue.serverTimestamp(),
       all: inc,
       ...(forRanking ? { ranking: inc } : {}),
+      ...(phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {}),
     };
 
     if (leagueKey) {

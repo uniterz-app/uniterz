@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import { mergeUserPlansIntoSingleRanking } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,11 @@ function isRankingMetric(v: string): v is RankingMetric {
   return ALLOWED_METRICS.includes(v as RankingMetric);
 }
 
-async function fetchSingleRanking(metric: RankingMetric, uid: string | null) {
+async function fetchSingleRanking(
+  metric: RankingMetric,
+  uid: string | null,
+  phase: RankingPhase
+) {
   const baseUrl =
     process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
     process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
@@ -32,6 +37,7 @@ async function fetchSingleRanking(metric: RankingMetric, uid: string | null) {
 
   const url = new URL(baseUrl);
   url.searchParams.set("metric", metric);
+  url.searchParams.set("phase", phase);
   if (uid) url.searchParams.set("uid", uid);
 
   const res = await fetch(url.toString(), {
@@ -52,6 +58,7 @@ async function fetchSingleRanking(metric: RankingMetric, uid: string | null) {
   return {
     ok: true as const,
     metric,
+    phase,
     count: json?.count ?? 0,
     rows: json?.rows ?? [],
     myRank: json?.myRank ?? null,
@@ -60,11 +67,11 @@ async function fetchSingleRanking(metric: RankingMetric, uid: string | null) {
 }
 
 const getCachedSingle = unstable_cache(
-  async (metric: RankingMetric, uidKey: string) => {
+  async (metric: RankingMetric, uidKey: string, phase: RankingPhase) => {
     const uid = uidKey === "__anon__" ? null : uidKey;
-    return fetchSingleRanking(metric, uid);
+    return fetchSingleRanking(metric, uid, phase);
   },
-  ["cumulative-ranking-single-v1"],
+  ["cumulative-ranking-single-v2"],
   { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
 );
 
@@ -74,10 +81,14 @@ export async function GET(req: Request) {
 
     const rawMetric = searchParams.get("metric") ?? "totalPoints";
     const uid = searchParams.get("uid");
+    const rawPhase = searchParams.get("phase");
 
     const metric: RankingMetric = isRankingMetric(rawMetric)
       ? rawMetric
       : "totalPoints";
+    const phase: RankingPhase = isRankingPhase(rawPhase)
+      ? rawPhase
+      : "playoffs";
 
     const baseUrl =
       process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -93,7 +104,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const payload = await getCachedSingle(metric, uid ?? "__anon__");
+    const payload = await getCachedSingle(metric, uid ?? "__anon__", phase);
 
     if (!payload.ok) {
       return NextResponse.json(
@@ -120,6 +131,7 @@ export async function GET(req: Request) {
       {
         ok: true,
         metric: body.metric,
+        phase: body.phase,
         count: body.count,
         rows: body.rows,
         myRank: body.myRank,

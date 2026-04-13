@@ -92,6 +92,8 @@ import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { nameBebas } from "@/lib/fonts";
 
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
@@ -450,10 +452,14 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             </div>
           ) : !playoffDisplayData ? (
             <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
-              <p className="text-sm text-white/70">
-                {language === "en"
-                  ? "The bracket hasn't been submitted yet."
-                  : "まだブラケットは提出されていません。"}
+              <p
+                className={[
+                  nameBebas.className,
+                  "text-[clamp(1.75rem,9vw,2.7rem)] leading-none tracking-[0.22em]",
+                ].join(" ")}
+                style={cyberNoDataLabelStyle}
+              >
+                NO DATA
               </p>
             </div>
           ) : (

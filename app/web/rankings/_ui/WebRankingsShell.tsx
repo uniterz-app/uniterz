@@ -9,16 +9,20 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
+import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
 import Header from "@/app/component/Header";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useWebRankings } from "../_lib/useWebRankings";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
   TIMEZONE_ET,
   TIMEZONE_JST,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { nameBebas } from "@/lib/fonts";
 
 function getMyMetricValue(metric: MobileMetric, row: any): number {
   if (!row) return 0;
@@ -66,13 +70,14 @@ function RankingInfoNotice({ language }: { language: "ja" | "en" }) {
       <p className="text-[12px] leading-relaxed text-white/60">
         {language === "en"
           ? `Rankings are updated daily at ${formatRankingsUpdateTimeEn()} / Scores are cumulative.`
-          : "ランキングは毎日16:00に更新 / スコアは累積です"}
+          : "ランキングは毎日16:00に更新 / スコアは累積"}
       </p>
     </div>
   );
 }
 
 export default function WebRankingsShell() {
+  const [phase, setPhase] = useState<RankingPhase>("playoffs");
   const {
     listReady,
     personalPending,
@@ -85,7 +90,7 @@ export default function WebRankingsShell() {
     myRank,
     myRow,
     myUid,
-  } = useWebRankings();
+  } = useWebRankings(phase);
 
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
@@ -103,7 +108,7 @@ export default function WebRankingsShell() {
 
   const [topDone, setTopDone] = useState(false);
 
-  const pageKey = metric;
+  const pageKey = `${phase}-${metric}`;
   const pageKeyRef = useRef(pageKey);
   pageKeyRef.current = pageKey;
 
@@ -129,19 +134,26 @@ export default function WebRankingsShell() {
 
         <div className="mx-auto max-w-[860px] space-y-3 px-3 pt-2">
           <RankingInfoNotice language={language} />
+          <div className="space-y-0.5">
+            <RankingPhaseTabs
+              phase={phase}
+              onChange={setPhase}
+              isMobile={false}
+            />
 
-          <MyRankCard
-            rank={myRank}
-            metric={metric as MobileMetric}
-            value={myValue}
-            displayName={user.displayName || "You"}
-            photoURL={user.photoURL || null}
-            totalPosts={myRow?.totalPosts}
-            loading={!listReady}
-            statsScramble={listReady && personalPending}
-            language={language}
-            isPro={user.plan === "pro"}
-          />
+            <MyRankCard
+              rank={myRank}
+              metric={metric as MobileMetric}
+              value={myValue}
+              displayName={user.displayName || "You"}
+              photoURL={user.photoURL || null}
+              totalPosts={myRow?.totalPosts}
+              loading={!listReady}
+              statsScramble={listReady && personalPending}
+              language={language}
+              isPro={user.plan === "pro"}
+            />
+          </div>
 
           <RankingsMetricRow
             metrics={visibleMetrics}
@@ -158,12 +170,21 @@ export default function WebRankingsShell() {
         )}
 
         {listReady && rows.length === 0 ? (
-            <div className="mx-auto max-w-[860px] px-3 pt-6 text-sm text-white/50">
-              {language === "en"
-                ? "Ranking data not found"
-                : "ランキングデータが見つかりません"}
-            </div>
-          ) : listReady ? (
+          <div
+            role="status"
+            className="mx-auto flex min-h-[min(65dvh,520px)] max-w-[860px] items-center justify-center px-4 text-center"
+          >
+            <p
+              className={[
+                nameBebas.className,
+                "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+              ].join(" ")}
+              style={cyberNoDataLabelStyle}
+            >
+              NO DATA
+            </p>
+          </div>
+        ) : listReady ? (
             <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
                 <div className="mx-auto max-w-[860px] px-2 pt-3">

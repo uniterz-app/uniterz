@@ -92,6 +92,8 @@ import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { nameBebas } from "@/lib/fonts";
 
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
@@ -441,7 +443,15 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             </div>
           ) : !playoffDisplayData ? (
             <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
-              {language === "en" ? "Not submitted" : "未提出"}
+              <p
+                className={[
+                  nameBebas.className,
+                  "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+                ].join(" ")}
+                style={cyberNoDataLabelStyle}
+              >
+                NO DATA
+              </p>
             </div>
           ) : (
             <div

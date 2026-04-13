@@ -13,6 +13,7 @@ import {
 } from "@/lib/rankings/rankingTransform";
 import type { RankingRow } from "@/lib/rankings/useRanking";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
@@ -83,7 +84,7 @@ const EMPTY_MAP: Record<MobileMetric, WebRankingRow[]> = {
   streak: [],
 };
 
-export function useWebRankings() {
+export function useWebRankings(phase: RankingPhase = "playoffs") {
   const visibleMetrics = useMemo(
     () => METRICS.filter((m) => AVAILABLE_METRICS.includes(m.key)),
     []
@@ -98,7 +99,7 @@ export function useWebRankings() {
   }, [metric]);
 
   const { listReady, personalPending, myUid, byMetric } =
-    useCumulativeRankingsBulk();
+    useCumulativeRankingsBulk(phase);
 
   const rowsMap = useMemo(() => {
     if (!byMetric) return EMPTY_MAP;

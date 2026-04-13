@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,8 @@ function metricsToKey(metrics: BulkRankingMetric[]): string {
 
 async function fetchBulkFromFunctions(
   uid: string | undefined,
-  metrics: BulkRankingMetric[]
+  metrics: BulkRankingMetric[],
+  phase: RankingPhase
 ) {
   const baseUrl =
     process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -54,6 +56,7 @@ async function fetchBulkFromFunctions(
     metrics.map(async (metric) => {
       const url = new URL(baseUrl);
       url.searchParams.set("metric", metric);
+      url.searchParams.set("phase", phase);
       if (uid) url.searchParams.set("uid", uid);
 
       const res = await fetch(url.toString(), {
@@ -90,7 +93,7 @@ async function fetchBulkFromFunctions(
 }
 
 const getCachedBulk = unstable_cache(
-  async (uidKey: string, metricsKey: string) => {
+  async (uidKey: string, metricsKey: string, phase: RankingPhase) => {
     const uid = uidKey === "__anon__" ? undefined : uidKey;
     const parts = metricsKey
       .split(",")
@@ -98,9 +101,9 @@ const getCachedBulk = unstable_cache(
     const metrics = (
       parts.length ? parts : [...BULK_METRICS]
     ) as BulkRankingMetric[];
-    return fetchBulkFromFunctions(uid, metrics);
+    return fetchBulkFromFunctions(uid, metrics, phase);
   },
-  ["cumulative-ranking-bulk-v2"],
+  ["cumulative-ranking-bulk-v3"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -112,6 +115,10 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const uid = searchParams.get("uid") ?? undefined;
     const metricsList = parseMetricsParam(searchParams.get("metrics"));
+    const rawPhase = searchParams.get("phase");
+    const phase: RankingPhase = isRankingPhase(rawPhase)
+      ? rawPhase
+      : "playoffs";
     const metricsKey = metricsToKey(metricsList);
 
     const baseUrl =
@@ -125,7 +132,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const cached = await getCachedBulk(uid ?? "__anon__", metricsKey);
+    const cached = await getCachedBulk(uid ?? "__anon__", metricsKey, phase);
     const data =
       typeof structuredClone === "function"
         ? structuredClone(cached)

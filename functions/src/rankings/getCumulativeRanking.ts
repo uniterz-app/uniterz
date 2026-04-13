@@ -14,6 +14,8 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
+type RankingPhase = "play_in" | "playoffs";
+
 type RankingRow = {
   uid: string;
   displayName: string;
@@ -44,29 +46,31 @@ function isMetric(v: unknown): v is Metric {
   );
 }
 
-function rankingSlice(d: any) {
-  const rk = d.ranking;
-  if (rk && typeof rk === "object") {
-    const tp = rk.totalPosts ?? 0;
-    const tw = rk.totalWins ?? 0;
+function isRankingPhase(v: unknown): v is RankingPhase {
+  return v === "play_in" || v === "playoffs";
+}
+
+function rankingSlice(d: any, phase: RankingPhase) {
+  const byPhase = d.rankingByPhase?.[phase];
+  if (byPhase && typeof byPhase === "object") {
+    const tp = byPhase.totalPosts ?? 0;
+    const tw = byPhase.totalWins ?? 0;
     return {
       totalPosts: tp,
       totalWins: tw,
-      winRate: tp > 0 ? tw / tp : rk.winRate ?? 0,
-      totalPoints: rk.totalPoints ?? 0,
-      totalPrecision: rk.totalPrecision ?? 0,
-      totalUpset: rk.totalUpset ?? 0,
+      winRate: tp > 0 ? tw / tp : byPhase.winRate ?? 0,
+      totalPoints: byPhase.totalPoints ?? 0,
+      totalPrecision: byPhase.totalPrecision ?? 0,
+      totalUpset: byPhase.totalUpset ?? 0,
     };
   }
-  const totalPosts = d.totalPosts ?? 0;
-  const totalWins = d.totalWins ?? 0;
   return {
-    totalPosts,
-    totalWins,
-    winRate: d.winRate ?? 0,
-    totalPoints: d.totalPoints ?? 0,
-    totalPrecision: d.totalPrecision ?? 0,
-    totalUpset: d.totalUpset ?? 0,
+    totalPosts: 0,
+    totalWins: 0,
+    winRate: 0,
+    totalPoints: 0,
+    totalPrecision: 0,
+    totalUpset: 0,
   };
 }
 
@@ -74,15 +78,17 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
   try {
     const rawMetric = req.query.metric;
     const uid = req.query.uid as string | undefined;
+    const rawPhase = req.query.phase;
 
     const metric: Metric = isMetric(rawMetric) ? rawMetric : "totalPoints";
+    const phase: RankingPhase = isRankingPhase(rawPhase) ? rawPhase : "playoffs";
 
     /* =========================
      * ① Top20（snapshot）
      * =======================*/
     const snapDoc = await db()
       .collection("cumulative_ranking_snapshots")
-      .doc(metric)
+      .doc(`${phase}_${metric}`)
       .get();
 
     const rawRows: RankingRow[] = snapDoc.exists
@@ -126,7 +132,20 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
 
       if (mySnap.exists) {
         const me = mySnap.data() as any;
-        const rk = rankingSlice(me);
+        const rk = rankingSlice(me, phase);
+
+        if ((rk.totalPosts ?? 0) <= 0) {
+          res.status(200).json({
+            ok: true,
+            metric,
+            phase,
+            count: rows.length,
+            rows,
+            myRank: null,
+            myRow: null,
+          });
+          return;
+        }
 
         const myValue =
           metric === "activeWinStreak"
@@ -136,17 +155,18 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
               : rk[metric] ?? 0;
 
         const hasRankingObj =
-          me.ranking &&
-          typeof me.ranking === "object" &&
-          (me.ranking.totalPosts != null || me.ranking.totalPoints != null);
+          me.rankingByPhase?.[phase] &&
+          typeof me.rankingByPhase[phase] === "object" &&
+          (me.rankingByPhase[phase].totalPosts != null ||
+            me.rankingByPhase[phase].totalPoints != null);
 
         const rankField =
           metric === "activeWinStreak"
             ? new FieldPath("activeWinStreak")
             : hasRankingObj
               ? metric === "winRate"
-                ? new FieldPath("ranking", "winRate")
-                : new FieldPath("ranking", metric)
+                ? new FieldPath("rankingByPhase", phase, "winRate")
+                : new FieldPath("rankingByPhase", phase, metric)
               : metric === "winRate"
                 ? "winRate"
                 : metric;
@@ -198,6 +218,7 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
     res.status(200).json({
       ok: true,
       metric,
+      phase,
       count: rows.length,
       rows,
       myRank,
