@@ -94,6 +94,11 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
+import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
+import {
+  clearSideMenuOrigin,
+  consumeOpenProfileSideMenu,
+} from "@/lib/navigation/sideMenuReturnNav";
 
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
@@ -143,7 +148,19 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [bracketReveal, setBracketReveal] = useState(false);
 
+  useEffect(() => {
+    if (!isMe) return;
+    clearSideMenuOrigin();
+    if (consumeOpenProfileSideMenu()) {
+      setDrawerOpen(true);
+    }
+  }, [isMe]);
+
   const canOpenSettings = isMe;
+
+  const { unreadCount: menuUnreadCount } = useAnnouncementsUnread({
+    enabled: isMe,
+  });
 
   const posts = summary?.posts ?? 0;
   const wins = (summary as any)?.wins ?? 0;
@@ -249,6 +266,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         currentStreak={currentStreak}
         canOpenSettings={canOpenSettings}
         onOpenSettings={() => setDrawerOpen(true)}
+        menuUnreadCount={isMe ? menuUnreadCount : 0}
       >
         {resolvedBadges.length > 0 ? (
           <div className="grid grid-cols-10 gap-0.5">
@@ -490,7 +508,12 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         )}
       </div>
 
-      <SideMenuDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <SideMenuDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onOpenMenu={() => setDrawerOpen(true)}
+        variant="web"
+      />
 
       <ScoringRulesChangeNoticeModal
         language={language}

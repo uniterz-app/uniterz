@@ -4,16 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { db } from "@/lib/firebase";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-  type Timestamp,
-} from "firebase/firestore";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
+import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { ChevronLeft } from "lucide-react";
+import EventNoticeBody from "@/app/component/events/EventNoticeBody";
+import { isInAppEventAnnouncementDetail } from "@/lib/announcements/inAppEventAnnouncement";
+import { CURRENT_EVENT } from "@/lib/events/currentEvent";
 
 /* 一覧と同じマッピング */
 const TYPE_META: Record<string, { label: string; grad: string; glow: string }> = {
@@ -59,26 +57,48 @@ export default function WebAnnouncementDetailPage() {
   const isEn = language === "en";
 
   const [a, setA] = useState<Ann | null>(null);
+  /** Firestore に無くアプリ内イベントで表示している */
+  const [syntheticEvent, setSyntheticEvent] = useState(false);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "missing">(
+    "loading"
+  );
 
   // 取得
   useEffect(() => {
+    if (!id) return;
+    let alive = true;
     (async () => {
       const ref = doc(db, "announcements", id);
       const snap = await getDoc(ref);
-      if (snap.exists()) setA(snap.data() as Ann);
+      if (!alive) return;
+      if (snap.exists()) {
+        setA(snap.data() as Ann);
+        setSyntheticEvent(false);
+        setLoadState("ready");
+        return;
+      }
+      if (isInAppEventAnnouncementDetail(id)) {
+        setA(null);
+        setSyntheticEvent(true);
+        setLoadState("ready");
+        return;
+      }
+      setA(null);
+      setSyntheticEvent(false);
+      setLoadState("missing");
     })();
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
-  // 既読マーキング
+  // 既読（ログイン: Firestore / ゲスト: localStorage）。表示できたときだけ
   useEffect(() => {
-    if (status !== "ready" || !user?.uid || !id) return;
-    (async () => {
-      const ref = doc(db, `users/${user.uid}/reads/${id}`);
-      await setDoc(ref, { at: serverTimestamp() }, { merge: true });
-    })();
-  }, [status, user?.uid, id]);
+    if (!isAuthStateResolved(status) || !id || loadState !== "ready") return;
+    markAnnouncementRead(user?.uid ?? null, id);
+  }, [status, user?.uid, id, loadState]);
 
-  if (!a) {
+  if (loadState === "loading") {
     return (
       <div className="min-h-screen bg-[#0B0F17] text-white">
         <div className="mx-auto max-w-[840px] px-5 py-10">
@@ -88,10 +108,28 @@ export default function WebAnnouncementDetailPage() {
     );
   }
 
-  const src = (a.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
-  const typeKey = a.type ?? "info";
+  if (loadState === "missing" || (!a && !syntheticEvent)) {
+    return (
+      <div className="min-h-screen bg-[#0B0F17] text-white">
+        <div className="mx-auto max-w-[840px] px-5 py-10">
+          <p className="text-white/60">
+            {isEn ? "This announcement was not found." : "お知らせが見つかりません。"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const typeKey = syntheticEvent ? "event" : (a?.type ?? "info");
   const meta = TYPE_META[typeKey];
   const typeLabel = isEn ? TYPE_LABEL_EN[typeKey] ?? meta.label : meta.label;
+  const postedAtTs = syntheticEvent
+    ? Timestamp.fromMillis(CURRENT_EVENT.postedAtMs)
+    : a?.postedAt;
+  const title = syntheticEvent ? CURRENT_EVENT.title : a!.title;
+  const src = syntheticEvent
+    ? ""
+    : (a!.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
 
   return (
     <div className="relative min-h-screen text-white">
@@ -122,32 +160,53 @@ export default function WebAnnouncementDetailPage() {
       </div>
 
       <div className="mx-auto max-w-[840px] px-5 py-6">
-        {src && (
-          <Image
-            src={src}
-            alt={a.title}
-            width={1440}
-            height={810}
-            className="w-full h-[320px] object-cover rounded-2xl border border-white/10 shadow-[0_16px_60px_rgba(0,0,0,0.35)]"
-            priority
-          />
+        {syntheticEvent ? (
+          <>
+            <div className="mt-0 flex items-center gap-3">
+              <span
+                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
+              >
+                {typeLabel}
+              </span>
+              <span className="text-xs text-white/60">
+                {formatDate(postedAtTs)}
+              </span>
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 overflow-hidden shadow-[0_16px_60px_rgba(0,0,0,0.35)] bg-[#120818]/90">
+              <EventNoticeBody event={CURRENT_EVENT} heroHeight={320} />
+            </div>
+          </>
+        ) : (
+          <>
+            {src && (
+              <Image
+                src={src}
+                alt={title}
+                width={1440}
+                height={810}
+                className="w-full h-[320px] object-cover rounded-2xl border border-white/10 shadow-[0_16px_60px_rgba(0,0,0,0.35)]"
+                priority
+              />
+            )}
+
+            <div className="mt-4 flex items-center gap-3">
+              <span
+                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
+              >
+                {typeLabel}
+              </span>
+              <span className="text-xs text-white/60">
+                {formatDate(postedAtTs)}
+              </span>
+            </div>
+
+            <h2 className="text-2xl font-bold mt-2 leading-snug">{title}</h2>
+
+            <div className="mt-4 text-[15px] leading-relaxed whitespace-pre-wrap text-white/90">
+              {a!.body ?? ""}
+            </div>
+          </>
         )}
-
-        <div className="mt-4 flex items-center gap-3">
-          {/* 一覧と同じ “日本語ラベル & グラデ & グロー” */}
-          <span
-            className={`px-3 py-1.5 rounded-full text-[12px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
-          >
-            {typeLabel}
-          </span>
-          <span className="text-xs text-white/60">{formatDate(a.postedAt)}</span>
-        </div>
-
-        <h2 className="text-2xl font-bold mt-2 leading-snug">{a.title}</h2>
-
-        <div className="mt-4 text-[15px] leading-relaxed whitespace-pre-wrap text-white/90">
-          {a.body ?? ""}
-        </div>
       </div>
     </div>
   );

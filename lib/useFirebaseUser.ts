@@ -13,6 +13,11 @@ import { auth, authInitialization } from "@/lib/firebase";
 
 export type FirebaseAuthStatus = "loading" | "guest" | "ready";
 
+/** ログイン済み or 未ログイン確定（onAuthStateChanged 後）。お知らせ未読などゲストでも扱う処理用 */
+export function isAuthStateResolved(status: FirebaseAuthStatus): boolean {
+  return status === "ready" || status === "guest";
+}
+
 type FirebaseUserContextValue = { fUser: User | null; status: FirebaseAuthStatus };
 
 const FirebaseUserContext = createContext<FirebaseUserContextValue | null>(null);

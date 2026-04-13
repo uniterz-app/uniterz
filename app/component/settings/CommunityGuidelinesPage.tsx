@@ -2,10 +2,11 @@
 
 import React from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { useFloatingBackNavigation } from "@/lib/hooks/useFloatingBackNavigation";
+import { ChevronLeft } from "lucide-react";
 
 type Variant = "web" | "mobile";
 
@@ -14,24 +15,30 @@ export default function CommunityGuidelinesPage({
 }: {
   variant: Variant;
 }) {
-  const router = useRouter();
   const isWeb = variant === "web";
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const isEn = language === "en";
+  const { goBack, prefersSideMenuAria } = useFloatingBackNavigation();
+  const backAria =
+    prefersSideMenuAria && user
+      ? isEn
+        ? "Back to side menu"
+        : "サイドメニューに戻る"
+      : isEn
+        ? "Back"
+        : "戻る";
   const updatedAt = "2026-03-23";
 
   return (
     <div className="min-h-screen w-full bg-[#050814] relative">
       <button
-        onClick={() => router.back()}
-        className="fixed top-4 right-4 z-50 h-11 w-11 rounded-full 
-                   bg-white/10 backdrop-blur border border-white/20 
-                   flex items-center justify-center text-white text-2xl 
-                   shadow-[0_8px_18px_rgba(0,0,0,0.35)] active:scale-95"
-        aria-label={isEn ? "Close" : "閉じる"}
+        type="button"
+        onClick={goBack}
+        className="fixed top-4 right-4 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-zinc-900/85 text-white shadow-[0_8px_18px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:bg-zinc-800/90 active:scale-95"
+        aria-label={backAria}
       >
-        ×
+        <ChevronLeft className="h-6 w-6" strokeWidth={2.25} aria-hidden />
       </button>
 
       <div

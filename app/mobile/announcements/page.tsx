@@ -7,16 +7,29 @@ import {
   collection,
   getDocs,
   onSnapshot,
-  orderBy,
-  limit,
-  query,
-  where,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
+import {
+  isAuthStateResolved,
+  useFirebaseUser,
+} from "@/lib/useFirebaseUser";
+import {
+  ANNOUNCEMENT_READ_IDS_STORAGE_KEY,
+  ANNOUNCEMENT_READS_CHANGED_EVENT,
+  getLocalAnnouncementReadIds,
+} from "@/lib/announcements/localAnnouncementReads";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
+import { mergeSyntheticEventIntoAnnouncements } from "@/lib/announcements/inAppEventAnnouncement";
+import {
+  queryVisibleAnnouncementsNoOrder,
+  sortAnnouncementsByPinnedThenPosted,
+  VISIBLE_ANNOUNCEMENTS_FETCH_LIMIT,
+} from "@/lib/announcements/announcementsClientQuery";
+
+const MOBILE_ANNOUNCEMENTS_LIST_LIMIT = 20;
 
 type Announcement = {
   id: string;
@@ -70,44 +83,54 @@ export default function AnnouncementsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const q = query(
-          collection(db, "announcements"),
-          where("visible", "==", true),
-          orderBy("pinned", "desc"),
-          orderBy("postedAt", "desc"),
-          limit(20)
-        );
+        const q = queryVisibleAnnouncementsNoOrder(VISIBLE_ANNOUNCEMENTS_FETCH_LIMIT);
         const snap = await getDocs(q);
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Announcement[];
-        setItems(list);
+        const sorted = sortAnnouncementsByPinnedThenPosted(list);
+        setItems(
+          mergeSyntheticEventIntoAnnouncements(
+            sorted.slice(0, MOBILE_ANNOUNCEMENTS_LIST_LIMIT)
+          )
+        );
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // 既読の購読（ログイン時のみ）
+  // 既読購読（ログイン: Firestore / ゲスト: localStorage）
   useEffect(() => {
-    if (status !== "ready" || !user?.uid) {
+    if (!isAuthStateResolved(status)) {
       setReadIds(new Set());
       return;
     }
-    const colRef = collection(db, `users/${user.uid}/reads`);
-    const unsub = onSnapshot(colRef, (snap) => {
-      const s = new Set<string>();
-      snap.forEach((d) => s.add(d.id));
-      setReadIds(s);
-    });
-    return () => unsub();
+    if (user?.uid) {
+      const colRef = collection(db, `users/${user.uid}/reads`);
+      const unsub = onSnapshot(colRef, (snap) => {
+        const s = new Set<string>();
+        snap.forEach((d) => s.add(d.id));
+        setReadIds(s);
+      });
+      return () => unsub();
+    }
+    const sync = () => setReadIds(getLocalAnnouncementReadIds());
+    sync();
+    const onCustom = () => sync();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key === ANNOUNCEMENT_READ_IDS_STORAGE_KEY) sync();
+    };
+    window.addEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(ANNOUNCEMENT_READS_CHANGED_EVENT, onCustom);
+      window.removeEventListener("storage", onStorage);
+    };
   }, [status, user?.uid]);
 
-  // 未読判定
   const isUnread = useMemo(() => {
-    if (status !== "ready" || !user?.uid) {
-      return (_id: string) => false; // 未ログイン時は未読ドット非表示
-    }
+    if (!isAuthStateResolved(status)) return (_id: string) => false;
     return (id: string) => !readIds.has(id);
-  }, [status, user?.uid, readIds]);
+  }, [status, readIds]);
 
   return (
     <div className="relative min-h-screen text-white">
@@ -162,7 +185,15 @@ export default function AnnouncementsPage() {
             const unread = isUnread(a.id);
 
             return (
-              <Link href={`/mobile/announcements/${a.id}`} key={a.id}>
+              <Link
+                href={`/mobile/announcements/${a.id}`}
+                key={a.id}
+                onClick={() => {
+                  if (isAuthStateResolved(status)) {
+                    markAnnouncementRead(user?.uid ?? null, a.id);
+                  }
+                }}
+              >
                 <div
                   className={[
                     "relative rounded-2xl overflow-hidden mb-5 border border-white/10 bg-white/5",
@@ -173,38 +204,36 @@ export default function AnnouncementsPage() {
                   {/* 未読ドット */}
                   {unread && (
                     <span
-                      className="absolute right-2 top-2 w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(0,229,255,0.8)]"
+                      className="pointer-events-none absolute right-2 top-2 z-20 h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(0,229,255,0.8)]"
                       aria-label={isEn ? "Unread" : "未読"}
                     />
                   )}
 
-                  {/* 画像（16:9） */}
                   {src ? (
                     <Image
                       src={src}
                       alt={a.title}
                       width={800}
                       height={450}
-                      className="w-full h-44 object-cover"
+                      className="h-44 w-full object-cover"
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-44 bg-white/5" />
+                    <div className="h-44 w-full bg-white/5" />
                   )}
 
-                  {/* 本文 */}
                   <div className="p-3">
                     <div className="flex items-center gap-3">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold bg-linear-to-r ${meta.grad} text-black/90 ${meta.glow}`}
                       >
-                      {typeLabel}
+                        {typeLabel}
                       </span>
                       <span className="text-xs text-white/60">
                         {formatDate(a.postedAt)}
                       </span>
                     </div>
-                    <h2 className="text-base font-semibold mt-1 leading-tight">
+                    <h2 className="mt-1 text-base font-semibold leading-tight">
                       {a.title}
                     </h2>
                   </div>

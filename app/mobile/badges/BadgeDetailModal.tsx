@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
+
 export default function BadgeDetailModal({
   badge,
   onClose,
@@ -89,19 +91,19 @@ export default function BadgeDetailModal({
           </p>
         )}
 
-        {/* === CLOSE ボタン === */}
+        {/* === 戻る === */}
         <button
+          type="button"
           onClick={onClose}
           className="
             absolute left-1/2 -bottom-7 -translate-x-1/2
-            w-14 h-14 rounded-full
-            bg-white/10 border border-white/20
-            flex items-center justify-center
-            backdrop-blur-sm
-            hover:bg-white/20 transition
+            flex h-14 w-14 items-center justify-center rounded-full
+            border border-white/20 bg-white/10
+            backdrop-blur-sm transition hover:bg-white/20
           "
+          aria-label={isEn ? "Back" : "戻る"}
         >
-          <span className="text-2xl leading-none">×</span>
+          <ChevronLeft className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden />
         </button>
       </div>
     </div>

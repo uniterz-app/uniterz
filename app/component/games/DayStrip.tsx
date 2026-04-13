@@ -298,7 +298,7 @@ export default function DayStrip({
               style={basis}
               variants={dayStripItem}
             >
-              <button
+              <motion.button
                 ref={(el) => {
                   if (el) btnRefs.current[i] = el;
                   if (selected) selRef.current = el;
@@ -306,8 +306,8 @@ export default function DayStrip({
                 onPointerDown={() => {
                   markStripPointerPick();
                 }}
-                onClick={() => {
-                  // Click selection should win over scroll-snap callbacks.
+                onTap={() => {
+                  // タップ 1 回で確定（onClick よりタッチで安定）
                   scrollingByCode.current = true;
                   if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
                   onSelect(d);
@@ -315,7 +315,7 @@ export default function DayStrip({
                     scrollingByCode.current = false;
                   }, 320);
                 }}
-                className="flex flex-col items-center justify-center"
+                className="flex touch-manipulation flex-col items-center justify-center"
                 type="button"
                 aria-label={new Intl.DateTimeFormat(a11yLocale, {
                   timeZone,
@@ -377,7 +377,7 @@ export default function DayStrip({
                     }).format(d)}
                   </span>
                 </div>
-              </button>
+              </motion.button>
             </motion.div>
           );
         })}

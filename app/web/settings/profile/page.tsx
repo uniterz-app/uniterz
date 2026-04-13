@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Camera, ArrowLeft } from "lucide-react";
+import { Camera } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
@@ -10,6 +10,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
+import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 type Language = "ja" | "en";
 const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
@@ -123,7 +124,7 @@ export default function ProfileEditPage() {
   return (
     <main
       className="
-        min-h-screen
+        relative min-h-screen
         text-white
         px-4 py-6
         flex justify-center
@@ -131,21 +132,14 @@ export default function ProfileEditPage() {
         bg-black/20
       "
     >
+      <FloatingCloseButton />
       {/*
         従来のラッパー（参考）: w-full max-w-[480px] rounded-2xl bg-[#111827] border border-white/10 shadow-2xl px-5 py-6
         見た目は SettingsNeonCard に統合（パディングはカード側の innerPad）
       */}
       <SettingsNeonCard className="w-full max-w-[480px]">
         {/* ===== ヘッダー ===== */}
-        <header className="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 hover:bg-white/10"
-            aria-label={isEn ? "Back" : "戻る"}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+        <header className="mb-6">
           <div>
             <h1 className="text-base font-semibold leading-tight">
               {isEn ? "Profile Settings" : "プロフィール設定"}

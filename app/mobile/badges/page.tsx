@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserBadges } from "@/app/component/badges/useUserBadges";
@@ -19,7 +17,6 @@ type ResolvedBadge = MasterBadge & {
 };
 
 export default function MobileBadgesPage() {
-  const router = useRouter();
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
   const { language } = useUserLanguage(uid);
@@ -54,21 +51,16 @@ export default function MobileBadgesPage() {
     .filter((b): b is ResolvedBadge => b !== null);
 
   return (
-    <div className="min-h-screen px-4 py-6 text-white bg-[#0A1118]">
+    <div className="relative min-h-screen text-white bg-[#0A1118]">
       <FloatingCloseButton />
-      {/* Header */}
-      <div className="flex items-center mb-6">
-        <button
-          onClick={() => router.back()}
-          className="mr-3 p-2 rounded-full bg-white/10"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-xl font-bold tracking-wide">
+      {/* お知らせ一覧と同様：右上フローティング戻る＋中央タイトル */}
+      <div className="sticky top-0 z-10 border-b border-white/5 backdrop-blur supports-backdrop-filter:bg-[#0A1118]/70">
+        <h1 className="py-3 text-center text-lg font-bold">
           {language === "en" ? "Badge Palette" : "バッジパレット"}
         </h1>
       </div>
 
+      <div className="p-4">
       {/* ベロア風背景 */}
       <div
         className="
@@ -129,6 +121,7 @@ export default function MobileBadgesPage() {
           language={language as Language}
         />
       )}
+      </div>
     </div>
   );
 }

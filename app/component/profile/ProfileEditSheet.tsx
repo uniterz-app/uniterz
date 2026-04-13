@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Camera, X, User } from "lucide-react";
+import { Camera, ChevronLeft, User } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, db, auth } from "@/lib/firebase";
@@ -26,12 +26,15 @@ type Props = {
   onSaved?: () => void;
   /** 別コンテナに埋め込むときは true（オーバーレイなし） */
   embedded?: boolean;
+  /** 戻る・背景タップで閉じたあとサイドメニューを再度開く（保存成功時は呼ばない） */
+  reopenMenu?: () => void;
 };
 
 export default function ProfileEditSheet({
   onClose,
   onSaved,
   embedded = false,
+  reopenMenu,
 }: Props) {
   const osIsJa =
     typeof navigator !== "undefined" &&
@@ -136,6 +139,13 @@ export default function ProfileEditSheet({
 
     onSaved?.();
     onClose();
+    // 保存後はメニューを自動では開かない
+  };
+
+  /** 戻る・オーバーレイ：シートを閉じてサイドメニューを開き直す */
+  const handleDismiss = () => {
+    onClose();
+    reopenMenu?.();
   };
 
   /**
@@ -171,11 +181,11 @@ export default function ProfileEditSheet({
               {!embedded && (
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10"
-                  aria-label={isEn ? "Close" : "閉じる"}
+                  onClick={handleDismiss}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-zinc-900/85 text-white shadow-[0_8px_18px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:bg-zinc-800/90 active:scale-95"
+                  aria-label={isEn ? "Back" : "戻る"}
                 >
-                  <X className="h-5 w-5" />
+                  <ChevronLeft className="h-6 w-6" strokeWidth={2.25} aria-hidden />
                 </button>
               )}
             </header>
@@ -326,7 +336,7 @@ export default function ProfileEditSheet({
     <div
       role="dialog"
       aria-modal="true"
-      onClick={onClose}
+      onClick={handleDismiss}
       className="fixed inset-0 z-1000001 flex items-end justify-center bg-black/50 p-3 backdrop-blur-md sm:items-center sm:p-4"
       style={{ WebkitBackdropFilter: "blur(16px)" }}
     >

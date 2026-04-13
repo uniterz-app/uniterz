@@ -1,7 +1,7 @@
 // app/component/settings/SettingsMenu.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import cn from "clsx";
 import {
@@ -22,22 +22,21 @@ import {
   Award,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
-import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
 import { ADMIN_UID } from "@/lib/constants";
-import { db, auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-} from "firebase/firestore";
+import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
 import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
+import {
+  markNavigatedFromSideMenu,
+  clearSideMenuOrigin,
+} from "@/lib/navigation/sideMenuReturnNav";
 
 type Variant = "mobile" | "web";
 type SettingsMenuProps = {
@@ -45,11 +44,14 @@ type SettingsMenuProps = {
   className?: string;
   /** プロフィール編集オーバーレイを開く前にサイドメニューを閉じる */
   onRequestCloseMenu?: () => void;
+  /** プロフィール編集を戻るで閉じたあとサイドメニューを再度開く */
+  onRequestOpenMenu?: () => void;
 };
 
 export default function SettingsMenu({
   className,
   onRequestCloseMenu,
+  onRequestOpenMenu,
 }: SettingsMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -71,12 +73,15 @@ export default function SettingsMenu({
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
 
-  const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [plan, setPlan] = useState<"free" | "pro">("free");
+
+  const { unreadCount } = useAnnouncementsUnread({
+    enabled: isAuthStateResolved(status),
+  });
 
   // ===== logout =====
   const handleLogout = async () => {
+    clearSideMenuOrigin();
     await signOut(auth);
     router.push(
       resolvedVariant === "web" ? "/web/login" : "/mobile/login"
@@ -103,49 +108,6 @@ export default function SettingsMenu({
   );
   const contactPath = p("/web/contact", "/mobile/contact");
 
-  // ===== announcements unread =====
-  useEffect(() => {
-    if (status !== "ready") return;
-    let alive = true;
-    const q = query(
-      collection(db, "announcements"),
-      where("visible", "==", true),
-      orderBy("pinned", "desc"),
-      orderBy("postedAt", "desc"),
-      limit(30)
-    );
-    getDocs(q).then((snap) => {
-      if (!alive) return;
-      const s = new Set<string>();
-      snap.forEach((d) => s.add(d.id));
-      setVisibleIds(s);
-    });
-    return () => { alive = false; };
-  }, [status]);
-
-  useEffect(() => {
-    if (!user?.uid) {
-      setReadIds(new Set());
-      return;
-    }
-    let alive = true;
-    getDocs(collection(db, `users/${user.uid}/reads`)).then((snap) => {
-      if (!alive) return;
-      const s = new Set<string>();
-      snap.forEach((d) => s.add(d.id));
-      setReadIds(s);
-    });
-    return () => { alive = false; };
-  }, [user?.uid]);
-
-  const unreadCount = useMemo(() => {
-    let c = 0;
-    visibleIds.forEach((id) => {
-      if (!readIds.has(id)) c++;
-    });
-    return c;
-  }, [visibleIds, readIds]);
-
   // ===== plan =====
   useEffect(() => {
     if (!user?.uid) return;
@@ -169,6 +131,12 @@ export default function SettingsMenu({
 
   const isAdmin = user?.uid === ADMIN_UID;
 
+  /** サイドメニューからの遷移（戻るボタン用フラグ） */
+  const pushFromMenu = (href: string) => {
+    markNavigatedFromSideMenu();
+    router.push(href);
+  };
+
   // ===== styles =====
   const containerClasses = cn(
     "relative text-white flex flex-col",
@@ -180,13 +148,10 @@ export default function SettingsMenu({
     "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300/55 mt-4 mb-2",
     isMobile ? "pl-7" : "pl-5"
   );
-  const itemClasses = cn(
-    "group relative flex items-center gap-3 border-b border-white/8 py-3 text-sm text-white/88 transition hover:bg-slate-200/[0.05]",
-    isMobile ? "pl-7 pr-3" : "px-5"
-  );
-  const subItemClasses = cn(
-    "group relative flex items-center gap-3 border-b border-white/8 py-2 text-xs text-slate-300/75 transition hover:bg-slate-200/[0.04] hover:text-white",
-    isMobile ? "pl-7 pr-3" : "px-5"
+  /** 試合カードの HOME/AWAY ラベルと同系統 */
+  const menuLabelFont = bracketMarketTeamTypography(isMobile);
+  const labelText = (en: string, ja: string) => (
+    <span className={cn(isEn && "uppercase")}>{isEn ? en : ja}</span>
   );
 
   return (
@@ -194,102 +159,180 @@ export default function SettingsMenu({
       <nav className={cn(containerClasses, "overflow-x-hidden")}>
         <p className={groupTitleClasses}>{isEn ? "Main" : "メイン"}</p>
 
-        <button
-          type="button"
-          className={itemClasses}
-          onClick={openProfileEditOverlay}
-        >
-          <User size={16} /> {isEn ? "Edit Profile" : "プロフィール編集"}
-        </button>
+        <div className="flex flex-col gap-2">
+          <SideMenuItemButton
+            icon={User}
+            labelStyle={menuLabelFont}
+            onClick={openProfileEditOverlay}
+          >
+            {labelText("Edit Profile", "プロフィール編集")}
+          </SideMenuItemButton>
 
-        <button className={itemClasses} onClick={() => router.push(p("/web/badges", "/mobile/badges"))}>
-          <Award size={16} /> {isEn ? "Badge Palette" : "バッジパレット"}
-        </button>
+          <SideMenuItemButton
+            icon={Award}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(p("/web/badges", "/mobile/badges"))}
+          >
+            {labelText("Badge Palette", "バッジパレット")}
+          </SideMenuItemButton>
 
-        <button className={itemClasses} onClick={() => router.push(announcementsPath)}>
-          <Megaphone size={16} /> {isEn ? "Announcements" : "お知らせ"}
-          {unreadCount > 0 && <span className="ml-auto text-xs bg-red-500 px-2 rounded-full">{unreadCount}</span>}
-        </button>
+          <SideMenuItemButton
+            icon={Megaphone}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(announcementsPath)}
+            trailing={
+              unreadCount > 0 ? (
+                <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white tabular-nums">
+                  {unreadCount}
+                </span>
+              ) : undefined
+            }
+          >
+            {labelText("Announcements", "お知らせ")}
+          </SideMenuItemButton>
+        </div>
 
         <p className={groupTitleClasses}>{isEn ? "Subscription" : "サブスクリプション"}</p>
 
-        <button
-          className={itemClasses}
-          onClick={() =>
-            router.push(
-              resolvedVariant === "web"
-                ? plan === "pro"
-                  ? "/web/plan-status"
-                  : "/web/pro/subscribe"
-                : plan === "pro"
-                  ? "/mobile/plan-status"
-                  : "/mobile/pro/subscribe"
-            )
-          }
-        >
-          <Package size={16} /> {isEn ? "Plan Status" : "プランの確認"}
-        </button>
+        <div className="flex flex-col gap-2">
+          <SideMenuItemButton
+            icon={Package}
+            labelStyle={menuLabelFont}
+            onClick={() =>
+              pushFromMenu(
+                resolvedVariant === "web"
+                  ? plan === "pro"
+                    ? "/web/plan-status"
+                    : "/web/pro/subscribe"
+                  : plan === "pro"
+                    ? "/mobile/plan-status"
+                    : "/mobile/pro/subscribe"
+              )
+            }
+          >
+            {labelText("Plan Status", "プランの確認")}
+          </SideMenuItemButton>
+        </div>
 
         <p className={groupTitleClasses}>{isEn ? "Support" : "サポート"}</p>
 
-        <button className={subItemClasses} onClick={() => router.push(resetPath)}>
-          <Key size={14} /> {isEn ? "Password Reset" : "パスワードリセット"}
-        </button>
+        <div className="flex flex-col gap-2">
+          <SideMenuItemButton
+            dense
+            icon={Key}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(resetPath)}
+          >
+            {labelText("Password Reset", "パスワードリセット")}
+          </SideMenuItemButton>
 
-        <button className={subItemClasses} onClick={() => router.push(helpPath)}>
-          <HelpCircle size={14} /> {isEn ? "Help" : "ヘルプ"}
-        </button>
+          <SideMenuItemButton
+            dense
+            icon={HelpCircle}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(helpPath)}
+          >
+            {labelText("Help", "ヘルプ")}
+          </SideMenuItemButton>
 
-        <button className={subItemClasses} onClick={() => router.push(guidelinesPath)}>
-          <Users size={14} /> {isEn ? "Community Guidelines" : "ガイドライン"}
-        </button>
+          <SideMenuItemButton
+            dense
+            icon={Users}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(guidelinesPath)}
+          >
+            {labelText("Community Guidelines", "ガイドライン")}
+          </SideMenuItemButton>
 
-        <button className={subItemClasses} onClick={() => router.push(termsPath)}>
-          <FileText size={14} /> {isEn ? "Terms of Service" : "利用規約"}
-        </button>
+          <SideMenuItemButton
+            dense
+            icon={FileText}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(termsPath)}
+          >
+            {labelText("Terms of Service", "利用規約")}
+          </SideMenuItemButton>
 
-        <button className={subItemClasses} onClick={() => router.push(contactPath)}>
-          <Mail size={14} /> {isEn ? "Contact" : "お問い合わせ"}
-        </button>
+          <SideMenuItemButton
+            dense
+            icon={Mail}
+            iconSize={15}
+            labelStyle={menuLabelFont}
+            onClick={() => pushFromMenu(contactPath)}
+          >
+            {labelText("Contact", "お問い合わせ")}
+          </SideMenuItemButton>
+        </div>
 
         {isAdmin && (
           <>
             <p className={groupTitleClasses}>{isEn ? "Admin" : "管理"}</p>
 
-        <button className={itemClasses} onClick={() => router.push("/admin")}>
-              <LayoutDashboard size={16} /> {isEn ? "Admin Dashboard" : "管理ダッシュボード"}
-            </button>
+            <div className="flex flex-col gap-2">
+              <SideMenuItemButton
+                icon={LayoutDashboard}
+                labelStyle={menuLabelFont}
+                onClick={() => pushFromMenu("/admin")}
+              >
+                {labelText("Admin Dashboard", "管理ダッシュボード")}
+              </SideMenuItemButton>
 
-            <button className={itemClasses} onClick={() => router.push("/admin/badges")}>
-              <Award size={16} /> {isEn ? "Grant Badges" : "バッジ付与"}
-            </button>
+              <SideMenuItemButton
+                icon={Award}
+                labelStyle={menuLabelFont}
+                onClick={() => pushFromMenu("/admin/badges")}
+              >
+                {labelText("Grant Badges", "バッジ付与")}
+              </SideMenuItemButton>
 
-            <button className={itemClasses} onClick={() => router.push("/admin/announcements")}>
-              <Newspaper size={16} /> {isEn ? "Manage Announcements" : "お知らせ管理"}
-            </button>
+              <SideMenuItemButton
+                icon={Newspaper}
+                labelStyle={menuLabelFont}
+                onClick={() => pushFromMenu("/admin/announcements")}
+              >
+                {labelText("Manage Announcements", "お知らせ管理")}
+              </SideMenuItemButton>
 
-            <button className={itemClasses} onClick={() => router.push("/admin/announcements/new")}>
-              <PlusSquare size={16} /> {isEn ? "Create Announcement" : "お知らせ作成"}
-            </button>
+              <SideMenuItemButton
+                icon={PlusSquare}
+                labelStyle={menuLabelFont}
+                onClick={() => pushFromMenu("/admin/announcements/new")}
+              >
+                {labelText("Create Announcement", "お知らせ作成")}
+              </SideMenuItemButton>
 
-            <button className={itemClasses} onClick={() => router.push("/admin/games-import")}>
-              <Database size={16} /> {isEn ? "Game Import" : "試合インポート"}
-            </button>
+              <SideMenuItemButton
+                icon={Database}
+                labelStyle={menuLabelFont}
+                onClick={() => pushFromMenu("/admin/games-import")}
+              >
+                {labelText("Game Import", "試合インポート")}
+              </SideMenuItemButton>
 
-            <button className={itemClasses} onClick={() => router.push("/admin/plans")}>
-              <CheckCheck size={16} /> {isEn ? "Plan Approval" : "プラン承認"}
-            </button>
+              <SideMenuItemButton
+                icon={CheckCheck}
+                labelStyle={menuLabelFont}
+                onClick={() => pushFromMenu("/admin/plans")}
+              >
+                {labelText("Plan Approval", "プラン承認")}
+              </SideMenuItemButton>
+            </div>
           </>
         )}
 
-        <div className="mt-5 border-t border-white/10 pt-3 pb-3">
-          <button
-            type="button"
-            className={cn(itemClasses, "border-b-0")}
+        <div className="mt-5 border-t border-white/10 pt-4 pb-1">
+          <SideMenuItemButton
+            icon={LogOut}
+            tone="danger"
+            labelStyle={menuLabelFont}
             onClick={() => setShowLogoutModal(true)}
           >
-            <LogOut size={16} /> {isEn ? "Logout" : "ログアウト"}
-          </button>
+            {labelText("Logout", "ログアウト")}
+          </SideMenuItemButton>
         </div>
       </nav>
 
@@ -303,7 +346,10 @@ export default function SettingsMenu({
       {portalReady &&
         showProfileEdit &&
         createPortal(
-          <ProfileEditSheet onClose={() => setShowProfileEdit(false)} />,
+          <ProfileEditSheet
+            onClose={() => setShowProfileEdit(false)}
+            reopenMenu={onRequestOpenMenu}
+          />,
           document.body
         )}
     </>

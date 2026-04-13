@@ -171,9 +171,9 @@ export default function MobileMatchCard(props: MatchCardProps) {
 
   return (
     <motion.div
-      onClick={handle}
+      onTap={handle}
       className="
-        w-full rounded-2xl bg-white/5 border border-white/10
+        w-full touch-manipulation rounded-2xl bg-white/5 border border-white/10
         px-4 py-3 text-white active:scale-[0.98]
         transition-transform cursor-pointer select-none
       "

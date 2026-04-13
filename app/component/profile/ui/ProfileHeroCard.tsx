@@ -35,6 +35,8 @@ type Props = {
   currentStreak: number;
   canOpenSettings: boolean;
   onOpenSettings: () => void;
+  /** 未読お知らせ件数（0 より大きいときメニューボタンにバッジ） */
+  menuUnreadCount?: number;
   children?: ReactNode;
 };
 
@@ -204,6 +206,7 @@ export default function ProfileHeroCard({
   currentStreak,
   canOpenSettings,
   onOpenSettings,
+  menuUnreadCount = 0,
   children,
 }: Props) {
   const reduceMotion = useReducedMotion();
@@ -541,8 +544,8 @@ export default function ProfileHeroCard({
       type="button"
       className={
         isWeb
-          ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5"
-          : "absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/10"
+          ? "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5"
+          : "absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5"
       }
       onClick={onOpenSettings}
       initial={
@@ -565,6 +568,14 @@ export default function ProfileHeroCard({
       aria-label="Menu"
     >
       <Menu className={isWeb ? "h-5 w-5" : "h-4 w-4"} />
+      {menuUnreadCount > 0 && (
+        <span
+          className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+          aria-hidden
+        >
+          {menuUnreadCount > 9 ? "9+" : menuUnreadCount}
+        </span>
+      )}
     </motion.button>
   );
 

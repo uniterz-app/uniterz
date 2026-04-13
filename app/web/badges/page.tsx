@@ -7,8 +7,8 @@ import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import BadgeDetailModal from "./BadgeDetailModal";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import type { Language } from "@/lib/i18n/language";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
+import type { Language } from "@/lib/i18n/language";
 
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
@@ -49,13 +49,18 @@ export default function WebBadgesPage() {
     .filter((b): b is ResolvedBadge => b !== null);
 
   return (
-    <div className="min-h-screen px-6 py-10 text-white bg-[#08111A]">
+    <div className="relative min-h-screen text-white bg-[#08111A]">
       <FloatingCloseButton />
-      {/* Header */}
-      <h1 className="text-3xl font-extrabold mb-6 tracking-wide">
-        {language === "en" ? "Badge Palette" : "バッジパレット"}
-      </h1>
+      {/* お知らせなどと同様：右上フローティング戻るのみ */}
+      <div className="sticky top-0 z-10 border-b border-white/5 backdrop-blur supports-backdrop-filter:bg-[#08111A]/70">
+        <div className="mx-auto max-w-[1200px] px-6">
+          <h1 className="py-4 text-left text-xl font-bold tracking-wide md:text-2xl md:font-extrabold">
+            {language === "en" ? "Badge Palette" : "バッジパレット"}
+          </h1>
+        </div>
+      </div>
 
+      <div className="mx-auto max-w-[1200px] px-6 py-8">
       {/* velvet / velour風 */}
       <div
         className="
@@ -114,6 +119,7 @@ export default function WebBadgesPage() {
           language={language as Language}
         />
       )}
+      </div>
     </div>
   );
 }

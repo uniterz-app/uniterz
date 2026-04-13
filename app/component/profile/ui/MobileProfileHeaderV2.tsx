@@ -27,6 +27,8 @@ type Props = {
 
   // 確認用（未指定なら profile.currentStreak を使う）
   debugCurrentStreak?: number | null;
+  /** 未読お知らせ件数 */
+  menuUnreadCount?: number;
 };
 
 export default function MobileProfileHeaderV2({
@@ -38,6 +40,7 @@ export default function MobileProfileHeaderV2({
   avatarSize = 84,
   streakFrameMin = 3,
   debugCurrentStreak = null,
+  menuUnreadCount = 0,
 }: Props) {
   const displayName = profile.displayName ?? "";
   const handle = profile.handle ?? "";
@@ -103,9 +106,17 @@ export default function MobileProfileHeaderV2({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="absolute right-3 top-3 z-20 h-10 w-10 rounded-full border border-white/15 bg-white/10 backdrop-blur flex items-center justify-center"
+                className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5"
               >
                 <Menu className="h-5 w-5" />
+                {menuUnreadCount > 0 && (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                    aria-hidden
+                  >
+                    {menuUnreadCount > 9 ? "9+" : menuUnreadCount}
+                  </span>
+                )}
               </button>
             )}
 

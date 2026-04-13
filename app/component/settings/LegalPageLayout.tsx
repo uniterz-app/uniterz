@@ -7,6 +7,8 @@ import Image from "next/image";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { useFloatingBackNavigation } from "@/lib/hooks/useFloatingBackNavigation";
+import { ChevronLeft } from "lucide-react";
 
 type Variant = "web" | "mobile";
 
@@ -29,6 +31,15 @@ export default function LegalPageLayout({
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const isEn = language === "en";
+  const { goBack, prefersSideMenuAria } = useFloatingBackNavigation();
+  const backAria =
+    prefersSideMenuAria && user
+      ? isEn
+        ? "Back to side menu"
+        : "サイドメニューに戻る"
+      : isEn
+        ? "Back"
+        : "戻る";
 
   return (
     <div className="min-h-screen w-full bg-[#050814] relative">
@@ -78,21 +89,20 @@ export default function LegalPageLayout({
         </SettingsNeonCard>
       </div>
 
-      {/* ===== 戻る（×）ボタン：右上固定 ===== */}
+      {/* ===== 戻る：右上固定 ===== */}
       <button
-        onClick={() => window.history.back()}
+        type="button"
+        onClick={goBack}
         className="
           fixed top-4 right-4 z-50
-          w-11 h-11 rounded-full
-          bg-white/10 backdrop-blur 
-          border border-white/20 
-          flex items-center justify-center
-          shadow-[0_0_18px_rgba(0,0,0,0.35)]
-          active:scale-95 transition-transform
+          flex h-11 w-11 items-center justify-center rounded-full
+          border border-white/20 bg-zinc-900/85 text-white backdrop-blur-sm
+          shadow-[0_8px_18px_rgba(0,0,0,0.4)]
+          transition hover:bg-zinc-800/90 active:scale-95
         "
-        aria-label={isEn ? "Close" : "閉じる"}
+        aria-label={backAria}
       >
-        <span className="text-2xl font-bold text-white">×</span>
+        <ChevronLeft className="h-6 w-6" strokeWidth={2.25} aria-hidden />
       </button>
     </div>
   );

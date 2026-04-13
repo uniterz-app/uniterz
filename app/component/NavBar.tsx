@@ -587,6 +587,7 @@ export default function NavBar() {
               <Link
                 key={item.key}
                 href={href}
+                className={isMobile ? "touch-manipulation" : undefined}
                 style={{
                   ...(isMobile ? BarStyle.linkMobile : BarStyle.linkWeb),
                   position: "relative",

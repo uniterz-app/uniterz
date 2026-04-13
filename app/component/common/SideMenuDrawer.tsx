@@ -10,6 +10,8 @@ type SideMenuDrawerProps = {
   open: boolean;
   /** 閉じるときに呼ぶ */
   onClose: () => void;
+  /** プロフィール編集の戻るなどでメニューを再度開く */
+  onOpenMenu?: () => void;
   /** mobile / web で中身のサイズを少し変える */
   variant?: "mobile" | "web";
 };
@@ -17,6 +19,7 @@ type SideMenuDrawerProps = {
 export default function SideMenuDrawer({
   open,
   onClose,
+  onOpenMenu,
   variant = "mobile",
 }: SideMenuDrawerProps) {
   const isMobile = variant === "mobile";
@@ -83,15 +86,19 @@ export default function SideMenuDrawer({
 
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 flex max-h-[100dvh] flex-col py-3 pl-0 pr-2 sm:py-4 sm:pr-3",
+          "fixed left-0 top-0 z-50 flex max-h-[100dvh] flex-col py-4 pl-0 pr-3 sm:py-5 sm:pr-5",
           "transition-transform duration-300 ease-out",
           open ? (isMobile ? "-translate-x-4" : "-translate-x-2") : "-translate-x-full",
         )}
       >
           <div
             className={cn(
-              "relative max-h-[calc(100dvh-24px)] min-h-0 overflow-y-auto overflow-x-hidden border border-white/12 bg-[#071326]/68 shadow-[0_22px_56px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl",
-              isMobile ? "w-[52vw] min-w-[280px] max-w-[340px] -ml-2" : "w-[min(420px,38vw)]",
+              // 上下に余白を取り、パネル高さを画面いっぱいより少し低くする
+              "relative max-h-[min(92dvh,calc(100dvh-3rem))] min-h-0 overflow-y-auto overflow-x-hidden border border-white/12 bg-[#071326]/68 shadow-[0_22px_56px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl",
+              // 右端まで張り付かないよう幅を少し削り、外側 pr と合わせて余白を確保
+              isMobile
+                ? "w-[46vw] min-w-[260px] max-w-[300px] -ml-2"
+                : "w-[min(368px,32vw)]",
             )}
             style={{
               clipPath:
@@ -154,7 +161,10 @@ export default function SideMenuDrawer({
               aria-hidden
               className="pointer-events-none absolute inset-x-3 top-2 h-px bg-white/25"
             />
-            <SettingsMenu onRequestCloseMenu={onClose} />
+            <SettingsMenu
+              onRequestCloseMenu={onClose}
+              onRequestOpenMenu={onOpenMenu}
+            />
           </div>
       </div>
     </>
