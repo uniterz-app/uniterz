@@ -13,7 +13,6 @@ import { auth } from "@/lib/firebase";
 import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import { toast } from "@/app/component/ui/toast";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Swords } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
@@ -243,8 +242,6 @@ export default function PredictionFormV2({
     : "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
 
   /** Match tab label font size (text-xs / text-sm). */
-  const postseasonTabIconClass = "h-[1em] w-[1em] shrink-0 opacity-90";
-
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
@@ -508,13 +505,6 @@ export default function PredictionFormV2({
                 isMobile ? "min-w-0" : "",
               ].join(" ")}
             >
-              {isNbaPostseasonTools && (
-                <Swords
-                  className={postseasonTabIconClass}
-                  strokeWidth={2.25}
-                  aria-hidden
-                />
-              )}
               <span className={isMobile ? "truncate" : ""}>
                 {isNbaPostseasonTools
                   ? isEn
