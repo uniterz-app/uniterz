@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
@@ -40,7 +41,7 @@ export default function CommunityGuidelinesPage({
             : "mx-auto max-w-[640px] px-4 py-8 text-white"
         }
       >
-        <div className="rounded-3xl bg-[#0b1020] px-6 py-6 border border-white/10">
+        <SettingsNeonCard className="w-full">
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 overflow-hidden">
               <Image
@@ -184,7 +185,7 @@ export default function CommunityGuidelinesPage({
               </p>
             </section>
           </div>
-        </div>
+        </SettingsNeonCard>
       </div>
     </div>
   );

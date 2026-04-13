@@ -55,7 +55,8 @@ export default function RankingsMetricRow({
             }
       }
     >
-      <div className="relative flex h-[48px] w-full max-w-[320px] items-center justify-center sm:h-[56px] sm:max-w-[420px]">
+      <div className="relative flex h-[52px] w-full max-w-[320px] items-center justify-center sm:h-[58px] sm:max-w-[420px]">
+        {/* 左右は scale を外さないとレイアウト高さと見た目がズレる */}
         {/* LEFT */}
         {metrics.length > 1 && (
           <button
@@ -63,15 +64,15 @@ export default function RankingsMetricRow({
             onClick={() => setMetric(prevMetric.key)}
             className={[
               "absolute left-0 z-0",
-              "flex h-[34px] min-w-[80px] max-w-[34%] items-center justify-center",
+              "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
               "rounded-xl border border-white/10 bg-white/[0.035] px-2",
-              "text-[10px] text-white/40 sm:h-[40px] sm:min-w-[100px] sm:text-xs",
+              "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
               "shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md",
-              "scale-[0.88] opacity-70",
+              "opacity-70",
               jp.className,
             ].join(" ")}
             style={{
-              transform: "perspective(800px) rotateY(28deg) scale(0.88)",
+              transform: "perspective(800px) rotateY(26deg)",
               transformOrigin: "right center",
             }}
           >
@@ -87,11 +88,11 @@ export default function RankingsMetricRow({
           onClick={() => setMetric(nextMetric.key)}
           className={[
             "relative z-10",
-            "flex h-[40px] min-w-[120px] max-w-[56%] items-center justify-center",
+            "box-border flex h-[44px] min-w-[120px] max-w-[56%] items-center justify-center leading-none",
             "rounded-xl border bg-white/7 px-3",
             "text-sm font-black tracking-[0.04em] text-white",
             "shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]",
-            "backdrop-blur-md sm:h-[46px] sm:min-w-[150px] sm:text-base",
+            "backdrop-blur-md sm:h-[50px] sm:min-w-[150px] sm:text-base",
             jp.className,
           ].join(" ")}
           style={{
@@ -117,15 +118,15 @@ export default function RankingsMetricRow({
             onClick={() => setMetric(nextMetric.key)}
             className={[
               "absolute right-0 z-0",
-              "flex h-[34px] min-w-[80px] max-w-[34%] items-center justify-center",
+              "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
               "rounded-xl border border-white/10 bg-white/[0.035] px-2",
-              "text-[10px] text-white/40 sm:h-[40px] sm:min-w-[100px] sm:text-xs",
+              "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
               "shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md",
-              "scale-[0.88] opacity-70",
+              "opacity-70",
               jp.className,
             ].join(" ")}
             style={{
-              transform: "perspective(800px) rotateY(-28deg) scale(0.88)",
+              transform: "perspective(800px) rotateY(-26deg)",
               transformOrigin: "left center",
             }}
           >

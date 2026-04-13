@@ -46,7 +46,7 @@ export default function LeaderboardsPage() {
     <div className="min-h-dvh bg-app">
       <main className="pb-bottom-nav">
         <div className="border-b border-white/10 px-4 pt-3">
-          <div className="scrollbar-none flex overflow-x-auto">
+          <div className="scrollbar-none flex items-stretch overflow-x-auto">
             {TABS.map((item) => {
               const active = tab === item.key;
 
@@ -57,7 +57,7 @@ export default function LeaderboardsPage() {
                   onClick={() => setTab(item.key)}
                   className={[
                     nameRajdhani.className,
-                    "relative shrink-0 whitespace-nowrap px-3 pb-3 pt-1 text-[15px] font-medium tracking-[0.06em] transition",
+                    "relative flex h-12 shrink-0 items-center whitespace-nowrap px-3 text-[15px] font-medium leading-none tracking-[0.06em] transition",
                     "mr-8 last:mr-0",
                     active ? "text-white" : "text-white/42",
                   ].join(" ")}

@@ -10,6 +10,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 
 type Language = "ja" | "en";
 const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
@@ -149,7 +150,11 @@ export default function ProfileEditPage() {
         bg-black/5
       "
     >
-      <div className="w-full max-w-[480px] rounded-2xl bg-[#111827] border border-white/10 shadow-2xl px-5 py-6">
+      {/*
+        従来のラッパー（参考）: w-full max-w-[480px] rounded-2xl bg-[#111827] border border-white/10 shadow-2xl px-5 py-6
+        見た目は SettingsNeonCard に統合（パディングはカード側の innerPad）
+      */}
+      <SettingsNeonCard className="w-full max-w-[480px]">
         {/* ===== ヘッダー ===== */}
         <header className="mb-6 flex items-center gap-3">
           <button
@@ -291,7 +296,7 @@ export default function ProfileEditPage() {
               : "変更を保存"}
           </button>
         </form>
-      </div>
+      </SettingsNeonCard>
     </main>
   );
 }

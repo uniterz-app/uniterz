@@ -21,9 +21,9 @@ import useMonthlyLeaderboard, {
   type MonthlyLeaderboardRow,
 } from "@/lib/leaderboards/useMonthlyLeaderboard";
 import { nameBebas, jp } from "@/lib/fonts";
+import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   league?: string;
@@ -103,20 +103,12 @@ function findMyRow(
   return rows.find((row) => row.uid === myUid) ?? null;
 }
 
-function monthlyLeaderboardErrorMessage(
-  error: string,
-  language: Language
-): string {
+function isMonthlyLeaderboardNoDataError(error: string): boolean {
   const lower = error.toLowerCase();
-  if (
+  return (
     lower.includes("monthly leaderboard snapshot not found") ||
     lower.includes("monthly leaderboard not found")
-  ) {
-    return language === "en"
-      ? "No leaderboard data for this month."
-      : "この月のデータはありません";
-  }
-  return error;
+  );
 }
 
 export default function MonthlyLeaderboardSection({
@@ -251,10 +243,23 @@ export default function MonthlyLeaderboardSection({
         )}
 
         {!loading && error && (
-          <div className="flex min-h-[min(45vh,380px)] flex-col items-center justify-center px-4 pb-10 text-center">
-            <p className="text-[15px] text-white/80">
-              {monthlyLeaderboardErrorMessage(error, language)}
-            </p>
+          <div
+            role="status"
+            className="flex min-h-[min(45vh,380px)] flex-col items-center justify-center px-4 pb-10 text-center"
+          >
+            {isMonthlyLeaderboardNoDataError(error) ? (
+              <p
+                className={[
+                  nameBebas.className,
+                  "text-[clamp(1.75rem,6vw,3rem)] leading-none tracking-[0.22em]",
+                ].join(" ")}
+                style={cyberNoDataLabelStyle}
+              >
+                NO DATA
+              </p>
+            ) : (
+              <p className="text-[15px] text-white/80">{error}</p>
+            )}
           </div>
         )}
 

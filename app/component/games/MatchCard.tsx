@@ -778,7 +778,10 @@ background:
               "mc-round text-center font-bold",
               mobileDense
                 ? "mt-3 mb-0 text-xl leading-snug md:text-2xl"
-                : "mt-2 mb-0.5 text-lg md:text-2xl",
+                : isMobile
+                  ? "mt-2 mb-0.5 text-lg md:text-2xl"
+                  : // Web 試合カード：レギュラーシーズン等の帯ラベルを読みやすく大きめに
+                    "mt-2 mb-0.5 text-xl tracking-[0.06em] md:text-2xl lg:text-3xl",
             ].join(" ")}
             style={teamNameFont}
           >

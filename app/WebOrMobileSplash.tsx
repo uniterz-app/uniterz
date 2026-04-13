@@ -7,13 +7,11 @@ import NavBar from "@/app/component/NavBar";
 import { isGuestLegalPath } from "@/lib/guestLegalPaths";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 
-/** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィール・パスワードリセット） */
+/** 下部ナビを出さないルート（ゲスト向け文言ページ・初回プロフィールセットアップ） */
 function shouldShowBottomNavBar(pathname: string | null | undefined): boolean {
   if (!pathname) return true;
   if (isGuestLegalPath(pathname)) return false;
   if (isProfileSetupRoute(pathname)) return false;
-  if (pathname.startsWith("/web/reset") || pathname.startsWith("/mobile/reset"))
-    return false;
   return true;
 }
 

@@ -4,6 +4,7 @@
 import React from "react";
 import cn from "clsx";
 import Image from "next/image";
+import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
@@ -37,8 +38,7 @@ export default function LegalPageLayout({
           isWeb ? "max-w-3xl px-6 py-10" : "max-w-[640px] px-4 py-8"
         )}
       >
-        {/* カード */}
-        <div className="rounded-3xl bg-[#0b1020] px-6 py-6 border border-white/10">
+        <SettingsNeonCard className="w-full">
           {/* ヘッダー */}
           <div className="mb-4 flex items-center gap-3">
             {/* ロゴ差し替え（U → ロゴ画像） */}
@@ -75,7 +75,7 @@ export default function LegalPageLayout({
           <div className="mt-4 space-y-4 text-xs md:text-sm leading-relaxed text-white/80">
             {children}
           </div>
-        </div>
+        </SettingsNeonCard>
       </div>
 
       {/* ===== 戻る（×）ボタン：右上固定 ===== */}

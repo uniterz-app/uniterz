@@ -19,13 +19,22 @@ import {
   useReducedMotion,
   type Variants,
 } from "framer-motion";
-import { CalendarRange, Check, ChevronDown, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarRange,
+  Check,
+  ChevronDown,
+  X,
+} from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { SCHEDULE_MY_POST_DELETED_EVENT } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
 import { nameBebas } from "@/lib/fonts";
-import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import {
+  cyberNoDataLabelStyle,
+} from "@/lib/ui/cyberNoDataLabelStyle";
 import ResultCard, {
   type ResultCardOpenAnchor,
 } from "@/app/component/result/ResultCard";
@@ -67,6 +76,13 @@ import {
   GAMES_CYBER_ENTRY_DURATION_SEC,
   GAMES_CYBER_SLOT_GAP_SEC,
 } from "@/app/component/games/cyberMotion";
+
+/** Delete ラベル用（かなり鮮やかな赤＋強い発光） */
+const deleteConfirmDeleteLabelStyle: CSSProperties = {
+  color: "#ff6363",
+  textShadow:
+    "0 0 16px rgba(255,90,90,1), 0 0 36px rgba(239,68,68,0.95), 0 0 64px rgba(220,38,38,0.75), 0 0 96px rgba(153,27,27,0.45)",
+};
 
 /** 一覧の複合フィルター（デフォルトはすべて通過） */
 export type ResultListFilters = {
@@ -379,6 +395,11 @@ export default function ResultListWithOverlay({
     () => new Set()
   );
   const dismissedFromStorageLoadedRef = useRef(false);
+  /** ゴミ箱：削除 API 実行前の確認 */
+  const [deleteConfirmPost, setDeleteConfirmPost] =
+    useState<PostWithMillis | null>(null);
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
+  const deleteSubmittingRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
 
   const isMobile = platform === "mobile";
@@ -621,10 +642,10 @@ export default function ResultListWithOverlay({
   }, []);
 
   const dismissPostFromList = useCallback(
-    async (post: PostWithMillis) => {
-      if (!canDismissResultListPostNow(post, Date.now())) return;
+    async (post: PostWithMillis): Promise<boolean> => {
+      if (!canDismissResultListPostNow(post, Date.now())) return false;
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) return false;
 
       let deleted = false;
       try {
@@ -637,12 +658,12 @@ export default function ResultListWithOverlay({
             credentials: "include",
           }
         );
-        if (res.status === 403) return;
+        if (res.status === 403) return false;
         deleted = res.ok || res.status === 404;
       } catch {
-        return;
+        return false;
       }
-      if (!deleted) return;
+      if (!deleted) return false;
 
       if (typeof window !== "undefined") {
         window.dispatchEvent(
@@ -663,9 +684,34 @@ export default function ResultListWithOverlay({
       });
 
       await refreshResultPosts?.();
+      return true;
     },
     [close, openPostId, refreshResultPosts]
   );
+
+  const confirmDismissPostFromList = useCallback(async () => {
+    const post = deleteConfirmPost;
+    if (!post || deleteSubmittingRef.current) return;
+    deleteSubmittingRef.current = true;
+    setDeleteInProgress(true);
+    try {
+      const ok = await dismissPostFromList(post);
+      if (ok) setDeleteConfirmPost(null);
+    } finally {
+      deleteSubmittingRef.current = false;
+      setDeleteInProgress(false);
+    }
+  }, [deleteConfirmPost, dismissPostFromList]);
+
+  useEffect(() => {
+    if (!deleteConfirmPost) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || deleteInProgress) return;
+      setDeleteConfirmPost(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [deleteConfirmPost, deleteInProgress]);
 
   const open = useCallback(
     (post: PredictionPostV2 | PostWithMillis, anchor: ResultCardOpenAnchor) => {
@@ -1515,7 +1561,7 @@ export default function ResultListWithOverlay({
                             listNowTick
                           )}
                           onPreKickoffDismiss={() =>
-                            dismissPostFromList(post)
+                            setDeleteConfirmPost(post)
                           }
                         />
                       </div>
@@ -1550,7 +1596,7 @@ export default function ResultListWithOverlay({
                             listNowTick
                           )}
                           onPreKickoffDismiss={() =>
-                            dismissPostFromList(post)
+                            setDeleteConfirmPost(post)
                           }
                         />
                       </m.div>
@@ -1755,6 +1801,124 @@ export default function ResultListWithOverlay({
                   </>
                 )}
               </m.div>
+            </AnimatePresence>,
+            document.body
+          )
+        : null}
+
+      {overlayPortalReady && typeof document !== "undefined"
+        ? createPortal(
+            <AnimatePresence>
+              {deleteConfirmPost ? (
+                <m.div
+                  key={`result-delete-${deleteConfirmPost.id}`}
+                  role="presentation"
+                  className="fixed inset-0 z-[100002] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm pointer-events-auto"
+                  initial={prefersReducedMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+                  transition={{ duration: 0.2, ease: easeOut }}
+                  onClick={() => {
+                    if (!deleteInProgress) setDeleteConfirmPost(null);
+                  }}
+                >
+                  <m.div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="result-delete-confirm-title"
+                    className={[
+                      "relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/18 p-5",
+                      "bg-linear-to-b from-white/[0.12] via-cyan-950/25 to-zinc-950/50",
+                      "backdrop-blur-2xl backdrop-saturate-[1.8]",
+                      "shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.25),0_28px_96px_rgba(0,0,0,0.55)]",
+                      "ring-1 ring-cyan-400/25",
+                    ].join(" ")}
+                    initial={
+                      prefersReducedMotion ? false : { opacity: 0, scale: 0.96, y: 8 }
+                    }
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={
+                      prefersReducedMotion
+                        ? undefined
+                        : { opacity: 0, scale: 0.98, y: 6 }
+                    }
+                    transition={{ duration: 0.24, ease: easeOut }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p
+                      id="result-delete-confirm-title"
+                      className="px-1 py-1 text-center text-sm font-semibold text-white/95 drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] sm:text-base"
+                    >
+                      本当に削除しますか
+                    </p>
+                    {/* 参照デザイン：ガラス枠＋ホバー塗り＋矢印（左＝戻る／右＝進む）。英字は NO DATA と同系 */}
+                    <div className="mt-5 flex w-full flex-row items-center justify-between gap-3">
+                      <m.button
+                        type="button"
+                        disabled={deleteInProgress}
+                        className={[
+                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-[11px]",
+                          "border-2 border-cyan-400/55 bg-white/[0.06] px-3 backdrop-blur-md",
+                          "shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
+                          "transition-all duration-500 ease-out",
+                          "hover:border-cyan-300/85 hover:bg-cyan-500/[0.22] disabled:pointer-events-none disabled:opacity-45",
+                        ].join(" ")}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+                        onClick={() => setDeleteConfirmPost(null)}
+                      >
+                        <ArrowLeft
+                          className={[
+                            "h-[1.35em] w-[1.35em] shrink-0 text-cyan-200/95",
+                            "transition-transform duration-500 ease-out",
+                            "group-hover:-translate-x-1.5",
+                          ].join(" ")}
+                          aria-hidden
+                        />
+                        <span
+                          className={[
+                            nameBebas.className,
+                            "text-[0.95rem] leading-none tracking-[0.14em] sm:text-[1.05rem]",
+                          ].join(" ")}
+                          style={cyberNoDataLabelStyle}
+                        >
+                          Cancel
+                        </span>
+                      </m.button>
+                      <m.button
+                        type="button"
+                        disabled={deleteInProgress}
+                        className={[
+                          "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-end gap-2 overflow-hidden rounded-[11px]",
+                          "border-2 border-red-600 bg-white/[0.06] px-3 backdrop-blur-md",
+                          "shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_22px_rgba(220,38,38,0.45),0_0_40px_rgba(185,28,28,0.22)]",
+                          "transition-all duration-500 ease-out",
+                          "hover:border-red-500 hover:bg-red-700/45 hover:shadow-[0_0_36px_rgba(239,68,68,0.55),0_0_56px_rgba(220,38,38,0.35)] disabled:pointer-events-none disabled:opacity-45",
+                        ].join(" ")}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+                        onClick={() => void confirmDismissPostFromList()}
+                      >
+                        <span
+                          className={[
+                            nameBebas.className,
+                            "text-[0.95rem] leading-none tracking-[0.14em] sm:text-[1.05rem]",
+                          ].join(" ")}
+                          style={deleteConfirmDeleteLabelStyle}
+                        >
+                          Delete
+                        </span>
+                        <ArrowRight
+                          className={[
+                            "h-[1.35em] w-[1.35em] shrink-0 text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.85)]",
+                            "transition-transform duration-500 ease-out",
+                            "group-hover:translate-x-1.5 group-hover:text-red-300",
+                          ].join(" ")}
+                          aria-hidden
+                        />
+                      </m.button>
+                    </div>
+                  </m.div>
+                </m.div>
+              ) : null}
             </AnimatePresence>,
             document.body
           )

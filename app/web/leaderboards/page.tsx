@@ -46,7 +46,7 @@ export default function WebLeaderboardsPage() {
     <div className="min-h-dvh bg-app text-white">
       <main className="mx-auto w-full max-w-7xl px-6 pb-bottom-nav pt-6 lg:px-10">
         <div className="border-b border-white/10">
-          <div className="flex overflow-x-auto">
+          <div className="flex items-stretch overflow-x-auto">
             {TABS.map((item) => {
               const active = tab === item.key;
 
@@ -57,7 +57,7 @@ export default function WebLeaderboardsPage() {
                   onClick={() => setTab(item.key)}
                   className={[
                     nameRajdhani.className,
-                    "relative shrink-0 whitespace-nowrap px-4 pb-4 pt-2 text-[18px] font-medium tracking-[0.06em] transition",
+                    "relative flex h-14 shrink-0 items-center whitespace-nowrap px-4 text-[18px] font-medium leading-none tracking-[0.06em] transition",
                     "mr-10 last:mr-0",
                     active ? "text-white" : "text-white/42",
                   ].join(" ")}

@@ -11,6 +11,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -101,16 +102,9 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div
-        style={{
-          width: formWidth,
-          padding: 24,
-          backgroundColor: "rgba(10,10,20,0.92)",
-          borderRadius: 16,
-          textAlign: "center",
-          boxShadow: "0 0 40px rgba(0,0,0,0.55)",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}
+      <SettingsNeonCard
+        className="mx-auto text-center"
+        style={{ width: formWidth }}
       >
         <h1
           style={{
@@ -249,7 +243,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
               ? "Change password"
               : "パスワードを変更する"}
         </button>
-      </div>
+      </SettingsNeonCard>
     </form>
   );
 }
