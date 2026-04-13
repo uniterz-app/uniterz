@@ -34,6 +34,8 @@ export type NbaH2HGameCard = {
    * 未指定ならホーム／アウェイラベルは出さない。
    */
   homeTeamSide?: "left" | "right";
+  /** true のとき得点の直上に OT を表示 */
+  wentToOvertime?: boolean;
 };
 
 export type NbaH2HAverages = {
@@ -293,48 +295,60 @@ export default function NbaPostseasonMatchupPanel({
                   </span>
                 </div>
                 {g.scoreLeft != null && g.scoreRight != null ? (
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "shrink-0 text-xl font-bold tabular-nums tracking-tight sm:text-2xl md:text-2xl",
-                    ].join(" ")}
-                  >
+                  <div className="flex shrink-0 flex-col items-center">
+                    {g.wentToOvertime ? (
+                      <span
+                        className={[
+                          resultStatsMetricNumClass,
+                          "mb-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
+                        ].join(" ")}
+                      >
+                        OT
+                      </span>
+                    ) : null}
                     <span
-                      className={
-                        g.scoreLeft > g.scoreRight
-                          ? "text-yellow-300"
-                          : "text-white"
-                      }
-                      style={
-                        g.scoreLeft > g.scoreRight
-                          ? {
-                              textShadow:
-                                "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                            }
-                          : undefined
-                      }
+                      className={[
+                        resultStatsMetricNumClass,
+                        "text-xl font-bold tabular-nums tracking-tight sm:text-2xl md:text-2xl",
+                      ].join(" ")}
                     >
-                      {g.scoreLeft}
+                      <span
+                        className={
+                          g.scoreLeft > g.scoreRight
+                            ? "text-yellow-300"
+                            : "text-white"
+                        }
+                        style={
+                          g.scoreLeft > g.scoreRight
+                            ? {
+                                textShadow:
+                                  "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                              }
+                            : undefined
+                        }
+                      >
+                        {g.scoreLeft}
+                      </span>
+                      <span className="mx-1 text-white/55">–</span>
+                      <span
+                        className={
+                          g.scoreRight > g.scoreLeft
+                            ? "text-yellow-300"
+                            : "text-white"
+                        }
+                        style={
+                          g.scoreRight > g.scoreLeft
+                            ? {
+                                textShadow:
+                                  "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                              }
+                            : undefined
+                        }
+                      >
+                        {g.scoreRight}
+                      </span>
                     </span>
-                    <span className="mx-1 text-white/55">–</span>
-                    <span
-                      className={
-                        g.scoreRight > g.scoreLeft
-                          ? "text-yellow-300"
-                          : "text-white"
-                      }
-                      style={
-                        g.scoreRight > g.scoreLeft
-                          ? {
-                              textShadow:
-                                "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                            }
-                          : undefined
-                      }
-                    >
-                      {g.scoreRight}
-                    </span>
-                  </span>
+                  </div>
                 ) : (
                   <span
                     className={[
@@ -430,7 +444,7 @@ export default function NbaPostseasonMatchupPanel({
             leftWin={row.leftWin}
             rightWin={row.rightWin}
             barDelay={index * ROW_STAGGER}
-            largerMobileMetrics
+            emphasizedMetrics
           />
         ))}
       </div>

@@ -132,17 +132,21 @@ export function SymmetricalCompareRow({
   rightWin,
   barDelay,
   largerMobileMetrics = false,
+  emphasizedMetrics = false,
 }: {
   label: string;
   left: {
     primary: string;
     rank: string | null;
+    /** 主数値の直下（例: リーグ内順位）。recordBelow より上に表示 */
+    rankBelow?: string | null;
     barPct: number;
     recordBelow: string | null;
   };
   right: {
     primary: string;
     rank: string | null;
+    rankBelow?: string | null;
     barPct: number;
     recordBelow: string | null;
   };
@@ -151,12 +155,16 @@ export function SymmetricalCompareRow({
   barDelay: number;
   /** true のとき主数値のみモバイルで一段大きく（H2H 直接対決スタッツ用） */
   largerMobileMetrics?: boolean;
+  /** true のとき主数値をモバイル・デスクトップとも大きく（詳細スタッツ用） */
+  emphasizedMetrics?: boolean;
 }) {
   const rowAnimDelay = barDelay;
 
-  const primarySize = largerMobileMetrics
-    ? "text-base md:text-base"
-    : "text-sm md:text-base";
+  const primarySize = emphasizedMetrics
+    ? "text-lg md:text-2xl"
+    : largerMobileMetrics
+      ? "text-base md:text-base"
+      : "text-sm md:text-base";
 
   const leftNumClass = [
     resultStatsMetricNumClass,
@@ -169,6 +177,30 @@ export function SymmetricalCompareRow({
     `text-left ${primarySize}`,
     "text-[#b388ff]",
   ].join(" ");
+
+  const subLineClass = emphasizedMetrics
+    ? [
+        resultStatsMetricNumClass,
+        "text-[11px] text-white/48 md:text-[13px]",
+      ].join(" ")
+    : [
+        resultStatsMetricNumClass,
+        "text-[10px] text-white/45 md:text-[11px]",
+      ].join(" ");
+
+  const rankBelowLineClass = emphasizedMetrics
+    ? [
+        resultStatsMetricNumClass,
+        "text-[11px] text-white/55 md:text-[13px]",
+      ].join(" ")
+    : [
+        resultStatsMetricNumClass,
+        "text-[10px] text-white/52 md:text-[11px]",
+      ].join(" ");
+
+  const labelClass = emphasizedMetrics
+    ? "text-xs font-medium leading-tight tracking-wide text-white/72 md:text-[13px]"
+    : "text-[10px] font-medium leading-tight tracking-wide text-white/65 md:text-[11px]";
 
   return (
     <motion.div
@@ -204,23 +236,22 @@ export function SymmetricalCompareRow({
             >
               {left.primary}
             </span>
+            {left.rankBelow ? (
+              <span className={rankBelowLineClass}>{left.rankBelow}</span>
+            ) : null}
             {left.recordBelow ? (
-              <span
-                className={[
-                  resultStatsMetricNumClass,
-                  "text-[10px] text-white/45 md:text-[11px]",
-                ].join(" ")}
-              >
-                {left.recordBelow}
-              </span>
+              <span className={subLineClass}>{left.recordBelow}</span>
             ) : null}
           </div>
         </div>
 
-        <div className="w-18 shrink-0 px-0.5 text-center md:w-21">
-          <div className="text-[10px] font-medium leading-tight tracking-wide text-white/65 md:text-[11px]">
-            {label}
-          </div>
+        <div
+          className={[
+            "shrink-0 px-0.5 text-center",
+            emphasizedMetrics ? "w-20 md:w-22" : "w-18 md:w-21",
+          ].join(" ")}
+        >
+          <div className={labelClass}>{label}</div>
         </div>
 
         <div className="flex min-w-0 flex-1 items-center gap-1 md:gap-1.5">
@@ -235,15 +266,11 @@ export function SymmetricalCompareRow({
             >
               {right.primary}
             </span>
+            {right.rankBelow ? (
+              <span className={rankBelowLineClass}>{right.rankBelow}</span>
+            ) : null}
             {right.recordBelow ? (
-              <span
-                className={[
-                  resultStatsMetricNumClass,
-                  "text-[10px] text-white/45 md:text-[11px]",
-                ].join(" ")}
-              >
-                {right.recordBelow}
-              </span>
+              <span className={subLineClass}>{right.recordBelow}</span>
             ) : null}
           </div>
           <span

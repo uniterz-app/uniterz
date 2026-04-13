@@ -522,10 +522,7 @@ export default function ScheduleList({
     openGameId && selectedProps ? (
       <div
         key="prediction-page"
-        className={[
-          "fixed inset-0 overflow-hidden",
-          isMobile ? "z-100000" : "z-99999",
-        ].join(" ")}
+        className="fixed inset-0 z-100000 overflow-hidden"
       >
         <div
           className={[
@@ -608,91 +605,44 @@ export default function ScheduleList({
                     ? teamRecordMap[selectedProps.away.teamId] ?? null
                     : null
                 }
-                sharedLayoutId={
-                  disableReturnLayout || isMobile
-                    ? undefined
-                    : `matchcard-${selectedProps.id}`
-                }
-                disableCardMotion={isMobile}
+                sharedLayoutId={undefined}
+                disableCardMotion
                 hideActions
                 showMarketBias
                 inPredictOverlay
               />
 
-              {isMobile ? (
-                <div className="mt-2 overflow-x-hidden px-0 py-0">
-                  <PredictionFormV2
-                    dense={dense}
-                    game={selectedProps}
-                    user={{ name: "You" }}
-                    embedded
-                    inOverlay
-                    overlayScheduleGameIds={gameIds}
-                    overlayScheduleGames={propsList}
-                    overlayPredictedGameIds={overlayPredictedGameIds}
-                    onClosePredictOverlay={close}
-                    onSwitchOverlayGame={(id) => {
-                      setOpenGameId(String(id));
-                      setStandingsOpenInOverlay(false);
-                      setDisableReturnLayout(false);
-                    }}
-                    onStandingsOpenChange={(open) => {
-                      setStandingsOpenInOverlay(open);
-                      if (open) setDisableReturnLayout(true);
-                    }}
-                    onPostCreated={(payload) => {
-                      const gameId = selectedProps?.id;
-                      if (gameId && payload?.id) {
-                        setMyPostMap((prev) => ({
-                          ...prev,
-                          [String(gameId)]: payload.id,
-                        }));
-                      }
-                    }}
-                  />
-                </div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 1, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.26,
-                    delay: 0.05,
-                    ease: GAMES_CYBER_EASE,
+              <div className="mt-2 overflow-x-hidden px-0 py-0">
+                <PredictionFormV2
+                  dense={dense}
+                  game={selectedProps}
+                  user={{ name: "You" }}
+                  embedded
+                  inOverlay
+                  overlayScheduleGameIds={gameIds}
+                  overlayScheduleGames={propsList}
+                  overlayPredictedGameIds={overlayPredictedGameIds}
+                  onClosePredictOverlay={close}
+                  onSwitchOverlayGame={(id) => {
+                    setOpenGameId(String(id));
+                    setStandingsOpenInOverlay(false);
+                    setDisableReturnLayout(false);
                   }}
-                  className="mt-2 overflow-x-hidden px-0 py-0"
-                >
-                  <PredictionFormV2
-                    dense={dense}
-                    game={selectedProps}
-                    user={{ name: "You" }}
-                    embedded
-                    inOverlay
-                    overlayScheduleGameIds={gameIds}
-                    overlayScheduleGames={propsList}
-                    overlayPredictedGameIds={overlayPredictedGameIds}
-                    onClosePredictOverlay={close}
-                    onSwitchOverlayGame={(id) => {
-                      setOpenGameId(String(id));
-                      setStandingsOpenInOverlay(false);
-                      setDisableReturnLayout(false);
-                    }}
-                    onStandingsOpenChange={(open) => {
-                      setStandingsOpenInOverlay(open);
-                      if (open) setDisableReturnLayout(true);
-                    }}
-                    onPostCreated={(payload) => {
-                      const gameId = selectedProps?.id;
-                      if (gameId && payload?.id) {
-                        setMyPostMap((prev) => ({
-                          ...prev,
-                          [String(gameId)]: payload.id,
-                        }));
-                      }
-                    }}
-                  />
-                </motion.div>
-              )}
+                  onStandingsOpenChange={(open) => {
+                    setStandingsOpenInOverlay(open);
+                    if (open) setDisableReturnLayout(true);
+                  }}
+                  onPostCreated={(payload) => {
+                    const gameId = selectedProps?.id;
+                    if (gameId && payload?.id) {
+                      setMyPostMap((prev) => ({
+                        ...prev,
+                        [String(gameId)]: payload.id,
+                      }));
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -700,11 +650,12 @@ export default function ScheduleList({
     ) : null;
 
   return (
+    <>
     <LayoutGroup id="schedule-list">
       <motion.div
         className={openGameId ? "pointer-events-none" : ""}
         animate={{
-          scale: openGameId && !isMobile ? 0.995 : 1,
+          scale: 1,
           opacity: 1,
         }}
         transition={{
@@ -754,30 +705,21 @@ export default function ScheduleList({
                     : null
                 }
                 sharedLayoutId={
-                  disableReturnLayout || isMobile
+                  openGameId || disableReturnLayout || isMobile
                     ? undefined
                     : `matchcard-${props.id}`
                 }
                 onOpenPredict={open}
-                showMarketBias={isMobile ? isOpen : false}
-                hideActions={isMobile ? isOpen : false}
-                inPredictOverlay={isMobile ? isOpen : false}
-                disableCardMotion={
-                  isMobile || (!!openGameId && !isOpen)
-                }
+                showMarketBias={isOpen}
+                hideActions={isOpen}
+                inPredictOverlay={isOpen}
+                disableCardMotion={isMobile || !!openGameId}
               />
             </motion.div>
           );
         })}
         </motion.div>
       </motion.div>
-
-      {overlayContent &&
-        (isMobile && typeof document !== "undefined"
-          ? createPortal(overlayContent, document.body)
-          : !isMobile
-            ? overlayContent
-            : null)}
 
       {rulesIntroOpen && typeof document !== "undefined"
         ? createPortal(
@@ -791,5 +733,10 @@ export default function ScheduleList({
           )
         : null}
     </LayoutGroup>
+
+      {overlayContent && typeof document !== "undefined"
+        ? createPortal(overlayContent, document.body)
+        : null}
+    </>
   );
 }

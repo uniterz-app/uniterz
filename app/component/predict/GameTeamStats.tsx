@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
-import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
   ROW_STAGGER,
   SymmetricalCompareRow,
@@ -26,13 +25,17 @@ type TeamDoc = {
 
   conference: "east" | "west";
 
-  vsEastGames: number;
-  vsEastWins: number;
-  vsWestGames: number;
-  vsWestWins: number;
-
   ppgRank?: number;
   papgRank?: number;
+  diffRank?: number;
+  ofrtgRank?: number;
+  dfrtgRank?: number;
+  netrtgRank?: number;
+
+  /** 100 possessions 想定の攻撃・守備・NET（teams に手入力 or シード） */
+  ofrtg?: number;
+  dfrtg?: number;
+  netrtg?: number;
 };
 
 type Props = {
@@ -40,6 +43,16 @@ type Props = {
   homeTeamId: string;
   awayTeamId: string;
   language?: "ja" | "en";
+};
+
+/** teams に保存したリーグ順位（シーズン確定後は seed で一括書き込み） */
+type StoredNbaStatRanks = {
+  ppg?: number;
+  papg?: number;
+  diff?: number;
+  ofrtg?: number;
+  dfrtg?: number;
+  netrtg?: number;
 };
 
 type ViewStats = {
@@ -55,15 +68,32 @@ type ViewStats = {
   homeWinPct: number;
   awayWinPct: number;
 
-  vsEastW: number;
-  vsEastL: number;
-  vsEastPct: number;
-  vsWestW: number;
-  vsWestL: number;
-  vsWestPct: number;
+  ortg?: number;
+  drtg?: number;
+  netRtg?: number;
 
-  ppgRank?: number;
-  papgRank?: number;
+  nbaStatRanks?: StoredNbaStatRanks;
+};
+
+type CompareStatRow = {
+  key: string;
+  label: string;
+  left: {
+    primary: string;
+    rank: string | null;
+    rankBelow?: string | null;
+    barPct: number;
+    recordBelow: string | null;
+  };
+  right: {
+    primary: string;
+    rank: string | null;
+    rankBelow?: string | null;
+    barPct: number;
+    recordBelow: string | null;
+  };
+  leftWin: boolean;
+  rightWin: boolean;
 };
 
 function formatStatRank(rank: number | undefined, isEn: boolean): string | null {
@@ -72,14 +102,30 @@ function formatStatRank(rank: number | undefined, isEn: boolean): string | null 
   return isEn ? `#${r}` : `${r}位`;
 }
 
+function readNbaAdvancedRtg(t: TeamDoc): {
+  ofrtg: number;
+  dfrtg: number;
+  netrtg: number;
+} | null {
+  if (
+    typeof t.ofrtg !== "number" ||
+    typeof t.dfrtg !== "number" ||
+    typeof t.netrtg !== "number" ||
+    !Number.isFinite(t.ofrtg) ||
+    !Number.isFinite(t.dfrtg) ||
+    !Number.isFinite(t.netrtg)
+  ) {
+    return null;
+  }
+  return { ofrtg: t.ofrtg, dfrtg: t.dfrtg, netrtg: t.netrtg };
+}
+
 export default function GameTeamStats({
-  league: _league,
+  league,
   homeTeamId,
   awayTeamId,
   language = "ja",
 }: Props) {
-  void _league;
-
   const isEn = language === "en";
   const [home, setHome] = useState<ViewStats | null>(null);
   const [away, setAway] = useState<ViewStats | null>(null);
@@ -110,13 +156,18 @@ export default function GameTeamStats({
         const awayWinPct =
           awayGames > 0 ? (100 * (t.awayWins ?? 0)) / awayGames : 0;
 
-        const eg = t.vsEastGames ?? 0;
-        const ew = t.vsEastWins ?? 0;
-        const el = Math.max(0, eg - ew);
-        const wg = t.vsWestGames ?? 0;
-        const ww = t.vsWestWins ?? 0;
-        const wl = Math.max(0, wg - ww);
-
+        const rtg = readNbaAdvancedRtg(t);
+        const nbaStatRanks: StoredNbaStatRanks | undefined =
+          league === "nba"
+            ? {
+                ppg: t.ppgRank,
+                papg: t.papgRank,
+                diff: t.diffRank,
+                ofrtg: t.ofrtgRank,
+                dfrtg: t.dfrtgRank,
+                netrtg: t.netrtgRank,
+              }
+            : undefined;
         return {
           avgFor: Number(avgFor.toFixed(1)),
           avgAgainst: Number(avgAgainst.toFixed(1)),
@@ -130,15 +181,11 @@ export default function GameTeamStats({
           homeWinPct,
           awayWinPct,
 
-          vsEastW: ew,
-          vsEastL: el,
-          vsEastPct: eg > 0 ? (100 * ew) / eg : 0,
-          vsWestW: ww,
-          vsWestL: wl,
-          vsWestPct: wg > 0 ? (100 * ww) / wg : 0,
+          ortg: rtg?.ofrtg,
+          drtg: rtg?.dfrtg,
+          netRtg: rtg?.netrtg,
 
-          ppgRank: typeof t.ppgRank === "number" ? t.ppgRank : undefined,
-          papgRank: typeof t.papgRank === "number" ? t.papgRank : undefined,
+          nbaStatRanks,
         };
       };
 
@@ -147,209 +194,235 @@ export default function GameTeamStats({
     };
 
     run();
-  }, [homeTeamId, awayTeamId]);
+  }, [homeTeamId, awayTeamId, league]);
 
   if (!home || !away) return null;
 
   const fmtDiff = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
 
+  const rh = home.nbaStatRanks;
+  const ra = away.nbaStatRanks;
+  const rbPpgH =
+    league === "nba" ? formatStatRank(rh?.ppg, isEn) : null;
+  const rbPpgA =
+    league === "nba" ? formatStatRank(ra?.ppg, isEn) : null;
+  const rbPapgH =
+    league === "nba" ? formatStatRank(rh?.papg, isEn) : null;
+  const rbPapgA =
+    league === "nba" ? formatStatRank(ra?.papg, isEn) : null;
+  const rbDiffH =
+    league === "nba" ? formatStatRank(rh?.diff, isEn) : null;
+  const rbDiffA =
+    league === "nba" ? formatStatRank(ra?.diff, isEn) : null;
+
   const [ppgBarL, ppgBarR] = barPctMaxNorm(home.avgFor, away.avgFor);
   const [papgBarL, papgBarR] = barPctMinPaNorm(home.avgAgainst, away.avgAgainst);
   const [diffBarL, diffBarR] = barPctDiffNorm(home.diff, away.diff);
 
-  const rows: Array<{
-    key: string;
-    label: string;
+  const fmtNet = (d: number) => `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
+
+  const ppgRow: CompareStatRow = {
+    key: "ppg",
+    label: isEn ? "PTS / G" : "平均得点",
     left: {
-      primary: string;
-      rank: string | null;
-      barPct: number;
-      recordBelow: string | null;
-    };
+      primary: home.avgFor.toFixed(1),
+      rank: null,
+      rankBelow: rbPpgH,
+      barPct: ppgBarL,
+      recordBelow: null,
+    },
     right: {
-      primary: string;
-      rank: string | null;
-      barPct: number;
-      recordBelow: string | null;
+      primary: away.avgFor.toFixed(1),
+      rank: null,
+      rankBelow: rbPpgA,
+      barPct: ppgBarR,
+      recordBelow: null,
+    },
+    leftWin: home.avgFor > away.avgFor,
+    rightWin: away.avgFor > home.avgFor,
+  };
+
+  const papgRow: CompareStatRow = {
+    key: "papg",
+    label: isEn ? "OPP PTS / G" : "平均失点",
+    left: {
+      primary: home.avgAgainst.toFixed(1),
+      rank: null,
+      rankBelow: rbPapgH,
+      barPct: papgBarL,
+      recordBelow: null,
+    },
+    right: {
+      primary: away.avgAgainst.toFixed(1),
+      rank: null,
+      rankBelow: rbPapgA,
+      barPct: papgBarR,
+      recordBelow: null,
+    },
+    leftWin: home.avgAgainst < away.avgAgainst,
+    rightWin: away.avgAgainst < home.avgAgainst,
+  };
+
+  const diffRow: CompareStatRow = {
+    key: "diff",
+    label: isEn ? "Point diff" : "得失点差",
+    left: {
+      primary: fmtDiff(home.diff),
+      rank: null,
+      rankBelow: rbDiffH,
+      barPct: diffBarL,
+      recordBelow: null,
+    },
+    right: {
+      primary: fmtDiff(away.diff),
+      rank: null,
+      rankBelow: rbDiffA,
+      barPct: diffBarR,
+      recordBelow: null,
+    },
+    leftWin: home.diff > away.diff,
+    rightWin: away.diff > home.diff,
+  };
+
+  const homeRow: CompareStatRow = {
+    key: "home",
+    label: isEn ? "Home" : "ホーム戦績",
+    left: {
+      primary: `${Math.round(home.homeWinPct)}%`,
+      rank: null,
+      barPct: Math.round(Math.min(100, Math.max(0, home.homeWinPct))),
+      recordBelow: `${home.homeW}-${home.homeL}`,
+    },
+    right: {
+      primary: `${Math.round(away.homeWinPct)}%`,
+      rank: null,
+      barPct: Math.round(Math.min(100, Math.max(0, away.homeWinPct))),
+      recordBelow: `${away.homeW}-${away.homeL}`,
+    },
+    leftWin: home.homeWinPct > away.homeWinPct,
+    rightWin: away.homeWinPct > home.homeWinPct,
+  };
+
+  const awayRow: CompareStatRow = {
+    key: "away",
+    label: isEn ? "Away" : "アウェイ戦績",
+    left: {
+      primary: `${Math.round(home.awayWinPct)}%`,
+      rank: null,
+      barPct: Math.round(Math.min(100, Math.max(0, home.awayWinPct))),
+      recordBelow: `${home.awayW}-${home.awayL}`,
+    },
+    right: {
+      primary: `${Math.round(away.awayWinPct)}%`,
+      rank: null,
+      barPct: Math.round(Math.min(100, Math.max(0, away.awayWinPct))),
+      recordBelow: `${away.awayW}-${away.awayL}`,
+    },
+    leftWin: home.awayWinPct > away.awayWinPct,
+    rightWin: away.awayWinPct > home.awayWinPct,
+  };
+
+  let rows: CompareStatRow[];
+
+  if (league === "nba") {
+    const ho = home.ortg;
+    const ao = away.ortg;
+    const hd = home.drtg;
+    const ad = away.drtg;
+    const hn = home.netRtg;
+    const an = away.netRtg;
+
+    const rbOfH = formatStatRank(rh?.ofrtg, isEn);
+    const rbOfA = formatStatRank(ra?.ofrtg, isEn);
+    const rbDfH = formatStatRank(rh?.dfrtg, isEn);
+    const rbDfA = formatStatRank(ra?.dfrtg, isEn);
+    const rbNtH = formatStatRank(rh?.netrtg, isEn);
+    const rbNtA = formatStatRank(ra?.netrtg, isEn);
+
+    const bothO = ho != null && ao != null;
+    const bothD = hd != null && ad != null;
+    const bothN = hn != null && an != null;
+
+    const [oL, oR] = bothO ? barPctMaxNorm(ho, ao) : [0, 0];
+    const [dL, dR] = bothD ? barPctMinPaNorm(hd, ad) : [0, 0];
+    const [nL, nR] = bothN ? barPctDiffNorm(hn, an) : [0, 0];
+
+    const ofrtgRow: CompareStatRow = {
+      key: "ofrtg",
+      label: "OFRTG",
+      left: {
+        primary: ho != null ? ho.toFixed(1) : "—",
+        rank: null,
+        rankBelow: rbOfH,
+        barPct: oL,
+        recordBelow: null,
+      },
+      right: {
+        primary: ao != null ? ao.toFixed(1) : "—",
+        rank: null,
+        rankBelow: rbOfA,
+        barPct: oR,
+        recordBelow: null,
+      },
+      leftWin: bothO && ho > ao,
+      rightWin: bothO && ao > ho,
     };
-    leftWin: boolean;
-    rightWin: boolean;
-  }> = [
-    {
-      key: "ppg",
-      label: isEn ? "PTS / G" : "平均得点",
+
+    const dfrtgRow: CompareStatRow = {
+      key: "dfrtg",
+      label: "DFRTG",
       left: {
-        primary: home.avgFor.toFixed(1),
-        rank: formatStatRank(home.ppgRank, isEn),
-        barPct: ppgBarL,
+        primary: hd != null ? hd.toFixed(1) : "—",
+        rank: null,
+        rankBelow: rbDfH,
+        barPct: dL,
         recordBelow: null,
       },
       right: {
-        primary: away.avgFor.toFixed(1),
-        rank: formatStatRank(away.ppgRank, isEn),
-        barPct: ppgBarR,
-        recordBelow: null,
-      },
-      leftWin: home.avgFor > away.avgFor,
-      rightWin: away.avgFor > home.avgFor,
-    },
-    {
-      key: "papg",
-      label: isEn ? "OPP PTS / G" : "平均失点",
-      left: {
-        primary: home.avgAgainst.toFixed(1),
-        rank: formatStatRank(home.papgRank, isEn),
-        barPct: papgBarL,
-        recordBelow: null,
-      },
-      right: {
-        primary: away.avgAgainst.toFixed(1),
-        rank: formatStatRank(away.papgRank, isEn),
-        barPct: papgBarR,
-        recordBelow: null,
-      },
-      leftWin: home.avgAgainst < away.avgAgainst,
-      rightWin: away.avgAgainst < home.avgAgainst,
-    },
-    {
-      key: "diff",
-      label: isEn ? "Point diff" : "得失点差",
-      left: {
-        primary: fmtDiff(home.diff),
+        primary: ad != null ? ad.toFixed(1) : "—",
         rank: null,
-        barPct: diffBarL,
+        rankBelow: rbDfA,
+        barPct: dR,
+        recordBelow: null,
+      },
+      leftWin: bothD && hd < ad,
+      rightWin: bothD && ad < hd,
+    };
+
+    const netrtgRow: CompareStatRow = {
+      key: "netrtg",
+      label: "NETRTG",
+      left: {
+        primary: hn != null ? fmtNet(hn) : "—",
+        rank: null,
+        rankBelow: rbNtH,
+        barPct: nL,
         recordBelow: null,
       },
       right: {
-        primary: fmtDiff(away.diff),
+        primary: an != null ? fmtNet(an) : "—",
         rank: null,
-        barPct: diffBarR,
+        rankBelow: rbNtA,
+        barPct: nR,
         recordBelow: null,
       },
-      leftWin: home.diff > away.diff,
-      rightWin: away.diff > home.diff,
-    },
-    {
-      key: "home",
-      label: isEn ? "Home" : "ホーム戦績",
-      left: {
-        primary: `${Math.round(home.homeWinPct)}%`,
-        rank: null,
-        barPct: Math.round(Math.min(100, Math.max(0, home.homeWinPct))),
-        recordBelow: `${home.homeW}-${home.homeL}`,
-      },
-      right: {
-        primary: `${Math.round(away.homeWinPct)}%`,
-        rank: null,
-        barPct: Math.round(Math.min(100, Math.max(0, away.homeWinPct))),
-        recordBelow: `${away.homeW}-${away.homeL}`,
-      },
-      leftWin: home.homeWinPct > away.homeWinPct,
-      rightWin: away.homeWinPct > home.homeWinPct,
-    },
-    {
-      key: "away",
-      label: isEn ? "Away" : "アウェイ戦績",
-      left: {
-        primary: `${Math.round(home.awayWinPct)}%`,
-        rank: null,
-        barPct: Math.round(Math.min(100, Math.max(0, home.awayWinPct))),
-        recordBelow: `${home.awayW}-${home.awayL}`,
-      },
-      right: {
-        primary: `${Math.round(away.awayWinPct)}%`,
-        rank: null,
-        barPct: Math.round(Math.min(100, Math.max(0, away.awayWinPct))),
-        recordBelow: `${away.awayW}-${away.awayL}`,
-      },
-      leftWin: home.awayWinPct > away.awayWinPct,
-      rightWin: away.awayWinPct > home.awayWinPct,
-    },
-    {
-      key: "vsEast",
-      label: isEn ? "VS EAST" : "VS EAST",
-      left: {
-        primary:
-          home.vsEastW + home.vsEastL > 0
-            ? `${Math.round(home.vsEastPct)}%`
-            : "—",
-        rank: null,
-        barPct:
-          home.vsEastW + home.vsEastL > 0
-            ? Math.round(Math.min(100, Math.max(0, home.vsEastPct)))
-            : 0,
-        recordBelow:
-          home.vsEastW + home.vsEastL > 0
-            ? `${home.vsEastW}-${home.vsEastL}`
-            : null,
-      },
-      right: {
-        primary:
-          away.vsEastW + away.vsEastL > 0
-            ? `${Math.round(away.vsEastPct)}%`
-            : "—",
-        rank: null,
-        barPct:
-          away.vsEastW + away.vsEastL > 0
-            ? Math.round(Math.min(100, Math.max(0, away.vsEastPct)))
-            : 0,
-        recordBelow:
-          away.vsEastW + away.vsEastL > 0
-            ? `${away.vsEastW}-${away.vsEastL}`
-            : null,
-      },
-      leftWin:
-        home.vsEastW + home.vsEastL > 0 &&
-        away.vsEastW + away.vsEastL > 0 &&
-        home.vsEastPct > away.vsEastPct,
-      rightWin:
-        home.vsEastW + home.vsEastL > 0 &&
-        away.vsEastW + away.vsEastL > 0 &&
-        away.vsEastPct > home.vsEastPct,
-    },
-    {
-      key: "vsWest",
-      label: isEn ? "VS WEST" : "VS WEST",
-      left: {
-        primary:
-          home.vsWestW + home.vsWestL > 0
-            ? `${Math.round(home.vsWestPct)}%`
-            : "—",
-        rank: null,
-        barPct:
-          home.vsWestW + home.vsWestL > 0
-            ? Math.round(Math.min(100, Math.max(0, home.vsWestPct)))
-            : 0,
-        recordBelow:
-          home.vsWestW + home.vsWestL > 0
-            ? `${home.vsWestW}-${home.vsWestL}`
-            : null,
-      },
-      right: {
-        primary:
-          away.vsWestW + away.vsWestL > 0
-            ? `${Math.round(away.vsWestPct)}%`
-            : "—",
-        rank: null,
-        barPct:
-          away.vsWestW + away.vsWestL > 0
-            ? Math.round(Math.min(100, Math.max(0, away.vsWestPct)))
-            : 0,
-        recordBelow:
-          away.vsWestW + away.vsWestL > 0
-            ? `${away.vsWestW}-${away.vsWestL}`
-            : null,
-      },
-      leftWin:
-        home.vsWestW + home.vsWestL > 0 &&
-        away.vsWestW + away.vsWestL > 0 &&
-        home.vsWestPct > away.vsWestPct,
-      rightWin:
-        home.vsWestW + home.vsWestL > 0 &&
-        away.vsWestW + away.vsWestL > 0 &&
-        away.vsWestPct > home.vsWestPct,
-    },
-  ];
+      leftWin: bothN && hn > an,
+      rightWin: bothN && an > hn,
+    };
+
+    rows = [
+      ppgRow,
+      ofrtgRow,
+      papgRow,
+      dfrtgRow,
+      diffRow,
+      netrtgRow,
+      homeRow,
+      awayRow,
+    ];
+  } else {
+    rows = [ppgRow, papgRow, diffRow, homeRow, awayRow];
+  }
 
   return (
     <section className="space-y-0">
@@ -362,6 +435,7 @@ export default function GameTeamStats({
           leftWin={row.leftWin}
           rightWin={row.rightWin}
           barDelay={index * ROW_STAGGER}
+          emphasizedMetrics
         />
       ))}
     </section>
