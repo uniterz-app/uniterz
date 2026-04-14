@@ -510,7 +510,7 @@ export default function ScheduleList({
   if (!propsList.length) {
     if (emptyHint) {
       return (
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-12 text-center text-sm leading-relaxed text-white/55 md:px-6">
+        <div className="rounded-xl border border-white/10 bg-white/4 px-4 py-12 text-center text-sm leading-relaxed text-white/55 md:px-6">
           {emptyHint}
         </div>
       );

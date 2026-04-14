@@ -18,7 +18,7 @@ export default function MobileLPPage() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[1220px] bg-[url('/lp/arena-crowd-bg.png')] bg-cover bg-center bg-no-repeat opacity-[0.48] blur-[2px] mask-[linear-gradient(180deg,rgba(0,0,0,0.96)_0%,rgba(0,0,0,0.82)_36%,rgba(0,0,0,0.38)_68%,transparent_100%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[1320px] bg-[linear-gradient(180deg,rgba(4,10,20,0.16)_0%,rgba(4,10,20,0.30)_32%,rgba(4,10,20,0.48)_56%,rgba(3,8,16,0.46)_76%,rgba(3,8,16,0.16)_90%,transparent_100%)]" />
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(4,244,255,0.04),transparent_42%)]" />
-      <div className="pointer-events-none fixed inset-y-0 left-[-34%] z-1 w-[42%] bg-[linear-gradient(90deg,transparent,rgba(148,241,255,0.06),transparent)] blur-2xl [animation:lp-impact-sweep_1.05s_cubic-bezier(.2,.7,.3,1)_both]" />
+      <div className="pointer-events-none fixed inset-y-0 left-[-34%] z-1 w-[42%] bg-[linear-gradient(90deg,transparent,rgba(148,241,255,0.06),transparent)] blur-2xl animate-[lp-impact-sweep_1.05s_cubic-bezier(.2,.7,.3,1)_both]" />
 
       <LPHeader homeHref="/mobile/lp" />
       <MobileLPQuickNav />

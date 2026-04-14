@@ -136,11 +136,16 @@ const items: Item[] = [
 const NAV_DOCK_CLIP =
   "polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px)";
 
+/** Web: dock hug bottom. Mobile: sit a bit higher so it feels less “in the home indicator”. */
+const NAV_WRAP_BOTTOM_WEB = "calc(10px + env(safe-area-inset-bottom))";
+const NAV_WRAP_BOTTOM_MOBILE =
+  "calc(18px + env(safe-area-inset-bottom))";
+
 const BarStyle = {
   wrap: {
     position: "fixed",
     left: "50%",
-    bottom: "calc(10px + env(safe-area-inset-bottom))",
+    bottom: NAV_WRAP_BOTTOM_WEB,
     transform: "translateX(-50%)",
     zIndex: 999999,
     width: "min(960px, 94vw)",
@@ -496,6 +501,7 @@ export default function NavBar() {
       <nav
         style={{
           ...BarStyle.wrap,
+          bottom: isMobile ? NAV_WRAP_BOTTOM_MOBILE : NAV_WRAP_BOTTOM_WEB,
           ...(playDockIntro ? { perspective: "720px" } : {}),
         }}
         aria-label="Bottom navigation"

@@ -86,7 +86,7 @@ export default function SideMenuDrawer({
 
       <div
         className={cn(
-          "fixed left-0 top-0 z-50 flex max-h-[100dvh] flex-col py-4 pl-0 pr-3 sm:py-5 sm:pr-5",
+          "fixed left-0 top-0 z-50 flex max-h-dvh flex-col py-4 pl-0 pr-3 sm:py-5 sm:pr-5",
           "transition-transform duration-300 ease-out",
           open ? (isMobile ? "-translate-x-4" : "-translate-x-2") : "-translate-x-full",
         )}

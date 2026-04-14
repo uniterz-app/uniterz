@@ -259,7 +259,7 @@ export default function NbaPostseasonMatchupPanel({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.05 }}
-              className="rounded-xl border border-white/10 bg-white/[0.04] p-3 md:p-3.5"
+              className="rounded-xl border border-white/10 bg-white/4 p-3 md:p-3.5"
             >
               <div className="text-center">
                 <span

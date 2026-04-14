@@ -268,7 +268,7 @@ export default function MobileResultMatchHeader({
             <HalftoneJerseyMark
               accent={homeColor}
               accentEnd={homeSecondaryColor}
-              className="h-[4.5rem] w-[4.5rem]"
+              className="h-18 w-18"
             />
           ) : (
             <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
@@ -330,7 +330,7 @@ export default function MobileResultMatchHeader({
             <HalftoneJerseyMark
               accent={awayColor}
               accentEnd={awaySecondaryColor}
-              className="h-[4.5rem] w-[4.5rem]"
+              className="h-18 w-18"
             />
           ) : (
             <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />

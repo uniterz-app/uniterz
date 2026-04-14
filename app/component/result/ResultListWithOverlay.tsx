@@ -1040,7 +1040,7 @@ export default function ResultListWithOverlay({
               {!isDefaultResultFilters(filters) ? (
                 <button
                   type="button"
-                  className="rounded-lg border border-white/14 bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-white/80 transition hover:border-cyan-400/30 hover:text-white"
+                  className="rounded-lg border border-white/14 bg-white/6 px-2.5 py-1 text-[11px] font-semibold text-white/80 transition hover:border-cyan-400/30 hover:text-white"
                   onClick={() => {
                     setFilters({ ...DEFAULT_RESULT_FILTERS });
                     setDetailFiltersOpen(false);
@@ -1108,7 +1108,7 @@ export default function ResultListWithOverlay({
                 ref={matchDayPickerRootRef}
                 className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
               >
-                <div className="min-w-0 flex-1 sm:min-w-[10rem]">
+                <div className="min-w-0 flex-1 sm:min-w-40">
                   <span className="mb-1 block text-[10px] font-medium tracking-wide text-cyan-200/45 sm:text-[11px]">
                     {fc.dateFromLabel}
                   </span>
@@ -1120,8 +1120,8 @@ export default function ResultListWithOverlay({
                     aria-expanded={matchDayPickerOpen === "from"}
                     aria-controls="result-filter-date-from-listbox"
                     className={[
-                      "flex w-full min-h-[2.75rem] items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:text-[13px]",
-                      "border-white/[0.12] bg-gradient-to-b from-white/[0.08] to-black/50 text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md",
+                      "flex w-full min-h-11 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:text-[13px]",
+                      "border-white/12 bg-linear-to-b from-white/8 to-black/50 text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md",
                       "hover:border-cyan-400/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)]",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45",
                       matchDayPickerOpen === "from"
@@ -1157,12 +1157,12 @@ export default function ResultListWithOverlay({
                   className="flex shrink-0 items-center justify-center sm:self-center sm:pb-1"
                   aria-hidden
                 >
-                  <span className="rounded-lg border border-cyan-500/20 bg-gradient-to-b from-cyan-500/10 to-transparent px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.2em] text-cyan-200/55">
+                  <span className="rounded-lg border border-cyan-500/20 bg-linear-to-b from-cyan-500/10 to-transparent px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.2em] text-cyan-200/55">
                     〜
                   </span>
                 </div>
 
-                <div className="min-w-0 flex-1 sm:min-w-[10rem]">
+                <div className="min-w-0 flex-1 sm:min-w-40">
                   <span className="mb-1 block text-[10px] font-medium tracking-wide text-cyan-200/45 sm:text-[11px]">
                     {fc.dateToLabel}
                   </span>
@@ -1174,8 +1174,8 @@ export default function ResultListWithOverlay({
                     aria-expanded={matchDayPickerOpen === "to"}
                     aria-controls="result-filter-date-to-listbox"
                     className={[
-                      "flex w-full min-h-[2.75rem] items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:text-[13px]",
-                      "border-white/[0.12] bg-gradient-to-b from-white/[0.08] to-black/50 text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md",
+                      "flex w-full min-h-11 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-xs font-medium transition sm:text-[13px]",
+                      "border-white/12 bg-linear-to-b from-white/8 to-black/50 text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md",
                       "hover:border-cyan-400/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)]",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/45",
                       matchDayPickerOpen === "to"
@@ -1210,7 +1210,7 @@ export default function ResultListWithOverlay({
                 {filters.dateFrom != null || filters.dateTo != null ? (
                   <button
                     type="button"
-                    className="rounded-xl border border-white/14 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-fuchsia-400/35 hover:bg-fuchsia-500/10 hover:text-white sm:shrink-0"
+                    className="rounded-xl border border-white/14 bg-white/6 px-3 py-2 text-[11px] font-semibold text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-fuchsia-400/35 hover:bg-fuchsia-500/10 hover:text-white sm:shrink-0"
                     onClick={() => {
                       clearDateRangeOnly();
                       setMatchDayPickerOpen(null);
@@ -1227,7 +1227,7 @@ export default function ResultListWithOverlay({
             <button
               type="button"
               aria-expanded={detailFiltersOpen}
-              className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/12 bg-white/[0.06] px-3 py-2.5 text-left backdrop-blur-sm transition hover:border-cyan-400/30 hover:bg-white/[0.09]"
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/12 bg-white/6 px-3 py-2.5 text-left backdrop-blur-sm transition hover:border-cyan-400/30 hover:bg-white/9"
               onClick={() => setDetailFiltersOpen((o) => !o)}
             >
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -1479,7 +1479,7 @@ export default function ResultListWithOverlay({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={off ?? { opacity: 0, y: -8 }}
               transition={{ duration: 0.35, ease: easeOut }}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/55"
+              className="rounded-2xl border border-white/10 bg-white/3 px-4 py-8 text-center text-sm text-white/55"
             >
               {language === "en"
                 ? "No results for this filter."
@@ -1682,7 +1682,7 @@ export default function ResultListWithOverlay({
                     : { opacity: 0, y: -6, scale: 0.98 }
                 }
                 transition={{ duration: 0.2, ease: easeOut }}
-                className="z-[92000] overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-cyan-500/25 bg-zinc-950/95 py-1 shadow-[0_20px_56px_rgba(0,0,0,0.72)] backdrop-blur-xl backdrop-saturate-150"
+                className="z-92000 overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl border border-cyan-500/25 bg-zinc-950/95 py-1 shadow-[0_20px_56px_rgba(0,0,0,0.72)] backdrop-blur-xl backdrop-saturate-150"
               >
                 {matchDayPickerOpen === "from" ? (
                   <>
@@ -1694,7 +1694,7 @@ export default function ResultListWithOverlay({
                         "flex w-full items-center gap-2 border-b border-white/[0.07] px-3 py-2.5 text-left text-[11px] transition sm:text-xs",
                         filters.dateFrom == null
                           ? "bg-cyan-500/14 text-cyan-50"
-                          : "text-white/50 hover:bg-white/[0.06] hover:text-white/88",
+                          : "text-white/50 hover:bg-white/6 hover:text-white/88",
                       ].join(" ")}
                       onClick={() => {
                         setFilterDateFrom("");
@@ -1718,7 +1718,7 @@ export default function ResultListWithOverlay({
                           role="option"
                           aria-selected={sel}
                           className={[
-                            "flex w-full items-center gap-2 border-b border-white/[0.05] px-3 py-2.5 text-left text-[11px] tabular-nums transition last:border-b-0 sm:text-xs",
+                            "flex w-full items-center gap-2 border-b border-white/5 px-3 py-2.5 text-left text-[11px] tabular-nums transition last:border-b-0 sm:text-xs",
                             sel
                               ? "bg-cyan-500/16 text-white"
                               : "text-white/85 hover:bg-cyan-500/10 hover:text-white",
@@ -1751,7 +1751,7 @@ export default function ResultListWithOverlay({
                         "flex w-full items-center gap-2 border-b border-white/[0.07] px-3 py-2.5 text-left text-[11px] transition sm:text-xs",
                         filters.dateTo == null
                           ? "bg-cyan-500/14 text-cyan-50"
-                          : "text-white/50 hover:bg-white/[0.06] hover:text-white/88",
+                          : "text-white/50 hover:bg-white/6 hover:text-white/88",
                       ].join(" ")}
                       onClick={() => {
                         setFilterDateTo("");
@@ -1775,7 +1775,7 @@ export default function ResultListWithOverlay({
                           role="option"
                           aria-selected={sel}
                           className={[
-                            "flex w-full items-center gap-2 border-b border-white/[0.05] px-3 py-2.5 text-left text-[11px] tabular-nums transition last:border-b-0 sm:text-xs",
+                            "flex w-full items-center gap-2 border-b border-white/5 px-3 py-2.5 text-left text-[11px] tabular-nums transition last:border-b-0 sm:text-xs",
                             sel
                               ? "bg-cyan-500/16 text-white"
                               : "text-white/85 hover:bg-cyan-500/10 hover:text-white",
@@ -1812,7 +1812,7 @@ export default function ResultListWithOverlay({
                 <m.div
                   key={`result-delete-${deleteConfirmPost.id}`}
                   role="presentation"
-                  className="fixed inset-0 z-[100002] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm pointer-events-auto"
+                  className="fixed inset-0 z-100002 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm pointer-events-auto"
                   initial={prefersReducedMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={prefersReducedMotion ? undefined : { opacity: 0 }}
@@ -1827,7 +1827,7 @@ export default function ResultListWithOverlay({
                     aria-labelledby="result-delete-confirm-title"
                     className={[
                       "relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/18 p-5",
-                      "bg-linear-to-b from-white/[0.12] via-cyan-950/25 to-zinc-950/50",
+                      "bg-linear-to-b from-white/12 via-cyan-950/25 to-zinc-950/50",
                       "backdrop-blur-2xl backdrop-saturate-[1.8]",
                       "shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.25),0_28px_96px_rgba(0,0,0,0.55)]",
                       "ring-1 ring-cyan-400/25",
@@ -1857,10 +1857,10 @@ export default function ResultListWithOverlay({
                         disabled={deleteInProgress}
                         className={[
                           "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-[11px]",
-                          "border-2 border-cyan-400/55 bg-white/[0.06] px-3 backdrop-blur-md",
+                          "border-2 border-cyan-400/55 bg-white/6 px-3 backdrop-blur-md",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
                           "transition-all duration-500 ease-out",
-                          "hover:border-cyan-300/85 hover:bg-cyan-500/[0.22] disabled:pointer-events-none disabled:opacity-45",
+                          "hover:border-cyan-300/85 hover:bg-cyan-500/22 disabled:pointer-events-none disabled:opacity-45",
                         ].join(" ")}
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
                         onClick={() => setDeleteConfirmPost(null)}
@@ -1888,7 +1888,7 @@ export default function ResultListWithOverlay({
                         disabled={deleteInProgress}
                         className={[
                           "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-end gap-2 overflow-hidden rounded-[11px]",
-                          "border-2 border-red-600 bg-white/[0.06] px-3 backdrop-blur-md",
+                          "border-2 border-red-600 bg-white/6 px-3 backdrop-blur-md",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_22px_rgba(220,38,38,0.45),0_0_40px_rgba(185,28,28,0.22)]",
                           "transition-all duration-500 ease-out",
                           "hover:border-red-500 hover:bg-red-700/45 hover:shadow-[0_0_36px_rgba(239,68,68,0.55),0_0_56px_rgba(220,38,38,0.35)] disabled:pointer-events-none disabled:opacity-45",
@@ -1931,7 +1931,7 @@ export default function ResultListWithOverlay({
                   key="result-overlay"
                   className={[
                     "fixed inset-0 pointer-events-auto",
-                    isMobile ? "z-[100000]" : "z-[99999]",
+                    isMobile ? "z-100000" : "z-99999",
                   ].join(" ")}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

@@ -23,6 +23,11 @@
   padding-bottom: var(--bottom-nav-clearance);
 }
 
+/* /mobile layout: NavBar `bottom` is larger — keep scroll padding in sync */
+.mobile-route-root {
+  --bottom-nav-clearance: calc(20px + 72px + env(safe-area-inset-bottom, 0px));
+}
+
 .bg-app {
   background: var(--color-app-bg);
 }

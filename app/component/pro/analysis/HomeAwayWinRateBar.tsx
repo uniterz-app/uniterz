@@ -8,6 +8,13 @@ type Props = {
   awayRate: number;
   homeShare: number;
   awayShare: number;
+  /**
+   * Pro Stats: after parent SummaryCardReveal, animate top bar then bottom bar.
+   * When false, use viewport intersection (default).
+   */
+  orchestrateWithParent?: boolean;
+  /** orchestrateWithParent 時、ラッパー入場アニメ後に true */
+  parentRevealDone?: boolean;
 };
 
 export default function HomeAwayWinRateBar({
@@ -15,20 +22,22 @@ export default function HomeAwayWinRateBar({
   awayRate,
   homeShare,
   awayShare,
+  orchestrateWithParent = false,
+  parentRevealDone = false,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [ioVisible, setIoVisible] = useState(false);
+  /** orchestrate 時: 1 = 勝率バー, 2 = 構造比バー */
+  const [rowStage, setRowStage] = useState(0);
 
-  /* =========================
-   * Intersection Observer
-   * ========================= */
   useEffect(() => {
+    if (orchestrateWithParent) return;
     if (!ref.current) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisible(true);
+          setIoVisible(true);
           observer.disconnect();
         }
       },
@@ -37,7 +46,21 @@ export default function HomeAwayWinRateBar({
 
     observer.observe(ref.current);
     return () => observer.disconnect();
-  }, []);
+  }, [orchestrateWithParent]);
+
+  useEffect(() => {
+    if (!orchestrateWithParent) return;
+    if (!parentRevealDone) {
+      setRowStage(0);
+      return;
+    }
+    setRowStage(1);
+    const t = window.setTimeout(() => setRowStage(2), 440);
+    return () => window.clearTimeout(t);
+  }, [orchestrateWithParent, parentRevealDone]);
+
+  const winRateVisible = orchestrateWithParent ? rowStage >= 1 : ioVisible;
+  const shareVisible = orchestrateWithParent ? rowStage >= 2 : ioVisible;
 
   const homePct = Math.round(homeRate * 100);
   const awayPct = Math.round(awayRate * 100);
@@ -69,7 +92,7 @@ export default function HomeAwayWinRateBar({
         <div
           className="absolute right-1/2 top-0 h-full transition-all ease-out"
           style={{
-            width: visible ? `${awayPct / 2}%` : "0%",
+            width: winRateVisible ? `${awayPct / 2}%` : "0%",
             transitionDuration: "1200ms",
             transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
             background:
@@ -82,9 +105,9 @@ export default function HomeAwayWinRateBar({
         <div
           className="absolute left-1/2 top-0 h-full transition-all ease-out"
           style={{
-            width: visible ? `${homePct / 2}%` : "0%",
+            width: winRateVisible ? `${homePct / 2}%` : "0%",
             transitionDuration: "1200ms",
-            transitionDelay: "120ms",
+            transitionDelay: orchestrateWithParent ? "90ms" : "120ms",
             transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
             background:
               "linear-gradient(90deg, rgba(34,211,238,0.98) 0%, rgba(45,212,191,0.9) 55%, rgba(56,189,248,0.72) 100%)",
@@ -105,11 +128,12 @@ export default function HomeAwayWinRateBar({
           <span>Home 投稿比 {homeSharePct}%</span>
         </div>
 
-        <div className="h-3 w-full overflow-hidden rounded-full bg-white/10 flex">
+        <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="absolute left-1/2 top-0 h-full w-px bg-white/30" />
           <div
-            className="h-full transition-all ease-out"
+            className="absolute right-1/2 top-0 h-full transition-all ease-out"
             style={{
-              width: visible ? `${awaySharePct}%` : "0%",
+              width: shareVisible ? `${awaySharePct / 2}%` : "0%",
               transitionDuration: "1200ms",
               transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
               background:
@@ -119,11 +143,11 @@ export default function HomeAwayWinRateBar({
             }}
           />
           <div
-            className="h-full transition-all ease-out"
+            className="absolute left-1/2 top-0 h-full transition-all ease-out"
             style={{
-              width: visible ? `${homeSharePct}%` : "0%",
+              width: shareVisible ? `${homeSharePct / 2}%` : "0%",
               transitionDuration: "1200ms",
-              transitionDelay: "120ms",
+              transitionDelay: orchestrateWithParent ? "90ms" : "120ms",
               transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
               background:
                 "linear-gradient(90deg, rgba(6,182,212,0.95) 0%, rgba(20,184,166,0.78) 100%)",

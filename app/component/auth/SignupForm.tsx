@@ -146,7 +146,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
             className={[
               "mt-5 flex w-full items-center justify-center rounded-[14px] border-0 px-3.5 py-3",
               authDisplayButton,
-              "bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
+              "bg-linear-to-r from-cyan-500 via-fuchsia-500 to-violet-600",
               "shadow-[0_10px_30px_rgba(6,182,212,0.25),0_12px_34px_rgba(124,58,237,0.22)]",
               "transition-[transform,filter,opacity] duration-100 ease-out",
               pressed ? "scale-[0.97]" : "scale-100",

@@ -473,7 +473,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             </div>
             ) : (
               <div
-                className="mt-6 min-h-[200px] rounded-2xl border border-white/10 bg-white/[0.03]"
+                className="mt-6 min-h-[200px] rounded-2xl border border-white/10 bg-white/3"
                 aria-hidden
               />
             )}

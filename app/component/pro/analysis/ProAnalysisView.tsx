@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useLayoutEffect, useState } from "react";
 import RadarChart from "@/app/component/pro/analysis/RadarChart";
 import AnalysisTypeCard from "@/app/component/pro/analysis/AnalysisTypeCard";
 import TeamAffinityCard from "@/app/component/pro/analysis/TeamAffinityCard";
@@ -131,6 +132,28 @@ export default function ProAnalysisView({
       : null;
 
   const hasPrevMonth = !!prevMonthSummary;
+  const [homeAwayBarsReveal, setHomeAwayBarsReveal] = useState(false);
+  const [marketBarsReveal, setMarketBarsReveal] = useState(false);
+  /** lg以上はデスクトップ用グリッドのみ「表示側」としてバー演出を同期（二重マウント対策） */
+  const [isLgViewport, setIsLgViewport] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 1024px)").matches
+      : false
+  );
+
+  useEffect(() => {
+    setHomeAwayBarsReveal(false);
+    setMarketBarsReveal(false);
+  }, [month, playSectionEntrance, hasPrevMonth]);
+
+  useLayoutEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const apply = () => setIsLgViewport(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   let revealK = hasPrevMonth ? 1 : 0;
   const revealPrev = hasPrevMonth ? 0 : -1;
   const revealRadar = revealK++;
@@ -269,12 +292,17 @@ export default function ProAnalysisView({
           enabled={playSectionEntrance}
           enterVariant="blurUp"
           className="w-full lg:hidden"
+          onAnimationComplete={() => {
+            if (!isLgViewport) setHomeAwayBarsReveal(true);
+          }}
         >
           <HomeAwayWinRateBar
             homeRate={homeAway.homeRate}
             awayRate={homeAway.awayRate}
             homeShare={homeAway.homeShare}
             awayShare={homeAway.awayShare}
+            orchestrateWithParent={playSectionEntrance}
+            parentRevealDone={homeAwayBarsReveal}
           />
         </SummaryCardReveal>
 
@@ -284,12 +312,17 @@ export default function ProAnalysisView({
           enabled={playSectionEntrance}
           enterVariant="blurUp"
           className="w-full lg:hidden"
+          onAnimationComplete={() => {
+            if (!isLgViewport) setMarketBarsReveal(true);
+          }}
         >
           <MarketBiasBars
             favorableWinRate={marketBias.favorableWinRate}
             contrarianWinRate={marketBias.contrarianWinRate}
             favorableShare={marketBias.favorableShare}
             contrarianShare={marketBias.contrarianShare}
+            orchestrateWithParent={playSectionEntrance}
+            parentRevealDone={marketBarsReveal}
           />
         </SummaryCardReveal>
 
@@ -311,12 +344,17 @@ export default function ProAnalysisView({
             enabled={playSectionEntrance}
             enterVariant="blurUp"
             className="w-full"
+            onAnimationComplete={() => {
+              if (isLgViewport) setHomeAwayBarsReveal(true);
+            }}
           >
             <HomeAwayWinRateBar
               homeRate={homeAway.homeRate}
               awayRate={homeAway.awayRate}
               homeShare={homeAway.homeShare}
               awayShare={homeAway.awayShare}
+              orchestrateWithParent={playSectionEntrance}
+              parentRevealDone={homeAwayBarsReveal}
             />
           </SummaryCardReveal>
 
@@ -326,12 +364,17 @@ export default function ProAnalysisView({
             enabled={playSectionEntrance}
             enterVariant="blurUp"
             className="w-full"
+            onAnimationComplete={() => {
+              if (isLgViewport) setMarketBarsReveal(true);
+            }}
           >
             <MarketBiasBars
               favorableWinRate={marketBias.favorableWinRate}
               contrarianWinRate={marketBias.contrarianWinRate}
               favorableShare={marketBias.favorableShare}
               contrarianShare={marketBias.contrarianShare}
+              orchestrateWithParent={playSectionEntrance}
+              parentRevealDone={marketBarsReveal}
             />
           </SummaryCardReveal>
         </div>

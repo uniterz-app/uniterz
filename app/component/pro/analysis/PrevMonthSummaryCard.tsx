@@ -445,8 +445,8 @@ export default function PrevMonthSummaryCard({
                 <>
                   <div
                     className={[
-                      "pointer-events-none absolute left-2 top-2 z-[2] flex h-[3.25rem] w-[3.25rem] flex-col items-center justify-center rounded-full",
-                      "border border-amber-300/40 bg-gradient-to-b from-amber-400/20 to-white/[0.06]",
+                      "pointer-events-none absolute left-2 top-2 z-2 flex h-13 w-13 flex-col items-center justify-center rounded-full",
+                      "border border-amber-300/40 bg-linear-to-b from-amber-400/20 to-white/6",
                       "shadow-[0_0_22px_rgba(251,191,36,0.18)]",
                       "sm:left-3 sm:top-3 sm:h-14 sm:w-14",
                     ].join(" ")}

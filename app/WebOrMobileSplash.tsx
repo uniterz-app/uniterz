@@ -23,6 +23,11 @@ export default function WebOrMobileSplash({
   const pathname = usePathname();
   const isWeb = pathname?.startsWith("/web");
 
+  // "/" は app/page.tsx 自身がスプラッシュと遷移制御を持つため、ここで重ねない
+  if (pathname === "/") {
+    return <div id="app-root">{children}</div>;
+  }
+
   // 公開LPは Firebase 待ちのスプラッシュを出さない（開けないように見えるのを防ぐ）
   if (pathname === "/mobile/lp" || pathname === "/mobile/lp-v2") {
     return <div id="app-root">{children}</div>;

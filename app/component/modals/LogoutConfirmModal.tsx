@@ -41,7 +41,7 @@ export default function LogoutConfirmModal({
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-100 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -49,7 +49,7 @@ export default function LogoutConfirmModal({
           />
 
           <motion.div
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4"
+            className="fixed inset-0 z-110 flex items-center justify-center p-4"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -112,7 +112,7 @@ export default function LogoutConfirmModal({
                       authDisplayButton,
                       "cursor-pointer border border-white/14 bg-white/[0.07] backdrop-blur-md",
                       "shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_8px_24px_rgba(0,0,0,0.3)]",
-                      "hover:bg-white/[0.11]",
+                      "hover:bg-white/11",
                     ].join(" ")}
                   >
                     {cancelLabel}
@@ -126,7 +126,7 @@ export default function LogoutConfirmModal({
                       baseBtn,
                       authDisplayButton,
                       "cursor-pointer",
-                      "bg-gradient-to-r from-red-600 via-rose-600 to-red-500",
+                      "bg-linear-to-r from-red-600 via-rose-600 to-red-500",
                       "shadow-[0_10px_30px_rgba(220,38,38,0.38),0_12px_34px_rgba(244,63,94,0.22),inset_0_1px_0_rgba(255,255,255,0.12)]",
                       "ring-1 ring-inset ring-red-300/35",
                     ].join(" ")}

@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   description: "Sports prediction platform",
   manifest: "/manifest.json",
   icons: {
-    apple: "/icon/icon-192.png",
-    icon: "/icon/icon-192.png",
+    apple: "/icon-new/Icon-new192.png",
+    icon: "/icon-new/Icon-new192.png",
   },
 };
 

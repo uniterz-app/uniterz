@@ -7,22 +7,22 @@
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/icon/icon-192.png",
+      "src": "/icon-new/Icon-new192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon/icon-256.png",
+      "src": "/icon-new/Icon-new256.png",
       "sizes": "256x256",
       "type": "image/png"
     },
     {
-      "src": "/icon/icon-512.png",
+      "src": "/icon-new/Icon-new512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/icon/icon-1024.png",
+      "src": "/icon-new/Icon-new1024.png",
       "sizes": "1024x1024",
       "type": "image/png"
     }
