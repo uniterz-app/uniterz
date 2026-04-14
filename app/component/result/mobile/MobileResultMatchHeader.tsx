@@ -1,7 +1,7 @@
 // app/component/result/mobile/MobileResultMatchHeader.tsx
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -12,11 +12,11 @@ import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import type { Language } from "@/lib/i18n/language";
-import { useCachedTeamRecord } from "@/lib/result/useCachedTeamRecord";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
-import ResultHitCyberBorder from "@/app/component/result/ResultHitCyberBorder";
-import { activeWinStreakToCyberTier } from "@/lib/result/streakCyberBorderTier";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
@@ -68,6 +68,36 @@ function fmtRecordWithRank(
 
 function toInt(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
+}
+
+/** teams/{teamId} から wins/losses/rank を取る（MatchCard と同じ） */
+function useTeamRecord(teamId?: string) {
+  const [rec, setRec] = useState<{
+    wins: number;
+    losses: number;
+    rank?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!teamId) return;
+
+    const ref = doc(db, "teams", teamId);
+    getDoc(ref).then((snap) => {
+      if (!snap.exists()) return;
+      const d = snap.data() as any;
+      const isNba = String(d.league ?? "") === "nba";
+      const wl = isNba
+        ? nbaRegularSeasonWinsLosses(d)
+        : { wins: Number(d.wins ?? 0), losses: Number(d.losses ?? 0) };
+      setRec({
+        wins: wl.wins,
+        losses: wl.losses,
+        rank: typeof d.rank === "number" ? d.rank : undefined,
+      });
+    });
+  }, [teamId]);
+
+  return rec;
 }
 
 /** Mobile表示用チーム名 */
@@ -175,8 +205,8 @@ export default function MobileResultMatchHeader({
       })()
     : null;
 
-  const homeRecord = useCachedTeamRecord(post.home?.teamId);
-  const awayRecord = useCachedTeamRecord(post.away?.teamId);
+  const homeRecord = useTeamRecord(post.home?.teamId);
+  const awayRecord = useTeamRecord(post.away?.teamId);
 
   const pillBg = leaguePillBg[normalizedLeague] ?? "#334155";
   const pillText =
@@ -215,11 +245,7 @@ export default function MobileResultMatchHeader({
       "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
   }
 
-  const cyberTier = activeWinStreakToCyberTier(activeWinStreak);
-  const showCyberBorder = badge === "streak" && cyberTier != null;
-  const cardBase = `${MATCH_OVERLAY_GLASS_PANEL} ${
-    showCyberBorder ? "overflow-visible" : "overflow-hidden"
-  } text-white`;
+  const cardBase = `${MATCH_OVERLAY_GLASS_PANEL} overflow-hidden text-white`;
 
   return (
     <div className={`relative ${cardBase} ${frame}`}>
@@ -228,9 +254,6 @@ export default function MobileResultMatchHeader({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
-      {showCyberBorder && cyberTier ? (
-        <ResultHitCyberBorder tier={cyberTier} />
-      ) : null}
       <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2">
         <span
           className="inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
@@ -277,7 +300,7 @@ export default function MobileResultMatchHeader({
             <HalftoneJerseyMark
               accent={homeColor}
               accentEnd={homeSecondaryColor}
-              className="h-18 w-18"
+              className="h-[4.5rem] w-[4.5rem]"
             />
           ) : (
             <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
@@ -339,7 +362,7 @@ export default function MobileResultMatchHeader({
             <HalftoneJerseyMark
               accent={awayColor}
               accentEnd={awaySecondaryColor}
-              className="h-18 w-18"
+              className="h-[4.5rem] w-[4.5rem]"
             />
           ) : (
             <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
