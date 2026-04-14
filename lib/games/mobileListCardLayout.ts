@@ -6,6 +6,10 @@ export const MOBILE_LIST_CARD_MAX_W_CLASS = "max-w-[min(100%,20.5rem)]";
 export const MOBILE_LIST_CARD_OUTER_CLASS =
   `mx-auto w-full ${MOBILE_LIST_CARD_MAX_W_CLASS}`;
 
+/** 試合予想オーバーレイ内の MatchCard：一覧用 max-w を外し、下のフォームと同じ横幅にする */
+export const MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS =
+  "mx-auto w-full max-w-none";
+
 /** リザルト一覧のカードのみやや広い（試合一覧の 20.5rem とは切り離し） */
 export const MOBILE_RESULT_CARD_MAX_W_CLASS = "max-w-[min(100%,21.5rem)]";
 export const MOBILE_RESULT_CARD_OUTER_CLASS =

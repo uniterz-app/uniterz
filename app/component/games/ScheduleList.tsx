@@ -619,6 +619,11 @@ export default function ScheduleList({
                   user={{ name: "You" }}
                   embedded
                   inOverlay
+                  overlayExistingPostId={
+                    selectedProps
+                      ? myPostMap[String(selectedProps.id)] ?? null
+                      : null
+                  }
                   overlayScheduleGameIds={gameIds}
                   overlayScheduleGames={propsList}
                   overlayPredictedGameIds={overlayPredictedGameIds}
