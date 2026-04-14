@@ -15,6 +15,8 @@ import { toast } from "@/app/component/ui/toast";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
+import { normalizeLeague } from "@/lib/leagues";
+import { getTeamPrimaryColor } from "@/lib/team-colors";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
 import NbaPostseasonMatchupPanel from "@/app/component/predict/NbaPostseasonMatchupPanel";
 import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
@@ -129,8 +131,22 @@ export default function PredictionFormV2({
     (game.seasonPhase === "playoffs" || game.seasonPhase === "play_in");
   const showStandingsTab = showStandings && !isNbaPostseasonTools;
 
-  const homeSafe = game?.home ?? { name: "Home", colorHex: "#ef4444" };
-  const awaySafe = game?.away ?? { name: "Away", colorHex: "#3b82f6" };
+  const homeSafe = game?.home ?? { name: "Home", colorHex: "#0ea5e9" };
+  const awaySafe = game?.away ?? { name: "Away", colorHex: "#f43f5e" };
+
+  /** 市場ドーナツ: MatchCard と同じく teamId からチームカラー（未登録時のみ colorHex / 既定） */
+  const normalizedLeague = normalizeLeague(game.league);
+  const homeMarketColor = useMemo(() => {
+    const fromPalette = getTeamPrimaryColor(normalizedLeague, game.home?.teamId);
+    if (fromPalette !== "#ffffff") return fromPalette;
+    return homeSafe.colorHex ?? "#0ea5e9";
+  }, [normalizedLeague, game.home?.teamId, homeSafe.colorHex]);
+
+  const awayMarketColor = useMemo(() => {
+    const fromPalette = getTeamPrimaryColor(normalizedLeague, game.away?.teamId);
+    if (fromPalette !== "#ffffff") return fromPalette;
+    return awaySafe.colorHex ?? "#f43f5e";
+  }, [normalizedLeague, game.away?.teamId, awaySafe.colorHex]);
 
   const [homeL1, homeL2] = splitTeamNameByLeague(game.league, homeSafe.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(game.league, awaySafe.name);
@@ -714,8 +730,8 @@ export default function PredictionFormV2({
               league={game.league}
               homeName={homeSafe.name}
               awayName={awaySafe.name}
-              homeColor={homeSafe.colorHex ?? "#ef4444"}
-              awayColor={awaySafe.colorHex ?? "#3b82f6"}
+              homeColor={homeMarketColor}
+              awayColor={awayMarketColor}
               variant="predictForm"
               chartReplayKey={marketChartKey}
               fallbackMarketBias={game.marketBias}

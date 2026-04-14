@@ -23,7 +23,6 @@ import {
   MOBILE_LIST_CARD_PANEL_DENSE,
   MOBILE_RESULT_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
-import ResultHitCyberBorder from "@/app/component/result/ResultHitCyberBorder";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -331,9 +330,6 @@ function ResultCardPresentationImpl({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
-      {badge === "hit" || badge === "streak" ? (
-        <ResultHitCyberBorder />
-      ) : null}
       {showPreKickoffDismiss && onPreKickoffDismiss ? (
         <button
           type="button"

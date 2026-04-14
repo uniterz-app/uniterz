@@ -27,11 +27,7 @@ export default function MobileLayout({
   return (
     <div
       className={`mobile-route-root ${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased bg-app min-h-screen`}
-      style={{
-        paddingBottom: "env(safe-area-inset-bottom)",
-        /* bg-app と同じ。Tailwind より先に描画される PWA 初回の白フラッシュ対策 */
-        backgroundColor: "#081116",
-      }}
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {children}
     </div>

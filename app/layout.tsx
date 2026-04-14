@@ -19,21 +19,15 @@ export const metadata: Metadata = {
   title: "Uniterz",
   description: "Sports prediction platform",
   manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Uniterz",
-  },
   icons: {
-    apple: "/icon-new/Icon-new192.png",
-    icon: "/icon-new/Icon-new192.png",
+    apple: "/icon/icon-192.png",
+    icon: "/icon/icon-192.png",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#081116",
 };
 
 export default function RootLayout({
@@ -44,17 +38,8 @@ export default function RootLayout({
   const maintenance = false;
 
   return (
-    <html lang="ja" style={{ backgroundColor: "#081116" }}>
+    <html lang="ja">
       <head>
-        {/* PWA 起動直後・CSS 読み込み前の一瞬白画面を防ぐ（Tailwind より先に確定させる） */}
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              html{background-color:#081116!important;color-scheme:dark!important;min-height:100%;}
-              body{background-color:#081116!important;margin:0!important;min-height:100%;min-height:100dvh;}
-            `,
-          }}
-        />
         <link
           rel="preload"
           href="/logo/uniterz-logo.glb"
