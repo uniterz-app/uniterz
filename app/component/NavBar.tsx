@@ -139,7 +139,7 @@ const NAV_DOCK_CLIP =
 /** Web: dock hug bottom. Mobile: sit a bit higher so it feels less “in the home indicator”. */
 const NAV_WRAP_BOTTOM_WEB = "calc(10px + env(safe-area-inset-bottom))";
 const NAV_WRAP_BOTTOM_MOBILE =
-  "calc(18px + env(safe-area-inset-bottom))";
+  "calc(24px + env(safe-area-inset-bottom))";
 
 const BarStyle = {
   wrap: {
