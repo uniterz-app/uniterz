@@ -46,6 +46,15 @@ export default function RootLayout({
   return (
     <html lang="ja" style={{ backgroundColor: "#081116" }}>
       <head>
+        {/* PWA 起動直後・CSS 読み込み前の一瞬白画面を防ぐ（Tailwind より先に確定させる） */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              html{background-color:#081116!important;color-scheme:dark!important;min-height:100%;}
+              body{background-color:#081116!important;margin:0!important;min-height:100%;min-height:100dvh;}
+            `,
+          }}
+        />
         <link
           rel="preload"
           href="/logo/uniterz-logo.glb"

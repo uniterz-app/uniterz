@@ -76,7 +76,11 @@ export default function Page() {
   return (
     <>
       {/* スプラッシュ切替・ルート遷移の隙間で白背景が見えないように下地を固定 */}
-      <div className="pointer-events-none fixed inset-0 z-90 bg-app" aria-hidden />
+      <div
+        className="pointer-events-none fixed inset-0 z-90"
+        style={{ backgroundColor: "#081116" }}
+        aria-hidden
+      />
       <AnimatePresence onExitComplete={() => setSplashExitDone(true)}>
         {splashVisible && (
           <motion.div
