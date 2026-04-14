@@ -74,18 +74,22 @@ export default function Page() {
   }, [splashExitDone, status, fUser, handle, router]);
 
   return (
-    <AnimatePresence onExitComplete={() => setSplashExitDone(true)}>
-      {splashVisible && (
-        <motion.div
-          key="root-splash"
-          className="fixed inset-0 z-[100]"
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <AnimatedSplashScreen />
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <>
+      {/* スプラッシュ切替・ルート遷移の隙間で白背景が見えないように下地を固定 */}
+      <div className="pointer-events-none fixed inset-0 z-90 bg-app" aria-hidden />
+      <AnimatePresence onExitComplete={() => setSplashExitDone(true)}>
+        {splashVisible && (
+          <motion.div
+            key="root-splash"
+            className="fixed inset-0 z-100"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <AnimatedSplashScreen />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
