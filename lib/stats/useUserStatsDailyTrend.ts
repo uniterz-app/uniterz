@@ -1,6 +1,14 @@
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  documentId,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
+import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 type DailyTrendRow = {
   date: string;
@@ -11,13 +19,6 @@ type DailyTrendRow = {
   winRate: number;
   scorePrecision: number;
 };
-
-function toDateKey(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 export function useUserStatsDailyTrend(uid?: string, enabled: boolean = true) {
   const [data, setData] = useState<DailyTrendRow[]>([]);
@@ -39,45 +40,40 @@ export function useUserStatsDailyTrend(uid?: string, enabled: boolean = true) {
     async function fetchDaily() {
       setLoading(true);
 
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(endDate.getDate() - 29);
-
-      const start = toDateKey(startDate);
-      const end = toDateKey(endDate);
+      const now = new Date();
+      const end = toDateKeyInTimeZone(now, TIMEZONE_JST);
+      const startDt = new Date(now.getTime() - 29 * 86400000);
+      const start = toDateKeyInTimeZone(startDt, TIMEZONE_JST);
 
       const q = query(
         collection(db, "user_stats_v2_daily"),
-        where("date", ">=", start),
-        where("date", "<=", end),
-        orderBy("date", "asc")
+        where(documentId(), ">=", `${uid}_${start}`),
+        where(documentId(), "<=", `${uid}_${end}`),
+        orderBy(documentId())
       );
 
       const snap = await getDocs(q);
 
-      const rows: DailyTrendRow[] = snap.docs
-        .filter((doc) => doc.id.startsWith(`${uid}_`))
-        .map((doc) => {
-          const d = doc.data();
-          const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
+      const rows: DailyTrendRow[] = snap.docs.map((doc) => {
+        const d = doc.data();
+        const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
 
-          const posts = all?.posts ?? 0;
-          const wins = all?.wins ?? 0;
-          const pointsV3 = all?.pointsSumV3 ?? 0;
-          const upsetPoints = all?.upsetPointsSum ?? 0;
-          const scorePrecisionSum = all?.scorePrecisionSum ?? 0;
+        const posts = all?.posts ?? 0;
+        const wins = all?.wins ?? 0;
+        const pointsV3 = all?.pointsSumV3 ?? 0;
+        const upsetPoints = all?.upsetPointsSum ?? 0;
+        const scorePrecisionSum = all?.scorePrecisionSum ?? 0;
 
-          return {
-            date: d.date,
-            posts,
-            wins,
-            pointsV3,
-            upsetPoints,
-            winRate: posts > 0 ? wins / posts : 0,
-            // 現行仕様では scorePrecision は 10点スケールの合計値を日次で保持
-            scorePrecision: scorePrecisionSum,
-          };
-        });
+        return {
+          date: d.date,
+          posts,
+          wins,
+          pointsV3,
+          upsetPoints,
+          winRate: posts > 0 ? wins / posts : 0,
+          scorePrecision: scorePrecisionSum,
+        };
+      });
 
       setData(rows);
       setLoading(false);

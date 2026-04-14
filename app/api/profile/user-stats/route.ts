@@ -120,10 +120,15 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   return base;
 }
 
-async function aggregateFromDaily(uid: string, days: number): Promise<SummaryForCards> {
+/** Fetch last 30 daily docs once; derive 3d / 7d / 30d windows in memory (40 reads → 30). */
+async function aggregateRecentWindowsFromDaily(uid: string): Promise<{
+  recent3: SummaryForCards;
+  seven: SummaryForCards;
+  thirty: SummaryForCards;
+}> {
   const adminDb = getAdminDb();
   const today = new Date();
-  const dates = Array.from({ length: days }, (_, i) => {
+  const dates = Array.from({ length: 30 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     return d;
@@ -135,15 +140,24 @@ async function aggregateFromDaily(uid: string, days: number): Promise<SummaryFor
     )
   );
 
-  const bucket = snaps.reduce((acc, snap) => {
-    const raw = snap.exists
-      ? (snap.data()?.all as Partial<Bucket> | undefined)
-      : undefined;
-    return mergeBucket(acc, raw ?? null);
-  }, empty());
+  function windowFromIndices(from: number, toExclusive: number): SummaryForCards {
+    const bucket = empty();
+    for (let i = from; i < toExclusive && i < snaps.length; i++) {
+      const snap = snaps[i];
+      const raw = snap.exists
+        ? (snap.data()?.all as Partial<Bucket> | undefined)
+        : undefined;
+      mergeBucket(bucket, raw ?? null);
+    }
+    const computed = computeForCards(bucket);
+    return { fullPosts: computed.posts, ...computed };
+  }
 
-  const computed = computeForCards(bucket);
-  return { fullPosts: computed.posts, ...computed };
+  return {
+    recent3: windowFromIndices(0, 3),
+    seven: windowFromIndices(0, 7),
+    thirty: windowFromIndices(0, 30),
+  };
 }
 
 /** 全期間：日次 `all` の合算（user_stats_v2_all_cache は未整備のため使わない） */
@@ -203,10 +217,8 @@ export async function GET(req: Request) {
     // window cache は更新トリガー用途に留め、レスポンスは daily 実集計を返す
     // （7d 初回だけ 0 になる不整合を防ぐ）
     // all も日次 all の合算（キャッシュ doc は未整備で空になりがちなため）
-    const [recent3, seven, thirty, allSummary] = await Promise.all([
-      aggregateFromDaily(uid, 3),
-      aggregateFromDaily(uid, 7),
-      aggregateFromDaily(uid, 30),
+    const [{ recent3, seven, thirty }, allSummary] = await Promise.all([
+      aggregateRecentWindowsFromDaily(uid),
       aggregateAllFromDaily(uid),
     ]);
 

@@ -15,6 +15,16 @@ export type BulkMetricPayload = {
 
 const ANON_KEY = "__anon__";
 
+function emptyBulkMetric(): BulkMetricPayload {
+  return {
+    ok: true,
+    rows: [],
+    count: 0,
+    myRank: null,
+    myRow: null,
+  };
+}
+
 /** 初回は総合（totalPoints）のみ先読み。他4指標は認証確定後に idle でまとめて取得。 */
 const PRIMARY_METRICS = "totalPoints";
 const REST_METRICS = "activeWinStreak,totalPrecision,totalUpset,winRate";
@@ -98,13 +108,17 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
           setByMetric((p) => mergeMetricBundles(p, partial));
           setAppliedTotalPointsUid(ANON_KEY);
         } else {
-          setByMetric(null);
-          setAppliedTotalPointsUid(null);
+          setByMetric(
+            mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+          );
+          setAppliedTotalPointsUid(ANON_KEY);
         }
       } catch {
         if (cancelled || g !== mountPrimaryGenRef.current) return;
-        setByMetric(null);
-        setAppliedTotalPointsUid(null);
+        setByMetric(
+          mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+        );
+        setAppliedTotalPointsUid(ANON_KEY);
       } finally {
         if (!cancelled && g === mountPrimaryGenRef.current) {
           setLoading(false);
@@ -128,9 +142,18 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
             if (partial) {
               setByMetric((p) => mergeMetricBundles(p, partial));
               setAppliedTotalPointsUid(ANON_KEY);
+            } else {
+              setByMetric(
+                mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+              );
+              setAppliedTotalPointsUid(ANON_KEY);
             }
           } catch {
-            /* keep previous */
+            if (cancelled || g !== mountPrimaryGenRef.current) return;
+            setByMetric(
+              mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+            );
+            setAppliedTotalPointsUid(ANON_KEY);
           }
         })();
         return;
@@ -144,9 +167,12 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
           if (partial) {
             setByMetric((p) => mergeMetricBundles(p, partial));
             setAppliedTotalPointsUid(uid);
+          } else {
+            setAppliedTotalPointsUid(uid);
           }
         } catch {
-          /* keep anon totalPoints */
+          if (cancelled || uq !== uidPrimarySeqRef.current) return;
+          setAppliedTotalPointsUid(uid);
         }
       })();
     });

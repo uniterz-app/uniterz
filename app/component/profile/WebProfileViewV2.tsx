@@ -198,9 +198,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
   const proSummaryTotal = 5;
   const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-${range}`;
-  /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
-  const overviewReady =
-    !resolvedUid || (!statsLoading && !dailyTrendLoading);
+  /** Summary cards wait for user-stats only; chart block waits for daily trend. */
+  const summaryReady = !resolvedUid || !statsLoading;
+  const chartReady = !resolvedUid || !dailyTrendLoading;
 
   const summaryEntranceLockedRef = useRef(false);
   useEffect(() => {
@@ -216,7 +216,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     return () => window.cancelAnimationFrame(id);
   }, [tab, playoffDisplayData?.season]);
   const playSummaryEntrance =
-    !summaryEntranceLockedRef.current && !statsLoading && overviewReady;
+    !summaryEntranceLockedRef.current && !statsLoading && summaryReady;
 
   const [chartEntranceDone, setChartEntranceDone] = useState(false);
   const onChartRevealComplete = useCallback(() => {
@@ -224,8 +224,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   }, []);
 
   useEffect(() => {
-    if (!overviewReady) setChartEntranceDone(false);
-  }, [overviewReady]);
+    if (!chartReady) setChartEntranceDone(false);
+  }, [chartReady]);
 
   useEffect(() => {
     if (!playSummaryEntrance) setChartEntranceDone(true);
@@ -300,7 +300,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       <div className="mt-6">
         {tab === "overview" ? (
           <>
-            {overviewReady ? (
+            {summaryReady ? (
               <>
               <div key={summaryMountKey} className="min-h-[120px]">
               {currentIsProView ? (
@@ -405,6 +405,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               )}
               </div>
 
+            {chartReady ? (
             <div className="mt-6 space-y-4">
               <SummaryCardReveal
                 index={5}
@@ -451,6 +452,12 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                 </div>
               </SummaryCardReveal>
             </div>
+            ) : (
+              <div
+                className="mt-6 min-h-[200px] rounded-2xl border border-white/10 bg-white/[0.03]"
+                aria-hidden
+              />
+            )}
               </>
             ) : null}
           </>
