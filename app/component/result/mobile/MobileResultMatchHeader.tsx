@@ -15,6 +15,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
 import { useCachedTeamRecord } from "@/lib/result/useCachedTeamRecord";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import ResultHitCyberBorder from "@/app/component/result/ResultHitCyberBorder";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
@@ -222,6 +223,9 @@ export default function MobileResultMatchHeader({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
+      {badge === "hit" || badge === "streak" ? (
+        <ResultHitCyberBorder />
+      ) : null}
       <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2">
         <span
           className="inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
