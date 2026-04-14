@@ -22,6 +22,258 @@ type FAQItem = {
   answer: React.ReactNode;
 };
 
+type ScoringSectionItem = {
+  id: "winRate" | "totalPoints" | "scorePrecision" | "upsetPoints";
+  title: string;
+  content: React.ReactNode;
+};
+
+function ScoringLogicSections({
+  items,
+  defaultOpenId,
+}: {
+  items: ScoringSectionItem[];
+  defaultOpenId: ScoringSectionItem["id"];
+}) {
+  const [openId, setOpenId] = useState<ScoringSectionItem["id"] | null>(
+    defaultOpenId
+  );
+
+  return (
+    <div className="space-y-2">
+      {items.map((item) => {
+        const open = openId === item.id;
+        return (
+          <div
+            key={item.id}
+            className="overflow-hidden rounded-xl border border-white/10 bg-white/3"
+          >
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-3 py-2 text-left"
+              onClick={() => setOpenId(open ? null : item.id)}
+            >
+              <span className="text-sm font-semibold text-white/90">
+                {item.title}
+              </span>
+              <span className="text-xs text-cyan-200/80">{open ? "−" : "+"}</span>
+            </button>
+            {open ? (
+              <div className="border-t border-white/10 px-3 py-2 text-sm leading-relaxed text-white/80">
+                {item.content}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ScoringLogicAnswerJa() {
+  const items: ScoringSectionItem[] = [
+    {
+      id: "winRate",
+      title: "勝率",
+      content: <p>勝敗予想の的中率です（勝ち数 ÷ 投稿数）。</p>,
+    },
+    {
+      id: "totalPoints",
+      title: "総合得点",
+      content: (
+        <div className="space-y-1">
+          <p>
+            <span className="font-semibold text-emerald-300">勝者的中</span>で
+            <span className="font-semibold text-cyan-300"> +4点</span>。
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">得失点差の近さ（Max4点）</span>
+            ：誤差0で4点、誤差1〜14で段階的に減点、誤差15以上は0点。
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">合計得点の近さ（Max2点）</span>
+            ：合計誤差0〜3で2点、4〜7で1点、8以上は0点。
+          </p>
+          <p>
+            上記がすべて一致すると1試合の基本点は
+            <span className="font-semibold text-cyan-300">10点</span>
+            です。
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">連勝ボーナス</span>
+            ：3〜4連勝 +1点、5〜6連勝 +2点、7連勝以上 +3点（2連勝以下は0点）。
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">アップセットボーナス</span>
+            ：あなたの予想が少数派で的中し、かつ試合がアップセットだった場合
+            <span className="font-semibold text-cyan-300"> +2点</span>。
+          </p>
+          <p>
+            ※ 勝者予想を外した場合、
+            <span className="font-semibold text-red-300">総合得点は0点</span>
+            です。
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "scorePrecision",
+      title: "スコア精度",
+      content: (
+        <div className="space-y-1">
+          <p>
+            <span className="font-semibold text-emerald-300">1試合 0〜10点</span>
+            ：
+            <span className="font-semibold text-cyan-300">HOME得点差（最大3）</span>
+            ＋
+            <span className="font-semibold text-cyan-300">AWAY得点差（最大3）</span>
+            ＋
+            <span className="font-semibold text-cyan-300">得失点差（最大4）</span>。
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">誤差0で満点</span>
+            、誤差1〜11で段階的に減点、誤差12以上は
+            <span className="font-semibold text-red-300">0点</span>
+            です。
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "upsetPoints",
+      title: "アップセット得点",
+      content: (
+        <div className="space-y-1">
+          <p>
+            <span className="font-semibold text-emerald-300">アップセット（番狂わせ）が起きた試合</span>
+            で、あなたが
+            <span className="font-semibold text-emerald-300">少数派の予想</span>
+            を当てたときに加点される指標です（1試合0〜10点）。
+          </p>
+          <p>
+            あなたの予想側が
+            <span className="font-semibold text-cyan-300">45%以下</span>
+            の少数派になるとアップセット得点の対象になり、
+            <span className="font-semibold text-cyan-300">10%以下</span>
+            のような強い少数派に近づくほど
+            <span className="font-semibold text-emerald-300">10点に近い高得点</span>
+            になります。
+          </p>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-2 text-sm leading-relaxed text-white/80">
+      <p>
+        採点ロジックは下記4項目に分かれています。項目をタップすると詳細が開きます。
+      </p>
+      <ScoringLogicSections items={items} defaultOpenId="totalPoints" />
+    </div>
+  );
+}
+
+function ScoringLogicAnswerEn() {
+  const items: ScoringSectionItem[] = [
+    {
+      id: "winRate",
+      title: "Win Rate",
+      content: <p>Your winner-prediction accuracy (wins ÷ submissions).</p>,
+    },
+    {
+      id: "totalPoints",
+      title: "Total Points",
+      content: (
+        <div className="space-y-1">
+          <p>
+            <span className="font-semibold text-emerald-300">Correct winner</span>
+            <span className="font-semibold text-cyan-300"> +4 points</span>.
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">Margin closeness (max 4)</span>
+            : 4 points at 0 error, gradually reduced for
+            errors 1–14, and 0 at 15+.
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">Total-score closeness (max 2)</span>
+            : 2 points for total error 0–3, 1 point
+            for 4–7, and 0 for 8+.
+          </p>
+          <p>
+            Perfect match on all parts gives
+            <span className="font-semibold text-cyan-300"> 10 base points</span>
+            per match.
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">Win-streak bonus</span>
+            : +1 (3–4 streak), +2 (5–6), +3 (7+), else 0.
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">Upset bonus</span>
+            : when your minority pick is correct and the match is an upset,
+            <span className="font-semibold text-cyan-300"> +2 points</span>.
+          </p>
+          <p>
+            Miss the winner and
+            <span className="font-semibold text-red-300"> total points become 0</span>.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "scorePrecision",
+      title: "Score Precision",
+      content: (
+        <div className="space-y-1">
+          <p>
+            <span className="font-semibold text-emerald-300">0–10 per match</span>:{" "}
+            <span className="font-semibold text-cyan-300">HOME score difference (max 3)</span>{" "}
+            +{" "}
+            <span className="font-semibold text-cyan-300">AWAY score difference (max 3)</span>{" "}
+            +{" "}
+            <span className="font-semibold text-cyan-300">point-difference gap (max 4)</span>.
+          </p>
+          <p>
+            <span className="font-semibold text-emerald-300">0 error = full points</span>, 1–11
+            are reduced step by step, and 12+ becomes
+            <span className="font-semibold text-red-300"> 0</span>.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "upsetPoints",
+      title: "Upset Points",
+      content: (
+        <div className="space-y-1">
+          <p>
+            A separate 0–10 metric awarded when an
+            <span className="font-semibold text-emerald-300"> upset actually happens</span>
+            and your
+            <span className="font-semibold text-emerald-300"> minority pick is correct</span>.
+          </p>
+          <p>
+            Your pick starts qualifying when your side is at
+            <span className="font-semibold text-cyan-300"> 45% or lower</span>.
+            As it gets closer to a strong minority such as
+            <span className="font-semibold text-cyan-300"> 10% or lower</span>,
+            the upset score gets closer to
+            <span className="font-semibold text-emerald-300"> 10 points</span>.
+          </p>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-2 text-sm leading-relaxed text-white/80">
+      <p>Scoring logic is split into four sections. Tap each section to expand details.</p>
+      <ScoringLogicSections items={items} defaultOpenId="totalPoints" />
+    </div>
+  );
+}
+
 const faqsJa: FAQItem[] = [
   {
     id: "form",
@@ -78,33 +330,7 @@ const faqsJa: FAQItem[] = [
     question: "得点はどう計算されていますか？",
     icon: <Sigma className="h-5 w-5 text-emerald-200" />,
     accentClass: "from-emerald-500/70 via-teal-500/70 to-cyan-500/70",
-    answer: (
-      <div className="space-y-2 text-sm leading-relaxed text-white/80">
-        <p>
-          試合ごとの投稿には、主に
-          <span className="font-semibold text-emerald-300"> 勝率・スコア精度・総合得点 </span>
-          が反映されます。
-        </p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>
-            <b>勝率</b>：勝敗予想の的中率（勝ち数 ÷ 投稿数）
-          </li>
-          <li>
-            <b>スコア精度</b>（1試合 0〜10点）：HOME得点差(最大3) + AWAY得点差(最大3) + 点差精度(最大4)
-          </li>
-          <li>スコア精度は誤差0で満点、誤差1〜11で段階的に減点、誤差12以上は0点</li>
-          <li>
-            <b>総合得点 pointsV3</b>：勝者的中4点 + 点差の近さ(最大4点) + 合計得点の近さ(最大2点)
-          </li>
-          <li>総合得点は勝者を外すと0点。条件成立時のみアップセット/連勝ボーナスが加算されます</li>
-        </ul>
-        <p>
-          サマリーカードの表示は期間内の合計値です。ハイライトは
-          <span className="font-semibold text-emerald-300"> 過去3日で4投稿以上 </span>
-          の場合に判定されます。
-        </p>
-      </div>
-    ),
+    answer: <ScoringLogicAnswerJa />,
   },
   {
     id: "ranking",
@@ -189,41 +415,7 @@ const faqsEn: FAQItem[] = [
     question: "How are points calculated?",
     icon: <Sigma className="h-5 w-5 text-emerald-200" />,
     accentClass: "from-emerald-500/70 via-teal-500/70 to-cyan-500/70",
-    answer: (
-      <div className="space-y-2 text-sm leading-relaxed text-white/80">
-        <p>
-          Match submissions mainly reflect:{" "}
-          <span className="font-semibold text-emerald-300">
-            Win Rate, Score Precision, and Total Points
-          </span>
-          .
-        </p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>
-            <b>Win Rate</b>: your win accuracy (wins ÷ submissions).
-          </li>
-          <li>
-            <b>Score Precision</b> (0–10 per match): HOME point difference
-            (max 3) + AWAY point difference (max 3) + margin precision (max 4).
-          </li>
-          <li>
-            Score Precision is 10 points at 0 error, deducted stepwise for
-            errors 1–11, and 0 points for errors 12+.
-          </li>
-          <li>
-            <b>Total Points (pointsV3)</b>: 4 points for correct winner +
-            up to 4 points for closeness of point difference + up to 2 points for closeness of total score.
-          </li>
-          <li>
-            Total Points become 0 if you miss the winner. Upset / win-streak bonuses are added only when the conditions are met.
-          </li>
-        </ul>
-        <p>
-          Summary cards show the total values within the selected period.
-          Highlights are applied when you have <span className="font-semibold text-emerald-300">4+ posts in the last 3 days</span>.
-        </p>
-      </div>
-    ),
+    answer: <ScoringLogicAnswerEn />,
   },
   {
     id: "ranking",

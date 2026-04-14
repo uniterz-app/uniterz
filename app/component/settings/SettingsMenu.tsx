@@ -15,7 +15,6 @@ import {
   PlusSquare,
   Database,
   CheckCheck,
-  Key,
   FileText,
   Users,
   Mail,
@@ -95,10 +94,6 @@ export default function SettingsMenu({
   const announcementsPath = p(
     "/web/announcements",
     "/mobile/announcements"
-  );
-  const resetPath = p(
-    "/web/settings/password",
-    "/mobile/settings/password"
   );
   const helpPath = p("/web/help", "/mobile/help");
   const termsPath = p("/web/terms", "/mobile/terms");
@@ -217,16 +212,6 @@ export default function SettingsMenu({
         <p className={groupTitleClasses}>{isEn ? "Support" : "サポート"}</p>
 
         <div className="flex flex-col gap-2">
-          <SideMenuItemButton
-            dense
-            icon={Key}
-            iconSize={15}
-            labelStyle={menuLabelFont}
-            onClick={() => pushFromMenu(resetPath)}
-          >
-            {labelText("Password Reset", "パスワードリセット")}
-          </SideMenuItemButton>
-
           <SideMenuItemButton
             dense
             icon={HelpCircle}
