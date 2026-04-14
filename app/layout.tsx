@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#081116",
 };
 
 export default function RootLayout({
@@ -38,7 +39,7 @@ export default function RootLayout({
   const maintenance = false;
 
   return (
-    <html lang="ja">
+    <html lang="ja" style={{ backgroundColor: "#081116" }}>
       <head>
         <link
           rel="preload"
