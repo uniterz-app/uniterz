@@ -10,6 +10,7 @@ import * as functions from "firebase-functions";
 
 import { buildCumulativeStats } from "./rankings/buildCumulativeStats";
 import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankingSnapshot";
+import { hasNbaGameScheduledJstToday } from "./schedule/hasNbaGameScheduledJstToday";
 
 // ★追加
 import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
@@ -66,23 +67,35 @@ export const updateTeamRankingsDaily = onSchedule(
 );
 
 /* ============================================================================
- * Cumulative Stats (15:40)
+ * Cumulative Stats (15:40) — JST 当日に NBA 試合がある日のみ
  * ==========================================================================*/
 
 export const buildCumulativeStatsCron = onSchedule(
   { schedule: "40 15 * * *", timeZone: "Asia/Tokyo" },
   async () => {
+    if (!(await hasNbaGameScheduledJstToday())) {
+      console.log(
+        "[buildCumulativeStatsCron] skip: no NBA games scheduled this JST date"
+      );
+      return;
+    }
     await buildCumulativeStats();
   }
 );
 
 /* ============================================================================
- * Cumulative Ranking Snapshot (15:55)
+ * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA 試合がある日のみ
  * ==========================================================================*/
 
 export const buildCumulativeRankingSnapshotCron = onSchedule(
   { schedule: "55 15 * * *", timeZone: "Asia/Tokyo" },
   async () => {
+    if (!(await hasNbaGameScheduledJstToday())) {
+      console.log(
+        "[buildCumulativeRankingSnapshotCron] skip: no NBA games scheduled this JST date"
+      );
+      return;
+    }
     await buildCumulativeRankingSnapshot();
     const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
     const token = process.env.INTERNAL_REVALIDATE_SECRET;

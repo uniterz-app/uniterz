@@ -44,6 +44,7 @@ const _core_1 = require("./analytics/_core");
 const functions = __importStar(require("firebase-functions"));
 const buildCumulativeStats_1 = require("./rankings/buildCumulativeStats");
 const buildCumulativeRankingSnapshot_1 = require("./rankings/buildCumulativeRankingSnapshot");
+const hasNbaGameScheduledJstToday_1 = require("./schedule/hasNbaGameScheduledJstToday");
 // ★追加
 const buildMonthlyLeaderboardSnapshot_1 = require("./leaderboards/buildMonthlyLeaderboardSnapshot");
 const jstLeaderboardMonth_1 = require("./leaderboards/jstLeaderboardMonth");
@@ -93,16 +94,24 @@ exports.updateTeamRankingsDaily = (0, scheduler_1.onSchedule)({ schedule: "0 16 
     await (0, runTeamRankingsCron_1.runTeamRankingsCronIfNbaGamesToday)();
 });
 /* ============================================================================
- * Cumulative Stats (15:40)
+ * Cumulative Stats (15:40) — JST 当日に NBA 試合がある日のみ
  * ==========================================================================*/
 exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({ schedule: "40 15 * * *", timeZone: "Asia/Tokyo" }, async () => {
+    if (!(await (0, hasNbaGameScheduledJstToday_1.hasNbaGameScheduledJstToday)())) {
+        console.log("[buildCumulativeStatsCron] skip: no NBA games scheduled this JST date");
+        return;
+    }
     await (0, buildCumulativeStats_1.buildCumulativeStats)();
 });
 /* ============================================================================
- * Cumulative Ranking Snapshot (15:55)
+ * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA 試合がある日のみ
  * ==========================================================================*/
 exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "55 15 * * *", timeZone: "Asia/Tokyo" }, async () => {
     var _a;
+    if (!(await (0, hasNbaGameScheduledJstToday_1.hasNbaGameScheduledJstToday)())) {
+        console.log("[buildCumulativeRankingSnapshotCron] skip: no NBA games scheduled this JST date");
+        return;
+    }
     await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
     const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
     const token = process.env.INTERNAL_REVALIDATE_SECRET;

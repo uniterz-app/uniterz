@@ -3,27 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.runTeamRankingsCronIfNbaGamesToday = runTeamRankingsCronIfNbaGamesToday;
 const firestore_1 = require("firebase-admin/firestore");
 const teamStandingsSeasonPhase_1 = require("../teamStandingsSeasonPhase");
+const jstCalendarDayFirestore_1 = require("../time/jstCalendarDayFirestore");
 const updateTeamRankings_1 = require("./updateTeamRankings");
-/** Asia/Tokyo の「今日」0:00〜23:59:59.999 を Timestamp で返す */
-function jstTodayStartEnd() {
-    const ymd = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Asia/Tokyo",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).format(new Date());
-    const start = firestore_1.Timestamp.fromDate(new Date(`${ymd}T00:00:00+09:00`));
-    const end = firestore_1.Timestamp.fromDate(new Date(`${ymd}T23:59:59.999+09:00`));
-    return { start, end };
-}
 /**
- * JST calendar day has at least one NBA game counted toward regular-season standings (seasonPhase not play_in / playoffs), run updateTeamRankings.
- * play_in / playoffs の試合だけの日はスキップ（onGameFinalV2 も RS の wins / regular stats は更新しない）。
- * Scheduled daily at 16:00 Asia/Tokyo.
+ * Runs updateTeamRankings when this JST date has any NBA game that counts toward
+ * regular-season standings (same rule as countsTowardRegularSeasonTeamStats: not play_in / playoffs).
+ * Skips days with only play_in or playoff games. Cron: 16:00 Asia/Tokyo.
  */
 async function runTeamRankingsCronIfNbaGamesToday() {
     const db = (0, firestore_1.getFirestore)();
-    const { start, end } = jstTodayStartEnd();
+    const { start, end } = (0, jstCalendarDayFirestore_1.jstCalendarDayStartEndTimestamps)();
     const snap = await db
         .collection("games")
         .where("league", "==", "nba")

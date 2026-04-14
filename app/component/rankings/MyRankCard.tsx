@@ -8,7 +8,7 @@ import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
@@ -42,7 +42,7 @@ function formatValue(metric: MobileMetric, value: number) {
 }
 
 function getRankStyle(rank: number | null, loading: boolean) {
-  if (loading || !rank) {
+  if (loading || rank == null) {
     return {
       color: "rgba(255,255,255,0.9)",
       textShadow: "none",
@@ -167,29 +167,23 @@ export default function MyRankCard({
       : 0;
 
   const [showSideColumns, setShowSideColumns] = useState(false);
-  const identityDoneRef = useRef(false);
-
   useEffect(() => {
-    identityDoneRef.current = false;
     setShowSideColumns(false);
     setAvatarMediaOk(false);
   }, [metric]);
 
-  const onIdentityAnimationComplete = useCallback(() => {
-    if (identityDoneRef.current) return;
-    identityDoneRef.current = true;
-    setShowSideColumns(true);
-  }, []);
-
-  /** 子の show アニメ完了に相当するタイミング（hidden 時の onComplete 誤発火を避ける） */
   useEffect(() => {
-    if (reduceMotion === true) return;
-    if (!avatarFadeReady) return;
-    const ms =
-      Math.round((IDENTITY_DELAY_CHILDREN + AVATAR_REVEAL_DURATION) * 1000) + 55;
-    const id = window.setTimeout(onIdentityAnimationComplete, ms);
+    if (!ready) {
+      setShowSideColumns(false);
+      return;
+    }
+    if (reduceMotion === true) {
+      setShowSideColumns(true);
+      return;
+    }
+    const id = window.setTimeout(() => setShowSideColumns(true), 200);
     return () => clearTimeout(id);
-  }, [avatarFadeReady, metric, reduceMotion, onIdentityAnimationComplete]);
+  }, [ready, metric, reduceMotion]);
 
   const rankCount = useRankCountUp(
     rank ?? 0,
@@ -289,11 +283,7 @@ export default function MyRankCard({
                 textShadow: rankStyle.textShadow,
               }}
             >
-              {loading
-                ? "--"
-                : rank
-                    ? `#${rank}`
-                    : "-"}
+              {loading || rank == null ? "--" : `#${rank}`}
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -354,13 +344,8 @@ export default function MyRankCard({
     );
   }
 
-  const centerContent = loading ? (
-    "--"
-  ) : rank == null ? (
-    "-"
-  ) : (
-    `#${rankCount}`
-  );
+  const centerContent =
+    loading || rank == null ? "--" : `#${rankCount}`;
 
   return (
     <motion.div
