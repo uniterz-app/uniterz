@@ -77,7 +77,7 @@ function RankingInfoNotice({ language }: { language: "ja" | "en" }) {
 }
 
 export default function WebRankingsShell() {
-  const [phase, setPhase] = useState<RankingPhase>("playoffs");
+  const [phase, setPhase] = useState<RankingPhase>("play_in");
   const {
     listReady,
     personalPending,
