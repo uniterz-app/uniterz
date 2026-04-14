@@ -24,6 +24,7 @@ import {
   MOBILE_RESULT_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
 import ResultHitCyberBorder from "@/app/component/result/ResultHitCyberBorder";
+import { activeWinStreakToCyberTier } from "@/lib/result/streakCyberBorderTier";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -313,11 +314,15 @@ function ResultCardPresentationImpl({
     ? MOBILE_LIST_CARD_PANEL_DENSE
     : MATCH_OVERLAY_GLASS_PANEL;
 
+  const cyberTier = activeWinStreakToCyberTier(activeWinStreak);
+  const showCyberBorder = badge === "streak" && cyberTier != null;
+
   return (
     <div
       onClick={handle}
       className={[
-        "group relative overflow-hidden text-white",
+        "group relative text-white",
+        showCyberBorder ? "overflow-visible" : "overflow-hidden",
         isMobile
           ? MOBILE_RESULT_CARD_OUTER_CLASS
           : "mx-auto w-full max-w-[1200px]",
@@ -331,8 +336,8 @@ function ResultCardPresentationImpl({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
-      {badge === "hit" || badge === "streak" ? (
-        <ResultHitCyberBorder />
+      {showCyberBorder && cyberTier ? (
+        <ResultHitCyberBorder tier={cyberTier} />
       ) : null}
       {showPreKickoffDismiss && onPreKickoffDismiss ? (
         <button
