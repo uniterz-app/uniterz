@@ -71,29 +71,31 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
   }, [status, isPublic, guestSignupHref, router]);
 
   return (
-    <AnimatePresence mode="wait">
-      {showBlockingSplash ? (
-        <motion.div
-          key="auth-splash"
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[100]"
-        >
-          <AnimatedSplashScreen />
-        </motion.div>
-      ) : (
-        <motion.div
-          key="auth-main"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="flex min-h-dvh w-full flex-1 flex-col"
-        >
-          {children}
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className="min-h-dvh bg-app">
+      <AnimatePresence mode="wait">
+        {showBlockingSplash ? (
+          <motion.div
+            key="auth-splash"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-100"
+          >
+            <AnimatedSplashScreen />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="auth-main"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="flex min-h-dvh w-full flex-1 flex-col"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

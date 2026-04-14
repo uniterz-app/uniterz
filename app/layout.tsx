@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: "Uniterz",
   description: "Sports prediction platform",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Uniterz",
+  },
   icons: {
     apple: "/icon-new/Icon-new192.png",
     icon: "/icon-new/Icon-new192.png",
