@@ -20,16 +20,16 @@ type Props = {
   enterVariant?: "default" | "fade" | "blurUp";
 };
 
-/** 下から「にじみ出す」ように、透明度・位置・スケールを同じカーブで立ち上げる */
-const EMERGE_DURATION = 1.08;
+/** 下から「にじみ出す」ように（初回体感を優先し過度に長くしない） */
+const EMERGE_DURATION = 0.62;
 const EMERGE_EASE: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
 
 /**
  * プロフィールサマリーカード用: 下からふわっと浮かび、透過→不透明・スケールが段々大きくなる
  */
-const FADE_DURATION = 0.52;
-const FADE_FIRST_DELAY = 0.04;
-const FADE_STEP = 0.072;
+const FADE_DURATION = 0.38;
+const FADE_FIRST_DELAY = 0.02;
+const FADE_STEP = 0.045;
 
 const BLUR_UP_DURATION = 0.78;
 const BLUR_UP_FIRST_DELAY = 0.06;
@@ -107,8 +107,8 @@ export default function SummaryCardReveal({
     );
   }
 
-  const firstStart = 0.05;
-  const step = 0.11;
+  const firstStart = 0.02;
+  const step = 0.055;
   const delay = firstStart + index * step;
 
   return (

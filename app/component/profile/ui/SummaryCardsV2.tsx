@@ -258,6 +258,7 @@ export default function SummaryCardsV2({
       index={i}
       total={SUMMARY_CARD_TOTAL}
       enabled={reveal}
+      enterVariant="fade"
       className="min-w-0"
     >
       {node}
