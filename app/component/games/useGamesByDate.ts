@@ -36,6 +36,10 @@ const gamesByMonthCache = new Map<
   { games: any[]; savedAt: number }
 >();
 
+export function writeGamesByMonthCacheEntry(cacheKey: string, games: any[]) {
+  gamesByMonthCache.set(cacheKey, { games, savedAt: Date.now() });
+}
+
 /** games 行の開始日（指定タイムゾーンの暦日キー） */
 export function gameRowStartDateKeyInTimeZone(
   game: { startAtJst?: unknown },

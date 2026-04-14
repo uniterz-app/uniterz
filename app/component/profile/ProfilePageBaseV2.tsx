@@ -9,6 +9,7 @@ import WebProfileViewV2 from "./WebProfileViewV2";
 
 import { useUserStatsV2 } from "./useUserStatsV2";
 import type { SummaryForCardsV2 } from "./useUserStatsV2";
+import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 
 type Props = { handle: string; variant?: "web" | "mobile" };
 
@@ -24,7 +25,8 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   );
   const [range, setRange] = useState<"7d" | "30d" | "all">("7d");
 
-  const { stats, summaries, loading: statsLoading } = useUserStatsV2(targetUid);
+  const { stats, summaries, loading: statsLoading, dailyTrend } =
+    useUserStatsV2(targetUid);
 
   const normalizedProfile = useMemo<Profile | undefined>(() => {
     if (!profile) return undefined;
@@ -84,6 +86,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     summary: summaryV2,
     statsLoading,
     targetUid,
+    profileDailyTrendSeed: dailyTrend,
   };
 
   return variant === "web" ? (
@@ -106,4 +109,7 @@ export type ProfileViewPropsV2 = {
   statsLoading: boolean;
 
   targetUid: string | null;
+
+  /** user-stats API の dailyTrend（あれば日次チャートは Firestore を読まない） */
+  profileDailyTrendSeed?: ProfileDailyTrendRow[] | null;
 };

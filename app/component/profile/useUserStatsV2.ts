@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 
 export type SummaryForCardsV2 = {
   posts: number;
@@ -23,12 +24,11 @@ export type SummaryForCardsV2 = {
   // ④ 総合得点（期間合計）
   pointsSumV3: number;
 
-  /** 総合得点の内訳（pointsV3 = base + upsetBonus + streakBonus） */
+  /** pointsV3 = base + upsetBonus + streakBonus */
   basePointsSum: number;
   upsetBonusSum: number;
   streakBonusSum: number;
 
-  // Upset補助
   upsetChanceCount: number;
   upsetHitCount: number;
 };
@@ -39,6 +39,7 @@ type CacheEntry = {
   at: number;
   summaries: Record<"7d" | "30d" | "all", SummaryForCardsV2> | null;
   stats: Record<string, unknown> | null;
+  dailyTrend: ProfileDailyTrendRow[] | null;
 };
 
 const statsCache = new Map<string, CacheEntry>();
@@ -49,6 +50,9 @@ export function useUserStatsV2(uid?: string | null) {
     Record<"7d" | "30d" | "all", SummaryForCardsV2> | null
   >(null);
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
+  const [dailyTrend, setDailyTrend] = useState<ProfileDailyTrendRow[] | null>(
+    null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +60,7 @@ export function useUserStatsV2(uid?: string | null) {
     if (!uid) {
       setSummaries(null);
       setStats(null);
+      setDailyTrend(null);
       setLoading(false);
       return;
     }
@@ -69,6 +74,7 @@ export function useUserStatsV2(uid?: string | null) {
         if (cancelled) return;
         setStats(cached.stats);
         setSummaries(cached.summaries);
+        setDailyTrend(cached.dailyTrend ?? null);
         setLoading(false);
         return;
       }
@@ -91,15 +97,20 @@ export function useUserStatsV2(uid?: string | null) {
         const nextSummaries =
           (json?.summaries as Record<"7d" | "30d" | "all", SummaryForCardsV2>) ??
           null;
+        const nextDailyTrend = Array.isArray(json?.dailyTrend)
+          ? (json.dailyTrend as ProfileDailyTrendRow[])
+          : null;
 
         statsCache.set(safeUid, {
           at: Date.now(),
           stats: nextStats,
           summaries: nextSummaries,
+          dailyTrend: nextDailyTrend,
         });
 
         setStats(nextStats);
         setSummaries(nextSummaries);
+        setDailyTrend(nextDailyTrend);
       } catch {
         if (cancelled) return;
         // Keep previous values on transient fetch errors.
@@ -115,5 +126,5 @@ export function useUserStatsV2(uid?: string | null) {
     };
   }, [uid]);
 
-  return { loading, summaries, stats };
+  return { loading, summaries, stats, dailyTrend };
 }

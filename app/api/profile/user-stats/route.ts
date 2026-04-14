@@ -1,13 +1,19 @@
 // app/api/profile/user-stats/route.ts
-// ロールアップキャッシュ利用で Firestore read を削減
+// ロールアップキャッシュで Firestore read を抑える
 
 import { NextResponse } from "next/server";
 import { FieldPath } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
-  buildWindowCacheForUser,
+  buildWindowCacheForUserFromSnapshots,
   isWindowCacheStale,
 } from "@/lib/profile/buildUserStatsWindowCache";
+import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
+import {
+  aggregateRecentWindowsFromDailySnaps,
+  buildDailyTrendFromDailySnaps,
+  dateKeyJSTIntl,
+} from "@/lib/profile/userStatsV2ProfileRollup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,25 +42,11 @@ type SummaryForCards = {
   pointsSumV3: number;
   upsetChanceCount: number;
   upsetHitCount: number;
-  /** 総合得点内訳（finalizePost / updateUserStatsV2 と一致） */
+  /** bonus breakdown (finalizePost / updateUserStatsV2) */
   upsetBonusSum: number;
   streakBonusSum: number;
   basePointsSum: number;
 };
-
-function dateKeyJST(d: Date): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(d);
-
-  const yyyy = parts.find((p) => p.type === "year")?.value ?? "1970";
-  const mm = parts.find((p) => p.type === "month")?.value ?? "01";
-  const dd = parts.find((p) => p.type === "day")?.value ?? "01";
-  return `${yyyy}-${mm}-${dd}`;
-}
 
 const empty = (): Bucket => ({
   posts: 0,
@@ -120,47 +112,7 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   return base;
 }
 
-/** Fetch last 30 daily docs once; derive 3d / 7d / 30d windows in memory (40 reads → 30). */
-async function aggregateRecentWindowsFromDaily(uid: string): Promise<{
-  recent3: SummaryForCards;
-  seven: SummaryForCards;
-  thirty: SummaryForCards;
-}> {
-  const adminDb = getAdminDb();
-  const today = new Date();
-  const dates = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    return d;
-  });
-
-  const snaps = await Promise.all(
-    dates.map((d) =>
-      adminDb.doc(`user_stats_v2_daily/${uid}_${dateKeyJST(d)}`).get()
-    )
-  );
-
-  function windowFromIndices(from: number, toExclusive: number): SummaryForCards {
-    const bucket = empty();
-    for (let i = from; i < toExclusive && i < snaps.length; i++) {
-      const snap = snaps[i];
-      const raw = snap.exists
-        ? (snap.data()?.all as Partial<Bucket> | undefined)
-        : undefined;
-      mergeBucket(bucket, raw ?? null);
-    }
-    const computed = computeForCards(bucket);
-    return { fullPosts: computed.posts, ...computed };
-  }
-
-  return {
-    recent3: windowFromIndices(0, 3),
-    seven: windowFromIndices(0, 7),
-    thirty: windowFromIndices(0, 30),
-  };
-}
-
-/** 全期間：日次 `all` の合算（user_stats_v2_all_cache は未整備のため使わない） */
+/** 全期間：日次 `all` の合算 */
 async function aggregateAllFromDaily(uid: string): Promise<SummaryForCards> {
   const adminDb = getAdminDb();
   const snap = await adminDb
@@ -179,23 +131,77 @@ async function aggregateAllFromDaily(uid: string): Promise<SummaryForCards> {
   return { fullPosts: computed.posts, ...computed };
 }
 
+const ALL_SUMMARY_TTL_MS = 45_000;
+const allSummaryCache = new Map<string, { at: number; summary: SummaryForCards }>();
+
+function getCachedAllSummary(uid: string): SummaryForCards | null {
+  const hit = allSummaryCache.get(uid);
+  if (!hit) return null;
+  if (Date.now() - hit.at >= ALL_SUMMARY_TTL_MS) {
+    allSummaryCache.delete(uid);
+    return null;
+  }
+  return hit.summary;
+}
+
+function setCachedAllSummary(uid: string, summary: SummaryForCards) {
+  allSummaryCache.set(uid, { at: Date.now(), summary });
+}
+
+async function aggregateAllFromDailyCached(uid: string): Promise<SummaryForCards> {
+  const cached = getCachedAllSummary(uid);
+  if (cached) return cached;
+  const summary = await aggregateAllFromDaily(uid);
+  setCachedAllSummary(uid, summary);
+  return summary;
+}
+
+async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
+  const today = new Date();
+  const dates = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    return d;
+  });
+  return Promise.all(
+    dates.map((d) =>
+      adminDb.doc(`user_stats_v2_daily/${uid}_${dateKeyJSTIntl(d)}`).get()
+    )
+  );
+}
+
 export async function GET(req: Request) {
   try {
     const adminDb = getAdminDb();
     const { searchParams } = new URL(req.url);
-    const uid = searchParams.get("uid");
+    const uidParam = searchParams.get("uid")?.trim() ?? "";
+    const handleParam = searchParams.get("handle")?.trim() ?? "";
     const forceRefresh = searchParams.get("refresh") === "1";
 
-    if (!uid || typeof uid !== "string") {
+    let resolvedUid = uidParam;
+    if (!resolvedUid && handleParam) {
+      resolvedUid = (await resolveUidByHandleCached(adminDb, handleParam)) ?? "";
+    }
+
+    if (!resolvedUid) {
+      if (handleParam) {
+        return NextResponse.json(
+          { ok: false, error: "user not found" },
+          { status: 404 }
+        );
+      }
       return NextResponse.json(
-        { ok: false, error: "uid is required" },
+        { ok: false, error: "uid or handle is required" },
         { status: 400 }
       );
     }
 
-    const [statsSnap, windowSnap] = await Promise.all([
+    const uid = resolvedUid;
+
+    const [statsSnap, windowSnap, last30Snaps] = await Promise.all([
       adminDb.collection("user_stats_v2").doc(uid).get(),
       adminDb.collection("user_stats_v2_window_cache").doc(uid).get(),
+      fetchLast30DailySnapshots(adminDb, uid),
     ]);
 
     const stats = statsSnap.exists ? statsSnap.data() : null;
@@ -207,20 +213,21 @@ export async function GET(req: Request) {
 
     if (needRebuild) {
       try {
-        await buildWindowCacheForUser(adminDb, uid);
+        await buildWindowCacheForUserFromSnapshots(adminDb, uid, last30Snaps);
       } catch (e) {
-        // 再構築に失敗しても、下の daily 実集計レスポンスは返す
         console.warn("[profile/user-stats] window cache rebuild failed:", e);
       }
     }
 
-    // window cache は更新トリガー用途に留め、レスポンスは daily 実集計を返す
-    // （7d 初回だけ 0 になる不整合を防ぐ）
-    // all も日次 all の合算（キャッシュ doc は未整備で空になりがちなため）
-    const [{ recent3, seven, thirty }, allSummary] = await Promise.all([
-      aggregateRecentWindowsFromDaily(uid),
-      aggregateAllFromDaily(uid),
-    ]);
+    const { recent3, seven, thirty } =
+      aggregateRecentWindowsFromDailySnaps(last30Snaps);
+    const dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps);
+    const allSummary = forceRefresh
+      ? await aggregateAllFromDaily(uid).then((s) => {
+          setCachedAllSummary(uid, s);
+          return s;
+        })
+      : await aggregateAllFromDailyCached(uid);
 
     const recent3Posts = recent3.fullPosts;
 
@@ -232,8 +239,10 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       ok: true,
+      resolvedUid: uid,
       stats,
       summaries,
+      dailyTrend,
     });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "unexpected error";

@@ -21,6 +21,7 @@ import {
   getZonedYMD,
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
+import { writeGamesByMonthCacheEntry } from "./useGamesByDate";
 
 /** 暦月1本分の試合取得でも足りる上限（多試合日・複数リーグ想定） */
 const GAME_DAYS_MONTH_QUERY_LIMIT = 500;
@@ -91,7 +92,10 @@ export function useGameDays(
       const cached = gameDaysRowsCache.get(cacheKey);
       const fresh =
         cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;
-      if (fresh) {
+      const rowsHaveId =
+        !!cached?.rows?.length &&
+        typeof (cached.rows[0] as { id?: string })?.id === "string";
+      if (fresh && rowsHaveId) {
         if (!alive) return;
         setRows(cached.rows);
         setLoading(false);
@@ -121,8 +125,13 @@ export function useGameDays(
 
         if (!alive) return;
 
-        const list = snap.docs.map((d) => d.data());
-        gameDaysRowsCache.set(cacheKey, { rows: list, savedAt: Date.now() });
+        const list = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        const savedAt = Date.now();
+        gameDaysRowsCache.set(cacheKey, { rows: list, savedAt });
+        writeGamesByMonthCacheEntry(cacheKey, list);
         setRows(list);
       } catch (e: any) {
         if (!alive) return;

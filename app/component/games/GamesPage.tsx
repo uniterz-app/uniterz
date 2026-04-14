@@ -15,10 +15,7 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
-import {
-  gameRowStartDateKeyInTimeZone,
-  useGamesByCalendarMonth,
-} from "./useGamesByDate";
+import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -528,18 +525,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Games（開いた暦月をまとめて取得し、選択日で絞り込み）
   ========================= */
-  const { loading: loadingMonthGames, games: gamesInCalendarMonth } =
-    useGamesByCalendarMonth(league, anchorForGameDays, dayTimeZone);
-
   const games = useMemo(() => {
     if (!selected) return [];
     const dayKey = toDateKeyInTimeZone(selected, dayTimeZone);
-    return gamesInCalendarMonth.filter(
+    return monthRows.filter(
       (g) => gameRowStartDateKeyInTimeZone(g, dayTimeZone) === dayKey,
     );
-  }, [gamesInCalendarMonth, selected, dayTimeZone]);
+  }, [monthRows, selected, dayTimeZone]);
 
-  const loading = loadingMonthGames;
+  const loading = loadingDays;
 
   const gamesAfterTeamFilter = useMemo(() => {
     const raw = games ?? [];

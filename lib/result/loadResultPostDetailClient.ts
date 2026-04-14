@@ -1,5 +1,6 @@
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import {
   parseGamePointsDistributionV1,
@@ -37,9 +38,11 @@ export async function loadResultPostDetailClient(
     ...postSnap.data(),
   } as PredictionPostV2;
 
-  const gameSnap = await getDoc(doc(db, "games", post.gameId));
+  const { exists: gameExists, data: gameData } = await getCachedGameDocForResult(
+    post.gameId
+  );
 
-  if (!gameSnap.exists()) {
+  if (!gameExists || !gameData) {
     return {
       ok: true,
       post,
@@ -47,11 +50,6 @@ export async function loadResultPostDetailClient(
       pointsDistribution: null,
     };
   }
-
-  const gameData: Record<string, unknown> = gameSnap.data() as Record<
-    string,
-    unknown
-  >;
   const mkt = gameData.market as
     | {
         homeRate?: number;

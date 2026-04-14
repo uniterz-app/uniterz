@@ -1,7 +1,7 @@
 // lib/profile/buildUserStatsWindowCache.ts
 // API route 用：user_stats_v2_window_cache を構築（functions とロジック共有のため独立実装）
 
-import type { Firestore } from "firebase-admin/firestore";
+import type { DocumentSnapshot, Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 
 type Bucket = {
@@ -114,26 +114,13 @@ export function isWindowCacheStale(
   return (now.getTime() - then.getTime()) > STALE_HOURS * 60 * 60 * 1000;
 }
 
-export async function buildWindowCacheForUser(
+/** 既に取得済みの直近30日スナップショットで window_cache のみ更新（再読み取りなし） */
+export async function buildWindowCacheForUserFromSnapshots(
   db: Firestore,
-  uid: string
+  uid: string,
+  dailySnaps: DocumentSnapshot[]
 ): Promise<void> {
-  const today = new Date();
-  const dates: Date[] = [];
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    dates.push(d);
-  }
-
-  const dailySnaps = await Promise.all(
-    dates.map((d) =>
-      db.doc(`user_stats_v2_daily/${uid}_${dateKeyJST(d)}`).get()
-    )
-  );
-
-  const dailyBuckets: { bucket: Bucket | null }[] = dates.map((d, i) => {
-    const snap = dailySnaps[i];
+  const dailyBuckets: { bucket: Bucket | null }[] = dailySnaps.map((snap) => {
     const raw = snap?.exists
       ? (snap.data()?.all as Partial<Bucket> | undefined)
       : undefined;
@@ -161,4 +148,25 @@ export async function buildWindowCacheForUser(
     },
     { merge: true }
   );
+}
+
+export async function buildWindowCacheForUser(
+  db: Firestore,
+  uid: string
+): Promise<void> {
+  const today = new Date();
+  const dates: Date[] = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    dates.push(d);
+  }
+
+  const dailySnaps = await Promise.all(
+    dates.map((d) =>
+      db.doc(`user_stats_v2_daily/${uid}_${dateKeyJST(d)}`).get()
+    )
+  );
+
+  await buildWindowCacheForUserFromSnapshots(db, uid, dailySnaps);
 }

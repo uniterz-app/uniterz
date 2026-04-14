@@ -106,8 +106,17 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
-    props;
+  const {
+    profile,
+    tab,
+    setTab,
+    range,
+    setRange,
+    summary,
+    targetUid,
+    statsLoading,
+    profileDailyTrendSeed,
+  } = props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
 
@@ -136,6 +145,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const { chartData: dailyTrendForChart, loading: dailyTrendLoading } =
     useProfileDailyTrendChart(resolvedUid, {
       enabled: fetchOverviewExtras,
+      seedRows: profileDailyTrendSeed,
     });
 
   const {

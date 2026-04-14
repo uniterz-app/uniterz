@@ -136,9 +136,12 @@ export function useProfile(handle: string) {
 
   const profile: Profile = useMemo(() => {
     const u = user ?? {};
+    const placeholder = loading && user === null;
 
     return {
-      displayName: u.displayName || BASE_PROFILE.displayName,
+      displayName: placeholder
+        ? decodedHandle
+        : u.displayName || BASE_PROFILE.displayName,
       handle: u.handle || decodedHandle,
       bio: u.bio ?? "",
       avatarUrl: u.photoURL && u.photoURL.trim() ? u.photoURL : "",
@@ -147,7 +150,7 @@ export function useProfile(handle: string) {
       maxStreak: u.maxStreak ?? 0,
       plan: u.plan ?? "free",
     };
-  }, [user, decodedHandle, counts]);
+  }, [user, decodedHandle, counts, loading]);
 
   return {
     profile,

@@ -27,8 +27,8 @@ import {
   ChevronDown,
   X,
 } from "lucide-react";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
+import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
 import { SCHEDULE_MY_POST_DELETED_EVENT } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
 import { nameBebas } from "@/lib/fonts";
@@ -760,16 +760,15 @@ export default function ResultListWithOverlay({
     setPointsDistributionLoading(true);
     (async () => {
       try {
-        const snap = await getDoc(doc(db, "games", post.gameId));
+        const { exists, data: d } = await getCachedGameDocForResult(post.gameId);
         if (cancelled) return;
-        if (!snap.exists()) {
+        if (!exists || !d) {
           if (!cancelled) {
             setMarket(null);
             setPointsDistribution(null);
           }
           return;
         }
-        const d = snap.data() as Record<string, unknown>;
         const marketRaw = d.market as Record<string, unknown> | undefined;
         const pdRaw = rawPointsDistributionFromGameDoc(d);
         if (!cancelled) {
