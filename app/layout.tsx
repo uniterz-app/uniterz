@@ -19,21 +19,15 @@ export const metadata: Metadata = {
   title: "Uniterz",
   description: "Sports prediction platform",
   manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Uniterz",
-  },
   icons: {
-    apple: "/icon-new/Icon-new192.png",
-    icon: "/icon-new/Icon-new192.png",
+    apple: "/icon/icon-192.png",
+    icon: "/icon/icon-192.png",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#081116",
 };
 
 export default function RootLayout({
@@ -44,7 +38,7 @@ export default function RootLayout({
   const maintenance = false;
 
   return (
-    <html lang="ja" style={{ backgroundColor: "#081116" }}>
+    <html lang="ja">
       <head>
         <link
           rel="preload"

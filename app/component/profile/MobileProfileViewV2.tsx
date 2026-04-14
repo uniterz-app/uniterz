@@ -106,17 +106,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const {
-    profile,
-    tab,
-    setTab,
-    range,
-    setRange,
-    summary,
-    targetUid,
-    statsLoading,
-    profileDailyTrendSeed,
-  } = props;
+  const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
+    props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
 
@@ -145,7 +136,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const { chartData: dailyTrendForChart, loading: dailyTrendLoading } =
     useProfileDailyTrendChart(resolvedUid, {
       enabled: fetchOverviewExtras,
-      seedRows: profileDailyTrendSeed,
     });
 
   const {
@@ -211,9 +201,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const proSummaryTotal = 5;
   const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-${range}`;
-  /** Summary: user-stats only; chart row: after daily trend. */
-  const summaryReady = !resolvedUid || !statsLoading;
-  const chartReady = !resolvedUid || !dailyTrendLoading;
+  /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
+  const overviewReady =
+    !resolvedUid || (!statsLoading && !dailyTrendLoading);
 
   const summaryEntranceLockedRef = useRef(false);
   useEffect(() => {
@@ -229,7 +219,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     return () => window.cancelAnimationFrame(id);
   }, [tab, playoffDisplayData?.season]);
   const playSummaryEntrance =
-    !summaryEntranceLockedRef.current && !statsLoading && summaryReady;
+    !summaryEntranceLockedRef.current && !statsLoading && overviewReady;
 
   const [chartEntranceDone, setChartEntranceDone] = useState(false);
   const onChartRevealComplete = useCallback(() => {
@@ -237,8 +227,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   }, []);
 
   useEffect(() => {
-    if (!chartReady) setChartEntranceDone(false);
-  }, [chartReady]);
+    if (!overviewReady) setChartEntranceDone(false);
+  }, [overviewReady]);
 
   useEffect(() => {
     if (!playSummaryEntrance) setChartEntranceDone(true);
@@ -310,7 +300,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       <div className="mt-1">
         {tab === "overview" ? (
           <>
-            {summaryReady ? (
+            {overviewReady ? (
               <>
               <div key={summaryMountKey} className="min-h-[100px]">
               {currentIsProView ? (
@@ -425,7 +415,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               <PeriodToggle value={range} onChange={setRange} language={language} />
             </div>
 
-            {chartReady ? (
             <div className="mt-6 space-y-4">
               <SummaryCardReveal
                 index={5}
@@ -471,12 +460,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                 </div>
               </SummaryCardReveal>
             </div>
-            ) : (
-              <div
-                className="mt-6 min-h-[200px] rounded-2xl border border-white/10 bg-white/3"
-                aria-hidden
-              />
-            )}
               </>
             ) : null}
           </>
