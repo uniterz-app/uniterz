@@ -54,7 +54,10 @@ export default function AnimatedSplashScreen() {
   }, [reduceMotion]);
 
   return (
-    <div className="relative flex h-full min-h-dvh w-full flex-col items-center justify-center overflow-hidden bg-app">
+    <div
+      className="relative flex h-full min-h-dvh w-full flex-col items-center justify-center overflow-hidden bg-app"
+      style={{ backgroundColor: "#081116" }}
+    >
       <div className="pointer-events-none absolute inset-0 z-0 -translate-y-[clamp(0.75rem,3.25vh,2rem)]">
         <UniterzLogo3DBackground
           variant="splash"

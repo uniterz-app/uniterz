@@ -334,13 +334,14 @@ export default function UniterzLogo3DBackground({
         "pointer-events-none absolute inset-0 z-0 h-full w-full",
         className ?? "",
       ].join(" ")}
+      style={{ backgroundColor: THEME.bgColor }}
     >
       <Canvas
         className="h-full w-full"
         dpr={dpr}
         gl={{
           antialias: true,
-          alpha: true,
+          alpha: false,
           powerPreference: "high-performance",
         }}
         camera={{ position: [0, 0, 8], fov: 28 }}
