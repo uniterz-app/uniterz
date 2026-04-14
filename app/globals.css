@@ -36,6 +36,51 @@
   background: var(--color-card-bg);
 }
 
+/* ResultCard 連勝時：枠を走るスイープ（conic 回転 + リングマスク） */
+.result-card-streak-sweep {
+  padding: 2px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.result-card-streak-sweep__spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin-left: -100vmax;
+  margin-top: -100vmax;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 250deg,
+    rgba(255, 255, 255, 0.15) 292deg,
+    rgba(255, 255, 255, 0.92) 314deg,
+    rgba(255, 255, 255, 0.15) 336deg,
+    transparent 360deg
+  );
+  animation: result-card-streak-sweep-spin 3.5s linear infinite;
+}
+
+@keyframes result-card-streak-sweep-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card-streak-sweep__spin {
+    animation: none;
+  }
+}
+
 /* ============================================================
    Dev preview only — 青系グラデ + 静止ドット（アプリ全体には未適用）
    /web/bg-halftone-preview · /mobile/bg-halftone-preview
