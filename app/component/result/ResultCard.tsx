@@ -23,6 +23,7 @@ import {
   MOBILE_LIST_CARD_PANEL_DENSE,
   MOBILE_RESULT_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
+import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -312,6 +313,23 @@ function ResultCardPresentationImpl({
     ? MOBILE_LIST_CARD_PANEL_DENSE
     : MATCH_OVERLAY_GLASS_PANEL;
 
+  /** 試合 LIVE 中（一覧の MatchCard と同趣旨：status live または開始後の scheduled） */
+  const isLiveGame =
+    post.status !== "final" &&
+    (post.status === "live" ||
+      (post.status === "scheduled" &&
+        typeof post.startAtMillis === "number" &&
+        Number.isFinite(post.startAtMillis) &&
+        Date.now() >= post.startAtMillis));
+
+  const liveMarkNode = isLiveGame ? (
+    <LiveMatchMark
+      density={isMobile ? "resultMobile" : "resultDesktop"}
+      isEn={isEn}
+      className="pointer-events-auto"
+    />
+  ) : null;
+
   return (
     <div
       onClick={handle}
@@ -417,6 +435,7 @@ function ResultCardPresentationImpl({
                 MISS
               </span>
             )}
+            {liveMarkNode}
           </div>
           <div
             className={[
@@ -482,6 +501,7 @@ function ResultCardPresentationImpl({
                 MISS
               </span>
             )}
+            {liveMarkNode}
           </div>
         </div>
       )}

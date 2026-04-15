@@ -35,6 +35,7 @@ import {
   MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 
 
 
@@ -416,12 +417,10 @@ let center: React.ReactNode = inPredictOverlay ? (
     </div>
   </div>
 ) : isLive ? (
-    <span
-      className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
-      style={{ fontSize: dense ? 10 : 11 }}
-    >
-      LIVE
-    </span>
+    <LiveMatchMark
+      density={dense ? "matchDense" : "matchComfortable"}
+      isEn={isEn}
+    />
   ) : (
     <div
       className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
@@ -443,12 +442,10 @@ let center: React.ReactNode = inPredictOverlay ? (
             : "flex flex-col items-center gap-1"
         }
       >
-        <span
-          className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
-          style={{ fontSize: dense ? 10 : 11 }}
-        >
-          LIVE
-        </span>
+        <LiveMatchMark
+          density={dense ? "matchDense" : "matchComfortable"}
+          isEn={isEn}
+        />
         <div
           className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
             " "
