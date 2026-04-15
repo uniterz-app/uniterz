@@ -435,7 +435,7 @@ export default function ProfileHeroCard({
         <motion.div
           className={
             isWeb
-              ? "absolute left-1/2 -bottom-1.5 -translate-x-1/2"
+              ? "absolute left-1/2 -bottom-1.5 z-10 -translate-x-1/2"
               : "absolute left-1/2 -bottom-1 z-10 -translate-x-1/2"
           }
           initial={heroEntranceAnim ? { opacity: 0, y: 4 } : false}

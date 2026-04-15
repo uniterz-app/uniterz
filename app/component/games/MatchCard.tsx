@@ -32,8 +32,10 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
   MOBILE_LIST_CARD_OUTER_CLASS,
   MOBILE_LIST_CARD_PANEL_DENSE,
+  MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 
 
 
@@ -415,12 +417,10 @@ let center: React.ReactNode = inPredictOverlay ? (
     </div>
   </div>
 ) : isLive ? (
-    <span
-      className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
-      style={{ fontSize: dense ? 10 : 11 }}
-    >
-      LIVE
-    </span>
+    <LiveMatchMark
+      density={dense ? "matchDense" : "matchComfortable"}
+      isEn={isEn}
+    />
   ) : (
     <div
       className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
@@ -442,12 +442,10 @@ let center: React.ReactNode = inPredictOverlay ? (
             : "flex flex-col items-center gap-1"
         }
       >
-        <span
-          className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
-          style={{ fontSize: dense ? 10 : 11 }}
-        >
-          LIVE
-        </span>
+        <LiveMatchMark
+          density={dense ? "matchDense" : "matchComfortable"}
+          isEn={isEn}
+        />
         <div
           className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
             " "
@@ -496,19 +494,18 @@ let center: React.ReactNode = inPredictOverlay ? (
     e.preventDefault();
     e.stopPropagation();
 
-    // 予想済みなら何もしない（2回投稿防止・遷移防止）
-    if (myPostId) return;
-
     const me = auth.currentUser;
     if (!me) return;
 
-    // 試合開始後は遷移しない（predictions/post ページは使わない）
-    if (isGameStarted) {
+    // スケジュール一覧のオーバーレイ：予想済み・試合開始後も市場・詳細スタッツを見るために開く
+    if (onOpenPredict) {
+      onOpenPredict(id);
       return;
     }
 
-    // 試合前だけ overlay を開く
-    onOpenPredict?.(id);
+    // オーバーレイなしの単体カード：従来どおり（予想済み・開始後は何もしない）
+    if (myPostId) return;
+    if (isGameStarted) return;
   };
   /* ★ 「予想をする」クリック時：
         - 試合前   : 投稿あれば投稿詳細 / なければ予想作成へ
@@ -636,7 +633,11 @@ return (
   }}
 className={[
   "group relative overflow-hidden text-white",
-  mobileDense ? MOBILE_LIST_CARD_OUTER_CLASS : "mx-auto max-w-[1200px] w-full",
+  inPredictOverlay && isMobile
+    ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
+    : mobileDense
+      ? MOBILE_LIST_CARD_OUTER_CLASS
+      : "mx-auto max-w-[1200px] w-full",
 disableCardMotion
   ? ""
   : [
@@ -1172,13 +1173,13 @@ background:
 <button
   type="button"
   onClick={handleOpenPredict}
-  disabled={isPredicted}
+  disabled={Boolean(isPredicted && !onOpenPredict)}
   className={[
     "grid w-full place-items-center font-bold text-white",
     "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
     "rounded-md",
     "transition-all duration-200",
-    isPredicted
+    isPredicted && !onOpenPredict
       ? "cursor-default"
       : "active:scale-[0.985] cursor-pointer",
   ].join(" ")}
