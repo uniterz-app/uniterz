@@ -36,6 +36,10 @@ import {
 } from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
+import {
+  isPlayoffStyleGameCard,
+  type SeriesStanding,
+} from "@/lib/games/playoffSeriesUi";
 
 
 
@@ -59,6 +63,8 @@ export type MatchCardProps = {
   home: TeamSide;
   away: TeamSide;
   score: { home: number; away: number } | null;
+  /** プレーオフ系：シリーズのホーム先勝数（未設定時は null） */
+  seriesStanding?: SeriesStanding | null;
   liveMeta: { period: string; runningTime?: string } | null;
   finalMeta: { ot?: boolean } | null;
 
@@ -196,8 +202,10 @@ function MatchCard({
   home,
   away,
   score,
+  seriesStanding = null,
   liveMeta,
   finalMeta,
+  seasonPhase = null,
   viewPredictionHref,
   makePredictionHref,
   dense = false,
@@ -235,6 +243,9 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** モバイルの試合一覧（dense）：カード幅・ラウンド帯のレイアウト調整用 */
   const mobileDense = dense && isMobile;
   const teamNameFont = bracketMarketTeamTypography(isMobile);
+  const showPlayoffSeriesRow =
+    isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
+    seriesStanding != null;
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
   function getDisplayName(league: League, l1: string, l2: string): string {
@@ -400,22 +411,71 @@ const isLive =
     Date.now() >= startAtJst.getTime());
 
 let center: React.ReactNode = inPredictOverlay ? (
-  <div
-    className={
-      mobileDense
-        ? "flex min-h-[44px] items-center justify-center md:min-h-[68px]"
-        : "flex min-h-[72px] items-center justify-center md:min-h-[88px]"
-    }
-  >
+  status === "final" && score ? (
     <div
-      className={[
-        "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
-        resultStatsMetricNumClass,
-      ].join(" ")}
+      className={
+        mobileDense
+          ? "flex min-h-[44px] flex-col items-center justify-center gap-0.5 md:min-h-[68px]"
+          : "flex min-h-[72px] flex-col items-center justify-center gap-1 md:min-h-[88px]"
+      }
     >
-      VS
+      <div
+        className={[
+          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          resultStatsMetricNumClass,
+        ].join(" ")}
+      >
+        {score.home} <span className="opacity-70">–</span> {score.away}
+      </div>
+      <div
+        className="text-[10px] font-medium text-white/75 md:text-xs"
+        style={teamNameFont}
+      >
+        {isEn ? "Final" : "試合終了"}
+        {finalMeta?.ot ? " (OT)" : ""}
+      </div>
     </div>
-  </div>
+  ) : status === "live" && score ? (
+    <div
+      className={
+        mobileDense
+          ? "flex min-h-[44px] flex-col items-center justify-center gap-0.5 md:min-h-[68px]"
+          : "flex min-h-[72px] flex-col items-center justify-center gap-1 md:min-h-[88px]"
+      }
+    >
+      <div
+        className={[
+          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          resultStatsMetricNumClass,
+        ].join(" ")}
+      >
+        {score.home} <span className="opacity-70">–</span> {score.away}
+      </div>
+      {liveMeta?.period ? (
+        <div className="text-[10px] text-white/75 md:text-xs">
+          {liveMeta.period}
+          {liveMeta.runningTime ? ` ${liveMeta.runningTime}` : ""}
+        </div>
+      ) : null}
+    </div>
+  ) : (
+    <div
+      className={
+        mobileDense
+          ? "flex min-h-[44px] items-center justify-center md:min-h-[68px]"
+          : "flex min-h-[72px] items-center justify-center md:min-h-[88px]"
+      }
+    >
+      <div
+        className={[
+          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          resultStatsMetricNumClass,
+        ].join(" ")}
+      >
+        VS
+      </div>
+    </div>
+  )
 ) : isLive ? (
     <LiveMatchMark
       density={dense ? "matchDense" : "matchComfortable"}
@@ -671,7 +731,8 @@ dense
         aria-hidden
       />
 
-{showMarketBias && marketBias && (
+{/* 試合終了後は市場バイアスの色帯・境界線を出さない */}
+{showMarketBias && marketBias && status !== "final" && (
   <div className="pointer-events-none absolute inset-0 z-1 overflow-hidden rounded-2xl">
     {/* HOME 側バー */}
     <div
@@ -968,6 +1029,67 @@ background:
           transition={entryTransition ? entryTransition(5) : undefined}
         >
           {center}
+          {showPlayoffSeriesRow && seriesStanding ? (
+            <div
+              className={[
+                "mt-1 flex justify-center",
+                resultStatsMetricNumClass,
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "inline-flex items-baseline font-bold tabular-nums",
+                  mobileDense
+                    ? "text-sm md:text-base"
+                    : "text-base md:text-xl lg:text-2xl",
+                ].join(" ")}
+              >
+                <span className="pr-0.5 text-cyan-300/70 md:pr-1">（</span>
+                <span
+                  className={
+                    seriesStanding.homeWins > seriesStanding.awayWins
+                      ? "text-yellow-300"
+                      : "text-cyan-50"
+                  }
+                  style={
+                    seriesStanding.homeWins > seriesStanding.awayWins
+                      ? {
+                          textShadow:
+                            "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                        }
+                      : {
+                          textShadow:
+                            "0 0 8px rgba(34, 211, 238, 0.35), 0 0 2px rgba(103, 232, 249, 0.45)",
+                        }
+                  }
+                >
+                  {seriesStanding.homeWins}
+                </span>
+                <span className="px-0.5 text-cyan-400/55 md:px-1.5">-</span>
+                <span
+                  className={
+                    seriesStanding.awayWins > seriesStanding.homeWins
+                      ? "text-yellow-300"
+                      : "text-cyan-50"
+                  }
+                  style={
+                    seriesStanding.awayWins > seriesStanding.homeWins
+                      ? {
+                          textShadow:
+                            "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                        }
+                      : {
+                          textShadow:
+                            "0 0 8px rgba(34, 211, 238, 0.35), 0 0 2px rgba(103, 232, 249, 0.45)",
+                        }
+                  }
+                >
+                  {seriesStanding.awayWins}
+                </span>
+                <span className="pl-0.5 text-cyan-300/70 md:pl-1">）</span>
+              </span>
+            </div>
+          ) : null}
         </motion.div>
 
         {/* AWAY */}

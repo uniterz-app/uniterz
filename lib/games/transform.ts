@@ -8,6 +8,13 @@ import type {
   TeamSide,
   MatchCardProps,
 } from "@/app/component/games/MatchCard";
+import {
+  parseSeriesStandingFromRaw,
+  isPlayoffStyleGameCard,
+} from "@/lib/games/playoffSeriesUi";
+
+/** プレーオフ：Firestore に seriesStanding が無いときの既定（0-0） */
+const PLAYOFF_SERIES_STANDING_FALLBACK = { homeWins: 0, awayWins: 0 } as const;
 
 // --------------------------------------------------------
 // gamePath の参照
@@ -39,13 +46,23 @@ export const toDateOrNull = (v: any): Date | null => {
   return null;
 };
 
-/** ステータス正規化 */
+/** ステータス文字列のみを正規化（ドキュメント全体は toStatusFromGameDoc） */
 export const toStatus = (s: any): Status => {
   const t = String(s ?? "scheduled").toLowerCase();
   if (t === "live" || t === "inprogress") return "live";
   if (t === "final" || t === "ended") return "final";
   return "scheduled";
 };
+
+/**
+ * Firestore の games ドキュメント用。
+ * `final: true` なのに `status` が scheduled のまま等のときも final とみなす。
+ */
+export function toStatusFromGameDoc(raw: Record<string, unknown> | null | undefined): Status {
+  if (!raw) return "scheduled";
+  if (raw.final === true || raw.final === 1) return "final";
+  return toStatus(raw.status);
+}
 
 /** リーグ別カラー辞書からカラーを引く */
 export const pickTeamColor = (league: League, name?: string) => {
@@ -113,6 +130,28 @@ export function getResolvedGameScore(
     const as = raw.awayScore;
     if (typeof hs === "number" && typeof as === "number") {
       score = { home: hs, away: as };
+    } else if (hs != null && as != null) {
+      const h = Number(hs);
+      const a = Number(as);
+      if (Number.isFinite(h) && Number.isFinite(a)) {
+        score = { home: h, away: a };
+      }
+    }
+  }
+  if (!score) {
+    const fs = raw.finalScore as { home?: unknown; away?: unknown } | undefined;
+    if (fs && fs.home != null && fs.away != null) {
+      const h = Number(fs.home);
+      const a = Number(fs.away);
+      if (Number.isFinite(h) && Number.isFinite(a)) score = { home: h, away: a };
+    }
+  }
+  if (!score) {
+    const r = raw.result as { home?: unknown; away?: unknown } | undefined;
+    if (r && r.home != null && r.away != null) {
+      const h = Number(r.home);
+      const a = Number(r.away);
+      if (Number.isFinite(h) && Number.isFinite(a)) score = { home: h, away: a };
     }
   }
   return score;
@@ -150,11 +189,15 @@ export type GameDoc = {
   startAtJst?: any;
   startAt?: any;
   status?: any;
+  /** true のとき試合終了（status が未更新でも final 扱いに使う） */
+  final?: boolean;
   home?: any;
   away?: any;
   score?: any;
   homeScore?: number;
   awayScore?: number;
+  finalScore?: { home?: number; away?: number };
+  result?: { home?: number; away?: number };
   /** false = ランキング集計から除外（例: プレーイン）。未設定は true 扱い */
   countsForRanking?: boolean;
   liveMeta?: any;
@@ -174,6 +217,11 @@ export type GameDoc = {
   homePct?: number;
   awayPct?: number;
   seasonPhase?: unknown;
+  seriesHomeWins?: unknown;
+  seriesAwayWins?: unknown;
+  series?: unknown;
+  seriesStanding?: unknown;
+  seriesRecord?: unknown;
 };
 
 /** MatchCardProps へ整形 */
@@ -190,7 +238,7 @@ export function toMatchCardProps(
   const id = String(raw?.id ?? "");
   const league = normalizeLeague(raw?.league);
   const startAtJst = normalizeStartAtJst(raw);
-  const status = toStatus(raw?.status);
+  const status = toStatusFromGameDoc(raw as Record<string, unknown>);
   const home = toTeamSide(league)(raw?.home);
   const away = toTeamSide(league)(raw?.away);
 
@@ -198,6 +246,15 @@ export function toMatchCardProps(
   // スコア補完
   // --------------------------------------------------------
   const score = getResolvedGameScore(raw as Record<string, unknown>);
+  const seasonPhase = normalizeSeasonPhase(raw?.seasonPhase);
+  const roundLabelStr = raw?.roundLabel ?? "";
+  const parsedSeries = parseSeriesStandingFromRaw(
+    raw as Record<string, unknown>
+  );
+  /** プレーオフのみ。未連携時は 0-0 フォールバック */
+  const seriesStanding = isPlayoffStyleGameCard(seasonPhase, roundLabelStr)
+    ? (parsedSeries ?? PLAYOFF_SERIES_STANDING_FALLBACK)
+    : null;
 
   const liveMeta = toLiveMeta(raw?.liveMeta);
   const finalMeta = toFinalMeta(raw?.finalMeta);
@@ -249,14 +306,15 @@ export function toMatchCardProps(
   return {
     id,
     league,
-    seasonPhase: normalizeSeasonPhase(raw?.seasonPhase),
+    seasonPhase,
     venue: raw?.venue ?? "",
-    roundLabel: raw?.roundLabel ?? "",
+    roundLabel: roundLabelStr,
     startAtJst,
     status,
     home,
     away,
     score,
+    seriesStanding,
     liveMeta,
     finalMeta,
 

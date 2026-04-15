@@ -375,10 +375,10 @@ export default function PredictionFormV2({
   ].join(" ");
 
   const glassCard =
-    "relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
+    "relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
 
   const glassCardStatsPanel = isMobile
-    ? "relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
+    ? "relative w-full overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
     : glassCard;
 
   const toolButtonBase = isMobile
@@ -645,9 +645,8 @@ export default function PredictionFormV2({
       animate="show"
       className={[
         "mx-auto w-full overflow-x-hidden text-white",
-        embedded && inOverlay && isMobile
-          ? "max-w-none"
-          : "max-w-[900px]",
+        /* 試合オーバーレイでは上の MatchCard と同じ横幅に揃える（/web でも max-w-[900px] に縮まない） */
+        embedded && inOverlay ? "max-w-none" : "max-w-[900px]",
         embedded
           ? "min-h-0 overflow-y-visible pb-2"
           : [
