@@ -99,8 +99,11 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
       plan: row.plan === "pro" ? "pro" : "free",
     }));
 
-    // スナップショットが plan 未保存の世代でも、users.plan で Pro バッジを正しく出す
-    const rowUids = rows.map((r) => r.uid).filter(Boolean);
+    // スナップショットが plan 未保存の世代だけ users.plan を補完（常時20件readを避ける）
+    const missingPlanUids = rawRows
+      .filter((r) => r?.uid && r.plan !== "pro" && r.plan !== "free")
+      .map((r) => r.uid as string);
+    const rowUids = [...new Set(missingPlanUids)];
     const planByUid = new Map<string, "free" | "pro">();
     if (rowUids.length > 0) {
       const refs = rowUids.map((id) => db().collection("users").doc(id));
@@ -147,48 +150,53 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
           return;
         }
 
-        const myValue =
-          metric === "activeWinStreak"
-            ? me.activeWinStreak ?? 0
-            : metric === "winRate"
-              ? rk.winRate ?? 0
-              : rk[metric] ?? 0;
+        const storedRankRaw = me.snapshotRanks?.[phase]?.[metric];
+        const storedRank =
+          typeof storedRankRaw === "number" &&
+          Number.isFinite(storedRankRaw) &&
+          storedRankRaw >= 1
+            ? Math.floor(storedRankRaw)
+            : null;
 
-        const hasRankingObj =
-          me.rankingByPhase?.[phase] &&
-          typeof me.rankingByPhase[phase] === "object" &&
-          (me.rankingByPhase[phase].totalPosts != null ||
-            me.rankingByPhase[phase].totalPoints != null);
-
-        const rankField =
-          metric === "activeWinStreak"
-            ? new FieldPath("activeWinStreak")
-            : hasRankingObj
-              ? metric === "winRate"
-                ? new FieldPath("rankingByPhase", phase, "winRate")
-                : new FieldPath("rankingByPhase", phase, metric)
+        if (storedRank != null) {
+          myRank = storedRank;
+        } else {
+          const myValue =
+            metric === "activeWinStreak"
+              ? me.activeWinStreak ?? 0
               : metric === "winRate"
-                ? "winRate"
-                : metric;
+                ? rk.winRate ?? 0
+                : rk[metric] ?? 0;
 
-        const higherSnap = await db()
-          .collection("cumulative_stats")
-          .where(rankField as any, ">", myValue)
-          .count()
-          .get();
+          const hasRankingObj =
+            me.rankingByPhase?.[phase] &&
+            typeof me.rankingByPhase[phase] === "object" &&
+            (me.rankingByPhase[phase].totalPosts != null ||
+              me.rankingByPhase[phase].totalPoints != null);
 
-        myRank = (higherSnap.data().count ?? 0) + 1;
+          const rankField =
+            metric === "activeWinStreak"
+              ? new FieldPath("activeWinStreak")
+              : hasRankingObj
+                ? metric === "winRate"
+                  ? new FieldPath("rankingByPhase", phase, "winRate")
+                  : new FieldPath("rankingByPhase", phase, metric)
+                : metric === "winRate"
+                  ? "winRate"
+                  : metric;
 
-        // トップ20外のユーザーはバッチに含まれないため、必要時のみ users を参照
-        let myPlanResolved: "free" | "pro" =
-          planByUid.get(uid) ?? (me.plan === "pro" ? "pro" : "free");
-        if (!planByUid.has(uid)) {
-          const uSnap = await db().collection("users").doc(uid).get();
-          if (uSnap.exists) {
-            const u = uSnap.data() as { plan?: string };
-            myPlanResolved = u?.plan === "pro" ? "pro" : "free";
-          }
+          const higherSnap = await db()
+            .collection("cumulative_stats")
+            .where(rankField as any, ">", myValue)
+            .count()
+            .get();
+
+          myRank = (higherSnap.data().count ?? 0) + 1;
         }
+
+        // myRow は cumulative_stats の plan を優先（追加readを避ける）
+        const myPlanResolved: "free" | "pro" =
+          me.plan === "pro" ? "pro" : "free";
 
         myRow = {
           uid,

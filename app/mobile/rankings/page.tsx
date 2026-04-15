@@ -79,7 +79,7 @@ export default function MobileRankingsPage() {
     [visibleMetrics]
   );
 
-  const { listReady, personalPending, myUid, byMetric } =
+  const { listReady, personalPending, myUid, byMetric, ensureMetric } =
     useCumulativeRankingsBulk(phase);
 
   const { user } = useMyRankingUser(myUid);
@@ -87,6 +87,9 @@ export default function MobileRankingsPage() {
 
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
+  useEffect(() => {
+    void ensureMetric(apiKey);
+  }, [apiKey, ensureMetric]);
   const rawRows = useMemo(
     () =>
       Array.isArray(bundle?.rows) ? (bundle.rows as RankingApiRow[]) : [],

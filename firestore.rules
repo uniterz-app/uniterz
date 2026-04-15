@@ -168,6 +168,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+
+    // cumulative_stats — Functions が集計。本人のみ読取（snapshotRanks / rankSnapshotHistory）
+    match /cumulative_stats/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+
+      match /rankSnapshotHistory/{dateKey} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
     // ========================================================================
     // プレーオフ — lib/playoff-*, PlayoffBracketMarket, usePlayoffOfficialResults
     // ========================================================================

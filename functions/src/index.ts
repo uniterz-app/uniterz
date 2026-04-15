@@ -25,6 +25,7 @@ export { rescorePlayoffBrackets } from "./playoff-bracket/rescorePlayoffBrackets
 export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
 export { rebuildPlayoffBracketMarket } from "./playoff-bracket/rebuildPlayoffBracketMarket";
 export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
+export { backfillCumulativeStatsFromDailyHttp } from "./rankings/backfillCumulativeStatsFromDaily";
 export { getMonthlyLeaderboard } from "./leaderboards/getMonthlyLeaderboard";
 export {
   rebuildMonthlyLeaderboardsCron,
@@ -71,7 +72,12 @@ export const updateTeamRankingsDaily = onSchedule(
  * ==========================================================================*/
 
 export const buildCumulativeStatsCron = onSchedule(
-  { schedule: "40 15 * * *", timeZone: "Asia/Tokyo" },
+  {
+    schedule: "40 15 * * *",
+    timeZone: "Asia/Tokyo",
+    memory: "1GiB",
+    timeoutSeconds: 540,
+  },
   async () => {
     if (!(await hasNbaGameScheduledJstToday())) {
       console.log(
@@ -168,6 +174,7 @@ export { dailyAnalytics } from "./analytics/daily";
 export { runDailyAnalytics } from "./analytics/runDaily";
 
 export { fixUserStats } from "./fixUserStats";
+export { backfillStreakApplyMarkersHttp } from "./backfillStreakApplyMarkers";
 
 /* ============================================================================
  * Debug

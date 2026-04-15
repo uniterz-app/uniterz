@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
@@ -25,18 +25,8 @@ function emptyBulkMetric(): BulkMetricPayload {
   };
 }
 
-/** 初回は総合（totalPoints）のみ先読み。他4指標は認証確定後に idle でまとめて取得。 */
+/** 初回は総合（totalPoints）のみ先読み。 */
 const PRIMARY_METRICS = "totalPoints";
-const REST_METRICS = "activeWinStreak,totalPrecision,totalUpset,winRate";
-
-function scheduleIdle(cb: () => void): () => void {
-  if (typeof requestIdleCallback !== "undefined") {
-    const id = requestIdleCallback(cb, { timeout: 2500 });
-    return () => cancelIdleCallback(id);
-  }
-  const t = window.setTimeout(cb, 16);
-  return () => clearTimeout(t);
-}
 
 function mergeMetricBundles(
   prev: Record<string, BulkMetricPayload> | null,
@@ -92,8 +82,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
 
   const mountPrimaryGenRef = useRef(0);
   const uidPrimarySeqRef = useRef(0);
-  const restGenRef = useRef(0);
-  const lastRestKeyRef = useRef<string | undefined>(undefined);
+  const metricReqSeqRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,8 +121,6 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
       setAuthReady(true);
 
       if (!uid) {
-        restGenRef.current += 1;
-        lastRestKeyRef.current = undefined;
         const g = ++mountPrimaryGenRef.current;
         void (async () => {
           try {
@@ -183,38 +170,38 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
     };
   }, [phase]);
 
-  useEffect(() => {
-    if (!authReady) return;
-    if (!byMetric?.totalPoints) return;
+  const ensureMetric = useCallback(
+    async (metric: string) => {
+      if (metric === "totalPoints") return;
+      if (!authReady) return;
+      if (!byMetric?.totalPoints) return;
+      if (byMetric?.[metric]) return;
 
-    if (myUid) {
-      if (appliedTotalPointsUid !== myUid) return;
-    } else if (appliedTotalPointsUid !== ANON_KEY) return;
+      const uidForMetric = myUid;
+      if (uidForMetric) {
+        if (appliedTotalPointsUid !== uidForMetric) return;
+      } else if (appliedTotalPointsUid !== ANON_KEY) {
+        return;
+      }
 
-    const restKey = `${phase}:${myUid ?? ANON_KEY}`;
-    if (lastRestKeyRef.current === restKey) return;
-
-    const gen = ++restGenRef.current;
-    const uidForRest = myUid;
-    const captureKey = restKey;
-
-    const cancelIdle = scheduleIdle(() => {
-      void (async () => {
-        try {
-          const partial = await fetchBulkMetrics(REST_METRICS, uidForRest, phase);
-          if (gen !== restGenRef.current) return;
-          if (partial) {
-            setByMetric((p) => mergeMetricBundles(p, partial));
-            lastRestKeyRef.current = captureKey;
-          }
-        } catch {
-          /* ignore */
+      const seq = ++metricReqSeqRef.current;
+      try {
+        const partial = await fetchBulkMetrics(metric, uidForMetric, phase);
+        if (seq !== metricReqSeqRef.current) return;
+        if (partial) {
+          setByMetric((p) => mergeMetricBundles(p, partial));
+        } else {
+          setByMetric((p) =>
+            mergeMetricBundles(p, { [metric]: emptyBulkMetric() })
+          );
         }
-      })();
-    });
-
-    return cancelIdle;
-  }, [authReady, byMetric?.totalPoints, myUid, appliedTotalPointsUid, phase]);
+      } catch {
+        if (seq !== metricReqSeqRef.current) return;
+        setByMetric((p) => mergeMetricBundles(p, { [metric]: emptyBulkMetric() }));
+      }
+    },
+    [authReady, byMetric, myUid, appliedTotalPointsUid, phase]
+  );
 
   const listReady = byMetric?.totalPoints != null;
   const personalPending =
@@ -229,5 +216,6 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
     myUid,
     byMetric,
     authReady,
+    ensureMetric,
   };
 }

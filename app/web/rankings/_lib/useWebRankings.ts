@@ -98,8 +98,12 @@ export function useWebRankings(phase: RankingPhase = "playoffs") {
     }
   }, [metric]);
 
-  const { listReady, personalPending, myUid, byMetric } =
+  const { listReady, personalPending, myUid, byMetric, ensureMetric } =
     useCumulativeRankingsBulk(phase);
+
+  useEffect(() => {
+    void ensureMetric(API_METRIC_BY_MOBILE[metric]);
+  }, [metric, ensureMetric]);
 
   const rowsMap = useMemo(() => {
     if (!byMetric) return EMPTY_MAP;

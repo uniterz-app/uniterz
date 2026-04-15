@@ -33,7 +33,7 @@ export type SummaryForCardsV2 = {
   upsetHitCount: number;
 };
 
-const CACHE_TTL_MS = 45_000;
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 type CacheEntry = {
   at: number;

@@ -42,7 +42,7 @@ function rankingSlice(d, phase) {
     };
 }
 exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
     try {
         const rawMetric = req.query.metric;
         const uid = req.query.uid;
@@ -60,8 +60,11 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
             ? ((_b = (_a = snapDoc.data()) === null || _a === void 0 ? void 0 : _a.rows) !== null && _b !== void 0 ? _b : [])
             : [];
         let rows = rawRows.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
-        // スナップショットが plan 未保存の世代でも、users.plan で Pro バッジを正しく出す
-        const rowUids = rows.map((r) => r.uid).filter(Boolean);
+        // スナップショットが plan 未保存の世代だけ users.plan を補完（常時20件readを避ける）
+        const missingPlanUids = rawRows
+            .filter((r) => (r === null || r === void 0 ? void 0 : r.uid) && r.plan !== "pro" && r.plan !== "free")
+            .map((r) => r.uid);
+        const rowUids = [...new Set(missingPlanUids)];
         const planByUid = new Map();
         if (rowUids.length > 0) {
             const refs = rowUids.map((id) => db().collection("users").doc(id));
@@ -104,45 +107,49 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
                     });
                     return;
                 }
-                const myValue = metric === "activeWinStreak"
-                    ? (_d = me.activeWinStreak) !== null && _d !== void 0 ? _d : 0
-                    : metric === "winRate"
-                        ? (_e = rk.winRate) !== null && _e !== void 0 ? _e : 0
-                        : (_f = rk[metric]) !== null && _f !== void 0 ? _f : 0;
-                const hasRankingObj = ((_g = me.rankingByPhase) === null || _g === void 0 ? void 0 : _g[phase]) &&
-                    typeof me.rankingByPhase[phase] === "object" &&
-                    (me.rankingByPhase[phase].totalPosts != null ||
-                        me.rankingByPhase[phase].totalPoints != null);
-                const rankField = metric === "activeWinStreak"
-                    ? new firestore_1.FieldPath("activeWinStreak")
-                    : hasRankingObj
-                        ? metric === "winRate"
-                            ? new firestore_1.FieldPath("rankingByPhase", phase, "winRate")
-                            : new firestore_1.FieldPath("rankingByPhase", phase, metric)
-                        : metric === "winRate"
-                            ? "winRate"
-                            : metric;
-                const higherSnap = await db()
-                    .collection("cumulative_stats")
-                    .where(rankField, ">", myValue)
-                    .count()
-                    .get();
-                myRank = ((_h = higherSnap.data().count) !== null && _h !== void 0 ? _h : 0) + 1;
-                // トップ20外のユーザーはバッチに含まれないため、必要時のみ users を参照
-                let myPlanResolved = (_j = planByUid.get(uid)) !== null && _j !== void 0 ? _j : (me.plan === "pro" ? "pro" : "free");
-                if (!planByUid.has(uid)) {
-                    const uSnap = await db().collection("users").doc(uid).get();
-                    if (uSnap.exists) {
-                        const u = uSnap.data();
-                        myPlanResolved = (u === null || u === void 0 ? void 0 : u.plan) === "pro" ? "pro" : "free";
-                    }
+                const storedRankRaw = (_e = (_d = me.snapshotRanks) === null || _d === void 0 ? void 0 : _d[phase]) === null || _e === void 0 ? void 0 : _e[metric];
+                const storedRank = typeof storedRankRaw === "number" &&
+                    Number.isFinite(storedRankRaw) &&
+                    storedRankRaw >= 1
+                    ? Math.floor(storedRankRaw)
+                    : null;
+                if (storedRank != null) {
+                    myRank = storedRank;
                 }
+                else {
+                    const myValue = metric === "activeWinStreak"
+                        ? (_f = me.activeWinStreak) !== null && _f !== void 0 ? _f : 0
+                        : metric === "winRate"
+                            ? (_g = rk.winRate) !== null && _g !== void 0 ? _g : 0
+                            : (_h = rk[metric]) !== null && _h !== void 0 ? _h : 0;
+                    const hasRankingObj = ((_j = me.rankingByPhase) === null || _j === void 0 ? void 0 : _j[phase]) &&
+                        typeof me.rankingByPhase[phase] === "object" &&
+                        (me.rankingByPhase[phase].totalPosts != null ||
+                            me.rankingByPhase[phase].totalPoints != null);
+                    const rankField = metric === "activeWinStreak"
+                        ? new firestore_1.FieldPath("activeWinStreak")
+                        : hasRankingObj
+                            ? metric === "winRate"
+                                ? new firestore_1.FieldPath("rankingByPhase", phase, "winRate")
+                                : new firestore_1.FieldPath("rankingByPhase", phase, metric)
+                            : metric === "winRate"
+                                ? "winRate"
+                                : metric;
+                    const higherSnap = await db()
+                        .collection("cumulative_stats")
+                        .where(rankField, ">", myValue)
+                        .count()
+                        .get();
+                    myRank = ((_k = higherSnap.data().count) !== null && _k !== void 0 ? _k : 0) + 1;
+                }
+                // myRow は cumulative_stats の plan を優先（追加readを避ける）
+                const myPlanResolved = me.plan === "pro" ? "pro" : "free";
                 myRow = {
                     uid,
-                    displayName: (_k = me.displayName) !== null && _k !== void 0 ? _k : "",
-                    handle: (_l = me.handle) !== null && _l !== void 0 ? _l : null,
-                    photoURL: (_m = me.photoURL) !== null && _m !== void 0 ? _m : null,
-                    countryCode: (_o = me.countryCode) !== null && _o !== void 0 ? _o : null,
+                    displayName: (_l = me.displayName) !== null && _l !== void 0 ? _l : "",
+                    handle: (_m = me.handle) !== null && _m !== void 0 ? _m : null,
+                    photoURL: (_o = me.photoURL) !== null && _o !== void 0 ? _o : null,
+                    countryCode: (_p = me.countryCode) !== null && _p !== void 0 ? _p : null,
                     plan: myPlanResolved,
                     totalPosts: rk.totalPosts,
                     totalWins: rk.totalWins,
@@ -150,7 +157,7 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
                     totalPoints: rk.totalPoints,
                     totalPrecision: rk.totalPrecision,
                     totalUpset: rk.totalUpset,
-                    activeWinStreak: (_p = me.activeWinStreak) !== null && _p !== void 0 ? _p : 0,
+                    activeWinStreak: (_q = me.activeWinStreak) !== null && _q !== void 0 ? _q : 0,
                     rank: myRank,
                 };
             }
@@ -172,7 +179,7 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
     catch (e) {
         res.status(500).json({
             ok: false,
-            error: (_q = e === null || e === void 0 ? void 0 : e.message) !== null && _q !== void 0 ? _q : "unknown error",
+            error: (_r = e === null || e === void 0 ? void 0 : e.message) !== null && _r !== void 0 ? _r : "unknown error",
         });
         return;
     }

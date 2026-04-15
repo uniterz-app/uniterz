@@ -1,6 +1,6 @@
 // functions/src/rankings/buildCumulativeStats.ts
 
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
 
 function db() {
   return getFirestore();
@@ -54,31 +54,31 @@ function addRankingTotals(
  * =======================================================*/
 export async function buildCumulativeStats() {
   const dateKey = getTodayJST();
-
-  const dailySnap = await db()
-    .collection("user_stats_v2_daily")
-    .where("date", "==", dateKey)
-    .get();
-
+  const firestore = db();
+  const PAGE_SIZE = 500;
+  const CONCURRENCY = 20;
   let updated = 0;
   let skipped = 0;
+  let scanned = 0;
 
-  for (const doc of dailySnap.docs) {
+  const processDoc = async (
+    doc: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>
+  ) => {
     const data = doc.data();
     const uid = doc.id.split("_")[0];
-    if (!uid) continue;
+    if (!uid) return { updated: false };
 
     const statsAll = data.all;
-    if (!statsAll) continue;
+    if (!statsAll) return { updated: false };
 
-      /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
+    /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
     const statsRanking = data.ranking ?? data.all;
-      const statsByPhase = data.rankingByPhase ?? {};
+    const statsByPhase = data.rankingByPhase ?? {};
 
-    const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
-    const userRef = db().doc(`users/${uid}`);
+    const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
+    const userRef = firestore.doc(`users/${uid}`);
 
-    const result = await db().runTransaction(async (tx) => {
+    return firestore.runTransaction(async (tx) => {
       const [cumulativeSnap, userSnap] = await Promise.all([
         tx.get(cumulativeRef),
         tx.get(userRef),
@@ -244,14 +244,39 @@ export async function buildCumulativeStats() {
 
       return { updated: true };
     });
+  };
 
-    if (result.updated) updated++;
-    else skipped++;
+  let cursor:
+    | FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>
+    | undefined;
+
+  for (;;) {
+    let q: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = firestore
+      .collection("user_stats_v2_daily")
+      .where("date", "==", dateKey)
+      .orderBy(FieldPath.documentId())
+      .limit(PAGE_SIZE);
+    if (cursor) q = q.startAfter(cursor);
+
+    const pageSnap = await q.get();
+    if (pageSnap.empty) break;
+
+    scanned += pageSnap.size;
+    cursor = pageSnap.docs[pageSnap.docs.length - 1];
+
+    for (let i = 0; i < pageSnap.docs.length; i += CONCURRENCY) {
+      const chunk = pageSnap.docs.slice(i, i + CONCURRENCY);
+      const chunkResults = await Promise.all(chunk.map((d) => processDoc(d)));
+      chunkResults.forEach((r) => {
+        if (r.updated) updated++;
+        else skipped++;
+      });
+    }
   }
 
   return {
     date: dateKey,
-    scanned: dailySnap.size,
+    scanned,
     updated,
     skipped,
   };

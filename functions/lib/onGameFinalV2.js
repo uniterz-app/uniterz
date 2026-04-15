@@ -17,9 +17,14 @@ const db = () => (0, firestore_2.getFirestore)();
 const MIN_MARKET = 10;
 const UPSET_MARKET_RATIO = 0.6;
 const UPSET_WIN_DIFF = 10;
+/** Firestore batch max 500 ops; ~1 update per post, chunk below limit */
+const FINALIZE_POSTS_CHUNK_SIZE = 400;
 exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     document: "games/{gameId}",
     region: "asia-northeast1",
+    /** 投稿数が多い試合でヒープ不足（signal 6）になりやすいため明示 */
+    memory: "1GiB",
+    timeoutSeconds: 540,
 }, async (event) => {
     var _a, _b, _c, _d;
     const firestore = db();
@@ -114,20 +119,29 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         },
     });
     hadUpsetGame = upset.isUpsetGame;
-    /* ===== ④ finalize posts ===== */
-    const batch = firestore.batch();
-    const userUpdateTasks = [];
-    for (const doc of postsSnap.docs) {
-        await (0, finalizePost_1.finalizePost)({
-            postDoc: doc,
-            game,
-            market,
-            hadUpsetGame,
-            after,
-            batch,
-            userUpdateTasks,
-            streakResultMap,
-        });
+    /* ===== ④ finalize posts（バッチ分割 + チャンクごとにユーザー更新をフラッシュ） ===== */
+    const postDocs = postsSnap.docs;
+    for (let i = 0; i < postDocs.length; i += FINALIZE_POSTS_CHUNK_SIZE) {
+        const slice = postDocs.slice(i, i + FINALIZE_POSTS_CHUNK_SIZE);
+        const pendingInSlice = slice.filter((d) => !d.data().settledAt);
+        if (pendingInSlice.length === 0)
+            continue;
+        const batch = firestore.batch();
+        const userUpdateTasks = [];
+        for (const doc of pendingInSlice) {
+            await (0, finalizePost_1.finalizePost)({
+                postDoc: doc,
+                game,
+                market,
+                hadUpsetGame,
+                after,
+                batch,
+                userUpdateTasks,
+                streakResultMap,
+            });
+        }
+        await batch.commit();
+        await Promise.all(userUpdateTasks);
     }
     const pointsDistribution = (0, aggregateGamePointsDistribution_1.aggregateGamePointsDistributionFromPostsSnap)({
         postsSnap,
@@ -140,8 +154,6 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         hadUpsetGame,
         streakResultMap,
     });
-    await batch.commit();
-    await Promise.all(userUpdateTasks);
     /* ===== ⑤ finalize game ===== */
     const gamePatch = {
         market: {
