@@ -81,6 +81,28 @@
   }
 }
 
+/* LIVE バッジ：控えめな不透明度の点滅（色・形はそのまま） */
+@keyframes live-match-mark-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.76;
+  }
+}
+
+.live-match-mark--pulse {
+  animation: live-match-mark-blink 2.75s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-match-mark--pulse {
+    animation: none;
+  }
+}
+
 /* ============================================================
    Dev preview only — 青系グラデ + 静止ドット（アプリ全体には未適用）
    /web/bg-halftone-preview · /mobile/bg-halftone-preview

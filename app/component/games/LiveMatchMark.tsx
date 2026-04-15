@@ -17,7 +17,7 @@ type Props = {
 };
 
 const WRAP_BASE = [
-  "inline-flex shrink-0 items-center justify-center rounded-md",
+  "live-match-mark--pulse inline-flex shrink-0 items-center justify-center rounded-md",
   "border border-red-500/50 bg-red-600 font-bold uppercase tracking-wide text-white shadow-sm",
 ].join(" ");
 
