@@ -10,6 +10,11 @@ import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { streakShortLabel } from "@/lib/i18n/rankings";
+import {
+  profileHrefWithRankingsReturn,
+  stashRankingsTabForReturn,
+} from "@/lib/navigation/rankingsProfileFrom";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
   ProCyberBadge,
@@ -259,12 +264,15 @@ export default function RankingCard({
   row: r,
   rank,
   metric,
+  rankPhase = "play_in",
   onCountDone,
   language = "ja",
 }: {
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
+  /** ランキングからプロフィールへ戻るときのフェーズ復元用（一覧は Web / モバイルから渡す） */
+  rankPhase?: RankingPhase;
   onCountDone?: () => void;
   language?: Language;
 }) {
@@ -278,6 +286,10 @@ export default function RankingCard({
     ? "/mobile"
     : "/web";
   const handleOrUid = r.handle || r.uid;
+  const profileHref = profileHrefWithRankingsReturn(pathname, base, handleOrUid, {
+    metric,
+    phase: rankPhase,
+  });
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(
@@ -290,8 +302,13 @@ export default function RankingCard({
 
   return (
     <Link
-      href={`${base}/u/${handleOrUid}`}
+      href={profileHref}
       className={["block min-w-0", isTop3 ? "mb-1.5" : "mb-2"].join(" ")}
+      onClick={() => {
+        if (pathname.includes("/rankings")) {
+          stashRankingsTabForReturn(metric, rankPhase);
+        }
+      }}
     >
       <div
         className={[
@@ -398,8 +415,9 @@ export default function RankingCard({
           </div>
 
           <div className="min-w-0">
-            <div className="flex min-w-0 max-w-full items-center gap-1">
-              <div className="min-w-0 flex-1 overflow-hidden">
+            {/* grid: 名前は左のセルで truncate、Pro は常に名前の直後（flex-1 でスコア横に飛ばさない） */}
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
+              <div className="min-w-0 overflow-hidden">
                 <div
                   className={[
                     "truncate font-black tracking-[0.01em]",
@@ -415,13 +433,15 @@ export default function RankingCard({
                 </div>
               </div>
               {r.plan === "pro" ? (
-                <ProCyberBadge
-                  {...proBadgeStaticMotion}
-                  compact
-                  ariaLabel={
-                    language === "en" ? "Pro member" : "Pro 会員"
-                  }
-                />
+                <div className="shrink-0">
+                  <ProCyberBadge
+                    {...proBadgeStaticMotion}
+                    compact
+                    ariaLabel={
+                      language === "en" ? "Pro member" : "Pro 会員"
+                    }
+                  />
+                </div>
               ) : null}
             </div>
           </div>

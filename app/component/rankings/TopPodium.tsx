@@ -19,6 +19,11 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { Crown } from "lucide-react";
+import {
+  profileHrefWithRankingsReturn,
+  stashRankingsTabForReturn,
+} from "@/lib/navigation/rankingsProfileFrom";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 /* =========================
  * Flag map
@@ -426,11 +431,13 @@ function ScoreText({
 export default function TopPodium({
   rows,
   metric,
+  rankPhase,
   onTopCountDone,
   language = "ja",
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
+  rankPhase: RankingPhase;
   onTopCountDone?: () => void;
   /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
@@ -501,11 +508,22 @@ export default function TopPodium({
           const s = rankPreset(rank);
           const countryCode = getCountryCode(row);
 
+          const profileHref = profileHrefWithRankingsReturn(
+            pathname,
+            base,
+            row.handle || row.uid,
+            { metric, phase: rankPhase }
+          );
           return (
             <Link
               key={row.uid}
-              href={`${base}/u/${row.handle || row.uid}`}
+              href={profileHref}
               className="relative block"
+              onClick={() => {
+                if (pathname.includes("/rankings")) {
+                  stashRankingsTabForReturn(metric, rankPhase);
+                }
+              }}
             >
               {rank === 1 ? (
                 <motion.div
@@ -627,10 +645,10 @@ export default function TopPodium({
                         />
                       </div>
 
-                      {/* バッジは SVG がはみ出すため、overflow-hidden は名前テキスト側のみにかける */}
+                      {/* minmax+auto: 名前の直後に Pro（flex-1 だとスコア列側に寄るのを防ぐ） */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 max-w-full items-center gap-1">
-                          <div className="min-w-0 flex-1 overflow-hidden">
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
+                          <div className="min-w-0 overflow-hidden">
                             <div
                               className={[
                                 "truncate font-black leading-none tracking-[0.005em]",
@@ -654,13 +672,15 @@ export default function TopPodium({
                             </div>
                           </div>
                           {row.plan === "pro" ? (
-                            <ProCyberBadge
-                              {...proBadgeStaticMotion}
-                              compact
-                              ariaLabel={
-                                language === "en" ? "Pro member" : "Pro 会員"
-                              }
-                            />
+                            <div className="shrink-0">
+                              <ProCyberBadge
+                                {...proBadgeStaticMotion}
+                                compact
+                                ariaLabel={
+                                  language === "en" ? "Pro member" : "Pro 会員"
+                                }
+                              />
+                            </div>
                           ) : null}
                         </div>
                       </div>

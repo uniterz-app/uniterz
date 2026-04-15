@@ -5,10 +5,10 @@ import UniterzLogo3DBackground from "@/app/component/background/UniterzLogo3DBac
 export default function CyberPageBackground() {
   return (
     <div
-      className="pointer-events-none fixed left-0 top-0 z-0 w-full overflow-hidden bg-app"
+      className="pointer-events-none fixed inset-0 z-0 w-screen overflow-hidden bg-app"
       style={{
-        /* 動的 dvh ではなく large viewport：UI バーの伸縮でキャンバスが縮み、背景が「変わった」ように見えるのを抑える */
-        height: "100lvh",
+        /* スクロールしてもビューポートに張り付き、3D が常に画面中央基準で見える */
+        height: "100dvh",
         minHeight: "100lvh",
       }}
     >

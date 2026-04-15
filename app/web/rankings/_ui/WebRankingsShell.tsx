@@ -1,6 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  consumeStashedRankingsTab,
+  isMobileMetricParam,
+  RANKINGS_TAB_METRIC_PARAM,
+  RANKINGS_TAB_PHASE_PARAM,
+} from "@/lib/navigation/rankingsProfileFrom";
+import { isRankingPhase } from "@/lib/rankings/rankingPhase";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
@@ -92,6 +99,26 @@ export default function WebRankingsShell() {
     myUid,
   } = useWebRankings(phase);
 
+  const rankingsRestoreOnce = useRef(false);
+  useEffect(() => {
+    if (rankingsRestoreOnce.current) return;
+    rankingsRestoreOnce.current = true;
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const m = sp.get(RANKINGS_TAB_METRIC_PARAM);
+    const ph = sp.get(RANKINGS_TAB_PHASE_PARAM);
+    if (isMobileMetricParam(m) || isRankingPhase(ph)) {
+      if (isMobileMetricParam(m)) setMetric(m);
+      if (isRankingPhase(ph)) setPhase(ph);
+      return;
+    }
+    const stashed = consumeStashedRankingsTab();
+    if (stashed) {
+      setMetric(stashed.metric);
+      setPhase(stashed.phase);
+    }
+  }, [setMetric, setPhase]);
+
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
 
@@ -122,17 +149,18 @@ export default function WebRankingsShell() {
   }, [pageKey]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-app">
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <CyberPageBackground />
-      </div>
-
-      <div className="relative z-10 min-h-screen">
-        <div className="sticky top-0 z-40">
-          <Header />
+    <>
+      <CyberPageBackground />
+      {/* ビューポート固定：長い一覧は内側だけスクロール。背景の 3D は常に画面中央 */}
+      <div className="relative z-10 flex h-dvh min-h-0 w-full flex-col overflow-hidden">
+        <div className="shrink-0">
+          <div className="sticky top-0 z-40">
+            <Header />
+          </div>
         </div>
 
-        <div className="mx-auto max-w-[860px] space-y-3 px-3 pt-2">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-bottom-nav">
+          <div className="mx-auto max-w-[860px] space-y-3 px-3 pt-2">
           <RankingInfoNotice language={language} />
           <div className="space-y-0.5">
             <RankingPhaseTabs
@@ -161,7 +189,7 @@ export default function WebRankingsShell() {
             setMetric={setMetric}
             language={language}
           />
-        </div>
+          </div>
 
         {!listReady && (
           <div className="mx-auto max-w-[860px] px-3 pt-4 text-sm text-white/40">
@@ -191,6 +219,7 @@ export default function WebRankingsShell() {
                   <TopPodium
                     rows={top3}
                     metric={metric}
+                    rankPhase={phase}
                     onTopCountDone={handleTopCountDone}
                     intro={intro}
                     language={language}
@@ -200,7 +229,7 @@ export default function WebRankingsShell() {
 
                 <motion.div
                   key={`rest-${pageKey}`}
-                  className="mx-auto max-w-[860px] px-2 pb-bottom-nav pt-2"
+                  className="mx-auto max-w-[860px] px-2 pt-2"
                   variants={restContainer}
                   initial="hidden"
                   animate={topDone ? "show" : "hidden"}
@@ -218,6 +247,7 @@ export default function WebRankingsShell() {
                             row={r}
                             rank={i + 4}
                             metric={metric}
+                            rankPhase={phase}
                             language={language}
                           />
                         </motion.div>
@@ -228,7 +258,8 @@ export default function WebRankingsShell() {
               </motion.div>
             </AnimatePresence>
           ) : null}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

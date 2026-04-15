@@ -81,6 +81,45 @@
   }
 }
 
+/* ResultCard UPSET 時：枠を走る黒系のスイープ（conic 回転＋リングマスク） */
+.result-card-upset-sweep {
+  padding: 2px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.result-card-upset-sweep__spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin-left: -100vmax;
+  margin-top: -100vmax;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 238deg,
+    rgba(12, 12, 18, 0.5) 282deg,
+    rgba(0, 0, 0, 0.94) 310deg,
+    rgba(12, 12, 18, 0.5) 338deg,
+    transparent 360deg
+  );
+  animation: result-card-streak-sweep-spin 4.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card-upset-sweep__spin {
+    animation: none;
+  }
+}
+
 /* LIVE バッジ：控えめな不透明度の点滅（色・形はそのまま） */
 @keyframes live-match-mark-blink {
   0%,
