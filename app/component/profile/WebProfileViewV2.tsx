@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
@@ -99,6 +99,7 @@ import {
   clearSideMenuOrigin,
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
+import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
 
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
@@ -249,6 +250,9 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   return (
     <LazyMotion features={domAnimation}>
     <div className="mx-auto w-full max-w-[1200px] px-4 py-6 pb-bottom-nav text-white">
+      <Suspense fallback={null}>
+        <RankingsReturnNavLink language={language} />
+      </Suspense>
       <ProfileHeroCard
         key={heroUidKey}
         layout="web"
