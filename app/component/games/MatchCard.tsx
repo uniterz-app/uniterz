@@ -22,7 +22,11 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 import type { League } from "@/lib/leagues";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
@@ -298,12 +302,22 @@ const awayColor = useMemo(
   [normalizedLeague, away.teamId]
 );
 
+const homeJerseyColor = useMemo(
+  () => getTeamJerseyPrimaryColor(normalizedLeague, home.teamId) ?? homeColor,
+  [normalizedLeague, home.teamId, homeColor]
+);
+
+const awayJerseyColor = useMemo(
+  () => getTeamJerseyPrimaryColor(normalizedLeague, away.teamId) ?? awayColor,
+  [normalizedLeague, away.teamId, awayColor]
+);
+
 const homeSecondaryColor = useMemo(
-  () => getTeamSecondaryColor(normalizedLeague, home.teamId),
+  () => getTeamJerseySecondaryColor(normalizedLeague, home.teamId),
   [normalizedLeague, home.teamId]
 );
 const awaySecondaryColor = useMemo(
-  () => getTeamSecondaryColor(normalizedLeague, away.teamId),
+  () => getTeamJerseySecondaryColor(normalizedLeague, away.teamId),
   [normalizedLeague, away.teamId]
 );
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
@@ -897,7 +911,7 @@ background:
   <div className="flex w-full flex-col items-center">
   {Icon === Jersey ? (
     <HalftoneJerseyMark
-      accent={homeColor}
+      accent={homeJerseyColor}
       accentEnd={homeSecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
@@ -906,7 +920,7 @@ background:
   ) : (
     <Icon
       className={teamMarkSizeSoccer}
-      fill={homeColor}
+      fill={homeJerseyColor}
       stroke="#fff"
     />
   )}
@@ -1121,7 +1135,7 @@ background:
   {/* アイコン：mobile大きく / webそのまま */}
   {Icon === Jersey ? (
     <HalftoneJerseyMark
-      accent={awayColor}
+      accent={awayJerseyColor}
       accentEnd={awaySecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
@@ -1130,7 +1144,7 @@ background:
   ) : (
     <Icon
       className={teamMarkSizeSoccer}
-      fill={awayColor}
+      fill={awayJerseyColor}
       stroke="#fff"
     />
   )}
