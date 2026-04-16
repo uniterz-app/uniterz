@@ -148,7 +148,8 @@ export function useGamesByCalendarMonth(
 export function useGamesByDate(
   rawLeague: League,
   dayDate: Date | null,
-  timeZone: string
+  timeZone: string,
+  enabled = true,
 ) {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,7 +170,7 @@ export function useGamesByDate(
     let alive = true;
 
     async function load() {
-      if (!dayDate || !range) {
+      if (!enabled || !dayDate || !range) {
         if (!alive) return;
         setErr(null);
         setGames([]);
@@ -180,7 +181,7 @@ export function useGamesByDate(
       setErr(null);
 
       const dayKey = toDateKeyInTimeZone(dayDate, timeZone);
-      const cacheKey = `${league}|${dayKey}`;
+      const cacheKey = `${league}|${timeZone}|${dayKey}|${GAME_SCHEDULE_SEASON}`;
       const hit = gamesByDayCache.get(cacheKey);
       const cacheFresh =
         hit && Date.now() - hit.savedAt < GAMES_BY_DAY_CACHE_TTL_MS;
@@ -215,7 +216,9 @@ export function useGamesByDate(
           ...d.data(),
         }));
 
-        gamesByDayCache.set(cacheKey, { games: rows, savedAt: Date.now() });
+        if (rows.length > 0) {
+          gamesByDayCache.set(cacheKey, { games: rows, savedAt: Date.now() });
+        }
         setGames(rows);
         setLoading(false);
       } catch (e: any) {
@@ -230,7 +233,7 @@ export function useGamesByDate(
     return () => {
       alive = false;
     };
-  }, [league, dayDate, range, timeZone]);
+  }, [enabled, league, dayDate, range, timeZone]);
 
   return { loading, error, games };
 }
