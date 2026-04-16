@@ -11,6 +11,7 @@ import {
   barPctMaxNorm,
   barPctMinPaNorm,
 } from "./teamStatsCompare";
+import type { Language } from "@/lib/i18n/language";
 
 
 type TeamDoc = {
@@ -42,7 +43,7 @@ type Props = {
   league: League;
   homeTeamId: string;
   awayTeamId: string;
-  language?: "ja" | "en";
+  language?: Language;
 };
 
 /** teams に保存したリーグ順位（シーズン確定後は seed で一括書き込み） */

@@ -38,6 +38,9 @@ export function stashRankingsTabForReturn(
   }
 }
 
+/** Web ランキングのスクロール位置（戻るリンクで復元） */
+export const WEB_RANKINGS_SCROLL_KEY = "uniterz.webRankings.scrollY.v1";
+
 /** 一度だけ読み取り、キーを削除する */
 export function consumeStashedRankingsTab(): {
   metric: MobileMetric;

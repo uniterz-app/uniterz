@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { Camera } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage, db, auth } from "@/lib/firebase";
+import { storage, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
@@ -15,9 +14,9 @@ import type { Language } from "@/lib/i18n/language";
 import {
   guessLanguageFromNavigator,
   normalizeLanguage,
-  TIMEZONE_BY_LANGUAGE,
 } from "@/lib/i18n/language";
 import { ui } from "@/lib/i18n/ui";
+import { saveMeProfile } from "@/lib/api/saveMeProfile";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -94,22 +93,24 @@ export default function ProfileEditPage() {
       }
     }
 
-    await setDoc(
-      doc(db, "users", user.uid),
-      {
+    try {
+      await saveMeProfile({
         displayName: name || "",
         bio: bio || "",
         photoURL: photoURL || "",
         language,
-        locale: language,
-        timeZone: TIMEZONE_BY_LANGUAGE[language],
         countryCode: countryCode || null,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    router.back();
+      });
+      router.back();
+    } catch (err) {
+      console.error(err);
+      alert(
+        ui(language, {
+          ja: "保存に失敗しました。時間をおいて再度お試しください。",
+          en: "Failed to save. Please try again later.",
+        })
+      );
+    }
   };
 
   const previewURL = selectedFile

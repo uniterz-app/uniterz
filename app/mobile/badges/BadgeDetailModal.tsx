@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft } from "lucide-react";
+import type { Language } from "@/lib/i18n/language";
 
 export default function BadgeDetailModal({
   badge,
@@ -9,7 +10,7 @@ export default function BadgeDetailModal({
 }: {
   badge: any;
   onClose: () => void;
-  language?: "ja" | "en";
+  language?: Language;
 }) {
   const isEn = language === "en";
   const awardedAt =

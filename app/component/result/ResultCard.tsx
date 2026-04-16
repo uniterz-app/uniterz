@@ -604,7 +604,7 @@ function ResultCardPresentationImpl({
         >
           <div
             className={[
-              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black",
+              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white/85",
               isMobile
                 ? mobileScheduleDense
                   ? "text-xl md:text-4xl"
@@ -618,7 +618,7 @@ function ResultCardPresentationImpl({
 
           {finalScore && (
             <div
-              className={`mt-1 whitespace-nowrap tabular-nums opacity-85 md:mt-1.5 ${
+              className={`mt-1 whitespace-nowrap tabular-nums text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:mt-1.5 ${
                 isMobile
                   ? "text-[13px] font-bold leading-tight"
                   : "text-base font-bold md:text-lg"

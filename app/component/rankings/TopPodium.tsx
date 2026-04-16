@@ -20,6 +20,8 @@ import {
 } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { Crown } from "lucide-react";
+import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 /* =========================
  * Flag map
@@ -427,11 +429,14 @@ function ScoreText({
 export default function TopPodium({
   rows,
   metric,
+  rankPhase,
   onTopCountDone,
   language = "ja",
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
+  /** ランキングからプロフィールへの戻り用 */
+  rankPhase?: RankingPhase;
   onTopCountDone?: () => void;
   /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
@@ -467,6 +472,7 @@ export default function TopPodium({
     pathname.startsWith("/mobile") || pathname.startsWith("/m/")
       ? "/mobile"
       : "/web";
+  const phaseForReturn = rankPhase ?? "play_in";
 
   const r1 = rows[0];
   const r2 = rows[1];
@@ -502,10 +508,16 @@ export default function TopPodium({
           const s = rankPreset(rank);
           const countryCode = getCountryCode(row);
 
+          const profileHref = profileHrefWithRankingsReturn(
+            pathname,
+            base,
+            row.handle || row.uid,
+            { metric, phase: phaseForReturn }
+          );
           return (
             <Link
               key={row.uid}
-              href={`${base}/u/${row.handle || row.uid}`}
+              href={profileHref}
               className="relative block"
             >
               {rank === 1 ? (

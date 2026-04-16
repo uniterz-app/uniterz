@@ -81,6 +81,20 @@ type Props = {
 
 type Winner = "home" | "away" | "draw";
 
+/** MatchCard と同趣旨：試合開始済み（未投稿ならスコア予想 UI を出さない） */
+function isMatchStartedForPredict(game: MatchCardProps): boolean {
+  const { status, startAtJst } = game;
+  if (status === "live" || status === "final") return true;
+  if (status === "scheduled" && startAtJst instanceof Date) {
+    try {
+      return Date.now() >= startAtJst.getTime();
+    } catch {
+      /* ignore */
+    }
+  }
+  return false;
+}
+
 export default function PredictionFormV2({
   dense = false,
   game,
@@ -139,6 +153,14 @@ export default function PredictionFormV2({
   const [existingSnapshot, setExistingSnapshot] = useState<ExistingSnap>(null);
   /** true のときスコア入力を出して PATCH 更新可能 */
   const [showScoreEdit, setShowScoreEdit] = useState(false);
+
+  /**
+   * 一覧オーバーレイ以外（/predict 単体）で、自分の投稿 ID を API で解決した結果。
+   * skip = オーバーレイ（オーバーレイは overlayExistingPostId を使う）
+   */
+  const [standaloneMine, setStandaloneMine] = useState<
+    "skip" | "loading" | { postId: string | null }
+  >(() => (inOverlay ? "skip" : "loading"));
 
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -255,8 +277,65 @@ export default function PredictionFormV2({
     setWinner(null);
   }, [scoreHome, scoreAway, isSoccer]);
 
+  const isGameStarted = useMemo(
+    () => isMatchStartedForPredict(game),
+    [game.status, game.startAtJst]
+  );
+
+  /** /predict 単体：この試合の自分の投稿 ID を取得（開始後に未投稿ならフォームを出さないため） */
   useEffect(() => {
-    if (!inOverlay || !overlayExistingPostId) {
+    if (inOverlay) {
+      setStandaloneMine("skip");
+      return;
+    }
+    let alive = true;
+    setStandaloneMine("loading");
+    void (async () => {
+      try {
+        const me = auth.currentUser;
+        if (!me) {
+          if (alive) setStandaloneMine({ postId: null });
+          return;
+        }
+        const token = await me.getIdToken();
+        const gid = String((game as { id: string }).id);
+        const res = await fetch(
+          `/api/posts_v2/byGameMine?gameId=${encodeURIComponent(gid)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: "include",
+          }
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          exists?: boolean;
+          postId?: string;
+        };
+        if (!alive) return;
+        if (!json.ok || !json.exists || !json.postId) {
+          setStandaloneMine({ postId: null });
+          return;
+        }
+        setStandaloneMine({ postId: String(json.postId) });
+      } catch {
+        if (alive) setStandaloneMine({ postId: null });
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [inOverlay, (game as { id: string }).id]);
+
+  const standaloneMineLoading = !inOverlay && standaloneMine === "loading";
+
+  const effectivePostId = inOverlay
+    ? overlayExistingPostId ?? null
+    : standaloneMine === "skip" || standaloneMine === "loading"
+      ? null
+      : standaloneMine.postId;
+
+  useEffect(() => {
+    if (!effectivePostId) {
       setExistingSnapshot(null);
       setShowScoreEdit(false);
       return;
@@ -275,7 +354,7 @@ export default function PredictionFormV2({
         }
         const token = await me.getIdToken();
         const res = await fetch(
-          `/api/posts_v2/${encodeURIComponent(overlayExistingPostId)}`,
+          `/api/posts_v2/${encodeURIComponent(effectivePostId)}`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
             credentials: "include",
@@ -305,15 +384,34 @@ export default function PredictionFormV2({
     return () => {
       alive = false;
     };
-  }, [inOverlay, overlayExistingPostId, (game as { id: string }).id]);
+  }, [effectivePostId, (game as { id: string }).id]);
 
   const overlayFormLayout = useMemo(() => {
-    if (!inOverlay || !overlayExistingPostId) {
+    // 単体ページで投稿の有無取得中：開始済みならフォームは出さず読み込み表示
+    if (standaloneMineLoading) {
+      if (isGameStarted) {
+        return {
+          showLoadingExisting: true,
+          showEditableSummary: false,
+          showLockedSummary: false,
+          showScoreForm: false,
+        };
+      }
       return {
         showLoadingExisting: false,
         showEditableSummary: false,
         showLockedSummary: false,
         showScoreForm: true,
+      };
+    }
+
+    // 自分の投稿なし：試合開始後はスコア予想ブロックを出さない
+    if (!effectivePostId) {
+      return {
+        showLoadingExisting: false,
+        showEditableSummary: false,
+        showLockedSummary: false,
+        showScoreForm: !isGameStarted,
       };
     }
     if (existingSnapshot === "loading" || existingSnapshot === null) {
@@ -330,7 +428,7 @@ export default function PredictionFormV2({
         showLoadingExisting: false,
         showEditableSummary: false,
         showLockedSummary: false,
-        showScoreForm: true,
+        showScoreForm: !isGameStarted,
       };
     }
     if (!snap.editable) {
@@ -355,7 +453,13 @@ export default function PredictionFormV2({
       showLockedSummary: false,
       showScoreForm: true,
     };
-  }, [inOverlay, overlayExistingPostId, existingSnapshot, showScoreEdit]);
+  }, [
+    standaloneMineLoading,
+    isGameStarted,
+    effectivePostId,
+    existingSnapshot,
+    showScoreEdit,
+  ]);
 
   const snapPred =
     existingSnapshot !== null &&
@@ -430,17 +534,16 @@ export default function PredictionFormV2({
       const idToken = await me.getIdToken();
 
       const isPatchUpdate = Boolean(
-        inOverlay &&
-          overlayExistingPostId &&
+        effectivePostId &&
           existingSnapshot !== null &&
           existingSnapshot !== "loading" &&
           existingSnapshot.editable &&
           showScoreEdit
       );
 
-      if (isPatchUpdate && overlayExistingPostId) {
+      if (isPatchUpdate && effectivePostId) {
         const res = await fetch(
-          `/api/posts_v2/${encodeURIComponent(overlayExistingPostId)}`,
+          `/api/posts_v2/${encodeURIComponent(effectivePostId)}`,
           {
             method: "PATCH",
             headers: {
@@ -1138,7 +1241,7 @@ export default function PredictionFormV2({
                   />
                 </div>
               </div>
-              {showScoreEdit && overlayExistingPostId ? (
+              {showScoreEdit && effectivePostId ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -1191,7 +1294,7 @@ export default function PredictionFormV2({
                   ? isEn
                     ? "Submitting..."
                     : "投稿中…"
-                  : overlayExistingPostId && showScoreEdit
+                  : effectivePostId && showScoreEdit
                     ? isEn
                       ? "Update prediction"
                       : "予想を更新する"

@@ -20,9 +20,9 @@ function wrapIndex(index: number, length: number) {
   return (index + length) % length;
 }
 
-function formatLabel(key: MobileMetric, lang: Language, label: string) {
+function formatLabel(key: MobileMetric, lang: Language) {
   if (key === "upsetScore") return upsetShortLabel(lang);
-  return lang === "en" ? metricLabel(key, lang) : label;
+  return metricLabel(key, lang);
 }
 
 export default function RankingsMetricRow({
@@ -90,7 +90,7 @@ export default function RankingsMetricRow({
             }}
           >
             <span className="truncate">
-              {formatLabel(prevMetric.key, language, prevMetric.label)}
+              {formatLabel(prevMetric.key, language)}
             </span>
           </button>
         )}
@@ -126,7 +126,7 @@ export default function RankingsMetricRow({
           }}
         >
           <span className="truncate">
-            {formatLabel(currentMetric?.key, language, currentMetric?.label)}
+            {formatLabel(currentMetric!.key, language)}
           </span>
         </button>
 
@@ -154,7 +154,7 @@ export default function RankingsMetricRow({
             }}
           >
             <span className="truncate">
-              {formatLabel(nextMetric.key, language, nextMetric.label)}
+              {formatLabel(nextMetric.key, language)}
             </span>
           </button>
         )}

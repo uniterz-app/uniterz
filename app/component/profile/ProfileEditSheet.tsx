@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import { Camera, ChevronLeft, User } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage, db, auth } from "@/lib/firebase";
+import { storage, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import CyberAuthField from "@/app/component/auth/CyberAuthField";
 import CyberAuthTextarea from "@/app/component/auth/CyberAuthTextarea";
@@ -17,9 +16,9 @@ import type { Language } from "@/lib/i18n/language";
 import {
   guessLanguageFromNavigator,
   normalizeLanguage,
-  TIMEZONE_BY_LANGUAGE,
 } from "@/lib/i18n/language";
 import { ui } from "@/lib/i18n/ui";
+import { saveMeProfile } from "@/lib/api/saveMeProfile";
 
 type Props = {
   onClose: () => void;
@@ -113,24 +112,26 @@ export default function ProfileEditSheet({
       if (uploaded) photoURL = uploaded;
     }
 
-    await setDoc(
-      doc(db, "users", user.uid),
-      {
+    try {
+      await saveMeProfile({
         displayName: name || "",
         bio: bio || "",
         photoURL: photoURL || "",
-        photoCropY: cropY,
         language,
-        locale: language,
-        timeZone: TIMEZONE_BY_LANGUAGE[language],
         countryCode: countryCode || null,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    onSaved?.();
-    onClose();
+        photoCropY: cropY,
+      });
+      onSaved?.();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert(
+        ui(language, {
+          ja: "保存に失敗しました。時間をおいて再度お試しください。",
+          en: "Failed to save. Please try again later.",
+        })
+      );
+    }
     // 保存後はメニューを自動では開かない
   };
 

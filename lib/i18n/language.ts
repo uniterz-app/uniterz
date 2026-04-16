@@ -8,18 +8,15 @@ export const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
 
 export function normalizeLanguage(v: unknown): Language | null {
   if (v === "ja" || v === "en") return v;
-  // 中国語 UI を外したあとも、旧データの zh は英語扱いに寄せる
+  // 旧バージョンの中国語コードは英語 UI に寄せる
   if (v === "zh") return "en";
   return null;
 }
 
 export function guessLanguageFromNavigator(): Language {
-  if (
-    typeof navigator !== "undefined" &&
-    navigator.language?.toLowerCase().startsWith("ja")
-  ) {
-    return "ja";
-  }
+  if (typeof navigator === "undefined") return "en";
+  const low = navigator.language?.toLowerCase() ?? "";
+  if (low.startsWith("ja")) return "ja";
+  if (low.startsWith("zh")) return "en";
   return "en";
 }
-
