@@ -278,6 +278,14 @@ function ResultMatchHeader({
           <div className="result-card-streak-sweep__spin" />
         </div>
       ) : null}
+      {badge === "upset" ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-upset-sweep"
+          aria-hidden
+        >
+          <div className="result-card-upset-sweep__spin" />
+        </div>
+      ) : null}
       <div
         className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
         style={PROFILE_SHELL_GRID_STYLE}
@@ -370,7 +378,7 @@ function ResultMatchHeader({
 
           <div
             className={[
-              "font-black leading-none tracking-tight tabular-nums text-xl md:text-5xl",
+              "font-black leading-none tracking-tight tabular-nums text-xl text-white/85 md:text-5xl",
               resultStatsMetricNumClass,
             ].join(" ")}
           >
@@ -379,9 +387,12 @@ function ResultMatchHeader({
 
           {finalScore && (
             <div
-              className={`mt-2 text-sm font-bold tabular-nums opacity-85 sm:mt-2.5 sm:text-base ${resultStatsMetricNumClass}`}
+              className={`mt-2 text-sm font-bold tabular-nums sm:mt-2.5 sm:text-base ${resultStatsMetricNumClass}`}
             >
-              Final: {finalScore}
+              <span className="text-white/55">Final: </span>
+              <span className="text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)]">
+                {finalScore}
+              </span>
             </div>
           )}
         </div>

@@ -267,6 +267,14 @@ export default function MobileResultMatchHeader({
           <div className="result-card-streak-sweep__spin" />
         </div>
       ) : null}
+      {badge === "upset" ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-upset-sweep"
+          aria-hidden
+        >
+          <div className="result-card-upset-sweep__spin" />
+        </div>
+      ) : null}
       <div
         className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
         style={PROFILE_SHELL_GRID_STYLE}
@@ -353,7 +361,7 @@ export default function MobileResultMatchHeader({
 
           <div
             className={[
-              "font-black leading-none tracking-tight tabular-nums text-xl md:text-5xl",
+              "font-black leading-none tracking-tight tabular-nums text-xl text-white/85 md:text-5xl",
               resultStatsMetricNumClass,
             ].join(" ")}
           >
@@ -362,15 +370,17 @@ export default function MobileResultMatchHeader({
 
           {finalScore && (
             <div
-              className={`mt-1 flex flex-col items-center tabular-nums opacity-85 ${resultStatsMetricNumClass}`}
+              className={`mt-1 flex flex-col items-center tabular-nums ${resultStatsMetricNumClass}`}
             >
               <div
-                className="text-[9px] font-bold uppercase tracking-wide"
+                className="text-[9px] font-bold uppercase tracking-wide text-white/50"
                 style={teamNameFont}
               >
                 Final
               </div>
-              <div className="text-sm font-bold md:text-base">{finalScore}</div>
+              <div className="text-sm font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-base">
+                {finalScore}
+              </div>
             </div>
           )}
         </div>

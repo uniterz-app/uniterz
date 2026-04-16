@@ -6,12 +6,14 @@ import AuthBackdrop from "@/app/component/auth/AuthBackdrop";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import type { Language } from "@/lib/i18n/language";
+import { normalizeLanguage } from "@/lib/i18n/language";
 
 export default function MobileSignupPage() {
   const { status, fUser } = useFirebaseUser();
   const router = useRouter();
   const [handle, setHandle] = useState<string | null>(null);
-  const [language, setLanguage] = useState<string | null>(null);
+  const [language, setLanguage] = useState<Language | null>(null);
 
   /* ------------------------------------
    * ① ログイン済みの場合 → handle を読み込む
@@ -23,8 +25,7 @@ export default function MobileSignupPage() {
       const data = await getUserDocDataCached(fUser.uid);
       const h = data?.handle || data?.slug;
       setHandle(h || null);
-      const lang = data?.language;
-      setLanguage(lang === "ja" || lang === "en" ? lang : null);
+      setLanguage(normalizeLanguage(data?.language));
     };
 
     loadHandle();

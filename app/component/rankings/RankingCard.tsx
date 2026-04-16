@@ -16,6 +16,8 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
+import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 const FLAG_SRC: Record<string, string> = {
   US: "/flags/us.png",
@@ -260,12 +262,15 @@ export default function RankingCard({
   row: r,
   rank,
   metric,
+  rankPhase,
   onCountDone,
   language = "ja",
 }: {
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
+  /** ランキング画面からプロフィールへ行くときの戻り用（未指定時は play_in） */
+  rankPhase?: RankingPhase;
   onCountDone?: () => void;
   language?: Language;
 }) {
@@ -279,6 +284,10 @@ export default function RankingCard({
     ? "/mobile"
     : "/web";
   const handleOrUid = r.handle || r.uid;
+  const profileHref = profileHrefWithRankingsReturn(pathname, base, handleOrUid, {
+    metric,
+    phase: rankPhase ?? "play_in",
+  });
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(
@@ -291,7 +300,7 @@ export default function RankingCard({
 
   return (
     <Link
-      href={`${base}/u/${handleOrUid}`}
+      href={profileHref}
       className={["block min-w-0", isTop3 ? "mb-1.5" : "mb-2"].join(" ")}
     >
       <div

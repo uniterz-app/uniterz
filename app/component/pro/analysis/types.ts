@@ -1,6 +1,7 @@
 // app/component/pro/analysis/types.ts
 
 import type { RadarAxisLevels } from "./radarLevelUtils";
+import type { Language } from "@/lib/i18n/language";
 
 export type RadarMetric = {
   winRate: number; // 0–10（当月・10投稿以上ユーザー内の相対）
@@ -18,5 +19,5 @@ export type RadarChartProps = {
   /** 未指定時は右側の評価パネルを出さない（プレビュー互換） */
   axisLevels?: RadarAxisLevels | null;
   isSample?: boolean;
-  language?: "ja" | "en";
+  language?: Language;
 };

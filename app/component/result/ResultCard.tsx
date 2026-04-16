@@ -367,6 +367,14 @@ function ResultCardPresentationImpl({
           <div className="result-card-streak-sweep__spin" />
         </div>
       ) : null}
+      {badge === "upset" ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-upset-sweep"
+          aria-hidden
+        >
+          <div className="result-card-upset-sweep__spin" />
+        </div>
+      ) : null}
       <div
         className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
         style={PROFILE_SHELL_GRID_STYLE}
@@ -612,7 +620,7 @@ function ResultCardPresentationImpl({
         >
           <div
             className={[
-              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black",
+              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white/85",
               isMobile
                 ? mobileScheduleDense
                   ? "text-xl md:text-4xl"
@@ -626,7 +634,7 @@ function ResultCardPresentationImpl({
 
           {finalScore && (
             <div
-              className={`mt-1 whitespace-nowrap tabular-nums opacity-85 md:mt-1.5 ${
+              className={`mt-1 whitespace-nowrap tabular-nums text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:mt-1.5 ${
                 isMobile
                   ? "text-[13px] font-bold leading-tight"
                   : "text-base font-bold md:text-lg"

@@ -9,8 +9,6 @@ export function metricLabel(metric: MobileMetric, lang: Language): string {
     if (metric === "upsetScore") return "Upset Score";
     if (metric === "streak") return "Win Streak";
   }
-
-  // ja
   if (metric === "totalScore") return "総合スコア";
   if (metric === "winRate") return "勝率";
   if (metric === "marginPrecision") return "スコア精度";
@@ -21,15 +19,16 @@ export function metricLabel(metric: MobileMetric, lang: Language): string {
 }
 
 export function upsetShortLabel(lang: Language): string {
-  // UIが横幅小さめなので短縮形にする
-  return lang === "en" ? "Upset" : "アップセット";
+  if (lang === "en") return "Upset";
+  return "アップセット";
 }
 
 export function streakShortLabel(lang: Language): string {
-  return lang === "en" ? "Win Streak" : "連勝中";
+  if (lang === "en") return "Win Streak";
+  return "連勝中";
 }
 
 export function postsLabel(lang: Language): string {
-  return lang === "en" ? "Posts" : "投稿";
+  if (lang === "en") return "Posts";
+  return "投稿";
 }
-

@@ -226,6 +226,7 @@ export default function MobileRankingsPage() {
                 <TopPodium
                   rows={top3}
                   metric={metric}
+                  rankPhase={phase}
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
@@ -253,6 +254,7 @@ export default function MobileRankingsPage() {
                           row={r}
                           rank={i + 4}
                           metric={metric}
+                          rankPhase={phase}
                           language={language}
                         />
                       </motion.div>

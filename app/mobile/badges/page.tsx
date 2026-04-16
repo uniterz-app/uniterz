@@ -7,7 +7,6 @@ import { useUserBadges } from "@/app/component/badges/useUserBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import type { Language } from "@/lib/i18n/language";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 import BadgeDetailModal from "./BadgeDetailModal";
@@ -118,7 +117,7 @@ export default function MobileBadgesPage() {
         <BadgeDetailModal
           badge={selected}
           onClose={() => setSelected(null)}
-          language={language as Language}
+          language={language}
         />
       )}
       </div>

@@ -97,5 +97,6 @@ const ja: PlayoffBracketStrings = {
 };
 
 export function getPlayoffBracketStrings(lang: Language): PlayoffBracketStrings {
-  return lang === "en" ? en : ja;
+  if (lang === "en") return en;
+  return ja;
 }

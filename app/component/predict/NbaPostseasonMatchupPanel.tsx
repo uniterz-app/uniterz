@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
@@ -119,11 +119,23 @@ function fmtDiff(d: number) {
 
 const H2H_INJURY_NAMES_PER_ROW = 2;
 
+/** 略称（A.）と姓の間で改行されないよう、直後のスペースを NBSP にする */
+function h2hInjuryNameForWrap(name: string): string {
+  return name.replace(/\b([A-Z]\.) /g, "$1\u00a0");
+}
+
 function h2hHomeAwayLabel(role: "home" | "away"): string {
   return role === "home" ? "Home" : "Away";
 }
 
-function H2hInjuryNamesTwoPerRow({ names }: { names: string[] }): ReactNode {
+function H2hInjuryNamesTwoPerRow({
+  names,
+  alignEnd,
+}: {
+  names: string[];
+  /** true のとき右寄せ列（Spurs 側）。1 行内は名前単位で折り返し、イニシャルと姓が分断されないようにする */
+  alignEnd?: boolean;
+}): ReactNode {
   if (!names.length) {
     return <span className="text-white/38">—</span>;
   }
@@ -131,10 +143,29 @@ function H2hInjuryNamesTwoPerRow({ names }: { names: string[] }): ReactNode {
   for (let i = 0; i < names.length; i += H2H_INJURY_NAMES_PER_ROW) {
     rows.push(names.slice(i, i + H2H_INJURY_NAMES_PER_ROW));
   }
+  const rowClass = alignEnd
+    ? "flex flex-wrap justify-end gap-x-1"
+    : "flex flex-wrap justify-start gap-x-1";
   return (
     <span className="flex flex-col gap-y-1">
-      {rows.map((pair, idx) => (
-        <span key={idx}>{pair.join(" · ")}</span>
+      {rows.map((pair, rowIdx) => (
+        <span key={rowIdx} className={rowClass}>
+          {pair.map((name, i) => (
+            <Fragment key={`${rowIdx}-${i}-${name}`}>
+              {i > 0 ? (
+                <span
+                  className="shrink-0 self-center text-white/50"
+                  aria-hidden
+                >
+                  ·
+                </span>
+              ) : null}
+              <span className="shrink-0 whitespace-nowrap">
+                {h2hInjuryNameForWrap(name)}
+              </span>
+            </Fragment>
+          ))}
+        </span>
       ))}
     </span>
   );
@@ -391,7 +422,7 @@ export default function NbaPostseasonMatchupPanel({
                         "min-w-0 flex-1 text-right text-xs leading-relaxed text-white/82 sm:text-sm md:text-base",
                       ].join(" ")}
                     >
-                      <H2hInjuryNamesTwoPerRow names={g.injuriesLeft} />
+                      <H2hInjuryNamesTwoPerRow names={g.injuriesLeft} alignEnd />
                     </div>
                     <div
                       className={[

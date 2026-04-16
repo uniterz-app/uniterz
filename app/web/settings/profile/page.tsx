@@ -3,32 +3,29 @@
 import { useState, useEffect } from "react";
 import { Camera } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage, db, auth } from "@/lib/firebase";
+import { storage, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
-
-type Language = "ja" | "en";
-const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
-  ja: "Asia/Tokyo",
-  en: "America/New_York",
-};
+import type { Language } from "@/lib/i18n/language";
+import {
+  guessLanguageFromNavigator,
+  normalizeLanguage,
+} from "@/lib/i18n/language";
+import { ui } from "@/lib/i18n/ui";
+import { saveMeProfile } from "@/lib/api/saveMeProfile";
 
 export default function ProfileEditPage() {
   const router = useRouter();
 
-  const osIsJa =
-    typeof navigator !== "undefined" &&
-    navigator.language?.toLowerCase().startsWith("ja");
-
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
-  const [language, setLanguage] = useState<Language>(() => (osIsJa ? "ja" : "en"));
-  const isEn = language === "en";
+  const [language, setLanguage] = useState<Language>(() =>
+    guessLanguageFromNavigator()
+  );
   const [countryCode, setCountryCode] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPhotoURL, setCurrentPhotoURL] = useState<string | null>(null);
@@ -43,11 +40,8 @@ export default function ProfileEditPage() {
         setName(d.displayName ?? "");
         setBio(d.bio ?? "");
         setCurrentPhotoURL(d.photoURL ?? null);
-        if (d.language === "ja" || d.language === "en") {
-          setLanguage(d.language);
-        } else {
-          setLanguage(osIsJa ? "ja" : "en");
-        }
+        const norm = normalizeLanguage(d.language);
+        setLanguage(norm ?? guessLanguageFromNavigator());
         setCountryCode(typeof d.countryCode === "string" ? d.countryCode : "");
       }
     });
@@ -99,22 +93,24 @@ export default function ProfileEditPage() {
       }
     }
 
-    await setDoc(
-      doc(db, "users", user.uid),
-      {
+    try {
+      await saveMeProfile({
         displayName: name || "",
         bio: bio || "",
         photoURL: photoURL || "",
         language,
-        locale: language,
-        timeZone: TIMEZONE_BY_LANGUAGE[language],
         countryCode: countryCode || null,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    router.back();
+      });
+      router.back();
+    } catch (err) {
+      console.error(err);
+      alert(
+        ui(language, {
+          ja: "保存に失敗しました。時間をおいて再度お試しください。",
+          en: "Failed to save. Please try again later.",
+        })
+      );
+    }
   };
 
   const previewURL = selectedFile
@@ -142,10 +138,16 @@ export default function ProfileEditPage() {
         <header className="mb-6">
           <div>
             <h1 className="text-base font-semibold leading-tight">
-              {isEn ? "Profile Settings" : "プロフィール設定"}
+              {ui(language, {
+                ja: "プロフィール設定",
+                en: "Profile Settings",
+              })}
             </h1>
             <p className="text-xs text-white/60">
-              {isEn ? "Edit your icon, name, and bio." : "アイコン・名前・自己紹介を編集できます"}
+              {ui(language, {
+                ja: "アイコン・名前・自己紹介を編集できます",
+                en: "Edit your icon, name, and bio.",
+              })}
             </p>
           </div>
         </header>
@@ -187,11 +189,11 @@ export default function ProfileEditPage() {
           {/* ===== 名前 ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {isEn ? "Name" : "名前"}
+              {ui(language, { ja: "名前", en: "Name" })}
             </label>
             <input
               type="text"
-              placeholder={isEn ? "Name" : "名前"}
+              placeholder={ui(language, { ja: "名前", en: "Name" })}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
@@ -201,10 +203,10 @@ export default function ProfileEditPage() {
           {/* ===== 自己紹介 ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {isEn ? "Bio" : "自己紹介"}
+              {ui(language, { ja: "自己紹介", en: "Bio" })}
             </label>
             <textarea
-              placeholder={isEn ? "Bio" : "自己紹介"}
+              placeholder={ui(language, { ja: "自己紹介", en: "Bio" })}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60 min-h-[96px]"
@@ -214,29 +216,41 @@ export default function ProfileEditPage() {
           {/* ===== 使用言語 ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {isEn ? "App Language" : "使用言語"}
+              {ui(language, {
+                ja: "使用言語",
+                en: "App Language",
+              })}
             </label>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
             >
-              <option value="ja">{isEn ? "Japanese" : "日本語"}</option>
-              <option value="en">English</option>
+              <option value="ja">
+                {ui(language, { ja: "日本語", en: "Japanese" })}
+              </option>
+              <option value="en">
+                {ui(language, { ja: "English", en: "English" })}
+              </option>
             </select>
           </div>
 
           {/* ===== 住んでいる国（任意） ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {isEn ? "Country (optional)" : "住んでいる国（任意）"}
+              {ui(language, {
+                ja: "住んでいる国（任意）",
+                en: "Country (optional)",
+              })}
             </label>
             <select
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
             >
-              <option value="">{isEn ? "Not set" : "未設定"}</option>
+              <option value="">
+                {ui(language, { ja: "未設定", en: "Not set" })}
+              </option>
               {COUNTRY_OPTIONS.map((c) => (
                 <option key={c.code} value={c.code}>
                   {language === "ja" ? c.labelJa : c.labelEn}
@@ -251,7 +265,15 @@ export default function ProfileEditPage() {
             disabled={uploading}
             className="mt-2 w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-400 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {uploading ? (isEn ? "Uploading..." : "アップロード中...") : isEn ? "Save Changes" : "変更を保存"}
+            {uploading
+              ? ui(language, {
+                  ja: "アップロード中...",
+                  en: "Uploading...",
+                })
+              : ui(language, {
+                  ja: "変更を保存",
+                  en: "Save Changes",
+                })}
           </button>
         </form>
       </SettingsNeonCard>
