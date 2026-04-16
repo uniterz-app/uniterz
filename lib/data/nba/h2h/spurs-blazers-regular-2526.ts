@@ -19,14 +19,10 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
     rightTeamDisplay: H2H_RIGHT,
     scoreLeft: 115,
     scoreRight: 102,
-    homeTeamSide: "left",
-    injuriesLeft: ["S. Castle", "V. Wembanyama"],
-    injuriesRight: [
-      "S. Henderson",
-      "J. Holiday",
-      "D. Lillard",
-      "M. Thybulle",
-    ],
+    /** Portland（Blazers）ホーム — Spurs @ Trail Blazers */
+    homeTeamSide: "right",
+    injuriesLeft: ["V. Wembanyama", "S. Castle", "J. McLaughlin"],
+    injuriesRight: ["J. Holiday", "D. Lillard", "M. Thybulle"],
   },
   {
     id: "h2h-spurs-blazers-2026-01-02",
@@ -36,16 +32,15 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
     rightTeamDisplay: H2H_RIGHT,
     scoreLeft: 110,
     scoreRight: 115,
-    homeTeamSide: "right",
-    injuriesLeft: ["D. Vassell", "V. Wembanyama"],
+    /** San Antonio（Spurs）ホーム — Trail Blazers @ Spurs */
+    homeTeamSide: "left",
+    injuriesLeft: ["V. Wembanyama", "D. Vassell"],
     injuriesRight: [
       "J. Grant",
-      "S. Henderson",
-      "J. Holiday",
-      "D. Lillard",
+      "R. Williams III",
       "M. Thybulle",
       "B. Wesley",
-      "R. Williams III",
+      "D. Reath",
     ],
   },
   {
@@ -56,9 +51,16 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
     rightTeamDisplay: H2H_RIGHT,
     scoreLeft: 112,
     scoreRight: 101,
+    /** San Antonio（Spurs）ホーム — Trail Blazers @ Spurs */
     homeTeamSide: "left",
-    injuriesLeft: ["S. Castle", "V. Wembanyama"],
-    injuriesRight: ["J. Grant", "D. Lillard"],
+    injuriesLeft: [
+      "V. Wembanyama",
+      "S. Castle",
+      "K. Olynyk",
+      "B. Biyombo",
+      "M. Plumlee",
+    ],
+    injuriesRight: ["V. Krejci", "S. Sharpe", "D. Lillard"],
   },
 ];
 
