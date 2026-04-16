@@ -50,10 +50,15 @@ import {
   gameMatchesMarginBounds,
   parseMarginBoundParam,
 } from "@/lib/games/marginFilter";
-import { toStatusFromGameDoc } from "@/lib/games/transform";
+import { toStatus } from "@/lib/games/transform";
 
 /** 日付ストリップの後にリストを出すまでの待ち（秒） */
 const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.14;
+
+function isFinalGameRow(row: Record<string, unknown>): boolean {
+  if (row.final === true || row.final === 1) return true;
+  return toStatus(row.status) === "final";
+}
 
 /* =========================
    Date Utils
@@ -565,7 +570,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!games) return false;
     if (games.length === 0) return false;
     return games.every((g: Record<string, unknown>) => {
-      return toStatusFromGameDoc(g) === "final";
+      return isFinalGameRow(g);
     });
   }, [selected, games]);
 
