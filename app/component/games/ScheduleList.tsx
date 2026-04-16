@@ -134,8 +134,13 @@ export default function ScheduleList({
   );
 
   const propsList = useMemo<MatchCardProps[]>(() => {
-    return (games ?? []).map(
-      (g: any) => toMatchCardProps(g, { dense }) as MatchCardProps
+    const list = games ?? [];
+    return list.map(
+      (g: any) =>
+        toMatchCardProps(g, {
+          dense,
+          peerGamesForSeriesInference: list,
+        }) as MatchCardProps
     );
   }, [games, dense]);
 
