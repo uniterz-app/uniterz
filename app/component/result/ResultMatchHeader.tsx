@@ -8,7 +8,11 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -179,11 +183,17 @@ function ResultMatchHeader({
     getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#f43f5e";
-  const homeSecondaryColor = getTeamSecondaryColor(
+  const homeJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, post.home?.teamId) ??
+    homeColor;
+  const awayJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, post.away?.teamId) ??
+    awayColor;
+  const homeJerseySecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     post.home?.teamId
   );
-  const awaySecondaryColor = getTeamSecondaryColor(
+  const awayJerseySecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     post.away?.teamId
   );
@@ -322,8 +332,8 @@ function ResultMatchHeader({
         <div className="flex flex-col items-center">
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={homeColor}
-              accentEnd={homeSecondaryColor}
+              accent={homeJerseyColor}
+              accentEnd={homeJerseySecondaryColor}
               className={jerseyMarkClass}
             />
           ) : (
@@ -390,8 +400,8 @@ function ResultMatchHeader({
         <div className="flex flex-col items-center">
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={awayColor}
-              accentEnd={awaySecondaryColor}
+              accent={awayJerseyColor}
+              accentEnd={awayJerseySecondaryColor}
               className={jerseyMarkClass}
             />
           ) : (
