@@ -88,6 +88,7 @@ export default function WebRankingsShell() {
     top3,
     restRows,
     myRank,
+    myRankDeltaPlaces,
     myRow,
     myUid,
   } = useWebRankings(phase);
@@ -152,6 +153,7 @@ export default function WebRankingsShell() {
               statsScramble={listReady && personalPending}
               language={language}
               isPro={user.plan === "pro"}
+              rankDeltaPlaces={myRankDeltaPlaces}
             />
           </div>
 

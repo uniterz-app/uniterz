@@ -18,6 +18,7 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
+import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { Crown } from "lucide-react";
 
 /* =========================
@@ -630,29 +631,28 @@ export default function TopPodium({
                       {/* バッジは SVG がはみ出すため、overflow-hidden は名前テキスト側のみにかける */}
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 max-w-full items-center gap-1">
-                          <div className="min-w-0 flex-1 overflow-hidden">
-                            <div
-                              className={[
-                                "truncate font-black leading-none tracking-[0.005em]",
-                                jp.className,
-                                s.nameText,
-                              ].join(" ")}
+                          <div
+                            className={[
+                              "min-w-0 truncate font-black leading-none tracking-[0.005em]",
+                              jp.className,
+                              s.nameText,
+                            ].join(" ")}
+                            style={{
+                              color: "rgba(255,255,255,0.94)",
+                            }}
+                          >
+                            <span
                               style={{
-                                color: "rgba(255,255,255,0.94)",
+                                textShadow: [
+                                  "0 1px 1px rgba(0,0,0,0.32)",
+                                  "0 2px 4px rgba(0,0,0,0.18)",
+                                ].join(", "),
                               }}
                             >
-                              <span
-                                style={{
-                                  textShadow: [
-                                    "0 1px 1px rgba(0,0,0,0.32)",
-                                    "0 2px 4px rgba(0,0,0,0.18)",
-                                  ].join(", "),
-                                }}
-                              >
-                                {row.displayName ?? row.handle ?? "Unknown"}
-                              </span>
-                            </div>
+                              {row.displayName ?? row.handle ?? "Unknown"}
+                            </span>
                           </div>
+                          <RankDeltaBadge delta={row.rankDeltaPlaces} />
                           {row.plan === "pro" ? (
                             <ProCyberBadge
                               {...proBadgeStaticMotion}

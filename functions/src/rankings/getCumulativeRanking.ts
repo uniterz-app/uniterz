@@ -2,6 +2,10 @@
 
 import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldPath } from "firebase-admin/firestore";
+import {
+  getYesterdayDateKeyJST,
+  RANK_SNAPSHOT_HISTORY_SUBCOL,
+} from "./buildCumulativeRankingSnapshot";
 
 function db() {
   return getFirestore();
@@ -34,6 +38,7 @@ type RankingRow = {
   activeWinStreak: number;
 
   rank: number;
+  rankDeltaPlaces?: number | null;
 };
 
 function isMetric(v: unknown): v is Metric {
@@ -126,6 +131,7 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
 
     let myRank: number | null = null;
     let myRow: RankingRow | null = null;
+    let myRankDeltaPlaces: number | null = null;
 
     /* =========================
      * ② 自分の順位 + 自分のデータ
@@ -146,6 +152,7 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
             rows,
             myRank: null,
             myRow: null,
+            myRankDeltaPlaces: null,
           });
           return;
         }
@@ -194,6 +201,33 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
           myRank = (higherSnap.data().count ?? 0) + 1;
         }
 
+        const yKey = getYesterdayDateKeyJST();
+        const histSnap = await db()
+          .collection("cumulative_stats")
+          .doc(uid)
+          .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+          .doc(yKey)
+          .get();
+        if (histSnap.exists && myRank != null) {
+          const hd = histSnap.data() as Record<string, unknown> | undefined;
+          const phaseBlock = hd?.[phase] as
+            | Partial<Record<Metric, number>>
+            | undefined;
+          const prevRaw = phaseBlock?.[metric];
+          const prevRank =
+            typeof prevRaw === "number" &&
+            Number.isFinite(prevRaw) &&
+            prevRaw >= 1
+              ? Math.floor(prevRaw)
+              : null;
+          if (prevRank != null) {
+            const d = prevRank - myRank;
+            if (d !== 0) {
+              myRankDeltaPlaces = d;
+            }
+          }
+        }
+
         // myRow は cumulative_stats の plan を優先（追加readを避ける）
         const myPlanResolved: "free" | "pro" =
           me.plan === "pro" ? "pro" : "free";
@@ -216,6 +250,7 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
           activeWinStreak: me.activeWinStreak ?? 0,
 
           rank: myRank,
+          rankDeltaPlaces: myRankDeltaPlaces,
         };
       }
     }
@@ -231,6 +266,7 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
       rows,
       myRank,
       myRow,
+      myRankDeltaPlaces,
     });
     return;
   } catch (e: any) {

@@ -97,6 +97,7 @@ export default function MobileRankingsPage() {
   );
 
   const myRank = bundle?.myRank ?? null;
+  const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
@@ -184,6 +185,7 @@ export default function MobileRankingsPage() {
               language={language}
               isPro={user.plan === "pro"}
               mobileWide
+              rankDeltaPlaces={myRankDeltaPlaces}
             />
           </div>
 
