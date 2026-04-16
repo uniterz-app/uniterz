@@ -55,8 +55,6 @@ export default function DayStrip({
   const firstAlignRef = useRef(true);
   const scrollTimer = useRef<number | null>(null);
   const scrollingByCode = useRef(false);
-  /** ストリップ上の日をタップした直後は、smooth スクロールや snap と二重にならないよう整列・スナップ選択を抑止 */
-  const skipProgrammaticAlignUntil = useRef(0);
   /** scrollIntoView 直後〜motion の子が落ち着くまで scroll 由来の snap 選択を無効化（初回オープン時の誤日付へ寄るのを防ぐ） */
   const suppressSnapPickUntil = useRef(0);
 
@@ -80,12 +78,6 @@ export default function DayStrip({
     const idx = keys.indexOf(scrollKey);
     const el = idx >= 0 ? btnRefs.current[idx] : null;
     if (!el) return;
-
-    // タップで選んだ日は既に画面内にあるので中央寄せしない（端の日で snap / smooth が残りスクロールと競合するのを防ぐ）
-    if (Date.now() < skipProgrammaticAlignUntil.current) {
-      didInit.current = true;
-      return;
-    }
 
     scrollingByCode.current = true;
     if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
@@ -126,8 +118,6 @@ export default function DayStrip({
     if (!wrap) return;
 
     if (Date.now() < suppressSnapPickUntil.current) return;
-    if (Date.now() < skipProgrammaticAlignUntil.current) return;
-
     // offsetLeft は transform 付き祖先では列全体に対する座標にならないため、ビューポート基準で中央に近い日を選ぶ
     const wrapRect = wrap.getBoundingClientRect();
     const stripCenterX = wrapRect.left + wrapRect.width / 2;
@@ -189,10 +179,6 @@ export default function DayStrip({
       if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
     };
   }, [dates, snapSelectOnScroll, selectedKey, timeZone]);
-
-  const markStripPointerPick = () => {
-    skipProgrammaticAlignUntil.current = Date.now() + 520;
-  };
 
   const sz = sizeMap[size];
   /** flex gap と visibleCount 用の basis 計算を一致させる */
@@ -303,17 +289,14 @@ export default function DayStrip({
                   if (el) btnRefs.current[i] = el;
                   if (selected) selRef.current = el;
                 }}
-                onPointerDown={() => {
-                  markStripPointerPick();
-                }}
-                onTap={() => {
-                  // タップ 1 回で確定（onClick よりタッチで安定）
+                onClick={() => {
+                  // クリック/タップ確定後、selected 追従の中央寄せで表示を更新する
                   scrollingByCode.current = true;
                   if (scrollTimer.current) window.clearTimeout(scrollTimer.current);
                   onSelect(d);
                   window.setTimeout(() => {
                     scrollingByCode.current = false;
-                  }, 320);
+                  }, 180);
                 }}
                 className="flex touch-manipulation flex-col items-center justify-center"
                 type="button"
