@@ -66,14 +66,15 @@ async function fetchBulkFromFunctions(
       const json = await res.json();
 
       if (!res.ok) {
-        return {
-          metric,
-          ok: false,
-          rows: [],
-          count: 0,
-          myRank: null,
-          myRow: null,
-        };
+      return {
+        metric,
+        ok: false,
+        rows: [],
+        count: 0,
+        myRank: null,
+        myRow: null,
+        myRankDeltaPlaces: null,
+      };
       }
 
       return {
@@ -83,6 +84,7 @@ async function fetchBulkFromFunctions(
         count: json?.count ?? 0,
         myRank: json?.myRank ?? null,
         myRow: json?.myRow ?? null,
+        myRankDeltaPlaces: json?.myRankDeltaPlaces ?? null,
       };
     })
   );

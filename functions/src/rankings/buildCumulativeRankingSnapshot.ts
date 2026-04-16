@@ -38,15 +38,25 @@ function toDateKeyJST(d: Date) {
   return `${y}-${m}-${dd}`;
 }
 
-function getTodayJST() {
-  return toDateKeyJST(new Date());
+function getTodayJST(now: Date = new Date()) {
+  return toDateKeyJST(now);
 }
 
+/** JST の「昨日」の dateKey（履歴 doc id と一致） */
+export function getYesterdayDateKeyJST(now: Date = new Date()): string {
+  const todayKey = getTodayJST(now);
+  const [y, m, d] = todayKey.split("-").map(Number);
+  const prev = new Date(Date.UTC(y, m - 1, d - 1));
+  const yy = prev.getUTCFullYear();
+  const mm = String(prev.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(prev.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
 
 /* =========================================================
  * Utils
  * =======================================================*/
-/** ランキング掲載用。phase 指定時は rankingByPhase を優先 */
+/** Leaderboard slice: prefer `rankingByPhase[phase]` when `phase` is set. */
 function rankingSlice(d: any, phase?: RankingPhase) {
   if (phase) {
     const byPhase = d.rankingByPhase?.[phase];
@@ -161,6 +171,62 @@ function assignCompetitionRanks(
 
 type PhaseRankMap = Partial<Record<Metric, number>>;
 
+type SnapshotRow = BaseRow & {
+  rank: number;
+  rankDeltaPlaces: number | null;
+};
+
+function computeRankDeltaPlaces(
+  prevRank: number | null,
+  currentRank: number
+): number | null {
+  if (prevRank == null || currentRank < 1) return null;
+  const d = prevRank - currentRank;
+  if (d === 0) return null;
+  return d;
+}
+
+async function fetchYesterdayRanksForUids(
+  uids: string[],
+  yesterdayKey: string
+): Promise<Map<string, { play_in: PhaseRankMap; playoffs: PhaseRankMap } | null>> {
+  const out = new Map<
+    string,
+    { play_in: PhaseRankMap; playoffs: PhaseRankMap } | null
+  >();
+  if (uids.length === 0) return out;
+
+  const firestore = db();
+  const CHUNK = 200;
+  for (let i = 0; i < uids.length; i += CHUNK) {
+    const chunk = uids.slice(i, i + CHUNK);
+    const refs = chunk.map((uid) =>
+      firestore
+        .collection("cumulative_stats")
+        .doc(uid)
+        .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+        .doc(yesterdayKey)
+    );
+    const snaps = await firestore.getAll(...refs);
+    snaps.forEach((s, j) => {
+      const uid = chunk[j]!;
+      if (!s.exists) {
+        out.set(uid, null);
+        return;
+      }
+      const d = s.data() as {
+        play_in?: PhaseRankMap;
+        playoffs?: PhaseRankMap;
+      };
+      out.set(uid, {
+        play_in: (d?.play_in ?? {}) as PhaseRankMap,
+        playoffs: (d?.playoffs ?? {}) as PhaseRankMap,
+      });
+    });
+  }
+  return out;
+}
+
 /* =========================================================
  * Main
  * =======================================================*/
@@ -178,6 +244,14 @@ export async function buildCumulativeRankingSnapshot() {
     }
     return rankByUid.get(uid)!;
   }
+
+  type Top20Job = {
+    phase: RankingPhase;
+    metric: Metric;
+    rows: Array<BaseRow & { rank: number }>;
+  };
+  const top20Jobs: Top20Job[] = [];
+  const topUidSet = new Set<string>();
 
   for (const phase of RANKING_PHASES) {
     const baseRows: BaseRow[] = snap.docs
@@ -219,20 +293,48 @@ export async function buildCumulativeRankingSnapshot() {
         ...row,
         rank: ranks.get(row.uid) ?? 0,
       }));
-
-      await db()
-        .collection("cumulative_ranking_snapshots")
-        .doc(`${phase}_${metric}`)
-        .set(
-          {
-            phase,
-            metric,
-            rows: top20,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
+      for (const r of top20) {
+        topUidSet.add(r.uid);
+      }
+      top20Jobs.push({ phase, metric, rows: top20 });
     }
+  }
+
+  const yesterdayKey = getYesterdayDateKeyJST();
+  const prevByUid = await fetchYesterdayRanksForUids(
+    [...topUidSet],
+    yesterdayKey
+  );
+
+  for (const { phase, metric, rows } of top20Jobs) {
+    const enriched: SnapshotRow[] = rows.map((row) => {
+      const prevBlock = prevByUid.get(row.uid);
+      const prevRaw = prevBlock?.[phase]?.[metric];
+      const prevRank =
+        typeof prevRaw === "number" &&
+        Number.isFinite(prevRaw) &&
+        prevRaw >= 1
+          ? Math.floor(prevRaw)
+          : null;
+      return {
+        ...row,
+        rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
+      };
+    });
+
+    await db()
+      .collection("cumulative_ranking_snapshots")
+      .doc(`${phase}_${metric}`)
+      .set(
+        {
+          phase,
+          metric,
+          rows: enriched,
+          updatedAt: FieldValue.serverTimestamp(),
+          rankDeltaBasisDateKey: yesterdayKey,
+        },
+        { merge: true }
+      );
   }
 
   const firestore = db();
@@ -285,5 +387,6 @@ export async function buildCumulativeRankingSnapshot() {
     metrics: METRICS.length,
     ranksWritten: rankByUid.size,
     historyDateKey: dateKey,
+    rankDeltaBasisDateKey: yesterdayKey,
   };
 }

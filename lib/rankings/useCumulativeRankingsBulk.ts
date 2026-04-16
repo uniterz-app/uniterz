@@ -11,6 +11,7 @@ export type BulkMetricPayload = {
   count: number;
   myRank: number | null;
   myRow: Record<string, unknown> | null;
+  myRankDeltaPlaces: number | null;
 };
 
 const ANON_KEY = "__anon__";
@@ -22,6 +23,7 @@ function emptyBulkMetric(): BulkMetricPayload {
     count: 0,
     myRank: null,
     myRow: null,
+    myRankDeltaPlaces: null,
   };
 }
 
@@ -45,6 +47,8 @@ function mergeMetricBundles(
         ...inc,
         myRank: inc.myRank ?? old.myRank,
         myRow: (inc.myRow ?? old.myRow) as Record<string, unknown> | null,
+        myRankDeltaPlaces:
+          inc.myRankDeltaPlaces ?? old.myRankDeltaPlaces ?? null,
       };
     } else {
       out[k] = inc;
@@ -86,10 +90,13 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
 
   useEffect(() => {
     let cancelled = false;
+    // Phase changed: drop previous phase bundles immediately
+    setByMetric(null);
+    setAppliedTotalPointsUid(null);
+    setLoading(true);
 
     void (async () => {
       const g = ++mountPrimaryGenRef.current;
-      setLoading(true);
       try {
         const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase);
         if (cancelled || g !== mountPrimaryGenRef.current) return;

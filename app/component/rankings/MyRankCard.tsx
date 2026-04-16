@@ -15,6 +15,7 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
+import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 
 type Props = {
   rank: number | null;
@@ -31,6 +32,8 @@ type Props = {
   isPro?: boolean;
   /** モバイルランキング用：外側パディングを抑えてカードを横に少し広げる */
   mobileWide?: boolean;
+  /** 前日比順位（正=上昇）。API の myRankDeltaPlaces */
+  rankDeltaPlaces?: number | null;
 };
 
 function formatValue(metric: MobileMetric, value: number) {
@@ -148,6 +151,7 @@ export default function MyRankCard({
   language = "ja",
   isPro = false,
   mobileWide = false,
+  rankDeltaPlaces = null,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const ready = !loading;
@@ -275,15 +279,20 @@ export default function MyRankCard({
             >
               YOUR RANK
             </div>
-            <div
-              className={[numClass, "leading-none"].join(" ")}
-              style={{
-                fontSize: 21,
-                color: rankStyle.color,
-                textShadow: rankStyle.textShadow,
-              }}
-            >
-              {loading || rank == null ? "--" : `#${rank}`}
+            <div className="flex items-baseline justify-center gap-1">
+              <div
+                className={[numClass, "leading-none"].join(" ")}
+                style={{
+                  fontSize: 21,
+                  color: rankStyle.color,
+                  textShadow: rankStyle.textShadow,
+                }}
+              >
+                {loading || rank == null ? "--" : `#${rank}`}
+              </div>
+              {!loading && rank != null ? (
+                <RankDeltaBadge delta={rankDeltaPlaces} />
+              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -468,15 +477,20 @@ export default function MyRankCard({
           >
             YOUR RANK
           </div>
-          <div
-            className={[numClass, "leading-none"].join(" ")}
-            style={{
-              fontSize: 21,
-              color: rankStyle.color,
-              textShadow: rankStyle.textShadow,
-            }}
-          >
-            {centerContent}
+          <div className="flex items-baseline justify-center gap-1">
+            <div
+              className={[numClass, "leading-none"].join(" ")}
+              style={{
+                fontSize: 21,
+                color: rankStyle.color,
+                textShadow: rankStyle.textShadow,
+              }}
+            >
+              {centerContent}
+            </div>
+            {showSideColumns && !loading && rank != null ? (
+              <RankDeltaBadge delta={rankDeltaPlaces} />
+            ) : null}
           </div>
         </motion.div>
 
