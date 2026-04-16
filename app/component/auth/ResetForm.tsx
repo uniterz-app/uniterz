@@ -126,12 +126,12 @@ export default function ResetForm({ variant = "web" }: Props) {
                   <FaEnvelope aria-hidden />
                 </span>
               }
-            />
-          </div>
+          />
+        </div>
 
-          <button
-            type="submit"
-            disabled={busy}
+        <button
+          type="submit"
+          disabled={busy}
             onPointerDown={() => setPressed(true)}
             onPointerUp={() => setPressed(false)}
             onPointerCancel={() => setPressed(false)}
@@ -146,9 +146,9 @@ export default function ResetForm({ variant = "web" }: Props) {
             ].join(" ")}
           >
             {busy ? ui.sending : ui.sendCta}
-          </button>
+        </button>
 
-          {msg && (
+        {msg && (
             <p className={`mt-4 ${bodySans} text-emerald-300/95`}>{msg}</p>
           )}
           {err && <p className={`mt-4 ${bodySans} text-red-300/95`}>{err}</p>}

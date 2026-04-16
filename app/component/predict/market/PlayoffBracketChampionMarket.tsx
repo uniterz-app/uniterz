@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { nameBebas } from "@/lib/fonts";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import type { Language } from "@/lib/i18n/language";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
@@ -92,7 +92,7 @@ export default function PlayoffBracketChampionMarket({
           short: code,
           count,
           pct: percent(count, totalEntries),
-          color: getTeamPrimaryColor("nba", teamId) ?? "#3b82f6",
+          color: getTeamJerseyPrimaryColor("nba", teamId) ?? "#3b82f6",
         };
       })
       .sort((a, b) => b.count - a.count);

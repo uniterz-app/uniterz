@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import {
   getPlayoffBracketConfig,
@@ -234,11 +237,17 @@ function SeriesCard({
   const teamBPct = percent(countB, total);
 
   const colorA =
-    getTeamPrimaryColor("nba", NBA_TEAM_ID_BY_CODE[teamA]) ?? "#3b82f6";
+    getTeamJerseyPrimaryColor("nba", NBA_TEAM_ID_BY_CODE[teamA]) ?? "#3b82f6";
   const colorB =
-    getTeamPrimaryColor("nba", NBA_TEAM_ID_BY_CODE[teamB]) ?? "#ef4444";
-  const colorAEnd = getTeamSecondaryColor("nba", NBA_TEAM_ID_BY_CODE[teamA]);
-  const colorBEnd = getTeamSecondaryColor("nba", NBA_TEAM_ID_BY_CODE[teamB]);
+    getTeamJerseyPrimaryColor("nba", NBA_TEAM_ID_BY_CODE[teamB]) ?? "#ef4444";
+  const colorAEnd = getTeamJerseySecondaryColor(
+    "nba",
+    NBA_TEAM_ID_BY_CODE[teamA]
+  );
+  const colorBEnd = getTeamJerseySecondaryColor(
+    "nba",
+    NBA_TEAM_ID_BY_CODE[teamB]
+  );
 
   const pctClassA = getPctTextClass(teamAPct, teamBPct, total > 0);
   const pctClassB = getPctTextClass(teamBPct, teamAPct, total > 0);
