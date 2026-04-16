@@ -5,9 +5,9 @@ import type {
 
 export const MAGIC_HORNETS_TEAM_IDS = ["nba-magic", "nba-hornets"] as const;
 
-/** H2Hカードは左=Hornets、右=Magic で固定 */
-const H2H_LEFT = "Hornets";
-const H2H_RIGHT = "Magic";
+/** H2Hカードは左=Magic、右=Hornets で固定 */
+const H2H_LEFT = "Magic";
+const H2H_RIGHT = "Hornets";
 
 /** 2025-26 レギュラー Magic vs Hornets（4試合） */
 export const magicHornetsH2HGames: NbaH2HGameCard[] = [
@@ -17,11 +17,11 @@ export const magicHornetsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2025-10-31",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 107,
-    scoreRight: 123,
-    homeTeamSide: "left",
-    injuriesLeft: ["B. Miller", "J. Green", "G. Williams"],
-    injuriesRight: ["J. Suggs", "M. Wagner", "J. Cain"],
+    scoreLeft: 123,
+    scoreRight: 107,
+    homeTeamSide: "right",
+    injuriesLeft: ["J. Suggs", "M. Wagner", "J. Cain"],
+    injuriesRight: ["B. Miller", "J. Green", "G. Williams"],
   },
   {
     id: "h2h-magic-hornets-2025-12-26",
@@ -29,11 +29,11 @@ export const magicHornetsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2025-12-27",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 120,
-    scoreRight: 105,
-    homeTeamSide: "right",
-    injuriesLeft: ["R. Kalkbrenner", "M. Plumlee", "G. Williams"],
-    injuriesRight: ["F. Wagner", "J. Suggs", "M. Wagner"],
+    scoreLeft: 105,
+    scoreRight: 120,
+    homeTeamSide: "left",
+    injuriesLeft: ["F. Wagner", "J. Suggs", "M. Wagner"],
+    injuriesRight: ["R. Kalkbrenner", "M. Plumlee", "G. Williams"],
   },
   {
     id: "h2h-magic-hornets-2026-01-22",
@@ -41,11 +41,11 @@ export const magicHornetsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2026-01-23",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 124,
-    scoreRight: 97,
-    homeTeamSide: "right",
-    injuriesLeft: ["T. Mann", "M. Plumlee", "L. McNeeley"],
-    injuriesRight: ["F. Wagner", "J. Suggs", "C. Castleton"],
+    scoreLeft: 97,
+    scoreRight: 124,
+    homeTeamSide: "left",
+    injuriesLeft: ["F. Wagner", "J. Suggs", "C. Castleton"],
+    injuriesRight: ["T. Mann", "M. Plumlee", "L. McNeeley"],
   },
   {
     id: "h2h-magic-hornets-2026-03-19",
@@ -53,16 +53,16 @@ export const magicHornetsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2026-03-20",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 130,
-    scoreRight: 111,
-    homeTeamSide: "left",
-    injuriesLeft: ["T. Salaun", "L. McNeeley"],
-    injuriesRight: [
+    scoreLeft: 111,
+    scoreRight: 130,
+    homeTeamSide: "right",
+    injuriesLeft: [
       "F. Wagner",
       "J. Isaac",
       "W. Carter Jr.",
       "A. Black",
     ],
+    injuriesRight: ["T. Salaun", "L. McNeeley"],
   },
 ];
 
@@ -80,8 +80,8 @@ function magicHornetsH2HStatsFromGames(games: NbaH2HGameCard[]): {
     if (g.scoreLeft == null || g.scoreRight == null) {
       throw new Error(`magicHornetsH2H: missing scores for ${g.id}`);
     }
-    hornetsPts += g.scoreLeft;
-    magicPts += g.scoreRight;
+    magicPts += g.scoreLeft;
+    hornetsPts += g.scoreRight;
   }
   const n = games.length;
   const r1 = (x: number) => Number(x.toFixed(1));
