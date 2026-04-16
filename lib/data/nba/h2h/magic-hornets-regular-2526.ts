@@ -3,86 +3,85 @@ import type {
   NbaH2HAverages,
 } from "@/app/component/predict/NbaPostseasonMatchupPanel";
 
-export const HORNETS_MAGIC_TEAM_IDS = ["nba-hornets", "nba-magic"] as const;
+export const MAGIC_HORNETS_TEAM_IDS = ["nba-magic", "nba-hornets"] as const;
 
-/** H2Hカードは左=Magic、右=Hornets で固定（従来の左右・スコア・ホーム表示・欠場を反転） */
-const H2H_LEFT = "Magic";
-const H2H_RIGHT = "Hornets";
+/** H2Hカードは左=Hornets、右=Magic で固定 */
+const H2H_LEFT = "Hornets";
+const H2H_RIGHT = "Magic";
 
-/** 2025-26 レギュラー Magic vs Hornets（4試合・マジック 1勝3敗） */
-export const hornetsMagicH2HGames: NbaH2HGameCard[] = [
+/** 2025-26 レギュラー Magic vs Hornets（4試合） */
+export const magicHornetsH2HGames: NbaH2HGameCard[] = [
   {
-    id: "h2h-hornets-magic-2025-10-30",
+    id: "h2h-magic-hornets-2025-10-30",
     dateEt: "2025-10-30",
     dateJst: "2025-10-31",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 123,
-    scoreRight: 107,
+    scoreLeft: 107,
+    scoreRight: 123,
     homeTeamSide: "left",
-    injuriesLeft: ["J. Cain", "J. Suggs", "M. Wagner"],
-    injuriesRight: ["J. Green", "G. Williams", "B. Miller"],
+    injuriesLeft: ["B. Miller", "J. Green", "G. Williams"],
+    injuriesRight: ["J. Suggs", "M. Wagner", "J. Cain"],
   },
   {
-    id: "h2h-hornets-magic-2025-12-26",
+    id: "h2h-magic-hornets-2025-12-26",
     dateEt: "2025-12-26",
     dateJst: "2025-12-27",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 105,
-    scoreRight: 120,
+    scoreLeft: 120,
+    scoreRight: 105,
     homeTeamSide: "right",
-    injuriesLeft: ["F. Wagner", "M. Wagner"],
-    injuriesRight: ["G. Williams"],
+    injuriesLeft: ["R. Kalkbrenner", "M. Plumlee", "G. Williams"],
+    injuriesRight: ["F. Wagner", "J. Suggs", "M. Wagner"],
   },
   {
-    id: "h2h-hornets-magic-2026-01-22",
+    id: "h2h-magic-hornets-2026-01-22",
     dateEt: "2026-01-22",
     dateJst: "2026-01-23",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 97,
-    scoreRight: 124,
+    scoreLeft: 124,
+    scoreRight: 97,
     homeTeamSide: "right",
-    injuriesLeft: ["J. Suggs", "F. Wagner"],
-    injuriesRight: ["T. Mann"],
+    injuriesLeft: ["T. Mann", "M. Plumlee", "L. McNeeley"],
+    injuriesRight: ["F. Wagner", "J. Suggs", "C. Castleton"],
   },
   {
-    id: "h2h-hornets-magic-2026-03-19",
+    id: "h2h-magic-hornets-2026-03-19",
     dateEt: "2026-03-19",
     dateJst: "2026-03-20",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 111,
-    scoreRight: 130,
-    homeTeamSide: "right",
-    injuriesLeft: [
-      "A. Black",
-      "W. Carter Jr.",
-      "J. Isaac",
+    scoreLeft: 130,
+    scoreRight: 111,
+    homeTeamSide: "left",
+    injuriesLeft: ["T. Salaun", "L. McNeeley"],
+    injuriesRight: [
       "F. Wagner",
+      "J. Isaac",
+      "W. Carter Jr.",
+      "A. Black",
     ],
-    injuriesRight: [],
   },
 ];
 
-function hornetsMagicH2HStatsFromGames(games: NbaH2HGameCard[]): {
-  hornetsPpg: number;
+function magicHornetsH2HStatsFromGames(games: NbaH2HGameCard[]): {
   magicPpg: number;
-  hornetsPapg: number;
+  hornetsPpg: number;
   magicPapg: number;
-  hornetsNet: number;
+  hornetsPapg: number;
   magicNet: number;
+  hornetsNet: number;
 } {
-  let hornetsPts = 0;
   let magicPts = 0;
+  let hornetsPts = 0;
   for (const g of games) {
     if (g.scoreLeft == null || g.scoreRight == null) {
-      throw new Error(`hornetsMagicH2H: missing scores for ${g.id}`);
+      throw new Error(`magicHornetsH2H: missing scores for ${g.id}`);
     }
-    /* 左=Magic、右=Hornets */
-    magicPts += g.scoreLeft;
-    hornetsPts += g.scoreRight;
+    hornetsPts += g.scoreLeft;
+    magicPts += g.scoreRight;
   }
   const n = games.length;
   const r1 = (x: number) => Number(x.toFixed(1));
@@ -93,16 +92,16 @@ function hornetsMagicH2HStatsFromGames(games: NbaH2HGameCard[]): {
   const hornetsNet = r1(hornetsPpg - hornetsPapg);
   const magicNet = r1(magicPpg - magicPapg);
   return {
-    hornetsPpg,
     magicPpg,
-    hornetsPapg,
+    hornetsPpg,
     magicPapg,
-    hornetsNet,
+    hornetsPapg,
     magicNet,
+    hornetsNet,
   };
 }
 
-export function hornetsMagicH2HAveragesForSides({
+export function magicHornetsH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
 }: {
@@ -110,18 +109,18 @@ export function hornetsMagicH2HAveragesForSides({
   awayTeamId: string;
 }): NbaH2HAverages | null {
   const ids = new Set([homeTeamId, awayTeamId]);
-  if (!ids.has("nba-hornets") || !ids.has("nba-magic")) {
+  if (!ids.has("nba-magic") || !ids.has("nba-hornets")) {
     return null;
   }
 
   const {
-    hornetsPpg,
     magicPpg,
-    hornetsPapg,
+    hornetsPpg,
     magicPapg,
-    hornetsNet,
+    hornetsPapg,
     magicNet,
-  } = hornetsMagicH2HStatsFromGames(hornetsMagicH2HGames);
+    hornetsNet,
+  } = magicHornetsH2HStatsFromGames(magicHornetsH2HGames);
 
   if (homeTeamId === "nba-hornets") {
     return {
