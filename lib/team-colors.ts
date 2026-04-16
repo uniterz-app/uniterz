@@ -4,6 +4,50 @@ import { teamColorsJ1 } from "./teams-j1";
 import { teamColorsNBA } from "./teams-nba";
 import { teamColorsPL } from "./teams-pl";
 
+/** ユニフォーム専用の色上書き（まずはポストシーズン対象から段階的に調整） */
+const jerseyPrimaryOverridesNBA: Record<string, string> = {
+  "nba-76ers": "#003DA5",
+  "nba-magic": "#0075BD",
+  "nba-nuggets": "#FEC525",
+  "nba-pistons": "#FFFFFF",
+  "nba-hornets": "#1D8CAB",
+  "nba-knicks": "#F48328",
+  "nba-lakers": "#FDB827",
+  "nba-suns": "#E66226",
+  "nba-timberwolves": "#A8AAAD",
+  "nba-warriors": "#DFFE00",
+  "nba-blazers": "#E13A3E",
+  "nba-cavaliers": "#6F212F",
+  "nba-celtics": "#BC9A5C",
+  "nba-hawks": "#CC092F",
+  "nba-raptors": "#BE0F34",
+  "nba-rockets": "#D31145",
+  "nba-spurs": "#C4CED4",
+  "nba-thunder": "#F05133",
+};
+
+/** ユニフォームのグラデ終点を primary と同じにするチーム（単色に近い見た目） */
+const jerseyGradientEndMatchesPrimaryNBA = new Set<string>([
+  "nba-76ers",
+  "nba-blazers",
+  "nba-cavaliers",
+  "nba-celtics",
+  "nba-hawks",
+  "nba-hornets",
+  "nba-knicks",
+  "nba-lakers",
+  "nba-magic",
+  "nba-nuggets",
+  "nba-pistons",
+  "nba-raptors",
+  "nba-rockets",
+  "nba-spurs",
+  "nba-suns",
+  "nba-thunder",
+  "nba-timberwolves",
+  "nba-warriors",
+]);
+
 /** マップに secondary が無いとき、primary からグラデーション用の2色目を生成する */
 function deriveSecondaryFromPrimary(primaryHex: string): string {
   const hex = primaryHex.trim().replace(/^#/, "");
@@ -52,6 +96,33 @@ export function getTeamPrimaryColor(
     default:
       return "#ffffff";
   }
+}
+
+/** ユニフォーム用 primary（未指定チームは通常のチームカラーを使う） */
+export function getTeamJerseyPrimaryColor(
+  league: League,
+  teamId: string | null | undefined
+): string {
+  if (!teamId) return getTeamPrimaryColor(league, teamId);
+  if (league === "nba") {
+    return jerseyPrimaryOverridesNBA[teamId] ?? getTeamPrimaryColor(league, teamId);
+  }
+  return getTeamPrimaryColor(league, teamId);
+}
+
+/** ユニフォーム canvas の2色目（通常はチーム secondary、上記セットのチームは jersey primary と同色） */
+export function getTeamJerseySecondaryColor(
+  league: League,
+  teamId: string | null | undefined
+): string {
+  if (
+    league === "nba" &&
+    teamId &&
+    jerseyGradientEndMatchesPrimaryNBA.has(teamId)
+  ) {
+    return getTeamJerseyPrimaryColor(league, teamId);
+  }
+  return getTeamSecondaryColor(league, teamId);
 }
 
 export function getTeamSecondaryColor(
