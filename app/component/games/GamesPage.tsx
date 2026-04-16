@@ -15,7 +15,7 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
-import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
+import { useGamesByDate } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -50,6 +50,7 @@ import {
   gameMatchesMarginBounds,
   parseMarginBoundParam,
 } from "@/lib/games/marginFilter";
+import { toStatusFromGameDoc } from "@/lib/games/transform";
 
 /** 日付ストリップの後にリストを出すまでの待ち（秒） */
 const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.14;
@@ -60,32 +61,15 @@ const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.14;
 function findInitialGameDay(params: {
   gameDays: Date[];
   stateSelected: Date | null;
-  urlDate: string | null;
   todayKey: string;
   timeZone: string;
 }): Date | null {
-  const { gameDays, stateSelected, urlDate, todayKey, timeZone } = params;
+  const { gameDays, stateSelected, todayKey, timeZone } = params;
 
   if (!gameDays.length) return null;
 
   if (stateSelected) {
     const wantedKey = toDateKeyInTimeZone(stateSelected, timeZone);
-    const hit = gameDays.find(
-      (d) => toDateKeyInTimeZone(d, timeZone) === wantedKey
-    );
-    if (hit) return hit;
-    const monthPrefix = wantedKey.slice(0, 7);
-    const inMonth = gameDays
-      .filter((d) =>
-        toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix)
-      )
-      .sort((a, b) => a.getTime() - b.getTime());
-    if (inMonth.length) return inMonth[0];
-  }
-
-  const parsedUrlDate = parseDateKeyInTimeZone(urlDate ?? "", timeZone);
-  if (parsedUrlDate) {
-    const wantedKey = toDateKeyInTimeZone(parsedUrlDate, timeZone);
     const hit = gameDays.find(
       (d) => toDateKeyInTimeZone(d, timeZone) === wantedKey
     );
@@ -206,14 +190,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [dayTimeZone]
   );
 
-  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → URL → 今日 */
+  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → 今日（初期位置を今日基準に固定） */
   const anchorForGameDays = useMemo(() => {
-    const fromUrl = parseDateKeyInTimeZone(dateParam ?? "", dayTimeZone);
     const stored = selectedByLeague[league];
     if (stored) return stored;
-    if (fromUrl) return fromUrl;
     return parseDateKeyInTimeZone(todayKey, dayTimeZone) ?? new Date();
-  }, [dateParam, dayTimeZone, league, selectedByLeague, todayKey]);
+  }, [dayTimeZone, league, selectedByLeague, todayKey]);
 
   /* =========================
      Game days（アンカー日の暦月1ヶ月分を取得）
@@ -371,7 +353,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return findInitialGameDay({
       gameDays: gameDaysForStrip,
       stateSelected: stored,
-      urlDate: dateParam,
       todayKey,
       timeZone: dayTimeZone,
     });
@@ -379,7 +360,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     gameDaysForStrip,
     selectedByLeague,
     league,
-    dateParam,
     todayKey,
     dayTimeZone,
   ]);
@@ -525,15 +505,16 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Games（開いた暦月をまとめて取得し、選択日で絞り込み）
   ========================= */
-  const games = useMemo(() => {
-    if (!selected) return [];
-    const dayKey = toDateKeyInTimeZone(selected, dayTimeZone);
-    return monthRows.filter(
-      (g) => gameRowStartDateKeyInTimeZone(g, dayTimeZone) === dayKey,
-    );
-  }, [monthRows, selected, dayTimeZone]);
+  const { games, loading: loadingDayQuery } = useGamesByDate(
+    league,
+    selected,
+    dayTimeZone,
+    !!selected,
+  );
 
-  const loading = loadingDays;
+  const loading =
+    loadingDays ||
+    (!!selected && loadingDayQuery);
 
   const gamesAfterTeamFilter = useMemo(() => {
     const raw = games ?? [];
@@ -583,7 +564,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!selected) return false;
     if (!games) return false;
     if (games.length === 0) return false;
-    return games.every((g: any) => g.status === "final");
+    return games.every((g: Record<string, unknown>) => {
+      return toStatusFromGameDoc(g) === "final";
+    });
   }, [selected, games]);
 
   /* =========================
