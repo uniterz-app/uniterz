@@ -130,6 +130,7 @@ export function useWebRankings(phase: RankingPhase = "playoffs") {
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
   const myRank = bundle?.myRank ?? null;
+  const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRow = (bundle?.myRow ?? null) as RankingRow | null;
 
   return {
@@ -143,6 +144,7 @@ export function useWebRankings(phase: RankingPhase = "playoffs") {
     restRows,
     myUid,
     myRank,
+    myRankDeltaPlaces,
     myRow,
   };
 }

@@ -20,6 +20,8 @@ export type CountryCode = string;
 
 export type RankingRowWithCountry = RankingRow & {
   countryCode?: CountryCode;
+  /** 前日比順位差（正=上昇）。スナップショット行のみ。 */
+  rankDeltaPlaces?: number;
   totalScore?: number;
   avgTotalScore?: number;
   marginPrecisionScore?: number;

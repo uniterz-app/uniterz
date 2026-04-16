@@ -18,12 +18,8 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
+import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { Crown } from "lucide-react";
-import {
-  profileHrefWithRankingsReturn,
-  stashRankingsTabForReturn,
-} from "@/lib/navigation/rankingsProfileFrom";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 /* =========================
  * Flag map
@@ -431,13 +427,11 @@ function ScoreText({
 export default function TopPodium({
   rows,
   metric,
-  rankPhase,
   onTopCountDone,
   language = "ja",
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
-  rankPhase: RankingPhase;
   onTopCountDone?: () => void;
   /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
@@ -508,22 +502,11 @@ export default function TopPodium({
           const s = rankPreset(rank);
           const countryCode = getCountryCode(row);
 
-          const profileHref = profileHrefWithRankingsReturn(
-            pathname,
-            base,
-            row.handle || row.uid,
-            { metric, phase: rankPhase }
-          );
           return (
             <Link
               key={row.uid}
-              href={profileHref}
+              href={`${base}/u/${row.handle || row.uid}`}
               className="relative block"
-              onClick={() => {
-                if (pathname.includes("/rankings")) {
-                  stashRankingsTabForReturn(metric, rankPhase);
-                }
-              }}
             >
               {rank === 1 ? (
                 <motion.div
@@ -645,42 +628,39 @@ export default function TopPodium({
                         />
                       </div>
 
-                      {/* minmax+auto: 名前の直後に Pro（flex-1 だとスコア列側に寄るのを防ぐ） */}
+                      {/* バッジは SVG がはみ出すため、overflow-hidden は名前テキスト側のみにかける */}
                       <div className="min-w-0 flex-1">
-                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
-                          <div className="min-w-0 overflow-hidden">
-                            <div
-                              className={[
-                                "truncate font-black leading-none tracking-[0.005em]",
-                                jp.className,
-                                s.nameText,
-                              ].join(" ")}
+                        <div className="flex min-w-0 max-w-full items-center gap-1">
+                          <div
+                            className={[
+                              "min-w-0 truncate font-black leading-none tracking-[0.005em]",
+                              jp.className,
+                              s.nameText,
+                            ].join(" ")}
+                            style={{
+                              color: "rgba(255,255,255,0.94)",
+                            }}
+                          >
+                            <span
                               style={{
-                                color: "rgba(255,255,255,0.94)",
+                                textShadow: [
+                                  "0 1px 1px rgba(0,0,0,0.32)",
+                                  "0 2px 4px rgba(0,0,0,0.18)",
+                                ].join(", "),
                               }}
                             >
-                              <span
-                                style={{
-                                  textShadow: [
-                                    "0 1px 1px rgba(0,0,0,0.32)",
-                                    "0 2px 4px rgba(0,0,0,0.18)",
-                                  ].join(", "),
-                                }}
-                              >
-                                {row.displayName ?? row.handle ?? "Unknown"}
-                              </span>
-                            </div>
+                              {row.displayName ?? row.handle ?? "Unknown"}
+                            </span>
                           </div>
+                          <RankDeltaBadge delta={row.rankDeltaPlaces} />
                           {row.plan === "pro" ? (
-                            <div className="shrink-0">
-                              <ProCyberBadge
-                                {...proBadgeStaticMotion}
-                                compact
-                                ariaLabel={
-                                  language === "en" ? "Pro member" : "Pro 会員"
-                                }
-                              />
-                            </div>
+                            <ProCyberBadge
+                              {...proBadgeStaticMotion}
+                              compact
+                              ariaLabel={
+                                language === "en" ? "Pro member" : "Pro 会員"
+                              }
+                            />
                           ) : null}
                         </div>
                       </div>

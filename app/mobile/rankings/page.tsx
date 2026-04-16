@@ -24,16 +24,7 @@ import type { RankingRow } from "@/lib/rankings/useRanking";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import {
-  type RankingPhase,
-  isRankingPhase,
-} from "@/lib/rankings/rankingPhase";
-import {
-  consumeStashedRankingsTab,
-  isMobileMetricParam,
-  RANKINGS_TAB_METRIC_PARAM,
-  RANKINGS_TAB_PHASE_PARAM,
-} from "@/lib/navigation/rankingsProfileFrom";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
   TIMEZONE_ET,
   TIMEZONE_JST,
@@ -106,6 +97,7 @@ export default function MobileRankingsPage() {
   );
 
   const myRank = bundle?.myRank ?? null;
+  const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
@@ -151,37 +143,17 @@ export default function MobileRankingsPage() {
     setTopDone(true);
   }, [pageKey]);
 
-  const rankingsRestoreOnce = useRef(false);
-  useEffect(() => {
-    if (rankingsRestoreOnce.current) return;
-    rankingsRestoreOnce.current = true;
-    if (typeof window === "undefined") return;
-    const sp = new URLSearchParams(window.location.search);
-    const m = sp.get(RANKINGS_TAB_METRIC_PARAM);
-    const ph = sp.get(RANKINGS_TAB_PHASE_PARAM);
-    if (isMobileMetricParam(m) || isRankingPhase(ph)) {
-      if (isMobileMetricParam(m)) setMetric(m);
-      if (isRankingPhase(ph)) setPhase(ph);
-      return;
-    }
-    const stashed = consumeStashedRankingsTab();
-    if (stashed) {
-      setMetric(stashed.metric);
-      setPhase(stashed.phase);
-    }
-  }, [setMetric, setPhase]);
-
   return (
-    <>
-      <CyberPageBackground />
-      <div className="relative z-10 flex h-dvh min-h-0 w-full flex-col overflow-hidden">
-        <div className="shrink-0">
-          <div className="sticky top-0 z-40">
-            <Header />
-          </div>
+    <div className="relative h-dvh overflow-hidden bg-app">
+      <div className="pointer-events-none absolute inset-0">
+        <CyberPageBackground />
+      </div>
+
+      <div className="relative z-10 h-full overflow-y-auto overscroll-y-contain pb-bottom-nav">
+        <div className="sticky top-0 z-40">
+          <Header />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-bottom-nav">
         <div className="space-y-3 px-3 pt-2">
           <div className="text-center">
             <p className="text-[12px] text-white/60">
@@ -213,6 +185,7 @@ export default function MobileRankingsPage() {
               language={language}
               isPro={user.plan === "pro"}
               mobileWide
+              rankDeltaPlaces={myRankDeltaPlaces}
             />
           </div>
 
@@ -253,7 +226,6 @@ export default function MobileRankingsPage() {
                 <TopPodium
                   rows={top3}
                   metric={metric}
-                  rankPhase={phase}
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
@@ -281,7 +253,6 @@ export default function MobileRankingsPage() {
                           row={r}
                           rank={i + 4}
                           metric={metric}
-                          rankPhase={phase}
                           language={language}
                         />
                       </motion.div>
@@ -292,8 +263,7 @@ export default function MobileRankingsPage() {
             </motion.div>
         </AnimatePresence>
         )}
-        </div>
       </div>
-    </>
+    </div>
   );
 }
