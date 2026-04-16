@@ -14,7 +14,11 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import type { MatchCardProps } from "./MatchCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -124,11 +128,15 @@ export default function MobileMatchCard(props: MatchCardProps) {
     getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e";
-  const homeSecondaryColor = getTeamSecondaryColor(
+  const homeJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, home.teamId) ?? homeColor;
+  const awayJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, away.teamId) ?? awayColor;
+  const homeSecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     home.teamId
   );
-  const awaySecondaryColor = getTeamSecondaryColor(
+  const awaySecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     away.teamId
   );
@@ -218,14 +226,14 @@ export default function MobileMatchCard(props: MatchCardProps) {
         >
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={homeColor}
+              accent={homeJerseyColor}
               accentEnd={homeSecondaryColor}
               className="h-[4.5rem] w-[4.5rem]"
               enableDotReveal={jerseyDotRevealEnabled}
               dotRevealDelayMs={jerseyDotHomeDelayMs}
             />
           ) : (
-            <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
+            <Icon className="h-16 w-16" fill={homeJerseyColor} stroke="#fff" />
           )}
           <div className="mt-1.5 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, home.name, homeL1, homeL2)}
@@ -317,14 +325,14 @@ export default function MobileMatchCard(props: MatchCardProps) {
         >
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={awayColor}
+              accent={awayJerseyColor}
               accentEnd={awaySecondaryColor}
               className="h-[4.5rem] w-[4.5rem]"
               enableDotReveal={jerseyDotRevealEnabled}
               dotRevealDelayMs={jerseyDotAwayDelayMs}
             />
           ) : (
-            <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
+            <Icon className="h-16 w-16" fill={awayJerseyColor} stroke="#fff" />
           )}
           <div className="mt-1.5 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, away.name, awayL1, awayL2)}
