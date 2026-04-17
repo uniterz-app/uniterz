@@ -34,7 +34,7 @@ export default function MobileSignupPage() {
   useEffect(() => {
     if (status !== "ready" || !fUser) return;
     if (handle && language) {
-      router.replace(`/mobile/u/${encodeURIComponent(handle)}`);
+      router.replace("/mobile/games");
       return;
     }
     router.replace("/mobile/onboarding");

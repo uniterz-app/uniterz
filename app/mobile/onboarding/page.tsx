@@ -28,8 +28,7 @@ export default function MobileOnboardingPage() {
       const hasLanguage = normalizeLanguage(data?.language) !== null;
 
       if (hasHandle && hasLanguage) {
-        const handle = data?.handle || data?.slug;
-        router.replace(`/mobile/u/${encodeURIComponent(handle)}`);
+        router.replace("/mobile/games");
         return;
       }
 
