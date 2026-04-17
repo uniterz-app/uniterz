@@ -104,6 +104,39 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
             return (Object.assign(Object.assign({}, r), { plan: (_a = planByUid.get(r.uid)) !== null && _a !== void 0 ? _a : r.plan }));
         });
     }
+    // 住んでいる国は users が最新（プロフィール保存直後も国旗表示できるよう反映）
+    const rowUidsForCountry = [
+        ...new Set(rows.map((r) => r.uid).filter(Boolean)),
+    ];
+    if (uid && !rowUidsForCountry.includes(uid)) {
+        rowUidsForCountry.push(uid);
+    }
+    const countryByUid = new Map();
+    if (rowUidsForCountry.length > 0) {
+        const userRefs = rowUidsForCountry.map((id) => db().collection("users").doc(id));
+        const countrySnaps = await db().getAll(...userRefs);
+        countrySnaps.forEach((s, i) => {
+            const id = rowUidsForCountry[i];
+            if (!id)
+                return;
+            if (!s.exists) {
+                countryByUid.set(id, undefined);
+                return;
+            }
+            const u = s.data();
+            const raw = u === null || u === void 0 ? void 0 : u.countryCode;
+            const c = typeof raw === "string" && raw.trim() !== ""
+                ? raw.trim().slice(0, 8)
+                : null;
+            countryByUid.set(id, c);
+        });
+        rows = rows.map((r) => {
+            const v = countryByUid.get(r.uid);
+            if (v === undefined)
+                return r;
+            return Object.assign(Object.assign({}, r), { countryCode: v });
+        });
+    }
     let myRank = null;
     let myRow = null;
     let myRankDeltaPlaces = null;
@@ -173,12 +206,15 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
             }
         }
         const myPlanResolved = me.plan === "pro" ? "pro" : "free";
+        const myCountryFresh = uid ? countryByUid.get(uid) : undefined;
         myRow = {
             uid,
             displayName: (_m = me.displayName) !== null && _m !== void 0 ? _m : "",
             handle: (_o = me.handle) !== null && _o !== void 0 ? _o : null,
             photoURL: (_p = me.photoURL) !== null && _p !== void 0 ? _p : null,
-            countryCode: (_q = me.countryCode) !== null && _q !== void 0 ? _q : null,
+            countryCode: myCountryFresh !== undefined
+                ? myCountryFresh
+                : ((_q = me.countryCode) !== null && _q !== void 0 ? _q : null),
             plan: myPlanResolved,
             totalPosts: rk.totalPosts,
             totalWins: rk.totalWins,

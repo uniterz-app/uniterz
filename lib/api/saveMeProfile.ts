@@ -2,6 +2,11 @@
 
 import { auth } from "@/lib/firebase";
 import type { Language } from "@/lib/i18n/language";
+import {
+  dispatchCumulativeRankingInvalidate,
+  dispatchCumulativeRankingPatchMyCountry,
+  persistRankCountrySessionOverride,
+} from "@/lib/rankings/cumulativeRankingInvalidate";
 
 /** 本人 users/{uid} のプロフィール欄をサーバー（Admin SDK）経由で merge 保存する */
 export type SaveMeProfilePayload = {
@@ -32,4 +37,9 @@ export async function saveMeProfile(payload: SaveMeProfilePayload): Promise<void
   if (!res.ok) {
     throw new Error(data?.error ?? res.statusText);
   }
+
+  // シート閉鎖でランキングがアンマウントされても、次回表示で API 結果にマージできるよう保持
+  persistRankCountrySessionOverride(user.uid, payload.countryCode);
+  dispatchCumulativeRankingPatchMyCountry(user.uid, payload.countryCode);
+  dispatchCumulativeRankingInvalidate();
 }

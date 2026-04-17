@@ -24,23 +24,35 @@ export default function WebOrMobileSplash({
 
   // "/" は app/page.tsx 自身がスプラッシュと遷移制御を持つため、ここで重ねない
   if (pathname === "/") {
-    return <div id="app-root">{children}</div>;
+    return (
+      <div id="app-root" className="relative isolate min-h-0">
+        {children}
+      </div>
+    );
   }
 
   // 公開LPは Firebase 待ちのスプラッシュを出さない（開けないように見えるのを防ぐ）
   if (pathname === "/mobile/lp" || pathname === "/mobile/lp-v2") {
-    return <div id="app-root">{children}</div>;
+    return (
+      <div id="app-root" className="relative isolate min-h-0">
+        {children}
+      </div>
+    );
   }
   if (pathname === "/lp" || pathname === "/lp-v2") {
     return (
-      <div id="app-root">{children}</div>
+      <div id="app-root" className="relative isolate min-h-0">
+        {children}
+      </div>
     );
   }
 
   if (isWeb) {
     return (
       <AuthGate platform="web">
-        <div id="app-root">{children}</div>
+        <div id="app-root" className="relative isolate min-h-0">
+          {children}
+        </div>
         {shouldShowBottomNavBar(pathname) ? <NavBar /> : null}
       </AuthGate>
     );
@@ -48,7 +60,9 @@ export default function WebOrMobileSplash({
 
   return (
     <AuthGate platform="mobile">
-      <div id="app-root">{children}</div>
+      <div id="app-root" className="relative isolate min-h-0">
+        {children}
+      </div>
       {shouldShowBottomNavBar(pathname) ? <NavBar /> : null}
     </AuthGate>
   );

@@ -22,11 +22,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 import type { League } from "@/lib/leagues";
-import {
-  getTeamPrimaryColor,
-  getTeamJerseyPrimaryColor,
-  getTeamJerseySecondaryColor,
-} from "@/lib/team-colors";
+import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
@@ -271,13 +267,10 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     : sharedTransitionBaseKey
       ? scheduleSharedBoundsVtName(sharedTransitionBaseKey)
       : "";
-  /** モバイルは外枠のみ共有（グリッド二重名による補間崩れを避ける）。Web は従来どおり bounds + content */
   const vtContentName = forceViewTransitionNameNone
     ? "none"
     : sharedTransitionBaseKey
-      ? isMobile
-        ? "none"
-        : scheduleSharedContentVtName(sharedTransitionBaseKey)
+      ? scheduleSharedContentVtName(sharedTransitionBaseKey)
       : "";
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
@@ -331,22 +324,12 @@ const awayColor = useMemo(
   [normalizedLeague, away.teamId]
 );
 
-const homeJerseyColor = useMemo(
-  () => getTeamJerseyPrimaryColor(normalizedLeague, home.teamId) ?? homeColor,
-  [normalizedLeague, home.teamId, homeColor]
-);
-
-const awayJerseyColor = useMemo(
-  () => getTeamJerseyPrimaryColor(normalizedLeague, away.teamId) ?? awayColor,
-  [normalizedLeague, away.teamId, awayColor]
-);
-
 const homeSecondaryColor = useMemo(
-  () => getTeamJerseySecondaryColor(normalizedLeague, home.teamId),
+  () => getTeamSecondaryColor(normalizedLeague, home.teamId),
   [normalizedLeague, home.teamId]
 );
 const awaySecondaryColor = useMemo(
-  () => getTeamJerseySecondaryColor(normalizedLeague, away.teamId),
+  () => getTeamSecondaryColor(normalizedLeague, away.teamId),
   [normalizedLeague, away.teamId]
 );
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
@@ -390,7 +373,7 @@ const marketMajority = useMemo(() => {
     showContentEntry && (league === "nba" || league === "bj");
 
   const entryTransition = useMemo(() => {
-    if (!showContentEntry || reduceMotion || isMobile) return null;
+    if (!showContentEntry || reduceMotion) return null;
     const listStagger =
       scheduleEntryIndex !== undefined
         ? Math.min(scheduleEntryIndex * 0.032, 0.14)
@@ -405,7 +388,7 @@ const marketMajority = useMemo(() => {
       duration,
       ease,
     });
-  }, [showContentEntry, reduceMotion, isMobile, scheduleEntryIndex]);
+  }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
 
   /**
    * ドットは最終要素の後ではなく、各チーム列（HOME=4 / AWAY=6）の入場に同期
@@ -711,37 +694,34 @@ const normalStyle: React.CSSProperties = {
 
 return (
 <motion.div
-  layout={
-    !isMobile && !disableCardMotion && !sharedTransitionBaseKey
-  }
-  layoutId={isMobile ? undefined : sharedLayoutId}
+  layout={!disableCardMotion && !sharedTransitionBaseKey}
+  layoutId={sharedLayoutId}
   initial={entryTransition ? { scale: 0.972, opacity: 0.92 } : false}
   animate={entryTransition ? { scale: 1, opacity: 1 } : undefined}
-  transition={
-    isMobile
-      ? {}
-      : {
-          layout: { duration: 0.22 },
-          ...(entryTransition
-            ? {
-                scale: {
-                  type: "tween" as const,
-                  delay: entryTransition(0).delay,
-                  duration: entryTransition(0).duration + 0.06,
-                  ease: entryTransition(0).ease,
-                },
-                opacity: {
-                  type: "tween" as const,
-                  delay: entryTransition(0).delay,
-                  duration: entryTransition(0).duration * 0.55,
-                  ease: entryTransition(0).ease,
-                },
-              }
-            : {}),
+  transition={{
+    layout: { duration: 0.22 },
+    ...(entryTransition
+      ? {
+          scale: {
+            type: "tween" as const,
+            delay: entryTransition(0).delay,
+            duration: entryTransition(0).duration + 0.06,
+            ease: entryTransition(0).ease,
+          },
+          opacity: {
+            type: "tween" as const,
+            delay: entryTransition(0).delay,
+            duration: entryTransition(0).duration * 0.55,
+            ease: entryTransition(0).ease,
+          },
         }
-  }
+      : {}),
+  }}
 className={[
   "group relative overflow-hidden text-white",
+  onOpenPredict && isMobile && !inPredictOverlay
+    ? "cursor-pointer active:scale-[0.993]"
+    : "",
   inPredictOverlay && isMobile
     ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
     : mobileDense
@@ -749,12 +729,10 @@ className={[
       : "mx-auto max-w-[1200px] w-full",
 disableCardMotion
   ? ""
-  : isMobile
-    ? ""
-    : [
-        "transition-opacity duration-200",
-        navigating ? "opacity-90" : "",
-      ].join(" "),
+  : [
+      "transition-opacity duration-200",
+      navigating ? "opacity-90" : "",
+    ].join(" "),
 dense
   ? MOBILE_LIST_CARD_PANEL_DENSE
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
@@ -765,17 +743,27 @@ dense
       : "",
     className || "",
   ].join(" ")}
- style={{
-  ...(isMobile ? {} : { willChange: "transform" as const }),
-  ...(vtBoundsName
-    ? ({
-        viewTransitionName: vtBoundsName,
-        ...(vtBoundsName !== "none"
-          ? { viewTransitionClass: "schedule-shared-bounds" }
-          : {}),
-      } as React.CSSProperties)
-    : {}),
-}}
+  onClick={(e) => {
+    // モバイル一覧：カード領域タップでも予想オーバーレイへ（ボタン行は除外・未ログインは無視）
+    if (!onOpenPredict || inPredictOverlay) return;
+    if (!isMobile) return;
+    const el = e.target as HTMLElement | null;
+    if (!el?.closest) return;
+    if (el.closest("button")) return;
+    if (!auth.currentUser) return;
+    onOpenPredict(id);
+  }}
+  style={{
+    willChange: "transform",
+    ...(vtBoundsName
+      ? ({
+          viewTransitionName: vtBoundsName,
+          ...(vtBoundsName !== "none"
+            ? { viewTransitionClass: "schedule-shared-bounds" }
+            : {}),
+        } as React.CSSProperties)
+      : {}),
+  }}
 >
       <motion.div
         className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl"
@@ -966,7 +954,7 @@ background:
   <div className="flex w-full flex-col items-center">
   {Icon === Jersey ? (
     <HalftoneJerseyMark
-      accent={homeJerseyColor}
+      accent={homeColor}
       accentEnd={homeSecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
@@ -975,7 +963,7 @@ background:
   ) : (
     <Icon
       className={teamMarkSizeSoccer}
-      fill={homeJerseyColor}
+      fill={homeColor}
       stroke="#fff"
     />
   )}
@@ -1190,7 +1178,7 @@ background:
   {/* アイコン：mobile大きく / webそのまま */}
   {Icon === Jersey ? (
     <HalftoneJerseyMark
-      accent={awayJerseyColor}
+      accent={awayColor}
       accentEnd={awaySecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
@@ -1199,7 +1187,7 @@ background:
   ) : (
     <Icon
       className={teamMarkSizeSoccer}
-      fill={awayJerseyColor}
+      fill={awayColor}
       stroke="#fff"
     />
   )}
@@ -1369,17 +1357,11 @@ background:
     "grid w-full place-items-center font-bold text-white",
     "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
     "rounded-md",
-    isMobile
-      ? ""
-      : "transition-all duration-200",
+    "transition-all duration-200",
     isPredicted && !onOpenPredict
       ? "cursor-default"
-      : isMobile
-        ? "cursor-pointer"
-        : "active:scale-[0.985] cursor-pointer",
-  ]
-    .filter(Boolean)
-    .join(" ")}
+      : "active:scale-[0.985] cursor-pointer",
+  ].join(" ")}
   style={isPredicted ? predictedStyle : normalStyle}
 >
 {status === "final"

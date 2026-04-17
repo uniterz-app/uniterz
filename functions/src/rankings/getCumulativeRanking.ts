@@ -161,6 +161,41 @@ async function rankingPayloadForMetric(
     }));
   }
 
+  // 住んでいる国は users が最新（プロフィール保存直後も国旗表示できるよう反映）
+  const rowUidsForCountry = [
+    ...new Set(rows.map((r) => r.uid).filter(Boolean)),
+  ] as string[];
+  if (uid && !rowUidsForCountry.includes(uid)) {
+    rowUidsForCountry.push(uid);
+  }
+  const countryByUid = new Map<string, string | null | undefined>();
+  if (rowUidsForCountry.length > 0) {
+    const userRefs = rowUidsForCountry.map((id) =>
+      db().collection("users").doc(id)
+    );
+    const countrySnaps = await db().getAll(...userRefs);
+    countrySnaps.forEach((s, i) => {
+      const id = rowUidsForCountry[i];
+      if (!id) return;
+      if (!s.exists) {
+        countryByUid.set(id, undefined);
+        return;
+      }
+      const u = s.data() as { countryCode?: unknown };
+      const raw = u?.countryCode;
+      const c =
+        typeof raw === "string" && raw.trim() !== ""
+          ? raw.trim().slice(0, 8)
+          : null;
+      countryByUid.set(id, c);
+    });
+    rows = rows.map((r) => {
+      const v = countryByUid.get(r.uid);
+      if (v === undefined) return r;
+      return { ...r, countryCode: v };
+    });
+  }
+
   let myRank: number | null = null;
   let myRow: RankingRow | null = null;
   let myRankDeltaPlaces: number | null = null;
@@ -248,12 +283,17 @@ async function rankingPayloadForMetric(
     const myPlanResolved: "free" | "pro" =
       me.plan === "pro" ? "pro" : "free";
 
+    const myCountryFresh = uid ? countryByUid.get(uid) : undefined;
+
     myRow = {
       uid,
       displayName: me.displayName ?? "",
       handle: me.handle ?? null,
       photoURL: me.photoURL ?? null,
-      countryCode: me.countryCode ?? null,
+      countryCode:
+        myCountryFresh !== undefined
+          ? myCountryFresh
+          : (me.countryCode ?? null),
       plan: myPlanResolved,
 
       totalPosts: rk.totalPosts,
