@@ -23,6 +23,7 @@ import { buildAllUsersWindowCache } from "./stats/buildUserStatsWindowCache";
 export { onGameFinalV2 } from "./onGameFinalV2";
 export { rescorePlayoffBrackets } from "./playoff-bracket/rescorePlayoffBrackets";
 export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
+export { onPlayoffBracketRescoreTaskCreated } from "./playoff-bracket/onPlayoffBracketRescoreTaskCreated";
 export { rebuildPlayoffBracketMarket } from "./playoff-bracket/rebuildPlayoffBracketMarket";
 export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
 export { backfillCumulativeStatsFromDailyHttp } from "./rankings/backfillCumulativeStatsFromDaily";
