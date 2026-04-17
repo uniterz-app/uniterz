@@ -68,12 +68,12 @@ export default function LoginForm({ variant }: LoginFormProps) {
       const handle = d?.handle || d?.username;
       const hasLanguage = normalizeLanguage(d?.language) !== null;
 
-      const base = v === "mobile" ? "/mobile/u" : "/web/u";
+      const gamesPath = v === "mobile" ? "/mobile/games" : "/web/games";
       const onboardingPath =
         v === "mobile" ? "/mobile/onboarding" : "/web/onboarding";
 
       if (handle && hasLanguage) {
-        router.replace(`${base}/${encodeURIComponent(handle)}`);
+        router.replace(gamesPath);
       } else if (!hasLanguage) {
         router.replace(onboardingPath);
       } else {

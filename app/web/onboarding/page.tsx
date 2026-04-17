@@ -28,8 +28,7 @@ export default function WebOnboardingPage() {
       const hasLanguage = normalizeLanguage(data?.language) !== null;
 
       if (hasHandle && hasLanguage) {
-        const handle = data?.handle || data?.slug;
-        router.replace(`/web/u/${encodeURIComponent(handle)}`);
+        router.replace("/web/games");
         return;
       }
 

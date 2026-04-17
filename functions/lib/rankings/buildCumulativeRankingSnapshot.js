@@ -2,6 +2,7 @@
 // functions/src/rankings/buildCumulativeRankingSnapshot.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RANK_SNAPSHOT_HISTORY_SUBCOL = void 0;
+exports.getYesterdayDateKeyJST = getYesterdayDateKeyJST;
 exports.buildCumulativeRankingSnapshot = buildCumulativeRankingSnapshot;
 const firestore_1 = require("firebase-admin/firestore");
 /* =========================================================
@@ -27,13 +28,23 @@ function toDateKeyJST(d) {
     const dd = String(j.getUTCDate()).padStart(2, "0");
     return `${y}-${m}-${dd}`;
 }
-function getTodayJST() {
-    return toDateKeyJST(new Date());
+function getTodayJST(now = new Date()) {
+    return toDateKeyJST(now);
+}
+/** JST の「昨日」の dateKey（履歴 doc id と一致） */
+function getYesterdayDateKeyJST(now = new Date()) {
+    const todayKey = getTodayJST(now);
+    const [y, m, d] = todayKey.split("-").map(Number);
+    const prev = new Date(Date.UTC(y, m - 1, d - 1));
+    const yy = prev.getUTCFullYear();
+    const mm = String(prev.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(prev.getUTCDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
 }
 /* =========================================================
  * Utils
  * =======================================================*/
-/** ランキング掲載用。phase 指定時は rankingByPhase を優先 */
+/** Leaderboard slice: prefer `rankingByPhase[phase]` when `phase` is set. */
 function rankingSlice(d, phase) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
     if (phase) {
@@ -134,6 +145,44 @@ function assignCompetitionRanks(sorted, metric) {
     }
     return out;
 }
+function computeRankDeltaPlaces(prevRank, currentRank) {
+    if (prevRank == null || currentRank < 1)
+        return null;
+    const d = prevRank - currentRank;
+    if (d === 0)
+        return null;
+    return d;
+}
+async function fetchYesterdayRanksForUids(uids, yesterdayKey) {
+    const out = new Map();
+    if (uids.length === 0)
+        return out;
+    const firestore = db();
+    const CHUNK = 200;
+    for (let i = 0; i < uids.length; i += CHUNK) {
+        const chunk = uids.slice(i, i + CHUNK);
+        const refs = chunk.map((uid) => firestore
+            .collection("cumulative_stats")
+            .doc(uid)
+            .collection(exports.RANK_SNAPSHOT_HISTORY_SUBCOL)
+            .doc(yesterdayKey));
+        const snaps = await firestore.getAll(...refs);
+        snaps.forEach((s, j) => {
+            var _a, _b;
+            const uid = chunk[j];
+            if (!s.exists) {
+                out.set(uid, null);
+                return;
+            }
+            const d = s.data();
+            out.set(uid, {
+                play_in: ((_a = d === null || d === void 0 ? void 0 : d.play_in) !== null && _a !== void 0 ? _a : {}),
+                playoffs: ((_b = d === null || d === void 0 ? void 0 : d.playoffs) !== null && _b !== void 0 ? _b : {}),
+            });
+        });
+    }
+    return out;
+}
 /* =========================================================
  * Main
  * =======================================================*/
@@ -146,6 +195,8 @@ async function buildCumulativeRankingSnapshot() {
         }
         return rankByUid.get(uid);
     }
+    const top20Jobs = [];
+    const topUidSet = new Set();
     for (const phase of RANKING_PHASES) {
         const baseRows = snap.docs
             .map((doc) => {
@@ -179,16 +230,36 @@ async function buildCumulativeRankingSnapshot() {
                 var _a;
                 return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0 }));
             });
-            await db()
-                .collection("cumulative_ranking_snapshots")
-                .doc(`${phase}_${metric}`)
-                .set({
-                phase,
-                metric,
-                rows: top20,
-                updatedAt: firestore_1.FieldValue.serverTimestamp(),
-            }, { merge: true });
+            for (const r of top20) {
+                topUidSet.add(r.uid);
+            }
+            top20Jobs.push({ phase, metric, rows: top20 });
         }
+    }
+    const yesterdayKey = getYesterdayDateKeyJST();
+    const prevByUid = await fetchYesterdayRanksForUids([...topUidSet], yesterdayKey);
+    for (const { phase, metric, rows } of top20Jobs) {
+        const enriched = rows.map((row) => {
+            var _a;
+            const prevBlock = prevByUid.get(row.uid);
+            const prevRaw = (_a = prevBlock === null || prevBlock === void 0 ? void 0 : prevBlock[phase]) === null || _a === void 0 ? void 0 : _a[metric];
+            const prevRank = typeof prevRaw === "number" &&
+                Number.isFinite(prevRaw) &&
+                prevRaw >= 1
+                ? Math.floor(prevRaw)
+                : null;
+            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank) });
+        });
+        await db()
+            .collection("cumulative_ranking_snapshots")
+            .doc(`${phase}_${metric}`)
+            .set({
+            phase,
+            metric,
+            rows: enriched,
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            rankDeltaBasisDateKey: yesterdayKey,
+        }, { merge: true });
     }
     const firestore = db();
     const dateKey = getTodayJST();
@@ -230,6 +301,7 @@ async function buildCumulativeRankingSnapshot() {
         metrics: METRICS.length,
         ranksWritten: rankByUid.size,
         historyDateKey: dateKey,
+        rankDeltaBasisDateKey: yesterdayKey,
     };
 }
 //# sourceMappingURL=buildCumulativeRankingSnapshot.js.map

@@ -39,6 +39,46 @@ function metricsToKey(metrics: BulkRankingMetric[]): string {
   return [...new Set(metrics)].sort().join(",");
 }
 
+async function fetchOneMetricFromFunctions(
+  baseUrl: string,
+  uid: string | undefined,
+  metric: BulkRankingMetric,
+  phase: RankingPhase
+) {
+  const url = new URL(baseUrl);
+  url.searchParams.set("metric", metric);
+  url.searchParams.set("phase", phase);
+  if (uid) url.searchParams.set("uid", uid);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    cache: "no-store",
+  });
+  const json = await res.json();
+
+  if (!res.ok) {
+    return {
+      metric,
+      ok: false,
+      rows: [] as unknown[],
+      count: 0,
+      myRank: null,
+      myRow: null,
+      myRankDeltaPlaces: null,
+    };
+  }
+
+  return {
+    metric,
+    ok: true,
+    rows: json?.rows ?? [],
+    count: json?.count ?? 0,
+    myRank: json?.myRank ?? null,
+    myRow: json?.myRow ?? null,
+    myRankDeltaPlaces: json?.myRankDeltaPlaces ?? null,
+  };
+}
+
 async function fetchBulkFromFunctions(
   uid: string | undefined,
   metrics: BulkRankingMetric[],
@@ -52,41 +92,52 @@ async function fetchBulkFromFunctions(
     throw new Error("CUMULATIVE_RANKING_FUNCTION_URL is not set");
   }
 
-  const results = await Promise.all(
-    metrics.map(async (metric) => {
-      const url = new URL(baseUrl);
-      url.searchParams.set("metric", metric);
-      url.searchParams.set("phase", phase);
-      if (uid) url.searchParams.set("uid", uid);
+  const combinedUrl = new URL(baseUrl);
+  combinedUrl.searchParams.set("metrics", metrics.join(","));
+  combinedUrl.searchParams.set("phase", phase);
+  if (uid) combinedUrl.searchParams.set("uid", uid);
 
-      const res = await fetch(url.toString(), {
-        method: "GET",
-        cache: "no-store",
-      });
-      const json = await res.json();
+  const combinedRes = await fetch(combinedUrl.toString(), {
+    method: "GET",
+    cache: "no-store",
+  });
+  const combinedJson = await combinedRes.json();
 
-      if (!res.ok) {
-      return {
-        metric,
-        ok: false,
-        rows: [],
-        count: 0,
-        myRank: null,
-        myRow: null,
-        myRankDeltaPlaces: null,
-      };
+  if (
+    combinedRes.ok &&
+    combinedJson?.ok &&
+    combinedJson?.byMetric &&
+    typeof combinedJson.byMetric === "object"
+  ) {
+    const byMetric: Record<
+      string,
+      {
+        ok: boolean;
+        rows: unknown[];
+        count: number;
+        myRank: unknown;
+        myRow: unknown;
+        myRankDeltaPlaces: unknown;
       }
-
-      return {
-        metric,
+    > = {};
+    for (const metric of metrics) {
+      const b = combinedJson.byMetric[metric];
+      byMetric[metric] = {
         ok: true,
-        rows: json?.rows ?? [],
-        count: json?.count ?? 0,
-        myRank: json?.myRank ?? null,
-        myRow: json?.myRow ?? null,
-        myRankDeltaPlaces: json?.myRankDeltaPlaces ?? null,
+        rows: b?.rows ?? [],
+        count: b?.count ?? 0,
+        myRank: b?.myRank ?? null,
+        myRow: b?.myRow ?? null,
+        myRankDeltaPlaces: b?.myRankDeltaPlaces ?? null,
       };
-    })
+    }
+    return { ok: true as const, byMetric };
+  }
+
+  const results = await Promise.all(
+    metrics.map((metric) =>
+      fetchOneMetricFromFunctions(baseUrl, uid, metric, phase)
+    )
   );
 
   const byMetric = Object.fromEntries(results.map((r) => [r.metric, r]));

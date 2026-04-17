@@ -86,7 +86,7 @@ export default function OnboardingForm({ variant }: Props) {
       const snap = await getDoc(userRef);
       const existing = snap.exists() ? (snap.data() as Record<string, unknown>) : {};
 
-      const slug = await ensureUserSlug(db, user.uid);
+      await ensureUserSlug(db, user.uid);
       const uploadedPhotoURL = await uploadAvatarIfNeeded(user.uid);
 
       await saveMeProfile({
@@ -100,8 +100,8 @@ export default function OnboardingForm({ variant }: Props) {
         completeOnboarding: true,
       });
 
-      const profileBase = resolvedVariant === "mobile" ? "/mobile/u" : "/web/u";
-      router.replace(`${profileBase}/${encodeURIComponent(slug)}`);
+      const gamesPath = resolvedVariant === "mobile" ? "/mobile/games" : "/web/games";
+      router.replace(gamesPath);
     } catch (err) {
       console.error("onboarding save failed:", err);
       alert(
