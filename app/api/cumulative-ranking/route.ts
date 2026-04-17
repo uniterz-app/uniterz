@@ -72,7 +72,10 @@ const getCachedSingle = unstable_cache(
     return fetchSingleRanking(metric, uid, phase);
   },
   ["cumulative-ranking-single-v2"],
-  { revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC }
+  {
+    revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
+    tags: ["cumulative-ranking"],
+  }
 );
 
 export async function GET(req: Request) {

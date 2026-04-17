@@ -18,20 +18,7 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { Crown } from "lucide-react";
-
-/* =========================
- * Flag map
- * ========================= */
-const FLAG_SRC: Record<string, string> = {
-  US: "/flags/us.png",
-  CN: "/flags/cn.png",
-  JP: "/flags/jp.png",
-};
-
-function getCountryCode(row: RankingRowWithCountry): string | undefined {
-  if (!row.countryCode) return undefined;
-  return FLAG_SRC[row.countryCode] ? row.countryCode : undefined;
-}
+import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
 /* =========================
  * Medal
@@ -121,21 +108,13 @@ function PodiumCornerFrame({ rank }: { rank: 1 | 2 | 3 }) {
 function rankInk(rank: 1 | 2 | 3) {
   const m = medal(rank);
 
-  const shadow =
-    rank === 1
-      ? "0 0 14px rgba(255,215,90,0.16)"
-      : rank === 2
-      ? "0 0 12px rgba(230,235,245,0.10)"
-      : "0 0 12px rgba(205,127,50,0.10)";
-
-  const solidStyle = { color: m.solid, textShadow: shadow } as const;
+  const solidStyle = { color: m.solid } as const;
 
   const gradStyle = {
     backgroundImage: m.grad,
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
-    textShadow: `0 0 12px ${m.glow}`,
     display: "inline-block",
   } as const;
 
@@ -151,8 +130,6 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
       WebkitBackgroundClip: "text",
       backgroundClip: "text",
       color: "transparent",
-      textShadow:
-        "0 0 8px rgba(255,215,90,0.48), 0 0 16px rgba(255,193,7,0.30), 0 0 28px rgba(234,179,8,0.16)",
       display: "inline-block",
     } as const;
   }
@@ -163,8 +140,6 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
       WebkitBackgroundClip: "text",
       backgroundClip: "text",
       color: "transparent",
-      textShadow:
-        "0 0 8px rgba(230,238,250,0.40), 0 0 16px rgba(203,213,225,0.26), 0 0 26px rgba(148,163,184,0.14)",
       display: "inline-block",
     } as const;
   }
@@ -174,8 +149,6 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
-    textShadow:
-      "0 0 8px rgba(222,150,90,0.42), 0 0 16px rgba(180,95,50,0.26), 0 0 26px rgba(146,85,40,0.14)",
     display: "inline-block",
   } as const;
 }
@@ -183,55 +156,41 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
 /* =========================
  * Size presets
  * ========================= */
+const monthlyPodiumUnified = {
+  cardMinH: "min-h-[66px] lg:min-h-[74px]",
+  topH: "h-[40px]",
+  rowPy: "py-1",
+  gap: "gap-1.5",
+  px: "px-3",
+  rankW: "w-[24px]",
+  avatar: "h-[38px] w-[38px] lg:h-[44px] lg:w-[44px]",
+  avatarText: "text-[15px] lg:text-[18px]",
+  nameText: "text-[16px] lg:text-[19px]",
+  scoreW: "w-[82px] shrink-0 text-right tabular-nums lg:w-[90px]",
+} as const;
+
 function rankPreset(rank: 1 | 2 | 3) {
   if (rank === 1) {
     return {
-      cardMinH: "min-h-[68px] lg:min-h-[78px]",
-      topH: "h-[42px]",
-      rowPy: "py-1",
-      rankW: "w-[24px]",
+      ...monthlyPodiumUnified,
       rankText: "text-[26px] lg:text-[33px]",
-      avatar: "h-[40px] w-[40px] lg:h-[48px] lg:w-[48px]",
-      avatarText: "text-[16px] lg:text-[20px]",
-      nameText: "text-[16px] lg:text-[20px]",
-      scoreW: "w-[68px]",
       scoreMain: "text-[25px] lg:text-[32px]",
       scoreSub: "text-[9px] lg:text-[13px]",
-      gap: "gap-1.5",
-      px: "px-3",
     };
   }
   if (rank === 2) {
     return {
-      cardMinH: "min-h-[62px] lg:min-h-[72px]",
-      topH: "h-[39px]",
-      rowPy: "py-1",
-      rankW: "w-[22px]",
+      ...monthlyPodiumUnified,
       rankText: "text-[22px] lg:text-[29px]",
-      avatar: "h-[38px] w-[38px] lg:h-[44px] lg:w-[44px]",
-      avatarText: "text-[15px] lg:text-[18px]",
-      nameText: "text-[16px] lg:text-[19px]",
-      scoreW: "w-[62px]",
       scoreMain: "text-[19px] lg:text-[27px]",
       scoreSub: "text-[8px] lg:text-[12px]",
-      gap: "gap-1.5",
-      px: "px-3",
     };
   }
   return {
-    cardMinH: "min-h-[56px] lg:min-h-[66px]",
-    topH: "h-[36px]",
-    rowPy: "py-0.5",
-    rankW: "w-[20px]",
+    ...monthlyPodiumUnified,
     rankText: "text-[20px] lg:text-[26px]",
-    avatar: "h-[36px] w-[36px] lg:h-[41px] lg:w-[41px]",
-    avatarText: "text-[14px] lg:text-[17px]",
-    nameText: "text-[16px] lg:text-[18px]",
-    scoreW: "w-[58px]",
     scoreMain: "text-[16px] lg:text-[24px]",
     scoreSub: "text-[8px] lg:text-[11px]",
-    gap: "gap-1",
-    px: "px-2.5",
   };
 }
 
@@ -301,27 +260,30 @@ function FadedFlagBg({
   const m = medal(rank);
   const src = countryCode ? FLAG_SRC[countryCode] : undefined;
 
-  if (!src) return null;
-
   return (
-    <div className="pointer-events-none absolute inset-y-0 -right-[11%] w-[42%] overflow-hidden">
+    <div className="pointer-events-none absolute inset-y-0 right-0 w-[38%] overflow-hidden">
       <div
-        className="absolute inset-y-[2%] right-[10%] w-[92%] overflow-hidden rounded-[18px]"
+        className="absolute inset-y-[4%] right-0 w-full overflow-hidden rounded-none"
         style={{
-          opacity: 0.43,
+          opacity: 0.64,
           boxShadow: `0 0 24px ${m.glow}`,
+          backgroundImage: src
+            ? undefined
+            : "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 42%, rgba(255,255,255,0.06) 100%)",
           maskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.22) 18%, rgba(0,0,0,0.62) 48%, rgba(0,0,0,0.95) 100%)",
+            "linear-gradient(90deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.44) 20%, rgba(0,0,0,0.78) 50%, rgba(0,0,0,0.98) 100%)",
           WebkitMaskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.22) 18%, rgba(0,0,0,0.62) 48%, rgba(0,0,0,0.95) 100%)",
+            "linear-gradient(90deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.44) 20%, rgba(0,0,0,0.78) 50%, rgba(0,0,0,0.98) 100%)",
         }}
       >
-        <img
-          src={src}
-          alt=""
-          className="h-full w-full object-cover"
-          draggable={false}
-        />
+        {src ? (
+          <img
+            src={src}
+            alt=""
+            className="h-full w-full object-contain object-right"
+            draggable={false}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -624,7 +586,7 @@ export default function MonthlyTopPodium({
                     <div className={["flex min-w-0 items-center", s.gap].join(" ")}>
                       <div
                         className={[
-                          "shrink-0 translate-y-[7px] text-center font-black leading-none",
+                          "shrink-0 translate-y-[6px] text-center font-black leading-none",
                         rankHudNumClass,
                           s.rankW,
                           s.rankText,
@@ -678,7 +640,7 @@ export default function MonthlyTopPodium({
 
                     <div
                       className={[
-                        "shrink-0 flex translate-y-[5px] flex-col items-end justify-center",
+                        "flex shrink-0 translate-y-[6px] flex-col items-end justify-center",
                         s.scoreW,
                       ].join(" ")}
                     >
