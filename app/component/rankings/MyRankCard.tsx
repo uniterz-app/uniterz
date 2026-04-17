@@ -46,30 +46,18 @@ function formatValue(metric: MobileMetric, value: number) {
 
 function getRankStyle(rank: number | null, loading: boolean) {
   if (loading || rank == null) {
-    return {
-      color: "rgba(255,255,255,0.9)",
-      textShadow: "none",
-    };
+    return { color: "rgba(255,255,255,0.9)" };
   }
 
   if (rank <= 10) {
-    return {
-      color: "#FFD65A",
-      textShadow: "0 0 12px rgba(255,215,90,0.25)",
-    };
+    return { color: "#FFD65A" };
   }
 
   if (rank <= 20) {
-    return {
-      color: "#F4E47A",
-      textShadow: "0 0 10px rgba(244,228,122,0.18)",
-    };
+    return { color: "#F4E47A" };
   }
 
-  return {
-    color: "rgba(255,255,255,0.95)",
-    textShadow: "none",
-  };
+  return { color: "rgba(255,255,255,0.95)" };
 }
 
 const CARD_SHELL = {
@@ -285,7 +273,6 @@ export default function MyRankCard({
                 style={{
                   fontSize: 21,
                   color: rankStyle.color,
-                  textShadow: rankStyle.textShadow,
                 }}
               >
                 {loading || rank == null ? "--" : `#${rank}`}
@@ -312,7 +299,6 @@ export default function MyRankCard({
                 ].join(" ")}
                 style={{
                   color: "rgba(255,255,255,0.9)",
-                  textShadow: "0 0 10px rgba(255,255,255,0.08)",
                 }}
               >
                 <span className={[numClass, "text-[19px]"].join(" ")}>
@@ -483,7 +469,6 @@ export default function MyRankCard({
               style={{
                 fontSize: 21,
                 color: rankStyle.color,
-                textShadow: rankStyle.textShadow,
               }}
             >
               {centerContent}
@@ -519,7 +504,6 @@ export default function MyRankCard({
               ].join(" ")}
               style={{
                 color: "rgba(255,255,255,0.9)",
-                textShadow: "0 0 10px rgba(255,255,255,0.08)",
               }}
             >
               <span className={[numClass, "text-[19px]"].join(" ")}>

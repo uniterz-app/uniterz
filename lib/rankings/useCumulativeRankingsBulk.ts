@@ -3,7 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import {
+  CUMULATIVE_RANKING_INVALIDATE_EVENT,
+  CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
+  clearRankCountrySessionOverride,
+  readRankCountrySessionOverride,
+  type CumulativeRankingPatchMyCountryDetail,
+} from "@/lib/rankings/cumulativeRankingInvalidate";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+
+/** 指標タブで既に読み込んだバンドルを捨てずにまとめて取り直す */
+const REFETCH_ALL_METRICS =
+  "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
 
 export type BulkMetricPayload = {
   ok: boolean;
@@ -57,6 +68,71 @@ function mergeMetricBundles(
   return out;
 }
 
+/** プロフィール保存直後：該当 uid の行と myRow の countryCode を即座に差し替え */
+function patchCountryInBundles(
+  prev: Record<string, BulkMetricPayload> | null,
+  uid: string,
+  countryCode: string | null
+): Record<string, BulkMetricPayload> | null {
+  if (!prev) return prev;
+  const next: Record<string, BulkMetricPayload> = {};
+  for (const [key, bundle] of Object.entries(prev)) {
+    const b = bundle as BulkMetricPayload;
+    const rows = Array.isArray(b.rows)
+      ? b.rows.map((row) => {
+          const r = row as { uid?: string };
+          if (r?.uid === uid) return { ...r, countryCode };
+          return row;
+        })
+      : b.rows;
+    const my = b.myRow as { uid?: string } | null | undefined;
+    const myRow =
+      my && typeof my.uid === "string" && my.uid === uid
+        ? ({ ...my, countryCode } as Record<string, unknown>)
+        : b.myRow;
+    next[key] = { ...b, rows, myRow };
+  }
+  return next;
+}
+
+/** プロフィール保存で sessionStorage に残した国を、取得済みバンドルへ反映 */
+function applySessionCountryOverride(
+  bundles: Record<string, BulkMetricPayload> | null,
+  uid: string | null
+): Record<string, BulkMetricPayload> | null {
+  if (!bundles || !uid) return bundles;
+  const stored = readRankCountrySessionOverride(uid);
+  if (stored === undefined) return bundles;
+  return patchCountryInBundles(bundles, uid, stored);
+}
+
+/** サーバの myRow / 自分の行がセッションと一致したらセッション上書きを消す */
+function maybeClearSessionCountryAfterFetch(
+  partial: Record<string, BulkMetricPayload>,
+  uid: string
+): void {
+  const stored = readRankCountrySessionOverride(uid);
+  if (stored === undefined) return;
+
+  const tp = partial.totalPoints;
+  if (!tp) return;
+  const rows = tp?.rows as
+    | Array<{ uid?: string; countryCode?: string | null }>
+    | undefined;
+  const myRow = tp?.myRow as { uid?: string; countryCode?: string | null } | null;
+  const mine = rows?.find((r) => r?.uid === uid);
+  const serverCode =
+    mine?.countryCode ??
+    (myRow?.uid === uid ? myRow.countryCode : undefined) ??
+    null;
+
+  if (stored === null && (serverCode == null || serverCode === "")) {
+    clearRankCountrySessionOverride(uid);
+  } else if (typeof stored === "string" && serverCode === stored) {
+    clearRankCountrySessionOverride(uid);
+  }
+}
+
 async function fetchBulkMetrics(
   metrics: string,
   uid: string | null,
@@ -87,6 +163,63 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
   const mountPrimaryGenRef = useRef(0);
   const uidPrimarySeqRef = useRef(0);
   const metricReqSeqRef = useRef(0);
+  const invalidateSeqRef = useRef(0);
+
+  /** プロフィールで国を保存した直後：一覧の該当行を即更新（ランキング画面を開いているときのみ効く） */
+  useEffect(() => {
+    const onPatchMyCountry = (ev: Event) => {
+      const d = (ev as CustomEvent<CumulativeRankingPatchMyCountryDetail>)
+        .detail;
+      if (!d?.uid) return;
+      setByMetric((prev) => patchCountryInBundles(prev, d.uid, d.countryCode));
+    };
+    window.addEventListener(
+      CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
+      onPatchMyCountry
+    );
+    return () => {
+      window.removeEventListener(
+        CUMULATIVE_RANKING_PATCH_MY_COUNTRY_EVENT,
+        onPatchMyCountry
+      );
+    };
+  }, []);
+
+  /** プロフィール保存後など、サーバと揃えるため全指標を背後で再取得（一覧は消さない） */
+  useEffect(() => {
+    const onInvalidate = () => {
+      const seq = ++invalidateSeqRef.current;
+      void (async () => {
+        const uid = auth.currentUser?.uid ?? null;
+        try {
+          const partial = await fetchBulkMetrics(
+            REFETCH_ALL_METRICS,
+            uid,
+            phase
+          );
+          if (seq !== invalidateSeqRef.current) return;
+          if (partial) {
+            const merged = mergeMetricBundles(null, partial);
+            const withSession = applySessionCountryOverride(merged, uid);
+            setByMetric(withSession);
+            if (uid) maybeClearSessionCountryAfterFetch(partial, uid);
+            setAppliedTotalPointsUid(uid ?? ANON_KEY);
+          }
+        } catch {
+          if (seq !== invalidateSeqRef.current) return;
+        }
+      })();
+    };
+
+    window.addEventListener(CUMULATIVE_RANKING_INVALIDATE_EVENT, onInvalidate);
+    return () => {
+      invalidateSeqRef.current += 1;
+      window.removeEventListener(
+        CUMULATIVE_RANKING_INVALIDATE_EVENT,
+        onInvalidate
+      );
+    };
+  }, [phase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,18 +234,26 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
         const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase);
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         if (partial) {
-          setByMetric((p) => mergeMetricBundles(p, partial));
+          setByMetric((p) =>
+            applySessionCountryOverride(mergeMetricBundles(p, partial), null)
+          );
           setAppliedTotalPointsUid(ANON_KEY);
         } else {
           setByMetric(
-            mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+            applySessionCountryOverride(
+              mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
+              null
+            )
           );
           setAppliedTotalPointsUid(ANON_KEY);
         }
       } catch {
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         setByMetric(
-          mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+          applySessionCountryOverride(
+            mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
+            null
+          )
         );
         setAppliedTotalPointsUid(ANON_KEY);
       } finally {
@@ -134,18 +275,26 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
             const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase);
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             if (partial) {
-              setByMetric((p) => mergeMetricBundles(p, partial));
+              setByMetric((p) =>
+                applySessionCountryOverride(mergeMetricBundles(p, partial), null)
+              );
               setAppliedTotalPointsUid(ANON_KEY);
             } else {
               setByMetric(
-                mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+                applySessionCountryOverride(
+                  mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
+                  null
+                )
               );
               setAppliedTotalPointsUid(ANON_KEY);
             }
           } catch {
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             setByMetric(
-              mergeMetricBundles(null, { totalPoints: emptyBulkMetric() })
+              applySessionCountryOverride(
+                mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
+                null
+              )
             );
             setAppliedTotalPointsUid(ANON_KEY);
           }
@@ -159,7 +308,10 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
           const partial = await fetchBulkMetrics(PRIMARY_METRICS, uid, phase);
           if (cancelled || uq !== uidPrimarySeqRef.current) return;
           if (partial) {
-            setByMetric((p) => mergeMetricBundles(p, partial));
+            setByMetric((p) =>
+              applySessionCountryOverride(mergeMetricBundles(p, partial), uid)
+            );
+            maybeClearSessionCountryAfterFetch(partial, uid);
             setAppliedTotalPointsUid(uid);
           } else {
             setAppliedTotalPointsUid(uid);
@@ -196,15 +348,29 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
         const partial = await fetchBulkMetrics(metric, uidForMetric, phase);
         if (seq !== metricReqSeqRef.current) return;
         if (partial) {
-          setByMetric((p) => mergeMetricBundles(p, partial));
+          setByMetric((p) =>
+            applySessionCountryOverride(
+              mergeMetricBundles(p, partial),
+              uidForMetric
+            )
+          );
+          if (uidForMetric) maybeClearSessionCountryAfterFetch(partial, uidForMetric);
         } else {
           setByMetric((p) =>
-            mergeMetricBundles(p, { [metric]: emptyBulkMetric() })
+            applySessionCountryOverride(
+              mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
+              uidForMetric
+            )
           );
         }
       } catch {
         if (seq !== metricReqSeqRef.current) return;
-        setByMetric((p) => mergeMetricBundles(p, { [metric]: emptyBulkMetric() }));
+        setByMetric((p) =>
+          applySessionCountryOverride(
+            mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
+            uidForMetric
+          )
+        );
       }
     },
     [authReady, byMetric, myUid, appliedTotalPointsUid, phase]

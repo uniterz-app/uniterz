@@ -211,6 +211,11 @@ service cloud.firestore {
         && docId == resource.data.season + '_' + request.auth.uid;
     }
 
+    // Chunked rescore queue — Cloud Functions のみ（Admin SDK）
+    match /playoffBracketRescoreTasks/{taskId} {
+      allow read, write: if false;
+    }
+
     // ========================================================================
     // コミュニティ — app/api/communities/* のみ（Admin SDK）。クライアント直叩き禁止
     // ========================================================================

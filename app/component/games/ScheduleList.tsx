@@ -1,19 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import {
+  safeViewTransitionToken,
+  startDomViewTransition,
+  supportsViewTransitionApi,
+} from "@/lib/viewTransition";
 import type { League } from "@/lib/leagues";
 import { X } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 import MatchCard, { type MatchCardProps } from "./MatchCard";
+import ScheduleSharedTransitionLayout from "./ScheduleSharedTransitionLayout";
 import {
   GAMES_CYBER_EASE,
   GAMES_CYBER_EASE_SNAP,
   GAMES_DAY_SWITCH_EASE,
+  GAMES_SCHEDULE_SHELL_MOTION_COMPLETE_SEC,
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
@@ -77,6 +85,9 @@ function readTeamRecordCacheFromSession(): Record<string, TeamRecord> {
 
 const SCHEDULE_STAGGER_EASE = GAMES_CYBER_EASE_SNAP;
 
+/** page モードで 4 枚目以降をずらす間隔（秒） */
+const PAGE_REST_CARD_STAGGER_SEC = 0.034;
+
 function writeTeamRecordCacheToSession(next: Record<string, TeamRecord>) {
   if (typeof window === "undefined") return;
 
@@ -127,6 +138,12 @@ export default function ScheduleList({
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const scrollYRef = useRef(0);
+  /** オープン直前の旧スナップショットで、共有要素名を付ける一覧カードはこの id のみ */
+  const sharedVtListSourceRef = useRef<string | null>(null);
+  /** クローズ後の新スナップショットで、一覧に戻す共有要素名を付けるカードはこの id のみ */
+  const sharedVtListTargetRef = useRef<string | null>(null);
+  /** ref のみ変えたあと一覧を再描画して VT 名を1枚に絞る */
+  const [vtListTransitionNonce, setVtListTransitionNonce] = useState(0);
 
   const [myPostMap, setMyPostMap] = useState<Record<string, string>>({});
   const [teamRecordMap, setTeamRecordMap] = useState<Record<string, TeamRecord>>(
@@ -170,10 +187,19 @@ export default function ScheduleList({
   }, [propsList, openGameId]);
 
   const reduceMotion = useReducedMotion();
+  /** 一覧のスタッガー等は Web のみ。モバイルは即表示 */
+  const listShellAnimations = !isMobile && !reduceMotion;
+  /** 一覧→オーバーレイの View Transitions（モバイルは即切替・アニメ無し。Web のみ） */
+  const vtUi = useMemo(
+    () => Boolean(!isMobile && supportsViewTransitionApi() && !reduceMotion),
+    [isMobile, reduceMotion]
+  );
+
   const leagueAnimKey =
     leagueProp ?? (propsList[0]?.league as League | undefined) ?? "nba";
 
   const isDaySwitchShell = listShellIntro === "daySwitch";
+  const isPageShell = listShellIntro === "page";
 
   const scheduleContainer = useMemo(
     () => ({
@@ -181,30 +207,41 @@ export default function ScheduleList({
       show: {
         transition: {
           staggerChildren:
-            reduceMotion || isDaySwitchShell ? 0 : 0.032,
+            !listShellAnimations || isDaySwitchShell
+              ? 0
+              : isPageShell
+                ? 0
+                : 0.032,
           delayChildren:
-            reduceMotion || isDaySwitchShell ? 0 : 0.022,
+            !listShellAnimations || isDaySwitchShell
+              ? 0
+              : isPageShell
+                ? 0
+                : 0.022,
         },
       },
     }),
-    [reduceMotion, isDaySwitchShell]
+    [listShellAnimations, isDaySwitchShell, isPageShell]
   );
 
-  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch は先頭から順に（遅延に上限あり） */
+  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch は先頭から順に（遅延に上限あり）。page はラッパー完了後に残りをスタッガー */
   const scheduleItem = useMemo(
     () => ({
       hidden: (i: number) => {
-        if (reduceMotion) {
+        if (!listShellAnimations) {
           return { opacity: 1, y: 0, scale: 1 };
         }
         if (isDaySwitchShell) {
           return { opacity: 0, y: -11, scale: 1 };
         }
+        if (isPageShell && i >= 3) {
+          return { opacity: 0, y: 12, scale: 1 };
+        }
         if (i >= 3) return { opacity: 1, y: 0, scale: 1 };
         return { opacity: 0, y: -22, scale: 0.985 };
       },
       show: (i: number) => {
-        if (reduceMotion) {
+        if (!listShellAnimations) {
           return {
             opacity: 1,
             y: 0,
@@ -224,12 +261,18 @@ export default function ScheduleList({
             },
           };
         }
-        if (i >= 3) {
+        if (isPageShell && i >= 3) {
           return {
             opacity: 1,
             y: 0,
             scale: 1,
-            transition: { duration: 0 },
+            transition: {
+              duration: 0.24,
+              ease: SCHEDULE_STAGGER_EASE,
+              delay:
+                GAMES_SCHEDULE_SHELL_MOTION_COMPLETE_SEC +
+                (i - 3) * PAGE_REST_CARD_STAGGER_SEC,
+            },
           };
         }
         return {
@@ -239,33 +282,70 @@ export default function ScheduleList({
           transition: {
             duration: 0.26,
             ease: SCHEDULE_STAGGER_EASE,
-            delay: Math.min(i * 0.024, 0.1),
+            delay: isPageShell
+              ? 0.02 + i * 0.045
+              : Math.min(i * 0.024, 0.1),
           },
         };
       },
     }),
-    [reduceMotion, isDaySwitchShell]
+    [listShellAnimations, isDaySwitchShell, isPageShell]
   );
 
-  const open = useCallback((gameId: string) => {
-    scrollYRef.current = window.scrollY;
-    setStandingsOpenInOverlay(false);
-    setDisableReturnLayout(false);
-    if (!readPredictionRulesIntroSeen()) {
-      setPendingGameIdForRules(String(gameId));
-      setRulesIntroOpen(true);
-      return;
-    }
-    setOpenGameId(String(gameId));
-  }, []);
+  const open = useCallback(
+    (gameId: string) => {
+      scrollYRef.current = window.scrollY;
+      setStandingsOpenInOverlay(false);
+      setDisableReturnLayout(false);
+      if (!readPredictionRulesIntroSeen()) {
+        setPendingGameIdForRules(String(gameId));
+        setRulesIntroOpen(true);
+        return;
+      }
+      const gid = String(gameId);
+      if (!vtUi) {
+        setOpenGameId(gid);
+        return;
+      }
+      sharedVtListSourceRef.current = gid;
+      sharedVtListTargetRef.current = null;
+      flushSync(() => setVtListTransitionNonce((n) => n + 1));
+      startDomViewTransition(
+        () => {
+          flushSync(() => {
+            sharedVtListSourceRef.current = null;
+            setOpenGameId(gid);
+          });
+        },
+        { skip: false }
+      );
+    },
+    [vtUi]
+  );
 
   const handleRulesIntroStart = useCallback(() => {
     writePredictionRulesIntroSeen();
-    setRulesIntroOpen(false);
     const id = pendingGameIdForRules;
     setPendingGameIdForRules(null);
-    if (id) setOpenGameId(id);
-  }, [pendingGameIdForRules]);
+    setRulesIntroOpen(false);
+    if (!id) return;
+    if (!vtUi) {
+      setOpenGameId(id);
+      return;
+    }
+    sharedVtListSourceRef.current = String(id);
+    sharedVtListTargetRef.current = null;
+    flushSync(() => setVtListTransitionNonce((n) => n + 1));
+    startDomViewTransition(
+      () => {
+        flushSync(() => {
+          sharedVtListSourceRef.current = null;
+          setOpenGameId(String(id));
+        });
+      },
+      { skip: false }
+    );
+  }, [pendingGameIdForRules, vtUi]);
 
   const handleRulesIntroCancel = useCallback(() => {
     setRulesIntroOpen(false);
@@ -273,10 +353,34 @@ export default function ScheduleList({
   }, []);
 
   const close = useCallback(() => {
-    setStandingsOpenInOverlay(false);
-    setDisableReturnLayout(true);
-    setOpenGameId(null);
-  }, []);
+    const closingId = openGameId;
+    if (!vtUi) {
+      setStandingsOpenInOverlay(false);
+      setDisableReturnLayout(true);
+      setOpenGameId(null);
+      return;
+    }
+    startDomViewTransition(
+      () => {
+        flushSync(() => {
+          setStandingsOpenInOverlay(false);
+          setDisableReturnLayout(true);
+          sharedVtListSourceRef.current = null;
+          if (closingId) {
+            sharedVtListTargetRef.current = String(closingId);
+          }
+          setOpenGameId(null);
+        });
+      },
+      {
+        skip: false,
+        onFinished: () => {
+          sharedVtListTargetRef.current = null;
+          flushSync(() => setVtListTransitionNonce((n) => n + 1));
+        },
+      }
+    );
+  }, [vtUi, openGameId]);
 
   useEffect(() => {
     let alive = true;
@@ -588,7 +692,12 @@ export default function ScheduleList({
               <button
                 type="button"
                 aria-label={isEn ? "Close" : "閉じる"}
-                className="absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
+                className={[
+                  "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md",
+                  isMobile ? "" : "transition hover:bg-black/55",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 onClick={(e) => {
                   e.stopPropagation();
                   close();
@@ -611,13 +720,26 @@ export default function ScheduleList({
                     : null
                 }
                 sharedLayoutId={undefined}
+                sharedTransitionBaseKey={
+                  vtUi
+                    ? safeViewTransitionToken(String(selectedProps.id))
+                    : undefined
+                }
                 disableCardMotion
                 hideActions
                 showMarketBias
                 inPredictOverlay
               />
 
-              <div className="mt-2 overflow-x-hidden px-0 py-0">
+              <div
+                key={String(openGameId)}
+                className={[
+                  isMobile ? "" : "schedule-overlay-form-enter",
+                  "mt-2 overflow-x-hidden px-0 py-0",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
                 <PredictionFormV2
                   dense={dense}
                   game={selectedProps}
@@ -634,9 +756,14 @@ export default function ScheduleList({
                   overlayPredictedGameIds={overlayPredictedGameIds}
                   onClosePredictOverlay={close}
                   onSwitchOverlayGame={(id) => {
-                    setOpenGameId(String(id));
-                    setStandingsOpenInOverlay(false);
-                    setDisableReturnLayout(false);
+                    startDomViewTransition(
+                      () => {
+                        setOpenGameId(String(id));
+                        setStandingsOpenInOverlay(false);
+                        setDisableReturnLayout(false);
+                      },
+                      { skip: !vtUi }
+                    );
                   }}
                   onStandingsOpenChange={(open) => {
                     setStandingsOpenInOverlay(open);
@@ -659,77 +786,154 @@ export default function ScheduleList({
       </div>
     ) : null;
 
+  const listRows = propsList.map((props, index) => {
+    const isVtGhostRow =
+      vtUi && openGameId && String(openGameId) === String(props.id);
+
+    const isOpen =
+      !!selectedProps && String(selectedProps.id) === String(props.id);
+
+    /** Web の VT 用：対象行以外をぼかし。モバイルは遷移アニメ無しのため付けない */
+    const activeListTargetId =
+      openGameId ?? sharedVtListSourceRef.current ?? null;
+    const dimPeerRow =
+      !isMobile &&
+      activeListTargetId != null &&
+      String(props.id) !== String(activeListTargetId);
+    const peerBackdropClass =
+      dimPeerRow && !reduceMotion
+        ? "blur-[10px] brightness-[0.84] saturate-[0.92]"
+        : dimPeerRow && reduceMotion
+          ? "opacity-55"
+          : "";
+
+    const listSharedTransitionBaseKey =
+      vtUi && !isVtGhostRow
+        ? (() => {
+            const pid = String(props.id);
+            if (
+              sharedVtListSourceRef.current &&
+              pid === sharedVtListSourceRef.current
+            ) {
+              return safeViewTransitionToken(pid);
+            }
+            if (
+              sharedVtListTargetRef.current &&
+              pid === sharedVtListTargetRef.current
+            ) {
+              return safeViewTransitionToken(pid);
+            }
+            return undefined;
+          })()
+        : undefined;
+
+    const forceViewTransitionNameNone =
+      vtUi && listSharedTransitionBaseKey === undefined;
+
+    const rowClass = [
+      "relative",
+      isOpen || isVtGhostRow ? "pointer-events-none" : "",
+      peerBackdropClass,
+      dimPeerRow ? "transition-none" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const card = (
+      <MatchCard
+        {...props}
+        className={isVtGhostRow ? "invisible select-none" : undefined}
+        scheduleEntryIndex={index}
+        heavyListEntry={!isDaySwitchShell}
+        myPostId={myPostMap[String(props.id)] ?? null}
+        homeRecord={
+          props.home?.teamId
+            ? teamRecordMap[props.home.teamId] ?? null
+            : null
+        }
+        awayRecord={
+          props.away?.teamId
+            ? teamRecordMap[props.away.teamId] ?? null
+            : null
+        }
+        sharedLayoutId={
+          isMobile || vtUi || openGameId || disableReturnLayout
+            ? undefined
+            : `matchcard-${props.id}`
+        }
+        sharedTransitionBaseKey={listSharedTransitionBaseKey}
+        forceViewTransitionNameNone={forceViewTransitionNameNone}
+        onOpenPredict={open}
+        showMarketBias={isOpen && !isVtGhostRow}
+        hideActions={isOpen && !isVtGhostRow}
+        inPredictOverlay={isOpen && !isVtGhostRow}
+        disableCardMotion={!!openGameId}
+      />
+    );
+
+    if (isMobile) {
+      return (
+        <div
+          key={props.id}
+          className={rowClass}
+          aria-hidden={isOpen || isVtGhostRow ? true : undefined}
+        >
+          {card}
+        </div>
+      );
+    }
+
+    return (
+      <motion.div
+        key={props.id}
+        layout={false}
+        custom={index}
+        variants={scheduleItem}
+        className={rowClass}
+        aria-hidden={isOpen || isVtGhostRow ? true : undefined}
+      >
+        {card}
+      </motion.div>
+    );
+  });
+
   return (
     <>
-    <LayoutGroup id="schedule-list">
-      <motion.div
-        className={openGameId ? "pointer-events-none" : ""}
-        animate={{
-          scale: 1,
-          opacity: 1,
-        }}
-        transition={{
-          duration: 0.2,
-          ease: GAMES_CYBER_EASE,
-        }}
-      >
-        <motion.div
-          key={leagueAnimKey}
-          className={[
-            "grid",
-            isMobile && dense
-              ? "gap-2.5 px-1"
-              : "gap-6 px-4 md:px-6 lg:px-8",
-          ].join(" ")}
-          variants={scheduleContainer}
-          initial={reduceMotion ? false : "hidden"}
-          animate="show"
-        >
-        {propsList.map((props, index) => {
-          const isOpen = !!selectedProps && String(selectedProps.id) === String(props.id);
-
-          return (
+      {isMobile ? (
+        <ScheduleSharedTransitionLayout data-vt-nonce={vtListTransitionNonce}>
+          <div className={openGameId ? "pointer-events-none" : ""}>
+            <div key={leagueAnimKey} className="grid gap-2.5 px-1">
+              {listRows}
+            </div>
+          </div>
+        </ScheduleSharedTransitionLayout>
+      ) : (
+        <LayoutGroup id="schedule-list">
+          <ScheduleSharedTransitionLayout data-vt-nonce={vtListTransitionNonce}>
             <motion.div
-              key={props.id}
-              custom={index}
-              variants={scheduleItem}
-              className={[
-                "relative",
-                isOpen ? "pointer-events-none" : "",
-              ].join(" ")}
-              aria-hidden={isOpen}
+              className={openGameId ? "pointer-events-none" : ""}
+              animate={{
+                scale: 1,
+                opacity: 1,
+              }}
+              transition={{
+                duration: listShellAnimations ? 0.2 : 0,
+                ease: GAMES_CYBER_EASE,
+              }}
             >
-              <MatchCard
-                {...props}
-                scheduleEntryIndex={index}
-                heavyListEntry={!isDaySwitchShell}
-                myPostId={myPostMap[String(props.id)] ?? null}
-                homeRecord={
-                  props.home?.teamId
-                    ? teamRecordMap[props.home.teamId] ?? null
-                    : null
-                }
-                awayRecord={
-                  props.away?.teamId
-                    ? teamRecordMap[props.away.teamId] ?? null
-                    : null
-                }
-                sharedLayoutId={
-                  openGameId || disableReturnLayout || isMobile
-                    ? undefined
-                    : `matchcard-${props.id}`
-                }
-                onOpenPredict={open}
-                showMarketBias={isOpen}
-                hideActions={isOpen}
-                inPredictOverlay={isOpen}
-                disableCardMotion={isMobile || !!openGameId}
-              />
+              <motion.div
+                key={leagueAnimKey}
+                className="grid gap-6 px-4 md:px-6 lg:px-8"
+                variants={scheduleContainer}
+                initial={listShellAnimations ? "hidden" : false}
+                animate="show"
+              >
+                {listRows}
+              </motion.div>
             </motion.div>
-          );
-        })}
-        </motion.div>
-      </motion.div>
+          </ScheduleSharedTransitionLayout>
+        </LayoutGroup>
+      )}
 
       {rulesIntroOpen && typeof document !== "undefined"
         ? createPortal(
@@ -742,7 +946,6 @@ export default function ScheduleList({
             document.body
           )
         : null}
-    </LayoutGroup>
 
       {overlayContent && typeof document !== "undefined"
         ? createPortal(overlayContent, document.body)

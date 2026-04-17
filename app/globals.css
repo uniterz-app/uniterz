@@ -793,3 +793,83 @@ body::before {
     transform: none;
   }
 }
+
+/* 試合カード → 予想オーバーレイ（View Transition）
+   ルート全体を長めにクロスフェードすると、UA の合成で中間フレームが真っ黒に見えやすい。
+   ルートは実質即時切替えにし、view-transition-name 付き共有要素のモーフのみ残す。 */
+@supports (view-transition-name: none) {
+  ::view-transition-group(root) {
+    background-color: var(--color-app-bg);
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 1ms;
+    animation-timing-function: linear;
+  }
+
+  /* 試合カード外枠：やや長め＋減速を強めた ease でモーフを滑らかに */
+  ::view-transition-group(.schedule-shared-bounds) {
+    animation-duration: 0.5s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.32, 1);
+  }
+
+  ::view-transition-old(.schedule-shared-bounds),
+  ::view-transition-new(.schedule-shared-bounds) {
+    animation-duration: 0.5s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.32, 1);
+  }
+
+  /* Web の二層目（モバイル単層時は未使用） */
+  ::view-transition-group(.schedule-shared-content) {
+    animation-duration: 0.48s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.32, 1);
+  }
+
+  ::view-transition-old(.schedule-shared-content),
+  ::view-transition-new(.schedule-shared-content) {
+    animation-duration: 0.48s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.32, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @supports (view-transition-name: none) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 1ms !important;
+    }
+
+    ::view-transition-group(.schedule-shared-bounds),
+    ::view-transition-old(.schedule-shared-bounds),
+    ::view-transition-new(.schedule-shared-bounds),
+    ::view-transition-group(.schedule-shared-content),
+    ::view-transition-old(.schedule-shared-content),
+    ::view-transition-new(.schedule-shared-content) {
+      animation-duration: 1ms !important;
+    }
+  }
+}
+
+/* オーバーレイ本文：カードの VT 開始後に軽くフェードイン */
+@keyframes schedule-overlay-form-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.schedule-overlay-form-enter {
+  /* 遅延なし：カード VT と同時に本文も立ち上げて段差を減らす */
+  animation: schedule-overlay-form-fade-in 0.24s cubic-bezier(0.22, 1, 0.32, 1) 0s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schedule-overlay-form-enter {
+    animation: none;
+    opacity: 1;
+  }
+}

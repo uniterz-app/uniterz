@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -58,6 +58,8 @@ var rescorePlayoffBrackets_1 = require("./playoff-bracket/rescorePlayoffBrackets
 Object.defineProperty(exports, "rescorePlayoffBrackets", { enumerable: true, get: function () { return rescorePlayoffBrackets_1.rescorePlayoffBrackets; } });
 var onPlayoffResultsWrite_1 = require("./playoff-bracket/onPlayoffResultsWrite");
 Object.defineProperty(exports, "onPlayoffResultsWrite", { enumerable: true, get: function () { return onPlayoffResultsWrite_1.onPlayoffResultsWrite; } });
+var onPlayoffBracketRescoreTaskCreated_1 = require("./playoff-bracket/onPlayoffBracketRescoreTaskCreated");
+Object.defineProperty(exports, "onPlayoffBracketRescoreTaskCreated", { enumerable: true, get: function () { return onPlayoffBracketRescoreTaskCreated_1.onPlayoffBracketRescoreTaskCreated; } });
 var rebuildPlayoffBracketMarket_1 = require("./playoff-bracket/rebuildPlayoffBracketMarket");
 Object.defineProperty(exports, "rebuildPlayoffBracketMarket", { enumerable: true, get: function () { return rebuildPlayoffBracketMarket_1.rebuildPlayoffBracketMarket; } });
 var getCumulativeRanking_1 = require("./rankings/getCumulativeRanking");

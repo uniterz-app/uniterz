@@ -44,6 +44,10 @@ import {
   isPlayoffStyleGameCard,
   type SeriesStanding,
 } from "@/lib/games/playoffSeriesUi";
+import {
+  scheduleSharedBoundsVtName,
+  scheduleSharedContentVtName,
+} from "@/lib/games/scheduleSharedTransitionKeys";
 
 
 
@@ -78,6 +82,12 @@ export type MatchCardProps = {
   makePredictionHref: string;
   onOpenPredict?: (gameId: string) => void;
   sharedLayoutId?: string;
+  /** View Transitions 共有要素用のベースキー（一覧とオーバーレイで同一値） */
+  sharedTransitionBaseKey?: string;
+  /**
+   * 一覧で「共有要素に参加しない」カード用。`view-transition-name: none` で他カードの誤補間を防ぐ。
+   */
+  forceViewTransitionNameNone?: boolean;
   disableCardMotion?: boolean;
 
   dense?: boolean;
@@ -106,6 +116,8 @@ homeRecord?: {
   scheduleEntryIndex?: number;
   /** false のとき派手な一覧入場・ユニドット開幕を出さない（日付切替など） */
   heavyListEntry?: boolean;
+  /** ルート要素に付与（例: VT ゴースト行の invisible） */
+  className?: string;
 };
 
 
@@ -224,11 +236,13 @@ function MatchCard({
   awayRecord = null,
   className,
   sharedLayoutId,
+  sharedTransitionBaseKey,
+  forceViewTransitionNameNone = false,
   onOpenPredict,
   disableCardMotion = false,
   scheduleEntryIndex,
   heavyListEntry = true,
-}: MatchCardProps & { className?: string }) {
+}: MatchCardProps) {
   const router = useRouter();
 
   const { fUser: user } = useFirebaseUser();
@@ -250,6 +264,21 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   const showPlayoffSeriesRow =
     isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
     seriesStanding != null;
+
+  /** 共有要素遷移：外枠とヒーローグリッドに別名を付与（none は一覧の非参加カード用） */
+  const vtBoundsName = forceViewTransitionNameNone
+    ? "none"
+    : sharedTransitionBaseKey
+      ? scheduleSharedBoundsVtName(sharedTransitionBaseKey)
+      : "";
+  /** モバイルは外枠のみ共有（グリッド二重名による補間崩れを避ける）。Web は従来どおり bounds + content */
+  const vtContentName = forceViewTransitionNameNone
+    ? "none"
+    : sharedTransitionBaseKey
+      ? isMobile
+        ? "none"
+        : scheduleSharedContentVtName(sharedTransitionBaseKey)
+      : "";
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
   function getDisplayName(league: League, l1: string, l2: string): string {
@@ -361,7 +390,7 @@ const marketMajority = useMemo(() => {
     showContentEntry && (league === "nba" || league === "bj");
 
   const entryTransition = useMemo(() => {
-    if (!showContentEntry || reduceMotion) return null;
+    if (!showContentEntry || reduceMotion || isMobile) return null;
     const listStagger =
       scheduleEntryIndex !== undefined
         ? Math.min(scheduleEntryIndex * 0.032, 0.14)
@@ -376,7 +405,7 @@ const marketMajority = useMemo(() => {
       duration,
       ease,
     });
-  }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
+  }, [showContentEntry, reduceMotion, isMobile, scheduleEntryIndex]);
 
   /**
    * ドットは最終要素の後ではなく、各チーム列（HOME=4 / AWAY=6）の入場に同期
@@ -682,29 +711,35 @@ const normalStyle: React.CSSProperties = {
 
 return (
 <motion.div
-  layout={!disableCardMotion}
-  layoutId={sharedLayoutId}
+  layout={
+    !isMobile && !disableCardMotion && !sharedTransitionBaseKey
+  }
+  layoutId={isMobile ? undefined : sharedLayoutId}
   initial={entryTransition ? { scale: 0.972, opacity: 0.92 } : false}
   animate={entryTransition ? { scale: 1, opacity: 1 } : undefined}
-  transition={{
-    layout: { duration: 0.22 },
-    ...(entryTransition
-      ? {
-          scale: {
-            type: "tween" as const,
-            delay: entryTransition(0).delay,
-            duration: entryTransition(0).duration + 0.06,
-            ease: entryTransition(0).ease,
-          },
-          opacity: {
-            type: "tween" as const,
-            delay: entryTransition(0).delay,
-            duration: entryTransition(0).duration * 0.55,
-            ease: entryTransition(0).ease,
-          },
+  transition={
+    isMobile
+      ? {}
+      : {
+          layout: { duration: 0.22 },
+          ...(entryTransition
+            ? {
+                scale: {
+                  type: "tween" as const,
+                  delay: entryTransition(0).delay,
+                  duration: entryTransition(0).duration + 0.06,
+                  ease: entryTransition(0).ease,
+                },
+                opacity: {
+                  type: "tween" as const,
+                  delay: entryTransition(0).delay,
+                  duration: entryTransition(0).duration * 0.55,
+                  ease: entryTransition(0).ease,
+                },
+              }
+            : {}),
         }
-      : {}),
-  }}
+  }
 className={[
   "group relative overflow-hidden text-white",
   inPredictOverlay && isMobile
@@ -714,10 +749,12 @@ className={[
       : "mx-auto max-w-[1200px] w-full",
 disableCardMotion
   ? ""
-  : [
-      "transition-opacity duration-200",
-      navigating ? "opacity-90" : "",
-    ].join(" "),
+  : isMobile
+    ? ""
+    : [
+        "transition-opacity duration-200",
+        navigating ? "opacity-90" : "",
+      ].join(" "),
 dense
   ? MOBILE_LIST_CARD_PANEL_DENSE
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
@@ -729,7 +766,15 @@ dense
     className || "",
   ].join(" ")}
  style={{
-  willChange: "transform",
+  ...(isMobile ? {} : { willChange: "transform" as const }),
+  ...(vtBoundsName
+    ? ({
+        viewTransitionName: vtBoundsName,
+        ...(vtBoundsName !== "none"
+          ? { viewTransitionClass: "schedule-shared-bounds" }
+          : {}),
+      } as React.CSSProperties)
+    : {}),
 }}
 >
       <motion.div
@@ -881,6 +926,16 @@ background:
               ? "items-start gap-1 px-3 py-0"
               : "items-center gap-2 px-4 py-2.5"
         }`}
+        style={
+          vtContentName
+            ? ({
+                viewTransitionName: vtContentName,
+                ...(vtContentName !== "none"
+                  ? { viewTransitionClass: "schedule-shared-content" }
+                  : {}),
+              } as React.CSSProperties)
+            : undefined
+        }
       >
         {/* HOME */}
         <motion.div
@@ -1314,11 +1369,17 @@ background:
     "grid w-full place-items-center font-bold text-white",
     "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
     "rounded-md",
-    "transition-all duration-200",
+    isMobile
+      ? ""
+      : "transition-all duration-200",
     isPredicted && !onOpenPredict
       ? "cursor-default"
-      : "active:scale-[0.985] cursor-pointer",
-  ].join(" ")}
+      : isMobile
+        ? "cursor-pointer"
+        : "active:scale-[0.985] cursor-pointer",
+  ]
+    .filter(Boolean)
+    .join(" ")}
   style={isPredicted ? predictedStyle : normalStyle}
 >
 {status === "final"

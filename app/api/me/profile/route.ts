@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 import { normalizeLanguage, TIMEZONE_BY_LANGUAGE } from "@/lib/i18n/language";
@@ -75,6 +76,9 @@ export async function POST(req: Request) {
     }
 
     await getAdminDb().doc(`users/${uid}`).set(patch, { merge: true });
+
+    // 累積ランキング API（unstable_cache）が users.countryCode の更新より古い JSON を返さないようにする
+    revalidateTag("cumulative-ranking", {});
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

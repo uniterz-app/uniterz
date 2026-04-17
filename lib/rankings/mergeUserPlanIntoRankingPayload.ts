@@ -2,13 +2,31 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 
 type RowLike = Record<string, unknown> & { uid?: string };
 
+/** users ドキュメントから plan と（存在する場合のみ）国旗用 countryCode を取り出す */
+type UserMergeFields = {
+  plan: "free" | "pro";
+  /** ドキュメントがあるときだけ付与。未設定は Functions の行をそのまま使う */
+  countryCode?: string | null;
+};
+
 function planFromUserDoc(data: { plan?: string } | undefined): "free" | "pro" {
   return data?.plan === "pro" ? "pro" : "free";
 }
 
-/** Firestore users をバッチ取得して uid → plan */
-async function loadPlansByUid(uids: string[]): Promise<Map<string, "free" | "pro">> {
-  const out = new Map<string, "free" | "pro">();
+/** Cloud Functions getCumulativeRanking と同じ country の正規化 */
+function countryFromUserDoc(data: { countryCode?: unknown } | undefined): string | null {
+  const raw = data?.countryCode;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    return raw.trim().slice(0, 8);
+  }
+  return null;
+}
+
+/** Firestore users をバッチ取得して uid → plan / countryCode（1 回の getAll で両方） */
+async function loadUserMergeFieldsByUid(
+  uids: string[]
+): Promise<Map<string, UserMergeFields>> {
+  const out = new Map<string, UserMergeFields>();
   const unique = [...new Set(uids.filter(Boolean))];
   if (unique.length === 0) return out;
 
@@ -22,10 +40,14 @@ async function loadPlansByUid(uids: string[]): Promise<Map<string, "free" | "pro
       const id = batch[j];
       if (!id) return;
       if (!snap.exists) {
-        out.set(id, "free");
+        out.set(id, { plan: "free" });
         return;
       }
-      out.set(id, planFromUserDoc(snap.data() as { plan?: string }));
+      const data = snap.data() as { plan?: string; countryCode?: unknown };
+      out.set(id, {
+        plan: planFromUserDoc(data),
+        countryCode: countryFromUserDoc(data),
+      });
     });
   }
   return out;
@@ -46,11 +68,14 @@ function collectUidsFromBulk(
   return [...uids];
 }
 
-/** cumulative-ranking/bulk のレスポンスに users.plan を反映（Functions 未更新でもバッジ表示用） */
+/**
+ * cumulative-ranking/bulk のレスポンスに users の plan / countryCode を反映。
+ * unstable_cache 内の古い行でも、他ユーザーの国旗が Firestore と一致するようにする。
+ */
 export async function mergeUserPlansIntoBulkByMetric(
   byMetric: Record<string, { rows?: unknown[]; myRow?: unknown | null }>
 ): Promise<void> {
-  const planByUid = await loadPlansByUid(collectUidsFromBulk(byMetric));
+  const fieldsByUid = await loadUserMergeFieldsByUid(collectUidsFromBulk(byMetric));
 
   for (const bundle of Object.values(byMetric)) {
     if (Array.isArray(bundle.rows)) {
@@ -58,16 +83,24 @@ export async function mergeUserPlansIntoBulkByMetric(
         const r = row as RowLike;
         const uid = r.uid;
         if (typeof uid !== "string" || !uid) return row;
-        const p = planByUid.get(uid);
-        if (p === undefined) return row;
-        return { ...r, plan: p };
+        const f = fieldsByUid.get(uid);
+        if (f === undefined) return row;
+        const next: RowLike = { ...r, plan: f.plan };
+        if ("countryCode" in f) {
+          next.countryCode = f.countryCode;
+        }
+        return next;
       });
     }
     if (bundle.myRow && typeof (bundle.myRow as RowLike).uid === "string") {
       const m = bundle.myRow as RowLike;
-      const p = planByUid.get(m.uid as string);
-      if (p !== undefined) {
-        bundle.myRow = { ...m, plan: p };
+      const f = fieldsByUid.get(m.uid as string);
+      if (f !== undefined) {
+        const next: RowLike = { ...m, plan: f.plan };
+        if ("countryCode" in f) {
+          next.countryCode = f.countryCode;
+        }
+        bundle.myRow = next;
       }
     }
   }
@@ -86,22 +119,30 @@ export async function mergeUserPlansIntoSingleRanking(body: {
   if (body.myRow && typeof (body.myRow as RowLike).uid === "string") {
     uids.add((body.myRow as RowLike).uid as string);
   }
-  const planByUid = await loadPlansByUid([...uids]);
+  const fieldsByUid = await loadUserMergeFieldsByUid([...uids]);
 
   body.rows = body.rows.map((row) => {
     const r = row as RowLike;
     const uid = r.uid;
     if (typeof uid !== "string" || !uid) return row;
-    const p = planByUid.get(uid);
-    if (p === undefined) return row;
-    return { ...r, plan: p };
+    const f = fieldsByUid.get(uid);
+    if (f === undefined) return row;
+    const next: RowLike = { ...r, plan: f.plan };
+    if ("countryCode" in f) {
+      next.countryCode = f.countryCode;
+    }
+    return next;
   });
 
   if (body.myRow && typeof (body.myRow as RowLike).uid === "string") {
     const m = body.myRow as RowLike;
-    const p = planByUid.get(m.uid as string);
-    if (p !== undefined) {
-      body.myRow = { ...m, plan: p };
+    const f = fieldsByUid.get(m.uid as string);
+    if (f !== undefined) {
+      const next: RowLike = { ...m, plan: f.plan };
+      if ("countryCode" in f) {
+        next.countryCode = f.countryCode;
+      }
+      body.myRow = next;
     }
   }
 }

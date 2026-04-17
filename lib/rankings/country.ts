@@ -1,9 +1,38 @@
 import type { RankingRowWithCountry }from "@/app/component/rankings/_data/mockRows";
 
+/** COUNTRY_OPTIONS と同じ ISO コード。拡張子は実ファイルに合わせる */
 export const FLAG_SRC: Record<string, string> = {
   US: "/flags/us.png",
   CN: "/flags/cn.png",
   JP: "/flags/jp.png",
+  KR: "/flags/kr.png",
+  TW: "/flags/tw.png",
+  HK: "/flags/hk.png",
+  SG: "/flags/sg.svg",
+  TH: "/flags/th.svg",
+  VN: "/flags/vn.png",
+  ID: "/flags/id.svg",
+  PH: "/flags/ph.svg",
+  MY: "/flags/my.png",
+  /** 取り込み元ファイル名が不定のため、インド以外なら in.png を差し替え */
+  IN: "/flags/in.png",
+  AU: "/flags/au.svg",
+  NZ: "/flags/nz.png",
+  GB: "/flags/gb.svg",
+  DE: "/flags/de.png",
+  FR: "/flags/fr.png",
+  ES: "/flags/es.svg",
+  IT: "/flags/it.png",
+  NL: "/flags/nl.png",
+  SE: "/flags/se.png",
+  NO: "/flags/no.png",
+  DK: "/flags/dk.png",
+  PL: "/flags/pl.png",
+  TR: "/flags/tr.svg",
+  AE: "/flags/ae.webp",
+  SA: "/flags/sa.svg",
+  BR: "/flags/br.png",
+  MX: "/flags/mx.svg",
 };
 
 export type CountryOption = {
@@ -49,5 +78,6 @@ export function getCountryCode(
   row: RankingRowWithCountry
 ): string | undefined {
   if (!row.countryCode) return undefined;
-  return FLAG_SRC[row.countryCode] ? row.countryCode : undefined;
+  const upper = row.countryCode.toUpperCase();
+  return FLAG_SRC[upper] ? upper : undefined;
 }
