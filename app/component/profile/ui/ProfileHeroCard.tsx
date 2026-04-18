@@ -584,7 +584,7 @@ export default function ProfileHeroCard({
   /** 常にバッジ行の高さを確保して、表示時にカードが縦に伸びないようにする */
   const badgesSlotClass = isWeb
     ? "mt-2.5 min-h-[56px] sm:min-h-16"
-    : "mt-1.5 min-h-12 sm:min-h-14";
+    : "mt-1.5 min-h-14 sm:min-h-16";
 
   const badgesWrap = hasBadgeSlot ? (
     <div

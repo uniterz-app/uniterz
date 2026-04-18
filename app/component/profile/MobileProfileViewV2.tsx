@@ -276,13 +276,13 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         menuUnreadCount={isMe ? menuUnreadCount : 0}
       >
         {resolvedBadges.length > 0 ? (
-          <div className="flex flex-wrap content-start gap-1 sm:gap-1.5">
+          <div className="flex flex-wrap content-start gap-1.5 sm:gap-2">
             {resolvedBadges.slice(0, 10).map((b) => (
               <button
                 key={b.id}
                 type="button"
                 title={b.title}
-                className="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-14 sm:w-14"
+                className="inline-flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:h-16 sm:w-16"
                 onClick={() => {
                   setSelectedBadge(b);
                   setBadgeModalOpen(true);
