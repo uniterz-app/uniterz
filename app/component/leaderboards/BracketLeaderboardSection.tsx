@@ -13,6 +13,8 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import BracketUserCard from "./BracketUserCard";
 import useBracketLeaderboard, {
+  BRACKET_LEADERBOARD_FIRST_LIMIT,
+  BRACKET_LEADERBOARD_PAGE_LIMIT,
   type BracketLeaderboardRow,
 } from "@/lib/leaderboards/useBracketLeaderboard";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
@@ -29,6 +31,23 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 type Props = {
   season?: string;
 };
+
+/** Each fetch chunk (30 then 20, 20, …) uses the same per-item stagger as the first chunk. */
+const BRACKET_CARD_STAGGER_STEP = 0.05;
+const BRACKET_CARD_ENTER_DURATION = 0.4;
+
+function bracketCardEnterDelay(index: number): number {
+  const chunkStart =
+    index < BRACKET_LEADERBOARD_FIRST_LIMIT
+      ? 0
+      : BRACKET_LEADERBOARD_FIRST_LIMIT +
+        Math.floor(
+          (index - BRACKET_LEADERBOARD_FIRST_LIMIT) /
+            BRACKET_LEADERBOARD_PAGE_LIMIT
+        ) *
+          BRACKET_LEADERBOARD_PAGE_LIMIT;
+  return (index - chunkStart) * BRACKET_CARD_STAGGER_STEP;
+}
 
 export default function BracketLeaderboardSection({ season: propSeason }: Props) {
   const router = useRouter();
@@ -257,8 +276,8 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                duration: 0.4,
-                delay: index * 0.05,
+                duration: BRACKET_CARD_ENTER_DURATION,
+                delay: bracketCardEnterDelay(index),
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
