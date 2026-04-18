@@ -22,8 +22,8 @@ export const teamColorsNBA: TeamColorMap = {
   // CLE Cavaliers
   "nba-cavaliers":    { primary: "#6F263D", secondary: "#FFB81C" },
 
-  // DET Pistons → Red 主導
-  "nba-pistons":      { primary: "#FFFFFF", secondary: "#006BB6" },
+  // DET Pistons → 単色（公式レッド系 #ED174C）
+  "nba-pistons":      { primary: "#ED174C", secondary: "#ED174C", textOnPrimary: "#fff" },
 
   // IND Pacers → Gold 主導
   "nba-pacers":       { primary: "#FDBB30", secondary: "#002D62" },
@@ -74,7 +74,11 @@ export const teamColorsNBA: TeamColorMap = {
   "nba-grizzlies":    { primary: "#5D76A9", secondary: "#12173F" },
 
   // MIN Timberwolves
-  "nba-timberwolves": { primary: "#0C2340", secondary: "#236192" },
+  "nba-timberwolves": {
+    primary: "#0C2340",
+    secondary: "#0C2340",
+    textOnPrimary: "#fff",
+  },
 
   // NOP Pelicans
   "nba-pelicans":     { primary: "#0C2340", secondary: "#C8102E" },
