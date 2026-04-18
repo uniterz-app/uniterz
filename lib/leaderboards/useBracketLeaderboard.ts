@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type BracketLeaderboardRow = {
   uid: string;
@@ -20,8 +20,14 @@ type ApiResponse = {
   season?: string;
   count?: number;
   rows?: BracketLeaderboardRow[];
+  hasMore?: boolean;
+  nextCursor?: string | null;
   error?: string;
 };
+
+/** First request page size (must match BracketLeaderboardSection UX). */
+export const BRACKET_LEADERBOARD_FIRST_LIMIT = 30;
+export const BRACKET_LEADERBOARD_PAGE_LIMIT = 20;
 
 type UseBracketLeaderboardParams = {
   season: string;
@@ -30,8 +36,11 @@ type UseBracketLeaderboardParams = {
 
 type UseBracketLeaderboardResult = {
   loading: boolean;
+  loadingMore: boolean;
   error: string | null;
   rows: BracketLeaderboardRow[];
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
   refetch: () => Promise<void>;
 };
 
@@ -41,63 +50,142 @@ export default function useBracketLeaderboard(
   const { season, enabled = true } = params;
 
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [rows, setRows] = useState<BracketLeaderboardRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const fetchLeaderboard = async (signal?: AbortSignal) => {
-    if (!enabled) {
-      setLoading(false);
-      setRows([]);
-      setError(null);
-      return;
-    }
+  const rowsRef = useRef<BracketLeaderboardRow[]>([]);
+  const nextCursorRef = useRef<string | null>(null);
+  const hasMoreRef = useRef(false);
+  const loadingMoreLock = useRef(false);
 
-    if (!season || !/^\d{4}$/.test(season)) {
-      setLoading(false);
-      setRows([]);
-      setError("invalid season");
-      return;
-    }
+  rowsRef.current = rows;
+  nextCursorRef.current = nextCursor;
+  hasMoreRef.current = hasMore;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(
-        `/api/bracket-leaderboard?season=${encodeURIComponent(season)}`,
-        { method: "GET", cache: "no-store", signal }
-      );
-
-      const json: ApiResponse = await res.json();
-
-      if (!res.ok || !json.ok) {
-        throw new Error(json?.error ?? "failed to fetch bracket leaderboard");
-      }
-
-      const nextRows = Array.isArray(json.rows) ? json.rows : [];
-      setRows(nextRows);
-      setError(null);
-    } catch (e: unknown) {
-      if (e instanceof Error && e.name === "AbortError") return;
-      setRows([]);
-      setError(e instanceof Error ? e.message : "failed to fetch bracket leaderboard");
-    } finally {
-      if (!signal?.aborted) {
+  const fetchFirstPage = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!enabled) {
         setLoading(false);
+        setLoadingMore(false);
+        setRows([]);
+        setError(null);
+        setHasMore(false);
+        setNextCursor(null);
+        return;
       }
-    }
-  };
+
+      if (!season || !/^\d{4}$/.test(season)) {
+        setLoading(false);
+        setRows([]);
+        setError("invalid season");
+        setHasMore(false);
+        setNextCursor(null);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const q = new URLSearchParams({
+          season,
+          limit: String(BRACKET_LEADERBOARD_FIRST_LIMIT),
+          startRank: "1",
+        });
+        const res = await fetch(`/api/bracket-leaderboard?${q}`, {
+          method: "GET",
+          cache: "no-store",
+          signal,
+        });
+
+        const json: ApiResponse = await res.json();
+
+        if (!res.ok || !json.ok) {
+          throw new Error(json?.error ?? "failed to fetch bracket leaderboard");
+        }
+
+        const nextRows = Array.isArray(json.rows) ? json.rows : [];
+        setRows(nextRows);
+        setHasMore(Boolean(json.hasMore));
+        setNextCursor(json.nextCursor ?? null);
+        setError(null);
+      } catch (e: unknown) {
+        if (e instanceof Error && e.name === "AbortError") return;
+        setRows([]);
+        setHasMore(false);
+        setNextCursor(null);
+        setError(
+          e instanceof Error ? e.message : "failed to fetch bracket leaderboard"
+        );
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
+      }
+    },
+    [season, enabled]
+  );
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchLeaderboard(controller.signal);
+    fetchFirstPage(controller.signal);
     return () => controller.abort();
+  }, [fetchFirstPage]);
+
+  const loadMore = useCallback(async () => {
+    if (!enabled || !season || !/^\d{4}$/.test(season)) return;
+    if (!hasMoreRef.current || loadingMoreLock.current) return;
+    const cursor = nextCursorRef.current;
+    if (!cursor) return;
+
+    loadingMoreLock.current = true;
+    setLoadingMore(true);
+    setError(null);
+
+    try {
+      const startRank = rowsRef.current.length + 1;
+      const q = new URLSearchParams({
+        season,
+        limit: String(BRACKET_LEADERBOARD_PAGE_LIMIT),
+        startRank: String(startRank),
+        cursor,
+      });
+      const res = await fetch(`/api/bracket-leaderboard?${q}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      const json: ApiResponse = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json?.error ?? "failed to fetch bracket leaderboard");
+      }
+      const chunk = Array.isArray(json.rows) ? json.rows : [];
+      setRows((prev) => [...prev, ...chunk]);
+      setHasMore(Boolean(json.hasMore));
+      setNextCursor(json.nextCursor ?? null);
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : "failed to fetch bracket leaderboard"
+      );
+    } finally {
+      loadingMoreLock.current = false;
+      setLoadingMore(false);
+    }
   }, [season, enabled]);
+
+  const refetch = useCallback(async () => {
+    await fetchFirstPage();
+  }, [fetchFirstPage]);
 
   return {
     loading,
+    loadingMore,
     error,
     rows,
-    refetch: () => fetchLeaderboard(),
+    hasMore,
+    loadMore,
+    refetch,
   };
 }
