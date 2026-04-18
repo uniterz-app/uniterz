@@ -29,7 +29,7 @@ export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
       { code: "TOR", seed: 5 },
       { code: "ATL", seed: 6 },
       { code: "PHI", seed: 7 },
-      { code: "CHA", seed: 8 },
+      { code: "ORL", seed: 8 },
     ],
     west: [
       { code: "OKC", seed: 1 },
@@ -39,7 +39,7 @@ export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
       { code: "HOU", seed: 5 },
       { code: "MIN", seed: 6 },
       { code: "POR", seed: 7 },
-      { code: "GSW", seed: 8 },
+      { code: "PHX", seed: 8 },
     ],
   },
 };

@@ -342,6 +342,221 @@ body.splash-bg {
   animation: splash-hud-pulse 2.8s ease-in-out infinite;
 }
 
+/* ============================================================
+   バッジパレット（HUD / ホログラム格納庫）
+   ============================================================ */
+
+@keyframes badge-palette-chrome-glitch {
+  0%,
+  86%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    filter: none;
+  }
+
+  86.25% {
+    transform: translate3d(-3px, 2px, 0);
+    filter: saturate(1.35) hue-rotate(-18deg) contrast(1.08);
+  }
+
+  86.45% {
+    transform: translate3d(4px, -2px, 0);
+    filter: saturate(1.3) hue-rotate(22deg) contrast(1.05);
+  }
+
+  86.7% {
+    transform: translate3d(-1px, 1px, 0);
+    filter: brightness(1.12) hue-rotate(-8deg);
+  }
+
+  87% {
+    transform: translate3d(0, 0, 0);
+    filter: none;
+  }
+}
+
+.badge-palette-chrome-glitch {
+  animation: badge-palette-chrome-glitch 9.5s ease-in-out infinite;
+}
+
+/* 回転コニック（2px リング用・中央は子でマスク） */
+@keyframes badge-palette-orbit-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.badge-palette-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200%;
+  aspect-ratio: 1;
+  max-width: none;
+  background: conic-gradient(
+    from 0deg,
+    rgba(34, 211, 238, 0.98),
+    rgba(139, 92, 246, 0.92),
+    rgba(6, 182, 212, 0.55),
+    rgba(167, 139, 250, 0.75),
+    rgba(34, 211, 238, 0.98)
+  );
+  animation: badge-palette-orbit-spin 16s linear infinite;
+  will-change: transform;
+}
+
+/* パネル内を走る縦方向のスキャンビーム */
+@keyframes badge-palette-beam-y {
+  0%,
+  6% {
+    top: 10%;
+    opacity: 0;
+  }
+
+  14% {
+    opacity: 0.92;
+  }
+
+  52% {
+    top: 86%;
+    opacity: 0.92;
+  }
+
+  62%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.badge-palette-beam {
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(207, 250, 254, 0.98),
+    transparent
+  );
+  box-shadow:
+    0 0 18px rgba(34, 211, 238, 0.75),
+    0 0 40px rgba(34, 211, 238, 0.25);
+  animation: badge-palette-beam-y 7s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* 斜めハッチ（奥行き用・静止） */
+.badge-palette-diagonal-hatch {
+  background-image: repeating-linear-gradient(
+    -32deg,
+    transparent,
+    transparent 5px,
+    rgba(34, 211, 238, 0.035) 5px,
+    rgba(34, 211, 238, 0.035) 6px
+  );
+}
+
+/* スロット登場 */
+@keyframes badge-palette-slot-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.badge-palette-slot-enter {
+  animation: badge-palette-slot-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* スロットホバー：短い横スイープ */
+@keyframes badge-palette-slot-sweep {
+  from {
+    transform: translateX(-130%);
+  }
+
+  to {
+    transform: translateX(130%);
+  }
+}
+
+.badge-palette-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(103, 232, 249, 0.28),
+    transparent
+  );
+  transform: translateX(-120%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.badge-palette-slot:hover::before,
+.badge-palette-slot:focus-visible::before {
+  opacity: 1;
+  animation: badge-palette-slot-sweep 0.55s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-palette-chrome-glitch {
+    animation: none;
+  }
+
+  .badge-palette-orbit {
+    animation: none;
+    transform: translate(-50%, -50%) rotate(25deg);
+  }
+
+  .badge-palette-beam {
+    animation: none;
+    opacity: 0;
+  }
+
+  .badge-palette-slot-enter {
+    animation: none;
+  }
+
+  .badge-palette-slot:hover::before,
+  .badge-palette-slot:focus-visible::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  .badge-palette-shell .splash-cyber-grid,
+  .badge-palette-shell .splash-cyber-scanlines {
+    animation: none;
+  }
+
+  .badge-palette-shell .splash-cyber-corner {
+    animation: none;
+    opacity: 0.72;
+    filter: none;
+  }
+
+  .badge-palette-shell.cyber-card::after {
+    animation: none;
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+}
+
 /* スプラッシュ：充填率は AnimatedSplashScreen の loadProgress01 と同期（inline transform） */
 
 .splash-loading-track {
