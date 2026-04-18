@@ -20,7 +20,6 @@ export type PlayoffBracketConfig = {
 export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
   "2026": {
     season: "2026",
-    allowSubmission: false,
     east: [
       { code: "DET", seed: 1 },
       { code: "BOS", seed: 2 },
