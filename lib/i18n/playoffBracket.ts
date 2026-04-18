@@ -25,6 +25,11 @@ export type PlayoffBracketStrings = {
   alertSubmittedOk: string;
   alertSubmitFailed: string;
   alertSubmissionLockedBySeeding: string;
+  alertSubmissionClosedByDeadline: string;
+  bannerSubmissionClosedByDeadline: string;
+  submitBracketClosedShort: string;
+  submitLockedSeedingShort: string;
+  submitBracketCta: string;
   submitCancel: string;
   submitConfirm: string;
   submitSubmitting: string;
@@ -59,6 +64,13 @@ const en: PlayoffBracketStrings = {
   alertSubmitFailed: "Submission failed.",
   alertSubmissionLockedBySeeding:
     "Standings are not finalized yet, so submission is disabled.",
+  alertSubmissionClosedByDeadline:
+    "The bracket submission deadline has passed. Your picks were not saved to the server.",
+  bannerSubmissionClosedByDeadline:
+    "Submission is closed. You can still view the bracket page; new submissions are not accepted.",
+  submitBracketClosedShort: "Submission closed",
+  submitLockedSeedingShort: "Not open yet",
+  submitBracketCta: "Submit bracket",
   submitCancel: "Cancel",
   submitConfirm: "Confirm",
   submitSubmitting: "Submitting...",
@@ -91,6 +103,11 @@ const ja: PlayoffBracketStrings = {
   alertSubmittedOk: "ブラケットを提出しました",
   alertSubmitFailed: "提出に失敗しました",
   alertSubmissionLockedBySeeding: "まだ順位が決まってないので提出はできません",
+  alertSubmissionClosedByDeadline: "提出期限を過ぎたため、提出できません。",
+  bannerSubmissionClosedByDeadline: "もう提出は受け付けていません。ブラケット画面の表示は引き続きできます。",
+  submitBracketClosedShort: "提出終了",
+  submitLockedSeedingShort: "まだ提出開始前です",
+  submitBracketCta: "ブラケットを提出",
   submitCancel: "キャンセル",
   submitConfirm: "確定",
   submitSubmitting: "送信中...",
