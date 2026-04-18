@@ -108,7 +108,7 @@ function mixRgb(
   };
 }
 
-/** 左→右（segment 0→last）でチーム色が徐々に濃くなる */
+/** 左→右でグラデ。ユニ primary に近い色味（黒混入は弱め） */
 function teamSegmentPalette(
   hex: string,
   segmentIndex: number,
@@ -116,17 +116,18 @@ function teamSegmentPalette(
 ): BarPalette {
   const base = hexToRgb(hex) ?? { r: 59, g: 130, b: 246 };
   const t = numSegments <= 1 ? 0 : segmentIndex / (numSegments - 1);
-  const lifted = mixRgb(WHITE, base, 0.42 - t * 0.2);
-  const sunk = mixRgb(base, BLACK, 0.26 + t * 0.54);
-  const core = mixRgb(lifted, sunk, 0.52);
-  const edge = mixRgb(sunk, BLACK, 0.38);
-  const ca = 0.4 + t * 0.5;
-  const ea = 0.7 + t * 0.26;
+  const towardBase = 0.62 - t * 0.2;
+  const lifted = mixRgb(WHITE, base, towardBase);
+  const sunk = mixRgb(base, BLACK, 0.08 + t * 0.22);
+  const core = mixRgb(lifted, sunk, 0.35);
+  const edge = mixRgb(sunk, BLACK, 0.14);
+  const ca = 0.58 + t * 0.34;
+  const ea = 0.85 + t * 0.12;
   return {
     core: `rgba(${core.r},${core.g},${core.b},${ca})`,
     edge: `rgba(${edge.r},${edge.g},${edge.b},${ea})`,
-    shadow: `0 0 ${8 + t * 12}px rgba(${base.r},${base.g},${base.b},${
-      0.16 + t * 0.34
+    shadow: `0 0 ${6 + t * 14}px rgba(${base.r},${base.g},${base.b},${
+      0.28 + t * 0.38
     })`,
   };
 }

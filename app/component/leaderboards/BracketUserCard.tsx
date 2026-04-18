@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { alfa, jp } from "@/lib/fonts";
 import type { BracketLeaderboardRow } from "@/lib/leaderboards/useBracketLeaderboard";
+import { nbaTeamIdFromBracketCode } from "@/lib/nba-bracket-code";
+import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
   ProCyberBadge,
@@ -15,6 +17,57 @@ type Props = {
   language?: Language;
   onClick?: () => void;
 };
+
+function textOnJerseyPrimary(hex: string): "#ffffff" | "#0f172a" {
+  const h = hex.replace(/^#/, "");
+  if (h.length !== 6) return "#ffffff";
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  if ([r, g, b].some((n) => Number.isNaN(n))) return "#ffffff";
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.72 ? "#0f172a" : "#ffffff";
+}
+
+function ChampionPickBadge({
+  code,
+  language,
+}: {
+  code: string;
+  language: Language;
+}) {
+  const teamId = nbaTeamIdFromBracketCode(code);
+  const bg =
+    teamId != null
+      ? (getTeamJerseyPrimaryColor("nba", teamId) ?? "#1d4ed8")
+      : "#334155";
+  const label = code.trim().toUpperCase().slice(0, 3);
+  const fg = textOnJerseyPrimary(bg);
+
+  return (
+    <span
+      className={[
+        "inline-flex h-[15px] shrink-0 items-center justify-center rounded-[4px] px-1 text-[9px] font-black leading-none tracking-[0.05em] sm:h-[18px] sm:rounded-[5px] sm:px-1.5 sm:text-[10px] sm:tracking-[0.06em]",
+        alfa.className,
+      ].join(" ")}
+      style={{
+        backgroundColor: bg,
+        color: fg,
+        boxShadow:
+          fg === "#ffffff"
+            ? "inset 0 1px 0 rgba(255,255,255,0.2)"
+            : "inset 0 1px 0 rgba(255,255,255,0.35)",
+      }}
+      title={
+        language === "en"
+          ? `Predicted champion: ${label}`
+          : `優勝予想: ${label}`
+      }
+    >
+      {label}
+    </span>
+  );
+}
 
 export default function BracketUserCard({
   row,
@@ -77,6 +130,9 @@ export default function BracketUserCard({
             >
               {displayName}
             </div>
+            {row.championPick ? (
+              <ChampionPickBadge code={row.championPick} language={language} />
+            ) : null}
             {isPro ? (
               <ProCyberBadge
                 {...proBadgeStaticMotion}
