@@ -5,9 +5,9 @@ import type {
 
 export const THUNDER_SUNS_TEAM_IDS = ["nba-thunder", "nba-suns"] as const;
 
-/** H2Hカードは左=Suns、右=Thunder で固定 */
-const H2H_LEFT = "Suns";
-const H2H_RIGHT = "Thunder";
+/** H2Hカードは左=Thunder、右=Suns で固定 */
+const H2H_LEFT = "Thunder";
+const H2H_RIGHT = "Suns";
 
 /** 2025-26 レギュラー Thunder vs Suns（4試合） */
 export const thunderSunsH2HGames: NbaH2HGameCard[] = [
@@ -17,11 +17,11 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2025-11-29",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 119,
-    scoreRight: 123,
-    homeTeamSide: "right",
-    injuriesLeft: ["G. Allen", "R. Dunn", "J. Green"],
-    injuriesRight: ["T. Sorber", "N. Topic", "A. Wiggins"],
+    scoreLeft: 123,
+    scoreRight: 119,
+    homeTeamSide: "left",
+    injuriesLeft: ["T. Sorber", "N. Topic", "A. Wiggins"],
+    injuriesRight: ["G. Allen", "R. Dunn", "J. Green"],
   },
   {
     id: "h2h-thunder-suns-2026-01-04",
@@ -29,17 +29,17 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2026-01-05",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 108,
-    scoreRight: 105,
-    homeTeamSide: "left",
-    injuriesLeft: ["J. Green", "G. Allen"],
-    injuriesRight: [
+    scoreLeft: 105,
+    scoreRight: 108,
+    homeTeamSide: "right",
+    injuriesLeft: [
       "O. Dieng",
       "I. Hartenstein",
       "T. Sorber",
       "N. Topic",
       "J. Williams",
     ],
+    injuriesRight: ["J. Green", "G. Allen"],
   },
   {
     id: "h2h-thunder-suns-2026-02-11",
@@ -47,11 +47,11 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2026-02-12",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 109,
-    scoreRight: 136,
-    homeTeamSide: "left",
-    injuriesLeft: ["D. Booker", "J. Green", "G. Allen"],
-    injuriesRight: ["S. Gilgeous-Alexander", "A. Mitchell", "T. Sorber"],
+    scoreLeft: 136,
+    scoreRight: 109,
+    homeTeamSide: "right",
+    injuriesLeft: ["S. Gilgeous-Alexander", "A. Mitchell", "T. Sorber"],
+    injuriesRight: ["D. Booker", "J. Green", "G. Allen"],
   },
   {
     id: "h2h-thunder-suns-2026-04-12",
@@ -59,11 +59,10 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     dateJst: "2026-04-13",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
-    scoreLeft: 135,
-    scoreRight: 103,
-    homeTeamSide: "right",
-    injuriesLeft: ["G. Allen", "D. Booker", "D. Brooks", "R. O'Neale"],
-    injuriesRight: [
+    scoreLeft: 103,
+    scoreRight: 135,
+    homeTeamSide: "left",
+    injuriesLeft: [
       "A. Caruso",
       "S. Gilgeous-Alexander",
       "I. Hartenstein",
@@ -75,6 +74,7 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
       "Jal. Williams",
       "Jay. Williams",
     ],
+    injuriesRight: ["G. Allen", "D. Booker", "D. Brooks", "R. O'Neale"],
   },
 ];
 
@@ -92,8 +92,8 @@ function thunderSunsH2HStatsFromGames(games: NbaH2HGameCard[]): {
     if (g.scoreLeft == null || g.scoreRight == null) {
       throw new Error(`thunderSunsH2H: missing scores for ${g.id}`);
     }
-    sunsPts += g.scoreLeft;
-    thunderPts += g.scoreRight;
+    thunderPts += g.scoreLeft;
+    sunsPts += g.scoreRight;
   }
   const n = games.length;
   const r1 = (x: number) => Number(x.toFixed(1));
