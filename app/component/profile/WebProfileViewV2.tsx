@@ -273,21 +273,29 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         menuUnreadCount={isMe ? menuUnreadCount : 0}
       >
         {resolvedBadges.length > 0 ? (
-          <div className="grid grid-cols-10 gap-0.5">
+          <div className="flex flex-wrap content-start gap-1 sm:gap-1.5">
             {resolvedBadges.slice(0, 10).map((b) => (
               <button
                 key={b.id}
-                className="h-12 w-12 rounded-lg"
+                type="button"
+                title={b.title}
+                className="inline-flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-16 sm:w-16"
                 onClick={() => {
                   setSelectedBadge(b);
                   setBadgeModalOpen(true);
                 }}
               >
-                <img
-                  src={b.icon}
-                  alt={b.title}
-                  className="h-full w-full object-cover"
-                />
+                {b.icon ? (
+                  <img
+                    src={b.icon}
+                    alt={b.title}
+                    className="h-full w-full object-contain p-0.5"
+                  />
+                ) : (
+                  <span className="truncate px-0.5 text-center text-[9px] leading-tight text-white/55">
+                    {b.title}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -527,6 +535,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal
           badge={selectedBadge}
+          language={language as Language}
           onClose={() => {
             setBadgeModalOpen(false);
             setSelectedBadge(null);

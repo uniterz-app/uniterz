@@ -16,22 +16,25 @@ export default function BadgeGrid({ badges, variant }: Props) {
   if (!badges || badges.length === 0) return null;
 
   const sliceMax = variant === "mobile" ? 10 : 10;
-  const cols = variant === "mobile" ? "grid-cols-5" : "grid-cols-10";
-  const size = variant === "mobile" ? "w-10 h-10" : "w-12 h-12";
+  const slot =
+    variant === "mobile"
+      ? "h-12 w-12 sm:h-14 sm:w-14"
+      : "h-14 w-14 sm:h-16 sm:w-16";
 
   return (
-    <div className={`mt-4 grid ${cols} gap-2`}>
+    <div className="mt-4 flex flex-wrap content-start gap-2">
       {badges.slice(0, sliceMax).map((b) => (
         <button
           key={b.id}
-          className={`${size} rounded-xl overflow-hidden bg-white/10`}
+          type="button"
+          className={`inline-flex ${slot} shrink-0 items-center justify-center overflow-hidden rounded-xl`}
           title={b.title}
         >
           {b.icon ? (
             <img
               src={b.icon}
               alt={b.title}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-contain p-0.5"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-[10px] text-white/60">

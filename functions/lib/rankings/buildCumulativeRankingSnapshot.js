@@ -1,8 +1,9 @@
 "use strict";
 // functions/src/rankings/buildCumulativeRankingSnapshot.ts
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RANK_SNAPSHOT_HISTORY_SUBCOL = void 0;
+exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = exports.RANK_SNAPSHOT_HISTORY_SUBCOL = void 0;
 exports.getYesterdayDateKeyJST = getYesterdayDateKeyJST;
+exports.subtractOneDayFromDateKeyJST = subtractOneDayFromDateKeyJST;
 exports.buildCumulativeRankingSnapshot = buildCumulativeRankingSnapshot;
 const firestore_1 = require("firebase-admin/firestore");
 /* =========================================================
@@ -41,6 +42,17 @@ function getYesterdayDateKeyJST(now = new Date()) {
     const dd = String(prev.getUTCDate()).padStart(2, "0");
     return `${yy}-${mm}-${dd}`;
 }
+/** Step a JST calendar dateKey (YYYY-MM-DD) back one day (rankSnapshotHistory doc id). */
+function subtractOneDayFromDateKeyJST(dateKey) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const prev = new Date(Date.UTC(y, m - 1, d - 1));
+    const yy = prev.getUTCFullYear();
+    const mm = String(prev.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(prev.getUTCDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
+}
+/** Max days to walk back when yesterday's per-user rank snapshot doc is missing. */
+exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
 /* =========================================================
  * Utils
  * =======================================================*/
@@ -153,33 +165,47 @@ function computeRankDeltaPlaces(prevRank, currentRank) {
         return null;
     return d;
 }
-async function fetchYesterdayRanksForUids(uids, yesterdayKey) {
+/**
+ * For each uid, use the first existing rankSnapshotHistory doc when walking back
+ * from startKey (usually yesterday) up to maxLookbackDays days.
+ */
+async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) {
     const out = new Map();
     if (uids.length === 0)
         return out;
+    const pending = new Set(uids);
+    let key = startKey;
     const firestore = db();
     const CHUNK = 200;
-    for (let i = 0; i < uids.length; i += CHUNK) {
-        const chunk = uids.slice(i, i + CHUNK);
-        const refs = chunk.map((uid) => firestore
-            .collection("cumulative_stats")
-            .doc(uid)
-            .collection(exports.RANK_SNAPSHOT_HISTORY_SUBCOL)
-            .doc(yesterdayKey));
-        const snaps = await firestore.getAll(...refs);
-        snaps.forEach((s, j) => {
-            var _a, _b;
-            const uid = chunk[j];
-            if (!s.exists) {
-                out.set(uid, null);
-                return;
-            }
-            const d = s.data();
-            out.set(uid, {
-                play_in: ((_a = d === null || d === void 0 ? void 0 : d.play_in) !== null && _a !== void 0 ? _a : {}),
-                playoffs: ((_b = d === null || d === void 0 ? void 0 : d.playoffs) !== null && _b !== void 0 ? _b : {}),
+    for (let day = 0; day < maxLookbackDays && pending.size > 0; day++) {
+        const chunkList = [...pending];
+        for (let i = 0; i < chunkList.length; i += CHUNK) {
+            const chunk = chunkList.slice(i, i + CHUNK);
+            const refs = chunk.map((uid) => firestore
+                .collection("cumulative_stats")
+                .doc(uid)
+                .collection(exports.RANK_SNAPSHOT_HISTORY_SUBCOL)
+                .doc(key));
+            const snaps = await firestore.getAll(...refs);
+            snaps.forEach((s, j) => {
+                var _a, _b;
+                const uid = chunk[j];
+                if (!pending.has(uid))
+                    return;
+                if (s.exists) {
+                    const d = s.data();
+                    out.set(uid, {
+                        play_in: ((_a = d === null || d === void 0 ? void 0 : d.play_in) !== null && _a !== void 0 ? _a : {}),
+                        playoffs: ((_b = d === null || d === void 0 ? void 0 : d.playoffs) !== null && _b !== void 0 ? _b : {}),
+                    });
+                    pending.delete(uid);
+                }
             });
-        });
+        }
+        key = subtractOneDayFromDateKeyJST(key);
+    }
+    for (const uid of pending) {
+        out.set(uid, null);
     }
     return out;
 }
@@ -237,7 +263,7 @@ async function buildCumulativeRankingSnapshot() {
         }
     }
     const yesterdayKey = getYesterdayDateKeyJST();
-    const prevByUid = await fetchYesterdayRanksForUids([...topUidSet], yesterdayKey);
+    const prevByUid = await fetchLatestPriorRankMapsForUids([...topUidSet], yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS);
     for (const { phase, metric, rows } of top20Jobs) {
         const enriched = rows.map((row) => {
             var _a;

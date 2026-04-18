@@ -53,6 +53,19 @@ export function getYesterdayDateKeyJST(now: Date = new Date()): string {
   return `${yy}-${mm}-${dd}`;
 }
 
+/** Step a JST calendar dateKey (YYYY-MM-DD) back one day (rankSnapshotHistory doc id). */
+export function subtractOneDayFromDateKeyJST(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const prev = new Date(Date.UTC(y, m - 1, d - 1));
+  const yy = prev.getUTCFullYear();
+  const mm = String(prev.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(prev.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/** Max days to walk back when yesterday's per-user rank snapshot doc is missing. */
+export const RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
+
 /* =========================================================
  * Utils
  * =======================================================*/
@@ -186,9 +199,14 @@ function computeRankDeltaPlaces(
   return d;
 }
 
-async function fetchYesterdayRanksForUids(
+/**
+ * For each uid, use the first existing rankSnapshotHistory doc when walking back
+ * from startKey (usually yesterday) up to maxLookbackDays days.
+ */
+async function fetchLatestPriorRankMapsForUids(
   uids: string[],
-  yesterdayKey: string
+  startKey: string,
+  maxLookbackDays: number
 ): Promise<Map<string, { play_in: PhaseRankMap; playoffs: PhaseRankMap } | null>> {
   const out = new Map<
     string,
@@ -196,33 +214,44 @@ async function fetchYesterdayRanksForUids(
   >();
   if (uids.length === 0) return out;
 
+  const pending = new Set(uids);
+  let key = startKey;
   const firestore = db();
   const CHUNK = 200;
-  for (let i = 0; i < uids.length; i += CHUNK) {
-    const chunk = uids.slice(i, i + CHUNK);
-    const refs = chunk.map((uid) =>
-      firestore
-        .collection("cumulative_stats")
-        .doc(uid)
-        .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
-        .doc(yesterdayKey)
-    );
-    const snaps = await firestore.getAll(...refs);
-    snaps.forEach((s, j) => {
-      const uid = chunk[j]!;
-      if (!s.exists) {
-        out.set(uid, null);
-        return;
-      }
-      const d = s.data() as {
-        play_in?: PhaseRankMap;
-        playoffs?: PhaseRankMap;
-      };
-      out.set(uid, {
-        play_in: (d?.play_in ?? {}) as PhaseRankMap,
-        playoffs: (d?.playoffs ?? {}) as PhaseRankMap,
+
+  for (let day = 0; day < maxLookbackDays && pending.size > 0; day++) {
+    const chunkList = [...pending];
+    for (let i = 0; i < chunkList.length; i += CHUNK) {
+      const chunk = chunkList.slice(i, i + CHUNK);
+      const refs = chunk.map((uid) =>
+        firestore
+          .collection("cumulative_stats")
+          .doc(uid)
+          .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+          .doc(key)
+      );
+      const snaps = await firestore.getAll(...refs);
+      snaps.forEach((s, j) => {
+        const uid = chunk[j]!;
+        if (!pending.has(uid)) return;
+        if (s.exists) {
+          const d = s.data() as {
+            play_in?: PhaseRankMap;
+            playoffs?: PhaseRankMap;
+          };
+          out.set(uid, {
+            play_in: (d?.play_in ?? {}) as PhaseRankMap,
+            playoffs: (d?.playoffs ?? {}) as PhaseRankMap,
+          });
+          pending.delete(uid);
+        }
       });
-    });
+    }
+    key = subtractOneDayFromDateKeyJST(key);
+  }
+
+  for (const uid of pending) {
+    out.set(uid, null);
   }
   return out;
 }
@@ -301,9 +330,10 @@ export async function buildCumulativeRankingSnapshot() {
   }
 
   const yesterdayKey = getYesterdayDateKeyJST();
-  const prevByUid = await fetchYesterdayRanksForUids(
+  const prevByUid = await fetchLatestPriorRankMapsForUids(
     [...topUidSet],
-    yesterdayKey
+    yesterdayKey,
+    RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
   );
 
   for (const { phase, metric, rows } of top20Jobs) {

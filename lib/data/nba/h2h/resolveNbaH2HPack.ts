@@ -152,6 +152,11 @@ function idsAreWarriorsSuns(homeTeamId: string, awayTeamId: string): boolean {
   return WARRIORS_SUNS_TEAM_IDS.every((id) => s.has(id));
 }
 
+function idsAreThunderSuns(homeTeamId: string, awayTeamId: string): boolean {
+  const s = new Set([homeTeamId, awayTeamId]);
+  return THUNDER_SUNS_TEAM_IDS.every((id) => s.has(id));
+}
+
 function idsAreSpursBlazers(homeTeamId: string, awayTeamId: string): boolean {
   const s = new Set([homeTeamId, awayTeamId]);
   return SPURS_BLAZERS_TEAM_IDS.every((id) => s.has(id));
@@ -481,6 +486,45 @@ function inferWarriorsSunsIdsFromNames(
   return { homeTeamId: hid, awayTeamId: aid };
 }
 
+function namesLookThunderSuns(homeName?: string, awayName?: string): boolean {
+  const blob = `${(homeName ?? "").toLowerCase()} ${(awayName ?? "").toLowerCase()}`;
+  const hasSuns = blob.includes("suns") || blob.includes("phoenix");
+  const hasThunder =
+    blob.includes("thunder") ||
+    blob.includes("oklahoma") ||
+    blob.includes("okc");
+  return hasSuns && hasThunder;
+}
+
+function inferThunderSunsIdsFromNames(
+  homeName?: string,
+  awayName?: string
+): { homeTeamId: string; awayTeamId: string } | null {
+  if (!namesLookThunderSuns(homeName, awayName)) return null;
+  const hn = (homeName ?? "").toLowerCase();
+  const an = (awayName ?? "").toLowerCase();
+  let hid = "";
+  let aid = "";
+  if (hn.includes("suns") || hn.includes("phoenix")) hid = "nba-suns";
+  else if (
+    hn.includes("thunder") ||
+    hn.includes("oklahoma") ||
+    hn.includes("okc")
+  ) {
+    hid = "nba-thunder";
+  }
+  if (an.includes("suns") || an.includes("phoenix")) aid = "nba-suns";
+  else if (
+    an.includes("thunder") ||
+    an.includes("oklahoma") ||
+    an.includes("okc")
+  ) {
+    aid = "nba-thunder";
+  }
+  if (!hid || !aid || hid === aid) return null;
+  return { homeTeamId: hid, awayTeamId: aid };
+}
+
 function namesLookLakersRockets(homeName?: string, awayName?: string): boolean {
   const blob = `${(homeName ?? "").toLowerCase()} ${(awayName ?? "").toLowerCase()}`;
   return blob.includes("laker") && blob.includes("rocket");
@@ -574,6 +618,10 @@ export function resolveNbaH2HPack(
       homeName,
       awayName
     );
+    const inferredThunderSuns = inferThunderSunsIdsFromNames(
+      homeName,
+      awayName
+    );
     const inferredSixersMagic = inferSixersMagicIdsFromNames(
       homeName,
       awayName
@@ -604,6 +652,7 @@ export function resolveNbaH2HPack(
       inferredSunsBlazers ??
       inferredThunderSuns ??
       inferredWarriorsSuns ??
+      inferredThunderSuns ??
       inferredSixersMagic ??
       inferredSixersCeltics ??
       inferredClippersWarriors ??
@@ -728,6 +777,19 @@ export function resolveNbaH2HPack(
       games: warriorsSunsH2HGames,
       h2hAverages,
       seriesRecord: computeH2hSeriesRecord(warriorsSunsH2HGames),
+    };
+  }
+
+  if (idsAreThunderSuns(hid, aid)) {
+    const h2hAverages = thunderSunsH2HAveragesForSides({
+      homeTeamId: hid,
+      awayTeamId: aid,
+    });
+    if (!h2hAverages) return null;
+    return {
+      games: thunderSunsH2HGames,
+      h2hAverages,
+      seriesRecord: computeH2hSeriesRecord(thunderSunsH2HGames),
     };
   }
 

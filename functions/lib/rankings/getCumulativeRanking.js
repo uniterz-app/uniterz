@@ -42,19 +42,29 @@ function rankingSlice(d, phase) {
         totalUpset: 0,
     };
 }
+async function loadLatestHistSnapForUid(uid) {
+    const firestore = db();
+    let key = (0, buildCumulativeRankingSnapshot_1.getYesterdayDateKeyJST)();
+    for (let i = 0; i < buildCumulativeRankingSnapshot_1.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS; i++) {
+        const snap = await firestore
+            .collection("cumulative_stats")
+            .doc(uid)
+            .collection(buildCumulativeRankingSnapshot_1.RANK_SNAPSHOT_HISTORY_SUBCOL)
+            .doc(key)
+            .get();
+        if (snap.exists)
+            return snap;
+        key = (0, buildCumulativeRankingSnapshot_1.subtractOneDayFromDateKeyJST)(key);
+    }
+    return null;
+}
 async function loadUserRankingSnaps(uid) {
     if (!uid)
         return { mySnap: null, histSnap: null };
     const mySnap = await db().collection("cumulative_stats").doc(uid).get();
     if (!mySnap.exists)
         return { mySnap, histSnap: null };
-    const yKey = (0, buildCumulativeRankingSnapshot_1.getYesterdayDateKeyJST)();
-    const histSnap = await db()
-        .collection("cumulative_stats")
-        .doc(uid)
-        .collection(buildCumulativeRankingSnapshot_1.RANK_SNAPSHOT_HISTORY_SUBCOL)
-        .doc(yKey)
-        .get();
+    const histSnap = await loadLatestHistSnapForUid(uid);
     return { mySnap, histSnap };
 }
 function parseMetricsParam(raw) {
