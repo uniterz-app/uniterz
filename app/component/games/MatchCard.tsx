@@ -595,12 +595,8 @@ let center: React.ReactNode = inPredictOverlay ? (
   const [homeL1, homeL2] = splitTeamNameByLeague(league, home.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(league, away.name);
 
-  const handleOpenPredict = (
-    e: React.MouseEvent | React.KeyboardEvent
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  /** Same behavior as the predict CTA (schedule overlay when logged in). */
+  const triggerOpenPredictLikeButton = () => {
     const me = auth.currentUser;
     if (!me) return;
 
@@ -613,6 +609,12 @@ let center: React.ReactNode = inPredictOverlay ? (
     // オーバーレイなしの単体カード：従来どおり（予想済み・開始後は何もしない）
     if (myPostId) return;
     if (isGameStarted) return;
+  };
+
+  const handleOpenPredict = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerOpenPredictLikeButton();
   };
 
   /** 一覧オーバーレイ以外で、カード全体を Next の Link にするときの遷移先 */
@@ -647,10 +649,14 @@ let center: React.ReactNode = inPredictOverlay ? (
     !hideActions &&
     !inPredictOverlay &&
     (Boolean(onOpenPredict) || Boolean(effectiveFullCardLinkHref));
-  /* ★ 「予想をする」クリック時：
-        - 試合前   : 投稿あれば投稿詳細 / なければ予想作成へ
-        - 試合開始後: 投稿あれば投稿詳細 / なければ“予想を見る”へ
-  */
+
+  /** スケジュール一覧オーバーレイ：全面タップの押下フィードバック用 */
+  const openOverlayFromCardShell =
+    Boolean(onOpenPredict) &&
+    !hideActions &&
+    !inPredictOverlay &&
+    !(isPredicted && !onOpenPredict);
+
   const handleMakePrediction = async (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   e.stopPropagation();
@@ -817,17 +823,25 @@ dense
 >
       {useFullCardHitLayer ? (
         onOpenPredict ? (
-          <div
+          <motion.div
             role="button"
             tabIndex={0}
             aria-label={
               isEn ? "Open prediction for this game" : "この試合の予想を開く"
             }
             className={[
-              "absolute inset-0 z-[12] cursor-pointer rounded-2xl",
+              "absolute inset-0 z-[12] cursor-pointer touch-manipulation rounded-2xl",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
               "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
             ].join(" ")}
+            whileTap={
+              openOverlayFromCardShell && !reduceMotion
+                ? {
+                    scale: 0.985,
+                    transition: { duration: 0.12, ease: "easeOut" },
+                  }
+                : undefined
+            }
             onClick={handleOpenPredict}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -843,7 +857,8 @@ dense
               isEn ? "Open this match prediction" : "この試合の予想ページへ"
             }
             className={[
-              "absolute inset-0 z-[12] cursor-pointer rounded-2xl",
+              "absolute inset-0 z-[12] cursor-pointer touch-manipulation rounded-2xl",
+              "transition-transform duration-150 ease-out active:scale-[0.985]",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
               "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
             ].join(" ")}
