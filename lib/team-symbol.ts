@@ -2,7 +2,7 @@
 
 export function teamSymbol(teamId: string): string {
   const colors: Record<string, string> = {
-    lakers: "#FDB927",
+    lakers: "#DFFE00",
     warriors: "#1D428A",
     celtics: "#007A33",
     bulls: "#CE1141",

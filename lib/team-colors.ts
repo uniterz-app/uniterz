@@ -12,7 +12,7 @@ const jerseyPrimaryOverridesNBA: Record<string, string> = {
   "nba-pistons": "#ED174C",
   "nba-hornets": "#1D8CAB",
   "nba-knicks": "#F48328",
-  "nba-lakers": "#FDB827",
+  "nba-lakers": "#DFFE00",
   "nba-suns": "#E66226",
   "nba-timberwolves": "#0C2340",
   "nba-warriors": "#DFFE00",

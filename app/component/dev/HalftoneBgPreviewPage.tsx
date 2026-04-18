@@ -41,7 +41,7 @@ export default function HalftoneBgPreviewPage({ variant }: Props) {
           <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
             <div className="flex flex-col items-center gap-1.5">
               <div className="relative aspect-[87.76/114.88] w-full max-w-[16rem] overflow-hidden rounded-xl border border-white/10 bg-black/35 sm:max-w-[18rem]">
-                <DotJerseyCanvas accent="#FDB927" accentEnd="#552583" />
+                <DotJerseyCanvas accent="#DFFE00" accentEnd="#552583" />
               </div>
               <span className="text-[10px] text-white/40">
                 二色グラデ（黄→紫）
