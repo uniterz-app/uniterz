@@ -464,7 +464,7 @@ let center: React.ReactNode = inPredictOverlay ? (
     >
       <div
         className={[
-          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          "text-2xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
           resultStatsMetricNumClass,
         ].join(" ")}
       >
@@ -488,7 +488,7 @@ let center: React.ReactNode = inPredictOverlay ? (
     >
       <div
         className={[
-          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          "text-2xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
           resultStatsMetricNumClass,
         ].join(" ")}
       >
@@ -511,7 +511,7 @@ let center: React.ReactNode = inPredictOverlay ? (
     >
       <div
         className={[
-          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          "text-2xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
           resultStatsMetricNumClass,
         ].join(" ")}
       >
