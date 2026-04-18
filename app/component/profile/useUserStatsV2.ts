@@ -1,7 +1,7 @@
 // app/component/profile/useUserStatsV2.ts
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 
 export type SummaryForCardsV2 = {
@@ -33,25 +33,91 @@ export type SummaryForCardsV2 = {
   upsetHitCount: number;
 };
 
-const CACHE_TTL_MS = 45_000;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+/** 初回は 7d + チャート用 trend +連勝用 stats のみ（30d / all / cumulative はタブ選択時） */
+const PARTS_INITIAL = "stats,7d,trend";
 
 type CacheEntry = {
   at: number;
-  summaries: Record<"7d" | "30d" | "all", SummaryForCardsV2> | null;
+  summaries: Partial<Record<"7d" | "30d" | "all", SummaryForCardsV2>>;
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[] | null;
 };
 
 const statsCache = new Map<string, CacheEntry>();
 
+function mergeSummaries(
+  prev: Partial<Record<"7d" | "30d" | "all", SummaryForCardsV2>> | null,
+  next: Partial<Record<"7d" | "30d" | "all", SummaryForCardsV2>> | undefined
+): Partial<Record<"7d" | "30d" | "all", SummaryForCardsV2>> {
+  return { ...(prev ?? {}), ...(next ?? {}) };
+}
+
 export function useUserStatsV2(uid?: string | null) {
   const [loading, setLoading] = useState(true);
+  const [extending, setExtending] = useState(false);
   const [summaries, setSummaries] = useState<
-    Record<"7d" | "30d" | "all", SummaryForCardsV2> | null
+    Partial<Record<"7d" | "30d" | "all", SummaryForCardsV2>> | null
   >(null);
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
   const [dailyTrend, setDailyTrend] = useState<ProfileDailyTrendRow[] | null>(
     null
+  );
+
+  const preloadRange = useCallback(
+    async (range: "7d" | "30d" | "all") => {
+      if (!uid) return;
+      if (range === "7d") return;
+
+      const now = Date.now();
+      const cached = statsCache.get(uid);
+      if (cached && now - cached.at < CACHE_TTL_MS && cached.summaries[range]) {
+        setSummaries((p) =>
+          mergeSummaries(p, { [range]: cached.summaries[range] })
+        );
+        return;
+      }
+
+      const parts = range === "30d" ? "30d" : "all";
+      setExtending(true);
+      try {
+        const qs = new URLSearchParams({ uid, parts });
+        const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
+          method: "GET",
+        });
+        const json = await res.json();
+        if (!res.ok || !json?.ok) {
+          throw new Error(json?.error ?? "failed to fetch profile stats");
+        }
+
+        const nextSummaries =
+          (json?.summaries as Partial<
+            Record<"7d" | "30d" | "all", SummaryForCardsV2>
+          >) ?? {};
+        const nextStats = (json?.stats as Record<string, unknown>) ?? null;
+        const nextTrend = Array.isArray(json?.dailyTrend)
+          ? (json.dailyTrend as ProfileDailyTrendRow[])
+          : null;
+
+        setSummaries((p) => mergeSummaries(p, nextSummaries));
+        if (nextStats) setStats(nextStats);
+        if (nextTrend && nextTrend.length > 0) setDailyTrend(nextTrend);
+
+        const prevCache = statsCache.get(uid);
+        statsCache.set(uid, {
+          at: Date.now(),
+          summaries: mergeSummaries(prevCache?.summaries ?? null, nextSummaries),
+          stats: nextStats ?? prevCache?.stats ?? null,
+          dailyTrend: nextTrend ?? prevCache?.dailyTrend ?? null,
+        });
+      } catch {
+        // keep previous values
+      } finally {
+        setExtending(false);
+      }
+    },
+    [uid]
   );
 
   useEffect(() => {
@@ -62,6 +128,7 @@ export function useUserStatsV2(uid?: string | null) {
       setStats(null);
       setDailyTrend(null);
       setLoading(false);
+      setExtending(false);
       return;
     }
 
@@ -70,7 +137,12 @@ export function useUserStatsV2(uid?: string | null) {
     async function run() {
       const cached = statsCache.get(safeUid);
       const now = Date.now();
-      if (cached && now - cached.at < CACHE_TTL_MS) {
+      if (
+        cached &&
+        now - cached.at < CACHE_TTL_MS &&
+        cached.summaries["7d"] &&
+        cached.stats != null
+      ) {
         if (cancelled) return;
         setStats(cached.stats);
         setSummaries(cached.summaries);
@@ -81,7 +153,7 @@ export function useUserStatsV2(uid?: string | null) {
 
       try {
         setLoading(true);
-        const qs = new URLSearchParams({ uid: safeUid });
+        const qs = new URLSearchParams({ uid: safeUid, parts: PARTS_INITIAL });
         const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
           method: "GET",
         });
@@ -95,16 +167,17 @@ export function useUserStatsV2(uid?: string | null) {
 
         const nextStats = (json?.stats as Record<string, unknown>) ?? null;
         const nextSummaries =
-          (json?.summaries as Record<"7d" | "30d" | "all", SummaryForCardsV2>) ??
-          null;
+          (json?.summaries as Partial<
+            Record<"7d" | "30d" | "all", SummaryForCardsV2>
+          >) ?? {};
         const nextDailyTrend = Array.isArray(json?.dailyTrend)
           ? (json.dailyTrend as ProfileDailyTrendRow[])
           : null;
 
         statsCache.set(safeUid, {
           at: Date.now(),
-          stats: nextStats,
           summaries: nextSummaries,
+          stats: nextStats,
           dailyTrend: nextDailyTrend,
         });
 
@@ -113,18 +186,27 @@ export function useUserStatsV2(uid?: string | null) {
         setDailyTrend(nextDailyTrend);
       } catch {
         if (cancelled) return;
-        // Keep previous values on transient fetch errors.
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    run();
+    void run();
 
     return () => {
       cancelled = true;
     };
   }, [uid]);
 
-  return { loading, summaries, stats, dailyTrend };
+  const statsLoading = loading || extending;
+
+  return {
+    loading,
+    extending,
+    summaries,
+    stats,
+    dailyTrend,
+    statsLoading,
+    preloadRange,
+  };
 }

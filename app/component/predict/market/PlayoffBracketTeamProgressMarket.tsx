@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import { nameBebas, resultStatsMetricNumClass } from "@/lib/fonts";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
 import type { Language } from "@/lib/i18n/language";
@@ -299,8 +302,8 @@ export default function PlayoffBracketTeamProgressMarket({
             : westCodes.includes(code)
               ? ("west" as const)
               : null,
-          color: getTeamPrimaryColor("nba", teamId) ?? "#3b82f6",
-          colorEnd: getTeamSecondaryColor("nba", teamId),
+          color: getTeamJerseyPrimaryColor("nba", teamId) ?? "#3b82f6",
+          colorEnd: getTeamJerseySecondaryColor("nba", teamId),
           ...rowBase,
           bestLabel: best.label,
           bestPct: best.pct,

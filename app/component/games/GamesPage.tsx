@@ -15,7 +15,7 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
-import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
+import { useGamesByDate } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -34,7 +34,12 @@ import {
   shiftCalendarMonthStart,
 } from "@/lib/time/zonedTime";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
-import { GAMES_CYBER_EASE, GAMES_DAY_SWITCH_EASE } from "./cyberMotion";
+import {
+  GAMES_CYBER_EASE,
+  GAMES_DAY_SWITCH_EASE,
+  GAMES_LIST_AFTER_DAY_STRIP_SEC,
+  GAMES_SCHEDULE_SHELL_DURATION_SEC,
+} from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
 import { fetchNextGameDayAfterLocalDay } from "@/lib/games/fetchNextGameDayAfter";
 import {
@@ -50,9 +55,12 @@ import {
   gameMatchesMarginBounds,
   parseMarginBoundParam,
 } from "@/lib/games/marginFilter";
+import { toStatus } from "@/lib/games/transform";
 
-/** 日付ストリップの後にリストを出すまでの待ち（秒） */
-const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.14;
+function isFinalGameRow(row: Record<string, unknown>): boolean {
+  if (row.final === true || row.final === 1) return true;
+  return toStatus(row.status) === "final";
+}
 
 /* =========================
    Date Utils
@@ -60,32 +68,15 @@ const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.14;
 function findInitialGameDay(params: {
   gameDays: Date[];
   stateSelected: Date | null;
-  urlDate: string | null;
   todayKey: string;
   timeZone: string;
 }): Date | null {
-  const { gameDays, stateSelected, urlDate, todayKey, timeZone } = params;
+  const { gameDays, stateSelected, todayKey, timeZone } = params;
 
   if (!gameDays.length) return null;
 
   if (stateSelected) {
     const wantedKey = toDateKeyInTimeZone(stateSelected, timeZone);
-    const hit = gameDays.find(
-      (d) => toDateKeyInTimeZone(d, timeZone) === wantedKey
-    );
-    if (hit) return hit;
-    const monthPrefix = wantedKey.slice(0, 7);
-    const inMonth = gameDays
-      .filter((d) =>
-        toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix)
-      )
-      .sort((a, b) => a.getTime() - b.getTime());
-    if (inMonth.length) return inMonth[0];
-  }
-
-  const parsedUrlDate = parseDateKeyInTimeZone(urlDate ?? "", timeZone);
-  if (parsedUrlDate) {
-    const wantedKey = toDateKeyInTimeZone(parsedUrlDate, timeZone);
     const hit = gameDays.find(
       (d) => toDateKeyInTimeZone(d, timeZone) === wantedKey
     );
@@ -206,14 +197,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [dayTimeZone]
   );
 
-  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → URL → 今日 */
+  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → 今日（初期位置を今日基準に固定） */
   const anchorForGameDays = useMemo(() => {
-    const fromUrl = parseDateKeyInTimeZone(dateParam ?? "", dayTimeZone);
     const stored = selectedByLeague[league];
     if (stored) return stored;
-    if (fromUrl) return fromUrl;
     return parseDateKeyInTimeZone(todayKey, dayTimeZone) ?? new Date();
-  }, [dateParam, dayTimeZone, league, selectedByLeague, todayKey]);
+  }, [dayTimeZone, league, selectedByLeague, todayKey]);
 
   /* =========================
      Game days（アンカー日の暦月1ヶ月分を取得）
@@ -371,7 +360,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return findInitialGameDay({
       gameDays: gameDaysForStrip,
       stateSelected: stored,
-      urlDate: dateParam,
       todayKey,
       timeZone: dayTimeZone,
     });
@@ -379,7 +367,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     gameDaysForStrip,
     selectedByLeague,
     league,
-    dateParam,
     todayKey,
     dayTimeZone,
   ]);
@@ -525,15 +512,16 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Games（開いた暦月をまとめて取得し、選択日で絞り込み）
   ========================= */
-  const games = useMemo(() => {
-    if (!selected) return [];
-    const dayKey = toDateKeyInTimeZone(selected, dayTimeZone);
-    return monthRows.filter(
-      (g) => gameRowStartDateKeyInTimeZone(g, dayTimeZone) === dayKey,
-    );
-  }, [monthRows, selected, dayTimeZone]);
+  const { games, loading: loadingDayQuery } = useGamesByDate(
+    league,
+    selected,
+    dayTimeZone,
+    !!selected,
+  );
 
-  const loading = loadingDays;
+  const loading =
+    loadingDays ||
+    (!!selected && loadingDayQuery);
 
   const gamesAfterTeamFilter = useMemo(() => {
     const raw = games ?? [];
@@ -583,7 +571,9 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     if (!selected) return false;
     if (!games) return false;
     if (games.length === 0) return false;
-    return games.every((g: any) => g.status === "final");
+    return games.every((g: Record<string, unknown>) => {
+      return isFinalGameRow(g);
+    });
   }, [selected, games]);
 
   /* =========================
@@ -650,6 +640,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const isMobile = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
+  /** 試合一覧まわりの入場・ヘッダの Framer モーションは Web のみ（モバイルは即表示） */
+  const webGamesMotion = !isMobile && !reduceMotion;
 
   /* =========================
      UI
@@ -711,8 +703,58 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return () => window.clearTimeout(id);
   }, [isInitialLoading, selectedDayKey, playRichScheduleIntro]);
 
-  const richScheduleMotion =
-    playRichScheduleIntro && !reduceMotion;
+  const richScheduleMotion = playRichScheduleIntro && webGamesMotion;
+
+  /** 一覧の listShellIntro はブロック再マウント時だけ更新（900ms だけ変わると Framer が再入場しがち） */
+  const scheduleBlockKey = useMemo(
+    () => `${league}|${selectedDayKey}|${teamFilterKey}`,
+    [league, selectedDayKey, teamFilterKey],
+  );
+
+  const playRichIntroRef = useRef(playRichScheduleIntro);
+  playRichIntroRef.current = playRichScheduleIntro;
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
+
+  const prevScheduleBlockKeyRef = useRef<string | null>(null);
+
+  const [listShellIntroLocked, setListShellIntroLocked] = useState<
+    "page" | "daySwitch"
+  >(() => (reduceMotion || isMobile ? "daySwitch" : "page"));
+
+  useLayoutEffect(() => {
+    if (prevScheduleBlockKeyRef.current === scheduleBlockKey) return;
+    const prev = prevScheduleBlockKeyRef.current;
+    prevScheduleBlockKeyRef.current = scheduleBlockKey;
+
+    if (isMobile) {
+      setListShellIntroLocked("daySwitch");
+      prevScheduleBlockKeyRef.current = scheduleBlockKey;
+      return;
+    }
+
+    const splitKey = (k: string) => k.split("|");
+    const prevLeague = prev == null ? null : splitKey(prev)[0];
+    const nextParts = splitKey(scheduleBlockKey);
+    const nextLeague = nextParts[0];
+    const prevDay = prev == null ? null : splitKey(prev)[1] ?? "";
+    const nextDay = nextParts[1] ?? "";
+
+    if (prev !== null && prevLeague !== nextLeague) {
+      setListShellIntroLocked(reduceMotionRef.current ? "daySwitch" : "page");
+      return;
+    }
+    if (prev !== null && prevDay !== nextDay) {
+      setListShellIntroLocked("daySwitch");
+      return;
+    }
+
+    setListShellIntroLocked(
+      playRichIntroRef.current && !reduceMotionRef.current
+        ? "page"
+        : "daySwitch",
+    );
+  }, [scheduleBlockKey, isMobile]);
 
   return (
     <div
@@ -726,10 +768,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     >
       <div className="mb-2 mt-3 flex items-center justify-between gap-3">
         <motion.div
-          initial={reduceMotion ? false : { opacity: 0, x: -16 }}
+          initial={webGamesMotion ? { opacity: 0, x: -16 } : false}
           animate={{ opacity: 1, x: 0 }}
           transition={{
-            duration: reduceMotion ? 0 : 0.32,
+            duration: webGamesMotion ? 0.32 : 0,
             ease: GAMES_CYBER_EASE,
           }}
         >
@@ -752,11 +794,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
         <div className="flex shrink-0 items-center gap-2">
           <motion.div
-            initial={reduceMotion ? false : { opacity: 0, x: 12 }}
+            initial={webGamesMotion ? { opacity: 0, x: 12 } : false}
             animate={{ opacity: 1, x: 0 }}
             transition={{
-              duration: reduceMotion ? 0 : 0.28,
-              delay: reduceMotion ? 0 : 0.04,
+              duration: webGamesMotion ? 0.28 : 0,
+              delay: webGamesMotion ? 0.04 : 0,
               ease: GAMES_CYBER_EASE,
             }}
           >
@@ -778,11 +820,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
           {league === "nba" && (
             <motion.div
-              initial={reduceMotion ? false : { opacity: 0, x: 18 }}
+              initial={webGamesMotion ? { opacity: 0, x: 18 } : false}
               animate={{ opacity: 1, x: 0 }}
               transition={{
-                duration: reduceMotion ? 0 : 0.32,
-                delay: reduceMotion ? 0 : 0.05,
+                duration: webGamesMotion ? 0.32 : 0,
+                delay: webGamesMotion ? 0.05 : 0,
                 ease: GAMES_CYBER_EASE,
               }}
             >
@@ -805,11 +847,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       </div>
 
       <motion.div
-        initial={reduceMotion ? false : { opacity: 0, y: -10, scale: 0.985 }}
+        initial={webGamesMotion ? { opacity: 0, y: -10, scale: 0.985 } : false}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{
-          duration: reduceMotion ? 0 : 0.34,
-          delay: reduceMotion ? 0 : 0.04,
+          duration: webGamesMotion ? 0.34 : 0,
+          delay: webGamesMotion ? 0.04 : 0,
           ease: GAMES_CYBER_EASE,
         }}
         className="mb-1"
@@ -868,11 +910,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     <motion.div
       key={`day-strip-${league}-${teamFilterKey}`}
       className="mb-2"
-      initial={reduceMotion ? false : { opacity: 0 }}
+      initial={webGamesMotion ? { opacity: 0 } : false}
       animate={{ opacity: 1 }}
       transition={{
-        duration: reduceMotion ? 0 : 0.24,
-        delay: reduceMotion ? 0 : 0.06,
+        duration: webGamesMotion ? 0.24 : 0,
+        delay: webGamesMotion ? 0.06 : 0,
         ease: GAMES_CYBER_EASE,
       }}
     >
@@ -892,27 +934,26 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     </motion.div>
 
     <motion.div
-      key={`sched-${selectedDayKey}-${teamFilterKey}-${loading ? "l" : "d"}`}
+      key={`sched-${scheduleBlockKey}`}
       initial={
-        reduceMotion
-          ? false
-          : richScheduleMotion
+        webGamesMotion
+          ? richScheduleMotion
             ? { opacity: 0, y: 10 }
             : { opacity: 0 }
+          : false
       }
       animate={
-        reduceMotion
-          ? { opacity: 1 }
-          : richScheduleMotion
+        webGamesMotion
+          ? richScheduleMotion
             ? { opacity: 1, y: 0 }
             : { opacity: 1 }
+          : { opacity: 1 }
       }
       transition={
-        reduceMotion
-          ? { duration: 0 }
-          : richScheduleMotion
+        webGamesMotion
+          ? richScheduleMotion
             ? {
-                duration: 0.28,
+                duration: GAMES_SCHEDULE_SHELL_DURATION_SEC,
                 delay: GAMES_LIST_AFTER_DAY_STRIP_SEC,
                 ease: GAMES_CYBER_EASE,
               }
@@ -921,6 +962,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
                 delay: 0.06,
                 ease: GAMES_DAY_SWITCH_EASE,
               }
+          : { duration: 0 }
       }
     >
       <div
@@ -935,7 +977,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           loading={loading}
           league={league}
           emptyHint={scheduleEmptyHint}
-          listShellIntro={richScheduleMotion ? "page" : "daySwitch"}
+          listShellIntro={listShellIntroLocked}
         />
       </div>
     </motion.div>

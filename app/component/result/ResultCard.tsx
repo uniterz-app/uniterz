@@ -8,7 +8,11 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -23,6 +27,7 @@ import {
   MOBILE_LIST_CARD_PANEL_DENSE,
   MOBILE_RESULT_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
+import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -156,12 +161,24 @@ function ResultCardPresentationImpl({
     getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#f43f5e";
-  const homeSecondaryColor = useMemo(
-    () => getTeamSecondaryColor(normalizedLeague, post.home?.teamId),
+  const homeJerseyColor = useMemo(
+    () =>
+      getTeamJerseyPrimaryColor(normalizedLeague, post.home?.teamId) ??
+      homeColor,
+    [normalizedLeague, post.home?.teamId, homeColor]
+  );
+  const awayJerseyColor = useMemo(
+    () =>
+      getTeamJerseyPrimaryColor(normalizedLeague, post.away?.teamId) ??
+      awayColor,
+    [normalizedLeague, post.away?.teamId, awayColor]
+  );
+  const homeJerseySecondaryColor = useMemo(
+    () => getTeamJerseySecondaryColor(normalizedLeague, post.home?.teamId),
     [normalizedLeague, post.home?.teamId]
   );
-  const awaySecondaryColor = useMemo(
-    () => getTeamSecondaryColor(normalizedLeague, post.away?.teamId),
+  const awayJerseySecondaryColor = useMemo(
+    () => getTeamJerseySecondaryColor(normalizedLeague, post.away?.teamId),
     [normalizedLeague, post.away?.teamId]
   );
 
@@ -312,6 +329,23 @@ function ResultCardPresentationImpl({
     ? MOBILE_LIST_CARD_PANEL_DENSE
     : MATCH_OVERLAY_GLASS_PANEL;
 
+  /** 試合 LIVE 中（一覧の MatchCard と同趣旨：status live または開始後の scheduled） */
+  const isLiveGame =
+    post.status !== "final" &&
+    (post.status === "live" ||
+      (post.status === "scheduled" &&
+        typeof post.startAtMillis === "number" &&
+        Number.isFinite(post.startAtMillis) &&
+        Date.now() >= post.startAtMillis));
+
+  const liveMarkNode = isLiveGame ? (
+    <LiveMatchMark
+      density={isMobile ? "resultMobile" : "resultDesktop"}
+      isEn={isEn}
+      className="pointer-events-auto"
+    />
+  ) : null;
+
   return (
     <div
       onClick={handle}
@@ -331,6 +365,14 @@ function ResultCardPresentationImpl({
           aria-hidden
         >
           <div className="result-card-streak-sweep__spin" />
+        </div>
+      ) : null}
+      {badge === "upset" ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-upset-sweep"
+          aria-hidden
+        >
+          <div className="result-card-upset-sweep__spin" />
         </div>
       ) : null}
       <div
@@ -417,6 +459,7 @@ function ResultCardPresentationImpl({
                 MISS
               </span>
             )}
+            {liveMarkNode}
           </div>
           <div
             className={[
@@ -482,6 +525,7 @@ function ResultCardPresentationImpl({
                 MISS
               </span>
             )}
+            {liveMarkNode}
           </div>
         </div>
       )}
@@ -508,8 +552,8 @@ function ResultCardPresentationImpl({
               <div className="relative flex w-full min-w-0 items-center justify-center">
                 {Icon === Jersey ? (
                   <HalftoneJerseyMark
-                    accent={homeColor}
-                    accentEnd={homeSecondaryColor}
+                    accent={homeJerseyColor}
+                    accentEnd={homeJerseySecondaryColor}
                     className={
                       mobileScheduleDense
                         ? "jersey-icon ml-1 h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
@@ -548,8 +592,8 @@ function ResultCardPresentationImpl({
             <>
               {Icon === Jersey ? (
                 <HalftoneJerseyMark
-                  accent={homeColor}
-                  accentEnd={homeSecondaryColor}
+                  accent={homeJerseyColor}
+                  accentEnd={homeJerseySecondaryColor}
                   className="h-20 w-20"
                 />
               ) : (
@@ -576,7 +620,7 @@ function ResultCardPresentationImpl({
         >
           <div
             className={[
-              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black",
+              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white/85",
               isMobile
                 ? mobileScheduleDense
                   ? "text-xl md:text-4xl"
@@ -590,7 +634,7 @@ function ResultCardPresentationImpl({
 
           {finalScore && (
             <div
-              className={`mt-1 whitespace-nowrap tabular-nums opacity-85 md:mt-1.5 ${
+              className={`mt-1 whitespace-nowrap tabular-nums text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:mt-1.5 ${
                 isMobile
                   ? "text-[13px] font-bold leading-tight"
                   : "text-base font-bold md:text-lg"
@@ -615,8 +659,8 @@ function ResultCardPresentationImpl({
               <div className="relative flex w-full min-w-0 items-center justify-center">
                 {Icon === Jersey ? (
                   <HalftoneJerseyMark
-                    accent={awayColor}
-                    accentEnd={awaySecondaryColor}
+                    accent={awayJerseyColor}
+                    accentEnd={awayJerseySecondaryColor}
                     className={
                       mobileScheduleDense
                         ? "jersey-icon mr-1 h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
@@ -655,8 +699,8 @@ function ResultCardPresentationImpl({
             <>
               {Icon === Jersey ? (
                 <HalftoneJerseyMark
-                  accent={awayColor}
-                  accentEnd={awaySecondaryColor}
+                  accent={awayJerseyColor}
+                  accentEnd={awayJerseySecondaryColor}
                   className="h-20 w-20"
                 />
               ) : (

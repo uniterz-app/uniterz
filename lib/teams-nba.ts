@@ -5,10 +5,10 @@ export const teamColorsNBA: TeamColorMap = {
   /* EAST */
 
   // ATL Hawks
-  "nba-hawks":        { primary: "#E03A3E", secondary: "#C1D32F" },
+  "nba-hawks":        { primary: "#CC092F", secondary: "#C1D32F" },
 
   // BOS Celtics
-  "nba-celtics":      { primary: "#007A33", secondary: "#BA9653" },
+  "nba-celtics":      { primary: "#BC9A5C", secondary: "#BA9653" },
 
   // BKN Nets
   "nba-nets":         { primary: "#000000", secondary: "#FFFFFF", textOnPrimary: "#fff" },
@@ -22,8 +22,8 @@ export const teamColorsNBA: TeamColorMap = {
   // CLE Cavaliers
   "nba-cavaliers":    { primary: "#6F263D", secondary: "#FFB81C" },
 
-  // DET Pistons → Red 主導
-  "nba-pistons":      { primary: "#C8102E", secondary: "#006BB6" },
+  // DET Pistons → 単色（公式レッド系 #ED174C）
+  "nba-pistons":      { primary: "#ED174C", secondary: "#ED174C", textOnPrimary: "#fff" },
 
   // IND Pacers → Gold 主導
   "nba-pacers":       { primary: "#FDBB30", secondary: "#002D62" },
@@ -41,7 +41,7 @@ export const teamColorsNBA: TeamColorMap = {
   "nba-magic":        { primary: "#000000", secondary: "#0077C0", textOnPrimary: "#fff" },
 
   // PHI 76ers
-  "nba-76ers":        { primary: "#006BB6", secondary: "#ED174C" },
+  "nba-76ers":        { primary: "#003DA5", secondary: "#ED174C" },
 
   // TOR Raptors
   "nba-raptors":      { primary: "#CE1141", secondary: "#000000" },
@@ -56,37 +56,41 @@ export const teamColorsNBA: TeamColorMap = {
   "nba-mavericks":    { primary: "#002B5C", secondary: "#00538C" },
 
   // DEN Nuggets → Gold 主導
-  "nba-nuggets":      { primary: "#FEC524", secondary: "#0E2240" },
+  "nba-nuggets":      { primary: "#FEC525", secondary: "#0E2240" },
 
   // GSW Warriors → Yellow 主導
   "nba-warriors":     { primary: "#FFC72C", secondary: "#1D428A" },
 
   // HOU Rockets
-  "nba-rockets":      { primary: "#CE1141", secondary: "#000000" },
+  "nba-rockets":      { primary: "#D31145", secondary: "#000000" },
 
   // LAC Clippers
   "nba-clippers":     { primary: "#C8102E", secondary: "#1D428A" },
 
   // LAL Lakers → Yellow 主導（あなた希望）
-  "nba-lakers":       { primary: "#FDB927", secondary: "#552583" },
+  "nba-lakers":       { primary: "#FDB827", secondary: "#552583" },
 
   // MEM Grizzlies
   "nba-grizzlies":    { primary: "#5D76A9", secondary: "#12173F" },
 
   // MIN Timberwolves
-  "nba-timberwolves": { primary: "#0C2340", secondary: "#236192" },
+  "nba-timberwolves": {
+    primary: "#0C2340",
+    secondary: "#0C2340",
+    textOnPrimary: "#fff",
+  },
 
   // NOP Pelicans
   "nba-pelicans":     { primary: "#0C2340", secondary: "#C8102E" },
 
   // OKC Thunder → Orange 主導
-  "nba-thunder":      { primary: "#EF3B24", secondary: "#007AC1" },
+  "nba-thunder":      { primary: "#F05133", secondary: "#007AC1" },
 
   // PHX Suns
   "nba-suns":         { primary: "#1D1160", secondary: "#E56020" },
 
   // POR Trail Blazers
-  "nba-blazers":      { primary: "#E03A3E", secondary: "#000000" },
+  "nba-blazers":      { primary: "#E13A3E", secondary: "#000000" },
 
   // SAC Kings
   "nba-kings":        { primary: "#5A2D81", secondary: "#63727A" },

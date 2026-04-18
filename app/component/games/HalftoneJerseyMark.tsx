@@ -73,10 +73,10 @@ export default function HalftoneJerseyMark({
   const glowFilter = useMemo(() => {
     const { r, g, b } = accentRgbForGlow(accent, accentEnd);
     return [
-      `drop-shadow(0 0 5px rgba(${r},${g},${b},0.75))`,
-      `drop-shadow(0 0 12px rgba(${r},${g},${b},0.45))`,
-      `drop-shadow(0 0 22px rgba(${r},${g},${b},0.22))`,
-      "drop-shadow(0 1px 6px rgba(0,0,0,0.55))",
+      `drop-shadow(0 0 3px rgba(${r},${g},${b},0.52))`,
+      `drop-shadow(0 0 8px rgba(${r},${g},${b},0.30))`,
+      `drop-shadow(0 0 14px rgba(${r},${g},${b},0.15))`,
+      "drop-shadow(0 1px 4px rgba(0,0,0,0.42))",
     ].join(" ");
   }, [accent, accentEnd]);
 

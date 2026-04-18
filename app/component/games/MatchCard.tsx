@@ -22,7 +22,11 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 import type { League } from "@/lib/leagues";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { auth } from "@/lib/firebase";
 import EventPill from "@/app/component/common/EventPill";
@@ -32,8 +36,18 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
   MOBILE_LIST_CARD_OUTER_CLASS,
   MOBILE_LIST_CARD_PANEL_DENSE,
+  MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
+import {
+  isPlayoffStyleGameCard,
+  type SeriesStanding,
+} from "@/lib/games/playoffSeriesUi";
+import {
+  scheduleSharedBoundsVtName,
+  scheduleSharedContentVtName,
+} from "@/lib/games/scheduleSharedTransitionKeys";
 
 
 
@@ -57,6 +71,8 @@ export type MatchCardProps = {
   home: TeamSide;
   away: TeamSide;
   score: { home: number; away: number } | null;
+  /** プレーオフ系：シリーズのホーム先勝数（未設定時は null） */
+  seriesStanding?: SeriesStanding | null;
   liveMeta: { period: string; runningTime?: string } | null;
   finalMeta: { ot?: boolean } | null;
 
@@ -66,6 +82,12 @@ export type MatchCardProps = {
   makePredictionHref: string;
   onOpenPredict?: (gameId: string) => void;
   sharedLayoutId?: string;
+  /** View Transitions 共有要素用のベースキー（一覧とオーバーレイで同一値） */
+  sharedTransitionBaseKey?: string;
+  /**
+   * 一覧で「共有要素に参加しない」カード用。`view-transition-name: none` で他カードの誤補間を防ぐ。
+   */
+  forceViewTransitionNameNone?: boolean;
   disableCardMotion?: boolean;
 
   dense?: boolean;
@@ -94,6 +116,8 @@ homeRecord?: {
   scheduleEntryIndex?: number;
   /** false のとき派手な一覧入場・ユニドット開幕を出さない（日付切替など） */
   heavyListEntry?: boolean;
+  /** ルート要素に付与（例: VT ゴースト行の invisible） */
+  className?: string;
 };
 
 
@@ -194,8 +218,10 @@ function MatchCard({
   home,
   away,
   score,
+  seriesStanding = null,
   liveMeta,
   finalMeta,
+  seasonPhase = null,
   viewPredictionHref,
   makePredictionHref,
   dense = false,
@@ -210,11 +236,13 @@ function MatchCard({
   awayRecord = null,
   className,
   sharedLayoutId,
+  sharedTransitionBaseKey,
+  forceViewTransitionNameNone = false,
   onOpenPredict,
   disableCardMotion = false,
   scheduleEntryIndex,
   heavyListEntry = true,
-}: MatchCardProps & { className?: string }) {
+}: MatchCardProps) {
   const router = useRouter();
 
   const { fUser: user } = useFirebaseUser();
@@ -233,6 +261,24 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** モバイルの試合一覧（dense）：カード幅・ラウンド帯のレイアウト調整用 */
   const mobileDense = dense && isMobile;
   const teamNameFont = bracketMarketTeamTypography(isMobile);
+  const showPlayoffSeriesRow =
+    isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
+    seriesStanding != null;
+
+  /** 共有要素遷移：外枠とヒーローグリッドに別名を付与（none は一覧の非参加カード用） */
+  const vtBoundsName = forceViewTransitionNameNone
+    ? "none"
+    : sharedTransitionBaseKey
+      ? scheduleSharedBoundsVtName(sharedTransitionBaseKey)
+      : "";
+  /** モバイルは外枠のみ共有（グリッド二重名による補間崩れを避ける）。Web は従来どおり bounds + content */
+  const vtContentName = forceViewTransitionNameNone
+    ? "none"
+    : sharedTransitionBaseKey
+      ? isMobile
+        ? "none"
+        : scheduleSharedContentVtName(sharedTransitionBaseKey)
+      : "";
 
   // ▼ 追加：NBA × mobile のときは nickname（line2 のみ）
   function getDisplayName(league: League, l1: string, l2: string): string {
@@ -285,12 +331,22 @@ const awayColor = useMemo(
   [normalizedLeague, away.teamId]
 );
 
+const homeJerseyColor = useMemo(
+  () => getTeamJerseyPrimaryColor(normalizedLeague, home.teamId) ?? homeColor,
+  [normalizedLeague, home.teamId, homeColor]
+);
+
+const awayJerseyColor = useMemo(
+  () => getTeamJerseyPrimaryColor(normalizedLeague, away.teamId) ?? awayColor,
+  [normalizedLeague, away.teamId, awayColor]
+);
+
 const homeSecondaryColor = useMemo(
-  () => getTeamSecondaryColor(normalizedLeague, home.teamId),
+  () => getTeamJerseySecondaryColor(normalizedLeague, home.teamId),
   [normalizedLeague, home.teamId]
 );
 const awaySecondaryColor = useMemo(
-  () => getTeamSecondaryColor(normalizedLeague, away.teamId),
+  () => getTeamJerseySecondaryColor(normalizedLeague, away.teamId),
   [normalizedLeague, away.teamId]
 );
 const homeBiasPct = Math.max(0, Math.min(100, marketBias?.homePct ?? 68));
@@ -334,7 +390,7 @@ const marketMajority = useMemo(() => {
     showContentEntry && (league === "nba" || league === "bj");
 
   const entryTransition = useMemo(() => {
-    if (!showContentEntry || reduceMotion) return null;
+    if (!showContentEntry || reduceMotion || isMobile) return null;
     const listStagger =
       scheduleEntryIndex !== undefined
         ? Math.min(scheduleEntryIndex * 0.032, 0.14)
@@ -349,7 +405,7 @@ const marketMajority = useMemo(() => {
       duration,
       ease,
     });
-  }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
+  }, [showContentEntry, reduceMotion, isMobile, scheduleEntryIndex]);
 
   /**
    * ドットは最終要素の後ではなく、各チーム列（HOME=4 / AWAY=6）の入場に同期
@@ -398,29 +454,76 @@ const isLive =
     Date.now() >= startAtJst.getTime());
 
 let center: React.ReactNode = inPredictOverlay ? (
-  <div
-    className={
-      mobileDense
-        ? "flex min-h-[44px] items-center justify-center md:min-h-[68px]"
-        : "flex min-h-[72px] items-center justify-center md:min-h-[88px]"
-    }
-  >
+  status === "final" && score ? (
     <div
-      className={[
-        "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
-        resultStatsMetricNumClass,
-      ].join(" ")}
+      className={
+        mobileDense
+          ? "flex min-h-[44px] flex-col items-center justify-center gap-0.5 md:min-h-[68px]"
+          : "flex min-h-[72px] flex-col items-center justify-center gap-1 md:min-h-[88px]"
+      }
     >
-      VS
+      <div
+        className={[
+          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          resultStatsMetricNumClass,
+        ].join(" ")}
+      >
+        {score.home} <span className="opacity-70">–</span> {score.away}
+      </div>
+      <div
+        className="text-[10px] font-medium text-white/75 md:text-xs"
+        style={teamNameFont}
+      >
+        {isEn ? "Final" : "試合終了"}
+        {finalMeta?.ot ? " (OT)" : ""}
+      </div>
     </div>
-  </div>
-) : isLive ? (
-    <span
-      className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
-      style={{ fontSize: dense ? 10 : 11 }}
+  ) : status === "live" && score ? (
+    <div
+      className={
+        mobileDense
+          ? "flex min-h-[44px] flex-col items-center justify-center gap-0.5 md:min-h-[68px]"
+          : "flex min-h-[72px] flex-col items-center justify-center gap-1 md:min-h-[88px]"
+      }
     >
-      LIVE
-    </span>
+      <div
+        className={[
+          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          resultStatsMetricNumClass,
+        ].join(" ")}
+      >
+        {score.home} <span className="opacity-70">–</span> {score.away}
+      </div>
+      {liveMeta?.period ? (
+        <div className="text-[10px] text-white/75 md:text-xs">
+          {liveMeta.period}
+          {liveMeta.runningTime ? ` ${liveMeta.runningTime}` : ""}
+        </div>
+      ) : null}
+    </div>
+  ) : (
+    <div
+      className={
+        mobileDense
+          ? "flex min-h-[44px] items-center justify-center md:min-h-[68px]"
+          : "flex min-h-[72px] items-center justify-center md:min-h-[88px]"
+      }
+    >
+      <div
+        className={[
+          "text-3xl leading-none tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] md:text-5xl",
+          resultStatsMetricNumClass,
+        ].join(" ")}
+      >
+        VS
+      </div>
+    </div>
+  )
+) : isLive ? (
+    <LiveMatchMark
+      density={dense ? "matchDense" : "matchComfortable"}
+      isEn={isEn}
+    />
   ) : (
     <div
       className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
@@ -442,12 +545,10 @@ let center: React.ReactNode = inPredictOverlay ? (
             : "flex flex-col items-center gap-1"
         }
       >
-        <span
-          className="animate-pulse rounded-full bg-red-500/90 px-2 py-0.5 text-white font-bold uppercase tracking-wide"
-          style={{ fontSize: dense ? 10 : 11 }}
-        >
-          LIVE
-        </span>
+        <LiveMatchMark
+          density={dense ? "matchDense" : "matchComfortable"}
+          isEn={isEn}
+        />
         <div
           className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
             " "
@@ -496,19 +597,18 @@ let center: React.ReactNode = inPredictOverlay ? (
     e.preventDefault();
     e.stopPropagation();
 
-    // 予想済みなら何もしない（2回投稿防止・遷移防止）
-    if (myPostId) return;
-
     const me = auth.currentUser;
     if (!me) return;
 
-    // 試合開始後は遷移しない（predictions/post ページは使わない）
-    if (isGameStarted) {
+    // スケジュール一覧のオーバーレイ：予想済み・試合開始後も市場・詳細スタッツを見るために開く
+    if (onOpenPredict) {
+      onOpenPredict(id);
       return;
     }
 
-    // 試合前だけ overlay を開く
-    onOpenPredict?.(id);
+    // オーバーレイなしの単体カード：従来どおり（予想済み・開始後は何もしない）
+    if (myPostId) return;
+    if (isGameStarted) return;
   };
   /* ★ 「予想をする」クリック時：
         - 試合前   : 投稿あれば投稿詳細 / なければ予想作成へ
@@ -611,38 +711,50 @@ const normalStyle: React.CSSProperties = {
 
 return (
 <motion.div
-  layout={!disableCardMotion}
-  layoutId={sharedLayoutId}
+  layout={
+    !isMobile && !disableCardMotion && !sharedTransitionBaseKey
+  }
+  layoutId={isMobile ? undefined : sharedLayoutId}
   initial={entryTransition ? { scale: 0.972, opacity: 0.92 } : false}
   animate={entryTransition ? { scale: 1, opacity: 1 } : undefined}
-  transition={{
-    layout: { duration: 0.22 },
-    ...(entryTransition
-      ? {
-          scale: {
-            type: "tween" as const,
-            delay: entryTransition(0).delay,
-            duration: entryTransition(0).duration + 0.06,
-            ease: entryTransition(0).ease,
-          },
-          opacity: {
-            type: "tween" as const,
-            delay: entryTransition(0).delay,
-            duration: entryTransition(0).duration * 0.55,
-            ease: entryTransition(0).ease,
-          },
+  transition={
+    isMobile
+      ? {}
+      : {
+          layout: { duration: 0.22 },
+          ...(entryTransition
+            ? {
+                scale: {
+                  type: "tween" as const,
+                  delay: entryTransition(0).delay,
+                  duration: entryTransition(0).duration + 0.06,
+                  ease: entryTransition(0).ease,
+                },
+                opacity: {
+                  type: "tween" as const,
+                  delay: entryTransition(0).delay,
+                  duration: entryTransition(0).duration * 0.55,
+                  ease: entryTransition(0).ease,
+                },
+              }
+            : {}),
         }
-      : {}),
-  }}
+  }
 className={[
   "group relative overflow-hidden text-white",
-  mobileDense ? MOBILE_LIST_CARD_OUTER_CLASS : "mx-auto max-w-[1200px] w-full",
+  inPredictOverlay && isMobile
+    ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
+    : mobileDense
+      ? MOBILE_LIST_CARD_OUTER_CLASS
+      : "mx-auto max-w-[1200px] w-full",
 disableCardMotion
   ? ""
-  : [
-      "transition-opacity duration-200",
-      navigating ? "opacity-90" : "",
-    ].join(" "),
+  : isMobile
+    ? ""
+    : [
+        "transition-opacity duration-200",
+        navigating ? "opacity-90" : "",
+      ].join(" "),
 dense
   ? MOBILE_LIST_CARD_PANEL_DENSE
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
@@ -654,7 +766,15 @@ dense
     className || "",
   ].join(" ")}
  style={{
-  willChange: "transform",
+  ...(isMobile ? {} : { willChange: "transform" as const }),
+  ...(vtBoundsName
+    ? ({
+        viewTransitionName: vtBoundsName,
+        ...(vtBoundsName !== "none"
+          ? { viewTransitionClass: "schedule-shared-bounds" }
+          : {}),
+      } as React.CSSProperties)
+    : {}),
 }}
 >
       <motion.div
@@ -670,7 +790,8 @@ dense
         aria-hidden
       />
 
-{showMarketBias && marketBias && (
+{/* 試合終了後は市場バイアスの色帯・境界線を出さない */}
+{showMarketBias && marketBias && status !== "final" && (
   <div className="pointer-events-none absolute inset-0 z-1 overflow-hidden rounded-2xl">
     {/* HOME 側バー */}
     <div
@@ -805,6 +926,16 @@ background:
               ? "items-start gap-1 px-3 py-0"
               : "items-center gap-2 px-4 py-2.5"
         }`}
+        style={
+          vtContentName
+            ? ({
+                viewTransitionName: vtContentName,
+                ...(vtContentName !== "none"
+                  ? { viewTransitionClass: "schedule-shared-content" }
+                  : {}),
+              } as React.CSSProperties)
+            : undefined
+        }
       >
         {/* HOME */}
         <motion.div
@@ -835,7 +966,7 @@ background:
   <div className="flex w-full flex-col items-center">
   {Icon === Jersey ? (
     <HalftoneJerseyMark
-      accent={homeColor}
+      accent={homeJerseyColor}
       accentEnd={homeSecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
@@ -844,7 +975,7 @@ background:
   ) : (
     <Icon
       className={teamMarkSizeSoccer}
-      fill={homeColor}
+      fill={homeJerseyColor}
       stroke="#fff"
     />
   )}
@@ -967,6 +1098,67 @@ background:
           transition={entryTransition ? entryTransition(5) : undefined}
         >
           {center}
+          {showPlayoffSeriesRow && seriesStanding ? (
+            <div
+              className={[
+                "mt-1 flex justify-center",
+                resultStatsMetricNumClass,
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "inline-flex items-baseline font-bold tabular-nums",
+                  mobileDense
+                    ? "text-sm md:text-base"
+                    : "text-base md:text-xl lg:text-2xl",
+                ].join(" ")}
+              >
+                <span className="pr-0.5 text-cyan-300/70 md:pr-1">（</span>
+                <span
+                  className={
+                    seriesStanding.homeWins > seriesStanding.awayWins
+                      ? "text-yellow-300"
+                      : "text-cyan-50"
+                  }
+                  style={
+                    seriesStanding.homeWins > seriesStanding.awayWins
+                      ? {
+                          textShadow:
+                            "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                        }
+                      : {
+                          textShadow:
+                            "0 0 8px rgba(34, 211, 238, 0.35), 0 0 2px rgba(103, 232, 249, 0.45)",
+                        }
+                  }
+                >
+                  {seriesStanding.homeWins}
+                </span>
+                <span className="px-0.5 text-cyan-400/55 md:px-1.5">-</span>
+                <span
+                  className={
+                    seriesStanding.awayWins > seriesStanding.homeWins
+                      ? "text-yellow-300"
+                      : "text-cyan-50"
+                  }
+                  style={
+                    seriesStanding.awayWins > seriesStanding.homeWins
+                      ? {
+                          textShadow:
+                            "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                        }
+                      : {
+                          textShadow:
+                            "0 0 8px rgba(34, 211, 238, 0.35), 0 0 2px rgba(103, 232, 249, 0.45)",
+                        }
+                  }
+                >
+                  {seriesStanding.awayWins}
+                </span>
+                <span className="pl-0.5 text-cyan-300/70 md:pl-1">）</span>
+              </span>
+            </div>
+          ) : null}
         </motion.div>
 
         {/* AWAY */}
@@ -998,7 +1190,7 @@ background:
   {/* アイコン：mobile大きく / webそのまま */}
   {Icon === Jersey ? (
     <HalftoneJerseyMark
-      accent={awayColor}
+      accent={awayJerseyColor}
       accentEnd={awaySecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
@@ -1007,7 +1199,7 @@ background:
   ) : (
     <Icon
       className={teamMarkSizeSoccer}
-      fill={awayColor}
+      fill={awayJerseyColor}
       stroke="#fff"
     />
   )}
@@ -1172,16 +1364,22 @@ background:
 <button
   type="button"
   onClick={handleOpenPredict}
-  disabled={isPredicted}
+  disabled={Boolean(isPredicted && !onOpenPredict)}
   className={[
     "grid w-full place-items-center font-bold text-white",
     "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
     "rounded-md",
-    "transition-all duration-200",
-    isPredicted
+    isMobile
+      ? ""
+      : "transition-all duration-200",
+    isPredicted && !onOpenPredict
       ? "cursor-default"
-      : "active:scale-[0.985] cursor-pointer",
-  ].join(" ")}
+      : isMobile
+        ? "cursor-pointer"
+        : "active:scale-[0.985] cursor-pointer",
+  ]
+    .filter(Boolean)
+    .join(" ")}
   style={isPredicted ? predictedStyle : normalStyle}
 >
 {status === "final"

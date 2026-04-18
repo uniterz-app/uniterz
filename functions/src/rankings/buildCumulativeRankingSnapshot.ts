@@ -27,10 +27,49 @@ const METRICS: Metric[] = [
 type RankingPhase = "play_in" | "playoffs";
 const RANKING_PHASES: RankingPhase[] = ["play_in", "playoffs"];
 
+/** Client: list cumulative_stats/{uid}/rankSnapshotHistory ordered by dateKey. */
+export const RANK_SNAPSHOT_HISTORY_SUBCOL = "rankSnapshotHistory";
+
+function toDateKeyJST(d: Date) {
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const y = j.getUTCFullYear();
+  const m = String(j.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(j.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function getTodayJST(now: Date = new Date()) {
+  return toDateKeyJST(now);
+}
+
+/** JST の「昨日」の dateKey（履歴 doc id と一致） */
+export function getYesterdayDateKeyJST(now: Date = new Date()): string {
+  const todayKey = getTodayJST(now);
+  const [y, m, d] = todayKey.split("-").map(Number);
+  const prev = new Date(Date.UTC(y, m - 1, d - 1));
+  const yy = prev.getUTCFullYear();
+  const mm = String(prev.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(prev.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/** Step a JST calendar dateKey (YYYY-MM-DD) back one day (rankSnapshotHistory doc id). */
+export function subtractOneDayFromDateKeyJST(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const prev = new Date(Date.UTC(y, m - 1, d - 1));
+  const yy = prev.getUTCFullYear();
+  const mm = String(prev.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(prev.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/** Max days to walk back when yesterday's per-user rank snapshot doc is missing. */
+export const RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
+
 /* =========================================================
  * Utils
  * =======================================================*/
-/** ランキング掲載用。phase 指定時は rankingByPhase を優先 */
+/** Leaderboard slice: prefer `rankingByPhase[phase]` when `phase` is set. */
 function rankingSlice(d: any, phase?: RankingPhase) {
   if (phase) {
     const byPhase = d.rankingByPhase?.[phase];
@@ -89,14 +128,162 @@ function getValue(d: any, metric: Metric, phase: RankingPhase) {
   return r.totalUpset ?? 0;
 }
 
+type BaseRow = {
+  uid: string;
+  displayName: string;
+  handle: string | null;
+  photoURL: string | null;
+  countryCode?: string | null;
+  plan: "free" | "pro";
+  totalPosts: number;
+  totalWins: number;
+  winRate: number;
+  totalPoints: number;
+  totalPrecision: number;
+  totalUpset: number;
+  activeWinStreak: number;
+};
+
+function getRowMetricValue(row: BaseRow, metric: Metric): number {
+  if (metric === "activeWinStreak") return row.activeWinStreak ?? 0;
+  if (metric === "winRate") return row.winRate ?? 0;
+  if (metric === "totalPoints") return row.totalPoints ?? 0;
+  if (metric === "totalPrecision") return row.totalPrecision ?? 0;
+  return row.totalUpset ?? 0;
+}
+
+/** Same ordering as snapshot sort (desc). Returns 0 when tied for rank. */
+function cmpSortRows(a: BaseRow, b: BaseRow, metric: Metric): number {
+  const diff = getRowMetricValue(b, metric) - getRowMetricValue(a, metric);
+  if (diff !== 0) return diff;
+  if (metric === "winRate") {
+    const postsDiff = (b.totalPosts ?? 0) - (a.totalPosts ?? 0);
+    if (postsDiff !== 0) return postsDiff;
+  }
+  return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
+}
+
+/** Matches getCumulativeRanking: rank = 1 + #{ strictly better values }. */
+function assignCompetitionRanks(
+  sorted: BaseRow[],
+  metric: Metric
+): Map<string, number> {
+  const out = new Map<string, number>();
+  let rank = 1;
+  for (let i = 0; i < sorted.length; i++) {
+    if (
+      i > 0 &&
+      cmpSortRows(sorted[i - 1]!, sorted[i]!, metric) !== 0
+    ) {
+      rank = i + 1;
+    }
+    out.set(sorted[i]!.uid, rank);
+  }
+  return out;
+}
+
+type PhaseRankMap = Partial<Record<Metric, number>>;
+
+type SnapshotRow = BaseRow & {
+  rank: number;
+  rankDeltaPlaces: number | null;
+};
+
+function computeRankDeltaPlaces(
+  prevRank: number | null,
+  currentRank: number
+): number | null {
+  if (prevRank == null || currentRank < 1) return null;
+  const d = prevRank - currentRank;
+  if (d === 0) return null;
+  return d;
+}
+
+/**
+ * For each uid, use the first existing rankSnapshotHistory doc when walking back
+ * from startKey (usually yesterday) up to maxLookbackDays days.
+ */
+async function fetchLatestPriorRankMapsForUids(
+  uids: string[],
+  startKey: string,
+  maxLookbackDays: number
+): Promise<Map<string, { play_in: PhaseRankMap; playoffs: PhaseRankMap } | null>> {
+  const out = new Map<
+    string,
+    { play_in: PhaseRankMap; playoffs: PhaseRankMap } | null
+  >();
+  if (uids.length === 0) return out;
+
+  const pending = new Set(uids);
+  let key = startKey;
+  const firestore = db();
+  const CHUNK = 200;
+
+  for (let day = 0; day < maxLookbackDays && pending.size > 0; day++) {
+    const chunkList = [...pending];
+    for (let i = 0; i < chunkList.length; i += CHUNK) {
+      const chunk = chunkList.slice(i, i + CHUNK);
+      const refs = chunk.map((uid) =>
+        firestore
+          .collection("cumulative_stats")
+          .doc(uid)
+          .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+          .doc(key)
+      );
+      const snaps = await firestore.getAll(...refs);
+      snaps.forEach((s, j) => {
+        const uid = chunk[j]!;
+        if (!pending.has(uid)) return;
+        if (s.exists) {
+          const d = s.data() as {
+            play_in?: PhaseRankMap;
+            playoffs?: PhaseRankMap;
+          };
+          out.set(uid, {
+            play_in: (d?.play_in ?? {}) as PhaseRankMap,
+            playoffs: (d?.playoffs ?? {}) as PhaseRankMap,
+          });
+          pending.delete(uid);
+        }
+      });
+    }
+    key = subtractOneDayFromDateKeyJST(key);
+  }
+
+  for (const uid of pending) {
+    out.set(uid, null);
+  }
+  return out;
+}
+
 /* =========================================================
  * Main
  * =======================================================*/
 export async function buildCumulativeRankingSnapshot() {
   const snap = await db().collection("cumulative_stats").get();
 
+  const rankByUid = new Map<
+    string,
+    { play_in: PhaseRankMap; playoffs: PhaseRankMap }
+  >();
+
+  function ensure(uid: string) {
+    if (!rankByUid.has(uid)) {
+      rankByUid.set(uid, { play_in: {}, playoffs: {} });
+    }
+    return rankByUid.get(uid)!;
+  }
+
+  type Top20Job = {
+    phase: RankingPhase;
+    metric: Metric;
+    rows: Array<BaseRow & { rank: number }>;
+  };
+  const top20Jobs: Top20Job[] = [];
+  const topUidSet = new Set<string>();
+
   for (const phase of RANKING_PHASES) {
-    const baseRows = snap.docs
+    const baseRows: BaseRow[] = snap.docs
       .map((doc) => {
         const d = doc.data();
         const r = rankingSlice(d, phase);
@@ -107,7 +294,7 @@ export async function buildCumulativeRankingSnapshot() {
           handle: d.handle ?? null,
           photoURL: d.photoURL ?? null,
           countryCode: d.countryCode ?? null,
-          plan: d.plan === "pro" ? "pro" : "free",
+          plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
 
           totalPosts: r.totalPosts,
           totalWins: r.totalWins,
@@ -122,41 +309,114 @@ export async function buildCumulativeRankingSnapshot() {
       .filter((row) => (row.totalPosts ?? 0) > 0);
 
     for (const metric of METRICS) {
-      const sorted = [...baseRows]
-        .sort((a, b) => {
-          const diff = getValue(b, metric, phase) - getValue(a, metric, phase);
-          if (diff !== 0) return diff;
+      const sortedFull = [...baseRows].sort((a, b) =>
+        cmpSortRows(a, b, metric)
+      );
+      const ranks = assignCompetitionRanks(sortedFull, metric);
 
-          if (metric === "winRate") {
-            const postsDiff = (b.totalPosts ?? 0) - (a.totalPosts ?? 0);
-            if (postsDiff !== 0) return postsDiff;
-          }
+      for (const [uid, rank] of ranks) {
+        ensure(uid)[phase][metric] = rank;
+      }
 
-          return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
-        })
-        .slice(0, 20)
-        .map((row, index) => ({
-          ...row,
-          rank: index + 1,
-        }));
-
-      await db()
-        .collection("cumulative_ranking_snapshots")
-        .doc(`${phase}_${metric}`)
-        .set(
-          {
-            phase,
-            metric,
-            rows: sorted,
-            updatedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
+      const top20 = sortedFull.slice(0, 20).map((row) => ({
+        ...row,
+        rank: ranks.get(row.uid) ?? 0,
+      }));
+      for (const r of top20) {
+        topUidSet.add(r.uid);
+      }
+      top20Jobs.push({ phase, metric, rows: top20 });
     }
   }
+
+  const yesterdayKey = getYesterdayDateKeyJST();
+  const prevByUid = await fetchLatestPriorRankMapsForUids(
+    [...topUidSet],
+    yesterdayKey,
+    RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
+  );
+
+  for (const { phase, metric, rows } of top20Jobs) {
+    const enriched: SnapshotRow[] = rows.map((row) => {
+      const prevBlock = prevByUid.get(row.uid);
+      const prevRaw = prevBlock?.[phase]?.[metric];
+      const prevRank =
+        typeof prevRaw === "number" &&
+        Number.isFinite(prevRaw) &&
+        prevRaw >= 1
+          ? Math.floor(prevRaw)
+          : null;
+      return {
+        ...row,
+        rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
+      };
+    });
+
+    await db()
+      .collection("cumulative_ranking_snapshots")
+      .doc(`${phase}_${metric}`)
+      .set(
+        {
+          phase,
+          metric,
+          rows: enriched,
+          updatedAt: FieldValue.serverTimestamp(),
+          rankDeltaBasisDateKey: yesterdayKey,
+        },
+        { merge: true }
+      );
+  }
+
+  const firestore = db();
+  const dateKey = getTodayJST();
+  let batch = firestore.batch();
+  let ops = 0;
+
+  const flush = async () => {
+    if (ops > 0) {
+      await batch.commit();
+      batch = firestore.batch();
+      ops = 0;
+    }
+  };
+
+  for (const [uid, per] of rankByUid) {
+    batch.set(
+      firestore.doc(`cumulative_stats/${uid}`),
+      {
+        snapshotRanks: {
+          updatedAt: FieldValue.serverTimestamp(),
+          play_in: per.play_in,
+          playoffs: per.playoffs,
+        },
+      },
+      { merge: true }
+    );
+    batch.set(
+      firestore
+        .collection("cumulative_stats")
+        .doc(uid)
+        .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+        .doc(dateKey),
+      {
+        dateKey,
+        play_in: per.play_in,
+        playoffs: per.playoffs,
+        writtenAt: FieldValue.serverTimestamp(),
+      }
+    );
+    ops += 2;
+    if (ops >= 500) {
+      await flush();
+    }
+  }
+  await flush();
 
   return {
     ok: true,
     metrics: METRICS.length,
+    ranksWritten: rankByUid.size,
+    historyDateKey: dateKey,
+    rankDeltaBasisDateKey: yesterdayKey,
   };
 }

@@ -6,6 +6,7 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import AuthBackdrop from "@/app/component/auth/AuthBackdrop";
 import OnboardingForm from "@/app/component/auth/OnboardingForm";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { normalizeLanguage } from "@/lib/i18n/language";
 
 export default function WebOnboardingPage() {
   const router = useRouter();
@@ -24,11 +25,10 @@ export default function WebOnboardingPage() {
       const data = (await getUserDocDataCached(fUser.uid)) as any;
 
       const hasHandle = Boolean(data?.handle || data?.slug);
-      const hasLanguage = data?.language === "ja" || data?.language === "en";
+      const hasLanguage = normalizeLanguage(data?.language) !== null;
 
       if (hasHandle && hasLanguage) {
-        const handle = data?.handle || data?.slug;
-        router.replace(`/web/u/${encodeURIComponent(handle)}`);
+        router.replace("/web/games");
         return;
       }
 

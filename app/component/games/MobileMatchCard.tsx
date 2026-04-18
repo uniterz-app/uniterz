@@ -14,7 +14,11 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import type { MatchCardProps } from "./MatchCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -23,6 +27,8 @@ import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 // ★ 追加：Premier League 用 alias
 import { getTeamAlias } from "@/lib/team-alias";
+import { isPlayoffStyleGameCard } from "@/lib/games/playoffSeriesUi";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 /**
  * 完全モバイル専用の試合カード
@@ -33,6 +39,9 @@ export default function MobileMatchCard(props: MatchCardProps) {
   const {
     id,
     league,
+    roundLabel,
+    seasonPhase = null,
+    seriesStanding = null,
     startAtJst,
     status,
     home,
@@ -67,7 +76,11 @@ export default function MobileMatchCard(props: MatchCardProps) {
   }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+  const isEn = language === "en";
+  const displayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
+  const showPlayoffSeriesRow =
+    isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
+    seriesStanding != null;
 
   const fmtShortDate = (d: Date | null) =>
     d
@@ -115,11 +128,15 @@ export default function MobileMatchCard(props: MatchCardProps) {
     getTeamPrimaryColor(normalizedLeague, home.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, away.teamId) ?? "#f43f5e";
-  const homeSecondaryColor = getTeamSecondaryColor(
+  const homeJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, home.teamId) ?? homeColor;
+  const awayJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, away.teamId) ?? awayColor;
+  const homeSecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     home.teamId
   );
-  const awaySecondaryColor = getTeamSecondaryColor(
+  const awaySecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     away.teamId
   );
@@ -209,14 +226,14 @@ export default function MobileMatchCard(props: MatchCardProps) {
         >
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={homeColor}
+              accent={homeJerseyColor}
               accentEnd={homeSecondaryColor}
               className="h-[4.5rem] w-[4.5rem]"
               enableDotReveal={jerseyDotRevealEnabled}
               dotRevealDelayMs={jerseyDotHomeDelayMs}
             />
           ) : (
-            <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
+            <Icon className="h-16 w-16" fill={homeJerseyColor} stroke="#fff" />
           )}
           <div className="mt-1.5 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, home.name, homeL1, homeL2)}
@@ -243,6 +260,60 @@ export default function MobileMatchCard(props: MatchCardProps) {
           >
             {showScore}
           </div>
+          {showPlayoffSeriesRow && seriesStanding ? (
+            <div
+              className={[
+                "mt-1 flex justify-center",
+                resultStatsMetricNumClass,
+              ].join(" ")}
+            >
+              <span className="inline-flex items-baseline text-sm font-bold tabular-nums md:text-base">
+                <span className="pr-0.5 text-cyan-300/70 md:pr-1">（</span>
+                <span
+                  className={
+                    seriesStanding.homeWins > seriesStanding.awayWins
+                      ? "text-yellow-300"
+                      : "text-cyan-50"
+                  }
+                  style={
+                    seriesStanding.homeWins > seriesStanding.awayWins
+                      ? {
+                          textShadow:
+                            "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                        }
+                      : {
+                          textShadow:
+                            "0 0 8px rgba(34, 211, 238, 0.35), 0 0 2px rgba(103, 232, 249, 0.45)",
+                        }
+                  }
+                >
+                  {seriesStanding.homeWins}
+                </span>
+                <span className="px-0.5 text-cyan-400/55 md:px-1.5">-</span>
+                <span
+                  className={
+                    seriesStanding.awayWins > seriesStanding.homeWins
+                      ? "text-yellow-300"
+                      : "text-cyan-50"
+                  }
+                  style={
+                    seriesStanding.awayWins > seriesStanding.homeWins
+                      ? {
+                          textShadow:
+                            "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                        }
+                      : {
+                          textShadow:
+                            "0 0 8px rgba(34, 211, 238, 0.35), 0 0 2px rgba(103, 232, 249, 0.45)",
+                        }
+                  }
+                >
+                  {seriesStanding.awayWins}
+                </span>
+                <span className="pl-0.5 text-cyan-300/70 md:pl-1">）</span>
+              </span>
+            </div>
+          ) : null}
         </motion.div>
 
         {/* AWAY */}
@@ -254,14 +325,14 @@ export default function MobileMatchCard(props: MatchCardProps) {
         >
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={awayColor}
+              accent={awayJerseyColor}
               accentEnd={awaySecondaryColor}
               className="h-[4.5rem] w-[4.5rem]"
               enableDotReveal={jerseyDotRevealEnabled}
               dotRevealDelayMs={jerseyDotAwayDelayMs}
             />
           ) : (
-            <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
+            <Icon className="h-16 w-16" fill={awayJerseyColor} stroke="#fff" />
           )}
           <div className="mt-1.5 text-[14px] text-center leading-tight font-bold">
             {getMobileTeamName(league, away.name, awayL1, awayL2)}

@@ -7,6 +7,7 @@ import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { normalizeLanguage } from "@/lib/i18n/language";
 import CyberAuthField from "./CyberAuthField";
 import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
@@ -65,14 +66,14 @@ export default function LoginForm({ variant }: LoginFormProps) {
       const d = (await getUserDocDataCached(user.uid)) as any;
 
       const handle = d?.handle || d?.username;
-      const hasLanguage = d?.language === "ja" || d?.language === "en";
+      const hasLanguage = normalizeLanguage(d?.language) !== null;
 
-      const base = v === "mobile" ? "/mobile/u" : "/web/u";
+      const gamesPath = v === "mobile" ? "/mobile/games" : "/web/games";
       const onboardingPath =
         v === "mobile" ? "/mobile/onboarding" : "/web/onboarding";
 
       if (handle && hasLanguage) {
-        router.replace(`${base}/${encodeURIComponent(handle)}`);
+        router.replace(gamesPath);
       } else if (!hasLanguage) {
         router.replace(onboardingPath);
       } else {

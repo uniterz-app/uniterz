@@ -36,7 +36,7 @@ const TOTAL_SCORE_TOOLTIP =
 
 /** DonutChart のグラデ混色を踏まえ、暗背景でも隣接セグメントが判別しやすい色相差 */
 const SEG_BASE = "#2dd4bf"; // teal-400
-const SEG_UPSET = "#fb923c"; // orange-400
+const SEG_UPSET = "#f87171"; // red-400（結果カードの UPSET バッジと揃える）
 const SEG_STREAK = "#a78bfa"; // violet-400
 
 function TotalScoreCard({

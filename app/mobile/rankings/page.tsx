@@ -79,7 +79,7 @@ export default function MobileRankingsPage() {
     [visibleMetrics]
   );
 
-  const { listReady, personalPending, myUid, byMetric } =
+  const { listReady, personalPending, myUid, byMetric, ensureMetric } =
     useCumulativeRankingsBulk(phase);
 
   const { user } = useMyRankingUser(myUid);
@@ -87,6 +87,9 @@ export default function MobileRankingsPage() {
 
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
+  useEffect(() => {
+    void ensureMetric(apiKey);
+  }, [apiKey, ensureMetric]);
   const rawRows = useMemo(
     () =>
       Array.isArray(bundle?.rows) ? (bundle.rows as RankingApiRow[]) : [],
@@ -94,6 +97,7 @@ export default function MobileRankingsPage() {
   );
 
   const myRank = bundle?.myRank ?? null;
+  const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
@@ -181,6 +185,7 @@ export default function MobileRankingsPage() {
               language={language}
               isPro={user.plan === "pro"}
               mobileWide
+              rankDeltaPlaces={myRankDeltaPlaces}
             />
           </div>
 
@@ -221,6 +226,7 @@ export default function MobileRankingsPage() {
                 <TopPodium
                   rows={top3}
                   metric={metric}
+                  rankPhase={phase}
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
@@ -248,6 +254,7 @@ export default function MobileRankingsPage() {
                           row={r}
                           rank={i + 4}
                           metric={metric}
+                          rankPhase={phase}
                           language={language}
                         />
                       </motion.div>

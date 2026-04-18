@@ -1,7 +1,7 @@
 // app/component/profile/ProfilePageBaseV2.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useProfile, type Profile } from "./useProfile";
 
 import MobileProfileViewV2 from "./MobileProfileViewV2";
@@ -25,8 +25,16 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   );
   const [range, setRange] = useState<"7d" | "30d" | "all">("7d");
 
-  const { stats, summaries, loading: statsLoading, dailyTrend } =
+  const { stats, summaries, statsLoading, dailyTrend, preloadRange } =
     useUserStatsV2(targetUid);
+
+  const setRangeWithLoad = useCallback(
+    (v: "7d" | "30d" | "all") => {
+      setRange(v);
+      void preloadRange(v);
+    },
+    [preloadRange]
+  );
 
   const normalizedProfile = useMemo<Profile | undefined>(() => {
     if (!profile) return undefined;
@@ -82,7 +90,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     tab,
     setTab,
     range,
-    setRange,
+    setRange: setRangeWithLoad,
     summary: summaryV2,
     statsLoading,
     targetUid,

@@ -1,111 +1,12 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
+import Shared, {
+  type BadgeDetailModalProps,
+} from "@/app/component/badges/BadgeDetailModal";
 
-export default function BadgeDetailModal({
-  badge,
-  onClose,
-  language = "ja",
-}: {
-  badge: any;
-  onClose: () => void;
-  language?: "ja" | "en";
-}) {
-  const isEn = language === "en";
-  const awardedAt =
-    badge.awardedAt?.toMillis
-      ? badge.awardedAt.toMillis()
-      : typeof badge.awardedAt === "number"
-      ? badge.awardedAt
-      : null;
+export type { BadgeDetailModalProps };
 
-  return (
-    <div
-      className="
-        fixed inset-0 z-9999 flex items-center justify-center
-        bg-black/60 backdrop-blur-sm
-      "
-      onClick={onClose}
-    >
-      {/* === カラーブロブ（背面演出） === */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-120px] right-[-60px] w-[280px] h-[280px] bg-[#FFD451] opacity-[0.18] rounded-full blur-[90px] mix-blend-screen" />
-        <div className="absolute bottom-[-100px] left-[-80px] w-[260px] h-[260px] bg-[#D12A4C] opacity-[0.16] rounded-full blur-[100px] mix-blend-screen" />
-        <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[200px] h-[200px] bg-white opacity-[0.1] rounded-full blur-[120px] mix-blend-screen" />
-      </div>
-
-      {/* ====== PANEL ====== */}
-      <div
-        className="
-          relative
-          bg-[#0d1620]/95 rounded-3xl px-8 pt-4 pb-12
-          w-[85%] max-w-sm text-white
-          border border-white/10 shadow-2xl
-        "
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* === バッジ画像（光る演出） === */}
-        <div className="flex justify-center">
-          <div className="relative w-36 h-36 overflow-hidden rounded-2xl">
-            <img
-              src={badge.icon}
-              alt={badge.id}
-              className="w-full h-full object-contain relative z-10"
-            />
-
-            {/* 光エフェクト */}
-            <div
-              className="
-                pointer-events-none
-                absolute inset-0
-                -translate-x-full
-                animate-badge-shine
-                bg-linear-to-r
-                from-transparent
-                via-white/45
-                to-transparent
-                skew-x-12
-              "
-            />
-          </div>
-        </div>
-
-        {/* === タイトル === */}
-        <h2 className="text-[18px] font-bold text-center tracking-wide mt-0 mb-0 leading-none">
-          {badge.title ?? badge.id}
-        </h2>
-
-        {/* === 説明文 === */}
-        {badge.description && (
-          <p className="text-white/70 text-center text-[14px] mt-1 mb-1 leading-snug">
-            {badge.description}
-          </p>
-        )}
-
-        {/* === 付与日 === */}
-        {awardedAt && (
-          <p className="text-[11px] text-white/40 text-center mt-1 leading-none">
-            {isEn
-              ? `Awarded on: ${new Date(awardedAt).toLocaleDateString("en-US")}`
-              : `付与日：${new Date(awardedAt).toLocaleDateString("ja-JP")}`}
-          </p>
-        )}
-
-        {/* === 戻る === */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="
-            absolute left-1/2 -bottom-7 -translate-x-1/2
-            flex h-14 w-14 items-center justify-center rounded-full
-            border border-white/20 bg-white/10
-            backdrop-blur-sm transition hover:bg-white/20
-          "
-          aria-label={isEn ? "Back" : "戻る"}
-        >
-          <ChevronLeft className="h-7 w-7 text-white" strokeWidth={2.25} aria-hidden />
-        </button>
-      </div>
-    </div>
-  );
+/** Mobile badge palette: shine on artwork. */
+export default function BadgeDetailModal(props: BadgeDetailModalProps) {
+  return <Shared {...props} shine />;
 }

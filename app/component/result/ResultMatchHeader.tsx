@@ -8,7 +8,11 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
-import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
+import {
+  getTeamPrimaryColor,
+  getTeamJerseyPrimaryColor,
+  getTeamJerseySecondaryColor,
+} from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
@@ -179,11 +183,17 @@ function ResultMatchHeader({
     getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#0ea5e9";
   const awayColor =
     getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#f43f5e";
-  const homeSecondaryColor = getTeamSecondaryColor(
+  const homeJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, post.home?.teamId) ??
+    homeColor;
+  const awayJerseyColor =
+    getTeamJerseyPrimaryColor(normalizedLeague, post.away?.teamId) ??
+    awayColor;
+  const homeJerseySecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     post.home?.teamId
   );
-  const awaySecondaryColor = getTeamSecondaryColor(
+  const awayJerseySecondaryColor = getTeamJerseySecondaryColor(
     normalizedLeague,
     post.away?.teamId
   );
@@ -268,6 +278,14 @@ function ResultMatchHeader({
           <div className="result-card-streak-sweep__spin" />
         </div>
       ) : null}
+      {badge === "upset" ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-upset-sweep"
+          aria-hidden
+        >
+          <div className="result-card-upset-sweep__spin" />
+        </div>
+      ) : null}
       <div
         className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
         style={PROFILE_SHELL_GRID_STYLE}
@@ -314,8 +332,8 @@ function ResultMatchHeader({
         <div className="flex flex-col items-center">
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={homeColor}
-              accentEnd={homeSecondaryColor}
+              accent={homeJerseyColor}
+              accentEnd={homeJerseySecondaryColor}
               className={jerseyMarkClass}
             />
           ) : (
@@ -360,7 +378,7 @@ function ResultMatchHeader({
 
           <div
             className={[
-              "font-black leading-none tracking-tight tabular-nums text-xl md:text-5xl",
+              "font-black leading-none tracking-tight tabular-nums text-xl text-white/85 md:text-5xl",
               resultStatsMetricNumClass,
             ].join(" ")}
           >
@@ -369,9 +387,12 @@ function ResultMatchHeader({
 
           {finalScore && (
             <div
-              className={`mt-2 text-sm font-bold tabular-nums opacity-85 sm:mt-2.5 sm:text-base ${resultStatsMetricNumClass}`}
+              className={`mt-2 text-sm font-bold tabular-nums sm:mt-2.5 sm:text-base ${resultStatsMetricNumClass}`}
             >
-              Final: {finalScore}
+              <span className="text-white/55">Final: </span>
+              <span className="text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)]">
+                {finalScore}
+              </span>
             </div>
           )}
         </div>
@@ -379,8 +400,8 @@ function ResultMatchHeader({
         <div className="flex flex-col items-center">
           {Icon === Jersey ? (
             <HalftoneJerseyMark
-              accent={awayColor}
-              accentEnd={awaySecondaryColor}
+              accent={awayJerseyColor}
+              accentEnd={awayJerseySecondaryColor}
               className={jerseyMarkClass}
             />
           ) : (

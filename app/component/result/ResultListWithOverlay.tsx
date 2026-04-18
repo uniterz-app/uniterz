@@ -1513,11 +1513,8 @@ export default function ResultListWithOverlay({
         {visibleGrouped.map((day) => {
           const pendingShown = day.pending;
           const finalShown = day.final;
-          const displayPosts = [...pendingShown, ...finalShown].sort((a, b) => {
-            const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
-            const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
-            return be - ae;
-          });
+          // 未確定（試合前〜得点未確定）を上、試合確定済みを下（各バケット内の順は groupPostsByResultDay に従う）
+          const displayPosts = [...pendingShown, ...finalShown];
           const dayPts = dayPointsHeaderForList(
             finalShown,
             pendingShown,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -59,6 +60,60 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
   const [overlayBracket, setOverlayBracket] = useState<BracketState | null>(
     null
   );
+
+  const [overlayPortalReady, setOverlayPortalReady] = useState(false);
+  const overlayScrollRef = useRef<HTMLDivElement>(null);
+  const lockedDocumentScrollYRef = useRef(0);
+
+  useEffect(() => {
+    setOverlayPortalReady(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!selectedRow) return;
+    overlayScrollRef.current?.scrollTo(0, 0);
+  }, [selectedRow, bracketLoading, playoffDisplayData]);
+
+  useEffect(() => {
+    if (!selectedRow) return;
+
+    lockedDocumentScrollYRef.current = window.scrollY;
+    const body = document.body;
+    const html = document.documentElement;
+    const prevBody = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    const prevHtmlOverflow = html.style.overflow;
+
+    body.style.position = "fixed";
+    body.style.top = `-${lockedDocumentScrollYRef.current}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+
+    overlayScrollRef.current?.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      overlayScrollRef.current?.scrollTo(0, 0);
+    });
+
+    return () => {
+      body.style.position = prevBody.position;
+      body.style.top = prevBody.top;
+      body.style.left = prevBody.left;
+      body.style.right = prevBody.right;
+      body.style.width = prevBody.width;
+      body.style.overflow = prevBody.overflow;
+      html.style.overflow = prevHtmlOverflow;
+      window.scrollTo(0, lockedDocumentScrollYRef.current);
+    };
+  }, [selectedRow]);
 
   const loadBracketForUser = useCallback(
     async (uid: string) => {
@@ -200,84 +255,93 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
         </div>
       </div>
 
-      <AnimatePresence>
-        {selectedRow && (
-          <motion.div
-            key="bracket-detail-overlay"
-            className="fixed inset-0 z-99999 flex flex-col"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <motion.div
-              className="absolute inset-0 bg-black/20 backdrop-blur-md"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={closeDetail}
-              aria-hidden
-            />
+      {overlayPortalReady
+        ? createPortal(
+            <AnimatePresence>
+              {selectedRow && (
+                <motion.div
+                  key="bracket-detail-overlay"
+                  className="fixed inset-0 z-99999 flex flex-col"
+                  style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-black/20 backdrop-blur-md"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={closeDetail}
+                    aria-hidden
+                  />
 
-            <motion.div
-              className="relative z-10 flex h-full flex-col rounded-t-2xl bg-transparent pb-4"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{
-                type: "spring",
-                damping: 28,
-                stiffness: 300,
-              }}
-            >
-              <button
-                type="button"
-                aria-label={language === "en" ? "Close" : "閉じる"}
-                className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
-                onClick={closeDetail}
-              >
-                <X size={18} strokeWidth={2.4} />
-              </button>
+                  <motion.div
+                    className="relative z-10 flex h-full max-h-dvh flex-col rounded-t-2xl bg-transparent pb-4"
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "100%" }}
+                    transition={{
+                      type: "spring",
+                      damping: 28,
+                      stiffness: 300,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-label={language === "en" ? "Close" : "閉じる"}
+                      className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
+                      onClick={closeDetail}
+                    >
+                      <X size={18} strokeWidth={2.4} />
+                    </button>
 
-              <div className="sticky top-0 z-10 shrink-0 border-b border-white/12 bg-black/25 px-4 py-3 backdrop-blur-md">
-                <BracketUserCard
-                  row={selectedRow}
-                  language={language}
-                  onClick={() => openProfileFromSheet(selectedRow)}
-                />
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 pb-bottom-nav sm:px-4 sm:py-6">
-                {bracketLoading ? (
-                  <div className="flex items-center justify-center py-16">
-                    <div className="text-white/60">
-                      {language === "en" ? "Loading..." : "読み込み中..."}
+                    <div className="sticky top-0 z-10 shrink-0 border-b border-white/12 bg-black/25 px-4 py-3 backdrop-blur-md">
+                      <BracketUserCard
+                        row={selectedRow}
+                        language={language}
+                        onClick={() => openProfileFromSheet(selectedRow)}
+                      />
                     </div>
-                  </div>
-                ) : playoffDisplayData ? (
-                  <div className="mx-auto flex w-full max-w-[1200px] justify-center">
-                    <PlayoffBracket
-                      league="nba"
-                      score={playoffScore}
-                      {...playoffDisplayData}
-                      bracket={overlayBracket ?? undefined}
-                      results={officialResults ?? undefined}
-                      hitLegend={{ language }}
-                      showGlassShell={false}
-                    />
-                  </div>
-                ) : (
-                  <div className="py-16 text-center text-white/60">
-                    {language === "en"
-                      ? "Couldn't load the bracket"
-                      : "ブラケットを読み込めませんでした"}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+                    <div
+                      ref={overlayScrollRef}
+                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 pb-bottom-nav sm:px-4 sm:py-6"
+                    >
+                      {bracketLoading ? (
+                        <div className="flex items-center justify-center py-16">
+                          <div className="text-white/60">
+                            {language === "en" ? "Loading..." : "読み込み中..."}
+                          </div>
+                        </div>
+                      ) : playoffDisplayData ? (
+                        <div className="mx-auto flex w-full max-w-[1200px] justify-center">
+                          <PlayoffBracket
+                            league="nba"
+                            score={playoffScore}
+                            {...playoffDisplayData}
+                            bracket={overlayBracket ?? undefined}
+                            results={officialResults ?? undefined}
+                            hitLegend={{ language }}
+                            showGlassShell={false}
+                          />
+                        </div>
+                      ) : (
+                        <div className="py-16 text-center text-white/60">
+                          {language === "en"
+                            ? "Couldn't load the bracket"
+                            : "ブラケットを読み込めませんでした"}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )
+        : null}
     </>
   );
 }

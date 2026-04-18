@@ -15,6 +15,7 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
+import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 
 type Props = {
   rank: number | null;
@@ -31,6 +32,8 @@ type Props = {
   isPro?: boolean;
   /** モバイルランキング用：外側パディングを抑えてカードを横に少し広げる */
   mobileWide?: boolean;
+  /** 前日比順位（正=上昇）。API の myRankDeltaPlaces */
+  rankDeltaPlaces?: number | null;
 };
 
 function formatValue(metric: MobileMetric, value: number) {
@@ -43,30 +46,18 @@ function formatValue(metric: MobileMetric, value: number) {
 
 function getRankStyle(rank: number | null, loading: boolean) {
   if (loading || rank == null) {
-    return {
-      color: "rgba(255,255,255,0.9)",
-      textShadow: "none",
-    };
+    return { color: "rgba(255,255,255,0.9)" };
   }
 
   if (rank <= 10) {
-    return {
-      color: "#FFD65A",
-      textShadow: "0 0 12px rgba(255,215,90,0.25)",
-    };
+    return { color: "#FFD65A" };
   }
 
   if (rank <= 20) {
-    return {
-      color: "#F4E47A",
-      textShadow: "0 0 10px rgba(244,228,122,0.18)",
-    };
+    return { color: "#F4E47A" };
   }
 
-  return {
-    color: "rgba(255,255,255,0.95)",
-    textShadow: "none",
-  };
+  return { color: "rgba(255,255,255,0.95)" };
 }
 
 const CARD_SHELL = {
@@ -148,6 +139,7 @@ export default function MyRankCard({
   language = "ja",
   isPro = false,
   mobileWide = false,
+  rankDeltaPlaces = null,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const ready = !loading;
@@ -275,15 +267,19 @@ export default function MyRankCard({
             >
               YOUR RANK
             </div>
-            <div
-              className={[numClass, "leading-none"].join(" ")}
-              style={{
-                fontSize: 21,
-                color: rankStyle.color,
-                textShadow: rankStyle.textShadow,
-              }}
-            >
-              {loading || rank == null ? "--" : `#${rank}`}
+            <div className="flex items-baseline justify-center gap-1">
+              <div
+                className={[numClass, "leading-none"].join(" ")}
+                style={{
+                  fontSize: 21,
+                  color: rankStyle.color,
+                }}
+              >
+                {loading || rank == null ? "--" : `#${rank}`}
+              </div>
+              {!loading && rank != null ? (
+                <RankDeltaBadge delta={rankDeltaPlaces} />
+              ) : null}
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -303,7 +299,6 @@ export default function MyRankCard({
                 ].join(" ")}
                 style={{
                   color: "rgba(255,255,255,0.9)",
-                  textShadow: "0 0 10px rgba(255,255,255,0.08)",
                 }}
               >
                 <span className={[numClass, "text-[19px]"].join(" ")}>
@@ -468,15 +463,19 @@ export default function MyRankCard({
           >
             YOUR RANK
           </div>
-          <div
-            className={[numClass, "leading-none"].join(" ")}
-            style={{
-              fontSize: 21,
-              color: rankStyle.color,
-              textShadow: rankStyle.textShadow,
-            }}
-          >
-            {centerContent}
+          <div className="flex items-baseline justify-center gap-1">
+            <div
+              className={[numClass, "leading-none"].join(" ")}
+              style={{
+                fontSize: 21,
+                color: rankStyle.color,
+              }}
+            >
+              {centerContent}
+            </div>
+            {showSideColumns && !loading && rank != null ? (
+              <RankDeltaBadge delta={rankDeltaPlaces} />
+            ) : null}
           </div>
         </motion.div>
 
@@ -505,7 +504,6 @@ export default function MyRankCard({
               ].join(" ")}
               style={{
                 color: "rgba(255,255,255,0.9)",
-                textShadow: "0 0 10px rgba(255,255,255,0.08)",
               }}
             >
               <span className={[numClass, "text-[19px]"].join(" ")}>

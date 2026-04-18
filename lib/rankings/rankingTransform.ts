@@ -26,6 +26,8 @@ export type RankingApiRow = {
   currentStreak?: number;
   activeWinStreak?: number;
   countryCode?: string | null;
+  /** Day-over-day rank change (positive = improved). From snapshot job. */
+  rankDeltaPlaces?: number | null;
 };
 
 export function toApiMetric(metric: MobileMetric) {
@@ -64,6 +66,13 @@ export function toMobileRows(
       winRate: totalPosts > 0 ? totalWins / totalPosts : 0,
 
       countryCode: row.countryCode ?? undefined,
+
+      rankDeltaPlaces:
+        typeof row.rankDeltaPlaces === "number" &&
+        Number.isFinite(row.rankDeltaPlaces) &&
+        row.rankDeltaPlaces !== 0
+          ? row.rankDeltaPlaces
+          : undefined,
     };
   });
 }

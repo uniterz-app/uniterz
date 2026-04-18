@@ -1,6 +1,7 @@
 // functions/src/stats/buildUserStatsWindowCache.ts
 // user_stats_v2_window_cache/{uid} を構築（7d/30d ロールアップ）
 
+import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 type Bucket = {
@@ -104,6 +105,48 @@ function computeForCards(b: Bucket): Omit<SummaryForCards, "fullPosts"> {
 
 const STALE_HOURS = 24;
 
+type DailyTrendRow = {
+  date: string;
+  posts: number;
+  wins: number;
+  pointsV3: number;
+  upsetPoints: number;
+  winRate: number;
+  scorePrecision: number;
+};
+
+/** app/lib の buildDailyTrendFromDailySnaps と同じ解決ルール（Functions 単体ビルドのため重複） */
+function buildDailyTrendFromSnaps(snaps: DocumentSnapshot[]): DailyTrendRow[] {
+  const rows: DailyTrendRow[] = [];
+  for (const snap of snaps) {
+    if (!snap.exists) continue;
+    const d = snap.data();
+    if (!d) continue;
+    const dateRaw = d.date;
+    const date = typeof dateRaw === "string" ? dateRaw : "";
+    if (!date) continue;
+
+    const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
+    const posts = all?.posts ?? 0;
+    const wins = all?.wins ?? 0;
+    const pointsV3 = all?.pointsSumV3 ?? 0;
+    const upsetPoints = all?.upsetPointsSum ?? 0;
+    const scorePrecisionSum = all?.scorePrecisionSum ?? 0;
+
+    rows.push({
+      date,
+      posts,
+      wins,
+      pointsV3,
+      upsetPoints,
+      winRate: posts > 0 ? wins / posts : 0,
+      scorePrecision: scorePrecisionSum,
+    });
+  }
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  return rows;
+}
+
 export async function buildWindowCacheForUser(uid: string): Promise<void> {
   const db = getFirestore();
   const today = new Date();
@@ -140,11 +183,19 @@ export async function buildWindowCacheForUser(uid: string): Promise<void> {
   const seven = computeForCards(sevenBucket);
   const thirty = computeForCards(thirtyBucket);
 
+  const recent3Bucket = dailyBuckets
+    .slice(0, 3)
+    .reduce((acc, row) => mergeBucket(acc, row.bucket), empty());
+  const recent3Posts = safeInt(recent3Bucket.posts);
+  const dailyTrend = buildDailyTrendFromSnaps(dailySnaps);
+
   const windowRef = db.doc(`user_stats_v2_window_cache/${uid}`);
   await windowRef.set(
     {
       "7d": { fullPosts: seven.posts, ...seven },
       "30d": { fullPosts: thirty.posts, ...thirty },
+      recent3Posts,
+      dailyTrend,
       updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true }

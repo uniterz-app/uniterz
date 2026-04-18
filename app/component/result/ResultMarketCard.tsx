@@ -5,7 +5,7 @@ import React, { memo, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import DonutChart from "@/app/component/predict/DonutChart";
 import { normalizeLeague, type League } from "@/lib/leagues";
-import { getTeamPrimaryColor } from "@/lib/team-colors";
+import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { getTeamAlias } from "@/lib/team-alias";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -60,10 +60,10 @@ function ResultMarketCard({
   const normalizedLeague = normalizeLeague(post.league);
 
   const homeColor =
-    getTeamPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#3B82F6";
+    getTeamJerseyPrimaryColor(normalizedLeague, post.home?.teamId) ?? "#3B82F6";
 
   const awayColor =
-    getTeamPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#EF4444";
+    getTeamJerseyPrimaryColor(normalizedLeague, post.away?.teamId) ?? "#EF4444";
 
   const isSoccer = post.league === "j1" || post.league === "pl";
 

@@ -20,7 +20,6 @@ export type PlayoffBracketConfig = {
 export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
   "2026": {
     season: "2026",
-    allowSubmission: false,
     east: [
       { code: "DET", seed: 1 },
       { code: "BOS", seed: 2 },
@@ -28,8 +27,8 @@ export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
       { code: "CLE", seed: 4 },
       { code: "TOR", seed: 5 },
       { code: "ATL", seed: 6 },
-      { code: "ORL", seed: 7 },
-      { code: "MIA", seed: 8 },
+      { code: "PHI", seed: 7 },
+      { code: "ORL", seed: 8 },
     ],
     west: [
       { code: "OKC", seed: 1 },
@@ -38,8 +37,8 @@ export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
       { code: "LAL", seed: 4 },
       { code: "HOU", seed: 5 },
       { code: "MIN", seed: 6 },
-      { code: "PHX", seed: 7 },
-      { code: "LAC", seed: 8 },
+      { code: "POR", seed: 7 },
+      { code: "PHX", seed: 8 },
     ],
   },
 };

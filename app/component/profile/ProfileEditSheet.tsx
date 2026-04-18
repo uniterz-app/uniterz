@@ -4,22 +4,21 @@ import { useState, useEffect } from "react";
 import { Camera, ChevronLeft, User } from "lucide-react";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage, db, auth } from "@/lib/firebase";
+import { storage, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import CyberAuthField from "@/app/component/auth/CyberAuthField";
 import CyberAuthTextarea from "@/app/component/auth/CyberAuthTextarea";
 import CyberAuthSelect from "@/app/component/auth/CyberAuthSelect";
 import cyberFieldStyles from "@/app/component/auth/cyberAuthField.module.css";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
-
-type Language = "ja" | "en";
-
-const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
-  ja: "Asia/Tokyo",
-  en: "America/New_York",
-};
+import type { Language } from "@/lib/i18n/language";
+import {
+  guessLanguageFromNavigator,
+  normalizeLanguage,
+} from "@/lib/i18n/language";
+import { ui } from "@/lib/i18n/ui";
+import { saveMeProfile } from "@/lib/api/saveMeProfile";
 
 type Props = {
   onClose: () => void;
@@ -36,16 +35,11 @@ export default function ProfileEditSheet({
   embedded = false,
   reopenMenu,
 }: Props) {
-  const osIsJa =
-    typeof navigator !== "undefined" &&
-    navigator.language?.toLowerCase().startsWith("ja");
-
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [language, setLanguage] = useState<Language>(() =>
-    osIsJa ? "ja" : "en"
+    guessLanguageFromNavigator()
   );
-  const isEn = language === "en";
   const [countryCode, setCountryCode] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPhotoURL, setCurrentPhotoURL] = useState<string | null>(null);
@@ -68,18 +62,15 @@ export default function ProfileEditSheet({
         setName(typeof d.displayName === "string" ? d.displayName : "");
         setBio(typeof d.bio === "string" ? d.bio : "");
         setCurrentPhotoURL(typeof d.photoURL === "string" ? d.photoURL : null);
-        if (d.language === "ja" || d.language === "en") {
-          setLanguage(d.language);
-        } else {
-          setLanguage(osIsJa ? "ja" : "en");
-        }
+        const norm = normalizeLanguage(d.language);
+        setLanguage(norm ?? guessLanguageFromNavigator());
         setCountryCode(typeof d.countryCode === "string" ? d.countryCode : "");
         if (typeof d.photoCropY === "number") setCropY(d.photoCropY);
       }
       setReady(true);
     });
     return () => unsub();
-  }, [osIsJa]);
+  }, []);
 
   const defaultAvatarUrl =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="100%" height="100%" fill="%23000"/></svg>';
@@ -121,24 +112,26 @@ export default function ProfileEditSheet({
       if (uploaded) photoURL = uploaded;
     }
 
-    await setDoc(
-      doc(db, "users", user.uid),
-      {
+    try {
+      await saveMeProfile({
         displayName: name || "",
         bio: bio || "",
         photoURL: photoURL || "",
-        photoCropY: cropY,
         language,
-        locale: language,
-        timeZone: TIMEZONE_BY_LANGUAGE[language],
         countryCode: countryCode || null,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    onSaved?.();
-    onClose();
+        photoCropY: cropY,
+      });
+      onSaved?.();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert(
+        ui(language, {
+          ja: "保存に失敗しました。時間をおいて再度お試しください。",
+          en: "Failed to save. Please try again later.",
+        })
+      );
+    }
     // 保存後はメニューを自動では開かない
   };
 
@@ -170,12 +163,16 @@ export default function ProfileEditSheet({
             <header className="mb-5 flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <h1 className="text-2xl font-bold tracking-tight text-white">
-                  {isEn ? "Profile Settings" : "プロフィール設定"}
+                  {ui(language, {
+                    ja: "プロフィール設定",
+                    en: "Profile Settings",
+                  })}
                 </h1>
                 <p className="mt-1 text-sm text-white/70">
-                  {isEn
-                    ? "Edit your icon, name, bio, language, and country."
-                    : "アイコン・名前・自己紹介・言語・国を編集できます"}
+                  {ui(language, {
+                    ja: "アイコン・名前・自己紹介・言語・国を編集できます",
+                    en: "Edit your icon, name, bio, language, and country.",
+                  })}
                 </p>
               </div>
               {!embedded && (
@@ -183,7 +180,7 @@ export default function ProfileEditSheet({
                   type="button"
                   onClick={handleDismiss}
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-zinc-900/85 text-white shadow-[0_8px_18px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:bg-zinc-800/90 active:scale-95"
-                  aria-label={isEn ? "Back" : "戻る"}
+                  aria-label={ui(language, { ja: "戻る", en: "Back" })}
                 >
                   <ChevronLeft className="h-6 w-6" strokeWidth={2.25} aria-hidden />
                 </button>
@@ -192,7 +189,10 @@ export default function ProfileEditSheet({
 
             {!ready ? (
               <div className="py-12 text-center text-sm text-white/55">
-                {isEn ? "Loading…" : "読み込み中…"}
+                {ui(language, {
+                  ja: "読み込み中…",
+                  en: "Loading…",
+                })}
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">
@@ -224,14 +224,17 @@ export default function ProfileEditSheet({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {isEn ? "Name" : "名前"}
+                    {ui(language, { ja: "名前", en: "Name" })}
                   </label>
                   <CyberAuthField
                     inputProps={{
                       type: "text",
                       name: "displayName",
                       autoComplete: "name",
-                      placeholder: isEn ? "Name" : "名前",
+                      placeholder: ui(language, {
+                        ja: "名前",
+                        en: "Name",
+                      }),
                       value: name,
                       onChange: (e) => setName(e.target.value),
                     }}
@@ -245,12 +248,15 @@ export default function ProfileEditSheet({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {isEn ? "Bio" : "自己紹介"}
+                    {ui(language, { ja: "自己紹介", en: "Bio" })}
                   </label>
                   <CyberAuthTextarea
                     textareaProps={{
                       name: "bio",
-                      placeholder: isEn ? "Bio" : "自己紹介",
+                      placeholder: ui(language, {
+                        ja: "自己紹介",
+                        en: "Bio",
+                      }),
                       value: bio,
                       onChange: (e) => setBio(e.target.value),
                       rows: 4,
@@ -260,7 +266,10 @@ export default function ProfileEditSheet({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {isEn ? "App Language" : "使用言語"}
+                    {ui(language, {
+                      ja: "使用言語",
+                      en: "App Language",
+                    })}
                   </label>
                   <CyberAuthSelect
                     selectProps={{
@@ -268,14 +277,21 @@ export default function ProfileEditSheet({
                       onChange: (e) => setLanguage(e.target.value as Language),
                     }}
                   >
-                    <option value="ja">{isEn ? "Japanese" : "日本語"}</option>
-                    <option value="en">English</option>
+                    <option value="ja">
+                      {ui(language, { ja: "日本語", en: "Japanese" })}
+                    </option>
+                    <option value="en">
+                      {ui(language, { ja: "English", en: "English" })}
+                    </option>
                   </CyberAuthSelect>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {isEn ? "Country (optional)" : "住んでいる国（任意）"}
+                    {ui(language, {
+                      ja: "住んでいる国（任意）",
+                      en: "Country (optional)",
+                    })}
                   </label>
                   <CyberAuthSelect
                     selectProps={{
@@ -283,7 +299,12 @@ export default function ProfileEditSheet({
                       onChange: (e) => setCountryCode(e.target.value),
                     }}
                   >
-                    <option value="">{isEn ? "Not set" : "未設定"}</option>
+                    <option value="">
+                      {ui(language, {
+                        ja: "未設定",
+                        en: "Not set",
+                      })}
+                    </option>
                     {COUNTRY_OPTIONS.map((c) => (
                       <option key={c.code} value={c.code}>
                         {language === "ja" ? c.labelJa : c.labelEn}
@@ -309,12 +330,14 @@ export default function ProfileEditSheet({
                 >
                   <span>
                     {uploading
-                      ? isEn
-                        ? "Uploading..."
-                        : "アップロード中..."
-                      : isEn
-                        ? "Save changes"
-                        : "変更を保存"}
+                      ? ui(language, {
+                          ja: "アップロード中...",
+                          en: "Uploading...",
+                        })
+                      : ui(language, {
+                          ja: "変更を保存",
+                          en: "Save changes",
+                        })}
                   </span>
                   {!uploading ? (
                     <span className="text-lg leading-none">↗</span>

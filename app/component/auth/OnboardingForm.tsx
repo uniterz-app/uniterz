@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Camera } from "lucide-react";
 import { FaUser } from "react-icons/fa";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, auth, storage } from "@/lib/firebase";
 import { ensureUserSlug } from "@/lib/ensureSlug";
@@ -17,25 +17,18 @@ import {
   authDisplayHeadingLong,
   authDisplayButton,
 } from "./authEnglishDisplay";
+import type { Language } from "@/lib/i18n/language";
+import { guessLanguageFromNavigator } from "@/lib/i18n/language";
+import { ui as uiStr } from "@/lib/i18n/ui";
+import { saveMeProfile } from "@/lib/api/saveMeProfile";
 
 type Props = {
   variant?: "web" | "mobile";
 };
 
-type Language = "ja" | "en";
-
-const TIMEZONE_BY_LANGUAGE: Record<Language, string> = {
-  ja: "Asia/Tokyo",
-  en: "America/New_York",
-};
-
 export default function OnboardingForm({ variant }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-
-  const osIsJa =
-    typeof navigator !== "undefined" &&
-    navigator.language?.toLowerCase().startsWith("ja");
 
   const resolvedVariant: "web" | "mobile" = useMemo(() => {
     if (variant) return variant;
@@ -44,7 +37,7 @@ export default function OnboardingForm({ variant }: Props) {
 
   const [displayName, setDisplayName] = useState("");
   const [language, setLanguage] = useState<Language>(() =>
-    osIsJa ? "ja" : "en"
+    guessLanguageFromNavigator()
   );
   const [countryCode, setCountryCode] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -64,25 +57,6 @@ export default function OnboardingForm({ variant }: Props) {
 
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
-
-  const ui = {
-    subtitle: osIsJa
-      ? "ユーザーネームと言語を設定すると次へ進めます（必須）"
-      : "Set your username and language to continue (required)",
-    usernameLabel: osIsJa
-      ? "ユーザーネーム（必須）"
-      : "Username (required)",
-    usernamePlaceholder: osIsJa ? "Username" : "Username",
-    languageLabel: osIsJa ? "使用言語（必須）" : "App Language (required)",
-    countryLabel: osIsJa ? "住んでいる国（任意）" : "Country (optional)",
-    countryNote: osIsJa
-      ? "国はランキング表示時のフラッグに使用されます。"
-      : "Country is used for the flag shown on rankings.",
-    countryNoteLater: osIsJa
-      ? "（一部の国は今後フラッグ画像を追加予定）"
-      : "(Some flags may be added later.)",
-    selectCountryPlaceholder: osIsJa ? "未設定" : "Not set",
-  } as const;
 
   const canSubmit = displayName.trim().length > 0;
   const formWidth = resolvedVariant === "mobile" ? 320 : 380;
@@ -112,37 +86,29 @@ export default function OnboardingForm({ variant }: Props) {
       const snap = await getDoc(userRef);
       const existing = snap.exists() ? (snap.data() as Record<string, unknown>) : {};
 
-      const slug = await ensureUserSlug(db, user.uid);
+      await ensureUserSlug(db, user.uid);
       const uploadedPhotoURL = await uploadAvatarIfNeeded(user.uid);
 
-      await setDoc(
-        userRef,
-        {
-          displayName: displayName.trim(),
-          username: slug,
-          handle: slug,
-          slug,
-          language,
-          locale: language,
-          timeZone: TIMEZONE_BY_LANGUAGE[language],
-          countryCode: countryCode || null,
-          photoURL:
-            uploadedPhotoURL ??
-            (typeof existing.photoURL === "string" ? existing.photoURL : ""),
-          onboardingCompletedAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      await saveMeProfile({
+        displayName: displayName.trim(),
+        bio: typeof existing.bio === "string" ? existing.bio : "",
+        photoURL:
+          uploadedPhotoURL ??
+          (typeof existing.photoURL === "string" ? existing.photoURL : ""),
+        language,
+        countryCode: countryCode || null,
+        completeOnboarding: true,
+      });
 
-      const profileBase = resolvedVariant === "mobile" ? "/mobile/u" : "/web/u";
-      router.replace(`${profileBase}/${encodeURIComponent(slug)}`);
+      const gamesPath = resolvedVariant === "mobile" ? "/mobile/games" : "/web/games";
+      router.replace(gamesPath);
     } catch (err) {
       console.error("onboarding save failed:", err);
       alert(
-        language === "en"
-          ? "Failed to save. Please try again later."
-          : "保存に失敗しました。時間をおいて再度お試しください。"
+        uiStr(language, {
+          ja: "保存に失敗しました。時間をおいて再度お試しください。",
+          en: "Failed to save. Please try again later.",
+        })
       );
     } finally {
       setSaving(false);
@@ -164,7 +130,12 @@ export default function OnboardingForm({ variant }: Props) {
         <div className="relative z-10">
           <AuthFormBranding />
           <h1 className={`mt-1 ${authDisplayHeadingLong}`}>PROFILE SETUP</h1>
-          <p className={`mt-2 ${bodySans}`}>{ui.subtitle}</p>
+          <p className={`mt-2 ${bodySans}`}>
+            {uiStr(language, {
+              ja: "ユーザーネームと言語を設定すると次へ進めます（必須）",
+              en: "Set your username and language to continue (required)",
+            })}
+          </p>
 
           <div className="mt-4 flex justify-center">
             <label className="relative cursor-pointer">
@@ -197,14 +168,20 @@ export default function OnboardingForm({ variant }: Props) {
           <div className="mt-5 space-y-3 text-left">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-white/75">
-                {ui.usernameLabel}
+                {uiStr(language, {
+                  ja: "ユーザーネーム（必須）",
+                  en: "Username (required)",
+                })}
               </label>
               <CyberAuthField
                 inputProps={{
                   type: "text",
                   name: "username",
                   autoComplete: "username",
-                  placeholder: ui.usernamePlaceholder,
+                  placeholder: uiStr(language, {
+                    ja: "Username",
+                    en: "Username",
+                  }),
                   value: displayName,
                   onChange: (e) => setDisplayName(e.target.value),
                 }}
@@ -218,7 +195,10 @@ export default function OnboardingForm({ variant }: Props) {
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-white/75">
-                {ui.languageLabel}
+                {uiStr(language, {
+                  ja: "使用言語（必須）",
+                  en: "App Language (required)",
+                })}
               </label>
               <CyberAuthSelect
                 selectProps={{
@@ -226,14 +206,21 @@ export default function OnboardingForm({ variant }: Props) {
                   onChange: (e) => setLanguage(e.target.value as Language),
                 }}
               >
-                <option value="ja">{osIsJa ? "日本語" : "Japanese"}</option>
-                <option value="en">English</option>
+                <option value="ja">
+                  {uiStr(language, { ja: "日本語", en: "Japanese" })}
+                </option>
+                <option value="en">
+                  {uiStr(language, { ja: "English", en: "English" })}
+                </option>
               </CyberAuthSelect>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-white/75">
-                {ui.countryLabel}
+                {uiStr(language, {
+                  ja: "住んでいる国（任意）",
+                  en: "Country (optional)",
+                })}
               </label>
               <CyberAuthSelect
                 selectProps={{
@@ -241,17 +228,28 @@ export default function OnboardingForm({ variant }: Props) {
                   onChange: (e) => setCountryCode(e.target.value),
                 }}
               >
-                <option value="">{ui.selectCountryPlaceholder}</option>
+                <option value="">
+                  {uiStr(language, {
+                    ja: "未設定",
+                    en: "Not set",
+                  })}
+                </option>
                 {COUNTRY_OPTIONS.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {language === "en" ? c.labelEn : c.labelJa}
+                    {language === "ja" ? c.labelJa : c.labelEn}
                   </option>
                 ))}
               </CyberAuthSelect>
               <p className="mt-1 font-[family-name:var(--font-geist-sans)] text-xs leading-relaxed text-white/60">
-                {ui.countryNote}
+                {uiStr(language, {
+                  ja: "国はランキング表示時のフラッグに使用されます。",
+                  en: "Country is used for the flag shown on rankings.",
+                })}
                 {countryCode && !selectedCountryHasFlag
-                  ? ui.countryNoteLater
+                  ? uiStr(language, {
+                      ja: "（一部の国は今後フラッグ画像を追加予定）",
+                      en: "(Some flags may be added later.)",
+                    })
                   : ""}
               </p>
             </div>
@@ -274,12 +272,14 @@ export default function OnboardingForm({ variant }: Props) {
             ].join(" ")}
           >
             {saving
-              ? language === "en"
-                ? "SAVING..."
-                : "保存中..."
-              : language === "en"
-                ? "CONTINUE"
-                : "次へ"}
+              ? uiStr(language, {
+                  ja: "保存中...",
+                  en: "SAVING...",
+                })
+              : uiStr(language, {
+                  ja: "次へ",
+                  en: "CONTINUE",
+                })}
           </button>
         </div>
       </div>

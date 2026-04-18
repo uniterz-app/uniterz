@@ -75,6 +75,19 @@
         { "fieldPath": "pinned", "order": "DESCENDING" },
         { "fieldPath": "postedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "playoffBrackets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "season", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "badges",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "badgeId", "order": "ASCENDING" }]
     }
   ],
   "fieldOverrides": []

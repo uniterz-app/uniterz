@@ -61,7 +61,7 @@ export default function Page() {
     const isMobile = window.innerWidth < 768;
 
     if (status === "ready" && fUser && handle) {
-      router.replace(isMobile ? `/mobile/u/${handle}` : `/web/u/${handle}`);
+      router.replace(isMobile ? "/mobile/games" : "/web/games");
       return;
     }
 

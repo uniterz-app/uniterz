@@ -18,21 +18,11 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
+import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { Crown } from "lucide-react";
-
-/* =========================
- * Flag map
- * ========================= */
-const FLAG_SRC: Record<string, string> = {
-  US: "/flags/us.png",
-  CN: "/flags/cn.png",
-  JP: "/flags/jp.png",
-};
-
-function getCountryCode(row: RankingRowWithCountry): string | undefined {
-  if (!row.countryCode) return undefined;
-  return FLAG_SRC[row.countryCode] ? row.countryCode : undefined;
-}
+import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
 const rankHudNumClass = summaryMetricNumClass;
 
@@ -45,8 +35,6 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
       WebkitBackgroundClip: "text",
       backgroundClip: "text",
       color: "transparent",
-      textShadow:
-        "0 0 8px rgba(255,215,90,0.48), 0 0 16px rgba(255,193,7,0.30), 0 0 28px rgba(234,179,8,0.16)",
       display: "inline-block",
     } as const;
   }
@@ -57,8 +45,6 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
       WebkitBackgroundClip: "text",
       backgroundClip: "text",
       color: "transparent",
-      textShadow:
-        "0 0 8px rgba(230,238,250,0.40), 0 0 16px rgba(203,213,225,0.26), 0 0 26px rgba(148,163,184,0.14)",
       display: "inline-block",
     } as const;
   }
@@ -68,16 +54,8 @@ function podiumScoreStyle(rank: 1 | 2 | 3) {
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
-    textShadow:
-      "0 0 8px rgba(222,150,90,0.42), 0 0 16px rgba(180,95,50,0.26), 0 0 26px rgba(146,85,40,0.14)",
     display: "inline-block",
   } as const;
-}
-
-function rankDigitGlow(rank: 1 | 2 | 3): string {
-  if (rank === 1) return "drop-shadow(0 0 14px rgba(255,215,90,0.55))";
-  if (rank === 2) return "drop-shadow(0 0 12px rgba(230,238,250,0.45))";
-  return "drop-shadow(0 0 12px rgba(220,150,90,0.48))";
 }
 
 /* =========================
@@ -168,21 +146,13 @@ function PodiumCornerFrame({ rank }: { rank: 1 | 2 | 3 }) {
 function rankInk(rank: 1 | 2 | 3) {
   const m = medal(rank);
 
-  const shadow =
-    rank === 1
-      ? "0 0 14px rgba(255,215,90,0.16)"
-      : rank === 2
-      ? "0 0 12px rgba(230,235,245,0.10)"
-      : "0 0 12px rgba(205,127,50,0.10)";
-
-  const solidStyle = { color: m.solid, textShadow: shadow } as const;
+  const solidStyle = { color: m.solid } as const;
 
   const gradStyle = {
     backgroundImage: m.grad,
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
     color: "transparent",
-    textShadow: `0 0 12px ${m.glow}`,
     display: "inline-block",
   } as const;
 
@@ -192,62 +162,42 @@ function rankInk(rank: 1 | 2 | 3) {
 /* =========================
  * Size presets
  * ========================= */
-/** 枠・行の高さを 1〜3 位で揃え、出現アニメ時にレイアウトが伸び縮みしないようにする */
-const podiumLayoutStable = {
-  cardMinH: "min-h-[58px]",
-  rowPy: "py-0.5",
-  rowMinH: "min-h-[36px]",
+/** 1〜3 位で枠・行・アバター・スコア列幅を揃え、数字まわりだけ順位差を出す */
+const podiumLayoutUnified = {
+  cardMinH: "min-h-[66px] lg:min-h-[74px]",
+  rowMinH: "min-h-[40px]",
+  rowPy: "py-1",
   gap: "gap-2",
   px: "px-3",
+  rankW: "w-[28px]",
+  avatar: "h-[38px] w-[38px] lg:h-[44px] lg:w-[44px]",
+  avatarText: "text-[15px] lg:text-[18px]",
+  nameText: "text-[16px] lg:text-[19px]",
+  scoreW: "w-[82px] shrink-0 text-right tabular-nums lg:w-[90px]",
 } as const;
 
 function rankPreset(rank: 1 | 2 | 3) {
   if (rank === 1) {
     return {
-      ...podiumLayoutStable,
-      cardMinH: "min-h-[68px] lg:min-h-[78px]",
-      rowMinH: "min-h-[42px]",
-      rowPy: "py-1",
-      rankW: "w-[28px]",
+      ...podiumLayoutUnified,
       rankText: "text-[26px] lg:text-[33px]",
-      avatar: "h-[40px] w-[40px] lg:h-[48px] lg:w-[48px]",
-      avatarText: "text-[16px] lg:text-[20px]",
-      nameText: "text-[16px] lg:text-[20px]",
-      scoreW: "min-w-[62px]",
       scoreMain: "text-[25px] lg:text-[32px]",
       scoreSub: "text-[10px] lg:text-[13px]",
-      badgeSize: "h-[13px] w-[13px]",
     };
   }
   if (rank === 2) {
     return {
-      ...podiumLayoutStable,
-      cardMinH: "min-h-[62px] lg:min-h-[72px]",
-      rowMinH: "min-h-[39px]",
-      rankW: "w-[26px]",
+      ...podiumLayoutUnified,
       rankText: "text-[22px] lg:text-[29px]",
-      avatar: "h-[38px] w-[38px] lg:h-[44px] lg:w-[44px]",
-      avatarText: "text-[15px] lg:text-[18px]",
-      nameText: "text-[16px] lg:text-[19px]",
-      scoreW: "min-w-[54px]",
       scoreMain: "text-[21px] lg:text-[28px]",
       scoreSub: "text-[9px] lg:text-[12px]",
-      badgeSize: "h-[12px] w-[12px]",
     };
   }
   return {
-    ...podiumLayoutStable,
-    cardMinH: "min-h-[56px] lg:min-h-[66px]",
-    rowMinH: "min-h-[36px]",
-    rankW: "w-[24px]",
+    ...podiumLayoutUnified,
     rankText: "text-[20px] lg:text-[26px]",
-    avatar: "h-[36px] w-[36px] lg:h-[41px] lg:w-[41px]",
-    avatarText: "text-[14px] lg:text-[17px]",
-    nameText: "text-[16px] lg:text-[18px]",
-    scoreW: "min-w-[50px]",
     scoreMain: "text-[18px] lg:text-[25px]",
     scoreSub: "text-[9px] lg:text-[11px]",
-    badgeSize: "h-[11px] w-[11px]",
   };
 }
 
@@ -264,27 +214,30 @@ function FadedFlagBg({
   const m = medal(rank);
   const src = countryCode ? FLAG_SRC[countryCode] : undefined;
 
-  if (!src) return null;
-
   return (
-    <div className="pointer-events-none absolute inset-y-0 -right-[11%] w-[42%] overflow-hidden">
+    <div className="pointer-events-none absolute inset-y-0 right-0 w-[38%] overflow-hidden">
       <div
-        className="absolute inset-y-[2%] right-[10%] w-[92%] overflow-hidden rounded-[18px]"
+        className="absolute inset-y-[4%] right-0 w-full overflow-hidden rounded-none"
         style={{
-          opacity: 0.43,
+          opacity: 0.64,
           boxShadow: `0 0 24px ${m.glow}`,
+          backgroundImage: src
+            ? undefined
+            : "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 42%, rgba(255,255,255,0.06) 100%)",
           maskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.22) 18%, rgba(0,0,0,0.62) 48%, rgba(0,0,0,0.95) 100%)",
+            "linear-gradient(90deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.44) 20%, rgba(0,0,0,0.78) 50%, rgba(0,0,0,0.98) 100%)",
           WebkitMaskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.22) 18%, rgba(0,0,0,0.62) 48%, rgba(0,0,0,0.95) 100%)",
+            "linear-gradient(90deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.44) 20%, rgba(0,0,0,0.78) 50%, rgba(0,0,0,0.98) 100%)",
         }}
       >
-        <img
-          src={src}
-          alt=""
-          className="h-full w-full object-cover"
-          draggable={false}
-        />
+        {src ? (
+          <img
+            src={src}
+            alt=""
+            className="h-full w-full object-contain object-right"
+            draggable={false}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -426,11 +379,14 @@ function ScoreText({
 export default function TopPodium({
   rows,
   metric,
+  rankPhase,
   onTopCountDone,
   language = "ja",
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
+  /** ランキングからプロフィールへの戻り用 */
+  rankPhase?: RankingPhase;
   onTopCountDone?: () => void;
   /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
@@ -466,6 +422,7 @@ export default function TopPodium({
     pathname.startsWith("/mobile") || pathname.startsWith("/m/")
       ? "/mobile"
       : "/web";
+  const phaseForReturn = rankPhase ?? "play_in";
 
   const r1 = rows[0];
   const r2 = rows[1];
@@ -501,10 +458,16 @@ export default function TopPodium({
           const s = rankPreset(rank);
           const countryCode = getCountryCode(row);
 
+          const profileHref = profileHrefWithRankingsReturn(
+            pathname,
+            base,
+            row.handle || row.uid,
+            { metric, phase: phaseForReturn }
+          );
           return (
             <Link
               key={row.uid}
-              href={`${base}/u/${row.handle || row.uid}`}
+              href={profileHref}
               className="relative block"
             >
               {rank === 1 ? (
@@ -604,15 +567,12 @@ export default function TopPodium({
                     <div className={["flex min-w-0 items-center", s.gap].join(" ")}>
                       <div
                         className={[
-                          "flex shrink-0 translate-y-[7px] items-center justify-center text-center leading-none",
+                          "flex shrink-0 translate-y-[6px] items-center justify-center text-center leading-none",
                           rankHudNumClass,
                           s.rankW,
                           s.rankText,
                         ].join(" ")}
-                        style={{
-                          ...(rank === 2 ? ink.solidStyle : ink.gradStyle),
-                          filter: rankDigitGlow(rank),
-                        }}
+                        style={rank === 2 ? ink.solidStyle : ink.gradStyle}
                       >
                         {rank}
                       </div>
@@ -630,29 +590,28 @@ export default function TopPodium({
                       {/* バッジは SVG がはみ出すため、overflow-hidden は名前テキスト側のみにかける */}
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 max-w-full items-center gap-1">
-                          <div className="min-w-0 flex-1 overflow-hidden">
-                            <div
-                              className={[
-                                "truncate font-black leading-none tracking-[0.005em]",
-                                jp.className,
-                                s.nameText,
-                              ].join(" ")}
+                          <div
+                            className={[
+                              "min-w-0 truncate font-black leading-none tracking-[0.005em]",
+                              jp.className,
+                              s.nameText,
+                            ].join(" ")}
+                            style={{
+                              color: "rgba(255,255,255,0.94)",
+                            }}
+                          >
+                            <span
                               style={{
-                                color: "rgba(255,255,255,0.94)",
+                                textShadow: [
+                                  "0 1px 1px rgba(0,0,0,0.32)",
+                                  "0 2px 4px rgba(0,0,0,0.18)",
+                                ].join(", "),
                               }}
                             >
-                              <span
-                                style={{
-                                  textShadow: [
-                                    "0 1px 1px rgba(0,0,0,0.32)",
-                                    "0 2px 4px rgba(0,0,0,0.18)",
-                                  ].join(", "),
-                                }}
-                              >
-                                {row.displayName ?? row.handle ?? "Unknown"}
-                              </span>
-                            </div>
+                              {row.displayName ?? row.handle ?? "Unknown"}
+                            </span>
                           </div>
+                          <RankDeltaBadge delta={row.rankDeltaPlaces} />
                           {row.plan === "pro" ? (
                             <ProCyberBadge
                               {...proBadgeStaticMotion}
@@ -668,7 +627,7 @@ export default function TopPodium({
 
                     <div
                       className={[
-                        "flex shrink-0 translate-y-[5px] flex-col items-end justify-center",
+                        "flex shrink-0 translate-y-[6px] flex-col items-end justify-center",
                         s.scoreW,
                       ].join(" ")}
                     >

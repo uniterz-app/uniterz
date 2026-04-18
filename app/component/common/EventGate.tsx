@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { usePathname } from "next/navigation";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
+import { normalizeLanguage } from "@/lib/i18n/language";
 
 const eventSeenStorageKey = () => `event_seen_${CURRENT_EVENT.id}`;
 
@@ -53,7 +54,7 @@ export default function EventGate() {
       const lang = d?.language;
       const handle = d?.handle || d?.slug || d?.username;
 
-      const ok = (lang === "ja" || lang === "en") && Boolean(handle);
+      const ok = normalizeLanguage(lang) !== null && Boolean(handle);
       setOnboardingComplete(ok);
     });
 

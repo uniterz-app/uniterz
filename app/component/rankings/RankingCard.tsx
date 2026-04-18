@@ -15,26 +15,12 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
-
-const FLAG_SRC: Record<string, string> = {
-  US: "/flags/us.png",
-  CN: "/flags/cn.png",
-  JP: "/flags/jp.png",
-};
-
-function getCountryCode(row: RankingRowWithCountry): string | undefined {
-  if (!row.countryCode) return undefined;
-  return FLAG_SRC[row.countryCode] ? row.countryCode : undefined;
-}
+import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
+import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
 const rankHudNumClass = summaryMetricNumClass;
-
-function rankDigitGlowFilter(rank: number): string | undefined {
-  if (rank === 1) return "drop-shadow(0 0 12px rgba(255,215,90,0.5))";
-  if (rank === 2) return "drop-shadow(0 0 10px rgba(230,238,250,0.4))";
-  if (rank === 3) return "drop-shadow(0 0 10px rgba(220,150,90,0.42))";
-  return undefined;
-}
 
 function medal(rank: number) {
   if (rank === 1) {
@@ -123,26 +109,47 @@ function FadedFlagBg({
 }) {
   const m = medal(rank);
   const src = countryCode ? FLAG_SRC[countryCode] : undefined;
+  /** 4位以下の一覧行：国旗をわずかに右へ */
+  const listRow = rank > 3;
 
   if (!src) return null;
 
   return (
-    <div className="pointer-events-none absolute inset-y-0 -right-[1%] w-[34%] overflow-hidden">
+    <div
+      className={[
+        "pointer-events-none absolute inset-y-0 w-[34%] overflow-hidden",
+        listRow ? "-right-[0%]" : "-right-[1%]",
+      ].join(" ")}
+    >
       <div
-        className="absolute inset-y-[1%] right-[3%] w-[92%] overflow-hidden rounded-[16px]"
+        className={[
+          "absolute inset-y-[2.5%] w-[92%] overflow-hidden rounded-none",
+          listRow ? "right-0" : "right-[3%]",
+        ].join(" ")}
         style={{
-          opacity: rank <= 3 ? 0.22 : 0.14,
-          boxShadow: `0 0 24px ${m.glow}`,
+          opacity: listRow ? 0.72 : 0.46,
+          boxShadow: listRow
+            ? [
+                "0 0 12px rgba(255,255,255,0.28)",
+                "0 0 26px rgba(170,210,255,0.22)",
+                "0 0 44px rgba(120,180,255,0.12)",
+                `0 0 20px ${m.glow}`,
+              ].join(", ")
+            : `0 0 24px ${m.glow}`,
           maskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.18) 18%, rgba(0,0,0,0.56) 48%, rgba(0,0,0,0.96) 100%)",
+            "linear-gradient(90deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.42) 20%, rgba(0,0,0,0.76) 50%, rgba(0,0,0,0.98) 100%)",
           WebkitMaskImage:
-            "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.18) 18%, rgba(0,0,0,0.56) 48%, rgba(0,0,0,0.96) 100%)",
+            "linear-gradient(90deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.42) 20%, rgba(0,0,0,0.76) 50%, rgba(0,0,0,0.98) 100%)",
         }}
       >
         <img
           src={src}
           alt=""
-          className="h-full w-full object-cover"
+          className={
+            listRow
+              ? "h-full w-full object-contain object-right drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]"
+              : "h-full w-full object-contain object-right"
+          }
           draggable={false}
         />
       </div>
@@ -171,19 +178,8 @@ function ValueText({
 
   const valueStyle =
     rank <= 3
-      ? ({
-          color: m.text,
-          textShadow:
-            rank === 1
-              ? "0 0 16px rgba(255,215,90,0.18)"
-              : rank === 2
-                ? "0 0 14px rgba(230,235,245,0.10)"
-                : "0 0 14px rgba(205,127,50,0.10)",
-        } as const)
-      : ({
-          color: "rgba(255,255,255,0.9)",
-          textShadow: "none",
-        } as const);
+      ? ({ color: m.text } as const)
+      : ({ color: "rgba(255,255,255,0.9)" } as const);
 
   if (metric === "streak") {
     return (
@@ -259,12 +255,15 @@ export default function RankingCard({
   row: r,
   rank,
   metric,
+  rankPhase,
   onCountDone,
   language = "ja",
 }: {
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
+  /** ランキング画面からプロフィールへ行くときの戻り用（未指定時は play_in） */
+  rankPhase?: RankingPhase;
   onCountDone?: () => void;
   language?: Language;
 }) {
@@ -278,6 +277,10 @@ export default function RankingCard({
     ? "/mobile"
     : "/web";
   const handleOrUid = r.handle || r.uid;
+  const profileHref = profileHrefWithRankingsReturn(pathname, base, handleOrUid, {
+    metric,
+    phase: rankPhase ?? "play_in",
+  });
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(
@@ -290,7 +293,7 @@ export default function RankingCard({
 
   return (
     <Link
-      href={`${base}/u/${handleOrUid}`}
+      href={profileHref}
       className={["block min-w-0", isTop3 ? "mb-1.5" : "mb-2"].join(" ")}
     >
       <div
@@ -372,15 +375,6 @@ export default function RankingCard({
               ].join(" ")}
               style={{
                 color: m.text,
-                textShadow:
-                  rank === 1
-                    ? "0 0 18px rgba(255,215,90,0.35), 0 0 8px rgba(255,215,90,0.2)"
-                    : rank === 2
-                      ? "0 0 16px rgba(230,235,245,0.22), 0 0 8px rgba(230,235,245,0.12)"
-                      : rank === 3
-                        ? "0 0 16px rgba(205,127,50,0.22), 0 0 8px rgba(205,127,50,0.12)"
-                        : "none",
-                filter: rankDigitGlowFilter(rank),
               }}
             >
               {rank}
@@ -399,21 +393,20 @@ export default function RankingCard({
 
           <div className="min-w-0">
             <div className="flex min-w-0 max-w-full items-center gap-1">
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <div
-                  className={[
-                    "truncate font-black tracking-[0.01em]",
-                    jp.className,
-                    rank === 1 ? "text-[20px]" : isTop3 ? "text-[17px]" : "text-[13px]",
-                  ].join(" ")}
-                  style={{
-                    color: "rgba(255,255,255,0.92)",
-                    textShadow: "0 2px 12px rgba(0,0,0,0.35)",
-                  }}
-                >
-                  {r.displayName ?? r.handle ?? "Unknown"}
-                </div>
+              <div
+                className={[
+                  "min-w-0 truncate font-black tracking-[0.01em]",
+                  jp.className,
+                  rank === 1 ? "text-[20px]" : isTop3 ? "text-[17px]" : "text-[13px]",
+                ].join(" ")}
+                style={{
+                  color: "rgba(255,255,255,0.92)",
+                  textShadow: "0 2px 12px rgba(0,0,0,0.35)",
+                }}
+              >
+                {r.displayName ?? r.handle ?? "Unknown"}
               </div>
+              <RankDeltaBadge delta={r.rankDeltaPlaces} />
               {r.plan === "pro" ? (
                 <ProCyberBadge
                   {...proBadgeStaticMotion}

@@ -12,12 +12,18 @@ import {
   ProCyberBadge,
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
+import type { Language } from "@/lib/i18n/language";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
   if (!u) return null;
   const token = await u.getIdToken();
   return `Bearer ${token}`;
+}
+
+function commMsg(lang: Language, m: { ja: string; en: string }) {
+  if (lang === "en") return m.en;
+  return m.ja;
 }
 
 type Summary = {
@@ -61,7 +67,7 @@ function displayMain(metric: CommunityMetric, row: LBRow): string {
 
 export type CommunityGroupDetailViewProps = {
   groupId: string;
-  language: "ja" | "en";
+  language: Language;
   variant: "web" | "mobile";
   /** 画像があるときだけ横長バナーを表示。ないときは上段なし */
   headerBanner: "wide_when_image" | "off";
@@ -135,43 +141,42 @@ export default function CommunityGroupDetailView({
     void load();
   }, [load]);
 
-  const t = useMemo(
-    () =>
-      language === "en"
-        ? {
-            back: "Back to rankings",
-            close: "Close",
-            members: "Members",
-            rank: "Rank",
-            player: "Player",
-            score: "Score",
-            ranking: "Ranking",
-            archived: "This community is archived.",
-            regen: "New invite code",
-            transfer: "Transfer ownership",
-            transferPh: "Member user ID",
-            transferBtn: "Transfer",
-            archive: "Archive group",
-            leave: "Leave group",
-          }
-        : {
-            back: "ランキングに戻る",
-            close: "閉じる",
-            members: "参加人数",
-            rank: "順位",
-            player: "ユーザー",
-            score: "スコア",
-            ranking: "ランキング",
-            archived: "このコミュニティはアーカイブされています。",
-            regen: "招待コードを再発行",
-            transfer: "オーナー譲渡",
-            transferPh: "譲渡先のユーザーID",
-            transferBtn: "譲渡",
-            archive: "グループをアーカイブ",
-            leave: "グループを退会",
-          },
-    [language]
-  );
+  const t = useMemo(() => {
+    if (language === "en") {
+      return {
+        back: "Back to rankings",
+        close: "Close",
+        members: "Members",
+        rank: "Rank",
+        player: "Player",
+        score: "Score",
+        ranking: "Ranking",
+        archived: "This community is archived.",
+        regen: "New invite code",
+        transfer: "Transfer ownership",
+        transferPh: "Member user ID",
+        transferBtn: "Transfer",
+        archive: "Archive group",
+        leave: "Leave group",
+      };
+    }
+    return {
+      back: "ランキングに戻る",
+      close: "閉じる",
+      members: "参加人数",
+      rank: "順位",
+      player: "ユーザー",
+      score: "スコア",
+      ranking: "ランキング",
+      archived: "このコミュニティはアーカイブされています。",
+      regen: "招待コードを再発行",
+      transfer: "オーナー譲渡",
+      transferPh: "譲渡先のユーザーID",
+      transferBtn: "譲渡",
+      archive: "グループをアーカイブ",
+      leave: "グループを退会",
+    };
+  }, [language]);
 
   const finishExit = useCallback(() => {
     if (onExitAction) onExitAction();
@@ -192,11 +197,19 @@ export default function CommunityGroupDetailView({
     }
     const code = String(json.inviteCode ?? "");
     toast.success(
-      language === "en" ? `New code: ${code}` : `新しい招待コード: ${code}`
+      commMsg(language, {
+        en: `New code: ${code}`,
+        ja: `新しい招待コード: ${code}`,
+      })
     );
     try {
       await navigator.clipboard.writeText(code);
-      toast.info(language === "en" ? "Copied." : "コピーしました。");
+      toast.info(
+        commMsg(language, {
+          en: "Copied.",
+          ja: "コピーしました。",
+        })
+      );
     } catch {
       /* ignore */
     }
@@ -208,9 +221,10 @@ export default function CommunityGroupDetailView({
     const h = await authHeader();
     if (!h) return;
     const ok = window.confirm(
-      language === "en"
-        ? "Transfer ownership to this user? You will become a member."
-        : "このユーザーにオーナーを譲渡しますか？あなたはメンバーになります。"
+      commMsg(language, {
+        en: "Transfer ownership to this user? You will become a member.",
+        ja: "このユーザーにオーナーを譲渡しますか？あなたはメンバーになります。",
+      })
     );
     if (!ok) return;
     const res = await fetch(`/api/communities/${groupId}/transfer`, {
@@ -223,7 +237,12 @@ export default function CommunityGroupDetailView({
       toast.error(String(json?.error ?? "failed"));
       return;
     }
-    toast.success(language === "en" ? "Transferred." : "譲渡しました。");
+    toast.success(
+      commMsg(language, {
+        en: "Transferred.",
+        ja: "譲渡しました。",
+      })
+    );
     setTransferUid("");
     void load();
   }, [groupId, transferUid, language, load]);
@@ -232,9 +251,10 @@ export default function CommunityGroupDetailView({
     const h = await authHeader();
     if (!h) return;
     const ok = window.confirm(
-      language === "en"
-        ? "Archive this group? New joins will be blocked."
-        : "このグループをアーカイブしますか？新規参加はできなくなります。"
+      commMsg(language, {
+        en: "Archive this group? New joins will be blocked.",
+        ja: "このグループをアーカイブしますか？新規参加はできなくなります。",
+      })
     );
     if (!ok) return;
     const res = await fetch(`/api/communities/${groupId}/archive`, {
@@ -246,7 +266,12 @@ export default function CommunityGroupDetailView({
       toast.error(String(json?.error ?? "failed"));
       return;
     }
-    toast.success(language === "en" ? "Archived." : "アーカイブしました。");
+    toast.success(
+      commMsg(language, {
+        en: "Archived.",
+        ja: "アーカイブしました。",
+      })
+    );
     finishExit();
   }, [groupId, language, finishExit]);
 
@@ -254,9 +279,10 @@ export default function CommunityGroupDetailView({
     const h = await authHeader();
     if (!h) return;
     const ok = window.confirm(
-      language === "en"
-        ? "Leave this group?"
-        : "このグループから退会しますか？"
+      commMsg(language, {
+        en: "Leave this group?",
+        ja: "このグループから退会しますか？",
+      })
     );
     if (!ok) return;
     const res = await fetch(`/api/communities/${groupId}/leave`, {
@@ -268,7 +294,12 @@ export default function CommunityGroupDetailView({
       toast.error(String(json?.error ?? "failed"));
       return;
     }
-    toast.success(language === "en" ? "Left group." : "退会しました。");
+    toast.success(
+      commMsg(language, {
+        en: "Left group.",
+        ja: "退会しました。",
+      })
+    );
     finishExit();
   }, [groupId, language, finishExit]);
 
@@ -319,7 +350,10 @@ export default function CommunityGroupDetailView({
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3">
         {loading && (
           <p className="text-sm text-white/45">
-            {language === "en" ? "Loading…" : "読み込み中…"}
+            {commMsg(language, {
+              en: "Loading…",
+              ja: "読み込み中…",
+            })}
           </p>
         )}
 
@@ -446,9 +480,10 @@ export default function CommunityGroupDetailView({
                                   {...proBadgeStaticMotion}
                                   compact
                                   ariaLabel={
-                                    language === "en"
-                                      ? "Pro member"
-                                      : "Pro 会員"
+                                    commMsg(language, {
+                                      en: "Pro member",
+                                      ja: "Pro 会員",
+                                    })
                                   }
                                 />
                               ) : null}

@@ -75,9 +75,25 @@ type Props = {
   overlayScheduleGames?: MatchCardProps[];
   /** 当日リストのうち、すでに自分が予想投稿済みの gameId（次試合モーダルでスキップ） */
   overlayPredictedGameIds?: string[];
+  /** Games オーバーレイ: この試合の自分の投稿 ID（あれば修正 UI） */
+  overlayExistingPostId?: string | null;
 };
 
 type Winner = "home" | "away" | "draw";
+
+/** MatchCard と同趣旨：試合開始済み（未投稿ならスコア予想 UI を出さない） */
+function isMatchStartedForPredict(game: MatchCardProps): boolean {
+  const { status, startAtJst } = game;
+  if (status === "live" || status === "final") return true;
+  if (status === "scheduled" && startAtJst instanceof Date) {
+    try {
+      return Date.now() >= startAtJst.getTime();
+    } catch {
+      /* ignore */
+    }
+  }
+  return false;
+}
 
 export default function PredictionFormV2({
   dense = false,
@@ -92,6 +108,7 @@ export default function PredictionFormV2({
   overlayScheduleGameIds,
   overlayScheduleGames,
   overlayPredictedGameIds,
+  overlayExistingPostId = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -120,6 +137,30 @@ export default function PredictionFormV2({
   const [nextGamePreview, setNextGamePreview] = useState<MatchCardProps | null>(
     null
   );
+
+  type ExistingSnap =
+    | null
+    | "loading"
+    | {
+        editable: boolean;
+        prediction: {
+          winner: Winner;
+          score: { home: number; away: number };
+        };
+      };
+
+  /** オーバーレイで既存投稿を読み込んだ結果（修正可否・表示用） */
+  const [existingSnapshot, setExistingSnapshot] = useState<ExistingSnap>(null);
+  /** true のときスコア入力を出して PATCH 更新可能 */
+  const [showScoreEdit, setShowScoreEdit] = useState(false);
+
+  /**
+   * 一覧オーバーレイ以外（/predict 単体）で、自分の投稿 ID を API で解決した結果。
+   * skip = オーバーレイ（オーバーレイは overlayExistingPostId を使う）
+   */
+  const [standaloneMine, setStandaloneMine] = useState<
+    "skip" | "loading" | { postId: string | null }
+  >(() => (inOverlay ? "skip" : "loading"));
 
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -236,6 +277,197 @@ export default function PredictionFormV2({
     setWinner(null);
   }, [scoreHome, scoreAway, isSoccer]);
 
+  const isGameStarted = useMemo(
+    () => isMatchStartedForPredict(game),
+    [game.status, game.startAtJst]
+  );
+
+  /** /predict 単体：この試合の自分の投稿 ID を取得（開始後に未投稿ならフォームを出さないため） */
+  useEffect(() => {
+    if (inOverlay) {
+      setStandaloneMine("skip");
+      return;
+    }
+    let alive = true;
+    setStandaloneMine("loading");
+    void (async () => {
+      try {
+        const me = auth.currentUser;
+        if (!me) {
+          if (alive) setStandaloneMine({ postId: null });
+          return;
+        }
+        const token = await me.getIdToken();
+        const gid = String((game as { id: string }).id);
+        const res = await fetch(
+          `/api/posts_v2/byGameMine?gameId=${encodeURIComponent(gid)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: "include",
+          }
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          exists?: boolean;
+          postId?: string;
+        };
+        if (!alive) return;
+        if (!json.ok || !json.exists || !json.postId) {
+          setStandaloneMine({ postId: null });
+          return;
+        }
+        setStandaloneMine({ postId: String(json.postId) });
+      } catch {
+        if (alive) setStandaloneMine({ postId: null });
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [inOverlay, (game as { id: string }).id]);
+
+  const standaloneMineLoading = !inOverlay && standaloneMine === "loading";
+
+  const effectivePostId = inOverlay
+    ? overlayExistingPostId ?? null
+    : standaloneMine === "skip" || standaloneMine === "loading"
+      ? null
+      : standaloneMine.postId;
+
+  useEffect(() => {
+    if (!effectivePostId) {
+      setExistingSnapshot(null);
+      setShowScoreEdit(false);
+      return;
+    }
+
+    let alive = true;
+    setExistingSnapshot("loading");
+    setShowScoreEdit(false);
+
+    void (async () => {
+      try {
+        const me = auth.currentUser;
+        if (!me) {
+          if (alive) setExistingSnapshot(null);
+          return;
+        }
+        const token = await me.getIdToken();
+        const res = await fetch(
+          `/api/posts_v2/${encodeURIComponent(effectivePostId)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: "include",
+          }
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          exists?: boolean;
+          mine?: boolean;
+          editable?: boolean;
+          prediction?: { winner: Winner; score: { home: number; away: number } };
+        };
+        if (!alive) return;
+        if (!json.ok || !json.exists || !json.mine || !json.prediction) {
+          setExistingSnapshot(null);
+          return;
+        }
+        setExistingSnapshot({
+          editable: Boolean(json.editable),
+          prediction: json.prediction,
+        });
+      } catch {
+        if (alive) setExistingSnapshot(null);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [effectivePostId, (game as { id: string }).id]);
+
+  const overlayFormLayout = useMemo(() => {
+    // 単体ページで投稿の有無取得中：開始済みならフォームは出さず読み込み表示
+    if (standaloneMineLoading) {
+      if (isGameStarted) {
+        return {
+          showLoadingExisting: true,
+          showEditableSummary: false,
+          showLockedSummary: false,
+          showScoreForm: false,
+        };
+      }
+      return {
+        showLoadingExisting: false,
+        showEditableSummary: false,
+        showLockedSummary: false,
+        showScoreForm: true,
+      };
+    }
+
+    // 自分の投稿なし：試合開始後はスコア予想ブロックを出さない
+    if (!effectivePostId) {
+      return {
+        showLoadingExisting: false,
+        showEditableSummary: false,
+        showLockedSummary: false,
+        showScoreForm: !isGameStarted,
+      };
+    }
+    if (existingSnapshot === "loading" || existingSnapshot === null) {
+      return {
+        showLoadingExisting: true,
+        showEditableSummary: false,
+        showLockedSummary: false,
+        showScoreForm: false,
+      };
+    }
+    const snap = existingSnapshot;
+    if (!snap.prediction) {
+      return {
+        showLoadingExisting: false,
+        showEditableSummary: false,
+        showLockedSummary: false,
+        showScoreForm: !isGameStarted,
+      };
+    }
+    if (!snap.editable) {
+      return {
+        showLoadingExisting: false,
+        showEditableSummary: false,
+        showLockedSummary: true,
+        showScoreForm: false,
+      };
+    }
+    if (!showScoreEdit) {
+      return {
+        showLoadingExisting: false,
+        showEditableSummary: true,
+        showLockedSummary: false,
+        showScoreForm: false,
+      };
+    }
+    return {
+      showLoadingExisting: false,
+      showEditableSummary: false,
+      showLockedSummary: false,
+      showScoreForm: true,
+    };
+  }, [
+    standaloneMineLoading,
+    isGameStarted,
+    effectivePostId,
+    existingSnapshot,
+    showScoreEdit,
+  ]);
+
+  const snapPred =
+    existingSnapshot !== null &&
+    existingSnapshot !== "loading" &&
+    "prediction" in existingSnapshot
+      ? existingSnapshot.prediction
+      : null;
+
   const canSubmit =
     !!winner && !submitting && scoreHome !== "" && scoreAway !== "";
 
@@ -247,10 +479,10 @@ export default function PredictionFormV2({
   ].join(" ");
 
   const glassCard =
-    "relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
+    "relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
 
   const glassCardStatsPanel = isMobile
-    ? "relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
+    ? "relative w-full overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
     : glassCard;
 
   const toolButtonBase = isMobile
@@ -300,6 +532,67 @@ export default function PredictionFormV2({
     try {
       setSubmitting(true);
       const idToken = await me.getIdToken();
+
+      const isPatchUpdate = Boolean(
+        effectivePostId &&
+          existingSnapshot !== null &&
+          existingSnapshot !== "loading" &&
+          existingSnapshot.editable &&
+          showScoreEdit
+      );
+
+      if (isPatchUpdate && effectivePostId) {
+        const res = await fetch(
+          `/api/posts_v2/${encodeURIComponent(effectivePostId)}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              prediction: {
+                winner,
+                score: { home: h, away: a },
+              },
+            }),
+          }
+        );
+        const rawPatch = await res.text().catch(() => "");
+        let jsonPatch: any = {};
+        try {
+          jsonPatch = rawPatch ? JSON.parse(rawPatch) : {};
+        } catch {
+          throw new Error(
+            rawPatch?.slice(0, 200) || `更新失敗 (${res.status})`
+          );
+        }
+        if (!res.ok) {
+          const detailPatch =
+            (typeof jsonPatch?.message === "string" && jsonPatch.message) ||
+            (typeof jsonPatch?.error === "string" && jsonPatch.error) ||
+            rawPatch?.slice(0, 200);
+          throw new Error(detailPatch || `更新失敗 (${res.status})`);
+        }
+        toast.success(isEn ? "Prediction updated." : "予想を更新しました");
+        setExistingSnapshot((prev) =>
+          typeof prev === "object" && prev !== null && "prediction" in prev
+            ? {
+                ...prev,
+                prediction: {
+                  winner: winner!,
+                  score: { home: h, away: a },
+                },
+              }
+            : prev
+        );
+        setShowScoreEdit(false);
+        setWinner(null);
+        setScoreHome("");
+        setScoreAway("");
+        setSubmitting(false);
+        return;
+      }
 
       const body = {
         gameId: (game as any).id,
@@ -454,7 +747,9 @@ export default function PredictionFormV2({
       initial="hidden"
       animate="show"
       className={[
-        "mx-auto w-full max-w-[900px] overflow-x-hidden text-white",
+        "mx-auto w-full overflow-x-hidden text-white",
+        /* 試合オーバーレイでは上の MatchCard と同じ横幅に揃える（/web でも max-w-[900px] に縮まない） */
+        embedded && inOverlay ? "max-w-none" : "max-w-[900px]",
         embedded
           ? "min-h-0 overflow-y-visible pb-2"
           : [
@@ -776,67 +1071,211 @@ export default function PredictionFormV2({
           </motion.div>
         )}
 
-        <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
-          <div className="text-sm font-semibold text-white/88">
-            {isEn ? "Score Prediction" : "スコア予想"}
-          </div>
+        {overlayFormLayout.showLoadingExisting ? (
+          <motion.div
+            variants={fadeUp}
+            className={`py-6 text-center text-sm text-white/70 ${glassCard}`}
+          >
+            {isEn ? "Loading…" : "読み込み中…"}
+          </motion.div>
+        ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div
-                className="mb-2 text-sm font-bold text-white/88"
-                style={predictTeamNameTy}
-              >
-                {homeLabel}
-              </div>
-              <input
-                type="number"
-                inputMode="numeric"
-                className={scoreInputClass}
-                placeholder={isEn ? "Score" : "得点"}
-                value={scoreHome}
-                onChange={(e) => setScoreHome(e.target.value)}
-              />
+        {overlayFormLayout.showEditableSummary && snapPred ? (
+          <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
+            <div className="text-sm font-semibold text-white/88">
+              {isEn ? "Your prediction" : "あなたの予想"}
             </div>
-
-            <div>
-              <div
-                className="mb-2 text-sm font-bold text-white/88"
-                style={predictTeamNameTy}
-              >
-                {awayLabel}
+            <div className="space-y-2 px-0.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/88 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {homeLabel}
+                </div>
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/88 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {awayLabel}
+                </div>
               </div>
-              <input
-                type="number"
-                inputMode="numeric"
-                className={scoreInputClass}
-                placeholder={isEn ? "Score" : "得点"}
-                value={scoreAway}
-                onChange={(e) => setScoreAway(e.target.value)}
-              />
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.home}
+                </div>
+                <span
+                  className={[
+                    "shrink-0 font-black tabular-nums text-white/55",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                  aria-hidden
+                >
+                  –
+                </span>
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.away}
+                </div>
+              </div>
             </div>
-          </div>
-        </motion.div>
+            <button
+              type="button"
+              onClick={() => {
+                setScoreHome(String(snapPred.score.home));
+                setScoreAway(String(snapPred.score.away));
+                setShowScoreEdit(true);
+              }}
+              className="flex h-11 w-full items-center justify-center rounded-xl border border-amber-300/40 bg-amber-500/15 text-sm font-bold text-amber-100 transition hover:bg-amber-500/25 active:scale-[0.99]"
+            >
+              {isEn ? "Edit" : "修正"}
+            </button>
+          </motion.div>
+        ) : null}
 
-        <motion.div variants={fadeUp} className="pt-0">
-          <button
-            disabled={!canSubmit}
-            onClick={handleSubmit}
-            className={[
-              "flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold text-white",
-              "border backdrop-blur-xl transition-all duration-200",
-              "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]",
-              canSubmit
-                ? [
-                    "border-blue-500/40",
-                    "active:scale-[0.98]",
-                  ].join(" ")
-                : "cursor-not-allowed border-white/15 bg-white/6 text-white/40",
-            ].join(" ")}
-            style={
-              canSubmit
-                ? {
-                    background: `
+        {overlayFormLayout.showLockedSummary && snapPred ? (
+          <motion.div variants={fadeUp} className={`space-y-2 pt-1 ${glassCard}`}>
+            <div className="text-sm font-semibold text-white/88">
+              {isEn ? "Your prediction (locked)" : "あなたの予想（試合開始後は変更できません）"}
+            </div>
+            <div className="space-y-2 px-0.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/85 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {homeLabel}
+                </div>
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/85 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {awayLabel}
+                </div>
+              </div>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white/90",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.home}
+                </div>
+                <span
+                  className={[
+                    "shrink-0 font-black tabular-nums text-white/50",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                  aria-hidden
+                >
+                  –
+                </span>
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white/90",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.away}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
+
+        {overlayFormLayout.showScoreForm ? (
+          <>
+            <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
+              <div className="text-sm font-semibold text-white/88">
+                {isEn ? "Score Prediction" : "スコア予想"}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div
+                    className="mb-2 text-sm font-bold text-white/88"
+                    style={predictTeamNameTy}
+                  >
+                    {homeLabel}
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    className={scoreInputClass}
+                    placeholder={isEn ? "Score" : "得点"}
+                    value={scoreHome}
+                    onChange={(e) => setScoreHome(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <div
+                    className="mb-2 text-sm font-bold text-white/88"
+                    style={predictTeamNameTy}
+                  >
+                    {awayLabel}
+                  </div>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    className={scoreInputClass}
+                    placeholder={isEn ? "Score" : "得点"}
+                    value={scoreAway}
+                    onChange={(e) => setScoreAway(e.target.value)}
+                  />
+                </div>
+              </div>
+              {showScoreEdit && effectivePostId ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowScoreEdit(false);
+                    setScoreHome("");
+                    setScoreAway("");
+                    setWinner(null);
+                  }}
+                  className="mt-2 w-full text-center text-xs font-medium text-white/55 underline-offset-2 hover:text-white/80 hover:underline"
+                >
+                  {isEn ? "Cancel editing" : "修正をやめる"}
+                </button>
+              ) : null}
+            </motion.div>
+
+            <motion.div variants={fadeUp} className="pt-0">
+              <button
+                disabled={!canSubmit}
+                onClick={handleSubmit}
+                className={[
+                  "flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold text-white",
+                  "border backdrop-blur-xl transition-all duration-200",
+                  "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]",
+                  canSubmit
+                    ? [
+                        "border-blue-500/40",
+                        "active:scale-[0.98]",
+                      ].join(" ")
+                    : "cursor-not-allowed border-white/15 bg-white/6 text-white/40",
+                ].join(" ")}
+                style={
+                  canSubmit
+                    ? {
+                        background: `
                       radial-gradient(92% 230% at 50% 50%,
                         rgba(59,130,246,0.92) 0%,
                         rgba(37,99,235,0.88) 36%,
@@ -846,14 +1285,26 @@ export default function PredictionFormV2({
                         rgba(29,78,216,0.00) 100%
                       )
                     `,
-                    boxShadow: "none",
-                  }
-                : undefined
-            }
-          >
-            {submitting ? (isEn ? "Submitting..." : "投稿中…") : isEn ? "Submit Prediction" : "予想する"}
-          </button>
-        </motion.div>
+                        boxShadow: "none",
+                      }
+                    : undefined
+                }
+              >
+                {submitting
+                  ? isEn
+                    ? "Submitting..."
+                    : "投稿中…"
+                  : effectivePostId && showScoreEdit
+                    ? isEn
+                      ? "Update prediction"
+                      : "予想を更新する"
+                    : isEn
+                      ? "Submit Prediction"
+                      : "予想する"}
+              </button>
+            </motion.div>
+          </>
+        ) : null}
       </div>
     </motion.div>
     {nextModal}

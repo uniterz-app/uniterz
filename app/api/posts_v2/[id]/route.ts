@@ -78,13 +78,67 @@ export async function GET(req: NextRequest, ctx: any) {
       typeof data.startAtMillis === "number" &&
       Date.now() < data.startAtMillis;
 
-    return NextResponse.json({ ok: true, exists: true, mine, editable });
+    const payload: Record<string, unknown> = {
+      ok: true,
+      exists: true,
+      mine,
+      editable,
+    };
+    if (mine) {
+      if (data.prediction) payload.prediction = data.prediction;
+      if (typeof data.comment === "string") payload.comment = data.comment;
+    }
+    return NextResponse.json(payload);
   } catch (e: any) {
     return NextResponse.json(
       { ok: false, error: e?.message },
       { status: e?.status ?? 500 }
     );
   }
+}
+
+function isSoccerLeague(league: unknown): boolean {
+  const s = String(league ?? "").toLowerCase();
+  return s === "pl" || s === "j1" || s.includes("premier");
+}
+
+/** 予想 PATCH 用（POST /api/posts_v2 と同趣旨の検証） */
+function parsePredictionPatch(
+  raw: unknown,
+  league: unknown
+): { ok: true; prediction: { winner: "home" | "away" | "draw"; score: { home: number; away: number } } } | { ok: false; error: string } {
+  const soccer = isSoccerLeague(league);
+  const p = (raw as any)?.prediction ?? raw;
+  if (!p || typeof p !== "object")
+    return { ok: false, error: "prediction required" };
+  const winner = (p as any).winner;
+  if (!["home", "away", "draw"].includes(winner))
+    return { ok: false, error: "prediction.winner must be home/away/draw" };
+  const s = (p as any).score ?? {};
+  const home = Number(s.home);
+  const away = Number(s.away);
+  if (
+    !Number.isInteger(home) ||
+    !Number.isInteger(away) ||
+    home < 0 ||
+    away < 0
+  )
+    return { ok: false, error: "score invalid" };
+  if (!soccer && winner === "draw")
+    return { ok: false, error: "draw not allowed for this league" };
+  if (winner === "home" && home <= away)
+    return { ok: false, error: "home win requires home score > away" };
+  if (winner === "away" && away <= home)
+    return { ok: false, error: "away win requires away score > home" };
+  if (soccer && winner === "draw" && home !== away)
+    return { ok: false, error: "draw requires equal scores" };
+  return {
+    ok: true,
+    prediction: {
+      winner: winner as "home" | "away" | "draw",
+      score: { home, away },
+    },
+  };
 }
 
 /* ========= PATCH ========= */
@@ -110,7 +164,29 @@ export async function PATCH(req: NextRequest, ctx: any) {
       return NextResponse.json({ ok: false, error: "locked" }, { status: 403 });
 
     const body = await req.json().catch(() => null);
-    if (!body || typeof body.comment !== "string")
+    if (!body || typeof body !== "object")
+      return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
+
+    if (body.prediction != null) {
+      const parsed = parsePredictionPatch(body.prediction, data.league);
+      if (!parsed.ok) {
+        return NextResponse.json(
+          { ok: false, error: parsed.error },
+          { status: 400 }
+        );
+      }
+      const updates: Record<string, unknown> = {
+        prediction: parsed.prediction,
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (typeof body.comment === "string") {
+        updates.comment = body.comment.slice(0, 2000);
+      }
+      await ref.update(updates);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (typeof body.comment !== "string")
       return NextResponse.json(
         { ok: false, error: "comment required" },
         { status: 400 }

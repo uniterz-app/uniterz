@@ -21,10 +21,16 @@ const MIN_MARKET = 10;
 const UPSET_MARKET_RATIO = 0.6;
 const UPSET_WIN_DIFF = 10;
 
+/** Firestore batch max 500 ops; ~1 update per post, chunk below limit */
+const FINALIZE_POSTS_CHUNK_SIZE = 400;
+
 export const onGameFinalV2 = onDocumentWritten(
   {
     document: "games/{gameId}",
     region: "asia-northeast1",
+    /** 投稿数が多い試合でヒープ不足（signal 6）になりやすいため明示 */
+    memory: "1GiB",
+    timeoutSeconds: 540,
   },
   async (event) => {
     const firestore = db();
@@ -147,21 +153,31 @@ export const onGameFinalV2 = onDocumentWritten(
 
     hadUpsetGame = upset.isUpsetGame;
 
-    /* ===== ④ finalize posts ===== */
-    const batch = firestore.batch();
-    const userUpdateTasks: Promise<any>[] = [];
+    /* ===== ④ finalize posts（バッチ分割 + チャンクごとにユーザー更新をフラッシュ） ===== */
+    const postDocs = postsSnap.docs;
+    for (let i = 0; i < postDocs.length; i += FINALIZE_POSTS_CHUNK_SIZE) {
+      const slice = postDocs.slice(i, i + FINALIZE_POSTS_CHUNK_SIZE);
+      const pendingInSlice = slice.filter((d) => !d.data().settledAt);
+      if (pendingInSlice.length === 0) continue;
 
-    for (const doc of postsSnap.docs) {
-      await finalizePost({
-        postDoc: doc,
-        game,
-        market,
-        hadUpsetGame,
-        after,
-        batch,
-        userUpdateTasks,
-        streakResultMap,
-      });
+      const batch = firestore.batch();
+      const userUpdateTasks: Promise<any>[] = [];
+
+      for (const doc of pendingInSlice) {
+        await finalizePost({
+          postDoc: doc,
+          game,
+          market,
+          hadUpsetGame,
+          after,
+          batch,
+          userUpdateTasks,
+          streakResultMap,
+        });
+      }
+
+      await batch.commit();
+      await Promise.all(userUpdateTasks);
     }
 
     const pointsDistribution = aggregateGamePointsDistributionFromPostsSnap({
@@ -175,9 +191,6 @@ export const onGameFinalV2 = onDocumentWritten(
       hadUpsetGame,
       streakResultMap,
     });
-
-    await batch.commit();
-    await Promise.all(userUpdateTasks);
 
     /* ===== ⑤ finalize game ===== */
     const gamePatch: Record<string, any> = {

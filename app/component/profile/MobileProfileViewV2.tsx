@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation } from "framer-motion";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
@@ -98,6 +98,7 @@ import {
   clearSideMenuOrigin,
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
+import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
 import { nameBebas } from "@/lib/fonts";
 
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
@@ -252,6 +253,9 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   return (
     <LazyMotion features={domAnimation}>
     <div className="mx-auto min-h-screen max-w-[640px] px-4 py-4 pb-bottom-nav text-white">
+      <Suspense fallback={null}>
+        <RankingsReturnNavLink language={language} />
+      </Suspense>
       <ProfileHeroCard
         key={heroUidKey}
         layout="mobile"
@@ -272,21 +276,29 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         menuUnreadCount={isMe ? menuUnreadCount : 0}
       >
         {resolvedBadges.length > 0 ? (
-          <div className="grid grid-cols-5 gap-0.5">
+          <div className="flex flex-wrap content-start gap-1 sm:gap-1.5">
             {resolvedBadges.slice(0, 10).map((b) => (
               <button
                 key={b.id}
-                className="h-11 w-11 overflow-hidden rounded-lg"
+                type="button"
+                title={b.title}
+                className="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-14 sm:w-14"
                 onClick={() => {
                   setSelectedBadge(b);
                   setBadgeModalOpen(true);
                 }}
               >
-                <img
-                  src={b.icon}
-                  alt={b.title}
-                  className="h-full w-full object-contain"
-                />
+                {b.icon ? (
+                  <img
+                    src={b.icon}
+                    alt={b.title}
+                    className="h-full w-full object-contain p-0.5"
+                  />
+                ) : (
+                  <span className="truncate px-0.5 text-center text-[9px] leading-tight text-white/55">
+                    {b.title}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -547,7 +559,11 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       {badgeModalOpen && selectedBadge && (
         <BadgeDetailModal
           badge={selectedBadge}
-          onClose={() => setBadgeModalOpen(false)}
+          language={language}
+          onClose={() => {
+            setBadgeModalOpen(false);
+            setSelectedBadge(null);
+          }}
         />
       )}
     </div>

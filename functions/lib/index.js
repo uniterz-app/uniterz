@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -58,10 +58,14 @@ var rescorePlayoffBrackets_1 = require("./playoff-bracket/rescorePlayoffBrackets
 Object.defineProperty(exports, "rescorePlayoffBrackets", { enumerable: true, get: function () { return rescorePlayoffBrackets_1.rescorePlayoffBrackets; } });
 var onPlayoffResultsWrite_1 = require("./playoff-bracket/onPlayoffResultsWrite");
 Object.defineProperty(exports, "onPlayoffResultsWrite", { enumerable: true, get: function () { return onPlayoffResultsWrite_1.onPlayoffResultsWrite; } });
+var onPlayoffBracketRescoreTaskCreated_1 = require("./playoff-bracket/onPlayoffBracketRescoreTaskCreated");
+Object.defineProperty(exports, "onPlayoffBracketRescoreTaskCreated", { enumerable: true, get: function () { return onPlayoffBracketRescoreTaskCreated_1.onPlayoffBracketRescoreTaskCreated; } });
 var rebuildPlayoffBracketMarket_1 = require("./playoff-bracket/rebuildPlayoffBracketMarket");
 Object.defineProperty(exports, "rebuildPlayoffBracketMarket", { enumerable: true, get: function () { return rebuildPlayoffBracketMarket_1.rebuildPlayoffBracketMarket; } });
 var getCumulativeRanking_1 = require("./rankings/getCumulativeRanking");
 Object.defineProperty(exports, "getCumulativeRanking", { enumerable: true, get: function () { return getCumulativeRanking_1.getCumulativeRanking; } });
+var backfillCumulativeStatsFromDaily_1 = require("./rankings/backfillCumulativeStatsFromDaily");
+Object.defineProperty(exports, "backfillCumulativeStatsFromDailyHttp", { enumerable: true, get: function () { return backfillCumulativeStatsFromDaily_1.backfillCumulativeStatsFromDailyHttp; } });
 var getMonthlyLeaderboard_1 = require("./leaderboards/getMonthlyLeaderboard");
 Object.defineProperty(exports, "getMonthlyLeaderboard", { enumerable: true, get: function () { return getMonthlyLeaderboard_1.getMonthlyLeaderboard; } });
 var monthly_1 = require("./leaderboards/monthly");
@@ -96,7 +100,12 @@ exports.updateTeamRankingsDaily = (0, scheduler_1.onSchedule)({ schedule: "0 16 
 /* ============================================================================
  * Cumulative Stats (15:40) — JST 当日に NBA 試合がある日のみ
  * ==========================================================================*/
-exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({ schedule: "40 15 * * *", timeZone: "Asia/Tokyo" }, async () => {
+exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
+    schedule: "40 15 * * *",
+    timeZone: "Asia/Tokyo",
+    memory: "1GiB",
+    timeoutSeconds: 540,
+}, async () => {
     if (!(await (0, hasNbaGameScheduledJstToday_1.hasNbaGameScheduledJstToday)())) {
         console.log("[buildCumulativeStatsCron] skip: no NBA games scheduled this JST date");
         return;
@@ -164,6 +173,8 @@ var runDaily_1 = require("./analytics/runDaily");
 Object.defineProperty(exports, "runDailyAnalytics", { enumerable: true, get: function () { return runDaily_1.runDailyAnalytics; } });
 var fixUserStats_1 = require("./fixUserStats");
 Object.defineProperty(exports, "fixUserStats", { enumerable: true, get: function () { return fixUserStats_1.fixUserStats; } });
+var backfillStreakApplyMarkers_1 = require("./backfillStreakApplyMarkers");
+Object.defineProperty(exports, "backfillStreakApplyMarkersHttp", { enumerable: true, get: function () { return backfillStreakApplyMarkers_1.backfillStreakApplyMarkersHttp; } });
 /* ============================================================================
  * Debug
  * ==========================================================================*/

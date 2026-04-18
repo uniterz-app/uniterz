@@ -1,7 +1,14 @@
 // functions/src/rankings/getCumulativeRanking.ts
 
 import { onRequest } from "firebase-functions/v2/https";
+import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { getFirestore, FieldPath } from "firebase-admin/firestore";
+import {
+  getYesterdayDateKeyJST,
+  RANK_SNAPSHOT_HISTORY_SUBCOL,
+  RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
+  subtractOneDayFromDateKeyJST,
+} from "./buildCumulativeRankingSnapshot";
 
 function db() {
   return getFirestore();
@@ -34,6 +41,7 @@ type RankingRow = {
   activeWinStreak: number;
 
   rank: number;
+  rankDeltaPlaces?: number | null;
 };
 
 function isMetric(v: unknown): v is Metric {
@@ -74,155 +82,288 @@ function rankingSlice(d: any, phase: RankingPhase) {
   };
 }
 
-export const getCumulativeRanking = onRequest(async (req, res) => {
-  try {
-    const rawMetric = req.query.metric;
-    const uid = req.query.uid as string | undefined;
-    const rawPhase = req.query.phase;
+type UserRankingSnaps = {
+  mySnap: DocumentSnapshot | null;
+  histSnap: DocumentSnapshot | null;
+};
 
-    const metric: Metric = isMetric(rawMetric) ? rawMetric : "totalPoints";
-    const phase: RankingPhase = isRankingPhase(rawPhase) ? rawPhase : "playoffs";
-
-    /* =========================
-     * ① Top20（snapshot）
-     * =======================*/
-    const snapDoc = await db()
-      .collection("cumulative_ranking_snapshots")
-      .doc(`${phase}_${metric}`)
+async function loadLatestHistSnapForUid(
+  uid: string
+): Promise<DocumentSnapshot | null> {
+  const firestore = db();
+  let key = getYesterdayDateKeyJST();
+  for (let i = 0; i < RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS; i++) {
+    const snap = await firestore
+      .collection("cumulative_stats")
+      .doc(uid)
+      .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+      .doc(key)
       .get();
+    if (snap.exists) return snap;
+    key = subtractOneDayFromDateKeyJST(key);
+  }
+  return null;
+}
 
-    const rawRows: RankingRow[] = snapDoc.exists
-      ? (snapDoc.data()?.rows ?? [])
-      : [];
-    let rows: RankingRow[] = rawRows.map((row) => ({
-      ...row,
-      plan: row.plan === "pro" ? "pro" : "free",
+async function loadUserRankingSnaps(uid: string | undefined): Promise<UserRankingSnaps> {
+  if (!uid) return { mySnap: null, histSnap: null };
+  const mySnap = await db().collection("cumulative_stats").doc(uid).get();
+  if (!mySnap.exists) return { mySnap, histSnap: null };
+  const histSnap = await loadLatestHistSnapForUid(uid);
+  return { mySnap, histSnap };
+}
+
+function parseMetricsParam(raw: unknown): Metric[] | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const out: Metric[] = [];
+  for (const p of parts) {
+    if (isMetric(p)) out.push(p);
+  }
+  if (out.length === 0) return null;
+  return [...new Set(out)];
+}
+
+type MetricPayload = {
+  count: number;
+  rows: RankingRow[];
+  myRank: number | null;
+  myRow: RankingRow | null;
+  myRankDeltaPlaces: number | null;
+};
+
+async function rankingPayloadForMetric(
+  metric: Metric,
+  phase: RankingPhase,
+  uid: string | undefined,
+  snaps: UserRankingSnaps
+): Promise<MetricPayload> {
+  const snapDoc = await db()
+    .collection("cumulative_ranking_snapshots")
+    .doc(`${phase}_${metric}`)
+    .get();
+
+  const rawRows: RankingRow[] = snapDoc.exists
+    ? (snapDoc.data()?.rows ?? [])
+    : [];
+  let rows: RankingRow[] = rawRows.map((row) => ({
+    ...row,
+    plan: row.plan === "pro" ? "pro" : "free",
+  }));
+
+  const missingPlanUids = rawRows
+    .filter((r) => r?.uid && r.plan !== "pro" && r.plan !== "free")
+    .map((r) => r.uid as string);
+  const rowUids = [...new Set(missingPlanUids)];
+  const planByUid = new Map<string, "free" | "pro">();
+  if (rowUids.length > 0) {
+    const refs = rowUids.map((id) => db().collection("users").doc(id));
+    const userSnaps = await db().getAll(...refs);
+    userSnaps.forEach((s, i) => {
+      const id = rowUids[i];
+      if (!id) return;
+      if (!s.exists) {
+        planByUid.set(id, "free");
+        return;
+      }
+      const u = s.data() as { plan?: string };
+      planByUid.set(id, u?.plan === "pro" ? "pro" : "free");
+    });
+    rows = rows.map((r) => ({
+      ...r,
+      plan: planByUid.get(r.uid) ?? r.plan,
     }));
+  }
 
-    // スナップショットが plan 未保存の世代でも、users.plan で Pro バッジを正しく出す
-    const rowUids = rows.map((r) => r.uid).filter(Boolean);
-    const planByUid = new Map<string, "free" | "pro">();
-    if (rowUids.length > 0) {
-      const refs = rowUids.map((id) => db().collection("users").doc(id));
-      const userSnaps = await db().getAll(...refs);
-      userSnaps.forEach((s, i) => {
-        const id = rowUids[i];
-        if (!id) return;
-        if (!s.exists) {
-          planByUid.set(id, "free");
-          return;
-        }
-        const u = s.data() as { plan?: string };
-        planByUid.set(id, u?.plan === "pro" ? "pro" : "free");
-      });
-      rows = rows.map((r) => ({
-        ...r,
-        plan: planByUid.get(r.uid) ?? r.plan,
-      }));
+  // 住んでいる国は users が最新（プロフィール保存直後も国旗表示できるよう反映）
+  const rowUidsForCountry = [
+    ...new Set(rows.map((r) => r.uid).filter(Boolean)),
+  ] as string[];
+  if (uid && !rowUidsForCountry.includes(uid)) {
+    rowUidsForCountry.push(uid);
+  }
+  const countryByUid = new Map<string, string | null | undefined>();
+  if (rowUidsForCountry.length > 0) {
+    const userRefs = rowUidsForCountry.map((id) =>
+      db().collection("users").doc(id)
+    );
+    const countrySnaps = await db().getAll(...userRefs);
+    countrySnaps.forEach((s, i) => {
+      const id = rowUidsForCountry[i];
+      if (!id) return;
+      if (!s.exists) {
+        countryByUid.set(id, undefined);
+        return;
+      }
+      const u = s.data() as { countryCode?: unknown };
+      const raw = u?.countryCode;
+      const c =
+        typeof raw === "string" && raw.trim() !== ""
+          ? raw.trim().slice(0, 8)
+          : null;
+      countryByUid.set(id, c);
+    });
+    rows = rows.map((r) => {
+      const v = countryByUid.get(r.uid);
+      if (v === undefined) return r;
+      return { ...r, countryCode: v };
+    });
+  }
+
+  let myRank: number | null = null;
+  let myRow: RankingRow | null = null;
+  let myRankDeltaPlaces: number | null = null;
+
+  if (uid && snaps.mySnap?.exists) {
+    const mySnap = snaps.mySnap;
+    const me = mySnap.data() as any;
+    const rk = rankingSlice(me, phase);
+
+    if ((rk.totalPosts ?? 0) <= 0) {
+      return {
+        count: rows.length,
+        rows,
+        myRank: null,
+        myRow: null,
+        myRankDeltaPlaces: null,
+      };
     }
 
-    let myRank: number | null = null;
-    let myRow: RankingRow | null = null;
+    const storedRankRaw = me.snapshotRanks?.[phase]?.[metric];
+    const storedRank =
+      typeof storedRankRaw === "number" &&
+      Number.isFinite(storedRankRaw) &&
+      storedRankRaw >= 1
+        ? Math.floor(storedRankRaw)
+        : null;
 
-    /* =========================
-     * ② 自分の順位 + 自分のデータ
-     * =======================*/
-    if (uid) {
-      const mySnap = await db().collection("cumulative_stats").doc(uid).get();
+    if (storedRank != null) {
+      myRank = storedRank;
+    } else {
+      const myValue =
+        metric === "activeWinStreak"
+          ? me.activeWinStreak ?? 0
+          : metric === "winRate"
+            ? rk.winRate ?? 0
+            : rk[metric] ?? 0;
 
-      if (mySnap.exists) {
-        const me = mySnap.data() as any;
-        const rk = rankingSlice(me, phase);
+      const hasRankingObj =
+        me.rankingByPhase?.[phase] &&
+        typeof me.rankingByPhase[phase] === "object" &&
+        (me.rankingByPhase[phase].totalPosts != null ||
+          me.rankingByPhase[phase].totalPoints != null);
 
-        if ((rk.totalPosts ?? 0) <= 0) {
-          res.status(200).json({
-            ok: true,
-            metric,
-            phase,
-            count: rows.length,
-            rows,
-            myRank: null,
-            myRow: null,
-          });
-          return;
-        }
-
-        const myValue =
-          metric === "activeWinStreak"
-            ? me.activeWinStreak ?? 0
+      const rankField =
+        metric === "activeWinStreak"
+          ? new FieldPath("activeWinStreak")
+          : hasRankingObj
+            ? metric === "winRate"
+              ? new FieldPath("rankingByPhase", phase, "winRate")
+              : new FieldPath("rankingByPhase", phase, metric)
             : metric === "winRate"
-              ? rk.winRate ?? 0
-              : rk[metric] ?? 0;
+              ? "winRate"
+              : metric;
 
-        const hasRankingObj =
-          me.rankingByPhase?.[phase] &&
-          typeof me.rankingByPhase[phase] === "object" &&
-          (me.rankingByPhase[phase].totalPosts != null ||
-            me.rankingByPhase[phase].totalPoints != null);
+      const higherSnap = await db()
+        .collection("cumulative_stats")
+        .where(rankField as any, ">", myValue)
+        .count()
+        .get();
 
-        const rankField =
-          metric === "activeWinStreak"
-            ? new FieldPath("activeWinStreak")
-            : hasRankingObj
-              ? metric === "winRate"
-                ? new FieldPath("rankingByPhase", phase, "winRate")
-                : new FieldPath("rankingByPhase", phase, metric)
-              : metric === "winRate"
-                ? "winRate"
-                : metric;
+      myRank = (higherSnap.data().count ?? 0) + 1;
+    }
 
-        const higherSnap = await db()
-          .collection("cumulative_stats")
-          .where(rankField as any, ">", myValue)
-          .count()
-          .get();
-
-        myRank = (higherSnap.data().count ?? 0) + 1;
-
-        // トップ20外のユーザーはバッチに含まれないため、必要時のみ users を参照
-        let myPlanResolved: "free" | "pro" =
-          planByUid.get(uid) ?? (me.plan === "pro" ? "pro" : "free");
-        if (!planByUid.has(uid)) {
-          const uSnap = await db().collection("users").doc(uid).get();
-          if (uSnap.exists) {
-            const u = uSnap.data() as { plan?: string };
-            myPlanResolved = u?.plan === "pro" ? "pro" : "free";
-          }
+    const histSnap = snaps.histSnap;
+    if (histSnap?.exists && myRank != null) {
+      const hd = histSnap.data() as Record<string, unknown> | undefined;
+      const phaseBlock = hd?.[phase] as
+        | Partial<Record<Metric, number>>
+        | undefined;
+      const prevRaw = phaseBlock?.[metric];
+      const prevRank =
+        typeof prevRaw === "number" &&
+        Number.isFinite(prevRaw) &&
+        prevRaw >= 1
+          ? Math.floor(prevRaw)
+          : null;
+      if (prevRank != null) {
+        const d = prevRank - myRank;
+        if (d !== 0) {
+          myRankDeltaPlaces = d;
         }
-
-        myRow = {
-          uid,
-          displayName: me.displayName ?? "",
-          handle: me.handle ?? null,
-          photoURL: me.photoURL ?? null,
-          countryCode: me.countryCode ?? null,
-          plan: myPlanResolved,
-
-          totalPosts: rk.totalPosts,
-          totalWins: rk.totalWins,
-          winRate: rk.winRate,
-
-          totalPoints: rk.totalPoints,
-          totalPrecision: rk.totalPrecision,
-          totalUpset: rk.totalUpset,
-          activeWinStreak: me.activeWinStreak ?? 0,
-
-          rank: myRank,
-        };
       }
     }
 
-    /* =========================
-     * response
-     * =======================*/
+    const myPlanResolved: "free" | "pro" =
+      me.plan === "pro" ? "pro" : "free";
+
+    const myCountryFresh = uid ? countryByUid.get(uid) : undefined;
+
+    myRow = {
+      uid,
+      displayName: me.displayName ?? "",
+      handle: me.handle ?? null,
+      photoURL: me.photoURL ?? null,
+      countryCode:
+        myCountryFresh !== undefined
+          ? myCountryFresh
+          : (me.countryCode ?? null),
+      plan: myPlanResolved,
+
+      totalPosts: rk.totalPosts,
+      totalWins: rk.totalWins,
+      winRate: rk.winRate,
+
+      totalPoints: rk.totalPoints,
+      totalPrecision: rk.totalPrecision,
+      totalUpset: rk.totalUpset,
+      activeWinStreak: me.activeWinStreak ?? 0,
+
+      rank: myRank,
+      rankDeltaPlaces: myRankDeltaPlaces,
+    };
+  }
+
+  return {
+    count: rows.length,
+    rows,
+    myRank,
+    myRow,
+    myRankDeltaPlaces,
+  };
+}
+
+export const getCumulativeRanking = onRequest(async (req, res) => {
+  try {
+    const uid = req.query.uid as string | undefined;
+    const rawPhase = req.query.phase;
+    const phase: RankingPhase = isRankingPhase(rawPhase) ? rawPhase : "playoffs";
+
+    const bulkMetrics = parseMetricsParam(req.query.metrics);
+    if (bulkMetrics) {
+      const snaps = await loadUserRankingSnaps(uid);
+      const byMetric: Record<string, MetricPayload> = {};
+      for (const m of bulkMetrics) {
+        byMetric[m] = await rankingPayloadForMetric(m, phase, uid, snaps);
+      }
+      res.status(200).json({ ok: true, phase, byMetric });
+      return;
+    }
+
+    const rawMetric = req.query.metric;
+    const metric: Metric = isMetric(rawMetric) ? rawMetric : "totalPoints";
+    const snaps = await loadUserRankingSnaps(uid);
+    const payload = await rankingPayloadForMetric(metric, phase, uid, snaps);
+
     res.status(200).json({
       ok: true,
       metric,
       phase,
-      count: rows.length,
-      rows,
-      myRank,
-      myRow,
+      count: payload.count,
+      rows: payload.rows,
+      myRank: payload.myRank,
+      myRow: payload.myRow,
+      myRankDeltaPlaces: payload.myRankDeltaPlaces,
     });
     return;
   } catch (e: any) {

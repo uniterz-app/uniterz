@@ -1,9 +1,7 @@
 import type { CommunityMetric, CommunityPeriodType } from "./types";
+import type { Language } from "@/lib/i18n/language";
 
-export function metricLabel(
-  m: CommunityMetric,
-  lang: "ja" | "en"
-): string {
+export function metricLabel(m: CommunityMetric, lang: Language): string {
   if (lang === "en") {
     switch (m) {
       case "totalPoints":
@@ -36,10 +34,7 @@ export function metricLabel(
   }
 }
 
-export function periodLabel(
-  p: CommunityPeriodType,
-  lang: "ja" | "en"
-): string {
+export function periodLabel(p: CommunityPeriodType, lang: Language): string {
   if (lang === "en") {
     switch (p) {
       case "all_time":

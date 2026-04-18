@@ -3,6 +3,13 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { judgeWin } from "./judgeWin";
 
+/**
+ * games/{gameId}: set `suppressStreakIncrementV2: true` to skip all streak writes for that game (no stats updates, no per-user markers).
+ * Typical use: after the first streak apply, flip this on before re-finalizing to avoid a second increment.
+ * If true before the first finalize, this game never updates streaks.
+ */
+export const SUPPRESS_STREAK_INCREMENT_V2_FIELD = "suppressStreakIncrementV2";
+
 export type UpdatedUserStreakResult = {
   uid: string;
   didWin: boolean;
@@ -11,6 +18,34 @@ export type UpdatedUserStreakResult = {
   maxWinStreak: number;
   maxLoseStreak: number;
 };
+
+function streakResultFromUserSnap(
+  uid: string,
+  didWin: boolean,
+  snap: FirebaseFirestore.DocumentSnapshot
+): UpdatedUserStreakResult {
+  const current = snap.get("currentStreak") ?? 0;
+  const maxWin = snap.get("maxWinStreak") ?? 0;
+  const maxLose = snap.get("maxLoseStreak") ?? 0;
+  const activeWinStreak = current > 0 ? current : 0;
+  return {
+    uid,
+    didWin,
+    currentStreak: current,
+    activeWinStreak,
+    maxWinStreak: maxWin,
+    maxLoseStreak: maxLose,
+  };
+}
+
+/** 試合ごとの連勝反映済み（onGameFinalV2再実行時の二重加算防止） */
+function streakApplyMarkerRef(
+  db: FirebaseFirestore.Firestore,
+  gameId: string,
+  uid: string
+) {
+  return db.doc(`games/${gameId}/streak_apply_v2/${uid}`);
+}
 
 export async function updateUserStreak({
   db,
@@ -41,13 +76,35 @@ export async function updateUserStreak({
 
   const updatedMap = new Map<string, UpdatedUserStreakResult>();
 
+  const gameSnap = await db.doc(`games/${gameId}`).get();
+  const suppressStreakForGame =
+    gameSnap.get(SUPPRESS_STREAK_INCREMENT_V2_FIELD) === true;
+
+  if (suppressStreakForGame) {
+    const entries = [...userResult.entries()];
+    await Promise.all(
+      entries.map(async ([uid, didWin]) => {
+        const snap = await db.doc(`user_stats_v2/${uid}`).get();
+        updatedMap.set(uid, streakResultFromUserSnap(uid, didWin, snap));
+      })
+    );
+    return updatedMap;
+  }
+
   for (const [uid, didWin] of userResult.entries()) {
     const userRef = db.doc(`user_stats_v2/${uid}`);
     const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
     const publicUserRef = db.doc(`users/${uid}`);
+    const markerRef = streakApplyMarkerRef(db, gameId, uid);
 
     const updated = await db.runTransaction<UpdatedUserStreakResult>(
       async (tx) => {
+        const markerSnap = await tx.get(markerRef);
+        if (markerSnap.exists) {
+          const snap = await tx.get(userRef);
+          return streakResultFromUserSnap(uid, didWin, snap);
+        }
+
         const snap = await tx.get(userRef);
 
         let current = snap.get("currentStreak") ?? 0;
@@ -100,6 +157,10 @@ export async function updateUserStreak({
           },
           { merge: true }
         );
+
+        tx.set(markerRef, {
+          appliedAt: FieldValue.serverTimestamp(),
+        });
 
         return {
           uid,
