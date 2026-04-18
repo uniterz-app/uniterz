@@ -21,6 +21,7 @@ import {
   getPlayoffBracketConfig,
   buildRound1Series,
   getCurrentPlayoffSeason,
+  isPlayoffBracketSubmissionPastDeadline,
 } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -60,6 +61,23 @@ export default function PlayoffBracketPredict() {
 
   const config = useMemo(() => getPlayoffBracketConfig(season), [season]);
   const allowSubmission = config.allowSubmission !== false;
+
+  const [deadlineNowMs, setDeadlineNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setDeadlineNowMs(Date.now()), 5_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const pastDeadline = isPlayoffBracketSubmissionPastDeadline(
+    season,
+    deadlineNowMs
+  );
+  const submitButtonDisabled = !allowSubmission || pastDeadline;
+  const submitButtonLabel = !allowSubmission
+    ? t.submitLockedSeedingShort
+    : pastDeadline
+      ? t.submitBracketClosedShort
+      : t.submitBracketCta;
 
   const { eastR1, westR1 } = useMemo(() => {
     const { eastR1, westR1 } = buildRound1Series(config);
@@ -137,6 +155,10 @@ export default function PlayoffBracketPredict() {
       alert(t.alertSubmissionLockedBySeeding);
       return;
     }
+    if (pastDeadline) {
+      alert(t.alertSubmissionClosedByDeadline);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -165,6 +187,10 @@ export default function PlayoffBracketPredict() {
   function handleOpenSubmitModal() {
     if (!allowSubmission) {
       alert(t.alertSubmissionLockedBySeeding);
+      return;
+    }
+    if (pastDeadline) {
+      alert(t.alertSubmissionClosedByDeadline);
       return;
     }
     setSubmitOpen(true);
@@ -288,6 +314,11 @@ export default function PlayoffBracketPredict() {
         <div className="flex items-center justify-center overflow-x-auto whitespace-nowrap pb-4 text-[18px] font-semibold">
           NBA Playoff Bracket
         </div>
+        {pastDeadline && !hasSubmittedBracket ? (
+          <p className="mx-auto max-w-xl pb-3 text-center text-[13px] leading-snug text-amber-200/90">
+            {t.bannerSubmissionClosedByDeadline}
+          </p>
+        ) : null}
       </div>
 
       <PlayoffBracketBoard
@@ -312,6 +343,9 @@ export default function PlayoffBracketPredict() {
         hasSubmittedBracket={hasSubmittedBracket}
         savedBracketLoading={savedBracketLoading}
         canEditBracket={canEditBracket}
+        submitButtonDisabled={submitButtonDisabled}
+        submitButtonLabel={submitButtonLabel}
+        hideSubmitButton={pastDeadline && !hasSubmittedBracket}
         onSelectWinner={setWinner}
         onSelectGames={setGames}
         onSubmitClick={handleOpenSubmitModal}

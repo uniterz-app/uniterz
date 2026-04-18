@@ -11,6 +11,11 @@ export type PlayoffBracketConfig = {
   west: PlayoffSeedTeam[];
   /** シード未確定期間など、提出を一時的に止める */
   allowSubmission?: boolean;
+  /**
+   * Submission closes at this instant (inclusive: at/after = no submit). Use explicit offset (e.g. +09:00).
+   * Keep firestore.rules `playoffBracketSubmissionAllows` in sync when you change this.
+   */
+  submissionClosesAtIso?: string;
 };
 
 /* =========================
@@ -20,6 +25,8 @@ export type PlayoffBracketConfig = {
 export const PLAYOFF_BRACKET_CONFIGS: Record<string, PlayoffBracketConfig> = {
   "2026": {
     season: "2026",
+    /** 2026-04-19 02:00 JST（夜中）— firestore.rules の playoffBracketSubmissionOpenForSeason と一致させる */
+    submissionClosesAtIso: "2026-04-19T02:00:00+09:00",
     east: [
       { code: "DET", seed: 1 },
       { code: "BOS", seed: 2 },
@@ -69,6 +76,18 @@ export function getPlayoffBracketConfig(
     throw new Error(`Playoff config not found for season: ${season}`);
   }
   return config;
+}
+
+/** Client-side deadline check for UX; enforcement is in Firestore Rules. */
+export function isPlayoffBracketSubmissionPastDeadline(
+  season: string,
+  nowMs: number = Date.now()
+): boolean {
+  const iso = PLAYOFF_BRACKET_CONFIGS[season]?.submissionClosesAtIso;
+  if (!iso) return false;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return false;
+  return nowMs >= t;
 }
 
 /* =========================

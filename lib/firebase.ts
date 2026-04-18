@@ -57,12 +57,13 @@ export const functions: Functions = getFunctions(app, "asia-northeast1");
 
 export { app };
 
-// --- ここからデバッグ用（ブラウザだけ有効） ---
-if (typeof window !== "undefined") {
-  // Firestore をブラウザコンソールから触れるように
+// --- デバッグ用：開発ビルドのみ（本番バンドルに秘密は無いが、コンソール経由の操作面を狭める） ---
+if (
+  typeof window !== "undefined" &&
+  process.env.NODE_ENV === "development"
+) {
   (window as any)._db = db;
   (window as any)._appProjectId = app.options.projectId;
-
   (window as any)._fs = {
     getDocs,
     collection,
@@ -72,11 +73,12 @@ if (typeof window !== "undefined") {
     where,
     Timestamp,
   };
-
   try {
     if (!(window as any).__FB_PROJECT_LOGGED__) {
       console.log("[FB] projectId =", app.options.projectId);
       (window as any).__FB_PROJECT_LOGGED__ = true;
     }
-  } catch {}
+  } catch {
+    /* ignore */
+  }
 }
