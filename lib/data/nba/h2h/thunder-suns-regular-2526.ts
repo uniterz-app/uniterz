@@ -9,7 +9,10 @@ export const THUNDER_SUNS_TEAM_IDS = ["nba-thunder", "nba-suns"] as const;
 const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Suns";
 
-/** 2025-26 レギュラー Thunder vs Suns（4試合） */
+/**
+ * 2025-26 レギュラー Thunder vs Suns（5試合）
+ * 左列=Thunder得点、右列=Suns得点。
+ */
 export const thunderSunsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-thunder-suns-2025-11-28",
@@ -20,8 +23,20 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     scoreLeft: 123,
     scoreRight: 119,
     homeTeamSide: "left",
-    injuriesLeft: ["T. Sorber", "N. Topic", "A. Wiggins"],
+    injuriesLeft: ["A. Wiggins"],
     injuriesRight: ["G. Allen", "R. Dunn", "J. Green"],
+  },
+  {
+    id: "h2h-thunder-suns-2025-12-10",
+    dateEt: "2025-12-10",
+    dateJst: "2025-12-11",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 138,
+    scoreRight: 89,
+    homeTeamSide: "left",
+    injuriesLeft: ["I. Hartenstein", "I. Joe"],
+    injuriesRight: ["D. Booker", "J. Green"],
   },
   {
     id: "h2h-thunder-suns-2026-01-04",
@@ -32,14 +47,8 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     scoreLeft: 105,
     scoreRight: 108,
     homeTeamSide: "right",
-    injuriesLeft: [
-      "O. Dieng",
-      "I. Hartenstein",
-      "T. Sorber",
-      "N. Topic",
-      "J. Williams",
-    ],
-    injuriesRight: ["J. Green", "G. Allen"],
+    injuriesLeft: ["I. Hartenstein", "Jay. Williams"],
+    injuriesRight: ["J. Green"],
   },
   {
     id: "h2h-thunder-suns-2026-02-11",
@@ -50,8 +59,8 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     scoreLeft: 136,
     scoreRight: 109,
     homeTeamSide: "right",
-    injuriesLeft: ["S. Gilgeous-Alexander", "A. Mitchell", "T. Sorber"],
-    injuriesRight: ["D. Booker", "J. Green", "G. Allen"],
+    injuriesLeft: ["S. Gilgeous-Alexander", "A. Mitchell"],
+    injuriesRight: ["G. Allen", "D. Booker", "J. Green"],
   },
   {
     id: "h2h-thunder-suns-2026-04-12",
@@ -69,9 +78,8 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
       "C. Holmgren",
       "I. Joe",
       "A. Mitchell",
-      "T. Sorber",
       "C. Wallace",
-      "Jal. Williams",
+      "J. Williams",
       "Jay. Williams",
     ],
     injuriesRight: ["G. Allen", "D. Booker", "D. Brooks", "R. O'Neale"],
