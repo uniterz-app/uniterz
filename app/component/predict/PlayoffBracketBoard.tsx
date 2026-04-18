@@ -41,6 +41,10 @@ type Props = {
   hasSubmittedBracket: boolean;
   savedBracketLoading: boolean;
   canEditBracket: boolean;
+  submitButtonDisabled?: boolean;
+  submitButtonLabel?: string;
+  /** After deadline: hide submit button only (page / bracket stay). */
+  hideSubmitButton?: boolean;
 
   onSelectWinner: (seriesId: SeriesId, teamCode: string) => void;
   onSelectGames: (seriesId: SeriesId, games: number) => void;
@@ -167,6 +171,9 @@ export default function PlayoffBracketBoard({
   hasSubmittedBracket,
   savedBracketLoading,
   canEditBracket,
+  submitButtonDisabled = false,
+  submitButtonLabel = "Submit Bracket",
+  hideSubmitButton = false,
   onSelectWinner,
   onSelectGames,
   onSubmitClick,
@@ -402,9 +409,12 @@ function renderAnimatedCard(
 
         {renderChampionCard()}
 
-        {isComplete && !hasSubmittedBracket && !savedBracketLoading && (
+        {isComplete &&
+          !hasSubmittedBracket &&
+          !savedBracketLoading &&
+          !hideSubmitButton && (
           <div
-            className="absolute z-30 flex justify-center"
+            className="absolute z-30 flex flex-col items-center gap-1"
             style={{
               left: FINALS_X,
               top: LABEL_SPACE_Y + Y_FINALS + CARD_H + 14,
@@ -412,10 +422,17 @@ function renderAnimatedCard(
             }}
           >
             <button
-              onClick={onSubmitClick}
-              className="rounded-xl bg-[#163a5f] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1d4c78]"
+              type="button"
+              disabled={submitButtonDisabled}
+              onClick={() => !submitButtonDisabled && onSubmitClick()}
+              className={[
+                "rounded-xl px-6 py-3 text-sm font-semibold text-white",
+                !submitButtonDisabled
+                  ? "bg-[#163a5f] hover:bg-[#1d4c78]"
+                  : "cursor-not-allowed bg-white/15 text-white/55 hover:bg-white/15",
+              ].join(" ")}
             >
-              Submit Bracket
+              {submitButtonLabel}
             </button>
           </div>
         )}
