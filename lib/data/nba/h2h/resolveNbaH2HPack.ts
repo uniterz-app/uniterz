@@ -142,11 +142,6 @@ function idsAreSunsBlazers(homeTeamId: string, awayTeamId: string): boolean {
   return SUNS_BLAZERS_TEAM_IDS.every((id) => s.has(id));
 }
 
-function idsAreThunderSuns(homeTeamId: string, awayTeamId: string): boolean {
-  const s = new Set([homeTeamId, awayTeamId]);
-  return THUNDER_SUNS_TEAM_IDS.every((id) => s.has(id));
-}
-
 function idsAreWarriorsSuns(homeTeamId: string, awayTeamId: string): boolean {
   const s = new Set([homeTeamId, awayTeamId]);
   return WARRIORS_SUNS_TEAM_IDS.every((id) => s.has(id));
@@ -434,33 +429,8 @@ function inferSunsBlazersIdsFromNames(
   return { homeTeamId: hid, awayTeamId: aid };
 }
 
-function namesLookThunderSuns(homeName?: string, awayName?: string): boolean {
-  const blob = `${(homeName ?? "").toLowerCase()} ${(awayName ?? "").toLowerCase()}`;
-  const hasThunder = blob.includes("thunder") || blob.includes("oklahoma");
-  const hasSuns = blob.includes("suns") || blob.includes("phoenix");
-  return hasThunder && hasSuns;
-}
-
-function inferThunderSunsIdsFromNames(
-  homeName?: string,
-  awayName?: string
-): { homeTeamId: string; awayTeamId: string } | null {
-  if (!namesLookThunderSuns(homeName, awayName)) return null;
-  const hn = (homeName ?? "").toLowerCase();
-  const an = (awayName ?? "").toLowerCase();
-  let hid = "";
-  let aid = "";
-  if (hn.includes("thunder") || hn.includes("oklahoma")) hid = "nba-thunder";
-  else if (hn.includes("suns") || hn.includes("phoenix")) hid = "nba-suns";
-  if (an.includes("thunder") || an.includes("oklahoma")) aid = "nba-thunder";
-  else if (an.includes("suns") || an.includes("phoenix")) aid = "nba-suns";
-  if (!hid || !aid || hid === aid) return null;
-  return { homeTeamId: hid, awayTeamId: aid };
-}
-
 function namesLookWarriorsSuns(homeName?: string, awayName?: string): boolean {
   const blob = `${(homeName ?? "").toLowerCase()} ${(awayName ?? "").toLowerCase()}`;
-  if (namesLookThunderSuns(homeName, awayName)) return false;
   const hasSuns = blob.includes("suns") || blob.includes("phoenix");
   const hasWarrior =
     blob.includes("warrior") || blob.includes("golden state");
@@ -610,10 +580,6 @@ export function resolveNbaH2HPack(
       homeName,
       awayName
     );
-    const inferredThunderSuns = inferThunderSunsIdsFromNames(
-      homeName,
-      awayName
-    );
     const inferredWarriorsSuns = inferWarriorsSunsIdsFromNames(
       homeName,
       awayName
@@ -650,7 +616,6 @@ export function resolveNbaH2HPack(
       inferredMagicPistons ??
       inferredMagicHornets ??
       inferredSunsBlazers ??
-      inferredThunderSuns ??
       inferredWarriorsSuns ??
       inferredThunderSuns ??
       inferredSixersMagic ??
@@ -751,19 +716,6 @@ export function resolveNbaH2HPack(
       games: sunsBlazersH2HGames,
       h2hAverages,
       seriesRecord: computeH2hSeriesRecord(sunsBlazersH2HGames),
-    };
-  }
-
-  if (idsAreThunderSuns(hid, aid)) {
-    const h2hAverages = thunderSunsH2HAveragesForSides({
-      homeTeamId: hid,
-      awayTeamId: aid,
-    });
-    if (!h2hAverages) return null;
-    return {
-      games: thunderSunsH2HGames,
-      h2hAverages,
-      seriesRecord: computeH2hSeriesRecord(thunderSunsH2HGames),
     };
   }
 
