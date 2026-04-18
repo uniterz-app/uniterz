@@ -29,6 +29,18 @@ type Props = {
   season?: string;
 };
 
+/** Long lists: stagger first 30 cards; rest share one enter delay (batch). */
+const BRACKET_CARD_STAGGER_FIRST = 30;
+const BRACKET_CARD_STAGGER_STEP = 0.05;
+const BRACKET_CARD_ENTER_DURATION = 0.4;
+
+function bracketCardEnterDelay(index: number): number {
+  if (index < BRACKET_CARD_STAGGER_FIRST) {
+    return index * BRACKET_CARD_STAGGER_STEP;
+  }
+  return BRACKET_CARD_STAGGER_FIRST * BRACKET_CARD_STAGGER_STEP;
+}
+
 export default function BracketLeaderboardSection({ season: propSeason }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -185,8 +197,8 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                duration: 0.4,
-                delay: index * 0.05,
+                duration: BRACKET_CARD_ENTER_DURATION,
+                delay: bracketCardEnterDelay(index),
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
