@@ -18,7 +18,7 @@ export default function BadgeGrid({ badges, variant }: Props) {
   const sliceMax = variant === "mobile" ? 10 : 10;
   const slot =
     variant === "mobile"
-      ? "h-12 w-12 sm:h-14 sm:w-14"
+      ? "h-14 w-14 sm:h-16 sm:w-16"
       : "h-14 w-14 sm:h-16 sm:w-16";
 
   return (
