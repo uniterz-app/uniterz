@@ -252,6 +252,8 @@ function MatchCard({
   const displayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
 
     const [navigating, setNavigating] = useState(false);
+  // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
+  const [fullCardPressed, setFullCardPressed] = useState(false);
 
 const isPredicted = !!myPostId;
 
@@ -650,12 +652,18 @@ let center: React.ReactNode = inPredictOverlay ? (
     !inPredictOverlay &&
     (Boolean(onOpenPredict) || Boolean(effectiveFullCardLinkHref));
 
-  /** スケジュール一覧オーバーレイ：全面タップの押下フィードバック用 */
-  const openOverlayFromCardShell =
-    Boolean(onOpenPredict) &&
-    !hideActions &&
-    !inPredictOverlay &&
-    !(isPredicted && !onOpenPredict);
+  const fullCardPressHandlers =
+    useFullCardHitLayer && !reduceMotion
+      ? {
+          onPointerDown: () => setFullCardPressed(true),
+          onPointerUp: () => setFullCardPressed(false),
+          onPointerLeave: () => setFullCardPressed(false),
+          onPointerCancel: () => setFullCardPressed(false),
+        }
+      : {};
+
+  const cardShellPressScale =
+    useFullCardHitLayer && fullCardPressed && !reduceMotion ? 0.985 : 1;
 
   const handleMakePrediction = async (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
@@ -759,10 +767,24 @@ return (
   }
   layoutId={isMobile ? undefined : sharedLayoutId}
   initial={entryTransition ? { scale: 0.972, opacity: 0.92 } : false}
-  animate={entryTransition ? { scale: 1, opacity: 1 } : undefined}
+  animate={
+    entryTransition
+      ? { scale: cardShellPressScale, opacity: 1 }
+      : useFullCardHitLayer
+        ? { scale: cardShellPressScale }
+        : undefined
+  }
   transition={
     isMobile
-      ? {}
+      ? useFullCardHitLayer && !reduceMotion
+        ? {
+            scale: {
+              type: "tween" as const,
+              duration: 0.12,
+              ease: "easeOut",
+            },
+          }
+        : {}
       : {
           layout: { duration: 0.22 },
           ...(entryTransition
@@ -770,8 +792,15 @@ return (
                 scale: {
                   type: "tween" as const,
                   delay: entryTransition(0).delay,
-                  duration: entryTransition(0).duration + 0.06,
-                  ease: entryTransition(0).ease,
+                  ...(useFullCardHitLayer && !reduceMotion
+                    ? {
+                        duration: 0.12,
+                        ease: "easeOut",
+                      }
+                    : {
+                        duration: entryTransition(0).duration + 0.06,
+                        ease: entryTransition(0).ease,
+                      }),
                 },
                 opacity: {
                   type: "tween" as const,
@@ -780,7 +809,15 @@ return (
                   ease: entryTransition(0).ease,
                 },
               }
-            : {}),
+            : useFullCardHitLayer && !reduceMotion
+              ? {
+                  scale: {
+                    type: "tween" as const,
+                    duration: 0.12,
+                    ease: "easeOut",
+                  },
+                }
+              : {}),
         }
   }
 className={[
@@ -810,6 +847,7 @@ dense
     className || "",
   ].join(" ")}
  style={{
+  transformOrigin: "50% 50%",
   ...(isMobile ? {} : { willChange: "transform" as const }),
   ...(vtBoundsName
     ? ({
@@ -834,15 +872,8 @@ dense
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
               "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
             ].join(" ")}
-            whileTap={
-              openOverlayFromCardShell && !reduceMotion
-                ? {
-                    scale: 0.985,
-                    transition: { duration: 0.12, ease: "easeOut" },
-                  }
-                : undefined
-            }
             onClick={handleOpenPredict}
+            {...fullCardPressHandlers}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
@@ -858,11 +889,11 @@ dense
             }
             className={[
               "absolute inset-0 z-[12] cursor-pointer touch-manipulation rounded-2xl",
-              "transition-transform duration-150 ease-out active:scale-[0.985]",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
               "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
             ].join(" ")}
             prefetch={false}
+            {...fullCardPressHandlers}
           />
         )
       ) : null}
