@@ -16,6 +16,8 @@ export type BracketLeaderboardRow = {
   winnerPoints: number;
   gamesPoints: number;
   rank: number;
+  /** 優勝予想（TEAM_SHORT 略称、例: LAL） */
+  championPick: string | null;
 };
 
 type ApiResponse = {
@@ -49,18 +51,34 @@ export async function GET(req: Request) {
       totalScore: number;
       winnerPoints: number;
       gamesPoints: number;
+      championPick: string | null;
     };
 
     const brackets: BracketEntry[] = bracketsSnap.docs
       .map((doc) => {
-        const d = doc.data();
+        const d = doc.data() as {
+          uid?: string;
+          totalScore?: unknown;
+          winnerPoints?: unknown;
+          gamesPoints?: unknown;
+          championPick?: unknown;
+          bracket?: { FINALS?: { winner?: unknown } };
+        };
         const uid = typeof d.uid === "string" ? d.uid.trim() : "";
         if (!uid) return null;
+        const raw =
+          typeof d.championPick === "string" && d.championPick.trim()
+            ? d.championPick.trim()
+            : typeof d.bracket?.FINALS?.winner === "string" &&
+                d.bracket.FINALS.winner.trim()
+              ? d.bracket.FINALS.winner.trim()
+              : null;
         return {
           uid,
           totalScore: Number(d.totalScore ?? 0),
           winnerPoints: Number(d.winnerPoints ?? 0),
           gamesPoints: Number(d.gamesPoints ?? 0),
+          championPick: raw,
         };
       })
       .filter((b): b is BracketEntry => b !== null);
@@ -118,6 +136,7 @@ export async function GET(req: Request) {
         winnerPoints: b.winnerPoints,
         gamesPoints: b.gamesPoints,
         rank: index + 1,
+        championPick: b.championPick,
       };
     });
 

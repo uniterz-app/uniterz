@@ -12,6 +12,7 @@ export type BracketLeaderboardRow = {
   winnerPoints: number;
   gamesPoints: number;
   rank: number;
+  championPick?: string | null;
 };
 
 type ApiResponse = {
