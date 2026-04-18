@@ -83,6 +83,11 @@
         { "fieldPath": "season", "order": "ASCENDING" },
         { "fieldPath": "__name__", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "badges",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "badgeId", "order": "ASCENDING" }]
     }
   ],
   "fieldOverrides": []

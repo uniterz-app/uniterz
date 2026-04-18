@@ -6,6 +6,8 @@ import { getFirestore, FieldPath } from "firebase-admin/firestore";
 import {
   getYesterdayDateKeyJST,
   RANK_SNAPSHOT_HISTORY_SUBCOL,
+  RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
+  subtractOneDayFromDateKeyJST,
 } from "./buildCumulativeRankingSnapshot";
 
 function db() {
@@ -85,17 +87,29 @@ type UserRankingSnaps = {
   histSnap: DocumentSnapshot | null;
 };
 
+async function loadLatestHistSnapForUid(
+  uid: string
+): Promise<DocumentSnapshot | null> {
+  const firestore = db();
+  let key = getYesterdayDateKeyJST();
+  for (let i = 0; i < RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS; i++) {
+    const snap = await firestore
+      .collection("cumulative_stats")
+      .doc(uid)
+      .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+      .doc(key)
+      .get();
+    if (snap.exists) return snap;
+    key = subtractOneDayFromDateKeyJST(key);
+  }
+  return null;
+}
+
 async function loadUserRankingSnaps(uid: string | undefined): Promise<UserRankingSnaps> {
   if (!uid) return { mySnap: null, histSnap: null };
   const mySnap = await db().collection("cumulative_stats").doc(uid).get();
   if (!mySnap.exists) return { mySnap, histSnap: null };
-  const yKey = getYesterdayDateKeyJST();
-  const histSnap = await db()
-    .collection("cumulative_stats")
-    .doc(uid)
-    .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
-    .doc(yKey)
-    .get();
+  const histSnap = await loadLatestHistSnapForUid(uid);
   return { mySnap, histSnap };
 }
 

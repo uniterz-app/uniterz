@@ -582,7 +582,9 @@ export default function ProfileHeroCard({
   const hasBadgeSlot = children != null && children !== false;
   const badgesHidden = hasBadgeSlot && !staticHero && !badgesVisible;
   /** 常にバッジ行の高さを確保して、表示時にカードが縦に伸びないようにする */
-  const badgesSlotClass = isWeb ? "mt-2.5 min-h-[52px]" : "mt-1.5 min-h-[46px]";
+  const badgesSlotClass = isWeb
+    ? "mt-2.5 min-h-[56px] sm:min-h-16"
+    : "mt-1.5 min-h-12 sm:min-h-14";
 
   const badgesWrap = hasBadgeSlot ? (
     <div
