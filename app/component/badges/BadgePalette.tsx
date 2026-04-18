@@ -228,7 +228,7 @@ export default function BadgePalette<T extends BadgePaletteItem>({
                     >
                       <span
                         className={[
-                          "relative flex min-h-0 flex-1 overflow-hidden",
+                          "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
                           gemRounded,
                           "ring-1 ring-cyan-300/30 ring-inset",
                           "shadow-[inset_0_0_0_1px_rgba(0,0,0,0.6),0_0_22px_rgba(34,211,238,0.14)]",
@@ -240,7 +240,7 @@ export default function BadgePalette<T extends BadgePaletteItem>({
                             src={b.icon}
                             alt={b.title}
                             className={[
-                              "h-full w-full object-cover",
+                              "h-full w-full min-h-0 min-w-0 object-contain",
                               "transition-transform duration-200 ease-out motion-reduce:transition-none",
                               "group-hover:scale-[1.06]",
                             ].join(" ")}
