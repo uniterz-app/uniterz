@@ -593,10 +593,8 @@ let center: React.ReactNode = inPredictOverlay ? (
   const [homeL1, homeL2] = splitTeamNameByLeague(league, home.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(league, away.name);
 
-  const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  /** Same behavior as the predict CTA (schedule overlay when logged in). */
+  const triggerOpenPredictLikeButton = () => {
     const me = auth.currentUser;
     if (!me) return;
 
@@ -610,6 +608,19 @@ let center: React.ReactNode = inPredictOverlay ? (
     if (myPostId) return;
     if (isGameStarted) return;
   };
+
+  const handleOpenPredict = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerOpenPredictLikeButton();
+  };
+
+  /** Full card opens the same overlay as the predict button on the schedule list. */
+  const openOverlayFromCardShell =
+    Boolean(onOpenPredict) &&
+    !hideActions &&
+    !inPredictOverlay &&
+    !(isPredicted && !onOpenPredict);
   /* ★ 「予想をする」クリック時：
         - 試合前   : 投稿あれば投稿詳細 / なければ予想作成へ
         - 試合開始後: 投稿あれば投稿詳細 / なければ“予想を見る”へ
@@ -740,8 +751,17 @@ return (
             : {}),
         }
   }
+  whileTap={
+    openOverlayFromCardShell && !reduceMotion
+      ? { scale: 0.985, transition: { duration: 0.12, ease: "easeOut" } }
+      : undefined
+  }
+  onClick={openOverlayFromCardShell ? handleOpenPredict : undefined}
 className={[
   "group relative overflow-hidden text-white",
+  openOverlayFromCardShell
+    ? "cursor-pointer touch-manipulation"
+    : "",
   inPredictOverlay && isMobile
     ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
     : mobileDense
