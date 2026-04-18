@@ -57,7 +57,7 @@ function formatRankingsUpdateTimeEn() {
 }
 
 export default function MobileRankingsPage() {
-  const [phase, setPhase] = useState<RankingPhase>("play_in");
+  const [phase, setPhase] = useState<RankingPhase>("playoffs");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
 
   const visibleMetrics: MobileMetric[] = [

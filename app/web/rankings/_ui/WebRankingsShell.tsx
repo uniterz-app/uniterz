@@ -92,7 +92,7 @@ function RankingInfoNotice({ language }: { language: Language }) {
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
-  const [phase, setPhase] = useState<RankingPhase>("play_in");
+  const [phase, setPhase] = useState<RankingPhase>("playoffs");
   const {
     listReady,
     personalPending,

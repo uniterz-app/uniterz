@@ -25,14 +25,17 @@ function formatLabel(key: MobileMetric, lang: Language) {
   return metricLabel(key, lang);
 }
 
-export default function RankingsMetricRow({
+/** Web 用：選択タブが Z 方向へ出てくるスプリング */
+const tabSpring = { type: "spring" as const, stiffness: 420, damping: 30, mass: 0.82 };
+
+/** モバイル：変更しない（従来の 3 スロット UI） */
+function RankingsMetricRowMobile({
   metrics,
   metric,
   setMetric,
   language = "ja",
-  compactMobile = false,
-}: Props) {
-  const reduceMotion = useReducedMotion();
+  reduceMotion,
+}: Props & { reduceMotion: boolean | null }) {
   const currentIndex = metrics.findIndex((m) => m.key === metric);
 
   const prevIndex = wrapIndex(currentIndex - 1, metrics.length);
@@ -57,31 +60,13 @@ export default function RankingsMetricRow({
             }
       }
     >
-      <div
-        className={[
-          "relative flex w-full items-center justify-center sm:max-w-[420px]",
-          compactMobile
-            ? "h-[44px] max-w-[300px] sm:h-[50px]"
-            : "h-[52px] max-w-[320px] sm:h-[58px]",
-        ].join(" ")}
-      >
-        {/* 左右は scale を外さないとレイアウト高さと見た目がズレる */}
-        {/* LEFT */}
+      <div className="relative flex h-[44px] w-full max-w-[300px] items-center justify-center sm:h-[50px] sm:max-w-[420px]">
         {metrics.length > 1 && (
           <button
             type="button"
             onClick={() => setMetric(prevMetric.key)}
             className={[
-              "absolute left-0 z-0",
-              compactMobile
-                ? "box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none"
-                : "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
-              "rounded-xl border border-white/10 bg-white/[0.035] px-2",
-              compactMobile
-                ? "text-[9px] text-white/35 sm:h-[40px] sm:min-w-[90px] sm:text-[11px]"
-                : "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
-              "shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md",
-              "opacity-70",
+              "absolute left-0 z-0 box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none rounded-xl border border-[#ffffff80] bg-transparent px-2 text-[9px] font-medium text-[#ffffff80] shadow-none backdrop-blur-md opacity-70 [-webkit-tap-highlight-color:transparent] transition-[color,border-color,box-shadow,text-shadow] duration-500 ease-in-out hover:border-[#008cff] hover:text-white hover:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] focus-visible:outline-none focus-visible:border-[#008cff] focus-visible:text-white focus-visible:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] active:border-[#008cff] active:text-white active:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] sm:h-[40px] sm:min-w-[90px] sm:text-[11px]",
               jp.className,
             ].join(" ")}
             style={{
@@ -95,34 +80,15 @@ export default function RankingsMetricRow({
           </button>
         )}
 
-        {/* CENTER */}
         <button
           type="button"
           onClick={() => setMetric(nextMetric.key)}
           className={[
-            "relative z-10",
-            compactMobile
-              ? "box-border flex h-[38px] min-w-[106px] max-w-[54%] items-center justify-center leading-none"
-              : "box-border flex h-[44px] min-w-[120px] max-w-[56%] items-center justify-center leading-none",
-            "rounded-xl border bg-white/7 px-3",
-            compactMobile
-              ? "text-[12px] font-black tracking-[0.03em] text-white"
-              : "text-sm font-black tracking-[0.04em] text-white",
-            "shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14)]",
-            compactMobile
-              ? "backdrop-blur-md sm:h-[44px] sm:min-w-[132px] sm:text-[14px]"
-              : "backdrop-blur-md sm:h-[50px] sm:min-w-[150px] sm:text-base",
+            "relative z-10 box-border flex h-[38px] min-w-[106px] max-w-[54%] items-center justify-center rounded-xl border border-[rgba(57,255,136,0.72)] bg-white/7 px-3 text-[12px] font-black tracking-[0.03em] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.22),0_0_10px_rgba(57,255,136,0.14)] backdrop-blur-md [-webkit-tap-highlight-color:transparent] transition-[border-color,box-shadow,text-shadow] duration-500 ease-in-out hover:shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.85),0_0_12px_rgba(57,255,136,0.55),0_0_28px_rgba(57,255,136,0.35)] focus-visible:outline-none focus-visible:shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.85),0_0_12px_rgba(57,255,136,0.55),0_0_28px_rgba(57,255,136,0.35)] active:shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.85),0_0_12px_rgba(57,255,136,0.55),0_0_28px_rgba(57,255,136,0.35)] sm:h-[44px] sm:min-w-[132px] sm:text-[14px]",
             jp.className,
           ].join(" ")}
           style={{
-            borderColor: "rgba(57,255,136,0.72)",
             textShadow: "0 0 10px rgba(57,255,136,0.18)",
-            boxShadow: [
-              "0 8px 24px rgba(0,0,0,0.22)",
-              "inset 0 1px 0 rgba(255,255,255,0.14)",
-              "0 0 0 1px rgba(57,255,136,0.22)",
-              "0 0 10px rgba(57,255,136,0.14)",
-            ].join(", "),
           }}
         >
           <span className="truncate">
@@ -130,22 +96,12 @@ export default function RankingsMetricRow({
           </span>
         </button>
 
-        {/* RIGHT */}
         {metrics.length > 1 && (
           <button
             type="button"
             onClick={() => setMetric(nextMetric.key)}
             className={[
-              "absolute right-0 z-0",
-              compactMobile
-                ? "box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none"
-                : "box-border flex h-[44px] min-w-[80px] max-w-[34%] items-center justify-center leading-none",
-              "rounded-xl border border-white/10 bg-white/[0.035] px-2",
-              compactMobile
-                ? "text-[9px] text-white/35 sm:h-[40px] sm:min-w-[90px] sm:text-[11px]"
-                : "text-[10px] text-white/40 sm:h-[50px] sm:min-w-[100px] sm:text-xs",
-              "shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md",
-              "opacity-70",
+              "absolute right-0 z-0 box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none rounded-xl border border-[#ffffff80] bg-transparent px-2 text-[9px] font-medium text-[#ffffff80] shadow-none backdrop-blur-md opacity-70 [-webkit-tap-highlight-color:transparent] transition-[color,border-color,box-shadow,text-shadow] duration-500 ease-in-out hover:border-[#008cff] hover:text-white hover:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] focus-visible:outline-none focus-visible:border-[#008cff] focus-visible:text-white focus-visible:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] active:border-[#008cff] active:text-white active:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] sm:h-[40px] sm:min-w-[90px] sm:text-[11px]",
               jp.className,
             ].join(" ")}
             style={{
@@ -158,6 +114,110 @@ export default function RankingsMetricRow({
             </span>
           </button>
         )}
+      </div>
+    </motion.div>
+  );
+}
+
+export default function RankingsMetricRow({
+  metrics,
+  metric,
+  setMetric,
+  language = "ja",
+  compactMobile = false,
+}: Props) {
+  const reduceMotion = useReducedMotion();
+
+  if (compactMobile) {
+    return (
+      <RankingsMetricRowMobile
+        metrics={metrics}
+        metric={metric}
+        setMetric={setMetric}
+        language={language}
+        compactMobile
+        reduceMotion={reduceMotion}
+      />
+    );
+  }
+
+  return (
+    <motion.div
+      className="w-full px-2"
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : {
+              duration: 0.38,
+              delay: 0.08,
+              ease: tabFadeEase,
+            }
+      }
+    >
+      <div className="w-full">
+        <div
+          className="flex w-full flex-wrap justify-center gap-2 py-2.5 [transform-style:preserve-3d] transform-gpu"
+          style={
+            reduceMotion
+              ? undefined
+              : {
+                  perspective: "960px",
+                  perspectiveOrigin: "50% 50%",
+                }
+          }
+        >
+          {metrics.map((m) => {
+            const active = m.key === metric;
+            return (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setMetric(m.key)}
+                className={[
+                  jp.className,
+                  "group relative h-[40px] min-w-[5.5rem] max-w-[min(100%,11rem)] shrink-0 cursor-pointer select-none rounded-xl p-0 outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent] sm:h-[44px] sm:min-w-[6.25rem]",
+                ].join(" ")}
+              >
+                <motion.span
+                  initial={false}
+                  animate={
+                    reduceMotion
+                      ? {
+                          scale: active ? 1 : 0.98,
+                          opacity: active ? 1 : 0.88,
+                          z: 0,
+                          rotateX: 0,
+                        }
+                      : {
+                          z: active ? 52 : -18,
+                          scale: active ? 1.08 : 0.92,
+                          rotateX: active ? 0 : 9,
+                        }
+                  }
+                  transition={tabSpring}
+                  className={[
+                    "flex h-full w-full items-center justify-center rounded-xl border px-2.5 text-xs font-black leading-none tracking-[0.03em] will-change-transform pointer-events-none backdrop-blur-md transition-[border-color,box-shadow,color,text-shadow] duration-500 ease-in-out sm:px-3 sm:text-sm",
+                    active
+                      ? "border-[rgba(57,255,136,0.72)] bg-white/7 text-white shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.22),0_0_14px_rgba(57,255,136,0.2)] group-hover:shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_2px_rgba(57,255,136,0.85),0_0_16px_rgba(57,255,136,0.55),0_0_36px_rgba(57,255,136,0.3)] group-focus-visible:shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_2px_rgba(57,255,136,0.85),0_0_16px_rgba(57,255,136,0.55),0_0_36px_rgba(57,255,136,0.3)] group-active:shadow-[0_10px_28px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_2px_rgba(57,255,136,0.85),0_0_16px_rgba(57,255,136,0.55),0_0_36px_rgba(57,255,136,0.3)]"
+                      : "border-[#ffffff80] bg-white/[0.035] text-[#ffffff80] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] group-hover:border-[#008cff] group-hover:text-white group-hover:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] group-focus-visible:border-[#008cff] group-focus-visible:text-white group-focus-visible:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] group-active:border-[#008cff] group-active:text-white group-active:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35),inset_0_1px_0_rgba(255,255,255,0.08)]",
+                  ].join(" ")}
+                  style={{
+                    transformStyle: "preserve-3d",
+                    textShadow: active
+                      ? "0 0 10px rgba(57,255,136,0.18)"
+                      : undefined,
+                  }}
+                >
+                  <span className="line-clamp-2 text-center sm:line-clamp-1">
+                    {formatLabel(m.key, language)}
+                  </span>
+                </motion.span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </motion.div>
   );
