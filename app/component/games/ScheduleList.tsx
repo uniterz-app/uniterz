@@ -111,6 +111,11 @@ export default function ScheduleList({
   emptyHint = null,
   /** page=先頭のみ派手入場。daySwitch=日付切替時は先頭カードから順に上方向からフェードイン */
   listShellIntro = "daySwitch",
+  /**
+   * 日付クエリの games 以外に、暦月一括取得分などを渡す。
+   * プレーオフの「他日に開催した同シリーズ試合」を推定に含める（当日カードだけだと 0-0 のままになるのを防ぐ）。
+   */
+  extraPeerGamesForSeriesInference = null,
 }: {
   games: GameItemRaw[];
   dense?: boolean;
@@ -119,6 +124,7 @@ export default function ScheduleList({
   league?: League;
   emptyHint?: string | null;
   listShellIntro?: "page" | "daySwitch";
+  extraPeerGamesForSeriesInference?: GameItemRaw[] | null;
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
@@ -152,14 +158,25 @@ export default function ScheduleList({
 
   const propsList = useMemo<MatchCardProps[]>(() => {
     const list = games ?? [];
+    const extra = extraPeerGamesForSeriesInference ?? [];
+    const byId = new Map<string, any>();
+    for (const row of extra) {
+      const id = String((row as any)?.id ?? "");
+      if (id) byId.set(id, row);
+    }
+    for (const row of list) {
+      const id = String((row as any)?.id ?? "");
+      if (id) byId.set(id, row);
+    }
+    const peerPool = Array.from(byId.values());
     return list.map(
       (g: any) =>
         toMatchCardProps(g, {
           dense,
-          peerGamesForSeriesInference: list,
+          peerGamesForSeriesInference: peerPool,
         }) as MatchCardProps
     );
-  }, [games, dense]);
+  }, [games, dense, extraPeerGamesForSeriesInference]);
 
   const gameIds = useMemo(() => {
     return propsList.map((p) => String(p.id));
