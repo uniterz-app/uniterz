@@ -6,6 +6,7 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, useMemo, useCallback } from "react";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
@@ -257,6 +258,7 @@ const isPredicted = !!myPostId;
     // ▼ 追加：モバイル判定
  // ✅ 追加（既存の useSectionPrefix を使う）
 const prefix = useSectionPrefix();
+const pathname = usePathname();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** モバイルの試合一覧（dense）：カード幅・ラウンド帯のレイアウト調整用 */
   const mobileDense = dense && isMobile;
@@ -593,7 +595,9 @@ let center: React.ReactNode = inPredictOverlay ? (
   const [homeL1, homeL2] = splitTeamNameByLeague(league, home.name);
   const [awayL1, awayL2] = splitTeamNameByLeague(league, away.name);
 
-  const handleOpenPredict = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleOpenPredict = (
+    e: React.MouseEvent | React.KeyboardEvent
+  ) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -610,6 +614,39 @@ let center: React.ReactNode = inPredictOverlay ? (
     if (myPostId) return;
     if (isGameStarted) return;
   };
+
+  /** 一覧オーバーレイ以外で、カード全体を Next の Link にするときの遷移先 */
+  const fullCardLinkHref = useMemo(() => {
+    if (hideActions || inPredictOverlay || onOpenPredict) return null;
+    if (status === "final" || isGameStarted || isPredicted) {
+      return viewPredictionHref;
+    }
+    return makePredictionHref;
+  }, [
+    hideActions,
+    inPredictOverlay,
+    onOpenPredict,
+    status,
+    isGameStarted,
+    isPredicted,
+    viewPredictionHref,
+    makePredictionHref,
+  ]);
+
+  const skipFullCardLink = (() => {
+    if (!fullCardLinkHref || !pathname) return false;
+    const path = fullCardLinkHref.split("?")[0] ?? "";
+    return pathname === path || pathname.startsWith(`${path}/`);
+  })();
+
+  const effectiveFullCardLinkHref =
+    fullCardLinkHref && !skipFullCardLink ? fullCardLinkHref : null;
+
+  /** カード全面をクリック対象にする（オーバーレイ用 Link / クリックレイヤー） */
+  const useFullCardHitLayer =
+    !hideActions &&
+    !inPredictOverlay &&
+    (Boolean(onOpenPredict) || Boolean(effectiveFullCardLinkHref));
   /* ★ 「予想をする」クリック時：
         - 試合前   : 投稿あれば投稿詳細 / なければ予想作成へ
         - 試合開始後: 投稿あれば投稿詳細 / なければ“予想を見る”へ
@@ -758,6 +795,7 @@ disableCardMotion
 dense
   ? MOBILE_LIST_CARD_PANEL_DENSE
   : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
+    isPredicted ? "!border-zinc-500/50" : "",
     hideLine
       ? mobileDense
         ? "pb-1 md:pb-2"
@@ -777,6 +815,43 @@ dense
     : {}),
 }}
 >
+      {useFullCardHitLayer ? (
+        onOpenPredict ? (
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={
+              isEn ? "Open prediction for this game" : "この試合の予想を開く"
+            }
+            className={[
+              "absolute inset-0 z-[12] cursor-pointer rounded-2xl",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
+              "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
+            ].join(" ")}
+            onClick={handleOpenPredict}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleOpenPredict(e);
+              }
+            }}
+          />
+        ) : (
+          <Link
+            href={effectiveFullCardLinkHref!}
+            aria-label={
+              isEn ? "Open this match prediction" : "この試合の予想ページへ"
+            }
+            className={[
+              "absolute inset-0 z-[12] cursor-pointer rounded-2xl",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
+              "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
+            ].join(" ")}
+            prefetch={false}
+          />
+        )
+      ) : null}
+
       <motion.div
         className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl"
         initial={entryTransition ? { opacity: 0, y: 8 } : false}
@@ -1360,44 +1435,76 @@ background:
         >
           {/* ▼ 試合別タイムラインへ */}
           {/* ▼ 予想作成ページへ（自分の投稿があれば詳細へ／開始後は未投稿なら“見る”へ） */}
-          {/* ▼ 予想をする / 予想済み */}
-<button
-  type="button"
-  onClick={handleOpenPredict}
-  disabled={Boolean(isPredicted && !onOpenPredict)}
-  className={[
-    "grid w-full place-items-center font-bold text-white",
-    "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
-    "rounded-md",
-    isMobile
-      ? ""
-      : "transition-all duration-200",
-    isPredicted && !onOpenPredict
-      ? "cursor-default"
-      : isMobile
-        ? "cursor-pointer"
-        : "active:scale-[0.985] cursor-pointer",
-  ]
-    .filter(Boolean)
-    .join(" ")}
-  style={isPredicted ? predictedStyle : normalStyle}
->
-{status === "final"
-  ? isEn
-    ? "Final"
-    : "試合終了"
-  : isGameStarted
-  ? isEn
-    ? "Live"
-    : "試合中"
-  : isPredicted
-  ? isEn
-    ? "Predicted"
-    : "予想済み"
-  : isEn
-  ? "Predict"
-  : "予想をする"}
-</button>
+          {/* ▼ 予想をする / 予想済み（全面ヒット時は下段は表示のみで、<a> 内 button を避ける） */}
+          {useFullCardHitLayer ? (
+            <div
+              aria-hidden
+              className={[
+                "grid w-full place-items-center font-bold text-white",
+                "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
+                "rounded-md",
+                isMobile ? "" : "transition-all duration-200",
+                isPredicted && !onOpenPredict ? "cursor-default" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={isPredicted ? predictedStyle : normalStyle}
+            >
+              {status === "final"
+                ? isEn
+                  ? "Final"
+                  : "試合終了"
+                : isGameStarted
+                  ? isEn
+                    ? "Live"
+                    : "試合中"
+                  : isPredicted
+                    ? isEn
+                      ? "Predicted"
+                      : "予想済み"
+                    : isEn
+                      ? "Predict"
+                      : "予想をする"}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenPredict}
+              disabled={Boolean(isPredicted && !onOpenPredict)}
+              className={[
+                "grid w-full place-items-center font-bold text-white",
+                "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
+                "rounded-md",
+                isMobile
+                  ? ""
+                  : "transition-all duration-200",
+                isPredicted && !onOpenPredict
+                  ? "cursor-default"
+                  : isMobile
+                    ? "cursor-pointer"
+                    : "active:scale-[0.985] cursor-pointer",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={isPredicted ? predictedStyle : normalStyle}
+            >
+              {status === "final"
+                ? isEn
+                  ? "Final"
+                  : "試合終了"
+                : isGameStarted
+                  ? isEn
+                    ? "Live"
+                    : "試合中"
+                  : isPredicted
+                    ? isEn
+                      ? "Predicted"
+                      : "予想済み"
+                    : isEn
+                      ? "Predict"
+                      : "予想をする"}
+            </button>
+          )}
         </motion.div>
       )}
     </motion.div>
