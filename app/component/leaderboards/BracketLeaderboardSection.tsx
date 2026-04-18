@@ -37,8 +37,25 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const season = propSeason ?? getCurrentPlayoffSeason();
-  const { loading, error, rows } = useBracketLeaderboard({ season });
+  const { loading, loadingMore, error, rows, hasMore, loadMore } =
+    useBracketLeaderboard({ season });
   const officialResults = usePlayoffOfficialResults(season);
+
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = loadMoreSentinelRef.current;
+    if (!el || loading || !hasMore || loadingMore) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting || loadingMore) return;
+        void loadMore();
+      },
+      { root: null, rootMargin: "200px 0px 0px 0px", threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loading, hasMore, loadingMore, loadMore, rows.length]);
 
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
   useEffect(() => {
@@ -252,6 +269,23 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
               />
             </motion.div>
           ))}
+          {hasMore ? (
+            <div
+              ref={loadMoreSentinelRef}
+              className="h-px w-full shrink-0"
+              aria-hidden
+            />
+          ) : null}
+          {loadingMore ? (
+            <div
+              className={[
+                "py-3 text-center text-[11px] text-white/50",
+                jp.className,
+              ].join(" ")}
+            >
+              {language === "en" ? "Loading…" : "読み込み中…"}
+            </div>
+          ) : null}
         </div>
       </div>
 

@@ -85,6 +85,14 @@
       ]
     },
     {
+      "collectionGroup": "playoffBrackets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "season", "order": "ASCENDING" },
+        { "fieldPath": "totalScore", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "badges",
       "queryScope": "COLLECTION_GROUP",
       "fields": [{ "fieldPath": "badgeId", "order": "ASCENDING" }]
