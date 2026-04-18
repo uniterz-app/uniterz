@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { Undo2 } from "lucide-react";
 
 import { nameBebas, jp } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
@@ -341,15 +341,6 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                       stiffness: 300,
                     }}
                   >
-                    <button
-                      type="button"
-                      aria-label={language === "en" ? "Close" : "閉じる"}
-                      className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md transition hover:bg-black/55"
-                      onClick={closeDetail}
-                    >
-                      <X size={18} strokeWidth={2.4} />
-                    </button>
-
                     <div className="sticky top-0 z-10 shrink-0 border-b border-white/12 bg-black/25 px-4 py-3 backdrop-blur-md">
                       <BracketUserCard
                         row={selectedRow}
@@ -369,17 +360,42 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                           </div>
                         </div>
                       ) : playoffDisplayData ? (
-                        <div className="mx-auto flex w-full max-w-[1200px] justify-center">
-                          <PlayoffBracket
-                            league="nba"
-                            score={playoffScore}
-                            {...playoffDisplayData}
-                            bracket={overlayBracket ?? undefined}
-                            results={officialResults ?? undefined}
-                            hitLegend={{ language }}
-                            showGlassShell={false}
-                          />
-                        </div>
+                        <>
+                          <div className="mx-auto flex w-full max-w-[1200px] justify-center">
+                            <PlayoffBracket
+                              league="nba"
+                              score={playoffScore}
+                              {...playoffDisplayData}
+                              bracket={overlayBracket ?? undefined}
+                              results={officialResults ?? undefined}
+                              hitLegend={{ language }}
+                              showGlassShell={false}
+                            />
+                          </div>
+                          {isMobile ? (
+                            <div className="mt-6 flex w-full justify-end px-1 pb-2">
+                              <button
+                                type="button"
+                                onClick={closeDetail}
+                                aria-label={
+                                  language === "en" ? "Close" : "閉じる"
+                                }
+                                className={[
+                                  "inline-flex items-center justify-center rounded-full border-2 border-white",
+                                  "bg-black/50 p-2.5 text-white",
+                                  "backdrop-blur-md transition hover:border-white/90 hover:bg-black/60 active:scale-[0.99]",
+                                ].join(" ")}
+                              >
+                                <Undo2
+                                  className="shrink-0"
+                                  size={17}
+                                  strokeWidth={2.4}
+                                  aria-hidden
+                                />
+                              </button>
+                            </div>
+                          ) : null}
+                        </>
                       ) : (
                         <div className="py-16 text-center text-white/60">
                           {language === "en"
@@ -389,6 +405,31 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                       )}
                     </div>
                   </motion.div>
+
+                  {!isMobile ? (
+                    <button
+                      type="button"
+                      onClick={closeDetail}
+                      aria-label={language === "en" ? "Close" : "閉じる"}
+                      className={[
+                        "pointer-events-auto fixed z-100000 inline-flex items-center justify-center",
+                        "rounded-full border-2 border-white bg-black/45 p-4 text-white",
+                        "shadow-lg shadow-black/35 backdrop-blur-md",
+                        "transition hover:border-white/90 hover:bg-black/55 active:scale-[0.99]",
+                      ].join(" ")}
+                      style={{
+                        bottom: "var(--bottom-nav-clearance)",
+                        right: "max(1.5rem, env(safe-area-inset-right, 0px))",
+                      }}
+                    >
+                      <Undo2
+                        className="shrink-0"
+                        size={28}
+                        strokeWidth={2.6}
+                        aria-hidden
+                      />
+                    </button>
+                  ) : null}
                 </motion.div>
               )}
             </AnimatePresence>,

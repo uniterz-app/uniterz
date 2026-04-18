@@ -67,8 +67,8 @@ export const teamColorsNBA: TeamColorMap = {
   // LAC Clippers
   "nba-clippers":     { primary: "#C8102E", secondary: "#1D428A" },
 
-  // LAL Lakers → Yellow 主導（あなた希望）
-  "nba-lakers":       { primary: "#FDB827", secondary: "#552583" },
+  // LAL Lakers → primary #DFFE00 (neon yellow), secondary purple
+  "nba-lakers":       { primary: "#DFFE00", secondary: "#552583" },
 
   // MEM Grizzlies
   "nba-grizzlies":    { primary: "#5D76A9", secondary: "#12173F" },
