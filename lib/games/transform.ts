@@ -195,7 +195,7 @@ function seasonKeyFromRaw(raw: Record<string, unknown>): string {
 }
 
 /** 同シーズン・同リーグのプレーオフで、同じ対戦カード（2 チームの組）か */
-function isSamePlayoffSeriesMatchup(
+export function isSamePlayoffSeriesMatchup(
   a: Record<string, unknown>,
   b: Record<string, unknown>
 ): boolean {

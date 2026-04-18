@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
@@ -27,8 +28,7 @@ const PredictionForm = dynamic(
   { ssr: false, loading: PredictRouteShell }
 );
 
-// 生の games ドキュメント型（transform の入力に合わせる）
-type GameDoc = Parameters<typeof toMatchCardProps>[0];
+type GameProps = ReturnType<typeof toMatchCardProps>;
 
 export default function Page() {
   // ---- Hooks（順序固定）----
@@ -38,25 +38,40 @@ export default function Page() {
   const isEn = language === "en";
 
   const [profile, setProfile] = useState<{ displayName?: string; photoURL?: string } | null>(null);
-  const [rawGame, setRawGame] = useState<GameDoc | null>(null);
+  const [gameProps, setGameProps] = useState<GameProps | null>(null);
   const [loading, setLoading] = useState(true);
 
   /** 一覧からのスクロール位置が残ると 1 フレームだけズレて見えるため、描画直前に先頭へ */
   useLayoutEffect(() => {
-    if (loading || !rawGame) return;
+    if (loading || !gameProps) return;
     window.scrollTo(0, 0);
-  }, [loading, rawGame, id]);
+  }, [loading, gameProps, id]);
 
-  // ---- ① games/{id} を1回取得（Firestore）----
+  // ---- ① games/{id} と同一シリーズの兄弟試合を取得してから MatchCard 用 props を確定 ----
   useEffect(() => {
     let alive = true;
     (async () => {
       if (!id) return;
       setLoading(true);
+      setGameProps(null);
       try {
         const snap = await getDoc(doc(db, "games", String(id)));
         if (!alive) return;
-        setRawGame(snap.exists() ? ({ id: snap.id, ...snap.data() } as any) : null);
+        if (!snap.exists()) {
+          setGameProps(null);
+          return;
+        }
+        const raw = { id: snap.id, ...snap.data() } as any;
+        const peers = await fetchPlayoffSeriesPeerGames(
+          raw as Record<string, unknown>
+        );
+        if (!alive) return;
+        setGameProps(
+          toMatchCardProps(raw, {
+            dense: true,
+            peerGamesForSeriesInference: peers,
+          })
+        );
       } finally {
         if (alive) setLoading(false);
       }
@@ -91,12 +106,9 @@ export default function Page() {
   if (status !== "ready") return <PredictRouteShell />; // 認証準備待ち
   if (!fUser || !id) return null; // 未ログイン/IDなし
   if (loading) return <PredictRouteShell />; // Firestore 取得中
-  if (!rawGame) return null; // 404相当（存在しない試合）
+  if (!gameProps) return null; // 404相当（存在しない試合）
 
-  // ---- ④ 表示用に整形（Hookは使わない：ただの変数）----
-  const gameProps = toMatchCardProps(rawGame, { dense: true });
-
-  // ---- ⑤ フォームに渡すユーザー表示 ----
+  // ---- ④ フォームに渡すユーザー表示 ----
   const user = {
     name:
       (profile?.displayName && profile.displayName.trim()) ||
