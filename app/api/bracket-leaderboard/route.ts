@@ -1,10 +1,14 @@
 // app/api/bracket-leaderboard/route.ts
 
 import { NextResponse } from "next/server";
+import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const LIMIT_DEFAULT = 30;
+const LIMIT_MAX = 50;
 
 export type BracketLeaderboardRow = {
   uid: string;
@@ -25,8 +29,36 @@ type ApiResponse = {
   season?: string;
   count?: number;
   rows?: BracketLeaderboardRow[];
+  /** 次ページがある */
+  hasMore?: boolean;
+  /** 次リクエストに `cursor` として渡す opaque文字列 */
+  nextCursor?: string | null;
   error?: string;
 };
+
+/** Cursor = last row's playoffBrackets document id (opaque base64url JSON). */
+function encodeCursor(docId: string): string {
+  return Buffer.from(JSON.stringify({ i: docId }), "utf8").toString("base64url");
+}
+
+function decodeCursor(raw: string): { i: string } | null {
+  try {
+    const j = JSON.parse(
+      Buffer.from(raw, "base64url").toString("utf8")
+    ) as unknown;
+    if (
+      j &&
+      typeof j === "object" &&
+      "i" in j &&
+      typeof (j as { i: unknown }).i === "string"
+    ) {
+      return { i: (j as { i: string }).i };
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 export async function GET(req: Request) {
   try {
@@ -41,10 +73,68 @@ export async function GET(req: Request) {
       );
     }
 
-    const bracketsSnap = await adminDb
+    let limit = LIMIT_DEFAULT;
+    const limitRaw = searchParams.get("limit");
+    if (limitRaw) {
+      const n = parseInt(limitRaw, 10);
+      if (Number.isFinite(n)) {
+        limit = Math.min(LIMIT_MAX, Math.max(1, n));
+      }
+    }
+
+    let startRank = 1;
+    const startRankRaw = searchParams.get("startRank");
+    if (startRankRaw) {
+      const r = parseInt(startRankRaw, 10);
+      if (Number.isFinite(r) && r >= 1) startRank = r;
+    }
+
+    const cursorRaw = searchParams.get("cursor")?.trim() ?? "";
+    let cursorSnap: DocumentSnapshot | null = null;
+    if (cursorRaw) {
+      const cursorDecoded = decodeCursor(cursorRaw);
+      if (!cursorDecoded?.i) {
+        return NextResponse.json(
+          { ok: false, error: "invalid cursor" } satisfies ApiResponse,
+          { status: 400 }
+        );
+      }
+      const cur = await adminDb
+        .collection("playoffBrackets")
+        .doc(cursorDecoded.i)
+        .get();
+      if (!cur.exists) {
+        return NextResponse.json(
+          { ok: false, error: "invalid cursor" } satisfies ApiResponse,
+          { status: 400 }
+        );
+      }
+      const cs = cur.data()?.season;
+      if (String(cs ?? "") !== season) {
+        return NextResponse.json(
+          { ok: false, error: "invalid cursor" } satisfies ApiResponse,
+          { status: 400 }
+        );
+      }
+      cursorSnap = cur;
+    }
+
+    const fetchCap = Math.min(limit + 1, LIMIT_MAX + 1);
+
+    let query = adminDb
       .collection("playoffBrackets")
       .where("season", "==", season)
-      .get();
+      .orderBy("totalScore", "desc")
+      .limit(fetchCap);
+
+    if (cursorSnap) {
+      query = query.startAfter(cursorSnap);
+    }
+
+    const snap = await query.get();
+    const docs = snap.docs;
+    const hasMore = docs.length > limit;
+    const pageDocs = hasMore ? docs.slice(0, limit) : docs;
 
     type BracketEntry = {
       uid: string;
@@ -54,7 +144,7 @@ export async function GET(req: Request) {
       championPick: string | null;
     };
 
-    const brackets: BracketEntry[] = bracketsSnap.docs
+    const brackets: BracketEntry[] = pageDocs
       .map((doc) => {
         const d = doc.data() as {
           uid?: string;
@@ -83,8 +173,6 @@ export async function GET(req: Request) {
       })
       .filter((b): b is BracketEntry => b !== null);
 
-    brackets.sort((a, b) => b.totalScore - a.totalScore);
-
     const uids = [...new Set(brackets.map((b) => b.uid))];
     const userMap = new Map<
       string,
@@ -96,7 +184,6 @@ export async function GET(req: Request) {
       }
     >();
 
-    // Firestore getAll は最大 100 件まで。バッチで取得
     const BATCH_SIZE = 100;
     for (let i = 0; i < uids.length; i += BATCH_SIZE) {
       const batch = uids.slice(i, i + BATCH_SIZE);
@@ -135,10 +222,14 @@ export async function GET(req: Request) {
         totalScore: b.totalScore,
         winnerPoints: b.winnerPoints,
         gamesPoints: b.gamesPoints,
-        rank: index + 1,
+        rank: startRank + index,
         championPick: b.championPick,
       };
     });
+
+    const lastDoc = pageDocs[pageDocs.length - 1];
+    const nextCursor =
+      hasMore && lastDoc ? encodeCursor(lastDoc.id) : null;
 
     return NextResponse.json(
       {
@@ -146,6 +237,8 @@ export async function GET(req: Request) {
         season,
         count: rows.length,
         rows,
+        hasMore,
+        nextCursor,
       } satisfies ApiResponse,
       { status: 200 }
     );
