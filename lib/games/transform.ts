@@ -367,13 +367,21 @@ export function toMatchCardProps(
       ? inferPlayoffSeriesStandingFromPeers(raw, peers)
       : null;
 
-  /** プレーオフのみ。Firestore 明示 → 一覧からの推定 → 0-0 */
+  /** プレーオフのみ。一覧から確定試合を集計した推定を優先（ドキュメント上の 0-0 が古いまま残るのを防ぐ） */
+  const seriesGamesPlayed = (s: SeriesStanding) => s.homeWins + s.awayWins;
   let seriesStanding: SeriesStanding | null = null;
   if (isPlayoffStyleGameCard(seasonPhase, roundLabelStr)) {
-    if (parsedSeries) {
+    if (inferredFromPeers != null) {
+      if (
+        !parsedSeries ||
+        seriesGamesPlayed(inferredFromPeers) >= seriesGamesPlayed(parsedSeries)
+      ) {
+        seriesStanding = inferredFromPeers;
+      } else {
+        seriesStanding = parsedSeries;
+      }
+    } else if (parsedSeries) {
       seriesStanding = parsedSeries;
-    } else if (inferredFromPeers) {
-      seriesStanding = inferredFromPeers;
     } else {
       seriesStanding = { ...PLAYOFF_SERIES_STANDING_FALLBACK };
     }

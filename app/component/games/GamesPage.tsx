@@ -973,6 +973,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       >
         <ScheduleList
           games={filteredGames}
+          extraPeerGamesForSeriesInference={monthRows}
           dense={dense}
           loading={loading}
           league={league}
