@@ -58,6 +58,11 @@ import {
   sunsBlazersH2HGames,
 } from "./suns-blazers-regular-2526";
 import {
+  THUNDER_SUNS_TEAM_IDS,
+  thunderSunsH2HAveragesForSides,
+  thunderSunsH2HGames,
+} from "./thunder-suns-regular-2526";
+import {
   TOR_CLE_TEAM_IDS,
   torCleH2HAveragesForSides,
   torCleH2HGames,
@@ -140,6 +145,11 @@ function idsAreSunsBlazers(homeTeamId: string, awayTeamId: string): boolean {
 function idsAreWarriorsSuns(homeTeamId: string, awayTeamId: string): boolean {
   const s = new Set([homeTeamId, awayTeamId]);
   return WARRIORS_SUNS_TEAM_IDS.every((id) => s.has(id));
+}
+
+function idsAreThunderSuns(homeTeamId: string, awayTeamId: string): boolean {
+  const s = new Set([homeTeamId, awayTeamId]);
+  return THUNDER_SUNS_TEAM_IDS.every((id) => s.has(id));
 }
 
 function idsAreSpursBlazers(homeTeamId: string, awayTeamId: string): boolean {
@@ -675,6 +685,19 @@ export function resolveNbaH2HPack(
       games: warriorsSunsH2HGames,
       h2hAverages,
       seriesRecord: computeH2hSeriesRecord(warriorsSunsH2HGames),
+    };
+  }
+
+  if (idsAreThunderSuns(hid, aid)) {
+    const h2hAverages = thunderSunsH2HAveragesForSides({
+      homeTeamId: hid,
+      awayTeamId: aid,
+    });
+    if (!h2hAverages) return null;
+    return {
+      games: thunderSunsH2HGames,
+      h2hAverages,
+      seriesRecord: computeH2hSeriesRecord(thunderSunsH2HGames),
     };
   }
 
