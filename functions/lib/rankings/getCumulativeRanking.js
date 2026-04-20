@@ -45,6 +45,19 @@ function rankingSlice(d, phase) {
         totalUpset: 0,
     };
 }
+async function loadLatestHistSnapForUidFromNewest(uid) {
+    var _a;
+    const firestore = db();
+    const snap = await firestore
+        .collection("cumulative_stats")
+        .doc(uid)
+        .collection(buildCumulativeRankingSnapshot_1.RANK_SNAPSHOT_HISTORY_SUBCOL)
+        .get();
+    if (snap.empty)
+        return null;
+    const sorted = [...snap.docs].sort((a, b) => a.id.localeCompare(b.id));
+    return (_a = sorted[sorted.length - 1]) !== null && _a !== void 0 ? _a : null;
+}
 async function loadLatestHistSnapForUid(uid) {
     const firestore = db();
     let key = (0, buildCumulativeRankingSnapshot_1.getYesterdayDateKeyJST)();
@@ -63,12 +76,15 @@ async function loadLatestHistSnapForUid(uid) {
 }
 async function loadUserRankingSnaps(uid) {
     if (!uid)
-        return { mySnap: null, histSnap: null };
+        return { mySnap: null, latestHistSnap: null, histSnap: null };
     const mySnap = await db().collection("cumulative_stats").doc(uid).get();
     if (!mySnap.exists)
-        return { mySnap, histSnap: null };
-    const histSnap = await loadLatestHistSnapForUid(uid);
-    return { mySnap, histSnap };
+        return { mySnap, latestHistSnap: null, histSnap: null };
+    const [latestHistSnap, histSnap] = await Promise.all([
+        loadLatestHistSnapForUidFromNewest(uid),
+        loadLatestHistSnapForUid(uid),
+    ]);
+    return { mySnap, latestHistSnap, histSnap };
 }
 function parseMetricsParam(raw) {
     if (typeof raw !== "string" || !raw.trim())
@@ -84,7 +100,7 @@ function parseMetricsParam(raw) {
     return [...new Set(out)];
 }
 async function rankingPayloadForMetric(metric, phase, uid, snaps) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
     const snapDoc = await db()
         .collection("cumulative_ranking_snapshots")
         .doc(`${phase}_${metric}`)
@@ -166,13 +182,25 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
                 myRankDeltaPlaces: null,
             };
         }
-        const storedRankRaw = (_f = (_e = me.snapshotRanks) === null || _e === void 0 ? void 0 : _e[phase]) === null || _f === void 0 ? void 0 : _f[metric];
+        const latestHistRaw = (_f = (((_e = snaps.latestHistSnap) === null || _e === void 0 ? void 0 : _e.exists)
+            ? snaps.latestHistSnap.data()
+            : undefined)) === null || _f === void 0 ? void 0 : _f[phase];
+        const latestHistRankRaw = latestHistRaw === null || latestHistRaw === void 0 ? void 0 : latestHistRaw[metric];
+        const latestHistRank = typeof latestHistRankRaw === "number" &&
+            Number.isFinite(latestHistRankRaw) &&
+            latestHistRankRaw >= 1
+            ? Math.floor(latestHistRankRaw)
+            : null;
+        const storedRankRaw = (_h = (_g = me.snapshotRanks) === null || _g === void 0 ? void 0 : _g[phase]) === null || _h === void 0 ? void 0 : _h[metric];
         const storedRank = typeof storedRankRaw === "number" &&
             Number.isFinite(storedRankRaw) &&
             storedRankRaw >= 1
             ? Math.floor(storedRankRaw)
             : null;
-        if (storedRank != null) {
+        if (latestHistRank != null) {
+            myRank = latestHistRank;
+        }
+        else if (storedRank != null) {
             myRank = storedRank;
         }
         else if (!isPhaseSnapshotBuiltDaily(phase)) {
@@ -181,11 +209,11 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
         }
         else {
             const myValue = metric === "activeWinStreak"
-                ? (_g = me.activeWinStreak) !== null && _g !== void 0 ? _g : 0
+                ? (_j = me.activeWinStreak) !== null && _j !== void 0 ? _j : 0
                 : metric === "winRate"
-                    ? (_h = rk.winRate) !== null && _h !== void 0 ? _h : 0
-                    : (_j = rk[metric]) !== null && _j !== void 0 ? _j : 0;
-            const hasRankingObj = ((_k = me.rankingByPhase) === null || _k === void 0 ? void 0 : _k[phase]) &&
+                    ? (_k = rk.winRate) !== null && _k !== void 0 ? _k : 0
+                    : (_l = rk[metric]) !== null && _l !== void 0 ? _l : 0;
+            const hasRankingObj = ((_m = me.rankingByPhase) === null || _m === void 0 ? void 0 : _m[phase]) &&
                 typeof me.rankingByPhase[phase] === "object" &&
                 (me.rankingByPhase[phase].totalPosts != null ||
                     me.rankingByPhase[phase].totalPoints != null);
@@ -203,7 +231,7 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
                 .where(rankField, ">", myValue)
                 .count()
                 .get();
-            myRank = ((_l = higherSnap.data().count) !== null && _l !== void 0 ? _l : 0) + 1;
+            myRank = ((_o = higherSnap.data().count) !== null && _o !== void 0 ? _o : 0) + 1;
         }
         const histSnap = snaps.histSnap;
         if ((histSnap === null || histSnap === void 0 ? void 0 : histSnap.exists) && myRank != null) {
@@ -226,12 +254,12 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
         const myCountryFresh = uid ? countryByUid.get(uid) : undefined;
         myRow = {
             uid,
-            displayName: (_m = me.displayName) !== null && _m !== void 0 ? _m : "",
-            handle: (_o = me.handle) !== null && _o !== void 0 ? _o : null,
-            photoURL: (_p = me.photoURL) !== null && _p !== void 0 ? _p : null,
+            displayName: (_p = me.displayName) !== null && _p !== void 0 ? _p : "",
+            handle: (_q = me.handle) !== null && _q !== void 0 ? _q : null,
+            photoURL: (_r = me.photoURL) !== null && _r !== void 0 ? _r : null,
             countryCode: myCountryFresh !== undefined
                 ? myCountryFresh
-                : ((_q = me.countryCode) !== null && _q !== void 0 ? _q : null),
+                : ((_s = me.countryCode) !== null && _s !== void 0 ? _s : null),
             plan: myPlanResolved,
             totalPosts: rk.totalPosts,
             totalWins: rk.totalWins,
@@ -239,7 +267,7 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
             totalPoints: rk.totalPoints,
             totalPrecision: rk.totalPrecision,
             totalUpset: rk.totalUpset,
-            activeWinStreak: (_r = me.activeWinStreak) !== null && _r !== void 0 ? _r : 0,
+            activeWinStreak: (_t = me.activeWinStreak) !== null && _t !== void 0 ? _t : 0,
             rank: myRank,
             rankDeltaPlaces: myRankDeltaPlaces,
         };
