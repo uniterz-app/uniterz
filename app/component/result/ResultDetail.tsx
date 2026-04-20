@@ -71,7 +71,11 @@ export default function ResultDetail({
       <LazyMotion features={domAnimation}>
         <React.Fragment key={post.id}>
           <m.div {...fadeUp(E.delayHeader)}>
-            <ResultMatchHeader post={post} language={language} inOverlay={inOverlay} />
+            <ResultMatchHeader
+              post={post}
+              language={language}
+              inOverlay={inOverlay}
+            />
           </m.div>
 
           <div

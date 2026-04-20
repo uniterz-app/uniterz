@@ -9,7 +9,7 @@ export const SIXERS_CELTICS_TEAM_IDS = ["nba-76ers", "nba-celtics"] as const;
 const H2H_LEFT = "Celtics";
 const H2H_RIGHT = "76ers";
 
-/** 2025-26 レギュラー Celtics vs 76ers（4試合・2勝2敗） */
+/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ1） */
 export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-sixers-celtics-2025-10-22",
@@ -62,6 +62,29 @@ export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
     homeTeamSide: "left",
     injuriesLeft: ["J. Tatum"],
     injuriesRight: ["J. Embiid", "P. George"],
+  },
+  {
+    id: "h2h-sixers-celtics-2026-04-19",
+    dateEt: "2026-04-19",
+    dateJst: "2026-04-20",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 123,
+    scoreRight: 91,
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["J. Embiid"],
+    inactiveFooterSummary: {
+      ja:
+        "セルティックスはかなり余裕のある入りで試合をコントロール。\n" +
+        "テイタムが25点11リバウンド7アシスト、ブラウンが26得点で、ボストンらしいバランスのいい勝ち方だった。\n" +
+        "フィラデルフィアはエンビード不在もあり、攻守ともに差が出た。",
+      en:
+        "Boston controlled the game from the tip with a comfortable, confident start.\n" +
+        "Jayson Tatum posted 25 points, 11 rebounds, and 7 assists; Jaylen Brown added 26—it was a balanced, Celtics-style win.\n" +
+        "Philadelphia, also without Joel Embiid, couldn’t close the gap on either end.",
+    },
   },
 ];
 

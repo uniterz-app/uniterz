@@ -62,7 +62,11 @@ export default function MobileResultDetail({
       <LazyMotion features={domAnimation}>
         <React.Fragment key={post.id}>
           <m.div {...fadeUp(E.delayHeader)}>
-            <MobileResultMatchHeader post={post} language={language} inOverlay={inOverlay} />
+            <MobileResultMatchHeader
+              post={post}
+              language={language}
+              inOverlay={inOverlay}
+            />
           </m.div>
 
           <div className="mt-4 space-y-4">

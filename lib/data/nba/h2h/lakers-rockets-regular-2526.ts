@@ -9,7 +9,7 @@ export const LAKERS_ROCKETS_TEAM_IDS = ["nba-lakers", "nba-rockets"] as const;
 const H2H_LEFT = "Lakers";
 const H2H_RIGHT = "Rockets";
 
-/** 2025-26 レギュラー・ロケッツ対レイカーズ（3試合） */
+/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ1） */
 export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-lakers-rockets-2025-12-25",
@@ -57,6 +57,31 @@ export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
       "F. VanVleet",
     ],
   },
+  {
+    id: "h2h-lakers-rockets-2026-04-18",
+    dateEt: "2026-04-18",
+    dateJst: "2026-04-19",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 107,
+    scoreRight: 98,
+    homeTeamSide: "left",
+    injuriesLeft: ["L. Doncic", "A. Reaves"],
+    injuriesRight: ["S. Adams", "F. VanVleet"],
+    inactiveFooterSummary: {
+      ja:
+        "レイカーズはルカ・リーブス不在でも勝ったのが大きい。\n" +
+        "レイカーズが試合の入りから集中力を見せ、チーム全体で高いFG%をマークした。\n" +
+        "ケナードが27得点、レブロンが19得点13アシストで勝利。\n" +
+        "ロケッツはレイカーズのゾーンDFに対して解決の糸口を見つけられず、流れを一度も奪えないまま敗戦。",
+      en:
+        "A major statement win for the Lakers without Luka Dončić and Austin Reaves.\n" +
+        "Los Angeles brought focus from the opening tip and posted a strong team field-goal percentage.\n" +
+        "Luke Kennard scored 27; LeBron James added 19 points and 13 assists to close it out.\n" +
+        "Houston never found answers against L.A.’s zone defense and couldn’t flip momentum once.",
+    },
+  },
 ];
 
 /** 左=LAL・右=HOU のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -95,7 +120,7 @@ function lakersRocketsH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記3試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function lakersRocketsH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

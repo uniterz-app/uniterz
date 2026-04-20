@@ -287,39 +287,41 @@ export default function MobileResultMatchHeader({
         >
           {pillText}
         </span>
-        <div className="flex min-w-0 flex-1 justify-end">
-          {badge === "streak" && streakBadge && (
-            <span
-              className={`inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold shadow-md ${streakBadge.className}`}
-            >
-              <Flame
-                className={`h-2.5 w-2.5 shrink-0 ${streakBadge.iconClassName}`}
-                aria-hidden
-              />
-              <span className="min-w-0 truncate leading-tight">
-                {streakBadge.label}
+        <div className="flex min-w-0 flex-1 flex-col items-end gap-1">
+          <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
+            {badge === "streak" && streakBadge && (
+              <span
+                className={`inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold shadow-md ${streakBadge.className}`}
+              >
+                <Flame
+                  className={`h-2.5 w-2.5 shrink-0 ${streakBadge.iconClassName}`}
+                  aria-hidden
+                />
+                <span className="min-w-0 truncate leading-tight">
+                  {streakBadge.label}
+                </span>
               </span>
-            </span>
-          )}
-          {badge === "hit" && (
-            <span className="shrink-0 rounded-md bg-yellow-400 px-1.5 py-0.5 text-[10px] font-extrabold text-black shadow-md">
-              HIT
-            </span>
-          )}
-          {badge === "upset" && (
-            <span className="shrink-0 rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
-              UPSET
-            </span>
-          )}
-          {badge === "miss" && (
-            <span className="shrink-0 rounded-md bg-gray-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
-              MISS
-            </span>
-          )}
+            )}
+            {badge === "hit" && (
+              <span className="shrink-0 rounded-md bg-yellow-400 px-1.5 py-0.5 text-[10px] font-extrabold text-black shadow-md">
+                HIT
+              </span>
+            )}
+            {badge === "upset" && (
+              <span className="shrink-0 rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
+                UPSET
+              </span>
+            )}
+            {badge === "miss" && (
+              <span className="shrink-0 rounded-md bg-gray-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
+                MISS
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="relative z-10 px-4 pb-5 pt-9">
+      <div className="relative z-10 px-4 pb-5 pt-11">
       <div className="grid grid-cols-3 items-center pt-1">
         <div className="flex flex-col items-center">
           {Icon === Jersey ? (

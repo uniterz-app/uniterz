@@ -73,7 +73,6 @@ export default function SettingsMenu({
   const [portalReady, setPortalReady] = useState(false);
 
   const [plan, setPlan] = useState<"free" | "pro">("free");
-
   const { unreadCount } = useAnnouncementsUnread({
     enabled: isAuthStateResolved(status),
   });
@@ -105,14 +104,19 @@ export default function SettingsMenu({
 
   // ===== plan =====
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      setPlan("free");
+      return;
+    }
     let alive = true;
     getUserDocDataCached(user.uid).then((data) => {
       if (!alive) return;
       const p = data?.plan;
       setPlan(p === "pro" ? "pro" : "free");
     });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [user?.uid]);
 
   useEffect(() => {

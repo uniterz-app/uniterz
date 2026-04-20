@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import AnimatedSplashScreen from "@/app/component/splash/AnimatedSplashScreen";
 import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplashVisible";
+import { sanitizeInternalNext } from "@/lib/auth/safeNextRedirect";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -67,8 +68,11 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
 
   useEffect(() => {
     if (status !== "guest" || isPublic) return;
-    router.replace(guestSignupHref);
-  }, [status, isPublic, guestSignupHref, router]);
+    const pathOnly = pathname ?? "";
+    const safe = sanitizeInternalNext(pathOnly);
+    const qs = safe ? `?next=${encodeURIComponent(safe)}` : "";
+    router.replace(`${guestSignupHref}${qs}`);
+  }, [status, isPublic, guestSignupHref, router, pathname]);
 
   return (
     <div className="min-h-dvh bg-app">

@@ -9,7 +9,7 @@ export const HAWKS_KNICKS_TEAM_IDS = ["nba-hawks", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Hawks";
 
-/** 2025-26 レギュラー・ニックス対ホークス（3試合） */
+/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ1） */
 export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-hawks-knicks-2025-12-27",
@@ -52,6 +52,29 @@ export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
     injuriesLeft: ["T. Jemison III"],
     injuriesRight: ["J. Landale"],
   },
+  {
+    id: "h2h-hawks-knicks-2026-04-18",
+    dateEt: "2026-04-18",
+    dateJst: "2026-04-19",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 113,
+    scoreRight: 102,
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["J. Landale"],
+    inactiveFooterSummary: {
+      ja:
+        "ニックスは大きく崩れず、ホークスの追い上げを受けても最後は締めた。\n" +
+        "ブランソンが出だしから好調で28得点まで積み上げた、ニックスは取りこぼさない強さが出た Game 1 だった。\n" +
+        "アトランタは食らいついたが、大事なところでシュートが決まらずに終始リードを奪えず。",
+      en:
+        "The Knicks never unraveled, absorbed Atlanta’s runs, and closed the game out.\n" +
+        "Jalen Brunson was sharp from the start and piled up 28 points—it was the kind of Game 1 where New York’s refusal to give away possessions showed.\n" +
+        "The Hawks hung around, but shots wouldn’t fall when it mattered and they never wrested the lead.",
+    },
+  },
 ];
 
 /** 左=NYK・右=ATL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -90,7 +113,7 @@ function hawksKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記3試合からの H2H 平均（小数1桁）。 */
+/** 上記4試合からの H2H 平均（小数1桁）。 */
 export function hawksKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

@@ -9,7 +9,7 @@ export const SPURS_BLAZERS_TEAM_IDS = ["nba-spurs", "nba-blazers"] as const;
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Blazers";
 
-/** 2025-26 レギュラー Spurs vs Trail Blazers（3試合） */
+/** 2025-26 Spurs vs Trail Blazers（レギュラー3 + プレーオフ1） */
 export const spursBlazersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-blazers-2025-11-25",
@@ -62,6 +62,29 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
     ],
     injuriesRight: ["V. Krejci", "S. Sharpe", "D. Lillard"],
   },
+  {
+    id: "h2h-spurs-blazers-2026-04-19",
+    dateEt: "2026-04-19",
+    dateJst: "2026-04-20",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 111,
+    scoreRight: 98,
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["D. Lillard"],
+    inactiveFooterSummary: {
+      ja:
+        "スパーズはウェンバンヤマが35得点で、チーム史上最多得点でPOデビューを飾った。\n" +
+        "若いコアの勢いがそのまま出たGame 1だった。\n" +
+        "ブレイザーズはアブディヤの30得点とこちらもインパクトを残したPOデビューだったが、主役のインパクトで上回られた。",
+      en:
+        "Victor Wembanyama scored 35 in a playoff debut that set a Spurs franchise record for points.\n" +
+        "Game 1 was the young core’s energy on full display.\n" +
+        "Portland got a statement 30-point playoff debut from Deni Avdija as well, but the headliner’s impact won the night.",
+    },
+  },
 ];
 
 /** 左=SAS・右=POR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -100,7 +123,7 @@ function spursBlazersH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記3試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function spursBlazersH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

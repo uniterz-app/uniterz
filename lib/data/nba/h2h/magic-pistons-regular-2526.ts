@@ -10,8 +10,8 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Magic";
 
 /**
- * 2025-26 レギュラー Magic vs Pistons（4試合）
- * 出典: StatMuse 等の公開スコアに基づく（今季直接対決 2-2）
+ * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ1）
+ * 出典: StatMuse 等の公開スコアに基づく（レギュラー直接対決 2-2）
  */
 export const magicPistonsH2HGames: NbaH2HGameCard[] = [
   {
@@ -61,6 +61,31 @@ export const magicPistonsH2HGames: NbaH2HGameCard[] = [
     homeTeamSide: "right",
     injuriesLeft: ["C. Cunningham", "I. Stewart"],
     injuriesRight: [],
+  },
+  {
+    id: "h2h-magic-pistons-2026-04-19",
+    dateEt: "2026-04-19",
+    dateJst: "2026-04-20",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 101,
+    scoreRight: 112,
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["J. Isaac"],
+    inactiveFooterSummary: {
+      ja:
+        "この日の唯一のアップセット。\n" +
+        "マジックがPIからの勢いのままバンケロ、フランツのWエースの活躍により勝利。\n" +
+        "ピストンズは、ケイドが39得点と孤軍奮闘。\n" +
+        "ケイド以外の得点源が欲しいところ、Game2からEast1位の力を見せつけられるか？",
+      en:
+        "The lone upset on the slate that day.\n" +
+        "Orlando rode its Play-In momentum to a win behind its twin aces, Paolo Banchero and Franz Wagner.\n" +
+        "Detroit leaned on Cade Cunningham’s 39-point night in a largely solo effort.\n" +
+        "They need more scoring help beyond Cade—can the East’s No. 1 seed reassert itself starting in Game 2?",
+    },
   },
 ];
 

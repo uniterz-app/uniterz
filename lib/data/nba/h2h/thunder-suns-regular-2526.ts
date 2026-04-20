@@ -10,7 +10,7 @@ const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Suns";
 
 /**
- * 2025-26 レギュラー Thunder vs Suns（5試合）
+ * 2025-26 Thunder vs Suns（レギュラー5 + プレーオフ1）
  * 左列=Thunder得点、右列=Suns得点。
  */
 export const thunderSunsH2HGames: NbaH2HGameCard[] = [
@@ -83,6 +83,29 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
       "Jay. Williams",
     ],
     injuriesRight: ["G. Allen", "D. Booker", "D. Brooks", "R. O'Neale"],
+  },
+  {
+    id: "h2h-thunder-suns-2026-04-19",
+    dateEt: "2026-04-19",
+    dateJst: "2026-04-20",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 119,
+    scoreRight: 84,
+    homeTeamSide: "left",
+    injuriesLeft: ["T. Sorber"],
+    injuriesRight: ["M. Williams"],
+    inactiveFooterSummary: {
+      ja:
+        "サンダーは昨季からの勢いをそのまま持ち込み、ディフェンディングチャンピオンの立ち上がりとしてかなり強い内容だった。\n" +
+        "スコア差どおり一方的で、シリーズ全体でもOKCの総合力が先に見えたGame 1。\n" +
+        "フェニックスはまず得点の作り方を立て直す必要がある。",
+      en:
+        "OKC carried last season’s surge straight into Game 1 and opened the series against the defending champions with a commanding performance.\n" +
+        "The lopsided score reflected the flow—Game 1 was the first glimpse of Oklahoma City’s overall edge across the matchup.\n" +
+        "Phoenix needs to reset how it generates offense before anything else.",
+    },
   },
 ];
 

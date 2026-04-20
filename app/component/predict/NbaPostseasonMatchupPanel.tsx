@@ -11,6 +11,24 @@ import {
   barPctMinPaNorm,
 } from "./teamStatsCompare";
 
+/** 欠場ブロック直下のサマリー（日英いずれか一方だけでも可） */
+export type NbaH2HGameInactiveFooterSummary = {
+  ja: string;
+  en: string;
+};
+
+function h2hInactiveFooterSummaryBody(
+  isEn: boolean,
+  block: NbaH2HGameInactiveFooterSummary | undefined
+): string | null {
+  if (!block) return null;
+  const ja = block.ja.trim();
+  const en = block.en.trim();
+  if (!ja && !en) return null;
+  if (isEn) return en || ja;
+  return ja || en;
+}
+
 export type NbaH2HGameCard = {
   id: string;
   /** ET の日付（YYYY-MM-DD）。英語 UI で表示。 */
@@ -36,6 +54,10 @@ export type NbaH2HGameCard = {
   homeTeamSide?: "left" | "right";
   /** true のとき得点の直上に OT を表示 */
   wentToOvertime?: boolean;
+  /** 日付とスコア行の間に表示（例: プレーオフの「Game 1」） */
+  seriesGameLabel?: string;
+  /** 欠場者の下に表示するサマリーカード（任意） */
+  inactiveFooterSummary?: NbaH2HGameInactiveFooterSummary;
 };
 
 export type NbaH2HAverages = {
@@ -176,8 +198,11 @@ export default function NbaPostseasonMatchupPanel({
   seriesGames,
   h2hAverages,
 }: Props) {
+  /** データは古い日付が先頭のため、今季の直接対決は新しい試合が上になるよう逆順で表示 */
   const games =
-    seriesGames && seriesGames.length > 0 ? seriesGames : SKELETON_GAMES;
+    seriesGames && seriesGames.length > 0
+      ? [...seriesGames].reverse()
+      : SKELETON_GAMES;
 
   const h = h2hAverages;
   const homePts = h?.homeAvgPts ?? null;
@@ -284,7 +309,12 @@ export default function NbaPostseasonMatchupPanel({
     <section className="space-y-5">
       <div className="space-y-2">
         <ul className="space-y-2.5">
-          {games.map((g, i) => (
+          {games.map((g, i) => {
+            const inactiveFooterSummaryText = h2hInactiveFooterSummaryBody(
+              isEn,
+              g.inactiveFooterSummary
+            );
+            return (
             <motion.li
               key={g.id}
               initial={{ opacity: 0, y: 6 }}
@@ -302,6 +332,18 @@ export default function NbaPostseasonMatchupPanel({
                   {formatH2hGameCardDate(isEn, g.dateEt, g.dateJst)}
                 </span>
               </div>
+              {g.seriesGameLabel ? (
+                <div className="mt-1 text-center">
+                  <span
+                    className={[
+                      resultStatsMetricNumClass,
+                      "text-xs font-semibold tracking-wide text-white/55 md:text-[13px]",
+                    ].join(" ")}
+                  >
+                    {g.seriesGameLabel}
+                  </span>
+                </div>
+              ) : null}
               <div className="mt-2.5 flex flex-wrap items-end justify-center gap-2 sm:gap-3 md:gap-4">
                 <div className="flex min-w-0 max-w-[42%] flex-1 flex-col items-center sm:max-w-none">
                   {g.homeTeamSide ? (
@@ -442,9 +484,35 @@ export default function NbaPostseasonMatchupPanel({
                     </div>
                   </div>
                 </div>
+                {inactiveFooterSummaryText ? (
+                  <div
+                    className={[
+                      resultStatsMetricNumClass,
+                      "mt-2 rounded-lg border border-white/12 bg-black/30 px-2.5 py-2 sm:px-3 sm:py-2.5",
+                    ].join(" ")}
+                  >
+                    <p
+                      className={[
+                        resultStatsMetricNumClass,
+                        "text-[10px] font-semibold tracking-wide text-white/48 md:text-[11px]",
+                      ].join(" ")}
+                    >
+                      {isEn ? "Summary" : "サマリー"}
+                    </p>
+                    <p
+                      className={[
+                        resultStatsMetricNumClass,
+                        "mt-1 whitespace-pre-line text-xs leading-relaxed text-white/78 sm:text-sm",
+                      ].join(" ")}
+                    >
+                      {inactiveFooterSummaryText}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </motion.li>
-          ))}
+            );
+          })}
         </ul>
         {!seriesGames?.length ? (
           <p className="text-[9px] text-white/38 md:text-[10px]">

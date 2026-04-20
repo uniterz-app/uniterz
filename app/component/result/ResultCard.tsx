@@ -350,11 +350,11 @@ function ResultCardPresentationImpl({
     <div
       onClick={handle}
       className={[
-        "group relative overflow-hidden text-white",
+        "relative overflow-hidden text-white",
         isMobile
           ? MOBILE_RESULT_CARD_OUTER_CLASS
           : "mx-auto w-full max-w-[1200px]",
-        "active:scale-[0.98] transition-transform cursor-pointer select-none",
+        "cursor-pointer select-none",
         listPanelClass,
         frame,
       ].join(" ")}
@@ -381,24 +381,33 @@ function ResultCardPresentationImpl({
         aria-hidden
       />
       {showPreKickoffDismiss && onPreKickoffDismiss ? (
-        <button
-          type="button"
+        <div
           className={[
-            "pointer-events-auto absolute z-40 rounded-lg border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-red-400/45 hover:bg-red-950/35 hover:text-red-100",
-            isMobile ? "right-2 top-2 p-1.5" : "right-3 top-3 p-1.5 sm:right-4 sm:top-4",
+            "pointer-events-auto absolute z-40 flex flex-col items-end gap-1.5",
+            isMobile ? "right-2 top-2" : "right-3 top-3 sm:right-4 sm:top-4",
           ].join(" ")}
-          aria-label={isEn ? "Remove from list" : "一覧から除外"}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onPreKickoffDismiss();
-          }}
         >
-          <Trash2
-            className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"}
-            aria-hidden
-          />
-        </button>
+          <button
+            type="button"
+            className={[
+              "border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-red-400/45 hover:bg-red-950/35 hover:text-red-100",
+              isMobile
+                ? "inline-flex h-7 w-7 items-center justify-center rounded-md p-0"
+                : "inline-flex h-8 w-8 items-center justify-center rounded-lg p-0",
+            ].join(" ")}
+            aria-label={isEn ? "Remove from list" : "一覧から除外"}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onPreKickoffDismiss();
+            }}
+          >
+            <Trash2
+              className={isMobile ? "h-3 w-3" : "h-3.5 w-3.5"}
+              aria-hidden
+            />
+          </button>
+        </div>
       ) : null}
       {listDateLabel ? (
         <div
@@ -422,44 +431,46 @@ function ResultCardPresentationImpl({
         <>
           <div
             className={[
-              "pointer-events-none absolute top-2 z-20 flex max-w-[min(100%,11rem)] items-start justify-end gap-1",
+              "pointer-events-none absolute top-2 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
               showPreKickoffDismiss && onPreKickoffDismiss ? "right-11" : "right-2",
             ].join(" ")}
           >
-            {badge === "streak" && streakBadge && (
-              <span
-                className={`pointer-events-auto inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-              >
-                <Flame
-                  className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
-                />
-                <span className="min-w-0 truncate text-[9px] leading-tight">
-                  {streakBadge.label}
+            <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
+              {badge === "streak" && streakBadge && (
+                <span
+                  className={`pointer-events-auto inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+                >
+                  <Flame
+                    className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
+                  />
+                  <span className="min-w-0 truncate text-[9px] leading-tight">
+                    {streakBadge.label}
+                  </span>
                 </span>
-              </span>
-            )}
-            {badge === "hit" && (
-              <span
-                className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
-              >
-                HIT
-              </span>
-            )}
-            {badge === "upset" && (
-              <span
-                className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-              >
-                UPSET
-              </span>
-            )}
-            {badge === "miss" && (
-              <span
-                className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-              >
-                MISS
-              </span>
-            )}
-            {liveMarkNode}
+              )}
+              {badge === "hit" && (
+                <span
+                  className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+                >
+                  HIT
+                </span>
+              )}
+              {badge === "upset" && (
+                <span
+                  className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                >
+                  UPSET
+                </span>
+              )}
+              {badge === "miss" && (
+                <span
+                  className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                >
+                  MISS
+                </span>
+              )}
+              {liveMarkNode}
+            </div>
           </div>
           <div
             className={[
@@ -490,47 +501,54 @@ function ResultCardPresentationImpl({
           </span>
           <div
             className={[
-              "flex min-w-0 flex-1 justify-end",
-              showPreKickoffDismiss && onPreKickoffDismiss ? "pr-10 sm:pr-11" : "",
+              "flex min-w-0 flex-1 flex-col items-end gap-1.5",
+              showPreKickoffDismiss && onPreKickoffDismiss
+                ? "pr-10 sm:pr-11"
+                : "",
             ].join(" ")}
           >
-            {badge === "streak" && streakBadge && (
-              <span
-                className={`pointer-events-auto inline-flex max-w-full items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-              >
-                <Flame
-                  className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
-                />
-                <span className="min-w-0 truncate">{streakBadge.label}</span>
-              </span>
-            )}
-            {badge === "hit" && (
-              <span
-                className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
-              >
-                HIT
-              </span>
-            )}
-            {badge === "upset" && (
-              <span
-                className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-              >
-                UPSET
-              </span>
-            )}
-            {badge === "miss" && (
-              <span
-                className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-              >
-                MISS
-              </span>
-            )}
-            {liveMarkNode}
+            <div className="flex flex-row flex-wrap items-start justify-end gap-1">
+              {badge === "streak" && streakBadge && (
+                <span
+                  className={`pointer-events-auto inline-flex max-w-full items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
+                >
+                  <Flame
+                    className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
+                  />
+                  <span className="min-w-0 truncate">{streakBadge.label}</span>
+                </span>
+              )}
+              {badge === "hit" && (
+                <span
+                  className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
+                >
+                  HIT
+                </span>
+              )}
+              {badge === "upset" && (
+                <span
+                  className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                >
+                  UPSET
+                </span>
+              )}
+              {badge === "miss" && (
+                <span
+                  className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+                >
+                  MISS
+                </span>
+              )}
+              {liveMarkNode}
+            </div>
           </div>
         </div>
       )}
 
-      <div className={`relative z-10 ${contentPad}`}>
+      {/* active:scale は本文のみ（角の除外ボタン押下でカード全体が沈まないよう） */}
+      <div
+        className={`relative z-10 transition-transform active:scale-[0.98] ${contentPad}`}
+      >
       <div
         className={`grid items-center ${
           isMobile
