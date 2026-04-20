@@ -25,7 +25,12 @@ const METRICS: Metric[] = [
 ];
 
 type RankingPhase = "play_in" | "playoffs";
-const RANKING_PHASES: RankingPhase[] = ["play_in", "playoffs"];
+
+/**
+ * 日次スナップショットで再計算・書き込みするフェーズ。プレーイン終了後は確定表示のため除外する。
+ * Next の `RANKING_SNAPSHOT_BUILD_PHASES` と同期すること。
+ */
+export const SNAPSHOT_BUILD_PHASES: RankingPhase[] = ["playoffs"];
 
 /** Client: list cumulative_stats/{uid}/rankSnapshotHistory ordered by dateKey. */
 export const RANK_SNAPSHOT_HISTORY_SUBCOL = "rankSnapshotHistory";
@@ -282,7 +287,7 @@ export async function buildCumulativeRankingSnapshot() {
   const top20Jobs: Top20Job[] = [];
   const topUidSet = new Set<string>();
 
-  for (const phase of RANKING_PHASES) {
+  for (const phase of SNAPSHOT_BUILD_PHASES) {
     const baseRows: BaseRow[] = snap.docs
       .map((doc) => {
         const d = doc.data();
@@ -381,14 +386,15 @@ export async function buildCumulativeRankingSnapshot() {
   };
 
   for (const [uid, per] of rankByUid) {
+    /**
+     * merge のネストは play_in を消さないよう、更新するフィールドだけドットパスで書く。
+     * （プレーインは SNAPSHOT_BUILD_PHASES 外のため per.play_in は空のまま）
+     */
     batch.set(
       firestore.doc(`cumulative_stats/${uid}`),
       {
-        snapshotRanks: {
-          updatedAt: FieldValue.serverTimestamp(),
-          play_in: per.play_in,
-          playoffs: per.playoffs,
-        },
+        "snapshotRanks.updatedAt": FieldValue.serverTimestamp(),
+        "snapshotRanks.playoffs": per.playoffs,
       },
       { merge: true }
     );
@@ -400,10 +406,10 @@ export async function buildCumulativeRankingSnapshot() {
         .doc(dateKey),
       {
         dateKey,
-        play_in: per.play_in,
         playoffs: per.playoffs,
         writtenAt: FieldValue.serverTimestamp(),
-      }
+      },
+      { merge: true }
     );
     ops += 2;
     if (ops >= 500) {

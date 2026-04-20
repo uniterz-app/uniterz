@@ -1,10 +1,21 @@
 /**
- * npx tsx scripts/grant-playin-2026-total-points-badges.ts
+ * プレーイン（play_in）総合得点ランキングに応じてバッジを付与する。
  *
- * cumulative_ranking_snapshots/play_in_totalPoints の rows を読み、
- * 1〜3位は個別バッジ、4〜20位は共通バッジを user_badges に付与する。
+ * 前提:
+ * - `cumulative_ranking_snapshots/play_in_totalPoints` が最新であること
+ *   （Cloud Functions `buildCumulativeRankingSnapshotCron`、または手動でスナップショット生成後）
+ * - `master_badges` に定義があること →先に
+ *   `npx tsx scripts/seed-playin-2026-total-points-badges.ts`
  *
- * ドライラン: DRY_RUN=1 npx tsx scripts/grant-playin-2026-total-points-badges.ts
+ * 付与ルール（rows[].rank ）:
+ * - 1位 → playin_2026_total_points_rank1（画像1st.png）
+ * - 2位 → playin_2026_total_points_rank2（2nd.png）
+ * - 3位 → playin_2026_total_points_rank3（3rd.png）
+ * - 4〜20位 → playin_2026_total_points_rank4_20（top20.png）
+ *
+ * 実行:
+ *   DRY_RUN=1 npx tsx scripts/grant-playin-2026-total-points-badges.ts  # 確認のみ
+ *   npx tsx scripts/grant-playin-2026-total-points-badges.ts            # 本番書き込み
  */
 
 import adminPkg from "firebase-admin";
@@ -68,6 +79,9 @@ async function main() {
   let batch = db.batch();
   let ops = 0;
   let granted = 0;
+  /** 1〜20位でバッジ対象になった行数（DRY_RUN でもカウント） */
+  let eligible = 0;
+  const summary = new Map<string, number>();
 
   for (const row of rows) {
     const uid = typeof row.uid === "string" ? row.uid : "";
@@ -79,6 +93,7 @@ async function main() {
 
     const badgeId = badgeIdForRank(rank);
     if (!badgeId) continue;
+    eligible++;
 
     const ref = db
       .collection("user_badges")
@@ -87,6 +102,7 @@ async function main() {
       .doc(badgeId);
 
     console.log(`rank ${rank} -> ${uid.slice(0, 8)}… -> ${badgeId}`);
+    summary.set(badgeId, (summary.get(badgeId) ?? 0) + 1);
 
     if (!DRY_RUN) {
       batch.set(
@@ -117,7 +133,28 @@ async function main() {
     await batch.commit();
   }
 
-  console.log(DRY_RUN ? `would grant: ${rows.length} rows checked` : `granted: ${granted}`);
+  const inTop20 = rows.filter((r) => {
+    const rk =
+      typeof r.rank === "number" && Number.isFinite(r.rank)
+        ? Math.floor(r.rank)
+        : 0;
+    return rk >= 1 && rk <= 20;
+  }).length;
+  if (inTop20 < 20) {
+    console.warn(
+      `note: only ${inTop20} rows in ranks 1–20 (snapshot may have fewer users with play_in posts).`
+    );
+  }
+
+  console.log(DRY_RUN ? "dry-run summary (by badgeId):" : "granted summary (by badgeId):");
+  for (const [id, n] of [...summary.entries()].sort()) {
+    console.log(`  ${id}: ${n}`);
+  }
+  console.log(
+    DRY_RUN
+      ? `dry-run: ${eligible} user(s) would receive a badge (no writes)`
+      : `committed grant writes: ${granted} (eligible rows: ${eligible})`
+  );
   console.log("=== done ===");
   process.exit(0);
 }
