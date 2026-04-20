@@ -288,6 +288,10 @@ export default function ProfilePlayoffRankTrendChart({
   const chartKey = `${entranceSync ? "e" : "io"}-${rechartsAfterEntrance ? "on" : "off"}-${rows.length}`;
 
   const isEmpty = !loading && rows.length === 0;
+  const currentRankIsTop20 =
+    trendSummary.currentRank != null &&
+    trendSummary.currentRank >= 1 &&
+    trendSummary.currentRank <= 20;
 
   useEffect(() => {
     if (!chartVisible || chartRows.length === 0) {
@@ -366,14 +370,20 @@ export default function ProfilePlayoffRankTrendChart({
       />
       {!loading && chartRows.length > 0 && trendSummary.currentRank != null && (
         <div className="pointer-events-none absolute right-0 top-0 z-30 flex -translate-x-3 translate-y-2 flex-col items-center text-center sm:-translate-x-4 sm:translate-y-3">
-          <span className="mb-1 max-w-24 text-[9px] leading-tight text-cyan-100/72 sm:text-[11px]">
+          <span
+            className={[
+              "mb-1 max-w-24 text-[9px] leading-tight sm:text-[11px]",
+              currentRankIsTop20 ? "text-amber-200/90" : "text-cyan-100/72",
+            ].join(" ")}
+          >
             {isEn ? "Current rank" : "現在の順位"}
           </span>
           <span
             className={[
-              "leading-none text-cyan-100",
+              "leading-none",
               resultStatsMetricNumClass,
               isDesktop ? "text-4xl sm:text-[2.6rem]" : "text-2xl",
+              currentRankIsTop20 ? "text-amber-300" : "text-cyan-100",
             ].join(" ")}
           >
             {trendSummary.currentRank}
@@ -420,7 +430,7 @@ export default function ProfilePlayoffRankTrendChart({
               <LineChart
                 key={chartKey}
                 data={chartRows}
-                margin={{ top: 10, right: 22, left: 14, bottom: 8 }}
+                margin={{ top: 22, right: 22, left: 14, bottom: 8 }}
               >
                 <CartesianGrid
                   stroke="rgba(148,163,184,0.12)"
@@ -448,6 +458,7 @@ export default function ProfilePlayoffRankTrendChart({
                   domain={yDomain}
                   reversed
                   ticks={yTicks}
+                  padding={{ top: 18, bottom: 0 }}
                   allowDecimals={false}
                   tick={{ fontSize: axisTickFontSize, fill: "rgba(148,163,184,0.85)" }}
                   tickLine={false}
