@@ -298,36 +298,38 @@ function ResultMatchHeader({
         >
           {pillText}
         </span>
-        <div className="flex min-w-0 flex-1 justify-end">
-          {badge === "streak" && streakBadge && (
-            <span
-              className={`inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold shadow-md sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[11px] ${streakBadge.className}`}
-            >
-              <Flame
-                className={`h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 ${streakBadge.iconClassName}`}
-              />
-              <span className="min-w-0 truncate">{streakBadge.label}</span>
-            </span>
-          )}
-          {badge === "hit" && (
-            <span className="shrink-0 rounded-md bg-yellow-400 px-2 py-0.5 text-[10px] font-extrabold text-black shadow-md sm:px-2.5 sm:py-1 sm:text-[11px]">
-              HIT
-            </span>
-          )}
-          {badge === "upset" && (
-            <span className="shrink-0 rounded-md bg-red-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md sm:px-2.5 sm:py-1 sm:text-[11px]">
-              UPSET
-            </span>
-          )}
-          {badge === "miss" && (
-            <span className="shrink-0 rounded-md bg-gray-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md sm:px-2.5 sm:py-1 sm:text-[11px]">
-              MISS
-            </span>
-          )}
+        <div className="flex min-w-0 flex-1 flex-col items-end gap-1 sm:gap-1.5">
+          <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
+            {badge === "streak" && streakBadge && (
+              <span
+                className={`inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold shadow-md sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[11px] ${streakBadge.className}`}
+              >
+                <Flame
+                  className={`h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 ${streakBadge.iconClassName}`}
+                />
+                <span className="min-w-0 truncate">{streakBadge.label}</span>
+              </span>
+            )}
+            {badge === "hit" && (
+              <span className="shrink-0 rounded-md bg-yellow-400 px-2 py-0.5 text-[10px] font-extrabold text-black shadow-md sm:px-2.5 sm:py-1 sm:text-[11px]">
+                HIT
+              </span>
+            )}
+            {badge === "upset" && (
+              <span className="shrink-0 rounded-md bg-red-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md sm:px-2.5 sm:py-1 sm:text-[11px]">
+                UPSET
+              </span>
+            )}
+            {badge === "miss" && (
+              <span className="shrink-0 rounded-md bg-gray-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md sm:px-2.5 sm:py-1 sm:text-[11px]">
+                MISS
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="relative z-10 px-5 pb-5 pt-10 sm:px-6 sm:pb-6 sm:pt-11">
+      <div className="relative z-10 px-5 pb-5 pt-12 sm:px-6 sm:pb-6 sm:pt-14">
       <div className="grid grid-cols-3 items-center gap-1 sm:gap-2">
         <div className="flex flex-col items-center">
           {Icon === Jersey ? (

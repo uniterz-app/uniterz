@@ -100,13 +100,11 @@ import {
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
-
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
     props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
-
   const { language } = useUserLanguage(resolvedUid);
 
   const {

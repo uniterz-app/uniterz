@@ -1148,7 +1148,9 @@ export default function PredictionFormV2({
         {overlayFormLayout.showLockedSummary && snapPred ? (
           <motion.div variants={fadeUp} className={`space-y-2 pt-1 ${glassCard}`}>
             <div className="text-sm font-semibold text-white/88">
-              {isEn ? "Your prediction (locked)" : "あなたの予想（試合開始後は変更できません）"}
+              {isEn
+                ? "Your prediction (locked)"
+                : "あなたの予想（試合開始後は変更できません）"}
             </div>
             <div className="space-y-2 px-0.5">
               <div className="grid grid-cols-2 gap-3">

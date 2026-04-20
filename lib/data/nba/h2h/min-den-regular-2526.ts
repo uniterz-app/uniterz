@@ -9,7 +9,7 @@ export const MIN_DEN_TEAM_IDS = ["nba-nuggets", "nba-timberwolves"] as const;
 const H2H_LEFT = "Nuggets";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 レギュラー・ティルブズ対ナゲッツ（4試合） */
+/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ1） */
 export const minDenH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-min-den-2025-10-27",
@@ -60,6 +60,29 @@ export const minDenH2HGames: NbaH2HGameCard[] = [
     injuriesLeft: ["A. Gordon"],
     injuriesRight: [],
   },
+  {
+    id: "h2h-min-den-2026-04-18",
+    dateEt: "2026-04-18",
+    dateJst: "2026-04-19",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 116,
+    scoreRight: 105,
+    homeTeamSide: "left",
+    injuriesLeft: ["P. Watson"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "立ち上がりはウルブズがスタートダッシュを切ったものの、結局はヨキッチとマレーの支配力でデンバーが持っていった。\n" +
+        "ヨキッチは25-13-11のトリプルダブル、マレーは30得点。\n" +
+        "終盤に追いつくも、集中力が続かず、クラッチで離される展開だった。",
+      en:
+        "Minnesota sprinted out of the gates, but Denver ultimately seized the game behind Nikola Jokić and Jamal Murray.\n" +
+        "Jokić finished with a 25-13-11 triple-double; Murray poured in 30 points.\n" +
+        "The Wolves made late runs, yet couldn’t sustain their edge and were separated again in the clutch.",
+    },
+  },
 ];
 
 /** 左=DEN・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -98,7 +121,7 @@ function minDenH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function minDenH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

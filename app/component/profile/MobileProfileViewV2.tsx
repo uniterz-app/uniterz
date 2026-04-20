@@ -100,7 +100,6 @@ import {
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
 import { nameBebas } from "@/lib/fonts";
-
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -111,7 +110,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
-
   const { language } = useUserLanguage(resolvedUid);
 
   const {

@@ -21,6 +21,7 @@ import type { Language } from "@/lib/i18n/language";
 import { guessLanguageFromNavigator } from "@/lib/i18n/language";
 import { ui as uiStr } from "@/lib/i18n/ui";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
+import { consumePostOnboardingRedirect } from "@/lib/auth/safeNextRedirect";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -101,7 +102,8 @@ export default function OnboardingForm({ variant }: Props) {
       });
 
       const gamesPath = resolvedVariant === "mobile" ? "/mobile/games" : "/web/games";
-      router.replace(gamesPath);
+      const afterOnboarding = consumePostOnboardingRedirect();
+      router.replace(afterOnboarding ?? gamesPath);
     } catch (err) {
       console.error("onboarding save failed:", err);
       alert(

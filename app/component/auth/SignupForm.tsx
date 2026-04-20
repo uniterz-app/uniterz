@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -11,6 +11,10 @@ import CyberAuthField from "./CyberAuthField";
 import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
 import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
+import {
+  sanitizeInternalNext,
+  stashPostOnboardingRedirect,
+} from "@/lib/auth/safeNextRedirect";
 
 type SignupFormProps = {
   variant?: "web" | "mobile";
@@ -24,6 +28,16 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
   const [pressed, setPressed] = useState(false);
 
   const router = useRouter();
+
+  const loginBase = variant === "mobile" ? "/mobile/login" : "/web/login";
+  const [loginHref, setLoginHref] = useState(loginBase);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const safe = sanitizeInternalNext(sp.get("next"));
+    setLoginHref(safe ? `${loginBase}?next=${encodeURIComponent(safe)}` : loginBase);
+  }, [loginBase]);
 
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
@@ -66,6 +80,11 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
         },
         { merge: true }
       );
+
+      const sp = new URLSearchParams(
+        typeof window !== "undefined" ? window.location.search : ""
+      );
+      stashPostOnboardingRedirect(sp.get("next"));
 
       const onboardingPath =
         variant === "mobile" ? "/mobile/onboarding" : "/web/onboarding";
@@ -159,7 +178,7 @@ export default function SignupForm({ variant = "web" }: SignupFormProps) {
           <p className={`mt-5 ${bodySans}`}>
             {ui.alreadyLead}{" "}
             <Link
-              href={variant === "mobile" ? "/mobile/login" : "/web/login"}
+              href={loginHref}
               className="font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
             >
               {ui.loginText}

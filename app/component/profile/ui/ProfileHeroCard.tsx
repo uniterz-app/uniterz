@@ -539,14 +539,10 @@ export default function ProfileHeroCard({
     </div>
   );
 
-  const settingsBtn = canOpenSettings && (
+  const settingsMenuButton = canOpenSettings ? (
     <motion.button
       type="button"
-      className={
-        isWeb
-          ? "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5"
-          : "absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5"
-      }
+      className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5"
       onClick={onOpenSettings}
       initial={
         playEntrance && !reduceMotion
@@ -567,7 +563,7 @@ export default function ProfileHeroCard({
       }}
       aria-label="Menu"
     >
-      <Menu className={isWeb ? "h-5 w-5" : "h-4 w-4"} />
+      <Menu className="h-4 w-4" />
       {menuUnreadCount > 0 && (
         <span
           className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
@@ -577,7 +573,21 @@ export default function ProfileHeroCard({
         </span>
       )}
     </motion.button>
-  );
+  ) : null;
+
+  /** モバイル：右上にメニュー */
+  const mobileHeaderActions = canOpenSettings ? (
+    <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1.5">
+      {settingsMenuButton}
+    </div>
+  ) : null;
+
+  /** Web：名前列の右にメニュー */
+  const webHeaderActions = canOpenSettings ? (
+    <div className="flex shrink-0 flex-col items-end gap-1.5">
+      {settingsMenuButton}
+    </div>
+  ) : null;
 
   const hasBadgeSlot = children != null && children !== false;
   const badgesHidden = hasBadgeSlot && !staticHero && !badgesVisible;
@@ -621,13 +631,13 @@ export default function ProfileHeroCard({
       <div className="grid grid-cols-[80px_1fr_auto] items-start gap-3">
         {avatarBlock}
         {textBlock}
-        {settingsBtn}
+        {webHeaderActions}
       </div>
       {badgesWrap}
     </div>
   ) : (
     <div className="relative z-1">
-      {settingsBtn}
+      {mobileHeaderActions}
       <div className="flex items-start gap-3">
         {avatarBlock}
         {textBlock}

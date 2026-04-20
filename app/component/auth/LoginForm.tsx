@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { FaEnvelope, FaEye, FaEyeSlash } from "react-icons/fa";
@@ -12,6 +12,10 @@ import CyberAuthField from "./CyberAuthField";
 import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
 import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
+import {
+  sanitizeInternalNext,
+  stashPostOnboardingRedirect,
+} from "@/lib/auth/safeNextRedirect";
 
 type LoginFormProps = {
   variant?: "web" | "mobile";
@@ -32,6 +36,16 @@ export default function LoginForm({ variant }: LoginFormProps) {
     if (pathname?.startsWith("/mobile")) return "mobile";
     return "web";
   }, [variant, pathname]);
+
+  const signupBase = v === "mobile" ? "/mobile/signup" : "/web/signup";
+  const [signupHref, setSignupHref] = useState(signupBase);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const safe = sanitizeInternalNext(sp.get("next"));
+    setSignupHref(safe ? `${signupBase}?next=${encodeURIComponent(safe)}` : signupBase);
+  }, [signupBase]);
 
   /** 見出し・主ボタン＝Bebas 系コンデンス（バナー英字）／補助文・日本語＝Geist */
   const bodySans =
@@ -72,11 +86,19 @@ export default function LoginForm({ variant }: LoginFormProps) {
       const onboardingPath =
         v === "mobile" ? "/mobile/onboarding" : "/web/onboarding";
 
+      const sp = new URLSearchParams(
+        typeof window !== "undefined" ? window.location.search : ""
+      );
+      const next = sanitizeInternalNext(sp.get("next"));
+
       if (handle && hasLanguage) {
-        router.replace(gamesPath);
-      } else if (!hasLanguage) {
-        router.replace(onboardingPath);
+        if (next) {
+          router.replace(next);
+        } else {
+          router.replace(gamesPath);
+        }
       } else {
+        stashPostOnboardingRedirect(sp.get("next"));
         router.replace(onboardingPath);
       }
     } catch (error: any) {
@@ -175,7 +197,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
 
         <p className="mt-3">
           <Link
-            href={v === "mobile" ? "/mobile/signup" : "/web/signup"}
+            href={signupHref}
             className={`${bodySans} font-semibold text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200`}
           >
             {ui.createAccount}
