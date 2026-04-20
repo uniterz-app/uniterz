@@ -92,6 +92,7 @@ export const buildCumulativeStatsCron = onSchedule(
 
 /* ============================================================================
  * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA 試合がある日のみ
+ * （プレーイン順位は確定のため再集計しない。`buildCumulativeRankingSnapshot` は playoffs のみ更新）
  * ==========================================================================*/
 
 export const buildCumulativeRankingSnapshotCron = onSchedule(

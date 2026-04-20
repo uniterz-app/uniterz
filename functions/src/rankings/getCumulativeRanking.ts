@@ -8,6 +8,7 @@ import {
   RANK_SNAPSHOT_HISTORY_SUBCOL,
   RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
   subtractOneDayFromDateKeyJST,
+  SNAPSHOT_BUILD_PHASES,
 } from "./buildCumulativeRankingSnapshot";
 
 function db() {
@@ -58,6 +59,10 @@ function isRankingPhase(v: unknown): v is RankingPhase {
   return v === "play_in" || v === "playoffs";
 }
 
+function isPhaseSnapshotBuiltDaily(phase: RankingPhase): boolean {
+  return SNAPSHOT_BUILD_PHASES.includes(phase);
+}
+
 function rankingSlice(d: any, phase: RankingPhase) {
   const byPhase = d.rankingByPhase?.[phase];
   if (byPhase && typeof byPhase === "object") {
@@ -84,8 +89,23 @@ function rankingSlice(d: any, phase: RankingPhase) {
 
 type UserRankingSnaps = {
   mySnap: DocumentSnapshot | null;
+  latestHistSnap: DocumentSnapshot | null;
   histSnap: DocumentSnapshot | null;
 };
+
+async function loadLatestHistSnapForUidFromNewest(
+  uid: string
+): Promise<DocumentSnapshot | null> {
+  const firestore = db();
+  const snap = await firestore
+    .collection("cumulative_stats")
+    .doc(uid)
+    .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+    .get();
+  if (snap.empty) return null;
+  const sorted = [...snap.docs].sort((a, b) => a.id.localeCompare(b.id));
+  return sorted[sorted.length - 1] ?? null;
+}
 
 async function loadLatestHistSnapForUid(
   uid: string
@@ -106,11 +126,14 @@ async function loadLatestHistSnapForUid(
 }
 
 async function loadUserRankingSnaps(uid: string | undefined): Promise<UserRankingSnaps> {
-  if (!uid) return { mySnap: null, histSnap: null };
+  if (!uid) return { mySnap: null, latestHistSnap: null, histSnap: null };
   const mySnap = await db().collection("cumulative_stats").doc(uid).get();
-  if (!mySnap.exists) return { mySnap, histSnap: null };
-  const histSnap = await loadLatestHistSnapForUid(uid);
-  return { mySnap, histSnap };
+  if (!mySnap.exists) return { mySnap, latestHistSnap: null, histSnap: null };
+  const [latestHistSnap, histSnap] = await Promise.all([
+    loadLatestHistSnapForUidFromNewest(uid),
+    loadLatestHistSnapForUid(uid),
+  ]);
+  return { mySnap, latestHistSnap, histSnap };
 }
 
 function parseMetricsParam(raw: unknown): Metric[] | null {
@@ -229,6 +252,19 @@ async function rankingPayloadForMetric(
       };
     }
 
+    const latestHistRaw = (
+      snaps.latestHistSnap?.exists
+        ? (snaps.latestHistSnap.data() as Record<string, unknown> | undefined)
+        : undefined
+    )?.[phase] as Partial<Record<Metric, unknown>> | undefined;
+    const latestHistRankRaw = latestHistRaw?.[metric];
+    const latestHistRank =
+      typeof latestHistRankRaw === "number" &&
+      Number.isFinite(latestHistRankRaw) &&
+      latestHistRankRaw >= 1
+        ? Math.floor(latestHistRankRaw)
+        : null;
+
     const storedRankRaw = me.snapshotRanks?.[phase]?.[metric];
     const storedRank =
       typeof storedRankRaw === "number" &&
@@ -237,8 +273,13 @@ async function rankingPayloadForMetric(
         ? Math.floor(storedRankRaw)
         : null;
 
-    if (storedRank != null) {
+    if (latestHistRank != null) {
+      myRank = latestHistRank;
+    } else if (storedRank != null) {
       myRank = storedRank;
+    } else if (!isPhaseSnapshotBuiltDaily(phase)) {
+      /** プレーイン確定後はスナップショットに無いユーザーは live count しない（順位が動かない前提） */
+      myRank = null;
     } else {
       const myValue =
         metric === "activeWinStreak"

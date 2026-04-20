@@ -11,7 +11,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
-import { nameBebas } from "@/lib/fonts";
+import { nameBebas, nameRajdhani } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
@@ -167,6 +167,8 @@ export default function ProfileDailyTrendChart({
   const scorePrecisionLabel = isEn ? "Score Precision" : "スコア精度";
   const unitCount = isEn ? "items" : "件";
   const unitPts = "pts";
+  const title = "Daily Combo Chart";
+  const subtitle = "指定した期間の指標をチャート形式で表示";
 
   const ref = useRef<HTMLDivElement>(null);
   const [ioVisible, setIoVisible] = useState(false);
@@ -182,7 +184,7 @@ export default function ProfileDailyTrendChart({
           observer.disconnect();
         }
       },
-      { threshold: 0.4 }
+      { threshold: 0.95 }
     );
 
     observer.observe(ref.current);
@@ -276,6 +278,19 @@ export default function ProfileDailyTrendChart({
         aria-hidden
       />
       <div className="relative z-1">
+      <div className="px-1 pt-0.5">
+        <p
+          className={[
+            nameRajdhani.className,
+            "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
+          ].join(" ")}
+        >
+          {title}
+        </p>
+        <p className="mt-1.5 max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]">
+          {subtitle}
+        </p>
+      </div>
       <div className="relative h-48 sm:h-52 cursor-pointer overflow-hidden rounded-2xl">
         {isEmpty ? (
           <div

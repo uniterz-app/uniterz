@@ -1,20 +1,26 @@
 "use client";
 
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { isRankingSnapshotBuiltDailyForPhase } from "@/lib/rankings/rankingPhase";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   phase: RankingPhase;
   onChange: (phase: RankingPhase) => void;
   isMobile?: boolean;
+  /** Play-In 確定ラベル（未指定時は英語） */
+  language?: Language;
 };
 
 export default function RankingPhaseTabs({
   phase,
   onChange,
   isMobile = false,
+  language = "en",
 }: Props) {
   const teamNameFont = bracketMarketTeamTypography(isMobile);
+  const playInFrozen = !isRankingSnapshotBuiltDailyForPhase("play_in");
   const containerClass = isMobile
     ? "grid grid-cols-2 items-end gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1"
     : "grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1";
@@ -38,7 +44,14 @@ export default function RankingPhaseTabs({
         ].join(" ")}
         style={teamNameFont}
       >
-        Play-In
+        <span className="inline-flex flex-col items-center gap-0 leading-tight">
+          <span>Play-In</span>
+          {playInFrozen ? (
+            <span className="text-[9px] font-semibold normal-case tracking-wide text-white/45">
+              {language === "ja" ? "確定" : "Final"}
+            </span>
+          ) : null}
+        </span>
       </button>
       <button
         type="button"

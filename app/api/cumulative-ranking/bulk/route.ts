@@ -6,6 +6,8 @@ import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
+import { getAdminDb } from "@/lib/firebaseAdmin";
+import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 
 export const runtime = "nodejs";
 
@@ -20,6 +22,14 @@ const BULK_METRICS = [
 type BulkRankingMetric = (typeof BULK_METRICS)[number];
 
 const METRIC_SET = new Set<string>(BULK_METRICS);
+
+function dateKeyJST(now: Date = new Date()): string {
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const y = jst.getUTCFullYear();
+  const m = String(jst.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(jst.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
   if (!raw?.trim()) return [...BULK_METRICS];
@@ -37,6 +47,49 @@ function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
 
 function metricsToKey(metrics: BulkRankingMetric[]): string {
   return [...new Set(metrics)].sort().join(",");
+}
+
+async function loadLatestAndPrevSnapshotRank(
+  uid: string,
+  phase: RankingPhase
+): Promise<{ latestRank: number | null; deltaPlaces: number | null }> {
+  const adminDb = getAdminDb();
+  const snap = await adminDb
+    .collection("cumulative_stats")
+    .doc(uid)
+    .collection("rankSnapshotHistory")
+    .get();
+
+  if (snap.empty) return { latestRank: null, deltaPlaces: null };
+
+  const sorted = [...snap.docs].sort((a, b) => a.id.localeCompare(b.id));
+  const latest = sorted[sorted.length - 1];
+  const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
+  if (!latest) return { latestRank: null, deltaPlaces: null };
+
+  const latestData = latest.data() as
+    | { play_in?: Record<string, unknown>; playoffs?: Record<string, unknown> }
+    | undefined;
+  const prevData = prev?.data() as
+    | { play_in?: Record<string, unknown>; playoffs?: Record<string, unknown> }
+    | undefined;
+
+  const latestRankRaw =
+    phase === "play_in"
+      ? latestData?.play_in?.totalPoints
+      : latestData?.playoffs?.totalPoints;
+  const prevRankRaw =
+    phase === "play_in"
+      ? prevData?.play_in?.totalPoints
+      : prevData?.playoffs?.totalPoints;
+
+  const latestRank = coerceTotalPointsRank(latestRankRaw);
+  const prevRank = coerceTotalPointsRank(prevRankRaw);
+  if (latestRank == null) return { latestRank: null, deltaPlaces: null };
+  const deltaPlaces =
+    prevRank != null && prevRank !== latestRank ? prevRank - latestRank : null;
+
+  return { latestRank, deltaPlaces };
 }
 
 async function fetchOneMetricFromFunctions(
@@ -146,7 +199,12 @@ async function fetchBulkFromFunctions(
 }
 
 const getCachedBulk = unstable_cache(
-  async (uidKey: string, metricsKey: string, phase: RankingPhase) => {
+  async (
+    uidKey: string,
+    metricsKey: string,
+    phase: RankingPhase,
+    dayKey: string
+  ) => {
     const uid = uidKey === "__anon__" ? undefined : uidKey;
     const parts = metricsKey
       .split(",")
@@ -154,6 +212,8 @@ const getCachedBulk = unstable_cache(
     const metrics = (
       parts.length ? parts : [...BULK_METRICS]
     ) as BulkRankingMetric[];
+    // dayKey は unstable_cache のキー分離用（当日中は同一キーで再利用）
+    void dayKey;
     return fetchBulkFromFunctions(uid, metrics, phase);
   },
   ["cumulative-ranking-bulk-v3"],
@@ -173,6 +233,7 @@ export async function GET(req: Request) {
       ? rawPhase
       : "playoffs";
     const metricsKey = metricsToKey(metricsList);
+    const todayKey = dateKeyJST();
 
     const baseUrl =
       process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -185,16 +246,45 @@ export async function GET(req: Request) {
       );
     }
 
-    const cached = await getCachedBulk(uid ?? "__anon__", metricsKey, phase);
+    /**
+     * myRank（uid 付き）は最新性を優先して毎回 Functions 取得。
+     * 一覧のみ（uid なし）は dayKey 単位キャッシュを使う。
+     */
+    const source = uid
+      ? await fetchBulkFromFunctions(uid, metricsList, phase)
+      : await getCachedBulk("__anon__", metricsKey, phase, todayKey);
+
     const data =
       typeof structuredClone === "function"
-        ? structuredClone(cached)
-        : (JSON.parse(JSON.stringify(cached)) as typeof cached);
+        ? structuredClone(source)
+        : (JSON.parse(JSON.stringify(source)) as typeof source);
     await mergeUserPlansIntoBulkByMetric(data.byMetric);
+
+    /**
+     * Ranking Progress と同じ「最新 snapshot」を Your Rank（totalPoints）にも反映する。
+     * これで画面内で latest の見え方を一致させる。
+     */
+    if (uid && data.byMetric?.totalPoints) {
+      const { latestRank, deltaPlaces } = await loadLatestAndPrevSnapshotRank(
+        uid,
+        phase
+      );
+      if (latestRank != null) {
+        data.byMetric.totalPoints.myRank = latestRank;
+        data.byMetric.totalPoints.myRankDeltaPlaces = deltaPlaces;
+        const myRow = data.byMetric.totalPoints.myRow as
+          | Record<string, unknown>
+          | null
+          | undefined;
+        if (myRow && typeof myRow === "object") {
+          data.byMetric.totalPoints.myRow = { ...myRow, rank: latestRank };
+        }
+      }
+    }
 
     const maxAge = 0;
     const cacheControl = uid
-      ? `private, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
+      ? "private, no-store"
       : `public, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(data, {

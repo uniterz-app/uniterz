@@ -262,7 +262,7 @@ export default function RankingCard({
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
-  /** ランキング画面からプロフィールへ行くときの戻り用（未指定時は play_in） */
+  /** ランキング画面からプロフィールへ行くときの戻り用（未指定時は playoffs） */
   rankPhase?: RankingPhase;
   onCountDone?: () => void;
   language?: Language;
@@ -279,7 +279,7 @@ export default function RankingCard({
   const handleOrUid = r.handle || r.uid;
   const profileHref = profileHrefWithRankingsReturn(pathname, base, handleOrUid, {
     metric,
-    phase: rankPhase ?? "play_in",
+    phase: rankPhase ?? "playoffs",
   });
 
   const { n: target, d: decimals } = metricNum(r, metric);

@@ -25,36 +25,9 @@ import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
-import {
-  TIMEZONE_ET,
-  TIMEZONE_JST,
-  parseDateKeyInTimeZone,
-  toDateKeyInTimeZone,
-} from "@/lib/time/zonedTime";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
-
-function formatRankingsUpdateTimeEn() {
-  // Ranking update is scheduled at 16:00 in JST.
-  // Convert that wall-clock time to America/New_York (DST-aware).
-  const now = new Date();
-  const todayKeyJst = toDateKeyInTimeZone(now, TIMEZONE_JST);
-  const todayMidnightJst = parseDateKeyInTimeZone(todayKeyJst, TIMEZONE_JST);
-  if (!todayMidnightJst) return "16:00";
-
-  const MS_16H = 16 * 60 * 60 * 1000;
-  const MS_1D = 24 * 60 * 60 * 1000;
-  const jstUpdateTodayMs = todayMidnightJst.getTime() + MS_16H;
-  const jstUpdateMs =
-    now.getTime() >= jstUpdateTodayMs ? jstUpdateTodayMs + MS_1D : jstUpdateTodayMs;
-
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: TIMEZONE_ET,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(jstUpdateMs));
-}
+import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 
 export default function MobileRankingsPage() {
   const [phase, setPhase] = useState<RankingPhase>("playoffs");
@@ -155,18 +128,13 @@ export default function MobileRankingsPage() {
         </div>
 
         <div className="space-y-3 px-3 pt-2">
-          <div className="text-center">
-            <p className="text-[12px] text-white/60">
-              {language === "en"
-                ? `Rankings are updated daily at ${formatRankingsUpdateTimeEn()} / Scores are cumulative.`
-                : "ランキングは毎日16:00に更新 / スコアは累積"}
-            </p>
-          </div>
+          <RankingsScheduleNotice phase={phase} language={language} />
           <div className="space-y-0.5">
             <RankingPhaseTabs
               phase={phase}
               onChange={setPhase}
               isMobile
+              language={language}
             />
 
             <MyRankCard

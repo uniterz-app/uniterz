@@ -422,7 +422,7 @@ export default function TopPodium({
     pathname.startsWith("/mobile") || pathname.startsWith("/m/")
       ? "/mobile"
       : "/web";
-  const phaseForReturn = rankPhase ?? "play_in";
+  const phaseForReturn = rankPhase ?? "playoffs";
 
   const r1 = rows[0];
   const r2 = rows[1];

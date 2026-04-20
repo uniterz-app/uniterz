@@ -1,7 +1,7 @@
 "use strict";
 // functions/src/rankings/buildCumulativeRankingSnapshot.ts
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = exports.RANK_SNAPSHOT_HISTORY_SUBCOL = void 0;
+exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = exports.RANK_SNAPSHOT_HISTORY_SUBCOL = exports.SNAPSHOT_BUILD_PHASES = void 0;
 exports.getYesterdayDateKeyJST = getYesterdayDateKeyJST;
 exports.subtractOneDayFromDateKeyJST = subtractOneDayFromDateKeyJST;
 exports.buildCumulativeRankingSnapshot = buildCumulativeRankingSnapshot;
@@ -19,7 +19,11 @@ const METRICS = [
     "totalUpset",
     "activeWinStreak",
 ];
-const RANKING_PHASES = ["play_in", "playoffs"];
+/**
+ * 日次スナップショットで再計算・書き込みするフェーズ。プレーイン終了後は確定表示のため除外する。
+ * Next の `RANKING_SNAPSHOT_BUILD_PHASES` と同期すること。
+ */
+exports.SNAPSHOT_BUILD_PHASES = ["playoffs"];
 /** Client: list cumulative_stats/{uid}/rankSnapshotHistory ordered by dateKey. */
 exports.RANK_SNAPSHOT_HISTORY_SUBCOL = "rankSnapshotHistory";
 function toDateKeyJST(d) {
@@ -223,7 +227,7 @@ async function buildCumulativeRankingSnapshot() {
     }
     const top20Jobs = [];
     const topUidSet = new Set();
-    for (const phase of RANKING_PHASES) {
+    for (const phase of exports.SNAPSHOT_BUILD_PHASES) {
         const baseRows = snap.docs
             .map((doc) => {
             var _a, _b, _c, _d, _e;
@@ -299,12 +303,13 @@ async function buildCumulativeRankingSnapshot() {
         }
     };
     for (const [uid, per] of rankByUid) {
+        /**
+         * merge のネストは play_in を消さないよう、更新するフィールドだけドットパスで書く。
+         * （プレーインは SNAPSHOT_BUILD_PHASES 外のため per.play_in は空のまま）
+         */
         batch.set(firestore.doc(`cumulative_stats/${uid}`), {
-            snapshotRanks: {
-                updatedAt: firestore_1.FieldValue.serverTimestamp(),
-                play_in: per.play_in,
-                playoffs: per.playoffs,
-            },
+            "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(),
+            "snapshotRanks.playoffs": per.playoffs,
         }, { merge: true });
         batch.set(firestore
             .collection("cumulative_stats")
@@ -312,10 +317,9 @@ async function buildCumulativeRankingSnapshot() {
             .collection(exports.RANK_SNAPSHOT_HISTORY_SUBCOL)
             .doc(dateKey), {
             dateKey,
-            play_in: per.play_in,
             playoffs: per.playoffs,
             writtenAt: firestore_1.FieldValue.serverTimestamp(),
-        });
+        }, { merge: true });
         ops += 2;
         if (ops >= 500) {
             await flush();
