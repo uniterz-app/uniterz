@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
@@ -139,6 +139,92 @@ function fmtDiff(d: number) {
   return `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
 }
 
+function h2hRecordFromGames(
+  games: NbaH2HGameCard[]
+): {
+  leftTeamDisplay: string;
+  rightTeamDisplay: string;
+  leftWins: number;
+  rightWins: number;
+} | null {
+  if (!games.length) return null;
+  const { leftTeamDisplay, rightTeamDisplay } = games[0];
+  let leftWins = 0;
+  let rightWins = 0;
+  for (const g of games) {
+    if (g.scoreLeft == null || g.scoreRight == null) continue;
+    if (g.scoreLeft > g.scoreRight) leftWins += 1;
+    else if (g.scoreRight > g.scoreLeft) rightWins += 1;
+  }
+  return { leftTeamDisplay, rightTeamDisplay, leftWins, rightWins };
+}
+
+export function H2hSeasonRecordRow({
+  phaseLabel,
+  leftTeamDisplay,
+  rightTeamDisplay,
+  leftWins,
+  rightWins,
+}: {
+  /** 省略時はラベル（PO / RS 等）を出さない */
+  phaseLabel?: string;
+  leftTeamDisplay: string;
+  rightTeamDisplay: string;
+  leftWins: number;
+  rightWins: number;
+}) {
+  return (
+    <div
+      className={[
+        resultStatsMetricNumClass,
+        "flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-1 text-sm text-white/85 sm:text-base md:gap-x-2 md:text-lg",
+      ].join(" ")}
+    >
+      {phaseLabel ? (
+        <span className="shrink-0 text-[10px] font-semibold tracking-wider text-cyan-200/90 sm:text-xs">
+          {phaseLabel}
+        </span>
+      ) : null}
+      <span className="max-w-[42%] truncate sm:max-w-none">{leftTeamDisplay}</span>
+      <span
+        className={[
+          resultStatsMetricNumClass,
+          "inline-flex shrink-0 items-baseline font-bold tabular-nums text-xl sm:text-2xl md:text-3xl",
+        ].join(" ")}
+      >
+        <span
+          className={leftWins > rightWins ? "text-yellow-300" : "text-white"}
+          style={
+            leftWins > rightWins
+              ? {
+                  textShadow:
+                    "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                }
+              : undefined
+          }
+        >
+          {leftWins}
+        </span>
+        <span className="mx-1 text-white/55 sm:mx-1.5">–</span>
+        <span
+          className={rightWins > leftWins ? "text-yellow-300" : "text-white"}
+          style={
+            rightWins > leftWins
+              ? {
+                  textShadow:
+                    "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                }
+              : undefined
+          }
+        >
+          {rightWins}
+        </span>
+      </span>
+      <span className="max-w-[42%] truncate sm:max-w-none">{rightTeamDisplay}</span>
+    </div>
+  );
+}
+
 const H2H_INJURY_NAMES_PER_ROW = 2;
 
 /** 略称（A.）と姓の間で改行されないよう、直後のスペースを NBSP にする */
@@ -203,6 +289,16 @@ export default function NbaPostseasonMatchupPanel({
     seriesGames && seriesGames.length > 0
       ? [...seriesGames].reverse()
       : SKELETON_GAMES;
+  const [rsExpanded, setRsExpanded] = useState(false);
+  const poGames = useMemo(
+    () => games.filter((g) => Boolean(g.seriesGameLabel)),
+    [games]
+  );
+  const rsGames = useMemo(
+    () => games.filter((g) => !g.seriesGameLabel),
+    [games]
+  );
+  const rsRecord = useMemo(() => h2hRecordFromGames(rsGames), [rsGames]);
 
   const h = h2hAverages;
   const homePts = h?.homeAvgPts ?? null;
@@ -305,215 +401,263 @@ export default function NbaPostseasonMatchupPanel({
     },
   ];
 
-  return (
-    <section className="space-y-5">
-      <div className="space-y-2">
-        <ul className="space-y-2.5">
-          {games.map((g, i) => {
-            const inactiveFooterSummaryText = h2hInactiveFooterSummaryBody(
-              isEn,
-              g.inactiveFooterSummary
-            );
-            return (
-            <motion.li
-              key={g.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.05 }}
-              className="rounded-xl border border-white/10 bg-white/4 p-3 md:p-3.5"
-            >
-              <div className="text-center">
+  const renderGames = (items: NbaH2HGameCard[]) => (
+    <ul className="space-y-2.5">
+      {items.map((g, i) => {
+        const inactiveFooterSummaryText = h2hInactiveFooterSummaryBody(
+          isEn,
+          g.inactiveFooterSummary
+        );
+        return (
+          <motion.li
+            key={g.id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.05 }}
+            className="rounded-xl border border-white/10 bg-white/4 p-3 md:p-3.5"
+          >
+            <div className="text-center">
+              <span
+                className={[
+                  resultStatsMetricNumClass,
+                  "text-sm text-white/80 md:text-sm",
+                ].join(" ")}
+              >
+                {formatH2hGameCardDate(isEn, g.dateEt, g.dateJst)}
+              </span>
+            </div>
+            {g.seriesGameLabel ? (
+              <div className="mt-1 text-center">
                 <span
                   className={[
                     resultStatsMetricNumClass,
-                    "text-sm text-white/80 md:text-sm",
+                    "text-sm font-semibold tracking-wide text-white/65 sm:text-base md:text-[17px]",
                   ].join(" ")}
                 >
-                  {formatH2hGameCardDate(isEn, g.dateEt, g.dateJst)}
+                  {g.seriesGameLabel}
                 </span>
               </div>
-              {g.seriesGameLabel ? (
-                <div className="mt-1 text-center">
+            ) : null}
+            <div className="mt-2.5 flex flex-wrap items-end justify-center gap-2 sm:gap-3 md:gap-4">
+              <div className="flex min-w-0 max-w-[42%] flex-1 flex-col items-center sm:max-w-none">
+                {g.homeTeamSide ? (
                   <span
                     className={[
                       resultStatsMetricNumClass,
-                      "text-xs font-semibold tracking-wide text-white/55 md:text-[13px]",
+                      "mb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
                     ].join(" ")}
                   >
-                    {g.seriesGameLabel}
+                    {h2hHomeAwayLabel(g.homeTeamSide === "left" ? "home" : "away")}
                   </span>
-                </div>
-              ) : null}
-              <div className="mt-2.5 flex flex-wrap items-end justify-center gap-2 sm:gap-3 md:gap-4">
-                <div className="flex min-w-0 max-w-[42%] flex-1 flex-col items-center sm:max-w-none">
-                  {g.homeTeamSide ? (
-                    <span
-                      className={[
-                        resultStatsMetricNumClass,
-                        "mb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
-                      ].join(" ")}
-                    >
-                      {h2hHomeAwayLabel(
-                        g.homeTeamSide === "left" ? "home" : "away"
-                      )}
-                    </span>
-                  ) : null}
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "truncate text-center text-base font-semibold text-white/78 sm:text-lg md:text-lg",
-                    ].join(" ")}
-                  >
-                    {g.leftTeamDisplay}
-                  </span>
-                </div>
-                {g.scoreLeft != null && g.scoreRight != null ? (
-                  <div className="flex shrink-0 flex-col items-center">
-                    {g.wentToOvertime ? (
-                      <span
-                        className={[
-                          resultStatsMetricNumClass,
-                          "mb-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
-                        ].join(" ")}
-                      >
-                        OT
-                      </span>
-                    ) : null}
-                    <span
-                      className={[
-                        resultStatsMetricNumClass,
-                        "text-xl font-bold tabular-nums tracking-tight sm:text-2xl md:text-2xl",
-                      ].join(" ")}
-                    >
-                      <span
-                        className={
-                          g.scoreLeft > g.scoreRight
-                            ? "text-yellow-300"
-                            : "text-white"
-                        }
-                        style={
-                          g.scoreLeft > g.scoreRight
-                            ? {
-                                textShadow:
-                                  "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                              }
-                            : undefined
-                        }
-                      >
-                        {g.scoreLeft}
-                      </span>
-                      <span className="mx-1 text-white/55">–</span>
-                      <span
-                        className={
-                          g.scoreRight > g.scoreLeft
-                            ? "text-yellow-300"
-                            : "text-white"
-                        }
-                        style={
-                          g.scoreRight > g.scoreLeft
-                            ? {
-                                textShadow:
-                                  "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                              }
-                            : undefined
-                        }
-                      >
-                        {g.scoreRight}
-                      </span>
-                    </span>
-                  </div>
-                ) : (
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "shrink-0 text-xl font-bold tabular-nums tracking-tight text-white sm:text-2xl md:text-2xl",
-                    ].join(" ")}
-                  >
-                    —
-                  </span>
-                )}
-                <div className="flex min-w-0 max-w-[42%] flex-1 flex-col items-center sm:max-w-none">
-                  {g.homeTeamSide ? (
-                    <span
-                      className={[
-                        resultStatsMetricNumClass,
-                        "mb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
-                      ].join(" ")}
-                    >
-                      {h2hHomeAwayLabel(
-                        g.homeTeamSide === "right" ? "home" : "away"
-                      )}
-                    </span>
-                  ) : null}
-                  <span
-                    className={[
-                      resultStatsMetricNumClass,
-                      "truncate text-center text-base font-semibold text-white/78 sm:text-lg md:text-lg",
-                    ].join(" ")}
-                  >
-                    {g.rightTeamDisplay}
-                  </span>
-                </div>
+                ) : null}
+                <span
+                  className={[
+                    resultStatsMetricNumClass,
+                    "truncate text-center text-base font-semibold text-white/78 sm:text-lg md:text-lg",
+                  ].join(" ")}
+                >
+                  {g.leftTeamDisplay}
+                </span>
               </div>
-              <div className="mt-2 border-t border-white/8 pt-2">
-                <div className="rounded-lg border border-white/10 bg-black/25 px-2 py-2 sm:px-3 sm:py-2.5">
-                  <div className="flex items-start justify-center gap-2 sm:gap-3 md:gap-4">
-                    <div
+              {g.scoreLeft != null && g.scoreRight != null ? (
+                <div className="flex shrink-0 flex-col items-center">
+                  {g.wentToOvertime ? (
+                    <span
                       className={[
                         resultStatsMetricNumClass,
-                        "min-w-0 flex-1 text-right text-xs leading-relaxed text-white/82 sm:text-sm md:text-base",
+                        "mb-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
                       ].join(" ")}
                     >
-                      <H2hInjuryNamesTwoPerRow names={g.injuriesLeft} alignEnd />
-                    </div>
-                    <div
-                      className={[
-                        resultStatsMetricNumClass,
-                        "shrink-0 px-0.5 pt-0.5 text-center text-[11px] font-semibold tracking-wide text-white/55 sm:text-xs md:text-sm",
-                      ].join(" ")}
+                      OT
+                    </span>
+                  ) : null}
+                  <span
+                    className={[
+                      resultStatsMetricNumClass,
+                      "text-xl font-bold tabular-nums tracking-tight sm:text-2xl md:text-2xl",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={g.scoreLeft > g.scoreRight ? "text-yellow-300" : "text-white"}
+                      style={
+                        g.scoreLeft > g.scoreRight
+                          ? {
+                              textShadow:
+                                "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                            }
+                          : undefined
+                      }
                     >
-                      {isEn ? "Inactive" : "欠場"}
-                    </div>
-                    <div
-                      className={[
-                        resultStatsMetricNumClass,
-                        "min-w-0 flex-1 text-left text-xs leading-relaxed text-white/82 sm:text-sm md:text-base",
-                      ].join(" ")}
+                      {g.scoreLeft}
+                    </span>
+                    <span className="mx-1 text-white/55">–</span>
+                    <span
+                      className={g.scoreRight > g.scoreLeft ? "text-yellow-300" : "text-white"}
+                      style={
+                        g.scoreRight > g.scoreLeft
+                          ? {
+                              textShadow:
+                                "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                            }
+                          : undefined
+                      }
                     >
-                      <H2hInjuryNamesTwoPerRow names={g.injuriesRight} />
-                    </div>
-                  </div>
+                      {g.scoreRight}
+                    </span>
+                  </span>
                 </div>
-                {inactiveFooterSummaryText ? (
+              ) : (
+                <span
+                  className={[
+                    resultStatsMetricNumClass,
+                    "shrink-0 text-xl font-bold tabular-nums tracking-tight text-white sm:text-2xl md:text-2xl",
+                  ].join(" ")}
+                >
+                  —
+                </span>
+              )}
+              <div className="flex min-w-0 max-w-[42%] flex-1 flex-col items-center sm:max-w-none">
+                {g.homeTeamSide ? (
+                  <span
+                    className={[
+                      resultStatsMetricNumClass,
+                      "mb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
+                    ].join(" ")}
+                  >
+                    {h2hHomeAwayLabel(g.homeTeamSide === "right" ? "home" : "away")}
+                  </span>
+                ) : null}
+                <span
+                  className={[
+                    resultStatsMetricNumClass,
+                    "truncate text-center text-base font-semibold text-white/78 sm:text-lg md:text-lg",
+                  ].join(" ")}
+                >
+                  {g.rightTeamDisplay}
+                </span>
+              </div>
+            </div>
+            <div className="mt-2 border-t border-white/8 pt-2">
+              <div className="rounded-lg border border-white/10 bg-black/25 px-2 py-2 sm:px-3 sm:py-2.5">
+                <div className="flex items-start justify-center gap-2 sm:gap-3 md:gap-4">
                   <div
                     className={[
                       resultStatsMetricNumClass,
-                      "mt-2 rounded-lg border border-white/12 bg-black/30 px-2.5 py-2 sm:px-3 sm:py-2.5",
+                      "min-w-0 flex-1 text-right text-xs leading-relaxed text-white/82 sm:text-sm md:text-base",
                     ].join(" ")}
                   >
-                    <p
-                      className={[
-                        resultStatsMetricNumClass,
-                        "text-[10px] font-semibold tracking-wide text-white/48 md:text-[11px]",
-                      ].join(" ")}
-                    >
-                      {isEn ? "Summary" : "サマリー"}
-                    </p>
-                    <p
-                      className={[
-                        resultStatsMetricNumClass,
-                        "mt-1 whitespace-pre-line text-xs leading-relaxed text-white/78 sm:text-sm",
-                      ].join(" ")}
-                    >
-                      {inactiveFooterSummaryText}
-                    </p>
+                    <H2hInjuryNamesTwoPerRow names={g.injuriesLeft} alignEnd />
                   </div>
-                ) : null}
+                  <div
+                    className={[
+                      resultStatsMetricNumClass,
+                      "shrink-0 px-0.5 pt-0.5 text-center text-[11px] font-semibold tracking-wide text-white/55 sm:text-xs md:text-sm",
+                    ].join(" ")}
+                  >
+                    {isEn ? "Inactive" : "欠場"}
+                  </div>
+                  <div
+                    className={[
+                      resultStatsMetricNumClass,
+                      "min-w-0 flex-1 text-left text-xs leading-relaxed text-white/82 sm:text-sm md:text-base",
+                    ].join(" ")}
+                  >
+                    <H2hInjuryNamesTwoPerRow names={g.injuriesRight} />
+                  </div>
+                </div>
               </div>
-            </motion.li>
-            );
-          })}
-        </ul>
+              {inactiveFooterSummaryText ? (
+                <div
+                  className={[
+                    resultStatsMetricNumClass,
+                    "mt-2 rounded-lg border border-white/12 bg-black/30 px-2.5 py-2 sm:px-3 sm:py-2.5",
+                  ].join(" ")}
+                >
+                  <p
+                    className={[
+                      resultStatsMetricNumClass,
+                      "text-[10px] font-semibold tracking-wide text-white/48 md:text-[11px]",
+                    ].join(" ")}
+                  >
+                    Game Summary
+                  </p>
+                  <p
+                    className={[
+                      resultStatsMetricNumClass,
+                      "mt-1 whitespace-pre-line text-xs leading-relaxed text-white/78 sm:text-sm",
+                    ].join(" ")}
+                  >
+                    {inactiveFooterSummaryText}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </motion.li>
+        );
+      })}
+    </ul>
+  );
+
+  return (
+    <section className="space-y-5">
+      <div className="space-y-2">
+        <div className="space-y-2">
+          {poGames.length > 0 ? (
+            renderGames(poGames)
+          ) : (
+            <p className="rounded-xl border border-white/10 bg-white/4 px-3 py-2 text-[10px] text-white/45 md:text-[11px]">
+              {isEn ? "No PO head-to-head data yet." : "POの直接対決データはまだありません。"}
+            </p>
+          )}
+        </div>
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/2 p-2 sm:p-2.5">
+          <button
+            type="button"
+            onClick={() => setRsExpanded((v) => !v)}
+            className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/4 px-3 py-2 text-left"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-white/70 md:text-xs">
+              RS
+            </span>
+            <span className="text-[10px] text-white/60 md:text-[11px]">
+              {rsExpanded
+                ? isEn
+                  ? "Hide"
+                  : "閉じる"
+                : isEn
+                  ? "Show"
+                  : "表示"}
+            </span>
+          </button>
+          {rsExpanded ? (
+            <div className="space-y-2">
+              <div
+                className={[
+                  "text-center text-[11px] font-semibold text-white/88 sm:text-xs md:text-sm",
+                ].join(" ")}
+              >
+                {isEn ? "RS 直接対決" : "RS 直接対決"}
+              </div>
+              {seriesGames?.length && rsRecord ? (
+                <div className="text-center">
+                  <H2hSeasonRecordRow
+                    leftTeamDisplay={rsRecord.leftTeamDisplay}
+                    rightTeamDisplay={rsRecord.rightTeamDisplay}
+                    leftWins={rsRecord.leftWins}
+                    rightWins={rsRecord.rightWins}
+                  />
+                </div>
+              ) : null}
+              {rsGames.length > 0 ? (
+                renderGames(rsGames)
+              ) : (
+                <p className="rounded-xl border border-white/10 bg-white/4 px-3 py-2 text-[10px] text-white/45 md:text-[11px]">
+                  {isEn ? "No RS head-to-head data yet." : "RSの直接対決データはまだありません。"}
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
         {!seriesGames?.length ? (
           <p className="text-[9px] text-white/38 md:text-[10px]">
             {isEn

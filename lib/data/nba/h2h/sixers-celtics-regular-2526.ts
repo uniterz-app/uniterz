@@ -77,13 +77,13 @@ export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["J. Embiid"],
     inactiveFooterSummary: {
       ja:
-        "セルティックスはかなり余裕のある入りで試合をコントロール。\n" +
-        "テイタムが25点11リバウンド7アシスト、ブラウンが26得点で、ボストンらしいバランスのいい勝ち方だった。\n" +
-        "フィラデルフィアはエンビード不在もあり、攻守ともに差が出た。",
+        "Bostonはまさに“Celticsらしい試合”で、守備、ボール循環、層の厚さが全部出た。\n" +
+        "TatumのPo復帰戦としても十分で、Embiid不在のPhiladelphiaは攻撃の軸を作れず、序盤から差を広げられたまま押し切られた。\n" +
+        "単なる大勝というより「Bostonが自分たちのスタンダードをそのまま見せた試合」。",
       en:
-        "Boston controlled the game from the tip with a comfortable, confident start.\n" +
-        "Jayson Tatum posted 25 points, 11 rebounds, and 7 assists; Jaylen Brown added 26—it was a balanced, Celtics-style win.\n" +
-        "Philadelphia, also without Joel Embiid, couldn’t close the gap on either end.",
+        "This was quintessential Celtics basketball—defense, ball movement, and roster depth all on display.\n" +
+        "Strong enough as Jayson Tatum’s return game in the playoffs, and without Joel Embiid, Philadelphia never found a true offensive hub and was run out after an early gap opened.\n" +
+        "Less a mere blowout than Boston simply playing to its standard, start to finish.",
     },
   },
 ];

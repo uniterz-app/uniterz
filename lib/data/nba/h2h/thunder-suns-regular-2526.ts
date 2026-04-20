@@ -98,13 +98,13 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["M. Williams"],
     inactiveFooterSummary: {
       ja:
-        "サンダーは昨季からの勢いをそのまま持ち込み、ディフェンディングチャンピオンの立ち上がりとしてかなり強い内容だった。\n" +
-        "スコア差どおり一方的で、シリーズ全体でもOKCの総合力が先に見えたGame 1。\n" +
-        "フェニックスはまず得点の作り方を立て直す必要がある。",
+        "OKCは連覇候補らしい入りで、守備圧とトランジションで一気に試合を壊した。\n" +
+        "SGAが爆発的な当たり日ではなくても勝てたこと、Jalen WilliamsやChetまで含めて全体で押し切れたことが大きい。\n" +
+        "OKCはPOで更にDFのギアを上げて、Phoenixが自分の形に持ち込む前に守備で分断した。",
       en:
-        "OKC carried last season’s surge straight into Game 1 and opened the series against the defending champions with a commanding performance.\n" +
-        "The lopsided score reflected the flow—Game 1 was the first glimpse of Oklahoma City’s overall edge across the matchup.\n" +
-        "Phoenix needs to reset how it generates offense before anything else.",
+        "OKC opened like a repeat-title contender, blowing the game open with defensive pressure and transition.\n" +
+        "Winning without Shai Gilgeous-Alexander needing a nuclear scoring night mattered—and the Thunder rolled as a group, with Jalen Williams and Chet Holmgren among those powering the push.\n" +
+        "In the playoffs they shifted defense up another gear, splintering Phoenix on that end before the Suns could settle into their game.",
     },
   },
 ];

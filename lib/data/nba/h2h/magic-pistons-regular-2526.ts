@@ -76,15 +76,15 @@ export const magicPistonsH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["J. Isaac"],
     inactiveFooterSummary: {
       ja:
-        "この日の唯一のアップセット。\n" +
-        "マジックがPIからの勢いのままバンケロ、フランツのWエースの活躍により勝利。\n" +
-        "ピストンズは、ケイドが39得点と孤軍奮闘。\n" +
-        "ケイド以外の得点源が欲しいところ、Game2からEast1位の力を見せつけられるか？",
+        "このGame 1は、Cadeの個人爆発があってもDetroit全体では押し切れず、Orlandoのまとまりとサイズ感が勝った試合だった。\n" +
+        "BancheroとWagnerを中心にMagicが落ち着いて対応し、シリーズの空気を一気に変えるアウェー勝利になった。\n" +
+        "「Pistonsの若さが出た敗戦」と同時に、「Magicが下位シードでも普通に嫌な相手であることを証明したGame 1」。\n" +
+        "Pistonsは、Cade以外のスコアリングと、Durenの活躍に期待がかかる。",
       en:
-        "The lone upset on the slate that day.\n" +
-        "Orlando rode its Play-In momentum to a win behind its twin aces, Paolo Banchero and Franz Wagner.\n" +
-        "Detroit leaned on Cade Cunningham’s 39-point night in a largely solo effort.\n" +
-        "They need more scoring help beyond Cade—can the East’s No. 1 seed reassert itself starting in Game 2?",
+        "Even with a big individual night from Cade Cunningham, Detroit couldn’t impose its will as a team—Orlando’s cohesion and size won the day.\n" +
+        "Led by Paolo Banchero and Franz Wagner, the Magic stayed composed and stole Game 1 on the road, instantly shifting the series’ tone.\n" +
+        "It was both a loss where Detroit’s youth showed—and a Game 1 that proved the Magic are a tough out even as the lower seed.\n" +
+        "The Pistons will need more scoring beyond Cade, and more from Jalen Duren, going forward.",
     },
   },
 ];

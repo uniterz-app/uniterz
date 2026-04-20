@@ -74,13 +74,15 @@ export const minDenH2HGames: NbaH2HGameCard[] = [
     injuriesRight: [],
     inactiveFooterSummary: {
       ja:
-        "立ち上がりはウルブズがスタートダッシュを切ったものの、結局はヨキッチとマレーの支配力でデンバーが持っていった。\n" +
-        "ヨキッチは25-13-11のトリプルダブル、マレーは30得点。\n" +
-        "終盤に追いつくも、集中力が続かず、クラッチで離される展開だった。",
+        "序盤はWolvesが入ったが、結局はJokicとMurrayが試合を自分たちの形に戻した。\n" +
+        "特に中盤以降、Denverがフィジカルな展開でも落ち着いて得点を積み、ゲームを“スターの支配下”に置いたのが印象的だった。\n" +
+        "これは接戦の皮をかぶった試合というより「Denverのエース2人がシリーズの基準を先に示したGame 1」。\n" +
+        "WolvesはAntの膝の状態が気になる。",
       en:
-        "Minnesota sprinted out of the gates, but Denver ultimately seized the game behind Nikola Jokić and Jamal Murray.\n" +
-        "Jokić finished with a 25-13-11 triple-double; Murray poured in 30 points.\n" +
-        "The Wolves made late runs, yet couldn’t sustain their edge and were separated again in the clutch.",
+        "Minnesota had the early edge, but Jokić and Murray eventually bent the game back to Denver’s terms.\n" +
+        "From the middle stages on, the Nuggets stayed composed in a physical game, stacking points and placing the night firmly under their stars’ control.\n" +
+        "Less a nail-biter in disguise than a Game 1 where Denver’s two aces set the series standard first.\n" +
+        "For the Wolves, Anthony Edwards’ knee will be worth watching.",
     },
   },
 ];

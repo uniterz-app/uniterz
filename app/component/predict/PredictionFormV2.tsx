@@ -18,7 +18,9 @@ import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { normalizeLeague } from "@/lib/leagues";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import GameTeamStats from "@/app/component/predict/GameTeamStats";
-import NbaPostseasonMatchupPanel from "@/app/component/predict/NbaPostseasonMatchupPanel";
+import NbaPostseasonMatchupPanel, {
+  H2hSeasonRecordRow,
+} from "@/app/component/predict/NbaPostseasonMatchupPanel";
 import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
@@ -81,6 +83,13 @@ type Props = {
 
 type Winner = "home" | "away" | "draw";
 
+type H2HRecordLine = {
+  leftTeamDisplay: string;
+  rightTeamDisplay: string;
+  leftWins: number;
+  rightWins: number;
+};
+
 /** MatchCard と同趣旨：試合開始済み（未投稿ならスコア予想 UI を出さない） */
 function isMatchStartedForPredict(game: MatchCardProps): boolean {
   const { status, startAtJst } = game;
@@ -93,6 +102,19 @@ function isMatchStartedForPredict(game: MatchCardProps): boolean {
     }
   }
   return false;
+}
+
+function computeRecordByGames(games: Array<{ leftTeamDisplay: string; rightTeamDisplay: string; scoreLeft: number | null; scoreRight: number | null }>): H2HRecordLine | null {
+  if (!games.length) return null;
+  const { leftTeamDisplay, rightTeamDisplay } = games[0];
+  let leftWins = 0;
+  let rightWins = 0;
+  for (const g of games) {
+    if (g.scoreLeft == null || g.scoreRight == null) continue;
+    if (g.scoreLeft > g.scoreRight) leftWins += 1;
+    else if (g.scoreRight > g.scoreLeft) rightWins += 1;
+  }
+  return { leftTeamDisplay, rightTeamDisplay, leftWins, rightWins };
 }
 
 export default function PredictionFormV2({
@@ -207,6 +229,11 @@ export default function PredictionFormV2({
     game.home.name,
     game.away.name,
   ]);
+  const h2hPoRecord = useMemo(() => {
+    const poGames =
+      nbaH2HPack?.games?.filter((g) => Boolean(g.seriesGameLabel)) ?? [];
+    return computeRecordByGames(poGames);
+  }, [nbaH2HPack?.games]);
 
   useEffect(() => {
     onStandingsOpenChange?.(toolsTab === "standings");
@@ -902,67 +929,16 @@ export default function PredictionFormV2({
                     "font-semibold text-white/90",
                   ].join(" ")}
                 >
-                  {isEn ? "Season head-to-head" : "今季の直接対決"}
+                  {isEn ? "Series Trend" : "Series Trend"}
                 </div>
-                {nbaH2HPack?.seriesRecord ? (
-                  <div
-                    className={[
-                      resultStatsMetricNumClass,
-                      "flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-1 text-sm text-white/85 sm:text-base md:gap-x-2 md:text-lg",
-                    ].join(" ")}
-                  >
-                    <span className="max-w-[46%] truncate sm:max-w-none">
-                      {nbaH2HPack.seriesRecord.leftTeamDisplay}
-                    </span>
-                    <span
-                      className={[
-                        resultStatsMetricNumClass,
-                        "inline-flex shrink-0 items-baseline font-bold tabular-nums text-xl sm:text-2xl md:text-3xl",
-                      ].join(" ")}
-                    >
-                      <span
-                        className={
-                          nbaH2HPack.seriesRecord.leftWins >
-                          nbaH2HPack.seriesRecord.rightWins
-                            ? "text-yellow-300"
-                            : "text-white"
-                        }
-                        style={
-                          nbaH2HPack.seriesRecord.leftWins >
-                          nbaH2HPack.seriesRecord.rightWins
-                            ? {
-                                textShadow:
-                                  "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                              }
-                            : undefined
-                        }
-                      >
-                        {nbaH2HPack.seriesRecord.leftWins}
-                      </span>
-                      <span className="mx-1 text-white/55 sm:mx-1.5">–</span>
-                      <span
-                        className={
-                          nbaH2HPack.seriesRecord.rightWins >
-                          nbaH2HPack.seriesRecord.leftWins
-                            ? "text-yellow-300"
-                            : "text-white"
-                        }
-                        style={
-                          nbaH2HPack.seriesRecord.rightWins >
-                          nbaH2HPack.seriesRecord.leftWins
-                            ? {
-                                textShadow:
-                                  "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                              }
-                            : undefined
-                        }
-                      >
-                        {nbaH2HPack.seriesRecord.rightWins}
-                      </span>
-                    </span>
-                    <span className="max-w-[46%] truncate sm:max-w-none">
-                      {nbaH2HPack.seriesRecord.rightTeamDisplay}
-                    </span>
+                {h2hPoRecord ? (
+                  <div className="text-center">
+                    <H2hSeasonRecordRow
+                      leftTeamDisplay={h2hPoRecord.leftTeamDisplay}
+                      rightTeamDisplay={h2hPoRecord.rightTeamDisplay}
+                      leftWins={h2hPoRecord.leftWins}
+                      rightWins={h2hPoRecord.rightWins}
+                    />
                   </div>
                 ) : null}
               </div>

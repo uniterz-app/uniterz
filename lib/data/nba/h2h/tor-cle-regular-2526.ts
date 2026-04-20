@@ -76,13 +76,13 @@ export const torCleH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["I. Quickley"],
     inactiveFooterSummary: {
       ja:
-        "キャブスはレギュラーシーズンで3敗した相手だったが、堅実に Game 1 を勝利。\n" +
-        "ミッチェルが32得点で主導し、内外どちらからも得点を積み上げ、クリーブランドはシリーズの入りをしっかり取った。\n" +
-        "トロントは点は取れたものの、アイソレーション、P&R など守り切れず後手に回った。",
+        "Cavsは「RSで3敗した相手に、POで先に主導権を取り返した」試合。\n" +
+        "Mitchellの得点力に加えて、Strusのベンチ火力、さらにHardenとAllenを含めた攻撃の選択肢が多く、Torontoに守る的を絞らせなかったのが大きい。\n" +
+        "単なる勝利というより「Cavsがこのカードの不安要素をひとまず消したGame 1」。",
       en:
-        "Cleveland had lost all three regular-season meetings to this opponent but took Game 1 with steady execution.\n" +
-        "Donovan Mitchell led with 32 points, the Cavs scored inside and out, and they set a firm tone to open the series.\n" +
-        "Toronto still scored, but trailed reacting to isolations, pick-and-rolls, and other actions they could not shut down.",
+        "For the Cavs, this was the game where they seized the early playoff edge against a team that had beaten them three times in the regular season.\n" +
+        "Alongside Mitchell’s scoring, Strus’s bench punch and a deep set of options—including Allen—kept Toronto from locking onto a single defensive focus.\n" +
+        "More than a simple win, it was a Game 1 that put the matchup’s biggest doubts to rest, at least for now.",
     },
   },
 ];

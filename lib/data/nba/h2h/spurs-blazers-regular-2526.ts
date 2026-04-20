@@ -76,13 +76,15 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["D. Lillard"],
     inactiveFooterSummary: {
       ja:
-        "スパーズはウェンバンヤマが35得点で、チーム史上最多得点でPOデビューを飾った。\n" +
-        "若いコアの勢いがそのまま出たGame 1だった。\n" +
-        "ブレイザーズはアブディヤの30得点とこちらもインパクトを残したPOデビューだったが、主役のインパクトで上回られた。",
+        "Wembanyamaのプレーオフ初戦として強烈で、Game 1の最大テーマはそこだった。\n" +
+        "記録級のデビューに加えて、Fox、Castle、Vassellまで噛み合い、San Antonioは若いコアがそのままシリーズの武器になる形を見せた。\n" +
+        "BlazersもAvdija中心にしっかり対抗できる場面はあり、完全に力負けした初戦ではない。\n" +
+        "最終的には、Spursが若い主力をまとめて機能させたのが大きかった。",
       en:
-        "Victor Wembanyama scored 35 in a playoff debut that set a Spurs franchise record for points.\n" +
-        "Game 1 was the young core’s energy on full display.\n" +
-        "Portland got a statement 30-point playoff debut from Deni Avdija as well, but the headliner’s impact won the night.",
+        "Victor Wembanyama’s playoff opener was the headliner—arguably the biggest story of Game 1.\n" +
+        "Beyond a record-setting debut, Fox, Stephon Castle, and Devin Vassell all clicked, showing San Antonio’s young core can be the series’ engine.\n" +
+        "Portland, led by Deni Avdija, had stretches where it answered back; this wasn’t a pure blowout where the Blazers looked overmatched from the jump.\n" +
+        "In the end, the Spurs getting their young pillars to fire together made the difference.",
     },
   },
 ];

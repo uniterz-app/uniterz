@@ -68,18 +68,16 @@ export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
     scoreRight: 98,
     homeTeamSide: "left",
     injuriesLeft: ["L. Doncic", "A. Reaves"],
-    injuriesRight: ["S. Adams", "F. VanVleet"],
+    injuriesRight: ["S. Adams", "F. VanVleet", "K. Durant"],
     inactiveFooterSummary: {
       ja:
-        "レイカーズはルカ・リーブス不在でも勝ったのが大きい。\n" +
-        "レイカーズが試合の入りから集中力を見せ、チーム全体で高いFG%をマークした。\n" +
-        "ケナードが27得点、レブロンが19得点13アシストで勝利。\n" +
-        "ロケッツはレイカーズのゾーンDFに対して解決の糸口を見つけられず、流れを一度も奪えないまま敗戦。",
+        "この試合の主役は完全にKennardで、Lakersは主力欠場があっても周辺戦力が機能する形を見せたのが収穫だった。\n" +
+        "LeBronが試合全体を安定させ、Houstonは若さとサイズはあっても、オフェンスの組み立てと外の再現性で後手に回った。\n" +
+        "Lakersの底力と同時に、RocketsはDurant不在以上に攻撃の整理不足が露呈したGame 1だった。",
       en:
-        "A major statement win for the Lakers without Luka Dončić and Austin Reaves.\n" +
-        "Los Angeles brought focus from the opening tip and posted a strong team field-goal percentage.\n" +
-        "Luke Kennard scored 27; LeBron James added 19 points and 13 assists to close it out.\n" +
-        "Houston never found answers against L.A.’s zone defense and couldn’t flip momentum once.",
+        "Kennard was the undisputed star of the night, and the Lakers’ biggest takeaway was proving their supporting cast could deliver with key starters sidelined.\n" +
+        "LeBron steadied the game from start to finish; Houston had youth and size, but trailed in offensive structure and perimeter shot-making consistency.\n" +
+        "It was a Game 1 that highlighted L.A.’s depth—and for the Rockets, exposed offensive disorganization beyond Durant’s absence.",
     },
   },
 ];

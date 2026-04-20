@@ -66,13 +66,13 @@ export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["J. Landale"],
     inactiveFooterSummary: {
       ja:
-        "ニックスは大きく崩れず、ホークスの追い上げを受けても最後は締めた。\n" +
-        "ブランソンが出だしから好調で28得点まで積み上げた、ニックスは取りこぼさない強さが出た Game 1 だった。\n" +
-        "アトランタは食らいついたが、大事なところでシュートが決まらずに終始リードを奪えず。",
+        "Knicksは「Brunsonで入りTownsで締めた」Game1。\n" +
+        "Brunsonが1Qだけで19点で空気を作り、終盤はTownsが後半19点をマーク。内容としては圧勝ではなく、NYが自分たちの形を崩さずに勝ち切った試合。\n" +
+        "Hawksは終盤に詰める場面は作ったが、試合全体ではKnicksの守備とサイズに押し返され、シリーズをひっくり返せるだけの持続的な攻撃までは出せなかった。",
       en:
-        "The Knicks never unraveled, absorbed Atlanta’s runs, and closed the game out.\n" +
-        "Jalen Brunson was sharp from the start and piled up 28 points—it was the kind of Game 1 where New York’s refusal to give away possessions showed.\n" +
-        "The Hawks hung around, but shots wouldn’t fall when it mattered and they never wrested the lead.",
+        "Game 1 for the Knicks was a “Brunson opens it, Towns closes it” night.\n" +
+        "Brunson dropped 19 in the first quarter to set the tone, and Towns answered with 19 in the second half. It wasn’t a blowout—New York simply stayed in its shape and found a way to win.\n" +
+        "The Hawks manufactured late pressure, but across the full game they were pushed back by the Knicks’ defense and size, and couldn’t generate the sustained offense needed to truly flip the series outlook.",
     },
   },
 ];
