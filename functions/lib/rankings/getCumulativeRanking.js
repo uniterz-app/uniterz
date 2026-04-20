@@ -18,6 +18,9 @@ function isMetric(v) {
 function isRankingPhase(v) {
     return v === "play_in" || v === "playoffs";
 }
+function isPhaseSnapshotBuiltDaily(phase) {
+    return buildCumulativeRankingSnapshot_1.SNAPSHOT_BUILD_PHASES.includes(phase);
+}
 function rankingSlice(d, phase) {
     var _a, _b, _c, _d, _e, _f, _g;
     const byPhase = (_a = d.rankingByPhase) === null || _a === void 0 ? void 0 : _a[phase];
@@ -171,6 +174,10 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
             : null;
         if (storedRank != null) {
             myRank = storedRank;
+        }
+        else if (!isPhaseSnapshotBuiltDaily(phase)) {
+            /** プレーイン確定後はスナップショットに無いユーザーは live count しない（順位が動かない前提） */
+            myRank = null;
         }
         else {
             const myValue = metric === "activeWinStreak"

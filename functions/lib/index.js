@@ -114,6 +114,7 @@ exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
 });
 /* ============================================================================
  * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA 試合がある日のみ
+ * （プレーイン順位は確定のため再集計しない。`buildCumulativeRankingSnapshot` は playoffs のみ更新）
  * ==========================================================================*/
 exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "55 15 * * *", timeZone: "Asia/Tokyo" }, async () => {
     var _a;

@@ -58,12 +58,12 @@ const PlayoffFullBracketWebLazy = dynamic(
   }
 );
 
-const ProfileNbaPredictionMapLazy = dynamic(
-  () => import("@/app/component/profile/ui/ProfileNbaPredictionMap"),
+const ProfilePlayoffRankTrendChartLazy = dynamic(
+  () => import("@/app/component/profile/ui/ProfilePlayoffRankTrendChart"),
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[360px] rounded-2xl bg-white/5" aria-hidden />
+      <div className="min-h-[240px] rounded-2xl bg-white/5" aria-hidden />
     ),
   }
 );
@@ -75,7 +75,6 @@ import SummaryCardReveal from "./ui/SummaryCardReveal";
 import ProfileHeroCard from "./ui/ProfileHeroCard";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/web/badges/BadgeDetailModal";
-import ScoringRulesChangeNoticeModal from "@/app/component/profile/ScoringRulesChangeNoticeModal";
 
 import AnalysisWinCard from "./ui/summary/AnalysisWinCard";
 import TotalScoreCard from "./ui/summary/TotalScoreCard";
@@ -90,6 +89,7 @@ import {
 } from "@/lib/profile/useProfileBadges";
 import { useProfilePlayoffBracket } from "@/lib/profile/useProfilePlayoffBracket";
 import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendChart";
+import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankTrend";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
@@ -131,6 +131,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
   const { chartData, loading: dailyTrendLoading } =
     useProfileDailyTrendChart(resolvedUid, {
+      enabled: fetchOverviewExtras,
+    });
+
+  const { chartRows: rankPlayoffTrendRows, loading: rankTrendLoading } =
+    useProfilePlayoffRankTrend(resolvedUid, {
       enabled: fetchOverviewExtras,
     });
 
@@ -201,7 +206,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-${range}`;
   /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
   const overviewReady =
-    !resolvedUid || (!statsLoading && !dailyTrendLoading);
+    !resolvedUid ||
+    (!statsLoading && !dailyTrendLoading && !rankTrendLoading);
 
   const summaryEntranceLockedRef = useRef(false);
   useEffect(() => {
@@ -430,14 +436,24 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   range={range}
                   allowAll={currentIsProView}
                   language={language}
-                  entranceSync
-                  rechartsAfterEntrance={
-                    !playSummaryEntrance || chartEntranceDone
-                  }
                 />
               </SummaryCardReveal>
               <SummaryCardReveal
                 index={6}
+                total={8}
+                enabled={playSummaryEntrance}
+                className="min-w-0 overflow-hidden"
+              >
+                <div className="pt-0">
+                  <ProfilePlayoffRankTrendChartLazy
+                    data={rankPlayoffTrendRows}
+                    loading={rankTrendLoading}
+                    language={language}
+                  />
+                </div>
+              </SummaryCardReveal>
+              <SummaryCardReveal
+                index={7}
                 total={8}
                 enabled={playSummaryEntrance}
                 className="min-w-0 overflow-hidden"
@@ -448,19 +464,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   layout="web"
                   entranceReady={!playSummaryEntrance || chartEntranceDone}
                 />
-              </SummaryCardReveal>
-              <SummaryCardReveal
-                index={7}
-                total={8}
-                enabled={playSummaryEntrance}
-                className="min-w-0 overflow-hidden"
-              >
-                <div className="pt-0">
-                  <ProfileNbaPredictionMapLazy
-                    uid={resolvedUid}
-                    language={language}
-                  />
-                </div>
               </SummaryCardReveal>
             </div>
               </>
@@ -525,11 +528,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         onClose={() => setDrawerOpen(false)}
         onOpenMenu={() => setDrawerOpen(true)}
         variant="web"
-      />
-
-      <ScoringRulesChangeNoticeModal
-        language={language}
-        enabled={!!resolvedUid}
       />
 
       {badgeModalOpen && selectedBadge && (

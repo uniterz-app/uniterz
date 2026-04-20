@@ -275,7 +275,7 @@ export default function StreakTrackerCard({
                 nameRajdhani.className,
                 "font-semibold tracking-wide text-white/95",
                 layout === "web"
-                  ? "text-xl sm:text-[1.55rem]"
+                  ? "text-xl sm:text-[1.72rem]"
                   : "text-lg",
               ].join(" ")}
             >
@@ -284,7 +284,7 @@ export default function StreakTrackerCard({
             <p
               className={[
                 isEn ? "" : jp.className,
-                "mt-1.5 max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[13px]",
+                "mt-1.5 max-w-[560px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
               ]
                 .filter(Boolean)
                 .join(" ")}

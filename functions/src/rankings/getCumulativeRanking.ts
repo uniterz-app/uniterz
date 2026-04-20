@@ -8,6 +8,7 @@ import {
   RANK_SNAPSHOT_HISTORY_SUBCOL,
   RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
   subtractOneDayFromDateKeyJST,
+  SNAPSHOT_BUILD_PHASES,
 } from "./buildCumulativeRankingSnapshot";
 
 function db() {
@@ -56,6 +57,10 @@ function isMetric(v: unknown): v is Metric {
 
 function isRankingPhase(v: unknown): v is RankingPhase {
   return v === "play_in" || v === "playoffs";
+}
+
+function isPhaseSnapshotBuiltDaily(phase: RankingPhase): boolean {
+  return SNAPSHOT_BUILD_PHASES.includes(phase);
 }
 
 function rankingSlice(d: any, phase: RankingPhase) {
@@ -239,6 +244,9 @@ async function rankingPayloadForMetric(
 
     if (storedRank != null) {
       myRank = storedRank;
+    } else if (!isPhaseSnapshotBuiltDaily(phase)) {
+      /** プレーイン確定後はスナップショットに無いユーザーは live count しない（順位が動かない前提） */
+      myRank = null;
     } else {
       const myValue =
         metric === "activeWinStreak"
