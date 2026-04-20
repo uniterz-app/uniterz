@@ -157,7 +157,7 @@ export default function ProfilePlayoffRankTrendChart({
 }: Props) {
   const isEn = language === "en";
   const title = "Ranking Progress";
-  const subtitle = "最新10件のランキングスナップショットの変動を表示";
+  const subtitle = "最新10件のランキングの変動を表示";
   const emptyHint = isEn
     ? "Rank snapshots appear after scheduled updates."
     : "ランキングの日次スナップショットが溜まると表示されます";
