@@ -2,7 +2,6 @@
 
 import type { Language } from "@/lib/i18n/language";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
-import { isRankingSnapshotBuiltDailyForPhase } from "@/lib/rankings/rankingPhase";
 import {
   TIMEZONE_ET,
   TIMEZONE_JST,
@@ -36,19 +35,7 @@ type Props = {
 };
 
 export default function RankingsScheduleNotice({ phase, language }: Props) {
-  const playInFinal = !isRankingSnapshotBuiltDailyForPhase("play_in");
-
-  if (phase === "play_in" && playInFinal) {
-    return (
-      <div className="text-center">
-        <p className="text-[12px] leading-relaxed text-white/60">
-          {language === "en"
-            ? "Play-In rankings are final — showing the last saved snapshot."
-            : "プレーイン順位は確定済みです。保存されているスナップショットを表示しています。"}
-        </p>
-      </div>
-    );
-  }
+  void phase;
 
   return (
     <div className="text-center">

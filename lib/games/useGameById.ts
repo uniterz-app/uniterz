@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { toMatchCardProps } from "@/lib/games/transform";
 
 type State =
@@ -32,7 +33,13 @@ export function useGameById(id?: string | null) {
           return;
         }
         const raw = { id, ...snap.data() }; // id を混ぜる
-        const gameProps = toMatchCardProps(raw as any, { dense: false });
+        const peers = await fetchPlayoffSeriesPeerGames(
+          raw as Record<string, unknown>
+        );
+        const gameProps = toMatchCardProps(raw as any, {
+          dense: false,
+          peerGamesForSeriesInference: peers,
+        });
         setState({ status: "loaded", data: gameProps, error: null });
       } catch (e: any) {
         console.warn("[useGameById] getDoc error:", e);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore";
@@ -11,6 +11,7 @@ import MatchCard from "@/app/component/games/MatchCard";
 import GamePredictionDistributionV2 from "@/app/component/predict/GamePredictionDistribution";
 
 import { toMatchCardProps } from "@/lib/games/transform";
+import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -21,8 +22,9 @@ import { normalizeLeague } from "@/lib/leagues";
 import { ArrowLeft } from "lucide-react";
 
 
-// Firestore の games 生ドキュメント型（id 付き）
-type GameDoc = Parameters<typeof toMatchCardProps>[0];
+type MatchCardLoaded = ReturnType<typeof toMatchCardProps> & {
+  hideActions: true;
+};
 
 export default function Page() {
   const router = useRouter();
@@ -52,8 +54,7 @@ export default function Page() {
     })();
   }, [uid, gameId]);
 
-  // 🔍 ゲーム情報の取得
-  const [rawGame, setRawGame] = useState<GameDoc | null>(null);
+  const [matchProps, setMatchProps] = useState<MatchCardLoaded | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,10 +62,26 @@ export default function Page() {
 
     (async () => {
       setLoading(true);
+      setMatchProps(null);
       try {
         const snap = await getDoc(doc(db, "games", gameId));
         if (!alive) return;
-        setRawGame(snap.exists() ? ({ id: snap.id, ...snap.data() } as GameDoc) : null);
+        if (!snap.exists()) {
+          setMatchProps(null);
+          return;
+        }
+        const raw = { id: snap.id, ...snap.data() } as Parameters<
+          typeof toMatchCardProps
+        >[0];
+        const peers = await fetchPlayoffSeriesPeerGames(
+          raw as Record<string, unknown>
+        );
+        if (!alive) return;
+        const base = toMatchCardProps(raw, {
+          dense: true,
+          peerGamesForSeriesInference: peers,
+        });
+        setMatchProps({ ...base, hideActions: true } as MatchCardLoaded);
       } finally {
         if (alive) setLoading(false);
       }
@@ -74,13 +91,6 @@ export default function Page() {
       alive = false;
     };
   }, [gameId]);
-
-  // MatchCard 用の props 整形
-  const matchProps = useMemo(() => {
-    if (!rawGame) return null;
-    const base = toMatchCardProps(rawGame, { dense: true });
-    return { ...base, hideActions: true };
-  }, [rawGame]);
 
   const homeName = matchProps?.home.name ?? "";
   const awayName = matchProps?.away.name ?? "";

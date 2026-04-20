@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
@@ -85,7 +86,13 @@ export default function Page() {
         }
 
         const raw = { id, ...snap.data() }; // id を混ぜる
-        const game = toMatchCardProps(raw as any, { dense: false });
+        const peers = await fetchPlayoffSeriesPeerGames(
+          raw as Record<string, unknown>
+        );
+        const game = toMatchCardProps(raw as any, {
+          dense: false,
+          peerGamesForSeriesInference: peers,
+        });
         setGameState({ kind: "loaded", game });
       } catch (e: any) {
         setGameState({ kind: "error", message: e?.message ?? "failed" });

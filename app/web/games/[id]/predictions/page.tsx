@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, limit, getDocs } from "firebase/firestore";
@@ -11,13 +11,16 @@ import MatchCard from "@/app/component/games/MatchCard";
 import GamePredictionDistributionV2 from "@/app/component/predict/GamePredictionDistribution";
 
 import { toMatchCardProps } from "@/lib/games/transform";
+import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
 
-type GameDoc = Parameters<typeof toMatchCardProps>[0];
+type MatchCardLoaded = ReturnType<typeof toMatchCardProps> & {
+  hideActions: true;
+};
 
 export default function Page() {
   const { id } = useParams<{ id: string }>();
@@ -45,8 +48,8 @@ export default function Page() {
     })();
   }, [uid, gameId]);
 
-  // 🔍 ゲーム情報取得
-  const [rawGame, setRawGame] = useState<GameDoc | null>(null);
+  // 🔍 ゲーム情報取得（同一シリーズの兄弟試合を含めてシリーズ表記を一覧と揃える）
+  const [matchProps, setMatchProps] = useState<MatchCardLoaded | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,11 +57,28 @@ export default function Page() {
 
     (async () => {
       setLoading(true);
+      setMatchProps(null);
       try {
         const snap = await getDoc(doc(db, "games", gameId));
         if (!alive) return;
 
-        setRawGame(snap.exists() ? ({ id: snap.id, ...snap.data() } as GameDoc) : null);
+        if (!snap.exists()) {
+          setMatchProps(null);
+          return;
+        }
+
+        const raw = { id: snap.id, ...snap.data() } as Parameters<
+          typeof toMatchCardProps
+        >[0];
+        const peers = await fetchPlayoffSeriesPeerGames(
+          raw as Record<string, unknown>
+        );
+        if (!alive) return;
+        const base = toMatchCardProps(raw, {
+          dense: false,
+          peerGamesForSeriesInference: peers,
+        });
+        setMatchProps({ ...base, hideActions: true } as MatchCardLoaded);
       } finally {
         if (alive) setLoading(false);
       }
@@ -68,13 +88,6 @@ export default function Page() {
       alive = false;
     };
   }, [gameId]);
-
-  // MatchCard 用データ整形
-  const matchProps = useMemo(() => {
-    if (!rawGame) return null;
-    const base = toMatchCardProps(rawGame, { dense: false });
-    return { ...base, hideActions: true };
-  }, [rawGame]);
 
   // 色・チーム名抽出
   const homeName = matchProps?.home.name ?? "";
