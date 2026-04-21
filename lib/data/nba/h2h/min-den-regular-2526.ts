@@ -9,7 +9,7 @@ export const MIN_DEN_TEAM_IDS = ["nba-nuggets", "nba-timberwolves"] as const;
 const H2H_LEFT = "Nuggets";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ1） */
+/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ2） */
 export const minDenH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-min-den-2025-10-27",
@@ -85,6 +85,25 @@ export const minDenH2HGames: NbaH2HGameCard[] = [
         "For the Wolves, Anthony Edwards’ knee will be worth watching.",
     },
   },
+  {
+    id: "h2h-min-den-2026-04-20",
+    dateEt: "2026-04-20",
+    dateJst: "2026-04-21",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 114,
+    scoreRight: 119,
+    homeTeamSide: "right",
+    injuriesLeft: ["P. Watson"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Nuggetsが第2Qに最大19点差をつけ、3Q終了時点でも93-90とリードしていたが、Wolvesが第4Qで逆転した。アントが30得点10リバウンド、ランドルが24得点9リバウンド、5outでnuggetsのゾーンDFにアンサー。Nuggetsはマレーが30得点、ヨキッチが24得点15リバウンド8アシストと数字は出たが、終盤2人のOFでシュートを決めきれず、さらにセカンドチャンスポイントで20-3と大きく差をつけられた。シリーズは1-1でWolvesのHomeへ",
+      en:
+        "Denver built a lead as large as 19 in the second quarter and still led 93-90 after three, but Minnesota flipped the game in the fourth. Edwards finished with 30 points and 10 rebounds, Randle added 24 and 9, and the Wolves countered the Nuggets’ zone with five-out spacing. Murray scored 30 and Jokić posted 24, 15 and 8, but late in the game the two stars could not convert enough looks in the half court, and Minnesota piled up second-chance points by 20-3 in a decisive stretch. The series is tied 1-1 heading to Minnesota.",
+    },
+  },
 ];
 
 /** 左=DEN・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -123,7 +142,7 @@ function minDenH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function minDenH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
