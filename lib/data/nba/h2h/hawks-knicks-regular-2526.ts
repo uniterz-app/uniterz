@@ -9,7 +9,7 @@ export const HAWKS_KNICKS_TEAM_IDS = ["nba-hawks", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Hawks";
 
-/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ1） */
+/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ2） */
 export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-hawks-knicks-2025-12-27",
@@ -75,6 +75,25 @@ export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
         "The Hawks manufactured late pressure, but across the full game they were pushed back by the Knicks’ defense and size, and couldn’t generate the sustained offense needed to truly flip the series outlook.",
     },
   },
+  {
+    id: "h2h-hawks-knicks-2026-04-20",
+    dateEt: "2026-04-20",
+    dateJst: "2026-04-21",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 106,
+    scoreRight: 107,
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["J. Landale"],
+    inactiveFooterSummary: {
+      ja:
+        "Knicksが一時14点リード、第4Q残り5分でも8点差をつけていたが、Hawksが最後に15-6で試合をひっくり返した。マッカラムが32得点で終盤の勝負どころを連続して決め、さらにベースラインフェイダウェイで決勝点も沈めた。Knicksはブランソンが29得点、ハート、タウンズ、アヌノビーも支えたが、第4QのFG成功率が22.7%まで落ち、逃げ切れなかった。ブリッジスのブザービーターも外れ、シリーズは1-1でHawksのHomeへ",
+      en:
+        "New York led by as many as 14 and still held an 8-point edge with five minutes left in the fourth, but Atlanta closed on a 15-6 run to flip the game. McCollum scored 32 and repeatedly hit big shots down the stretch, including the game-winner on a baseline fadeaway. Brunson had 29 for the Knicks with Hart, Towns and Anunoby helping, but their fourth-quarter field-goal rate fell to 22.7% and they could not hold on. Bridges’ buzzer-beater missed as well, leaving the series tied 1-1 heading to Atlanta.",
+    },
+  },
 ];
 
 /** 左=NYK・右=ATL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -113,7 +132,7 @@ function hawksKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記4試合からの H2H 平均（小数1桁）。 */
+/** 上記5試合からの H2H 平均（小数1桁）。 */
 export function hawksKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

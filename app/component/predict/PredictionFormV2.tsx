@@ -760,6 +760,12 @@ export default function PredictionFormV2({
             awayTeamId={nextGamePreview.away?.teamId}
             homeColorHex={nextGamePreview.home?.colorHex}
             awayColorHex={nextGamePreview.away?.colorHex}
+            startAtJst={nextGamePreview.startAtJst}
+            seasonPhase={nextGamePreview.seasonPhase}
+            roundLabel={nextGamePreview.roundLabel}
+            seriesStanding={nextGamePreview.seriesStanding}
+            homeRecord={nextGamePreview.homeRecord}
+            awayRecord={nextGamePreview.awayRecord}
             onYes={handleNextModalYes}
             onNo={handleNextModalNo}
           />,

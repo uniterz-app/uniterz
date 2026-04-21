@@ -9,7 +9,7 @@ export const TOR_CLE_TEAM_IDS = ["nba-raptors", "nba-cavaliers"] as const;
 const H2H_LEFT = "Cavaliers";
 const H2H_RIGHT = "Raptors";
 
-/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ1） */
+/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ2） */
 export const torCleH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-tor-cle-2025-10-31",
@@ -85,6 +85,25 @@ export const torCleH2HGames: NbaH2HGameCard[] = [
         "More than a simple win, it was a Game 1 that put the matchup’s biggest doubts to rest, at least for now.",
     },
   },
+  {
+    id: "h2h-tor-cle-2026-04-20",
+    dateEt: "2026-04-20",
+    dateJst: "2026-04-21",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 115,
+    scoreRight: 105,
+    homeTeamSide: "right",
+    injuriesLeft: ["T. Bryant"],
+    injuriesRight: ["I. Quickley"],
+    inactiveFooterSummary: {
+      ja:
+        "Cavsは前半から主導権を握り、終盤にRaptorsが詰めても落とさなかった。ミッチェルが30得点で第4Qに9得点、ハーデンが28得点5スティール、モブリーも11/13で25得点と効率よく続いた。Raptorsはバーンズがプレーオフ自己最多26得点、バレットが22得点だったが、Cavsのボールプレッシャーと上位3枚の得点力を止め切れず、シリーズは2-0になった。",
+      en:
+        "Cleveland led from the first half and never let the game slip away even when Toronto made late pushes. Mitchell scored 30 with 9 in the fourth quarter, Harden had 28 points and 5 steals, and Mobley stayed efficient with 25 on 11-for-13 shooting. Barnes set a new playoff career high with 26 for the Raptors and Barrett added 22, but they could not contain the Cavs’ ball pressure or the scoring punch of their top three, and the series went to 2-0.",
+    },
+  },
 ];
 
 /** 左=CLE・右=TOR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -124,7 +143,7 @@ function torCleH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function torCleH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
