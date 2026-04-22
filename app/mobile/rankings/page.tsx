@@ -164,6 +164,13 @@ export default function MobileRankingsPage() {
             language={language}
             compactMobile
           />
+          {metric === "winRate" && (
+            <p className="px-1 text-[11px] leading-4 text-white/60">
+              {language === "en"
+                ? "Win Rate ranking requires at least 10 posts."
+                : "勝率ランキングは10投稿以上が対象です。"}
+            </p>
+          )}
         </div>
 
         {!listReady && (

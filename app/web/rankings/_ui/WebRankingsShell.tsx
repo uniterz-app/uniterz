@@ -187,6 +187,13 @@ export default function WebRankingsShell() {
             setMetric={setMetric}
             language={language}
           />
+          {metric === "winRate" && (
+            <p className="px-1 text-xs leading-5 text-white/60">
+              {language === "en"
+                ? "Win Rate ranking requires at least 10 posts."
+                : "勝率ランキングは10投稿以上が対象です。"}
+            </p>
+          )}
         </div>
 
         {!listReady && (
