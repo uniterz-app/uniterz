@@ -90,6 +90,29 @@ type H2HRecordLine = {
   rightWins: number;
 };
 
+function normalizeH2HName(v: string | undefined): string {
+  return (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function shouldFlipH2HSides(
+  games: Array<{ leftTeamDisplay: string; rightTeamDisplay: string }>,
+  homeTeamName: string | undefined,
+  awayTeamName: string | undefined
+): boolean {
+  if (!games.length) return false;
+  const first = games[0];
+  if (!first) return false;
+  const left = normalizeH2HName(first.leftTeamDisplay);
+  const right = normalizeH2HName(first.rightTeamDisplay);
+  const home = normalizeH2HName(homeTeamName);
+  const away = normalizeH2HName(awayTeamName);
+  if (!left || !right || !home || !away) return false;
+
+  if (home.includes(left) && away.includes(right)) return false;
+  if (home.includes(right) && away.includes(left)) return true;
+  return false;
+}
+
 /** MatchCard と同趣旨：試合開始済み（未投稿ならスコア予想 UI を出さない） */
 function isMatchStartedForPredict(game: MatchCardProps): boolean {
   const { status, startAtJst } = game;
@@ -104,12 +127,31 @@ function isMatchStartedForPredict(game: MatchCardProps): boolean {
   return false;
 }
 
-function computeRecordByGames(games: Array<{ leftTeamDisplay: string; rightTeamDisplay: string; scoreLeft: number | null; scoreRight: number | null }>): H2HRecordLine | null {
+function computeRecordByGames(
+  games: Array<{
+    leftTeamDisplay: string;
+    rightTeamDisplay: string;
+    scoreLeft: number | null;
+    scoreRight: number | null;
+  }>,
+  homeTeamName?: string,
+  awayTeamName?: string
+): H2HRecordLine | null {
   if (!games.length) return null;
-  const { leftTeamDisplay, rightTeamDisplay } = games[0];
+  const flip = shouldFlipH2HSides(games, homeTeamName, awayTeamName);
+  const normalized = flip
+    ? games.map((g) => ({
+        leftTeamDisplay: g.rightTeamDisplay,
+        rightTeamDisplay: g.leftTeamDisplay,
+        scoreLeft: g.scoreRight,
+        scoreRight: g.scoreLeft,
+      }))
+    : games;
+
+  const { leftTeamDisplay, rightTeamDisplay } = normalized[0];
   let leftWins = 0;
   let rightWins = 0;
-  for (const g of games) {
+  for (const g of normalized) {
     if (g.scoreLeft == null || g.scoreRight == null) continue;
     if (g.scoreLeft > g.scoreRight) leftWins += 1;
     else if (g.scoreRight > g.scoreLeft) rightWins += 1;
@@ -232,8 +274,8 @@ export default function PredictionFormV2({
   const h2hPoRecord = useMemo(() => {
     const poGames =
       nbaH2HPack?.games?.filter((g) => Boolean(g.seriesGameLabel)) ?? [];
-    return computeRecordByGames(poGames);
-  }, [nbaH2HPack?.games]);
+    return computeRecordByGames(poGames, game.home.name, game.away.name);
+  }, [nbaH2HPack?.games, game.home.name, game.away.name]);
 
   useEffect(() => {
     onStandingsOpenChange?.(toolsTab === "standings");
@@ -959,6 +1001,8 @@ export default function PredictionFormV2({
                   isEn={isEn}
                   seriesGames={nbaH2HPack?.games}
                   h2hAverages={nbaH2HPack?.h2hAverages}
+                  homeTeamName={game.home.name}
+                  awayTeamName={game.away.name}
                 />
               </div>
             </div>

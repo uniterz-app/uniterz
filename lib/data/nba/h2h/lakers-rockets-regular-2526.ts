@@ -9,7 +9,7 @@ export const LAKERS_ROCKETS_TEAM_IDS = ["nba-lakers", "nba-rockets"] as const;
 const H2H_LEFT = "Lakers";
 const H2H_RIGHT = "Rockets";
 
-/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ1） */
+/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ2） */
 export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-lakers-rockets-2025-12-25",
@@ -80,6 +80,29 @@ export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
         "It was a Game 1 that highlighted L.A.’s depth—and for the Rockets, exposed offensive disorganization beyond Durant’s absence.",
     },
   },
+  {
+    id: "h2h-lakers-rockets-2026-04-21",
+    dateEt: "2026-04-21",
+    dateJst: "2026-04-22",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 101,
+    scoreRight: 94,
+    homeTeamSide: "left",
+    injuriesLeft: ["L. Doncic", "A. Reaves"],
+    injuriesRight: ["F. VanVleet", "S. Adams"],
+    inactiveFooterSummary: {
+      ja:
+        "Lakersは守備と試合運びで押し切ったGame 2だった。DoncicとReavesを欠く中でもLeBronが28得点8リバウンド7アシストで軸になり、さらにMarcus Smartが25得点、Kennardが23得点を加えて、ロースコア寄りの展開を最後までコントロールした。\n" +
+        "HoustonはDurantが復帰して23得点を挙げたが、9ターンオーバーと後半3得点で流れを変えきれず、チーム全体でも3Pは7/29と伸びなかった。\n" +
+        "Lakersは第3Qに突き放して主導権を握り、Rocketsは終盤に差を詰めても、試合全体では最後まで自分たちのペースに持ち込めなかった。",
+      en:
+        "Game 2 was won by the Lakers through defense and game control. Even without Doncic and Reaves, LeBron anchored the night with 28 points, 8 rebounds, and 7 assists, while Marcus Smart added 25 and Kennard scored 23 to manage a low-scoring script to the finish.\n" +
+        "Houston got Durant back and 23 points from him, but his nine turnovers and just three second-half points prevented any real swing, and the Rockets also shot only 7/29 from three as a team.\n" +
+        "The Lakers seized control in the third quarter, and while Houston trimmed the margin late, it still never fully imposed its pace across the game.",
+    },
+  },
 ];
 
 /** 左=LAL・右=HOU のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -118,7 +141,7 @@ function lakersRocketsH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function lakersRocketsH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

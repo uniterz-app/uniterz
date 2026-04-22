@@ -9,7 +9,7 @@ export const SPURS_BLAZERS_TEAM_IDS = ["nba-spurs", "nba-blazers"] as const;
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Blazers";
 
-/** 2025-26 Spurs vs Trail Blazers（レギュラー3 + プレーオフ1） */
+/** 2025-26 Spurs vs Trail Blazers（レギュラー3 + プレーオフ2） */
 export const spursBlazersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-blazers-2025-11-25",
@@ -87,6 +87,29 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
         "In the end, the Spurs getting their young pillars to fire together made the difference.",
     },
   },
+  {
+    id: "h2h-spurs-blazers-2026-04-21",
+    dateEt: "2026-04-21",
+    dateJst: "2026-04-22",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 103,
+    scoreRight: 106,
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "試合の大きな転換点はWembanyamaの負傷退場だった。第2Qに転倒して脳震とうプロトコル入りとなり、その後Spursは14点リードを作りながら終盤を締め切れなかった。\n" +
+        "ただ、Blazersは相手のアクシデント待ちで拾っただけではなく、Scoot Hendersonの31得点を軸に最後まで粘って奪った1勝だった。\n" +
+        "終盤はHoliday、Robert Williams III、Camaraらも要所で絡み、San Antonioの失速を見逃さずホームコートを奪い返した。Portland目線では、Game 1よりかなり競争力を示した内容だった。",
+      en:
+        "The major turning point was Wembanyama leaving injured. He fell in the second quarter and entered concussion protocol, and the Spurs could not close despite building a 14-point lead.\n" +
+        "Still, Portland did more than just benefit from the incident; it earned the win behind Scoot Henderson’s 31 points and a resilient finish.\n" +
+        "Holiday, Robert Williams III, and Camara all delivered key late sequences, and the Blazers capitalized on San Antonio’s fade to steal home-court advantage. From Portland’s perspective, this was a much more competitive performance than Game 1.",
+    },
+  },
 ];
 
 /** 左=SAS・右=POR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -125,7 +148,7 @@ function spursBlazersH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function spursBlazersH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
