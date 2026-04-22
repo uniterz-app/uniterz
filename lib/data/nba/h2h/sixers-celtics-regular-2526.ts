@@ -9,7 +9,7 @@ export const SIXERS_CELTICS_TEAM_IDS = ["nba-76ers", "nba-celtics"] as const;
 const H2H_LEFT = "Celtics";
 const H2H_RIGHT = "76ers";
 
-/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ1） */
+/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ2） */
 export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-sixers-celtics-2025-10-22",
@@ -84,6 +84,29 @@ export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
         "This was quintessential Celtics basketball—defense, ball movement, and roster depth all on display.\n" +
         "Strong enough as Jayson Tatum’s return game in the playoffs, and without Joel Embiid, Philadelphia never found a true offensive hub and was run out after an early gap opened.\n" +
         "Less a mere blowout than Boston simply playing to its standard, start to finish.",
+    },
+  },
+  {
+    id: "h2h-sixers-celtics-2026-04-21",
+    dateEt: "2026-04-21",
+    dateJst: "2026-04-22",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 97,
+    scoreRight: 111,
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["J. Embiid"],
+    inactiveFooterSummary: {
+      ja:
+        "PhiladelphiaはGame 1の重さを引きずらず、MaxeyとEdgecombeのバックコートで流れを作り直した。\n" +
+        "Edgecombeが30得点10リバウンド、Maxeyが29得点で計59点。さらに3P成功率でも76ersが19/39（48.7%）、Celticsが13/50（26.0%）と大差をつけて主導権を握った。\n" +
+        "Bostonは第3Qに3点差まで戻したが、76ersが再加速して突き放し、シリーズを1-1に戻した。",
+      en:
+        "Philadelphia reset the tone after Game 1 through the Maxey-Edgecombe backcourt.\n" +
+        "Edgecombe posted 30 points and 10 rebounds, Maxey added 29, and the pair combined for 59 while the 76ers also won the three-point battle decisively (19/39, 48.7%) over Boston (13/50, 26.0%).\n" +
+        "The Celtics cut it to three in the third quarter, but Philadelphia accelerated again and pulled away to level the series at 1-1.",
     },
   },
 ];
