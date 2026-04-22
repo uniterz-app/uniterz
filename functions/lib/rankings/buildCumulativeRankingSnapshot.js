@@ -12,6 +12,7 @@ const firestore_1 = require("firebase-admin/firestore");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
+const MIN_POSTS_FOR_WIN_RATE = 10;
 const METRICS = [
     "totalPoints",
     "winRate",
@@ -251,7 +252,10 @@ async function buildCumulativeRankingSnapshot() {
         })
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
         for (const metric of METRICS) {
-            const sortedFull = [...baseRows].sort((a, b) => cmpSortRows(a, b, metric));
+            const eligibleRows = metric === "winRate"
+                ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= MIN_POSTS_FOR_WIN_RATE; })
+                : baseRows;
+            const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
             const ranks = assignCompetitionRanks(sortedFull, metric);
             for (const [uid, rank] of ranks) {
                 ensure(uid)[phase][metric] = rank;

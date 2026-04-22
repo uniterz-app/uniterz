@@ -22,6 +22,8 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
+const MIN_POSTS_FOR_WIN_RATE = 10;
+
 type RankingPhase = "play_in" | "playoffs";
 
 type RankingRow = {
@@ -242,7 +244,9 @@ async function rankingPayloadForMetric(
     const me = mySnap.data() as any;
     const rk = rankingSlice(me, phase);
 
-    if ((rk.totalPosts ?? 0) <= 0) {
+    const minPosts =
+      metric === "winRate" ? MIN_POSTS_FOR_WIN_RATE : 1;
+    if ((rk.totalPosts ?? 0) < minPosts) {
       return {
         count: rows.length,
         rows,
@@ -305,11 +309,16 @@ async function rankingPayloadForMetric(
               ? "winRate"
               : metric;
 
-      const higherSnap = await db()
+      const higherQuery = db()
         .collection("cumulative_stats")
-        .where(rankField as any, ">", myValue)
-        .count()
-        .get();
+        .where(rankField as any, ">", myValue);
+      const higherSnap =
+        metric === "winRate"
+          ? await higherQuery
+              .where(new FieldPath("rankingByPhase", phase, "totalPosts") as any, ">=", MIN_POSTS_FOR_WIN_RATE)
+              .count()
+              .get()
+          : await higherQuery.count().get();
 
       myRank = (higherSnap.data().count ?? 0) + 1;
     }

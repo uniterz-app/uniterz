@@ -8,6 +8,7 @@ const buildCumulativeRankingSnapshot_1 = require("./buildCumulativeRankingSnapsh
 function db() {
     return (0, firestore_1.getFirestore)();
 }
+const MIN_POSTS_FOR_WIN_RATE = 10;
 function isMetric(v) {
     return (v === "winRate" ||
         v === "totalPoints" ||
@@ -173,7 +174,8 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
         const mySnap = snaps.mySnap;
         const me = mySnap.data();
         const rk = rankingSlice(me, phase);
-        if (((_d = rk.totalPosts) !== null && _d !== void 0 ? _d : 0) <= 0) {
+        const minPosts = metric === "winRate" ? MIN_POSTS_FOR_WIN_RATE : 1;
+        if (((_d = rk.totalPosts) !== null && _d !== void 0 ? _d : 0) < minPosts) {
             return {
                 count: rows.length,
                 rows,
@@ -226,11 +228,15 @@ async function rankingPayloadForMetric(metric, phase, uid, snaps) {
                     : metric === "winRate"
                         ? "winRate"
                         : metric;
-            const higherSnap = await db()
+            const higherQuery = db()
                 .collection("cumulative_stats")
-                .where(rankField, ">", myValue)
-                .count()
-                .get();
+                .where(rankField, ">", myValue);
+            const higherSnap = metric === "winRate"
+                ? await higherQuery
+                    .where(new firestore_1.FieldPath("rankingByPhase", phase, "totalPosts"), ">=", MIN_POSTS_FOR_WIN_RATE)
+                    .count()
+                    .get()
+                : await higherQuery.count().get();
             myRank = ((_o = higherSnap.data().count) !== null && _o !== void 0 ? _o : 0) + 1;
         }
         const histSnap = snaps.histSnap;
