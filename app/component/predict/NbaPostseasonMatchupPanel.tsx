@@ -74,6 +74,8 @@ type Props = {
   /** 未指定時はレイアウト用のプレースホルダーカードを表示 */
   seriesGames?: NbaH2HGameCard[];
   h2hAverages?: NbaH2HAverages;
+  homeTeamName?: string;
+  awayTeamName?: string;
 };
 
 const SKELETON_GAMES: NbaH2HGameCard[] = [
@@ -137,6 +139,53 @@ function formatH2hGameCardDate(
 
 function fmtDiff(d: number) {
   return `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
+}
+
+function normalizeTeamNameForMatch(v: string | undefined): string {
+  return (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function detectNeedsFlipForCurrentSides(
+  games: NbaH2HGameCard[],
+  homeTeamName: string | undefined,
+  awayTeamName: string | undefined
+): boolean {
+  if (!games.length) return false;
+  const first = games[0];
+  if (!first) return false;
+  const left = normalizeTeamNameForMatch(first.leftTeamDisplay);
+  const right = normalizeTeamNameForMatch(first.rightTeamDisplay);
+  const home = normalizeTeamNameForMatch(homeTeamName);
+  const away = normalizeTeamNameForMatch(awayTeamName);
+  if (!left || !right || !home || !away) return false;
+
+  const homeLooksLeft = home.includes(left);
+  const awayLooksRight = away.includes(right);
+  if (homeLooksLeft && awayLooksRight) return false;
+
+  const homeLooksRight = home.includes(right);
+  const awayLooksLeft = away.includes(left);
+  if (homeLooksRight && awayLooksLeft) return true;
+
+  return false;
+}
+
+function flipH2HGameSides(game: NbaH2HGameCard): NbaH2HGameCard {
+  return {
+    ...game,
+    leftTeamDisplay: game.rightTeamDisplay,
+    rightTeamDisplay: game.leftTeamDisplay,
+    scoreLeft: game.scoreRight,
+    scoreRight: game.scoreLeft,
+    injuriesLeft: game.injuriesRight,
+    injuriesRight: game.injuriesLeft,
+    homeTeamSide:
+      game.homeTeamSide === "left"
+        ? "right"
+        : game.homeTeamSide === "right"
+          ? "left"
+          : undefined,
+  };
 }
 
 function h2hRecordFromGames(
@@ -283,12 +332,20 @@ export default function NbaPostseasonMatchupPanel({
   isEn,
   seriesGames,
   h2hAverages,
+  homeTeamName,
+  awayTeamName,
 }: Props) {
   /** データは古い日付が先頭のため、今季の直接対決は新しい試合が上になるよう逆順で表示 */
-  const games =
-    seriesGames && seriesGames.length > 0
-      ? [...seriesGames].reverse()
-      : SKELETON_GAMES;
+  const games = useMemo(() => {
+    if (!seriesGames || seriesGames.length === 0) return SKELETON_GAMES;
+    const reversed = [...seriesGames].reverse();
+    const shouldFlip = detectNeedsFlipForCurrentSides(
+      reversed,
+      homeTeamName,
+      awayTeamName
+    );
+    return shouldFlip ? reversed.map(flipH2HGameSides) : reversed;
+  }, [seriesGames, homeTeamName, awayTeamName]);
   const [rsExpanded, setRsExpanded] = useState(false);
   const poGames = useMemo(
     () => games.filter((g) => Boolean(g.seriesGameLabel)),
