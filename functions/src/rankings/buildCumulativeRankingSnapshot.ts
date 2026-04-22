@@ -16,6 +16,8 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
+const MIN_POSTS_FOR_WIN_RATE = 10;
+
 const METRICS: Metric[] = [
   "totalPoints",
   "winRate",
@@ -314,7 +316,11 @@ export async function buildCumulativeRankingSnapshot() {
       .filter((row) => (row.totalPosts ?? 0) > 0);
 
     for (const metric of METRICS) {
-      const sortedFull = [...baseRows].sort((a, b) =>
+      const eligibleRows =
+        metric === "winRate"
+          ? baseRows.filter((row) => (row.totalPosts ?? 0) >= MIN_POSTS_FOR_WIN_RATE)
+          : baseRows;
+      const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
       );
       const ranks = assignCompetitionRanks(sortedFull, metric);
