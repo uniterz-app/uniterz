@@ -10,7 +10,7 @@ const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Suns";
 
 /**
- * 2025-26 Thunder vs Suns（レギュラー5 + プレーオフ1）
+ * 2025-26 Thunder vs Suns（レギュラー5 + プレーオフ2）
  * 左列=Thunder得点、右列=Suns得点。
  */
 export const thunderSunsH2HGames: NbaH2HGameCard[] = [
@@ -105,6 +105,29 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
         "OKC opened like a repeat-title contender, blowing the game open with defensive pressure and transition.\n" +
         "Winning without Shai Gilgeous-Alexander needing a nuclear scoring night mattered—and the Thunder rolled as a group, with Jalen Williams and Chet Holmgren among those powering the push.\n" +
         "In the playoffs they shifted defense up another gear, splintering Phoenix on that end before the Suns could settle into their game.",
+    },
+  },
+  {
+    id: "h2h-thunder-suns-2026-04-21",
+    dateEt: "2026-04-21",
+    dateJst: "2026-04-22",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 120,
+    scoreRight: 107,
+    homeTeamSide: "left",
+    injuriesLeft: ["T. Sorber"],
+    injuriesRight: ["J. Goodwin", "M. Williams"],
+    inactiveFooterSummary: {
+      ja:
+        "SGAが37得点9アシスト、13/25FGでしっかり修正し、試合の中心を握った。Chet Holmgrenも19得点8リバウンド4ブロックで攻守両面に効き、Thunderはシリーズ2戦連続で内容の差を見せた。\n" +
+        "PhoenixもGame 1よりは明確に対抗し、終盤には差を縮める場面もあった。ただそれでも、前半だけで11ターンオーバーを出し、OKCに走られる形を何度も作ってしまった。\n" +
+        "この試合でOKCにとって唯一の不安材料は、J-dubが第3Qに左ハムストリングを痛めて退場したこと。エースと守備で押し返して2-0にした試合だった。",
+      en:
+        "Shai Gilgeous-Alexander responded with a controlled star performance—37 points and 9 assists on 13-of-25 shooting—to take command of the game. Chet Holmgren added 19 points, 8 rebounds, and 4 blocks, and Oklahoma City again showed a clear edge in overall execution.\n" +
+        "Phoenix competed more cleanly than in Game 1 and even trimmed the margin late, but 11 first-half turnovers repeatedly fueled OKC transition chances.\n" +
+        "The lone concern for the Thunder was J-Dub exiting in the third quarter with a left hamstring issue, but OKC still imposed its defense and top-end creation to move ahead 2-0.",
     },
   },
 ];

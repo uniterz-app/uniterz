@@ -10,7 +10,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Magic";
 
 /**
- * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ1）
+ * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ2）
  * 出典: StatMuse 等の公開スコアに基づく（レギュラー直接対決 2-2）
  */
 export const magicPistonsH2HGames: NbaH2HGameCard[] = [
@@ -85,6 +85,29 @@ export const magicPistonsH2HGames: NbaH2HGameCard[] = [
         "Led by Paolo Banchero and Franz Wagner, the Magic stayed composed and stole Game 1 on the road, instantly shifting the series’ tone.\n" +
         "It was both a loss where Detroit’s youth showed—and a Game 1 that proved the Magic are a tough out even as the lower seed.\n" +
         "The Pistons will need more scoring beyond Cade, and more from Jalen Duren, going forward.",
+    },
+  },
+  {
+    id: "h2h-magic-pistons-2026-04-21",
+    dateEt: "2026-04-21",
+    dateJst: "2026-04-22",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 98,
+    scoreRight: 83,
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "DetroitはGame 1の流れをそのまま受けるのではなく、守備強度とリバウンドで試合の質自体を変えた。\n" +
+        "前半は46-46の重い展開だったが、後半に入って一気に圧力を強め、第3Qを38-16、しかもその中で30-3のランを作って試合を決めた。\n" +
+        "一方のOrlandoは、Game 1で見せた落ち着いたオフェンスがほぼ出なかった。FG32.5%、3P25.0%と全体的にショットが沈まず、Detroitがシリーズの強度を自分たちの土俵に引き戻したGame 2。",
+      en:
+        "Detroit did not carry over the Game 1 flow; it changed the game itself with defensive pressure and rebounding.\n" +
+        "The first half was a grind at 46-46, but the Pistons raised the intensity after halftime, won the third quarter 38-16, and effectively decided the game with a 30-3 run.\n" +
+        "Orlando never found the composed offense it showed in Game 1, shooting just 32.5% from the field and 25.0% from three, as Detroit pulled the series back onto its preferred physical terms.",
     },
   },
 ];
