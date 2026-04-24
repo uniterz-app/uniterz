@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export default function Tooltip({
   anchorRect,
@@ -11,20 +12,20 @@ export default function Tooltip({
   message: string;
   onClose: () => void;
 }) {
-  if (!anchorRect) return null;
+  if (!anchorRect || typeof document === "undefined") return null;
 
   const width = 260;
 
-  // 画面幅
-  const sw = typeof window !== "undefined" ? window.innerWidth : 390;
+  // 画面幅（ビューポート基準。アンカーは getBoundingClientRect 済み）
+  const sw = window.innerWidth;
 
-  // 中央寄せ
-  let left = anchorRect.left + anchorRect.width / 2 - width / 2;
+  /** アンカー中心に合わせた left（px）。はみ出し時は端に寄せる */
+  const centerX = anchorRect.left + anchorRect.width / 2;
+  let leftPx = centerX - width / 2;
+  leftPx = Math.max(12, Math.min(leftPx, sw - width - 12));
 
-  // 画面からはみ出さない
-  left = Math.max(12, Math.min(left, sw - width - 12));
-
-  const top = anchorRect.top - 60;
+  /** アイコン直上：transform 祖先の外に portal するので fixed＝ビューポートと一致 */
+  const topPx = anchorRect.top;
 
   // 外側クリックで閉じる（capture=true が重要）
   useEffect(() => {
@@ -38,10 +39,16 @@ export default function Tooltip({
     return () => window.removeEventListener("click", handler, true);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed z-9999"
-      style={{ top, left, width }}
+      className="fixed z-[9999]"
+      style={{
+        left: leftPx,
+        top: topPx,
+        width,
+        /** 吹き出し下端をアンカー上端の少し上に（従来の top-60 固定よりアンカーに密着） */
+        transform: "translateY(calc(-100% - 10px))",
+      }}
       onClick={(e) => e.stopPropagation()} // tooltip 外へのバブリングを防ぐ
     >
       {/* 吹き出し本体 */}
@@ -49,7 +56,7 @@ export default function Tooltip({
         id="tooltip-box"
         className="relative bg-gray-800 text-white text-[13px] rounded-lg p-3 shadow-xl"
       >
-        <div className="leading-relaxed">{message}</div>
+        <div className="whitespace-pre-line leading-relaxed">{message}</div>
 
         {/* ▼ 三角形 */}
         <div
@@ -61,6 +68,7 @@ export default function Tooltip({
           }}
         />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -11,9 +11,11 @@ import {
   Tooltip,
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import { Info } from "lucide-react";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import styles from "./profileChartInfoFaq.module.css";
 
 export type ProfilePlayoffRankTrendRow = {
   dateKey: string;
@@ -158,6 +160,8 @@ export default function ProfilePlayoffRankTrendChart({
   const isEn = language === "en";
   const title = "Ranking Progress";
   const subtitle = "最新10件のランキングの変動を表示";
+  /** Info 用（サブタイトルと同じ文言のみ。他 UI は従来のまま） */
+  const chartInfoTooltipMsg = subtitle;
   const emptyHint = isEn
     ? "Rank snapshots appear after scheduled updates."
     : "ランキングの日次スナップショットが溜まると表示されます";
@@ -359,8 +363,9 @@ export default function ProfilePlayoffRankTrendChart({
     <div
       ref={ref}
       className={[
-        "relative overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-3",
-        "shadow-[0_10px_30px_rgba(0,0,0,0.45)]",
+        "relative overflow-hidden rounded-xl border border-white/[0.12] bg-[#050814]/55 p-3",
+        "backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_10px_30px_rgba(0,0,0,0.42)]",
+        "ring-1 ring-inset ring-white/[0.05]",
       ].join(" ")}
     >
       <div
@@ -390,21 +395,36 @@ export default function ProfilePlayoffRankTrendChart({
           </span>
         </div>
       )}
-      <div className="relative z-10 px-1 pt-0.5">
-        <p
-          className={[
-            nameRajdhani.className,
-            "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
-          ].join(" ")}
-        >
-          {title}
-        </p>
+      {/* z をチャートより上にし、下方向の Info ツールチップが SVG に隠れないようにする */}
+      <div className="relative z-20 px-1 pt-0.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p
+            className={[
+              nameRajdhani.className,
+              "font-semibold tracking-wide text-white/95 text-lg sm:text-[1.72rem]",
+            ].join(" ")}
+          >
+            {title}
+          </p>
+          <div className={styles.wrap}>
+            <button
+              type="button"
+              className={styles.faqButton}
+              aria-label={chartInfoTooltipMsg}
+            >
+              <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
+            </button>
+            <div className={styles.tooltip} aria-hidden>
+              {chartInfoTooltipMsg}
+            </div>
+          </div>
+        </div>
         <p className="mt-1.5 max-w-[520px] text-xs leading-relaxed text-slate-400 sm:text-[14px]">
           {subtitle}
         </p>
       </div>
 
-      <div className="relative z-10 mt-2 h-52 sm:h-56">
+      <div className="relative z-0 mt-2 h-52 sm:h-56">
         {loading ? (
           <div className="absolute inset-0 grid place-items-center text-xs text-white/50">
             …
@@ -530,7 +550,9 @@ export default function ProfilePlayoffRankTrendChart({
         >
           <div
             className={[
-              "rounded-lg border border-cyan-300/20 bg-cyan-500/6 px-2.5 py-2",
+              "rounded-lg border border-cyan-300/25 bg-white/[0.06] px-2.5 py-2",
+              "backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+              "ring-1 ring-inset ring-cyan-400/15",
               isDesktop ? "px-3 py-2.5" : "",
             ].join(" ")}
           >

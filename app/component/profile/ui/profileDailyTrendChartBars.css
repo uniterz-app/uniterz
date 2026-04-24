@@ -1,0 +1,22 @@
+/* 日別コンボ棒：左から stagger は各 <g> の animation-delay（TSX）で指定 */
+@keyframes profileDailyBarRise {
+  from {
+    opacity: 0.65;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* 折れ線パス：左から伸びるアニメ時の端の見た目 */
+.profile-daily-line-draw-host .recharts-line-curve {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 棒フェーズでは折れ線を出さない（Line はマウントしたままなので非表示） */
+.profile-daily-line-draw-host[data-daily-line-entrance="bars"] .recharts-line-curve {
+  opacity: 0;
+}
