@@ -9,7 +9,7 @@ export const TOR_CLE_TEAM_IDS = ["nba-raptors", "nba-cavaliers"] as const;
 const H2H_LEFT = "Cavaliers";
 const H2H_RIGHT = "Raptors";
 
-/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ2） */
+/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ3） */
 export const torCleH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-tor-cle-2025-10-31",
@@ -104,6 +104,27 @@ export const torCleH2HGames: NbaH2HGameCard[] = [
         "Cleveland led from the first half and never let the game slip away even when Toronto made late pushes. Mitchell scored 30 with 9 in the fourth quarter, Harden had 28 points and 5 steals, and Mobley stayed efficient with 25 on 11-for-13 shooting. Barnes set a new playoff career high with 26 for the Raptors and Barrett added 22, but they could not contain the Cavs’ ball pressure or the scoring punch of their top three, and the series went to 2-0.",
     },
   },
+  {
+    id: "h2h-tor-cle-2026-04-23",
+    dateEt: "2026-04-23",
+    dateJst: "2026-04-24",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 104,
+    scoreRight: 126,
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["I. Quickley"],
+    inactiveFooterSummary: {
+      ja:
+        "RaptorsはScottie BarnesとRJ Barrettを軸に、まず2点中心のフィジカルな展開へ持ち込んだ。Barnesはミドル、ポスト、ドライブから崩し、Barrettもコンタクトを受けながらペイントへ入り続けた。さらにCollin Murray-Boylesもインサイドで効き、Cavaliersの守備を内側へ引き寄せた。\n" +
+        "試合を決めたのは第4Qの外角。Raptorsは4Qに3Pを8/9で決め、Jamison Battleが4本、RJ Barrettが3本、Brandon Ingramが1本を沈めた。フィジカルな2点攻勢で守備を収縮させ、最後はBattleとBarrettの外角で突き放し、ホームで1勝を挙げた。",
+      en:
+        "Toronto leaned on Scottie Barnes and RJ Barrett to turn the game into a physical, paint-first fight. Barnes scored from the mid-range, post, and off drives; Barrett kept attacking the rim through contact. Collin Murray-Boyles also made an impact inside and helped pull Cleveland’s defense inward.\n" +
+        "The Raptors broke it open from deep in the fourth quarter, shooting 8-for-9 from three—Jamison Battle made four, RJ Barrett three, and Brandon Ingram one. After shrinking the defense with their two-point pressure, Battle and Barrett from the perimeter put the game away as Toronto earned its first home win of the series, 126-104.",
+    },
+  },
 ];
 
 /** 左=CLE・右=TOR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -143,7 +164,7 @@ function torCleH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function torCleH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

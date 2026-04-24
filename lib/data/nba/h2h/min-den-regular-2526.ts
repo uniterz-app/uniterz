@@ -9,7 +9,7 @@ export const MIN_DEN_TEAM_IDS = ["nba-nuggets", "nba-timberwolves"] as const;
 const H2H_LEFT = "Nuggets";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ2） */
+/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ3） */
 export const minDenH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-min-den-2025-10-27",
@@ -104,6 +104,29 @@ export const minDenH2HGames: NbaH2HGameCard[] = [
         "Denver built a lead as large as 19 in the second quarter and still led 93-90 after three, but Minnesota flipped the game in the fourth. Edwards finished with 30 points and 10 rebounds, Randle added 24 and 9, and the Wolves countered the Nuggets’ zone with five-out spacing. Murray scored 30 and Jokić posted 24, 15 and 8, but late in the game the two stars could not convert enough looks in the half court, and Minnesota piled up second-chance points by 20-3 in a decisive stretch. The series is tied 1-1 heading to Minnesota.",
     },
   },
+  {
+    id: "h2h-min-den-2026-04-23",
+    dateEt: "2026-04-23",
+    dateJst: "2026-04-24",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 96,
+    scoreRight: 113,
+    homeTeamSide: "right",
+    injuriesLeft: ["A. Gordon"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Timberwolvesは開始直後からインテンシティでNuggetsを上回った。Jaden McDanielsとRudy Gobertが守備の基準を作り、一度もリードを許さなかった。\n" +
+        "最大の論点はNikola Jokićのシュート内容。27点15リバウンドは残したが、FGは7/26で、プレーオフキャリアでもかなり悪い数字だった。\n" +
+        "Aaron Gordon不在の影響も大きく、Minnesotaのフィジカルに対してNuggetsは前線で受け止める力が足りず、Jokićへの負担も増えた。Timberwolvesが守備強度と層の厚さで押し切り、シリーズをリードした。",
+      en:
+        "Minnesota’s intensity won the opening stretch and never let up—Jaden McDaniels and Rudy Gobert set the defensive standard, and the Wolves never trailed.\n" +
+        "The headline was Nikola Jokić’s shooting night: 27 points and 15 rebounds, but 7-for-26 from the field—among the roughest playoff shooting lines of his career.\n" +
+        "Without Aaron Gordon, Denver lacked enough front-line muscle to absorb Minnesota’s physicality, and Jokić’s load grew heavier. The Timberwolves leaned on their defense and depth for a 113-96 win and the series lead.",
+    },
+  },
 ];
 
 /** 左=DEN・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -142,7 +165,7 @@ function minDenH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function minDenH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
