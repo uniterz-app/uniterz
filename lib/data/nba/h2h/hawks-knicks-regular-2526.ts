@@ -9,7 +9,7 @@ export const HAWKS_KNICKS_TEAM_IDS = ["nba-hawks", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Hawks";
 
-/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ2） */
+/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ3） */
 export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-hawks-knicks-2025-12-27",
@@ -94,6 +94,27 @@ export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
         "New York led by as many as 14 and still held an 8-point edge with five minutes left in the fourth, but Atlanta closed on a 15-6 run to flip the game. McCollum scored 32 and repeatedly hit big shots down the stretch, including the game-winner on a baseline fadeaway. Brunson had 29 for the Knicks with Hart, Towns and Anunoby helping, but their fourth-quarter field-goal rate fell to 22.7% and they could not hold on. Bridges’ buzzer-beater missed as well, leaving the series tied 1-1 heading to Atlanta.",
     },
   },
+  {
+    id: "h2h-hawks-knicks-2026-04-23",
+    dateEt: "2026-04-23",
+    dateJst: "2026-04-24",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 108,
+    scoreRight: 109,
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["J. Landale"],
+    inactiveFooterSummary: {
+      ja:
+        "Hawksは攻撃のバリエーションでKnicksを上回った。CJ McCollumのプルアップ、Jalen Johnsonのドライブ、Jonathan Kumingaのリムアタックなど、複数の形から得点できた一方で、KnicksはJalen Brunsonへの依存が強く、終盤ほど攻撃が単調になった。\n" +
+        "特にKnicksはウィング陣の歯止めが効かず、Mikal BridgesとJosh Hartの得点・外角・判断が安定せず、Hawksは最後まで守備の的を絞りやすく、1点差の接戦をものにしてシリーズをリードした。",
+      en:
+        "Atlanta beat New York with more offensive variety: CJ McCollum pull-ups, Jalen Johnson drives, and Jonathan Kuminga attacking the rim gave the Hawks multiple ways to score, while the Knicks leaned heavily on Jalen Brunson and grew more one-dimensional late.\n" +
+        "New York’s wings were a problem—Mikal Bridges and Josh Hart never found a steady rhythm scoring, from the perimeter, or with their decisions—so Atlanta could keep its defensive focus narrow, escape with a 109-108 win, and take the series lead.",
+    },
+  },
 ];
 
 /** 左=NYK・右=ATL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -132,7 +153,7 @@ function hawksKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記5試合からの H2H 平均（小数1桁）。 */
+/** 上記6試合からの H2H 平均（小数1桁）。 */
 export function hawksKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
