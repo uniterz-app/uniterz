@@ -9,7 +9,7 @@ export const LAKERS_ROCKETS_TEAM_IDS = ["nba-lakers", "nba-rockets"] as const;
 const H2H_LEFT = "Lakers";
 const H2H_RIGHT = "Rockets";
 
-/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ2） */
+/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ3） */
 export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-lakers-rockets-2025-12-25",
@@ -102,6 +102,21 @@ export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
         "Houston got Durant back and 23 points from him, but his nine turnovers and just three second-half points prevented any real swing, and the Rockets also shot only 7/29 from three as a team.\n" +
         "The Lakers seized control in the third quarter, and while Houston trimmed the margin late, it still never fully imposed its pace across the game.",
     },
+  },
+  {
+    id: "h2h-lakers-rockets-2026-04-23",
+    dateEt: "2026-04-23",
+    dateJst: "2026-04-24",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 112,
+    scoreRight: 108,
+    wentToOvertime: true,
+    /** Los Angeles（Lakers）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["L. Doncic", "A. Reaves"],
+    injuriesRight: ["K. Durant", "S. Adams", "F. VanVleet"],
   },
 ];
 
