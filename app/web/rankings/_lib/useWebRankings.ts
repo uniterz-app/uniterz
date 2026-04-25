@@ -13,6 +13,7 @@ import {
 } from "@/lib/rankings/rankingTransform";
 import type { RankingRow } from "@/lib/rankings/useRanking";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 export type WebRankingRow = RankingRowWithCountry & {
@@ -84,7 +85,10 @@ const EMPTY_MAP: Record<MobileMetric, WebRankingRow[]> = {
   streak: [],
 };
 
-export function useWebRankings(phase: RankingPhase = "playoffs") {
+export function useWebRankings(
+  phase: RankingPhase = "playoffs",
+  round: PlayoffRoundKey = "overall"
+) {
   const visibleMetrics = useMemo(
     () => METRICS.filter((m) => AVAILABLE_METRICS.includes(m.key)),
     []
@@ -99,7 +103,7 @@ export function useWebRankings(phase: RankingPhase = "playoffs") {
   }, [metric]);
 
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useCumulativeRankingsBulk(phase);
+    useCumulativeRankingsBulk(phase, round);
 
   useEffect(() => {
     void ensureMetric(API_METRIC_BY_MOBILE[metric]);

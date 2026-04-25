@@ -41,7 +41,7 @@ async function buildCumulativeStats() {
     let skipped = 0;
     let scanned = 0;
     const processDoc = async (doc) => {
-        var _a, _b;
+        var _a, _b, _c;
         const data = doc.data();
         const uid = doc.id.split("_")[0];
         if (!uid)
@@ -52,10 +52,11 @@ async function buildCumulativeStats() {
         /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
         const statsRanking = (_a = data.ranking) !== null && _a !== void 0 ? _a : data.all;
         const statsByPhase = (_b = data.rankingByPhase) !== null && _b !== void 0 ? _b : {};
+        const statsByPlayoffRound = (_c = data.rankingByPlayoffRound) !== null && _c !== void 0 ? _c : {};
         const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
         const userRef = firestore.doc(`users/${uid}`);
         return firestore.runTransaction(async (tx) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30;
             const [cumulativeSnap, userSnap] = await Promise.all([
                 tx.get(cumulativeRef),
                 tx.get(userRef),
@@ -145,12 +146,38 @@ async function buildCumulativeStats() {
             const nextPlayoffs = Object.assign(Object.assign({}, nextPlayoffsRaw), { winRate: nextPlayoffsRaw.totalPosts > 0
                     ? nextPlayoffsRaw.totalWins / nextPlayoffsRaw.totalPosts
                     : 0 });
+            /* =========================
+             * プレーオフラウンド別ランキング累積（r1 / r2 / cf / finals）
+             * =======================*/
+            const prevByRound = ((_15 = cumulativeSnap.get("rankingByPlayoffRound")) !== null && _15 !== void 0 ? _15 : {});
+            const roundKeys = ["r1", "r2", "cf", "finals"];
+            const nextByRound = {};
+            for (const rk of roundKeys) {
+                const prevRound = (_16 = prevByRound[rk]) !== null && _16 !== void 0 ? _16 : {
+                    totalPosts: 0,
+                    totalWins: 0,
+                    totalPoints: 0,
+                    totalUpset: 0,
+                    totalPrecision: 0,
+                    winRate: 0,
+                };
+                const nextRoundRaw = addRankingTotals(prevRound, {
+                    posts: (_18 = (_17 = statsByPlayoffRound[rk]) === null || _17 === void 0 ? void 0 : _17.posts) !== null && _18 !== void 0 ? _18 : 0,
+                    wins: (_20 = (_19 = statsByPlayoffRound[rk]) === null || _19 === void 0 ? void 0 : _19.wins) !== null && _20 !== void 0 ? _20 : 0,
+                    pointsSumV3: (_22 = (_21 = statsByPlayoffRound[rk]) === null || _21 === void 0 ? void 0 : _21.pointsSumV3) !== null && _22 !== void 0 ? _22 : 0,
+                    upsetPointsSum: (_24 = (_23 = statsByPlayoffRound[rk]) === null || _23 === void 0 ? void 0 : _23.upsetPointsSum) !== null && _24 !== void 0 ? _24 : 0,
+                    scorePrecisionSum: (_26 = (_25 = statsByPlayoffRound[rk]) === null || _25 === void 0 ? void 0 : _25.scorePrecisionSum) !== null && _26 !== void 0 ? _26 : 0,
+                });
+                nextByRound[rk] = Object.assign(Object.assign({}, nextRoundRaw), { winRate: nextRoundRaw.totalPosts > 0
+                        ? nextRoundRaw.totalWins / nextRoundRaw.totalPosts
+                        : 0 });
+            }
             tx.set(cumulativeRef, {
                 uid,
-                displayName: (_15 = user.displayName) !== null && _15 !== void 0 ? _15 : "user",
-                handle: (_16 = user.handle) !== null && _16 !== void 0 ? _16 : null,
-                photoURL: (_17 = user.photoURL) !== null && _17 !== void 0 ? _17 : null,
-                countryCode: (_18 = user.countryCode) !== null && _18 !== void 0 ? _18 : null,
+                displayName: (_27 = user.displayName) !== null && _27 !== void 0 ? _27 : "user",
+                handle: (_28 = user.handle) !== null && _28 !== void 0 ? _28 : null,
+                photoURL: (_29 = user.photoURL) !== null && _29 !== void 0 ? _29 : null,
+                countryCode: (_30 = user.countryCode) !== null && _30 !== void 0 ? _30 : null,
                 plan: user.plan === "pro" ? "pro" : "free",
                 totalPosts: nextPosts,
                 totalWins: nextWins,
@@ -170,6 +197,7 @@ async function buildCumulativeStats() {
                     play_in: nextPlayIn,
                     playoffs: nextPlayoffs,
                 },
+                rankingByPlayoffRound: nextByRound,
                 lastAggregatedDate: dateKey,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });

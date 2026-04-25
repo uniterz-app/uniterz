@@ -2,6 +2,10 @@
 
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
+import {
+  isPlayoffRoundKey,
+  type PlayoffRoundKey,
+} from "@/lib/rankings/playoffRound";
 import { mergeUserPlansIntoSingleRanking } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
@@ -19,6 +23,7 @@ export async function GET(req: Request) {
     const rawMetric = searchParams.get("metric") ?? "totalPoints";
     const uid = searchParams.get("uid");
     const rawPhase = searchParams.get("phase");
+    const rawRound = searchParams.get("round");
 
     const metric: CumulativeRankingApiMetric = isCumulativeRankingApiMetric(
       rawMetric
@@ -28,6 +33,9 @@ export async function GET(req: Request) {
     const phase: RankingPhase = isRankingPhase(rawPhase)
       ? rawPhase
       : "playoffs";
+    const round: PlayoffRoundKey = isPlayoffRoundKey(rawRound)
+      ? rawRound
+      : "overall";
 
     const baseUrl =
       process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -46,7 +54,8 @@ export async function GET(req: Request) {
     const payload = await getCachedCumulativeRanking(
       metric,
       uid ?? "__anon__",
-      phase
+      phase,
+      round
     );
 
     if (!payload.ok) {
@@ -75,6 +84,7 @@ export async function GET(req: Request) {
         ok: true,
         metric: body.metric,
         phase: body.phase,
+        round: body.round,
         count: body.count,
         rows: body.rows,
         myRank: body.myRank,

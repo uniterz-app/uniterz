@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 
 const ALLOWED_METRICS = [
@@ -24,6 +25,7 @@ type OkPayload = {
   ok: true;
   metric: CumulativeRankingApiMetric;
   phase: RankingPhase;
+  round: PlayoffRoundKey;
   count: number;
   rows: unknown[];
   myRank: unknown;
@@ -39,7 +41,8 @@ type ErrPayload = {
 async function fetchSingleRanking(
   metric: CumulativeRankingApiMetric,
   uid: string | null,
-  phase: RankingPhase
+  phase: RankingPhase,
+  round: PlayoffRoundKey
 ): Promise<OkPayload | ErrPayload> {
   const baseUrl =
     process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -52,6 +55,7 @@ async function fetchSingleRanking(
   const url = new URL(baseUrl);
   url.searchParams.set("metric", metric);
   url.searchParams.set("phase", phase);
+  url.searchParams.set("round", round);
   if (uid) url.searchParams.set("uid", uid);
 
   const res = await fetch(url.toString(), {
@@ -73,6 +77,7 @@ async function fetchSingleRanking(
     ok: true as const,
     metric,
     phase,
+    round,
     count: json?.count ?? 0,
     rows: json?.rows ?? [],
     myRank: json?.myRank ?? null,
@@ -148,7 +153,7 @@ async function applyTotalPointsSnapshot(
 
 const getCachedAnonRanking = unstable_cache(
   async (metric: CumulativeRankingApiMetric, phase: RankingPhase) => {
-    return fetchSingleRanking(metric, null, phase);
+    return fetchSingleRanking(metric, null, phase, "overall");
   },
   ["cumulative-ranking-single-v3"],
   {
@@ -160,15 +165,19 @@ const getCachedAnonRanking = unstable_cache(
 export async function getCachedCumulativeRanking(
   metric: CumulativeRankingApiMetric,
   uidKey: string,
-  phase: RankingPhase
+  phase: RankingPhase,
+  round: PlayoffRoundKey
 ): Promise<OkPayload | ErrPayload> {
   if (uidKey === "__anon__") {
-    return getCachedAnonRanking(metric, phase);
+    if (round === "overall") {
+      return getCachedAnonRanking(metric, phase);
+    }
+    return fetchSingleRanking(metric, null, phase, round);
   }
 
-  const fresh = await fetchSingleRanking(metric, uidKey, phase);
+  const fresh = await fetchSingleRanking(metric, uidKey, phase, round);
   if (!fresh.ok) return fresh;
-  if (metric === "totalPoints") {
+  if (metric === "totalPoints" && round === "overall") {
     return applyTotalPointsSnapshot(uidKey, phase, fresh);
   }
   return fresh;

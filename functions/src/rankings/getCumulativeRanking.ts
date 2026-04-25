@@ -22,9 +22,10 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
-const MIN_POSTS_FOR_WIN_RATE = 10;
+const MIN_POSTS_FOR_WIN_RATE = 15;
 
 type RankingPhase = "play_in" | "playoffs";
+type PlayoffRoundKey = "overall" | "r1" | "r2" | "cf" | "finals";
 
 type RankingRow = {
   uid: string;
@@ -61,11 +62,36 @@ function isRankingPhase(v: unknown): v is RankingPhase {
   return v === "play_in" || v === "playoffs";
 }
 
+function isPlayoffRoundKey(v: unknown): v is PlayoffRoundKey {
+  return (
+    v === "overall" || v === "r1" || v === "r2" || v === "cf" || v === "finals"
+  );
+}
+
 function isPhaseSnapshotBuiltDaily(phase: RankingPhase): boolean {
   return SNAPSHOT_BUILD_PHASES.includes(phase);
 }
 
-function rankingSlice(d: any, phase: RankingPhase) {
+function rankingSlice(
+  d: any,
+  phase: RankingPhase,
+  round: PlayoffRoundKey = "overall"
+) {
+  if (phase === "playoffs" && round !== "overall") {
+    const byRound = d.rankingByPlayoffRound?.[round];
+    if (byRound && typeof byRound === "object") {
+      const tp = byRound.totalPosts ?? 0;
+      const tw = byRound.totalWins ?? 0;
+      return {
+        totalPosts: tp,
+        totalWins: tw,
+        winRate: tp > 0 ? tw / tp : byRound.winRate ?? 0,
+        totalPoints: byRound.totalPoints ?? 0,
+        totalPrecision: byRound.totalPrecision ?? 0,
+        totalUpset: byRound.totalUpset ?? 0,
+      };
+    }
+  }
   const byPhase = d.rankingByPhase?.[phase];
   if (byPhase && typeof byPhase === "object") {
     const tp = byPhase.totalPosts ?? 0;
@@ -160,12 +186,13 @@ type MetricPayload = {
 async function rankingPayloadForMetric(
   metric: Metric,
   phase: RankingPhase,
+  round: PlayoffRoundKey,
   uid: string | undefined,
   snaps: UserRankingSnaps
 ): Promise<MetricPayload> {
   const snapDoc = await db()
     .collection("cumulative_ranking_snapshots")
-    .doc(`${phase}_${metric}`)
+    .doc(round === "overall" ? `${phase}_${metric}` : `${phase}_${round}_${metric}`)
     .get();
 
   const rawRows: RankingRow[] = snapDoc.exists
@@ -242,7 +269,7 @@ async function rankingPayloadForMetric(
   if (uid && snaps.mySnap?.exists) {
     const mySnap = snaps.mySnap;
     const me = mySnap.data() as any;
-    const rk = rankingSlice(me, phase);
+    const rk = rankingSlice(me, phase, round);
 
     const minPosts =
       metric === "winRate" ? MIN_POSTS_FOR_WIN_RATE : 1;
@@ -256,11 +283,24 @@ async function rankingPayloadForMetric(
       };
     }
 
-    const latestHistRaw = (
-      snaps.latestHistSnap?.exists
-        ? (snaps.latestHistSnap.data() as Record<string, unknown> | undefined)
-        : undefined
-    )?.[phase] as Partial<Record<Metric, unknown>> | undefined;
+    const histLatestData = snaps.latestHistSnap?.exists
+      ? (snaps.latestHistSnap.data() as Record<string, unknown> | undefined)
+      : undefined;
+    const latestHistRaw =
+      phase === "playoffs" && round !== "overall"
+        ? (
+            histLatestData?.playoffRounds as
+              | Partial<
+                  Record<
+                    PlayoffRoundKey,
+                    Partial<Record<Metric, unknown>>
+                  >
+                >
+              | undefined
+          )?.[round]
+        : (histLatestData?.[phase] as
+            | Partial<Record<Metric, unknown>>
+            | undefined);
     const latestHistRankRaw = latestHistRaw?.[metric];
     const latestHistRank =
       typeof latestHistRankRaw === "number" &&
@@ -269,7 +309,12 @@ async function rankingPayloadForMetric(
         ? Math.floor(latestHistRankRaw)
         : null;
 
-    const storedRankRaw = me.snapshotRanks?.[phase]?.[metric];
+    const storedRankRaw =
+      phase === "playoffs" && round !== "overall"
+        ? me.snapshotRanks?.playoffRounds?.[round]?.[metric]
+        : round === "overall"
+          ? me.snapshotRanks?.[phase]?.[metric]
+          : undefined;
     const storedRank =
       typeof storedRankRaw === "number" &&
       Number.isFinite(storedRankRaw) &&
@@ -293,18 +338,27 @@ async function rankingPayloadForMetric(
             : rk[metric] ?? 0;
 
       const hasRankingObj =
-        me.rankingByPhase?.[phase] &&
-        typeof me.rankingByPhase[phase] === "object" &&
-        (me.rankingByPhase[phase].totalPosts != null ||
-          me.rankingByPhase[phase].totalPoints != null);
+        round === "overall"
+          ? me.rankingByPhase?.[phase] &&
+            typeof me.rankingByPhase[phase] === "object" &&
+            (me.rankingByPhase[phase].totalPosts != null ||
+              me.rankingByPhase[phase].totalPoints != null)
+          : me.rankingByPlayoffRound?.[round] &&
+            typeof me.rankingByPlayoffRound[round] === "object" &&
+            (me.rankingByPlayoffRound[round].totalPosts != null ||
+              me.rankingByPlayoffRound[round].totalPoints != null);
 
       const rankField =
         metric === "activeWinStreak"
           ? new FieldPath("activeWinStreak")
           : hasRankingObj
-            ? metric === "winRate"
-              ? new FieldPath("rankingByPhase", phase, "winRate")
-              : new FieldPath("rankingByPhase", phase, metric)
+            ? round === "overall"
+              ? metric === "winRate"
+                ? new FieldPath("rankingByPhase", phase, "winRate")
+                : new FieldPath("rankingByPhase", phase, metric)
+              : metric === "winRate"
+                ? new FieldPath("rankingByPlayoffRound", round, "winRate")
+                : new FieldPath("rankingByPlayoffRound", round, metric)
             : metric === "winRate"
               ? "winRate"
               : metric;
@@ -315,7 +369,13 @@ async function rankingPayloadForMetric(
       const higherSnap =
         metric === "winRate"
           ? await higherQuery
-              .where(new FieldPath("rankingByPhase", phase, "totalPosts") as any, ">=", MIN_POSTS_FOR_WIN_RATE)
+              .where(
+                (round === "overall"
+                  ? new FieldPath("rankingByPhase", phase, "totalPosts")
+                  : new FieldPath("rankingByPlayoffRound", round, "totalPosts")) as any,
+                ">=",
+                MIN_POSTS_FOR_WIN_RATE
+              )
               .count()
               .get()
           : await higherQuery.count().get();
@@ -326,9 +386,12 @@ async function rankingPayloadForMetric(
     const histSnap = snaps.histSnap;
     if (histSnap?.exists && myRank != null) {
       const hd = histSnap.data() as Record<string, unknown> | undefined;
-      const phaseBlock = hd?.[phase] as
-        | Partial<Record<Metric, number>>
-        | undefined;
+      const phaseBlock =
+        phase === "playoffs" && round !== "overall"
+          ? (hd?.playoffRounds as
+              | Partial<Record<PlayoffRoundKey, Partial<Record<Metric, number>>>>
+              | undefined)?.[round]
+          : (hd?.[phase] as Partial<Record<Metric, number>> | undefined);
       const prevRaw = phaseBlock?.[metric];
       const prevRank =
         typeof prevRaw === "number" &&
@@ -388,27 +451,32 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
     const uid = req.query.uid as string | undefined;
     const rawPhase = req.query.phase;
     const phase: RankingPhase = isRankingPhase(rawPhase) ? rawPhase : "playoffs";
+    const rawRound = req.query.round;
+    const round: PlayoffRoundKey = isPlayoffRoundKey(rawRound)
+      ? rawRound
+      : "overall";
 
     const bulkMetrics = parseMetricsParam(req.query.metrics);
     if (bulkMetrics) {
       const snaps = await loadUserRankingSnaps(uid);
       const byMetric: Record<string, MetricPayload> = {};
       for (const m of bulkMetrics) {
-        byMetric[m] = await rankingPayloadForMetric(m, phase, uid, snaps);
+        byMetric[m] = await rankingPayloadForMetric(m, phase, round, uid, snaps);
       }
-      res.status(200).json({ ok: true, phase, byMetric });
+      res.status(200).json({ ok: true, phase, round, byMetric });
       return;
     }
 
     const rawMetric = req.query.metric;
     const metric: Metric = isMetric(rawMetric) ? rawMetric : "totalPoints";
     const snaps = await loadUserRankingSnaps(uid);
-    const payload = await rankingPayloadForMetric(metric, phase, uid, snaps);
+    const payload = await rankingPayloadForMetric(metric, phase, round, uid, snaps);
 
     res.status(200).json({
       ok: true,
       metric,
       phase,
+      round,
       count: payload.count,
       rows: payload.rows,
       myRank: payload.myRank,
