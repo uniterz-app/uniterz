@@ -128,7 +128,14 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps) {
         ? ((_b = (_a = snapDoc.data()) === null || _a === void 0 ? void 0 : _a.rows) !== null && _b !== void 0 ? _b : [])
         : [];
     let rows = rawRows.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
-    const missingPlanUids = rawRows
+    if (rows.length === 0 &&
+        phase === "playoffs" &&
+        round !== "overall" &&
+        (round === "r1" || round === "r2" || round === "cf" || round === "finals")) {
+        const live = await (0, buildCumulativeRankingSnapshot_1.loadPlayoffRoundTop20RowsLive)(round, metric);
+        rows = live.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
+    }
+    const missingPlanUids = rows
         .filter((r) => (r === null || r === void 0 ? void 0 : r.uid) && r.plan !== "pro" && r.plan !== "free")
         .map((r) => r.uid);
     const rowUids = [...new Set(missingPlanUids)];

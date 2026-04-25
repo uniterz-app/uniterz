@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = exports.RANK_SNAPSHOT_HISTORY_SUBCOL = exports.SNAPSHOT_BUILD_PHASES = void 0;
 exports.getYesterdayDateKeyJST = getYesterdayDateKeyJST;
 exports.subtractOneDayFromDateKeyJST = subtractOneDayFromDateKeyJST;
+exports.loadPlayoffRoundTop20RowsLive = loadPlayoffRoundTop20RowsLive;
 exports.buildCumulativeRankingSnapshot = buildCumulativeRankingSnapshot;
 const firestore_1 = require("firebase-admin/firestore");
 /* =========================================================
@@ -215,6 +216,46 @@ async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) 
         out.set(uid, null);
     }
     return out;
+}
+/**
+ * 日次スナップショット doc が無い/空のとき、getCumulativeRanking が一覧を出せるよう
+ * cumulative_stats からラウンド別 Top20 をその場で算出する。
+ */
+async function loadPlayoffRoundTop20RowsLive(round, metric) {
+    const snap = await db().collection("cumulative_stats").get();
+    const baseRows = snap.docs
+        .map((doc) => {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        const d = doc.data();
+        const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
+        const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
+        const tw = (_c = rr === null || rr === void 0 ? void 0 : rr.totalWins) !== null && _c !== void 0 ? _c : 0;
+        return {
+            uid: doc.id,
+            displayName: (_d = d.displayName) !== null && _d !== void 0 ? _d : "user",
+            handle: (_e = d.handle) !== null && _e !== void 0 ? _e : null,
+            photoURL: (_f = d.photoURL) !== null && _f !== void 0 ? _f : null,
+            countryCode: (_g = d.countryCode) !== null && _g !== void 0 ? _g : null,
+            plan: (d.plan === "pro" ? "pro" : "free"),
+            totalPosts: tp,
+            totalWins: tw,
+            winRate: tp > 0 ? tw / tp : (_h = rr === null || rr === void 0 ? void 0 : rr.winRate) !== null && _h !== void 0 ? _h : 0,
+            totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
+            totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
+            totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
+            activeWinStreak: (_m = d.activeWinStreak) !== null && _m !== void 0 ? _m : 0,
+        };
+    })
+        .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
+    const eligibleRows = metric === "winRate"
+        ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= MIN_POSTS_FOR_WIN_RATE; })
+        : baseRows;
+    const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
+    const ranks = assignCompetitionRanks(sortedFull, metric);
+    return sortedFull.slice(0, 20).map((row) => {
+        var _a;
+        return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
+    });
 }
 /* =========================================================
  * Main

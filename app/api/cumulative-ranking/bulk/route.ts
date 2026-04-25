@@ -10,8 +10,7 @@ import {
   type PlayoffRoundKey,
 } from "@/lib/rankings/playoffRound";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
-import { getAdminDb } from "@/lib/firebaseAdmin";
-import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
+import { loadSnapshotTotalPointsRankAndDelta } from "@/lib/rankings/server/rankSnapshotHistoryTotalPoints";
 
 export const runtime = "nodejs";
 
@@ -51,49 +50,6 @@ function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
 
 function metricsToKey(metrics: BulkRankingMetric[]): string {
   return [...new Set(metrics)].sort().join(",");
-}
-
-async function loadLatestAndPrevSnapshotRank(
-  uid: string,
-  phase: RankingPhase
-): Promise<{ latestRank: number | null; deltaPlaces: number | null }> {
-  const adminDb = getAdminDb();
-  const snap = await adminDb
-    .collection("cumulative_stats")
-    .doc(uid)
-    .collection("rankSnapshotHistory")
-    .get();
-
-  if (snap.empty) return { latestRank: null, deltaPlaces: null };
-
-  const sorted = [...snap.docs].sort((a, b) => a.id.localeCompare(b.id));
-  const latest = sorted[sorted.length - 1];
-  const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
-  if (!latest) return { latestRank: null, deltaPlaces: null };
-
-  const latestData = latest.data() as
-    | { play_in?: Record<string, unknown>; playoffs?: Record<string, unknown> }
-    | undefined;
-  const prevData = prev?.data() as
-    | { play_in?: Record<string, unknown>; playoffs?: Record<string, unknown> }
-    | undefined;
-
-  const latestRankRaw =
-    phase === "play_in"
-      ? latestData?.play_in?.totalPoints
-      : latestData?.playoffs?.totalPoints;
-  const prevRankRaw =
-    phase === "play_in"
-      ? prevData?.play_in?.totalPoints
-      : prevData?.playoffs?.totalPoints;
-
-  const latestRank = coerceTotalPointsRank(latestRankRaw);
-  const prevRank = coerceTotalPointsRank(prevRankRaw);
-  if (latestRank == null) return { latestRank: null, deltaPlaces: null };
-  const deltaPlaces =
-    prevRank != null && prevRank !== latestRank ? prevRank - latestRank : null;
-
-  return { latestRank, deltaPlaces };
 }
 
 async function fetchOneMetricFromFunctions(
@@ -275,13 +231,11 @@ export async function GET(req: Request) {
 
     /**
      * Ranking Progress と同じ「最新 snapshot」を Your Rank（totalPoints）にも反映する。
-     * これで画面内で latest の見え方を一致させる。
+     * プレーオフ通算・ラウンド別とも rankSnapshotHistory を参照してトータルと揃える。
      */
-    if (uid && round === "overall" && data.byMetric?.totalPoints) {
-      const { latestRank, deltaPlaces } = await loadLatestAndPrevSnapshotRank(
-        uid,
-        phase
-      );
+    if (uid && data.byMetric?.totalPoints) {
+      const { latestRank, deltaPlaces } =
+        await loadSnapshotTotalPointsRankAndDelta(uid, phase, round);
       if (latestRank != null) {
         data.byMetric.totalPoints.myRank = latestRank;
         data.byMetric.totalPoints.myRankDeltaPlaces = deltaPlaces;

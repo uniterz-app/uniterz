@@ -5,6 +5,7 @@ import type { DocumentSnapshot } from "firebase-admin/firestore";
 import { getFirestore, FieldPath } from "firebase-admin/firestore";
 import {
   getYesterdayDateKeyJST,
+  loadPlayoffRoundTop20RowsLive,
   RANK_SNAPSHOT_HISTORY_SUBCOL,
   RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
   subtractOneDayFromDateKeyJST,
@@ -203,7 +204,20 @@ async function rankingPayloadForMetric(
     plan: row.plan === "pro" ? "pro" : "free",
   }));
 
-  const missingPlanUids = rawRows
+  if (
+    rows.length === 0 &&
+    phase === "playoffs" &&
+    round !== "overall" &&
+    (round === "r1" || round === "r2" || round === "cf" || round === "finals")
+  ) {
+    const live = await loadPlayoffRoundTop20RowsLive(round, metric);
+    rows = live.map((row) => ({
+      ...row,
+      plan: row.plan === "pro" ? "pro" : "free",
+    }));
+  }
+
+  const missingPlanUids = rows
     .filter((r) => r?.uid && r.plan !== "pro" && r.plan !== "free")
     .map((r) => r.uid as string);
   const rowUids = [...new Set(missingPlanUids)];

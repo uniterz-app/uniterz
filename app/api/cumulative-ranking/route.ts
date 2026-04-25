@@ -89,6 +89,7 @@ export async function GET(req: Request) {
         rows: body.rows,
         myRank: body.myRank,
         myRow: body.myRow,
+        myRankDeltaPlaces: body.myRankDeltaPlaces,
       },
       { status: 200, headers: { "Cache-Control": cacheControl } }
     );

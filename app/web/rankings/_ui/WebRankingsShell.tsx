@@ -16,7 +16,6 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
-import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
 import Header from "@/app/component/Header";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
@@ -52,7 +51,7 @@ function getMyMetricValue(metric: MobileMetric, row: any): number {
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
   const [phase, setPhase] = useState<RankingPhase>("playoffs");
-  const [round, setRound] = useState<PlayoffRoundKey>("overall");
+  const round: PlayoffRoundKey = "overall";
   const {
     listReady,
     personalPending,
@@ -164,20 +163,10 @@ export default function WebRankingsShell() {
           <div className="space-y-0.5">
             <RankingPhaseTabs
               phase={phase}
-              onChange={(next) => {
-                setPhase(next);
-                if (next !== "playoffs") setRound("overall");
-              }}
+              onChange={setPhase}
               isMobile={false}
               language={language}
             />
-            {phase === "playoffs" ? (
-              <PlayoffRoundTabs
-                round={round}
-                onChange={setRound}
-                isEn={language === "en"}
-              />
-            ) : null}
 
             <MyRankCard
               rank={myRank}

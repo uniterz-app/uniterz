@@ -169,6 +169,8 @@ export function useCumulativeRankingsBulk(
   const mountPrimaryGenRef = useRef(0);
   const uidPrimarySeqRef = useRef(0);
   const metricReqSeqRef = useRef(0);
+  /** phase / round が変わったら増加。古い ensureMetric の結果をマージしない。 */
+  const phaseRoundGenRef = useRef(0);
   const invalidateSeqRef = useRef(0);
 
   /** プロフィールで国を保存した直後：一覧の該当行を即更新（ランキング画面を開いているときのみ効く） */
@@ -224,6 +226,8 @@ export function useCumulativeRankingsBulk(
   }, [phase, round]);
 
   useEffect(() => {
+    phaseRoundGenRef.current += 1;
+    metricReqSeqRef.current += 1;
     let cancelled = false;
     // Phase changed: drop previous phase bundles immediately
     setByMetric(null);
@@ -345,9 +349,11 @@ export function useCumulativeRankingsBulk(
         return;
       }
 
+      const genAtStart = phaseRoundGenRef.current;
       const seq = ++metricReqSeqRef.current;
       try {
         const partial = await fetchBulkMetrics(metric, uidForMetric, phase, round);
+        if (genAtStart !== phaseRoundGenRef.current) return;
         if (seq !== metricReqSeqRef.current) return;
         if (partial) {
           setByMetric((p) =>

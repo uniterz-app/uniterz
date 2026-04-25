@@ -13,7 +13,6 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
-import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
 import Header from "@/app/component/Header";
 import {
@@ -33,7 +32,7 @@ import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNot
 
 export default function MobileRankingsPage() {
   const [phase, setPhase] = useState<RankingPhase>("playoffs");
-  const [round, setRound] = useState<PlayoffRoundKey>("overall");
+  const round: PlayoffRoundKey = "overall";
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
 
   const visibleMetrics: MobileMetric[] = [
@@ -135,21 +134,10 @@ export default function MobileRankingsPage() {
           <div className="space-y-0.5">
             <RankingPhaseTabs
               phase={phase}
-              onChange={(next) => {
-                setPhase(next);
-                if (next !== "playoffs") setRound("overall");
-              }}
+              onChange={setPhase}
               isMobile
               language={language}
             />
-            {phase === "playoffs" ? (
-              <PlayoffRoundTabs
-                round={round}
-                onChange={setRound}
-                isMobile
-                isEn={language === "en"}
-              />
-            ) : null}
 
             <MyRankCard
               rank={myRank}
