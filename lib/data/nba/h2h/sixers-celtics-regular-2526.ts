@@ -9,7 +9,7 @@ export const SIXERS_CELTICS_TEAM_IDS = ["nba-76ers", "nba-celtics"] as const;
 const H2H_LEFT = "Celtics";
 const H2H_RIGHT = "76ers";
 
-/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ2） */
+/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ3） */
 export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-sixers-celtics-2025-10-22",
@@ -108,6 +108,20 @@ export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
         "Edgecombe posted 30 points and 10 rebounds, Maxey added 29, and the pair combined for 59 while the 76ers also won the three-point battle decisively (19/39, 48.7%) over Boston (13/50, 26.0%).\n" +
         "The Celtics cut it to three in the third quarter, but Philadelphia accelerated again and pulled away to level the series at 1-1.",
     },
+  },
+  {
+    id: "h2h-sixers-celtics-2026-04-23",
+    dateEt: "2026-04-23",
+    dateJst: "2026-04-24",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 108,
+    scoreRight: 100,
+    /** Philadelphia（76ers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["J. Embiid"],
   },
 ];
 

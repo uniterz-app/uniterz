@@ -74,6 +74,7 @@ export async function buildCumulativeStats() {
     /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
     const statsRanking = data.ranking ?? data.all;
     const statsByPhase = data.rankingByPhase ?? {};
+      const statsByPlayoffRound = data.rankingByPlayoffRound ?? {};
 
     const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
     const userRef = firestore.doc(`users/${uid}`);
@@ -204,6 +205,38 @@ export async function buildCumulativeStats() {
             : 0,
       };
 
+      /* =========================
+       * プレーオフラウンド別ランキング累積（r1 / r2 / cf / finals）
+       * =======================*/
+      const prevByRound = (cumulativeSnap.get("rankingByPlayoffRound") ??
+        {}) as Record<string, RankingTotals | undefined>;
+      const roundKeys = ["r1", "r2", "cf", "finals"] as const;
+      const nextByRound: Record<string, RankingTotals> = {};
+      for (const rk of roundKeys) {
+        const prevRound = prevByRound[rk] ?? {
+          totalPosts: 0,
+          totalWins: 0,
+          totalPoints: 0,
+          totalUpset: 0,
+          totalPrecision: 0,
+          winRate: 0,
+        };
+        const nextRoundRaw = addRankingTotals(prevRound, {
+          posts: statsByPlayoffRound[rk]?.posts ?? 0,
+          wins: statsByPlayoffRound[rk]?.wins ?? 0,
+          pointsSumV3: statsByPlayoffRound[rk]?.pointsSumV3 ?? 0,
+          upsetPointsSum: statsByPlayoffRound[rk]?.upsetPointsSum ?? 0,
+          scorePrecisionSum: statsByPlayoffRound[rk]?.scorePrecisionSum ?? 0,
+        });
+        nextByRound[rk] = {
+          ...nextRoundRaw,
+          winRate:
+            nextRoundRaw.totalPosts > 0
+              ? nextRoundRaw.totalWins / nextRoundRaw.totalPosts
+              : 0,
+        };
+      }
+
       tx.set(
         cumulativeRef,
         {
@@ -235,6 +268,7 @@ export async function buildCumulativeStats() {
             play_in: nextPlayIn,
             playoffs: nextPlayoffs,
           },
+          rankingByPlayoffRound: nextByRound,
 
           lastAggregatedDate: dateKey,
           updatedAt: FieldValue.serverTimestamp(),

@@ -119,6 +119,7 @@ export async function finalizePost({
       points: totalPoints,
       countsForRanking,
       seasonPhase: game?.seasonPhase ?? null,
+      seasonRound: game?.seasonRound ?? null,
     }).then(() => buildWindowCacheForUser(uid))
   );
 }

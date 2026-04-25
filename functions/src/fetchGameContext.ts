@@ -20,6 +20,8 @@ export type NormalizedGame = {
   playedAt?: Timestamp | null;
   /** regular | play_in | playoffs; omitted/null treated as regular for standings. */
   seasonPhase?: "regular" | "play_in" | "playoffs" | null;
+  /** games.roundLabel を正規化した playoff round key（playoffs のみ） */
+  seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
 };
 
 export type GameContext = {
@@ -38,7 +40,16 @@ export type GameContext = {
  * Helpers
  * ========================= */
 
+function normalizePlayoffRoundKey(
+  v: unknown
+): "r1" | "r2" | "cf" | "finals" | null {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (!s) return null;
+  return s === "r1" || s === "r2" || s === "cf" || s === "finals" ? s : null;
+}
+
 function normalizeGame(after: any, gameId: string): NormalizedGame {
+  const seasonPhase = after?.seasonPhase ?? null;
   return {
     id: gameId,
     league: after?.league,
@@ -50,7 +61,11 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     homeRank: null,
     awayRank: null,
     playedAt: after?.startAtJst ?? after?.startAt ?? null,
-    seasonPhase: after?.seasonPhase ?? null,
+    seasonPhase,
+    seasonRound:
+      seasonPhase === "playoffs"
+        ? normalizePlayoffRoundKey(after?.playoffRound)
+        : null,
   };
 }
 

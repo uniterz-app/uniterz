@@ -12,7 +12,8 @@ import type { Language } from "@/lib/i18n/language";
 import { jp, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useCountUp } from "@/lib/hooks/useCountUp";
-import { BarChart3, TrendingDown, TrendingUp } from "lucide-react";
+import { BarChart3, Info, TrendingDown, TrendingUp } from "lucide-react";
+import styles from "./profileChartInfoFaq.module.css";
 
 type Layout = "mobile" | "web";
 
@@ -242,6 +243,8 @@ export default function StreakTrackerCard({
 
   const subtitleJa = `直近${STREAK_TRACKER_LAST_N}試合の連勝・連敗を表示`;
   const subtitleEn = `Win/loss streaks from your last ${STREAK_TRACKER_LAST_N} settled picks`;
+  /** Info 用（表示サブタイトルと同じ文言のみ） */
+  const chartInfoTooltipMsg = isEn ? subtitleEn : subtitleJa;
 
   const statWinLabel = isEn ? "Best W streak" : "最高連勝";
   const statLossLabel = isEn ? "Best L streak" : "最高連敗";
@@ -268,18 +271,32 @@ export default function StreakTrackerCard({
         aria-hidden
       />
       <div className="relative z-1">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div className="relative z-20 mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div
-              className={[
-                nameRajdhani.className,
-                "font-semibold tracking-wide text-white/95",
-                layout === "web"
-                  ? "text-xl sm:text-[1.72rem]"
-                  : "text-lg",
-              ].join(" ")}
-            >
-              Last20 Tracker
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div
+                className={[
+                  nameRajdhani.className,
+                  "font-semibold tracking-wide text-white/95",
+                  layout === "web"
+                    ? "text-xl sm:text-[1.72rem]"
+                    : "text-lg",
+                ].join(" ")}
+              >
+                Last20 Tracker
+              </div>
+              <div className={styles.wrap}>
+                <button
+                  type="button"
+                  className={styles.faqButton}
+                  aria-label={chartInfoTooltipMsg}
+                >
+                  <Info className="shrink-0" strokeWidth={1.75} aria-hidden />
+                </button>
+                <div className={styles.tooltip} aria-hidden>
+                  {chartInfoTooltipMsg}
+                </div>
+              </div>
             </div>
             <p
               className={[
@@ -364,7 +381,7 @@ export default function StreakTrackerCard({
 
         <div
           ref={chartSectionRef}
-          className={`relative overflow-hidden rounded-2xl border border-white/10 bg-black/35 ${S.chartBorder}`}
+          className={`relative z-0 overflow-hidden rounded-2xl border border-white/10 bg-black/35 ${S.chartBorder}`}
         >
           <div className="relative z-1">
             {loading ? (

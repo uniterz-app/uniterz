@@ -63,6 +63,8 @@ type ApplyOptsV2 = {
   countsForRanking?: boolean;
   /** シーズンフェーズ別ランキング集計用 */
   seasonPhase?: "regular" | "play_in" | "playoffs" | null;
+  /** プレーオフラウンド別ランキング集計用 */
+  seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
 };
 
 function shouldCountForRanking(v: boolean | undefined) {
@@ -74,6 +76,13 @@ function normalizeSeasonPhase(
 ): "play_in" | "playoffs" | null {
   if (!v) return null;
   return v === "play_in" || v === "playoffs" ? v : null;
+}
+
+function normalizeSeasonRound(
+  v: ApplyOptsV2["seasonRound"]
+): "r1" | "r2" | "cf" | "finals" | null {
+  if (!v) return null;
+  return v === "r1" || v === "r2" || v === "cf" || v === "finals" ? v : null;
 }
 
 const db = () => getFirestore();
@@ -171,10 +180,12 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     streakBonus,
     countsForRanking,
     seasonPhase,
+    seasonRound,
   } = opts;
 
   const forRanking = shouldCountForRanking(countsForRanking);
   const phaseKey = normalizeSeasonPhase(seasonPhase);
+  const roundKey = normalizeSeasonRound(seasonRound);
 
   const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
@@ -212,6 +223,9 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       all: inc,
       ...(forRanking ? { ranking: inc } : {}),
       ...(phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {}),
+      ...(forRanking && phaseKey === "playoffs" && roundKey
+        ? { rankingByPlayoffRound: { [roundKey]: inc } }
+        : {}),
     };
 
     if (leagueKey) {
