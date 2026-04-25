@@ -97,9 +97,14 @@ function resetDailyLinePathStyles(root: HTMLElement | null): void {
   }
 }
 
-/**
- * 線フェーズ直後に同期で「線を隠す」状態にする（runDaily の遅延までの一瞬の全表示を防ぐ）
- */
+/** パス長に合わせた dash（単一値より `len len` の方がエンジン差で安定しやすい） */
+function setPathClosedDash(path: SVGPathElement, len: number): void {
+  path.style.transition = "none";
+  path.style.strokeDasharray = `${len} ${len}`;
+  path.style.strokeDashoffset = `${len}`;
+}
+
+/** 線フェーズ直後に同期で「線を隠す」（runDaily の rAF までの一瞬の全表示を防ぐ） */
 function primeDailyLinePathsClosed(root: HTMLElement | null): void {
   if (!root) return;
   for (const path of collectDailyLinePaths(root)) {
@@ -110,9 +115,7 @@ function primeDailyLinePathsClosed(root: HTMLElement | null): void {
       continue;
     }
     if (!Number.isFinite(len) || len <= 0) continue;
-    path.style.transition = "none";
-    path.style.strokeDasharray = `${len}`;
-    path.style.strokeDashoffset = `${len}`;
+    setPathClosedDash(path, len);
   }
 }
 
@@ -128,8 +131,13 @@ function restoreDailyLineStrokeStyle(path: SVGPathElement): void {
   }
 }
 
+function pathSupportsWebAnim(path: SVGPathElement): boolean {
+  return typeof path.animate === "function";
+}
+
 /**
- * 折れ線パスを左から伸ばす。onComplete は高々1回（正常終了・安全タイムアウト・クリーンアップ中断のいずれか）。
+ * 折れ線パスを左から伸ばす。onComplete は高々1回（正常終了・安全タイムアウト・root 無しのみ）。
+ * クリーンアップ後に遅延コールバックが走っても onComplete は呼ばない（cancelled ガード）。
  */
 function runDailyLinePathDraw(
   root: HTMLElement | null,
@@ -137,103 +145,161 @@ function runDailyLinePathDraw(
 ): () => void {
   let cancelled = false;
   let completed = false;
-  let raf1 = 0;
-  let raf2 = 0;
-  let raf3 = 0;
+  let rafKickOuter = 0;
+  let rafKickInner = 0;
   const timers: number[] = [];
+  const webAnims: Animation[] = [];
 
   const completeOnce = () => {
-    if (completed) return;
+    if (completed || cancelled) return;
     completed = true;
     onComplete();
   };
 
   const stopTimersAndRaf = () => {
-    cancelAnimationFrame(raf1);
-    cancelAnimationFrame(raf2);
-    cancelAnimationFrame(raf3);
+    cancelAnimationFrame(rafKickOuter);
+    cancelAnimationFrame(rafKickInner);
     for (const id of timers) {
       window.clearTimeout(id);
     }
     timers.length = 0;
+    for (const a of webAnims) {
+      try {
+        a.cancel();
+      } catch {
+        /* 既に終了 */
+      }
+    }
+    webAnims.length = 0;
   };
 
   if (!root) {
-    const tid = window.setTimeout(completeOnce, 0);
+    const tid = window.setTimeout(() => {
+      if (!cancelled) completeOnce();
+    }, 0);
     timers.push(tid);
     return () => {
       cancelled = true;
       window.clearTimeout(tid);
-      completeOnce();
+      if (!completed) {
+        completed = true;
+        onComplete();
+      }
     };
   }
 
-  /** レイアウト確定後に getTotalLength を取る */
-  const kickTid = window.setTimeout(() => {
+  /** レイアウト確定後に開始（短い rAF 連打で prime 後の Recharts と整合） */
+  const kick = () => {
     if (cancelled) return;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        raf3 = requestAnimationFrame(() => {
-          if (cancelled) return;
-          const paths = collectDailyLinePaths(root);
-          if (paths.length === 0) {
-            completeOnce();
-            return;
-          }
+    const paths = collectDailyLinePaths(root);
+    if (paths.length === 0) {
+      completeOnce();
+      return;
+    }
 
-          const lineEndMs =
-            (paths.length - 1) * LINE_PATH_STAGGER_MS + LINE_PATH_DRAW_MS + 80;
-          const safetyTid = window.setTimeout(() => {
-            if (cancelled) return;
-            for (const path of paths) {
-              restoreDailyLineStrokeStyle(path);
-            }
-            completeOnce();
-          }, LINE_PATH_FALLBACK_MS);
-          timers.push(safetyTid);
+    const lineEndMs =
+      (paths.length - 1) * LINE_PATH_STAGGER_MS + LINE_PATH_DRAW_MS + 120;
+    const safetyTid = window.setTimeout(() => {
+      if (cancelled) return;
+      for (const a of webAnims) {
+        try {
+          a.cancel();
+        } catch {
+          /* 既に終了 */
+        }
+      }
+      webAnims.length = 0;
+      for (const p of collectDailyLinePaths(root)) {
+        restoreDailyLineStrokeStyle(p);
+      }
+      completeOnce();
+    }, LINE_PATH_FALLBACK_MS);
+    timers.push(safetyTid);
 
-          paths.forEach((path, index) => {
-            const tid = window.setTimeout(() => {
-              if (cancelled) return;
-              let len = 0;
-              try {
-                len = path.getTotalLength();
-              } catch {
-                /* 未レイアウト */
+    paths.forEach((path, index) => {
+      const tid = window.setTimeout(() => {
+        if (cancelled) return;
+        let len = 0;
+        try {
+          len = path.getTotalLength();
+        } catch {
+          return;
+        }
+        if (!Number.isFinite(len) || len <= 0) return;
+
+        setPathClosedDash(path, len);
+        void path.getBoundingClientRect();
+
+        if (pathSupportsWebAnim(path)) {
+          try {
+            const dashPair = `${len} ${len}`;
+            const anim = path.animate(
+              [
+                {
+                  strokeDasharray: dashPair,
+                  strokeDashoffset: String(len),
+                },
+                {
+                  strokeDasharray: dashPair,
+                  strokeDashoffset: "0",
+                },
+              ],
+              {
+                duration: LINE_PATH_DRAW_MS,
+                easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                fill: "forwards",
               }
-              if (!Number.isFinite(len) || len <= 0) return;
-              path.style.strokeDasharray = `${len}`;
-              path.style.strokeDashoffset = `${len}`;
-              path.style.transition = "none";
-              void path.getBoundingClientRect();
-              path.style.transition = `stroke-dashoffset ${LINE_PATH_DRAW_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-              requestAnimationFrame(() => {
-                if (cancelled) return;
-                path.style.strokeDashoffset = "0";
-              });
-            }, index * LINE_PATH_STAGGER_MS);
-            timers.push(tid);
-          });
+            );
+            webAnims.push(anim);
+            return;
+          } catch {
+            /* フォールバックへ */
+          }
+        }
 
-          const finishTid = window.setTimeout(() => {
+        /** CSS transition（WAAPI 不可時） */
+        path.style.transition = "none";
+        path.style.strokeDashoffset = `${len}`;
+        void path.getBoundingClientRect();
+        path.style.transition = `strokeDashoffset ${LINE_PATH_DRAW_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
             if (cancelled) return;
-            for (const path of paths) {
-              restoreDailyLineStrokeStyle(path);
-            }
-            completeOnce();
-          }, lineEndMs);
-          timers.push(finishTid);
+            path.style.strokeDashoffset = "0";
+          });
         });
-      });
+      }, index * LINE_PATH_STAGGER_MS);
+      timers.push(tid);
     });
-  }, 32);
-  timers.push(kickTid);
+
+    /** 全パス分の stagger + 描画時間を待ってから WAAPI を止めて復元・フェーズ完了 */
+    const finishTid = window.setTimeout(() => {
+      if (cancelled) return;
+      for (const a of webAnims) {
+        try {
+          a.cancel();
+        } catch {
+          /* 既に終了 */
+        }
+      }
+      webAnims.length = 0;
+      for (const p of collectDailyLinePaths(root)) {
+        restoreDailyLineStrokeStyle(p);
+      }
+      completeOnce();
+    }, lineEndMs);
+    timers.push(finishTid);
+  };
+
+  rafKickOuter = requestAnimationFrame(() => {
+    if (cancelled) return;
+    rafKickInner = requestAnimationFrame(kick);
+  });
 
   return () => {
     cancelled = true;
     stopTimersAndRaf();
     resetDailyLinePathStyles(root);
-    /** onComplete は完了時・安全タイムアウト・root 無しのみ。ここで呼ぶと bars 直後に done が上書きされるため呼ばない */
   };
 }
 
@@ -448,6 +514,8 @@ export default function ProfileDailyTrendChart({
   const ref = useRef<HTMLDivElement>(null);
   /** 折れ線パス query（ResponsiveContainer ラッパ） */
   const lineDrawHostRef = useRef<HTMLDivElement>(null);
+  /** 線描画セッション（クリーンアップ後の遅延 onComplete を無視） */
+  const lineDrawSessionRef = useRef(0);
   const [ioVisible, setIoVisible] = useState(false);
 
   useEffect(() => {
@@ -510,14 +578,21 @@ export default function ProfileDailyTrendChart({
     setEntrancePhase("bars");
   }, [allowEntranceAnim, chartVisible, composedChartKey, isEmpty]);
 
-  /** 棒フェーズ終了 → 線フェーズへ */
+  /** 棒フェーズ終了 → 線フェーズへ（キー・許可が変わったらタイマーを張り直す） */
   useEffect(() => {
     if (entrancePhase !== "bars") return;
     if (isEmpty || !chartVisible) return;
     const ms = barEntranceEndMs(chartData.length);
     const t = window.setTimeout(() => setEntrancePhase("lines"), ms);
     return () => window.clearTimeout(t);
-  }, [chartData.length, chartVisible, entrancePhase, isEmpty]);
+  }, [
+    allowEntranceAnim,
+    chartData.length,
+    chartVisible,
+    composedChartKey,
+    entrancePhase,
+    isEmpty,
+  ]);
 
   /** 線フェーズ：ブラウザ描画前にパスを閉じた状態へ（棒→線の切り替え直後のフラッシュ防止） */
   useLayoutEffect(() => {
@@ -530,15 +605,17 @@ export default function ProfileDailyTrendChart({
     return () => cancelAnimationFrame(raf);
   }, [chartVisible, composedChartKey, entrancePhase, isEmpty]);
 
-  /** 線フェーズ：パス描画（useEffect で runDaily の kick と重ねる） */
+  /** 線フェーズ：パス描画（古いセッションの onComplete は無視） */
   useEffect(() => {
     if (entrancePhase !== "lines" || !chartVisible || isEmpty) return;
+    const session = ++lineDrawSessionRef.current;
     const cleanupDraw = runDailyLinePathDraw(lineDrawHostRef.current, () => {
+      if (lineDrawSessionRef.current !== session) return;
       setEntrancePhase("done");
     });
     return () => {
       cleanupDraw();
-      /** フェーズは触らない（Strict Mode の二重マウントで lines→done にしない／キー変更は layout が bars に戻す） */
+      lineDrawSessionRef.current += 1;
     };
   }, [chartVisible, composedChartKey, entrancePhase, isEmpty]);
 
