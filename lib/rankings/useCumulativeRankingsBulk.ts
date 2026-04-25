@@ -11,6 +11,7 @@ import {
   type CumulativeRankingPatchMyCountryDetail,
 } from "@/lib/rankings/cumulativeRankingInvalidate";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 
 /** 指標タブで既に読み込んだバンドルを捨てずにまとめて取り直す */
 const REFETCH_ALL_METRICS =
@@ -136,11 +137,13 @@ function maybeClearSessionCountryAfterFetch(
 async function fetchBulkMetrics(
   metrics: string,
   uid: string | null,
-  phase: RankingPhase
+  phase: RankingPhase,
+  round: PlayoffRoundKey
 ): Promise<Record<string, BulkMetricPayload> | null> {
   const params = new URLSearchParams();
   params.set("metrics", metrics);
   params.set("phase", phase);
+  params.set("round", round);
   if (uid) params.set("uid", uid);
   const res = await fetch(`/api/cumulative-ranking/bulk?${params.toString()}`);
   const json = await res.json();
@@ -148,7 +151,10 @@ async function fetchBulkMetrics(
   return json.byMetric as Record<string, BulkMetricPayload>;
 }
 
-export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
+export function useCumulativeRankingsBulk(
+  phase: RankingPhase = "playoffs",
+  round: PlayoffRoundKey = "overall"
+) {
   const [authReady, setAuthReady] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -192,11 +198,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
       void (async () => {
         const uid = auth.currentUser?.uid ?? null;
         try {
-          const partial = await fetchBulkMetrics(
-            REFETCH_ALL_METRICS,
-            uid,
-            phase
-          );
+          const partial = await fetchBulkMetrics(REFETCH_ALL_METRICS, uid, phase, round);
           if (seq !== invalidateSeqRef.current) return;
           if (partial) {
             const merged = mergeMetricBundles(null, partial);
@@ -219,7 +221,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
         onInvalidate
       );
     };
-  }, [phase]);
+  }, [phase, round]);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,7 +233,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
     void (async () => {
       const g = ++mountPrimaryGenRef.current;
       try {
-        const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase);
+        const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round);
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         if (partial) {
           setByMetric((p) =>
@@ -272,7 +274,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
         const g = ++mountPrimaryGenRef.current;
         void (async () => {
           try {
-            const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase);
+            const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round);
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             if (partial) {
               setByMetric((p) =>
@@ -305,7 +307,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
       const uq = ++uidPrimarySeqRef.current;
       void (async () => {
         try {
-          const partial = await fetchBulkMetrics(PRIMARY_METRICS, uid, phase);
+          const partial = await fetchBulkMetrics(PRIMARY_METRICS, uid, phase, round);
           if (cancelled || uq !== uidPrimarySeqRef.current) return;
           if (partial) {
             setByMetric((p) =>
@@ -327,7 +329,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
       cancelled = true;
       unsub();
     };
-  }, [phase]);
+  }, [phase, round]);
 
   const ensureMetric = useCallback(
     async (metric: string) => {
@@ -345,7 +347,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
 
       const seq = ++metricReqSeqRef.current;
       try {
-        const partial = await fetchBulkMetrics(metric, uidForMetric, phase);
+        const partial = await fetchBulkMetrics(metric, uidForMetric, phase, round);
         if (seq !== metricReqSeqRef.current) return;
         if (partial) {
           setByMetric((p) =>
@@ -373,7 +375,7 @@ export function useCumulativeRankingsBulk(phase: RankingPhase = "playoffs") {
         );
       }
     },
-    [authReady, byMetric, myUid, appliedTotalPointsUid, phase]
+    [authReady, byMetric, myUid, appliedTotalPointsUid, phase, round]
   );
 
   const listReady = byMetric?.totalPoints != null;

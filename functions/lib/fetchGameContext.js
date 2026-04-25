@@ -4,20 +4,30 @@ exports.fetchGameContext = fetchGameContext;
 /* =========================
  * Helpers
  * ========================= */
+function normalizePlayoffRoundKey(v) {
+    const s = String(v !== null && v !== void 0 ? v : "").trim().toLowerCase();
+    if (!s)
+        return null;
+    return s === "r1" || s === "r2" || s === "cf" || s === "finals" ? s : null;
+}
 function normalizeGame(after, gameId) {
     var _a, _b, _c, _d, _e, _f, _g;
+    const seasonPhase = (_a = after === null || after === void 0 ? void 0 : after.seasonPhase) !== null && _a !== void 0 ? _a : null;
     return {
         id: gameId,
         league: after === null || after === void 0 ? void 0 : after.league,
-        homeTeamId: (_a = after === null || after === void 0 ? void 0 : after.home) === null || _a === void 0 ? void 0 : _a.teamId,
-        awayTeamId: (_b = after === null || after === void 0 ? void 0 : after.away) === null || _b === void 0 ? void 0 : _b.teamId,
-        homeScore: (_c = after === null || after === void 0 ? void 0 : after.homeScore) !== null && _c !== void 0 ? _c : null,
-        awayScore: (_d = after === null || after === void 0 ? void 0 : after.awayScore) !== null && _d !== void 0 ? _d : null,
+        homeTeamId: (_b = after === null || after === void 0 ? void 0 : after.home) === null || _b === void 0 ? void 0 : _b.teamId,
+        awayTeamId: (_c = after === null || after === void 0 ? void 0 : after.away) === null || _c === void 0 ? void 0 : _c.teamId,
+        homeScore: (_d = after === null || after === void 0 ? void 0 : after.homeScore) !== null && _d !== void 0 ? _d : null,
+        awayScore: (_e = after === null || after === void 0 ? void 0 : after.awayScore) !== null && _e !== void 0 ? _e : null,
         final: !!(after === null || after === void 0 ? void 0 : after.final),
         homeRank: null,
         awayRank: null,
-        playedAt: (_f = (_e = after === null || after === void 0 ? void 0 : after.startAtJst) !== null && _e !== void 0 ? _e : after === null || after === void 0 ? void 0 : after.startAt) !== null && _f !== void 0 ? _f : null,
-        seasonPhase: (_g = after === null || after === void 0 ? void 0 : after.seasonPhase) !== null && _g !== void 0 ? _g : null,
+        playedAt: (_g = (_f = after === null || after === void 0 ? void 0 : after.startAtJst) !== null && _f !== void 0 ? _f : after === null || after === void 0 ? void 0 : after.startAt) !== null && _g !== void 0 ? _g : null,
+        seasonPhase,
+        seasonRound: seasonPhase === "playoffs"
+            ? normalizePlayoffRoundKey(after === null || after === void 0 ? void 0 : after.playoffRound)
+            : null,
     };
 }
 /* =========================

@@ -5,6 +5,10 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import {
+  isPlayoffRoundKey,
+  type PlayoffRoundKey,
+} from "@/lib/rankings/playoffRound";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
@@ -96,11 +100,13 @@ async function fetchOneMetricFromFunctions(
   baseUrl: string,
   uid: string | undefined,
   metric: BulkRankingMetric,
-  phase: RankingPhase
+  phase: RankingPhase,
+  round: PlayoffRoundKey
 ) {
   const url = new URL(baseUrl);
   url.searchParams.set("metric", metric);
   url.searchParams.set("phase", phase);
+  url.searchParams.set("round", round);
   if (uid) url.searchParams.set("uid", uid);
 
   const res = await fetch(url.toString(), {
@@ -135,7 +141,8 @@ async function fetchOneMetricFromFunctions(
 async function fetchBulkFromFunctions(
   uid: string | undefined,
   metrics: BulkRankingMetric[],
-  phase: RankingPhase
+  phase: RankingPhase,
+  round: PlayoffRoundKey
 ) {
   const baseUrl =
     process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -148,6 +155,7 @@ async function fetchBulkFromFunctions(
   const combinedUrl = new URL(baseUrl);
   combinedUrl.searchParams.set("metrics", metrics.join(","));
   combinedUrl.searchParams.set("phase", phase);
+  combinedUrl.searchParams.set("round", round);
   if (uid) combinedUrl.searchParams.set("uid", uid);
 
   const combinedRes = await fetch(combinedUrl.toString(), {
@@ -189,7 +197,7 @@ async function fetchBulkFromFunctions(
 
   const results = await Promise.all(
     metrics.map((metric) =>
-      fetchOneMetricFromFunctions(baseUrl, uid, metric, phase)
+      fetchOneMetricFromFunctions(baseUrl, uid, metric, phase, round)
     )
   );
 
@@ -203,6 +211,7 @@ const getCachedBulk = unstable_cache(
     uidKey: string,
     metricsKey: string,
     phase: RankingPhase,
+    round: PlayoffRoundKey,
     dayKey: string
   ) => {
     const uid = uidKey === "__anon__" ? undefined : uidKey;
@@ -214,7 +223,7 @@ const getCachedBulk = unstable_cache(
     ) as BulkRankingMetric[];
     // dayKey は unstable_cache のキー分離用（当日中は同一キーで再利用）
     void dayKey;
-    return fetchBulkFromFunctions(uid, metrics, phase);
+    return fetchBulkFromFunctions(uid, metrics, phase, round);
   },
   ["cumulative-ranking-bulk-v3"],
   {
@@ -232,6 +241,10 @@ export async function GET(req: Request) {
     const phase: RankingPhase = isRankingPhase(rawPhase)
       ? rawPhase
       : "playoffs";
+    const rawRound = searchParams.get("round");
+    const round: PlayoffRoundKey = isPlayoffRoundKey(rawRound)
+      ? rawRound
+      : "overall";
     const metricsKey = metricsToKey(metricsList);
     const todayKey = dateKeyJST();
 
@@ -251,8 +264,8 @@ export async function GET(req: Request) {
      * 一覧のみ（uid なし）は dayKey 単位キャッシュを使う。
      */
     const source = uid
-      ? await fetchBulkFromFunctions(uid, metricsList, phase)
-      : await getCachedBulk("__anon__", metricsKey, phase, todayKey);
+      ? await fetchBulkFromFunctions(uid, metricsList, phase, round)
+      : await getCachedBulk("__anon__", metricsKey, phase, round, todayKey);
 
     const data =
       typeof structuredClone === "function"
@@ -264,7 +277,7 @@ export async function GET(req: Request) {
      * Ranking Progress と同じ「最新 snapshot」を Your Rank（totalPoints）にも反映する。
      * これで画面内で latest の見え方を一致させる。
      */
-    if (uid && data.byMetric?.totalPoints) {
+    if (uid && round === "overall" && data.byMetric?.totalPoints) {
       const { latestRank, deltaPlaces } = await loadLatestAndPrevSnapshotRank(
         uid,
         phase

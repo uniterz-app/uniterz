@@ -13,6 +13,7 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
+import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
 import Header from "@/app/component/Header";
 import {
@@ -25,12 +26,14 @@ import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 
 export default function MobileRankingsPage() {
   const [phase, setPhase] = useState<RankingPhase>("playoffs");
+  const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
 
   const visibleMetrics: MobileMetric[] = [
@@ -53,7 +56,7 @@ export default function MobileRankingsPage() {
   );
 
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useCumulativeRankingsBulk(phase);
+    useCumulativeRankingsBulk(phase, round);
 
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
@@ -132,10 +135,21 @@ export default function MobileRankingsPage() {
           <div className="space-y-0.5">
             <RankingPhaseTabs
               phase={phase}
-              onChange={setPhase}
+              onChange={(next) => {
+                setPhase(next);
+                if (next !== "playoffs") setRound("overall");
+              }}
               isMobile
               language={language}
             />
+            {phase === "playoffs" ? (
+              <PlayoffRoundTabs
+                round={round}
+                onChange={setRound}
+                isMobile
+                isEn={language === "en"}
+              />
+            ) : null}
 
             <MyRankCard
               rank={myRank}
@@ -167,8 +181,8 @@ export default function MobileRankingsPage() {
           {metric === "winRate" && (
             <p className="px-1 text-[11px] leading-4 text-white/60">
               {language === "en"
-                ? "Win Rate ranking requires at least 10 posts."
-                : "勝率ランキングは10投稿以上が対象です。"}
+                ? "Win Rate ranking requires at least 15 posts."
+                : "勝率ランキングは15投稿以上が対象です。"}
             </p>
           )}
         </div>

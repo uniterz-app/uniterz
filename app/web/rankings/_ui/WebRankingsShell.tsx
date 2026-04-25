@@ -16,12 +16,14 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
+import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
 import Header from "@/app/component/Header";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useWebRankings } from "../_lib/useWebRankings";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
+import { type PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import {
   RANKINGS_TAB_METRIC_PARAM,
   RANKINGS_TAB_PHASE_PARAM,
@@ -50,6 +52,7 @@ function getMyMetricValue(metric: MobileMetric, row: any): number {
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
   const [phase, setPhase] = useState<RankingPhase>("playoffs");
+  const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const {
     listReady,
     personalPending,
@@ -63,7 +66,7 @@ export default function WebRankingsShell() {
     myRankDeltaPlaces,
     myRow,
     myUid,
-  } = useWebRankings(phase);
+  } = useWebRankings(phase, round);
 
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
@@ -161,10 +164,20 @@ export default function WebRankingsShell() {
           <div className="space-y-0.5">
             <RankingPhaseTabs
               phase={phase}
-              onChange={setPhase}
+              onChange={(next) => {
+                setPhase(next);
+                if (next !== "playoffs") setRound("overall");
+              }}
               isMobile={false}
               language={language}
             />
+            {phase === "playoffs" ? (
+              <PlayoffRoundTabs
+                round={round}
+                onChange={setRound}
+                isEn={language === "en"}
+              />
+            ) : null}
 
             <MyRankCard
               rank={myRank}
@@ -190,8 +203,8 @@ export default function WebRankingsShell() {
           {metric === "winRate" && (
             <p className="px-1 text-xs leading-5 text-white/60">
               {language === "en"
-                ? "Win Rate ranking requires at least 10 posts."
-                : "勝率ランキングは10投稿以上が対象です。"}
+                ? "Win Rate ranking requires at least 15 posts."
+                : "勝率ランキングは15投稿以上が対象です。"}
             </p>
           )}
         </div>

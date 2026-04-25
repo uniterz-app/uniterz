@@ -16,7 +16,7 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
-const MIN_POSTS_FOR_WIN_RATE = 10;
+const MIN_POSTS_FOR_WIN_RATE = 15;
 
 const METRICS: Metric[] = [
   "totalPoints",
@@ -27,6 +27,8 @@ const METRICS: Metric[] = [
 ];
 
 type RankingPhase = "play_in" | "playoffs";
+type PlayoffRoundKey = "r1" | "r2" | "cf" | "finals";
+const PLAYOFF_ROUND_KEYS: PlayoffRoundKey[] = ["r1", "r2", "cf", "finals"];
 
 /**
  * 日次スナップショットで再計算・書き込みするフェーズ。プレーイン終了後は確定表示のため除外する。
@@ -191,6 +193,13 @@ function assignCompetitionRanks(
 
 type PhaseRankMap = Partial<Record<Metric, number>>;
 
+/** rankSnapshotHistory / snapshotRanks 用（ラウンド別は playoffs のみ） */
+type PriorRankBlock = {
+  play_in: PhaseRankMap;
+  playoffs: PhaseRankMap;
+  playoffRounds: Partial<Record<PlayoffRoundKey, PhaseRankMap>>;
+};
+
 type SnapshotRow = BaseRow & {
   rank: number;
   rankDeltaPlaces: number | null;
@@ -214,11 +223,8 @@ async function fetchLatestPriorRankMapsForUids(
   uids: string[],
   startKey: string,
   maxLookbackDays: number
-): Promise<Map<string, { play_in: PhaseRankMap; playoffs: PhaseRankMap } | null>> {
-  const out = new Map<
-    string,
-    { play_in: PhaseRankMap; playoffs: PhaseRankMap } | null
-  >();
+): Promise<Map<string, PriorRankBlock | null>> {
+  const out = new Map<string, PriorRankBlock | null>();
   if (uids.length === 0) return out;
 
   const pending = new Set(uids);
@@ -245,10 +251,13 @@ async function fetchLatestPriorRankMapsForUids(
           const d = s.data() as {
             play_in?: PhaseRankMap;
             playoffs?: PhaseRankMap;
+            playoffRounds?: Partial<Record<PlayoffRoundKey, PhaseRankMap>>;
           };
           out.set(uid, {
             play_in: (d?.play_in ?? {}) as PhaseRankMap,
             playoffs: (d?.playoffs ?? {}) as PhaseRankMap,
+            playoffRounds: (d?.playoffRounds ??
+              {}) as Partial<Record<PlayoffRoundKey, PhaseRankMap>>,
           });
           pending.delete(uid);
         }
@@ -340,6 +349,74 @@ export async function buildCumulativeRankingSnapshot() {
     }
   }
 
+  type RoundTop20Job = {
+    round: PlayoffRoundKey;
+    metric: Metric;
+    rows: Array<BaseRow & { rank: number }>;
+  };
+  const roundTop20Jobs: RoundTop20Job[] = [];
+  const rankByUidPlayoffRound = new Map<
+    string,
+    Partial<Record<PlayoffRoundKey, PhaseRankMap>>
+  >();
+
+  function ensurePlayoffRound(uid: string) {
+    if (!rankByUidPlayoffRound.has(uid)) {
+      rankByUidPlayoffRound.set(uid, {});
+    }
+    return rankByUidPlayoffRound.get(uid)!;
+  }
+
+  for (const round of PLAYOFF_ROUND_KEYS) {
+    const baseRows: BaseRow[] = snap.docs
+      .map((doc) => {
+        const d = doc.data();
+        const rr = d.rankingByPlayoffRound?.[round];
+        const tp = rr?.totalPosts ?? 0;
+        const tw = rr?.totalWins ?? 0;
+        return {
+          uid: doc.id,
+          displayName: d.displayName ?? "user",
+          handle: d.handle ?? null,
+          photoURL: d.photoURL ?? null,
+          countryCode: d.countryCode ?? null,
+          plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
+          totalPosts: tp,
+          totalWins: tw,
+          winRate: tp > 0 ? tw / tp : rr?.winRate ?? 0,
+          totalPoints: rr?.totalPoints ?? 0,
+          totalPrecision: rr?.totalPrecision ?? 0,
+          totalUpset: rr?.totalUpset ?? 0,
+          activeWinStreak: d.activeWinStreak ?? 0,
+        };
+      })
+      .filter((row) => (row.totalPosts ?? 0) > 0);
+
+    for (const metric of METRICS) {
+      const eligibleRows =
+        metric === "winRate"
+          ? baseRows.filter((row) => (row.totalPosts ?? 0) >= MIN_POSTS_FOR_WIN_RATE)
+          : baseRows;
+      const sortedFull = [...eligibleRows].sort((a, b) =>
+        cmpSortRows(a, b, metric)
+      );
+      const ranks = assignCompetitionRanks(sortedFull, metric);
+      for (const [uid, rank] of ranks) {
+        const slot = ensurePlayoffRound(uid);
+        if (!slot[round]) slot[round] = {};
+        slot[round]![metric] = rank;
+      }
+      const top20 = sortedFull.slice(0, 20).map((row) => ({
+        ...row,
+        rank: ranks.get(row.uid) ?? 0,
+      }));
+      for (const r of top20) {
+        topUidSet.add(r.uid);
+      }
+      roundTop20Jobs.push({ round, metric, rows: top20 });
+    }
+  }
+
   const yesterdayKey = getYesterdayDateKeyJST();
   const prevByUid = await fetchLatestPriorRankMapsForUids(
     [...topUidSet],
@@ -378,6 +455,38 @@ export async function buildCumulativeRankingSnapshot() {
       );
   }
 
+  for (const { round, metric, rows } of roundTop20Jobs) {
+    const enriched: SnapshotRow[] = rows.map((row) => {
+      const prevBlock = prevByUid.get(row.uid);
+      const prevRaw = prevBlock?.playoffRounds?.[round]?.[metric];
+      const prevRank =
+        typeof prevRaw === "number" &&
+        Number.isFinite(prevRaw) &&
+        prevRaw >= 1
+          ? Math.floor(prevRaw)
+          : null;
+      return {
+        ...row,
+        rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
+      };
+    });
+
+    await db()
+      .collection("cumulative_ranking_snapshots")
+      .doc(`playoffs_${round}_${metric}`)
+      .set(
+        {
+          phase: "playoffs",
+          round,
+          metric,
+          rows: enriched,
+          updatedAt: FieldValue.serverTimestamp(),
+          rankDeltaBasisDateKey: yesterdayKey,
+        },
+        { merge: true }
+      );
+  }
+
   const firestore = db();
   const dateKey = getTodayJST();
   let batch = firestore.batch();
@@ -392,6 +501,7 @@ export async function buildCumulativeRankingSnapshot() {
   };
 
   for (const [uid, per] of rankByUid) {
+    const playoffRounds = rankByUidPlayoffRound.get(uid) ?? {};
     /**
      * merge のネストは play_in を消さないよう、更新するフィールドだけドットパスで書く。
      * （プレーインは SNAPSHOT_BUILD_PHASES 外のため per.play_in は空のまま）
@@ -401,6 +511,7 @@ export async function buildCumulativeRankingSnapshot() {
       {
         "snapshotRanks.updatedAt": FieldValue.serverTimestamp(),
         "snapshotRanks.playoffs": per.playoffs,
+        "snapshotRanks.playoffRounds": playoffRounds,
       },
       { merge: true }
     );
@@ -413,6 +524,7 @@ export async function buildCumulativeRankingSnapshot() {
       {
         dateKey,
         playoffs: per.playoffs,
+        playoffRounds,
         writtenAt: FieldValue.serverTimestamp(),
       },
       { merge: true }
