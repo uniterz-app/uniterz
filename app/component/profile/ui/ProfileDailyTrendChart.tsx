@@ -24,6 +24,7 @@ import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts"
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
+import { m, useReducedMotion } from "framer-motion";
 import { Info } from "lucide-react";
 import { cyberMetricValueStyle, hexToRgb } from "./detailMetricGlassCard";
 import styles from "./profileChartInfoFaq.module.css";
@@ -482,6 +483,85 @@ function buildPointsAxis(chartRows: ReturnType<typeof buildCumulative>) {
   return { domain: [0, top] as [number, number], ticks, top };
 }
 
+/** 内訳数値：前回の表示値から新値へ ease-out（初回はゼロを挟まない） */
+const DETAIL_COUNT_UP_MS = 520;
+const DETAIL_COUNT_EASE = 2.15;
+
+function formatDetailCountDisplay(v: number, decimals: number): string {
+  if (decimals <= 0) return String(Math.max(0, Math.round(v)));
+  return formatMetricDecimals(v, decimals);
+}
+
+function DetailCountUpNumber({
+  end,
+  decimals,
+  token,
+  reduceMotion,
+  delayMs = 0,
+}: {
+  end: number;
+  decimals: number;
+  /** `detailDate` と列キーでアニメを張り直す */
+  token: string;
+  reduceMotion: boolean;
+  delayMs?: number;
+}) {
+  const safe = Number.isFinite(end) ? end : 0;
+  const finalText =
+    decimals <= 0
+      ? String(toInt(safe))
+      : formatMetricDecimals(safe, decimals);
+
+  const prevEndRef = useRef<number | null>(null);
+  const [text, setText] = useState(finalText);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setText(finalText);
+      prevEndRef.current = safe;
+      return;
+    }
+
+    const from =
+      prevEndRef.current == null || !Number.isFinite(prevEndRef.current)
+        ? safe
+        : prevEndRef.current;
+
+    if (from === safe) {
+      setText(finalText);
+      prevEndRef.current = safe;
+      return;
+    }
+
+    setText(formatDetailCountDisplay(from, decimals));
+    let raf = 0;
+    let t0: number | null = null;
+    const step = (ts: number) => {
+      if (t0 == null) t0 = ts;
+      const elapsed = ts - t0 - delayMs;
+      if (elapsed < 0) {
+        raf = requestAnimationFrame(step);
+        return;
+      }
+      const p = Math.min(1, elapsed / DETAIL_COUNT_UP_MS);
+      const eased = 1 - (1 - p) ** DETAIL_COUNT_EASE;
+      const cur = from + (safe - from) * eased;
+      setText(formatDetailCountDisplay(cur, decimals));
+      if (p < 1) raf = requestAnimationFrame(step);
+      else {
+        setText(finalText);
+        prevEndRef.current = safe;
+      }
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [safe, decimals, token, reduceMotion, delayMs, finalText]);
+
+  return <>{text}</>;
+}
+
 export default function ProfileDailyTrendChart({
   data,
   range = "7d",
@@ -517,6 +597,7 @@ export default function ProfileDailyTrendChart({
   /** 線描画セッション（クリーンアップ後の遅延 onComplete を無視） */
   const lineDrawSessionRef = useRef(0);
   const [ioVisible, setIoVisible] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (entranceSync) return;
@@ -926,7 +1007,16 @@ export default function ProfileDailyTrendChart({
         <div className="mt-2.5 min-w-0 sm:mt-3">
           {detailDate && detailRow ? (
             <div className="text-[11px] font-medium leading-snug sm:text-xs">
-              <div className="mb-3 min-w-0 sm:mb-3.5">
+              <m.div
+                key={detailDate}
+                className="mb-3 min-w-0 sm:mb-3.5"
+                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: reduceMotion ? 0 : 0.4,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
                 <p
                   className={[
                     nameRajdhani.className,
@@ -936,7 +1026,7 @@ export default function ProfileDailyTrendChart({
                 >
                   {formatDateLabel(detailDate)}
                 </p>
-              </div>
+              </m.div>
 
               {/* Ranking Progress の統計帯と同型（枠・グリッド・区切り・上ラベル/下数値） */}
               <div
@@ -953,7 +1043,16 @@ export default function ProfileDailyTrendChart({
                     "grid-cols-[1fr_auto_1fr_auto_1fr]",
                   ].join(" ")}
                 >
-                  <div className="min-w-0 px-0.5 py-0.5 text-center sm:px-1">
+                  <m.div
+                    className="min-w-0 px-0.5 py-0.5 text-center sm:px-1"
+                    initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 0.44,
+                      delay: reduceMotion ? 0 : 0.05,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                  >
                     <p
                       className={[
                         "leading-tight text-slate-400",
@@ -972,7 +1071,13 @@ export default function ProfileDailyTrendChart({
                       ].join(" ")}
                     >
                       <span style={cyberMetricValueStyle(COLORS.wins)}>
-                        {toInt(detailRow.wins)}
+                        <DetailCountUpNumber
+                          end={clampNum(detailRow.wins)}
+                          decimals={0}
+                          token={`${detailDate}-wins`}
+                          reduceMotion={!!reduceMotion}
+                          delayMs={50}
+                        />
                       </span>
                       <span
                         className="text-white/35"
@@ -982,7 +1087,13 @@ export default function ProfileDailyTrendChart({
                         /
                       </span>
                       <span style={cyberMetricValueStyle(COLORS.posts)}>
-                        {toInt(detailRow.posts)}
+                        <DetailCountUpNumber
+                          end={clampNum(detailRow.posts)}
+                          decimals={0}
+                          token={`${detailDate}-posts`}
+                          reduceMotion={!!reduceMotion}
+                          delayMs={120}
+                        />
                       </span>
                       <span
                         className={[
@@ -994,9 +1105,18 @@ export default function ProfileDailyTrendChart({
                         {unitCount}
                       </span>
                     </p>
-                  </div>
+                  </m.div>
                   <span className="text-center text-cyan-100/30">|</span>
-                  <div className="min-w-0 px-0.5 py-0.5 text-center sm:px-1">
+                  <m.div
+                    className="min-w-0 px-0.5 py-0.5 text-center sm:px-1"
+                    initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 0.44,
+                      delay: reduceMotion ? 0 : 0.05 + 0.09,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                  >
                     <p
                       className={[
                         "leading-tight text-slate-400",
@@ -1014,7 +1134,13 @@ export default function ProfileDailyTrendChart({
                       ].join(" ")}
                       style={cyberMetricValueStyle(COLORS.score)}
                     >
-                      {formatMetricDecimals(detailRow.scorePrecision, 1)}
+                      <DetailCountUpNumber
+                        end={clampNum(detailRow.scorePrecision)}
+                        decimals={1}
+                        token={`${detailDate}-sp`}
+                        reduceMotion={!!reduceMotion}
+                        delayMs={140}
+                      />
                       <span
                         className="translate-y-px text-[11px] sm:text-xs"
                         style={cyberMetricValueStyle(COLORS.score, "soft")}
@@ -1023,9 +1149,18 @@ export default function ProfileDailyTrendChart({
                         {unitPts}
                       </span>
                     </p>
-                  </div>
+                  </m.div>
                   <span className="text-center text-cyan-100/30">|</span>
-                  <div className="min-w-0 px-0.5 py-0.5 text-center sm:px-1">
+                  <m.div
+                    className="min-w-0 px-0.5 py-0.5 text-center sm:px-1"
+                    initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 0.44,
+                      delay: reduceMotion ? 0 : 0.05 + 0.18,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                  >
                     <p
                       className={[
                         "leading-tight text-slate-400",
@@ -1043,7 +1178,13 @@ export default function ProfileDailyTrendChart({
                       ].join(" ")}
                       style={cyberMetricValueStyle(COLORS.total)}
                     >
-                      {formatMetricDecimals(detailRow.pointsV3, 1)}
+                      <DetailCountUpNumber
+                        end={clampNum(detailRow.pointsV3)}
+                        decimals={1}
+                        token={`${detailDate}-pts`}
+                        reduceMotion={!!reduceMotion}
+                        delayMs={230}
+                      />
                       <span
                         className="translate-y-px text-[11px] sm:text-xs"
                         style={cyberMetricValueStyle(COLORS.total, "soft")}
@@ -1052,7 +1193,7 @@ export default function ProfileDailyTrendChart({
                         {unitPts}
                       </span>
                     </p>
-                  </div>
+                  </m.div>
                 </div>
               </div>
             </div>
