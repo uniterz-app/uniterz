@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, type TouchEvent as ReactTouchEvent } from "react";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import { jp } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
@@ -36,7 +37,37 @@ function RankingsMetricRowMobile({
   language = "ja",
   reduceMotion,
 }: Props & { reduceMotion: boolean | null }) {
-  const currentIndex = metrics.findIndex((m) => m.key === metric);
+  const touchStartXRef = useRef<number | null>(null);
+  const currentIndex = Math.max(
+    0,
+    metrics.findIndex((m) => m.key === metric)
+  );
+  const SWIPE_THRESHOLD_PX = 36;
+
+  const moveMetricBy = (delta: number) => {
+    if (metrics.length <= 1) return;
+    const targetIndex = wrapIndex(currentIndex + delta, metrics.length);
+    setMetric(metrics[targetIndex].key);
+  };
+
+  const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const startX = touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (startX == null) return;
+    const endX = e.changedTouches[0]?.clientX;
+    if (typeof endX !== "number") return;
+    const dx = endX - startX;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    if (dx < 0) {
+      moveMetricBy(1);
+      return;
+    }
+    moveMetricBy(-1);
+  };
 
   const prevIndex = wrapIndex(currentIndex - 1, metrics.length);
   const nextIndex = wrapIndex(currentIndex + 1, metrics.length);
@@ -48,6 +79,8 @@ function RankingsMetricRowMobile({
   return (
     <motion.div
       className="flex items-center justify-center px-2"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={
