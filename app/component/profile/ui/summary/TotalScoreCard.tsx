@@ -22,6 +22,7 @@ import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 type Props = {
   totalPoints: number;
   analyses: number;
+  totalPointsRank?: number | null;
   basePoints?: number;
   upsetBonusPoints?: number;
   streakBonusPoints?: number;
@@ -30,6 +31,16 @@ type Props = {
   className?: string;
   language?: Language;
 };
+
+function formatOrdinal(rank: number): string {
+  const mod100 = rank % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${rank}th`;
+  const mod10 = rank % 10;
+  if (mod10 === 1) return `${rank}st`;
+  if (mod10 === 2) return `${rank}nd`;
+  if (mod10 === 3) return `${rank}rd`;
+  return `${rank}th`;
+}
 
 const TOTAL_SCORE_TOOLTIP =
   "勝者的中・点差/合計点の近さで決まる基本点に、アップセットボーナスと連勝ボーナスを加えた包括スコア。";
@@ -42,6 +53,7 @@ const SEG_STREAK = "#a78bfa"; // violet-400
 function TotalScoreCard({
   totalPoints,
   analyses,
+  totalPointsRank = null,
   basePoints = 0,
   upsetBonusPoints = 0,
   streakBonusPoints = 0,
@@ -108,6 +120,12 @@ function TotalScoreCard({
   const tooltipMsg = isEn
     ? "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
     : TOTAL_SCORE_TOOLTIP;
+  const rankText =
+    totalPointsRank != null ? ` / ${formatOrdinal(totalPointsRank)}` : "";
+  const rankClass =
+    totalPointsRank != null && totalPointsRank <= 20
+      ? "text-yellow-300"
+      : "text-white/55";
 
   const denom = Math.max(total, 1e-6);
   const segments = [
@@ -177,6 +195,11 @@ function TotalScoreCard({
               <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-xl">
                 pts
               </span>
+              {rankText ? (
+                <span className={`ml-1 text-[10px] md:text-sm ${rankClass}`}>
+                  {rankText}
+                </span>
+              ) : null}
             </div>
 
             <div className="mt-2 text-[9px] tracking-tight text-white/60 md:mt-4 md:text-[16px]">

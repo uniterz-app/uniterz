@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -44,7 +45,7 @@ export type ProfileDailyTrendPoint = {
 
 type Props = {
   data: ProfileDailyTrendPoint[];
-  range?: "7d" | "30d" | "all";
+  range?: "7d" | "30d";
   allowAll?: boolean;
   language?: Language;
   /**
@@ -95,6 +96,7 @@ function resetDailyLinePathStyles(root: HTMLElement | null): void {
     path.style.transition = "";
     path.style.strokeDasharray = "";
     path.style.strokeDashoffset = "";
+    path.style.opacity = "";
   }
 }
 
@@ -103,6 +105,7 @@ function setPathClosedDash(path: SVGPathElement, len: number): void {
   path.style.transition = "none";
   path.style.strokeDasharray = `${len} ${len}`;
   path.style.strokeDashoffset = `${len}`;
+  path.style.opacity = "0";
 }
 
 /** 線フェーズ直後に同期で「線を隠す」（runDaily の rAF までの一瞬の全表示を防ぐ） */
@@ -123,6 +126,7 @@ function primeDailyLinePathsClosed(root: HTMLElement | null): void {
 function restoreDailyLineStrokeStyle(path: SVGPathElement): void {
   const stroke = (path.getAttribute("stroke") ?? "").toLowerCase();
   path.style.transition = "";
+  path.style.opacity = "1";
   if (stroke === COLORS.score.toLowerCase()) {
     path.style.strokeDasharray = "5 3";
     path.style.strokeDashoffset = "0";
@@ -230,6 +234,7 @@ function runDailyLinePathDraw(
 
         setPathClosedDash(path, len);
         void path.getBoundingClientRect();
+        path.style.opacity = "1";
 
         if (pathSupportsWebAnim(path)) {
           try {
@@ -325,13 +330,21 @@ function barFaceShade(hex: string, face: "right" | "top"): string {
   return `rgb(${Math.min(255, Math.round(r + (255 - r) * 0.26))},${Math.min(255, Math.round(g + (255 - g) * 0.26))},${Math.min(255, Math.round(b + (255 - b) * 0.26))})`;
 }
 
+function blockFaceFill(hex: string): { main: string; side: string; top: string } {
+  return {
+    main: hex,
+    side: barFaceShade(hex, "right"),
+    top: barFaceShade(hex, "top"),
+  };
+}
+
 /**
- * 擬似3Dの縦棒（正面＋右面＋上面）。
+ * Tracer風のブロック縦棒（複数セグメント）。
  * Recharts の棒アニメは LabelList が消えるため isAnimationActive は false のまま、
  * CSS の scaleY（下基準）＋ index ごとの delay で左→右に立ち上げる。
  */
-function createCyber3DBarShape(animActive: boolean) {
-  return function ProfileDailyCyberBarShape(props: BarShapeProps) {
+function createTracerBlockBarShape() {
+  return function ProfileDailyTracerBlockBarShape(props: BarShapeProps) {
     const x = props.x;
     const y = props.y;
     const width = props.width;
@@ -340,39 +353,54 @@ function createCyber3DBarShape(animActive: boolean) {
     const idx = typeof props.index === "number" ? props.index : 0;
     if (x == null || y == null || width <= 0 || height <= 1) return null;
 
-    const skew = Math.min(9, Math.max(2.5, width * 0.34));
-    const skewY = Math.min(7, skew * 0.42);
-    const w1 = Math.max(width - skew, width * 0.48);
+    const skew = Math.min(7, Math.max(2.2, width * 0.3));
+    const skewY = Math.min(5.5, skew * 0.4);
+    const frontW = Math.max(width - skew, width * 0.54);
     const frontX = x;
     const frontY = y;
-    const frontW = w1;
     const frontH = height;
+    const rawValue = props.value;
+    const valueCount = Math.max(0, Math.floor(clampNum(rawValue)));
+    if (valueCount <= 0) return null;
 
-    const rightPath = `M ${frontX + frontW} ${frontY} L ${x + width} ${frontY - skewY} L ${x + width} ${frontY + frontH} L ${frontX + frontW} ${frontY + frontH} Z`;
-    const topPath = `M ${frontX} ${frontY} L ${frontX + frontW} ${frontY} L ${x + width} ${frontY - skewY} L ${frontX + skew * 0.12} ${frontY - skewY} Z`;
+    const innerH = Math.max(4, frontH - 2);
+    const segGap = Math.max(1.1, Math.min(2.2, innerH * 0.015));
+    const maxSegmentsByHeight = Math.max(1, Math.floor(innerH / 3.6));
+    const segmentCount = Math.max(1, Math.min(valueCount, maxSegmentsByHeight));
+    const segH = Math.max(2.6, (innerH - segGap * (segmentCount - 1)) / segmentCount);
+    const fills = blockFaceFill(fill);
 
     const originX = frontX + frontW / 2;
     const originY = frontY + frontH;
-    const groupStyle = animActive
-      ? {
-          transformOrigin: `${originX}px ${originY}px`,
-          animation: `profileDailyBarRise ${BAR_ANIM_MS}ms cubic-bezier(0.22, 1, 0.36, 1) ${idx * BAR_STAGGER_MS}ms both`,
-        }
-      : undefined;
+    const groupStyle: CSSProperties & { "--profile-daily-bar-delay"?: string } = {
+      transformOrigin: `${originX}px ${originY}px`,
+      "--profile-daily-bar-delay": `${idx * BAR_STAGGER_MS}ms`,
+    };
+
+    const segments = Array.from({ length: segmentCount }, (_, i) => {
+      const segY = frontY + frontH - (i + 1) * segH - i * segGap;
+      const sidePath = `M ${frontX + frontW} ${segY} L ${x + width} ${segY - skewY} L ${x + width} ${segY + segH} L ${frontX + frontW} ${segY + segH} Z`;
+      const topPath = `M ${frontX} ${segY} L ${frontX + frontW} ${segY} L ${x + width} ${segY - skewY} L ${frontX + skew * 0.12} ${segY - skewY} Z`;
+      return (
+        <g key={i}>
+          <path d={sidePath} fill={fills.side} stroke="none" />
+          <path d={topPath} fill={fills.top} stroke="none" />
+          <rect
+            x={frontX}
+            y={segY}
+            width={frontW}
+            height={segH}
+            fill={fills.main}
+            stroke="rgba(255,255,255,0.22)"
+            strokeWidth={0.55}
+          />
+        </g>
+      );
+    });
 
     return (
-      <g className="recharts-layer" style={groupStyle}>
-        <path d={rightPath} fill={barFaceShade(fill, "right")} stroke="none" />
-        <path d={topPath} fill={barFaceShade(fill, "top")} stroke="none" />
-        <rect
-          x={frontX}
-          y={frontY}
-          width={frontW}
-          height={frontH}
-          fill={fill}
-          stroke="rgba(255,255,255,0.16)"
-          strokeWidth={0.6}
-        />
+      <g className="recharts-layer profile-daily-bar-group" style={groupStyle}>
+        {segments}
       </g>
     );
   };
@@ -585,6 +613,9 @@ export default function ProfileDailyTrendChart({
   const unitCount = isEn ? "items" : "件";
   const unitPts = "pts";
   const title = "Daily Combo Chart";
+  const subtitle = isEn
+    ? "Trend of stats over the last 10 days"
+    : "過去10日のスタッツの推移";
 
   /** Info ツールチップ：凡例・操作の補足のみ */
   const chartInfoTooltipMsg = isEn
@@ -626,13 +657,8 @@ export default function ProfileDailyTrendChart({
     const rows = Array.isArray(data) ? data : [];
 
     if (range === "7d") return rows.slice(-7);
-    if (range === "30d") return rows.slice(-30);
-    if (range === "all" && allowAll) return rows;
-    /** 非 Pro の ALL はロック表示の下に直近30日を描画（空画面にならない） */
-    if (range === "all" && !allowAll) return rows.slice(-30);
-
-    return [];
-  }, [data, range, allowAll]);
+    return rows.slice(-10);
+  }, [data, range]);
 
   /** range 切り替えで Recharts が内部状態を持ち越さないようキーに含める */
   const composedChartKey = entranceSync
@@ -643,8 +669,8 @@ export default function ProfileDailyTrendChart({
 
   const chartData = useMemo(() => buildCumulative(limitedData), [limitedData]);
 
-  const isLocked = range === "all" && !allowAll;
-  const isEmpty = !isLocked && limitedData.length === 0;
+  const isLocked = false;
+  const isEmpty = limitedData.length === 0;
 
   /** 棒 → 折れ線 → 完了 の入場シーケンス（`runDailyLinePathDraw` と連動） */
   const [entrancePhase, setEntrancePhase] =
@@ -700,10 +726,7 @@ export default function ProfileDailyTrendChart({
     };
   }, [chartVisible, composedChartKey, entrancePhase, isEmpty]);
 
-  const barShapeFn = useMemo(
-    () => createCyber3DBarShape(allowEntranceAnim && entrancePhase === "bars"),
-    [allowEntranceAnim, entrancePhase]
-  );
+  const barShapeFn = useMemo(() => createTracerBlockBarShape(), []);
 
   const { countDomain, countTicks, pointsDomain, pointTicks, pointsTop } =
     useMemo(() => {
@@ -775,19 +798,23 @@ export default function ProfileDailyTrendChart({
 
   useEffect(() => {
     if (!detailDate) return;
+    // 棒/線の入場中は選択状態の補正を遅らせ、Recharts レイヤ差し替えを避ける
+    if (entrancePhase !== "done") return;
     if (!limitedData.some((r) => r.date === detailDate)) {
       setDetailDate(null);
     }
-  }, [detailDate, limitedData]);
+  }, [detailDate, entrancePhase, limitedData]);
 
   /** 期間変更や初回表示で、無効な選択を直しつつ最終日を初期フォーカスにする */
   useEffect(() => {
     if (isEmpty || isLocked || limitedData.length === 0) return;
+    // 棒/線の入場中に detailDate を更新すると棒が再描画に見えるため、完了後に反映
+    if (entrancePhase !== "done") return;
     const last = limitedData[limitedData.length - 1]?.date;
     if (!last) return;
     if (detailDate != null && limitedData.some((r) => r.date === detailDate)) return;
     setDetailDate(last);
-  }, [isEmpty, isLocked, limitedData, detailDate]);
+  }, [isEmpty, isLocked, limitedData, detailDate, entrancePhase]);
 
   return (
     <div
@@ -827,6 +854,7 @@ export default function ProfileDailyTrendChart({
             </div>
           </div>
         </div>
+        <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
       </div>
       {/* カードの p-3 と相殺して横いっぱい */}
       <div className="relative z-0 -mx-3 h-52 cursor-pointer overflow-hidden rounded-2xl sm:h-56">

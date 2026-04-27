@@ -19,10 +19,21 @@ type Props = {
   analyses: number;
   upsetChanceCount: number;
   upsetHitCount: number;
+  totalUpsetRank?: number | null;
   compact?: boolean;
   className?: string;
   language?: Language;
 };
+
+function formatOrdinal(rank: number): string {
+  const mod100 = rank % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${rank}th`;
+  const mod10 = rank % 10;
+  if (mod10 === 1) return `${rank}st`;
+  if (mod10 === 2) return `${rank}nd`;
+  if (mod10 === 3) return `${rank}rd`;
+  return `${rank}th`;
+}
 
 const UPSET_TOOLTIP =
   "アップセットが起きた試合で少数派を当てたときだけ加点されます（1試合0〜10）。「発生」は自分が予想した試合のうち、実際にアップセットが起きた試合数です。";
@@ -37,6 +48,7 @@ function UpsetCard({
   analyses,
   upsetChanceCount,
   upsetHitCount,
+  totalUpsetRank = null,
   compact = true,
   className = "",
   language = "ja",
@@ -96,6 +108,12 @@ function UpsetCard({
   const tooltipMsg = isEn
     ? "You earn Upset Points only when you correctly predict an upset (0–10 points per match). “Occurred” means how many of your predicted matches actually had an upset."
     : UPSET_TOOLTIP;
+  const rankText =
+    totalUpsetRank != null ? ` / ${formatOrdinal(totalUpsetRank)}` : "";
+  const rankClass =
+    totalUpsetRank != null && totalUpsetRank <= 20
+      ? "text-yellow-300"
+      : "text-white/55";
 
   return (
     <>
@@ -145,6 +163,11 @@ function UpsetCard({
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
             pts
           </span>
+          {rankText ? (
+            <span className={`ml-1 text-[10px] md:text-sm ${rankClass}`}>
+              {rankText}
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-1.5 text-[9px] text-white/60 text-center leading-snug tracking-tight md:mt-4 md:text-[13px] md:leading-relaxed">
