@@ -16,7 +16,17 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
-const MIN_POSTS_FOR_WIN_RATE = 15;
+const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
+
+function minPostsForWinRate(
+  phase: RankingPhase,
+  round: "overall" | PlayoffRoundKey
+): number {
+  if (phase === "playoffs" && (round === "overall" || round === "r1")) {
+    return 20;
+  }
+  return MIN_POSTS_FOR_WIN_RATE_BASE;
+}
 
 const METRICS: Metric[] = [
   "totalPoints",
@@ -308,7 +318,7 @@ export async function loadPlayoffRoundTop20RowsLive(
   const eligibleRows =
     metric === "winRate"
       ? baseRows.filter(
-          (row) => (row.totalPosts ?? 0) >= MIN_POSTS_FOR_WIN_RATE
+          (row) => (row.totalPosts ?? 0) >= minPostsForWinRate("playoffs", round)
         )
       : baseRows;
   const sortedFull = [...eligibleRows].sort((a, b) =>
@@ -377,7 +387,9 @@ export async function buildCumulativeRankingSnapshot() {
     for (const metric of METRICS) {
       const eligibleRows =
         metric === "winRate"
-          ? baseRows.filter((row) => (row.totalPosts ?? 0) >= MIN_POSTS_FOR_WIN_RATE)
+          ? baseRows.filter(
+              (row) => (row.totalPosts ?? 0) >= minPostsForWinRate(phase, "overall")
+            )
           : baseRows;
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
@@ -445,7 +457,9 @@ export async function buildCumulativeRankingSnapshot() {
     for (const metric of METRICS) {
       const eligibleRows =
         metric === "winRate"
-          ? baseRows.filter((row) => (row.totalPosts ?? 0) >= MIN_POSTS_FOR_WIN_RATE)
+          ? baseRows.filter(
+              (row) => (row.totalPosts ?? 0) >= minPostsForWinRate("playoffs", round)
+            )
           : baseRows;
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)

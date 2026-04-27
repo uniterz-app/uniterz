@@ -54,6 +54,23 @@ function isSeriesValid(seriesId, prediction) {
         return false;
     return predWinner === w1 || predWinner === w2;
 }
+/** 実際の対戦カード（親2シリーズの勝者ペア）と、予想の対戦カードが一致しているか */
+function isActualMatchupAlignedForGamesBonus(seriesId, prediction, results) {
+    const parents = PLAYOFF_BRACKET_STRUCTURE[seriesId];
+    if (!parents)
+        return true; // R1 は対戦カード固定なので常に一致扱い
+    const [p1, p2] = parents;
+    const predP1 = prediction[p1];
+    const predP2 = prediction[p2];
+    const resP1 = results[p1];
+    const resP2 = results[p2];
+    if (!(predP1 === null || predP1 === void 0 ? void 0 : predP1.winner) || !(predP2 === null || predP2 === void 0 ? void 0 : predP2.winner))
+        return false;
+    if (!isRecordedOfficialResult(resP1) || !isRecordedOfficialResult(resP2))
+        return false;
+    const predSet = new Set([predP1.winner, predP2.winner]);
+    return predSet.has(resP1.winner) && predSet.has(resP2.winner);
+}
 function scorePlayoffBracket(prediction, results) {
     let totalScore = 0;
     let winnerPoints = 0;
@@ -75,7 +92,8 @@ function scorePlayoffBracket(prediction, results) {
             const pts = PLAYOFF_ROUND_POINTS[round];
             winnerPoints += pts;
             totalScore += pts;
-            if (pred.games === result.games) {
+            if (pred.games === result.games &&
+                isActualMatchupAlignedForGamesBonus(id, prediction, results)) {
                 gamesPoints += PLAYOFF_GAMES_EXACT_POINTS;
                 totalScore += PLAYOFF_GAMES_EXACT_POINTS;
             }

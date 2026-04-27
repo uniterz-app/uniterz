@@ -23,7 +23,14 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
-const MIN_POSTS_FOR_WIN_RATE = 15;
+const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
+
+function minPostsForWinRate(phase: RankingPhase, round: PlayoffRoundKey): number {
+  if (phase === "playoffs" && (round === "overall" || round === "r1")) {
+    return 20;
+  }
+  return MIN_POSTS_FOR_WIN_RATE_BASE;
+}
 
 type RankingPhase = "play_in" | "playoffs";
 type PlayoffRoundKey = "overall" | "r1" | "r2" | "cf" | "finals";
@@ -285,8 +292,7 @@ async function rankingPayloadForMetric(
     const me = mySnap.data() as any;
     const rk = rankingSlice(me, phase, round);
 
-    const minPosts =
-      metric === "winRate" ? MIN_POSTS_FOR_WIN_RATE : 1;
+    const minPosts = metric === "winRate" ? minPostsForWinRate(phase, round) : 1;
     if ((rk.totalPosts ?? 0) < minPosts) {
       return {
         count: rows.length,
@@ -388,7 +394,7 @@ async function rankingPayloadForMetric(
                   ? new FieldPath("rankingByPhase", phase, "totalPosts")
                   : new FieldPath("rankingByPlayoffRound", round, "totalPosts")) as any,
                 ">=",
-                MIN_POSTS_FOR_WIN_RATE
+                minPostsForWinRate(phase, round)
               )
               .count()
               .get()

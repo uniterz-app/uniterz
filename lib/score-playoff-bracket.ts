@@ -52,6 +52,28 @@ function isSeriesValid(seriesId: SeriesId, prediction: Bracket) {
   return predWinner === w1 || predWinner === w2;
 }
 
+/** 実際の対戦カード（親2シリーズの勝者ペア）と、予想の対戦カードが一致しているか */
+function isActualMatchupAlignedForGamesBonus(
+  seriesId: SeriesId,
+  prediction: Bracket,
+  results: Bracket
+): boolean {
+  const parents = PLAYOFF_BRACKET_STRUCTURE[seriesId];
+  if (!parents) return true; // R1 は対戦カード固定なので常に一致扱い
+
+  const [p1, p2] = parents;
+
+  const predP1 = prediction[p1];
+  const predP2 = prediction[p2];
+  const resP1 = results[p1];
+  const resP2 = results[p2];
+
+  if (!predP1?.winner || !predP2?.winner) return false;
+  if (!isRecordedOfficialResult(resP1) || !isRecordedOfficialResult(resP2)) return false;
+  const predSet = new Set([predP1.winner, predP2.winner]);
+  return predSet.has(resP1!.winner) && predSet.has(resP2!.winner);
+}
+
 export type PlayoffScoreResult = {
   totalScore: number;
   winnerPoints: number;
@@ -88,7 +110,10 @@ export function scorePlayoffBracket(
       winnerPoints += pts;
       totalScore += pts;
 
-      if (pred.games === result.games) {
+      if (
+        pred.games === result.games &&
+        isActualMatchupAlignedForGamesBonus(id, prediction, results)
+      ) {
         gamesPoints += PLAYOFF_GAMES_EXACT_POINTS;
         totalScore += PLAYOFF_GAMES_EXACT_POINTS;
       }
