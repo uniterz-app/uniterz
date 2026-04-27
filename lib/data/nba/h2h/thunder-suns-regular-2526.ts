@@ -10,7 +10,7 @@ const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Suns";
 
 /**
- * 2025-26 Thunder vs Suns（レギュラー5 + プレーオフ2）
+ * 2025-26 Thunder vs Suns（レギュラー5 + プレーオフ3）
  * 左列=Thunder得点、右列=Suns得点。
  */
 export const thunderSunsH2HGames: NbaH2HGameCard[] = [
@@ -128,6 +128,30 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
         "Shai Gilgeous-Alexander responded with a controlled star performance—37 points and 9 assists on 13-of-25 shooting—to take command of the game. Chet Holmgren added 19 points, 8 rebounds, and 4 blocks, and Oklahoma City again showed a clear edge in overall execution.\n" +
         "Phoenix competed more cleanly than in Game 1 and even trimmed the margin late, but 11 first-half turnovers repeatedly fueled OKC transition chances.\n" +
         "The lone concern for the Thunder was J-Dub exiting in the third quarter with a left hamstring issue, but OKC still imposed its defense and top-end creation to move ahead 2-0.",
+    },
+  },
+  {
+    id: "h2h-thunder-suns-2026-04-26",
+    dateEt: "2026-04-26",
+    dateJst: "2026-04-27",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 121,
+    scoreRight: 109,
+    /** Phoenix（Suns）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["I. Joe", "T. Sorber", "Jay. Williams"],
+    injuriesRight: ["J. Goodwin", "M. Williams"],
+    inactiveFooterSummary: {
+      ja:
+        "OKCはShai Gilgeous-Alexanderが42得点8アシストで試合を支配。ターンオーバーを7本に抑え、終盤まで安定したオフェンスを継続した。\n" +
+        "SunsはDillon Brooksが33得点、Jalen Greenも26得点で粘ったが、Devin Bookerが16得点に抑えられ、エース差がそのまま勝敗に出た。\n" +
+        "OKCが3連勝でシリーズ突破に王手。",
+      en:
+        "Shai Gilgeous-Alexander dominated with 42 points and 8 assists; OKC held turnovers to seven and kept its offense steady deep into the game.\n" +
+        "Phoenix got 33 from Dillon Brooks and 26 from Jalen Green, but Devin Booker was limited to 16 points—and the star gap showed on the scoreboard.\n" +
+        "The Thunder’s third straight win put them on the brink of closing out the series.",
     },
   },
 ];

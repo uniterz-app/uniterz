@@ -9,7 +9,7 @@ export const MIN_DEN_TEAM_IDS = ["nba-nuggets", "nba-timberwolves"] as const;
 const H2H_LEFT = "Nuggets";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ3） */
+/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ4） */
 export const minDenH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-min-den-2025-10-27",
@@ -127,6 +127,30 @@ export const minDenH2HGames: NbaH2HGameCard[] = [
         "Without Aaron Gordon, Denver lacked enough front-line muscle to absorb Minnesota’s physicality, and Jokić’s load grew heavier. The Timberwolves leaned on their defense and depth for a 113-96 win and the series lead.",
     },
   },
+  {
+    id: "h2h-min-den-2026-04-26",
+    dateEt: "2026-04-26",
+    dateJst: "2026-04-27",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 96,
+    scoreRight: 112,
+    /** Denver（Nuggets）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["P. Watson"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "WolvesはAnthony EdwardsとDonte DiVincenzoが試合中に負傷退場する厳しい展開。それでもAyo Dosunmuが43得点の大爆発で穴を埋め、ベンチから試合を決定づけた。\n" +
+        "NuggetsはNikola Jokicが24得点15リバウンド9アシスト、Jamal Murrayが30得点を挙げたが、後半の勢いを止められなかった。\n" +
+        "Wolvesが3勝1敗で大きくリード。",
+      en:
+        "Minnesota lost Anthony Edwards and Donte DiVincenzo to in-game injuries, but Ayo Dosunmu erupted for 43 points off the bench to fill the void and seal the win.\n" +
+        "Denver got 24 points, 15 rebounds, and 9 assists from Nikola Jokić and 30 from Jamal Murray, yet could not slow Minnesota’s second-half surge.\n" +
+        "The Timberwolves took firm control with a 3-1 series lead.",
+    },
+  },
 ];
 
 /** 左=DEN・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -165,7 +189,7 @@ function minDenH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記8試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function minDenH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

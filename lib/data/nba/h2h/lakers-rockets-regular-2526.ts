@@ -9,7 +9,7 @@ export const LAKERS_ROCKETS_TEAM_IDS = ["nba-lakers", "nba-rockets"] as const;
 const H2H_LEFT = "Lakers";
 const H2H_RIGHT = "Rockets";
 
-/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ3） */
+/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ4） */
 export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-lakers-rockets-2025-12-25",
@@ -117,6 +117,40 @@ export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
     homeTeamSide: "left",
     injuriesLeft: ["L. Doncic", "A. Reaves"],
     injuriesRight: ["K. Durant", "S. Adams", "F. VanVleet"],
+    inactiveFooterSummary: {
+      ja:
+        "LakersはLuka DončićとAustin Reavesを欠く中、LeBron Jamesが29得点13リバウンドで試合を支えた。\n" +
+        "終盤はHoustonがAlperen Sengunの得点などでリードを奪ったが、LeBronが残り13秒で同点3Pを決めて延長へ。OTではMarcus Smartが8得点を挙げ、Lakersが勝負所を制した。\n" +
+        "RocketsはKevin Durant不在ながらSengunが33得点16リバウンド、Amen Thompsonも26得点11リバウンドで粘ったが、最後の経験値と決定力でLakersが上回った。Lakersが3勝0敗でシリーズ突破に王手。",
+      en:
+        "Without Luka Dončić and Austin Reaves, the Lakers leaned on LeBron James (29 points, 13 rebounds) to stay afloat.\n" +
+        "Houston seized the lead late behind Alperen Sengun’s scoring, but LeBron drilled a tying three with 13 seconds left to force overtime. Marcus Smart scored eight in OT as L.A. won the clutch minutes.\n" +
+        "Even with Kevin Durant sidelined, the Rockets got 33 points and 16 rebounds from Sengun and 26 points and 11 boards from Amen Thompson—but experience and shot-making tilted the night to the Lakers, who moved to 3-0 and took a stranglehold on the series.",
+    },
+  },
+  {
+    id: "h2h-lakers-rockets-2026-04-26",
+    dateEt: "2026-04-26",
+    dateJst: "2026-04-27",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 96,
+    scoreRight: 115,
+    /** Houston（Rockets）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["L. Doncic", "A. Reaves"],
+    injuriesRight: ["S. Adams", "K. Durant", "F. VanVleet"],
+    inactiveFooterSummary: {
+      ja:
+        "Rocketsは敗退回避をかけた試合でエネルギーを前面に出し、Lakersを115-96で圧倒した。Amen Thompsonが23得点で流れを作り、チーム全体でもLakersの24ターンオーバーから30得点を奪った。\n" +
+        "Lakersは主力不在の影響もあり、攻撃のリズムが最後まで安定しなかった。\n" +
+        "Houstonがスイープを回避し、Lakersのシリーズリードは3勝1敗となった。",
+      en:
+        "Houston played with desperation and ran past the Lakers 115-96. Amen Thompson’s 23 points sparked the night, and the Rockets turned 24 L.A. turnovers into 30 points.\n" +
+        "Shorthanded Los Angeles never found a steady offensive rhythm.\n" +
+        "Houston avoided the sweep; the Lakers’ lead now stands at 3-1.",
+    },
   },
 ];
 
@@ -156,7 +190,7 @@ function lakersRocketsH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function lakersRocketsH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

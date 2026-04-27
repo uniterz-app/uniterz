@@ -9,7 +9,7 @@ export const TOR_CLE_TEAM_IDS = ["nba-raptors", "nba-cavaliers"] as const;
 const H2H_LEFT = "Cavaliers";
 const H2H_RIGHT = "Raptors";
 
-/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ3） */
+/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ4） */
 export const torCleH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-tor-cle-2025-10-31",
@@ -125,6 +125,30 @@ export const torCleH2HGames: NbaH2HGameCard[] = [
         "The Raptors broke it open from deep in the fourth quarter, shooting 8-for-9 from three—Jamison Battle made four, RJ Barrett three, and Brandon Ingram one. After shrinking the defense with their two-point pressure, Battle and Barrett from the perimeter put the game away as Toronto earned its first home win of the series, 126-104.",
     },
   },
+  {
+    id: "h2h-tor-cle-2026-04-27",
+    dateEt: "2026-04-27",
+    dateJst: "2026-04-28",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 89,
+    scoreRight: 93,
+    /** Cleveland（Cavaliers）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["I. Quickley"],
+    inactiveFooterSummary: {
+      ja:
+        "Raptorsは3Pが4/30と極端に入らない中、守備とフリースローで勝ち切った。Scottie BarnesとBrandon Ingramが各23得点を挙げ、終盤の重要な場面でも得点源になった。\n" +
+        "CavsはDonovan Mitchellが20得点、James Hardenが19得点を記録したが、Hardenの7ターンオーバーを含めて攻撃が重かった。\n" +
+        "Torontoが泥臭いロースコア戦を制し、シリーズを2勝2敗に戻した。",
+      en:
+        "Toronto shot just 4-for-30 from three but still grinded out the win behind defense and free throws. Scottie Barnes and Brandon Ingram each scored 23 and delivered late.\n" +
+        "Cleveland got 20 from Donovan Mitchell and 19 from James Harden, but the offense stalled—including seven turnovers from Harden.\n" +
+        "The Raptors won a gritty, low-scoring fight to even the series at 2-2.",
+    },
+  },
 ];
 
 /** 左=CLE・右=TOR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -164,7 +188,7 @@ function torCleH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function torCleH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
