@@ -13,7 +13,13 @@ const firestore_1 = require("firebase-admin/firestore");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
-const MIN_POSTS_FOR_WIN_RATE = 15;
+const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
+function minPostsForWinRate(phase, round) {
+    if (phase === "playoffs" && (round === "overall" || round === "r1")) {
+        return 20;
+    }
+    return MIN_POSTS_FOR_WIN_RATE_BASE;
+}
 const METRICS = [
     "totalPoints",
     "winRate",
@@ -248,7 +254,7 @@ async function loadPlayoffRoundTop20RowsLive(round, metric) {
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
     const eligibleRows = metric === "winRate"
-        ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= MIN_POSTS_FOR_WIN_RATE; })
+        ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= minPostsForWinRate("playoffs", round); })
         : baseRows;
     const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
     const ranks = assignCompetitionRanks(sortedFull, metric);
@@ -297,7 +303,7 @@ async function buildCumulativeRankingSnapshot() {
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
         for (const metric of METRICS) {
             const eligibleRows = metric === "winRate"
-                ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= MIN_POSTS_FOR_WIN_RATE; })
+                ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= minPostsForWinRate(phase, "overall"); })
                 : baseRows;
             const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
             const ranks = assignCompetitionRanks(sortedFull, metric);
@@ -349,7 +355,7 @@ async function buildCumulativeRankingSnapshot() {
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
         for (const metric of METRICS) {
             const eligibleRows = metric === "winRate"
-                ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= MIN_POSTS_FOR_WIN_RATE; })
+                ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= minPostsForWinRate("playoffs", round); })
                 : baseRows;
             const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
             const ranks = assignCompetitionRanks(sortedFull, metric);

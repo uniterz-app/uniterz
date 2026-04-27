@@ -8,7 +8,13 @@ const buildCumulativeRankingSnapshot_1 = require("./buildCumulativeRankingSnapsh
 function db() {
     return (0, firestore_1.getFirestore)();
 }
-const MIN_POSTS_FOR_WIN_RATE = 15;
+const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
+function minPostsForWinRate(phase, round) {
+    if (phase === "playoffs" && (round === "overall" || round === "r1")) {
+        return 20;
+    }
+    return MIN_POSTS_FOR_WIN_RATE_BASE;
+}
 function isMetric(v) {
     return (v === "winRate" ||
         v === "totalPoints" ||
@@ -199,7 +205,7 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps) {
         const mySnap = snaps.mySnap;
         const me = mySnap.data();
         const rk = rankingSlice(me, phase, round);
-        const minPosts = metric === "winRate" ? MIN_POSTS_FOR_WIN_RATE : 1;
+        const minPosts = metric === "winRate" ? minPostsForWinRate(phase, round) : 1;
         if (((_d = rk.totalPosts) !== null && _d !== void 0 ? _d : 0) < minPosts) {
             return {
                 count: rows.length,
@@ -276,7 +282,7 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps) {
                 ? await higherQuery
                     .where((round === "overall"
                     ? new firestore_1.FieldPath("rankingByPhase", phase, "totalPosts")
-                    : new firestore_1.FieldPath("rankingByPlayoffRound", round, "totalPosts")), ">=", MIN_POSTS_FOR_WIN_RATE)
+                    : new firestore_1.FieldPath("rankingByPlayoffRound", round, "totalPosts")), ">=", minPostsForWinRate(phase, round))
                     .count()
                     .get()
                 : await higherQuery.count().get();
