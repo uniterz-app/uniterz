@@ -41,8 +41,10 @@ export type SummaryRanksV2 = {
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/** 初回は stats + playoffs 集計 + チャート用 trend を取得 */
-const PARTS_INITIAL = "stats,phase,trend";
+/** 初回は stats + playoffs 集計のみ（体感表示を優先） */
+const PARTS_INITIAL = "stats,phase";
+/** チャートは後追いで取得 */
+const PARTS_TREND = "trend";
 
 type CacheEntry = {
   at: number;
@@ -77,6 +79,37 @@ export function useUserStatsV2(uid?: string | null) {
 
     const safeUid = uid;
 
+    async function fetchTrendLater(safeUid: string) {
+      try {
+        const qs = new URLSearchParams({
+          uid: safeUid,
+          parts: PARTS_TREND,
+          phase: "playoffs",
+        });
+        const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
+          method: "GET",
+        });
+        const json = await res.json();
+        if (!res.ok || !json?.ok || cancelled) return;
+
+        const nextDailyTrend = Array.isArray(json?.dailyTrend)
+          ? (json.dailyTrend as ProfileDailyTrendRow[])
+          : null;
+
+        const prev = statsCache.get(safeUid);
+        statsCache.set(safeUid, {
+          at: Date.now(),
+          summary: prev?.summary ?? summary,
+          summaryRanks: prev?.summaryRanks ?? summaryRanks,
+          stats: prev?.stats ?? stats,
+          dailyTrend: nextDailyTrend,
+        });
+        setDailyTrend(nextDailyTrend);
+      } catch {
+        // trend は後追いなので失敗しても UI 全体は止めない
+      }
+    }
+
     async function run() {
       const cached = statsCache.get(safeUid);
       const now = Date.now();
@@ -92,6 +125,9 @@ export function useUserStatsV2(uid?: string | null) {
         setSummaryRanks(cached.summaryRanks ?? null);
         setDailyTrend(cached.dailyTrend ?? null);
         setLoading(false);
+        if (cached.dailyTrend == null) {
+          void fetchTrendLater(safeUid);
+        }
         return;
       }
 
@@ -116,22 +152,21 @@ export function useUserStatsV2(uid?: string | null) {
         const nextStats = (json?.stats as Record<string, unknown>) ?? null;
         const nextSummary = (json?.summary as SummaryForCardsV2) ?? null;
         const nextSummaryRanks = (json?.summaryRanks as SummaryRanksV2) ?? null;
-        const nextDailyTrend = Array.isArray(json?.dailyTrend)
-          ? (json.dailyTrend as ProfileDailyTrendRow[])
-          : null;
 
         statsCache.set(safeUid, {
           at: Date.now(),
           summary: nextSummary,
           summaryRanks: nextSummaryRanks,
           stats: nextStats,
-          dailyTrend: nextDailyTrend,
+          dailyTrend: null,
         });
 
         setStats(nextStats);
         setSummary(nextSummary);
         setSummaryRanks(nextSummaryRanks);
-        setDailyTrend(nextDailyTrend);
+        setDailyTrend(null);
+        setLoading(false);
+        void fetchTrendLater(safeUid);
       } catch {
         if (cancelled) return;
       } finally {
