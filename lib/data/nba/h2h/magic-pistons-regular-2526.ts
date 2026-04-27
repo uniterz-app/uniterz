@@ -10,7 +10,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Magic";
 
 /**
- * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ2）
+ * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ3）
  * 出典: StatMuse 等の公開スコアに基づく（レギュラー直接対決 2-2）
  */
 export const magicPistonsH2HGames: NbaH2HGameCard[] = [
@@ -108,6 +108,30 @@ export const magicPistonsH2HGames: NbaH2HGameCard[] = [
         "Detroit did not carry over the Game 1 flow; it changed the game itself with defensive pressure and rebounding.\n" +
         "The first half was a grind at 46-46, but the Pistons raised the intensity after halftime, won the third quarter 38-16, and effectively decided the game with a 30-3 run.\n" +
         "Orlando never found the composed offense it showed in Game 1, shooting just 32.5% from the field and 25.0% from three, as Detroit pulled the series back onto its preferred physical terms.",
+    },
+  },
+  {
+    id: "h2h-magic-pistons-2026-04-25",
+    dateEt: "2026-04-25",
+    dateJst: "2026-04-26",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 105,
+    scoreRight: 113,
+    /** Orlando（Magic）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["J. Isaac"],
+    inactiveFooterSummary: {
+      ja:
+        "MagicはPaolo BancheroとDesmond Baneがそれぞれ25得点を記録。Baneは外角から高確率で沈め、Pistons守備を広げた。\n" +
+        "PistonsはCade Cunninghamが27得点9アシストと攻撃を作ったが、9ターンオーバーが重く、勝負所で流れを渡した。\n" +
+        "Magicがホームで取り返し、シリーズを2勝1敗とした。",
+      en:
+        "Paolo Banchero and Desmond Bane each scored 25 for Orlando; Bane stretched the floor from deep at a high clip and widened Detroit’s defense.\n" +
+        "Cade Cunningham created offense with 27 points and 9 assists, but 9 turnovers loomed large and the Pistons gave away key momentum swings.\n" +
+        "The Magic defended home court and took a 2-1 series lead.",
     },
   },
 ];

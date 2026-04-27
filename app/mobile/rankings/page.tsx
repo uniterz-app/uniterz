@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import {
   METRICS,
   type MobileMetric,
@@ -24,13 +32,23 @@ import type { RankingRow } from "@/lib/rankings/useRanking";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import {
+  isRankingPhase,
+  type RankingPhase,
+} from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
+import { useSearchParams } from "next/navigation";
+import {
+  RANKINGS_TAB_METRIC_PARAM,
+  RANKINGS_TAB_PHASE_PARAM,
+  isMobileMetricParam,
+} from "@/lib/navigation/rankingsProfileFrom";
 
 export default function MobileRankingsPage() {
+  const searchParams = useSearchParams();
   const [phase, setPhase] = useState<RankingPhase>("playoffs");
   const round: PlayoffRoundKey = "overall";
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
@@ -42,6 +60,60 @@ export default function MobileRankingsPage() {
     "upsetScore",
     "streak",
   ];
+
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const SWIPE_X_THRESHOLD_PX = 42;
+  const SWIPE_Y_TOLERANCE_PX = 24;
+
+  const moveMetricBy = useCallback(
+    (delta: number) => {
+      if (visibleMetrics.length <= 1) return;
+      const currentIndex = visibleMetrics.indexOf(metric);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex =
+        (safeIndex + delta + visibleMetrics.length) % visibleMetrics.length;
+      setMetric(visibleMetrics[nextIndex]);
+    },
+    [metric, visibleMetrics]
+  );
+
+  const handleCardsTouchStart = useCallback(
+    (e: ReactTouchEvent<HTMLDivElement>) => {
+      const t = e.touches[0];
+      if (!t) return;
+      swipeStartRef.current = { x: t.clientX, y: t.clientY };
+    },
+    []
+  );
+
+  const handleCardsTouchEnd = useCallback(
+    (e: ReactTouchEvent<HTMLDivElement>) => {
+      const start = swipeStartRef.current;
+      swipeStartRef.current = null;
+      if (!start) return;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      if (Math.abs(dx) < SWIPE_X_THRESHOLD_PX) return;
+      if (Math.abs(dy) > SWIPE_Y_TOLERANCE_PX && Math.abs(dy) > Math.abs(dx))
+        return;
+      if (dx < 0) {
+        moveMetricBy(1);
+        return;
+      }
+      moveMetricBy(-1);
+    },
+    [moveMetricBy]
+  );
+
+  /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric を反映 */
+  useLayoutEffect(() => {
+    const ph = searchParams.get(RANKINGS_TAB_PHASE_PARAM);
+    if (isRankingPhase(ph)) setPhase(ph);
+    const m = searchParams.get(RANKINGS_TAB_METRIC_PARAM);
+    if (isMobileMetricParam(m)) setMetric(m);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!visibleMetrics.includes(metric)) {
@@ -197,8 +269,9 @@ export default function MobileRankingsPage() {
             </p>
           </div>
         ) : (
-        <AnimatePresence mode="wait">
-            <motion.div key={pageKey} className="relative">
+          <div onTouchStart={handleCardsTouchStart} onTouchEnd={handleCardsTouchEnd}>
+            <AnimatePresence mode="wait">
+              <motion.div key={pageKey} className="relative">
               <div className="relative z-10">
                 <TopPodium
                   rows={top3}
@@ -239,8 +312,9 @@ export default function MobileRankingsPage() {
                   </div>
                 )}
               </motion.div>
-            </motion.div>
-        </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         )}
       </div>
     </div>

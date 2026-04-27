@@ -9,7 +9,7 @@ export const SPURS_BLAZERS_TEAM_IDS = ["nba-spurs", "nba-blazers"] as const;
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Blazers";
 
-/** 2025-26 Spurs vs Trail Blazers（レギュラー3 + プレーオフ2） */
+/** 2025-26 Spurs vs Trail Blazers（レギュラー3 + プレーオフ4） */
 export const spursBlazersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-blazers-2025-11-25",
@@ -110,6 +110,54 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
         "Holiday, Robert Williams III, and Camara all delivered key late sequences, and the Blazers capitalized on San Antonio’s fade to steal home-court advantage. From Portland’s perspective, this was a much more competitive performance than Game 1.",
     },
   },
+  {
+    id: "h2h-spurs-blazers-2026-04-24",
+    dateEt: "2026-04-24",
+    dateJst: "2026-04-25",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 120,
+    scoreRight: 108,
+    /** Portland（Blazers）ホーム — Spurs @ Trail Blazers */
+    homeTeamSide: "right",
+    injuriesLeft: ["V. Wembanyama", "J. McLaughlin"],
+    injuriesRight: ["D. Lillard"],
+    inactiveFooterSummary: {
+      ja:
+        "Blazersは前半65点でリードし、3Qには82-67まで広げたが、そこからSpursが一気に反撃。\n" +
+        "SpursはWembanyama不在でもCastleとHarperが得点源になり、3Q終盤から流れを完全に奪った。\n" +
+        "Portlandは後半43点だけに失速し、特に4Qは21点で止まった。Spursは若手2人の爆発で逆転勝ちし、敵地でシリーズ主導権を取り返した。",
+      en:
+        "Portland led with 65 first-half points and pushed the margin to 82-67 in the third, but San Antonio flipped the game from there.\n" +
+        "Even without Wembanyama, the Spurs found their offense through Castle and Harper, fully seizing momentum late in the third quarter.\n" +
+        "The Blazers cooled off to just 43 points in the second half, including only 21 in the fourth. San Antonio’s two-young-guard surge powered a comeback road win and swung control of the series back.",
+    },
+  },
+  {
+    id: "h2h-spurs-blazers-2026-04-26",
+    dateEt: "2026-04-26",
+    dateJst: "2026-04-27",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 114,
+    scoreRight: 93,
+    /** Portland（Blazers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["D. Lillard"],
+    inactiveFooterSummary: {
+      ja:
+        "Spursは前半に17点差を背負ったが、後半を74-35で圧倒して逆転勝利。Victor Wembanyamaが27得点12リバウンド7ブロックで攻守に存在感を示し、De'Aaron Foxも28得点7アシストで試合を動かした。\n" +
+        "BlazersはDeni Avdijaが26得点、Jrue Holidayが20得点を挙げたが、後半に完全に失速。\n" +
+        "Spursがシリーズ3勝1敗と優位に立った。",
+      en:
+        "San Antonio trailed by 17 in the first half but flipped the game with a 74-35 second half. Victor Wembanyama anchored both ends with 27 points, 12 rebounds, and 7 blocks; De'Aaron Fox added 28 points and 7 assists to steer the win.\n" +
+        "Portland got 26 from Deni Avdija and 20 from Jrue Holiday but faded completely after halftime.\n" +
+        "The Spurs seized a commanding 3-1 series edge.",
+    },
+  },
 ];
 
 /** 左=SAS・右=POR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -148,7 +196,7 @@ function spursBlazersH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function spursBlazersH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

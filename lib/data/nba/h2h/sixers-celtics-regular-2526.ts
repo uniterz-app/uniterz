@@ -9,7 +9,7 @@ export const SIXERS_CELTICS_TEAM_IDS = ["nba-76ers", "nba-celtics"] as const;
 const H2H_LEFT = "Celtics";
 const H2H_RIGHT = "76ers";
 
-/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ3） */
+/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ4） */
 export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-sixers-celtics-2025-10-22",
@@ -122,6 +122,40 @@ export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
     homeTeamSide: "right",
     injuriesLeft: [],
     injuriesRight: ["J. Embiid"],
+    inactiveFooterSummary: {
+      ja:
+        "CelticsはJayson TatumとJaylen Brownがそれぞれ25得点を記録し、終盤の勝負所でBostonの個の強さが出た。\n" +
+        "76ersはJoel Embiid不在の中で粘り、試合終盤まで競ったが、4QにTatumが重要な得点を重ねて流れを渡さなかった。\n" +
+        "Philadelphiaは守備では耐えたものの、ハーフコートで安定して点を取る形が足りず、最後に押し切られた。Celticsが接戦を取り、シリーズを2勝1敗とリード。",
+      en:
+        "Jayson Tatum and Jaylen Brown each scored 25 for Boston, and the Celtics’ individual shot-making showed up in the clutch.\n" +
+        "Philadelphia hung around without Joel Embiid and stayed competitive late, but Tatum kept landing key buckets in the fourth to deny a real swing.\n" +
+        "The 76ers held up defensively but lacked steady half-court scoring and were finally worn down. Boston escaped a tight game to take a 2-1 series lead.",
+    },
+  },
+  {
+    id: "h2h-sixers-celtics-2026-04-25",
+    dateEt: "2026-04-25",
+    dateJst: "2026-04-26",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 128,
+    scoreRight: 96,
+    /** Philadelphia（76ers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Celticsは1Qから34-18と主導権を握り、そのまま大差で押し切った。Payton Pritchardが32得点、Jayson Tatumが30得点11アシストを記録し、Philadelphia守備を崩し続けた。\n" +
+        "76ersはJoel Embiidが復帰して26得点10リバウンド6アシストを残したが、チーム全体ではBostonの強度と展開力についていけなかった。\n" +
+        "Celticsが3勝1敗でシリーズ突破に王手。",
+      en:
+        "Boston seized control early with a 34-18 first quarter and never let up. Payton Pritchard scored 32 and Jayson Tatum added 30 points and 11 assists, repeatedly stressing Philadelphia’s defense.\n" +
+        "Joel Embiid returned with 26 points, 10 rebounds, and 6 assists, but the 76ers as a whole could not match Boston’s intensity or pace.\n" +
+        "The Celtics moved to 3-1 and took a stranglehold on closing out the series.",
+    },
   },
 ];
 
