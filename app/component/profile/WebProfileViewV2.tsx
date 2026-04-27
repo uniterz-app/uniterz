@@ -69,7 +69,6 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
 );
 
 import Tabs from "./ui/Tabs";
-import PeriodToggle from "./ui/PeriodToggle";
 import SummaryCardsV2 from "./ui/SummaryCardsV2";
 import SummaryCardReveal from "./ui/SummaryCardReveal";
 import ProfileHeroCard from "./ui/ProfileHeroCard";
@@ -101,7 +100,7 @@ import {
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
-  const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
+  const { profile, tab, setTab, summary, summaryRanks, targetUid, statsLoading } =
     props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
@@ -180,18 +179,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const upsetChanceCount = (summary as any)?.upsetChanceCount ?? 0;
   const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
 
-  const periodLabel =
-    range === "7d"
-      ? language === "en"
-        ? "Last 7 days"
-        : "7日"
-      : range === "30d"
-      ? language === "en"
-        ? "Last 30 days"
-        : "30日"
-      : language === "en"
-      ? "All"
-      : "All";
+  const periodLabel = language === "en" ? "Playoffs" : "プレーオフ";
 
   const maxStreak = profile.maxStreak ?? 0;
   const currentStreak = Math.max(
@@ -201,7 +189,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const showCurrentStreakBadge = currentStreak >= 3;
 
   const proSummaryTotal = 5;
-  const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-${range}`;
+  const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-playoffs`;
   /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
   const overviewReady =
     !resolvedUid ||
@@ -308,9 +296,6 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
       <div className="mt-6 flex items-center justify-between">
         <Tabs value={tab} onChange={setTab} size="lg" />
-        {tab === "overview" && (
-          <PeriodToggle value={range} onChange={setRange} language={language} />
-        )}
       </div>
 
       <div className="mt-6">
@@ -318,6 +303,14 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           <>
             {overviewReady ? (
               <>
+              <p
+                className={[
+                  nameBebas.className,
+                  "mt-4 mb-1 text-center text-[clamp(1.6rem,3.8vw,2.35rem)] leading-none tracking-[0.12em] text-cyan-200/90",
+                ].join(" ")}
+              >
+                2026 PLAYOFFS STATS
+              </p>
               <div key={summaryMountKey} className="min-h-[120px]">
               {currentIsProView ? (
                 <>
@@ -359,6 +352,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                         scorePrecisionSum={summary?.scorePrecisionSum ?? 0}
                         analyses={posts}
                         language={language}
+                        totalPrecisionRank={summaryRanks?.totalPrecision ?? null}
                       />
                     </SummaryCardReveal>
                   </div>
@@ -378,6 +372,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                         upsetChanceCount={upsetChanceCount}
                         upsetHitCount={upsetHitCount}
                         language={language}
+                        totalUpsetRank={summaryRanks?.totalUpset ?? null}
                       />
                     </SummaryCardReveal>
                     <SummaryCardReveal
@@ -396,6 +391,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                         upsetBonusPoints={upsetBonusSum}
                         streakBonusPoints={streakBonusSum}
                         language={language}
+                        totalPointsRank={summaryRanks?.totalPoints ?? null}
                       />
                     </SummaryCardReveal>
                   </div>
@@ -403,7 +399,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               ) : (
                 <SummaryCardsV2
                   compact
-                  period={range}
+                  period="30d"
+                  summaryRanks={summaryRanks}
                   language={language}
                   reveal={playSummaryEntrance}
                   data={{
@@ -431,7 +428,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
               >
                 <ProfileDailyTrendChartLazy
                   data={chartData}
-                  range={range}
+                  range="30d"
                   allowAll={currentIsProView}
                   language={language}
                 />

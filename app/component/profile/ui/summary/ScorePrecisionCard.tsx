@@ -18,10 +18,21 @@ import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDe
 type Props = {
   scorePrecisionSum: number;
   analyses: number;
+  totalPrecisionRank?: number | null;
   compact?: boolean;
   className?: string;
   language?: Language;
 };
+
+function formatOrdinal(rank: number): string {
+  const mod100 = rank % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${rank}th`;
+  const mod10 = rank % 10;
+  if (mod10 === 1) return `${rank}st`;
+  if (mod10 === 2) return `${rank}nd`;
+  if (mod10 === 3) return `${rank}rd`;
+  return `${rank}th`;
+}
 
 const SCORE_PRECISION_TOOLTIP =
   "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です。下のバーは1試合あたり平均（0〜10）を可視化しています。";
@@ -34,6 +45,7 @@ function clamp01(v: number) {
 function ScorePrecisionCard({
   scorePrecisionSum,
   analyses,
+  totalPrecisionRank = null,
   compact = true,
   className = "",
   language = "ja",
@@ -87,6 +99,12 @@ function ScorePrecisionCard({
   const tooltipMsg = isEn
     ? "Evaluate how close your predicted score is to the actual score on a 0–10 scale, summed within the selected period. The bar below visualizes your per-match average (0–10)."
     : SCORE_PRECISION_TOOLTIP;
+  const rankText =
+    totalPrecisionRank != null ? ` / ${formatOrdinal(totalPrecisionRank)}` : "";
+  const rankClass =
+    totalPrecisionRank != null && totalPrecisionRank <= 20
+      ? "text-yellow-300"
+      : "text-white/55";
 
   return (
     <>
@@ -136,6 +154,11 @@ function ScorePrecisionCard({
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
             pts
           </span>
+          {rankText ? (
+            <span className={`ml-1 text-[10px] md:text-sm ${rankClass}`}>
+              {rankText}
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-1 w-full md:mt-4">

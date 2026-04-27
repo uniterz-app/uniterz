@@ -1,14 +1,14 @@
 // app/component/profile/ProfilePageBaseV2.tsx
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useProfile, type Profile } from "./useProfile";
 
 import MobileProfileViewV2 from "./MobileProfileViewV2";
 import WebProfileViewV2 from "./WebProfileViewV2";
 
 import { useUserStatsV2 } from "./useUserStatsV2";
-import type { SummaryForCardsV2 } from "./useUserStatsV2";
+import type { SummaryForCardsV2, SummaryRanksV2 } from "./useUserStatsV2";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 
 type Props = { handle: string; variant?: "web" | "mobile" };
@@ -23,18 +23,9 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   const [tab, setTab] = useState<"overview" | "stats" | "bracket">(
     "overview"
   );
-  const [range, setRange] = useState<"7d" | "30d" | "all">("7d");
 
-  const { stats, summaries, statsLoading, dailyTrend, preloadRange } =
+  const { stats, summary, summaryRanks, statsLoading, dailyTrend } =
     useUserStatsV2(targetUid);
-
-  const setRangeWithLoad = useCallback(
-    (v: "7d" | "30d" | "all") => {
-      setRange(v);
-      void preloadRange(v);
-    },
-    [preloadRange]
-  );
 
   const normalizedProfile = useMemo<Profile | undefined>(() => {
     if (!profile) return undefined;
@@ -78,9 +69,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     };
   }, [normalizedProfile, stats]);
 
-  const summaryV2: SummaryForCardsV2 | undefined = useMemo(() => {
-    return summaries?.[range];
-  }, [summaries, range]);
+  const summaryV2: SummaryForCardsV2 | undefined = summary ?? undefined;
 
   if (loading) return <div style={{ padding: 24 }}>Loading...</div>;
   if (!normalizedProfile) return <div style={{ padding: 24 }}>Not found</div>;
@@ -89,9 +78,8 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     profile: mergedProfile,
     tab,
     setTab,
-    range,
-    setRange: setRangeWithLoad,
     summary: summaryV2,
+    summaryRanks: summaryRanks ?? undefined,
     statsLoading,
     targetUid,
     profileDailyTrendSeed: dailyTrend,
@@ -110,10 +98,8 @@ export type ProfileViewPropsV2 = {
   tab: "overview" | "stats" | "bracket";
   setTab: (v: "overview" | "stats" | "bracket") => void;
 
-  range: "7d" | "30d" | "all";
-  setRange: (v: "7d" | "30d" | "all") => void;
-
   summary?: SummaryForCardsV2;
+  summaryRanks?: SummaryRanksV2;
   statsLoading: boolean;
 
   targetUid: string | null;

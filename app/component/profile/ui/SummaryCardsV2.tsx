@@ -29,6 +29,7 @@ import {
   summaryCardShadowSmClass,
 } from "@/lib/ui/profileCardEdgeGlow";
 import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
+import type { SummaryRanksV2 } from "../useUserStatsV2";
 
 export type SummaryDataV2 = {
   posts: number;
@@ -45,7 +46,8 @@ export type SummaryDataV2 = {
 type Props = {
   data: SummaryDataV2;
   compact?: boolean;
-  period: "7d" | "30d" | "all";
+  period: "7d" | "30d";
+  summaryRanks?: SummaryRanksV2;
   language?: Language;
   /** 取得完了後にカードを順番に浮き上がらせる */
   reveal?: boolean;
@@ -59,6 +61,7 @@ export default function SummaryCardsV2({
   data,
   compact = false,
   period,
+  summaryRanks,
   language = "ja",
   reveal = false,
 }: Props) {
@@ -68,7 +71,7 @@ export default function SummaryCardsV2({
     message: string;
   } | null>(null);
 
-  const animatedPeriodsRef = useRef<Set<"7d" | "30d" | "all">>(new Set());
+  const animatedPeriodsRef = useRef<Set<"7d" | "30d">>(new Set());
   const shouldAnimate = !animatedPeriodsRef.current.has(period);
 
   useEffect(() => {
@@ -154,6 +157,20 @@ export default function SummaryCardsV2({
   const iconSize = compact ? 13 : 20;
 
   const isMobile = compact;
+
+  const formatOrdinal = (rank: number): string => {
+    const mod100 = rank % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${rank}th`;
+    const mod10 = rank % 10;
+    if (mod10 === 1) return `${rank}st`;
+    if (mod10 === 2) return `${rank}nd`;
+    if (mod10 === 3) return `${rank}rd`;
+    return `${rank}th`;
+  };
+  const toRankLabel = (rank: number | null | undefined): string | null =>
+    typeof rank === "number" && Number.isFinite(rank) && rank > 0
+      ? ` / ${formatOrdinal(Math.floor(rank))}`
+      : null;
 
   function openTooltip(e: React.MouseEvent, message: string) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -306,6 +323,8 @@ export default function SummaryCardsV2({
               labelCls={labelCls}
               valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hPrecision)}
               afterIcon={highlightIcon(hPrecision, iconSize)}
+              rankLabel={toRankLabel(summaryRanks?.totalPrecision)}
+              rankHighlight={summaryRanks?.totalPrecision != null && summaryRanks.totalPrecision <= 20}
               compactShell={compact}
             />
           )}
@@ -320,6 +339,8 @@ export default function SummaryCardsV2({
               labelCls={labelCls}
               valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hUpset)}
               afterIcon={highlightIcon(hUpset, iconSize)}
+              rankLabel={toRankLabel(summaryRanks?.totalUpset)}
+              rankHighlight={summaryRanks?.totalUpset != null && summaryRanks.totalUpset <= 20}
               compactShell={compact}
             />
           )}
@@ -348,6 +369,8 @@ export default function SummaryCardsV2({
               labelCls={labelCls}
               valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hTotal)}
               afterIcon={highlightIcon(hTotal, iconSize)}
+              rankLabel={toRankLabel(summaryRanks?.totalPoints)}
+              rankHighlight={summaryRanks?.totalPoints != null && summaryRanks.totalPoints <= 20}
               compactShell={compact}
             />
           )}
@@ -400,6 +423,8 @@ export default function SummaryCardsV2({
             labelCls={labelCls}
             valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hPrecision)}
             afterIcon={highlightIcon(hPrecision, iconSize)}
+            rankLabel={toRankLabel(summaryRanks?.totalPrecision)}
+            rankHighlight={summaryRanks?.totalPrecision != null && summaryRanks.totalPrecision <= 20}
             compactShell={compact}
           />
         )}
@@ -413,6 +438,8 @@ export default function SummaryCardsV2({
             labelCls={labelCls}
             valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hUpset)}
             afterIcon={highlightIcon(hUpset, iconSize)}
+            rankLabel={toRankLabel(summaryRanks?.totalUpset)}
+            rankHighlight={summaryRanks?.totalUpset != null && summaryRanks.totalUpset <= 20}
             compactShell={compact}
           />
         )}
@@ -439,6 +466,8 @@ export default function SummaryCardsV2({
             labelCls={labelCls}
             valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hTotal)}
             afterIcon={highlightIcon(hTotal, iconSize)}
+            rankLabel={toRankLabel(summaryRanks?.totalPoints)}
+            rankHighlight={summaryRanks?.totalPoints != null && summaryRanks.totalPoints <= 20}
             compactShell={compact}
           />
         )}
@@ -483,6 +512,8 @@ function Card({
   labelCls,
   valueCls,
   afterIcon,
+  rankLabel,
+  rankHighlight = false,
   compactShell,
 }: {
   icon?: React.ReactNode;
@@ -492,6 +523,8 @@ function Card({
   labelCls: string;
   valueCls: string;
   afterIcon?: React.ReactNode;
+  rankLabel?: string | null;
+  rankHighlight?: boolean;
   compactShell?: boolean;
 }) {
   const shell = compactShell
@@ -524,7 +557,28 @@ function Card({
         </div>
 
         <div className="flex items-center justify-center truncate leading-none">
+          {rankLabel ? (
+            <span
+              className={[
+                "invisible ml-0.5 text-[9px] font-semibold md:ml-1 md:text-[11px]",
+                rankHighlight ? "text-yellow-300" : "text-white/55",
+              ].join(" ")}
+              aria-hidden
+            >
+              {rankLabel}
+            </span>
+          ) : null}
           <span className={`${valueCls} truncate`}>{value}</span>
+          {rankLabel ? (
+            <span
+              className={[
+                "ml-0.5 text-[9px] font-semibold md:ml-1 md:text-[11px]",
+                rankHighlight ? "text-yellow-300" : "text-white/55",
+              ].join(" ")}
+            >
+              {rankLabel}
+            </span>
+          ) : null}
           {afterIcon}
         </div>
       </div>

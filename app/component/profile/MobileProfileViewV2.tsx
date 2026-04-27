@@ -69,7 +69,6 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
 );
 
 import Tabs from "./ui/Tabs";
-import PeriodToggle from "./ui/PeriodToggle";
 import SummaryCardsV2 from "./ui/SummaryCardsV2";
 import SummaryCardReveal from "./ui/SummaryCardReveal";
 import ProfileHeroCard from "./ui/ProfileHeroCard";
@@ -106,7 +105,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const { profile, tab, setTab, range, setRange, summary, targetUid, statsLoading } =
+  const { profile, tab, setTab, summary, summaryRanks, targetUid, statsLoading } =
     props;
 
   const resolvedUid = typeof targetUid === "string" ? targetUid : null;
@@ -183,18 +182,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const upsetChanceCount = (summary as any)?.upsetChanceCount ?? 0;
   const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
 
-  const periodLabel =
-    range === "7d"
-      ? language === "en"
-        ? "Last 7 days"
-        : "7日"
-      : range === "30d"
-      ? language === "en"
-        ? "Last 30 days"
-        : "30日"
-      : language === "en"
-      ? "All"
-      : "All";
+  const periodLabel = language === "en" ? "Playoffs" : "プレーオフ";
 
   const maxStreak = profile.maxStreak ?? 0;
   const currentStreak = Math.max(
@@ -204,7 +192,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const showCurrentStreakBadge = currentStreak >= 3;
 
   const proSummaryTotal = 5;
-  const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-${range}`;
+  const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}-playoffs`;
   /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
   const overviewReady =
     !resolvedUid ||
@@ -318,6 +306,14 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           <>
             {overviewReady ? (
               <>
+              <p
+                className={[
+                  nameBebas.className,
+                  "mt-4 mb-0.5 text-center text-[clamp(1.25rem,5.9vw,1.7rem)] leading-none tracking-[0.12em] text-cyan-200/90",
+                ].join(" ")}
+              >
+                2026 PLAYOFFS STATS
+              </p>
               <div key={summaryMountKey} className="min-h-[100px]">
               {currentIsProView ? (
                 <>
@@ -364,6 +360,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                         scorePrecisionSum={summary?.scorePrecisionSum ?? 0}
                         analyses={posts}
                         language={language}
+                        totalPrecisionRank={summaryRanks?.totalPrecision ?? null}
                       />
                     </SummaryCardReveal>
 
@@ -381,6 +378,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                         upsetChanceCount={upsetChanceCount}
                         upsetHitCount={upsetHitCount}
                         language={language}
+                        totalUpsetRank={summaryRanks?.totalUpset ?? null}
                       />
                     </SummaryCardReveal>
                   </div>
@@ -402,6 +400,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                         upsetBonusPoints={upsetBonusSum}
                         streakBonusPoints={streakBonusSum}
                         language={language}
+                        totalPointsRank={summaryRanks?.totalPoints ?? null}
                       />
                     </SummaryCardReveal>
                   </div>
@@ -409,7 +408,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               ) : (
                 <SummaryCardsV2
                   compact
-                  period={range}
+                  period="30d"
+                  summaryRanks={summaryRanks}
                   language={language}
                   reveal={playSummaryEntrance}
                   data={{
@@ -427,10 +427,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               )}
               </div>
 
-            <div className="mb-3 mt-3 flex justify-center">
-              <PeriodToggle value={range} onChange={setRange} language={language} />
-            </div>
-
             <div className="mt-6 space-y-4">
               <SummaryCardReveal
                 index={5}
@@ -441,7 +437,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               >
                 <ProfileDailyTrendChartLazy
                   data={dailyTrendForChart}
-                  range={range}
+                  range="30d"
                   allowAll={currentIsProView}
                   language={language}
                 />
