@@ -17,24 +17,24 @@ import { isPlayoffBracketComplete } from "../lib/playoff-bracket";
 const admin = adminPkg;
 
 const SEASON = "2026";
-const UID = "RwJLVZq3R9hMAoaS6EG92pyyn1p1";
+const UID = "p5Q1EG1jmjNzOyNvNrUaCauMnxD2";
 
 const BRACKET: BracketState = {
   R1_E1: { winner: "DET", games: 5 },
-  R1_E2: { winner: "TOR", games: 6 },
-  R1_E3: { winner: "BOS", games: 4 },
-  R1_E4: { winner: "NYK", games: 7 },
-  R1_W1: { winner: "OKC", games: 4 },
+  R1_E2: { winner: "CLE", games: 6 },
+  R1_E3: { winner: "BOS", games: 5 },
+  R1_E4: { winner: "NYK", games: 6 },
+  R1_W1: { winner: "OKC", games: 5 },
   R1_W2: { winner: "HOU", games: 5 },
-  R1_W3: { winner: "SAS", games: 6 },
-  R1_W4: { winner: "DEN", games: 7 },
+  R1_W3: { winner: "SAS", games: 5 },
+  R1_W4: { winner: "DEN", games: 6 },
   R2_E1: { winner: "DET", games: 6 },
-  R2_E2: { winner: "BOS", games: 5 },
-  R2_W1: { winner: "OKC", games: 4 },
-  R2_W2: { winner: "DEN", games: 7 },
-  CF_E: { winner: "DET", games: 7 },
-  CF_W: { winner: "OKC", games: 7 },
-  FINALS: { winner: "OKC", games: 6 },
+  R2_E2: { winner: "BOS", games: 6 },
+  R2_W1: { winner: "OKC", games: 6 },
+  R2_W2: { winner: "SAS", games: 7 },
+  CF_E: { winner: "DET", games: 6 },
+  CF_W: { winner: "SAS", games: 7 },
+  FINALS: { winner: "SAS", games: 7 },
 };
 
 async function main() {

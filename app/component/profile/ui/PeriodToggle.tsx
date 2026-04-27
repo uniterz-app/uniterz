@@ -9,7 +9,7 @@ const plex = IBM_Plex_Sans({
   display: "swap",
 });
 
-type Range = "7d" | "30d" | "all";
+type Range = "7d" | "30d";
 
 type Props = {
   value: Range;
@@ -27,7 +27,6 @@ export default function PeriodToggle({
   const items: { key: Range; label: string }[] = [
     { key: "7d", label: isEn ? "Last 7d" : "7日" },
     { key: "30d", label: isEn ? "Last 30d" : "30日" },
-    { key: "all", label: isEn ? "All-time" : "ALL" },
   ];
 
   return (

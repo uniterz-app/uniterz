@@ -30,6 +30,7 @@ type RawSide =
     };
 
 type SeasonPhase = "regular" | "play_in" | "playoffs";
+type PlayoffRound = "r1" | "r2" | "cf" | "finals" | "overall";
 
 type RawGame = {
   id: string;
@@ -43,6 +44,8 @@ type RawGame = {
   roundLabel?: string;
   /** play_in のときランキング除外（countsForRanking 未指定時のみ効く） */
   seasonPhase?: SeasonPhase;
+  /** playoffs 時のみ保存（r1 / r2 / cf / finals / overall） */
+  playoffRound?: PlayoffRound;
   /** 明示指定が最優先。省略時は seasonPhase で決定、それも無ければ true */
   countsForRanking?: boolean;
   status?: "scheduled" | "live" | "final";
@@ -85,6 +88,7 @@ type Preview =
         roundLabel?: string;
         countsForRanking: boolean;
         seasonPhase?: SeasonPhase;
+        playoffRound?: PlayoffRound;
         status: "scheduled" | "live" | "final";
         home: any;
         away: any;
@@ -208,6 +212,23 @@ function normalizeRow(r: RawGame): Preview {
     })();
 
     const { countsForRanking, seasonPhase } = resolveCountsForRanking(r);
+    const playoffRoundRaw = r?.playoffRound;
+    const playoffRound: PlayoffRound | undefined =
+      typeof playoffRoundRaw === "string" &&
+      (playoffRoundRaw === "r1" ||
+        playoffRoundRaw === "r2" ||
+        playoffRoundRaw === "cf" ||
+        playoffRoundRaw === "finals" ||
+        playoffRoundRaw === "overall")
+        ? playoffRoundRaw
+        : undefined;
+
+    if (seasonPhase === "playoffs" && !playoffRound) {
+      return {
+        ok: false,
+        reason: "seasonPhase=playoffs の場合は playoffRound が必要です（r1/r2/cf/finals/overall）",
+      };
+    }
 
     // colorHex / teamId は存在するときのみキーを持たせる
 const toSide = (x: RawSide) => {
@@ -251,6 +272,7 @@ const toSide = (x: RawSide) => {
         roundLabel: r?.roundLabel || "",
         countsForRanking,
         ...(seasonPhase ? { seasonPhase } : {}),
+        ...(seasonPhase === "playoffs" && playoffRound ? { playoffRound } : {}),
         status,
         home: toSide(r?.home),
         away: toSide(r?.away),
@@ -351,6 +373,9 @@ export default function GamesImportPage() {
             roundLabel: g.roundLabel ?? "",
             countsForRanking: g.countsForRanking,
             ...(g.seasonPhase ? { seasonPhase: g.seasonPhase } : {}),
+            ...(g.seasonPhase === "playoffs" && g.playoffRound
+              ? { playoffRound: g.playoffRound }
+              : {}),
             status: g.status,
             home: g.home,
             away: g.away,

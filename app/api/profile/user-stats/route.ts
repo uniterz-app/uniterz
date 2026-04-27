@@ -10,7 +10,6 @@ import {
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
-  aggregateRecentWindowsFromDailySnaps,
   buildDailyTrendFromDailySnaps,
   dateKeyJSTIntl,
 } from "@/lib/profile/userStatsV2ProfileRollup";
@@ -18,9 +17,10 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type StatsPart = "stats" | "7d" | "30d" | "all" | "trend";
+type StatsPart = "stats" | "phase" | "trend";
+type RankingPhase = "play_in" | "playoffs";
 
-const ALL_PARTS: StatsPart[] = ["stats", "7d", "30d", "all", "trend"];
+const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend"];
 
 type SummaryForCards = {
   posts: number;
@@ -38,6 +38,12 @@ type SummaryForCards = {
   basePointsSum: number;
 };
 
+type SummaryRanks = {
+  totalPrecision: number | null;
+  totalUpset: number | null;
+  totalPoints: number | null;
+};
+
 function safeInt(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
@@ -48,38 +54,100 @@ function safeNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function summaryAllFromCumulativeAndStats(
+function parsePhase(raw: string | null): RankingPhase {
+  return raw === "play_in" ? "play_in" : "playoffs";
+}
+
+function summaryFromPhaseRanking(
   cumulative: Record<string, unknown> | null,
-  stats: Record<string, unknown> | null
+  phase: RankingPhase
 ): SummaryForCards {
-  const c = cumulative ?? {};
-  const s = stats ?? {};
-  const posts = safeInt(c.totalPosts);
-  const wins = safeInt(c.totalWins);
-  const pointsSumV3 = safeNum(c.totalPoints);
-  const upsetPointsSum = safeNum(c.totalUpset);
-  const scorePrecisionSum = safeNum(c.totalPrecision);
-  const upsetBonusSum = safeNum(s.upsetBonusSum);
-  const streakBonusSum = safeNum(s.streakBonusSum);
-  const basePointsSum = Math.max(
-    0,
-    pointsSumV3 - upsetBonusSum - streakBonusSum
-  );
+  const byPhase = ((cumulative?.rankingByPhase as Record<string, unknown>) ??
+    {}) as Record<string, Record<string, unknown> | undefined>;
+  const r = byPhase[phase] ?? {};
+  const posts = safeInt(r.totalPosts);
+  const wins = safeInt(r.totalWins);
+  const pointsSumV3 = safeNum(r.totalPoints);
+  const upsetPointsSum = safeNum(r.totalUpset);
+  const scorePrecisionSum = safeNum(r.totalPrecision);
   return {
     posts,
     fullPosts: posts,
     recent3Posts: 0,
     wins,
-    winRate: posts ? wins / posts : 0,
+    winRate: posts > 0 ? wins / posts : 0,
     scorePrecisionSum,
     upsetPointsSum,
     pointsSumV3,
-    upsetChanceCount: safeInt(s.upsetOpportunityCount),
-    upsetHitCount: safeInt(s.upsetHitCount),
-    upsetBonusSum,
-    streakBonusSum,
-    basePointsSum,
+    upsetChanceCount: 0,
+    upsetHitCount: 0,
+    upsetBonusSum: 0,
+    streakBonusSum: 0,
+    basePointsSum: pointsSumV3,
   };
+}
+
+function safeRank(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.floor(n);
+  return i > 0 ? i : null;
+}
+
+function summaryRanksFromSnapshot(
+  cumulative: Record<string, unknown> | null,
+  phase: RankingPhase
+): SummaryRanks {
+  const snapshotRanks = (cumulative?.snapshotRanks ?? {}) as Record<
+    string,
+    Record<string, unknown> | undefined
+  >;
+  const byPhase = snapshotRanks[phase] ?? {};
+  return {
+    totalPrecision: safeRank(byPhase.totalPrecision),
+    totalUpset: safeRank(byPhase.totalUpset),
+    totalPoints: safeRank(byPhase.totalPoints),
+  };
+}
+
+async function summaryRanksFromRankingBulk(
+  uid: string,
+  phase: RankingPhase
+): Promise<SummaryRanks> {
+  const baseUrl =
+    process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
+    process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
+  if (!baseUrl) {
+    return { totalPrecision: null, totalUpset: null, totalPoints: null };
+  }
+
+  const url = new URL(baseUrl);
+  url.searchParams.set("uid", uid);
+  url.searchParams.set("phase", phase);
+  url.searchParams.set("round", "overall");
+  url.searchParams.set("metrics", "totalPrecision,totalUpset,totalPoints");
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      cache: "no-store",
+    });
+    const json = await res.json();
+    if (!res.ok || !json?.ok || typeof json.byMetric !== "object") {
+      return { totalPrecision: null, totalUpset: null, totalPoints: null };
+    }
+    const byMetric = json.byMetric as Record<
+      string,
+      { myRank?: unknown } | undefined
+    >;
+    return {
+      totalPrecision: safeRank(byMetric.totalPrecision?.myRank),
+      totalUpset: safeRank(byMetric.totalUpset?.myRank),
+      totalPoints: safeRank(byMetric.totalPoints?.myRank),
+    };
+  } catch {
+    return { totalPrecision: null, totalUpset: null, totalPoints: null };
+  }
 }
 
 async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
@@ -128,6 +196,7 @@ export async function GET(req: Request) {
     const uidParam = searchParams.get("uid")?.trim() ?? "";
     const handleParam = searchParams.get("handle")?.trim() ?? "";
     const forceRefresh = searchParams.get("refresh") === "1";
+    const phase = parsePhase(searchParams.get("phase"));
     const parts =
       parsePartsParam(searchParams.get("parts")) ?? new Set<StatsPart>(ALL_PARTS);
 
@@ -151,15 +220,14 @@ export async function GET(req: Request) {
 
     const uid = resolvedUid;
 
-    const wantStats = parts.has("stats") || parts.has("all");
-    const wantCumulative = parts.has("all");
-    const wantWindow =
-      parts.has("7d") || parts.has("30d") || parts.has("trend");
+    const wantStats = parts.has("stats");
+    const wantPhase = parts.has("phase");
+    const wantWindow = parts.has("trend");
 
     const statsSnap = wantStats
       ? await adminDb.collection("user_stats_v2").doc(uid).get()
       : null;
-    const cumulativeSnap = wantCumulative
+    const cumulativeSnap = wantPhase
       ? await adminDb.collection("cumulative_stats").doc(uid).get()
       : null;
     const windowSnap = wantWindow
@@ -177,13 +245,6 @@ export async function GET(req: Request) {
     );
     const needRebuild = wantWindow && (forceRefresh || stale || missingRollup);
 
-    let seven: ReturnType<
-      typeof aggregateRecentWindowsFromDailySnaps
-    >["seven"];
-    let thirty: ReturnType<
-      typeof aggregateRecentWindowsFromDailySnaps
-    >["thirty"];
-    let recent3Posts: number;
     let dailyTrend: ProfileDailyTrendRow[];
 
     if (wantWindow) {
@@ -194,53 +255,35 @@ export async function GET(req: Request) {
         } catch (e) {
           console.warn("[profile/user-stats] window cache rebuild failed:", e);
         }
-        const agg = aggregateRecentWindowsFromDailySnaps(last30Snaps);
-        seven = agg.seven;
-        thirty = agg.thirty;
-        recent3Posts = agg.recent3.fullPosts;
         dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps);
       } else {
         const w = windowData as Record<string, unknown>;
-        seven = w["7d"] as typeof seven;
-        thirty = w["30d"] as typeof thirty;
-        recent3Posts = w.recent3Posts as number;
         dailyTrend = w.dailyTrend as ProfileDailyTrendRow[];
       }
     } else {
-      seven = undefined as unknown as typeof seven;
-      thirty = undefined as unknown as typeof thirty;
-      recent3Posts = 0;
       dailyTrend = [];
     }
 
-    const allSummary = parts.has("all")
-      ? summaryAllFromCumulativeAndStats(
+    const summary = wantPhase
+      ? summaryFromPhaseRanking(
           cumulative as Record<string, unknown> | null,
-          stats as Record<string, unknown> | null
+          phase
         )
       : null;
-
-    const recent3ForOverlay = wantWindow ? recent3Posts : 0;
-
-    const summaries: Partial<Record<"7d" | "30d" | "all", SummaryForCards>> = {};
-    if (parts.has("7d") && wantWindow) {
-      summaries["7d"] = { ...seven, recent3Posts };
-    }
-    if (parts.has("30d") && wantWindow) {
-      summaries["30d"] = { ...thirty, recent3Posts };
-    }
-    if (parts.has("all") && allSummary) {
-      summaries.all = { ...allSummary, recent3Posts: recent3ForOverlay };
-    }
+    const summaryRanks = wantPhase
+      ? await summaryRanksFromRankingBulk(uid, phase)
+      : null;
 
     const body: Record<string, unknown> = {
       ok: true,
       resolvedUid: uid,
       parts: [...parts],
+      phase,
     };
 
     if (wantStats) body.stats = stats;
-    if (Object.keys(summaries).length > 0) body.summaries = summaries;
+    if (summary) body.summary = summary;
+    if (summaryRanks) body.summaryRanks = summaryRanks;
     if (parts.has("trend") && wantWindow) body.dailyTrend = dailyTrend;
 
     return NextResponse.json(body);
