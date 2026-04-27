@@ -21,8 +21,8 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
-import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
+import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import Header from "@/app/component/Header";
 import {
   API_METRIC_BY_MOBILE,
@@ -168,6 +168,8 @@ export default function MobileRankingsPage() {
     }
     return myRawRow.activeWinStreak ?? 0;
   }, [metric, myRawRow]);
+  const winRateMinPosts =
+    phase === "playoffs" && (round === "overall" || round === "r1") ? 20 : 1;
 
   const introRef = useRef(true);
   const intro = introRef.current;
@@ -178,7 +180,7 @@ export default function MobileRankingsPage() {
 
   const [topDone, setTopDone] = useState(false);
 
-  const pageKey = `${phase}-${metric}`;
+  const pageKey = `${phase}-${round}-${metric}`;
   const pageKeyRef = useRef(pageKey);
   pageKeyRef.current = pageKey;
 
@@ -207,21 +209,21 @@ export default function MobileRankingsPage() {
           <div className="space-y-0.5">
             <RankingPhaseTabs
               phase={phase}
-              onChange={(next) => {
-                setPhase(next);
-                if (next !== "playoffs") setRound("overall");
+              onChange={(nextPhase) => {
+                setPhase(nextPhase);
+                setRound("overall");
               }}
               isMobile
               language={language}
             />
-            {phase === "playoffs" ? (
+            {phase === "playoffs" && (
               <PlayoffRoundTabs
                 round={round}
                 onChange={setRound}
                 isMobile
                 isEn={language === "en"}
               />
-            ) : null}
+            )}
 
             <MyRankCard
               rank={myRank}
@@ -252,9 +254,13 @@ export default function MobileRankingsPage() {
           />
           {metric === "winRate" && (
             <p className="px-1 text-[11px] leading-4 text-white/60">
-              {language === "en"
-                ? "Win Rate ranking requires at least 15 posts."
-                : "勝率ランキングは15投稿以上が対象です。"}
+              {winRateMinPosts > 1
+                ? language === "en"
+                  ? `Win Rate ranking requires at least ${winRateMinPosts} posts.`
+                  : `勝率ランキングは${winRateMinPosts}投稿以上が対象です。`
+                : language === "en"
+                  ? "No minimum posts requirement for this round."
+                  : "このラウンドは投稿数の足切りはありません。"}
             </p>
           )}
         </div>

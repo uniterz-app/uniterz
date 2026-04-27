@@ -16,7 +16,17 @@ type Metric =
   | "totalUpset"
   | "activeWinStreak";
 
-const MIN_POSTS_FOR_WIN_RATE = 15;
+const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
+
+function minPostsForWinRate(
+  phase: RankingPhase,
+  round: "overall" | PlayoffRoundKey
+): number {
+  if (phase === "playoffs" && (round === "overall" || round === "r1")) {
+    return 20;
+  }
+  return MIN_POSTS_FOR_WIN_RATE_BASE;
+}
 
 const METRICS: Metric[] = [
   "totalPoints",
@@ -272,6 +282,56 @@ async function fetchLatestPriorRankMapsForUids(
   return out;
 }
 
+/**
+ * 日次スナップショット doc が無い/空のとき、getCumulativeRanking が一覧を出せるよう
+ * cumulative_stats からラウンド別 Top20 をその場で算出する。
+ */
+export async function loadPlayoffRoundTop20RowsLive(
+  round: PlayoffRoundKey,
+  metric: Metric
+): Promise<SnapshotRow[]> {
+  const snap = await db().collection("cumulative_stats").get();
+  const baseRows: BaseRow[] = snap.docs
+    .map((doc) => {
+      const d = doc.data();
+      const rr = d.rankingByPlayoffRound?.[round];
+      const tp = rr?.totalPosts ?? 0;
+      const tw = rr?.totalWins ?? 0;
+      return {
+        uid: doc.id,
+        displayName: d.displayName ?? "user",
+        handle: d.handle ?? null,
+        photoURL: d.photoURL ?? null,
+        countryCode: d.countryCode ?? null,
+        plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
+        totalPosts: tp,
+        totalWins: tw,
+        winRate: tp > 0 ? tw / tp : rr?.winRate ?? 0,
+        totalPoints: rr?.totalPoints ?? 0,
+        totalPrecision: rr?.totalPrecision ?? 0,
+        totalUpset: rr?.totalUpset ?? 0,
+        activeWinStreak: d.activeWinStreak ?? 0,
+      };
+    })
+    .filter((row) => (row.totalPosts ?? 0) > 0);
+
+  const eligibleRows =
+    metric === "winRate"
+      ? baseRows.filter(
+          (row) => (row.totalPosts ?? 0) >= minPostsForWinRate("playoffs", round)
+        )
+      : baseRows;
+  const sortedFull = [...eligibleRows].sort((a, b) =>
+    cmpSortRows(a, b, metric)
+  );
+  const ranks = assignCompetitionRanks(sortedFull, metric);
+  return sortedFull.slice(0, 20).map((row) => ({
+    ...row,
+    rank: ranks.get(row.uid) ?? 0,
+    rankDeltaPlaces: null,
+  }));
+}
+
 /* =========================================================
  * Main
  * =======================================================*/
@@ -327,7 +387,9 @@ export async function buildCumulativeRankingSnapshot() {
     for (const metric of METRICS) {
       const eligibleRows =
         metric === "winRate"
-          ? baseRows.filter((row) => (row.totalPosts ?? 0) >= MIN_POSTS_FOR_WIN_RATE)
+          ? baseRows.filter(
+              (row) => (row.totalPosts ?? 0) >= minPostsForWinRate(phase, "overall")
+            )
           : baseRows;
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
@@ -395,7 +457,9 @@ export async function buildCumulativeRankingSnapshot() {
     for (const metric of METRICS) {
       const eligibleRows =
         metric === "winRate"
-          ? baseRows.filter((row) => (row.totalPosts ?? 0) >= MIN_POSTS_FOR_WIN_RATE)
+          ? baseRows.filter(
+              (row) => (row.totalPosts ?? 0) >= minPostsForWinRate("playoffs", round)
+            )
           : baseRows;
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
