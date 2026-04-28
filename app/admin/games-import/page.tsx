@@ -54,6 +54,8 @@ type RawGame = {
   score?: any;
   liveMeta?: any;
   finalMeta?: any;
+  /** NBA プレーオフ掲時など（例: "r1"） */
+  playoffRound?: string;
 };
 
 function resolveCountsForRanking(r: RawGame): {
@@ -95,6 +97,7 @@ type Preview =
         score?: any;
         liveMeta?: any;
         finalMeta?: any;
+        playoffRound?: string;
       };
     };
 
@@ -260,6 +263,12 @@ const toSide = (x: RawSide) => {
 };
 
 
+    const playoffRoundRaw = r?.playoffRound;
+    const playoffRound =
+      typeof playoffRoundRaw === "string" && playoffRoundRaw.trim()
+        ? playoffRoundRaw.trim()
+        : undefined;
+
     return {
       ok: true,
       normalized: {
@@ -279,6 +288,7 @@ const toSide = (x: RawSide) => {
         score: r?.score ?? null,
         liveMeta: r?.liveMeta ?? null,
         finalMeta: r?.finalMeta ?? null,
+        ...(playoffRound ? { playoffRound } : {}),
       },
     };
   } catch (e: any) {
@@ -382,6 +392,7 @@ export default function GamesImportPage() {
             score: g.score ?? null,
             liveMeta: g.liveMeta ?? null,
             finalMeta: g.finalMeta ?? null,
+            ...(g.playoffRound ? { playoffRound: g.playoffRound } : {}),
             // 初期状態（確定前）
             final: false,
             homeScore: null,
