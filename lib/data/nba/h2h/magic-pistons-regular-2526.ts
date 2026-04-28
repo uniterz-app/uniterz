@@ -10,7 +10,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Magic";
 
 /**
- * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ3）
+ * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ4）
  * 出典: StatMuse 等の公開スコアに基づく（レギュラー直接対決 2-2）
  */
 export const magicPistonsH2HGames: NbaH2HGameCard[] = [
@@ -132,6 +132,26 @@ export const magicPistonsH2HGames: NbaH2HGameCard[] = [
         "Paolo Banchero and Desmond Bane each scored 25 for Orlando; Bane stretched the floor from deep at a high clip and widened Detroit’s defense.\n" +
         "Cade Cunningham created offense with 27 points and 9 assists, but 9 turnovers loomed large and the Pistons gave away key momentum swings.\n" +
         "The Magic defended home court and took a 2-1 series lead.",
+    },
+  },
+  {
+    id: "h2h-magic-pistons-2026-04-27",
+    dateEt: "2026-04-27",
+    dateJst: "2026-04-28",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 88,
+    scoreRight: 94,
+    /** Detroit（Pistons）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["J. Isaac"],
+    inactiveFooterSummary: {
+      ja:
+        "MagicはFG32.6%と苦しみながらも、終盤の守備で勝ち切った。Desmond Baneが22点、Franz Wagnerが19点、Paolo Bancheroが18点。PistonsはCade Cunninghamが25点を記録したが、8ターンオーバーが重く、終盤に得点が止まった。Magicは残り約5分から7-1のランで主導権を奪い、94-88で勝利。Franz Wagnerはふくらはぎ負傷で途中退場。",
+      en:
+        "Orlando grinded to a 32.6% FG night but closed it out with late defense. Desmond Bane had 22, Franz Wagner 19, and Paolo Banchero 18. Cade Cunningham scored 25 for Detroit, but eight turnovers loomed large and the Pistons went cold down the stretch. The Magic seized control on a 7-1 run over the final ~five minutes in a 94-88 win. Wagner exited with a calf injury.",
     },
   },
 ];

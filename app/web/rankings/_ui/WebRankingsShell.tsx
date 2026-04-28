@@ -16,23 +16,26 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
-import RankingPhaseTabs from "@/app/component/rankings/RankingPhaseTabs";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
+import RankingsCategoryTabs, {
+  type RankingsCategory,
+} from "@/app/component/rankings/RankingsCategoryTabs";
 import Header from "@/app/component/Header";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useWebRankings } from "../_lib/useWebRankings";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
-import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { type PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import {
   RANKINGS_TAB_METRIC_PARAM,
-  RANKINGS_TAB_PHASE_PARAM,
   WEB_RANKINGS_SCROLL_KEY,
   isMobileMetricParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
+import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
+import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 
 function getMyMetricValue(metric: MobileMetric, row: any): number {
   if (!row) return 0;
@@ -51,8 +54,10 @@ function getMyMetricValue(metric: MobileMetric, row: any): number {
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
-  const [phase, setPhase] = useState<RankingPhase>("playoffs");
+  const [category, setCategory] = useState<RankingsCategory>("playoffs");
+  const phase: RankingPhase = "playoffs";
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
+  const season = useMemo(() => getCurrentPlayoffSeason(), []);
   const {
     listReady,
     personalPending,
@@ -75,13 +80,11 @@ export default function WebRankingsShell() {
 
   /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric を反映 */
   useLayoutEffect(() => {
-    const ph = searchParams.get(RANKINGS_TAB_PHASE_PARAM);
-    if (isRankingPhase(ph)) setPhase(ph);
     const m = searchParams.get(RANKINGS_TAB_METRIC_PARAM);
     if (isMobileMetricParam(m)) setMetric(m);
-    restoreScrollAfterListRef.current =
-      isMobileMetricParam(searchParams.get(RANKINGS_TAB_METRIC_PARAM)) ||
-      isRankingPhase(searchParams.get(RANKINGS_TAB_PHASE_PARAM));
+    restoreScrollAfterListRef.current = isMobileMetricParam(
+      searchParams.get(RANKINGS_TAB_METRIC_PARAM)
+    );
   }, [searchParams, setMetric]);
 
   useLayoutEffect(() => {
@@ -164,65 +167,72 @@ export default function WebRankingsShell() {
         <div className="mx-auto max-w-[860px] space-y-3 px-3 pt-2">
           <RankingsScheduleNotice phase={phase} language={language} />
           <div className="space-y-0.5">
-            <RankingPhaseTabs
-              phase={phase}
-              onChange={(nextPhase) => {
-                setPhase(nextPhase);
-                setRound("overall");
-              }}
-              isMobile={false}
-              language={language}
+            <RankingsCategoryTabs
+              category={category}
+              onChange={setCategory}
             />
-            {phase === "playoffs" && (
-              <PlayoffRoundTabs
-                round={round}
-                onChange={setRound}
-                isMobile={false}
-                isEn={language === "en"}
-              />
-            )}
+            {category === "playoffs" ? (
+              <>
+                <PlayoffRoundTabs
+                  round={round}
+                  onChange={setRound}
+                  isMobile={false}
+                  isEn={language === "en"}
+                />
+              </>
+            ) : null}
 
-            <MyRankCard
-              rank={myRank}
-              metric={metric as MobileMetric}
-              value={myValue}
-              displayName={user.displayName || "You"}
-              photoURL={user.photoURL || null}
-              totalPosts={myRow?.totalPosts}
-              loading={!listReady}
-              statsScramble={listReady && personalPending}
-              language={language}
-              isPro={user.plan === "pro"}
-              rankDeltaPlaces={myRankDeltaPlaces}
-            />
+            {category === "playoffs" ? (
+              <MyRankCard
+                rank={myRank}
+                metric={metric as MobileMetric}
+                value={myValue}
+                displayName={user.displayName || "You"}
+                photoURL={user.photoURL || null}
+                totalPosts={myRow?.totalPosts}
+                loading={!listReady}
+                statsScramble={listReady && personalPending}
+                language={language}
+                isPro={user.plan === "pro"}
+                rankDeltaPlaces={myRankDeltaPlaces}
+              />
+            ) : null}
           </div>
 
-          <RankingsMetricRow
-            metrics={visibleMetrics}
-            metric={metric}
-            setMetric={setMetric}
-            language={language}
-          />
-          {metric === "winRate" && (
-            <p className="px-1 text-xs leading-5 text-white/60">
-              {winRateMinPosts > 1
-                ? language === "en"
-                  ? `Win Rate ranking requires at least ${winRateMinPosts} posts.`
-                  : `勝率ランキングは${winRateMinPosts}投稿以上が対象です。`
-                : language === "en"
-                  ? "No minimum posts requirement for this round."
-                  : "このラウンドは投稿数の足切りはありません。"}
-            </p>
-          )}
+          {category === "playoffs" ? (
+            <>
+              <RankingsMetricRow
+                metrics={visibleMetrics}
+                metric={metric}
+                setMetric={setMetric}
+                language={language}
+              />
+              {metric === "winRate" && (
+                <p className="px-1 text-xs leading-5 text-white/60">
+                  {winRateMinPosts > 1
+                    ? language === "en"
+                      ? `Win Rate ranking requires at least ${winRateMinPosts} posts.`
+                      : `勝率ランキングは${winRateMinPosts}投稿以上が対象です。`
+                    : language === "en"
+                      ? "No minimum posts requirement for this round."
+                      : "このラウンドは投稿数の足切りはありません。"}
+                </p>
+              )}
+            </>
+          ) : null}
         </div>
 
-        {!listReady && (
+        {category === "playoffs" && !listReady && (
           <div className="mx-auto max-w-[860px] px-3 pt-4 text-sm text-white/40">
             {language === "en" ? "loading..." : "読み込み中..."}
           </div>
         )}
 
-        {listReady && rows.length === 0 ? (
+        {category === "bracket" ? (
+          <div className="mx-auto w-full max-w-[960px]">
+            <BracketLeaderboardSection season={season} />
+          </div>
+        ) : listReady && rows.length === 0 ? (
           <div
             role="status"
             className="mx-auto flex min-h-[min(65dvh,520px)] max-w-[860px] items-center justify-center px-4 text-center"

@@ -10,7 +10,7 @@ const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Suns";
 
 /**
- * 2025-26 Thunder vs Suns（レギュラー5 + プレーオフ3）
+ * 2025-26 Thunder vs Suns（レギュラー5 + プレーオフ4）
  * 左列=Thunder得点、右列=Suns得点。
  */
 export const thunderSunsH2HGames: NbaH2HGameCard[] = [
@@ -152,6 +152,26 @@ export const thunderSunsH2HGames: NbaH2HGameCard[] = [
         "Shai Gilgeous-Alexander dominated with 42 points and 8 assists; OKC held turnovers to seven and kept its offense steady deep into the game.\n" +
         "Phoenix got 33 from Dillon Brooks and 26 from Jalen Green, but Devin Booker was limited to 16 points—and the star gap showed on the scoreboard.\n" +
         "The Thunder’s third straight win put them on the brink of closing out the series.",
+    },
+  },
+  {
+    id: "h2h-thunder-suns-2026-04-28",
+    dateEt: "2026-04-28",
+    dateJst: "2026-04-29",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 131,
+    scoreRight: 122,
+    /** Oklahoma City（Thunder）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["Jay. Williams", "T. Sorber"],
+    injuriesRight: ["M. Williams"],
+    inactiveFooterSummary: {
+      ja:
+        "ThunderはShai Gilgeous-Alexanderが31点、Chet Holmgrenが24点。6人が二桁得点で、FG53%と高効率だった。SunsはBooker、Jalen Green、Dillon Brooks、Collin Gillespieが20点超えだったが、守備とリバウンドで耐えきれなかった。Bookerは前半2点から後半22点を返したが届かず。OKCが131-122で勝ち、4連勝でシリーズを突破。",
+      en:
+        "Shai Gilgeous-Alexander had 31 and Chet Holmgren 24; six Thunder players hit double figures on 53% shooting. Phoenix got 20+ from Devin Booker, Jalen Green, Dillon Brooks, and Collin Gillespie, but could not hold up on defense and the glass. Booker followed 2 first-half points with 22 in the second half, yet it wasn’t enough. OKC won 131-122, sweeping the series 4-0.",
     },
   },
 ];

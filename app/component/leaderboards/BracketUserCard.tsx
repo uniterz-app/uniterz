@@ -14,6 +14,7 @@ import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   row: BracketLeaderboardRow;
+  totalCount?: number;
   language?: Language;
   onClick?: () => void;
 };
@@ -71,6 +72,7 @@ function ChampionPickBadge({
 
 export default function BracketUserCard({
   row,
+  totalCount = 0,
   language = "ja",
   onClick,
 }: Props) {
@@ -80,7 +82,7 @@ export default function BracketUserCard({
   const initial = displayName.charAt(0).toUpperCase();
   const handle = row.handle ?? null;
   const baseCardClass =
-    "relative overflow-hidden rounded-[14px] border px-3 py-2";
+    "relative overflow-hidden rounded-none border px-3 py-2";
 
   const content = (
     <div className="relative z-10 flex items-center justify-between">
@@ -93,12 +95,12 @@ export default function BracketUserCard({
                 aria-hidden
               />
               <span
-                className="pointer-events-none absolute -inset-px z-[1] rounded-full border border-white/[0.1]"
+                className="pointer-events-none absolute -inset-px z-1 rounded-full border border-white/10"
                 aria-hidden
               />
             </>
           ) : null}
-          <div className="relative z-[2] h-9 w-9 overflow-hidden rounded-full border border-white/20 bg-black">
+          <div className="relative z-2 h-9 w-9 overflow-hidden rounded-full border border-white/20 bg-black">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
@@ -160,6 +162,11 @@ export default function BracketUserCard({
           style={{ fontSize: 20 }}
         >
           #{row.rank}
+          {totalCount > 0 ? (
+            <span className="ml-1 align-baseline text-[10px] text-white/55">
+              /{totalCount}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -179,10 +186,10 @@ export default function BracketUserCard({
 
   const shellStyle = {
     background:
-      "linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))",
-    borderColor: "rgba(255,255,255,0.11)",
+      "linear-gradient(160deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.035) 44%, rgba(8,13,24,0.55) 100%)",
+    borderColor: "rgba(255,255,255,0.16)",
     boxShadow:
-      "0 6px 20px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.16)",
+      "0 8px 22px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(255,255,255,0.05)",
   };
 
   if (onClick) {
@@ -192,11 +199,11 @@ export default function BracketUserCard({
         onClick={onClick}
         className={[
           baseCardClass,
-          "w-full text-left transition hover:bg-white/8 active:scale-[0.99]",
+          "w-full text-left transition hover:bg-white/5 active:scale-[0.99]",
         ].join(" ")}
         style={shellStyle}
       >
-        <ShellGridOverlay roundedClassName="rounded-[14px]" />
+        <ShellGridOverlay roundedClassName="rounded-none" />
         {content}
       </button>
     );
@@ -204,7 +211,7 @@ export default function BracketUserCard({
 
   return (
     <div className={baseCardClass} style={shellStyle}>
-      <ShellGridOverlay roundedClassName="rounded-[14px]" />
+      <ShellGridOverlay roundedClassName="rounded-none" />
       {content}
     </div>
   );
