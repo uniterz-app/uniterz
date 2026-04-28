@@ -13,8 +13,6 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import BracketUserCard from "./BracketUserCard";
 import useBracketLeaderboard, {
-  BRACKET_LEADERBOARD_FIRST_LIMIT,
-  BRACKET_LEADERBOARD_PAGE_LIMIT,
   type BracketLeaderboardRow,
 } from "@/lib/leaderboards/useBracketLeaderboard";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
@@ -27,26 +25,18 @@ import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResul
 import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb";
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 
 type Props = {
   season?: string;
 };
 
-/** Each fetch chunk (30 then 20, 20, …) uses the same per-item stagger as the first chunk. */
+/** Top50 render stagger. */
 const BRACKET_CARD_STAGGER_STEP = 0.05;
 const BRACKET_CARD_ENTER_DURATION = 0.4;
 
 function bracketCardEnterDelay(index: number): number {
-  const chunkStart =
-    index < BRACKET_LEADERBOARD_FIRST_LIMIT
-      ? 0
-      : BRACKET_LEADERBOARD_FIRST_LIMIT +
-        Math.floor(
-          (index - BRACKET_LEADERBOARD_FIRST_LIMIT) /
-            BRACKET_LEADERBOARD_PAGE_LIMIT
-        ) *
-          BRACKET_LEADERBOARD_PAGE_LIMIT;
-  return (index - chunkStart) * BRACKET_CARD_STAGGER_STEP;
+  return index * BRACKET_CARD_STAGGER_STEP;
 }
 
 export default function BracketLeaderboardSection({ season: propSeason }: Props) {
@@ -56,27 +46,12 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
 
   const season = propSeason ?? getCurrentPlayoffSeason();
-  const { loading, loadingMore, error, rows, hasMore, loadMore } =
-    useBracketLeaderboard({ season });
-  const officialResults = usePlayoffOfficialResults(season);
-
-  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const el = loadMoreSentinelRef.current;
-    if (!el || loading || !hasMore || loadingMore) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting || loadingMore) return;
-        void loadMore();
-      },
-      { root: null, rootMargin: "200px 0px 0px 0px", threshold: 0 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [loading, hasMore, loadingMore, loadMore, rows.length]);
-
   const [uid, setUid] = useState<string | null>(auth.currentUser?.uid ?? null);
+  const { loading, error, rows, myRow, totalCount } = useBracketLeaderboard({
+    season,
+    uid,
+  });
+  const officialResults = usePlayoffOfficialResults(season);
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUid(u?.uid ?? null);
@@ -189,9 +164,19 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
   const openProfileFromSheet = useCallback(
     (row: BracketLeaderboardRow) => {
       const handleOrUid = row.handle || row.uid;
-      router.push(`${isMobile ? "/mobile" : "/web"}/u/${handleOrUid}`);
+      const base = isMobile ? "/mobile" : "/web";
+      const href = profileHrefWithRankingsReturn(
+        pathname,
+        base,
+        handleOrUid,
+        {
+          metric: "totalScore",
+          phase: "playoffs",
+        }
+      );
+      router.push(href);
     },
-    [isMobile, router]
+    [isMobile, pathname, router]
   );
 
   const PlayoffBracket = isMobile ? PlayoffFullBracketMobile : PlayoffFullBracketWeb;
@@ -268,6 +253,11 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
   return (
     <>
       <div className="space-y-2 px-3 pt-2">
+        {myRow ? (
+          <div className="pt-0.5">
+            <BracketUserCard row={myRow} totalCount={totalCount} language={language} />
+          </div>
+        ) : null}
         {titleBlock}
         <div className="space-y-2 pb-bottom-nav pt-2">
           {rows.map((row, index) => (
@@ -283,28 +273,12 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
             >
               <BracketUserCard
                 row={row}
+                totalCount={totalCount}
                 language={language}
                 onClick={() => openDetail(row)}
               />
             </motion.div>
           ))}
-          {hasMore ? (
-            <div
-              ref={loadMoreSentinelRef}
-              className="h-px w-full shrink-0"
-              aria-hidden
-            />
-          ) : null}
-          {loadingMore ? (
-            <div
-              className={[
-                "py-3 text-center text-[11px] text-white/50",
-                jp.className,
-              ].join(" ")}
-            >
-              {language === "en" ? "Loading…" : "読み込み中…"}
-            </div>
-          ) : null}
         </div>
       </div>
 

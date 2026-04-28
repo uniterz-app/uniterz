@@ -19,6 +19,7 @@ type ApiResponse = {
   ok: boolean;
   season?: string;
   count?: number;
+  totalCount?: number;
   rows?: BracketLeaderboardRow[];
   hasMore?: boolean;
   nextCursor?: string | null;
@@ -31,6 +32,7 @@ export const BRACKET_LEADERBOARD_PAGE_LIMIT = 20;
 
 type UseBracketLeaderboardParams = {
   season: string;
+  uid?: string | null;
   enabled?: boolean;
 };
 
@@ -39,6 +41,8 @@ type UseBracketLeaderboardResult = {
   loadingMore: boolean;
   error: string | null;
   rows: BracketLeaderboardRow[];
+  myRow: BracketLeaderboardRow | null;
+  totalCount: number;
   hasMore: boolean;
   loadMore: () => Promise<void>;
   refetch: () => Promise<void>;
@@ -47,11 +51,13 @@ type UseBracketLeaderboardResult = {
 export default function useBracketLeaderboard(
   params: UseBracketLeaderboardParams
 ): UseBracketLeaderboardResult {
-  const { season, enabled = true } = params;
+  const { season, uid = null, enabled = true } = params;
 
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [rows, setRows] = useState<BracketLeaderboardRow[]>([]);
+  const [myRow, setMyRow] = useState<BracketLeaderboardRow | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -71,6 +77,8 @@ export default function useBracketLeaderboard(
         setLoading(false);
         setLoadingMore(false);
         setRows([]);
+        setMyRow(null);
+        setTotalCount(0);
         setError(null);
         setHasMore(false);
         setNextCursor(null);
@@ -80,6 +88,8 @@ export default function useBracketLeaderboard(
       if (!season || !/^\d{4}$/.test(season)) {
         setLoading(false);
         setRows([]);
+        setMyRow(null);
+        setTotalCount(0);
         setError("invalid season");
         setHasMore(false);
         setNextCursor(null);
@@ -92,9 +102,10 @@ export default function useBracketLeaderboard(
       try {
         const q = new URLSearchParams({
           season,
-          limit: String(BRACKET_LEADERBOARD_FIRST_LIMIT),
+          limit: "50",
           startRank: "1",
         });
+        if (uid) q.set("uid", uid);
         const res = await fetch(`/api/bracket-leaderboard?${q}`, {
           method: "GET",
           cache: "no-store",
@@ -109,12 +120,20 @@ export default function useBracketLeaderboard(
 
         const nextRows = Array.isArray(json.rows) ? json.rows : [];
         setRows(nextRows);
+        setMyRow(json.myRow ?? null);
+        setTotalCount(
+          typeof json.totalCount === "number" && Number.isFinite(json.totalCount)
+            ? Math.max(0, Math.floor(json.totalCount))
+            : 0
+        );
         setHasMore(Boolean(json.hasMore));
         setNextCursor(json.nextCursor ?? null);
         setError(null);
       } catch (e: unknown) {
         if (e instanceof Error && e.name === "AbortError") return;
         setRows([]);
+        setMyRow(null);
+        setTotalCount(0);
         setHasMore(false);
         setNextCursor(null);
         setError(
@@ -126,7 +145,7 @@ export default function useBracketLeaderboard(
         }
       }
     },
-    [season, enabled]
+    [season, enabled, uid]
   );
 
   useEffect(() => {
@@ -184,6 +203,8 @@ export default function useBracketLeaderboard(
     loadingMore,
     error,
     rows,
+    myRow,
+    totalCount,
     hasMore,
     loadMore,
     refetch,

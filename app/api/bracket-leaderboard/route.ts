@@ -28,7 +28,9 @@ type ApiResponse = {
   ok: boolean;
   season?: string;
   count?: number;
+  totalCount?: number;
   rows?: BracketLeaderboardRow[];
+  myRow?: BracketLeaderboardRow | null;
   /** 次ページがある */
   hasMore?: boolean;
   /** 次リクエストに `cursor` として渡す opaque文字列 */
@@ -65,6 +67,7 @@ export async function GET(req: Request) {
     const adminDb = getAdminDb();
     const { searchParams } = new URL(req.url);
     const season = searchParams.get("season") ?? "";
+    const uid = (searchParams.get("uid") ?? "").trim();
 
     if (!season || !/^\d{4}$/.test(season)) {
       return NextResponse.json(
@@ -121,11 +124,15 @@ export async function GET(req: Request) {
 
     const fetchCap = Math.min(limit + 1, LIMIT_MAX + 1);
 
-    let query = adminDb
+    const baseQuery = adminDb
       .collection("playoffBrackets")
       .where("season", "==", season)
-      .orderBy("totalScore", "desc")
-      .limit(fetchCap);
+      .orderBy("totalScore", "desc");
+
+    const totalCountSnap = await baseQuery.count().get();
+    const totalCount = totalCountSnap.data().count;
+
+    let query = baseQuery.limit(fetchCap);
 
     if (cursorSnap) {
       query = query.startAfter(cursorSnap);
@@ -231,12 +238,67 @@ export async function GET(req: Request) {
     const nextCursor =
       hasMore && lastDoc ? encodeCursor(lastDoc.id) : null;
 
+    let myRow: BracketLeaderboardRow | null = null;
+    if (uid) {
+      const myDocId = `${season}_${uid}`;
+      const mySnap = await adminDb.collection("playoffBrackets").doc(myDocId).get();
+      if (mySnap.exists) {
+        const my = mySnap.data() as {
+          uid?: string;
+          totalScore?: unknown;
+          winnerPoints?: unknown;
+          gamesPoints?: unknown;
+          championPick?: unknown;
+          bracket?: { FINALS?: { winner?: unknown } };
+        };
+        const myScore = Number(my.totalScore ?? 0);
+        const higherCountSnap = await adminDb
+          .collection("playoffBrackets")
+          .where("season", "==", season)
+          .where("totalScore", ">", myScore)
+          .count()
+          .get();
+        const myRank = Number(higherCountSnap.data().count ?? 0) + 1;
+        const myUserSnap = await adminDb.collection("users").doc(uid).get();
+        const myUser = myUserSnap.data() as
+          | {
+              displayName?: string;
+              handle?: string;
+              photoURL?: string;
+              avatarUrl?: string;
+              plan?: string;
+            }
+          | undefined;
+        const rawChampion =
+          typeof my.championPick === "string" && my.championPick.trim()
+            ? my.championPick.trim()
+            : typeof my.bracket?.FINALS?.winner === "string" &&
+                my.bracket.FINALS.winner.trim()
+              ? my.bracket.FINALS.winner.trim()
+              : null;
+        myRow = {
+          uid,
+          displayName: myUser?.displayName?.trim() ?? "You",
+          handle: myUser?.handle?.trim() ?? null,
+          photoURL: myUser?.photoURL ?? myUser?.avatarUrl ?? null,
+          plan: myUser?.plan === "pro" ? "pro" : "free",
+          totalScore: myScore,
+          winnerPoints: Number(my.winnerPoints ?? 0),
+          gamesPoints: Number(my.gamesPoints ?? 0),
+          rank: myRank,
+          championPick: rawChampion,
+        };
+      }
+    }
+
     return NextResponse.json(
       {
         ok: true,
         season,
         count: rows.length,
+        totalCount,
         rows,
+        myRow,
         hasMore,
         nextCursor,
       } satisfies ApiResponse,
