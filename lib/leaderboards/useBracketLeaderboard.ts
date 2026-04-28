@@ -21,6 +21,7 @@ type ApiResponse = {
   count?: number;
   totalCount?: number;
   rows?: BracketLeaderboardRow[];
+  myRow?: BracketLeaderboardRow | null;
   hasMore?: boolean;
   nextCursor?: string | null;
   error?: string;
