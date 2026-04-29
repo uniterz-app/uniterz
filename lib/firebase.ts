@@ -18,16 +18,26 @@ import {
   where,
   Timestamp,
 } from "firebase/firestore";
+import { resolveFirebaseClientConfig } from "../packages/shared/src";
 
 // ★ 追加：Functions
 import { getFunctions, type Functions } from "firebase/functions";
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-};
+/**
+ * Next.js / Turbopack は `process.env` を丸ごと渡すと `NEXT_PUBLIC_*` を
+ * クライアント用にインライン展開できず undefined になることがある。
+ * 参照はここでキーごとに書く（readEnvValue のラベル名はそのまま使う）。
+ */
+const firebaseConfig = resolveFirebaseClientConfig({
+  NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  EXPO_PUBLIC_FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+});
 
 // --- SSR/Hot Reload 対策：多重初期化を回避 ---
 const app: FirebaseApp =

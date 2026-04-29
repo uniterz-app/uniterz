@@ -9,7 +9,7 @@ export const HAWKS_KNICKS_TEAM_IDS = ["nba-hawks", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Hawks";
 
-/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ3） */
+/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ5） */
 export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-hawks-knicks-2025-12-27",
@@ -115,6 +115,55 @@ export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
         "New York’s wings were a problem—Mikal Bridges and Josh Hart never found a steady rhythm scoring, from the perimeter, or with their decisions—so Atlanta could keep its defensive focus narrow, escape with a 109-108 win, and take the series lead.",
     },
   },
+  {
+    id: "h2h-hawks-knicks-2026-04-26",
+    dateEt: "2026-04-26",
+    dateJst: "2026-04-27",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 114,
+    scoreRight: 98,
+    /** Atlanta（Hawks）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["J. Landale"],
+    inactiveFooterSummary: {
+      ja:
+        "Knicksが敵地でシリーズを2勝2敗に戻した試合。最大の差はKarl-Anthony Townsの存在感。Townsは得点だけでなく、リバウンド、パスでもHawksの守備を崩し、プレーオフでトリプルダブルを記録した。Hawksはインサイドで後手に回り、Townsへの対応でヘルプが寄ると、Knicksの周辺選手にスペースを与える展開になった。\n" +
+        "Knicksは序盤から落ち着いていて、無理にBrunson頼みにせず、Townsを起点にハーフコートで優位を作った。HawksはCJ McCollumやTrae Young周辺のオフェンスで流れを作りたかったが、Knicksの守備強度に対して安定して得点を重ねられなかった。終盤はKnicksがリバウンドと守備で試合を締め、Hawksに大きな反撃の時間を与えなかった。",
+      en:
+        "On the road, the Knicks evened the series at 2-2. The biggest swing was Karl-Anthony Towns: he scored, rebounded, and passed through Atlanta’s defense, logging a playoff triple-double.\n" +
+        "The Hawks were a step slow inside—helping on Towns opened space for New York’s role players.\n" +
+        "The Knicks stayed composed from the opening minutes, built the half-court through Towns instead of forcing everything through Brunson, and held their defensive edge. Atlanta wanted flow from the CJ McCollum and Trae Young offense but could not stack points consistently against New York’s intensity. Late, the Knicks sealed it on the glass and at the defensive end, never giving the Hawks a real rally window.",
+    },
+  },
+  {
+    id: "h2h-hawks-knicks-2026-04-28",
+    dateEt: "2026-04-28",
+    dateJst: "2026-04-29",
+    seriesGameLabel: "Game 5",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 126,
+    scoreRight: 97,
+    /** New York（Knicks）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["J. Landale"],
+    inactiveFooterSummary: {
+      ja:
+        "Knicks 126 - 97 Hawks。欠場者：Knicks なし / Hawks Jock Landale。\n" +
+        "KnicksがホームでHawksを圧倒し、シリーズを3勝2敗とした。Game 4で掴んだ流れをそのまま持ち込み、序盤から攻守でHawksを上回った。最大の違いはJalen Brunsonの支配力。39得点・8アシスト・1ターンオーバーという内容で、得点役とゲームメイク役を高い精度で両立した。\n" +
+        "Brunsonはスクリーンを使ってズレを作り、ミドル、ドライブ、キックアウトを冷静に選択。Hawksの守備はBrunsonを止めにいくと周囲に展開され、逆にスペースを与えると自分で得点される苦しい状態になった。Karl-Anthony TownsとOG Anunobyも攻守で安定し、Knicksはチーム全体でHawksを押し込んだ。\n" +
+        "HawksはCJ McCollumが6得点に抑えられ、攻撃の第2軸を作れなかった。Trae Young周辺のプレーメイクだけではKnicksの守備を継続的に崩せず、オフェンスが単発になった。リバウンド、ペイント、守備強度でもKnicksが上回り、点差以上にシリーズの流れがKnicks側へ傾いた試合だった。",
+      en:
+        "Knicks 126, Hawks 97. Inactives: none for New York; Jock Landale for Atlanta.\n" +
+        "The Knicks ran away at home to take a 3-2 series lead, carrying over the momentum from Game 4 and controlling both ends from the opening stretch. The clearest difference was Jalen Brunson: 39 points, 8 assists, and 1 turnover as he both scored and ran the game at a high level of efficiency.\n" +
+        "Brunson used screens to create advantage, reading mid-ranges, drives, and kick-outs calmly. When Atlanta sent extra help, the defense got stretched; when the Hawks stayed home, he scored anyway—a lose-lose proposition. Karl-Anthony Towns and OG Anunoby were steady on both ends as New York overwhelmed Atlanta.\n" +
+        "CJ McCollum was held to 6 points, leaving the Hawks without a true second axis on offense. Trae Young’s playmaking alone could not crack the Knicks’ defense consistently, and the attack turned into one-off looks. New York also won the rebounding battle, the paint, and the intensity—more than the margin suggests, the series tilted toward the Knicks.",
+    },
+  },
 ];
 
 /** 左=NYK・右=ATL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -153,7 +202,7 @@ function hawksKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記6試合からの H2H 平均（小数1桁）。 */
+/** 上記8試合からの H2H 平均（小数1桁）。 */
 export function hawksKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

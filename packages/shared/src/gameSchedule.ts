@@ -1,0 +1,1 @@
+export const GAME_SCHEDULE_SEASON = "2025-26";

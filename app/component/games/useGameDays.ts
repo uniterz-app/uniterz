@@ -18,6 +18,7 @@ import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
   getCalendarMonthRangeInTimeZone,
+  getPreviousCalendarMonthRangeInTimeZone,
   getZonedYMD,
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
@@ -59,7 +60,7 @@ export function monthRowsToSortedGameDays(
 const GAME_DAYS_ROWS_CACHE_TTL_MS = 5 * 60 * 1000;
 const gameDaysRowsCache = new Map<
   string,
-  { rows: any[]; savedAt: number }
+  { rows: any[]; peerRowsForSeriesInference: any[]; savedAt: number }
 >();
 
 /**
@@ -79,6 +80,9 @@ export function useGameDays(
   }, [windowAnchor, timeZone]);
 
   const [rows, setRows] = useState<any[]>([]);
+  const [peerRowsForSeriesInference, setPeerRowsForSeriesInference] = useState<
+    any[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<string | null>(null);
 
@@ -98,6 +102,11 @@ export function useGameDays(
       if (fresh && rowsHaveId) {
         if (!alive) return;
         setRows(cached.rows);
+        setPeerRowsForSeriesInference(
+          cached.peerRowsForSeriesInference?.length
+            ? cached.peerRowsForSeriesInference
+            : cached.rows
+        );
         setLoading(false);
         return;
       }
@@ -110,8 +119,12 @@ export function useGameDays(
           windowAnchor,
           timeZone
         );
+        const prev = getPreviousCalendarMonthRangeInTimeZone(
+          windowAnchor,
+          timeZone
+        );
 
-        const q = query(
+        const qCurrent = query(
           ref,
           where("league", "==", league),
           where("season", "==", GAME_SCHEDULE_SEASON),
@@ -121,18 +134,51 @@ export function useGameDays(
           limit(GAME_DAYS_MONTH_QUERY_LIMIT)
         );
 
-        const snap = await getDocs(q);
+        const qPrev = query(
+          ref,
+          where("league", "==", league),
+          where("season", "==", GAME_SCHEDULE_SEASON),
+          where("startAtJst", ">=", Timestamp.fromDate(prev.start)),
+          where("startAtJst", "<", Timestamp.fromDate(prev.end)),
+          orderBy("startAtJst", "asc"),
+          limit(GAME_DAYS_MONTH_QUERY_LIMIT)
+        );
+
+        const [snapCurrent, snapPrev] = await Promise.all([
+          getDocs(qCurrent),
+          getDocs(qPrev),
+        ]);
 
         if (!alive) return;
 
-        const list = snap.docs.map((d) => ({
+        const list = snapCurrent.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         }));
+        const listPrev = snapPrev.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        const byId = new Map<string, any>();
+        for (const g of listPrev) {
+          const id = String((g as { id?: string })?.id ?? "");
+          if (id) byId.set(id, g);
+        }
+        for (const g of list) {
+          const id = String((g as { id?: string })?.id ?? "");
+          if (id) byId.set(id, g);
+        }
+        const mergedPeers = Array.from(byId.values());
+
         const savedAt = Date.now();
-        gameDaysRowsCache.set(cacheKey, { rows: list, savedAt });
+        gameDaysRowsCache.set(cacheKey, {
+          rows: list,
+          peerRowsForSeriesInference: mergedPeers,
+          savedAt,
+        });
         writeGamesByMonthCacheEntry(cacheKey, list);
         setRows(list);
+        setPeerRowsForSeriesInference(mergedPeers);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? "unknown error");
@@ -153,5 +199,11 @@ export function useGameDays(
     [rows, timeZone],
   );
 
-  return { gameDays, monthRows: rows, loading, error };
+  return {
+    gameDays,
+    monthRows: rows,
+    peerRowsForSeriesInference,
+    loading,
+    error,
+  };
 }

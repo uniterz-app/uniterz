@@ -54,8 +54,6 @@ type RawGame = {
   score?: any;
   liveMeta?: any;
   finalMeta?: any;
-  /** NBA プレーオフ掲時など（例: "r1"） */
-  playoffRound?: string;
 };
 
 function resolveCountsForRanking(r: RawGame): {
@@ -97,7 +95,6 @@ type Preview =
         score?: any;
         liveMeta?: any;
         finalMeta?: any;
-        playoffRound?: string;
       };
     };
 
@@ -262,13 +259,6 @@ const toSide = (x: RawSide) => {
   });
 };
 
-
-    const playoffRoundRaw = r?.playoffRound;
-    const playoffRound =
-      typeof playoffRoundRaw === "string" && playoffRoundRaw.trim()
-        ? playoffRoundRaw.trim()
-        : undefined;
-
     return {
       ok: true,
       normalized: {
@@ -281,14 +271,13 @@ const toSide = (x: RawSide) => {
         roundLabel: r?.roundLabel || "",
         countsForRanking,
         ...(seasonPhase ? { seasonPhase } : {}),
-        ...(seasonPhase === "playoffs" && playoffRound ? { playoffRound } : {}),
+        ...(playoffRound ? { playoffRound } : {}),
         status,
         home: toSide(r?.home),
         away: toSide(r?.away),
         score: r?.score ?? null,
         liveMeta: r?.liveMeta ?? null,
         finalMeta: r?.finalMeta ?? null,
-        ...(playoffRound ? { playoffRound } : {}),
       },
     };
   } catch (e: any) {
@@ -383,16 +372,13 @@ export default function GamesImportPage() {
             roundLabel: g.roundLabel ?? "",
             countsForRanking: g.countsForRanking,
             ...(g.seasonPhase ? { seasonPhase: g.seasonPhase } : {}),
-            ...(g.seasonPhase === "playoffs" && g.playoffRound
-              ? { playoffRound: g.playoffRound }
-              : {}),
+            ...(g.playoffRound ? { playoffRound: g.playoffRound } : {}),
             status: g.status,
             home: g.home,
             away: g.away,
             score: g.score ?? null,
             liveMeta: g.liveMeta ?? null,
             finalMeta: g.finalMeta ?? null,
-            ...(g.playoffRound ? { playoffRound: g.playoffRound } : {}),
             // 初期状態（確定前）
             final: false,
             homeScore: null,

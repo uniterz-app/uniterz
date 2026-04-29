@@ -9,7 +9,7 @@ export const MIN_DEN_TEAM_IDS = ["nba-nuggets", "nba-timberwolves"] as const;
 const H2H_LEFT = "Nuggets";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ4） */
+/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ5） */
 export const minDenH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-min-den-2025-10-27",
@@ -151,6 +151,32 @@ export const minDenH2HGames: NbaH2HGameCard[] = [
         "The Timberwolves took firm control with a 3-1 series lead.",
     },
   },
+  {
+    id: "h2h-min-den-2026-04-28",
+    dateEt: "2026-04-28",
+    dateJst: "2026-04-29",
+    seriesGameLabel: "Game 5",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 125,
+    scoreRight: 113,
+    /** Denver（Nuggets）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["A. Gordon"],
+    injuriesRight: ["A. Edwards", "D. DiVincenzo"],
+    inactiveFooterSummary: {
+      ja:
+        "Nuggets 125 - 113 Wolves。欠場者：Nuggets Aaron Gordon / Wolves Anthony Edwards, Donte DiVincenzo。\n" +
+        "Nuggetsがホームで勝利し、敗退を回避した試合。Nikola Jokicが27得点・12リバウンド・16アシストのトリプルダブルで試合全体を支配した。Jokicは自分で得点するだけでなく、Wolvesの守備のズレを見つけて味方に得点機会を作り続けた。Jamal Murrayが24得点、Spencer Jonesが20得点で続き、Jokic以外の得点源が機能したことも大きかった。\n" +
+        "WolvesはAnthony EdwardsとDonte DiVincenzoを欠いた影響が大きかった。特にEdwards不在で、苦しい時間帯に自力で得点を作る選手が足りなかった。Julius Randleは27得点を挙げたが、チーム全体では25ターンオーバーを喫し、Nuggetsに走られる場面が多かった。\n" +
+        "Denverは守備で圧をかけ、ターンオーバーから流れを作った。オフェンスではJokicを中心にボールが回り、Minnesotaの守備を何度も後手に回した。シリーズはWolvesが3勝2敗でリードしたままだが、Nuggetsは本来の形を取り戻し、Game 6へつなげた。",
+      en:
+        "Nuggets 125, Timberwolves 113. Out: Aaron Gordon (Denver); Anthony Edwards and Donte DiVincenzo (Minnesota).\n" +
+        "Denver stayed alive at home behind Nikola Jokić’s 27-12-16 triple-double. He not only scored but kept finding creases in Minnesota’s defense to create looks for others. Jamal Murray added 24 and Spencer Jones 20—key secondary scoring that mattered as much as Jokić’s line.\n" +
+        "Minnesota felt Edwards’ and DiVincenzo’s absences: without Ant, the Wolves lacked a shot-creator in tough minutes. Julius Randle scored 27, but the team committed 25 turnovers and too often let Denver get out in transition.\n" +
+        "The Nuggets pressured defensively and turned takeaways into momentum. Offensively they moved the ball through Jokić and repeatedly put the Wolves a step late rotationally. Minnesota still led the series 3-2, but Denver re-found its identity and carried something real into Game 6.",
+    },
+  },
 ];
 
 /** 左=DEN・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -189,7 +215,7 @@ function minDenH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記8試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記9試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function minDenH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
