@@ -49,23 +49,22 @@ export async function fetchPlayoffSeriesPeerGames(
   const roundLabel = String(subject.roundLabel ?? "");
   if (!isPlayoffStyleGameCard(phase, roundLabel)) return onlySubject();
 
-  const col = collection(db, "games");
-  const q1 = query(
-    col,
-    where("league", "==", league),
-    where("season", "==", seasonEq),
-    where("home.teamId", "==", h),
-    where("away.teamId", "==", a)
-  );
-  const q2 = query(
-    col,
-    where("league", "==", league),
-    where("season", "==", seasonEq),
-    where("home.teamId", "==", a),
-    where("away.teamId", "==", h)
-  );
-
   try {
+    const col = collection(db, "games");
+    const q1 = query(
+      col,
+      where("league", "==", league),
+      where("season", "==", seasonEq),
+      where("home.teamId", "==", h),
+      where("away.teamId", "==", a)
+    );
+    const q2 = query(
+      col,
+      where("league", "==", league),
+      where("season", "==", seasonEq),
+      where("home.teamId", "==", a),
+      where("away.teamId", "==", h)
+    );
     const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
     const byId = new Map<string, Record<string, unknown>>();
     for (const d of s1.docs) {
