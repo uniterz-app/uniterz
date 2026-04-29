@@ -172,12 +172,10 @@ export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
     injuriesRight: [],
     inactiveFooterSummary: {
       ja:
-        "76ers 113 - 97 Celtics。欠場者：76ers なし / Celtics なし。\n" +
         "76ersが敵地で勝利し、敗退を回避した試合。Joel Embiidが33得点・8アシストで中心となり、Celticsの守備を内外から崩した。Embiidはポストやミドルで得点するだけでなく、ヘルプを引きつけて周囲へ展開し、Philadelphiaの攻撃を落ち着かせた。Tyrese Maxeyも25得点・10リバウンドで、Embiidに依存しすぎない形を作った。\n" +
         "勝負を決めたのは第4Q。Celticsは終盤にシュートが完全に止まり、第4QのFGが3/22と大失速。76ersはそこを逃さず、28-11のランで一気に突き放した。BostonはJayson Tatumが24得点・16リバウンド、Jaylen Brownが22得点を記録したが、勝負どころでオフェンスの形を作れなかった。\n" +
         "Celticsはリードを作る時間帯もあったが、終盤は外角依存が強くなり、リングに圧力をかける攻撃が不足した。一方の76ersは守備強度を落とさず、リバウンドとトランジションでも集中を切らさなかった。シリーズはCeltics 3勝2敗のままだが、PhiladelphiaがGame 6へ望みをつないだ大きな勝利。",
       en:
-        "76ers 113, Celtics 97. No absences for either team.\n" +
         "Philadelphia earned a road win to stay alive. Joel Embiid led the way with 33 points and 8 assists, stressing Boston’s defense inside and out—not only scoring from the post and mid-range, but drawing help and moving the ball to keep the 76ers’ attack composed. Tyrese Maxey added 25 points and 10 rebounds, giving the team a real second engine beyond Embiid.\n" +
         "The game broke open in the fourth: Boston’s offense stalled (3-for-22 FG in the quarter) while Philadelphia ripped off a 28-11 run. Jayson Tatum had 24 and 16 rebounds, Jaylen Brown 22, but the Celtics could not generate quality offense in the clutch.\n" +
         "Boston had its stretches in control, but late in the game leaned too much on the perimeter and not enough on rim pressure. The 76ers never let their defense slip, and they stayed connected on the glass and in transition. Boston still leads the series 3-2, but it was a massive win to force Game 6.",

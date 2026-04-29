@@ -173,12 +173,10 @@ export const spursBlazersH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["D. Lillard"],
     inactiveFooterSummary: {
       ja:
-        "Spurs 114 - 95 Blazers。欠場者：Spurs David Jones / Blazers Damian Lillard。\n" +
         "SpursがBlazersを下し、シリーズ4勝1敗で突破を決めた試合。San Antonioは序盤から主導権を握り、攻守のバランスでPortlandを上回った。Victor Wembanyamaは17得点・14リバウンド・6ブロックを記録し、数字以上に守備面で大きな影響を与えた。リム周辺にWembanyamaがいることで、Blazersはペイントへの侵入をためらい、攻撃が外に偏った。\n" +
         "De’Aaron Foxは21得点を挙げ、特に第4Qに13得点を集中させて試合を締めた。Blazersが反撃の流れを作りかけても、Foxが自分で得点して試合を落ち着かせた。San Antonioは若いチームながら、終盤の処理が安定していた。\n" +
         "BlazersはDamian Lillard不在の影響が大きく、勝負どころで安定して得点を作る選手を欠いた。シリーズ全体を通して、SpursはWembanyamaの守備、Foxの終盤力、周辺選手の役割遂行が噛み合っていた。San Antonioにとっては、再建段階から次のステージへ進んだことを示すシリーズ突破だった。",
       en:
-        "Spurs 114, Trail Blazers 95. Out: David Jones (San Antonio), Damian Lillard (Portland).\n" +
         "San Antonio closed the series 4-1, seizing control early and winning the balance of play on both ends. Victor Wembanyama posted 17 points, 14 rebounds, and 6 blocks—his defensive impact was even larger than the line. With him anchoring the rim, Portland hesitated to attack the paint and the offense drifted outside.\n" +
         "De’Aaron Fox scored 21, including 13 in the fourth quarter to slam the door whenever the Blazers threatened a run. For a young team, San Antonio was notably steady in closing time.\n" +
         "Without Lillard, the Blazers lacked a reliable late-clock scorer. Across the series, the Spurs’ defense behind Wemby, Fox’s fourth-quarter shot-making, and the supporting cast’s execution all clicked—a breakthrough that marked the next step beyond the rebuild.",

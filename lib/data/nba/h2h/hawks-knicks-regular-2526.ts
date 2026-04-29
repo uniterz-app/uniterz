@@ -153,12 +153,10 @@ export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
     injuriesRight: ["J. Landale"],
     inactiveFooterSummary: {
       ja:
-        "Knicks 126 - 97 Hawks。欠場者：Knicks なし / Hawks Jock Landale。\n" +
         "KnicksがホームでHawksを圧倒し、シリーズを3勝2敗とした。Game 4で掴んだ流れをそのまま持ち込み、序盤から攻守でHawksを上回った。最大の違いはJalen Brunsonの支配力。39得点・8アシスト・1ターンオーバーという内容で、得点役とゲームメイク役を高い精度で両立した。\n" +
         "Brunsonはスクリーンを使ってズレを作り、ミドル、ドライブ、キックアウトを冷静に選択。Hawksの守備はBrunsonを止めにいくと周囲に展開され、逆にスペースを与えると自分で得点される苦しい状態になった。Karl-Anthony TownsとOG Anunobyも攻守で安定し、Knicksはチーム全体でHawksを押し込んだ。\n" +
         "HawksはCJ McCollumが6得点に抑えられ、攻撃の第2軸を作れなかった。CJを起点にした展開もKnicksの守備に封じられ、オフェンスが単発になった。リバウンド、ペイント、守備強度でもKnicksが上回り、点差以上にシリーズの流れがKnicks側へ傾いた試合だった。",
       en:
-        "Knicks 126, Hawks 97. Inactives: none for New York; Jock Landale for Atlanta.\n" +
         "The Knicks ran away at home to take a 3-2 series lead, carrying over the momentum from Game 4 and controlling both ends from the opening stretch. The clearest difference was Jalen Brunson: 39 points, 8 assists, and 1 turnover as he both scored and ran the game at a high level of efficiency.\n" +
         "Brunson used screens to create advantage, reading mid-ranges, drives, and kick-outs calmly. When Atlanta sent extra help, the defense got stretched; when the Hawks stayed home, he scored anyway—a lose-lose proposition. Karl-Anthony Towns and OG Anunoby were steady on both ends as New York overwhelmed Atlanta.\n" +
         "CJ McCollum was held to 6 points, leaving the Hawks without a true second axis, and the Knicks also stifled actions built around him—Atlanta’s offense never strung together consistent looks. New York also won the rebounding battle, the paint, and the intensity—more than the margin suggests, the series tilted toward the Knicks.",
