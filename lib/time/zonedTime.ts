@@ -273,3 +273,17 @@ export function shiftCalendarMonthStart(
   return new Date(ms);
 }
 
+/**
+ * 直前の暦月の [start, end)（end は当月1日0時・排他）。
+ * スケジュールの「当月だけ取得」で月を跨いだプレーオフシリーズ推定に使う。
+ */
+export function getPreviousCalendarMonthRangeInTimeZone(
+  anchor: Date,
+  timeZone: string
+): { start: Date; end: Date } {
+  return {
+    start: shiftCalendarMonthStart(anchor, -1, timeZone),
+    end: shiftCalendarMonthStart(anchor, 0, timeZone),
+  };
+}
+

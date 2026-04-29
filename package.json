@@ -7,6 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "native:start": "npm --prefix apps/native run start",
+    "native:ios": "npm --prefix apps/native run ios",
+    "native:android": "npm --prefix apps/native run android",
     "fix:nba:games": "tsx scripts/fix-nba-games.ts",
     "fix:nba:posts": "tsx scripts/fix-nba-posts.ts",
     "share:tunnel": "node scripts/sns-share-tunnel.mjs"
@@ -24,6 +27,7 @@
     "firebase-admin": "^13.5.0",
     "framer-motion": "^12.35.1",
     "gsap": "^3.14.2",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.545.0",
     "next": "^16.0.7",
     "next-pwa": "^5.6.0",

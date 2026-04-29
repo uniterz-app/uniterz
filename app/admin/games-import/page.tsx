@@ -231,33 +231,34 @@ function normalizeRow(r: RawGame): Preview {
     }
 
     // colorHex / teamId は存在するときのみキーを持たせる
-const toSide = (x: RawSide) => {
-  // 文字列だけ渡された場合（例: "浦和レッズ"）
-  if (typeof x === "string") {
-    const mappedId = TEAM_IDS[x];
-    if (!mappedId) {
-      console.warn(`⚠ TEAM_IDS に存在しないチーム名: ${x}`);
-    }
-    return {
-      name: x,
-      teamId: mappedId,
+    const toSide = (x: RawSide) => {
+      // 文字列だけ渡された場合（例: "浦和レッズ"）
+      if (typeof x === "string") {
+        const mappedId = TEAM_IDS[x];
+        if (!mappedId) {
+          console.warn(`⚠ TEAM_IDS に存在しないチーム名: ${x}`);
+        }
+        return {
+          name: x,
+          teamId: mappedId,
+        };
+      }
+
+      // オブジェクトとして渡された場合
+      const name = x?.name ?? "";
+      const mappedId = x?.teamId ?? TEAM_IDS[name];
+
+      if (!mappedId) {
+        console.warn(`⚠ TEAM_IDS に存在しないチーム名: ${name}`);
+      }
+
+      return omitUndefined({
+        name,
+        teamId: mappedId,
+        ...(x?.colorHex ? { colorHex: x.colorHex } : {}),
+      });
     };
-  }
 
-  // オブジェクトとして渡された場合
-  const name = x?.name ?? "";
-  const mappedId = x?.teamId ?? TEAM_IDS[name];
-
-  if (!mappedId) {
-    console.warn(`⚠ TEAM_IDS に存在しないチーム名: ${name}`);
-  }
-
-  return omitUndefined({
-    name,
-    teamId: mappedId,
-    ...(x?.colorHex ? { colorHex: x.colorHex } : {}),
-  });
-};
     return {
       ok: true,
       normalized: {
@@ -270,7 +271,7 @@ const toSide = (x: RawSide) => {
         roundLabel: r?.roundLabel || "",
         countsForRanking,
         ...(seasonPhase ? { seasonPhase } : {}),
-        ...(seasonPhase === "playoffs" && playoffRound ? { playoffRound } : {}),
+        ...(playoffRound ? { playoffRound } : {}),
         status,
         home: toSide(r?.home),
         away: toSide(r?.away),
@@ -371,16 +372,13 @@ export default function GamesImportPage() {
             roundLabel: g.roundLabel ?? "",
             countsForRanking: g.countsForRanking,
             ...(g.seasonPhase ? { seasonPhase: g.seasonPhase } : {}),
-            ...(g.seasonPhase === "playoffs" && g.playoffRound
-              ? { playoffRound: g.playoffRound }
-              : {}),
+            ...(g.playoffRound ? { playoffRound: g.playoffRound } : {}),
             status: g.status,
             home: g.home,
             away: g.away,
             score: g.score ?? null,
             liveMeta: g.liveMeta ?? null,
             finalMeta: g.finalMeta ?? null,
-            ...(g.playoffRound ? { playoffRound: g.playoffRound } : {}),
             // 初期状態（確定前）
             final: false,
             homeScore: null,

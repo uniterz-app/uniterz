@@ -207,11 +207,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      Game days（アンカー日の暦月1ヶ月分を取得）
   ========================= */
-  const { gameDays, monthRows, loading: loadingDays } = useGameDays(
-    league,
-    dayTimeZone,
-    anchorForGameDays
-  );
+  const { gameDays, monthRows, peerRowsForSeriesInference, loading: loadingDays } =
+    useGameDays(league, dayTimeZone, anchorForGameDays);
 
   const { teams, nameById } = useScheduleTeams(league);
 
@@ -973,7 +970,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       >
         <ScheduleList
           games={filteredGames}
-          extraPeerGamesForSeriesInference={monthRows}
+          extraPeerGamesForSeriesInference={peerRowsForSeriesInference}
           dense={dense}
           loading={loading}
           league={league}
