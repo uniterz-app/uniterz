@@ -205,7 +205,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [dayTimeZone, league, selectedByLeague, todayKey]);
 
   /* =========================
-     Game days（アンカー日の暦月1ヶ月分を取得）
+     Game days（アンカー日の暦日±3日＝計7日分を取得しストリップ用）
   ========================= */
   const { gameDays, monthRows, peerRowsForSeriesInference, loading: loadingDays } =
     useGameDays(league, dayTimeZone, anchorForGameDays);
@@ -507,7 +507,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   });
 
   /* =========================
-     Games（開いた暦月をまとめて取得し、選択日で絞り込み）
+     Games（選択日の1日分を取得）
   ========================= */
   const { games, loading: loadingDayQuery } = useGamesByDate(
     league,

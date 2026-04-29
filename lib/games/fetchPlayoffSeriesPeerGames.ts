@@ -85,3 +85,57 @@ export async function fetchPlayoffSeriesPeerGames(
     return onlySubject();
   }
 }
+
+/**
+ * 日付窓が狭い一覧用。窓内のプレーオフ試合ごとに同一シリーズの全試合を追加取得し、
+ * `inferPlayoffSeriesStandingFromPeers` 用の peer プールを暦月一括取得時と同等にする。
+ * シリーズ単位でクエリは dedupe（同一カードの重複取得なし）。
+ */
+export async function mergePlayoffSeriesPeersForWindowGames(
+  windowRows: ReadonlyArray<Record<string, unknown> & { id?: string }>
+): Promise<Record<string, unknown>[]> {
+  const byId = new Map<string, Record<string, unknown>>();
+  for (const row of windowRows) {
+    const id = String(row.id ?? "");
+    if (id) byId.set(id, { ...row, id });
+  }
+
+  const seriesKeySeen = new Set<string>();
+  const subjects: Array<Record<string, unknown> & { id?: string }> = [];
+
+  for (const row of windowRows) {
+    if (row.season == null) continue;
+    const h = rawTeamIdFromSide(row.home);
+    const a = rawTeamIdFromSide(row.away);
+    if (!h || !a) continue;
+    const phase = normalizeSeasonPhase(row.seasonPhase);
+    const roundLabel = String(row.roundLabel ?? "");
+    if (!isPlayoffStyleGameCard(phase, roundLabel)) continue;
+
+    const league = normalizeLeague(row.league as any);
+    const [t1, t2] = [h, a].sort();
+    const key = `${league}\0${String(row.season)}\0${t1}\0${t2}\0${roundLabel}`;
+    if (seriesKeySeen.has(key)) continue;
+    seriesKeySeen.add(key);
+    subjects.push(row);
+  }
+
+  if (subjects.length === 0) {
+    return Array.from(byId.values());
+  }
+
+  const peerLists = await Promise.all(
+    subjects.map((s) => fetchPlayoffSeriesPeerGames(s))
+  );
+
+  for (const peers of peerLists) {
+    for (const p of peers) {
+      const id = String(p.id ?? "");
+      if (!id) continue;
+      const prev = byId.get(id);
+      byId.set(id, prev ? { ...p, ...prev } : { ...p });
+    }
+  }
+
+  return Array.from(byId.values());
+}

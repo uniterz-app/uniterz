@@ -287,3 +287,14 @@ export function getPreviousCalendarMonthRangeInTimeZone(
   };
 }
 
+/** 翌暦月の [start, end)（end は翌々月1日0時・排他） */
+export function getNextCalendarMonthRangeInTimeZone(
+  anchor: Date,
+  timeZone: string
+): { start: Date; end: Date } {
+  return {
+    start: shiftCalendarMonthStart(anchor, 1, timeZone),
+    end: shiftCalendarMonthStart(anchor, 2, timeZone),
+  };
+}
+

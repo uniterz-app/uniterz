@@ -17,15 +17,16 @@ import { normalizeLeague } from "@/lib/leagues";
 import {
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
-  getCalendarMonthRangeInTimeZone,
-  getPreviousCalendarMonthRangeInTimeZone,
-  getZonedYMD,
+  getPlusMinusDaysRangeInTimeZone,
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
-import { writeGamesByMonthCacheEntry } from "./useGamesByDate";
+import { mergePlayoffSeriesPeersForWindowGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 
-/** 暦月1本分の試合取得でも足りる上限（多試合日・複数リーグ想定） */
-const GAME_DAYS_MONTH_QUERY_LIMIT = 500;
+/** アンカー±3日（計7暦日）分の取得上限 */
+const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
+
+/** 日付ストリップ用：アンカーの前後に含める暦日数（今日含め前後3日＝計7日） */
+const GAME_DAYS_PLUS_MINUS = 3;
 
 /** 月内の games 行から、タイムゾーン基準の「試合がある日」を重複なく昇順で返す */
 export function monthRowsToSortedGameDays(
@@ -65,7 +66,7 @@ const gameDaysRowsCache = new Map<
 
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * windowAnchor が属するタイムゾーンの暦月1ヶ月分だけ Firestore から取得する（同一月内の日付移動では再取得しない）。
+ * アンカー日をタイムゾーンの暦日として ±GAME_DAYS_PLUS_MINUS 日の窓だけ Firestore から取得する。
  */
 export function useGameDays(
   rawLeague: League,
@@ -74,10 +75,10 @@ export function useGameDays(
 ) {
   const league = normalizeLeague(rawLeague);
 
-  const windowKey = useMemo(() => {
-    const { year, month } = getZonedYMD(windowAnchor, timeZone);
-    return `${year}-${String(month).padStart(2, "0")}`;
-  }, [windowAnchor, timeZone]);
+  const anchorDateKey = useMemo(
+    () => toDateKeyInTimeZone(windowAnchor, timeZone),
+    [windowAnchor, timeZone]
+  );
 
   const [rows, setRows] = useState<any[]>([]);
   const [peerRowsForSeriesInference, setPeerRowsForSeriesInference] = useState<
@@ -92,7 +93,7 @@ export function useGameDays(
     async function load() {
       setErr(null);
 
-      const cacheKey = `${league}|${timeZone}|${windowKey}`;
+      const cacheKey = `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;
       const cached = gameDaysRowsCache.get(cacheKey);
       const fresh =
         cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;
@@ -115,70 +116,41 @@ export function useGameDays(
 
       try {
         const ref = collection(db, "games");
-        const { start, end } = getCalendarMonthRangeInTimeZone(
+        const { start, end } = getPlusMinusDaysRangeInTimeZone(
           windowAnchor,
-          timeZone
-        );
-        const prev = getPreviousCalendarMonthRangeInTimeZone(
-          windowAnchor,
-          timeZone
+          timeZone,
+          GAME_DAYS_PLUS_MINUS
         );
 
-        const qCurrent = query(
+        const q = query(
           ref,
           where("league", "==", league),
           where("season", "==", GAME_SCHEDULE_SEASON),
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(GAME_DAYS_MONTH_QUERY_LIMIT)
+          limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
         );
 
-        const qPrev = query(
-          ref,
-          where("league", "==", league),
-          where("season", "==", GAME_SCHEDULE_SEASON),
-          where("startAtJst", ">=", Timestamp.fromDate(prev.start)),
-          where("startAtJst", "<", Timestamp.fromDate(prev.end)),
-          orderBy("startAtJst", "asc"),
-          limit(GAME_DAYS_MONTH_QUERY_LIMIT)
-        );
-
-        const [snapCurrent, snapPrev] = await Promise.all([
-          getDocs(qCurrent),
-          getDocs(qPrev),
-        ]);
+        const snap = await getDocs(q);
 
         if (!alive) return;
 
-        const list = snapCurrent.docs.map((d) => ({
+        const list = snap.docs.map((d) => ({
           id: d.id,
           ...d.data(),
         }));
-        const listPrev = snapPrev.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        const byId = new Map<string, any>();
-        for (const g of listPrev) {
-          const id = String((g as { id?: string })?.id ?? "");
-          if (id) byId.set(id, g);
-        }
-        for (const g of list) {
-          const id = String((g as { id?: string })?.id ?? "");
-          if (id) byId.set(id, g);
-        }
-        const mergedPeers = Array.from(byId.values());
+
+        const peerRows = await mergePlayoffSeriesPeersForWindowGames(list);
 
         const savedAt = Date.now();
         gameDaysRowsCache.set(cacheKey, {
           rows: list,
-          peerRowsForSeriesInference: mergedPeers,
+          peerRowsForSeriesInference: peerRows,
           savedAt,
         });
-        writeGamesByMonthCacheEntry(cacheKey, list);
         setRows(list);
-        setPeerRowsForSeriesInference(mergedPeers);
+        setPeerRowsForSeriesInference(peerRows);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? "unknown error");
@@ -192,7 +164,7 @@ export function useGameDays(
     return () => {
       alive = false;
     };
-  }, [league, timeZone, windowKey]);
+  }, [league, timeZone, anchorDateKey]);
 
   const gameDays = useMemo(
     () => monthRowsToSortedGameDays(rows, timeZone),
