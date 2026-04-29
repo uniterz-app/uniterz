@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Center, Environment, useGLTF } from "@react-three/drei";
+import { Center, useGLTF } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { useEffect, useMemo, useRef } from "react";
@@ -379,7 +379,6 @@ export default function UniterzLogo3DBackground({
         />
 
         <Logo3D scale={logoScale} />
-        <Environment preset="city" />
 
         <EffectComposer multisampling={0}>
           <Bloom
