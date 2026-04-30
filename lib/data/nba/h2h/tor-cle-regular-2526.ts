@@ -9,7 +9,7 @@ export const TOR_CLE_TEAM_IDS = ["nba-raptors", "nba-cavaliers"] as const;
 const H2H_LEFT = "Cavaliers";
 const H2H_RIGHT = "Raptors";
 
-/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ4） */
+/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ5） */
 export const torCleH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-tor-cle-2025-10-31",
@@ -149,6 +149,26 @@ export const torCleH2HGames: NbaH2HGameCard[] = [
         "The Raptors won a gritty, low-scoring fight to even the series at 2-2.",
     },
   },
+  {
+    id: "h2h-tor-cle-2026-05-02",
+    dateEt: "2026-05-02",
+    dateJst: "2026-05-03",
+    seriesGameLabel: "Game 5",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 125,
+    scoreRight: 120,
+    /** Toronto（Raptors）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["I. Quickley"],
+    inactiveFooterSummary: {
+      ja:
+        "Clevelandは何度も12点差を追う展開から後半に逆転。第3Q終盤からの27-8ランで流れを変え、Dennis Schroderが第4Qに11得点。James Hardenは23得点9リバウンド5アシスト、Evan Mobleyも23得点。TorontoはRJ Barrettが25得点、Ja’Kobe Walterが20得点を挙げたが届かなかった。シリーズはCleveland 3-2。",
+      en:
+        "Cleveland erased multiple 12-point deficits before taking control in the second half. A 27-8 run late in the third flipped momentum, and Dennis Schröder scored 11 in the fourth. James Harden finished with 23, 9, and 5; Evan Mobley also had 23. RJ Barrett scored 25 for Toronto and Ja’Kobe Walter 20, but it wasn’t enough. Cleveland leads the series 3-2.",
+    },
+  },
 ];
 
 /** 左=CLE・右=TOR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -188,7 +208,7 @@ function torCleH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記8試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function torCleH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

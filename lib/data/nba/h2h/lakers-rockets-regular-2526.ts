@@ -9,7 +9,7 @@ export const LAKERS_ROCKETS_TEAM_IDS = ["nba-lakers", "nba-rockets"] as const;
 const H2H_LEFT = "Lakers";
 const H2H_RIGHT = "Rockets";
 
-/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ4） */
+/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ5） */
 export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-lakers-rockets-2025-12-25",
@@ -152,6 +152,26 @@ export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
         "Houston avoided the sweep; the Lakers’ lead now stands at 3-1.",
     },
   },
+  {
+    id: "h2h-lakers-rockets-2026-05-02",
+    dateEt: "2026-05-02",
+    dateJst: "2026-05-03",
+    seriesGameLabel: "Game 5",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 93,
+    scoreRight: 99,
+    /** Houston（Rockets）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["L. Doncic"],
+    injuriesRight: ["S. Adams", "K. Durant", "F. VanVleet"],
+    inactiveFooterSummary: {
+      ja:
+        "Houstonは2試合連続で敗退を回避。Jabari Smith Jr.が22得点、Tari Easonが18得点。守備でLakersの攻撃を重くし、Los AngelesはFG42.1%、3P25.9%と低調だった。LeBron Jamesは25得点7アシストだったが、終盤まで流れを変え切れなかった。シリーズはLakers 3-2。",
+      en:
+        "Houston stayed alive for the second straight game. Jabari Smith Jr. scored 22 and Tari Eason 18, and the Rockets made the Lakers’ offense grind—Los Angeles shot just 42.1% from the field and 25.9% from three. LeBron James had 25 points and 7 assists but could not fully swing the game late. The Lakers still lead the series 3-2.",
+    },
+  },
 ];
 
 /** 左=LAL・右=HOU のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -190,7 +210,7 @@ function lakersRocketsH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function lakersRocketsH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

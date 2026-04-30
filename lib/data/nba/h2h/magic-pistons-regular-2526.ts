@@ -10,7 +10,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Magic";
 
 /**
- * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ4）
+ * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ5）
  * 出典: StatMuse 等の公開スコアに基づく（レギュラー直接対決 2-2）
  */
 export const magicPistonsH2HGames: NbaH2HGameCard[] = [
@@ -152,6 +152,26 @@ export const magicPistonsH2HGames: NbaH2HGameCard[] = [
         "MagicはFG32.6%と苦しみながらも、終盤の守備で勝ち切った。Desmond Baneが22点、Franz Wagnerが19点、Paolo Bancheroが18点。PistonsはCade Cunninghamが25点を記録したが、8ターンオーバーが重く、終盤に得点が止まった。Magicは残り約5分から7-1のランで主導権を奪い、94-88で勝利。Franz Wagnerはふくらはぎ負傷で途中退場。",
       en:
         "Orlando grinded to a 32.6% FG night but closed it out with late defense. Desmond Bane had 22, Franz Wagner 19, and Paolo Banchero 18. Cade Cunningham scored 25 for Detroit, but eight turnovers loomed large and the Pistons went cold down the stretch. The Magic seized control on a 7-1 run over the final ~five minutes in a 94-88 win. Wagner exited with a calf injury.",
+    },
+  },
+  {
+    id: "h2h-magic-pistons-2026-05-02",
+    dateEt: "2026-05-02",
+    dateJst: "2026-05-03",
+    seriesGameLabel: "Game 5",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 116,
+    scoreRight: 109,
+    /** Orlando（Magic）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["K. Huerter"],
+    injuriesRight: ["J. Isaac", "F. Wagner"],
+    inactiveFooterSummary: {
+      ja:
+        "DetroitはCade Cunninghamの45得点で敗退を回避。Tobias Harrisが23得点8アシスト、Ausar Thompsonも15リバウンド5スティールで支えた。OrlandoはPaolo Bancheroが45得点9リバウンド7アシストと対抗したが、終盤のクラッチでDetroitに押し切られた。シリーズはOrlando 3-2。",
+      en:
+        "Detroit stayed alive behind 45 points from Cade Cunningham. Tobias Harris added 23 and 8 assists, and Ausar Thompson chipped in 15 rebounds and 5 steals. Paolo Banchero countered with 45, 9, and 7 for Orlando, but the Pistons closed the clutch minutes to win on the road. Orlando still leads the series 3-2.",
     },
   },
 ];
