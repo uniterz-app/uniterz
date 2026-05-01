@@ -27,7 +27,7 @@ export function useTodayGames() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [games, setGames] = useState<NativeGameRow[]>([]);
-  /** ±10 日クエリの全行（プレーオフのシリーズ勝敗推定に使用） */
+  /** ±21 日クエリの全行（プレーオフのシリーズ勝敗推定に使用） */
   const [peerGamesForSeries, setPeerGamesForSeries] = useState<NativeGameRow[]>([]);
   const [dateKeysWithGames, setDateKeysWithGames] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
@@ -98,9 +98,9 @@ export function useTodayGames() {
     async function loadDateKeysWithGames() {
       try {
         const fromDate = new Date(selectedDate);
-        fromDate.setDate(fromDate.getDate() - 10);
+        fromDate.setDate(fromDate.getDate() - 21);
         const toDate = new Date(selectedDate);
-        toDate.setDate(toDate.getDate() + 10);
+        toDate.setDate(toDate.getDate() + 21);
         const { start } = getDayRangeInTimeZone(fromDate, TIMEZONE_JST);
         const { end } = getDayRangeInTimeZone(toDate, TIMEZONE_JST);
 

@@ -25,6 +25,10 @@ export type PairTeamStatsView = {
   avgFor: number;
   avgAgainst: number;
   diff: number;
+  /** ホーム試合での勝率（%）。Web `GameTeamStats` の Home 行と同じ */
+  homeWinPct: number;
+  /** アウェイ試合での勝率（%） */
+  awayWinPct: number;
   homeW: number;
   homeL: number;
   awayW: number;
@@ -43,8 +47,14 @@ export type PairTeamStatsView = {
 function buildView(t: TeamDoc): PairTeamStatsView {
   const avgFor = t.gamesPlayed > 0 ? t.pointsForTotal / t.gamesPlayed : 0;
   const avgAgainst = t.gamesPlayed > 0 ? t.pointsAgainstTotal / t.gamesPlayed : 0;
-  const homeL = Math.max(0, (t.homeGames ?? 0) - (t.homeWins ?? 0));
-  const awayL = Math.max(0, (t.awayGames ?? 0) - (t.awayWins ?? 0));
+  const homeGames = t.homeGames ?? 0;
+  const awayGames = t.awayGames ?? 0;
+  const homeWinPct =
+    homeGames > 0 ? (100 * (t.homeWins ?? 0)) / homeGames : 0;
+  const awayWinPct =
+    awayGames > 0 ? (100 * (t.awayWins ?? 0)) / awayGames : 0;
+  const homeL = Math.max(0, homeGames - (t.homeWins ?? 0));
+  const awayL = Math.max(0, awayGames - (t.awayWins ?? 0));
   const ofrtg =
     typeof t.ofrtg === "number" && Number.isFinite(t.ofrtg) ? t.ofrtg : undefined;
   const dfrtg =
@@ -55,6 +65,8 @@ function buildView(t: TeamDoc): PairTeamStatsView {
     avgFor: Number(avgFor.toFixed(1)),
     avgAgainst: Number(avgAgainst.toFixed(1)),
     diff: Number((avgFor - avgAgainst).toFixed(1)),
+    homeWinPct,
+    awayWinPct,
     homeW: t.homeWins ?? 0,
     homeL,
     awayW: t.awayWins ?? 0,

@@ -44,7 +44,6 @@ import {
   resolveTeamPrimaryColor,
 } from "./teamColors";
 import PredictModal, { type PredictModalMatchPreview } from "./PredictModal";
-import type { PredictHeroFromRect } from "./predictHeroTransition";
 import PredictNextGameNativeModal from "./PredictNextGameNativeModal";
 import GameDetailModal from "./GameDetailModal";
 import {
@@ -323,9 +322,6 @@ export default function GamesHomeScreen({
     null
   );
   const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
-  /** 一覧カード measure → 予想プレビューへのヒーロー遷移用 */
-  const [predictHeroFromRect, setPredictHeroFromRect] =
-    useState<PredictHeroFromRect | null>(null);
   /** 試合終了・未投稿で開くモバイル Web オーバーレイ相当（スコア入力なし） */
   const [predictSpectatorFinalOnly, setPredictSpectatorFinalOnly] = useState(false);
   /** 新規投稿直後：Web の PredictNextGameModal 相当 */
@@ -735,13 +731,9 @@ export default function GamesHomeScreen({
     goNextDay();
   }
 
-  function openPredictModal(
-    targetGame?: Record<string, unknown>,
-    fromRect?: PredictHeroFromRect | null
-  ) {
+  function openPredictModal(targetGame?: Record<string, unknown>) {
     const sourceGame = targetGame ?? selectedGame;
     if (!sourceGame) {
-      setPredictHeroFromRect(null);
       setPredictSpectatorFinalOnly(false);
       return;
     }
@@ -756,7 +748,6 @@ export default function GamesHomeScreen({
       setPredictSpectatorFinalOnly(false);
       setSelectedGame(sourceGame);
       setIsPredictModalOpen(false);
-      setPredictHeroFromRect(null);
       return;
     }
     if (existingPostId) {
@@ -767,7 +758,6 @@ export default function GamesHomeScreen({
     setScoreHome("");
     setScoreAway("");
     setPredictToolsTab(null);
-    setPredictHeroFromRect(fromRect ?? null);
     setSelectedGame(sourceGame);
     setIsPredictModalOpen(true);
 
@@ -986,7 +976,10 @@ export default function GamesHomeScreen({
       <View style={styles.topControlRow}>
         <View style={styles.leagueRow}>
           <Pressable
-            style={styles.leagueChipGlass}
+            style={({ pressed }) => [
+              styles.leagueChip,
+              pressed && styles.leagueChipPressed,
+            ]}
             onPress={() => {
               const currentIdx = LEAGUE_OPTIONS.findIndex(
                 (option) => option.id === selectedLeague
@@ -996,36 +989,7 @@ export default function GamesHomeScreen({
               setSelectedLeague(LEAGUE_OPTIONS[nextIdx].id);
             }}
           >
-            <LinearGradient
-              pointerEvents="none"
-              colors={[
-                "rgba(255,255,255,0.14)",
-                "rgba(130,150,200,0.12)",
-                "rgba(8,12,28,0.55)",
-                "rgba(3,5,16,0.78)",
-              ]}
-              locations={[0, 0.42, 0.52, 1]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0)"]}
-              locations={[0, 1]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 0.38 }}
-              style={styles.leagueChipGlassTopSheen}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.22)"]}
-              locations={[0, 1]}
-              start={{ x: 0.5, y: 0.55 }}
-              end={{ x: 0.5, y: 1 }}
-              style={styles.leagueChipGlassBottomVignette}
-            />
-            <Text style={styles.leagueChipTextGlass}>
+            <Text style={styles.leagueChipText}>
               {selectedLeagueOption.label}
             </Text>
           </Pressable>
@@ -1186,7 +1150,6 @@ export default function GamesHomeScreen({
 
       <PredictModal
         visible={isPredictModalOpen}
-        heroFromRect={predictHeroFromRect}
         matchPreview={predictModalMatchPreview}
         t={t}
         predictHomeTeamLabel={predictModalHomeLabel}
@@ -1204,7 +1167,6 @@ export default function GamesHomeScreen({
         onSubmit={() => void handleSubmitPrediction()}
         onClose={() => {
           setIsPredictModalOpen(false);
-          setPredictHeroFromRect(null);
           setPredictSpectatorFinalOnly(false);
           setSelectedGame(null);
         }}
@@ -1262,7 +1224,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: -spacing.xs,
     paddingTop: 12,
-    paddingBottom: 12,
+    /** ロゴとシアンラインを一段に見せるため下は詰める */
+    paddingBottom: 8,
     borderRadius: 0,
     overflow: "hidden",
     borderWidth: 0,
@@ -1275,11 +1238,14 @@ const styles = StyleSheet.create({
   },
   /** authEnglishDisplay の ink + AuthFormBranding のトラッキングに近い */
   brandText: {
-    color: "#e6e4de",
+    color: "rgba(203,220,245,0.92)",
     fontSize: 20,
+    lineHeight: 22,
     fontWeight: "400",
-    letterSpacing: 3.6,
+    letterSpacing: 5.4,
     fontFamily: DISPLAY_FONT_FAMILY,
+    includeFontPadding: false,
+    marginBottom: 0,
   },
   headerTextBlock: {
     flex: 1,
@@ -1361,54 +1327,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  /** リーグ名：角丸四角＋積層ガラス（上ハイライト＋下すみ） */
-  leagueChipGlass: {
-    minHeight: 28,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  /** Web `LeagueTabs` アクティブタブ相当：bg-white/10・border-white/20・rounded-lg */
+  leagueChip: {
+    minHeight: 32,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
-    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    backgroundColor: "rgba(6,10,24,0.25)",
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(80, 160, 255, 0.4)",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 7,
-      },
-      android: { elevation: 3 },
-      default: {
-        shadowColor: "rgba(80, 160, 255, 0.35)",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.35,
-        shadowRadius: 6,
-      },
-    }),
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
-  leagueChipGlassTopSheen: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    height: "50%",
-    opacity: 0.9,
+  leagueChipPressed: {
+    backgroundColor: "rgba(255,255,255,0.14)",
   },
-  leagueChipGlassBottomVignette: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  leagueChipTextGlass: {
+  leagueChipText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 14,
     lineHeight: 18,
-    fontWeight: "800",
+    fontWeight: "700",
     fontFamily: DISPLAY_FONT_FAMILY,
-    letterSpacing: 0.45,
+    letterSpacing: 1.12,
     textTransform: "uppercase",
-    zIndex: 1,
     includeFontPadding: false,
   },
   dayButton: {
@@ -1998,10 +1939,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(15,21,38,0.86)",
-    color: colors.textPrimary,
+    color: "#ffffff",
+    fontFamily: NUMERIC_FONT_FAMILY,
     fontSize: typography.body,
+    lineHeight: 20,
+    fontWeight: "700",
+    letterSpacing: -0.35,
     paddingHorizontal: spacing.md,
     textAlign: "center",
+    fontVariant: ["tabular-nums"],
   },
   scoreSeparator: {
     color: colors.textPrimary,

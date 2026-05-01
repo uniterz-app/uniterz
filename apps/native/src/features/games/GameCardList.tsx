@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   type LayoutChangeEvent,
   Platform,
@@ -21,7 +21,6 @@ import {
   MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY,
 } from "./matchCardCtaGradients";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
-import type { PredictHeroFromRect } from "./predictHeroTransition";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import {
   LIST_CARD_GRID_LAYER_OPACITY,
@@ -126,10 +125,7 @@ type GameCardListProps = {
   language: "ja" | "en";
   t: GamesTexts;
   styles: ScreenStyles;
-  openPredictModal: (
-    game: Record<string, unknown>,
-    fromRect?: PredictHeroFromRect | null
-  ) => void;
+  openPredictModal: (game: Record<string, unknown>) => void;
   resolveGameTeamName: (
     side: unknown,
     fallback: unknown,
@@ -182,8 +178,6 @@ export default function GameCardList(props: GameCardListProps) {
     renderWinnerLabel,
   } = props;
 
-  const shellRefs = useRef<Record<string, View | null>>({});
-
   return (
     <View style={styles.listArea}>
       <View style={styles.listContent}>
@@ -226,10 +220,6 @@ export default function GameCardList(props: GameCardListProps) {
           return (
             <View
               key={rowKey}
-              ref={(el) => {
-                if (el) shellRefs.current[rowKey] = el;
-                else delete shellRefs.current[rowKey];
-              }}
               style={[styles.gameCardShell, isPredicted && styles.gameCardShellPredicted]}
               collapsable={false}
             >
@@ -238,16 +228,7 @@ export default function GameCardList(props: GameCardListProps) {
               </View>
               <Pressable
                 style={styles.cardPressableBody}
-                onPress={() => {
-                  const node = shellRefs.current[rowKey];
-                  if (node) {
-                    node.measureInWindow((x, y, w, h) => {
-                      openPredictModal(game, { x, y, width: w, height: h });
-                    });
-                  } else {
-                    openPredictModal(game, null);
-                  }
-                }}
+                onPress={() => openPredictModal(game)}
               >
               <LinearGradient
                 pointerEvents="none"

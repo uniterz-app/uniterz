@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   type LayoutChangeEvent,
   KeyboardAvoidingView,
@@ -12,7 +12,7 @@ import {
   UIManager,
   View,
 } from "react-native";
-import Animated from "react-native-reanimated";
+import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, spacing } from "../../theme/tokens";
@@ -22,14 +22,22 @@ import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
-import type { PredictHeroFromRect } from "./predictHeroTransition";
-import { predictBlockFadeUpEnter, predictPanelRevealEnter } from "./predictMotion";
 import {
   MODAL_PREVIEW_GRID_LAYER_OPACITY,
   MODAL_PREVIEW_GRID_LINE_COLOR,
   shellGridHorizontalLineTopsCentered,
   shellGridVerticalLineLeftsCentered,
 } from "./matchCardShellGrid";
+import {
+  PREDICT_MODAL_EXIT_COMPLETION_MS,
+  predictBlockFadeUpEnter,
+  predictModalBackdropEnter,
+  predictModalBackdropExit,
+  predictModalPreviewEnter,
+  predictModalSheetEnter,
+  predictModalSheetExit,
+  predictPanelRevealEnter,
+} from "./predictMotion";
 
 /** #RRGGBB → rgba（カラー帯用） */
 function hexToRgba(hex: string, alpha: number): string {
@@ -55,6 +63,8 @@ const PREVIEW_NUMERIC = Platform.select({
   android: "Oxanium_700Bold",
   default: "Oxanium_700Bold",
 });
+/** Web `scoreInputClass` の `resultStatsMetricNumClass`（Oxanium・tabular・bold・tracking-tight）に相当 */
+const SCORE_INPUT_FONT = PREVIEW_NUMERIC;
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -82,6 +92,46 @@ function MatchPreviewShellBlur() {
     );
   }
   return <View style={s.matchPreviewBlurFallback} />;
+}
+
+function ToolPanelGridOverlay() {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const step = 22;
+  const vLines = useMemo(() => {
+    const out: number[] = [];
+    const max = Math.max(0, Math.round(size.width) - 1);
+    for (let x = 0; x <= max; x += step) out.push(x);
+    if (max > 0 && out[out.length - 1] !== max) out.push(max);
+    return out;
+  }, [size.width]);
+  const hLines = useMemo(() => {
+    const out: number[] = [];
+    const max = Math.max(0, Math.round(size.height) - 1);
+    for (let y = 0; y <= max; y += step) out.push(y);
+    if (max > 0 && out[out.length - 1] !== max) out.push(max);
+    return out;
+  }, [size.height]);
+  return (
+    <View
+      pointerEvents="none"
+      style={s.toolGridLayer}
+      onLayout={(e) => {
+        const w = e.nativeEvent.layout.width;
+        const h = e.nativeEvent.layout.height;
+        if (Math.abs(w - size.width) < 0.5 && Math.abs(h - size.height) < 0.5) return;
+        setSize({ width: w, height: h });
+      }}
+    >
+      <View style={[StyleSheet.absoluteFillObject, { opacity: 0.32 }]}>
+        {vLines.map((x) => (
+          <View key={`tool-v-${x}`} style={[s.toolGridVLine, { left: x }]} />
+        ))}
+        {hLines.map((y) => (
+          <View key={`tool-h-${y}`} style={[s.toolGridHLine, { top: y }]} />
+        ))}
+      </View>
+    </View>
+  );
 }
 
 /** 予想モーダル最上段：試合一覧の MatchCard 相当（Web オーバーレイと同順） */
@@ -344,8 +394,6 @@ type PredictModalProps = {
   isEditingPrediction: boolean;
   onSubmit: () => void;
   onClose: () => void;
-  /** 一覧カードの画面上矩形。指定時はプレビューまでヒーロー風モーフ */
-  heroFromRect: PredictHeroFromRect | null;
   /** 試合終了・未投稿: Web オーバーレイ同様スコア入力・送信を出さない */
   spectatorFinalNoPost?: boolean;
   /** タブ（市場・H2H・スタッツ）用の実データ: Firestore `posts` / `teams` および peer 試合 */
@@ -364,9 +412,11 @@ type PredictModalProps = {
 function GlassPanel({
   children,
   variant = "form",
+  showGrid = false,
 }: {
   children: React.ReactNode;
   variant?: "form" | "tool";
+  showGrid?: boolean;
 }) {
   return (
     <View
@@ -386,6 +436,7 @@ function GlassPanel({
         />
       )}
       <View style={s.glassPanelTint} pointerEvents="none" />
+      {showGrid ? <ToolPanelGridOverlay /> : null}
       <View
         style={
           variant === "form" ? s.glassPanelContentForm : s.glassPanelContentTool
@@ -415,72 +466,138 @@ export default function PredictModal({
   isEditingPrediction,
   onSubmit,
   onClose,
-  heroFromRect,
   spectatorFinalNoPost = false,
   predictData = null,
 }: PredictModalProps) {
-  void heroFromRect;
+  const reduceMotion = useReducedMotion() ?? false;
   const canSubmit =
     Boolean(winner) && !predictSubmitting && scoreHome !== "" && scoreAway !== "";
 
   /**
-   * Web `ScheduleList` オーバーレイ（モバイル）: dim は即表示、MatchCard 相当は motion 外で即表示、
-   * `PredictionFormV2` のみ pageContainer + fadeUp スタッガー。ここではプレビュー即表示、タブ以降のみ fadeUp。
+   * Web `PredictionFormV2` の pageContainer stagger に相当（delayChildren 30ms + 45ms×index）
    */
-  const blockIn = (_index: number) => undefined;
-  const toolPanelIn = undefined;
+  const blockIn = (staggerIndex: number) =>
+    reduceMotion ? undefined : predictBlockFadeUpEnter(staggerIndex);
+  const toolPanelIn = reduceMotion ? undefined : predictPanelRevealEnter();
 
+  const backdropEnter = reduceMotion ? undefined : predictModalBackdropEnter();
+  const backdropExit = reduceMotion ? undefined : predictModalBackdropExit();
+  const sheetEnter = reduceMotion ? undefined : predictModalSheetEnter();
+  const sheetExit = reduceMotion ? undefined : predictModalSheetExit();
+  const previewEnter = reduceMotion ? undefined : predictModalPreviewEnter();
+
+  const [layersVisible, setLayersVisible] = useState(visible);
+  const [exitingUi, setExitingUi] = useState(false);
+  const closeAnimLockRef = useRef(false);
+  const closeAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setLayersVisible(true);
+      setExitingUi(false);
+      closeAnimLockRef.current = false;
+    }
+  }, [visible]);
+
+  useEffect(
+    () => () => {
+      if (closeAnimTimerRef.current) {
+        clearTimeout(closeAnimTimerRef.current);
+        closeAnimTimerRef.current = null;
+      }
+    },
+    []
+  );
+
+  const modalChromeVisible = visible || exitingUi;
   const hasTool = Boolean(predictToolsTab);
+  /** プレビュー有無でタブ行の stagger インデックスをずらす（Web と同趣旨の縦スタッガー） */
+  const tabsStaggerIndex = matchPreview ? 1 : 0;
   const scoreStagger = hasTool ? 2 : 1;
   const submitStagger = hasTool ? 3 : 2;
-  const requestClose = onClose;
+
+  /** ×・背景タップ・Android 戻る：閉じるアニメ後に親へ通知（親が即 visible=false にしないため exitingUi でモーダルを維持） */
+  function scheduleCloseAfterExitAnimation() {
+    if (closeAnimLockRef.current) return;
+    if (reduceMotion) {
+      onClose();
+      return;
+    }
+    closeAnimLockRef.current = true;
+    setExitingUi(true);
+    setLayersVisible(false);
+    if (closeAnimTimerRef.current) clearTimeout(closeAnimTimerRef.current);
+    closeAnimTimerRef.current = setTimeout(() => {
+      closeAnimTimerRef.current = null;
+      closeAnimLockRef.current = false;
+      onClose();
+      setExitingUi(false);
+    }, PREDICT_MODAL_EXIT_COMPLETION_MS);
+  }
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={s.root}>
-        <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
-          {(Platform.OS === "ios" || Platform.OS === "android") && (
-            <BlurView
-              intensity={Platform.OS === "ios" ? 28 : 22}
-              tint="dark"
-              {...(Platform.OS === "android"
-                ? { blurMethod: "dimezisBlurViewSdk31Plus" as const, blurReductionFactor: 4 }
-                : {})}
-              style={StyleSheet.absoluteFillObject}
-            />
-          )}
-          {/** Web `bg-black/35` 相当。フェードなし（即表示） */}
-          <View style={s.backdropDim} pointerEvents="none" />
-          <Pressable
+    <Modal
+      visible={modalChromeVisible}
+      transparent
+      animationType="none"
+      onRequestClose={scheduleCloseAfterExitAnimation}
+    >
+      {modalChromeVisible ? (
+        <View style={s.root} key="predict-modal-mounted">
+          {layersVisible ? (
+            <>
+          <Animated.View
+            entering={backdropEnter}
+            exiting={backdropExit}
             style={StyleSheet.absoluteFillObject}
-            onPress={requestClose}
-            accessibilityRole="button"
-          />
-        </View>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={s.kav}
-          pointerEvents="box-none"
-        >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={s.scrollContent}
-            style={s.scroll}
-            pointerEvents="auto"
+            pointerEvents="box-none"
           >
-            {/** Web オーバーレイ: 上段カード即表示、予想フォーム部のみ fadeUp スタッガー */}
-            <View style={s.modalContent}>
-              {matchPreview ? (
-                <View>
-                  <PredictMatchPreview
-                    data={matchPreview}
-                    onClose={requestClose}
-                    closeLabel={t.close}
-                  />
-                </View>
-              ) : null}
-              <Animated.View style={s.predictToolsRow} entering={blockIn(0)}>
+            {(Platform.OS === "ios" || Platform.OS === "android") && (
+              <BlurView
+                intensity={Platform.OS === "ios" ? 28 : 22}
+                tint="dark"
+                {...(Platform.OS === "android"
+                  ? { blurMethod: "dimezisBlurViewSdk31Plus" as const, blurReductionFactor: 4 }
+                  : {})}
+                style={StyleSheet.absoluteFillObject}
+              />
+            )}
+            <View style={s.backdropDim} pointerEvents="none" />
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={scheduleCloseAfterExitAnimation}
+              accessibilityRole="button"
+            />
+          </Animated.View>
+          <Animated.View
+            entering={sheetEnter}
+            exiting={sheetExit}
+            style={s.modalSheetWrap}
+            pointerEvents="box-none"
+          >
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+              style={s.kav}
+              pointerEvents="box-none"
+            >
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={s.scrollContent}
+                style={s.scroll}
+                pointerEvents="auto"
+              >
+                <View style={s.modalContent}>
+                  {matchPreview ? (
+                    <Animated.View entering={previewEnter} collapsable={false}>
+                      <PredictMatchPreview
+                        data={matchPreview}
+                        onClose={scheduleCloseAfterExitAnimation}
+                        closeLabel={t.close}
+                      />
+                    </Animated.View>
+                  ) : null}
+              <Animated.View style={s.predictToolsRow} entering={blockIn(tabsStaggerIndex)}>
                 <Pressable
                   style={[
                     s.predictToolTab,
@@ -536,16 +653,26 @@ export default function PredictModal({
               </Animated.View>
 
               {predictToolsTab ? (
-                <Animated.View entering={toolPanelIn}>
-                  <GlassPanel variant="tool">
-                    <Text style={s.predictToolsPanelKicker}>
-                      {predictToolsTab === "h2h"
-                        ? t.tabH2h
-                        : predictToolsTab === "market"
-                          ? t.tabMarket
-                          : t.tabStats}
-                    </Text>
-                    <View style={s.predictToolsPanelDivider} />
+                <Animated.View
+                  key={`predict-tool-${predictToolsTab}`}
+                  entering={toolPanelIn}
+                >
+                  <GlassPanel
+                    variant="tool"
+                    showGrid={
+                      predictToolsTab === "h2h" ||
+                      predictToolsTab === "market" ||
+                      predictToolsTab === "stats"
+                    }
+                  >
+                    {predictToolsTab === "stats" ? (
+                      <>
+                        <Text style={s.predictToolsPanelKicker}>
+                          {t.tabStats}
+                        </Text>
+                        <View style={s.predictToolsPanelDivider} />
+                      </>
+                    ) : null}
                     {predictData && matchPreview ? (
                       <PredictToolTabContent
                         tab={predictToolsTab}
@@ -567,87 +694,41 @@ export default function PredictModal({
                 </Animated.View>
               ) : null}
 
-              {spectatorFinalNoPost ? (
-                <Animated.View entering={blockIn(scoreStagger)}>
-                  <GlassPanel variant="form">
-                    <Text style={s.spectatorHint}>{t.postGameSpectatorHint}</Text>
-                  </GlassPanel>
-                </Animated.View>
-              ) : (
+              {!spectatorFinalNoPost ? (
                 <>
                   <Animated.View entering={blockIn(scoreStagger)}>
                     <GlassPanel variant="form">
                       <Text style={s.predictSectionTitle}>{t.scorePredictTitle}</Text>
                       <View style={s.scoreGrid}>
                         <View style={s.scoreCol}>
-                          {matchPreview ? (
-                            <LinearGradient
-                              pointerEvents="none"
-                              colors={[
-                                hexToRgba(matchPreview.homePalette.primary, 0.2),
-                                hexToRgba(matchPreview.homePalette.primary, 0.04),
-                                "rgba(0,0,0,0)",
-                              ]}
-                              start={{ x: 0, y: 0.5 }}
-                              end={{ x: 1, y: 0.5 }}
-                              style={s.scoreColTint}
-                            />
-                          ) : null}
-                          <Text style={s.teamNameLabel} numberOfLines={2}>
+                          <Text style={s.teamNameLabel} numberOfLines={1}>
                             {predictHomeTeamLabel || "HOME"}
                           </Text>
-                          <TextInput
-                            value={scoreHome}
-                            onChangeText={setScoreHome}
-                            keyboardType="number-pad"
-                            style={[
-                              s.scoreInput,
-                              matchPreview && {
-                                borderColor: hexToRgba(
-                                  matchPreview.homePalette.primary,
-                                  0.45
-                                ),
-                                backgroundColor: "rgba(255,255,255,0.08)",
-                              },
-                            ]}
-                            placeholder={t.scoreFieldPlaceholder}
-                            placeholderTextColor="rgba(255,255,255,0.35)"
-                          />
+                          <View style={s.scoreInputWrap}>
+                            <TextInput
+                              value={scoreHome}
+                              onChangeText={setScoreHome}
+                              keyboardType="number-pad"
+                              style={s.scoreInput}
+                              placeholder={t.scoreFieldPlaceholder}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                            />
+                          </View>
                         </View>
                         <View style={s.scoreCol}>
-                          {matchPreview ? (
-                            <LinearGradient
-                              pointerEvents="none"
-                              colors={[
-                                "rgba(0,0,0,0)",
-                                hexToRgba(matchPreview.awayPalette.primary, 0.1),
-                                hexToRgba(matchPreview.awayPalette.primary, 0.22),
-                              ]}
-                              start={{ x: 0, y: 0.5 }}
-                              end={{ x: 1, y: 0.5 }}
-                              style={s.scoreColTint}
-                            />
-                          ) : null}
-                          <Text style={s.teamNameLabel} numberOfLines={2}>
+                          <Text style={s.teamNameLabel} numberOfLines={1}>
                             {predictAwayTeamLabel || "AWAY"}
                           </Text>
-                          <TextInput
-                            value={scoreAway}
-                            onChangeText={setScoreAway}
-                            keyboardType="number-pad"
-                            style={[
-                              s.scoreInput,
-                              matchPreview && {
-                                borderColor: hexToRgba(
-                                  matchPreview.awayPalette.primary,
-                                  0.45
-                                ),
-                                backgroundColor: "rgba(255,255,255,0.08)",
-                              },
-                            ]}
-                            placeholder={t.scoreFieldPlaceholder}
-                            placeholderTextColor="rgba(255,255,255,0.35)"
-                          />
+                          <View style={s.scoreInputWrap}>
+                            <TextInput
+                              value={scoreAway}
+                              onChangeText={setScoreAway}
+                              keyboardType="number-pad"
+                              style={s.scoreInput}
+                              placeholder={t.scoreFieldPlaceholder}
+                              placeholderTextColor="rgba(255,255,255,0.35)"
+                            />
+                          </View>
                         </View>
                       </View>
                       {isSoccerPredict ? (
@@ -701,11 +782,15 @@ export default function PredictModal({
                     </Pressable>
                   </Animated.View>
                 </>
-              )}
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
+              ) : null}
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </Animated.View>
+            </>
+          ) : null}
+        </View>
+      ) : null}
     </Modal>
   );
 }
@@ -713,6 +798,11 @@ export default function PredictModal({
 const s = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  /** 下からスライドするシート全体（KeyboardAvoidingView の親） */
+  modalSheetWrap: {
+    flex: 1,
+    zIndex: 1,
   },
   backdropDim: {
     ...StyleSheet.absoluteFillObject,
@@ -789,6 +879,24 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.035)",
   },
+  toolGridLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  toolGridVLine: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: "rgba(148,163,184,0.14)",
+  },
+  toolGridHLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(148,163,184,0.14)",
+  },
   glassPanelContentForm: {
     position: "relative",
     zIndex: 2,
@@ -827,49 +935,44 @@ const s = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 6,
   },
-  spectatorHint: {
-    color: "rgba(226,232,240,0.88)",
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: "500",
-    textAlign: "center",
-  },
   scoreGrid: {
     flexDirection: "row",
     gap: 12,
   },
   scoreCol: {
     flex: 1,
-    gap: 8,
-    position: "relative",
-    overflow: "hidden",
-    borderRadius: 12,
+    gap: 6,
   },
-  scoreColTint: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 12,
+  scoreInputWrap: {
+    borderRadius: 10,
+    overflow: "hidden",
   },
   teamNameLabel: {
-    zIndex: 1,
-    color: colors.textPrimary,
-    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 12,
+    lineHeight: 14,
     fontWeight: "700",
-    textAlign: "center",
+    textAlign: "left",
+    paddingHorizontal: 2,
   },
-  /** scoreInputClass: rounded-xl, border-white/15, text-base, px-3.5, py-2.5 */
+  /** scoreInputClass: Oxanium + tabular-nums + font-bold + tracking-tight, text-base */
   scoreInput: {
     zIndex: 1,
-    minHeight: 44,
-    borderRadius: 12,
+    minHeight: 38,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    color: "#ffffff",
+    fontFamily: SCORE_INPUT_FONT,
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: "700",
+    letterSpacing: -0.35,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     textAlign: "center",
+    fontVariant: ["tabular-nums"],
   },
   soccerHint: {
     marginTop: 8,
@@ -1042,11 +1145,18 @@ const s = StyleSheet.create({
     minHeight: 48,
   },
   matchPreviewVsText: {
-    fontFamily: PREVIEW_DISPLAY,
+    fontFamily: PREVIEW_NUMERIC,
     fontSize: 24,
     lineHeight: 26,
+    fontWeight: "700",
+    letterSpacing: 0.15,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
     color: "rgba(255,255,255,0.96)",
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   /** `PlayoffSeriesScoreInline` を包む（旧シリーズ行 Text 相当） */
   matchPreviewSeriesRow: {

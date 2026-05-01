@@ -162,7 +162,8 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     width: "100%",
     height: 2,
-    marginTop: 12,
+    /** ロゴ直下に寄せる（GamesHomeScreen の UNITERZ と隙間を詰める） */
+    marginTop: 2,
     borderRadius: 0,
     ...Platform.select({
       ios: {
