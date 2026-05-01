@@ -9,7 +9,7 @@ export const HAWKS_KNICKS_TEAM_IDS = ["nba-hawks", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Hawks";
 
-/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ5） */
+/** 2025-26 ニックス対ホークス（レギュラー3 + プレーオフ6） */
 export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-hawks-knicks-2025-12-27",
@@ -162,6 +162,26 @@ export const hawksKnicksH2HGames: NbaH2HGameCard[] = [
         "CJ McCollum was held to 6 points, leaving the Hawks without a true second axis, and the Knicks also stifled actions built around him—Atlanta’s offense never strung together consistent looks. New York also won the rebounding battle, the paint, and the intensity—more than the margin suggests, the series tilted toward the Knicks.",
     },
   },
+  {
+    id: "h2h-hawks-knicks-2026-05-01",
+    dateEt: "2026-05-01",
+    dateJst: "2026-05-02",
+    seriesGameLabel: "Game 6",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 140,
+    scoreRight: 89,
+    /** Atlanta（Hawks）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["J. Landale"],
+    inactiveFooterSummary: {
+      ja:
+        "Knicksがシリーズ4勝2敗で突破。1Qを40-15、前半を83-36で終えて試合を決めた。OG Anunobyが29得点、Mikal Bridgesが24得点、Jalen Brunsonが17得点8アシスト。Karl-Anthony Townsもトリプルダブル級の内容で、Knicksが攻守ともにHawksを圧倒した。HawksはJalen Johnsonが21得点したが、序盤から完全に流れを失い、立て直せなかった。",
+      en:
+        "The Knicks closed out the series 4-2. They broke it open with a 40-15 first quarter and led 83-36 at halftime. OG Anunoby scored 29, Mikal Bridges 24, and Jalen Brunson had 17 points and 8 assists; Karl-Anthony Towns flirted with a triple-double as New York dominated both ends. Jalen Johnson had 21 for Atlanta, but the Hawks lost the game early and never recovered.",
+    },
+  },
 ];
 
 /** 左=NYK・右=ATL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -200,7 +220,7 @@ function hawksKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記8試合からの H2H 平均（小数1桁）。 */
+/** 上記9試合からの H2H 平均（小数1桁）。 */
 export function hawksKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

@@ -9,7 +9,7 @@ export const SIXERS_CELTICS_TEAM_IDS = ["nba-76ers", "nba-celtics"] as const;
 const H2H_LEFT = "Celtics";
 const H2H_RIGHT = "76ers";
 
-/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ5） */
+/** 2025-26 Celtics vs 76ers（レギュラー4 + プレーオフ6） */
 export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-sixers-celtics-2025-10-22",
@@ -179,6 +179,28 @@ export const sixersCelticsH2HGames: NbaH2HGameCard[] = [
         "Philadelphia earned a road win to stay alive. Joel Embiid led the way with 33 points and 8 assists, stressing Boston’s defense inside and out—not only scoring from the post and mid-range, but drawing help and moving the ball to keep the 76ers’ attack composed. Tyrese Maxey added 25 points and 10 rebounds, giving the team a real second engine beyond Embiid.\n" +
         "The game broke open in the fourth: Boston’s offense stalled (3-for-22 FG in the quarter) while Philadelphia ripped off a 28-11 run. Jayson Tatum had 24 and 16 rebounds, Jaylen Brown 22, but the Celtics could not generate quality offense in the clutch.\n" +
         "Boston had its stretches in control, but late in the game leaned too much on the perimeter and not enough on rim pressure. The 76ers never let their defense slip, and they stayed connected on the glass and in transition. Boston still leads the series 3-2, but it was a massive win to force Game 6.",
+    },
+  },
+  {
+    id: "h2h-sixers-celtics-2026-05-01",
+    dateEt: "2026-05-01",
+    dateJst: "2026-05-02",
+    seriesGameLabel: "Game 6",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 93,
+    scoreRight: 106,
+    /** Philadelphia（76ers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "※Jayson Tatumは試合中に左ふくらはぎの違和感で退いた。\n" +
+        "シリーズは3勝3敗、Game 7へ。76ersが序盤から主導権を握り、Celticsを押し切った。Tyrese Maxeyが30得点、Paul Georgeが23得点、Joel Embiidが19得点10リバウンド8アシスト。CelticsはJaylen Brownが18得点、Tatumが17得点だったが、攻撃が重く、後半も流れを戻せなかった。",
+      en:
+        "Jayson Tatum exited during the game with left calf discomfort.\n" +
+        "The series is tied 3-3 heading to Game 7. Philadelphia seized control early and never let Boston back in. Tyrese Maxey scored 30, Paul George 23, and Joel Embiid posted 19 points, 10 rebounds, and 8 assists. Jaylen Brown had 18 for the Celtics and Tatum 17 before leaving, but Boston’s offense stayed heavy-legged and could not flip momentum in the second half.",
     },
   },
 ];
