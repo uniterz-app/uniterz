@@ -91,6 +91,8 @@ export default function WebResultPostPage() {
         market={state.market ?? undefined}
         pointsDistribution={state.pointsDistribution}
         language={language}
+        viewerUid={uid}
+        gamesRoutePrefix="/web"
       />
     </div>
   );

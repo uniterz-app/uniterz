@@ -9,6 +9,28 @@ import type { Language } from "@/lib/i18n/language";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
+import {
+  buildDotsFromDistribution,
+  CHART_H,
+  CHART_W,
+  clampChartScore,
+  GRID_YS,
+  SCORE_CHART_MAX,
+  MEAN_LINE_STROKE,
+  MEDIAN_LINE_STROKE,
+  PAD_B,
+  PAD_L,
+  PAD_R,
+  PAD_T,
+  PEER_DOT_FILL,
+  PLOT_BOTTOM,
+  PLOT_H,
+  PLOT_W,
+  scoreToY,
+  YOU_CORE_FILL,
+  YOU_CORE_STROKE,
+  YOU_HALO_FILL,
+} from "@/lib/results/resultPointsDistributionChartModel";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { roundMetricDecimals } from "@/lib/format/metricDecimals";
 
@@ -62,110 +84,11 @@ type Props = {
   compact?: boolean;
 };
 
-/** チャート縦軸の表示上限（pointsV3 が連勝・アップセットで 10 超でもここで頭打ち） */
-const SCORE_MIN = 0;
-const SCORE_CHART_MAX = 10;
-/** 勝者的中の下限（スコア 0〜4 と 4〜10 で縦の割り当てを変える） */
-const SCORE_HIT_FLOOR = 4;
-/**
- * プロット高さのうち 0〜4 が占める割合。小さいほど 0 と 4 が縦に近づく（4〜10 を広く使う）。
- */
-const PLOT_HEIGHT_SHARE_0_TO_4 = 0.07;
-const CHART_W = 320;
-const CHART_H = 200;
-const PAD_L = 36;
-const PAD_R = 12;
-const PAD_T = 8;
-const PAD_B = 28;
+const MEDIAN_LEGEND_FILL = "#22d3ee";
+const MEAN_LEGEND_FILL = "#fb7185";
 
 const FLOW_EASE = [0.22, 1, 0.36, 1] as const;
 
-/** 他ユーザーの点（スレート寄りのラベンダー） */
-const PEER_DOT_FILL = "rgba(196, 181, 253, 0.52)";
-/** 自分の点（アンバー系・グローも同色） */
-const YOU_HALO_FILL = "rgba(251, 191, 36, 0.22)";
-const YOU_CORE_FILL = "#fbbf24";
-const YOU_CORE_STROKE = "rgba(255, 252, 241, 0.9)";
-/** 中央値ガイド（図の水平線・凡例で共通色）— 暗背景で判別しやすいシアン */
-const MEDIAN_LINE_STROKE = "rgba(34, 211, 238, 0.88)";
-const MEDIAN_LEGEND_FILL = "#22d3ee";
-/** 平均ガイド — 中央値と寒暖で対比するローズ */
-const MEAN_LINE_STROKE = "rgba(251, 113, 133, 0.88)";
-const MEAN_LEGEND_FILL = "#fb7185";
-
-function clamp(n: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, n));
-}
-
-/** 決定的ジッター（インデックスのみ、同データで同配置） */
-function jitter01(i: number, salt: number) {
-  const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
-  return x - Math.floor(x);
-}
-
-function clampChartScore(raw: number): number {
-  return clamp(raw, SCORE_MIN, SCORE_CHART_MAX);
-}
-
-function scoreToY(score: number): number {
-  const H = CHART_H - PAD_T - PAD_B;
-  const yBottom = PAD_T + H;
-  const yTop = PAD_T;
-  const band04 = PLOT_HEIGHT_SHARE_0_TO_4 * H;
-  const yAt4 = yBottom - band04;
-
-  if (score <= SCORE_HIT_FLOOR) {
-    const t = score / SCORE_HIT_FLOOR;
-    return yBottom - t * band04;
-  }
-  const t =
-    (score - SCORE_HIT_FLOOR) / (SCORE_CHART_MAX - SCORE_HIT_FLOOR);
-  return yAt4 - t * (yAt4 - yTop);
-}
-
-type Dot = { x: number; y: number; kind: "peer" | "you" };
-
-function buildDotsFromDistribution(
-  dist: GamePointsDistributionV1,
-  myScore: number | null,
-  maxDots: number
-): Dot[] {
-  const dots: Dot[] = [];
-  let idx = 0;
-  const totalPeers = dist.bins.reduce((s, b) => s + b.count, 0);
-  const scale = totalPeers > maxDots ? maxDots / totalPeers : 1;
-
-  for (const bin of dist.bins) {
-    const take = Math.max(0, Math.round(bin.count * scale));
-    const span = bin.hi - bin.lo;
-    for (let k = 0; k < take; k++) {
-      const t = jitter01(idx, 1);
-      const u = jitter01(idx, 2);
-      const score =
-        span <= 0
-          ? clampChartScore(bin.lo)
-          : clampChartScore(bin.lo + span * (0.08 + t * 0.84));
-      const nx = PAD_L + u * (CHART_W - PAD_L - PAD_R);
-      dots.push({ x: nx, y: scoreToY(score), kind: "peer" });
-      idx += 1;
-    }
-  }
-
-  if (myScore != null && Number.isFinite(myScore)) {
-    const s = clampChartScore(myScore);
-    dots.push({
-      x: PAD_L + (CHART_W - PAD_L - PAD_R) * 0.52,
-      y: scoreToY(s),
-      kind: "you",
-    });
-  }
-
-  return dots;
-}
-
-const PLOT_W = CHART_W - PAD_L - PAD_R;
-const PLOT_H = CHART_H - PAD_T - PAD_B;
-const PLOT_BOTTOM = CHART_H - PAD_B;
 const AXIS_V_LEN = PLOT_BOTTOM - PAD_T;
 const AXIS_H_LEN = PLOT_W;
 
@@ -313,8 +236,6 @@ function ResultPointsDistributionCard({
   const axisFoot = isEn
     ? "0 / 4–10+ · chart max 10"
     : "0 / 4–10+ ・表示上限10";
-
-  const gridYs = [0, 4, 5, 6, 7, 8, 9, 10];
 
   const wantsAnim = !reduceMotion && chartInView;
   const showPeers = reduceMotion || peersReady;
@@ -511,7 +432,7 @@ function ResultPointsDistributionCard({
           />
 
           {/* 薄いグリッド（横線が左→右に伸びる） */}
-          {gridYs.map((g, gi) => {
+          {GRID_YS.map((g, gi) => {
             const ny = scoreToY(g);
             return (
               <m.line
@@ -538,7 +459,7 @@ function ResultPointsDistributionCard({
             );
           })}
 
-          {gridYs.map((g, gi) => {
+          {GRID_YS.map((g, gi) => {
             const ny = scoreToY(g);
             return (
               <m.text
