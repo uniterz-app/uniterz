@@ -37,6 +37,9 @@ export function getGamesTexts(language: GamesLanguage) {
       updateDoneOnly: "Prediction updated.",
       postErrorTitle: "Posting error",
       postErrorBody: "Failed to save prediction.",
+      apiBaseMissingTitle: "API URL not set",
+      apiBaseMissingBody:
+        "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL in apps/native/.env to your deployed Next.js site (no trailing slash), e.g. https://example.com",
       gameDetail: "Game Details",
       myPrediction: "Your prediction",
       tabH2h: "Matchup",
@@ -47,6 +50,8 @@ export function getGamesTexts(language: GamesLanguage) {
       scoreTime: "Score/Time",
       statusLabel: "Status",
       editPrediction: "Edit prediction",
+      /** 予想済み要約からスコア入力へ */
+      editScoresCta: "Edit",
       makePrediction: "Predict",
       close: "Close",
       predictInput: "Prediction Input",
@@ -123,8 +128,11 @@ export function getGamesTexts(language: GamesLanguage) {
     updateDoneNext: "予想を更新しました。次の試合へ進みます。",
     postDoneOnly: "予想を保存しました。",
     updateDoneOnly: "予想を更新しました。",
-    postErrorTitle: "投稿エラー",
-    postErrorBody: "予想の保存に失敗しました。",
+      postErrorTitle: "投稿エラー",
+      postErrorBody: "予想の保存に失敗しました。",
+      apiBaseMissingTitle: "API の URL が未設定",
+      apiBaseMissingBody:
+        "apps/native/.env に EXPO_PUBLIC_UNITERZ_API_BASE_URL を設定してください（末尾スラッシュなし）。デプロイした Next.js サイトのオリジンです。例: https://example.com",
     gameDetail: "試合詳細",
     myPrediction: "あなたの予想",
     tabH2h: "直接対決",
@@ -135,6 +143,8 @@ export function getGamesTexts(language: GamesLanguage) {
     scoreTime: "スコア/時刻",
     statusLabel: "ステータス",
     editPrediction: "予想を編集",
+    /** 予想済み要約からスコア入力へ */
+    editScoresCta: "修正",
     makePrediction: "予想する",
     close: "閉じる",
     predictInput: "予想入力",

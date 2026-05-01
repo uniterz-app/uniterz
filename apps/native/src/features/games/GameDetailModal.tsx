@@ -10,7 +10,10 @@ import {
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import type { GamesTexts } from "./gamesI18n";
-import { predictBlockFadeUpEnter } from "./predictMotion";
+import {
+  predictModalBackdropEnter,
+  predictModalSheetEnter,
+} from "./predictMotion";
 
 type ScreenStyles = Record<string, ViewStyle & TextStyle & ImageStyle>;
 
@@ -58,7 +61,7 @@ type GameDetailModalProps = {
   countdownNowMs: number;
   language: "ja" | "en";
   t: GamesTexts;
-  openPredictModal: () => void;
+  openPredictModal: () => void | Promise<void>;
   onClose: () => void;
   styles: ScreenStyles;
 };
@@ -88,21 +91,30 @@ export default function GameDetailModal(props: GameDetailModalProps) {
     styles,
   } = props;
 
-  const reduceMotion = useReducedMotion();
-  const cardEntering = reduceMotion ? undefined : predictBlockFadeUpEnter(0);
+  const reduceMotion = useReducedMotion() ?? false;
+  const backdropEnter = reduceMotion ? undefined : predictModalBackdropEnter();
+  const sheetEnter = reduceMotion ? undefined : predictModalSheetEnter();
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
-        {/** Web スケジュール系オーバーレイ同様、背景は即表示 */}
-        <View
-          pointerEvents="none"
+        <Animated.View
+          entering={backdropEnter}
+          pointerEvents="box-none"
           style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.65)" }]}
-        />
+        >
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t.close}
+          />
+        </Animated.View>
         <View
           style={[styles.modalBackdrop, { backgroundColor: "transparent", zIndex: 1 }]}
+          pointerEvents="box-none"
         >
-          <Animated.View style={styles.modalCard} entering={cardEntering}>
+          <Animated.View style={styles.modalCard} entering={sheetEnter}>
           <View style={styles.modalHeaderRow}>
             <Text style={[styles.modalTitle, styles.modalTitleInHeader]} numberOfLines={1}>
               {t.gameDetail}
@@ -193,8 +205,8 @@ export default function GameDetailModal(props: GameDetailModalProps) {
               </Text>
               {(() => {
                 const startAt = resolveGameStartAt(selectedGame);
-                const isScheduled = resolveGameStatus(selectedGame) === "scheduled";
-                if (!isScheduled || !startAt) return null;
+                /** キックオフ後はカウントダウンしない（API が scheduled のままのずれ対策） */
+                if (isGameStarted(selectedGame) || !startAt) return null;
                 return (
                   <Text style={styles.countdownText}>
                     {t.startsIn}: {formatCountdownLabel(startAt, countdownNowMs)}

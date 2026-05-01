@@ -1,4 +1,12 @@
-import { Easing, FadeIn, FadeInDown, FadeOut, FadeOutDown } from "react-native-reanimated";
+import {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  FadeOutDown,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 
 /**
  * モバイル Web `PredictionFormV2` の framer 設定に合わせる
@@ -6,6 +14,15 @@ import { Easing, FadeIn, FadeInDown, FadeOut, FadeOutDown } from "react-native-r
  * - fadeUp: y 12, duration 0.24, easeOut
  */
 const easeOut = Easing.bezier(0, 0, 0.2, 1);
+/** Web `DayStrip` の DAY_STRIP_EASE（`cyberMotion` の `GAMES_CYBER_EASE`） */
+const gamesCyberEase = Easing.bezier(0.16, 0.82, 0.22, 1);
+
+/** Web `app/component/games/DayStrip.tsx` の container/item と同一（秒→ms） */
+const DAY_STRIP_DELAY_CHILDREN_MS = 40;
+const DAY_STRIP_STAGGER_MS = 28;
+const DAY_STRIP_DURATION_MS = 280;
+/** Web `ScheduleList` daySwitch カード（`GAMES_DAY_SWITCH_EASE`） */
+const gamesDaySwitchEase = Easing.bezier(0.22, 1, 0.36, 1);
 
 /** Web `teamStatsCompare` の `ROW_STAGGER`（秒）→ ms */
 export const STATS_COMPARE_ROW_STAGGER_MS = 90;
@@ -124,4 +141,67 @@ export function predictMarketInnerEnter(blockIndex: number) {
     .withInitialValues({
       transform: [{ translateY: PREDICT_MOTION.fadeUpTranslateY }],
     });
+}
+
+/**
+ * Web `DayStrip`（framer `motion.div` variants）と同等：
+ * - delayChildren 40ms + staggerChildren 28ms×index
+ * - duration 280ms、ease `GAMES_CYBER_EASE`
+ * - hidden → show: opacity 0→1、translateY 12→0、scale 0.93→1
+ *
+ * 注意: Reanimated の `FadeIn` は opacity のみ補間するため、`withInitialValues` の transform は動かない。
+ * `withDelay` + `withTiming` で3プロパティを同じ尺・イージングで動かす。
+ */
+export function gamesDayStripChipEnter(index: number) {
+  const delayMs = DAY_STRIP_DELAY_CHILDREN_MS + index * DAY_STRIP_STAGGER_MS;
+  const duration = DAY_STRIP_DURATION_MS;
+  const easing = gamesCyberEase;
+  return () => {
+    "worklet";
+    const timing = { duration, easing };
+    return {
+      initialValues: {
+        opacity: 0,
+        transform: [{ translateY: 12 }, { scale: 0.93 }],
+      },
+      animations: {
+        opacity: withDelay(delayMs, withTiming(1, timing)),
+        transform: [
+          { translateY: withDelay(delayMs, withTiming(0, timing)) },
+          { scale: withDelay(delayMs, withTiming(1, timing)) },
+        ],
+      },
+    };
+  };
+}
+
+/** Web `ScheduleList` daySwitch カード（ms）— `FadeIn` は opacity のみのため translateY は別途補間する */
+const SCHEDULE_CARD_STAGGER_MS = 38;
+const SCHEDULE_CARD_STAGGER_CAP_MS = 280;
+const SCHEDULE_CARD_ENTER_MS = 520;
+
+/**
+ * Web `ScheduleList` daySwitch：hidden y=-11・delay min(i×38ms, 280ms)・520ms・`GAMES_DAY_SWITCH_EASE`
+ * （一覧・ページ初回マウント共通）
+ */
+export function gamesScheduleCardDaySwitchEnter(index: number) {
+  const delayMs = Math.min(index * SCHEDULE_CARD_STAGGER_MS, SCHEDULE_CARD_STAGGER_CAP_MS);
+  const duration = SCHEDULE_CARD_ENTER_MS;
+  const easing = gamesDaySwitchEase;
+  return () => {
+    "worklet";
+    const timing = { duration, easing };
+    return {
+      initialValues: {
+        opacity: 0,
+        transform: [{ translateY: -11 }],
+      },
+      animations: {
+        opacity: withDelay(delayMs, withTiming(1, timing)),
+        transform: [
+          { translateY: withDelay(delayMs, withTiming(0, timing)) },
+        ],
+      },
+    };
+  };
 }

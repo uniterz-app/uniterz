@@ -9,8 +9,8 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, { useReducedMotion } from "react-native-reanimated";
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -18,14 +18,11 @@ import {
   where,
   limit,
   getDocs,
-  serverTimestamp,
-  updateDoc,
 } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "../../utils/date";
 import {
-  resolveGameLiveMeta,
   resolveGameScore,
   resolveGameStartAt,
   resolveGameStatus,
@@ -44,13 +41,32 @@ import {
   resolveTeamPrimaryColor,
 } from "./teamColors";
 import PredictModal, { type PredictModalMatchPreview } from "./PredictModal";
+import {
+  createPredictionPostApi,
+  getUniterzApiBaseUrl,
+  PredictionApiError,
+  updatePredictionPostApi,
+} from "./submitPredictionApi";
 import PredictNextGameNativeModal from "./PredictNextGameNativeModal";
+import {
+  broadcastDeckTitleForNextModal,
+  scoreboardTeamLabelForNextModal,
+} from "./predictNextGameModalLabels";
+import {
+  isPlayoffStyleGameCard,
+  parseSeriesStandingFromRaw,
+} from "../../../../../lib/games/playoffSeriesUi";
 import GameDetailModal from "./GameDetailModal";
+import {
+  readEditModeHintShown,
+  writeEditModeHintShown,
+} from "./predictEditModeHintPrefs";
 import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
 import GameCardList from "./GameCardList";
+import { gamesDayStripChipEnter } from "./predictMotion";
 import {
   resolveNativeSeriesLabel,
   resolveNativeSeriesPair,
@@ -83,8 +99,17 @@ function resolveFinalMetaOt(raw: Record<string, unknown>): boolean {
   return Boolean(fm?.ot);
 }
 
+/** Web `MatchCardMobile` の isLive：公式 LIVE またはキックオフ経過後の予熱 */
+function isEffectiveLive(game: Record<string, unknown>): boolean {
+  const status = resolveGameStatus(game);
+  if (status === "live") return true;
+  if (status !== "scheduled") return false;
+  const startAt = resolveGameStartAt(game);
+  return startAt != null && Date.now() >= startAt.getTime();
+}
+
 /**
- * MobileMatchCard / MatchCardWeb の中央欄：スコア or キックオフ・LIVE/終了サブ
+ * 試合カード中央：終了はスコア、ライブは LIVE のみ（スコア非表示）、それ以外はキックオフ
  */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
@@ -93,6 +118,7 @@ function getGameCardCenterBlock(
   const status = resolveGameStatus(game);
   const score = resolveGameScore(game);
   const startAt = resolveGameStartAt(game);
+  const liveUi = isEffectiveLive(game);
   if (status === "final" && score) {
     const ot = resolveFinalMetaOt(game);
     const sub = `${language === "en" ? "Final" : "試合終了"}${
@@ -100,13 +126,9 @@ function getGameCardCenterBlock(
     }`;
     return { variant: "score", home: score.home, away: score.away, subLine: sub };
   }
-  if (status === "live" && score) {
-    return {
-      variant: "score",
-      home: score.home,
-      away: score.away,
-      subLine: renderLiveMetaLabel(game),
-    };
+  /** ライブ中はスコアを出さず LIVE のみ（一覧・モーダル共通） */
+  if (liveUi) {
+    return { variant: "liveMark" };
   }
   return {
     variant: "time",
@@ -122,6 +144,9 @@ function renderCenterText(
   if (b.variant === "score") {
     return `${b.home} – ${b.away}`;
   }
+  if (b.variant === "liveMark") {
+    return language === "en" ? "Live" : "試合中";
+  }
   return b.time;
 }
 
@@ -136,7 +161,10 @@ function renderStatusLabel(
 ): string {
   const status = resolveGameStatus(game);
   if (status === "final") return language === "en" ? "Final" : "試合終了";
-  if (status === "live") return language === "en" ? "Live" : "試合中";
+  /** API が scheduled のままでもキックオフ後はライブ扱い（Web `isMatchStartedForPredict` と同趣旨） */
+  if (status === "live" || isEffectiveLive(game)) {
+    return language === "en" ? "Live" : "試合中";
+  }
   return language === "en" ? "Scheduled" : "試合予定";
 }
 
@@ -192,14 +220,6 @@ function toCompactTeamName(
     return toUnifiedLabel(`${line1} ${line2}`.trim());
   }
   return toUnifiedLabel(rawName);
-}
-
-function renderLiveMetaLabel(game: Record<string, unknown>): string | null {
-  if (resolveGameStatus(game) !== "live") return null;
-  const meta = resolveGameLiveMeta(game);
-  if (!meta) return null;
-  if (meta.period && meta.runningTime) return `${meta.period} ${meta.runningTime}`;
-  return meta.period ?? meta.runningTime ?? null;
 }
 
 function formatCountdownLabel(startAt: Date, nowMs: number): string {
@@ -323,7 +343,9 @@ export default function GamesHomeScreen({
   );
   const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
   /** 試合終了・未投稿で開くモバイル Web オーバーレイ相当（スコア入力なし） */
-  const [predictSpectatorFinalOnly, setPredictSpectatorFinalOnly] = useState(false);
+  /** Web `PredictionFormV2` overlay：開始済みかつ自分の投稿なし → スコア入力・送信ブロックを出さない */
+  const [predictSpectatorStartedNoPost, setPredictSpectatorStartedNoPost] =
+    useState(false);
   /** 新規投稿直後：Web の PredictNextGameModal 相当 */
   const [nextGameAfterPost, setNextGameAfterPost] = useState<Record<
     string,
@@ -359,6 +381,7 @@ export default function GamesHomeScreen({
     games,
     peerGamesForSeries,
     dateKeysWithGames,
+    dateKey,
     selectedDate,
     setSelectedDate,
     selectedLeague,
@@ -471,7 +494,6 @@ export default function GamesHomeScreen({
     () => LEAGUE_OPTIONS.find((option) => option.id === selectedLeague) ?? LEAGUE_OPTIONS[0],
     [selectedLeague]
   );
-  const [didAutoAdvanceToday, setDidAutoAdvanceToday] = useState(false);
   const selectedGameId = String(selectedGame?.id ?? "");
   const isEditingPrediction = Boolean(myPostIdByGameId[selectedGameId]);
   const isGameDetailModalVisible = selectedGame != null && !isPredictModalOpen;
@@ -509,14 +531,35 @@ export default function GamesHomeScreen({
     const g = nextGameAfterPost;
     const homeN = resolveGameTeamName(g.home, g.homeTeamName, "HOME");
     const awayN = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
+    const isEn = language === "en";
+    const roundLabelRaw = g.roundLabel;
+    const roundLabel =
+      typeof roundLabelRaw === "string" && roundLabelRaw.trim()
+        ? roundLabelRaw.trim()
+        : null;
+    const seasonPhase = g.seasonPhase as
+      | "regular"
+      | "play_in"
+      | "playoffs"
+      | null
+      | undefined;
+    const seriesStanding = parseSeriesStandingFromRaw(g as Record<string, unknown>);
+    const showSeriesRow =
+      seriesStanding != null && isPlayoffStyleGameCard(seasonPhase, roundLabel);
     return {
-      homeTitle: toCompactTeamName(g.league, homeN),
-      awayTitle: toCompactTeamName(g.league, awayN),
+      homeTitle: scoreboardTeamLabelForNextModal(g.league, homeN, isEn),
+      awayTitle: scoreboardTeamLabelForNextModal(g.league, awayN, isEn),
+      deckLabel: broadcastDeckTitleForNextModal(isEn, seasonPhase, roundLabel),
       kickoff: formatKickoffTime(resolveGameStartAt(g), language),
       homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
       awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
+      homeRecordLine: formatSideRecord(g.home),
+      awayRecordLine: formatSideRecord(g.away),
+      showSeriesRow,
+      seriesHomeWins: showSeriesRow && seriesStanding ? seriesStanding.homeWins : null,
+      seriesAwayWins: showSeriesRow && seriesStanding ? seriesStanding.awayWins : null,
     };
-  }, [nextGameAfterPost, language]);
+  }, [nextGameAfterPost, language, formatSideRecord]);
 
   useEffect(() => {
     if (!isPredictModalOpen) return;
@@ -552,7 +595,7 @@ export default function GamesHomeScreen({
 
   useEffect(() => {
     if (!isPredictModalOpen || !selectedGame || !fUser?.uid) return;
-    if (predictSpectatorFinalOnly) return;
+    if (predictSpectatorStartedNoPost) return;
     const gameId = String(selectedGame.id ?? "");
     if (!gameId) return;
     const key = draftStorageKey(fUser.uid, gameId);
@@ -566,7 +609,7 @@ export default function GamesHomeScreen({
     );
   }, [
     isPredictModalOpen,
-    predictSpectatorFinalOnly,
+    predictSpectatorStartedNoPost,
     selectedGame,
     fUser?.uid,
     winner,
@@ -683,12 +726,20 @@ export default function GamesHomeScreen({
   }, [fUser?.uid, fUser?.displayName, myPredictionsReloadNonce]);
 
   const t = useMemo(() => getGamesTexts(language), [language]);
+  const reduceMotion = useReducedMotion() ?? false;
+  const dayStripChipEnter = (chipIndex: number) =>
+    reduceMotion ? undefined : gamesDayStripChipEnter(chipIndex);
 
   useEffect(() => {
     mainScrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [selectedDate, selectedLeague, loading]);
 
+  /**
+   * 今日がすべて終了なら翌日へ（手動で今日に戻した直後など、窓内再フェッチなしのケース）。
+   * 初回は `useTodayGames` のフェッチ完了時に同一バッチで寄せるため、loading 中は動かさない。
+   */
   useEffect(() => {
+    if (loading) return;
     if (skipAutoAdvanceRef.current) {
       skipAutoAdvanceRef.current = false;
       return;
@@ -696,64 +747,59 @@ export default function GamesHomeScreen({
     const isToday = isSameLocalDay(startOfLocalDay(selectedDate), today);
     if (!isToday) {
       suppressAutoAdvanceForTodayRef.current = false;
-      setDidAutoAdvanceToday(false);
       return;
     }
     if (suppressAutoAdvanceForTodayRef.current) return;
-    if (didAutoAdvanceToday) return;
     if (!games.length) return;
     const allFinished = games.every(
       (game) => resolveGameStatus(game as Record<string, unknown>) === "final"
     );
     if (!allFinished) return;
-    setDidAutoAdvanceToday(true);
     setSelectedDate((prev) => addDays(prev, 1));
-  }, [didAutoAdvanceToday, games, selectedDate, setSelectedDate, today]);
+  }, [loading, games, selectedDate, setSelectedDate, today]);
 
   function selectDateManually(nextDate: Date) {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
-    setDidAutoAdvanceToday(false);
     setSelectedDate(nextDate);
   }
 
   function goPrevDayManually() {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
-    setDidAutoAdvanceToday(false);
     goPrevDay();
   }
 
   function goNextDayManually() {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
-    setDidAutoAdvanceToday(false);
     goNextDay();
   }
 
-  function openPredictModal(targetGame?: Record<string, unknown>) {
+  async function openPredictModal(targetGame?: Record<string, unknown>) {
     const sourceGame = targetGame ?? selectedGame;
     if (!sourceGame) {
-      setPredictSpectatorFinalOnly(false);
+      setPredictSpectatorStartedNoPost(false);
       return;
     }
     const gameId = String(sourceGame.id ?? "");
     const existingPostId = myPostIdByGameId[gameId];
     const existingPrediction = myPredictionByGameId[gameId];
     const started = isGameStarted(sourceGame);
-    const status = resolveGameStatus(sourceGame);
-    const spectatorFinalNoPost =
-      Boolean(targetGame && started && !existingPostId && status === "final");
-    if (targetGame && started && !existingPostId && !spectatorFinalNoPost) {
-      setPredictSpectatorFinalOnly(false);
-      setSelectedGame(sourceGame);
-      setIsPredictModalOpen(false);
-      return;
-    }
+    /** Web 一覧カードの `onOpenPredict`：開始後・未投稿でもオーバーレイを開く（フォームだけ非表示） */
+    const spectatorStartedNoPost = Boolean(started && !existingPostId);
     if (existingPostId) {
-      Alert.alert(t.editModeTitle, t.editModeBody);
+      try {
+        const hintSeen = await readEditModeHintShown();
+        if (!hintSeen) {
+          Alert.alert(t.editModeTitle, t.editModeBody);
+          await writeEditModeHintShown();
+        }
+      } catch {
+        // ストレージ不可時は通知を省略（毎回出るよりマシ）
+      }
     }
-    setPredictSpectatorFinalOnly(spectatorFinalNoPost);
+    setPredictSpectatorStartedNoPost(spectatorStartedNoPost);
     setWinner(null);
     setScoreHome("");
     setScoreAway("");
@@ -761,7 +807,7 @@ export default function GamesHomeScreen({
     setSelectedGame(sourceGame);
     setIsPredictModalOpen(true);
 
-    if (spectatorFinalNoPost) return;
+    if (spectatorStartedNoPost) return;
 
     if (!fUser?.uid) return;
     void (async () => {
@@ -796,7 +842,7 @@ export default function GamesHomeScreen({
     setNextGameAfterPost(null);
     if (g) {
       requestAnimationFrame(() => {
-        openPredictModal(g);
+        void openPredictModal(g);
       });
     }
   }
@@ -858,46 +904,44 @@ export default function GamesHomeScreen({
       return;
     }
 
+    if (!getUniterzApiBaseUrl()) {
+      Alert.alert(t.apiBaseMissingTitle, t.apiBaseMissingBody);
+      return;
+    }
+
     setPredictSubmitting(true);
     try {
       const existingPostId = myPostIdByGameId[gameId];
       const isEditing = Boolean(existingPostId);
       if (existingPostId) {
-        await updateDoc(doc(db, "posts", existingPostId), {
-          prediction: {
-            winner,
-            score: { home: homeNum, away: awayNum },
-          },
-          comment: "",
-          updatedAt: serverTimestamp(),
+        await updatePredictionPostApi(existingPostId, {
+          winner,
+          scoreHome: homeNum,
+          scoreAway: awayNum,
         });
       } else {
-        await addDoc(collection(db, "posts"), {
-          schemaVersion: 2,
-          authorUid: fUser.uid,
-          authorDisplayName: fUser.displayName ?? "ユーザー",
-          authorPhotoURL: fUser.photoURL ?? null,
-          authorHandle: null,
-          gameId,
-          league: selectedGame.league ?? "nba",
-          home: selectedGame.home ?? null,
-          away: selectedGame.away ?? null,
-          status: selectedGame.status ?? "scheduled",
-          startAt: startAt ?? null,
-          startAtMillis: startAt?.getTime() ?? null,
-          startAtIso: startAt?.toISOString() ?? null,
-          prediction: {
+        try {
+          await createPredictionPostApi({
+            gameId,
             winner,
-            score: { home: homeNum, away: awayNum },
-          },
-          comment: "",
-          result: null,
-          stats: null,
-          likeCount: 0,
-          saveCount: 0,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+            scoreHome: homeNum,
+            scoreAway: awayNum,
+          });
+        } catch (err) {
+          if (
+            err instanceof PredictionApiError &&
+            err.code === "duplicate" &&
+            err.existingPostId
+          ) {
+            await updatePredictionPostApi(err.existingPostId, {
+              winner,
+              scoreHome: homeNum,
+              scoreAway: awayNum,
+            });
+          } else {
+            throw err;
+          }
+        }
       }
 
       const currentLeague = String(selectedGame.league ?? "");
@@ -934,8 +978,10 @@ export default function GamesHomeScreen({
           Alert.alert(t.postDone, t.postDoneOnly);
         }
       }
-    } catch (error: any) {
-      Alert.alert(t.postErrorTitle, error?.message ?? t.postErrorBody);
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error ? error.message : t.postErrorBody;
+      Alert.alert(t.postErrorTitle, msg);
     } finally {
       setPredictSubmitting(false);
     }
@@ -1015,65 +1061,89 @@ export default function GamesHomeScreen({
           ) : null}
         </View>
       </View>
-      <View style={styles.monthHeaderRow}>
-        <Pressable style={styles.dayButton} onPress={goPrevDayManually}>
-          <Text style={styles.dayButtonText}>←</Text>
-        </Pressable>
-        <View style={styles.monthHeaderCenter}>
-          <Text style={styles.monthHeaderText}>{monthLabel}</Text>
+      {loading ? (
+        <View style={styles.dayStripSkeletonBlock}>
+          <View style={styles.monthHeaderRow}>
+            <View style={styles.dayStripSkeletonArrow} />
+            <View style={styles.monthHeaderCenter}>
+              <View style={styles.dayStripSkeletonMonthBar} />
+            </View>
+            <View style={styles.dayStripSkeletonArrow} />
+          </View>
+          <View style={styles.dayStripContent}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <View key={i} style={styles.dayStripSkeletonChip} />
+            ))}
+          </View>
         </View>
-        <Pressable style={styles.dayButton} onPress={goNextDayManually}>
-          <Text style={styles.dayButtonText}>→</Text>
-        </Pressable>
-      </View>
-      <View style={styles.dayStripContent}>
-        {dayStripDates.map((day) => {
-          const selected = isSameLocalDay(day, selectedDate);
-          const isTodayChip = isSameLocalDay(day, today);
-          const dayNum = day.getDate();
-          return (
-            <Pressable
-              key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
-              style={[
-                styles.dayChip,
-                selected && styles.dayChipActive,
-                isTodayChip && !selected && styles.dayChipToday,
-                selected && styles.dayChipSelectedTransform,
-              ]}
-              onPress={() => selectDateManually(day)}
-            >
-              <LinearGradient
-                colors={
-                  selected
-                    ? ["rgba(34,211,238,0.42)", "rgba(8,145,178,0.36)"]
-                    : ["rgba(255,255,255,0.08)", "rgba(255,255,255,0.03)"]
-                }
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <LinearGradient
-                colors={[
-                  selected
-                    ? "rgba(255,255,255,0.12)"
-                    : "rgba(255,255,255,0.07)",
-                  "rgba(255,255,255,0)",
-                ]}
-                locations={selected ? [0, 0.55] : [0, 0.6]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                pointerEvents="none"
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text
-                style={[styles.dayChipDate, selected && styles.dayChipDateActive]}
-              >
-                {dayNum}
-              </Text>
+      ) : (
+        <>
+          <View style={styles.monthHeaderRow}>
+            <Pressable style={styles.dayButton} onPress={goPrevDayManually}>
+              <Text style={styles.dayButtonText}>←</Text>
             </Pressable>
-          );
-        })}
-      </View>
+            <View style={styles.monthHeaderCenter}>
+              <Text style={styles.monthHeaderText}>{monthLabel}</Text>
+            </View>
+            <Pressable style={styles.dayButton} onPress={goNextDayManually}>
+              <Text style={styles.dayButtonText}>→</Text>
+            </Pressable>
+          </View>
+          <View style={styles.dayStripContent}>
+            {dayStripDates.map((day, chipIdx) => {
+              const selected = isSameLocalDay(day, selectedDate);
+              const isTodayChip = isSameLocalDay(day, today);
+              const dayNum = day.getDate();
+              return (
+                <Animated.View
+                  key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
+                  entering={dayStripChipEnter(chipIdx)}
+                  style={styles.dayStripChipAnimWrap}
+                >
+                  <Pressable
+                    style={[
+                      styles.dayChip,
+                      selected && styles.dayChipActive,
+                      isTodayChip && !selected && styles.dayChipToday,
+                      selected && styles.dayChipSelectedTransform,
+                    ]}
+                    onPress={() => selectDateManually(day)}
+                  >
+                    <LinearGradient
+                      colors={
+                        selected
+                          ? ["rgba(34,211,238,0.42)", "rgba(8,145,178,0.36)"]
+                          : ["rgba(255,255,255,0.08)", "rgba(255,255,255,0.03)"]
+                      }
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <LinearGradient
+                      colors={[
+                        selected
+                          ? "rgba(255,255,255,0.12)"
+                          : "rgba(255,255,255,0.07)",
+                        "rgba(255,255,255,0)",
+                      ]}
+                      locations={selected ? [0, 0.55] : [0, 0.6]}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      pointerEvents="none"
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <Text
+                      style={[styles.dayChipDate, selected && styles.dayChipDateActive]}
+                    >
+                      {dayNum}
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
+          </View>
+        </>
+      )}
 
       {loading ? (
         <View style={styles.skeletonList}>
@@ -1099,9 +1169,9 @@ export default function GamesHomeScreen({
 
       {!loading && !error ? (
         <GameCardList
+          key={`${selectedLeague}-${dateKey}`}
           games={games}
           predictedGameIds={predictedGameIds}
-          myPredictionByGameId={myPredictionByGameId}
           language={language}
           t={t}
           styles={styles}
@@ -1117,7 +1187,6 @@ export default function GamesHomeScreen({
           resolveSeriesPair={resolveSeriesPairForList}
           getTeamRecordLabel={formatSideRecord}
           resolveTeamJerseyPalette={resolveTeamJerseyPalette}
-          renderWinnerLabel={renderWinnerLabel}
         />
       ) : null}
       </ScrollView>
@@ -1141,7 +1210,7 @@ export default function GamesHomeScreen({
         countdownNowMs={countdownNowMs}
         language={language}
         t={t}
-        openPredictModal={() => openPredictModal()}
+        openPredictModal={() => void openPredictModal()}
         onClose={() => {
           setSelectedGame(null);
         }}
@@ -1167,10 +1236,10 @@ export default function GamesHomeScreen({
         onSubmit={() => void handleSubmitPrediction()}
         onClose={() => {
           setIsPredictModalOpen(false);
-          setPredictSpectatorFinalOnly(false);
+          setPredictSpectatorStartedNoPost(false);
           setSelectedGame(null);
         }}
-        spectatorFinalNoPost={predictSpectatorFinalOnly}
+        spectatorStartedNoPost={predictSpectatorStartedNoPost}
         predictData={predictModalData}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
@@ -1178,7 +1247,7 @@ export default function GamesHomeScreen({
           visible
           title={t.nextGameModalTitle}
           sub={t.nextGameModalSub}
-          deckLabel={t.nextGameDeck}
+          deckLabel={nextGameAfterPostDisplay.deckLabel}
           skipLabel={t.nextGameModalSkip}
           primaryButtonLabel={t.nextGameModalYes}
           secondaryButtonLabel={t.nextGameModalNo}
@@ -1187,6 +1256,11 @@ export default function GamesHomeScreen({
           kickoff={nextGameAfterPostDisplay.kickoff}
           homePalette={nextGameAfterPostDisplay.homePalette}
           awayPalette={nextGameAfterPostDisplay.awayPalette}
+          homeRecordLine={nextGameAfterPostDisplay.homeRecordLine}
+          awayRecordLine={nextGameAfterPostDisplay.awayRecordLine}
+          showSeriesRow={nextGameAfterPostDisplay.showSeriesRow}
+          seriesHomeWins={nextGameAfterPostDisplay.seriesHomeWins}
+          seriesAwayWins={nextGameAfterPostDisplay.seriesAwayWins}
           onYes={(d) => void handleNextGameModalYes(d)}
           onNo={(d) => void handleNextGameModalNo(d)}
         />
@@ -1204,6 +1278,11 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: spacing.xs,
     gap: 6,
+  },
+  /** DayStrip チップ単位の进入ラッパー（Web motion.div 相当） */
+  dayStripChipAnimWrap: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   mainScroll: {
     flex: 1,
@@ -1382,6 +1461,28 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
     fontWeight: "700",
   },
+  /** 取得中は誤った「今日」チップで进入アニメが走らないようプレースホルダ */
+  dayStripSkeletonBlock: {
+    marginBottom: 1,
+  },
+  dayStripSkeletonArrow: {
+    minHeight: 28,
+    minWidth: 28,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  dayStripSkeletonMonthBar: {
+    height: 18,
+    width: 128,
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  dayStripSkeletonChip: {
+    width: 42,
+    height: 42,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
   monthHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1544,7 +1645,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingHorizontal: 2,
   },
-  /** パディングは `cardPressableBody`。方眼はシェル全面に敷く */
+  /** パディングは `cardPressableBody`。方眼・ベースは `cardFineShellBackdrop` でシェル全面 */
   gameCardShell: {
     position: "relative",
     overflow: "hidden",
@@ -1553,7 +1654,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
     borderRadius: 20,
-    backgroundColor: "rgba(8,11,18,0.84)",
+    /** 中継カード外周（内側 #080c12 と馴染む） */
+    backgroundColor: "rgba(6,9,14,0.98)",
     minHeight: 148,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
@@ -1561,29 +1663,37 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 7,
   },
+  /** 角丸内いっぱいに方眼（CTA 帯まで含むシェル全面） */
+  cardFineShellBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
   /** 角丸内いっぱいに方眼（パディングの外側まで） */
   cardGridUnderlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
   },
-  /** 試合テキスト・CTA の余白（従来 gameCardShell のパディング相当） */
+  /** 試合テキスト・CTA の余白（中継カード内側パディングは `cardFineInteriorContent`） */
   cardPressableBody: {
     flex: 1,
     zIndex: 1,
+    backgroundColor: "transparent",
     paddingHorizontal: spacing.sm,
-    paddingTop: 5,
+    paddingTop: 4,
     paddingBottom: 3,
+    gap: 4,
+  },
+  /** 一覧：方眼下のラウンド行〜リーグ線までの余白（シェル全面は `MatchCardFineBackdrop`） */
+  cardFineInteriorContent: {
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingBottom: 2,
     gap: 2,
   },
   cardLayerBase: {
     ...StyleSheet.absoluteFillObject,
-  },
-  cardBlurLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardBlurLayerFallback: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(24,28,38,0.12)",
   },
   cardLayerTopGlow: {
     ...StyleSheet.absoluteFillObject,
@@ -2012,6 +2122,34 @@ const styles = StyleSheet.create({
     textAlign: "center",
     includeFontPadding: false,
   },
+  /** Web `LiveMatchMark` に寄せた LIVE ピル（一覧中央・スコアなし時は単独） */
+  liveMarkWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    gap: 4,
+  },
+  liveMarkPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.5)",
+    backgroundColor: "rgba(220,38,38,0.96)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  liveMarkText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+  },
   cardCountdownText: {
     color: "#8ecbff",
     fontSize: 9,
@@ -2099,18 +2237,6 @@ const styles = StyleSheet.create({
   /** 試合終了（MatchCard の text-white） */
   cardActionTextFinal: {
     color: "#ffffff",
-  },
-  cardMyPredictionText: {
-    marginTop: 2,
-    marginBottom: 0,
-    color: "rgba(159,197,255,0.96)",
-    fontSize: 10,
-    lineHeight: 11,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-    textAlign: "center",
-    includeFontPadding: false,
-    fontFamily: NUMERIC_FONT_FAMILY,
   },
   cardActionShine: {
     position: "absolute",

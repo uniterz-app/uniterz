@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  UIManager,
   View,
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
@@ -65,34 +64,6 @@ const PREVIEW_NUMERIC = Platform.select({
 });
 /** Web `scoreInputClass` の `resultStatsMetricNumClass`（Oxanium・tabular・bold・tracking-tight）に相当 */
 const SCORE_INPUT_FONT = PREVIEW_NUMERIC;
-
-const hasNativeBlurView =
-  Platform.OS !== "web" &&
-  Boolean(
-    UIManager.getViewManagerConfig?.("ExpoBlurView") ??
-      UIManager.getViewManagerConfig?.("ViewManagerAdapter_ExpoBlur_ExpoBlurView")
-  );
-
-/** 一覧 `GameCardList` の `CardBlurLayer` と同設定（方眼の上のガラス感を揃える） */
-function MatchPreviewShellBlur() {
-  if (!hasNativeBlurView) {
-    return <View style={s.matchPreviewBlurFallback} />;
-  }
-  if (Platform.OS === "ios") {
-    return <BlurView intensity={30} tint="default" style={s.matchPreviewBlur} />;
-  }
-  if (Platform.OS === "android") {
-    return (
-      <BlurView
-        intensity={28}
-        tint="default"
-        experimentalBlurMethod="dimezisBlurView"
-        style={s.matchPreviewBlur}
-      />
-    );
-  }
-  return <View style={s.matchPreviewBlurFallback} />;
-}
 
 function ToolPanelGridOverlay() {
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -252,7 +223,7 @@ function PredictMatchPreview({
             style={s.matchPreviewBiasRight}
           />
         </View>
-        <MatchPreviewShellBlur />
+        {/** 一覧試合カードと同じ白の薄い層で方眼のコントラストを抑える */}
         <LinearGradient
           pointerEvents="none"
           colors={[
@@ -322,10 +293,27 @@ function PredictMatchPreview({
                   </Text>
                 ) : null}
               </>
+            ) : centerBlock.variant === "liveMark" ? (
+              <View style={s.matchPreviewVsBlock}>
+                <View style={s.matchPreviewLivePill}>
+                  <Text style={s.matchPreviewLivePillText}>LIVE</Text>
+                </View>
+                {seriesPair != null ? (
+                  <View style={s.matchPreviewSeriesRow}>
+                    <PlayoffSeriesScoreInline
+                      homeWins={seriesPair.home}
+                      awayWins={seriesPair.away}
+                      variant="preview"
+                    />
+                  </View>
+                ) : data.seriesLabel ? (
+                  <Text style={s.matchPreviewSeries}>{data.seriesLabel}</Text>
+                ) : null}
+              </View>
             ) : (
               <View style={s.matchPreviewVsBlock}>
                 <Text style={s.matchPreviewVsText} numberOfLines={1}>
-                  VS
+                  {centerBlock.time}
                 </Text>
                 {seriesPair != null ? (
                   <View style={s.matchPreviewSeriesRow}>
@@ -394,8 +382,8 @@ type PredictModalProps = {
   isEditingPrediction: boolean;
   onSubmit: () => void;
   onClose: () => void;
-  /** 試合終了・未投稿: Web オーバーレイ同様スコア入力・送信を出さない */
-  spectatorFinalNoPost?: boolean;
+  /** 試合開始済み・未投稿: Web `PredictionFormV2` overlay と同様スコア入力・送信を出さない */
+  spectatorStartedNoPost?: boolean;
   /** タブ（市場・H2H・スタッツ）用の実データ: Firestore `posts` / `teams` および peer 試合 */
   predictData?: {
     gameId: string;
@@ -466,12 +454,10 @@ export default function PredictModal({
   isEditingPrediction,
   onSubmit,
   onClose,
-  spectatorFinalNoPost = false,
+  spectatorStartedNoPost = false,
   predictData = null,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
-  const canSubmit =
-    Boolean(winner) && !predictSubmitting && scoreHome !== "" && scoreAway !== "";
 
   /**
    * Web `PredictionFormV2` の pageContainer stagger に相当（delayChildren 30ms + 45ms×index）
@@ -488,6 +474,8 @@ export default function PredictModal({
 
   const [layersVisible, setLayersVisible] = useState(visible);
   const [exitingUi, setExitingUi] = useState(false);
+  /** 予想済み: 最初は要約、「修正」でスコア入力＋送信を表示 */
+  const [scoreFormExpanded, setScoreFormExpanded] = useState(true);
   const closeAnimLockRef = useRef(false);
   const closeAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -499,6 +487,15 @@ export default function PredictModal({
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (!visible) return;
+    if (isEditingPrediction) {
+      setScoreFormExpanded(false);
+    } else {
+      setScoreFormExpanded(true);
+    }
+  }, [visible, isEditingPrediction]);
+
   useEffect(
     () => () => {
       if (closeAnimTimerRef.current) {
@@ -508,6 +505,18 @@ export default function PredictModal({
     },
     []
   );
+
+  const showPredictionSummary =
+    isEditingPrediction && !spectatorStartedNoPost && !scoreFormExpanded;
+  const showScoreInputBlock =
+    !spectatorStartedNoPost &&
+    (!isEditingPrediction || scoreFormExpanded);
+  const canSubmit =
+    showScoreInputBlock &&
+    Boolean(winner) &&
+    !predictSubmitting &&
+    scoreHome !== "" &&
+    scoreAway !== "";
 
   const modalChromeVisible = visible || exitingUi;
   const hasTool = Boolean(predictToolsTab);
@@ -694,93 +703,157 @@ export default function PredictModal({
                 </Animated.View>
               ) : null}
 
-              {!spectatorFinalNoPost ? (
+              {!spectatorStartedNoPost ? (
                 <>
-                  <Animated.View entering={blockIn(scoreStagger)}>
-                    <GlassPanel variant="form">
-                      <Text style={s.predictSectionTitle}>{t.scorePredictTitle}</Text>
-                      <View style={s.scoreGrid}>
-                        <View style={s.scoreCol}>
-                          <Text style={s.teamNameLabel} numberOfLines={1}>
-                            {predictHomeTeamLabel || "HOME"}
-                          </Text>
-                          <View style={s.scoreInputWrap}>
-                            <TextInput
-                              value={scoreHome}
-                              onChangeText={setScoreHome}
-                              keyboardType="number-pad"
-                              style={s.scoreInput}
-                              placeholder={t.scoreFieldPlaceholder}
-                              placeholderTextColor="rgba(255,255,255,0.35)"
+                  {showPredictionSummary ? (
+                    <Animated.View entering={blockIn(scoreStagger)}>
+                      <GlassPanel variant="form">
+                        <Text style={s.predictSummaryKicker}>{t.myPrediction}</Text>
+                        <View style={s.predictSummaryPairBlock}>
+                          <View style={s.predictSummaryNamesRow}>
+                            <Text
+                              style={s.predictSummaryTeamName}
+                              numberOfLines={1}
+                            >
+                              {predictHomeTeamLabel || "HOME"}
+                            </Text>
+                            <View
+                              style={s.predictSummaryMidGutter}
+                              accessibilityElementsHidden
+                              importantForAccessibility="no-hide-descendants"
                             />
+                            <Text
+                              style={s.predictSummaryTeamName}
+                              numberOfLines={1}
+                            >
+                              {predictAwayTeamLabel || "AWAY"}
+                            </Text>
+                          </View>
+                          <View style={s.predictSummaryScoresRow}>
+                            <Text style={s.predictSummaryScoreValue}>
+                              {scoreHome.trim() !== "" ? scoreHome : "–"}
+                            </Text>
+                            <View
+                              style={s.predictSummaryMidSep}
+                              accessibilityElementsHidden
+                              importantForAccessibility="no-hide-descendants"
+                            >
+                              <Text style={s.predictSummaryMidDash}>—</Text>
+                            </View>
+                            <Text style={s.predictSummaryScoreValue}>
+                              {scoreAway.trim() !== "" ? scoreAway : "–"}
+                            </Text>
                           </View>
                         </View>
-                        <View style={s.scoreCol}>
-                          <Text style={s.teamNameLabel} numberOfLines={1}>
-                            {predictAwayTeamLabel || "AWAY"}
-                          </Text>
-                          <View style={s.scoreInputWrap}>
-                            <TextInput
-                              value={scoreAway}
-                              onChangeText={setScoreAway}
-                              keyboardType="number-pad"
-                              style={s.scoreInput}
-                              placeholder={t.scoreFieldPlaceholder}
-                              placeholderTextColor="rgba(255,255,255,0.35)"
-                            />
-                          </View>
-                        </View>
-                      </View>
-                      {isSoccerPredict ? (
-                        <Text style={s.soccerHint}>{t.drawAvailable}</Text>
-                      ) : null}
-                    </GlassPanel>
-                  </Animated.View>
-
-                  {/** 送信：h-12, rounded-2xl, focus 相当の枠。背景は Web の radial を線形で近似。 */}
-                  <Animated.View entering={blockIn(submitStagger)}>
-                    <Pressable
-                      disabled={!canSubmit}
-                      onPress={onSubmit}
-                      style={({ pressed }) => [
-                        s.submitOuter,
-                        !canSubmit && s.submitOuterDisabled,
-                        canSubmit && pressed && s.submitOuterPressed,
-                      ]}
-                    >
-                      {canSubmit ? (
-                        <LinearGradient
-                          colors={[
-                            "rgba(59,130,246,0.92)",
-                            "rgba(37,99,235,0.88)",
-                            "rgba(29,78,216,0.58)",
-                            "rgba(29,78,216,0.22)",
-                            "rgba(29,78,216,0.06)",
+                        <Pressable
+                          onPress={() => setScoreFormExpanded(true)}
+                          style={({ pressed }) => [
+                            s.predictSummaryEditBtn,
+                            pressed && s.predictSummaryEditBtnPressed,
                           ]}
-                          locations={[0, 0.36, 0.58, 0.8, 1]}
-                          start={{ x: 0.5, y: 0 }}
-                          end={{ x: 0.5, y: 1 }}
-                          style={s.submitGradient}
+                          accessibilityRole="button"
+                          accessibilityLabel={t.editScoresCta}
                         >
-                          <Text style={s.predictButtonText}>
-                            {predictSubmitting
-                              ? isEditingPrediction
-                                ? t.updating
-                                : t.posting
-                              : isEditingPrediction
-                                ? t.submitUpdate
-                                : t.submitPost}
+                          <Text style={s.predictSummaryEditBtnText}>
+                            {t.editScoresCta}
                           </Text>
-                        </LinearGradient>
-                      ) : (
-                        <View style={s.submitDisabledFill}>
-                          <Text style={s.predictButtonTextDisabled}>
-                            {isEditingPrediction ? t.submitUpdate : t.submitPost}
+                        </Pressable>
+                      </GlassPanel>
+                    </Animated.View>
+                  ) : null}
+
+                  {showScoreInputBlock ? (
+                    <>
+                      <Animated.View entering={blockIn(scoreStagger)}>
+                        <GlassPanel variant="form">
+                          <Text style={s.predictSectionTitle}>
+                            {t.scorePredictTitle}
                           </Text>
-                        </View>
-                      )}
-                    </Pressable>
-                  </Animated.View>
+                          <View style={s.scoreGrid}>
+                            <View style={s.scoreCol}>
+                              <Text style={s.teamNameLabel} numberOfLines={1}>
+                                {predictHomeTeamLabel || "HOME"}
+                              </Text>
+                              <View style={s.scoreInputWrap}>
+                                <TextInput
+                                  value={scoreHome}
+                                  onChangeText={setScoreHome}
+                                  keyboardType="number-pad"
+                                  style={s.scoreInput}
+                                  placeholder={t.scoreFieldPlaceholder}
+                                  placeholderTextColor="rgba(255,255,255,0.35)"
+                                />
+                              </View>
+                            </View>
+                            <View style={s.scoreCol}>
+                              <Text style={s.teamNameLabel} numberOfLines={1}>
+                                {predictAwayTeamLabel || "AWAY"}
+                              </Text>
+                              <View style={s.scoreInputWrap}>
+                                <TextInput
+                                  value={scoreAway}
+                                  onChangeText={setScoreAway}
+                                  keyboardType="number-pad"
+                                  style={s.scoreInput}
+                                  placeholder={t.scoreFieldPlaceholder}
+                                  placeholderTextColor="rgba(255,255,255,0.35)"
+                                />
+                              </View>
+                            </View>
+                          </View>
+                          {isSoccerPredict ? (
+                            <Text style={s.soccerHint}>{t.drawAvailable}</Text>
+                          ) : null}
+                        </GlassPanel>
+                      </Animated.View>
+
+                      <Animated.View entering={blockIn(submitStagger)}>
+                        <Pressable
+                          disabled={!canSubmit}
+                          onPress={onSubmit}
+                          style={({ pressed }) => [
+                            s.submitOuter,
+                            !canSubmit && s.submitOuterDisabled,
+                            canSubmit && pressed && s.submitOuterPressed,
+                          ]}
+                        >
+                          {canSubmit ? (
+                            <LinearGradient
+                              colors={[
+                                "rgba(59,130,246,0.92)",
+                                "rgba(37,99,235,0.88)",
+                                "rgba(29,78,216,0.58)",
+                                "rgba(29,78,216,0.22)",
+                                "rgba(29,78,216,0.06)",
+                              ]}
+                              locations={[0, 0.36, 0.58, 0.8, 1]}
+                              start={{ x: 0.5, y: 0 }}
+                              end={{ x: 0.5, y: 1 }}
+                              style={s.submitGradient}
+                            >
+                              <Text style={s.predictButtonText}>
+                                {predictSubmitting
+                                  ? isEditingPrediction
+                                    ? t.updating
+                                    : t.posting
+                                  : isEditingPrediction
+                                    ? t.submitUpdate
+                                    : t.submitPost}
+                              </Text>
+                            </LinearGradient>
+                          ) : (
+                            <View style={s.submitDisabledFill}>
+                              <Text style={s.predictButtonTextDisabled}>
+                                {isEditingPrediction
+                                  ? t.submitUpdate
+                                  : t.submitPost}
+                              </Text>
+                            </View>
+                          )}
+                        </Pressable>
+                      </Animated.View>
+                    </>
+                  ) : null}
                 </>
               ) : null}
                 </View>
@@ -935,6 +1008,91 @@ const s = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 6,
   },
+  /** 予想済み要約（あなたの予想 → チーム名行 → スコア「—」スコア → 修正） */
+  predictSummaryKicker: {
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "600",
+    marginBottom: 10,
+    textAlign: "left",
+  },
+  predictSummaryPairBlock: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  predictSummaryNamesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  predictSummaryScoresRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 4,
+  },
+  /** チーム名行の中央（スコア行の「—」と幅を揃える） */
+  predictSummaryMidGutter: {
+    width: 28,
+    flexShrink: 0,
+  },
+  /** スコア行の中央の区切り */
+  predictSummaryMidSep: {
+    width: 28,
+    flexShrink: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  predictSummaryMidDash: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: "600",
+  },
+  predictSummaryTeamName: {
+    flex: 1,
+    minWidth: 0,
+    color: "#f8fafc",
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  predictSummaryScoreValue: {
+    flex: 1,
+    minWidth: 0,
+    color: "#ffffff",
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: "700",
+    textAlign: "center",
+    fontFamily: PREVIEW_NUMERIC,
+    fontVariant: ["tabular-nums"],
+  },
+  predictSummaryEditBtn: {
+    alignSelf: "stretch",
+    minHeight: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.85)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+  },
+  predictSummaryEditBtnPressed: {
+    opacity: 0.88,
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
+  },
+  predictSummaryEditBtnText: {
+    color: "#ffffff",
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
   scoreGrid: {
     flexDirection: "row",
     gap: 12,
@@ -1037,13 +1195,6 @@ const s = StyleSheet.create({
     zIndex: 1,
     borderRadius: 15,
     overflow: "hidden",
-  },
-  matchPreviewBlur: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  matchPreviewBlurFallback: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(24,28,38,0.12)",
   },
   matchPreviewLayerTopGlow: {
     ...StyleSheet.absoluteFillObject,
@@ -1157,6 +1308,23 @@ const s = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.45)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  /** Web `LiveMatchMark` 相当（プレビュー中央） */
+  matchPreviewLivePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.55)",
+    backgroundColor: "rgba(220,38,38,0.96)",
+  },
+  matchPreviewLivePillText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    includeFontPadding: false,
   },
   /** `PlayoffSeriesScoreInline` を包む（旧シリーズ行 Text 相当） */
   matchPreviewSeriesRow: {
