@@ -5,6 +5,7 @@ import {
   FadeOut,
   FadeOutDown,
   withDelay,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
@@ -41,10 +42,13 @@ export const PREDICT_MOTION = {
   modalSheetEnterTranslateY: 96,
   modalSheetEnterMs: 380,
   modalBackdropEnterMs: 240,
-  modalPreviewEnterMs: 320,
-  modalPreviewEnterDelayMs: 48,
-  modalPreviewEnterTranslateY: 20,
-  modalPreviewEnterScale: 0.94,
+  /** 先頭試合カード「3D pop」入場（custom entering で使用） */
+  modalPreviewEnterDelayMs: 40,
+  modalPreview3dPopDurationMs: 440,
+  modalPreview3dPopPerspective: 1100,
+  modalPreview3dPopRotateXDeg: 14,
+  modalPreview3dPopTranslateY: 36,
+  modalPreview3dPopScaleFrom: 0.82,
 } as const;
 
 /** オーバーレイ全体（backdrop）用。Web モバイル `ScheduleList` の dim は無アニメのため未使用 */
@@ -92,17 +96,45 @@ export function predictModalSheetEnter() {
     });
 }
 
-/** モーダル先頭プレビュー: fade + translateY + scale（位置測定なし） */
+/**
+ * モーダル先頭の試合カード: 「3D pop」— 手前に倒した状態から perspective + rotateX 復帰、
+ * scale はスプリングで少し弾む（一覧の FadeInDown より立体的）。
+ */
 export function predictModalPreviewEnter() {
-  return FadeInDown.duration(PREDICT_MOTION.modalPreviewEnterMs)
-    .delay(PREDICT_MOTION.modalPreviewEnterDelayMs)
-    .easing(easeOut)
-    .withInitialValues({
-      transform: [
-        { translateY: PREDICT_MOTION.modalPreviewEnterTranslateY },
-        { scale: PREDICT_MOTION.modalPreviewEnterScale },
-      ],
-    });
+  const delayMs = PREDICT_MOTION.modalPreviewEnterDelayMs;
+  const duration = PREDICT_MOTION.modalPreview3dPopDurationMs;
+  const easing = Easing.out(Easing.cubic);
+  const p = PREDICT_MOTION.modalPreview3dPopPerspective;
+  const rotateFrom = `${PREDICT_MOTION.modalPreview3dPopRotateXDeg}deg`;
+  const y0 = PREDICT_MOTION.modalPreview3dPopTranslateY;
+  const s0 = PREDICT_MOTION.modalPreview3dPopScaleFrom;
+  return () => {
+    "worklet";
+    const timing = { duration, easing };
+    const spring = { damping: 16, stiffness: 320, mass: 0.78 };
+    return {
+      initialValues: {
+        opacity: 0,
+        transform: [
+          { perspective: p },
+          { rotateX: rotateFrom },
+          { translateY: y0 },
+          { scale: s0 },
+        ],
+      },
+      animations: {
+        opacity: withDelay(delayMs, withTiming(1, { duration: 280, easing })),
+        transform: [
+          { perspective: p },
+          {
+            rotateX: withDelay(delayMs, withTiming("0deg", timing)),
+          },
+          { translateY: withDelay(delayMs, withTiming(0, timing)) },
+          { scale: withDelay(delayMs, withSpring(1, spring)) },
+        ],
+      },
+    };
+  };
 }
 
 /** 閉じる時のレイアウトアニメ完了待ち（ entering と同系の長さ + 余裕） */
@@ -200,6 +232,47 @@ export function gamesScheduleCardDaySwitchEnter(index: number) {
         opacity: withDelay(delayMs, withTiming(1, timing)),
         transform: [
           { translateY: withDelay(delayMs, withTiming(0, timing)) },
+        ],
+      },
+    };
+  };
+}
+
+/**
+ * 試合一覧カード入場：`predictModalPreviewEnter` と同じ 3D pop（perspective + rotateX + scale スプリング）。
+ * スタッガーは従来 daySwitch と同一（index×38ms・上限 280ms）。
+ */
+export function gamesScheduleCard3dPopEnter(index: number) {
+  const delayMs = Math.min(index * SCHEDULE_CARD_STAGGER_MS, SCHEDULE_CARD_STAGGER_CAP_MS);
+  const duration = PREDICT_MOTION.modalPreview3dPopDurationMs;
+  const easing = Easing.out(Easing.cubic);
+  const p = PREDICT_MOTION.modalPreview3dPopPerspective;
+  const rotateFrom = `${PREDICT_MOTION.modalPreview3dPopRotateXDeg}deg`;
+  const y0 = PREDICT_MOTION.modalPreview3dPopTranslateY;
+  const s0 = PREDICT_MOTION.modalPreview3dPopScaleFrom;
+  return () => {
+    "worklet";
+    const timing = { duration, easing };
+    const spring = { damping: 16, stiffness: 320, mass: 0.78 };
+    return {
+      initialValues: {
+        opacity: 0,
+        transform: [
+          { perspective: p },
+          { rotateX: rotateFrom },
+          { translateY: y0 },
+          { scale: s0 },
+        ],
+      },
+      animations: {
+        opacity: withDelay(delayMs, withTiming(1, { duration: 280, easing })),
+        transform: [
+          { perspective: p },
+          {
+            rotateX: withDelay(delayMs, withTiming("0deg", timing)),
+          },
+          { translateY: withDelay(delayMs, withTiming(0, timing)) },
+          { scale: withDelay(delayMs, withSpring(1, spring)) },
         ],
       },
     };

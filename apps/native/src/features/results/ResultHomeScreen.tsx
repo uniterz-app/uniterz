@@ -11,10 +11,17 @@ import {
   UIManager,
   View,
   type LayoutChangeEvent,
+  type ViewStyle,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { db } from "../../lib/firebase";
@@ -37,6 +44,7 @@ import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import ResultDetailScreen from "./ResultDetailScreen";
 import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
+import ResultPredictEditModal from "./ResultPredictEditModal";
 import { MatchCardListGridOverlay } from "../games/MatchCardListGridOverlay";
 
 const hasNativeBlurView =
@@ -49,6 +57,10 @@ const hasNativeBlurView =
 const JERSEY_SIZE_RESULT = 52;
 /** 上段／下段 50% 分割のカード高さ */
 const RESULT_CARD_SPLIT_HEIGHT = 214;
+
+/** Web `ResultCard` の `transition-all duration-300 ease-out`（モバイルフライアウトの translate 含む） */
+const CORNER_FAB_TRANSITION_MS = 300;
+const cornerFabTransitionEasing = Easing.out(Easing.cubic);
 
 /** Web `ResultDayPipeGroup` の日付帯グリッド（11px・シアン） */
 const DAY_HEADER_GRID_STEP = 11;
@@ -156,8 +168,17 @@ function normalizeLeague(raw: unknown): "nba" | "bj" | "j1" | "pl" {
   return "nba";
 }
 
+/** Firestore は数値フィールドが文字列で返ることがあるため Number に寄せる */
 function toNumber(v: unknown, fallback = 0) {
-  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (t !== "") {
+      const n = Number(t);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return fallback;
 }
 
 function clamp01(x: number) {
@@ -169,11 +190,13 @@ function toInt(v: unknown): number | null {
 }
 
 function isYellow10pt(v: unknown): boolean {
-  return typeof v === "number" && Number.isFinite(v) && v >= 7;
+  const n = toNumber(v, NaN);
+  return Number.isFinite(n) && n >= 7;
 }
 
 function isRedUpset(v: unknown): boolean {
-  return typeof v === "number" && Number.isFinite(v) && v > 0;
+  const n = toNumber(v, NaN);
+  return Number.isFinite(n) && n > 0;
 }
 
 type StreakBadge = { label: string; tone: "gold" | "orange" | "red" };
@@ -286,24 +309,80 @@ function ResultPostCard({
   post,
   language,
   nowMs,
+  viewerUid,
   onOpenDetail,
   onRequestDeleteConfirm,
+  onRequestPredictEdit,
 }: {
   post: PostWithMillis;
   language: "ja" | "en";
   nowMs: number;
+  viewerUid: string | null;
   onOpenDetail: (id: string) => void;
   /** Web 同様：カスタム削除確認モーダルを開く */
   onRequestDeleteConfirm: (post: PostWithMillis) => void;
+  /** Web `onRequestPredictEdit`（未接続時はペンを出さない） */
+  onRequestPredictEdit?: (post: PostWithMillis) => void;
 }) {
   const isEn = language === "en";
-  const showTrash = canDismissResultListPostNow(post, nowMs);
+  const [cornerFabOpen, setCornerFabOpen] = useState(false);
 
   const postStatus = typeof post.status === "string" ? post.status : "";
   const startAtMs =
     typeof post.startAtMillis === "number" && Number.isFinite(post.startAtMillis)
       ? post.startAtMillis
       : null;
+  /** Web `ResultCard` の `isMatchStarted` と同じ */
+  const isMatchStarted =
+    postStatus === "live" ||
+    postStatus === "final" ||
+    (postStatus === "scheduled" &&
+      startAtMs != null &&
+      nowMs >= startAtMs);
+
+  const authorUid =
+    typeof post.authorUid === "string" && post.authorUid.length > 0 ? post.authorUid : null;
+  const gameId =
+    typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
+  const hasCornerTrash = canDismissResultListPostNow(post, nowMs);
+  const hasCornerEdit = Boolean(
+    viewerUid &&
+      authorUid === viewerUid &&
+      gameId &&
+      onRequestPredictEdit
+  );
+  const hasCornerActions =
+    !isMatchStarted && (hasCornerTrash || hasCornerEdit);
+
+  useEffect(() => {
+    if (isMatchStarted) setCornerFabOpen(false);
+  }, [isMatchStarted]);
+
+  const penFlyProgress = useSharedValue(0);
+  const trashFlyProgress = useSharedValue(0);
+
+  useEffect(() => {
+    const target = cornerFabOpen ? 1 : 0;
+    const cfg = {
+      duration: CORNER_FAB_TRANSITION_MS,
+      easing: cornerFabTransitionEasing,
+    };
+    penFlyProgress.value = withTiming(hasCornerEdit ? target : 0, cfg);
+    trashFlyProgress.value = withTiming(hasCornerTrash ? target : 0, cfg);
+  }, [cornerFabOpen, hasCornerEdit, hasCornerTrash]);
+
+  /** Web `flyoutPenClass`：閉じ時 translate-x-2（+8px）、開くと 0 */
+  const cornerFlyoutPenMotion = useAnimatedStyle(() => ({
+    opacity: penFlyProgress.value,
+    transform: [{ translateX: 8 * (1 - penFlyProgress.value) }],
+  }));
+
+  /** Web `flyoutTrashClass`：閉じ時 -translate-y-2（-8px）、開くと 0 */
+  const cornerFlyoutTrashMotion = useAnimatedStyle(() => ({
+    opacity: trashFlyProgress.value,
+    transform: [{ translateY: -8 * (1 - trashFlyProgress.value) }],
+  }));
+
   /** Web ResultCard の isLiveGame と同じ：開始〜確定まで LIVE */
   const showLiveMark =
     postStatus !== "final" &&
@@ -314,8 +393,15 @@ function ResultPostCard({
 
   const requestDeletePost = useCallback(() => {
     if (!canDismissResultListPostNow(post, Date.now())) return;
+    setCornerFabOpen(false);
     onRequestDeleteConfirm(post);
   }, [onRequestDeleteConfirm, post]);
+
+  const requestPredictEdit = useCallback(() => {
+    if (!onRequestPredictEdit || !gameId) return;
+    setCornerFabOpen(false);
+    onRequestPredictEdit(post);
+  }, [gameId, onRequestPredictEdit, post]);
 
   const leagueKey = normalizeLeague(post.league);
   const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
@@ -407,16 +493,27 @@ function ResultPostCard({
                 ? styles.cardFrameMiss
                 : null;
 
+  const shellOverflowStyle =
+    cornerFabOpen && hasCornerActions ? styles.cardShellOverflowVisible : null;
+
   return (
     <Pressable
       style={({ pressed }) => [
         styles.listRowOuter,
         styles.cardOuter,
+        styles.resultCardPressable,
         pressed && styles.cardPressed,
       ]}
-      onPress={() => onOpenDetail(post.id)}
+      onPress={() => {
+        /** Web：FAB 外タップでメニューを閉じる（詳細は閉じた後のタップで） */
+        if (cornerFabOpen) {
+          setCornerFabOpen(false);
+          return;
+        }
+        onOpenDetail(post.id);
+      }}
     >
-      <View style={[styles.cardShell, frameStyle]} collapsable={false}>
+      <View style={[styles.cardShell, frameStyle, shellOverflowStyle]} collapsable={false}>
         <View pointerEvents="none" style={styles.cardGridUnderlay}>
           <MatchCardListGridOverlay styles={styles} tone="resultList" />
         </View>
@@ -463,28 +560,87 @@ function ResultPostCard({
             style={styles.cardLayerShine}
           />
           <View style={styles.cardGlowOverlay} />
-          {showTrash ? (
-            <Pressable
-              style={({ pressed }) => [
-                styles.cardTrashHit,
-                pressed && styles.cardTrashPressed,
-              ]}
-              onPress={requestDeletePost}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
-            >
-              <MaterialCommunityIcons
-                name="trash-can-outline"
-                size={17}
-                color="rgba(248,250,252,0.88)"
-              />
-            </Pressable>
+          {hasCornerActions ? (
+            <View style={styles.cornerFabCluster} pointerEvents="box-none">
+              {hasCornerEdit ? (
+                <Animated.View
+                  style={[styles.cornerFlyoutPenSlot, cornerFlyoutPenMotion]}
+                  pointerEvents={cornerFabOpen ? "auto" : "none"}
+                >
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.cornerFlyoutPen,
+                      pressed && styles.cornerFlyoutPressed,
+                    ]}
+                    onPress={requestPredictEdit}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
+                  >
+                    <MaterialCommunityIcons
+                      name="pencil"
+                      size={10}
+                      color="rgba(207,250,254,0.88)"
+                    />
+                  </Pressable>
+                </Animated.View>
+              ) : null}
+              {hasCornerTrash ? (
+                <Animated.View
+                  style={[styles.cornerFlyoutTrashSlot, cornerFlyoutTrashMotion]}
+                  pointerEvents={cornerFabOpen ? "auto" : "none"}
+                >
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.cornerFlyoutTrash,
+                      pressed && styles.cornerFlyoutPressed,
+                    ]}
+                    onPress={requestDeletePost}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
+                  >
+                    <MaterialCommunityIcons
+                      name="trash-can-outline"
+                      size={10}
+                      color="rgba(252,165,165,0.88)"
+                    />
+                  </Pressable>
+                </Animated.View>
+              ) : null}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.cornerMenuBtn,
+                  pressed && styles.cornerMenuBtnPressed,
+                ]}
+                onPress={() => setCornerFabOpen((v) => !v)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: cornerFabOpen }}
+                accessibilityLabel={isEn ? "Open actions" : "操作メニュー"}
+              >
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={["rgba(39,39,42,0.96)", "rgba(0,0,0,0.92)"]}
+                  locations={[0, 1]}
+                  style={styles.cornerMenuBtnGradient}
+                />
+                <View style={styles.cornerMenuIconWrap}>
+                  <MaterialCommunityIcons
+                    name="menu"
+                    size={10}
+                    color="rgba(224,250,254,0.72)"
+                  />
+                </View>
+              </Pressable>
+            </View>
           ) : null}
 
           <View style={styles.cardContent}>
           <View style={styles.cardUpperPane}>
-            <View style={[styles.cardTopRow, showTrash && styles.cardTopRowWithTrash]}>
+            <View
+              style={[styles.cardTopRow, hasCornerActions && styles.cardTopRowWithCornerFab]}
+            >
               <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
               <View style={styles.badgeRow}>
                 {badge === "streak" && streakBadge ? (
@@ -669,6 +825,8 @@ export default function ResultHomeScreen({
   }, []);
 
   const [detailPostId, setDetailPostId] = useState<string | null>(null);
+  /** Web `ResultListWithOverlay` と同様：一覧上で予想修正モーダルを開く */
+  const [predictEditPost, setPredictEditPost] = useState<PostWithMillis | null>(null);
   const [deleteConfirmPost, setDeleteConfirmPost] = useState<PostWithMillis | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const deleteSubmittingRef = useRef(false);
@@ -748,25 +906,32 @@ export default function ResultHomeScreen({
 
   const showInitialSpinner = loading && grouped.length === 0;
 
+  /** 親ではなくスクロール内容に下余白を付け、ナビ背後までカードが見えるようにする */
+  const listContentWithBottomInset = useMemo(
+    (): ViewStyle[] => [styles.listContent, { paddingBottom: bottomReserveY }],
+    [bottomReserveY]
+  );
+
   return (
     <View style={styles.resultScreenWrap}>
-    <View style={[styles.root, { paddingBottom: bottomReserveY }]}>
+    <View style={styles.root}>
       {showInitialSpinner ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.accent} size="large" />
           <Text style={styles.loadingText}>{t.loading}</Text>
         </View>
       ) : sections.length === 0 ? (
-        <View style={styles.listContent}>
+        <View style={[styles.listContent, { paddingBottom: bottomReserveY }]}>
           {listHeader}
           {listEmpty}
         </View>
       ) : (
         <SectionList<PostWithMillis, SectionT>
+          style={styles.listScroll}
           sections={sections}
           keyExtractor={(item) => item.id}
           stickySectionHeadersEnabled={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={listContentWithBottomInset}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
           ListFooterComponent={
@@ -789,7 +954,7 @@ export default function ResultHomeScreen({
           renderSectionHeader={({ section }) => (
             <ResultDayHeader
               dateLabel={section.dateLabel}
-              dayPoints={dayPointsHeaderForNative(section.pending, section.final, language)}
+              dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
             />
           )}
           renderItem={({ item }) => (
@@ -797,8 +962,10 @@ export default function ResultHomeScreen({
               post={item}
               language={language}
               nowMs={listNowTick}
+              viewerUid={uid}
               onOpenDetail={setDetailPostId}
               onRequestDeleteConfirm={setDeleteConfirmPost}
+              onRequestPredictEdit={setPredictEditPost}
             />
           )}
           SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
@@ -820,6 +987,13 @@ export default function ResultHomeScreen({
       }}
       onConfirm={() => void confirmDismissPostFromList()}
     />
+    <ResultPredictEditModal
+      visible={predictEditPost != null}
+      post={predictEditPost}
+      language={language}
+      onClose={() => setPredictEditPost(null)}
+      onUpdated={() => void refreshPosts()}
+    />
     </View>
   );
 }
@@ -836,6 +1010,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bgPrimary,
     minHeight: 0,
+  },
+  listScroll: {
+    flex: 1,
+    backgroundColor: colors.bgPrimary,
   },
   listContent: {
     /** `mainArea` の 8px に加えて少し狭く見せる */
@@ -1073,6 +1251,13 @@ const styles = StyleSheet.create({
   cardOuter: {
     marginBottom: 2,
   },
+  /** SectionList セル計測ぶれ防止：行全体を一覧カード高さに固定 */
+  resultCardPressable: {
+    height: RESULT_CARD_SPLIT_HEIGHT,
+    minHeight: RESULT_CARD_SPLIT_HEIGHT,
+    maxHeight: RESULT_CARD_SPLIT_HEIGHT,
+    flexShrink: 0,
+  },
   cardPressed: {
     opacity: 0.96,
     transform: [{ scale: 0.99 }],
@@ -1081,11 +1266,14 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderRadius: 20,
-    borderWidth: 1,
+    /** HIT だけ太枠にしない（全バッジ共通 2px で外寸を揃える） */
+    borderWidth: 2,
     borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(8,11,18,0.84)",
+    flexShrink: 0,
     height: RESULT_CARD_SPLIT_HEIGHT,
     minHeight: RESULT_CARD_SPLIT_HEIGHT,
+    maxHeight: RESULT_CARD_SPLIT_HEIGHT,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.55,
@@ -1120,19 +1308,102 @@ const styles = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 3,
   },
-  /** Web の `right-11` 相当：ゴミ箱とバッジ列の干渉を避ける */
-  cardTopRowWithTrash: {
-    paddingRight: 36,
+  /** Web の `right-11` 相当：コンパクト FAB とバッジ列の干渉を避ける */
+  cardTopRowWithCornerFab: {
+    paddingRight: 28,
   },
-  cardTrashHit: {
+  /** メニュー展開でフライアウトがはみ出すときのクリップ解除（Web と同様） */
+  cardShellOverflowVisible: {
+    overflow: "visible",
+  },
+  /** Web `ResultCard` の右上アクション簇（ハンバーガー＋フライアウト） */
+  cornerFabCluster: {
     position: "absolute",
-    top: 2,
-    right: 10,
-    zIndex: 5,
-    padding: 6,
+    top: 8,
+    /** 右端から離してハンバーガーをやや左へ */
+    right: 13,
+    zIndex: 50,
+    minWidth: 22,
+    minHeight: 22,
+    alignItems: "flex-end",
   },
-  cardTrashPressed: {
-    opacity: 0.72,
+  cornerMenuBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    overflow: "hidden",
+    borderWidth: 1,
+    /** Web `border-cyan-400/50` に寄せたメインボタン枠 */
+    borderColor: "rgba(34,211,238,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#22d3ee",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  /** Web `from-zinc-800/95 to-black/92` の縦グラデーション */
+  cornerMenuBtnGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 4,
+  },
+  /** 線が詰まって見えるので横だけやや潰して細めに（グラデの上に載せる） */
+  cornerMenuIconWrap: {
+    zIndex: 1,
+    transform: [{ scaleX: 0.82 }],
+  },
+  cornerMenuBtnPressed: {
+    opacity: 0.9,
+  },
+  /** Web `absolute top-full left-1/2 mt-2` に相当するスロット */
+  cornerFlyoutTrashSlot: {
+    position: "absolute",
+    /** メニュー高さ 22 + Web `mt-2` 相当の間隔 */
+    top: 30,
+    right: 0,
+    zIndex: 55,
+  },
+  cornerFlyoutTrash: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.5)",
+    backgroundColor: "rgba(0,0,0,0.78)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#f87171",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.14,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  /** Web `absolute right-full top-1/2 mr-2` に相当するスロット */
+  cornerFlyoutPenSlot: {
+    position: "absolute",
+    top: 0,
+    /** メニュー幅 22 + Web `mr-2` 相当の間隔 */
+    right: 30,
+    zIndex: 55,
+  },
+  cornerFlyoutPen: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "rgba(34,211,238,0.55)",
+    backgroundColor: "rgba(0,0,0,0.78)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#22d3ee",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.14,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  cornerFlyoutPressed: {
+    opacity: 0.85,
   },
   cardLayerBase: {
     ...StyleSheet.absoluteFillObject,
@@ -1175,7 +1446,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
   },
   cardFrameHit: {
-    borderColor: "rgba(250,204,21,0.65)",
+    borderColor: "rgba(250,204,21,0.72)",
     shadowColor: "rgba(250,204,21,0.45)",
     shadowOpacity: 0.4,
     shadowRadius: 14,

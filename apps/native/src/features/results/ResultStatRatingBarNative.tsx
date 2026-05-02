@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
-import {
-  Canvas,
-  Group,
-  LinearGradient,
-  RoundedRect,
-  vec,
-} from "@shopify/react-native-skia";
+import { Canvas, Group, RoundedRect } from "@shopify/react-native-skia";
 
 const SEGMENTS = 5;
 
@@ -97,22 +91,26 @@ export default function ResultStatRatingBarNative({ ratio, size = "md" }: Props)
                     r={2}
                     color="rgba(255,255,255,0.06)"
                   />
+                  {/* Skia 2.x では子 LinearGradient が確実に効かない環境があるため、縦グラデは edge→core の2枚で近似 */}
                   {fillW > 0.5 ? (
-                    <RoundedRect
-                      x={x}
-                      y={0}
-                      width={fillW}
-                      height={layout.h}
-                      r={2}
-                      color="transparent"
-                    >
-                      <LinearGradient
-                        start={vec(x, 0)}
-                        end={vec(x, layout.h)}
-                        colors={[pal.edge, pal.core, pal.edge]}
-                        positions={[0, 0.48, 1]}
+                    <Group>
+                      <RoundedRect
+                        x={x}
+                        y={0}
+                        width={fillW}
+                        height={layout.h}
+                        r={2}
+                        color={pal.edge}
                       />
-                    </RoundedRect>
+                      <RoundedRect
+                        x={x}
+                        y={layout.h * 0.22}
+                        width={fillW}
+                        height={Math.max(1, layout.h * 0.56)}
+                        r={1.5}
+                        color={pal.core}
+                      />
+                    </Group>
                   ) : null}
                 </Group>
               );

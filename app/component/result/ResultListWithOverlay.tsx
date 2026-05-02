@@ -57,6 +57,7 @@ import {
   isFinalResultPost,
   pruneDismissedResultListPostIds,
   RESULT_POSTS_MAX_CACHED,
+  hasPointsV3Recorded,
   sumDayPointsV3,
   type PostWithMillis,
   type ResultDayGroup,
@@ -229,7 +230,7 @@ function dayPointsHeaderForList(
   pendingShown: PostWithMillis[],
   language: Language
 ): ResultDayPointsHeader {
-  if (finalShown.length > 0) {
+  if (finalShown.length > 0 && finalShown.every(hasPointsV3Recorded)) {
     const total = sumDayPointsV3(finalShown);
     const fmt =
       Number.isInteger(total) || Math.abs(total - Math.round(total)) < 1e-6
@@ -261,7 +262,7 @@ function dayPointsHeaderForList(
       ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
     };
   }
-  if (pendingShown.length > 0) {
+  if (finalShown.length > 0 || pendingShown.length > 0) {
     return language === "en"
       ? {
           variant: "pending",

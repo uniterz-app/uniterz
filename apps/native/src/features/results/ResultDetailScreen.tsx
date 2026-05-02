@@ -14,6 +14,8 @@ import {
   Text,
   UIManager,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -116,8 +118,17 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
+/** Firestore は数値フィールドが文字列で返ることがあるため Number に寄せる */
 function toNumber(v: unknown, fallback = 0) {
-  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (t !== "") {
+      const n = Number(t);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return fallback;
 }
 
 function clamp01(x: number) {
@@ -153,9 +164,16 @@ function streakToneStyle(tone: StreakBadge["tone"]) {
  * リザルト一覧 `ResultPostCard` の `cardShell` と同色・同方眼（`tone="resultList"`）。
  * ブラーは入れず、ベースグラデ＋薄い白シーンのみ（一覧と同じ値）。
  */
-function ShellCard({ children }: { children: ReactNode }) {
+function ShellCard({
+  children,
+  frameStyle,
+}: {
+  children: ReactNode;
+  /** HIT 時など一覧 `cardFrameHit` に合わせた外枠 */
+  frameStyle?: StyleProp<ViewStyle>;
+}) {
   return (
-    <View style={styles.shellCard}>
+    <View style={[styles.shellCard, frameStyle]}>
       <View pointerEvents="none" style={styles.shellGridUnderlay}>
         <MatchCardListGridOverlay styles={styles} tone="resultList" />
       </View>
@@ -229,8 +247,9 @@ function ResultDetailMarketSection({
   const awayName = getMobileTeamName(leagueKey, away?.name ?? "", awayL1, awayL2);
   const homeFallback = "#0ea5e9";
   const awayFallback = "#f43f5e";
-  const homeC = resolveTeamPrimaryColor(post.league, home, homeFallback);
-  const awayC = resolveTeamPrimaryColor(post.league, away, awayFallback);
+  /** 一覧カード／試合ページの市場ドーナツと同じ：NBA はジャージ用オーバーライド色（Magic 等は primary テーブルが黒でも青で統一） */
+  const homeC = resolveTeamJerseyPalette(post.league, home, homeFallback).primary;
+  const awayC = resolveTeamJerseyPalette(post.league, away, awayFallback).primary;
 
   if (!market) {
     return (
@@ -249,6 +268,9 @@ function ResultDetailMarketSection({
   const h = market.homeRate ?? 0;
   const a = market.awayRate ?? 0;
   const d = market.drawRate ?? 0;
+  /** Firestore の market.total：0 のとき比率は未確定（0% 表示のガラストラックのみ） */
+  const marketRatesConfirmed =
+    typeof market.total === "number" && Number.isFinite(market.total) && market.total > 0;
 
   const legendHomeName = leagueKey === "nba" ? homeName.toUpperCase() : homeName;
   const legendAwayName = leagueKey === "nba" ? awayName.toUpperCase() : awayName;
@@ -279,6 +301,7 @@ function ResultDetailMarketSection({
           size={132}
           thickness={42}
           drawDelayMs={donutDrawDelayMs}
+          marketRatesConfirmed={marketRatesConfirmed}
         />
         <View style={styles.marketLegendCol}>
           {typeof market.total === "number" && market.total > 0 ? (
@@ -650,7 +673,9 @@ export default function ResultDetailScreen({
     else if (stats && stats.isWin === false) badge = "miss";
 
     return (
-      <ShellCard>
+      <ShellCard
+        frameStyle={badge === "hit" ? styles.shellCardHitGoldFrame : undefined}
+      >
         <View style={styles.matchTop}>
           <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
           <View style={styles.badgeRow}>
@@ -876,7 +901,7 @@ const styles = StyleSheet.create({
   shellCard: {
     position: "relative",
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: "rgba(255,255,255,0.12)",
     overflow: "hidden",
     backgroundColor: "rgba(8,11,18,0.84)",
@@ -885,6 +910,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.55,
     shadowRadius: 20,
     elevation: 7,
+  },
+  /** 一覧 `cardFrameHit` と同一のゴールド枠（詳細ヘッダーカードのみ・太さは shellCard と共通） */
+  shellCardHitGoldFrame: {
+    borderColor: "rgba(250,204,21,0.72)",
+    shadowColor: "rgba(250,204,21,0.45)",
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
   },
   /** 一覧と同順：方眼 → グラデ積層 */
   shellGridUnderlay: {
@@ -956,17 +988,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 4,
   },
-  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, maxWidth: "70%" },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    maxWidth: "72%",
+    justifyContent: "flex-end",
+  },
+  /** 一覧 `ResultHomeScreen` の miniBadge と同寸・同形状 */
   miniBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
+    gap: 3,
+    paddingHorizontal: 6,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
   },
-  miniBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  miniBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800", maxWidth: 120 },
   streakRed: {
     backgroundColor: "rgba(127,29,29,0.55)",
     borderColor: "rgba(252,165,165,0.5)",
@@ -979,11 +1018,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(113,63,18,0.5)",
     borderColor: "rgba(253,224,71,0.55)",
   },
+  /** 一覧カードの HIT と同一（ソリッドゴールド・黒字・枠線なし） */
   badgeHit: {
-    backgroundColor: "rgba(113,63,18,0.55)",
-    borderColor: "rgba(250,204,21,0.55)",
+    backgroundColor: "rgba(250,204,21,0.95)",
+    borderWidth: 0,
   },
-  badgeHitText: { color: "#fef08a", fontSize: 10, fontWeight: "900" },
+  badgeHitText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#0a0a0a",
+  },
   badgeUpset: {
     backgroundColor: "rgba(127,29,29,0.55)",
     borderColor: "rgba(248,113,113,0.55)",

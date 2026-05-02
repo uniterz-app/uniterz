@@ -1,6 +1,12 @@
 import { Platform, Pressable, StyleSheet, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { useReducedMotion } from "react-native-reanimated";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
 import type { GamesTexts } from "./gamesI18n";
 import {
@@ -9,10 +15,9 @@ import {
   MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY,
 } from "./matchCardCtaGradients";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
+import { LiveMarkPill } from "./LiveMarkPill";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import { MatchCardFineBackdrop } from "./MatchCardFineInterior";
-import { gamesScheduleCardDaySwitchEnter } from "./predictMotion";
-
 type ScreenStyles = Record<string, ViewStyle & TextStyle & ImageStyle>;
 
 type GameCardListProps = {
@@ -47,11 +52,16 @@ type GameCardListProps = {
   ) => { primary: string; secondary: string };
 };
 
-export default function GameCardList(props: GameCardListProps) {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+type GameCardListRowProps = GameCardListProps & {
+  game: Record<string, unknown>;
+};
+
+function GameCardListRow(props: GameCardListRowProps) {
   const {
-    games,
+    game,
     predictedGameIds,
-    language,
     t,
     styles,
     openPredictModal,
@@ -69,61 +79,84 @@ export default function GameCardList(props: GameCardListProps) {
   } = props;
 
   const reduceMotion = useReducedMotion() ?? false;
-  const cardListEnter = (i: number) =>
-    reduceMotion ? undefined : gamesScheduleCardDaySwitchEnter(i);
+  const pressedLift = useSharedValue(0);
+
+  const cardPressLiftStyle = useAnimatedStyle(() => {
+    if (reduceMotion) {
+      return {};
+    }
+    const y = interpolate(pressedLift.value, [0, 1], [0, -3]);
+    const s = interpolate(pressedLift.value, [0, 1], [1, 1.02]);
+    const shadowOp = interpolate(pressedLift.value, [0, 1], [0.55, 0.72]);
+    const shadowRad = interpolate(pressedLift.value, [0, 1], [20, 28]);
+    const el = interpolate(pressedLift.value, [0, 1], [7, 12]);
+    return {
+      transform: [{ translateY: y }, { scale: s }],
+      shadowOpacity: shadowOp,
+      shadowRadius: shadowRad,
+      elevation: el,
+    };
+  });
+
+  const gameId = String(game.id ?? "");
+  const isPredicted = predictedGameIds.has(gameId);
+  const awayName = resolveGameTeamName(game.away, game.awayTeamName, "AWAY");
+  const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
+  const awayCompact = toCompactTeamName(game.league, awayName);
+  const homeCompact = toCompactTeamName(game.league, homeName);
+  const soccer = isSoccerLeague(game.league);
+  const status = resolveGameStatus(game);
+  const started = isGameStarted(game);
+  const leagueColor = resolveLeagueColor(game.league);
+  const centerBlock = getGameCardCenterBlock(game);
+  const roundLabelRaw = game.roundLabel;
+  const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
+  const seriesLabel = resolveSeriesLabel(game);
+  const seriesPair = resolveSeriesPair(game);
+  const homeRecordLabel = getTeamRecordLabel(game.home);
+  const awayRecordLabel = getTeamRecordLabel(game.away);
+  const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
+  const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
+  const ctaLabel =
+    status === "final"
+      ? t.final
+      : started
+      ? t.live
+      : isPredicted
+      ? t.predicted
+      : t.predict;
+  /** MatchCard / MatchCardWeb: final も isPredicted ? predicted : normal（青 radial） */
+  const actionFillGradient = isPredicted
+    ? getMatchCardPredictedCtaLinearGradient()
+    : getMatchCardBlueCtaLinearGradient();
 
   return (
-    <View style={styles.listArea}>
-      <View style={styles.listContent}>
-        {games.length === 0 ? <Text style={styles.body}>{t.noGames}</Text> : null}
-        {games.map((game, idx) => {
-          const gameId = String(game.id ?? "");
-          const isPredicted = predictedGameIds.has(gameId);
-          const awayName = resolveGameTeamName(game.away, game.awayTeamName, "AWAY");
-          const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
-          const awayCompact = toCompactTeamName(game.league, awayName);
-          const homeCompact = toCompactTeamName(game.league, homeName);
-          const soccer = isSoccerLeague(game.league);
-          const status = resolveGameStatus(game);
-          const started = isGameStarted(game);
-          const leagueColor = resolveLeagueColor(game.league);
-          const centerBlock = getGameCardCenterBlock(game);
-          const roundLabelRaw = game.roundLabel;
-          const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
-          const seriesLabel = resolveSeriesLabel(game);
-          const seriesPair = resolveSeriesPair(game);
-          const homeRecordLabel = getTeamRecordLabel(game.home);
-          const awayRecordLabel = getTeamRecordLabel(game.away);
-          const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
-          const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
-          const ctaLabel =
-            status === "final"
-              ? t.final
-              : started
-              ? t.live
-              : isPredicted
-              ? t.predicted
-              : t.predict;
-          /** MatchCard / MatchCardWeb: final も isPredicted ? predicted : normal（青 radial） */
-          const actionFillGradient = isPredicted
-            ? getMatchCardPredictedCtaLinearGradient()
-            : getMatchCardBlueCtaLinearGradient();
-
-          const rowKey = gameId || `game-${idx}`;
-          return (
-            <Animated.View
-              key={rowKey}
-              entering={cardListEnter(idx)}
-              style={[styles.gameCardShell, isPredicted && styles.gameCardShellPredicted]}
-              collapsable={false}
-            >
+    <AnimatedPressable
+      collapsable={false}
+      android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
+      onPress={() => void openPredictModal(game)}
+      onPressIn={() => {
+        if (reduceMotion) {
+          return;
+        }
+        pressedLift.value = withTiming(1, { duration: 180 });
+      }}
+      onPressOut={() => {
+        if (reduceMotion) {
+          return;
+        }
+        pressedLift.value = withTiming(0, { duration: 220 });
+      }}
+      style={[
+        styles.gameCardShell,
+        isPredicted && styles.gameCardShellPredicted,
+        cardPressLiftStyle,
+      ]}
+    >
               <View pointerEvents="none" style={styles.cardFineShellBackdrop}>
                 <MatchCardFineBackdrop />
               </View>
-              <Pressable
-                style={styles.cardPressableBody}
-                onPress={() => void openPredictModal(game)}
-              >
+              <View style={styles.cardPressableBody}>
               <View style={{ flex: 1, minHeight: 0 }}>
               <View style={styles.cardFineInteriorContent}>
               <View style={styles.cardTopRow}>
@@ -159,9 +192,10 @@ export default function GameCardList(props: GameCardListProps) {
                   <View style={styles.centerScoreWrap}>
                     {centerBlock.variant === "liveMark" ? (
                       <View style={styles.liveMarkWrap}>
-                        <View style={styles.liveMarkPill}>
-                          <Text style={styles.liveMarkText}>LIVE</Text>
-                        </View>
+                        <LiveMarkPill
+                          pillStyle={styles.liveMarkPill}
+                          textStyle={styles.liveMarkText}
+                        />
                       </View>
                     ) : centerBlock.variant === "score" ? (
                       <Text style={styles.centerTextScore} numberOfLines={1}>
@@ -276,9 +310,21 @@ export default function GameCardList(props: GameCardListProps) {
                     : ctaLabel}
                 </Text>
               </View>
-              </Pressable>
-            </Animated.View>
-          );
+              </View>
+    </AnimatedPressable>
+  );
+}
+
+export default function GameCardList(props: GameCardListProps) {
+  const { games, t, styles } = props;
+
+  return (
+    <View style={styles.listArea}>
+      <View style={styles.listContent}>
+        {games.length === 0 ? <Text style={styles.body}>{t.noGames}</Text> : null}
+        {games.map((game, idx) => {
+          const rowKey = String(game.id ?? "") || `game-${idx}`;
+          return <GameCardListRow key={rowKey} {...props} game={game} />;
         })}
       </View>
     </View>

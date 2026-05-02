@@ -20,6 +20,7 @@ import { PredictToolTabContent } from "./PredictToolTabContent";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
+import { LiveMarkPill } from "./LiveMarkPill";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import {
   MODAL_PREVIEW_GRID_LAYER_OPACITY,
@@ -295,9 +296,10 @@ function PredictMatchPreview({
               </>
             ) : centerBlock.variant === "liveMark" ? (
               <View style={s.matchPreviewVsBlock}>
-                <View style={s.matchPreviewLivePill}>
-                  <Text style={s.matchPreviewLivePillText}>LIVE</Text>
-                </View>
+                <LiveMarkPill
+                  pillStyle={s.matchPreviewLivePill}
+                  textStyle={s.matchPreviewLivePillText}
+                />
                 {seriesPair != null ? (
                   <View style={s.matchPreviewSeriesRow}>
                     <PlayoffSeriesScoreInline
@@ -384,6 +386,8 @@ type PredictModalProps = {
   onClose: () => void;
   /** 試合開始済み・未投稿: Web `PredictionFormV2` overlay と同様スコア入力・送信を出さない */
   spectatorStartedNoPost?: boolean;
+  /** 試合開始後（キックオフ時刻経過・LIVE・終了）は予想の修正 UI（「修正」・スコア再入力）を出さない */
+  predictionEditLockedAfterKickoff?: boolean;
   /** タブ（市場・H2H・スタッツ）用の実データ: Firestore `posts` / `teams` および peer 試合 */
   predictData?: {
     gameId: string;
@@ -403,14 +407,15 @@ function GlassPanel({
   showGrid = false,
 }: {
   children: React.ReactNode;
-  variant?: "form" | "tool";
+  /** formCompact: 「あなたの予想」要約など縦幅を詰める */
+  variant?: "form" | "formCompact" | "tool";
   showGrid?: boolean;
 }) {
   return (
     <View
       style={[
         s.glassBase,
-        variant === "form" ? s.glassOuterForm : s.glassOuterTool,
+        variant === "tool" ? s.glassOuterTool : s.glassOuterForm,
       ]}
     >
       {(Platform.OS === "ios" || Platform.OS === "android") && (
@@ -427,7 +432,11 @@ function GlassPanel({
       {showGrid ? <ToolPanelGridOverlay /> : null}
       <View
         style={
-          variant === "form" ? s.glassPanelContentForm : s.glassPanelContentTool
+          variant === "tool"
+            ? s.glassPanelContentTool
+            : variant === "formCompact"
+              ? s.glassPanelContentFormCompact
+              : s.glassPanelContentForm
         }
       >
         {children}
@@ -455,6 +464,7 @@ export default function PredictModal({
   onSubmit,
   onClose,
   spectatorStartedNoPost = false,
+  predictionEditLockedAfterKickoff = false,
   predictData = null,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
@@ -470,11 +480,19 @@ export default function PredictModal({
   const backdropExit = reduceMotion ? undefined : predictModalBackdropExit();
   const sheetEnter = reduceMotion ? undefined : predictModalSheetEnter();
   const sheetExit = reduceMotion ? undefined : predictModalSheetExit();
-  const previewEnter = reduceMotion ? undefined : predictModalPreviewEnter();
 
   const [layersVisible, setLayersVisible] = useState(visible);
+
+  const previewEnter = reduceMotion ? undefined : predictModalPreviewEnter();
+
+  /** 直接対決／市場／詳細スタッツ：タップでパネルを開閉 */
+  function handleToolTabPress(tab: "h2h" | "market" | "stats") {
+    if (predictToolsTab === tab) setPredictToolsTab(null);
+    else setPredictToolsTab(tab);
+  }
+
   const [exitingUi, setExitingUi] = useState(false);
-  /** 予想済み: 最初は要約、「修正」でスコア入力＋送信を表示 */
+  /** 予想済み: 最初は要約、キックオフ前のみ「修正」でスコア入力＋送信 */
   const [scoreFormExpanded, setScoreFormExpanded] = useState(true);
   const closeAnimLockRef = useRef(false);
   const closeAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -506,10 +524,16 @@ export default function PredictModal({
     []
   );
 
+  /** 試合開始後かつ自分の投稿あり: 要約のみ（修正不可） */
+  const editingLockedAfterKickoff =
+    predictionEditLockedAfterKickoff && isEditingPrediction;
   const showPredictionSummary =
-    isEditingPrediction && !spectatorStartedNoPost && !scoreFormExpanded;
+    !spectatorStartedNoPost &&
+    (editingLockedAfterKickoff ||
+      (isEditingPrediction && !scoreFormExpanded));
   const showScoreInputBlock =
     !spectatorStartedNoPost &&
+    !editingLockedAfterKickoff &&
     (!isEditingPrediction || scoreFormExpanded);
   const canSubmit =
     showScoreInputBlock &&
@@ -606,13 +630,16 @@ export default function PredictModal({
                       />
                     </Animated.View>
                   ) : null}
-              <Animated.View style={s.predictToolsRow} entering={blockIn(tabsStaggerIndex)}>
+              <Animated.View
+                style={s.predictToolsRow}
+                entering={reduceMotion ? undefined : blockIn(tabsStaggerIndex)}
+              >
                 <Pressable
                   style={[
                     s.predictToolTab,
                     predictToolsTab === "h2h" && s.predictToolTabActive,
                   ]}
-                  onPress={() => setPredictToolsTab(predictToolsTab === "h2h" ? null : "h2h")}
+                  onPress={() => handleToolTabPress("h2h")}
                 >
                   <Text
                     style={[
@@ -628,9 +655,7 @@ export default function PredictModal({
                     s.predictToolTab,
                     predictToolsTab === "market" && s.predictToolTabActive,
                   ]}
-                  onPress={() =>
-                    setPredictToolsTab(predictToolsTab === "market" ? null : "market")
-                  }
+                  onPress={() => handleToolTabPress("market")}
                 >
                   <Text
                     style={[
@@ -646,9 +671,7 @@ export default function PredictModal({
                     s.predictToolTab,
                     predictToolsTab === "stats" && s.predictToolTabActive,
                   ]}
-                  onPress={() =>
-                    setPredictToolsTab(predictToolsTab === "stats" ? null : "stats")
-                  }
+                  onPress={() => handleToolTabPress("stats")}
                 >
                   <Text
                     style={[
@@ -707,9 +730,15 @@ export default function PredictModal({
                 <>
                   {showPredictionSummary ? (
                     <Animated.View entering={blockIn(scoreStagger)}>
-                      <GlassPanel variant="form">
+                      <GlassPanel variant="formCompact">
                         <Text style={s.predictSummaryKicker}>{t.myPrediction}</Text>
-                        <View style={s.predictSummaryPairBlock}>
+                        <View
+                          style={[
+                            s.predictSummaryPairBlock,
+                            editingLockedAfterKickoff &&
+                              s.predictSummaryPairBlockNoFooter,
+                          ]}
+                        >
                           <View style={s.predictSummaryNamesRow}>
                             <Text
                               style={s.predictSummaryTeamName}
@@ -745,19 +774,21 @@ export default function PredictModal({
                             </Text>
                           </View>
                         </View>
-                        <Pressable
-                          onPress={() => setScoreFormExpanded(true)}
-                          style={({ pressed }) => [
-                            s.predictSummaryEditBtn,
-                            pressed && s.predictSummaryEditBtnPressed,
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={t.editScoresCta}
-                        >
-                          <Text style={s.predictSummaryEditBtnText}>
-                            {t.editScoresCta}
-                          </Text>
-                        </Pressable>
+                        {!editingLockedAfterKickoff ? (
+                          <Pressable
+                            onPress={() => setScoreFormExpanded(true)}
+                            style={({ pressed }) => [
+                              s.predictSummaryEditBtn,
+                              pressed && s.predictSummaryEditBtnPressed,
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel={t.editScoresCta}
+                          >
+                            <Text style={s.predictSummaryEditBtnText}>
+                              {t.editScoresCta}
+                            </Text>
+                          </Pressable>
+                        ) : null}
                       </GlassPanel>
                     </Animated.View>
                   ) : null}
@@ -910,6 +941,7 @@ const s = StyleSheet.create({
   /** モバイル: h-9, rounded-xl, text-xs, font-semibold, border + bg */
   predictToolTab: {
     flex: 1,
+    minWidth: 0,
     minHeight: 36,
     borderRadius: 12,
     borderWidth: 1,
@@ -976,6 +1008,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
+  /** 予想済み要約（試合終了後など）— 通常 form より縦を削る */
+  glassPanelContentFormCompact: {
+    position: "relative",
+    zIndex: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
   glassPanelContentTool: {
     position: "relative",
     zIndex: 2,
@@ -1011,15 +1050,19 @@ const s = StyleSheet.create({
   /** 予想済み要約（あなたの予想 → チーム名行 → スコア「—」スコア → 修正） */
   predictSummaryKicker: {
     color: "rgba(255,255,255,0.88)",
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 12,
+    lineHeight: 15,
     fontWeight: "600",
-    marginBottom: 10,
+    marginBottom: 5,
     textAlign: "left",
   },
   predictSummaryPairBlock: {
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: 10,
+    gap: 5,
+  },
+  /** キックオフ後ロックで修正ボタンなし — 下の空きを削る */
+  predictSummaryPairBlockNoFooter: {
+    marginBottom: 2,
   },
   predictSummaryNamesRow: {
     flexDirection: "row",
@@ -1046,16 +1089,16 @@ const s = StyleSheet.create({
   },
   predictSummaryMidDash: {
     color: "rgba(255,255,255,0.5)",
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: "600",
   },
   predictSummaryTeamName: {
     flex: 1,
     minWidth: 0,
     color: "#f8fafc",
-    fontSize: 15,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 17,
     fontWeight: "700",
     textAlign: "center",
   },
@@ -1063,8 +1106,8 @@ const s = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: "#ffffff",
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: "700",
     textAlign: "center",
     fontFamily: PREVIEW_NUMERIC,
@@ -1072,14 +1115,14 @@ const s = StyleSheet.create({
   },
   predictSummaryEditBtn: {
     alignSelf: "stretch",
-    minHeight: 40,
+    minHeight: 36,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(212, 175, 55, 0.85)",
     backgroundColor: "rgba(255,255,255,0.04)",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: spacing.md,
   },
   predictSummaryEditBtnPressed: {
@@ -1309,20 +1352,20 @@ const s = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  /** Web `LiveMatchMark` 相当（プレビュー中央） */
+  /** Web `LiveMatchMark` 相当（プレビュー中央・一覧よりひとまわり小さめ） */
   matchPreviewLivePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: "rgba(239,68,68,0.55)",
     backgroundColor: "rgba(220,38,38,0.96)",
   },
   matchPreviewLivePillText: {
     color: "#ffffff",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1,
+    letterSpacing: 0.85,
     textTransform: "uppercase",
     includeFontPadding: false,
   },

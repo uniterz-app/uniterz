@@ -350,7 +350,7 @@ function MarketBars({
   return (
     <View style={s.marketDonutWrap}>
       <View style={s.marketDonutContent}>
-        <Animated.View entering={mEnter(0)}>
+        <Animated.View entering={mEnter(0)} style={s.marketDonutTopBlock}>
           <Text style={s.marketTitle}>{titleText}</Text>
           <View style={s.marketDonutCanvasWrap}>
             <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -1610,20 +1610,26 @@ const s = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
   },
-  /** Web predictForm: flex-col items-center gap-5（ドーナツ〜凡例） */
+  /** Web predictForm: flex-col gap-5（ドーナツ〜凡例）。タイトルは左寄せ・ドーナツ以下は従来どおり中央 */
   marketDonutContent: {
     alignItems: "center",
-    gap: 20,
+    gap: 16,
     width: "100%",
     paddingHorizontal: 12,
-    paddingTop: 4,
+    paddingTop: 2,
     paddingBottom: 10,
   },
-  /** Web: text-sm font-semibold */
-  marketTitle: {
+  /** タイトルをカード上辺の左に寄せるため幅いっぱいに伸ばす */
+  marketDonutTopBlock: {
+    alignSelf: "stretch",
     width: "100%",
-    textAlign: "center",
-    marginBottom: 12,
+    alignItems: "center",
+  },
+  /** Web: text-sm font-semibold（配置は左上） */
+  marketTitle: {
+    alignSelf: "stretch",
+    textAlign: "left",
+    marginBottom: 4,
     color: "#ffffff",
     fontSize: 14,
     lineHeight: 18,

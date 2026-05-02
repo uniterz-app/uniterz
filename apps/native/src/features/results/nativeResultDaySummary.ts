@@ -25,6 +25,15 @@ export function sumDayPointsV3(posts: readonly PostWithMillis[]): number {
   return s;
 }
 
+/** Web `hasPointsV3Recorded` と同等（0 点も記録済み） */
+function hasPointsV3Recorded(post: PostWithMillis): boolean {
+  const stats = post.stats as Record<string, unknown> | undefined;
+  const pv3 = stats?.pointsV3;
+  if (typeof pv3 === "number" && Number.isFinite(pv3)) return true;
+  const tp = (stats?.pointsV3Detail as { totalPoints?: number } | undefined)?.totalPoints;
+  return typeof tp === "number" && Number.isFinite(tp);
+}
+
 /** Web `countWinnerHits` と同等 */
 export function countWinnerHits(posts: readonly PostWithMillis[]): {
   wins: number;
@@ -53,13 +62,17 @@ export type NativeDayPointsHeader =
       hitTotal?: number;
     };
 
-/** Web `dayPointsHeaderForList` の表示用サマリー */
+/**
+ * Web `dayPointsHeaderForList` と同じ引数順（先が確定投稿・後が未確定）。
+ * `final` / `pending` を逆に渡すと確定がある日も「得点未確定」になる。
+ * 確定でも pointsV3 が未計算の投稿が混ざる日は「得点未確定」（合計 0 の誤表示を避ける）。
+ */
 export function dayPointsHeaderForNative(
   finalPosts: PostWithMillis[],
   pendingPosts: PostWithMillis[],
   language: "ja" | "en"
 ): NativeDayPointsHeader {
-  if (finalPosts.length > 0) {
+  if (finalPosts.length > 0 && finalPosts.every(hasPointsV3Recorded)) {
     const total = sumDayPointsV3(finalPosts);
     const fmt =
       Number.isInteger(total) || Math.abs(total - Math.round(total)) < 1e-6
@@ -83,7 +96,7 @@ export function dayPointsHeaderForNative(
       ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
     };
   }
-  if (pendingPosts.length > 0) {
+  if (finalPosts.length > 0 || pendingPosts.length > 0) {
     return language === "en"
       ? { variant: "pending", line: "Pending" }
       : { variant: "pending", line: "得点未確定" };

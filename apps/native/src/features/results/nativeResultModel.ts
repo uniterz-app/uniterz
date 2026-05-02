@@ -96,6 +96,29 @@ export function canDismissResultListPostNow(
   return nowMs < start;
 }
 
+/** Firestore の投稿生データに対する Web `editable` と同条件の判定（ゲーム一覧の posts 読込でも再利用） */
+export function isNativePostPredictionEditableFromRaw(
+  raw: Record<string, unknown>,
+  nowMs: number = Date.now()
+): boolean {
+  const sv = Number(raw.schemaVersion ?? 0);
+  if (sv !== 2) return false;
+  const start = raw.startAtMillis;
+  if (typeof start !== "number" || !Number.isFinite(start)) return false;
+  return nowMs < start;
+}
+
+/**
+ * Web `GET /api/posts_v2/:id` の `editable` と同一条件（投稿ドキュメントのキックオフ時刻で判定）。
+ * 試合ドキュメントの `live`/`final` だけ見ると一覧の pending とずれて誤ロックしやすい。
+ */
+export function isNativePostPredictionEditable(
+  post: PostWithMillis,
+  nowMs: number = Date.now()
+): boolean {
+  return isNativePostPredictionEditableFromRaw(post as Record<string, unknown>, nowMs);
+}
+
 export function mapDocToPostWithMillis(id: string, raw: unknown): PostWithMillis {
   const r = raw as Record<string, unknown>;
   const createdAtMillis = toCreatedAtMillis(raw);

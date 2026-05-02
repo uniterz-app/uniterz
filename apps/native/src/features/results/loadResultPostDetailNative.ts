@@ -96,11 +96,15 @@ export async function loadResultPostDetailNative(
       }
     | undefined;
 
+  const asFinite = (v: unknown, fallback = 0) => {
+    const n = Number(v ?? fallback);
+    return Number.isFinite(n) ? n : fallback;
+  };
   const market: ResultPostDetailMarket = {
-    homeRate: mkt?.homeRate ?? 0,
-    awayRate: mkt?.awayRate ?? 0,
-    drawRate: mkt?.drawRate ?? 0,
-    total: mkt?.total ?? 0,
+    homeRate: asFinite(mkt?.homeRate, 0),
+    awayRate: asFinite(mkt?.awayRate, 0),
+    drawRate: asFinite(mkt?.drawRate, 0),
+    total: asFinite(mkt?.total, 0),
   };
 
   return {

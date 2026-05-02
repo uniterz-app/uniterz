@@ -48,6 +48,7 @@ import {
   updatePredictionPostApi,
 } from "./submitPredictionApi";
 import PredictNextGameNativeModal from "./PredictNextGameNativeModal";
+import { isNativePostPredictionEditableFromRaw } from "../results/nativeResultModel";
 import {
   broadcastDeckTitleForNextModal,
   scoreboardTeamLabelForNextModal,
@@ -371,6 +372,10 @@ export default function GamesHomeScreen({
       }
     >
   >({});
+  /** 投稿の startAtMillis 基準（試合行の live/final より Web/API と整合しやすい） */
+  const [postEditableByGameId, setPostEditableByGameId] = useState<
+    Record<string, boolean>
+  >({});
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
@@ -633,6 +638,7 @@ export default function GamesHomeScreen({
     async function loadMyPredictions() {
       if (!fUser || gameIdSet.size === 0) {
         setPredictedGameIds(new Set());
+        setPostEditableByGameId({});
         return;
       }
       try {
@@ -646,6 +652,7 @@ export default function GamesHomeScreen({
         if (!alive) return;
         const ids = new Set<string>();
         const postMap: Record<string, string> = {};
+        const editableMap: Record<string, boolean> = {};
         const predictionMap: Record<
           string,
           {
@@ -663,6 +670,9 @@ export default function GamesHomeScreen({
           if (gameId && gameIdSet.has(gameId)) {
             ids.add(gameId);
             postMap[gameId] = row.id;
+            editableMap[gameId] = isNativePostPredictionEditableFromRaw(
+              rowData as Record<string, unknown>
+            );
             const winnerRaw = rowData?.prediction?.winner;
             const homeRaw = rowData?.prediction?.score?.home;
             const awayRaw = rowData?.prediction?.score?.away;
@@ -683,11 +693,13 @@ export default function GamesHomeScreen({
         });
         setPredictedGameIds(ids);
         setMyPostIdByGameId(postMap);
+        setPostEditableByGameId(editableMap);
         setMyPredictionByGameId(predictionMap);
       } catch {
         if (!alive) return;
         setPredictedGameIds(new Set());
         setMyPostIdByGameId({});
+        setPostEditableByGameId({});
         setMyPredictionByGameId({});
       }
     }
@@ -788,17 +800,7 @@ export default function GamesHomeScreen({
     const started = isGameStarted(sourceGame);
     /** Web 一覧カードの `onOpenPredict`：開始後・未投稿でもオーバーレイを開く（フォームだけ非表示） */
     const spectatorStartedNoPost = Boolean(started && !existingPostId);
-    if (existingPostId) {
-      try {
-        const hintSeen = await readEditModeHintShown();
-        if (!hintSeen) {
-          Alert.alert(t.editModeTitle, t.editModeBody);
-          await writeEditModeHintShown();
-        }
-      } catch {
-        // ストレージ不可時は通知を省略（毎回出るよりマシ）
-      }
-    }
+
     setPredictSpectatorStartedNoPost(spectatorStartedNoPost);
     setWinner(null);
     setScoreHome("");
@@ -806,6 +808,21 @@ export default function GamesHomeScreen({
     setPredictToolsTab(null);
     setSelectedGame(sourceGame);
     setIsPredictModalOpen(true);
+
+    /** 編集モード初回ヒントはストレージ await で開幕をブロックしない（モーダル表示後に実行） */
+    if (existingPostId) {
+      void (async () => {
+        try {
+          const hintSeen = await readEditModeHintShown();
+          if (!hintSeen) {
+            Alert.alert(t.editModeTitle, t.editModeBody);
+            await writeEditModeHintShown();
+          }
+        } catch {
+          // ストレージ不可時は通知を省略（毎回出るよりマシ）
+        }
+      })();
+    }
 
     if (spectatorStartedNoPost) return;
 
@@ -898,8 +915,14 @@ export default function GamesHomeScreen({
       return;
     }
 
-    const startAt = resolveGameStartAt(selectedGame);
-    if (isGameStarted(selectedGame)) {
+    const existingPostId = myPostIdByGameId[gameId];
+    const isEditing = Boolean(existingPostId);
+    if (isEditing) {
+      if (postEditableByGameId[gameId] !== true) {
+        Alert.alert(t.submitLockedTitle, t.submitLockedBody);
+        return;
+      }
+    } else if (isGameStarted(selectedGame)) {
       Alert.alert(t.submitLockedTitle, t.submitLockedBody);
       return;
     }
@@ -911,8 +934,6 @@ export default function GamesHomeScreen({
 
     setPredictSubmitting(true);
     try {
-      const existingPostId = myPostIdByGameId[gameId];
-      const isEditing = Boolean(existingPostId);
       if (existingPostId) {
         await updatePredictionPostApi(existingPostId, {
           winner,
@@ -1240,6 +1261,11 @@ export default function GamesHomeScreen({
           setSelectedGame(null);
         }}
         spectatorStartedNoPost={predictSpectatorStartedNoPost}
+        predictionEditLockedAfterKickoff={
+          isEditingPrediction && selectedGame != null
+            ? postEditableByGameId[String(selectedGame.id)] !== true
+            : false
+        }
         predictData={predictModalData}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
@@ -1648,7 +1674,8 @@ const styles = StyleSheet.create({
   /** パディングは `cardPressableBody`。方眼・ベースは `cardFineShellBackdrop` でシェル全面 */
   gameCardShell: {
     position: "relative",
-    overflow: "hidden",
+    /** 3D pop の rotateX 時に角がクリップされないよう visible（角丸クリップは backdrop 側） */
+    overflow: "visible",
     width: "92%",
     alignSelf: "center",
     borderWidth: 1,
@@ -1720,7 +1747,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "transparent",
   },
-  /** 角丸クリップは `gameCardShell` の overflow */
+  /** 角丸クリップは `cardFineShellBackdrop` の overflow（シェルは 3D pop 用に visible） */
   cardGridOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -2130,9 +2157,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   liveMarkPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: "rgba(239,68,68,0.5)",
     backgroundColor: "rgba(220,38,38,0.96)",
@@ -2144,9 +2171,9 @@ const styles = StyleSheet.create({
   },
   liveMarkText: {
     color: "#ffffff",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 0.8,
+    letterSpacing: 0.72,
     textTransform: "uppercase",
     includeFontPadding: false,
   },

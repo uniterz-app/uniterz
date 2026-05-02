@@ -58,7 +58,6 @@ function AppContent() {
   const { status, fUser } = useFirebaseUser();
   const [tab, setTab] = useState<MainTab>("games");
   const [profileRefreshNonce, setProfileRefreshNonce] = useState(0);
-
   const isAuthed = status === "ready" && fUser;
   /** safe-area ライブラリ無し時のホームインジケータ相当（ピルを物理下端から浮かせる） */
   const windowDims = Dimensions.get("window");
