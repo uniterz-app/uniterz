@@ -11,6 +11,8 @@
     "native:typecheck": "npm --prefix apps/native exec tsc --noEmit",
     "native:start": "npm --prefix apps/native run start",
     "native:start:dev": "npm --prefix apps/native run start:dev",
+    "native:start:lan": "npm --prefix apps/native run start:lan",
+    "native:start:tunnel": "npm --prefix apps/native run start:tunnel",
     "native:start:fresh": "npm --prefix apps/native run start -- --clear",
     "native:ios": "npm --prefix apps/native run ios",
     "native:ios:dev": "npm --prefix apps/native run ios:dev",

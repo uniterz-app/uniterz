@@ -3,17 +3,9 @@
  * リザルト一覧からその場でスコア修正できるようにする。
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, getDoc, type DocumentSnapshot } from "firebase/firestore";
+import { Timestamp, doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
   resolveGameScore,
@@ -28,13 +20,13 @@ import PredictModal, {
 import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import { getGamesTexts, type GamesLanguage } from "../games/gamesI18n";
 import type { GameCardCenterBlock } from "../games/gameCardCenterTypes";
+import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { resolveTeamJerseyPalette } from "../games/teamColors";
 import {
   resolveNativeSeriesLabel,
   resolveNativeSeriesPair,
 } from "../games/resolveNativeSeriesStanding";
 import {
-  fetchPredictionPostGet,
   getUniterzApiBaseUrl,
   PredictionApiError,
   updatePredictionPostApi,
@@ -45,28 +37,64 @@ import {
 } from "../games/predictEditModeHintPrefs";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import {
+  isPostPredictionEditableForViewer,
   type PostWithMillis,
-  isNativePostPredictionEditable,
 } from "./nativeResultModel";
-
-/** スコア文字列から勝者を決める（NBA 同点は null → 送信時バリデーション） */
-function inferWinnerFromScores(
-  league: SupportedLeague,
-  scoreHome: string,
-  scoreAway: string
-): "home" | "away" | "draw" | null {
-  if (scoreHome.trim() === "" || scoreAway.trim() === "") return null;
-  const h = Number(scoreHome);
-  const a = Number(scoreAway);
-  if (!Number.isFinite(h) || !Number.isFinite(a) || h < 0 || a < 0) return null;
-  const soccer = league === "pl" || league === "j1";
-  if (h > a) return "home";
-  if (a > h) return "away";
-  return soccer ? "draw" : null;
-}
 
 function draftStorageKey(userId: string, gameId: string): string {
   return `predictDraft:${userId}:${gameId}`;
+}
+
+/**
+ * `posts` に埋め込まれた試合情報で `games` の getDoc を待たずにモーダルを開く。
+ * ネットワークが遅いときの体感を抑える。取得後は Firestore の行で上書きする。
+ */
+function gameRowBootstrapFromPost(
+  post: PostWithMillis,
+  gameId: string
+): Record<string, unknown> | null {
+  const league = post.league;
+  const home = post.home;
+  const away = post.away;
+  if (
+    league == null ||
+    typeof home !== "object" ||
+    home === null ||
+    typeof away !== "object" ||
+    away === null
+  ) {
+    return null;
+  }
+  const row: Record<string, unknown> = {
+    id: gameId,
+    league,
+    home,
+    away,
+    status: typeof post.status === "string" ? post.status : "scheduled",
+  };
+  if (post.result != null) row.result = post.result;
+  const ht = post.homeTeamName;
+  const at = post.awayTeamName;
+  if (typeof ht === "string" && ht.trim()) row.homeTeamName = ht.trim();
+  if (typeof at === "string" && at.trim()) row.awayTeamName = at.trim();
+  const sj = post.startAtJst as unknown;
+  const sa = post.startAt as unknown;
+  if (sj != null) row.startAtJst = sj;
+  if (sa != null) row.startAt = sa;
+  const sm = post.startAtMillis;
+  if (
+    sj == null &&
+    sa == null &&
+    typeof sm === "number" &&
+    Number.isFinite(sm)
+  ) {
+    row.startAtJst = Timestamp.fromMillis(sm);
+  }
+  const rl = post.roundLabel;
+  if (typeof rl === "string" && rl.trim()) row.roundLabel = rl.trim();
+  if (post.season != null) row.season = post.season;
+  if (post.seasonPhase != null) row.seasonPhase = post.seasonPhase;
+  return row;
 }
 
 function toSupportedLeague(raw: unknown): SupportedLeague {
@@ -99,26 +127,6 @@ function toCompactTeamName(leagueRaw: unknown, rawName: string): string {
 
 type Phase = "idle" | "loading" | "error" | "ready";
 
-/** Firestore が無応答でもオーバーレイが塞がれ続けないようにする */
-const GAME_DOC_FETCH_TIMEOUT_MS = 20_000;
-
-function getGameDocWithTimeout(gameId: string): Promise<DocumentSnapshot> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => {
-      reject(new Error("game_doc_timeout"));
-    }, GAME_DOC_FETCH_TIMEOUT_MS);
-    void getDoc(doc(db, "games", gameId))
-      .then((snap) => {
-        clearTimeout(t);
-        resolve(snap);
-      })
-      .catch((e) => {
-        clearTimeout(t);
-        reject(e);
-      });
-  });
-}
-
 type Props = {
   visible: boolean;
   post: PostWithMillis | null;
@@ -139,8 +147,6 @@ export default function ResultPredictEditModal({
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [game, setGame] = useState<Record<string, unknown> | null>(null);
-  /** null: 未取得。API + 投稿で確定後にモーダルを出す（修正可否のチラつき防止） */
-  const [postEditAllowed, setPostEditAllowed] = useState<boolean | null>(null);
 
   const [predictToolsTab, setPredictToolsTab] = useState<
     null | "h2h" | "market" | "stats"
@@ -162,7 +168,6 @@ export default function ResultPredictEditModal({
     if (!visible || !post) {
       setPhase("idle");
       setGame(null);
-      setPostEditAllowed(null);
       resetLocalForm();
       return;
     }
@@ -174,119 +179,37 @@ export default function ResultPredictEditModal({
     }
 
     let cancelled = false;
-    setPhase("loading");
-    setGame(null);
-    setPostEditAllowed(null);
+    const bootstrap = gameRowBootstrapFromPost(post, gameId);
+    if (bootstrap) {
+      setGame(bootstrap);
+      setPhase("ready");
+    } else {
+      setPhase("loading");
+      setGame(null);
+    }
 
     void (async () => {
       try {
-        const [snap, apiRes] = await Promise.all([
-          getGameDocWithTimeout(gameId),
-          fetchPredictionPostGet(post.id),
-        ]);
+        const snap = await getDoc(doc(db, "games", gameId));
         if (cancelled) return;
         if (!snap.exists()) {
-          setPhase("error");
+          if (!bootstrap && !cancelled) setPhase("error");
           return;
         }
         const row = { id: snap.id, ...snap.data() } as Record<string, unknown>;
-        const gid = String(row.id ?? "");
-        const league = toSupportedLeague(row.league);
-
-        if (apiRes.ok && !apiRes.exists) {
-          setPhase("error");
-          return;
+        if (!cancelled) {
+          setGame(row);
+          setPhase("ready");
         }
-        let allowed = isNativePostPredictionEditable(post);
-        if (apiRes.ok && apiRes.exists) {
-          if (!apiRes.mine) {
-            setPhase("error");
-            return;
-          }
-          allowed = apiRes.editable;
-        }
-
-        let nextHome = "";
-        let nextAway = "";
-        let usedDraft = false;
-
-        if (fUser?.uid && gid) {
-          const rawDraft = await AsyncStorage.getItem(
-            draftStorageKey(fUser.uid, gid)
-          );
-          if (rawDraft) {
-            try {
-              const d = JSON.parse(rawDraft) as {
-                scoreHome?: string;
-                scoreAway?: string;
-              };
-              if (
-                typeof d.scoreHome === "string" &&
-                typeof d.scoreAway === "string" &&
-                d.scoreHome.trim() !== "" &&
-                d.scoreAway.trim() !== ""
-              ) {
-                nextHome = d.scoreHome;
-                nextAway = d.scoreAway;
-                usedDraft = true;
-              }
-            } catch {
-              /* ignore */
-            }
-          }
-        }
-
-        if (
-          !usedDraft &&
-          apiRes.ok &&
-          apiRes.exists &&
-          apiRes.mine &&
-          apiRes.prediction
-        ) {
-          nextHome = String(apiRes.prediction.score.home);
-          nextAway = String(apiRes.prediction.score.away);
-        }
-
-        if (!usedDraft && nextHome === "") {
-          const pred = post.prediction as
-            | { winner?: string; score?: { home?: number; away?: number } }
-            | undefined;
-          const ph = pred?.score?.home;
-          const pa = pred?.score?.away;
-          if (typeof ph === "number" && typeof pa === "number") {
-            nextHome = String(ph);
-            nextAway = String(pa);
-          }
-        }
-
-        let nextWinner = inferWinnerFromScores(league, nextHome, nextAway);
-        if (
-          nextWinner == null &&
-          nextHome !== "" &&
-          nextAway !== ""
-        ) {
-          const pred = post.prediction as { winner?: string } | undefined;
-          const w = pred?.winner;
-          if (w === "home" || w === "away" || w === "draw") {
-            nextWinner = w;
-          }
-        }
-
-        setScoreHome(nextHome);
-        setScoreAway(nextAway);
-        setWinner(nextWinner);
-        setGame(row);
-        setPostEditAllowed(allowed);
-        setPhase("ready");
       } catch {
-        if (!cancelled) setPhase("error");
+        if (!cancelled && !bootstrap) setPhase("error");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [visible, post?.id, post?.gameId, resetLocalForm, fUser?.uid]);
+  }, [visible, post?.id, post?.gameId, resetLocalForm]);
 
   /** 編集ヒント（GamesHomeScreen の openPredictModal と同様） */
   useEffect(() => {
@@ -303,6 +226,46 @@ export default function ResultPredictEditModal({
       }
     })();
   }, [visible, phase, post, t.editModeBody, t.editModeTitle]);
+
+  /** 下書きまたは投稿のスコアでフォーム初期化 */
+  useEffect(() => {
+    if (!visible || phase !== "ready" || !game || !post || !fUser?.uid) return;
+    const gameId = String(game.id ?? "");
+    if (!gameId) return;
+
+    void (async () => {
+      const key = draftStorageKey(fUser.uid!, gameId);
+      const raw = await AsyncStorage.getItem(key);
+      if (raw) {
+        try {
+          const draft = JSON.parse(raw) as {
+            winner: "home" | "away" | "draw" | null;
+            scoreHome: string;
+            scoreAway: string;
+          };
+          setWinner(draft.winner ?? null);
+          setScoreHome(draft.scoreHome ?? "");
+          setScoreAway(draft.scoreAway ?? "");
+          return;
+        } catch {
+          /* ignore */
+        }
+      }
+      const pred = post.prediction as
+        | { winner?: string; score?: { home?: number; away?: number } }
+        | undefined;
+      const ph = pred?.score?.home;
+      const pa = pred?.score?.away;
+      if (typeof ph === "number" && typeof pa === "number") {
+        setScoreHome(String(ph));
+        setScoreAway(String(pa));
+      }
+      const w = pred?.winner;
+      if (w === "home" || w === "away" || w === "draw") {
+        setWinner(w);
+      }
+    })();
+  }, [visible, phase, game, post, fUser?.uid]);
 
   const selectedLeague = useMemo(
     () => toSupportedLeague(game?.league),
@@ -445,7 +408,6 @@ export default function ResultPredictEditModal({
     resetLocalForm();
     setPhase("idle");
     setGame(null);
-    setPostEditAllowed(null);
     onClose();
   }, [onClose, resetLocalForm]);
 
@@ -487,7 +449,7 @@ export default function ResultPredictEditModal({
       return;
     }
 
-    if (postEditAllowed !== true) {
+    if (!isPostPredictionEditableForViewer(post, fUser?.uid)) {
       Alert.alert(t.submitLockedTitle, t.submitLockedBody);
       return;
     }
@@ -534,11 +496,13 @@ export default function ResultPredictEditModal({
     language,
     onUpdated,
     handleClose,
-    postEditAllowed,
   ]);
 
-  const predictModalVisible = Boolean(
-    visible && phase === "ready" && game && post && postEditAllowed !== null
+  const predictModalVisible = Boolean(visible && phase === "ready" && game && post);
+
+  /** Web GET `/api/posts_v2/:id` の `editable` と一致（試合 doc ではなく投稿のキックオフ時刻） */
+  const predictionEditable = Boolean(
+    post && isPostPredictionEditableForViewer(post, fUser?.uid)
   );
 
   const loadingOverlay =
@@ -546,10 +510,7 @@ export default function ResultPredictEditModal({
       <Modal transparent animationType="fade" visible>
         <View style={styles.loadingRoot}>
           <View style={styles.loadingCard}>
-            <ActivityIndicator color="#67e8f9" size="large" />
-            <Text style={styles.loadingText}>
-              {language === "en" ? "Loading match…" : "試合データを読み込み中…"}
-            </Text>
+            <BlocksPulseLoader />
           </View>
         </View>
       </Modal>
@@ -598,7 +559,8 @@ export default function ResultPredictEditModal({
         onSubmit={() => void handleSubmit()}
         onClose={handleClose}
         spectatorStartedNoPost={false}
-        predictionEditLockedAfterKickoff={postEditAllowed !== true}
+        predictionEditLockedAfterKickoff={!predictionEditable}
+        expandScoreFormWhenEditing={predictionEditable}
         predictData={predictModalData}
       />
     </>
@@ -678,11 +640,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     minWidth: 220,
-  },
-  loadingText: {
-    color: "rgba(248,250,252,0.75)",
-    fontSize: 14,
-    textAlign: "center",
   },
   errorCard: {
     padding: 24,

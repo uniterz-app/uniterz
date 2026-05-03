@@ -11,8 +11,9 @@ import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
   buildDailyTrendFromDailySnaps,
-  dateKeyJSTIntl,
+  mergeDailyTrendWithSnap,
 } from "@/lib/profile/userStatsV2ProfileRollup";
+import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -151,15 +152,11 @@ async function summaryRanksFromRankingBulk(
 }
 
 async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
-  const today = new Date();
-  const dates = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    return d;
-  });
+  /** JST の連続する暦日キー（サーバーの TZ に依存しない） */
+  const keys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 30);
   return Promise.all(
-    dates.map((d) =>
-      adminDb.doc(`user_stats_v2_daily/${uid}_${dateKeyJSTIntl(d)}`).get()
+    keys.map((dateKey) =>
+      adminDb.doc(`user_stats_v2_daily/${uid}_${dateKey}`).get()
     )
   );
 }
@@ -176,6 +173,31 @@ function windowCacheHasProfileRollup(w: Record<string, unknown> | null | undefin
     s30 != null &&
     typeof s30 === "object"
   );
+}
+
+/** `dailyTrend` が空または未配列（キャッシュ欠落・旧形式） */
+function dailyTrendFromCacheEmpty(
+  w: Record<string, unknown> | null | undefined
+): boolean {
+  if (!w) return true;
+  const raw = w.dailyTrend;
+  return !Array.isArray(raw) || raw.length === 0;
+}
+
+/**
+ * 7d / 30d に投稿が載っているのに `dailyTrend` が空 → ウィンドウだけ先にできた古いキャッシュ等。
+ * Web は `user_stats_v2_daily` を直読するためグラフが出るが、API 経路だけ空になるのを防ぐ。
+ */
+function windowRollupShowsPosts(w: Record<string, unknown>): boolean {
+  for (const key of ["7d", "30d"] as const) {
+    const o = w[key];
+    if (o != null && typeof o === "object") {
+      const r = o as Record<string, unknown>;
+      const posts = safeInt(r.posts ?? r.fullPosts ?? r.totalPosts);
+      if (posts > 0) return true;
+    }
+  }
+  return false;
 }
 
 function parsePartsParam(raw: string | null): Set<StatsPart> | null {
@@ -240,10 +262,17 @@ export async function GET(req: Request) {
     const windowData = windowSnap?.exists ? windowSnap.data() : null;
     const updatedAt = windowData?.updatedAt;
     const stale = !windowData || isWindowCacheStale(updatedAt);
-    const missingRollup = !windowCacheHasProfileRollup(
-      windowData as Record<string, unknown> | null | undefined
-    );
-    const needRebuild = wantWindow && (forceRefresh || stale || missingRollup);
+    const wObj = windowData as Record<string, unknown> | null | undefined;
+    const missingRollup = !windowCacheHasProfileRollup(wObj);
+    const cacheTrendIncomplete =
+      wantWindow &&
+      !!wObj &&
+      windowCacheHasProfileRollup(wObj) &&
+      dailyTrendFromCacheEmpty(wObj) &&
+      windowRollupShowsPosts(wObj);
+    const needRebuild =
+      wantWindow &&
+      (forceRefresh || stale || missingRollup || cacheTrendIncomplete);
 
     let dailyTrend: ProfileDailyTrendRow[];
 
@@ -258,10 +287,26 @@ export async function GET(req: Request) {
         dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps);
       } else {
         const w = windowData as Record<string, unknown>;
-        dailyTrend = w.dailyTrend as ProfileDailyTrendRow[];
+        const raw = w.dailyTrend;
+        dailyTrend = Array.isArray(raw) ? (raw as ProfileDailyTrendRow[]) : [];
       }
     } else {
       dailyTrend = [];
+    }
+
+    /**
+     * キャッシュは当日ぶんが古いことがある。また再構築パスでも Race で取りこぼしうるため、
+     * 常に JST 当日ドキュメントを1読してマージする（冪等）。
+     */
+    if (wantWindow) {
+      const todayKeys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 1);
+      const todayKey = todayKeys[0];
+      if (todayKey) {
+        const todaySnap = await adminDb
+          .doc(`user_stats_v2_daily/${uid}_${todayKey}`)
+          .get();
+        dailyTrend = mergeDailyTrendWithSnap(dailyTrend, todaySnap);
+      }
     }
 
     const summary = wantPhase

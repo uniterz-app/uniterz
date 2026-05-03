@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  ActivityIndicator,
   BackHandler,
   Platform,
   Pressable,
@@ -38,6 +37,7 @@ import {
 } from "./loadResultPostDetailNative";
 import { formatResultPostCardDateLabel } from "./nativeResultModel";
 import { RESULT_DETAIL_ENTRANCE, resultDetailSectionEnter } from "./resultDetailEntranceNative";
+import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -364,9 +364,7 @@ function ResultDetailDistributionSection({
       ? "Score distribution appears after the match ends."
       : "試合が終了したら、得点の分布が表示されます。"
     : distLoading
-      ? isEn
-        ? "Loading…"
-        : "読み込み中…"
+      ? "LOADING"
       : distribution == null
         ? isEn
           ? "Could not load score distribution for this match."
@@ -769,8 +767,7 @@ export default function ResultDetailScreen({
 
         {loading ? (
           <View style={styles.centerFill}>
-            <ActivityIndicator color="#22d3ee" size="large" />
-            <Text style={styles.loadingText}>{isEn ? "Loading…" : "読み込み中…"}</Text>
+            <BlocksPulseLoader />
           </View>
         ) : missing || !post ? (
           <View style={styles.centerFill}>
@@ -885,7 +882,6 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
-  loadingText: { color: "rgba(248,250,252,0.75)", marginTop: 8 },
   missingTitle: { color: "#f8fafc", fontSize: 17, fontWeight: "700" },
   primaryBtn: {
     marginTop: 8,

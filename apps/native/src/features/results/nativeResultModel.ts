@@ -53,7 +53,7 @@ function toStartAtMillis(p: unknown): number | null {
   return null;
 }
 
-export function formatResultDateLabel(ms: number | null | undefined, lang: "ja" | "en"): string {
+function formatResultDateLabel(ms: number | null | undefined, lang: "ja" | "en"): string {
   if (!ms) return lang === "en" ? "Unknown" : "不明";
   const d = new Date(ms);
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
@@ -96,27 +96,23 @@ export function canDismissResultListPostNow(
   return nowMs < start;
 }
 
-/** Firestore の投稿生データに対する Web `editable` と同条件の判定（ゲーム一覧の posts 読込でも再利用） */
-export function isNativePostPredictionEditableFromRaw(
-  raw: Record<string, unknown>,
+/**
+ * Web `GET /api/posts_v2/:id` の `editable` と同一条件。
+ * 試合ドキュメントではなく投稿の `startAtMillis` で判定する（データ不整合時も API と一致させる）。
+ */
+export function isPostPredictionEditableForViewer(
+  post: PostWithMillis,
+  viewerUid: string | null | undefined,
   nowMs: number = Date.now()
 ): boolean {
-  const sv = Number(raw.schemaVersion ?? 0);
-  if (sv !== 2) return false;
-  const start = raw.startAtMillis;
+  if (!viewerUid) return false;
+  const author =
+    typeof post.authorUid === "string" ? post.authorUid : String(post.authorUid ?? "");
+  if (!author || author !== viewerUid) return false;
+  if (Number(post.schemaVersion) !== 2) return false;
+  const start = post.startAtMillis;
   if (typeof start !== "number" || !Number.isFinite(start)) return false;
   return nowMs < start;
-}
-
-/**
- * Web `GET /api/posts_v2/:id` の `editable` と同一条件（投稿ドキュメントのキックオフ時刻で判定）。
- * 試合ドキュメントの `live`/`final` だけ見ると一覧の pending とずれて誤ロックしやすい。
- */
-export function isNativePostPredictionEditable(
-  post: PostWithMillis,
-  nowMs: number = Date.now()
-): boolean {
-  return isNativePostPredictionEditableFromRaw(post as Record<string, unknown>, nowMs);
 }
 
 export function mapDocToPostWithMillis(id: string, raw: unknown): PostWithMillis {

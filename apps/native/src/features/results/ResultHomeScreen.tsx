@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -11,7 +10,6 @@ import {
   UIManager,
   View,
   type LayoutChangeEvent,
-  type ViewStyle,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,12 +17,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { db } from "../../lib/firebase";
+import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
@@ -46,6 +46,7 @@ import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultPredictEditModal from "./ResultPredictEditModal";
 import { MatchCardListGridOverlay } from "../games/MatchCardListGridOverlay";
+import { gamesScheduleCardDaySwitchEnter } from "../games/predictMotion";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -305,11 +306,14 @@ function ResultDayHeader({
   );
 }
 
+const AnimatedResultCardPressable = Animated.createAnimatedComponent(Pressable);
+
 function ResultPostCard({
   post,
   language,
   nowMs,
   viewerUid,
+  listEnterIndex,
   onOpenDetail,
   onRequestDeleteConfirm,
   onRequestPredictEdit,
@@ -318,6 +322,8 @@ function ResultPostCard({
   language: "ja" | "en";
   nowMs: number;
   viewerUid: string | null;
+  /** 一覧入場のスタッガー（試合一覧と同じ `gamesScheduleCardDaySwitchEnter`） */
+  listEnterIndex: number;
   onOpenDetail: (id: string) => void;
   /** Web 同様：カスタム削除確認モーダルを開く */
   onRequestDeleteConfirm: (post: PostWithMillis) => void;
@@ -326,6 +332,10 @@ function ResultPostCard({
 }) {
   const isEn = language === "en";
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
+  const reduceMotionList = useReducedMotion() ?? false;
+  const cardListEntering = reduceMotionList
+    ? undefined
+    : gamesScheduleCardDaySwitchEnter(listEnterIndex);
 
   const postStatus = typeof post.status === "string" ? post.status : "";
   const startAtMs =
@@ -497,7 +507,9 @@ function ResultPostCard({
     cornerFabOpen && hasCornerActions ? styles.cardShellOverflowVisible : null;
 
   return (
-    <Pressable
+    <AnimatedResultCardPressable
+      collapsable={false}
+      entering={cardListEntering}
       style={({ pressed }) => [
         styles.listRowOuter,
         styles.cardOuter,
@@ -746,7 +758,7 @@ function ResultPostCard({
           </View>
         </View>
       </View>
-    </Pressable>
+    </AnimatedResultCardPressable>
   );
 }
 
@@ -762,6 +774,8 @@ type SectionT = {
   pending: PostWithMillis[];
   final: PostWithMillis[];
   data: PostWithMillis[];
+  /** リスト全体でのカード入場スタッガー用の先頭インデックス */
+  baseFlatIndex: number;
 };
 
 export default function ResultHomeScreen({
@@ -799,18 +813,14 @@ export default function ResultHomeScreen({
       language === "ja"
         ? {
             empty: "まだ予想の投稿がありません。",
-            loading: "読み込み中…",
             cacheHint: "古い投稿の一部は表示を省略しています。",
-            footerLoading: "さらに読み込み中…",
             pull: "引っ張って更新",
             filterFold: "絞り込み条件を指定",
             filterSoon: "フィルターは次フェーズで接続します。",
           }
         : {
             empty: "No predictions yet.",
-            loading: "Loading…",
             cacheHint: "Older posts may be omitted from this list.",
-            footerLoading: "Loading more…",
             pull: "Pull to refresh",
             filterFold: "Specify filters",
             filterSoon: "Filters will be available in a later release.",
@@ -834,17 +844,22 @@ export default function ResultHomeScreen({
   const { grouped, loading, postsCacheCapped, refreshPosts, loadMore, removePostById } =
     useNativeResultPosts(uid, language);
 
-  const sections: SectionT[] = useMemo(
-    () =>
-      grouped.map((g: ResultDayGroup) => ({
+  const sections: SectionT[] = useMemo(() => {
+    let baseFlatIndex = 0;
+    return grouped.map((g: ResultDayGroup) => {
+      const data = [...g.pending, ...g.final];
+      const section: SectionT = {
         title: g.dateLabel,
         dateLabel: g.dateLabel,
         pending: g.pending,
         final: g.final,
-        data: [...g.pending, ...g.final],
-      })),
-    [grouped]
-  );
+        data,
+        baseFlatIndex,
+      };
+      baseFlatIndex += data.length;
+      return section;
+    });
+  }, [grouped]);
 
   const onRefresh = useCallback(async () => {
     setManualRefreshing(true);
@@ -906,9 +921,9 @@ export default function ResultHomeScreen({
 
   const showInitialSpinner = loading && grouped.length === 0;
 
-  /** 親ではなくスクロール内容に下余白を付け、ナビ背後までカードが見えるようにする */
-  const listContentWithBottomInset = useMemo(
-    (): ViewStyle[] => [styles.listContent, { paddingBottom: bottomReserveY }],
+  /** 下端はスクロール内容側のパディングのみ（親に付けるとナビ下が塗りつぶされリストが届かない） */
+  const listContentWithBottomPad = useMemo(
+    () => [styles.listContent, { paddingBottom: bottomReserveY }],
     [bottomReserveY]
   );
 
@@ -916,9 +931,8 @@ export default function ResultHomeScreen({
     <View style={styles.resultScreenWrap}>
     <View style={styles.root}>
       {showInitialSpinner ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.loadingText}>{t.loading}</Text>
+        <View style={[styles.centered, { paddingBottom: bottomReserveY }]}>
+          <BlocksPulseLoader />
         </View>
       ) : sections.length === 0 ? (
         <View style={[styles.listContent, { paddingBottom: bottomReserveY }]}>
@@ -931,14 +945,13 @@ export default function ResultHomeScreen({
           sections={sections}
           keyExtractor={(item) => item.id}
           stickySectionHeadersEnabled={false}
-          contentContainerStyle={listContentWithBottomInset}
+          contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
           ListFooterComponent={
             loading && sections.some((s) => s.data.length > 0) ? (
               <View style={styles.footer}>
-                <ActivityIndicator color={colors.accent} />
-                <Text style={styles.footerText}>{t.footerLoading}</Text>
+                <BlocksPulseLoader pixelScale={0.78} />
               </View>
             ) : null
           }
@@ -957,12 +970,13 @@ export default function ResultHomeScreen({
               dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
             />
           )}
-          renderItem={({ item }) => (
+          renderItem={({ item, index, section }) => (
             <ResultPostCard
               post={item}
               language={language}
               nowMs={listNowTick}
               viewerUid={uid}
+              listEnterIndex={section.baseFlatIndex + index}
               onOpenDetail={setDetailPostId}
               onRequestDeleteConfirm={setDeleteConfirmPost}
               onRequestPredictEdit={setPredictEditPost}
@@ -1011,6 +1025,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgPrimary,
     minHeight: 0,
   },
+  /** フローティングナビの背後までスクロール背景を伸ばす */
   listScroll: {
     flex: 1,
     backgroundColor: colors.bgPrimary,
@@ -1061,10 +1076,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
-  },
-  loadingText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
   },
   emptyWrap: {
     paddingVertical: spacing.xl * 2,
@@ -1656,9 +1667,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: "center",
     gap: 8,
-  },
-  footerText: {
-    color: colors.textSecondary,
-    fontSize: 12,
   },
 });

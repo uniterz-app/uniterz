@@ -48,7 +48,6 @@ import {
   updatePredictionPostApi,
 } from "./submitPredictionApi";
 import PredictNextGameNativeModal from "./PredictNextGameNativeModal";
-import { isNativePostPredictionEditableFromRaw } from "../results/nativeResultModel";
 import {
   broadcastDeckTitleForNextModal,
   scoreboardTeamLabelForNextModal,
@@ -72,7 +71,7 @@ import {
   resolveNativeSeriesLabel,
   resolveNativeSeriesPair,
 } from "./resolveNativeSeriesStanding";
-import BrandCyanLineAnimated from "./BrandCyanLineAnimated";
+import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import { getGamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
@@ -372,10 +371,6 @@ export default function GamesHomeScreen({
       }
     >
   >({});
-  /** 投稿の startAtMillis 基準（試合行の live/final より Web/API と整合しやすい） */
-  const [postEditableByGameId, setPostEditableByGameId] = useState<
-    Record<string, boolean>
-  >({});
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
@@ -638,7 +633,6 @@ export default function GamesHomeScreen({
     async function loadMyPredictions() {
       if (!fUser || gameIdSet.size === 0) {
         setPredictedGameIds(new Set());
-        setPostEditableByGameId({});
         return;
       }
       try {
@@ -652,7 +646,6 @@ export default function GamesHomeScreen({
         if (!alive) return;
         const ids = new Set<string>();
         const postMap: Record<string, string> = {};
-        const editableMap: Record<string, boolean> = {};
         const predictionMap: Record<
           string,
           {
@@ -670,9 +663,6 @@ export default function GamesHomeScreen({
           if (gameId && gameIdSet.has(gameId)) {
             ids.add(gameId);
             postMap[gameId] = row.id;
-            editableMap[gameId] = isNativePostPredictionEditableFromRaw(
-              rowData as Record<string, unknown>
-            );
             const winnerRaw = rowData?.prediction?.winner;
             const homeRaw = rowData?.prediction?.score?.home;
             const awayRaw = rowData?.prediction?.score?.away;
@@ -693,13 +683,11 @@ export default function GamesHomeScreen({
         });
         setPredictedGameIds(ids);
         setMyPostIdByGameId(postMap);
-        setPostEditableByGameId(editableMap);
         setMyPredictionByGameId(predictionMap);
       } catch {
         if (!alive) return;
         setPredictedGameIds(new Set());
         setMyPostIdByGameId({});
-        setPostEditableByGameId({});
         setMyPredictionByGameId({});
       }
     }
@@ -915,14 +903,8 @@ export default function GamesHomeScreen({
       return;
     }
 
-    const existingPostId = myPostIdByGameId[gameId];
-    const isEditing = Boolean(existingPostId);
-    if (isEditing) {
-      if (postEditableByGameId[gameId] !== true) {
-        Alert.alert(t.submitLockedTitle, t.submitLockedBody);
-        return;
-      }
-    } else if (isGameStarted(selectedGame)) {
+    const startAt = resolveGameStartAt(selectedGame);
+    if (isGameStarted(selectedGame)) {
       Alert.alert(t.submitLockedTitle, t.submitLockedBody);
       return;
     }
@@ -934,6 +916,8 @@ export default function GamesHomeScreen({
 
     setPredictSubmitting(true);
     try {
+      const existingPostId = myPostIdByGameId[gameId];
+      const isEditing = Boolean(existingPostId);
       if (existingPostId) {
         await updatePredictionPostApi(existingPostId, {
           winner,
@@ -1017,29 +1001,7 @@ export default function GamesHomeScreen({
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
       >
-      {/*
-        モバイル Web: 試合一覧（GamesPage）自体に UNITERZ は無い。
-        ロゴの色・字間・下線は認証の AuthFormBranding / authEnglishDisplay（#e6e4de・cyan 1 本＋ glow）に合わせ、
-        バナー参照の「中央が暖色で左右に薄れる」帯をネイティブ用にレイヤー化。
-      */}
-      <View style={styles.brandShelf}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={[
-            "rgba(5,7,10,0)",
-            "rgba(61,46,32,0.52)",
-            "rgba(45,36,26,0.4)",
-            "rgba(61,46,32,0.52)",
-            "rgba(5,7,10,0)",
-          ]}
-          locations={[0, 0.32, 0.5, 0.68, 1]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.brandWarmHaze}
-        />
-        <Text style={styles.brandText}>UNITERZ</Text>
-        <BrandCyanLineAnimated />
-      </View>
+      <UniterzBrandShelfNative />
       <View style={styles.topControlRow}>
         <View style={styles.leagueRow}>
           <Pressable
@@ -1262,9 +1224,7 @@ export default function GamesHomeScreen({
         }}
         spectatorStartedNoPost={predictSpectatorStartedNoPost}
         predictionEditLockedAfterKickoff={
-          isEditingPrediction && selectedGame != null
-            ? postEditableByGameId[String(selectedGame.id)] !== true
-            : false
+          selectedGame != null && isGameStarted(selectedGame)
         }
         predictData={predictModalData}
       />
@@ -1321,36 +1281,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     gap: spacing.sm,
-  },
-  /** ロゴを載せる薄い段。親の横パディングを相殺して画面幅いっぱいに */
-  brandShelf: {
-    alignSelf: "stretch",
-    alignItems: "center",
-    marginBottom: 8,
-    marginHorizontal: -spacing.xs,
-    paddingTop: 12,
-    /** ロゴとシアンラインを一段に見せるため下は詰める */
-    paddingBottom: 8,
-    borderRadius: 0,
-    overflow: "hidden",
-    borderWidth: 0,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(6,9,14,0.72)",
-  },
-  brandWarmHaze: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  /** authEnglishDisplay の ink + AuthFormBranding のトラッキングに近い */
-  brandText: {
-    color: "rgba(203,220,245,0.92)",
-    fontSize: 20,
-    lineHeight: 22,
-    fontWeight: "400",
-    letterSpacing: 5.4,
-    fontFamily: DISPLAY_FONT_FAMILY,
-    includeFontPadding: false,
-    marginBottom: 0,
   },
   headerTextBlock: {
     flex: 1,

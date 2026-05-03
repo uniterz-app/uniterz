@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
   STREAK_TRACKER_LAST_N,
@@ -39,14 +40,6 @@ function buildYTicks(maxAbs: number): number[] {
   }
   const mid = Math.max(1, Math.floor(m / 2));
   return [...new Set([m, mid, 0, -mid, -m])].sort((a, b) => b - a);
-}
-
-function maxAbsStreak(rows: StreakTrackerPoint[]): number {
-  let m = 1;
-  for (const r of rows) {
-    m = Math.max(m, Math.abs(r.streakAfter));
-  }
-  return m;
 }
 
 function computeWindowStats(points: StreakTrackerPoint[]) {
@@ -139,7 +132,7 @@ export default function StreakTrackerCard({
 
   const { points, loading } = useProfileStreakTracker(uid);
 
-  const maxAbs = useMemo(() => maxAbsStreak(points), [points]);
+  const maxAbs = useMemo(() => streakChartLayoutMaxAbs(points), [points]);
   const ticks = useMemo(() => buildYTicks(maxAbs), [maxAbs]);
   const stats = useMemo(() => computeWindowStats(points), [points]);
 

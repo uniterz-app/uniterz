@@ -1,4 +1,4 @@
-import { Platform, Pressable, StyleSheet, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
+import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   interpolate,
@@ -18,6 +18,7 @@ import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { LiveMarkPill } from "./LiveMarkPill";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import { MatchCardFineBackdrop } from "./MatchCardFineInterior";
+import { gamesScheduleCardDaySwitchEnter } from "./predictMotion";
 type ScreenStyles = Record<string, ViewStyle & TextStyle & ImageStyle>;
 
 type GameCardListProps = {
@@ -52,15 +53,19 @@ type GameCardListProps = {
   ) => { primary: string; secondary: string };
 };
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 type GameCardListRowProps = GameCardListProps & {
   game: Record<string, unknown>;
+  /** ページ表示時の入場スタッガー用 */
+  rowIndex: number;
 };
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** タップ中だけわずかに縮む（一覧の「押した」感）。強い 3D pop は付けない */
 function GameCardListRow(props: GameCardListRowProps) {
   const {
     game,
+    rowIndex,
     predictedGameIds,
     t,
     styles,
@@ -79,22 +84,14 @@ function GameCardListRow(props: GameCardListRowProps) {
   } = props;
 
   const reduceMotion = useReducedMotion() ?? false;
-  const pressedLift = useSharedValue(0);
-
-  const cardPressLiftStyle = useAnimatedStyle(() => {
+  const pressed = useSharedValue(0);
+  const cardPressStyle = useAnimatedStyle(() => {
     if (reduceMotion) {
       return {};
     }
-    const y = interpolate(pressedLift.value, [0, 1], [0, -3]);
-    const s = interpolate(pressedLift.value, [0, 1], [1, 1.02]);
-    const shadowOp = interpolate(pressedLift.value, [0, 1], [0.55, 0.72]);
-    const shadowRad = interpolate(pressedLift.value, [0, 1], [20, 28]);
-    const el = interpolate(pressedLift.value, [0, 1], [7, 12]);
+    const s = interpolate(pressed.value, [0, 1], [1, 0.988]);
     return {
-      transform: [{ translateY: y }, { scale: s }],
-      shadowOpacity: shadowOp,
-      shadowRadius: shadowRad,
-      elevation: el,
+      transform: [{ scale: s }],
     };
   });
 
@@ -130,27 +127,28 @@ function GameCardListRow(props: GameCardListRowProps) {
     ? getMatchCardPredictedCtaLinearGradient()
     : getMatchCardBlueCtaLinearGradient();
 
+  const cardEntering = reduceMotion
+    ? undefined
+    : gamesScheduleCardDaySwitchEnter(rowIndex);
+
   return (
     <AnimatedPressable
       collapsable={false}
+      entering={cardEntering}
       android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
       onPress={() => void openPredictModal(game)}
       onPressIn={() => {
-        if (reduceMotion) {
-          return;
-        }
-        pressedLift.value = withTiming(1, { duration: 180 });
+        if (reduceMotion) return;
+        pressed.value = withTiming(1, { duration: 90 });
       }}
       onPressOut={() => {
-        if (reduceMotion) {
-          return;
-        }
-        pressedLift.value = withTiming(0, { duration: 220 });
+        if (reduceMotion) return;
+        pressed.value = withTiming(0, { duration: 160 });
       }}
       style={[
         styles.gameCardShell,
         isPredicted && styles.gameCardShellPredicted,
-        cardPressLiftStyle,
+        cardPressStyle,
       ]}
     >
               <View pointerEvents="none" style={styles.cardFineShellBackdrop}>
@@ -324,7 +322,9 @@ export default function GameCardList(props: GameCardListProps) {
         {games.length === 0 ? <Text style={styles.body}>{t.noGames}</Text> : null}
         {games.map((game, idx) => {
           const rowKey = String(game.id ?? "") || `game-${idx}`;
-          return <GameCardListRow key={rowKey} {...props} game={game} />;
+          return (
+            <GameCardListRow key={rowKey} {...props} game={game} rowIndex={idx} />
+          );
         })}
       </View>
     </View>

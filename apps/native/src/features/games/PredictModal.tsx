@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   type LayoutChangeEvent,
   KeyboardAvoidingView,
@@ -388,6 +388,11 @@ type PredictModalProps = {
   spectatorStartedNoPost?: boolean;
   /** 試合開始後（キックオフ時刻経過・LIVE・終了）は予想の修正 UI（「修正」・スコア再入力）を出さない */
   predictionEditLockedAfterKickoff?: boolean;
+  /**
+   * 編集モードで開いた直後からスコア入力ブロックを表示する。
+   * ゲーム一覧は要約→「修正」の2段が既定。リザルト一覧からは一覧上でそのまま得点を変えられるようにする。
+   */
+  expandScoreFormWhenEditing?: boolean;
   /** タブ（市場・H2H・スタッツ）用の実データ: Firestore `posts` / `teams` および peer 試合 */
   predictData?: {
     gameId: string;
@@ -465,6 +470,7 @@ export default function PredictModal({
   onClose,
   spectatorStartedNoPost = false,
   predictionEditLockedAfterKickoff = false,
+  expandScoreFormWhenEditing = false,
   predictData = null,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
@@ -497,7 +503,12 @@ export default function PredictModal({
   const closeAnimLockRef = useRef(false);
   const closeAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  /**
+   * `visible` が true になった直後、`useEffect` だと 1 フレーム遅れて `layersVisible` が true になり、
+   * 中身のない Modal＋全面 Pressable だけが描画されタップで閉じてしまう（リザルトからの修正など）。
+   * ペイント前に同期する。
+   */
+  useLayoutEffect(() => {
     if (visible) {
       setLayersVisible(true);
       setExitingUi(false);
@@ -507,12 +518,12 @@ export default function PredictModal({
 
   useEffect(() => {
     if (!visible) return;
-    if (isEditingPrediction) {
+    if (isEditingPrediction && !expandScoreFormWhenEditing) {
       setScoreFormExpanded(false);
     } else {
       setScoreFormExpanded(true);
     }
-  }, [visible, isEditingPrediction]);
+  }, [visible, isEditingPrediction, expandScoreFormWhenEditing]);
 
   useEffect(
     () => () => {
