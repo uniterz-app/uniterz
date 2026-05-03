@@ -48,6 +48,11 @@ import {
   sixersCelticsH2HGames,
 } from "./sixers-celtics-regular-2526";
 import {
+  SIXERS_KNICKS_TEAM_IDS,
+  sixersKnicksH2HAveragesForSides,
+  sixersKnicksH2HGames,
+} from "./sixers-knicks-regular-2526";
+import {
   SPURS_BLAZERS_TEAM_IDS,
   spursBlazersH2HAveragesForSides,
   spursBlazersH2HGames,
@@ -188,6 +193,11 @@ function idsAreSixersMagic(homeTeamId: string, awayTeamId: string): boolean {
 function idsAreSixersCeltics(homeTeamId: string, awayTeamId: string): boolean {
   const s = new Set([homeTeamId, awayTeamId]);
   return SIXERS_CELTICS_TEAM_IDS.every((id) => s.has(id));
+}
+
+function idsAreSixersKnicks(homeTeamId: string, awayTeamId: string): boolean {
+  const s = new Set([homeTeamId, awayTeamId]);
+  return SIXERS_KNICKS_TEAM_IDS.every((id) => s.has(id));
 }
 
 function idsAreClippersWarriors(homeTeamId: string, awayTeamId: string): boolean {
@@ -423,6 +433,45 @@ function inferSixersCelticsIdsFromNames(
   if (an.includes("76er") || an.includes("sixer") || an.includes("philadelphia"))
     aid = "nba-76ers";
   else if (an.includes("celtic") || an.includes("boston")) aid = "nba-celtics";
+  if (!hid || !aid || hid === aid) return null;
+  return { homeTeamId: hid, awayTeamId: aid };
+}
+
+function namesLookSixersKnicks(homeName?: string, awayName?: string): boolean {
+  const blob = `${(homeName ?? "").toLowerCase()} ${(awayName ?? "").toLowerCase()}`;
+  const hasSixers =
+    blob.includes("76er") ||
+    blob.includes("sixer") ||
+    blob.includes("philadelphia");
+  const hasKnicks = blob.includes("knick") || blob.includes("new york");
+  return hasSixers && hasKnicks;
+}
+
+function inferSixersKnicksIdsFromNames(
+  homeName?: string,
+  awayName?: string
+): { homeTeamId: string; awayTeamId: string } | null {
+  if (!namesLookSixersKnicks(homeName, awayName)) return null;
+  const hn = (homeName ?? "").toLowerCase();
+  const an = (awayName ?? "").toLowerCase();
+  let hid = "";
+  let aid = "";
+  if (hn.includes("knick") || hn.includes("new york")) hid = "nba-knicks";
+  else if (
+    hn.includes("76er") ||
+    hn.includes("sixer") ||
+    hn.includes("philadelphia")
+  ) {
+    hid = "nba-76ers";
+  }
+  if (an.includes("knick") || an.includes("new york")) aid = "nba-knicks";
+  else if (
+    an.includes("76er") ||
+    an.includes("sixer") ||
+    an.includes("philadelphia")
+  ) {
+    aid = "nba-76ers";
+  }
   if (!hid || !aid || hid === aid) return null;
   return { homeTeamId: hid, awayTeamId: aid };
 }
@@ -693,6 +742,10 @@ export function resolveNbaH2HPack(
       homeName,
       awayName
     );
+    const inferredSixersKnicks = inferSixersKnicksIdsFromNames(
+      homeName,
+      awayName
+    );
     const inferredClippersWarriors = inferClippersWarriorsIdsFromNames(
       homeName,
       awayName
@@ -722,6 +775,7 @@ export function resolveNbaH2HPack(
       inferredThunderSuns ??
       inferredSixersMagic ??
       inferredSixersCeltics ??
+      inferredSixersKnicks ??
       inferredClippersWarriors ??
       inferredLakersRockets ??
       inferredSpursTimberwolves ??
@@ -884,6 +938,19 @@ export function resolveNbaH2HPack(
       games: sixersCelticsH2HGames,
       h2hAverages,
       seriesRecord: computeH2hSeriesRecord(sixersCelticsH2HGames),
+    };
+  }
+
+  if (idsAreSixersKnicks(hid, aid)) {
+    const h2hAverages = sixersKnicksH2HAveragesForSides({
+      homeTeamId: hid,
+      awayTeamId: aid,
+    });
+    if (!h2hAverages) return null;
+    return {
+      games: sixersKnicksH2HGames,
+      h2hAverages,
+      seriesRecord: computeH2hSeriesRecord(sixersKnicksH2HGames),
     };
   }
 
