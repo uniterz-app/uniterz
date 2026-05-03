@@ -5,6 +5,7 @@
 
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
+import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 type Bucket = {
   posts: number;
@@ -131,35 +132,89 @@ export function aggregateRecentWindowsFromDailySnaps(
   };
 }
 
+/** Firestore の date / docId / Timestamp から YYYY-MM-DD を復元 */
+function resolveDailyDocDateKey(
+  dateRaw: unknown,
+  docId: string
+): string | null {
+  if (typeof dateRaw === "string") {
+    const m = /^(\d{4}-\d{2}-\d{2})/.exec(dateRaw.trim());
+    if (m) return m[1];
+  }
+  if (
+    dateRaw &&
+    typeof dateRaw === "object" &&
+    "toDate" in dateRaw &&
+    typeof (dateRaw as { toDate: () => Date }).toDate === "function"
+  ) {
+    try {
+      const inst = (dateRaw as { toDate: () => Date }).toDate();
+      if (!Number.isNaN(inst.getTime())) {
+        return toDateKeyInTimeZone(inst, TIMEZONE_JST);
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  const idTail = docId.match(/_(\d{4}-\d{2}-\d{2})$/);
+  return idTail ? idTail[1] : null;
+}
+
+/** 1 日分のスナップショットを `ProfileDailyTrendRow` に（存在しない・日付なしは null） */
+export function dailyTrendRowFromDailySnap(
+  snap: DocumentSnapshot
+): ProfileDailyTrendRow | null {
+  if (!snap.exists) return null;
+  const d = snap.data();
+  if (!d) return null;
+  const date = resolveDailyDocDateKey(d.date, snap.id);
+  if (!date) return null;
+
+  const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
+  const bucket =
+    all != null && typeof all === "object"
+      ? (all as Record<string, unknown>)
+      : null;
+  const posts = safeInt(bucket?.posts);
+  const wins = safeInt(bucket?.wins);
+  const pointsV3 = safeNum(bucket?.pointsSumV3);
+  const upsetPoints = safeNum(bucket?.upsetPointsSum);
+  const scorePrecisionSum = safeNum(bucket?.scorePrecisionSum);
+
+  return {
+    date,
+    posts,
+    wins,
+    pointsV3,
+    upsetPoints,
+    winRate: posts > 0 ? wins / posts : 0,
+    scorePrecision: scorePrecisionSum,
+  };
+}
+
+/**
+ * キャッシュ済み trend に特定日のスナップショットを上書きマージ（当日ぶんの取り残し対策）
+ */
+export function mergeDailyTrendWithSnap(
+  trend: ProfileDailyTrendRow[],
+  snap: DocumentSnapshot
+): ProfileDailyTrendRow[] {
+  const row = dailyTrendRowFromDailySnap(snap);
+  if (!row) return trend;
+  const next = trend.filter((r) => r.date !== row.date);
+  next.push(row);
+  next.sort((a, b) => a.date.localeCompare(b.date));
+  return next;
+}
+
 /** useUserStatsDailyTrend と同じ all / date の解決で行を作り、日付昇順に並べる */
 export function buildDailyTrendFromDailySnaps(
   snaps: DocumentSnapshot[]
 ): ProfileDailyTrendRow[] {
   const rows: ProfileDailyTrendRow[] = [];
   for (const snap of snaps) {
-    if (!snap.exists) continue;
-    const d = snap.data();
-    if (!d) continue;
-    const dateRaw = d.date;
-    const date = typeof dateRaw === "string" ? dateRaw : "";
-    if (!date) continue;
-
-    const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
-    const posts = all?.posts ?? 0;
-    const wins = all?.wins ?? 0;
-    const pointsV3 = all?.pointsSumV3 ?? 0;
-    const upsetPoints = all?.upsetPointsSum ?? 0;
-    const scorePrecisionSum = all?.scorePrecisionSum ?? 0;
-
-    rows.push({
-      date,
-      posts,
-      wins,
-      pointsV3,
-      upsetPoints,
-      winRate: posts > 0 ? wins / posts : 0,
-      scorePrecision: scorePrecisionSum,
-    });
+    const row = dailyTrendRowFromDailySnap(snap);
+    if (row) rows.push(row);
   }
   rows.sort((a, b) => a.date.localeCompare(b.date));
   return rows;

@@ -10,7 +10,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Magic";
 
 /**
- * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ5）
+ * 2025-26 Magic vs Pistons（レギュラー4 + プレーオフ6）
  * 出典: StatMuse 等の公開スコアに基づく（レギュラー直接対決 2-2）
  */
 export const magicPistonsH2HGames: NbaH2HGameCard[] = [
@@ -172,6 +172,28 @@ export const magicPistonsH2HGames: NbaH2HGameCard[] = [
         "DetroitはCade Cunninghamの45得点で敗退を回避。Tobias Harrisが23得点8アシスト、Ausar Thompsonも15リバウンド5スティールで支えた。OrlandoはPaolo Bancheroが45得点9リバウンド7アシストと対抗したが、終盤のクラッチでDetroitに押し切られた。シリーズはOrlando 3-2。",
       en:
         "Detroit stayed alive behind 45 points from Cade Cunningham. Tobias Harris added 23 and 8 assists, and Ausar Thompson chipped in 15 rebounds and 5 steals. Paolo Banchero countered with 45, 9, and 7 for Orlando, but the Pistons closed the clutch minutes to win on the road. Orlando still leads the series 3-2.",
+    },
+  },
+  {
+    id: "h2h-magic-pistons-2026-05-03",
+    dateEt: "2026-05-03",
+    dateJst: "2026-05-04",
+    seriesGameLabel: "Game 6",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 93,
+    scoreRight: 79,
+    /** Detroit（Pistons）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["K. Huerter"],
+    injuriesRight: ["J. Isaac", "F. Wagner"],
+    inactiveFooterSummary: {
+      ja:
+        "Orlandoは前半に試合を支配して最大24点差まで広げたが、後半に完全に失速した。DetroitはCade Cunninghamが32得点10リバウンド、Tobias Harrisが22得点10リバウンドで立て直し、後半だけで55-19と圧倒して逆転。Magicは第3Qから第4Q序盤にかけて23本連続でFGを外し、後半合計19得点に終わった。Paolo Bancheroは17得点9リバウンド7アシストを記録したが、FG4/20と苦しみ、最後まで流れを戻せなかった。\n" +
+        "シリーズは3勝3敗となった。",
+      en:
+        "Orlando dominated the first half and led by as many as 24, then completely unraveled after halftime. Detroit steadied behind 32 points and 10 rebounds from Cade Cunningham and 22 and 10 from Tobias Harris, outscoring the Magic 55-19 in the second half to flip the game. From late in the third through early in the fourth, Orlando missed 23 straight field goals and scored only 19 points after the break. Paolo Banchero finished with 17, 9, and 7 but shot 4-for-20 and never got the offense back on track.\n" +
+        "The series is tied 3-3.",
     },
   },
 ];

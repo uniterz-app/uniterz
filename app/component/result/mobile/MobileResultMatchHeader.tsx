@@ -1,8 +1,9 @@
 // app/component/result/mobile/MobileResultMatchHeader.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Flame } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Flame, Pencil } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
@@ -29,6 +30,8 @@ type Props = {
   post: PredictionPostV2;
   language?: Language;
   inOverlay?: boolean;
+  viewerUid?: string | null;
+  gamesRoutePrefix?: "/web" | "/mobile";
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -162,6 +165,8 @@ export default function MobileResultMatchHeader({
   post,
   language = "ja",
   inOverlay: _inOverlay = false,
+  viewerUid = null,
+  gamesRoutePrefix = "/mobile",
 }: Props) {
   const teamNameFont = bracketMarketTeamTypography(true);
   const normalizedLeague = normalizeLeague(post.league);
@@ -257,6 +262,12 @@ export default function MobileResultMatchHeader({
 
   const cardBase = `${MATCH_OVERLAY_GLASS_PANEL} overflow-hidden text-white`;
 
+  const predictEditHref = useMemo(() => {
+    if (!viewerUid || !post.gameId) return null;
+    if (post.authorUid !== viewerUid) return null;
+    return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
+  }, [viewerUid, post.authorUid, post.gameId, gamesRoutePrefix]);
+
   return (
     <div className={`relative ${cardBase} ${frame}`}>
       {badge === "streak" ? (
@@ -287,7 +298,12 @@ export default function MobileResultMatchHeader({
         >
           {pillText}
         </span>
-        <div className="flex min-w-0 flex-1 flex-col items-end gap-1">
+        <div
+          className={[
+            "flex min-w-0 flex-1 flex-col items-end gap-1",
+            predictEditHref ? "pr-10" : "",
+          ].join(" ")}
+        >
           <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
             {badge === "streak" && streakBadge && (
               <span
@@ -320,6 +336,17 @@ export default function MobileResultMatchHeader({
           </div>
         </div>
       </div>
+      {predictEditHref ? (
+        <div className="pointer-events-auto absolute right-2 top-2 z-30">
+          <Link
+            href={predictEditHref}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100"
+            aria-label={isEn ? "Edit prediction" : "予想を修正"}
+          >
+            <Pencil className="h-3 w-3" aria-hidden />
+          </Link>
+        </div>
+      ) : null}
 
       <div className="relative z-10 px-4 pb-5 pt-11">
       <div className="grid grid-cols-3 items-center pt-1">

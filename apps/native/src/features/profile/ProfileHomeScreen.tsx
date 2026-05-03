@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,171 +10,228 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { signOut, updateProfile } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import { LinearGradient } from "expo-linear-gradient";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import { useNativeProfileStats } from "./useNativeProfileStats";
+import { useNativeStreakTracker } from "./useNativeStreakTracker";
+import { useNativeProfilePlan } from "./useNativeProfilePlan";
+import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
+import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
+import ProfileSummaryGridNative from "./ProfileSummaryGridNative";
+import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
+import ProfileGridBackdrop from "./ProfileGridBackdrop";
+import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
+import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
+import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
+import ProfileSideMenuModal from "./ProfileSideMenuModal";
+import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
+import ProfileMobileStackModal from "./mobileScreens/ProfileMobileStackModal";
+import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
+import ProfileBracketTabNative from "./ProfileBracketTabNative";
+import ProfileStatsTabNative from "./ProfileStatsTabNative";
+import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
+import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+
+type ProfileTab = "overview" | "bracket" | "stats";
+
+/** Web `Tabs.tsx` と同一の英語ラベル */
+const PROFILE_TAB_LABELS_EN: Record<ProfileTab, string> = {
+  overview: "Overview",
+  stats: "Pro Stats",
+  bracket: "Bracket",
+};
+
+const PROFILE_TAB_ORDER: ProfileTab[] = ["overview", "stats", "bracket"];
 
 export default function ProfileHomeScreen({
   bottomReserveY = 0,
   onSaved,
 }: {
-  /** フローティング下部ナビと被らないよう確保する余白（App.tsx から注入） */
   bottomReserveY?: number;
   onSaved?: () => void;
 }) {
-  const { fUser } = useFirebaseUser();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { fUser, status } = useFirebaseUser();
+  const uid = fUser?.uid;
+  const apiBase = getUniterzApiBaseUrl();
+
+  const [tab, setTab] = useState<ProfileTab>("overview");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOverlay, setMobileOverlay] = useState<ProfileMobileOverlayKind>(null);
+  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
+
+  const [profileLoading, setProfileLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
-  const [handle, setHandle] = useState("");
   const [bio, setBio] = useState("");
+  const [handle, setHandle] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
   const [language, setLanguage] = useState<"ja" | "en">("ja");
+  const [plan, setPlan] = useState<"free" | "pro">("free");
+
+  const [saving, setSaving] = useState(false);
+
   const isJa = language === "ja";
-  const t = isJa
-    ? {
-        title: "PROFILE",
-        loading: "読み込み中...",
-        displayName: "表示名",
-        displayNamePlaceholder: "表示名を入力",
-        handle: "ハンドル",
-        handlePlaceholder: "@handle",
-        bio: "自己紹介",
-        bioPlaceholder: "自己紹介を入力",
-        avatarUrl: "アバター画像URL",
-        coverUrl: "カバー画像URL",
-        language: "表示言語",
-        summary: "SUMMARY",
-        posts: "投稿数",
-        wins: "的中",
-        winRate: "勝率",
-        totalPoints: "総合得点",
-        maxStreak: "最大連勝",
-        upsetPoints: "アップセット得点",
-        save: "プロフィール保存",
-        saving: "保存中...",
-        account: "ログイン中アカウント",
-        uid: "uid",
-        logout: "ログアウト",
-        invalidTitle: "入力不正",
-        invalidName: "表示名は50文字以内で入力してください。",
-        savedTitle: "保存完了",
-        savedBody: "プロフィールを更新しました。",
-        saveErrorTitle: "保存エラー",
-        saveErrorBody: "プロフィール更新に失敗しました。",
-      }
-    : {
-        title: "PROFILE",
-        loading: "Loading...",
-        displayName: "Display name",
-        displayNamePlaceholder: "Enter display name",
-        handle: "Handle",
-        handlePlaceholder: "@handle",
-        bio: "Bio",
-        bioPlaceholder: "Enter bio",
-        avatarUrl: "Avatar URL",
-        coverUrl: "Cover URL",
-        language: "Language",
-        summary: "SUMMARY",
-        posts: "Posts",
-        wins: "Wins",
-        winRate: "Win Rate",
-        totalPoints: "Total Points",
-        maxStreak: "Max Streak",
-        upsetPoints: "Upset Points",
-        save: "Save profile",
-        saving: "Saving...",
-        account: "Signed-in account",
-        uid: "uid",
-        logout: "Log out",
-        invalidTitle: "Invalid input",
-        invalidName: "Display name must be 50 characters or fewer.",
-        savedTitle: "Saved",
-        savedBody: "Profile has been updated.",
-        saveErrorTitle: "Save error",
-        saveErrorBody: "Failed to update profile.",
-      };
+
+  const profilePlanHook = useNativeProfilePlan({
+    targetUid: uid ?? null,
+    profilePlan: plan,
+  });
+  const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
+    useNativeAnnouncementsUnread(uid, status === "ready" && !!uid, {
+      enabled: profilePlanHook.isMe,
+    });
+  const { resolvedBadges } = useNativeProfileBadges(uid);
+
+  const statsBundle = useNativeProfileStats(uid, tab === "overview");
+  const streakBundle = useNativeStreakTracker(uid, tab === "overview");
+
+  const currentIsProView = profilePlanHook.isProView;
+  /** 概要6枚の並び: Web Pro は連勝→精度の順（`profileSummaryGridKeysProOverview`）。plan と hook のどちらかが Pro なら Pro 並びにする */
+  const proSummaryGridLayout =
+    profilePlanHook.effectivePlan === "pro" || plan === "pro";
+
+  const maxStreak = useMemo(() => {
+    const st = statsBundle.stats as Record<string, unknown> | null;
+    if (st != null) {
+      const raw = st.maxWinStreak;
+      const legacy = st.maxStreak;
+      const v = Number(raw ?? legacy);
+      if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
+    }
+    return 0;
+  }, [statsBundle.stats]);
+
+  const currentStreak = useMemo(() => {
+    const st = statsBundle.stats as Record<string, unknown> | null;
+    if (st != null) {
+      const v = Number(st.currentStreak);
+      if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
+    }
+    return 0;
+  }, [statsBundle.stats]);
+
+  const showStreakBadge = currentStreak >= 3;
+
+  /** Web ヒーロー2行目に近づける：ハンドル優先、無ければメール（UID の一部は誤解を招くので避ける） */
+  const secondaryIdLine =
+    handle.trim() || fUser?.email?.trim() || fUser?.uid?.slice(0, 12) || "";
+
+  const t = useMemo(
+    () =>
+      isJa
+        ? {
+            playoffsTitle: "2026 PLAYOFFS STATS",
+            apiMissing:
+              "EXPO_PUBLIC_UNITERZ_API_BASE_URL を .env に設定し、Next.js を起動してください。",
+            bracketSoon:
+              "プレーオフブラケットは Web 版と同様の表示を順次対応します。",
+            statsSoon: "詳細分析（Pro）は Web 版でご利用いただけます。",
+            title: "PROFILE",
+            displayName: "表示名",
+            displayNamePlaceholder: "表示名を入力",
+            bio: "自己紹介",
+            bioPlaceholder: "自己紹介を入力",
+            langLabel: "表示言語",
+            save: "プロフィール保存",
+            saving: "保存中…",
+            account: "ログイン中アカウント",
+            uid: "uid",
+            logout: "ログアウト",
+            invalidTitle: "入力不正",
+            invalidName: "表示名は50文字以内で入力してください。",
+            savedTitle: "保存完了",
+            savedBody: "プロフィールを更新しました。",
+            saveErrorTitle: "保存エラー",
+            saveErrorBody: "プロフィール更新に失敗しました。",
+            proBadge: "PRO",
+            streakLabel: "連勝",
+          }
+        : {
+            playoffsTitle: "2026 PLAYOFFS STATS",
+            apiMissing:
+              "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL and run the Next.js app.",
+            bracketSoon: "Playoff bracket view will match the web app in a future update.",
+            statsSoon: "Pro analysis is available on the web app.",
+            title: "PROFILE",
+            displayName: "Display name",
+            displayNamePlaceholder: "Enter display name",
+            bio: "Bio",
+            bioPlaceholder: "Enter bio",
+            langLabel: "Language",
+            save: "Save profile",
+            saving: "Saving…",
+            account: "Signed-in account",
+            uid: "uid",
+            logout: "Log out",
+            invalidTitle: "Invalid input",
+            invalidName: "Display name must be 50 characters or fewer.",
+            savedTitle: "Saved",
+            savedBody: "Profile has been updated.",
+            saveErrorTitle: "Save error",
+            saveErrorBody: "Failed to update profile.",
+            proBadge: "PRO",
+            streakLabel: "Streak",
+          },
+    [isJa]
+  );
 
   useEffect(() => {
     let alive = true;
     async function load() {
-      if (!fUser?.uid) {
-        setLoading(false);
+      if (!uid) {
+        setProfileLoading(false);
         return;
       }
-      setLoading(true);
+      setProfileLoading(true);
       try {
-        const snap = await getDoc(doc(db, "users", fUser.uid));
+        const snap = await getDoc(doc(db, "users", uid));
         if (!alive) return;
         const data = snap.data() as
           | {
               displayName?: unknown;
-              handle?: unknown;
               bio?: unknown;
+              handle?: unknown;
+              photoURL?: unknown;
               avatarUrl?: unknown;
-              coverUrl?: unknown;
               language?: unknown;
-              posts?: unknown;
-              wins?: unknown;
-              winRate?: unknown;
-              pointsSumV3?: unknown;
-              maxStreak?: unknown;
-              upsetPointsSum?: unknown;
+              plan?: unknown;
             }
           | undefined;
-        setDisplayName(typeof data?.displayName === "string" ? data.displayName : "");
-        setHandle(typeof data?.handle === "string" ? data.handle : "");
+        const fromDoc =
+          typeof data?.displayName === "string" ? data.displayName.trim() : "";
+        const fromAuth = auth.currentUser?.displayName?.trim() ?? "";
+        /** Web はヒーロー名にハンドルを使わない。Firestore が空のときは Auth の表示名を補う */
+        setDisplayName(fromDoc || fromAuth);
         setBio(typeof data?.bio === "string" ? data.bio : "");
-        setAvatarUrl(typeof data?.avatarUrl === "string" ? data.avatarUrl : "");
-        setCoverUrl(typeof data?.coverUrl === "string" ? data.coverUrl : "");
+        setHandle(typeof data?.handle === "string" ? data.handle : "");
+        const mergedAvatar =
+          typeof data?.photoURL === "string" && data.photoURL.trim().length > 0
+            ? data.photoURL
+            : typeof data?.avatarUrl === "string"
+              ? data.avatarUrl
+              : "";
+        setAvatarUrl(mergedAvatar);
         setLanguage(data?.language === "en" ? "en" : "ja");
-        setSummary({
-          posts: asNumber(data?.posts),
-          wins: asNumber(data?.wins),
-          winRate: asNumber(data?.winRate),
-          pointsSumV3: asNumber(data?.pointsSumV3),
-          maxStreak: asNumber(data?.maxStreak),
-          upsetPointsSum: asNumber(data?.upsetPointsSum),
-        });
+        setPlan(data?.plan === "pro" ? "pro" : "free");
       } finally {
         if (!alive) return;
-        setLoading(false);
+        setProfileLoading(false);
       }
     }
     void load();
     return () => {
       alive = false;
     };
-  }, [fUser?.uid]);
-
-  const [summary, setSummary] = useState({
-    posts: 0,
-    wins: 0,
-    winRate: 0,
-    pointsSumV3: 0,
-    maxStreak: 0,
-    upsetPointsSum: 0,
-  });
-
-  const safeDisplayName = useMemo(() => {
-    const name = displayName.trim();
-    if (name) return name;
-    if (fUser?.displayName) return fUser.displayName;
-    return "UNITERZ USER";
-  }, [displayName, fUser?.displayName]);
-
-  const safeHandle = useMemo(() => {
-    const raw = handle.trim() || fUser?.email?.split("@")[0] || "user";
-    return raw.startsWith("@") ? raw : `@${raw}`;
-  }, [handle, fUser?.email]);
+  }, [uid]);
 
   async function handleSaveProfile() {
-    if (!fUser?.uid || saving) return;
+    if (!uid || saving) return;
     const safeName = displayName.trim();
     const safeBio = bio.trim();
     if (safeName.length > 50) {
@@ -182,17 +240,14 @@ export default function ProfileHomeScreen({
     }
     setSaving(true);
     try {
-      if (auth.currentUser && auth.currentUser.uid === fUser.uid) {
+      if (auth.currentUser && auth.currentUser.uid === uid) {
         await updateProfile(auth.currentUser, { displayName: safeName || null });
       }
       await setDoc(
-        doc(db, "users", fUser.uid),
+        doc(db, "users", uid),
         {
           displayName: safeName,
-          handle: handle.trim(),
           bio: safeBio,
-          avatarUrl: avatarUrl.trim(),
-          coverUrl: coverUrl.trim(),
           language,
           updatedAt: serverTimestamp(),
         },
@@ -200,91 +255,277 @@ export default function ProfileHomeScreen({
       );
       onSaved?.();
       Alert.alert(t.savedTitle, t.savedBody);
-    } catch (error: any) {
-      Alert.alert(t.saveErrorTitle, error?.message ?? t.saveErrorBody);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : t.saveErrorBody;
+      Alert.alert(t.saveErrorTitle, msg);
     } finally {
       setSaving(false);
     }
   }
 
-  return (
-    <View style={styles.root}>
-      <Image
-        source={require("../../../assets/AuthFormScreen.png")}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      />
-      <View style={styles.backgroundDim} />
+  const apiConfigured = apiBase != null;
+
+  function renderTabs() {
+    const items: { id: ProfileTab; label: string }[] = PROFILE_TAB_ORDER.map((id) => ({
+      id,
+      label: PROFILE_TAB_LABELS_EN[id],
+    }));
+    return (
+      <View style={styles.tabBar}>
+        <View style={styles.tabRow}>
+          {items.map((item) => {
+            const active = tab === item.id;
+            return (
+              <Pressable
+                key={item.id}
+                style={({ pressed }) => [
+                  styles.tabHit,
+                  pressed && styles.tabHitPressed,
+                ]}
+                onPress={() => setTab(item.id)}
+              >
+                <Text
+                  style={[styles.tabLabel, active && styles.tabLabelActive]}
+                  maxFontSizeMultiplier={1.2}
+                >
+                  {item.label}
+                </Text>
+                {active ? <View style={styles.tabIndicator} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
+  function renderOverview() {
+    if (!apiConfigured) {
+      return (
+        <Text style={styles.warnText}>{t.apiMissing}</Text>
+      );
+    }
+    if (statsBundle.loading) {
+      return (
+        <View style={styles.inlineLoading}>
+          <BlocksPulseLoader pixelScale={0.9} />
+        </View>
+      );
+    }
+    if (statsBundle.error) {
+      return (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{statsBundle.error}</Text>
+          <Text style={styles.warnText}>{t.apiMissing}</Text>
+        </View>
+      );
+    }
+    if (!statsBundle.overviewReady || !statsBundle.summary) {
+      return (
+        <View style={styles.inlineLoading}>
+          <BlocksPulseLoader pixelScale={0.9} />
+        </View>
+      );
+    }
+
+    const entranceKey = `${uid ?? ""}-${statsBundle.summary.posts}-${proSummaryGridLayout ? "p" : "f"}`;
+
+    return (
+      <View style={styles.overviewBlock}>
+        <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
+          <Text
+            style={styles.playoffsHeading}
+            maxFontSizeMultiplier={1.2}
+          >
+            {t.playoffsTitle}
+          </Text>
+          <View style={styles.summaryGridWrap}>
+            <ProfileSummaryGridNative
+              summary={statsBundle.summary}
+              ranks={statsBundle.summaryRanks}
+              maxStreak={maxStreak}
+              language={language}
+              proOverviewLayout={proSummaryGridLayout}
+            />
+          </View>
+        </ProfileOverviewEntranceBlock>
+        <View style={styles.chartGap} />
+        <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
+          <ProfileDailyTrendChartNative
+            key={`dailyTrend:${uid ?? ""}:${statsBundle.dailyTrend.map((r) => r.date).join(",")}`}
+            data={statsBundle.dailyTrend}
+            language={language}
+            allowAll={currentIsProView}
+          />
+        </ProfileOverviewEntranceBlock>
+        <View style={styles.chartGap} />
+        <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
+          <ProfileRankTrendChartNative
+            data={statsBundle.rankTrend}
+            loading={false}
+            language={language}
+          />
+        </ProfileOverviewEntranceBlock>
+        <View style={styles.chartGap} />
+        <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
+          <ProfileStreakTrackerNative
+            points={streakBundle.points}
+            loading={streakBundle.loading}
+            language={language}
+          />
+        </ProfileOverviewEntranceBlock>
+      </View>
+    );
+  }
+
+  if (uid && profilePlanHook.isMe && profilePlanHook.loadingPlan) {
+    return (
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: bottomReserveY + spacing.xl },
+          { paddingBottom: spacing.lg + bottomReserveY },
         ]}
-        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroCard}>
-          <View style={styles.coverWrap}>
-            {coverUrl ? (
-              <Image source={{ uri: coverUrl }} style={styles.coverImage} />
-            ) : (
-              <LinearGradient
-                colors={["#0b1220", "#111827", "#060a12"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.coverImage}
-              />
-            )}
-            <View style={styles.coverOverlay} />
+        <View style={styles.inlineLoading}>
+          <BlocksPulseLoader />
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: spacing.lg + bottomReserveY },
+      ]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <UniterzBrandShelfNative horizontalBleed={spacing.sm} />
+
+      <ProfileGridBackdrop style={styles.hero}>
+        <View style={styles.heroRow}>
+          <View style={styles.heroLeftCol}>
+            <View style={styles.avatarHalo}>
+              {avatarUrl.trim().length > 0 ? (
+                <Image source={{ uri: avatarUrl.trim() }} style={styles.avatarCircle} />
+              ) : (
+                <View style={[styles.avatarCircle, styles.avatarFallback]}>
+                  <Text style={styles.avatarLetter}>
+                    {(
+                      displayName.trim()[0] ??
+                      fUser?.displayName?.trim()?.[0] ??
+                      handle.trim()[0] ??
+                      "?"
+                    ).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-          <View style={styles.avatarWrap}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <MaterialCommunityIcons
-                  name="account-outline"
-                  size={42}
-                  color="rgba(226,232,240,0.9)"
-                />
-              </View>
-            )}
-          </View>
-          <View style={styles.heroInfo}>
-            <Text style={styles.heroName} numberOfLines={1}>
-              {safeDisplayName}
-            </Text>
-            <Text style={styles.heroHandle} numberOfLines={1}>
-              {safeHandle}
-            </Text>
-            {bio.trim() ? (
-              <Text style={styles.heroBio} numberOfLines={3}>
+
+          <View style={styles.heroCenterCol}>
+            <View style={styles.nameRow}>
+              <Text style={styles.displayName} numberOfLines={1}>
+                {displayName.trim() || fUser?.displayName?.trim() || "—"}
+              </Text>
+              {currentIsProView ? (
+                <View style={styles.proPill}>
+                  <Text style={styles.proPillText}>{t.proBadge}</Text>
+                </View>
+              ) : null}
+              {showStreakBadge ? (
+                <View style={styles.streakPill}>
+                  <Text style={styles.streakPillText}>
+                    {t.streakLabel} {currentStreak}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            {secondaryIdLine.length > 0 ? (
+              <Text style={styles.heroIdLine} numberOfLines={1}>
+                {handle.trim().length > 0 ? `@${handle.trim()}` : secondaryIdLine}
+              </Text>
+            ) : null}
+            {bio.trim().length > 0 ? (
+              <Text style={styles.bioHero} numberOfLines={3}>
                 {bio.trim()}
               </Text>
             ) : null}
+            {profileLoading ? (
+              <View style={styles.heroLoadingRow}>
+                <BlocksPulseLoader pixelScale={0.65} labelStyle={styles.heroLoadingLabel} />
+              </View>
+            ) : null}
           </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.menuSquare, pressed && styles.menuSquarePressed]}
+            onPress={() => setMenuOpen(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialCommunityIcons name="menu" size={15} color="rgba(248,250,252,0.92)" />
+            {menuUnreadCount > 0 ? (
+              <View style={styles.menuBadge}>
+                <Text style={styles.menuBadgeText}>
+                  {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
+                </Text>
+              </View>
+            ) : null}
+          </Pressable>
         </View>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{t.summary}</Text>
-          <View style={styles.summaryGrid}>
-            <SummaryMetric label={t.posts} value={`${summary.posts}`} />
-            <SummaryMetric label={t.wins} value={`${summary.wins}`} />
-            <SummaryMetric
-              label={t.winRate}
-              value={`${Math.round(summary.winRate * 100)}%`}
-            />
-            <SummaryMetric label={t.totalPoints} value={formatOne(summary.pointsSumV3)} />
-            <SummaryMetric label={t.maxStreak} value={`${summary.maxStreak}`} />
-            <SummaryMetric
-              label={t.upsetPoints}
-              value={formatOne(summary.upsetPointsSum)}
-            />
+        {resolvedBadges.length > 0 ? (
+          <View style={styles.badgeRow}>
+            {resolvedBadges.slice(0, 10).map((b) => (
+              <Pressable
+                key={b.id}
+                style={styles.badgeThumb}
+                onPress={() => {
+                  setSelectedBadge(b);
+                  setBadgeModalOpen(true);
+                }}
+              >
+                {b.icon ? (
+                  <Image source={{ uri: b.icon }} style={styles.badgeImg} resizeMode="contain" />
+                ) : (
+                  <Text style={styles.badgeFallback} numberOfLines={2}>
+                    {b.title}
+                  </Text>
+                )}
+              </Pressable>
+            ))}
           </View>
-        </View>
+        ) : null}
+      </ProfileGridBackdrop>
 
-        <View style={styles.sectionCard}>
+      {renderTabs()}
+
+      {tab === "overview" ? (
+        renderOverview()
+      ) : tab === "bracket" ? (
+        <ProfileBracketTabNative uid={uid} language={language} />
+      ) : (
+        <ProfileStatsTabNative
+          uid={uid}
+          language={language}
+          isProView={currentIsProView}
+          myPlan={profilePlanHook.myPlan}
+          isMe={profilePlanHook.isMe}
+          isMyPro={profilePlanHook.isMyPro}
+          isTargetPro={profilePlanHook.isTargetPro}
+          apiBase={apiBase}
+          handle={handle}
+        />
+      )}
+
+      {settingsOpen ? (
+        <View style={styles.settingsCard}>
           <Text style={styles.sectionTitle}>{t.title}</Text>
-          {loading ? <Text style={styles.body}>{t.loading}</Text> : null}
 
           <Text style={styles.body}>{t.displayName}</Text>
           <TextInput
@@ -296,18 +537,6 @@ export default function ProfileHomeScreen({
             maxLength={50}
           />
           <Text style={styles.metaText}>{displayName.length}/50</Text>
-
-          <Text style={styles.body}>{t.handle}</Text>
-          <TextInput
-            value={handle}
-            onChangeText={setHandle}
-            style={styles.input}
-            placeholder={t.handlePlaceholder}
-            placeholderTextColor={colors.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            maxLength={30}
-          />
 
           <Text style={styles.body}>{t.bio}</Text>
           <TextInput
@@ -321,29 +550,7 @@ export default function ProfileHomeScreen({
           />
           <Text style={styles.metaText}>{bio.length}/280</Text>
 
-          <Text style={styles.body}>{t.avatarUrl}</Text>
-          <TextInput
-            value={avatarUrl}
-            onChangeText={setAvatarUrl}
-            style={styles.input}
-            placeholder="https://..."
-            placeholderTextColor={colors.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={styles.body}>{t.coverUrl}</Text>
-          <TextInput
-            value={coverUrl}
-            onChangeText={setCoverUrl}
-            style={styles.input}
-            placeholder="https://..."
-            placeholderTextColor={colors.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={styles.body}>{t.language}</Text>
+          <Text style={styles.body}>{t.langLabel}</Text>
           <View style={styles.languageRow}>
             <Pressable
               style={[
@@ -378,181 +585,358 @@ export default function ProfileHomeScreen({
           <Text style={styles.body}>{t.uid}</Text>
           <Text style={styles.value}>{fUser?.uid ?? "-"}</Text>
 
-          <Pressable style={styles.logoutButton} onPress={() => void signOut(auth)}>
-            <Text style={styles.logoutText}>{t.logout}</Text>
-          </Pressable>
         </View>
-      </ScrollView>
-    </View>
-  );
-}
-
-function asNumber(v: unknown): number {
-  return typeof v === "number" && Number.isFinite(v) ? v : 0;
-}
-
-function formatOne(v: number): string {
-  return `${Math.round(v * 10) / 10}`;
-}
-
-function SummaryMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      <Text style={styles.metricValue} numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
+      ) : null}
+    </ScrollView>
+    <ProfileSideMenuModal
+      visible={menuOpen}
+      onClose={() => setMenuOpen(false)}
+      language={language}
+      apiBase={apiBase}
+      unreadAnnouncements={menuUnreadCount}
+      uid={fUser?.uid ?? null}
+      plan={plan}
+      onOpenProfileSettings={() => {
+        setMenuOpen(false);
+        setSettingsOpen(true);
+      }}
+      onOpenInApp={(page) => {
+        setMenuOpen(false);
+        setMobileOverlay(page);
+      }}
+    />
+    <ProfileMobileStackModal
+      kind={mobileOverlay}
+      onClose={() => setMobileOverlay(null)}
+      onNavigate={(next) => setMobileOverlay(next)}
+      language={language}
+      uid={uid}
+      authReady={status === "ready"}
+      plan={plan}
+      apiBase={apiBase}
+      readIds={announcementReadIds}
+    />
+    <ProfileBadgeDetailModal
+      visible={badgeModalOpen}
+      badge={selectedBadge}
+      language={language}
+      onClose={() => {
+        setBadgeModalOpen(false);
+        setSelectedBadge(null);
+      }}
+    />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  scroll: {
     flex: 1,
     width: "100%",
-    backgroundColor: "#020617",
-  },
-  backgroundImage: {
-    position: "absolute",
-    top: -64,
-    bottom: -64,
-    left: -24,
-    right: -24,
-  },
-  backgroundDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2,6,23,0.2)",
+    minHeight: 0,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xs,
     paddingTop: spacing.sm,
-    gap: 10,
+    paddingHorizontal: spacing.sm,
+    flexGrow: 1,
   },
-  heroCard: {
-    borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(8,12,20,0.84)",
-  },
-  coverWrap: {
-    height: 180,
-    position: "relative",
-  },
-  coverImage: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  coverOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  avatarWrap: {
-    position: "absolute",
-    top: 126,
-    left: "50%",
-    marginLeft: -46,
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.25)",
-    overflow: "hidden",
-    backgroundColor: "#0f2d35",
-    zIndex: 2,
-  },
-  avatar: {
-    width: "100%",
-    height: "100%",
-  },
-  avatarFallback: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroInfo: {
-    alignItems: "center",
-    paddingTop: 52,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-    backgroundColor: "rgba(5,8,20,0.85)",
-  },
-  heroName: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    lineHeight: 28,
-    fontFamily: "Oxanium_800ExtraBold",
-  },
-  heroHandle: {
-    color: "rgba(226,232,240,0.74)",
-    fontSize: 14,
-    lineHeight: 18,
-    marginTop: 2,
-  },
-  heroBio: {
-    marginTop: 8,
-    color: "rgba(226,232,240,0.9)",
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: "center",
-  },
-  sectionCard: {
-    position: "relative",
-    overflow: "hidden",
-    width: "100%",
-    backgroundColor: "rgba(11,17,32,0.88)",
+  hero: {
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(9,14,24,0.94)",
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  heroLeftCol: {
+    width: 50,
+    alignItems: "center",
+  },
+  avatarHalo: {
+    padding: 2,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: "rgba(56,189,248,0.55)",
+    backgroundColor: "rgba(14,165,233,0.06)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(34,211,238,0.45)",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.85,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+      default: {},
+    }),
+  },
+  avatarCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    backgroundColor: "rgba(30,41,59,0.95)",
+  },
+  avatarFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroCenterCol: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 4,
+  },
+  heroIdLine: {
+    color: "rgba(148,163,184,0.92)",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  bioHero: {
+    color: "rgba(248,250,252,0.92)",
+    fontSize: 15,
+    lineHeight: 21,
+    marginTop: 8,
+    fontWeight: "500",
+  },
+  heroLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  /** ヒーロー内ローダーの英字ラベル（やや小さめ） */
+  heroLoadingLabel: {
+    fontSize: 9,
+    letterSpacing: 0.32,
+    color: "rgba(165,243,252,0.88)",
+  },
+  inlineLoading: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  menuSquare: {
+    position: "relative",
+    marginTop: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(15,21,38,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuSquarePressed: {
+    backgroundColor: "rgba(25,35,55,0.96)",
+  },
+  menuBadge: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "rgba(239,68,68,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: "rgba(15,23,42,0.9)",
+  },
+  menuBadgeText: { color: "#fff", fontSize: 8, fontWeight: "800" },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: spacing.md,
+  },
+  badgeThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(5,8,20,0.65)",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeImg: { width: 52, height: 52 },
+  badgeFallback: {
+    color: "rgba(148,163,184,0.85)",
+    fontSize: 9,
+    textAlign: "center",
+    paddingHorizontal: 4,
+  },
+  avatarLetter: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: "800",
+    fontFamily: Platform.select({
+      ios: "Oxanium_800ExtraBold",
+      android: "Oxanium_800ExtraBold",
+      default: "sans-serif",
+    }),
+  },
+  nameRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
+  displayName: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: "800",
+    flexShrink: 1,
+    fontFamily: Platform.select({
+      ios: "Oxanium_800ExtraBold",
+      android: "Oxanium_800ExtraBold",
+      default: "sans-serif",
+    }),
+  },
+  proPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: "rgba(124,92,255,0.35)",
+    borderWidth: 1,
+    borderColor: "rgba(167,139,250,0.45)",
+  },
+  proPillText: {
+    color: "rgba(248,250,252,0.95)",
+    fontSize: 10,
+    fontWeight: "800",
+    fontFamily: Platform.select({
+      ios: "BebasNeue_400Regular",
+      android: "BebasNeue_400Regular",
+      default: "sans-serif",
+    }),
+    letterSpacing: 1.2,
+  },
+  streakPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: "rgba(251,146,60,0.22)",
+    borderWidth: 1,
+    borderColor: "rgba(253,186,116,0.45)",
+  },
+  streakPillText: {
+    color: "rgba(255,237,213,0.95)",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  /** Web `Tabs.tsx`（size lg + `bracketMarketTeamTypography`）に寄せる：Bebas・tracking 0.06em 相当・下線 #6EA8FE */
+  tabBar: {
+    marginBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  tabRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    gap: 24,
+  },
+  tabHit: {
+    position: "relative",
+    paddingTop: 2,
+    paddingBottom: 10,
+  },
+  tabHitPressed: {
+    opacity: 0.85,
+  },
+  tabLabel: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 15,
+    fontWeight: "400",
+    /** Web `tracking-[0.06em]` に比例（15px 時は約 0.9px） */
+    letterSpacing: 0.9,
+    fontFamily: Platform.select({
+      ios: "BebasNeue_400Regular",
+      android: "BebasNeue_400Regular",
+      default: "sans-serif",
+    }),
+  },
+  tabLabelActive: {
+    color: "#ffffff",
+  },
+  tabIndicator: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: -StyleSheet.hairlineWidth,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: "#6EA8FE",
+  },
+  playoffsHeading: {
+    alignSelf: "stretch",
+    textAlign: "center",
+    color: "rgba(136,201,211,0.95)",
+    fontSize: 22,
+    /** Web `tracking-[0.12em]`（22px 時おおよそ 2.6）に近づけつつ少し詰める */
+    letterSpacing: 2.5,
+    marginBottom: spacing.md,
+    fontFamily: Platform.select({
+      ios: "BebasNeue_400Regular",
+      android: "BebasNeue_400Regular",
+      default: "sans-serif",
+    }),
+  },
+  overviewBlock: {
+    gap: 0,
+  },
+  /** チャートカードと同じ利用幅（scroll の横パディング内で常に 100%） */
+  summaryGridWrap: {
+    alignSelf: "stretch",
+    width: "100%",
+  },
+  chartGap: { height: 12 },
+  muted: {
+    color: colors.textSecondary,
+    fontSize: typography.body,
+    paddingVertical: spacing.md,
+  },
+  warnText: {
+    color: "rgba(251,191,36,0.9)",
+    fontSize: typography.caption,
+    lineHeight: 20,
+    marginVertical: spacing.sm,
+  },
+  errorBox: {
+    marginVertical: spacing.sm,
+  },
+  errorText: {
+    color: "rgba(251,113,133,0.95)",
+    fontSize: typography.body,
+    marginBottom: 8,
+  },
+  placeholderText: {
+    color: "rgba(148,163,184,0.9)",
+    fontSize: typography.body,
+    lineHeight: 22,
+    paddingVertical: spacing.lg,
+  },
+  settingsCard: {
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "#0b1120",
     padding: spacing.lg,
     gap: spacing.sm,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.32,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: typography.title,
-    fontWeight: "700",
+    marginBottom: spacing.md,
   },
   sectionTitle: {
     color: colors.textPrimary,
-    fontFamily: "BebasNeue_400Regular",
-    letterSpacing: 1.3,
-    fontSize: 28,
-    lineHeight: 30,
-    marginBottom: 2,
-  },
-  summaryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  metricCard: {
-    width: "48.9%",
-    minHeight: 72,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.11)",
-    backgroundColor: "rgba(15,21,38,0.76)",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    justifyContent: "center",
-  },
-  metricLabel: {
-    color: "rgba(226,232,240,0.7)",
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  metricValue: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    lineHeight: 28,
-    fontFamily: "Oxanium_700Bold",
-    marginTop: 3,
+    fontSize: typography.title,
+    fontWeight: "700",
   },
   body: {
     color: colors.textSecondary,
@@ -607,20 +991,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   saveButton: {
-    minHeight: 46,
-    borderRadius: 16,
+    minHeight: 44,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "rgba(103,232,249,0.3)",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(31,72,160,0.92)",
-    marginTop: 2,
+    backgroundColor: "rgba(45,99,235,0.92)",
+    marginTop: spacing.sm,
   },
   saveText: {
     color: colors.textPrimary,
-    fontSize: 18,
-    fontFamily: "BebasNeue_400Regular",
-    letterSpacing: 1.2,
+    fontSize: typography.body,
+    fontWeight: "700",
   },
   buttonDisabled: {
     opacity: 0.6,

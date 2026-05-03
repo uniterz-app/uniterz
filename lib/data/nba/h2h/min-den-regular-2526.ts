@@ -9,7 +9,7 @@ export const MIN_DEN_TEAM_IDS = ["nba-nuggets", "nba-timberwolves"] as const;
 const H2H_LEFT = "Nuggets";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ5） */
+/** 2025-26 ティルブズ対ナゲッツ（レギュラー4 + プレーオフ6） */
 export const minDenH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-min-den-2025-10-27",
@@ -175,6 +175,28 @@ export const minDenH2HGames: NbaH2HGameCard[] = [
         "The Nuggets pressured defensively and turned takeaways into momentum. Offensively they moved the ball through Jokić and repeatedly put the Wolves a step late rotationally. Minnesota still led the series 3-2, but Denver re-found its identity and carried something real into Game 6.",
     },
   },
+  {
+    id: "h2h-min-den-2026-05-01",
+    dateEt: "2026-05-01",
+    dateJst: "2026-05-02",
+    seriesGameLabel: "Game 6",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 98,
+    scoreRight: 110,
+    /** Minnesota（Timberwolves）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["A. Edwards", "D. DiVincenzo", "A. Dosunmu", "K. Anderson"],
+    inactiveFooterSummary: {
+      ja:
+        "Nuggets側の欠場者は公開情報が限定的。\n" +
+        "Wolvesがシリーズ4勝2敗で突破。主力ガード陣を欠く苦しい状況だったが、Jaden McDanielsが32得点10リバウンド、Terrence Shannon Jr.が先発起用に応えて24得点。サイズを活かしてペイント内得点64-40、リバウンド50-33でNuggetsを上回った。NuggetsはNikola Jokicが28得点10アシスト9リバウンドだったが、Jamal Murrayが12得点・FG4/17に抑えられ、終盤に10-1のランを許して敗退した。",
+      en:
+        "Denver’s inactive list was not fully clear in public reporting.\n" +
+        "Minnesota closed out the series 4-2 despite missing key guards. Jaden McDaniels had 32 points and 10 rebounds, and Terrence Shannon Jr. answered the starting nod with 24. The Wolves leveraged size for a 64-40 edge in the paint and 50-33 on the glass. Nikola Jokić finished with 28, 10 assists, and 9 rebounds for Denver, but Jamal Murray was held to 12 points on 4-for-17 shooting, and the Nuggets allowed a late 10-1 run that sealed their exit.",
+    },
+  },
 ];
 
 /** 左=DEN・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -213,7 +235,7 @@ function minDenH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記9試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記10試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function minDenH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

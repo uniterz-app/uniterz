@@ -8,4 +8,6 @@ export type GameCardCenterBlock =
       away: number;
       subLine: string | null;
     }
+  /** ライブ中：中央は LIVE のみ（スコアは表示しない） */
+  | { variant: "liveMark" }
   | { variant: "time"; time: string };

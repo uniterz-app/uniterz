@@ -1,0 +1,58 @@
+[
+  {
+    "id": "nba-20260506-02",
+    "league": "nba",
+    "startAtJstIso": "2026-05-06T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 1",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "away": { "name": "Los Angeles Lakers", "teamId": "nba-lakers" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260508-02",
+    "league": "nba",
+    "startAtJstIso": "2026-05-08T10:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 2",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "away": { "name": "Los Angeles Lakers", "teamId": "nba-lakers" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260510-02",
+    "league": "nba",
+    "startAtJstIso": "2026-05-10T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 3",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Los Angeles Lakers", "teamId": "nba-lakers" },
+    "away": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260512-02",
+    "league": "nba",
+    "startAtJstIso": "2026-05-12T11:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 4",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Los Angeles Lakers", "teamId": "nba-lakers" },
+    "away": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "status": "scheduled"
+  }
+]

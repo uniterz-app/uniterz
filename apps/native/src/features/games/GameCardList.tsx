@@ -1,18 +1,12 @@
-import { useMemo, useRef, useState } from "react";
-import {
-  type LayoutChangeEvent,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  UIManager,
-  View,
-  type ImageStyle,
-  type TextStyle,
-  type ViewStyle,
-} from "react-native";
-import { BlurView } from "expo-blur";
+import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
 import type { GamesTexts } from "./gamesI18n";
 import {
@@ -21,115 +15,19 @@ import {
   MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY,
 } from "./matchCardCtaGradients";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
-import type { PredictHeroFromRect } from "./predictHeroTransition";
+import { LiveMarkPill } from "./LiveMarkPill";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
-import {
-  LIST_CARD_GRID_LAYER_OPACITY,
-  LIST_CARD_GRID_LINE_COLOR,
-  shellGridHorizontalLineTopsCentered,
-  shellGridVerticalLineLeftsCentered,
-} from "./matchCardShellGrid";
-
+import { MatchCardFineBackdrop } from "./MatchCardFineInterior";
+import { gamesScheduleCardDaySwitchEnter } from "./predictMotion";
 type ScreenStyles = Record<string, ViewStyle & TextStyle & ImageStyle>;
-
-const hasNativeBlurView =
-  Platform.OS !== "web" &&
-  Boolean(
-    UIManager.getViewManagerConfig?.("ExpoBlurView") ??
-      UIManager.getViewManagerConfig?.("ViewManagerAdapter_ExpoBlur_ExpoBlurView")
-  );
-
-function CardBlurLayer({ styles }: { styles: ScreenStyles }) {
-  if (!hasNativeBlurView) {
-    return <View style={styles.cardBlurLayerFallback} />;
-  }
-  if (Platform.OS === "ios") {
-    return <BlurView intensity={30} tint="default" style={styles.cardBlurLayer} />;
-  }
-  if (Platform.OS === "android") {
-    return (
-      <BlurView
-        intensity={28}
-        tint="default"
-        experimentalBlurMethod="dimezisBlurView"
-        style={styles.cardBlurLayer}
-      />
-    );
-  }
-  return <View style={styles.cardBlurLayerFallback} />;
-}
-
-function CardGridOverlay({ styles }: { styles: ScreenStyles }) {
-  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
-  const verticalLineLeftPx = useMemo(
-    () => shellGridVerticalLineLeftsCentered(gridSize.width),
-    [gridSize.width]
-  );
-  const horizontalLineTopsPx = useMemo(
-    () => shellGridHorizontalLineTopsCentered(gridSize.height),
-    [gridSize.height]
-  );
-
-  function handleLayout(event: LayoutChangeEvent) {
-    const { width, height } = event.nativeEvent.layout;
-    if (
-      Math.abs(width - gridSize.width) < 0.5 &&
-      Math.abs(height - gridSize.height) < 0.5
-    ) {
-      return;
-    }
-    setGridSize({ width, height });
-  }
-
-  return (
-    <View pointerEvents="none" style={styles.cardGridOverlay} onLayout={handleLayout}>
-      {/** Web MatchCard と同じくレイヤー全体に opacity を掛ける */}
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { opacity: LIST_CARD_GRID_LAYER_OPACITY }]}
-      >
-        {verticalLineLeftPx.map((leftPx) => (
-          <View
-            key={`v-${leftPx}`}
-            style={[
-              styles.cardGridLineVertical,
-              { left: leftPx, backgroundColor: LIST_CARD_GRID_LINE_COLOR },
-            ]}
-          />
-        ))}
-        {horizontalLineTopsPx.map((topPx) => (
-          <View
-            key={`h-${topPx}`}
-            style={[
-              styles.cardGridLineHorizontal,
-              { top: topPx, backgroundColor: LIST_CARD_GRID_LINE_COLOR },
-            ]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
 
 type GameCardListProps = {
   games: Array<Record<string, unknown>>;
   predictedGameIds: Set<string>;
-  myPredictionByGameId: Record<
-    string,
-    {
-      winner: "home" | "away" | "draw";
-      score: { home: number; away: number };
-      comment: string;
-      updatedAt?: unknown;
-    }
-  >;
   language: "ja" | "en";
   t: GamesTexts;
   styles: ScreenStyles;
-  openPredictModal: (
-    game: Record<string, unknown>,
-    fromRect?: PredictHeroFromRect | null
-  ) => void;
+  openPredictModal: (game: Record<string, unknown>) => void | Promise<void>;
   resolveGameTeamName: (
     side: unknown,
     fallback: unknown,
@@ -153,18 +51,22 @@ type GameCardListProps = {
     side: unknown,
     fallback: string
   ) => { primary: string; secondary: string };
-  renderWinnerLabel: (
-    winner: "home" | "away" | "draw",
-    leagueRaw: unknown
-  ) => string;
 };
 
-export default function GameCardList(props: GameCardListProps) {
+type GameCardListRowProps = GameCardListProps & {
+  game: Record<string, unknown>;
+  /** ページ表示時の入場スタッガー用 */
+  rowIndex: number;
+};
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** タップ中だけわずかに縮む（一覧の「押した」感）。強い 3D pop は付けない */
+function GameCardListRow(props: GameCardListRowProps) {
   const {
-    games,
+    game,
+    rowIndex,
     predictedGameIds,
-    myPredictionByGameId,
-    language,
     t,
     styles,
     openPredictModal,
@@ -179,118 +81,82 @@ export default function GameCardList(props: GameCardListProps) {
     resolveSeriesPair,
     getTeamRecordLabel = () => null,
     resolveTeamJerseyPalette,
-    renderWinnerLabel,
   } = props;
 
-  const shellRefs = useRef<Record<string, View | null>>({});
+  const reduceMotion = useReducedMotion() ?? false;
+  const pressed = useSharedValue(0);
+  const cardPressStyle = useAnimatedStyle(() => {
+    if (reduceMotion) {
+      return {};
+    }
+    const s = interpolate(pressed.value, [0, 1], [1, 0.988]);
+    return {
+      transform: [{ scale: s }],
+    };
+  });
+
+  const gameId = String(game.id ?? "");
+  const isPredicted = predictedGameIds.has(gameId);
+  const awayName = resolveGameTeamName(game.away, game.awayTeamName, "AWAY");
+  const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
+  const awayCompact = toCompactTeamName(game.league, awayName);
+  const homeCompact = toCompactTeamName(game.league, homeName);
+  const soccer = isSoccerLeague(game.league);
+  const status = resolveGameStatus(game);
+  const started = isGameStarted(game);
+  const leagueColor = resolveLeagueColor(game.league);
+  const centerBlock = getGameCardCenterBlock(game);
+  const roundLabelRaw = game.roundLabel;
+  const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
+  const seriesLabel = resolveSeriesLabel(game);
+  const seriesPair = resolveSeriesPair(game);
+  const homeRecordLabel = getTeamRecordLabel(game.home);
+  const awayRecordLabel = getTeamRecordLabel(game.away);
+  const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
+  const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
+  const ctaLabel =
+    status === "final"
+      ? t.final
+      : started
+      ? t.live
+      : isPredicted
+      ? t.predicted
+      : t.predict;
+  /** MatchCard / MatchCardWeb: final も isPredicted ? predicted : normal（青 radial） */
+  const actionFillGradient = isPredicted
+    ? getMatchCardPredictedCtaLinearGradient()
+    : getMatchCardBlueCtaLinearGradient();
+
+  const cardEntering = reduceMotion
+    ? undefined
+    : gamesScheduleCardDaySwitchEnter(rowIndex);
 
   return (
-    <View style={styles.listArea}>
-      <View style={styles.listContent}>
-        {games.length === 0 ? <Text style={styles.body}>{t.noGames}</Text> : null}
-        {games.map((game, idx) => {
-          const gameId = String(game.id ?? "");
-          const isPredicted = predictedGameIds.has(gameId);
-          const myPrediction = myPredictionByGameId[gameId];
-          const awayName = resolveGameTeamName(game.away, game.awayTeamName, "AWAY");
-          const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
-          const awayCompact = toCompactTeamName(game.league, awayName);
-          const homeCompact = toCompactTeamName(game.league, homeName);
-          const soccer = isSoccerLeague(game.league);
-          const status = resolveGameStatus(game);
-          const started = isGameStarted(game);
-          const leagueColor = resolveLeagueColor(game.league);
-          const centerBlock = getGameCardCenterBlock(game);
-          const roundLabelRaw = game.roundLabel;
-          const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
-          const seriesLabel = resolveSeriesLabel(game);
-          const seriesPair = resolveSeriesPair(game);
-          const homeRecordLabel = getTeamRecordLabel(game.home);
-          const awayRecordLabel = getTeamRecordLabel(game.away);
-          const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
-          const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
-          const ctaLabel =
-            status === "final"
-              ? t.final
-              : started
-              ? t.live
-              : isPredicted
-              ? t.predicted
-              : t.predict;
-          /** MatchCard / MatchCardWeb: final も isPredicted ? predicted : normal（青 radial） */
-          const actionFillGradient = isPredicted
-            ? getMatchCardPredictedCtaLinearGradient()
-            : getMatchCardBlueCtaLinearGradient();
-
-          const rowKey = gameId || `game-${idx}`;
-          return (
-            <View
-              key={rowKey}
-              ref={(el) => {
-                if (el) shellRefs.current[rowKey] = el;
-                else delete shellRefs.current[rowKey];
-              }}
-              style={[styles.gameCardShell, isPredicted && styles.gameCardShellPredicted]}
-              collapsable={false}
-            >
-              <View pointerEvents="none" style={styles.cardGridUnderlay}>
-                <CardGridOverlay styles={styles} />
+    <AnimatedPressable
+      collapsable={false}
+      entering={cardEntering}
+      android_ripple={Platform.OS === "android" ? { color: "rgba(255,255,255,0.06)" } : undefined}
+      onPress={() => void openPredictModal(game)}
+      onPressIn={() => {
+        if (reduceMotion) return;
+        pressed.value = withTiming(1, { duration: 90 });
+      }}
+      onPressOut={() => {
+        if (reduceMotion) return;
+        pressed.value = withTiming(0, { duration: 160 });
+      }}
+      style={[
+        styles.gameCardShell,
+        isPredicted && styles.gameCardShellPredicted,
+        cardPressStyle,
+      ]}
+    >
+              <View pointerEvents="none" style={styles.cardFineShellBackdrop}>
+                <MatchCardFineBackdrop />
               </View>
-              <Pressable
-                style={styles.cardPressableBody}
-                onPress={() => {
-                  const node = shellRefs.current[rowKey];
-                  if (node) {
-                    node.measureInWindow((x, y, w, h) => {
-                      openPredictModal(game, { x, y, width: w, height: h });
-                    });
-                  } else {
-                    openPredictModal(game, null);
-                  }
-                }}
-              >
-              <LinearGradient
-                pointerEvents="none"
-                colors={[
-                  "rgba(14,18,28,0.92)",
-                  "rgba(10,13,22,0.86)",
-                  "rgba(7,10,17,0.92)",
-                ]}
-                locations={[0, 0.52, 1]}
-                style={styles.cardLayerBase}
-              />
-              <CardBlurLayer styles={styles} />
-              <LinearGradient
-                pointerEvents="none"
-                colors={[
-                  "rgba(255,255,255,0.018)",
-                  "rgba(255,255,255,0.004)",
-                  "rgba(255,255,255,0)",
-                ]}
-                locations={[0, 0.24, 1]}
-                style={styles.cardLayerTopGlow}
-              />
-              <LinearGradient
-                pointerEvents="none"
-                colors={[
-                  "rgba(255,255,255,0.018)",
-                  "rgba(255,255,255,0.008)",
-                  "rgba(255,255,255,0)",
-                ]}
-                locations={[0, 0.6, 1]}
-                style={styles.cardLayerGlassFog}
-              />
-              <LinearGradient
-                pointerEvents="none"
-                colors={[
-                  "rgba(255,255,255,0.012)",
-                  "rgba(255,255,255,0.003)",
-                  "rgba(255,255,255,0)",
-                ]}
-                locations={[0, 0.2, 1]}
-                style={styles.cardLayerShine}
-              />
-              <View style={styles.cardGlowOverlay} />
+              <View style={styles.cardPressableBody}>
+              <View style={{ flex: 1, minHeight: 0 }}>
+              <View style={styles.cardFineInteriorContent}>
               <View style={styles.cardTopRow}>
                   {roundLabel ? (
                     <Text style={styles.roundLabelText} numberOfLines={1}>
@@ -322,7 +188,14 @@ export default function GameCardList(props: GameCardListProps) {
 
                   <View style={styles.centerColumn}>
                   <View style={styles.centerScoreWrap}>
-                    {centerBlock.variant === "score" ? (
+                    {centerBlock.variant === "liveMark" ? (
+                      <View style={styles.liveMarkWrap}>
+                        <LiveMarkPill
+                          pillStyle={styles.liveMarkPill}
+                          textStyle={styles.liveMarkText}
+                        />
+                      </View>
+                    ) : centerBlock.variant === "score" ? (
                       <Text style={styles.centerTextScore} numberOfLines={1}>
                         <Text style={styles.centerTextScoreNum}>
                           {centerBlock.home}
@@ -380,6 +253,8 @@ export default function GameCardList(props: GameCardListProps) {
                   </View>
               </View>
               <View style={[styles.leagueDivider, { backgroundColor: leagueColor }]} />
+              </View>
+              </View>
               <View
                 style={[
                   styles.cardAction,
@@ -433,14 +308,22 @@ export default function GameCardList(props: GameCardListProps) {
                     : ctaLabel}
                 </Text>
               </View>
-              {myPrediction ? (
-                <Text style={styles.cardMyPredictionText} numberOfLines={1}>
-                  {t.myPick}: {renderWinnerLabel(myPrediction.winner, game.league)} /{" "}
-                  {myPrediction.score.home} – {myPrediction.score.away}
-                </Text>
-              ) : null}
-              </Pressable>
-            </View>
+              </View>
+    </AnimatedPressable>
+  );
+}
+
+export default function GameCardList(props: GameCardListProps) {
+  const { games, t, styles } = props;
+
+  return (
+    <View style={styles.listArea}>
+      <View style={styles.listContent}>
+        {games.length === 0 ? <Text style={styles.body}>{t.noGames}</Text> : null}
+        {games.map((game, idx) => {
+          const rowKey = String(game.id ?? "") || `game-${idx}`;
+          return (
+            <GameCardListRow key={rowKey} {...props} game={game} rowIndex={idx} />
           );
         })}
       </View>

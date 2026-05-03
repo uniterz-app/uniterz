@@ -9,7 +9,7 @@ export const LAKERS_ROCKETS_TEAM_IDS = ["nba-lakers", "nba-rockets"] as const;
 const H2H_LEFT = "Lakers";
 const H2H_RIGHT = "Rockets";
 
-/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ5） */
+/** 2025-26 ロケッツ対レイカーズ（レギュラー3 + プレーオフ6） */
 export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-lakers-rockets-2025-12-25",
@@ -172,6 +172,28 @@ export const lakersRocketsH2HGames: NbaH2HGameCard[] = [
         "Houston stayed alive for the second straight game. Jabari Smith Jr. scored 22 and Tari Eason 18, and the Rockets made the Lakers’ offense grind—Los Angeles shot just 42.1% from the field and 25.9% from three. LeBron James had 25 points and 7 assists but could not fully swing the game late. The Lakers still lead the series 3-2.",
     },
   },
+  {
+    id: "h2h-lakers-rockets-2026-05-03",
+    dateEt: "2026-05-03",
+    dateJst: "2026-05-04",
+    seriesGameLabel: "Game 6",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 98,
+    scoreRight: 78,
+    /** Los Angeles（Lakers）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["L. Doncic"],
+    injuriesRight: ["S. Adams", "K. Durant", "F. VanVleet"],
+    inactiveFooterSummary: {
+      ja:
+        "Los Angelesは立ち上がりから守備で主導権を握り、Houstonを前半31得点に抑えた。LeBron Jamesが28得点8アシスト7リバウンド、Rui Hachimuraが21得点、Austin Reavesが15得点で続き、試合を通してリードを維持した。HoustonはFG成功率が30％台前半、3P成功率も20％未満まで落ち、オフェンスが機能しなかった。Lakersは派手な打ち合いではなく、守備と試合運びで締め切った勝利だった。\n" +
+        "Lakersがシリーズ4勝2敗で突破した。",
+      en:
+        "Los Angeles grabbed control early with defense and held Houston to 31 points in the first half. LeBron James led with 28 points, 8 assists, and 7 rebounds; Rui Hachimura added 21 and Austin Reaves 15 as the Lakers led wire-to-wire. The Rockets stalled offensively—field-goal percentage in the low 30s and three-point shooting below 20%—and never found a rhythm. It was not a shootout; L.A. closed the series with defense and execution.\n" +
+        "The Lakers advanced 4-2.",
+    },
+  },
 ];
 
 /** 左=LAL・右=HOU のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -210,7 +232,7 @@ function lakersRocketsH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記8試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function lakersRocketsH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
