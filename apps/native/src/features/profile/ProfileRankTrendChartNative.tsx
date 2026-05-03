@@ -262,9 +262,21 @@ export default function ProfileRankTrendChartNative({
       return PAD_T + t * PLOT_H;
     };
 
+    /** 端の点で順位ラベル・ドットがカード外にはみ出さないよう、左右に余白を確保 */
+    const rawEdgeInset = rows.reduce((acc, row) => {
+      const gl = rankGlyphLayout(row.rank);
+      return Math.max(acc, gl.labelW / 2 + gl.rDot + 6);
+    }, 10);
+    const maxEdgeInset = Math.max(6, plotInnerW / 2 - 4);
+    const edgeInset = Math.min(rawEdgeInset, maxEdgeInset);
+    const spanX = Math.max(4, plotInnerW - 2 * edgeInset);
+    const xForIndex = (i: number) => {
+      if (n === 1) return edgeInset + spanX / 2;
+      return edgeInset + (i / (n - 1)) * spanX;
+    };
+
     const dots = rows.map((row, i) => {
-      const t = n === 1 ? 0.5 : i / (n - 1);
-      const x = t * plotInnerW;
+      const x = xForIndex(i);
       const y = rankToY(row.rank);
       const gl = rankGlyphLayout(row.rank);
       return {
@@ -291,7 +303,7 @@ export default function ProfileRankTrendChartNative({
     }
     /** 各スナップショット列に縦線（単一点は中央） */
     for (let i = 0; i < n; i++) {
-      const vx = n === 1 ? plotInnerW / 2 : (i / (n - 1)) * plotInnerW;
+      const vx = xForIndex(i);
       gridPaths.push(...verticalDashedSegments(vx, PAD_T, PLOT_H, 4, 4));
     }
 
@@ -494,11 +506,31 @@ export default function ProfileRankTrendChartNative({
               </View>
 
               <View style={[styles.xAxisRow, { width: plotInnerW }]}>
-                {chartRows.map((r) => (
-                  <Text key={r.dateKey} style={styles.xTick} numberOfLines={1}>
-                    {formatAxisDate(r.dateKey, language, showYearOnXAxis)}
-                  </Text>
-                ))}
+                {chartRows.map((r, i) => {
+                  const d = model.dots[i];
+                  if (!d) return null;
+                  const xTickW = 80;
+                  const xTickLeft = Math.max(
+                    0,
+                    Math.min(d.x - xTickW / 2, plotInnerW - xTickW)
+                  );
+                  return (
+                    <Text
+                      key={r.dateKey}
+                      style={[
+                        styles.xTick,
+                        {
+                          position: "absolute",
+                          left: xTickLeft,
+                          width: xTickW,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {formatAxisDate(r.dateKey, language, showYearOnXAxis)}
+                    </Text>
+                  );
+                })}
               </View>
             </View>
           </View>
@@ -763,12 +795,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   xAxisRow: {
-    flexDirection: "row",
+    position: "relative",
+    height: 16,
     marginTop: 4,
     alignSelf: "center",
   },
   xTick: {
-    flex: 1,
     textAlign: "center",
     fontSize: 9,
     color: "rgba(148,163,184,0.88)",

@@ -46,7 +46,13 @@ import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultPredictEditModal from "./ResultPredictEditModal";
 import { MatchCardListGridOverlay } from "../games/MatchCardListGridOverlay";
-import { gamesScheduleCardDaySwitchEnter } from "../games/predictMotion";
+import {
+  useResultDayHeaderEntrance,
+  useResultEntranceArmed,
+  useResultFilterBarEntrance,
+  useResultPostCardEntrance,
+  type ResultStatRowEntranceMeta,
+} from "./useResultHomeEntrance";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -260,48 +266,96 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
+function ResultListHeaderBlock({
+  cacheCapped,
+  hintText,
+  filterLabel,
+  entranceArmed,
+  onFilterPress,
+}: {
+  cacheCapped: boolean;
+  hintText: string;
+  filterLabel: string;
+  entranceArmed: boolean;
+  onFilterPress: () => void;
+}) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const filterMotion = useResultFilterBarEntrance(entranceArmed, reduceMotion);
+  return (
+    <View style={styles.headerBlock}>
+      {cacheCapped ? <Text style={styles.hint}>{hintText}</Text> : null}
+      <View style={styles.listRowOuter}>
+        <Animated.View style={filterMotion}>
+          <Pressable
+            style={({ pressed }) => [styles.filterBar, pressed && styles.filterBarPressed]}
+            onPress={onFilterPress}
+          >
+            <Text style={styles.filterBarText}>{filterLabel}</Text>
+            <MaterialCommunityIcons name="chevron-down" size={18} color="rgba(226,232,240,0.75)" />
+          </Pressable>
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
 function ResultDayHeader({
   dateLabel,
   dayPoints,
+  entranceActive,
+  sectionStaggerIndex,
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
+  /** 初回ロード時のみ true（スクロール後の新規セクションは false） */
+  entranceActive: boolean;
+  sectionStaggerIndex: number;
 }) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const { clipStyle, dateClusterStyle, rightClusterStyle } = useResultDayHeaderEntrance(
+    entranceActive,
+    reduceMotion,
+    sectionStaggerIndex
+  );
   return (
     <View style={[styles.listRowOuter, styles.dayHeaderSpacing]}>
-      <View style={styles.dayHeaderClip}>
+      <Animated.View style={[styles.dayHeaderClip, clipStyle]}>
         <ResultDayHeaderGridOverlay />
         <View style={styles.cornerTl} />
         <View style={styles.cornerBr} />
         <View style={styles.cornerTr} />
         <View style={styles.cornerBl} />
         <View style={styles.dayHeaderRow}>
-          <Text style={styles.dayHeaderDate}>{dateLabel}</Text>
-          {dayPoints?.variant === "total" &&
-          typeof dayPoints.hitTotal === "number" &&
-          dayPoints.hitTotal > 0 ? (
-            <View style={styles.dayHitWrap}>
-              <Text style={styles.dayHitLabel}>hit</Text>
-              <Text style={styles.dayHitNums}>
-                {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
-              </Text>
-            </View>
-          ) : null}
-          {dayPoints?.variant === "total" ? (
-            <View style={styles.dayTotalWrap}>
-              <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
-              <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
-              <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
-            </View>
-          ) : dayPoints?.variant === "pending" ? (
-            <View style={styles.pendingRow}>
-              <View style={styles.pendingPill}>
-                <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
+          <Animated.View style={[styles.dayHeaderDateSlot, dateClusterStyle]}>
+            <Text style={styles.dayHeaderDate}>{dateLabel}</Text>
+          </Animated.View>
+          <Animated.View style={[styles.dayHeaderRightCluster, rightClusterStyle]}>
+            {dayPoints?.variant === "total" &&
+            typeof dayPoints.hitTotal === "number" &&
+            dayPoints.hitTotal > 0 ? (
+              <View style={styles.dayHitWrap}>
+                <Text style={styles.dayHitLabel}>hit</Text>
+                <Text style={styles.dayHitNums}>
+                  {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
+                </Text>
               </View>
-            </View>
-          ) : null}
+            ) : null}
+            {dayPoints?.variant === "total" ? (
+              <View style={styles.dayTotalWrap}>
+                <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
+                <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
+                <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
+              </View>
+            ) : dayPoints?.variant === "pending" ? (
+              <View style={styles.pendingRow}>
+                <View style={styles.pendingPill}>
+                  <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
+                </View>
+              </View>
+            ) : null}
+          </Animated.View>
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -314,6 +368,7 @@ function ResultPostCard({
   nowMs,
   viewerUid,
   listEnterIndex,
+  entranceEnabled,
   onOpenDetail,
   onRequestDeleteConfirm,
   onRequestPredictEdit,
@@ -322,8 +377,10 @@ function ResultPostCard({
   language: "ja" | "en";
   nowMs: number;
   viewerUid: string | null;
-  /** 一覧入場のスタッガー（試合一覧と同じ `gamesScheduleCardDaySwitchEnter`） */
+  /** 一覧入場のスタッガー（試合一覧と同じ「浮き出し」入場） */
   listEnterIndex: number;
+  /** 結果タブ初回表示のみ入場アニメを有効化 */
+  entranceEnabled: boolean;
   onOpenDetail: (id: string) => void;
   /** Web 同様：カスタム削除確認モーダルを開く */
   onRequestDeleteConfirm: (post: PostWithMillis) => void;
@@ -333,9 +390,6 @@ function ResultPostCard({
   const isEn = language === "en";
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
   const reduceMotionList = useReducedMotion() ?? false;
-  const cardListEntering = reduceMotionList
-    ? undefined
-    : gamesScheduleCardDaySwitchEnter(listEnterIndex);
 
   const postStatus = typeof post.status === "string" ? post.status : "";
   const startAtMs =
@@ -488,6 +542,32 @@ function ResultPostCard({
     ];
   }, [stats, isEn, hadUpsetGame]);
 
+  const statRowEntranceMeta = useMemo((): [
+    ResultStatRowEntranceMeta,
+    ResultStatRowEntranceMeta,
+    ResultStatRowEntranceMeta,
+  ] => {
+    return statRows.map((row) => {
+      const cap = row.barMax;
+      const ratio =
+        row.key === "upsetPoints" && !hadUpsetGame
+          ? 0
+          : cap > 0
+            ? clamp01(row.value / cap)
+            : 0;
+      return { skipBarGrow: ratio === 0 };
+    }) as [ResultStatRowEntranceMeta, ResultStatRowEntranceMeta, ResultStatRowEntranceMeta];
+  }, [statRows, hadUpsetGame]);
+
+  const entrance = useResultPostCardEntrance({
+    rowIndex: listEnterIndex,
+    entranceEnabled,
+    reduceMotion: reduceMotionList,
+    badge,
+    hasFinalScore: hasFinal,
+    statRowMeta: statRowEntranceMeta,
+  });
+
   const frameStyle =
     badge === "upset"
       ? styles.cardFrameUpset
@@ -507,29 +587,30 @@ function ResultPostCard({
     cornerFabOpen && hasCornerActions ? styles.cardShellOverflowVisible : null;
 
   return (
-    <AnimatedResultCardPressable
+    <Animated.View
       collapsable={false}
-      entering={cardListEntering}
-      style={({ pressed }) => [
-        styles.listRowOuter,
-        styles.cardOuter,
-        styles.resultCardPressable,
-        pressed && styles.cardPressed,
-      ]}
-      onPress={() => {
-        /** Web：FAB 外タップでメニューを閉じる（詳細は閉じた後のタップで） */
-        if (cornerFabOpen) {
-          setCornerFabOpen(false);
-          return;
-        }
-        onOpenDetail(post.id);
-      }}
+      style={[styles.listRowOuter, styles.cardOuter, entrance.cardShellMotionStyle]}
     >
+      <AnimatedResultCardPressable
+        collapsable={false}
+        style={({ pressed }) => [styles.resultCardPressable, pressed && styles.cardPressed]}
+        onPress={() => {
+          /** Web：FAB 外タップでメニューを閉じる（詳細は閉じた後のタップで） */
+          if (cornerFabOpen) {
+            setCornerFabOpen(false);
+            return;
+          }
+          onOpenDetail(post.id);
+        }}
+      >
       <View style={[styles.cardShell, frameStyle, shellOverflowStyle]} collapsable={false}>
-        <View pointerEvents="none" style={styles.cardGridUnderlay}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.cardGridUnderlay, entrance.gridUnderlayStyle]}
+        >
           <MatchCardListGridOverlay styles={styles} tone="resultList" />
-        </View>
-        <View style={styles.cardPressableBody}>
+        </Animated.View>
+        <Animated.View style={[styles.cardPressableBody, entrance.cardBodyGateStyle]}>
           <LinearGradient
             pointerEvents="none"
             colors={[
@@ -655,62 +736,85 @@ function ResultPostCard({
             >
               <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
               <View style={styles.badgeRow}>
-                {badge === "streak" && streakBadge ? (
-                  <View style={[styles.miniBadge, streakToneStyle(streakBadge.tone)]}>
-                    <MaterialCommunityIcons name="fire" size={11} color="#fef08a" />
-                    <Text style={styles.miniBadgeText} numberOfLines={1}>
-                      {streakBadge.label}
-                    </Text>
-                  </View>
-                ) : null}
-                {badge === "hit" ? (
-                  <View style={[styles.miniBadge, styles.badgeHit]}>
-                    <Text style={styles.badgeHitText}>HIT</Text>
-                  </View>
-                ) : null}
-                {badge === "upset" ? (
-                  <View style={[styles.miniBadge, styles.badgeUpset]}>
-                    <Text style={styles.badgeUpsetText}>UPSET</Text>
-                  </View>
-                ) : null}
-                {badge === "miss" ? (
-                  <View style={[styles.miniBadge, styles.badgeMiss]}>
-                    <Text style={styles.badgeMissText}>MISS</Text>
-                  </View>
-                ) : null}
-                {showLiveMark ? (
-                  <View style={[styles.miniBadge, styles.badgeLive]} accessibilityLabel={isEn ? "Live" : "ライブ中"}>
-                    <Text style={styles.badgeLiveText}>LIVE</Text>
-                  </View>
-                ) : null}
+                <Animated.View style={[styles.badgeSubCluster, entrance.subBadgesStyle]}>
+                  {badge === "streak" && streakBadge ? (
+                    <View style={[styles.miniBadge, streakToneStyle(streakBadge.tone)]}>
+                      <MaterialCommunityIcons name="fire" size={11} color="#fef08a" />
+                      <Text style={styles.miniBadgeText} numberOfLines={1}>
+                        {streakBadge.label}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {badge === "upset" ? (
+                    <View style={[styles.miniBadge, styles.badgeUpset]}>
+                      <Text style={styles.badgeUpsetText}>UPSET</Text>
+                    </View>
+                  ) : null}
+                  {showLiveMark ? (
+                    <View
+                      style={[styles.miniBadge, styles.badgeLive]}
+                      accessibilityLabel={isEn ? "Live" : "ライブ中"}
+                    >
+                      <Text style={styles.badgeLiveText}>LIVE</Text>
+                    </View>
+                  ) : null}
+                </Animated.View>
+                <Animated.View style={[styles.badgeHitMissCluster, entrance.hitMissBadgeStyle]}>
+                  {badge === "hit" ? (
+                    <View style={[styles.miniBadge, styles.badgeHit]}>
+                      <Text style={styles.badgeHitText}>HIT</Text>
+                    </View>
+                  ) : null}
+                  {badge === "miss" ? (
+                    <View style={[styles.miniBadge, styles.badgeMiss]}>
+                      <Text style={styles.badgeMissText}>MISS</Text>
+                    </View>
+                  ) : null}
+                </Animated.View>
               </View>
             </View>
 
             <View style={styles.matchGrid}>
               <View style={styles.sideCol}>
-                <JerseyMarkAdaptive
-                  accent={homeJersey.primary}
-                  accentEnd={homeJersey.secondary}
-                  size={JERSEY_SIZE_RESULT}
-                />
-                <Text style={styles.teamName} numberOfLines={1}>
-                  {homeName.toUpperCase()}
-                </Text>
+                <Animated.View style={entrance.homeJerseyMarkStyle}>
+                  <JerseyMarkAdaptive
+                    accent={homeJersey.primary}
+                    accentEnd={homeJersey.secondary}
+                    size={JERSEY_SIZE_RESULT}
+                  />
+                </Animated.View>
+                <Animated.View style={entrance.homeTeamLabelStyle}>
+                  <Text style={styles.teamName} numberOfLines={1}>
+                    {homeName.toUpperCase()}
+                  </Text>
+                </Animated.View>
               </View>
               <View style={styles.centerCol}>
-                <Text style={styles.scoreDateLabel}>{cardDateLabel}</Text>
-                <Text style={styles.predictedScore}>{predictedScore}</Text>
-                {finalScore ? <Text style={styles.finalScore}>{finalScore}</Text> : null}
+                <Animated.View style={entrance.scoreDateStyle}>
+                  <Text style={styles.scoreDateLabel}>{cardDateLabel}</Text>
+                </Animated.View>
+                <Animated.View style={entrance.predictedScoreStyle}>
+                  <Text style={styles.predictedScore}>{predictedScore}</Text>
+                </Animated.View>
+                {finalScore ? (
+                  <Animated.View style={entrance.finalScoreStyle}>
+                    <Text style={styles.finalScore}>{finalScore}</Text>
+                  </Animated.View>
+                ) : null}
               </View>
               <View style={styles.sideCol}>
-                <JerseyMarkAdaptive
-                  accent={awayJersey.primary}
-                  accentEnd={awayJersey.secondary}
-                  size={JERSEY_SIZE_RESULT}
-                />
-                <Text style={styles.teamName} numberOfLines={1}>
-                  {awayName.toUpperCase()}
-                </Text>
+                <Animated.View style={entrance.awayJerseyMarkStyle}>
+                  <JerseyMarkAdaptive
+                    accent={awayJersey.primary}
+                    accentEnd={awayJersey.secondary}
+                    size={JERSEY_SIZE_RESULT}
+                  />
+                </Animated.View>
+                <Animated.View style={entrance.awayTeamLabelStyle}>
+                  <Text style={styles.teamName} numberOfLines={1}>
+                    {awayName.toUpperCase()}
+                  </Text>
+                </Animated.View>
               </View>
             </View>
           </View>
@@ -718,7 +822,7 @@ function ResultPostCard({
           <View style={styles.cardLowerPane}>
             <View style={styles.divider} />
             <View style={styles.statBlock}>
-            {statRows.map((row, index) => {
+            {statRows.map((row, rowIndex) => {
               const cap = row.barMax;
               const ratio =
                 row.key === "upsetPoints" && !hadUpsetGame
@@ -739,26 +843,36 @@ function ResultPostCard({
                     : isYellow10pt(stats?.pointsV3)
                       ? styles.statValueYellow
                       : styles.statValueWhite;
+              const ri = rowIndex as 0 | 1 | 2;
               return (
                 <View key={row.key} style={styles.statRow}>
                   <Text style={styles.statLabel} numberOfLines={1}>
                     {row.label}
                   </Text>
-                  <ResultStatRatingBarNative
-                    ratio={ratio}
-                    delayMs={index * 80}
-                    size="sm"
-                  />
-                  <Text style={[styles.statValue, valueStyle]}>{display}</Text>
+                  <Animated.View
+                    style={[styles.statBarRevealSlot, entrance.statBarSlotStyles[ri]]}
+                  >
+                    <ResultStatRatingBarNative ratio={ratio} size="sm" />
+                  </Animated.View>
+                  <Animated.View style={entrance.statValueStyles[ri]}>
+                    <Text style={[styles.statValue, valueStyle]}>{display}</Text>
+                  </Animated.View>
                 </View>
               );
             })}
             </View>
           </View>
           </View>
-        </View>
+        </Animated.View>
+        {entrance.showHitFrameFlash ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.hitFrameFlashRing, entrance.hitFrameFlashStyle]}
+          />
+        ) : null}
       </View>
-    </AnimatedResultCardPressable>
+      </AnimatedResultCardPressable>
+    </Animated.View>
   );
 }
 
@@ -861,6 +975,18 @@ export default function ResultHomeScreen({
     });
   }, [grouped]);
 
+  /** 初回マウント時のみ一覧入場を有効化（スクロールで遅延マウントされた日付帯は除外） */
+  const entranceArmed = useResultEntranceArmed();
+  const [initialSectionIdSet, setInitialSectionIdSet] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (sections.length === 0 || initialSectionIdSet !== null) return;
+    setInitialSectionIdSet(new Set(sections.map((s) => `${s.dateLabel}:${s.baseFlatIndex}`)));
+  }, [sections, initialSectionIdSet]);
+
+  const onFilterPress = useCallback(() => {
+    Alert.alert(language === "en" ? "Coming soon" : "準備中", t.filterSoon);
+  }, [language, t.filterSoon]);
+
   const onRefresh = useCallback(async () => {
     setManualRefreshing(true);
     try {
@@ -898,18 +1024,13 @@ export default function ResultHomeScreen({
   }, [deleteConfirmPost, language, removePostById]);
 
   const listHeader = (
-    <View style={styles.headerBlock}>
-      {postsCacheCapped ? <Text style={styles.hint}>{t.cacheHint}</Text> : null}
-      <View style={styles.listRowOuter}>
-        <Pressable
-          style={({ pressed }) => [styles.filterBar, pressed && styles.filterBarPressed]}
-          onPress={() => Alert.alert(language === "en" ? "Coming soon" : "準備中", t.filterSoon)}
-        >
-          <Text style={styles.filterBarText}>{t.filterFold}</Text>
-          <MaterialCommunityIcons name="chevron-down" size={18} color="rgba(226,232,240,0.75)" />
-        </Pressable>
-      </View>
-    </View>
+    <ResultListHeaderBlock
+      cacheCapped={postsCacheCapped}
+      hintText={t.cacheHint}
+      filterLabel={t.filterFold}
+      entranceArmed={entranceArmed}
+      onFilterPress={onFilterPress}
+    />
   );
 
   const listEmpty =
@@ -964,12 +1085,21 @@ export default function ResultHomeScreen({
           }
           onEndReached={() => loadMore()}
           onEndReachedThreshold={0.4}
-          renderSectionHeader={({ section }) => (
-            <ResultDayHeader
-              dateLabel={section.dateLabel}
-              dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
-            />
-          )}
+          renderSectionHeader={({ section }) => {
+            const sid = `${section.dateLabel}:${section.baseFlatIndex}`;
+            const isInitialHeader = initialSectionIdSet?.has(sid) ?? false;
+            const sectionIndex = sections.findIndex(
+              (s) => s.dateLabel === section.dateLabel && s.baseFlatIndex === section.baseFlatIndex
+            );
+            return (
+              <ResultDayHeader
+                dateLabel={section.dateLabel}
+                dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
+                entranceActive={entranceArmed && isInitialHeader}
+                sectionStaggerIndex={sectionIndex >= 0 ? sectionIndex : 0}
+              />
+            );
+          }}
           renderItem={({ item, index, section }) => (
             <ResultPostCard
               post={item}
@@ -977,6 +1107,7 @@ export default function ResultHomeScreen({
               nowMs={listNowTick}
               viewerUid={uid}
               listEnterIndex={section.baseFlatIndex + index}
+              entranceEnabled={entranceArmed}
               onOpenDetail={setDetailPostId}
               onRequestDeleteConfirm={setDeleteConfirmPost}
               onRequestPredictEdit={setPredictEditPost}
@@ -1111,6 +1242,20 @@ const styles = StyleSheet.create({
     zIndex: 3,
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+  },
+  /** 日付テキストのみスキャン方向の移動を付ける（レイアウト幅は維持） */
+  dayHeaderDateSlot: {
+    flexShrink: 0,
+  },
+  /** hit / 総合 / pending をまとめてフェード（日付より 100ms 遅れ） */
+  dayHeaderRightCluster: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    flexWrap: "wrap",
     gap: 8,
   },
   /** Web `ResultDayPipeGroup` の日付：`font-mono … text-cyan-50` + シアングロー */
@@ -1432,6 +1577,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "transparent",
   },
+  /** HIT 確定時のみ一瞬の黄枠強調（中身は透明・枠線のみ） */
+  hitFrameFlashRing: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 28,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "rgba(250,204,21,0)",
+  },
   cardFrameUpset: {
     borderColor: "rgba(185,28,28,0.85)",
     shadowColor: "rgba(220,38,38,0.75)",
@@ -1506,6 +1659,20 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 6,
     maxWidth: "72%",
+  },
+  /** ストリーク / UPSET / LIVE（HIT・MISS より先にフェード） */
+  badgeSubCluster: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+  },
+  /** HIT / MISS は最後のバウンス用クラスタ */
+  badgeHitMissCluster: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
   },
   miniBadge: {
     flexDirection: "row",
@@ -1635,6 +1802,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingVertical: 1,
+  },
+  /** Skia バーを左基点で scaleX 表示（親の overflow でクリップ） */
+  statBarRevealSlot: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
   },
   statLabel: {
     width: 96,

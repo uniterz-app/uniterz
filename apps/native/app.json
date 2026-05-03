@@ -14,7 +14,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.native"
+      "bundleIdentifier": "com.anonymous.native",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
+        "NSCameraUsageDescription": "プロフィール写真を撮影するためにカメラを使います。"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +30,14 @@
       "package": "com.anonymous.xnative"
     },
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
+          "cameraPermission": "プロフィール写真を撮影するためにカメラを使います。"
+        }
+      ]
     ],
     "web": {
       "favicon": "./assets/favicon.png"
