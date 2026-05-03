@@ -637,8 +637,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const isMobile = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
-  /** 試合一覧まわりの入場・ヘッダの Framer モーションは Web のみ（モバイルは即表示） */
-  const webGamesMotion = !isMobile && !reduceMotion;
+  /** 試合一覧・ヘッダの入場（`/mobile` 含む。`prefers-reduced-motion` のみオフ） */
+  const webGamesMotion = !reduceMotion;
 
   /* =========================
      UI
@@ -700,7 +700,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return () => window.clearTimeout(id);
   }, [isInitialLoading, selectedDayKey, playRichScheduleIntro]);
 
-  const richScheduleMotion = playRichScheduleIntro && webGamesMotion;
+  const richScheduleMotion = playRichScheduleIntro && !reduceMotion;
 
   /** 一覧の listShellIntro はブロック再マウント時だけ更新（900ms だけ変わると Framer が再入場しがち） */
   const scheduleBlockKey = useMemo(
@@ -717,18 +717,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const [listShellIntroLocked, setListShellIntroLocked] = useState<
     "page" | "daySwitch"
-  >(() => (reduceMotion || isMobile ? "daySwitch" : "page"));
+  >(() => (reduceMotion ? "daySwitch" : "page"));
 
   useLayoutEffect(() => {
     if (prevScheduleBlockKeyRef.current === scheduleBlockKey) return;
     const prev = prevScheduleBlockKeyRef.current;
     prevScheduleBlockKeyRef.current = scheduleBlockKey;
-
-    if (isMobile) {
-      setListShellIntroLocked("daySwitch");
-      prevScheduleBlockKeyRef.current = scheduleBlockKey;
-      return;
-    }
 
     const splitKey = (k: string) => k.split("|");
     const prevLeague = prev == null ? null : splitKey(prev)[0];
@@ -751,7 +745,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         ? "page"
         : "daySwitch",
     );
-  }, [scheduleBlockKey, isMobile]);
+  }, [scheduleBlockKey]);
 
   return (
     <div

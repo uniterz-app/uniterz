@@ -322,7 +322,7 @@ export default function DayStrip({
                     borderColor: selected
                       ? "rgba(34,211,238,0.62)"
                       : isTodayDate
-                        ? "rgba(34,211,238,0.38)"
+                        ? "rgba(250,204,21,0.75)"
                         : "rgba(255,255,255,0.16)",
                     background: selected
                       ? "linear-gradient(180deg, rgba(34,211,238,0.42) 0%, rgba(8,145,178,0.36) 100%)"
@@ -330,7 +330,7 @@ export default function DayStrip({
                     boxShadow: selected
                       ? "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(34,211,238,0.14), 0 0 7px rgba(34,211,238,0.14)"
                       : isTodayDate
-                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 4px rgba(34,211,238,0.07)"
+                        ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(250,204,21,0.2), 0 0 10px rgba(250,204,21,0.22)"
                         : "inset 0 1px 0 rgba(255,255,255,0.06)",
                     isolation: "isolate",
                   }}

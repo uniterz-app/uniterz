@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
-import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
+import {
+  streakChartLayoutMaxAbs,
+  streakPointSettledAtIsLocalToday,
+} from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
   STREAK_TRACKER_LAST_N,
@@ -530,29 +533,38 @@ export default function StreakTrackerCard({
                     <div
                       className={`flex shrink-0 justify-start ${S.colGap} ${S.labelRow}`}
                     >
-                      {points.map((_, i) => (
-                        <div
-                          key={`xl-${i}`}
-                          className="flex flex-1 flex-col items-center justify-center"
-                          style={{
-                            minWidth: S.colMinW,
-                            maxWidth: S.colMaxW,
-                          }}
-                        >
-                          <m.span
-                            className={`tabular-nums text-slate-500 ${S.indexLbl}`}
-                            initial={false}
-                            animate={axesReady ? { opacity: 1 } : { opacity: 0 }}
-                            transition={{
-                              duration: 0.42,
-                              delay: 0.065 * i,
-                              ease: [0.22, 1, 0.36, 1],
+                      {points.map((p, i) => {
+                        const isToday = streakPointSettledAtIsLocalToday(p.settledAtMs);
+                        return (
+                          <div
+                            key={`xl-${p.postId}`}
+                            className="flex flex-1 flex-col items-center justify-center"
+                            style={{
+                              minWidth: S.colMinW,
+                              maxWidth: S.colMaxW,
                             }}
                           >
-                            {i + 1}
-                          </m.span>
-                        </div>
-                      ))}
+                            <m.span
+                              className={[
+                                "tabular-nums",
+                                S.indexLbl,
+                                isToday
+                                  ? "inline-flex min-h-[15px] min-w-[15px] items-center justify-center rounded-full border-2 border-amber-300 bg-amber-400/45 font-extrabold text-slate-900 shadow-[0_0_14px_rgba(250,204,21,0.65)]"
+                                  : "text-slate-500",
+                              ].join(" ")}
+                              initial={false}
+                              animate={axesReady ? { opacity: 1 } : { opacity: 0 }}
+                              transition={{
+                                duration: 0.42,
+                                delay: 0.065 * i,
+                                ease: [0.22, 1, 0.36, 1],
+                              }}
+                            >
+                              {i + 1}
+                            </m.span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

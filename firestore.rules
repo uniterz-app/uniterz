@@ -49,6 +49,7 @@ service cloud.firestore {
             || (request.resource.data.bio is string
                 && request.resource.data.bio.size() <= 500))
         && (!('photoURL' in request.resource.data)
+            || request.resource.data.photoURL == null
             || request.resource.data.photoURL is string)
         && (!('language' in request.resource.data)
             || request.resource.data.language == 'ja'

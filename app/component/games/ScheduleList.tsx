@@ -204,8 +204,8 @@ export default function ScheduleList({
   }, [propsList, openGameId]);
 
   const reduceMotion = useReducedMotion();
-  /** 一覧のスタッガー等は Web のみ。モバイルは即表示 */
-  const listShellAnimations = !isMobile && !reduceMotion;
+  /** デスクトップ Web／モバイル Web ともネイティブ試合一覧に揃えて入場スタッガーを有効化 */
+  const listShellAnimations = !reduceMotion;
   /** 一覧→オーバーレイの View Transitions（モバイルは即切替・アニメ無し。Web のみ） */
   const vtUi = useMemo(
     () => Boolean(!isMobile && supportsViewTransitionApi() && !reduceMotion),
@@ -888,18 +888,6 @@ export default function ScheduleList({
       />
     );
 
-    if (isMobile) {
-      return (
-        <div
-          key={props.id}
-          className={rowClass}
-          aria-hidden={isOpen || isVtGhostRow ? true : undefined}
-        >
-          {card}
-        </div>
-      );
-    }
-
     return (
       <motion.div
         key={props.id}
@@ -914,43 +902,37 @@ export default function ScheduleList({
     );
   });
 
+  const scheduleGridClass = isMobile
+    ? "grid gap-2.5 px-1"
+    : "grid gap-6 px-4 md:px-6 lg:px-8";
+
   return (
     <>
-      {isMobile ? (
+      <LayoutGroup id="schedule-list">
         <ScheduleSharedTransitionLayout data-vt-nonce={vtListTransitionNonce}>
-          <div className={openGameId ? "pointer-events-none" : ""}>
-            <div key={leagueAnimKey} className="grid gap-2.5 px-1">
-              {listRows}
-            </div>
-          </div>
-        </ScheduleSharedTransitionLayout>
-      ) : (
-        <LayoutGroup id="schedule-list">
-          <ScheduleSharedTransitionLayout data-vt-nonce={vtListTransitionNonce}>
+          <motion.div
+            className={openGameId ? "pointer-events-none" : ""}
+            animate={{
+              scale: 1,
+              opacity: 1,
+            }}
+            transition={{
+              duration: listShellAnimations ? 0.2 : 0,
+              ease: GAMES_CYBER_EASE,
+            }}
+          >
             <motion.div
-              className={openGameId ? "pointer-events-none" : ""}
-              animate={{
-                scale: 1,
-                opacity: 1,
-              }}
-              transition={{
-                duration: listShellAnimations ? 0.2 : 0,
-                ease: GAMES_CYBER_EASE,
-              }}
+              key={leagueAnimKey}
+              className={scheduleGridClass}
+              variants={scheduleContainer}
+              initial={listShellAnimations ? "hidden" : false}
+              animate="show"
             >
-              <motion.div
-                key={leagueAnimKey}
-                className="grid gap-6 px-4 md:px-6 lg:px-8"
-                variants={scheduleContainer}
-                initial={listShellAnimations ? "hidden" : false}
-                animate="show"
-              >
-                {listRows}
-              </motion.div>
+              {listRows}
             </motion.div>
-          </ScheduleSharedTransitionLayout>
-        </LayoutGroup>
-      )}
+          </motion.div>
+        </ScheduleSharedTransitionLayout>
+      </LayoutGroup>
 
       {rulesIntroOpen && typeof document !== "undefined"
         ? createPortal(
