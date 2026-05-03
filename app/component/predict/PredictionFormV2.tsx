@@ -276,6 +276,11 @@ export default function PredictionFormV2({
       nbaH2HPack?.games?.filter((g) => Boolean(g.seriesGameLabel)) ?? [];
     return computeRecordByGames(poGames, game.home.name, game.away.name);
   }, [nbaH2HPack?.games, game.home.name, game.away.name]);
+  const h2hRsRecordForSeriesTrend = useMemo(() => {
+    const rsGames =
+      nbaH2HPack?.games?.filter((g) => !g.seriesGameLabel) ?? [];
+    return computeRecordByGames(rsGames, game.home.name, game.away.name);
+  }, [nbaH2HPack?.games, game.home.name, game.away.name]);
 
   useEffect(() => {
     onStandingsOpenChange?.(toolsTab === "standings");
@@ -986,6 +991,18 @@ export default function PredictionFormV2({
                       rightTeamDisplay={h2hPoRecord.rightTeamDisplay}
                       leftWins={h2hPoRecord.leftWins}
                       rightWins={h2hPoRecord.rightWins}
+                    />
+                  </div>
+                ) : h2hRsRecordForSeriesTrend ? (
+                  <div className="text-center">
+                    <H2hSeasonRecordRow
+                      phaseLabel={isEn ? "RS" : "RS"}
+                      leftTeamDisplay={h2hRsRecordForSeriesTrend.leftTeamDisplay}
+                      rightTeamDisplay={
+                        h2hRsRecordForSeriesTrend.rightTeamDisplay
+                      }
+                      leftWins={h2hRsRecordForSeriesTrend.leftWins}
+                      rightWins={h2hRsRecordForSeriesTrend.rightWins}
                     />
                   </div>
                 ) : null}
