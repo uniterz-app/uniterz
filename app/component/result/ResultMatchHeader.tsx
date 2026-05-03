@@ -276,8 +276,12 @@ function ResultMatchHeader({
   const predictEditHref = useMemo(() => {
     if (!viewerUid || !post.gameId) return null;
     if (post.authorUid !== viewerUid) return null;
+    /** 試合確定後は修正へ導線を出さない */
+    const finalized =
+      post.status === "final" || post.game?.status === "final";
+    if (finalized) return null;
     return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
-  }, [viewerUid, post.authorUid, post.gameId, gamesRoutePrefix]);
+  }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, gamesRoutePrefix]);
 
   return (
     <div className={`relative ${cardBase} ${frame}`}>

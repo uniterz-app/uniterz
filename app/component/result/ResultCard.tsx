@@ -376,8 +376,12 @@ function ResultCardPresentationImpl({
 
   const predictEditHref = useMemo(() => {
     if (!isOwnerPredict || !gamesRoutePrefix) return null;
+    /** 試合確定後は修正 URL を組み立てない（導線は出さない） */
+    const finalized =
+      post.status === "final" || post.game?.status === "final";
+    if (finalized) return null;
     return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
-  }, [isOwnerPredict, gamesRoutePrefix, post.gameId]);
+  }, [isOwnerPredict, gamesRoutePrefix, post.gameId, post.status, post.game?.status]);
 
   const hasCornerTrash = Boolean(showPreKickoffDismiss && onPreKickoffDismiss);
   const hasCornerEdit = Boolean(

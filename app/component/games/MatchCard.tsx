@@ -394,7 +394,7 @@ const marketMajority = useMemo(() => {
     showContentEntry && (league === "nba" || league === "bj");
 
   const entryTransition = useMemo(() => {
-    if (!showContentEntry || reduceMotion || isMobile) return null;
+    if (!showContentEntry || reduceMotion) return null;
     const listStagger =
       scheduleEntryIndex !== undefined
         ? Math.min(scheduleEntryIndex * 0.032, 0.14)
@@ -409,7 +409,7 @@ const marketMajority = useMemo(() => {
       duration,
       ease,
     });
-  }, [showContentEntry, reduceMotion, isMobile, scheduleEntryIndex]);
+  }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
 
   /**
    * ドットは最終要素の後ではなく、各チーム列（HOME=4 / AWAY=6）の入場に同期
@@ -776,15 +776,37 @@ return (
   }
   transition={
     isMobile
-      ? useFullCardHitLayer && !reduceMotion
+      ? entryTransition
         ? {
             scale: {
               type: "tween" as const,
-              duration: 0.12,
-              ease: "easeOut",
+              delay: entryTransition(0).delay,
+              ...(useFullCardHitLayer && !reduceMotion
+                ? {
+                    duration: 0.12,
+                    ease: "easeOut" as const,
+                  }
+                : {
+                    duration: entryTransition(0).duration + 0.06,
+                    ease: entryTransition(0).ease,
+                  }),
+            },
+            opacity: {
+              type: "tween" as const,
+              delay: entryTransition(0).delay,
+              duration: entryTransition(0).duration * 0.55,
+              ease: entryTransition(0).ease,
             },
           }
-        : {}
+        : useFullCardHitLayer && !reduceMotion
+          ? {
+              scale: {
+                type: "tween" as const,
+                duration: 0.12,
+                ease: "easeOut",
+              },
+            }
+          : {}
       : {
           layout: { duration: 0.22 },
           ...(entryTransition

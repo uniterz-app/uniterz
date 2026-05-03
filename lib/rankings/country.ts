@@ -1,5 +1,3 @@
-import type { RankingRowWithCountry }from "@/app/component/rankings/_data/mockRows";
-
 /** COUNTRY_OPTIONS と同じ ISO コード。拡張子は実ファイルに合わせる */
 export const FLAG_SRC: Record<string, string> = {
   US: "/flags/us.png",
@@ -74,9 +72,7 @@ export const COUNTRY_OPTIONS: CountryOption[] = [
   { code: "MX", labelJa: "メキシコ", labelEn: "Mexico" },
 ];
 
-export function getCountryCode(
-  row: RankingRowWithCountry
-): string | undefined {
+export function getCountryCode(row: { countryCode?: string | null }): string | undefined {
   if (!row.countryCode) return undefined;
   const upper = row.countryCode.toUpperCase();
   return FLAG_SRC[upper] ? upper : undefined;
