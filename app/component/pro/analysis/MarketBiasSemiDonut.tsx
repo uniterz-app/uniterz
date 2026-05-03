@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import DonutChart from "@/app/component/predict/DonutChart";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   favorableWinRate: number;
@@ -9,12 +11,16 @@ type Props = {
   favorableShare: number;
   contrarianShare: number;
   /**
-   * Pro Stats: after parent SummaryCardReveal, animate top bar row then bottom.
-   * When false, use viewport intersection (default).
+   * Pro Stats: 親 SummaryCardReveal の入場後に表示・アニメ開始。
+   * false のときはビューポート intersection。
    */
   orchestrateWithParent?: boolean;
   parentRevealDone?: boolean;
 };
+
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x));
+}
 
 export default function MarketBiasBars({
   favorableWinRate,
@@ -26,11 +32,11 @@ export default function MarketBiasBars({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [ioVisible, setIoVisible] = useState(false);
-  const [rowStage, setRowStage] = useState(0);
 
   useEffect(() => {
     if (orchestrateWithParent) return;
     if (!ref.current) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -38,123 +44,161 @@ export default function MarketBiasBars({
           observer.disconnect();
         }
       },
-      { threshold: 0.4 }
+      { threshold: 0.35 }
     );
+
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, [orchestrateWithParent]);
 
-  useEffect(() => {
-    if (!orchestrateWithParent) return;
-    if (!parentRevealDone) {
-      setRowStage(0);
-      return;
-    }
-    setRowStage(1);
-    const t = window.setTimeout(() => setRowStage(2), 440);
-    return () => window.clearTimeout(t);
-  }, [orchestrateWithParent, parentRevealDone]);
+  const visible = orchestrateWithParent ? parentRevealDone : ioVisible;
 
-  const winRateVisible = orchestrateWithParent ? rowStage >= 1 : ioVisible;
-  const shareVisible = orchestrateWithParent ? rowStage >= 2 : ioVisible;
+  const favWinPct = Math.round(clamp01(favorableWinRate) * 100);
+  const conWinPct = Math.round(clamp01(contrarianWinRate) * 100);
+  const favorableWinHigher = favWinPct > conWinPct;
+  const contrarianWinHigher = conWinPct > favWinPct;
 
-  const favWinPct = Math.round(favorableWinRate * 100);
-  const conWinPct = Math.round(contrarianWinRate * 100);
+  const fS = clamp01(favorableShare);
+  const cS = clamp01(contrarianShare);
+  const shareSum = fS + cS;
+  const favSeg = shareSum > 0 ? fS / shareSum : 0.5;
+  const conSeg = shareSum > 0 ? cS / shareSum : 0.5;
+  const favSharePct = Math.round(favSeg * 100);
+  const conSharePct = Math.round(conSeg * 100);
 
-  const favSharePct = Math.round(favorableShare * 100);
-  const conSharePct = Math.round(contrarianShare * 100);
+  /** 旧バー左=逆張り（シアン系）・右=順当（マゼンタ〜オレンジ系）に寄せる */
+  const COLOR_CONTRARIAN = "#22d3ee";
+  const COLOR_FAVORABLE = "#e879f9";
 
   return (
     <div
       ref={ref}
-      className="relative space-y-4 overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#050814]/85 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55),0_0_24px_rgba(56,189,248,0.08)]"
+      className="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#050814]/85 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55),0_0_24px_rgba(56,189,248,0.08)]"
     >
       <ShellGridOverlay roundedClassName="rounded-2xl" />
-      <div className="relative z-1 space-y-4">
-        <div>
-          <div className="mb-1 text-sm font-semibold text-white md:text-base">
-            市場志向 勝率
-          </div>
+      <div className="relative z-1">
+        <div className="mb-4 text-sm font-semibold text-white md:text-base">
+          市場志向
+        </div>
 
-          <div className="mb-1 flex justify-between text-xs text-white/60 md:text-sm">
-            <span>逆張り {conWinPct}%</span>
-            <span>順当 {favWinPct}%</span>
-          </div>
-
-          <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="absolute left-1/2 top-0 h-full w-px bg-white/30" />
-
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
+          <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 md:px-4 md:py-3">
+            <div className="text-[11px] font-medium text-cyan-200/90 md:text-xs">
+              逆張り勝率
+            </div>
             <div
-              className="absolute right-1/2 top-0 h-full transition-all"
-              style={{
-                width: winRateVisible ? `${conWinPct / 2}%` : "0%",
-                transitionDuration: "1200ms",
-                transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-                background:
-                  "linear-gradient(90deg, rgba(14,116,255,0.55) 0%, rgba(34,211,238,0.95) 100%)",
-                boxShadow:
-                  "0 0 12px rgba(34,211,238,0.45), inset 0 0 6px rgba(255,255,255,0.12)",
-              }}
-            />
-
+              className={[
+                "mt-1 text-2xl tabular-nums leading-none md:text-3xl",
+                contrarianWinHigher ? "text-yellow-300" : "text-white",
+                resultStatsMetricNumClass,
+              ].join(" ")}
+            >
+              {conWinPct}
+              <span
+                className={[
+                  "ml-0.5 text-base font-semibold md:text-lg",
+                  contrarianWinHigher ? "text-yellow-200/85" : "text-white/70",
+                ].join(" ")}
+              >
+                %
+              </span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 md:px-4 md:py-3">
+            <div className="text-[11px] font-medium text-fuchsia-200/90 md:text-xs">
+              順当勝率
+            </div>
             <div
-              className="absolute left-1/2 top-0 h-full transition-all"
-              style={{
-                width: winRateVisible ? `${favWinPct / 2}%` : "0%",
-                transitionDuration: "1200ms",
-                transitionDelay: orchestrateWithParent ? "90ms" : "120ms",
-                transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-                background:
-                  "linear-gradient(90deg, rgba(217,70,239,0.95) 0%, rgba(249,115,22,0.9) 100%)",
-                boxShadow:
-                  "0 0 12px rgba(217,70,239,0.45), inset 0 0 6px rgba(255,255,255,0.12)",
-              }}
-            />
+              className={[
+                "mt-1 text-2xl tabular-nums leading-none md:text-3xl",
+                favorableWinHigher ? "text-yellow-300" : "text-white",
+                resultStatsMetricNumClass,
+              ].join(" ")}
+            >
+              {favWinPct}
+              <span
+                className={[
+                  "ml-0.5 text-base font-semibold md:text-lg",
+                  favorableWinHigher ? "text-yellow-200/85" : "text-white/70",
+                ].join(" ")}
+              >
+                %
+              </span>
+            </div>
           </div>
         </div>
 
-        <div>
-          <div className="mb-1 text-sm font-semibold text-white md:text-base">
-            市場志向 構造比
+        <div className="mt-5">
+          <div className="mb-3 text-sm font-semibold text-white md:text-base">
+            順当 / 逆張り 比率
           </div>
-
-          <div className="mb-1 flex justify-between text-xs text-white/60 md:text-sm">
-            <span>逆張り {conSharePct}%</span>
-            <span>順当 {favSharePct}%</span>
-          </div>
-
-          <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="absolute left-1/2 top-0 h-full w-px bg-white/30" />
-            <div
-              className="absolute right-1/2 top-0 h-full transition-all"
-              style={{
-                width: shareVisible ? `${conSharePct / 2}%` : "0%",
-                transitionDuration: "1200ms",
-                transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-                background:
-                  "linear-gradient(90deg, rgba(14,116,255,0.78) 0%, rgba(34,211,238,0.95) 100%)",
-                boxShadow:
-                  "0 0 10px rgba(34,211,238,0.4), inset 0 0 5px rgba(255,255,255,0.1)",
-              }}
-            />
-            <div
-              className="absolute left-1/2 top-0 h-full transition-all"
-              style={{
-                width: shareVisible ? `${favSharePct / 2}%` : "0%",
-                transitionDuration: "1200ms",
-                transitionDelay: orchestrateWithParent ? "90ms" : "120ms",
-                transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-                background:
-                  "linear-gradient(90deg, rgba(217,70,239,0.88) 0%, rgba(249,115,22,0.92) 100%)",
-                boxShadow:
-                  "0 0 10px rgba(217,70,239,0.4), inset 0 0 5px rgba(255,255,255,0.1)",
-              }}
-            />
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-8">
+            {visible ? (
+              <div className="shrink-0">
+                <DonutChart
+                  segments={[
+                    {
+                      label: "逆張り",
+                      value: conSeg,
+                      color: COLOR_CONTRARIAN,
+                    },
+                    {
+                      label: "順当",
+                      value: favSeg,
+                      color: COLOR_FAVORABLE,
+                    },
+                  ]}
+                  size={132}
+                  thickness={30}
+                  rotationDeg={0}
+                  drawDelayMs={60}
+                  ariaLabel={`逆張り 投稿比率 ${conSharePct}パーセント、順当 ${favSharePct}パーセント`}
+                />
+              </div>
+            ) : (
+              <div
+                className="shrink-0 rounded-full bg-white/5"
+                style={{ width: 132, height: 132 }}
+                aria-hidden
+              />
+            )}
+            <ul className="w-full max-w-[240px] space-y-2.5 text-sm sm:w-auto">
+              <li className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-white/70">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: COLOR_CONTRARIAN }}
+                    aria-hidden
+                  />
+                  逆張り 投稿比
+                </span>
+                <span
+                  className={`tabular-nums text-white ${resultStatsMetricNumClass}`}
+                >
+                  {conSharePct}%
+                </span>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-white/70">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: COLOR_FAVORABLE }}
+                    aria-hidden
+                  />
+                  順当 投稿比
+                </span>
+                <span
+                  className={`tabular-nums text-white ${resultStatsMetricNumClass}`}
+                >
+                  {favSharePct}%
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
 
-        <p className="text-[11px] leading-relaxed text-white/50 md:text-[13px]">
-          ※ 上段は勝率、下段は投稿構造比を示しています
+        <p className="mt-3 text-[11px] leading-relaxed text-white/50 lg:text-[12px]">
+          ※ 勝率は市場多数派寄り／逆張りそれぞれの的中率。比率は投稿の内訳です。
         </p>
       </div>
     </div>

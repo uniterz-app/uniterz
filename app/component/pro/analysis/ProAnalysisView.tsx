@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import RadarChart from "@/app/component/pro/analysis/RadarChart";
 import AnalysisTypeCard from "@/app/component/pro/analysis/AnalysisTypeCard";
 import TeamAffinityCard from "@/app/component/pro/analysis/TeamAffinityCard";
@@ -134,25 +134,11 @@ export default function ProAnalysisView({
   const hasPrevMonth = !!prevMonthSummary;
   const [homeAwayBarsReveal, setHomeAwayBarsReveal] = useState(false);
   const [marketBarsReveal, setMarketBarsReveal] = useState(false);
-  /** lg以上はデスクトップ用グリッドのみ「表示側」としてバー演出を同期（二重マウント対策） */
-  const [isLgViewport, setIsLgViewport] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(min-width: 1024px)").matches
-      : false
-  );
 
   useEffect(() => {
     setHomeAwayBarsReveal(false);
     setMarketBarsReveal(false);
   }, [month, playSectionEntrance, hasPrevMonth]);
-
-  useLayoutEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const apply = () => setIsLgViewport(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
 
   let revealK = hasPrevMonth ? 1 : 0;
   const revealPrev = hasPrevMonth ? 0 : -1;
@@ -292,9 +278,7 @@ export default function ProAnalysisView({
           enabled={playSectionEntrance}
           enterVariant="blurUp"
           className="w-full lg:hidden"
-          onAnimationComplete={() => {
-            if (!isLgViewport) setHomeAwayBarsReveal(true);
-          }}
+          onAnimationComplete={() => setHomeAwayBarsReveal(true)}
         >
           <HomeAwayWinRateBar
             homeRate={homeAway.homeRate}
@@ -312,9 +296,7 @@ export default function ProAnalysisView({
           enabled={playSectionEntrance}
           enterVariant="blurUp"
           className="w-full lg:hidden"
-          onAnimationComplete={() => {
-            if (!isLgViewport) setMarketBarsReveal(true);
-          }}
+          onAnimationComplete={() => setMarketBarsReveal(true)}
         >
           <MarketBiasBars
             favorableWinRate={marketBias.favorableWinRate}
@@ -343,10 +325,8 @@ export default function ProAnalysisView({
             total={revealTotal}
             enabled={playSectionEntrance}
             enterVariant="blurUp"
-            className="w-full"
-            onAnimationComplete={() => {
-              if (isLgViewport) setHomeAwayBarsReveal(true);
-            }}
+            className="w-full min-h-0 min-w-0"
+            onAnimationComplete={() => setHomeAwayBarsReveal(true)}
           >
             <HomeAwayWinRateBar
               homeRate={homeAway.homeRate}
@@ -363,10 +343,8 @@ export default function ProAnalysisView({
             total={revealTotal}
             enabled={playSectionEntrance}
             enterVariant="blurUp"
-            className="w-full"
-            onAnimationComplete={() => {
-              if (isLgViewport) setMarketBarsReveal(true);
-            }}
+            className="w-full min-h-0 min-w-0"
+            onAnimationComplete={() => setMarketBarsReveal(true)}
           >
             <MarketBiasBars
               favorableWinRate={marketBias.favorableWinRate}

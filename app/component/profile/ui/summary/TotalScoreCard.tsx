@@ -107,10 +107,10 @@ function TotalScoreCard({
   const upset = Math.max(0, upsetBonusPoints ?? 0);
   const streak = Math.max(0, streakBonusPoints ?? 0);
 
-  const totalCu = useCountUp(total, 1000, inView, 1);
-  const baseCu = useCountUp(base, 1000, inView, 1);
-  const upsetCu = useCountUp(upset, 1000, inView, 1);
-  const streakCu = useCountUp(streak, 1000, inView, 1);
+  const totalCu = useCountUp(total, 1000, inView, 1, "zero");
+  const baseCu = useCountUp(base, 1000, inView, 1, "zero");
+  const upsetCu = useCountUp(upset, 1000, inView, 1, "zero");
+  const streakCu = useCountUp(streak, 1000, inView, 1, "zero");
 
   const avg =
     analyses > 0

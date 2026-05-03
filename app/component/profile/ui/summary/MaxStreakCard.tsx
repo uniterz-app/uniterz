@@ -73,7 +73,7 @@ function MaxStreakCard({
   }
 
   const base = safeInt(maxStreak);
-  const cu = useCountUp(base, 1000, inView);
+  const cu = useCountUp(base, 1000, inView, 0, "zero");
 
   const shown = useMemo(() => safeInt(cu), [cu]);
   const valueColor = getStreakColor(shown);

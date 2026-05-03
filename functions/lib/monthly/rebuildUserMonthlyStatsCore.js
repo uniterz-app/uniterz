@@ -194,6 +194,8 @@ async function rebuildUserMonthlyStatsCore() {
             pointsSumV3RankByUid.set(row.uid, rank);
         }
     }
+    /** 総合得点（合計）順位の母数＝当月に1件以上投稿があったユーザー数 */
+    const pointsSumV3RankDenominator = sortedByPointsSum.length;
     const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
     const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
     const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
@@ -315,161 +317,168 @@ async function rebuildUserMonthlyStatsCore() {
     for (const v of Object.values(leagueVolumeMapCohort)) {
         v.sort((a, b) => a - b);
     }
-    const batch = db().batch();
-    for (const row of rows) {
-        const postAgg = postAggMap[row.uid];
-        const streak = postAgg
-            ? calcStreak(postAgg.results)
-            : { maxWin: 0, maxLose: 0 };
-        const homeAway = postAgg
-            ? {
-                home: {
-                    posts: postAgg.homeAway.home.posts,
-                    wins: postAgg.homeAway.home.wins,
-                    winRate: postAgg.homeAway.home.posts > 0
-                        ? postAgg.homeAway.home.wins / postAgg.homeAway.home.posts
-                        : 0,
-                },
-                away: {
-                    posts: postAgg.homeAway.away.posts,
-                    wins: postAgg.homeAway.away.wins,
-                    winRate: postAgg.homeAway.away.posts > 0
-                        ? postAgg.homeAway.away.wins / postAgg.homeAway.away.posts
-                        : 0,
-                },
-            }
-            : {
-                home: { posts: 0, wins: 0, winRate: 0 },
-                away: { posts: 0, wins: 0, winRate: 0 },
+    /** Firestore WriteBatch: 500 操作上限・合計サイズ上限。まとめすぎると INVALID_ARGUMENT Transaction too big */
+    const WRITE_BATCH_LIMIT = 400;
+    for (let offset = 0; offset < rows.length; offset += WRITE_BATCH_LIMIT) {
+        const chunk = rows.slice(offset, offset + WRITE_BATCH_LIMIT);
+        const batch = db().batch();
+        for (const row of chunk) {
+            const postAgg = postAggMap[row.uid];
+            const streak = postAgg
+                ? calcStreak(postAgg.results)
+                : { maxWin: 0, maxLose: 0 };
+            const homeAway = postAgg
+                ? {
+                    home: {
+                        posts: postAgg.homeAway.home.posts,
+                        wins: postAgg.homeAway.home.wins,
+                        winRate: postAgg.homeAway.home.posts > 0
+                            ? postAgg.homeAway.home.wins / postAgg.homeAway.home.posts
+                            : 0,
+                    },
+                    away: {
+                        posts: postAgg.homeAway.away.posts,
+                        wins: postAgg.homeAway.away.wins,
+                        winRate: postAgg.homeAway.away.posts > 0
+                            ? postAgg.homeAway.away.wins / postAgg.homeAway.away.posts
+                            : 0,
+                    },
+                }
+                : {
+                    home: { posts: 0, wins: 0, winRate: 0 },
+                    away: { posts: 0, wins: 0, winRate: 0 },
+                };
+            const teams = postAgg
+                ? Object.entries(postAgg.teamMap)
+                    .map(([teamId, v]) => ({
+                    teamId,
+                    posts: v.posts,
+                    wins: v.wins,
+                    winRate: v.wins / v.posts,
+                }))
+                    .filter((t) => t.posts >= 5)
+                    .sort((a, b) => b.winRate !== a.winRate ? b.winRate - a.winRate : b.posts - a.posts)
+                : [];
+            const strong = teams.slice(0, 3);
+            const strongIds = new Set(strong.map((t) => t.teamId));
+            const weak = teams
+                .filter((t) => !strongIds.has(t.teamId))
+                .slice(-3)
+                .reverse();
+            const agg = map.get(row.uid);
+            const basePointsSum = Math.max(0, agg.pointsSumV3 - agg.upsetBonusSum - agg.streakBonusSum);
+            const mainLeague = getMainLeague(agg.leaguePosts);
+            const volumeMainLeague = mainLeague
+                ? percentile((_y = leagueVolumeMap[mainLeague]) !== null && _y !== void 0 ? _y : [], agg.leaguePosts[mainLeague])
+                : 0;
+            const percentiles = {
+                winRate: percentile(winRates, row.winRate),
+                precision: percentile(precisions, row.avgPrecision),
+                pointsV3: percentile(pointsV3s, row.avgPointsV3),
+                upset: percentile(upsetPointSums, row.upsetPointsSum),
+                volume: volumeMainLeague,
+                volumeByLeague: Object.fromEntries(Object.entries(agg.leaguePosts).map(([league, p]) => {
+                    var _a;
+                    return [
+                        league,
+                        percentile((_a = leagueVolumeMap[league]) !== null && _a !== void 0 ? _a : [], p),
+                    ];
+                })),
             };
-        const teams = postAgg
-            ? Object.entries(postAgg.teamMap)
-                .map(([teamId, v]) => ({
-                teamId,
-                posts: v.posts,
-                wins: v.wins,
-                winRate: v.wins / v.posts,
-            }))
-                .filter((t) => t.posts >= 5)
-                .sort((a, b) => b.winRate !== a.winRate ? b.winRate - a.winRate : b.posts - a.posts)
-            : [];
-        const strong = teams.slice(0, 3);
-        const strongIds = new Set(strong.map((t) => t.teamId));
-        const weak = teams
-            .filter((t) => !strongIds.has(t.teamId))
-            .slice(-3)
-            .reverse();
-        const agg = map.get(row.uid);
-        const basePointsSum = Math.max(0, agg.pointsSumV3 - agg.upsetBonusSum - agg.streakBonusSum);
-        const mainLeague = getMainLeague(agg.leaguePosts);
-        const volumeMainLeague = mainLeague
-            ? percentile((_y = leagueVolumeMap[mainLeague]) !== null && _y !== void 0 ? _y : [], agg.leaguePosts[mainLeague])
-            : 0;
-        const percentiles = {
-            winRate: percentile(winRates, row.winRate),
-            precision: percentile(precisions, row.avgPrecision),
-            pointsV3: percentile(pointsV3s, row.avgPointsV3),
-            upset: percentile(upsetPointSums, row.upsetPointsSum),
-            volume: volumeMainLeague,
-            volumeByLeague: Object.fromEntries(Object.entries(agg.leaguePosts).map(([league, p]) => {
-                var _a;
-                return [
-                    league,
-                    percentile((_a = leagueVolumeMap[league]) !== null && _a !== void 0 ? _a : [], p),
-                ];
-            })),
-        };
-        const marketAgg = (_z = postAggMap[row.uid]) !== null && _z !== void 0 ? _z : {
-            favoritePickCount: 0,
-            underdogPickCount: 0,
-            favoritePickRatioSum: 0,
-            favoriteWins: 0,
-            underdogWins: 0,
-        };
-        const totalMarketPicks = marketAgg.favoritePickCount + marketAgg.underdogPickCount;
-        const favoritePickRate = totalMarketPicks > 0
-            ? marketAgg.favoritePickCount / totalMarketPicks
-            : 0;
-        const favoriteWinRate = marketAgg.favoritePickCount > 0
-            ? marketAgg.favoriteWins / marketAgg.favoritePickCount
-            : 0;
-        const underdogWinRate = marketAgg.underdogPickCount > 0
-            ? marketAgg.underdogWins / marketAgg.underdogPickCount
-            : 0;
-        const avgMarketMajorityRatioPicked = marketAgg.favoritePickCount > 0
-            ? marketAgg.favoritePickRatioSum / marketAgg.favoritePickCount
-            : 0;
-        const radarEligible = row.posts >= MIN_POSTS_FOR_RADAR;
-        const upsetValid = agg.upsetOpp >= 5;
-        const radar10 = radarEligible
-            ? {
-                winRate: clamp10(percentile(winRatesCohort, row.winRate) / 10),
-                precision: clamp10(percentile(precisionsCohort, row.avgPrecision) / 10),
-                upset: clamp10(percentile(upsetPointSumsCohort, row.upsetPointsSum) / 10),
-                volume: mainLeague
-                    ? clamp10(percentile((_0 = leagueVolumeMapCohort[mainLeague]) !== null && _0 !== void 0 ? _0 : [], (_1 = agg.leaguePosts[mainLeague]) !== null && _1 !== void 0 ? _1 : 0) / 10)
-                    : 0,
-                streak: clamp10(percentile(staminaSorted, (_2 = staminaRawByUid.get(row.uid)) !== null && _2 !== void 0 ? _2 : 0) / 10),
-                pointsV3: clamp10(percentile(pointsV3sCohort, row.avgPointsV3) / 10),
-            }
-            : {
-                winRate: 0,
-                precision: 0,
-                upset: 0,
-                volume: 0,
-                streak: 0,
-                pointsV3: 0,
+            const marketAgg = (_z = postAggMap[row.uid]) !== null && _z !== void 0 ? _z : {
+                favoritePickCount: 0,
+                underdogPickCount: 0,
+                favoritePickRatioSum: 0,
+                favoriteWins: 0,
+                underdogWins: 0,
             };
-        const levelSummary = (0, judgeLevel_1.judgeLevels)(radar10);
-        const analysisTypeId = (0, judgeAnalysisType_1.judgeAnalysisType)(levelSummary);
-        const ref = db()
-            .collection("user_stats_v2_monthly")
-            .doc(`${row.uid}_${range.id}`);
-        batch.set(ref, {
-            uid: row.uid,
-            month: range.id,
-            raw: {
-                posts: agg.posts,
-                wins: agg.wins,
-                winRate: row.winRate,
-                avgPrecision: row.avgPrecision,
-                avgPointsV3: row.avgPointsV3,
-                /** 月内スコア精度の合計（平均は avgPrecision） */
-                scorePrecisionSum: agg.precisionSum,
-                /** 月内総合得点の合計（平均は avgPointsV3） */
-                pointsSumV3: agg.pointsSumV3,
-                basePointsSum,
-                upsetBonusSum: agg.upsetBonusSum,
-                streakBonusSum: agg.streakBonusSum,
-                upsetPointsSum: agg.upsetPointsSum,
-                upsetOpportunity: agg.upsetOpp,
-                upsetPick: agg.upsetPick,
-                upsetHit: agg.upsetHit,
-                leaguePosts: agg.leaguePosts,
-                /** 当月の総合得点（合計）による全ユーザー中の順位（同点は繰り上がり順位） */
-                pointsSumV3Rank: (_3 = pointsSumV3RankByUid.get(row.uid)) !== null && _3 !== void 0 ? _3 : null,
-            },
-            marketBias: {
-                favoritePickCount: marketAgg.favoritePickCount,
-                underdogPickCount: marketAgg.underdogPickCount,
-                favoritePickRate,
-                favoriteWinRate,
-                underdogWinRate,
-                avgMarketMajorityRatioPicked,
-            },
-            radar10,
-            radarEligible,
-            upsetValid,
-            percentiles,
-            homeAway,
-            teamStats: { strong, weak },
-            streak,
-            analysisTypeId,
-            analysisLevels: levelSummary.levels,
-            updatedAt: firestore_1.FieldValue.serverTimestamp(),
-        });
+            const totalMarketPicks = marketAgg.favoritePickCount + marketAgg.underdogPickCount;
+            const favoritePickRate = totalMarketPicks > 0
+                ? marketAgg.favoritePickCount / totalMarketPicks
+                : 0;
+            const favoriteWinRate = marketAgg.favoritePickCount > 0
+                ? marketAgg.favoriteWins / marketAgg.favoritePickCount
+                : 0;
+            const underdogWinRate = marketAgg.underdogPickCount > 0
+                ? marketAgg.underdogWins / marketAgg.underdogPickCount
+                : 0;
+            const avgMarketMajorityRatioPicked = marketAgg.favoritePickCount > 0
+                ? marketAgg.favoritePickRatioSum / marketAgg.favoritePickCount
+                : 0;
+            const radarEligible = row.posts >= MIN_POSTS_FOR_RADAR;
+            const upsetValid = agg.upsetOpp >= 5;
+            const radar10 = radarEligible
+                ? {
+                    winRate: clamp10(percentile(winRatesCohort, row.winRate) / 10),
+                    precision: clamp10(percentile(precisionsCohort, row.avgPrecision) / 10),
+                    upset: clamp10(percentile(upsetPointSumsCohort, row.upsetPointsSum) / 10),
+                    volume: mainLeague
+                        ? clamp10(percentile((_0 = leagueVolumeMapCohort[mainLeague]) !== null && _0 !== void 0 ? _0 : [], (_1 = agg.leaguePosts[mainLeague]) !== null && _1 !== void 0 ? _1 : 0) / 10)
+                        : 0,
+                    streak: clamp10(percentile(staminaSorted, (_2 = staminaRawByUid.get(row.uid)) !== null && _2 !== void 0 ? _2 : 0) / 10),
+                    pointsV3: clamp10(percentile(pointsV3sCohort, row.avgPointsV3) / 10),
+                }
+                : {
+                    winRate: 0,
+                    precision: 0,
+                    upset: 0,
+                    volume: 0,
+                    streak: 0,
+                    pointsV3: 0,
+                };
+            const levelSummary = (0, judgeLevel_1.judgeLevels)(radar10);
+            const analysisTypeId = (0, judgeAnalysisType_1.judgeAnalysisType)(levelSummary);
+            const ref = db()
+                .collection("user_stats_v2_monthly")
+                .doc(`${row.uid}_${range.id}`);
+            batch.set(ref, {
+                uid: row.uid,
+                month: range.id,
+                raw: {
+                    posts: agg.posts,
+                    wins: agg.wins,
+                    winRate: row.winRate,
+                    avgPrecision: row.avgPrecision,
+                    avgPointsV3: row.avgPointsV3,
+                    /** 月内スコア精度の合計（平均は avgPrecision） */
+                    scorePrecisionSum: agg.precisionSum,
+                    /** 月内総合得点の合計（平均は avgPointsV3） */
+                    pointsSumV3: agg.pointsSumV3,
+                    basePointsSum,
+                    upsetBonusSum: agg.upsetBonusSum,
+                    streakBonusSum: agg.streakBonusSum,
+                    upsetPointsSum: agg.upsetPointsSum,
+                    upsetOpportunity: agg.upsetOpp,
+                    upsetPick: agg.upsetPick,
+                    upsetHit: agg.upsetHit,
+                    leaguePosts: agg.leaguePosts,
+                    /** 当月の総合得点（合計）による全ユーザー中の順位（同点は繰り上がり順位） */
+                    pointsSumV3Rank: (_3 = pointsSumV3RankByUid.get(row.uid)) !== null && _3 !== void 0 ? _3 : null,
+                    /** 上記順位の分母（当月投稿ありユーザー数）。過去ドキュメントには無い場合あり */
+                    pointsSumV3RankDenominator: pointsSumV3RankDenominator > 0 ? pointsSumV3RankDenominator : null,
+                },
+                marketBias: {
+                    favoritePickCount: marketAgg.favoritePickCount,
+                    underdogPickCount: marketAgg.underdogPickCount,
+                    favoritePickRate,
+                    favoriteWinRate,
+                    underdogWinRate,
+                    avgMarketMajorityRatioPicked,
+                },
+                radar10,
+                radarEligible,
+                upsetValid,
+                percentiles,
+                homeAway,
+                teamStats: { strong, weak },
+                streak,
+                analysisTypeId,
+                analysisLevels: levelSummary.levels,
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            });
+        }
+        await batch.commit();
     }
-    await batch.commit();
     await (0, buildMonthlyGlobalStats_1.buildMonthlyGlobalStats)(rows, range.id);
     return { month: range.id, users: rows.length };
 }

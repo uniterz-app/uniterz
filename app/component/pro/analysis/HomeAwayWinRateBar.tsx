@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import DonutChart from "@/app/component/predict/DonutChart";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 
 type Props = {
   homeRate: number;
@@ -9,13 +11,17 @@ type Props = {
   homeShare: number;
   awayShare: number;
   /**
-   * Pro Stats: after parent SummaryCardReveal, animate top bar then bottom bar.
-   * When false, use viewport intersection (default).
+   * Pro Stats: 親 SummaryCardReveal の入場後に表示・アニメ開始。
+   * false のときはビューポート intersection。
    */
   orchestrateWithParent?: boolean;
-  /** orchestrateWithParent 時、ラッパー入場アニメ後に true */
+  /** orchestrateWithParent 時、ラッパー入場アニメ完了後に true */
   parentRevealDone?: boolean;
 };
+
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x));
+}
 
 export default function HomeAwayWinRateBar({
   homeRate,
@@ -27,8 +33,6 @@ export default function HomeAwayWinRateBar({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [ioVisible, setIoVisible] = useState(false);
-  /** orchestrate 時: 1 = 勝率バー, 2 = 構造比バー */
-  const [rowStage, setRowStage] = useState(0);
 
   useEffect(() => {
     if (orchestrateWithParent) return;
@@ -41,32 +45,31 @@ export default function HomeAwayWinRateBar({
           observer.disconnect();
         }
       },
-      { threshold: 0.4 }
+      { threshold: 0.35 }
     );
 
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, [orchestrateWithParent]);
 
-  useEffect(() => {
-    if (!orchestrateWithParent) return;
-    if (!parentRevealDone) {
-      setRowStage(0);
-      return;
-    }
-    setRowStage(1);
-    const t = window.setTimeout(() => setRowStage(2), 440);
-    return () => window.clearTimeout(t);
-  }, [orchestrateWithParent, parentRevealDone]);
+  const visible = orchestrateWithParent ? parentRevealDone : ioVisible;
 
-  const winRateVisible = orchestrateWithParent ? rowStage >= 1 : ioVisible;
-  const shareVisible = orchestrateWithParent ? rowStage >= 2 : ioVisible;
+  const homePct = Math.round(clamp01(homeRate) * 100);
+  const awayPct = Math.round(clamp01(awayRate) * 100);
+  const homeWinRateHigher = homePct > awayPct;
+  const awayWinRateHigher = awayPct > homePct;
 
-  const homePct = Math.round(homeRate * 100);
-  const awayPct = Math.round(awayRate * 100);
+  const hS = clamp01(homeShare);
+  const aS = clamp01(awayShare);
+  const shareSum = hS + aS;
+  const homeSeg = shareSum > 0 ? hS / shareSum : 0.5;
+  const awaySeg = shareSum > 0 ? aS / shareSum : 0.5;
+  const homeSharePct = Math.round(homeSeg * 100);
+  const awaySharePct = Math.round(awaySeg * 100);
 
-  const homeSharePct = Math.round(homeShare * 100);
-  const awaySharePct = Math.round(awayShare * 100);
+  /** 棒グラフ時代の配色に寄せた Home=シアン系、Away=マゼンタ系 */
+  const COLOR_HOME = "#22d3ee";
+  const COLOR_AWAY = "#e879f9";
 
   return (
     <div
@@ -75,93 +78,122 @@ export default function HomeAwayWinRateBar({
     >
       <ShellGridOverlay roundedClassName="rounded-2xl" />
       <div className="relative z-1">
-      {/* タイトル */}
-      <div className="mb-3 text-sm md:text-base font-semibold text-white">
-        Home / Away 分析
-      </div>
-
-      {/* ===== 勝率 ===== */}
-      <div className="mb-1 flex justify-between text-xs md:text-sm text-white/60">
-        <span>Away 勝率 {awayPct}%</span>
-        <span>Home 勝率 {homePct}%</span>
-      </div>
-
-      <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
-        <div className="absolute left-1/2 top-0 h-full w-px bg-white/30" />
-
-        <div
-          className="absolute right-1/2 top-0 h-full transition-all ease-out"
-          style={{
-            width: winRateVisible ? `${awayPct / 2}%` : "0%",
-            transitionDuration: "1200ms",
-            transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-            background:
-              "linear-gradient(90deg, rgba(217,70,239,0.45) 0%, rgba(244,114,182,0.92) 55%, rgba(251,113,133,0.98) 100%)",
-            boxShadow:
-              "0 0 12px rgba(232,121,249,0.45), inset 0 0 6px rgba(255,255,255,0.12)",
-          }}
-        />
-
-        <div
-          className="absolute left-1/2 top-0 h-full transition-all ease-out"
-          style={{
-            width: winRateVisible ? `${homePct / 2}%` : "0%",
-            transitionDuration: "1200ms",
-            transitionDelay: orchestrateWithParent ? "90ms" : "120ms",
-            transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-            background:
-              "linear-gradient(90deg, rgba(34,211,238,0.98) 0%, rgba(45,212,191,0.9) 55%, rgba(56,189,248,0.72) 100%)",
-            boxShadow:
-              "0 0 12px rgba(103,232,249,0.45), inset 0 0 6px rgba(255,255,255,0.12)",
-          }}
-        />
-      </div>
-
-      {/* ===== 構造比 ===== */}
-      <div className="mt-4">
-        <div className="mb-1 text-sm md:text-base font-semibold text-white">
-          Home / Away 比率
+        <div className="mb-4 text-sm font-semibold text-white md:text-base">
+          Home / Away 分析
         </div>
 
-        <div className="mb-1 flex justify-between text-xs md:text-sm text-white/60">
-          <span>Away 投稿比 {awaySharePct}%</span>
-          <span>Home 投稿比 {homeSharePct}%</span>
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
+          <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 md:px-4 md:py-3">
+            <div className="text-[11px] font-medium text-cyan-200/90 md:text-xs">
+              Home勝率
+            </div>
+            <div
+              className={[
+                "mt-1 text-2xl tabular-nums leading-none md:text-3xl",
+                homeWinRateHigher ? "text-yellow-300" : "text-white",
+                resultStatsMetricNumClass,
+              ].join(" ")}
+            >
+              {homePct}
+              <span
+                className={[
+                  "ml-0.5 text-base font-semibold md:text-lg",
+                  homeWinRateHigher ? "text-yellow-200/85" : "text-white/70",
+                ].join(" ")}
+              >
+                %
+              </span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 md:px-4 md:py-3">
+            <div className="text-[11px] font-medium text-fuchsia-200/90 md:text-xs">
+              Away勝率
+            </div>
+            <div
+              className={[
+                "mt-1 text-2xl tabular-nums leading-none md:text-3xl",
+                awayWinRateHigher ? "text-yellow-300" : "text-white",
+                resultStatsMetricNumClass,
+              ].join(" ")}
+            >
+              {awayPct}
+              <span
+                className={[
+                  "ml-0.5 text-base font-semibold md:text-lg",
+                  awayWinRateHigher ? "text-yellow-200/85" : "text-white/70",
+                ].join(" ")}
+              >
+                %
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
-          <div className="absolute left-1/2 top-0 h-full w-px bg-white/30" />
-          <div
-            className="absolute right-1/2 top-0 h-full transition-all ease-out"
-            style={{
-              width: shareVisible ? `${awaySharePct / 2}%` : "0%",
-              transitionDuration: "1200ms",
-              transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-              background:
-                "linear-gradient(90deg, rgba(192,38,211,0.7) 0%, rgba(236,72,153,0.9) 100%)",
-              boxShadow:
-                "0 0 10px rgba(232,121,249,0.35), inset 0 0 5px rgba(255,255,255,0.1)",
-            }}
-          />
-          <div
-            className="absolute left-1/2 top-0 h-full transition-all ease-out"
-            style={{
-              width: shareVisible ? `${homeSharePct / 2}%` : "0%",
-              transitionDuration: "1200ms",
-              transitionDelay: orchestrateWithParent ? "90ms" : "120ms",
-              transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-              background:
-                "linear-gradient(90deg, rgba(6,182,212,0.95) 0%, rgba(20,184,166,0.78) 100%)",
-              boxShadow:
-                "0 0 10px rgba(103,232,249,0.35), inset 0 0 5px rgba(255,255,255,0.1)",
-            }}
-          />
+        {/* 投稿比率（ドーナツ） */}
+        <div className="mt-5">
+          <div className="mb-3 text-sm font-semibold text-white md:text-base">
+            Home / Away 比率
+          </div>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-8">
+            {visible ? (
+              <div className="shrink-0">
+                <DonutChart
+                  segments={[
+                    { label: "Home", value: homeSeg, color: COLOR_HOME },
+                    { label: "Away", value: awaySeg, color: COLOR_AWAY },
+                  ]}
+                  size={132}
+                  thickness={30}
+                  rotationDeg={0}
+                  drawDelayMs={60}
+                  ariaLabel={`Home 投稿比率 ${homeSharePct}パーセント、Away ${awaySharePct}パーセント`}
+                />
+              </div>
+            ) : (
+              <div
+                className="shrink-0 rounded-full bg-white/5"
+                style={{ width: 132, height: 132 }}
+                aria-hidden
+              />
+            )}
+            <ul className="w-full max-w-[240px] space-y-2.5 text-sm sm:w-auto">
+              <li className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-white/70">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: COLOR_HOME }}
+                    aria-hidden
+                  />
+                  Home 投稿比
+                </span>
+                <span
+                  className={`tabular-nums text-white ${resultStatsMetricNumClass}`}
+                >
+                  {homeSharePct}%
+                </span>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-white/70">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: COLOR_AWAY }}
+                    aria-hidden
+                  />
+                  Away 投稿比
+                </span>
+                <span
+                  className={`tabular-nums text-white ${resultStatsMetricNumClass}`}
+                >
+                  {awaySharePct}%
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
 
-      {/* 説明 */}
-      <p className="mt-2 text-[11px] leading-relaxed text-white/50 lg:text-[12px]">
-        ※ 上段：勝率 / 下段：投稿構造比（どちらを多く選んでいるか）
-      </p>
+        <p className="mt-3 text-[11px] leading-relaxed text-white/50 lg:text-[12px]">
+          ※ 勝率はホーム／アウェーそれぞれの的中率。比率は投稿の内訳（どちらを多く選んだか）です。
+        </p>
       </div>
     </div>
   );
