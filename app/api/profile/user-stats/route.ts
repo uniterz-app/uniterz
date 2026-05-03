@@ -2,6 +2,7 @@
 // ロールアップキャッシュで Firestore read を抑える
 
 import { NextResponse } from "next/server";
+import { FieldPath } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
   buildWindowCacheForUserFromSnapshots,
@@ -70,6 +71,9 @@ function summaryFromPhaseRanking(
   const pointsSumV3 = safeNum(r.totalPoints);
   const upsetPointsSum = safeNum(r.totalUpset);
   const scorePrecisionSum = safeNum(r.totalPrecision);
+  const upsetBonusSum = safeNum(r.upsetBonusSum);
+  const streakBonusSum = safeNum(r.streakBonusSum);
+  const basePointsSum = Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum);
   return {
     posts,
     fullPosts: posts,
@@ -79,11 +83,79 @@ function summaryFromPhaseRanking(
     scorePrecisionSum,
     upsetPointsSum,
     pointsSumV3,
-    upsetChanceCount: 0,
-    upsetHitCount: 0,
-    upsetBonusSum: 0,
-    streakBonusSum: 0,
-    basePointsSum: pointsSumV3,
+    upsetChanceCount: safeInt(r.upsetOpportunityCount),
+    upsetHitCount: safeInt(r.upsetHitCount),
+    upsetBonusSum,
+    streakBonusSum,
+    basePointsSum,
+  };
+}
+
+function hasPhaseBonusFields(
+  cumulative: Record<string, unknown> | null,
+  phase: RankingPhase
+): boolean {
+  const byPhase = ((cumulative?.rankingByPhase as Record<string, unknown>) ??
+    {}) as Record<string, Record<string, unknown> | undefined>;
+  const r = byPhase[phase] ?? {};
+  return (
+    Object.prototype.hasOwnProperty.call(r, "upsetBonusSum") &&
+    Object.prototype.hasOwnProperty.call(r, "streakBonusSum")
+  );
+}
+
+async function summaryFromDailyPhaseFallback(
+  adminDb: ReturnType<typeof getAdminDb>,
+  uid: string,
+  phase: RankingPhase
+): Promise<SummaryForCards> {
+  const start = `${uid}_`;
+  const end = `${uid}_\uf8ff`;
+  const snap = await adminDb
+    .collection("user_stats_v2_daily")
+    .where(FieldPath.documentId(), ">=", start)
+    .where(FieldPath.documentId(), "<=", end)
+    .get();
+
+  let posts = 0;
+  let wins = 0;
+  let scorePrecisionSum = 0;
+  let upsetPointsSum = 0;
+  let pointsSumV3 = 0;
+  let upsetChanceCount = 0;
+  let upsetHitCount = 0;
+  let upsetBonusSum = 0;
+  let streakBonusSum = 0;
+
+  for (const d of snap.docs) {
+    const data = d.data() as Record<string, unknown>;
+    const byPhase = (data.rankingByPhase ?? {}) as Record<string, unknown>;
+    const row = (byPhase[phase] ?? {}) as Record<string, unknown>;
+    posts += safeInt(row.posts);
+    wins += safeInt(row.wins);
+    scorePrecisionSum += safeNum(row.scorePrecisionSum);
+    upsetPointsSum += safeNum(row.upsetPointsSum);
+    pointsSumV3 += safeNum(row.pointsSumV3);
+    upsetChanceCount += safeInt(row.upsetOpportunityCount);
+    upsetHitCount += safeInt(row.upsetHitCount);
+    upsetBonusSum += safeNum(row.upsetBonusSum);
+    streakBonusSum += safeNum(row.streakBonusSum);
+  }
+
+  return {
+    posts,
+    fullPosts: posts,
+    recent3Posts: 0,
+    wins,
+    winRate: posts > 0 ? wins / posts : 0,
+    scorePrecisionSum,
+    upsetPointsSum,
+    pointsSumV3,
+    upsetChanceCount,
+    upsetHitCount,
+    upsetBonusSum,
+    streakBonusSum,
+    basePointsSum: Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum),
   };
 }
 
@@ -264,12 +336,18 @@ export async function GET(req: Request) {
       dailyTrend = [];
     }
 
-    const summary = wantPhase
+    let summary = wantPhase
       ? summaryFromPhaseRanking(
           cumulative as Record<string, unknown> | null,
           phase
         )
       : null;
+    if (
+      wantPhase &&
+      !hasPhaseBonusFields(cumulative as Record<string, unknown> | null, phase)
+    ) {
+      summary = await summaryFromDailyPhaseFallback(adminDb, uid, phase);
+    }
     const summaryRanks = wantPhase
       ? await summaryRanksFromRankingBulk(uid, phase)
       : null;
