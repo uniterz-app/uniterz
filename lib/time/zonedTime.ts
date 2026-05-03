@@ -157,6 +157,21 @@ function addDaysToYmd(ymd: YMD, days: number): YMD {
   return { year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate() };
 }
 
+/** `timeZone` の暦で「今日」から過去 count 日分の dateKey（先頭が今日） */
+export function getPastDateKeysInTimeZone(
+  now: Date,
+  timeZone: string,
+  count: number
+): string[] {
+  let ymd = getZonedYMD(now, timeZone);
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    out.push(`${ymd.year}-${pad2(ymd.month)}-${pad2(ymd.day)}`);
+    ymd = addDaysToYmd(ymd, -1);
+  }
+  return out;
+}
+
 export function getDayRangeInTimeZone(date: Date, timeZone: string): { start: Date; end: Date } {
   const ymd = getZonedYMD(date, timeZone);
   const next = addDaysToYmd(ymd, 1);

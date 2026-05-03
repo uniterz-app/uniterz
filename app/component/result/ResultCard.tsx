@@ -1,9 +1,16 @@
 // app/component/result/ResultCard.tsx
 "use client";
 
-import React, { memo, useCallback, useMemo } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Flame, Trash2 } from "lucide-react";
+import { Flame, Menu, Pencil, Trash2 } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
@@ -28,6 +35,7 @@ import {
   MOBILE_RESULT_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
+import { ResultLeagueLabelNbaWeb } from "@/app/component/result/ResultLeagueLabelNbaWeb";
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -57,6 +65,14 @@ type Props = {
   showPreKickoffDismiss?: boolean;
   /** 一覧から除外（サーバー削除含む場合あり）。キックオフ後は呼ばれない想定 */
   onPreKickoffDismiss?: () => void | Promise<void>;
+  /** 閲覧者 UID（自分の投稿と一致するときのみ右上に予想修正ボタン） */
+  viewerUid?: string | null;
+  /** 予想画面へのルート接頭辞（例: `/web`） */
+  gamesRoutePrefix?: "/web" | "/mobile";
+  /** 指定時は「予想を修正」でページ遷移せずコールバック（オーバーレイ等） */
+  onRequestPredictEdit?: (post: PredictionPostV2) => void;
+  /** キックオフ・LIVE 判定の基準時刻（一覧の定期 tick と揃える） */
+  cardClockMs?: number;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -146,7 +162,15 @@ function ResultCardPresentationImpl({
   ratingBarsImmediate = false,
   showPreKickoffDismiss = false,
   onPreKickoffDismiss,
+  viewerUid = null,
+  gamesRoutePrefix,
+  onRequestPredictEdit,
+  cardClockMs,
 }: ResultCardPresentationProps) {
+  const clock =
+    typeof cardClockMs === "number" && Number.isFinite(cardClockMs)
+      ? cardClockMs
+      : Date.now();
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const isEn = language === "en";
@@ -329,14 +353,14 @@ function ResultCardPresentationImpl({
     ? MOBILE_LIST_CARD_PANEL_DENSE
     : MATCH_OVERLAY_GLASS_PANEL;
 
-  /** 試合 LIVE 中（一覧の MatchCard と同趣旨：status live または開始後の scheduled） */
+  /** 試合開始〜確定まで：LIVE 表示（一覧の MatchCard と同趣旨） */
   const isLiveGame =
     post.status !== "final" &&
     (post.status === "live" ||
       (post.status === "scheduled" &&
         typeof post.startAtMillis === "number" &&
         Number.isFinite(post.startAtMillis) &&
-        Date.now() >= post.startAtMillis));
+        clock >= post.startAtMillis));
 
   const liveMarkNode = isLiveGame ? (
     <LiveMatchMark
@@ -346,11 +370,70 @@ function ResultCardPresentationImpl({
     />
   ) : null;
 
+  const isOwnerPredict = Boolean(
+    viewerUid && post.authorUid === viewerUid && post.gameId
+  );
+
+  const predictEditHref = useMemo(() => {
+    if (!isOwnerPredict || !gamesRoutePrefix) return null;
+    return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
+  }, [isOwnerPredict, gamesRoutePrefix, post.gameId]);
+
+  const hasCornerTrash = Boolean(showPreKickoffDismiss && onPreKickoffDismiss);
+  const hasCornerEdit = Boolean(
+    isOwnerPredict && (onRequestPredictEdit || (predictEditHref && onNavigate))
+  );
+  /** 試合開始時点以降は右上メニュー（ハンバーガー）を出さない */
+  const isMatchStarted =
+    post.status === "live" ||
+    post.status === "final" ||
+    (post.status === "scheduled" &&
+      typeof post.startAtMillis === "number" &&
+      Number.isFinite(post.startAtMillis) &&
+      clock >= post.startAtMillis);
+
+  const hasCornerActions =
+    !isMatchStarted && (hasCornerEdit || hasCornerTrash);
+
+  /** モバイルはホバーが使えないため、ハンバーガーでメニュー開閉 */
+  const [cornerFabOpen, setCornerFabOpen] = useState(false);
+  const cornerFabRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isMatchStarted) setCornerFabOpen(false);
+  }, [isMatchStarted]);
+
+  useEffect(() => {
+    if (!isMobile || !cornerFabOpen) return;
+    const onDocPointer = (e: PointerEvent) => {
+      const el = cornerFabRef.current;
+      if (el && !el.contains(e.target as Node)) setCornerFabOpen(false);
+    };
+    document.addEventListener("pointerdown", onDocPointer, true);
+    return () => document.removeEventListener("pointerdown", onDocPointer, true);
+  }, [isMobile, cornerFabOpen]);
+
+  /** 下に飛び出すゴミ箱（中央揃え＋縦方向の出現） */
+  const flyoutTrashClass = isMobile
+    ? cornerFabOpen
+      ? "pointer-events-auto visible -translate-x-1/2 translate-y-0 opacity-100"
+      : "pointer-events-none invisible -translate-x-1/2 -translate-y-2 opacity-0"
+    : "pointer-events-none invisible -translate-x-1/2 -translate-y-2 opacity-0 group-hover:pointer-events-auto group-hover:visible group-hover:-translate-x-1/2 group-hover:translate-y-0 group-hover:opacity-100";
+
+  /** 左へ飛び出すペン（overflow 内に収める）。translate は y 中央揃えと合成 */
+  const flyoutPenClass = isMobile
+    ? cornerFabOpen
+      ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
+      : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0"
+    : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover:pointer-events-auto group-hover:visible group-hover:-translate-y-1/2 group-hover:translate-x-0 group-hover:opacity-100";
+
   return (
     <div
       onClick={handle}
       className={[
-        "relative overflow-hidden text-white",
+        "relative text-white",
+        /* モバイル：飛び出しボタンがカード外にはみ出すため、メニュー展開中だけクリップ解除（タップを受け付ける） */
+        isMobile && cornerFabOpen ? "overflow-visible" : "overflow-hidden",
         isMobile
           ? MOBILE_RESULT_CARD_OUTER_CLASS
           : "mx-auto w-full max-w-[1200px]",
@@ -380,33 +463,102 @@ function ResultCardPresentationImpl({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
-      {showPreKickoffDismiss && onPreKickoffDismiss ? (
+      {hasCornerActions ? (
         <div
+          ref={cornerFabRef}
           className={[
-            "pointer-events-auto absolute z-40 flex flex-col items-end gap-1.5",
-            isMobile ? "right-2 top-2" : "right-3 top-3 sm:right-4 sm:top-4",
+            /* ホバーでペンへ移る途中でも閉じにくいようホットエリアを広げる（見た目位置は維持） */
+            "group pointer-events-auto absolute -m-6 p-6",
+            isMobile ? "right-2 top-2 z-[50]" : "right-3 top-3 z-40 sm:right-4 sm:top-4",
           ].join(" ")}
+          onClick={(e) => e.stopPropagation()}
         >
-          <button
-            type="button"
+          <div
             className={[
-              "border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-red-400/45 hover:bg-red-950/35 hover:text-red-100",
-              isMobile
-                ? "inline-flex h-7 w-7 items-center justify-center rounded-md p-0"
-                : "inline-flex h-8 w-8 items-center justify-center rounded-lg p-0",
+              "relative flex items-center justify-center",
+              isMobile ? "touch-manipulation" : "",
             ].join(" ")}
-            aria-label={isEn ? "Remove from list" : "一覧から除外"}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onPreKickoffDismiss();
-            }}
           >
-            <Trash2
-              className={isMobile ? "h-3 w-3" : "h-3.5 w-3.5"}
-              aria-hidden
-            />
-          </button>
+            {/* 左に飛び出す：予想修正（ペン） */}
+            {hasCornerEdit && predictEditHref ? (
+              <button
+                type="button"
+                className={[
+                  "absolute right-full top-1/2 mr-2 flex size-8 items-center justify-center rounded-sm border border-cyan-400/55 bg-black/75 text-cyan-200 shadow-[0_0_14px_rgba(34,211,238,0.22),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md transition-all duration-300 ease-out sm:size-9",
+                  isMobile ? "z-[55]" : "z-30",
+                  "hover:border-cyan-300/90 hover:bg-cyan-500/12 hover:text-cyan-50 hover:shadow-[0_0_22px_rgba(34,211,238,0.4)]",
+                  isMobile ? "touch-manipulation" : "",
+                  flyoutPenClass,
+                ].join(" ")}
+                aria-label={isEn ? "Edit prediction" : "予想を修正"}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCornerFabOpen(false);
+                  if (onRequestPredictEdit) {
+                    onRequestPredictEdit(post);
+                  } else if (predictEditHref) {
+                    onNavigate?.(predictEditHref);
+                  }
+                }}
+              >
+                <Pencil
+                  className={isMobile ? "h-3.5 w-3.5" : "h-[15px] w-[15px]"}
+                  strokeWidth={2.2}
+                  aria-hidden
+                />
+              </button>
+            ) : null}
+            {/* 下に飛び出す：一覧から除外（ゴミ箱） */}
+            {hasCornerTrash && onPreKickoffDismiss ? (
+              <button
+                type="button"
+                className={[
+                  "absolute top-full left-1/2 mt-2 flex size-8 items-center justify-center rounded-sm border border-red-500/50 bg-black/75 text-red-300 shadow-[0_0_14px_rgba(248,113,113,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 ease-out sm:size-9",
+                  isMobile ? "z-[55]" : "z-30",
+                  "hover:border-red-400/85 hover:bg-red-950/45 hover:text-red-100 hover:shadow-[0_0_22px_rgba(239,68,68,0.32)]",
+                  isMobile ? "touch-manipulation" : "",
+                  flyoutTrashClass,
+                ].join(" ")}
+                aria-label={isEn ? "Remove from list" : "一覧から除外"}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCornerFabOpen(false);
+                  void onPreKickoffDismiss();
+                }}
+              >
+                <Trash2
+                  className={isMobile ? "h-3.5 w-3.5" : "h-[15px] w-[15px]"}
+                  strokeWidth={2.2}
+                  aria-hidden
+                />
+              </button>
+            ) : null}
+            {/* メイン：ハンバーガー（サイバー角パネル） */}
+            <button
+              type="button"
+              className={[
+                "relative flex items-center justify-center rounded-sm border border-cyan-400/50 bg-linear-to-b from-zinc-800/95 to-black/92 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
+                isMobile ? "z-[52] size-8 touch-manipulation" : "z-20 size-9",
+                "hover:border-cyan-300/90 hover:from-zinc-800 hover:to-zinc-950 hover:text-white hover:shadow-[0_0_26px_rgba(34,211,238,0.42)]",
+              ].join(" ")}
+              aria-expanded={isMobile ? cornerFabOpen : undefined}
+              aria-haspopup="true"
+              aria-label={isEn ? "Open actions" : "操作メニュー"}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isMobile) setCornerFabOpen((v) => !v);
+              }}
+            >
+              <Menu
+                className={isMobile ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}
+                strokeWidth={isMobile ? 2 : 2.1}
+                aria-hidden
+              />
+            </button>
+          </div>
         </div>
       ) : null}
       {listDateLabel ? (
@@ -432,7 +584,7 @@ function ResultCardPresentationImpl({
           <div
             className={[
               "pointer-events-none absolute top-2 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
-              showPreKickoffDismiss && onPreKickoffDismiss ? "right-11" : "right-2",
+              hasCornerActions ? "right-11" : "right-2",
             ].join(" ")}
           >
             <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
@@ -478,12 +630,18 @@ function ResultCardPresentationImpl({
               listDateLabel ? "top-10" : "top-2",
             ].join(" ")}
           >
-            <span
-              className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
-              style={{ backgroundColor: pillBg, ...teamNameFont }}
-            >
-              {pillText}
-            </span>
+            {normalizedLeague === "nba" ? (
+              <span className="pointer-events-auto mt-1 inline-flex shrink-0 items-center">
+                <ResultLeagueLabelNbaWeb />
+              </span>
+            ) : (
+              <span
+                className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
+                style={{ backgroundColor: pillBg, ...teamNameFont }}
+              >
+                {pillText}
+              </span>
+            )}
           </div>
         </>
       ) : (
@@ -493,18 +651,22 @@ function ResultCardPresentationImpl({
             listDateLabel ? "top-6 pt-0.5 sm:top-7 sm:pt-1" : "top-0 pt-1 sm:pt-1.5",
           ].join(" ")}
         >
-          <span
-            className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest sm:text-[11px]"
-            style={{ backgroundColor: pillBg, ...teamNameFont }}
-          >
-            {pillText}
-          </span>
+          {normalizedLeague === "nba" ? (
+            <span className="pointer-events-auto mt-1 inline-flex shrink-0 items-center pt-1 sm:mt-1.5 sm:pt-1.5">
+              <ResultLeagueLabelNbaWeb />
+            </span>
+          ) : (
+            <span
+              className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest sm:text-[11px]"
+              style={{ backgroundColor: pillBg, ...teamNameFont }}
+            >
+              {pillText}
+            </span>
+          )}
           <div
             className={[
               "flex min-w-0 flex-1 flex-col items-end gap-1.5",
-              showPreKickoffDismiss && onPreKickoffDismiss
-                ? "pr-10 sm:pr-11"
-                : "",
+              hasCornerActions ? "pr-12 sm:pr-14" : "",
             ].join(" ")}
           >
             <div className="flex flex-row flex-wrap items-start justify-end gap-1">

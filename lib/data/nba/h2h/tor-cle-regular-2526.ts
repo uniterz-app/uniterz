@@ -9,7 +9,7 @@ export const TOR_CLE_TEAM_IDS = ["nba-raptors", "nba-cavaliers"] as const;
 const H2H_LEFT = "Cavaliers";
 const H2H_RIGHT = "Raptors";
 
-/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ5） */
+/** 2025-26 ラプターズ対キャブス（レギュラー3 + プレーオフ6） */
 export const torCleH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-tor-cle-2025-10-31",
@@ -169,6 +169,29 @@ export const torCleH2HGames: NbaH2HGameCard[] = [
         "Cleveland erased multiple 12-point deficits before taking control in the second half. A 27-8 run late in the third flipped momentum, and Dennis Schröder scored 11 in the fourth. James Harden finished with 23, 9, and 5; Evan Mobley also had 23. RJ Barrett scored 25 for Toronto and Ja’Kobe Walter 20, but it wasn’t enough. Cleveland leads the series 3-2.",
     },
   },
+  {
+    id: "h2h-tor-cle-2026-05-03",
+    dateEt: "2026-05-03",
+    dateJst: "2026-05-04",
+    seriesGameLabel: "Game 6",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 110,
+    scoreRight: 112,
+    wentToOvertime: true,
+    /** Cleveland（Cavaliers）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["B. Ingram", "I. Quickley"],
+    inactiveFooterSummary: {
+      ja:
+        "TorontoはScottie Barnesが25得点14アシストでゲームを作り、RJ BarrettとJa’Kobe Walterも24得点ずつ記録。最後は延長残り1.2秒でBarrettが決勝3Pを決めてGame 7に持ち込んだ。ClevelandはEvan Mobleyが26得点14リバウンド、Donovan Mitchellが24得点、James Hardenも16得点9リバウンド9アシストで粘り、第4Qで11点差を追いついて延長に持ち込んだが、最後の一押しが足りなかった。\n" +
+        "シリーズは3勝3敗でGame 7へ。",
+      en:
+        "Scottie Barnes piloted the win with 25 points and 14 assists, while RJ Barrett and Ja’Kobe Walter each scored 24. With 1.2 seconds left in overtime, Barrett buried the game-winning three to force Game 7. Cleveland hung in behind 26 and 14 from Evan Mobley, 24 from Donovan Mitchell, and 16, 9 rebounds, and 9 assists from James Harden—the Cavs erased an 11-point fourth-quarter deficit to reach OT but could not land the final punch.\n" +
+        "The series is tied 3-3 heading into Game 7.",
+    },
+  },
 ];
 
 /** 左=CLE・右=TOR のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -208,7 +231,7 @@ function torCleH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記8試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記9試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function torCleH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

@@ -31,6 +31,7 @@ export default function ResultPage() {
         refreshResultPosts={refreshPosts}
         language={language}
         platform="web"
+        viewerUid={uid}
       />
     </div>
   );

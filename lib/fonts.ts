@@ -89,3 +89,12 @@ export const resultStatsMetricNumClass = [
   resultStatsOxanium.className,
   "tabular-nums tracking-tight font-bold",
 ].join(" ");
+
+/** ネイティブ `ResultLeagueLabelSkia`（Oxanium 800）に合わせたリザルト NBA ラベル用 */
+const resultLeagueLabelOxanium = Oxanium({
+  subsets: ["latin"],
+  weight: "800",
+  display: "swap",
+});
+
+export const resultLeagueNbaLabelFontClass = resultLeagueLabelOxanium.className;

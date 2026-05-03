@@ -26,6 +26,9 @@ type Props = {
   language?: Language;
   /** 一覧オーバーレイ内（試合の予想オーバーレイと同じガラス＋透過背景用） */
   inOverlay?: boolean;
+  /** 閲覧者 UID（自分の投稿時のみヘッダーに予想修正ボタン） */
+  viewerUid?: string | null;
+  gamesRoutePrefix?: "/web" | "/mobile";
 };
 
 export default function ResultDetail({
@@ -35,6 +38,8 @@ export default function ResultDetail({
   pointsDistributionLoading = false,
   language = "ja",
   inOverlay = false,
+  viewerUid = null,
+  gamesRoutePrefix = "/web",
 }: Props) {
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
@@ -75,6 +80,8 @@ export default function ResultDetail({
               post={post}
               language={language}
               inOverlay={inOverlay}
+              viewerUid={viewerUid}
+              gamesRoutePrefix={gamesRoutePrefix}
             />
           </m.div>
 

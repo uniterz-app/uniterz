@@ -218,6 +218,16 @@ export function sumDayPointsV3(posts: readonly PostWithMillis[]): number {
   return s;
 }
 
+/** 日付行の合計表示に使う前に、各確定投稿へ得点が書き込まれているか（0 点も記録済み） */
+export function hasPointsV3Recorded(post: PostWithMillis): boolean {
+  const stats = post.stats;
+  if (!stats) return false;
+  const pv3 = stats.pointsV3;
+  if (typeof pv3 === "number" && Number.isFinite(pv3)) return true;
+  const tp = stats.pointsV3Detail?.totalPoints;
+  return typeof tp === "number" && Number.isFinite(tp);
+}
+
 export function flattenResultDayGroups(
   groups: readonly ResultDayGroup[]
 ): PostWithMillis[] {
