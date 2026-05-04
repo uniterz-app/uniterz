@@ -7,12 +7,11 @@ import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 export default function EventModal({
   event,
   onClose,
+  isEn = false,
 }: {
-  event: Pick<
-    EventNoticeContent,
-    "tag" | "title" | "description" | "period" | "target" | "reward"
-  > & { heroImageURL?: string };
+  event: EventNoticeContent;
   onClose: () => void;
+  isEn?: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
@@ -37,7 +36,7 @@ export default function EventModal({
           INFORMATION
         </div>
 
-        <EventNoticeBody event={event} heroHeight={160} embedInModal />
+        <EventNoticeBody event={event} heroHeight={160} embedInModal isEn={isEn} />
 
         {/* Back */}
         <div
@@ -55,7 +54,7 @@ export default function EventModal({
                 "linear-gradient(180deg, rgba(120,180,255,0.18), rgba(80,120,255,0.1))",
             }}
           >
-            BACK
+            {isEn ? "Close" : "閉じる"}
           </button>
         </div>
       </div>

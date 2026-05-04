@@ -10,8 +10,10 @@ import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { ChevronLeft } from "lucide-react";
 import EventNoticeBody from "@/app/component/events/EventNoticeBody";
-import { isInAppEventAnnouncementDetail } from "@/lib/announcements/inAppEventAnnouncement";
-import { CURRENT_EVENT } from "@/lib/events/currentEvent";
+import {
+  getSyntheticEventById,
+  isInAppEventAnnouncementDetail,
+} from "@/lib/announcements/inAppEventAnnouncement";
 
 /* 一覧と同じタイプ定義（日本語ラベル＋グラデ＋グロー） */
 const TYPE_META: Record<string, { label: string; grad: string; glow: string }> = {
@@ -107,7 +109,14 @@ export default function MobileAnnouncementDetailPage() {
     );
   }
 
-  if (loadState === "missing" || (!a && !syntheticEvent)) {
+  const syntheticContent =
+    syntheticEvent && id ? getSyntheticEventById(id) : undefined;
+
+  if (
+    loadState === "missing" ||
+    (!a && !syntheticEvent) ||
+    (syntheticEvent && !syntheticContent)
+  ) {
     return (
       <div className="min-h-screen bg-[#0B0F17] text-white p-4">
         <p className="text-center text-white/60">
@@ -120,10 +129,14 @@ export default function MobileAnnouncementDetailPage() {
   const typeKey = syntheticEvent ? "event" : (a?.type ?? "info");
   const meta = TYPE_META[typeKey];
   const typeLabel = isEn ? TYPE_LABEL_EN[typeKey] ?? meta.label : meta.label;
-  const postedAtTs = syntheticEvent
-    ? Timestamp.fromMillis(CURRENT_EVENT.postedAtMs)
+  const postedAtTs = syntheticContent
+    ? Timestamp.fromMillis(syntheticContent.postedAtMs)
     : a?.postedAt;
-  const title = syntheticEvent ? CURRENT_EVENT.title : a!.title;
+  const title = syntheticContent
+    ? (isEn && syntheticContent.titleEn
+        ? syntheticContent.titleEn
+        : syntheticContent.title)
+    : a!.title;
   const src = syntheticEvent
     ? ""
     : (a!.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
@@ -156,7 +169,7 @@ export default function MobileAnnouncementDetailPage() {
 
       {/* 本文 */}
       <div className="p-4">
-        {syntheticEvent ? (
+        {syntheticEvent && syntheticContent ? (
           <>
             <div className="flex items-center gap-2">
               <span
@@ -169,7 +182,11 @@ export default function MobileAnnouncementDetailPage() {
               </span>
             </div>
             <div className="mt-3 rounded-xl border border-white/10 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)] bg-[#120818]/90">
-              <EventNoticeBody event={CURRENT_EVENT} heroHeight={192} />
+              <EventNoticeBody
+                event={syntheticContent}
+                heroHeight={192}
+                isEn={isEn}
+              />
             </div>
           </>
         ) : (

@@ -5,13 +5,47 @@ import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 type Props = {
   event: Pick<
     EventNoticeContent,
-    "tag" | "title" | "description" | "period" | "target" | "reward"
+    | "tag"
+    | "tagEn"
+    | "title"
+    | "titleEn"
+    | "description"
+    | "descriptionEn"
+    | "period"
+    | "periodEn"
+    | "target"
+    | "targetEn"
+    | "reward"
+    | "rewardEn"
   > & { heroImageURL?: string };
   /** モーダル用のヘッダー画像の高さ（px） */
   heroHeight?: number;
   /** true のとき角丸は親（モーダル）に合わせ、本文上に区切り線のみ */
   embedInModal?: boolean;
+  /** true のとき titleEn 等があれば英語を優先 */
+  isEn?: boolean;
 };
+
+function pickLocalized(
+  event: Props["event"],
+  isEn: boolean
+): Pick<
+  EventNoticeContent,
+  "tag" | "title" | "description" | "period" | "target" | "reward"
+> & { heroImageURL?: string } {
+  return {
+    heroImageURL: event.heroImageURL,
+    tag: isEn && event.tagEn ? event.tagEn : event.tag,
+    title: isEn && event.titleEn ? event.titleEn : event.title,
+    description:
+      isEn && event.descriptionEn ? event.descriptionEn : event.description,
+    period: isEn && event.periodEn ? event.periodEn : event.period,
+    target:
+      isEn && event.targetEn !== undefined ? event.targetEn : event.target,
+    reward:
+      isEn && event.rewardEn !== undefined ? event.rewardEn : event.reward,
+  };
+}
 
 /**
  * EventModal とお知らせ詳細で共通の本文（ヘッダー画像＋タグ・本文・期間など）
@@ -22,8 +56,10 @@ export default function EventNoticeBody({
   event,
   heroHeight = 160,
   embedInModal = false,
+  isEn = false,
 }: Props) {
-  const heroSrc = event.heroImageURL ?? DEFAULT_HERO;
+  const loc = pickLocalized(event, isEn);
+  const heroSrc = loc.heroImageURL ?? DEFAULT_HERO;
   const bodyClass = embedInModal
     ? "p-4 space-y-4 border-t border-white/10"
     : "p-4 space-y-4";
@@ -47,7 +83,7 @@ export default function EventNoticeBody({
       </div>
 
       <div className={bodyClass}>
-        {event.tag && (
+        {loc.tag && (
           <span
             className="inline-block px-3 py-1 text-[10px] rounded-full"
             style={{
@@ -58,16 +94,16 @@ export default function EventNoticeBody({
               letterSpacing: "0.15em",
             }}
           >
-            {event.tag}
+            {loc.tag}
           </span>
         )}
 
         <h2 className="text-lg font-bold text-white leading-snug">
-          {event.title}
+          {loc.title}
         </h2>
 
-        <p className="text-sm leading-relaxed text-white/90">
-          {event.description}
+        <p className="text-sm leading-relaxed whitespace-pre-wrap text-white/90">
+          {loc.description}
         </p>
 
         <div className="space-y-3 text-sm text-white">
@@ -75,24 +111,24 @@ export default function EventNoticeBody({
             <div className="text-[11px] tracking-widest text-white/70">
               PERIOD
             </div>
-            <div>{event.period}</div>
+            <div>{loc.period}</div>
           </div>
 
-          {event.target && (
+          {loc.target && (
             <div>
               <div className="text-[11px] tracking-widest text-white/70">
                 TARGET
               </div>
-              <div>{event.target}</div>
+              <div>{loc.target}</div>
             </div>
           )}
 
-          {event.reward && (
+          {loc.reward && (
             <div>
               <div className="text-[11px] tracking-widest text-white/70">
                 REWARD
               </div>
-              <div>{event.reward}</div>
+              <div>{loc.reward}</div>
             </div>
           )}
         </div>

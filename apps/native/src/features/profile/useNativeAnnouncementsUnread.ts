@@ -12,7 +12,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { PLAYOFF_COMPETITION_EVENT } from "../../../../../lib/events/playoffCompetition";
+import { SYNTHETIC_EVENT_NOTICES } from "../../../../../lib/events/syntheticEventNotices";
 
 const FETCH_LIMIT = 100;
 const ANNOUNCEMENTS_LIMIT = 30;
@@ -38,10 +38,16 @@ function sortAnnouncementsByPinnedThenPosted<T extends SortRow>(rows: T[]): T[] 
   });
 }
 
-function shouldInjectSyntheticEventAnnouncement(firestoreIds: Set<string>): boolean {
-  if (!PLAYOFF_COMPETITION_EVENT.listInAnnouncements) return false;
-  if (firestoreIds.has(PLAYOFF_COMPETITION_EVENT.id)) return false;
-  return true;
+function mergeSyntheticIdsIntoVisibleSetNative(
+  firestoreTopIds: Set<string>
+): Set<string> {
+  const out = new Set(firestoreTopIds);
+  for (const e of SYNTHETIC_EVENT_NOTICES) {
+    if (!e.listInAnnouncements) continue;
+    if (firestoreTopIds.has(e.id)) continue;
+    out.add(e.id);
+  }
+  return out;
 }
 
 type Options = { enabled?: boolean };
@@ -101,10 +107,7 @@ export function useNativeAnnouncementsUnread(
 
   const unreadCount = useMemo(() => {
     if (!enabled || !authReady) return 0;
-    const ids = new Set(visibleIds);
-    if (shouldInjectSyntheticEventAnnouncement(visibleIds)) {
-      ids.add(PLAYOFF_COMPETITION_EVENT.id);
-    }
+    const ids = mergeSyntheticIdsIntoVisibleSetNative(visibleIds);
     let c = 0;
     ids.forEach((id) => {
       if (!readIds.has(id)) c++;
