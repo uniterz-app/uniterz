@@ -1,6 +1,12 @@
 "use client";
 
-import { Fragment, type ReactNode, useMemo, useState } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { motion } from "framer-motion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
@@ -346,11 +352,15 @@ export default function NbaPostseasonMatchupPanel({
     );
     return shouldFlip ? reversed.map(flipH2HGameSides) : reversed;
   }, [seriesGames, homeTeamName, awayTeamName]);
-  const [rsExpanded, setRsExpanded] = useState(false);
   const poGames = useMemo(
     () => games.filter((g) => Boolean(g.seriesGameLabel)),
     [games]
   );
+  const hasPoH2h = poGames.length > 0;
+  const [rsExpanded, setRsExpanded] = useState(!hasPoH2h);
+  useEffect(() => {
+    setRsExpanded(!hasPoH2h);
+  }, [hasPoH2h]);
   const rsGames = useMemo(
     () => games.filter((g) => !g.seriesGameLabel),
     [games]

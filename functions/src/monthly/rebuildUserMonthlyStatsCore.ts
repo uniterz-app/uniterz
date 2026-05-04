@@ -252,6 +252,9 @@ export async function rebuildUserMonthlyStatsCore() {
     }
   }
 
+  /** 総合得点（合計）順位の母数＝当月に1件以上投稿があったユーザー数 */
+  const pointsSumV3RankDenominator = sortedByPointsSum.length;
+
   const winRates = rows.map((r) => r.winRate).sort((a, b) => a - b);
   const precisions = rows.map((r) => r.avgPrecision).sort((a, b) => a - b);
   const pointsV3s = rows.map((r) => r.avgPointsV3).sort((a, b) => a - b);
@@ -399,9 +402,14 @@ export async function rebuildUserMonthlyStatsCore() {
     v.sort((a, b) => a - b);
   }
 
-  const batch = db().batch();
+  /** Firestore WriteBatch: 500 操作上限・合計サイズ上限。まとめすぎると INVALID_ARGUMENT Transaction too big */
+  const WRITE_BATCH_LIMIT = 400;
 
-  for (const row of rows) {
+  for (let offset = 0; offset < rows.length; offset += WRITE_BATCH_LIMIT) {
+    const chunk = rows.slice(offset, offset + WRITE_BATCH_LIMIT);
+    const batch = db().batch();
+
+    for (const row of chunk) {
     const postAgg = postAggMap[row.uid];
     const streak = postAgg
       ? calcStreak(postAgg.results)
@@ -581,6 +589,9 @@ export async function rebuildUserMonthlyStatsCore() {
         leaguePosts: agg.leaguePosts,
         /** 当月の総合得点（合計）による全ユーザー中の順位（同点は繰り上がり順位） */
         pointsSumV3Rank: pointsSumV3RankByUid.get(row.uid) ?? null,
+        /** 上記順位の分母（当月投稿ありユーザー数）。過去ドキュメントには無い場合あり */
+        pointsSumV3RankDenominator:
+          pointsSumV3RankDenominator > 0 ? pointsSumV3RankDenominator : null,
       },
       marketBias: {
         favoritePickCount: marketAgg.favoritePickCount,
@@ -601,9 +612,11 @@ export async function rebuildUserMonthlyStatsCore() {
       analysisLevels: levelSummary.levels,
       updatedAt: FieldValue.serverTimestamp(),
     });
+    }
+
+    await batch.commit();
   }
 
-  await batch.commit();
   await buildMonthlyGlobalStats(rows, range.id);
 
   return { month: range.id, users: rows.length };

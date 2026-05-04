@@ -197,7 +197,7 @@ function LeaguePostCountUp({
   count: number;
   enabled: boolean;
 }) {
-  const v = useCountUp(count, 520, enabled, 0);
+  const v = useCountUp(count, 520, enabled, 0, "zero");
   return <span className="ml-0.5 tabular-nums text-white/90">{v}</span>;
 }
 
@@ -320,8 +320,7 @@ export default function PrevMonthSummaryCard({
     Number.isFinite(raw.pointsSumV3Rank)
       ? Math.max(1, Math.floor(raw.pointsSumV3Rank))
       : null;
-  const showTotalPointsRankBadge =
-    totalPointsRankRaw !== null && totalPointsRankRaw <= 100;
+  const showTotalPointsRankBadge = totalPointsRankRaw !== null;
 
   const totalIv = useInViewOnce();
   const postsIv = useInViewOnce();
@@ -330,42 +329,46 @@ export default function PrevMonthSummaryCard({
   const precIv = useInViewOnce();
   const upsetIv = useInViewOnce();
 
-  const cuPoints = useCountUp(pointsSum, 960, totalIv.inView, 1);
-  const cuBase = useCountUp(basePoints, 840, totalIv.inView, 1);
-  const cuStreakB = useCountUp(streakBonus, 840, totalIv.inView, 1);
-  const cuUpsetB = useCountUp(upsetBonus, 840, totalIv.inView, 1);
+  const cuPoints = useCountUp(pointsSum, 960, totalIv.inView, 1, "zero");
+  const cuBase = useCountUp(basePoints, 840, totalIv.inView, 1, "zero");
+  const cuStreakB = useCountUp(streakBonus, 840, totalIv.inView, 1, "zero");
+  const cuUpsetB = useCountUp(upsetBonus, 840, totalIv.inView, 1, "zero");
   const cuRank = useCountUp(
     totalPointsRankRaw ?? 0,
     720,
     totalIv.inView && showTotalPointsRankBadge,
-    0
+    0,
+    "zero"
   );
 
-  const cuPosts = useCountUp(posts, 880, postsIv.inView, 0);
+  const cuPosts = useCountUp(posts, 880, postsIv.inView, 0, "zero");
   const winVisible = winIvWeb.inView || winIvMobile.inView;
-  const cuWins = useCountUp(winsCount, 920, winVisible, 0);
-  const cuLosses = useCountUp(lossesCount, 920, winVisible, 0);
+  const cuWins = useCountUp(winsCount, 920, winVisible, 0, "zero");
+  const cuLosses = useCountUp(lossesCount, 920, winVisible, 0, "zero");
   const cuWinPct = useCountUp(
     Math.round(winRate * 100),
     1000,
     winVisible,
-    0
+    0,
+    "zero"
   );
 
-  const cuPrecSum = useCountUp(scorePrecisionSum, 960, precIv.inView, 1);
+  const cuPrecSum = useCountUp(scorePrecisionSum, 960, precIv.inView, 1, "zero");
   const cuAvgPrec = useCountUp(
     avgPrecision,
     900,
     precIv.inView,
-    posts > 0 ? 2 : 1
+    posts > 0 ? 2 : 1,
+    "zero"
   );
 
-  const cuUpsetSum = useCountUp(upsetSum, 960, upsetIv.inView, 2);
+  const cuUpsetSum = useCountUp(upsetSum, 960, upsetIv.inView, 2, "zero");
   const cuUpsetHit = useCountUp(
     upsetHitCount ?? 0,
     620,
     upsetIv.inView && upsetHitCount !== null,
-    0
+    0,
+    "zero"
   );
 
   const lb = {
@@ -443,39 +446,31 @@ export default function PrevMonthSummaryCard({
             <>
               {showTotalPointsRankBadge && totalPointsRankRaw !== null ? (
                 <>
-                  <div
+                  <p
                     className={[
-                      "pointer-events-none absolute left-2 top-2 z-2 flex h-13 w-13 flex-col items-center justify-center rounded-full",
-                      "border border-amber-300/40 bg-linear-to-b from-amber-400/20 to-white/6",
-                      "shadow-[0_0_22px_rgba(251,191,36,0.18)]",
-                      "sm:left-3 sm:top-3 sm:h-14 sm:w-14",
+                      "pointer-events-none absolute left-2 top-2 z-2 max-w-[calc(100%-0.75rem)] truncate leading-tight",
+                      "text-[13px] font-semibold tracking-tight text-amber-200/95",
+                      "sm:left-3 sm:top-3 sm:text-base lg:text-lg",
+                      resultStatsMetricNumClass,
                     ].join(" ")}
                     aria-hidden
                   >
-                    <span
-                      className={[
-                        resultStatsMetricNumClass,
-                        "leading-none text-white",
-                        totalPointsRankRaw >= 100
-                          ? "text-sm sm:text-base lg:text-lg"
-                          : "text-base sm:text-lg lg:text-xl",
-                      ].join(" ")}
-                    >
-                      {cuRank}
-                    </span>
-                    <span
-                      className={[
-                        resultStatsMetricNumClass,
-                        "mt-0.5 text-[9px] font-bold uppercase leading-none tracking-wide text-amber-100/75 sm:text-[10px] lg:text-xs",
-                      ].join(" ")}
-                    >
-                      {ordinalSuffixEn(totalPointsRankRaw)}
-                    </span>
-                  </div>
+                    {language === "en" ? (
+                      <>
+                        {cuRank}
+                        {ordinalSuffixEn(totalPointsRankRaw)}
+                      </>
+                    ) : (
+                      <>
+                        {cuRank}
+                        位
+                      </>
+                    )}
+                  </p>
                   <span className="sr-only">
                     {language === "en"
                       ? `Rank ${totalPointsRankRaw}${ordinalSuffixEn(totalPointsRankRaw)} by total points`
-                      : `総合得点 ${totalPointsRankRaw}${ordinalSuffixEn(totalPointsRankRaw)}`}
+                      : `総合得点 第${totalPointsRankRaw}位`}
                   </span>
                 </>
               ) : null}
@@ -666,7 +661,7 @@ export default function PrevMonthSummaryCard({
         </div>
       </div>
 
-      <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-stretch gap-2 sm:gap-3 lg:grid-cols-3">
+      <div className="grid w-full grid-cols-[minmax(0,35fr)_minmax(0,65fr)] items-stretch gap-2 sm:gap-3 lg:grid-cols-3">
         <div className="min-h-0 min-w-0">
           <MetricCard
             ref={postsIv.ref}

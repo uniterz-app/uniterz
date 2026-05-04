@@ -17,7 +17,13 @@ exports.rebuildUserMonthlyStatsV2 = (0, https_1.onRequest)({
         res.status(500).json({ ok: false, error: String(e) });
     }
 });
-exports.rebuildUserMonthlyStatsMonthCronV2 = (0, scheduler_1.onSchedule)({ schedule: "0 5 1 * *", timeZone: "Asia/Tokyo" }, async () => {
+/** HTTP 版と同じ上限。月次は全ユーザー走査のためデフォルト 60s だとタイムアウトしやすい */
+exports.rebuildUserMonthlyStatsMonthCronV2 = (0, scheduler_1.onSchedule)({
+    schedule: "0 5 1 * *",
+    timeZone: "Asia/Tokyo",
+    memory: "1GiB",
+    timeoutSeconds: 540,
+}, async () => {
     await (0, rebuildUserMonthlyStatsCore_1.rebuildUserMonthlyStatsCore)();
 });
 //# sourceMappingURL=rebuildUserMonthlyStatsV2.js.map

@@ -15,7 +15,10 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
-import { useGamesByDate } from "./useGamesByDate";
+import {
+  gameRowStartDateKeyInTimeZone,
+  useGamesByDate,
+} from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -543,11 +546,33 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     );
   }, [gamesAfterTeamFilter, marginMin, marginMax]);
 
+  const selectedDayKey = useMemo(
+    () => (selected ? toDateKeyInTimeZone(selected, dayTimeZone) : ""),
+    [selected, dayTimeZone]
+  );
+
+  /**
+   * Firestore 取得が1フレーム遅れると selected だけ翌日に進み games が前日のまま残る。
+   * その間は一覧をローディング扱いにして当日カードのフラッシュを出さない。
+   */
+  const gamesMatchSelectedDay = useMemo(() => {
+    if (!selectedDayKey) return true;
+    const g = games ?? [];
+    if (g.length === 0) return true;
+    return g.every((row: Record<string, unknown>) => {
+      const dk = gameRowStartDateKeyInTimeZone(row, dayTimeZone);
+      if (dk == null) return true;
+      return dk === selectedDayKey;
+    });
+  }, [games, selectedDayKey, dayTimeZone]);
+
+  const listLoading = loading || !gamesMatchSelectedDay;
+
   const hasAnyListFilter =
     teamFilterIds.length > 0 || marginMin != null || marginMax != null;
 
   const scheduleEmptyHint =
-    hasAnyListFilter && !loading && filteredGames.length === 0
+    hasAnyListFilter && !listLoading && filteredGames.length === 0
       ? isEn
         ? teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
           ? "No head-to-head between these teams on this date."
@@ -591,17 +616,33 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ========================= */
   const didAutoAdvance = useRef<Partial<Record<League, boolean>>>({});
 
+  /** ストリップ上に次の試合日があるときはペイント前に送る（useEffect だと当日が1フレーム残る） */
+  useLayoutEffect(() => {
+    if (!selected) return;
+    if (toDateKeyInTimeZone(selected, dayTimeZone) !== todayKey) return;
+    if (!allFinished) return;
+    if (didAutoAdvance.current[league]) return;
+    if (!nextGameDay) return;
+
+    didAutoAdvance.current[league] = true;
+    setSelectedAndSync(nextGameDay);
+  }, [
+    selected,
+    todayKey,
+    allFinished,
+    nextGameDay,
+    league,
+    dayTimeZone,
+    setSelectedAndSync,
+  ]);
+
+  /** ストリップ外の次の試合日だけ非同期で取る（上記 layout では触らない） */
   useEffect(() => {
     if (!selected) return;
     if (toDateKeyInTimeZone(selected, dayTimeZone) !== todayKey) return;
     if (!allFinished) return;
     if (didAutoAdvance.current[league]) return;
-
-    if (nextGameDay) {
-      didAutoAdvance.current[league] = true;
-      setSelectedAndSync(nextGameDay);
-      return;
-    }
+    if (nextGameDay) return;
 
     let cancelled = false;
     fetchNextGameDayAfterLocalDay({
@@ -649,7 +690,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const pagePad =
     dense && isMobile ? "px-0" : dense ? "px-3" : "px-4 md:px-6";
   const isInitialLoading = loadingDays || !selected;
-  const isSwitchingDate = !!selected && loading;
+  const isSwitchingDate = !!selected && listLoading;
   const playoffHref = isMobile ? "/mobile/playoff" : "/web/playoff";
   const playoffViewHref = isMobile
     ? "/mobile/playoff-bracket/view"
@@ -670,11 +711,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }
 
   const monthValue = selected ?? null;
-
-  const selectedDayKey = useMemo(
-    () => (selected ? toDateKeyInTimeZone(selected, dayTimeZone) : ""),
-    [selected, dayTimeZone]
-  );
 
   /** 初回だけリッチなリスト入場。日付変更・一定時間後はシンプルに */
   const [playRichScheduleIntro, setPlayRichScheduleIntro] = useState(true);
@@ -966,7 +1002,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           games={filteredGames}
           extraPeerGamesForSeriesInference={peerRowsForSeriesInference}
           dense={dense}
-          loading={loading}
+          loading={listLoading}
           league={league}
           emptyHint={scheduleEmptyHint}
           listShellIntro={listShellIntroLocked}

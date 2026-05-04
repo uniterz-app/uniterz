@@ -61,16 +61,10 @@ export async function buildMonthlyGlobalStats(
     .get();
 
   const totalGames = totalGamesSnap.size;
-
-  const upsetGamesSnap = await db()
-    .collection("games")
-    .where("league", "==", "nba")
-    .where("upsetMeta", "!=", null)
-    .where("resultComputedAtV2", ">=", start)
-    .where("resultComputedAtV2", "<=", end)
-    .get();
-
-  const upsetGames = upsetGamesSnap.size;
+  /** upsetMeta 条件は別クエリだと複合インデックス／不等価制約が重いので同一スナップで数える */
+  const upsetGames = totalGamesSnap.docs.filter(
+    (d) => d.data().upsetMeta != null
+  ).length;
 
   const top10Of = (arr: MonthlyGlobalRow[]) => {
     const n = Math.max(1, Math.floor(arr.length * 0.1));

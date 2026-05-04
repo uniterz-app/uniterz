@@ -91,8 +91,8 @@ function ScorePrecisionCard({
     [scorePrecisionSum, analyses]
   );
 
-  const sumCu = useCountUp(sum, 1000, visible, 1);
-  const avgCu = useCountUp(roundMetricDecimals(avg, 1), 1000, visible, 1);
+  const sumCu = useCountUp(sum, 1000, visible, 1, "zero");
+  const avgCu = useCountUp(roundMetricDecimals(avg, 1), 1000, visible, 1, "zero");
 
   const bar01 = clamp01(avg / 10);
 

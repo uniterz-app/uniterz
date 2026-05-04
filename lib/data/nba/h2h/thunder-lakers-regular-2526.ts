@@ -9,7 +9,7 @@ export const THUNDER_LAKERS_TEAM_IDS = ["nba-thunder", "nba-lakers"] as const;
 const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Lakers";
 
-/** 2025-26 Thunder vs Lakers（レギュラー3） */
+/** 2025-26 Thunder vs Lakers（レギュラー4） */
 export const thunderLakersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-thunder-lakers-2025-11-12",
@@ -21,8 +21,33 @@ export const thunderLakersH2HGames: NbaH2HGameCard[] = [
     scoreRight: 92,
     /** Oklahoma City（Thunder）ホーム */
     homeTeamSide: "left",
-    injuriesLeft: ["L. Dort", "N. Topic", "A. Wiggins", "J. Williams", "Jay. Williams"],
-    injuriesRight: ["L. James", "N. Smith Jr.", "G. Vincent"],
+    injuriesLeft: [
+      "J. Williams",
+      "L. Dort",
+      "A. Wiggins",
+      "K. Williams",
+      "N. Topic",
+      "T. Sorber",
+    ],
+    injuriesRight: ["L. James"],
+  },
+  {
+    id: "h2h-thunder-lakers-2026-02-09",
+    dateEt: "2026-02-09",
+    dateJst: "2026-02-10",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 119,
+    scoreRight: 110,
+    /** Los Angeles（Lakers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [
+      "S. Gilgeous-Alexander",
+      "A. Mitchell",
+      "N. Topic",
+      "T. Sorber",
+    ],
+    injuriesRight: ["L. Doncic", "A. Thiero"],
   },
   {
     id: "h2h-thunder-lakers-2026-04-02",
@@ -34,8 +59,8 @@ export const thunderLakersH2HGames: NbaH2HGameCard[] = [
     scoreRight: 96,
     /** Oklahoma City（Thunder）ホーム */
     homeTeamSide: "left",
-    injuriesLeft: ["A. Caruso", "T. Sorber"],
-    injuriesRight: ["M. Smart", "D. Knecht", "N. Smith Jr."],
+    injuriesLeft: [],
+    injuriesRight: ["L. Doncic"],
   },
   {
     id: "h2h-thunder-lakers-2026-04-07",
@@ -47,8 +72,14 @@ export const thunderLakersH2HGames: NbaH2HGameCard[] = [
     scoreRight: 87,
     /** Los Angeles（Lakers）ホーム */
     homeTeamSide: "right",
-    injuriesLeft: ["T. Sorber", "J. Williams"],
-    injuriesRight: ["L. Doncic", "L. James", "A. Reaves", "M. Smart", "J. Hayes"],
+    injuriesLeft: ["S. Gilgeous-Alexander"],
+    injuriesRight: [
+      "L. Doncic",
+      "L. James",
+      "A. Reaves",
+      "M. Smart",
+      "J. Hayes",
+    ],
   },
 ];
 
@@ -88,7 +119,7 @@ function thunderLakersH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記3試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function thunderLakersH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

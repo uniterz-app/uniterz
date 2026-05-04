@@ -100,10 +100,10 @@ function UpsetCard({
     return Math.max(0, Math.min(100, Math.round((hits / chances) * 100)));
   }, [hits, chances]);
 
-  const cuPoints = useCountUp(points, 1000, inView, 1);
-  const cuAnalyzed = useCountUp(analyzed, 1000, inView);
-  const cuChances = useCountUp(chances, 1000, inView);
-  const cuHitPct = useCountUp(hitPct, 1000, inView);
+  const cuPoints = useCountUp(points, 1000, inView, 1, "zero");
+  const cuAnalyzed = useCountUp(analyzed, 1000, inView, 0, "zero");
+  const cuChances = useCountUp(chances, 1000, inView, 0, "zero");
+  const cuHitPct = useCountUp(hitPct, 1000, inView, 0, "zero");
 
   const tooltipMsg = isEn
     ? "You earn Upset Points only when you correctly predict an upset (0–10 points per match). “Occurred” means how many of your predicted matches actually had an upset."

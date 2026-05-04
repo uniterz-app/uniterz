@@ -65,9 +65,9 @@ function AnalysisWinCard({ language = "ja", ...props }: Props) {
 
   const winRate = total > 0 ? hit / total : 0;
 
-  const cuHit = useCountUp(hit, 1000, inView);
-  const cuTotal = useCountUp(total, 1000, inView);
-  const cuRate = useCountUp(Math.round(winRate * 100), 1000, inView);
+  const cuHit = useCountUp(hit, 1000, inView, 0, "zero");
+  const cuTotal = useCountUp(total, 1000, inView, 0, "zero");
+  const cuRate = useCountUp(Math.round(winRate * 100), 1000, inView, 0, "zero");
 
   return (
     <div
