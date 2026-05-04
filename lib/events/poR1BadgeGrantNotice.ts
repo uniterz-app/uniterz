@@ -17,5 +17,5 @@ export const PO_R1_BADGE_GRANT_NOTICE: EventNoticeContent = {
   showModal: true,
   pinned: true,
   postedAtMs: Date.UTC(2026, 4, 4, 12, 0, 0),
-  heroImageURL: "/2026-Po-1stRound/1stRound-top50.png",
+  heroImageURL: "/2026-Po-1stRound/1stRound-1st.png",
 };
