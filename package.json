@@ -22,7 +22,11 @@
     "fix:nba:posts": "tsx scripts/fix-nba-posts.ts",
     "delete:posts:updated-before-jst": "tsx scripts/deletePostsByUpdatedBefore.ts",
     "delete:user-stats-v2-daily:date-before-jst": "tsx scripts/deleteUserStatsV2DailyByDateBefore.ts",
-    "share:tunnel": "node scripts/sns-share-tunnel.mjs"
+    "share:tunnel": "node scripts/sns-share-tunnel.mjs",
+    "badges:po1:seed": "tsx scripts/seed-po-2026-1st-round-badges.ts",
+    "badges:po1:grant:dry": "DRY_RUN=1 tsx scripts/grant-po-2026-1st-round-total-points-badges.ts",
+    "badges:po1:grant": "tsx scripts/grant-po-2026-1st-round-total-points-badges.ts",
+    "badges:po1:revoke-test": "tsx scripts/revoke-po-2026-1st-round-test-grants.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
