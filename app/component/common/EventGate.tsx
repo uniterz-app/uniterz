@@ -1,11 +1,12 @@
 // app/component/common/EventGate.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import EventModal from "@/app/component/modals/EventModal";
-import { CURRENT_EVENT } from "@/lib/events/currentEvent";
+import { EVENT_MODAL_QUEUE } from "@/lib/events/syntheticEventNotices";
+import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 import {
   collection,
   doc,
@@ -16,8 +17,9 @@ import {
 import { usePathname } from "next/navigation";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
 import { normalizeLanguage } from "@/lib/i18n/language";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
-const eventSeenStorageKey = () => `event_seen_${CURRENT_EVENT.id}`;
+const eventSeenStorageKey = (id: string) => `event_seen_${id}`;
 
 export default function EventGate() {
   const [open, setOpen] = useState(false);
@@ -26,8 +28,15 @@ export default function EventGate() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [readsReady, setReadsReady] = useState(false);
   const [migrationDone, setMigrationDone] = useState(false);
+  const [displayEvent, setDisplayEvent] = useState<EventNoticeContent | null>(
+    null
+  );
+  /** Firestore 購読が追いつく前に次モーダルが同じ ID で開かないようにする */
+  const pendingReadIdsRef = useRef<Set<string>>(new Set());
   const pathname = usePathname();
   const isPublicLp = pathname === "/lp" || pathname === "/mobile/lp";
+  const { language } = useUserLanguage(uid);
+  const isEn = language === "en";
 
   useEffect(() => {
     if (isPublicLp) return;
@@ -47,7 +56,6 @@ export default function EventGate() {
       return;
     }
 
-    // users/{uid} の更新を監視して、オンボーディング完了後にモーダルを出す
     const userRef = doc(db, "users", uid);
     const unsub = onSnapshot(userRef, (snap) => {
       const d = snap.data() as Record<string, unknown> | undefined;
@@ -61,7 +69,6 @@ export default function EventGate() {
     return () => unsub();
   }, [isPublicLp, uid]);
 
-  // localStorage の旧既読を Firestore に移し、キーを削除
   useEffect(() => {
     if (!uid) {
       setMigrationDone(true);
@@ -72,17 +79,19 @@ export default function EventGate() {
     (async () => {
       try {
         if (typeof window === "undefined") return;
-        const key = eventSeenStorageKey();
-        if (!window.localStorage.getItem(key)) return;
-        await setDoc(
-          doc(db, `users/${uid}/reads`, CURRENT_EVENT.id),
-          { at: serverTimestamp() },
-          { merge: true }
-        );
-        try {
-          window.localStorage.removeItem(key);
-        } catch {
-          /* ignore */
+        for (const ev of EVENT_MODAL_QUEUE) {
+          const key = eventSeenStorageKey(ev.id);
+          if (!window.localStorage.getItem(key)) continue;
+          await setDoc(
+            doc(db, `users/${uid}/reads`, ev.id),
+            { at: serverTimestamp() },
+            { merge: true }
+          );
+          try {
+            window.localStorage.removeItem(key);
+          } catch {
+            /* ignore */
+          }
         }
       } catch {
         /* ignore */
@@ -95,7 +104,6 @@ export default function EventGate() {
     };
   }, [uid]);
 
-  // 既読コレクション購読
   useEffect(() => {
     if (!uid) {
       setReadIds(new Set());
@@ -117,10 +125,15 @@ export default function EventGate() {
     if (!uid) return;
     if (!onboardingComplete) return;
     if (isProfileSetupRoute(pathname)) return;
-    if (!CURRENT_EVENT.showModal) return;
     if (!readsReady || !migrationDone) return;
-    if (readIds.has(CURRENT_EVENT.id)) return;
+    if (open) return;
 
+    const merged = new Set(readIds);
+    pendingReadIdsRef.current.forEach((id) => merged.add(id));
+    const next = EVENT_MODAL_QUEUE.find((e) => !merged.has(e.id));
+    if (!next) return;
+
+    setDisplayEvent(next);
     setOpen(true);
   }, [
     isPublicLp,
@@ -130,33 +143,42 @@ export default function EventGate() {
     readsReady,
     migrationDone,
     readIds,
+    open,
   ]);
 
   const close = async () => {
+    const ev = displayEvent;
+    if (!ev) return;
     if (uid) {
       try {
         await setDoc(
-          doc(db, `users/${uid}/reads`, CURRENT_EVENT.id),
+          doc(db, `users/${uid}/reads`, ev.id),
           { at: serverTimestamp() },
           { merge: true }
         );
+        pendingReadIdsRef.current.add(ev.id);
       } catch {
         /* ignore */
       }
+    } else {
+      pendingReadIdsRef.current.add(ev.id);
     }
     try {
       if (typeof window !== "undefined") {
-        window.localStorage.removeItem(eventSeenStorageKey());
+        window.localStorage.removeItem(eventSeenStorageKey(ev.id));
       }
     } catch {
       /* ignore */
     }
     setOpen(false);
+    setDisplayEvent(null);
   };
 
   if (isPublicLp) return null;
 
-  if (!open) return null;
+  if (!open || !displayEvent) return null;
 
-  return <EventModal event={CURRENT_EVENT} onClose={close} />;
+  return (
+    <EventModal event={displayEvent} onClose={close} isEn={isEn} />
+  );
 }

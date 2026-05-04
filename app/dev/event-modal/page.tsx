@@ -4,6 +4,16 @@
 import { useState } from "react";
 import EventModal from "@/app/component/modals/EventModal";
 import { NBA_RIVAL_WEEK_EVENT } from "@/lib/events/nbaRivalWeek";
+import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
+
+const DEV_EVENT: EventNoticeContent = {
+  ...NBA_RIVAL_WEEK_EVENT,
+  listInAnnouncements: false,
+  showModal: false,
+  pinned: false,
+  postedAtMs: Date.UTC(2026, 0, 21),
+  heroImageURL: "/event/eventheader.png",
+};
 
 export default function DevEventModalPage() {
   const [open, setOpen] = useState(true);
@@ -20,10 +30,7 @@ export default function DevEventModalPage() {
       </div>
 
       {open && (
-        <EventModal
-          event={NBA_RIVAL_WEEK_EVENT}
-          onClose={() => setOpen(false)}
-        />
+        <EventModal event={DEV_EVENT} onClose={() => setOpen(false)} />
       )}
     </>
   );

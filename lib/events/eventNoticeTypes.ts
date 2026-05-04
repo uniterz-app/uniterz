@@ -2,11 +2,18 @@
 export type EventNoticeContent = {
   id: string;
   tag?: string;
+  /** 英語 UI 用（未指定時は tag をそのまま表示） */
+  tagEn?: string;
   title: string;
+  titleEn?: string;
   description: string;
+  descriptionEn?: string;
   period: string;
+  periodEn?: string;
   target?: string;
+  targetEn?: string;
   reward?: string;
+  rewardEn?: string;
   /** Firestore に同名 ID が無いとき一覧に合成する */
   listInAnnouncements: boolean;
   /** オンボーディング完了後にモーダルを出す */

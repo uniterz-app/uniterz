@@ -47,10 +47,10 @@ function sortAnnouncementsByPinnedThenPosted<
   });
 }
 import {
+  getSyntheticEventById,
   isInAppEventAnnouncementDetailNative,
   mergeSyntheticEventIntoAnnouncementsNative,
 } from "./announcementsNativeUtils";
-import { CURRENT_EVENT } from "../../../../../../lib/events/currentEvent";
 import MobilePageShell from "./MobilePageShell";
 import { markAnnouncementReadNative } from "./markAnnouncementReadNative";
 
@@ -285,11 +285,29 @@ function RegularAnnouncementBody({
   );
 }
 
-function SyntheticEventBody({ isJa }: { isJa: boolean }) {
-  const e = CURRENT_EVENT;
+function SyntheticEventBody({
+  isJa,
+  announcementId,
+}: {
+  isJa: boolean;
+  announcementId: string;
+}) {
+  const e = getSyntheticEventById(announcementId);
+  if (!e) {
+    return (
+      <Text style={styles.muted}>
+        {isJa ? "お知らせが見つかりません。" : "This announcement was not found."}
+      </Text>
+    );
+  }
   const meta = TYPE_META.event!;
   const typeLabel = isJa ? meta.labelJa : meta.labelEn;
   const posted = new Date(e.postedAtMs);
+  const title = isJa ? e.title : (e.titleEn ?? e.title);
+  const body = isJa ? e.description : (e.descriptionEn ?? e.description);
+  const period = isJa ? e.period : (e.periodEn ?? e.period);
+  const target = isJa ? e.target : (e.targetEn ?? e.target);
+  const reward = isJa ? e.reward : (e.rewardEn ?? e.reward);
   return (
     <>
       <View style={styles.typeRow}>
@@ -298,17 +316,21 @@ function SyntheticEventBody({ isJa }: { isJa: boolean }) {
         </View>
         <Text style={styles.date}>{posted.toLocaleString(isJa ? "ja-JP" : "en-US")}</Text>
       </View>
-      <Text style={styles.detailH2}>{e.title}</Text>
-      <Text style={styles.body}>{e.description}</Text>
+      <Text style={styles.detailH2}>{title}</Text>
+      <Text style={styles.body}>{body}</Text>
       <Text style={[styles.body, { marginTop: 10 }]}>
-        {isJa ? "期間" : "Period"}: {e.period}
+        {isJa ? "期間" : "Period"}: {period}
       </Text>
-      <Text style={styles.body}>
-        {isJa ? "参加条件" : "Eligibility"}: {e.target}
-      </Text>
-      <Text style={styles.body}>
-        {isJa ? "特典" : "Reward"}: {e.reward}
-      </Text>
+      {target ? (
+        <Text style={styles.body}>
+          {isJa ? "参加条件" : "Eligibility"}: {target}
+        </Text>
+      ) : null}
+      {reward ? (
+        <Text style={styles.body}>
+          {isJa ? "特典" : "Reward"}: {reward}
+        </Text>
+      ) : null}
     </>
   );
 }
