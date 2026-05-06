@@ -1110,17 +1110,24 @@ export function PredictToolTabContent({
           return (
             <View style={s.h2hTrendCard}>
               <Text style={s.h2hTrendTitle}>Series Trend</Text>
-              <Text style={s.h2hTrendScore}>
-                <Text style={s.h2hTrendTeam}>{leftName} </Text>
-                <Text style={leftWins > rightWins ? s.h2hTrendNumLead : s.h2hTrendNum}>
-                  {leftWins}
+              {/* チーム名を勝敗数のすぐ横に（全体は中央寄せ） */}
+              <View style={s.h2hTrendRow}>
+                <Text style={[s.h2hTrendTeam, s.h2hTrendTeamLeft]} numberOfLines={1}>
+                  {leftName}
                 </Text>
-                <Text style={s.h2hTrendDash}> - </Text>
-                <Text style={rightWins > leftWins ? s.h2hTrendNumLead : s.h2hTrendNum}>
-                  {rightWins}
+                <Text style={s.h2hTrendScore}>
+                  <Text style={leftWins > rightWins ? s.h2hTrendNumLead : s.h2hTrendNum}>
+                    {leftWins}
+                  </Text>
+                  <Text style={s.h2hTrendDash}> – </Text>
+                  <Text style={rightWins > leftWins ? s.h2hTrendNumLead : s.h2hTrendNum}>
+                    {rightWins}
+                  </Text>
                 </Text>
-                <Text style={s.h2hTrendTeam}> {rightName}</Text>
-              </Text>
+                <Text style={[s.h2hTrendTeam, s.h2hTrendTeamRight]} numberOfLines={1}>
+                  {rightName}
+                </Text>
+              </View>
             </View>
           );
         })()}
@@ -1264,6 +1271,25 @@ const s = StyleSheet.create({
     textAlign: "center",
     fontFamily: DISPLAY_FONT_FAMILY,
   },
+  /** Series Trend：チーム名＋勝敗を1行・中央寄せ */
+  h2hTrendRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  h2hTrendTeamLeft: {
+    textAlign: "right",
+    flexShrink: 1,
+    maxWidth: "46%",
+  },
+  h2hTrendTeamRight: {
+    textAlign: "left",
+    flexShrink: 1,
+    maxWidth: "46%",
+  },
   h2hTrendScore: {
     textAlign: "center",
     color: colors.textPrimary,
@@ -1274,6 +1300,7 @@ const s = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   h2hTrendTeam: {
+    textAlign: "center",
     color: "rgba(255,255,255,0.78)",
     fontSize: 11,
     fontWeight: "700",
