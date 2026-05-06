@@ -13,7 +13,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Cavaliers";
 
 /**
- * 2025-26 Pistons vs Cavaliers（レギュラー直接対決）
+ * 2025-26 Pistons vs Cavaliers（レギュラー4 + プレーオフ Game 1）
  * 欠場者表記は既存H2Hと同様（イニシャル + 姓）
  */
 export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
@@ -70,6 +70,26 @@ export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
     homeTeamSide: "right",
     injuriesLeft: [],
     injuriesRight: ["D. Mitchell", "M. Strus"],
+  },
+  {
+    id: "h2h-pistons-cavaliers-2026-05-05-po-g1",
+    dateEt: "2026-05-05",
+    dateJst: "2026-05-06",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 111,
+    scoreRight: 101,
+    /** Detroit（Pistons）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Cade Cunninghamが23得点7アシスト、Tobias Harrisが20得点8リバウンドでDetroitが先勝。立ち上がりから守備の圧力でClevelandを苦しめ、19ターンオーバーから31得点を奪ったのが大きかった。Cavsは4QにJames Harden中心で追い上げ、残り5分28秒で93-93まで戻したが、そこからDetroitが18-8で締めた。Jalen Durenの連続ダンクで流れを切らせず、そのまま押し切った試合だった。シリーズはDetroitが1-0。",
+      en:
+        "Behind 23 points and 7 assists from Cade Cunningham and 20 points and 8 rebounds from Tobias Harris, Detroit stole Game 1. The Pistons bothered Cleveland with defensive pressure from the opening tip and turned 19 turnovers into 31 points. The Cavaliers rallied in the fourth behind James Harden, tying the game at 93-93 with 5:28 left, but Detroit closed on an 18-8 run. Back-to-back slams from Jalen Duren kept momentum on Detroit’s side as the Pistons pulled away. Detroit leads the series 1-0.",
+    },
   },
 ];
 
