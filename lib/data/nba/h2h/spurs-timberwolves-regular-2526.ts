@@ -12,7 +12,7 @@ export const SPURS_TIMBERWOLVES_TEAM_IDS = [
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 Spurs vs Timberwolves（レギュラー3） */
+/** 2025-26 Spurs vs Timberwolves（レギュラー3 + プレーオフ Game 1） */
 export const spursTimberwolvesH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-wolves-2025-11-30",
@@ -53,6 +53,26 @@ export const spursTimberwolvesH2HGames: NbaH2HGameCard[] = [
     injuriesLeft: ["D. Vassell"],
     injuriesRight: [],
   },
+  {
+    id: "h2h-spurs-wolves-2026-05-05-po-g1",
+    dateEt: "2026-05-05",
+    dateJst: "2026-05-06",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 102,
+    scoreRight: 104,
+    /** Minnesota（Timberwolves）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["D. DiVincenzo", "A. Dosunmu"],
+    inactiveFooterSummary: {
+      ja:
+        "Minnesotaは接戦を終盤でひっくり返した。Julius Randleが21得点、Jaden McDanielsとTerrence Shannon Jr.が各16得点。Anthony Edwardsは負傷から復帰しベンチから18得点を挙げ、終盤の7-0ランで流れを引き寄せた。San AntonioはVictor Wembanyamaが11得点15リバウンド12ブロックのトリプルダブル級、Dylan Harperが18得点、Stephon CastleとJulian Champagnieが各17得点だったが、最後のChampagnieのブザービーター3Pが外れて敗れた。シリーズはMinnesotaが1-0。",
+      en:
+        "Minnesota flipped a tight game late. Julius Randle scored 21, while Jaden McDaniels and Terrence Shannon Jr. each had 16. Anthony Edwards returned from injury and scored 18 off the bench, helping fuel a late 7-0 run. San Antonio got a triple-double-level night from Victor Wembanyama (11 points, 15 rebounds, 12 blocks), 18 from Dylan Harper, and 17 apiece from Stephon Castle and Julian Champagnie, but Julian Champagnie’s buzzer-beating three missed as Minnesota escaped. Minnesota leads the series 1-0.",
+    },
+  },
 ];
 
 /** 左=SAS・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -91,7 +111,7 @@ function spursTimberwolvesH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記3試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function spursTimberwolvesH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

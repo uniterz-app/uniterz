@@ -228,11 +228,12 @@ export function H2hSeasonRecordRow({
   leftWins: number;
   rightWins: number;
 }) {
+  /** チーム名を勝敗数のすぐ横に寄せ、ブロック全体を中央寄せ */
   return (
     <div
       className={[
         resultStatsMetricNumClass,
-        "flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-1 text-sm text-white/85 sm:text-base md:gap-x-2 md:text-lg",
+        "flex w-full max-w-full flex-col items-center gap-y-1",
       ].join(" ")}
     >
       {phaseLabel ? (
@@ -240,42 +241,48 @@ export function H2hSeasonRecordRow({
           {phaseLabel}
         </span>
       ) : null}
-      <span className="max-w-[42%] truncate sm:max-w-none">{leftTeamDisplay}</span>
-      <span
-        className={[
-          resultStatsMetricNumClass,
-          "inline-flex shrink-0 items-baseline font-bold tabular-nums text-xl sm:text-2xl md:text-3xl",
-        ].join(" ")}
-      >
-        <span
-          className={leftWins > rightWins ? "text-yellow-300" : "text-white"}
-          style={
-            leftWins > rightWins
-              ? {
-                  textShadow:
-                    "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                }
-              : undefined
-          }
-        >
-          {leftWins}
+      <div className="flex w-full max-w-full flex-wrap items-baseline justify-center gap-x-1 text-sm text-white/85 sm:gap-x-1.5 sm:text-base md:text-lg">
+        <span className="min-w-0 max-w-[46%] shrink truncate text-right">
+          {leftTeamDisplay}
         </span>
-        <span className="mx-1 text-white/55 sm:mx-1.5">–</span>
         <span
-          className={rightWins > leftWins ? "text-yellow-300" : "text-white"}
-          style={
-            rightWins > leftWins
-              ? {
-                  textShadow:
-                    "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
-                }
-              : undefined
-          }
+          className={[
+            resultStatsMetricNumClass,
+            "inline-flex shrink-0 items-baseline font-bold tabular-nums text-xl sm:text-2xl md:text-3xl",
+          ].join(" ")}
         >
-          {rightWins}
+          <span
+            className={leftWins > rightWins ? "text-yellow-300" : "text-white"}
+            style={
+              leftWins > rightWins
+                ? {
+                    textShadow:
+                      "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                  }
+                : undefined
+            }
+          >
+            {leftWins}
+          </span>
+          <span className="mx-0.5 text-white/55 sm:mx-1">–</span>
+          <span
+            className={rightWins > leftWins ? "text-yellow-300" : "text-white"}
+            style={
+              rightWins > leftWins
+                ? {
+                    textShadow:
+                      "0 0 8px rgba(253, 224, 71, 0.5), 0 0 3px rgba(253, 224, 71, 0.65)",
+                  }
+                : undefined
+            }
+          >
+            {rightWins}
+          </span>
         </span>
-      </span>
-      <span className="max-w-[42%] truncate sm:max-w-none">{rightTeamDisplay}</span>
+        <span className="min-w-0 max-w-[46%] shrink truncate text-left">
+          {rightTeamDisplay}
+        </span>
+      </div>
     </div>
   );
 }
