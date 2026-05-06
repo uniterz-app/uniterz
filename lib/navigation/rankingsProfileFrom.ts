@@ -1,6 +1,8 @@
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { isRankingPhase } from "@/lib/rankings/rankingPhase";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
 
 /** プロフィール URL：ランキングから来た印 */
 export const PROFILE_FROM_PARAM = "from";
@@ -9,6 +11,8 @@ export const PROFILE_FROM_RANKINGS_VALUE = "rankings";
 /** 戻り時に同じタブを復元するためのクエリキー */
 export const RANKINGS_TAB_METRIC_PARAM = "rankMetric";
 export const RANKINGS_TAB_PHASE_PARAM = "rankPhase";
+/** プレーオフ 1ST / 2ND など（overall = TOTAL） */
+export const RANKINGS_TAB_ROUND_PARAM = "rankRound";
 
 const SESSION_KEY = "uniterz.rankingsTabReturn.v1";
 
@@ -29,10 +33,14 @@ export function isMobileMetricParam(
 /** ランキング→プロフィール遷移の直前に呼ぶ（ブラウザ戻るでクエリが無い場合の復元用） */
 export function stashRankingsTabForReturn(
   metric: MobileMetric,
-  phase: RankingPhase
+  phase: RankingPhase,
+  playoffRound?: PlayoffRoundKey
 ): void {
   try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ metric, phase }));
+    sessionStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ metric, phase, playoffRound })
+    );
   } catch {
     /* ストレージ不可時は無視 */
   }
@@ -45,14 +53,23 @@ export const WEB_RANKINGS_SCROLL_KEY = "uniterz.webRankings.scrollY.v1";
 export function consumeStashedRankingsTab(): {
   metric: MobileMetric;
   phase: RankingPhase;
+  playoffRound?: PlayoffRoundKey;
 } | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     sessionStorage.removeItem(SESSION_KEY);
-    const o = JSON.parse(raw) as { metric?: string; phase?: string };
+    const o = JSON.parse(raw) as {
+      metric?: string;
+      phase?: string;
+      playoffRound?: string;
+    };
     if (!isMobileMetricParam(o.metric) || !isRankingPhase(o.phase)) return null;
-    return { metric: o.metric, phase: o.phase };
+    const playoffRound =
+      o.playoffRound && isPlayoffRoundKey(o.playoffRound)
+        ? o.playoffRound
+        : undefined;
+    return { metric: o.metric, phase: o.phase, playoffRound };
   } catch {
     return null;
   }
@@ -61,6 +78,8 @@ export function consumeStashedRankingsTab(): {
 export type RankingsReturnTab = {
   metric: MobileMetric;
   phase: RankingPhase;
+  /** プレーオフランキングのラウンドタブ（TOTAL / 1ST / …） */
+  playoffRound?: PlayoffRoundKey;
 };
 
 /**
@@ -80,6 +99,9 @@ export function profileHrefWithRankingsReturn(
     [RANKINGS_TAB_METRIC_PARAM]: tab.metric,
     [RANKINGS_TAB_PHASE_PARAM]: tab.phase,
   });
+  if (tab.playoffRound && isPlayoffRoundKey(tab.playoffRound)) {
+    q.set(RANKINGS_TAB_ROUND_PARAM, tab.playoffRound);
+  }
   return `${path}?${q.toString()}`;
 }
 
@@ -87,8 +109,10 @@ export function profileHrefWithRankingsReturn(
 export function buildRankingsPathQuery(sp: URLSearchParams): string {
   const m = sp.get(RANKINGS_TAB_METRIC_PARAM);
   const ph = sp.get(RANKINGS_TAB_PHASE_PARAM);
+  const r = sp.get(RANKINGS_TAB_ROUND_PARAM);
   const q = new URLSearchParams();
   if (isMobileMetricParam(m)) q.set(RANKINGS_TAB_METRIC_PARAM, m);
   if (isRankingPhase(ph)) q.set(RANKINGS_TAB_PHASE_PARAM, ph);
+  if (isPlayoffRoundKey(r)) q.set(RANKINGS_TAB_ROUND_PARAM, r);
   return q.toString();
 }

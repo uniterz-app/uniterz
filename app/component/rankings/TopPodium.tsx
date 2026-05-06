@@ -22,6 +22,7 @@ import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { Crown } from "lucide-react";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
 const rankHudNumClass = summaryMetricNumClass;
@@ -380,6 +381,7 @@ export default function TopPodium({
   rows,
   metric,
   rankPhase,
+  playoffRound,
   onTopCountDone,
   language = "ja",
 }: {
@@ -387,6 +389,8 @@ export default function TopPodium({
   metric: MobileMetric;
   /** ランキングからプロフィールへの戻り用 */
   rankPhase?: RankingPhase;
+  /** プレーオフラウンドタブの戻り用 */
+  playoffRound?: PlayoffRoundKey;
   onTopCountDone?: () => void;
   /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
@@ -462,7 +466,7 @@ export default function TopPodium({
             pathname,
             base,
             row.handle || row.uid,
-            { metric, phase: phaseForReturn }
+            { metric, phase: phaseForReturn, playoffRound }
           );
           return (
             <Link
