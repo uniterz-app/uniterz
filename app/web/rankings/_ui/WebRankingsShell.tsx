@@ -25,9 +25,10 @@ import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useWebRankings } from "../_lib/useWebRankings";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
-import { type PlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import { type PlayoffRoundKey, isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import {
   RANKINGS_TAB_METRIC_PARAM,
+  RANKINGS_TAB_ROUND_PARAM,
   WEB_RANKINGS_SCROLL_KEY,
   isMobileMetricParam,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -78,10 +79,12 @@ export default function WebRankingsShell() {
 
   const restoreScrollAfterListRef = useRef(false);
 
-  /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric を反映 */
+  /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric / rankRound を反映 */
   useLayoutEffect(() => {
     const m = searchParams.get(RANKINGS_TAB_METRIC_PARAM);
     if (isMobileMetricParam(m)) setMetric(m);
+    const r = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
+    if (isPlayoffRoundKey(r)) setRound(r);
     restoreScrollAfterListRef.current = isMobileMetricParam(
       searchParams.get(RANKINGS_TAB_METRIC_PARAM)
     );
@@ -255,6 +258,7 @@ export default function WebRankingsShell() {
                     rows={top3}
                     metric={metric}
                     rankPhase={phase}
+                    playoffRound={round}
                     onTopCountDone={handleTopCountDone}
                     intro={intro}
                     language={language}
@@ -283,6 +287,7 @@ export default function WebRankingsShell() {
                             rank={i + 4}
                             metric={metric}
                             rankPhase={phase}
+                            playoffRound={round}
                             language={language}
                           />
                         </motion.div>

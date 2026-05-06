@@ -37,12 +37,14 @@ import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsB
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import { useSearchParams } from "next/navigation";
 import {
   RANKINGS_TAB_METRIC_PARAM,
+  RANKINGS_TAB_ROUND_PARAM,
   isMobileMetricParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
@@ -110,10 +112,12 @@ export default function MobileRankingsPage() {
     [moveMetricBy]
   );
 
-  /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric を反映 */
+  /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric / rankRound を反映 */
   useLayoutEffect(() => {
     const m = searchParams.get(RANKINGS_TAB_METRIC_PARAM);
     if (isMobileMetricParam(m)) setMetric(m);
+    const r = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
+    if (isPlayoffRoundKey(r)) setRound(r);
   }, [searchParams]);
 
   useEffect(() => {
@@ -300,6 +304,7 @@ export default function MobileRankingsPage() {
                   rows={top3}
                   metric={metric}
                   rankPhase={phase}
+                  playoffRound={round}
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
@@ -328,6 +333,7 @@ export default function MobileRankingsPage() {
                           rank={i + 4}
                           metric={metric}
                           rankPhase={phase}
+                          playoffRound={round}
                           language={language}
                         />
                       </motion.div>
