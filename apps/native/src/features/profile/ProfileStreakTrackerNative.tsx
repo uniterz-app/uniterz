@@ -20,10 +20,7 @@ import {
   PROFILE_SHELL_GRID_NATIVE,
   profileShellGridPathD,
 } from "./profileShellGridNative";
-import {
-  streakChartLayoutMaxAbs,
-  streakPointSettledAtIsLocalToday,
-} from "../../../../../lib/profile/streakTrackerChartLayout";
+import { streakChartLayoutMaxAbs } from "../../../../../lib/profile/streakTrackerChartLayout";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 
 type Props = {
@@ -350,20 +347,11 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
                     </View>
                   </View>
                   <View style={[styles.xLabelRow, { width: chartTotalW, gap: COL_GAP }]}>
-                    {points.map((p, i) => {
-                      const isToday = streakPointSettledAtIsLocalToday(p.settledAtMs);
-                      return (
-                        <View key={`xl-${p.postId}`} style={[styles.xLabelCell, { width: colW }]}>
-                          {isToday ? (
-                            <View style={styles.xLabelTodayRing}>
-                              <Text style={[styles.xLabel, styles.xLabelTodayText]}>{i + 1}</Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.xLabel}>{i + 1}</Text>
-                          )}
-                        </View>
-                      );
-                    })}
+                    {points.map((p, i) => (
+                      <View key={`xl-${p.postId}`} style={[styles.xLabelCell, { width: colW }]}>
+                        <Text style={styles.xLabel}>{i + 1}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
               </View>
@@ -769,34 +757,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: "rgba(100,116,139,0.95)",
     fontVariant: ["tabular-nums"],
-  },
-  /** 横軸: 確定日がローカル当日の列 — 黄アンバーで一目で分かる */
-  xLabelTodayRing: {
-    minWidth: 18,
-    minHeight: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(250, 204, 21, 0.95)",
-    backgroundColor: "rgba(250, 204, 21, 0.38)",
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgb(250, 204, 21)",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.65,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 5,
-        shadowColor: "rgb(250, 204, 21)",
-      },
-      default: {},
-    }),
-  },
-  xLabelTodayText: {
-    color: "rgba(15, 23, 42, 0.96)",
-    fontWeight: "900",
   },
   footerGrid: {
     marginTop: 10,
