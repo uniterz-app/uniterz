@@ -18,6 +18,7 @@ import {
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
 const rankHudNumClass = summaryMetricNumClass;
@@ -256,6 +257,7 @@ export default function RankingCard({
   rank,
   metric,
   rankPhase,
+  playoffRound,
   onCountDone,
   language = "ja",
 }: {
@@ -264,6 +266,8 @@ export default function RankingCard({
   metric: MobileMetric;
   /** ランキング画面からプロフィールへ行くときの戻り用（未指定時は playoffs） */
   rankPhase?: RankingPhase;
+  /** プレーオフラウンドタブ（TOTAL / 1ST / …）の戻り用 */
+  playoffRound?: PlayoffRoundKey;
   onCountDone?: () => void;
   language?: Language;
 }) {
@@ -280,6 +284,7 @@ export default function RankingCard({
   const profileHref = profileHrefWithRankingsReturn(pathname, base, handleOrUid, {
     metric,
     phase: rankPhase ?? "playoffs",
+    playoffRound,
   });
 
   const { n: target, d: decimals } = metricNum(r, metric);
