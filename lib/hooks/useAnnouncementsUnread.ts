@@ -10,10 +10,7 @@ import {
   type AnnouncementSortRow,
 } from "@/lib/announcements/announcementsClientQuery";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
-import {
-  shouldInjectSyntheticEventAnnouncement,
-} from "@/lib/announcements/inAppEventAnnouncement";
-import { CURRENT_EVENT } from "@/lib/events/currentEvent";
+import { mergeSyntheticIdsIntoVisibleSet } from "@/lib/announcements/inAppEventAnnouncement";
 import {
   ANNOUNCEMENT_READ_IDS_STORAGE_KEY,
   ANNOUNCEMENT_READS_CHANGED_EVENT,
@@ -97,10 +94,7 @@ export function useAnnouncementsUnread(options: Options = {}) {
 
   const unreadCount = useMemo(() => {
     if (!enabled || !isAuthStateResolved(status)) return 0;
-    const ids = new Set(visibleIds);
-    if (shouldInjectSyntheticEventAnnouncement(visibleIds)) {
-      ids.add(CURRENT_EVENT.id);
-    }
+    const ids = mergeSyntheticIdsIntoVisibleSet(visibleIds);
     let c = 0;
     ids.forEach((id) => {
       if (!readIds.has(id)) c++;

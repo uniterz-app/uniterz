@@ -1,5 +1,8 @@
 import { Timestamp } from "firebase/firestore";
-import { CURRENT_EVENT } from "@/lib/events/currentEvent";
+import {
+  SYNTHETIC_EVENT_NOTICES,
+  getSyntheticEventById,
+} from "@/lib/events/syntheticEventNotices";
 import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 
 export type AnnouncementListShape = {
@@ -11,18 +14,15 @@ export type AnnouncementListShape = {
   pinned?: boolean;
 };
 
-/** Firestore に同名ドキュメントが無く、合成が有効なときだけ true */
-export function shouldInjectSyntheticEventAnnouncement(
-  firestoreIds: Set<string>
-): boolean {
-  if (!CURRENT_EVENT.listInAnnouncements) return false;
-  if (firestoreIds.has(CURRENT_EVENT.id)) return false;
-  return true;
+function postedAtMillis(
+  v: Timestamp | Date | null | undefined
+): number {
+  if (!v) return 0;
+  if (v instanceof Timestamp) return v.toMillis();
+  return v.getTime();
 }
 
-/** 一覧用の仮想アイテム（Firestore 行と同型） */
-export function buildSyntheticEventAnnouncementItem(): AnnouncementListShape {
-  const e: EventNoticeContent = CURRENT_EVENT;
+function buildListItem(e: EventNoticeContent): AnnouncementListShape {
   return {
     id: e.id,
     title: e.title,
@@ -33,12 +33,32 @@ export function buildSyntheticEventAnnouncementItem(): AnnouncementListShape {
   };
 }
 
-function postedAtMillis(
-  v: Timestamp | Date | null | undefined
-): number {
-  if (!v) return 0;
-  if (v instanceof Timestamp) return v.toMillis();
-  return v.getTime();
+/** @deprecated 複数合成に対応した merge を使う */
+export function shouldInjectSyntheticEventAnnouncement(
+  firestoreIds: Set<string>
+): boolean {
+  return SYNTHETIC_EVENT_NOTICES.some(
+    (e) => e.listInAnnouncements && !firestoreIds.has(e.id)
+  );
+}
+
+/** 未読カウント用: 一覧に出る合成 ID を Firestore 可視 ID に足す */
+export function mergeSyntheticIdsIntoVisibleSet(
+  firestoreTopIds: Set<string>
+): Set<string> {
+  const out = new Set(firestoreTopIds);
+  for (const e of SYNTHETIC_EVENT_NOTICES) {
+    if (!e.listInAnnouncements) continue;
+    if (firestoreTopIds.has(e.id)) continue;
+    out.add(e.id);
+  }
+  return out;
+}
+
+/** @deprecated 複数合成に対応した merge を使う */
+export function buildSyntheticEventAnnouncementItem(): AnnouncementListShape {
+  const e = SYNTHETIC_EVENT_NOTICES[0]!;
+  return buildListItem(e);
 }
 
 /** 合成アイテムをマージし pinned / postedAt でソート（クエリと同じ順） */
@@ -46,11 +66,15 @@ export function mergeSyntheticEventIntoAnnouncements<
   T extends AnnouncementListShape,
 >(items: T[]): T[] {
   const ids = new Set(items.map((i) => i.id));
-  if (!shouldInjectSyntheticEventAnnouncement(ids)) {
-    return items;
+  const toAdd: AnnouncementListShape[] = [];
+  for (const e of SYNTHETIC_EVENT_NOTICES) {
+    if (!e.listInAnnouncements) continue;
+    if (ids.has(e.id)) continue;
+    toAdd.push(buildListItem(e));
+    ids.add(e.id);
   }
-  const synthetic = buildSyntheticEventAnnouncementItem() as unknown as T;
-  const merged = [...items, synthetic];
+  if (toAdd.length === 0) return items;
+  const merged = [...items, ...(toAdd as unknown as T[])];
   merged.sort((a, b) => {
     const pa = a.pinned ? 1 : 0;
     const pb = b.pinned ? 1 : 0;
@@ -62,8 +86,7 @@ export function mergeSyntheticEventIntoAnnouncements<
 
 /** 詳細ページで Firestore が無いときにイベント本文を出すか */
 export function isInAppEventAnnouncementDetail(announcementId: string): boolean {
-  return (
-    CURRENT_EVENT.listInAnnouncements &&
-    announcementId === CURRENT_EVENT.id
-  );
+  return getSyntheticEventById(announcementId) !== undefined;
 }
+
+export { getSyntheticEventById };

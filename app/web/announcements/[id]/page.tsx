@@ -10,8 +10,10 @@ import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { ChevronLeft } from "lucide-react";
 import EventNoticeBody from "@/app/component/events/EventNoticeBody";
-import { isInAppEventAnnouncementDetail } from "@/lib/announcements/inAppEventAnnouncement";
-import { CURRENT_EVENT } from "@/lib/events/currentEvent";
+import {
+  getSyntheticEventById,
+  isInAppEventAnnouncementDetail,
+} from "@/lib/announcements/inAppEventAnnouncement";
 
 /* 一覧と同じマッピング */
 const TYPE_META: Record<string, { label: string; grad: string; glow: string }> = {
@@ -108,7 +110,14 @@ export default function WebAnnouncementDetailPage() {
     );
   }
 
-  if (loadState === "missing" || (!a && !syntheticEvent)) {
+  const syntheticContent =
+    syntheticEvent && id ? getSyntheticEventById(id) : undefined;
+
+  if (
+    loadState === "missing" ||
+    (!a && !syntheticEvent) ||
+    (syntheticEvent && !syntheticContent)
+  ) {
     return (
       <div className="min-h-screen bg-[#0B0F17] text-white">
         <div className="mx-auto max-w-[840px] px-5 py-10">
@@ -123,10 +132,14 @@ export default function WebAnnouncementDetailPage() {
   const typeKey = syntheticEvent ? "event" : (a?.type ?? "info");
   const meta = TYPE_META[typeKey];
   const typeLabel = isEn ? TYPE_LABEL_EN[typeKey] ?? meta.label : meta.label;
-  const postedAtTs = syntheticEvent
-    ? Timestamp.fromMillis(CURRENT_EVENT.postedAtMs)
+  const postedAtTs = syntheticContent
+    ? Timestamp.fromMillis(syntheticContent.postedAtMs)
     : a?.postedAt;
-  const title = syntheticEvent ? CURRENT_EVENT.title : a!.title;
+  const title = syntheticContent
+    ? (isEn && syntheticContent.titleEn
+        ? syntheticContent.titleEn
+        : syntheticContent.title)
+    : a!.title;
   const src = syntheticEvent
     ? ""
     : (a!.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
@@ -160,7 +173,7 @@ export default function WebAnnouncementDetailPage() {
       </div>
 
       <div className="mx-auto max-w-[840px] px-5 py-6">
-        {syntheticEvent ? (
+        {syntheticEvent && syntheticContent ? (
           <>
             <div className="mt-0 flex items-center gap-3">
               <span
@@ -173,7 +186,11 @@ export default function WebAnnouncementDetailPage() {
               </span>
             </div>
             <div className="mt-4 rounded-2xl border border-white/10 overflow-hidden shadow-[0_16px_60px_rgba(0,0,0,0.35)] bg-[#120818]/90">
-              <EventNoticeBody event={CURRENT_EVENT} heroHeight={320} />
+              <EventNoticeBody
+                event={syntheticContent}
+                heroHeight={320}
+                isEn={isEn}
+              />
             </div>
           </>
         ) : (
