@@ -21,9 +21,12 @@ import {
 } from "@/lib/time/zonedTime";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { mergePlayoffSeriesPeersForWindowGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
+import { getWcGamesPageQueryRange } from "@/lib/wc/wcGamesPageScheduleWindow";
 
 /** アンカー±3日（計7暦日）分の取得上限 */
 const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
+/** W杯: 一窓で本戦＋近接シード分を取得（件数多め） */
+const WC_GAMES_PAGE_WINDOW_LIMIT = 500;
 
 /** 日付ストリップ用：アンカーの前後に含める暦日数（今日含め前後3日＝計7日） */
 const GAME_DAYS_PLUS_MINUS = 3;
@@ -66,7 +69,8 @@ const gameDaysRowsCache = new Map<
 
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * アンカー日をタイムゾーンの暦日として ±GAME_DAYS_PLUS_MINUS 日の窓だけ Firestore から取得する。
+ * - 通常: アンカー日の暦日 ±3 日分を Firestore から取得
+ * - World Cup: 本戦期間（タイムゾーン別に 2026-05-01〜07 月頃まで）を一窓で取得（今日±3 では遠い試合が落ちるため）
  */
 export function useGameDays(
   rawLeague: League,
@@ -77,8 +81,19 @@ export function useGameDays(
 
   const anchorDateKey = useMemo(
     () => toDateKeyInTimeZone(windowAnchor, timeZone),
-    [windowAnchor, timeZone]
+    [windowAnchor, timeZone],
   );
+
+  const wcWindowCacheKey = useMemo(
+    () => `${league}|${timeZone}|wc-page-window-v1`,
+    [league, timeZone],
+  );
+
+  /** WC はアンカー日と無関係に固定窓の 1 クエリ。それ以外は ±3 日でアンカー依存 */
+  const fetchDepsKey = useMemo(() => {
+    if (league === "wc") return wcWindowCacheKey;
+    return `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;
+  }, [league, timeZone, anchorDateKey, wcWindowCacheKey]);
 
   const [rows, setRows] = useState<any[]>([]);
   const [peerRowsForSeriesInference, setPeerRowsForSeriesInference] = useState<
@@ -93,7 +108,10 @@ export function useGameDays(
     async function load() {
       setErr(null);
 
-      const cacheKey = `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;
+      const cacheKey =
+        league === "wc"
+          ? wcWindowCacheKey
+          : `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;
       const cached = gameDaysRowsCache.get(cacheKey);
       const fresh =
         cached && Date.now() - cached.savedAt < GAME_DAYS_ROWS_CACHE_TTL_MS;
@@ -116,11 +134,14 @@ export function useGameDays(
 
       try {
         const ref = collection(db, "games");
-        const { start, end } = getPlusMinusDaysRangeInTimeZone(
-          windowAnchor,
-          timeZone,
-          GAME_DAYS_PLUS_MINUS
-        );
+        const { start, end } =
+          league === "wc"
+            ? getWcGamesPageQueryRange(timeZone)
+            : getPlusMinusDaysRangeInTimeZone(
+                windowAnchor,
+                timeZone,
+                GAME_DAYS_PLUS_MINUS,
+              );
 
         const q = query(
           ref,
@@ -129,7 +150,11 @@ export function useGameDays(
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
+          limit(
+            league === "wc"
+              ? WC_GAMES_PAGE_WINDOW_LIMIT
+              : GAME_DAYS_WINDOW_QUERY_LIMIT,
+          ),
         );
 
         const snap = await getDocs(q);
@@ -164,7 +189,8 @@ export function useGameDays(
     return () => {
       alive = false;
     };
-  }, [league, timeZone, anchorDateKey]);
+    // fetchDepsKey に依存（WC はアンカー変更では再フェッチしない）
+  }, [fetchDepsKey]);
 
   const gameDays = useMemo(
     () => monthRowsToSortedGameDays(rows, timeZone),

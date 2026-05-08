@@ -11,6 +11,10 @@ import {
 } from "@/lib/rankings/playoffRound";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 import { loadSnapshotTotalPointsRankAndDelta } from "@/lib/rankings/server/rankSnapshotHistoryTotalPoints";
+import {
+  isWcRankingStage,
+  type WcRankingStage,
+} from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 
@@ -57,12 +61,14 @@ async function fetchOneMetricFromFunctions(
   uid: string | undefined,
   metric: BulkRankingMetric,
   phase: RankingPhase,
-  round: PlayoffRoundKey
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
 ) {
   const url = new URL(baseUrl);
   url.searchParams.set("metric", metric);
   url.searchParams.set("phase", phase);
   url.searchParams.set("round", round);
+  if (wcStage) url.searchParams.set("wcStage", wcStage);
   if (uid) url.searchParams.set("uid", uid);
 
   const res = await fetch(url.toString(), {
@@ -98,7 +104,8 @@ async function fetchBulkFromFunctions(
   uid: string | undefined,
   metrics: BulkRankingMetric[],
   phase: RankingPhase,
-  round: PlayoffRoundKey
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
 ) {
   const baseUrl =
     process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -112,6 +119,7 @@ async function fetchBulkFromFunctions(
   combinedUrl.searchParams.set("metrics", metrics.join(","));
   combinedUrl.searchParams.set("phase", phase);
   combinedUrl.searchParams.set("round", round);
+  if (wcStage) combinedUrl.searchParams.set("wcStage", wcStage);
   if (uid) combinedUrl.searchParams.set("uid", uid);
 
   const combinedRes = await fetch(combinedUrl.toString(), {
@@ -153,7 +161,7 @@ async function fetchBulkFromFunctions(
 
   const results = await Promise.all(
     metrics.map((metric) =>
-      fetchOneMetricFromFunctions(baseUrl, uid, metric, phase, round)
+      fetchOneMetricFromFunctions(baseUrl, uid, metric, phase, round, wcStage)
     )
   );
 
@@ -162,12 +170,17 @@ async function fetchBulkFromFunctions(
   return { ok: true as const, byMetric };
 }
 
+function wcStageCacheKey(wc: WcRankingStage | null): string {
+  return wc ?? "__no_wc__";
+}
+
 const getCachedBulk = unstable_cache(
   async (
     uidKey: string,
     metricsKey: string,
     phase: RankingPhase,
     round: PlayoffRoundKey,
+    wcStageKey: string,
     dayKey: string
   ) => {
     const uid = uidKey === "__anon__" ? undefined : uidKey;
@@ -177,11 +190,17 @@ const getCachedBulk = unstable_cache(
     const metrics = (
       parts.length ? parts : [...BULK_METRICS]
     ) as BulkRankingMetric[];
+    const wcStage: WcRankingStage | null =
+      wcStageKey === "__no_wc__"
+        ? null
+        : isWcRankingStage(wcStageKey)
+          ? wcStageKey
+          : null;
     // dayKey は unstable_cache のキー分離用（当日中は同一キーで再利用）
     void dayKey;
-    return fetchBulkFromFunctions(uid, metrics, phase, round);
+    return fetchBulkFromFunctions(uid, metrics, phase, round, wcStage);
   },
-  ["cumulative-ranking-bulk-v3"],
+  ["cumulative-ranking-bulk-v4"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -201,6 +220,10 @@ export async function GET(req: Request) {
     const round: PlayoffRoundKey = isPlayoffRoundKey(rawRound)
       ? rawRound
       : "overall";
+    const rawWcStage = searchParams.get("wcStage");
+    const wcStage: WcRankingStage | null = isWcRankingStage(rawWcStage)
+      ? rawWcStage
+      : null;
     const metricsKey = metricsToKey(metricsList);
     const todayKey = dateKeyJST();
 
@@ -220,8 +243,15 @@ export async function GET(req: Request) {
      * 一覧のみ（uid なし）は dayKey 単位キャッシュを使う。
      */
     const source = uid
-      ? await fetchBulkFromFunctions(uid, metricsList, phase, round)
-      : await getCachedBulk("__anon__", metricsKey, phase, round, todayKey);
+      ? await fetchBulkFromFunctions(uid, metricsList, phase, round, wcStage)
+      : await getCachedBulk(
+          "__anon__",
+          metricsKey,
+          phase,
+          round,
+          wcStageCacheKey(wcStage),
+          todayKey
+        );
 
     const data =
       typeof structuredClone === "function"
@@ -233,7 +263,7 @@ export async function GET(req: Request) {
      * Ranking Progress と同じ「最新 snapshot」を Your Rank（totalPoints）にも反映する。
      * プレーオフ通算・ラウンド別とも rankSnapshotHistory を参照してトータルと揃える。
      */
-    if (uid && data.byMetric?.totalPoints) {
+    if (uid && data.byMetric?.totalPoints && !wcStage) {
       const { latestRank, deltaPlaces } =
         await loadSnapshotTotalPointsRankAndDelta(uid, phase, round);
       if (latestRank != null) {
@@ -254,10 +284,13 @@ export async function GET(req: Request) {
       ? "private, no-store"
       : `public, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
-    return NextResponse.json(data, {
-      status: 200,
-      headers: { "Cache-Control": cacheControl },
-    });
+    return NextResponse.json(
+      { ...data, wcStage },
+      {
+        status: 200,
+        headers: { "Cache-Control": cacheControl },
+      }
+    );
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "unexpected error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

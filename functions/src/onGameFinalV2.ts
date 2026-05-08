@@ -14,6 +14,11 @@ import {
   countsTowardPlayoffTeamStats,
   countsTowardRegularSeasonTeamStats,
 } from "./teamStandingsSeasonPhase";
+import {
+  leagueToSport,
+  resolveActualOutcomeForUpset,
+  type SettlementGameInput,
+} from "./settlementGame";
 
 const db = () => getFirestore();
 
@@ -66,6 +71,17 @@ export const onGameFinalV2 = onDocumentWritten(
     if (!game.final) return;
     if (game.homeScore == null || game.awayScore == null) return;
 
+    const settlementGame: SettlementGameInput = {
+      homeScore: game.homeScore,
+      awayScore: game.awayScore,
+      league: game.league,
+      homeTeamId: game.homeTeamId,
+      awayTeamId: game.awayTeamId,
+      regulationEtScore: game.regulationEtScore ?? null,
+      advancingTeamId: game.advancingTeamId ?? null,
+      knockout: game.knockout === true,
+    };
+
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
 
@@ -73,7 +89,7 @@ export const onGameFinalV2 = onDocumentWritten(
       streakResultMap = await updateUserStreak({
         db: firestore,
         gameId,
-        final: { home: game.homeScore, away: game.awayScore },
+        settlementGame,
       });
 
       if (countsTowardRegularSeasonTeamStats(game.seasonPhase)) {
@@ -134,7 +150,11 @@ export const onGameFinalV2 = onDocumentWritten(
 
     const market = marketCalculator(picks);
 
-    const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
+    const upsetSport = leagueToSport(game.league);
+    const actualOutcome = resolveActualOutcomeForUpset(
+      settlementGame,
+      upsetSport
+    );
 
     const upset = upsetJudge({
       market: {
@@ -142,7 +162,8 @@ export const onGameFinalV2 = onDocumentWritten(
         majoritySide: market.majoritySide,
         majorityRatio: market.majorityRatio,
       },
-      result: { winnerSide },
+      actualOutcome,
+      sport: upsetSport === "football" ? "football" : "basketball",
       teams: { homeWins, awayWins },
       thresholds: {
         minMarket: MIN_MARKET,
@@ -182,11 +203,7 @@ export const onGameFinalV2 = onDocumentWritten(
 
     const pointsDistribution = aggregateGamePointsDistributionFromPostsSnap({
       postsSnap,
-      game: {
-        homeScore: game.homeScore!,
-        awayScore: game.awayScore!,
-        league: game.league,
-      },
+      game: settlementGame,
       market,
       hadUpsetGame,
       streakResultMap,

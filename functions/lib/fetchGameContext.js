@@ -11,7 +11,7 @@ function normalizePlayoffRoundKey(v) {
     return s === "r1" || s === "r2" || s === "cf" || s === "finals" ? s : null;
 }
 function normalizeGame(after, gameId) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     const seasonPhase = (_a = after === null || after === void 0 ? void 0 : after.seasonPhase) !== null && _a !== void 0 ? _a : null;
     return {
         id: gameId,
@@ -27,6 +27,12 @@ function normalizeGame(after, gameId) {
         seasonPhase,
         seasonRound: seasonPhase === "playoffs"
             ? normalizePlayoffRoundKey(after === null || after === void 0 ? void 0 : after.playoffRound)
+            : null,
+        regulationEtScore: (_h = after === null || after === void 0 ? void 0 : after.regulationEtScore) !== null && _h !== void 0 ? _h : null,
+        advancingTeamId: (_j = after === null || after === void 0 ? void 0 : after.advancingTeamId) !== null && _j !== void 0 ? _j : null,
+        knockout: (after === null || after === void 0 ? void 0 : after.knockout) === true,
+        wcStage: (after === null || after === void 0 ? void 0 : after.wcStage) === "qualifying" || (after === null || after === void 0 ? void 0 : after.wcStage) === "main"
+            ? after.wcStage
             : null,
     };
 }

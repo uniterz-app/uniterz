@@ -1,23 +1,24 @@
 "use strict";
-// functions/src/shared/upset/upsetJudge.ts
+// functions/src/upsetJudge.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.upsetJudge = upsetJudge;
 function upsetJudge(input) {
-    const { market, result, teams, thresholds } = input;
-    // draw は Upset 対象外
-    if (market.majoritySide === "draw") {
+    const { market, actualOutcome, sport, teams, thresholds } = input;
+    // NBA/B1: 多数派が引き分けのときは upset 判定しない（試合も基本的に決着）
+    if (sport === "basketball" && market.majoritySide === "draw") {
         return { isUpsetGame: false };
     }
-    // 市場サンプル不足は除外
     if (market.total < thresholds.minMarket) {
         return { isUpsetGame: false };
     }
-    // meta用に winDiff は算出して保持（判定には使わない）
-    const winDiff = result.winnerSide === "home"
-        ? teams.awayWins - teams.homeWins
-        : teams.homeWins - teams.awayWins;
-    // Upset判定は「市場偏りのみ」
-    const isUpset = market.majoritySide !== result.winnerSide &&
+    let winDiff = 0;
+    if (actualOutcome === "home") {
+        winDiff = teams.awayWins - teams.homeWins;
+    }
+    else if (actualOutcome === "away") {
+        winDiff = teams.homeWins - teams.awayWins;
+    }
+    const isUpset = market.majoritySide !== actualOutcome &&
         market.majorityRatio >= thresholds.marketRatio;
     if (!isUpset)
         return { isUpsetGame: false };

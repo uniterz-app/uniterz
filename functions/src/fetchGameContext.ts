@@ -22,6 +22,12 @@ export type NormalizedGame = {
   seasonPhase?: "regular" | "play_in" | "playoffs" | null;
   /** games.roundLabel を正規化した playoff round key（playoffs のみ） */
   seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
+  /** サッカー: 規定＋延長終了スコア（PK 前） */
+  regulationEtScore?: { home: number; away: number } | null;
+  advancingTeamId?: string | null;
+  knockout?: boolean;
+  /** World Cup（league=wc）のステージ */
+  wcStage?: "qualifying" | "main" | null;
 };
 
 export type GameContext = {
@@ -65,6 +71,13 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
     seasonRound:
       seasonPhase === "playoffs"
         ? normalizePlayoffRoundKey(after?.playoffRound)
+        : null,
+    regulationEtScore: after?.regulationEtScore ?? null,
+    advancingTeamId: after?.advancingTeamId ?? null,
+    knockout: after?.knockout === true,
+    wcStage:
+      after?.wcStage === "qualifying" || after?.wcStage === "main"
+        ? after.wcStage
         : null,
   };
 }

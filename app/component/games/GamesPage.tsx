@@ -9,7 +9,11 @@ import React, {
   useCallback,
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import LeagueTabs from "./LeagueTabs";
+import GamesDrawerMenu from "./GamesDrawerMenu";
+import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
+import { Menu } from "lucide-react";
+import { nameBebas } from "@/lib/fonts";
+import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
@@ -115,11 +119,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const { language } = useUserLanguage(user?.uid ?? null);
   const isEn = language === "en";
   const dayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
+  const langUi: "ja" | "en" = isEn ? "en" : "ja";
 
   /* =========================
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
+  const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
   const didInitLeague = useRef(false);
 
   // user_stats は後追いのみ。初回描画をブロックしない（試合カレンダーと並列で速く見せる）
@@ -152,6 +158,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           pl: data?.leagues?.pl?.posts ?? 0,
           bj: data?.leagues?.bj?.posts ?? 0,
           j1: data?.leagues?.j1?.posts ?? 0,
+          wc: data?.leagues?.wc?.posts ?? 0,
         };
 
         const sorted = (Object.entries(leaguePosts) as [League, number][]).sort(
@@ -793,32 +800,28 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
-      <div className="mb-2 mt-3 flex items-center justify-between gap-3">
-        <motion.div
-          initial={webGamesMotion ? { opacity: 0, x: -16 } : false}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{
-            duration: webGamesMotion ? 0.32 : 0,
-            ease: GAMES_CYBER_EASE,
-          }}
+      <div className="mb-2 mt-2 flex items-center gap-3 pl-2 pr-1 sm:pl-3">
+        <button
+          type="button"
+          onClick={() => setGamesDrawerOpen(true)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
+          aria-label={isEn ? "Open menu" : "メニューを開く"}
         >
-          <LeagueTabs
-            value={league}
-            onChange={(next) => {
-              setLeague(next);
-              const params = new URLSearchParams(searchParams.toString());
-              params.delete("team");
-              params.delete("team_mode");
-              params.delete("margin");
-              params.delete("margin_min");
-              params.delete("margin_max");
-              router.replace(`?${params.toString()}`, { scroll: false });
-            }}
-            size={dense ? "md" : "lg"}
-            layoutMobile={isMobile}
-          />
-        </motion.div>
+          <Menu className="h-5 w-5" strokeWidth={2.25} />
+        </button>
+        <span
+          className={[
+            nameBebas.className,
+            "min-w-0 flex-1 truncate text-center tracking-[0.28em] text-white/90",
+            isMobile ? "text-[20px]" : "text-[22px] sm:text-[24px]",
+          ].join(" ")}
+        >
+          {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
+        </span>
+        <div className="w-10 shrink-0" aria-hidden />
+      </div>
 
+      <div className="mb-2 mt-1 flex items-center justify-end gap-3">
         <div className="flex shrink-0 items-center gap-2">
           <motion.div
             initial={webGamesMotion ? { opacity: 0, x: 12 } : false}
@@ -1012,6 +1015,41 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   </>
 )}
 
+      <SideMenuDrawer
+        open={gamesDrawerOpen}
+        onClose={() => setGamesDrawerOpen(false)}
+        variant={isMobile ? "mobile" : "web"}
+      >
+        <GamesDrawerMenu
+          variant={isMobile ? "mobile" : "web"}
+          language={langUi}
+          league={league}
+          onSelectNba={() => {
+            didInitLeague.current = true;
+            setLeague("nba");
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("team");
+            params.delete("team_mode");
+            params.delete("margin");
+            params.delete("margin_min");
+            params.delete("margin_max");
+            router.replace(`?${params.toString()}`, { scroll: false });
+            setGamesDrawerOpen(false);
+          }}
+          onSelectWorldCup={() => {
+            didInitLeague.current = true;
+            setLeague("wc");
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("team");
+            params.delete("team_mode");
+            params.delete("margin");
+            params.delete("margin_min");
+            params.delete("margin_max");
+            router.replace(`?${params.toString()}`, { scroll: false });
+            setGamesDrawerOpen(false);
+          }}
+        />
+      </SideMenuDrawer>
     </div>
   );
 }

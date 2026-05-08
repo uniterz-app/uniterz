@@ -6,7 +6,7 @@ const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 const computePostSettlement_1 = require("./computePostSettlement");
 async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     const p = postDoc.data();
     if (p.settledAt)
         return;
@@ -17,6 +17,12 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
             homeScore: final.home,
             awayScore: final.away,
             league: game.league,
+            homeTeamId: game.homeTeamId,
+            awayTeamId: game.awayTeamId,
+            regulationEtScore: game.regulationEtScore,
+            advancingTeamId: game.advancingTeamId,
+            knockout: game.knockout,
+            countsForRanking: game.countsForRanking,
         },
         market,
         hadUpsetGame,
@@ -81,6 +87,7 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         countsForRanking,
         seasonPhase: (_c = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _c !== void 0 ? _c : null,
         seasonRound: (_d = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _d !== void 0 ? _d : null,
+        wcStage: (_e = game === null || game === void 0 ? void 0 : game.wcStage) !== null && _e !== void 0 ? _e : null,
     }).then(() => (0, buildUserStatsWindowCache_1.buildWindowCacheForUser)(uid)));
 }
 //# sourceMappingURL=finalizePost.js.map

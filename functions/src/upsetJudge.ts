@@ -1,4 +1,4 @@
-// functions/src/shared/upset/upsetJudge.ts
+// functions/src/upsetJudge.ts
 
 export type MajoritySide = "home" | "away" | "draw";
 
@@ -8,9 +8,9 @@ export type UpsetJudgeInput = {
     majoritySide: MajoritySide;
     majorityRatio: number;
   };
-  result: {
-    winnerSide: "home" | "away";
-  };
+  /** 試合結果（引き分け可）。ノックアウトでは進出側のみ home / away */
+  actualOutcome: MajoritySide;
+  sport: "basketball" | "football";
   teams: {
     homeWins: number;
     awayWins: number;
@@ -18,41 +18,40 @@ export type UpsetJudgeInput = {
   thresholds: {
     minMarket: number;
     marketRatio: number;
-    winDiff: number; // 互換のため残す（判定では使わない）
+    winDiff: number;
   };
 };
 
 export type UpsetJudgeResult = {
   isUpsetGame: boolean;
   meta?: {
-    marketMajoritySide: "home" | "away";
+    marketMajoritySide: MajoritySide;
     marketMajorityRatio: number;
-    winDiff: number; // meta には残す
+    winDiff: number;
   };
 };
 
 export function upsetJudge(input: UpsetJudgeInput): UpsetJudgeResult {
-  const { market, result, teams, thresholds } = input;
+  const { market, actualOutcome, sport, teams, thresholds } = input;
 
-  // draw は Upset 対象外
-  if (market.majoritySide === "draw") {
+  // NBA/B1: 多数派が引き分けのときは upset 判定しない（試合も基本的に決着）
+  if (sport === "basketball" && market.majoritySide === "draw") {
     return { isUpsetGame: false };
   }
 
-  // 市場サンプル不足は除外
   if (market.total < thresholds.minMarket) {
     return { isUpsetGame: false };
   }
 
-  // meta用に winDiff は算出して保持（判定には使わない）
-  const winDiff =
-    result.winnerSide === "home"
-      ? teams.awayWins - teams.homeWins
-      : teams.homeWins - teams.awayWins;
+  let winDiff = 0;
+  if (actualOutcome === "home") {
+    winDiff = teams.awayWins - teams.homeWins;
+  } else if (actualOutcome === "away") {
+    winDiff = teams.homeWins - teams.awayWins;
+  }
 
-  // Upset判定は「市場偏りのみ」
   const isUpset =
-    market.majoritySide !== result.winnerSide &&
+    market.majoritySide !== actualOutcome &&
     market.majorityRatio >= thresholds.marketRatio;
 
   if (!isUpset) return { isUpsetGame: false };
