@@ -9,7 +9,7 @@ export const SIXERS_KNICKS_TEAM_IDS = ["nba-76ers", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "76ers";
 
-/** 2025-26 Knicks vs 76ers（レギュラー4 + プレーオフ Game 1） */
+/** 2025-26 Knicks vs 76ers（レギュラー4 + プレーオフ Game 2まで） */
 export const sixersKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-sixers-knicks-2025-12-19",
@@ -83,6 +83,26 @@ export const sixersKnicksH2HGames: NbaH2HGameCard[] = [
         "The game stayed competitive early, but the Knicks seized control late in the first quarter and never looked back. Jalen Brunson scored 35 (27 in the first half), OG Anunoby had 18, and Karl-Anthony Towns and Mikal Bridges each added 17. New York shot 63.1% from the field and 51.4% from three, holding Philadelphia to 98 points. The 76ers got 17 from Paul George, 14 from Joel Embiid, and 13 from Tyrese Maxey but could not flip the momentum. New York leads the series 1-0.",
     },
   },
+  {
+    id: "h2h-sixers-knicks-2026-05-07-po-g2",
+    dateEt: "2026-05-07",
+    dateJst: "2026-05-08",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 108,
+    scoreRight: 102,
+    /** New York（Knicks）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["M. Robinson"],
+    injuriesRight: ["J. Embiid"],
+    inactiveFooterSummary: {
+      ja:
+        "Embiid不在の76ersは粘ったが、第4Qに失速。終盤のシュート精度とターンオーバーで差が出た。Tyrese Maxeyは26得点、Paul GeorgeとKelly Oubre Jr.が19得点。KnicksはJalen Brunsonが26得点、OG Anunobyが24得点、Karl-Anthony Townsが20得点。Knicksはペイントで56点を奪い、最後は地力で押し切った。シリーズはKnicksが2-0。",
+      en:
+        "The Embiid-less 76ers battled, but faded in the fourth quarter as late-shot quality and turnovers swung the game. Tyrese Maxey scored 26, while Paul George and Kelly Oubre Jr. added 19 each. For New York, Jalen Brunson had 26, OG Anunoby 24, and Karl-Anthony Towns 20. The Knicks scored 56 points in the paint and closed it out on execution late. New York leads the series 2-0.",
+    },
+  },
 ];
 
 /** 左=NYK・右=PHI のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -121,7 +141,7 @@ function sixersKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function sixersKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

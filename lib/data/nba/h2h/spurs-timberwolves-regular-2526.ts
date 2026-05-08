@@ -12,7 +12,7 @@ export const SPURS_TIMBERWOLVES_TEAM_IDS = [
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 Spurs vs Timberwolves（レギュラー3 + プレーオフ Game 1） */
+/** 2025-26 Spurs vs Timberwolves（レギュラー3 + プレーオフ Game 2まで） */
 export const spursTimberwolvesH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-wolves-2025-11-30",
@@ -73,6 +73,26 @@ export const spursTimberwolvesH2HGames: NbaH2HGameCard[] = [
         "Minnesota flipped a tight game late. Julius Randle scored 21, while Jaden McDaniels and Terrence Shannon Jr. each had 16. Anthony Edwards returned from injury and scored 18 off the bench, helping fuel a late 7-0 run. San Antonio got a triple-double-level night from Victor Wembanyama (11 points, 15 rebounds, 12 blocks), 18 from Dylan Harper, and 17 apiece from Stephon Castle and Julian Champagnie, but Julian Champagnie’s buzzer-beating three missed as Minnesota escaped. Minnesota leads the series 1-0.",
     },
   },
+  {
+    id: "h2h-spurs-wolves-2026-05-07-po-g2",
+    dateEt: "2026-05-07",
+    dateJst: "2026-05-08",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 133,
+    scoreRight: 95,
+    /** Minnesota（Timberwolves）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: ["D. DiVincenzo"],
+    inactiveFooterSummary: {
+      ja:
+        "SpursがGame1の敗戦から完全に修正して大勝。序盤からテンポと守備強度でWolvesを圧倒し、全スターターが二桁得点。Stephon Castleが19得点、Victor Wembanyamaも19得点を記録。WolvesはAnthony Edwardsがベンチ出場で12得点に留まり、Julius Randle、Jaden McDaniels、Terrence Shannon Jr.も各12得点止まり。Spursは3Qで一気に試合を壊し、シリーズを1-1に戻した。",
+      en:
+        "The Spurs made a full adjustment from Game 1 and rolled to a blowout win. They controlled pace and defensive intensity early, and all starters scored in double figures. Stephon Castle scored 19, and Victor Wembanyama added 19. For Minnesota, Anthony Edwards came off the bench and finished with 12, while Julius Randle, Jaden McDaniels, and Terrence Shannon Jr. also had 12 each. San Antonio broke the game open in the third quarter and tied the series 1-1.",
+    },
+  },
 ];
 
 /** 左=SAS・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -111,7 +131,7 @@ function spursTimberwolvesH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function spursTimberwolvesH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
