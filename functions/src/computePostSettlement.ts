@@ -1,6 +1,9 @@
 import { calcPostResult } from "./calcPostResult";
 import { calcUpsetPoints } from "./calcUpsetPoints";
 import { calcStreakBonus } from "./calcStreakBonus";
+import { calcPointsFootball } from "./footballTotalScore";
+import type { SettlementGameInput } from "./settlementGame";
+import { leagueToSport } from "./settlementGame";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 
 function lerpByRange(
@@ -84,7 +87,7 @@ function calcPointsV3({
 export type PostSettlementComputed = {
   totalPoints: number;
   result: ReturnType<typeof calcPostResult>;
-  baseScore: ReturnType<typeof calcPointsV3>;
+  baseScore: ReturnType<typeof calcPointsV3> | ReturnType<typeof calcPointsFootball>;
   upsetPoints: number;
   upsetBonus: number;
   streakBonus: number;
@@ -103,7 +106,7 @@ export function computePostSettlement({
   streakResultMap,
 }: {
   p: FirebaseFirestore.DocumentData;
-  game: { homeScore: number; awayScore: number; league?: string; countsForRanking?: boolean };
+  game: SettlementGameInput & { countsForRanking?: boolean };
   market: {
     majoritySide: string;
     majorityRatio: number;
@@ -114,12 +117,24 @@ export function computePostSettlement({
 }): PostSettlementComputed {
   const final = { home: game.homeScore, away: game.awayScore };
 
+  const settlementGame: SettlementGameInput = {
+    homeScore: game.homeScore,
+    awayScore: game.awayScore,
+    league: game.league,
+    homeTeamId: game.homeTeamId,
+    awayTeamId: game.awayTeamId,
+    regulationEtScore: game.regulationEtScore,
+    advancingTeamId: game.advancingTeamId,
+    knockout: game.knockout,
+  };
+
   const result = calcPostResult({
     prediction: p.prediction,
     final,
     market,
     hadUpsetGame,
     league: game.league,
+    settlementGame,
   });
 
   const upsetPoints = result.upsetHit
@@ -132,13 +147,17 @@ export function computePostSettlement({
   const predAway = p.prediction?.score?.away;
   const canScore = Number.isFinite(predHome) && Number.isFinite(predAway);
 
+  const sport = leagueToSport(game.league);
+
   const baseScore = canScore
-    ? calcPointsV3({
-        predHome,
-        predAway,
-        finalHome: final.home,
-        finalAway: final.away,
-      })
+    ? sport === "football"
+      ? calcPointsFootball(p.prediction, settlementGame)
+      : calcPointsV3({
+          predHome,
+          predAway,
+          finalHome: final.home,
+          finalAway: final.away,
+        })
     : {
         points: 0,
         basePoints: 0,

@@ -24,6 +24,8 @@ import NbaPostseasonMatchupPanel, {
 import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
+import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
+import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
 import {
@@ -229,7 +231,9 @@ export default function PredictionFormV2({
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const isSoccer = game.league === "pl" || game.league === "j1";
-  const showStandings = game.league === "nba";
+  const isWc = game.league === "wc";
+  // WC は Standings タブ（グループ順位 + FIFA ランク）を常に出す
+  const showStandings = game.league === "nba" || isWc;
   /** Playoffs / Play-In: 直接対決 / 市場 / 詳細スタッツの3タブ（順位表タブなし） */
   const isNbaPostseasonTools =
     game.league === "nba" &&
@@ -901,9 +905,13 @@ export default function PredictionFormV2({
                   ? isEn
                     ? "Matchup"
                     : "直接対決"
-                  : isEn
-                    ? "Stats"
-                    : "詳細スタッツ"}
+                  : isWc
+                    ? isEn
+                      ? "Profile"
+                      : "プロフィール"
+                    : isEn
+                      ? "Stats"
+                      : "詳細スタッツ"}
               </span>
             </span>
           </button>
@@ -957,9 +965,13 @@ export default function PredictionFormV2({
                 ? isEn
                   ? "Stats"
                   : "詳細スタッツ"
-                : isEn
-                  ? "Standings"
-                  : "順位表"}
+                : isWc
+                  ? isEn
+                    ? "Standing"
+                    : "順位"
+                  : isEn
+                    ? "Standings"
+                    : "順位表"}
             </span>
           </button>
         </motion.div>
@@ -1037,7 +1049,13 @@ export default function PredictionFormV2({
                   isMobile ? "mb-2 text-xs font-semibold text-white/90" : "mb-3 text-sm font-semibold text-white/90"
                 }
               >
-                {isEn ? "Stats" : "詳細スタッツ"}
+                {isWc
+                  ? isEn
+                    ? "Team Profile"
+                    : "チームプロフィール"
+                  : isEn
+                    ? "Stats"
+                    : "詳細スタッツ"}
               </div>
               <div
                 className={
@@ -1046,12 +1064,23 @@ export default function PredictionFormV2({
                     : "border-t border-white/10 pt-3"
                 }
               >
-                <GameTeamStats
-                  league={game.league}
-                  homeTeamId={game.home.teamId ?? ""}
-                  awayTeamId={game.away.teamId ?? ""}
-                  language={language}
-                />
+                {isWc ? (
+                  <WcTeamProfilePanel
+                    homeTeamId={game.home.teamId ?? ""}
+                    awayTeamId={game.away.teamId ?? ""}
+                    homeName={homeSafe.name}
+                    awayName={awaySafe.name}
+                    language={language}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <GameTeamStats
+                    league={game.league}
+                    homeTeamId={game.home.teamId ?? ""}
+                    awayTeamId={game.away.teamId ?? ""}
+                    language={language}
+                  />
+                )}
               </div>
             </div>
           </motion.div>
@@ -1091,7 +1120,13 @@ export default function PredictionFormV2({
                   : "mb-3 text-sm font-semibold text-white/90"
               }
             >
-              {isEn ? "Standings" : "順位表"}
+              {isWc
+                ? isEn
+                  ? "Standing"
+                  : "順位"
+                : isEn
+                  ? "Standings"
+                  : "順位表"}
             </div>
             <div
               className={
@@ -1100,7 +1135,14 @@ export default function PredictionFormV2({
                   : "border-t border-white/10 pt-3"
               }
             >
-              {showStandings ? (
+              {isWc ? (
+                <WcStandingPanel
+                  homeTeamId={game.home.teamId ?? ""}
+                  awayTeamId={game.away.teamId ?? ""}
+                  language={language}
+                  isMobile={isMobile}
+                />
+              ) : showStandings ? (
                 <NbaStandingsPanel compact={isMobile} />
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-4 text-sm text-white/65">

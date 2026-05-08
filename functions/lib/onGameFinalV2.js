@@ -13,6 +13,7 @@ const updateUserStreak_1 = require("./updateUserStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
 const updateTeamSeasonRecord_1 = require("./updateTeamSeasonRecord");
 const teamStandingsSeasonPhase_1 = require("./teamStandingsSeasonPhase");
+const settlementGame_1 = require("./settlementGame");
 const db = () => (0, firestore_2.getFirestore)();
 const MIN_MARKET = 10;
 const UPSET_MARKET_RATIO = 0.6;
@@ -26,7 +27,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     memory: "1GiB",
     timeoutSeconds: 540,
 }, async (event) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f;
     const firestore = db();
     const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
     const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
@@ -49,13 +50,23 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         return;
     if (game.homeScore == null || game.awayScore == null)
         return;
+    const settlementGame = {
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        league: game.league,
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+        regulationEtScore: (_e = game.regulationEtScore) !== null && _e !== void 0 ? _e : null,
+        advancingTeamId: (_f = game.advancingTeamId) !== null && _f !== void 0 ? _f : null,
+        knockout: game.knockout === true,
+    };
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();
     if (becameFinal) {
         streakResultMap = await (0, updateUserStreak_1.updateUserStreak)({
             db: firestore,
             gameId,
-            final: { home: game.homeScore, away: game.awayScore },
+            settlementGame,
         });
         if ((0, teamStandingsSeasonPhase_1.countsTowardRegularSeasonTeamStats)(game.seasonPhase)) {
             await (0, updateTeamSeasonRecord_1.updateTeamSeasonRecord)({
@@ -103,14 +114,16 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     /* ===== ③ market / upset ===== */
     let hadUpsetGame = false;
     const market = (0, marketCalculator_1.marketCalculator)(picks);
-    const winnerSide = game.homeScore > game.awayScore ? "home" : "away";
+    const upsetSport = (0, settlementGame_1.leagueToSport)(game.league);
+    const actualOutcome = (0, settlementGame_1.resolveActualOutcomeForUpset)(settlementGame, upsetSport);
     const upset = (0, upsetJudge_1.upsetJudge)({
         market: {
             total: market.total,
             majoritySide: market.majoritySide,
             majorityRatio: market.majorityRatio,
         },
-        result: { winnerSide },
+        actualOutcome,
+        sport: upsetSport === "football" ? "football" : "basketball",
         teams: { homeWins, awayWins },
         thresholds: {
             minMarket: MIN_MARKET,
@@ -145,11 +158,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
     }
     const pointsDistribution = (0, aggregateGamePointsDistribution_1.aggregateGamePointsDistributionFromPostsSnap)({
         postsSnap,
-        game: {
-            homeScore: game.homeScore,
-            awayScore: game.awayScore,
-            league: game.league,
-        },
+        game: settlementGame,
         market,
         hadUpsetGame,
         streakResultMap,

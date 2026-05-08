@@ -3,15 +3,18 @@ import { teamNameRules as teamNameRulesB1 } from "./team-names";
 import { teamNameRulesJ1 } from "./team-names-j1";
 import { teamNameRulesNBA } from "./team-names-nba";
 import { teamNameRulesPL } from "./team-names-pl";
+import type { League } from "./leagues";
 
 // 正規化
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
 
 /**
  * リーグ別にチーム名を 1行目 / 2行目 に分解する
+ *
+ * 将来リーグを増やしたときは else if を追加。未対応リーグは自動分割→fallback。
  */
 export function splitTeamNameByLeague(
-  league: "bj" | "j1" | "nba" | "pl",
+  league: League,
   rawName: string
 ): [string, string] {
   const name = norm(rawName);

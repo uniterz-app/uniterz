@@ -21,7 +21,10 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
+import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
+import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
+import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs, {
   type RankingsCategory,
 } from "@/app/component/rankings/RankingsCategoryTabs";
@@ -38,6 +41,8 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
@@ -49,14 +54,25 @@ import {
 } from "@/lib/navigation/rankingsProfileFrom";
 import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
+import { Menu } from "lucide-react";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
+  const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
+  const [rankingLeague, setRankingLeague] =
+    useState<RankingLeagueSource>("nba");
   const phase: RankingPhase = "playoffs";
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
+  const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const season = useMemo(() => getCurrentPlayoffSeason(), []);
+  const effectiveRound: PlayoffRoundKey =
+    rankingLeague === "worldcup" ? "overall" : round;
+  const wcStageForHook: WcRankingStage | null =
+    category === "playoffs" && rankingLeague === "worldcup"
+      ? wcStage
+      : null;
 
   const visibleMetrics: MobileMetric[] = [
     "totalScore",
@@ -132,10 +148,11 @@ export default function MobileRankingsPage() {
   );
 
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useCumulativeRankingsBulk(phase, round);
+    useCumulativeRankingsBulk(phase, effectiveRound, wcStageForHook);
 
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
+  const langUi = language === "en" ? "en" : "ja";
 
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
@@ -151,6 +168,10 @@ export default function MobileRankingsPage() {
   const myRank = bundle?.myRank ?? null;
   const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
+  const rankingListCount =
+    typeof bundle?.count === "number" && Number.isFinite(bundle.count)
+      ? bundle.count
+      : 0;
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length === 0) return [];
@@ -173,7 +194,16 @@ export default function MobileRankingsPage() {
     return myRawRow.activeWinStreak ?? 0;
   }, [metric, myRawRow]);
   const winRateMinPosts =
-    phase === "playoffs" && (round === "overall" || round === "r1") ? 20 : 1;
+    rankingLeague === "worldcup"
+      ? 1
+      : phase === "playoffs" && (round === "overall" || round === "r1")
+        ? 20
+        : 1;
+
+  const rankingHasNoEntries =
+    listReady &&
+    (rows.length === 0 ||
+      (rankingLeague === "worldcup" && rankingListCount === 0));
 
   const introRef = useRef(true);
   const intro = introRef.current;
@@ -184,7 +214,10 @@ export default function MobileRankingsPage() {
 
   const [topDone, setTopDone] = useState(false);
 
-  const pageKey = `${phase}-${round}-${metric}`;
+  const pageKey =
+    rankingLeague === "worldcup"
+      ? `${phase}-${effectiveRound}-${wcStage}-${metric}`
+      : `${phase}-${effectiveRound}-${metric}`;
   const pageKeyRef = useRef(pageKey);
   pageKeyRef.current = pageKey;
 
@@ -209,24 +242,56 @@ export default function MobileRankingsPage() {
         </div>
 
         <div className="space-y-3 px-3 pt-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setRankingsDrawerOpen(true)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
+              aria-label={langUi === "en" ? "Open menu" : "メニューを開く"}
+            >
+              <Menu className="h-5 w-5" strokeWidth={2.25} />
+            </button>
+            <span
+              className={[
+                nameBebas.className,
+                "min-w-0 flex-1 text-center text-[14px] tracking-[0.26em] text-white/90",
+              ].join(" ")}
+            >
+              {rankingLeague === "worldcup" ? "WORLD CUP" : "RANKINGS"}
+            </span>
+            <div className="w-10 shrink-0" aria-hidden />
+          </div>
+
           <RankingsScheduleNotice phase={phase} language={language} />
           <div className="space-y-0.5">
-            <RankingsCategoryTabs
-              category={category}
-              onChange={setCategory}
-            />
-            {category === "playoffs" && (
+            {rankingLeague === "nba" ? (
+              <RankingsCategoryTabs
+                category={category}
+                onChange={setCategory}
+              />
+            ) : null}
+
+            {rankingLeague === "nba" && category === "playoffs" ? (
               <PlayoffRoundTabs
                 round={round}
                 onChange={setRound}
                 isMobile
                 isEn={language === "en"}
               />
-            )}
+            ) : null}
+
+            {rankingLeague === "worldcup" ? (
+              <WcRankingStageTabs
+                stage={wcStage}
+                onChange={setWcStage}
+                isMobile
+                isEn={language === "en"}
+              />
+            ) : null}
 
             {category === "playoffs" ? (
               <MyRankCard
-                rank={myRank}
+                rank={rankingHasNoEntries ? null : myRank}
                 metric={metric}
                 value={myValue}
                 displayName={user.displayName || "You"}
@@ -241,7 +306,9 @@ export default function MobileRankingsPage() {
                 language={language}
                 isPro={user.plan === "pro"}
                 mobileWide
-                rankDeltaPlaces={myRankDeltaPlaces}
+                rankDeltaPlaces={
+                  rankingHasNoEntries ? null : myRankDeltaPlaces
+                }
               />
             ) : null}
           </div>
@@ -280,7 +347,7 @@ export default function MobileRankingsPage() {
           <div className="px-2 pb-bottom-nav pt-2">
             <BracketLeaderboardSection season={season} />
           </div>
-        ) : listReady && rows.length === 0 ? (
+        ) : rankingHasNoEntries ? (
           <div
             role="status"
             className="flex min-h-[min(62dvh,520px)] items-center justify-center px-4 text-center"
@@ -295,7 +362,7 @@ export default function MobileRankingsPage() {
               NO DATA
             </p>
           </div>
-        ) : (
+        ) : listReady ? (
           <div onTouchStart={handleCardsTouchStart} onTouchEnd={handleCardsTouchEnd}>
             <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
@@ -304,7 +371,7 @@ export default function MobileRankingsPage() {
                   rows={top3}
                   metric={metric}
                   rankPhase={phase}
-                  playoffRound={round}
+                  playoffRound={effectiveRound}
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
@@ -333,7 +400,7 @@ export default function MobileRankingsPage() {
                           rank={i + 4}
                           metric={metric}
                           rankPhase={phase}
-                          playoffRound={round}
+                          playoffRound={effectiveRound}
                           language={language}
                         />
                       </motion.div>
@@ -344,8 +411,30 @@ export default function MobileRankingsPage() {
               </motion.div>
             </AnimatePresence>
           </div>
-        )}
+        ) : null}
       </div>
+
+      <SideMenuDrawer
+        open={rankingsDrawerOpen}
+        onClose={() => setRankingsDrawerOpen(false)}
+        variant="mobile"
+      >
+        <RankingsDrawerMenu
+          variant="mobile"
+          language={langUi}
+          rankingLeague={rankingLeague}
+          onSelectNbaPlayoffs={() => {
+            setRankingLeague("nba");
+            setCategory("playoffs");
+            setRankingsDrawerOpen(false);
+          }}
+          onSelectWorldCup={() => {
+            setRankingLeague("worldcup");
+            setCategory("playoffs");
+            setRankingsDrawerOpen(false);
+          }}
+        />
+      </SideMenuDrawer>
     </div>
   );
 }

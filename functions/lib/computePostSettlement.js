@@ -4,6 +4,8 @@ exports.computePostSettlement = computePostSettlement;
 const calcPostResult_1 = require("./calcPostResult");
 const calcUpsetPoints_1 = require("./calcUpsetPoints");
 const calcStreakBonus_1 = require("./calcStreakBonus");
+const footballTotalScore_1 = require("./footballTotalScore");
+const settlementGame_1 = require("./settlementGame");
 function lerpByRange(value, min, max, start, end) {
     if (value <= min)
         return start;
@@ -69,12 +71,23 @@ function calcPointsV3({ predHome, predAway, finalHome, finalAway, }) {
 function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap, }) {
     var _a, _b, _c, _d, _e, _f, _g;
     const final = { home: game.homeScore, away: game.awayScore };
+    const settlementGame = {
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        league: game.league,
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+        regulationEtScore: game.regulationEtScore,
+        advancingTeamId: game.advancingTeamId,
+        knockout: game.knockout,
+    };
     const result = (0, calcPostResult_1.calcPostResult)({
         prediction: p.prediction,
         final,
         market,
         hadUpsetGame,
         league: game.league,
+        settlementGame,
     });
     const upsetPoints = result.upsetHit
         ? (0, calcUpsetPoints_1.calcUpsetPoints)(market.majorityRatio)
@@ -83,13 +96,16 @@ function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap,
     const predHome = (_b = (_a = p.prediction) === null || _a === void 0 ? void 0 : _a.score) === null || _b === void 0 ? void 0 : _b.home;
     const predAway = (_d = (_c = p.prediction) === null || _c === void 0 ? void 0 : _c.score) === null || _d === void 0 ? void 0 : _d.away;
     const canScore = Number.isFinite(predHome) && Number.isFinite(predAway);
+    const sport = (0, settlementGame_1.leagueToSport)(game.league);
     const baseScore = canScore
-        ? calcPointsV3({
-            predHome,
-            predAway,
-            finalHome: final.home,
-            finalAway: final.away,
-        })
+        ? sport === "football"
+            ? (0, footballTotalScore_1.calcPointsFootball)(p.prediction, settlementGame)
+            : calcPointsV3({
+                predHome,
+                predAway,
+                finalHome: final.home,
+                finalAway: final.away,
+            })
         : {
             points: 0,
             basePoints: 0,

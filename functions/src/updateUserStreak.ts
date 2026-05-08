@@ -1,7 +1,9 @@
 // functions/src/updateUserStreak.ts
 
 import { FieldValue } from "firebase-admin/firestore";
-import { judgeWin } from "./judgeWin";
+import { predictionWin } from "./predictionWin";
+import type { SettlementGameInput } from "./settlementGame";
+import { leagueToSport } from "./settlementGame";
 
 /**
  * games/{gameId}: set `suppressStreakIncrementV2: true` to skip all streak writes for that game (no stats updates, no per-user markers).
@@ -19,15 +21,61 @@ export type UpdatedUserStreakResult = {
   maxLoseStreak: number;
 };
 
+type StreakBySportState = {
+  basketball: number;
+  football: number;
+  maxBasketball: number;
+  maxFootball: number;
+};
+
+function migrateStreakBySport(
+  snap: FirebaseFirestore.DocumentSnapshot
+): StreakBySportState {
+  const sb = snap.get("streakBySport") as
+    | { basketball?: number; football?: number }
+    | undefined;
+  const mb = snap.get("maxWinStreakBySport") as
+    | { basketball?: number; football?: number }
+    | undefined;
+
+  if (sb && typeof sb === "object") {
+    return {
+      basketball: Number(sb.basketball ?? 0),
+      football: Number(sb.football ?? 0),
+      maxBasketball:
+        typeof mb?.basketball === "number"
+          ? mb.basketball
+          : Number(snap.get("maxWinStreak") ?? 0),
+      maxFootball:
+        typeof mb?.football === "number" ? mb.football : 0,
+    };
+  }
+
+  const legacy = snap.get("currentStreak") ?? 0;
+  const maxLegacy = snap.get("maxWinStreak") ?? 0;
+  return {
+    basketball: typeof legacy === "number" ? legacy : 0,
+    football: 0,
+    maxBasketball: typeof maxLegacy === "number" ? maxLegacy : 0,
+    maxFootball: 0,
+  };
+}
+
 function streakResultFromUserSnap(
   uid: string,
   didWin: boolean,
-  snap: FirebaseFirestore.DocumentSnapshot
+  snap: FirebaseFirestore.DocumentSnapshot,
+  settlementGame: SettlementGameInput
 ): UpdatedUserStreakResult {
-  const current = snap.get("currentStreak") ?? 0;
-  const maxWin = snap.get("maxWinStreak") ?? 0;
-  const maxLose = snap.get("maxLoseStreak") ?? 0;
+  const migrated = migrateStreakBySport(snap);
+  const sport = leagueToSport(settlementGame.league);
+  const current =
+    sport === "football" ? migrated.football : migrated.basketball;
+  const maxWin =
+    sport === "football" ? migrated.maxFootball : migrated.maxBasketball;
   const activeWinStreak = current > 0 ? current : 0;
+  const maxLose = snap.get("maxLoseStreak") ?? 0;
+
   return {
     uid,
     didWin,
@@ -50,11 +98,11 @@ function streakApplyMarkerRef(
 export async function updateUserStreak({
   db,
   gameId,
-  final,
+  settlementGame,
 }: {
   db: FirebaseFirestore.Firestore;
   gameId: string;
-  final: { home: number; away: number };
+  settlementGame: SettlementGameInput;
 }): Promise<Map<string, UpdatedUserStreakResult>> {
   const postsSnap = await db
     .collection("posts")
@@ -62,7 +110,6 @@ export async function updateUserStreak({
     .where("schemaVersion", "==", 2)
     .get();
 
-  // ユーザーごとに1回だけ判定
   const userResult = new Map<string, boolean>();
 
   postsSnap.docs.forEach((d) => {
@@ -70,7 +117,7 @@ export async function updateUserStreak({
     if (!p.authorUid) return;
     if (userResult.has(p.authorUid)) return;
 
-    const isWin = judgeWin(p.prediction, final);
+    const isWin = predictionWin(p.prediction, settlementGame);
     userResult.set(p.authorUid, isWin);
   });
 
@@ -85,11 +132,16 @@ export async function updateUserStreak({
     await Promise.all(
       entries.map(async ([uid, didWin]) => {
         const snap = await db.doc(`user_stats_v2/${uid}`).get();
-        updatedMap.set(uid, streakResultFromUserSnap(uid, didWin, snap));
+        updatedMap.set(
+          uid,
+          streakResultFromUserSnap(uid, didWin, snap, settlementGame)
+        );
       })
     );
     return updatedMap;
   }
+
+  const sportKey = leagueToSport(settlementGame.league);
 
   for (const [uid, didWin] of userResult.entries()) {
     const userRef = db.doc(`user_stats_v2/${uid}`);
@@ -102,56 +154,85 @@ export async function updateUserStreak({
         const markerSnap = await tx.get(markerRef);
         if (markerSnap.exists) {
           const snap = await tx.get(userRef);
-          return streakResultFromUserSnap(uid, didWin, snap);
+          return streakResultFromUserSnap(uid, didWin, snap, settlementGame);
         }
 
         const snap = await tx.get(userRef);
 
-        let current = snap.get("currentStreak") ?? 0;
-        let maxWin = snap.get("maxWinStreak") ?? 0;
         let maxLose = snap.get("maxLoseStreak") ?? 0;
 
-        if (didWin) {
-          current = current > 0 ? current + 1 : 1;
-          if (current > maxWin) maxWin = current;
+        const st = migrateStreakBySport(snap);
+        let curB = st.basketball;
+        let curF = st.football;
+        let maxB = st.maxBasketball;
+        let maxF = st.maxFootball;
+
+        if (sportKey === "football") {
+          if (didWin) {
+            curF = curF > 0 ? curF + 1 : 1;
+            if (curF > maxF) maxF = curF;
+          } else {
+            curF = curF < 0 ? curF - 1 : -1;
+            if (Math.abs(curF) > maxLose) {
+              maxLose = Math.abs(curF);
+            }
+          }
         } else {
-          current = current < 0 ? current - 1 : -1;
-          if (Math.abs(current) > maxLose) {
-            maxLose = Math.abs(current);
+          if (didWin) {
+            curB = curB > 0 ? curB + 1 : 1;
+            if (curB > maxB) maxB = curB;
+          } else {
+            curB = curB < 0 ? curB - 1 : -1;
+            if (Math.abs(curB) > maxLose) {
+              maxLose = Math.abs(curB);
+            }
           }
         }
 
-        const activeWinStreak = current > 0 ? current : 0;
+        const activeWinStreak =
+          sportKey === "football"
+            ? curF > 0
+              ? curF
+              : 0
+            : curB > 0
+              ? curB
+              : 0;
 
-        // user_stats_v2 更新（maxStreak はプロフィール等の既存名と揃えたエイリアス）
+        const currentForSport = sportKey === "football" ? curF : curB;
+
         tx.set(
           userRef,
           {
-            currentStreak: current,
-            maxWinStreak: maxWin,
+            streakBySport: { basketball: curB, football: curF },
+            maxWinStreakBySport: { basketball: maxB, football: maxF },
+            currentStreak: curB,
+            streakFootball: curF,
+            maxWinStreak: maxB,
+            maxWinStreakFootball: maxF,
             maxLoseStreak: maxLose,
-            maxStreak: maxWin,
+            maxStreak: maxB,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
         );
 
-        // 公開プロフィール（useProfile）と整合：試合確定と同時に連勝をミラー
         tx.set(
           publicUserRef,
           {
-            currentStreak: current,
-            maxStreak: maxWin,
+            streakBySport: { basketball: curB, football: curF },
+            currentStreak: curB,
+            streakFootball: curF,
+            maxStreak: maxB,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
         );
 
-        // cumulative_stats 更新
         tx.set(
           cumulativeRef,
           {
-            currentStreak: current,
+            streakBySport: { basketball: curB, football: curF },
+            currentStreak: curB,
             activeWinStreak,
             updatedAt: FieldValue.serverTimestamp(),
           },
@@ -165,9 +246,9 @@ export async function updateUserStreak({
         return {
           uid,
           didWin,
-          currentStreak: current,
+          currentStreak: currentForSport,
           activeWinStreak,
-          maxWinStreak: maxWin,
+          maxWinStreak: sportKey === "football" ? maxF : maxB,
           maxLoseStreak: maxLose,
         };
       }

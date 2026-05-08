@@ -12,11 +12,7 @@ function aggregateGamePointsDistributionFromPostsSnap({ postsSnap, game, market,
         const p = doc.data();
         const { totalPoints } = (0, computePostSettlement_1.computePostSettlement)({
             p,
-            game: {
-                homeScore: game.homeScore,
-                awayScore: game.awayScore,
-                league: game.league,
-            },
+            game: Object.assign({}, game),
             market,
             hadUpsetGame,
             streakResultMap,

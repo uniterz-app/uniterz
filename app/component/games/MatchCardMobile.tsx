@@ -3,6 +3,7 @@
 
 
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
@@ -123,6 +124,7 @@ const leagueLineColor: Record<League, string> = {
   j1: "#22c55e",   // J1
   nba: "#60a5fa",  // NBA
   pl: "#a855f7",   // Premier League（紫系・仮）
+  wc: "#f59e0b",   // World Cup（アンバー）
 };
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
@@ -346,7 +348,12 @@ const marketMajority = useMemo(() => {
   const teamMarkSizeSoccer = dense
     ? "jersey-icon w-16 h-16 md:w-20 md:h-20"
     : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
-  /** Canvas ユニのみモバイルルートでやや大きめ */
+  /** WC 国旗用：横長 3:2 系 (ジャージより気持ち小さめ) */
+  const teamMarkSizeFlag = dense
+    ? isMobile
+      ? "w-[4.5rem] h-[3rem] md:w-[5.5rem] md:h-[3.7rem] mb-2"
+      : "w-[4.5rem] h-[3rem] md:w-[5.5rem] md:h-[3.7rem] mb-2"
+    : "w-[4.75rem] h-[3.2rem] md:w-[6.25rem] md:h-[4.2rem] mb-2";
   const teamMarkSizeJersey = dense
     ? isMobile
       ? "jersey-icon w-[3.875rem] h-[3.875rem] md:w-20 md:h-20"
@@ -936,23 +943,27 @@ background:
           transition={entryTransition ? entryTransition(4) : undefined}
         >
 
-  {/* HOME：Web はラベルを大きく */}
-  <div
-    className={[
-      mobileDense ? "mb-0 -mt-3" : "mb-1",
-      "text-center font-bold uppercase opacity-85",
-      isMobile
-        ? "text-xs md:text-sm"
-        : "text-sm md:text-base lg:text-lg",
-    ].join(" ")}
-    style={teamNameFont}
-  >
-    HOME
-  </div>
+  {/* HOME：Web はラベルを大きく（WC は中立地のためラベルを出さない） */}
+  {league !== "wc" && (
+    <div
+      className={[
+        mobileDense ? "mb-0 -mt-3" : "mb-1",
+        "text-center font-bold uppercase opacity-85",
+        isMobile
+          ? "text-xs md:text-sm"
+          : "text-sm md:text-base lg:text-lg",
+      ].join(" ")}
+      style={teamNameFont}
+    >
+      HOME
+    </div>
+  )}
 
   {/* ユニ・チーム名・戦績（モバイル dense 時もラッパーでまとめるのみ） */}
   <div className="flex w-full flex-col items-center">
-  {Icon === Jersey ? (
+  {league === "wc" ? (
+    <CountryFlag teamId={home.teamId} className={teamMarkSizeFlag} />
+  ) : Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={homeColor}
       accentEnd={homeSecondaryColor}
@@ -1160,23 +1171,27 @@ background:
           transition={entryTransition ? entryTransition(6) : undefined}
         >
 
-  <div
-    className={[
-      mobileDense ? "mb-0 -mt-3" : "mb-1",
-      "text-center font-bold uppercase opacity-85",
-      isMobile
-        ? "text-xs md:text-sm"
-        : "text-sm md:text-base lg:text-lg",
-    ].join(" ")}
-    style={teamNameFont}
-  >
-    AWAY
-  </div>
+  {league !== "wc" && (
+    <div
+      className={[
+        mobileDense ? "mb-0 -mt-3" : "mb-1",
+        "text-center font-bold uppercase opacity-85",
+        isMobile
+          ? "text-xs md:text-sm"
+          : "text-sm md:text-base lg:text-lg",
+      ].join(" ")}
+      style={teamNameFont}
+    >
+      AWAY
+    </div>
+  )}
 
   {/* ユニ・チーム名・戦績（モバイル dense 時もラッパーでまとめるのみ） */}
   <div className="flex w-full flex-col items-center">
   {/* アイコン：mobile大きく / webそのまま */}
-  {Icon === Jersey ? (
+  {league === "wc" ? (
+    <CountryFlag teamId={away.teamId} className={teamMarkSizeFlag} />
+  ) : Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={awayColor}
       accentEnd={awaySecondaryColor}

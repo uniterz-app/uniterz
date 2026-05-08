@@ -15,6 +15,7 @@ import type { RankingRow } from "@/lib/rankings/useRanking";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
@@ -87,7 +88,8 @@ const EMPTY_MAP: Record<MobileMetric, WebRankingRow[]> = {
 
 export function useWebRankings(
   phase: RankingPhase = "playoffs",
-  round: PlayoffRoundKey = "overall"
+  round: PlayoffRoundKey = "overall",
+  wcStage: WcRankingStage | null = null
 ) {
   const visibleMetrics = useMemo(
     () => METRICS.filter((m) => AVAILABLE_METRICS.includes(m.key)),
@@ -103,7 +105,7 @@ export function useWebRankings(
   }, [metric]);
 
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useCumulativeRankingsBulk(phase, round);
+    useCumulativeRankingsBulk(phase, round, wcStage);
 
   useEffect(() => {
     void ensureMetric(API_METRIC_BY_MOBILE[metric]);
@@ -136,6 +138,10 @@ export function useWebRankings(
   const myRank = bundle?.myRank ?? null;
   const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRow = (bundle?.myRow ?? null) as RankingRow | null;
+  const rankingListCount =
+    typeof bundle?.count === "number" && Number.isFinite(bundle.count)
+      ? bundle.count
+      : 0;
 
   return {
     listReady,
@@ -150,5 +156,6 @@ export function useWebRankings(
     myRank,
     myRankDeltaPlaces,
     myRow,
+    rankingListCount,
   };
 }

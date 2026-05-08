@@ -12,7 +12,7 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
 type Props = {
   gameId: string;
-  league: "nba" | "bj" | "j1" | "pl";
+  league: "nba" | "bj" | "j1" | "pl" | "wc";
   homeName: string;
   awayName: string;
   homeColor: string;
@@ -134,7 +134,7 @@ export default function GamePredictionDistribution({
     };
   }, [gameId]);
 
-  const isSoccer = league === "j1" || league === "pl";
+  const isSoccer = league === "j1" || league === "pl" || league === "wc";
   const total = homeCount + awayCount + (isSoccer ? drawCount : 0);
   const sumFb =
     (fallbackMarketBias?.homePct ?? 0) + (fallbackMarketBias?.awayPct ?? 0);

@@ -1,7 +1,7 @@
 // app/component/common/SideMenuDrawer.tsx
 "use client";
 
-import React from "react";
+import React, { type ReactNode } from "react";
 import cn from "clsx";
 import SettingsMenu from "@/app/component/settings/SettingsMenu";
 
@@ -14,6 +14,8 @@ type SideMenuDrawerProps = {
   onOpenMenu?: () => void;
   /** mobile / web で中身のサイズを少し変える */
   variant?: "mobile" | "web";
+  /** 指定時は SettingsMenu の代わりに表示（ランキング用ドロワーなど） */
+  children?: ReactNode;
 };
 
 export default function SideMenuDrawer({
@@ -21,6 +23,7 @@ export default function SideMenuDrawer({
   onClose,
   onOpenMenu,
   variant = "mobile",
+  children,
 }: SideMenuDrawerProps) {
   const isMobile = variant === "mobile";
   return (
@@ -161,10 +164,12 @@ export default function SideMenuDrawer({
               aria-hidden
               className="pointer-events-none absolute inset-x-3 top-2 h-px bg-white/25"
             />
-            <SettingsMenu
-              onRequestCloseMenu={onClose}
-              onRequestOpenMenu={onOpenMenu}
-            />
+            {children ?? (
+              <SettingsMenu
+                onRequestCloseMenu={onClose}
+                onRequestOpenMenu={onOpenMenu}
+              />
+            )}
           </div>
       </div>
     </>

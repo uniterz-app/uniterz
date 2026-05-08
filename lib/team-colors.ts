@@ -3,6 +3,7 @@ import { teamColorsB1 } from "./teams-b1";
 import { teamColorsJ1 } from "./teams-j1";
 import { teamColorsNBA } from "./teams-nba";
 import { teamColorsPL } from "./teams-pl";
+import { teamColorsWC } from "./teams-wc";
 
 /** ユニフォーム専用の色上書き（まずはポストシーズン対象から段階的に調整） */
 const jerseyPrimaryOverridesNBA: Record<string, string> = {
@@ -93,6 +94,9 @@ export function getTeamPrimaryColor(
     case "pl":
       return teamColorsPL[teamId]?.primary ?? "#ffffff";
 
+    case "wc":
+      return teamColorsWC[teamId]?.primary ?? "#ffffff";
+
     default:
       return "#ffffff";
   }
@@ -144,6 +148,9 @@ export function getTeamSecondaryColor(
 
     case "pl":
       return teamColorsPL[teamId]?.secondary ?? deriveSecondaryFromPrimary(primary);
+
+    case "wc":
+      return teamColorsWC[teamId]?.secondary ?? deriveSecondaryFromPrimary(primary);
 
     default:
       return deriveSecondaryFromPrimary(primary);

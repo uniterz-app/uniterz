@@ -42,6 +42,12 @@ export async function finalizePost({
       homeScore: final.home,
       awayScore: final.away,
       league: game.league,
+      homeTeamId: game.homeTeamId,
+      awayTeamId: game.awayTeamId,
+      regulationEtScore: game.regulationEtScore,
+      advancingTeamId: game.advancingTeamId,
+      knockout: game.knockout,
+      countsForRanking: game.countsForRanking,
     },
     market,
     hadUpsetGame,
@@ -120,6 +126,7 @@ export async function finalizePost({
       countsForRanking,
       seasonPhase: game?.seasonPhase ?? null,
       seasonRound: game?.seasonRound ?? null,
+      wcStage: game?.wcStage ?? null,
     }).then(() => buildWindowCacheForUser(uid))
   );
 }
