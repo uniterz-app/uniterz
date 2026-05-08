@@ -18,6 +18,10 @@ import {
 } from "@/lib/i18n/language";
 import { ui } from "@/lib/i18n/ui";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
+import {
+  isProfileGamblingTermsError,
+  profileGamblingTermsUserMessage,
+} from "@/lib/profile/profileGamblingTerms";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -121,6 +125,10 @@ export default function ProfileEditPage() {
       router.back();
     } catch (err) {
       console.error(err);
+      if (isProfileGamblingTermsError(err)) {
+        alert(profileGamblingTermsUserMessage(language));
+        return;
+      }
       alert(
         ui(language, {
           ja: "保存に失敗しました。時間をおいて再度お試しください。",

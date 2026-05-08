@@ -22,6 +22,10 @@ import { guessLanguageFromNavigator } from "@/lib/i18n/language";
 import { ui as uiStr } from "@/lib/i18n/ui";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import { consumePostOnboardingRedirect } from "@/lib/auth/safeNextRedirect";
+import {
+  isProfileGamblingTermsError,
+  profileGamblingTermsUserMessage,
+} from "@/lib/profile/profileGamblingTerms";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -106,6 +110,10 @@ export default function OnboardingForm({ variant }: Props) {
       router.replace(afterOnboarding ?? gamesPath);
     } catch (err) {
       console.error("onboarding save failed:", err);
+      if (isProfileGamblingTermsError(err)) {
+        alert(profileGamblingTermsUserMessage(language));
+        return;
+      }
       alert(
         uiStr(language, {
           ja: "保存に失敗しました。時間をおいて再度お試しください。",

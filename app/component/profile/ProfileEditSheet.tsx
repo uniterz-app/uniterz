@@ -19,6 +19,10 @@ import {
 } from "@/lib/i18n/language";
 import { ui } from "@/lib/i18n/ui";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
+import {
+  isProfileGamblingTermsError,
+  profileGamblingTermsUserMessage,
+} from "@/lib/profile/profileGamblingTerms";
 
 type Props = {
   onClose: () => void;
@@ -125,6 +129,10 @@ export default function ProfileEditSheet({
       onClose();
     } catch (err) {
       console.error(err);
+      if (isProfileGamblingTermsError(err)) {
+        alert(profileGamblingTermsUserMessage(language));
+        return;
+      }
       alert(
         ui(language, {
           ja: "保存に失敗しました。時間をおいて再度お試しください。",

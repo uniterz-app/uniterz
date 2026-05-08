@@ -36,6 +36,11 @@ import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import {
+  assertProfileTextsFreeOfGamblingTerms,
+  isProfileGamblingTermsError,
+  profileGamblingTermsUserMessage,
+} from "../../../../../lib/profile/profileGamblingTerms";
 
 type ProfileTab = "overview" | "bracket" | "stats";
 
@@ -236,6 +241,13 @@ export default function ProfileHomeScreen({
     const safeBio = bio.trim();
     if (safeName.length > 50) {
       Alert.alert(t.invalidTitle, t.invalidName);
+      return;
+    }
+    try {
+      assertProfileTextsFreeOfGamblingTerms(safeName, safeBio);
+    } catch (e: unknown) {
+      if (!isProfileGamblingTermsError(e)) throw e;
+      Alert.alert(t.invalidTitle, profileGamblingTermsUserMessage(language));
       return;
     }
     setSaving(true);

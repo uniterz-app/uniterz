@@ -3,6 +3,10 @@
 import { auth } from "@/lib/firebase";
 import type { Language } from "@/lib/i18n/language";
 import {
+  assertProfileTextsFreeOfGamblingTerms,
+  ProfileGamblingTermsError,
+} from "@/lib/profile/profileGamblingTerms";
+import {
   dispatchCumulativeRankingInvalidate,
   dispatchCumulativeRankingPatchMyCountry,
   persistRankCountrySessionOverride,
@@ -24,6 +28,9 @@ export type SaveMeProfilePayload = {
 export async function saveMeProfile(payload: SaveMeProfilePayload): Promise<void> {
   const user = auth.currentUser;
   if (!user) throw new Error("not authenticated");
+
+  assertProfileTextsFreeOfGamblingTerms(payload.displayName, payload.bio);
+
   const token = await user.getIdToken();
   const res = await fetch("/api/me/profile", {
     method: "POST",
@@ -35,6 +42,9 @@ export async function saveMeProfile(payload: SaveMeProfilePayload): Promise<void
   });
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) {
+    if (data?.error === "forbidden_gambling_terms") {
+      throw new ProfileGamblingTermsError();
+    }
     throw new Error(data?.error ?? res.statusText);
   }
 
