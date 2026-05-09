@@ -1,0 +1,58 @@
+[
+  {
+    "id": "nba-20260506-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-06T08:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 1",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "away": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260508-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-08T08:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 2",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "away": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260510-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-10T04:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 3",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "away": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260512-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-12T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 4",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "away": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "status": "scheduled"
+  }
+]

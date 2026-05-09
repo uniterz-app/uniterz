@@ -1,0 +1,44 @@
+// Firebase Storage セキュリティルール（Web / ネイティブの client SDK アップロードと整合）
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    /** Firestore の isAdmin と同じ UID（管理画面のアップロード用） */
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid == "S6r5KyS9XcXds3Pm7koLzzELrvs2";
+    }
+
+    // プロフィール画像 — Web `settings/profile` / ネイティブ `ProfileHomeScreen`
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 8 * 1024 * 1024;
+    }
+
+    // お問い合わせ添付 — ContactForm
+    match /contact_screenshots/{userId}/{allPaths=**} {
+      allow read: if false;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 8 * 1024 * 1024;
+    }
+
+    // コミュニティヘッダー — CreateGroupModal
+    match /community_headers/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 8 * 1024 * 1024;
+    }
+
+    // お知らせ画像 — app/admin/announcements（管理者のみクライアントからアップロード）
+    match /announcements/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 12 * 1024 * 1024;
+    }
+
+    // 明示ルールに無いパスはデフォルトで拒否（catch-all の allow:false は一部クライアントで競合しうるため置かない）
+  }
+}
