@@ -7,7 +7,6 @@ import {
   LayoutChangeEvent,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -145,24 +144,25 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   const statRecordValue = `${stats.wins}-${stats.losses}`;
 
   const n = points.length;
-  const colW =
+  /** 横スクロールなし: 列はプロット幅に必ず収め、狭いときだけ COL_MIN_W 未満に詰める */
+  const gapTotal = COL_GAP * Math.max(0, n - 1);
+  const slotFloor =
     plotInnerW > 0 && n > 0
-      ? Math.min(
-          COL_MAX_W,
-          Math.max(COL_MIN_W, Math.floor((plotInnerW - COL_GAP * Math.max(0, n - 1)) / n))
-        )
+      ? Math.max(1, Math.floor(Math.max(0, plotInnerW - gapTotal) / n))
+      : COL_MIN_W;
+  const colW =
+    n > 0 && plotInnerW > 0
+      ? Math.min(COL_MAX_W, slotFloor < COL_MIN_W ? slotFloor : Math.max(COL_MIN_W, slotFloor))
       : COL_MIN_W;
 
   const chartTotalW = n * colW + Math.max(0, n - 1) * COL_GAP;
-  /** Web: `Math.max(points.length * minWidthPerCol, 100)` で最小幅を確保 */
-  const scrollMinW =
-    plotInnerW > 0
-      ? Math.max(plotInnerW, chartTotalW, Math.max(1, n) * 12)
-      : Math.max(chartTotalW, Math.max(1, n) * 12);
+  /** 格子・ゼロラインの幅（レイアウト前は列幅から推定） */
+  const plotChartW =
+    plotInnerW > 0 ? plotInnerW : Math.max(1, chartTotalW, Math.max(1, n) * 12);
 
   /** Web `CHART_GRID_STYLE` と同じ 18px 方眼（縦線・横線） */
   const chartGridLines = useMemo((): ReactNode[] => {
-    const w = Math.max(1, scrollMinW);
+    const w = Math.max(1, plotChartW);
     const h = PLOT_H;
     const xs = chartGridLinePositions(w, CHART_GRID_STEP);
     const ys = chartGridLinePositions(h, CHART_GRID_STEP);
@@ -194,7 +194,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
       );
     }
     return nodes;
-  }, [scrollMinW]);
+  }, [plotChartW]);
 
   const halfH = PLOT_H / 2;
   const blockH = Math.max(2, (halfH - (maxAbs - 1) * BLOCK_GAP_PX) / maxAbs);
@@ -300,26 +300,26 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
             </View>
 
             <View style={styles.plotFlex} onLayout={onPlotLayout}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.scrollContent, { minWidth: scrollMinW }]}
-              >
-                <View style={{ width: scrollMinW, minHeight: PLOT_H + 18 }}>
-                  <View style={[styles.plotScrollInner, { width: scrollMinW, height: PLOT_H }]}>
+              <View style={styles.plotNoScrollWrap}>
+                <View style={{ width: plotChartW, minHeight: PLOT_H + 18 }}>
+                  <View style={[styles.plotScrollInner, { width: plotChartW, height: PLOT_H }]}>
                     <Svg
-                      width={scrollMinW}
+                      width={plotChartW}
                       height={PLOT_H}
                       style={[styles.plotSvgBg, { opacity: CHART_GRID_OPACITY }]}
                       pointerEvents="none"
                     >
                       {chartGridLines}
                     </Svg>
+                    {/* Web と同じ Y=0 をプロット幅全体に一本（列ごとの View では途切れる） */}
+                    <View
+                      pointerEvents="none"
+                      style={[styles.plotZeroLine, { top: halfH - 0.5 }]}
+                    />
                     <View style={[styles.columnsOverlay, { gap: COL_GAP }]}>
                       {points.map((p) => (
                         <View key={p.postId} style={[styles.column, { width: colW }]}>
                           <View style={[styles.plotColumn, { height: PLOT_H }]}>
-                            <View style={[styles.zeroLine, { top: halfH - 0.5 }]} />
                             <View style={[styles.upperHalf, { height: halfH, gap: BLOCK_GAP_PX }]}>
                               {p.streakAfter > 0 &&
                                 Array.from({ length: p.streakAfter }, (_, bi) => (
@@ -354,7 +354,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
                     ))}
                   </View>
                 </View>
-              </ScrollView>
+              </View>
             </View>
           </View>
         </ChartGlassShell>
@@ -649,8 +649,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  scrollContent: {
-    flexGrow: 1,
+  /** 横スクロール廃止: プロットは親幅にクリップ */
+  plotNoScrollWrap: {
+    width: "100%",
+    overflow: "hidden",
   },
   plotScrollInner: {
     position: "relative",
@@ -677,14 +679,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: 8,
   },
-  /** Web `bg-cyan-200/45` + `h-px`（0 ライン）。`top` は `halfH - 0.5` で中央寄せ */
-  zeroLine: {
+  /** Web `absolute left-0 right-0 top-1/2 z-2 h-px bg-cyan-200/45` に相当（全幅の 0 ライン） */
+  plotZeroLine: {
     position: "absolute",
     left: 0,
     right: 0,
     height: 1,
     backgroundColor: "rgba(165,243,252,0.45)",
-    zIndex: 4,
+    zIndex: 2,
   },
   upperHalf: {
     position: "absolute",

@@ -13,7 +13,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Cavaliers";
 
 /**
- * 2025-26 Pistons vs Cavaliers（レギュラー4 + プレーオフ Game 1）
+ * 2025-26 Pistons vs Cavaliers（レギュラー4 + プレーオフ Game 2まで）
  * 欠場者表記は既存H2Hと同様（イニシャル + 姓）
  */
 export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
@@ -89,6 +89,26 @@ export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
         "Cade Cunninghamが23得点7アシスト、Tobias Harrisが20得点8リバウンドでDetroitが先勝。立ち上がりから守備の圧力でClevelandを苦しめ、19ターンオーバーから31得点を奪ったのが大きかった。Cavsは4QにJames Harden中心で追い上げ、残り5分28秒で93-93まで戻したが、そこからDetroitが18-8で締めた。Jalen Durenの連続ダンクで流れを切らせず、そのまま押し切った試合だった。シリーズはDetroitが1-0。",
       en:
         "Behind 23 points and 7 assists from Cade Cunningham and 20 points and 8 rebounds from Tobias Harris, Detroit stole Game 1. The Pistons bothered Cleveland with defensive pressure from the opening tip and turned 19 turnovers into 31 points. The Cavaliers rallied in the fourth behind James Harden, tying the game at 93-93 with 5:28 left, but Detroit closed on an 18-8 run. Back-to-back slams from Jalen Duren kept momentum on Detroit’s side as the Pistons pulled away. Detroit leads the series 1-0.",
+    },
+  },
+  {
+    id: "h2h-pistons-cavaliers-2026-05-07-po-g2",
+    dateEt: "2026-05-07",
+    dateJst: "2026-05-08",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 107,
+    scoreRight: 97,
+    /** Detroit（Pistons）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: ["S. Merrill"],
+    inactiveFooterSummary: {
+      ja:
+        "Pistonsが序盤から主導権を握り、前半終了時点で54-43。Cavsは3QにMitchellを中心に追い上げ、4Q序盤に79-79まで戻したが、そこからDetroitが崩れなかった。Cade Cunninghamは25得点10アシスト、終盤6分で12得点。Tobias Harris、Duncan Robinsonの外角も効き、Cavsの反撃を止めた。CavsはMitchellが31得点、Jarrett Allenが22得点。ただし3Pが7/32、4Qは0/11で、追いついた後に決め切れなかった。Clevelandは0-2。",
+      en:
+        "Detroit controlled early and led 54-43 at halftime. Cleveland rallied behind Donovan Mitchell in the third and tied the game at 79-79 early in the fourth, but the Pistons never broke. Cade Cunningham finished with 25 points and 10 assists, including 12 points in the final six minutes, while Tobias Harris and Duncan Robinson hit timely perimeter shots to stall the comeback. Donovan Mitchell scored 31 and Jarrett Allen added 22, but Cleveland shot 7-for-32 from three (0-for-11 in the fourth) and could not finish after tying it. Cleveland trails the series 0-2.",
     },
   },
 ];

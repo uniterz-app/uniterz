@@ -19,9 +19,6 @@ const gamesCyberEase = Easing.bezier(0.16, 0.82, 0.22, 1);
 const DAY_STRIP_DELAY_CHILDREN_MS = 40;
 const DAY_STRIP_STAGGER_MS = 28;
 const DAY_STRIP_DURATION_MS = 280;
-/** Web `ScheduleList` daySwitch カード（`GAMES_DAY_SWITCH_EASE`） */
-const gamesDaySwitchEase = Easing.bezier(0.22, 1, 0.36, 1);
-
 /** Web `teamStatsCompare` の `ROW_STAGGER`（秒）→ ms */
 const STATS_COMPARE_ROW_STAGGER_MS = 90;
 /** Web `SymmetricalCompareRow` の transition duration（約 0.35s） */
@@ -146,22 +143,24 @@ export function gamesDayStripChipEnter(index: number) {
     });
 }
 
-/** Web `ScheduleList` daySwitch カード（ms） */
-const SCHEDULE_CARD_STAGGER_MS = 38;
-const SCHEDULE_CARD_STAGGER_CAP_MS = 280;
-const SCHEDULE_CARD_ENTER_MS = 520;
+/** 試合一覧カード：上から index 順にスタッガー（ms） */
+const SCHEDULE_CARD_STAGGER_MS = 44;
+const SCHEDULE_CARD_STAGGER_CAP_MS = 320;
+const SCHEDULE_CARD_ENTER_MS = 420;
+
+const scheduleCardEmergingEase = Easing.out(Easing.cubic);
 
 /**
- * Web `ScheduleList` daySwitch：hidden y=-11・delay min(i×38ms, 280ms)・520ms・`GAMES_DAY_SWITCH_EASE`
- * （一覧・ページ初回マウント共通）
+ * 試合一覧の入場：手前に「浮き出す」（奥寄り・小さめから不透明度とスケールで復帰）。
+ * `GamesHomeScreen` / `ResultHomeScreen` のカード行で共通利用。
  */
 export function gamesScheduleCardDaySwitchEnter(index: number) {
   const delayMs = Math.min(index * SCHEDULE_CARD_STAGGER_MS, SCHEDULE_CARD_STAGGER_CAP_MS);
-  return FadeInDown.duration(SCHEDULE_CARD_ENTER_MS)
+  return FadeIn.duration(SCHEDULE_CARD_ENTER_MS)
     .delay(delayMs)
-    .easing(gamesDaySwitchEase)
+    .easing(scheduleCardEmergingEase)
     .withInitialValues({
       opacity: 0,
-      transform: [{ translateY: -11 }],
+      transform: [{ translateY: 26 }, { scale: 0.86 }],
     });
 }

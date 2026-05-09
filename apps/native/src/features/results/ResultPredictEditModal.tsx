@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import CyberGlassToastModal from "../../components/CyberGlassToastModal";
 import { Timestamp, doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
@@ -155,6 +156,11 @@ export default function ResultPredictEditModal({
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
   const [predictSubmitting, setPredictSubmitting] = useState(false);
+  /** 予想更新成功のカスタムオーバーレイ（システム Alert の代わり） */
+  const [postUpdateSuccess, setPostUpdateSuccess] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const resetLocalForm = useCallback(() => {
     setPredictToolsTab(null);
@@ -171,6 +177,7 @@ export default function ResultPredictEditModal({
       resetLocalForm();
       return;
     }
+    setPostUpdateSuccess(null);
     const gameId =
       typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
     if (!gameId) {
@@ -468,10 +475,10 @@ export default function ResultPredictEditModal({
       });
       await AsyncStorage.removeItem(draftStorageKey(fUser.uid, String(game.id ?? "")));
       await onUpdated();
-      Alert.alert(
-        language === "en" ? "Done" : "完了",
-        language === "en" ? "Prediction updated." : "予想を更新しました。"
-      );
+      setPostUpdateSuccess({
+        title: language === "en" ? "Done" : "完了",
+        message: language === "en" ? "Prediction updated." : "予想を更新しました。",
+      });
       handleClose();
     } catch (err) {
       const msg =
@@ -536,10 +543,20 @@ export default function ResultPredictEditModal({
       </Modal>
     ) : null;
 
+  const dismissPostSuccess = useCallback(() => {
+    setPostUpdateSuccess(null);
+  }, []);
+
   return (
     <>
       {loadingOverlay}
       {errorOverlay}
+      <CyberGlassToastModal
+        visible={postUpdateSuccess != null}
+        title={postUpdateSuccess?.title ?? ""}
+        message={postUpdateSuccess?.message ?? ""}
+        onDismiss={dismissPostSuccess}
+      />
       <PredictModal
         visible={predictModalVisible}
         matchPreview={predictModalMatchPreview}

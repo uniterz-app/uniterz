@@ -1,6 +1,7 @@
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, inMemoryPersistence, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import { resolveFirebaseClientConfig } from "../shared/firebaseClientConfig";
 
 const firebaseConfig = resolveFirebaseClientConfig({
@@ -26,3 +27,4 @@ export const auth = (() => {
   }
 })();
 export const db = getFirestore(app);
+export const storage = getStorage(app);

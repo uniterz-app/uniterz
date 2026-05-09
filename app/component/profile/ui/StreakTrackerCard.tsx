@@ -3,10 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
-import {
-  streakChartLayoutMaxAbs,
-  streakPointSettledAtIsLocalToday,
-} from "@/lib/profile/streakTrackerChartLayout";
+import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
   STREAK_TRACKER_LAST_N,
@@ -534,7 +531,6 @@ export default function StreakTrackerCard({
                       className={`flex shrink-0 justify-start ${S.colGap} ${S.labelRow}`}
                     >
                       {points.map((p, i) => {
-                        const isToday = streakPointSettledAtIsLocalToday(p.settledAtMs);
                         return (
                           <div
                             key={`xl-${p.postId}`}
@@ -548,9 +544,7 @@ export default function StreakTrackerCard({
                               className={[
                                 "tabular-nums",
                                 S.indexLbl,
-                                isToday
-                                  ? "inline-flex min-h-[15px] min-w-[15px] items-center justify-center rounded-full border-2 border-amber-300 bg-amber-400/45 font-extrabold text-slate-900 shadow-[0_0_14px_rgba(250,204,21,0.65)]"
-                                  : "text-slate-500",
+                                "text-slate-500",
                               ].join(" ")}
                               initial={false}
                               animate={axesReady ? { opacity: 1 } : { opacity: 0 }}

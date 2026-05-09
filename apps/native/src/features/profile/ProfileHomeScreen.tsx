@@ -1,19 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { signOut, updateProfile } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "../../lib/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { auth, db, storage } from "../../lib/firebase";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
@@ -41,6 +58,63 @@ import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
 } from "../../../../../lib/profile/profileGamblingTerms";
+import CyberGlassToastModal from "../../components/CyberGlassToastModal";
+import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
+
+const hasNativeBlurView =
+  Platform.OS !== "web" &&
+  Boolean(
+    UIManager.getViewManagerConfig?.("ExpoBlurView") ??
+      UIManager.getViewManagerConfig?.("ViewManagerAdapter_ExpoBlur_ExpoBlurView")
+  );
+
+/** Web `SettingsNeonCard` の conic-gradient に近い色（回転 LinearGradient 用） */
+const SETTINGS_NEON_SPIN_COLORS = [
+  "hsl(189, 92%, 58%)",
+  "hsl(240, 15%, 9%)",
+  "hsl(189, 99%, 26%)",
+  "hsl(188, 94%, 13%)",
+  "hsl(189, 92%, 58%)",
+] as const;
+
+/** Web `main` の `backdrop-blur-xl` 相当（フォールバックは単色） */
+function ProfileSettingsBackdropBlur() {
+  if (!hasNativeBlurView) {
+    return (
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(11, 13, 18, 0.94)" }]}
+      />
+    );
+  }
+  if (Platform.OS === "ios") {
+    return (
+      <BlurView
+        pointerEvents="none"
+        intensity={44}
+        tint="dark"
+        style={StyleSheet.absoluteFillObject}
+      />
+    );
+  }
+  if (Platform.OS === "android") {
+    return (
+      <BlurView
+        pointerEvents="none"
+        intensity={40}
+        tint="dark"
+        experimentalBlurMethod="dimezisBlurView"
+        style={StyleSheet.absoluteFillObject}
+      />
+    );
+  }
+  return (
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(11, 13, 18, 0.94)" }]}
+    />
+  );
+}
 
 type ProfileTab = "overview" | "bracket" | "stats";
 
@@ -52,6 +126,13 @@ const PROFILE_TAB_LABELS_EN: Record<ProfileTab, string> = {
 };
 
 const PROFILE_TAB_ORDER: ProfileTab[] = ["overview", "stats", "bracket"];
+
+function profileCountryRowLabel(code: string, appLang: "ja" | "en"): string {
+  const trimmed = code.trim();
+  if (!trimmed) return appLang === "ja" ? "未設定" : "Not set";
+  const row = COUNTRY_OPTIONS.find((c) => c.code === trimmed);
+  return row ? (appLang === "ja" ? row.labelJa : row.labelEn) : trimmed;
+}
 
 export default function ProfileHomeScreen({
   bottomReserveY = 0,
@@ -77,11 +158,48 @@ export default function ProfileHomeScreen({
   const [handle, setHandle] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [language, setLanguage] = useState<"ja" | "en">("ja");
+  const [countryCode, setCountryCode] = useState("");
   const [plan, setPlan] = useState<"free" | "pro">("free");
 
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [langModalOpen, setLangModalOpen] = useState(false);
+  const [countryModalOpen, setCountryModalOpen] = useState(false);
+  /** プロフィール保存成功 — システム Alert の代わりにサイバーガラストースト */
+  const [saveSuccessToast, setSaveSuccessToast] = useState<{
+    title: string;
+    body: string;
+  } | null>(null);
 
   const isJa = language === "ja";
+
+  const reduceMotion = useReducedMotion();
+  const neonSpinAngle = useSharedValue(0);
+  const neonSpinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${neonSpinAngle.value}deg` }],
+  }));
+
+  useEffect(() => {
+    if (!settingsOpen) {
+      cancelAnimation(neonSpinAngle);
+      neonSpinAngle.value = 0;
+      return;
+    }
+    if (reduceMotion) {
+      cancelAnimation(neonSpinAngle);
+      neonSpinAngle.value = 0;
+      return;
+    }
+    neonSpinAngle.value = withRepeat(
+      withTiming(360, { duration: 8000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    return () => {
+      cancelAnimation(neonSpinAngle);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- neonSpinAngle は SharedValue で安定
+  }, [settingsOpen, reduceMotion]);
 
   const profilePlanHook = useNativeProfilePlan({
     targetUid: uid ?? null,
@@ -137,23 +255,32 @@ export default function ProfileHomeScreen({
             bracketSoon:
               "プレーオフブラケットは Web 版と同様の表示を順次対応します。",
             statsSoon: "詳細分析（Pro）は Web 版でご利用いただけます。",
-            title: "PROFILE",
-            displayName: "表示名",
-            displayNamePlaceholder: "表示名を入力",
+            settingsTitle: "プロフィール設定",
+            settingsSubtitle: "アイコン・名前・自己紹介を編集できます",
+            settingsClose: "閉じる",
+            nameLabel: "名前",
+            namePlaceholder: "名前",
             bio: "自己紹介",
-            bioPlaceholder: "自己紹介を入力",
-            langLabel: "表示言語",
-            save: "プロフィール保存",
+            bioPlaceholder: "自己紹介",
+            langLabel: "使用言語",
+            countryLabel: "住んでいる国（任意）",
+            countryNotSet: "未設定",
+            save: "変更を保存",
             saving: "保存中…",
-            account: "ログイン中アカウント",
-            uid: "uid",
             logout: "ログアウト",
             invalidTitle: "入力不正",
-            invalidName: "表示名は50文字以内で入力してください。",
+            invalidName: "名前は50文字以内で入力してください。",
             savedTitle: "保存完了",
             savedBody: "プロフィールを更新しました。",
             saveErrorTitle: "保存エラー",
             saveErrorBody: "プロフィール更新に失敗しました。",
+            pickPhotoTitle: "写真へのアクセス",
+            pickPhotoDenied: "プロフィール写真を選ぶには、写真ライブラリへのアクセスを許可してください。",
+            uploadAvatarFail: "画像のアップロードに失敗しました。通信状況を確認して再度お試しください。",
+            imagePickerNativeTitle: "写真の選択を使えません",
+            imagePickerNativeHint:
+              "expo-image-picker を組み込んだ開発ビルドが必要です。apps/native で `npx expo run:ios` または `npx expo run:android` を実行してアプリを再ビルドしてください。",
+            changePhotoA11y: "プロフィール写真を変更",
             proBadge: "PRO",
             streakLabel: "連勝",
           }
@@ -163,23 +290,32 @@ export default function ProfileHomeScreen({
               "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL and run the Next.js app.",
             bracketSoon: "Playoff bracket view will match the web app in a future update.",
             statsSoon: "Pro analysis is available on the web app.",
-            title: "PROFILE",
-            displayName: "Display name",
-            displayNamePlaceholder: "Enter display name",
+            settingsTitle: "Profile Settings",
+            settingsSubtitle: "Edit your icon, name, and bio.",
+            settingsClose: "Close",
+            nameLabel: "Name",
+            namePlaceholder: "Name",
             bio: "Bio",
-            bioPlaceholder: "Enter bio",
-            langLabel: "Language",
-            save: "Save profile",
+            bioPlaceholder: "Bio",
+            langLabel: "App Language",
+            countryLabel: "Country (optional)",
+            countryNotSet: "Not set",
+            save: "Save Changes",
             saving: "Saving…",
-            account: "Signed-in account",
-            uid: "uid",
             logout: "Log out",
             invalidTitle: "Invalid input",
-            invalidName: "Display name must be 50 characters or fewer.",
+            invalidName: "Name must be 50 characters or fewer.",
             savedTitle: "Saved",
             savedBody: "Profile has been updated.",
             saveErrorTitle: "Save error",
             saveErrorBody: "Failed to update profile.",
+            pickPhotoTitle: "Photo access",
+            pickPhotoDenied: "Allow photo library access to choose a profile picture.",
+            uploadAvatarFail: "Could not upload the image. Check your connection and try again.",
+            imagePickerNativeTitle: "Photo picker unavailable",
+            imagePickerNativeHint:
+              "Rebuild the native app with expo-image-picker linked. From apps/native run `npx expo run:ios` or `npx expo run:android`.",
+            changePhotoA11y: "Change profile photo",
             proBadge: "PRO",
             streakLabel: "Streak",
           },
@@ -205,6 +341,7 @@ export default function ProfileHomeScreen({
               photoURL?: unknown;
               avatarUrl?: unknown;
               language?: unknown;
+              countryCode?: unknown;
               plan?: unknown;
             }
           | undefined;
@@ -215,14 +352,16 @@ export default function ProfileHomeScreen({
         setDisplayName(fromDoc || fromAuth);
         setBio(typeof data?.bio === "string" ? data.bio : "");
         setHandle(typeof data?.handle === "string" ? data.handle : "");
-        const mergedAvatar =
+        const fromFirestorePhoto =
           typeof data?.photoURL === "string" && data.photoURL.trim().length > 0
-            ? data.photoURL
-            : typeof data?.avatarUrl === "string"
-              ? data.avatarUrl
+            ? data.photoURL.trim()
+            : typeof data?.avatarUrl === "string" && data.avatarUrl.trim().length > 0
+              ? data.avatarUrl.trim()
               : "";
-        setAvatarUrl(mergedAvatar);
+        const authPhoto = auth.currentUser?.photoURL?.trim() ?? "";
+        setAvatarUrl(fromFirestorePhoto || authPhoto);
         setLanguage(data?.language === "en" ? "en" : "ja");
+        setCountryCode(typeof data?.countryCode === "string" ? data.countryCode : "");
         setPlan(data?.plan === "pro" ? "pro" : "free");
       } finally {
         if (!alive) return;
@@ -235,10 +374,87 @@ export default function ProfileHomeScreen({
     };
   }, [uid]);
 
+  /** expo-image-picker の base64 をバイナリに変換（uploadString より uploadBytes の方がルール検証と相性がよいことがある） */
+  function base64ToUint8Array(b64: string): Uint8Array {
+    const atobFn = (globalThis as { atob?: (data: string) => string }).atob;
+    if (typeof atobFn !== "function") throw new Error("atob unavailable");
+    const bin = atobFn(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) & 0xff;
+    return out;
+  }
+
+  /** ネイティブ未リンクの開発ビルドでは静的 import だと起動時に落ちるため、利用時のみ動的 import する */
+  function isImagePickerNativeMissingError(e: unknown): boolean {
+    const msg = e instanceof Error ? e.message : String(e);
+    return /ExponentImagePicker|Cannot find native module/i.test(msg);
+  }
+
+  /** Web プロフィール編集と同様：ライブラリから選び Storage に置いて URL を state に反映 */
+  async function pickAvatar() {
+    if (!uid || uploadingAvatar || saving) return;
+    let ImagePicker: typeof import("expo-image-picker");
+    try {
+      ImagePicker = await import("expo-image-picker");
+    } catch (e: unknown) {
+      if (isImagePickerNativeMissingError(e)) {
+        Alert.alert(t.imagePickerNativeTitle, t.imagePickerNativeHint);
+      } else {
+        Alert.alert(t.saveErrorTitle, t.uploadAvatarFail);
+      }
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(t.pickPhotoTitle, t.pickPhotoDenied);
+        return;
+      }
+      // iOS で allowsEditing + fetch().blob() の組み合わせが落ちることがあるため、
+      // クロップは使わず base64 経由で Storage に送る（無ければ arrayBuffer にフォールバック）
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.75,
+        base64: true,
+      });
+      if (picked.canceled || !picked.assets?.[0]) return;
+      const asset = picked.assets[0];
+      const uri = asset.uri;
+      setUploadingAvatar(true);
+      const fileRef = ref(storage, `avatars/${uid}/${Date.now()}_profile.jpg`);
+      const contentType =
+        asset.mimeType && asset.mimeType.startsWith("image/") ? asset.mimeType : "image/jpeg";
+
+      if (asset.base64 && asset.base64.length > 0) {
+        const bytes = base64ToUint8Array(asset.base64);
+        if (bytes.byteLength === 0) throw new Error("empty image");
+        await uploadBytes(fileRef, bytes, { contentType });
+      } else {
+        const res = await fetch(uri);
+        const buf = await res.arrayBuffer();
+        if (!buf || buf.byteLength === 0) throw new Error("empty image");
+        await uploadBytes(fileRef, new Uint8Array(buf), { contentType });
+      }
+      const url = await getDownloadURL(fileRef);
+      setAvatarUrl(url);
+    } catch (e: unknown) {
+      if (isImagePickerNativeMissingError(e)) {
+        Alert.alert(t.imagePickerNativeTitle, t.imagePickerNativeHint);
+      } else {
+        const detail = e instanceof Error ? e.message : String(e);
+        Alert.alert(t.saveErrorTitle, `${t.uploadAvatarFail}\n\n${detail}`);
+      }
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   async function handleSaveProfile() {
-    if (!uid || saving) return;
+    if (!uid || saving || uploadingAvatar) return;
     const safeName = displayName.trim();
     const safeBio = bio.trim();
+    const safePhoto = avatarUrl.trim();
     if (safeName.length > 50) {
       Alert.alert(t.invalidTitle, t.invalidName);
       return;
@@ -253,20 +469,26 @@ export default function ProfileHomeScreen({
     setSaving(true);
     try {
       if (auth.currentUser && auth.currentUser.uid === uid) {
-        await updateProfile(auth.currentUser, { displayName: safeName || null });
+        await updateProfile(auth.currentUser, {
+          displayName: safeName || null,
+          photoURL: safePhoto || null,
+        });
       }
       await setDoc(
         doc(db, "users", uid),
         {
           displayName: safeName,
           bio: safeBio,
+          photoURL: safePhoto || null,
           language,
+          countryCode: countryCode.trim() || null,
           updatedAt: serverTimestamp(),
         },
         { merge: true }
       );
       onSaved?.();
-      Alert.alert(t.savedTitle, t.savedBody);
+      setSettingsOpen(false);
+      setSaveSuccessToast({ title: t.savedTitle, body: t.savedBody });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : t.saveErrorBody;
       Alert.alert(t.saveErrorTitle, msg);
@@ -534,72 +756,270 @@ export default function ProfileHomeScreen({
           handle={handle}
         />
       )}
-
-      {settingsOpen ? (
-        <View style={styles.settingsCard}>
-          <Text style={styles.sectionTitle}>{t.title}</Text>
-
-          <Text style={styles.body}>{t.displayName}</Text>
-          <TextInput
-            value={displayName}
-            onChangeText={setDisplayName}
-            style={styles.input}
-            placeholder={t.displayNamePlaceholder}
-            placeholderTextColor={colors.textSecondary}
-            maxLength={50}
-          />
-          <Text style={styles.metaText}>{displayName.length}/50</Text>
-
-          <Text style={styles.body}>{t.bio}</Text>
-          <TextInput
-            value={bio}
-            onChangeText={setBio}
-            style={[styles.input, styles.bioInput]}
-            placeholder={t.bioPlaceholder}
-            placeholderTextColor={colors.textSecondary}
-            multiline
-            maxLength={280}
-          />
-          <Text style={styles.metaText}>{bio.length}/280</Text>
-
-          <Text style={styles.body}>{t.langLabel}</Text>
-          <View style={styles.languageRow}>
-            <Pressable
-              style={[
-                styles.languageChip,
-                language === "ja" && styles.languageChipActive,
-              ]}
-              onPress={() => setLanguage("ja")}
-            >
-              <Text style={styles.languageChipText}>日本語</Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.languageChip,
-                language === "en" && styles.languageChipActive,
-              ]}
-              onPress={() => setLanguage("en")}
-            >
-              <Text style={styles.languageChipText}>English</Text>
-            </Pressable>
-          </View>
-
-          <Pressable
-            style={[styles.saveButton, saving && styles.buttonDisabled]}
-            onPress={() => void handleSaveProfile()}
-            disabled={saving}
-          >
-            <Text style={styles.saveText}>{saving ? t.saving : t.save}</Text>
-          </Pressable>
-
-          <Text style={styles.body}>{t.account}</Text>
-          <Text style={styles.value}>{fUser?.email ?? "-"}</Text>
-          <Text style={styles.body}>{t.uid}</Text>
-          <Text style={styles.value}>{fUser?.uid ?? "-"}</Text>
-
-        </View>
-      ) : null}
     </ScrollView>
+
+    <Modal
+      visible={settingsOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setSettingsOpen(false)}
+      {...(Platform.OS === "ios" ? ({ presentationStyle: "overFullScreen" } as const) : {})}
+    >
+      <View style={styles.profileModalRoot}>
+        <ProfileSettingsBackdropBlur />
+        <View pointerEvents="none" style={styles.profileModalTint} />
+        <SafeAreaView style={styles.profileModalSafe}>
+          <KeyboardAvoidingView
+            style={styles.profileModalFill}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t.settingsClose}
+              onPress={() => setSettingsOpen(false)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [
+                styles.profileFloatingClose,
+                pressed && styles.profileFloatingClosePressed,
+              ]}
+            >
+              <MaterialCommunityIcons name="chevron-left" size={22} color="#fff" />
+            </Pressable>
+            <ScrollView
+              style={styles.profileModalFill}
+              contentContainerStyle={[
+                styles.profileOverlayScrollContent,
+                { paddingBottom: Math.max(bottomReserveY, 12) + 28 },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.settingsNeonShell}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[styles.settingsNeonSpinWrap, neonSpinStyle]}
+                >
+                  <LinearGradient
+                    colors={[...SETTINGS_NEON_SPIN_COLORS]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                </Animated.View>
+                <View style={styles.settingsNeonInner}>
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={["rgba(255,255,255,0.07)", "transparent"]}
+                    style={styles.settingsNeonInnerTopSheen}
+                  />
+                  <View style={styles.settingsHeaderBlock}>
+                    <Text style={styles.settingsTitle}>{t.settingsTitle}</Text>
+                    <Text style={styles.settingsSubtitle}>{t.settingsSubtitle}</Text>
+                  </View>
+
+                  <View style={styles.settingsFormGap}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t.changePhotoA11y}
+                      onPress={() => void pickAvatar()}
+                      disabled={uploadingAvatar || saving}
+                      style={({ pressed }) => [
+                        styles.avatarEditWrap,
+                        pressed && styles.avatarEditWrapPressed,
+                      ]}
+                    >
+                      <View style={styles.avatarEditCircle}>
+                        {avatarUrl.trim().length > 0 ? (
+                          <Image source={{ uri: avatarUrl.trim() }} style={styles.avatarEditImage} />
+                        ) : (
+                          <View style={[styles.avatarEditImage, styles.avatarEditFallback]}>
+                            <Text style={styles.avatarEditLetter}>
+                              {(
+                                displayName.trim()[0] ??
+                                fUser?.displayName?.trim()?.[0] ??
+                                handle.trim()[0] ??
+                                "?"
+                              ).toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={styles.avatarEditRing} />
+                      </View>
+                      <View style={styles.avatarEditCameraFab}>
+                        <MaterialCommunityIcons name="camera" size={14} color="#fff" />
+                      </View>
+                      {uploadingAvatar ? (
+                        <View style={styles.avatarEditUploading}>
+                          <ActivityIndicator color="rgba(248,250,252,0.95)" />
+                        </View>
+                      ) : null}
+                    </Pressable>
+
+                    <View style={styles.fieldBlock}>
+                      <Text style={styles.fieldLabel}>{t.nameLabel}</Text>
+                      <TextInput
+                        value={displayName}
+                        onChangeText={setDisplayName}
+                        style={styles.fieldInput}
+                        placeholder={t.namePlaceholder}
+                        placeholderTextColor="rgba(255,255,255,0.38)"
+                        maxLength={50}
+                        editable={!saving && !uploadingAvatar}
+                        keyboardAppearance="dark"
+                      />
+                    </View>
+
+                    <View style={styles.fieldBlock}>
+                      <Text style={styles.fieldLabel}>{t.bio}</Text>
+                      <TextInput
+                        value={bio}
+                        onChangeText={setBio}
+                        style={[styles.fieldInput, styles.bioInput]}
+                        placeholder={t.bioPlaceholder}
+                        placeholderTextColor="rgba(255,255,255,0.38)"
+                        multiline
+                        maxLength={280}
+                        editable={!saving && !uploadingAvatar}
+                        keyboardAppearance="dark"
+                      />
+                    </View>
+
+                    <View style={styles.fieldBlock}>
+                      <Text style={styles.fieldLabel}>{t.langLabel}</Text>
+                      <Pressable
+                        style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
+                        onPress={() => setLangModalOpen(true)}
+                      >
+                        <Text style={styles.selectRowText}>
+                          {language === "ja" ? "日本語" : "English"}
+                        </Text>
+                        <MaterialCommunityIcons
+                          name="chevron-down"
+                          size={20}
+                          color="rgba(226,232,240,0.65)"
+                        />
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.fieldBlock}>
+                      <Text style={styles.fieldLabel}>{t.countryLabel}</Text>
+                      <Pressable
+                        style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
+                        onPress={() => setCountryModalOpen(true)}
+                      >
+                        <Text style={styles.selectRowText} numberOfLines={1}>
+                          {profileCountryRowLabel(countryCode, language)}
+                        </Text>
+                        <MaterialCommunityIcons
+                          name="chevron-down"
+                          size={20}
+                          color="rgba(226,232,240,0.65)"
+                        />
+                      </Pressable>
+                    </View>
+
+                    <Pressable
+                      style={[
+                        styles.saveButton,
+                        (saving || uploadingAvatar) && styles.buttonDisabled,
+                      ]}
+                      onPress={() => void handleSaveProfile()}
+                      disabled={saving || uploadingAvatar}
+                    >
+                      <Text style={styles.saveText}>{saving ? t.saving : t.save}</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </View>
+    </Modal>
+
+    <Modal
+      visible={langModalOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setLangModalOpen(false)}
+    >
+      <View style={styles.modalRoot}>
+        <Pressable style={styles.modalBackdropFill} onPress={() => setLangModalOpen(false)} />
+        <View style={styles.modalSheet}>
+          <Text style={styles.modalSheetTitle}>{t.langLabel}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+            onPress={() => {
+              setLanguage("ja");
+              setLangModalOpen(false);
+            }}
+          >
+            <Text style={styles.modalOptionText}>日本語</Text>
+            {language === "ja" ? (
+              <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+            ) : null}
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+            onPress={() => {
+              setLanguage("en");
+              setLangModalOpen(false);
+            }}
+          >
+            <Text style={styles.modalOptionText}>English</Text>
+            {language === "en" ? (
+              <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+            ) : null}
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+
+    <Modal
+      visible={countryModalOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setCountryModalOpen(false)}
+    >
+      <View style={styles.modalRoot}>
+        <Pressable style={styles.modalBackdropFill} onPress={() => setCountryModalOpen(false)} />
+        <View style={styles.modalSheetTall}>
+          <Text style={styles.modalSheetTitle}>{t.countryLabel}</Text>
+          <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+            <Pressable
+              style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+              onPress={() => {
+                setCountryCode("");
+                setCountryModalOpen(false);
+              }}
+            >
+              <Text style={styles.modalOptionText}>{t.countryNotSet}</Text>
+              {!countryCode.trim() ? (
+                <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+              ) : null}
+            </Pressable>
+            {COUNTRY_OPTIONS.map((c) => (
+              <Pressable
+                key={c.code}
+                style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                onPress={() => {
+                  setCountryCode(c.code);
+                  setCountryModalOpen(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>
+                  {language === "ja" ? c.labelJa : c.labelEn}
+                </Text>
+                {countryCode.trim() === c.code ? (
+                  <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                ) : null}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+
     <ProfileSideMenuModal
       visible={menuOpen}
       onClose={() => setMenuOpen(false)}
@@ -636,6 +1056,12 @@ export default function ProfileHomeScreen({
         setBadgeModalOpen(false);
         setSelectedBadge(null);
       }}
+    />
+    <CyberGlassToastModal
+      visible={saveSuccessToast != null}
+      title={saveSuccessToast?.title ?? ""}
+      message={saveSuccessToast?.body ?? ""}
+      onDismiss={() => setSaveSuccessToast(null)}
     />
     </>
   );
@@ -936,86 +1362,309 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingVertical: spacing.lg,
   },
-  settingsCard: {
-    borderRadius: radius.card,
+  /** Web `main` + `FloatingCloseButton` + `SettingsNeonCard` に寄せたプロフィール編集 Modal */
+  profileModalRoot: {
+    flex: 1,
+  },
+  profileModalTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.2)",
+  },
+  profileModalSafe: {
+    flex: 1,
+  },
+  profileModalFill: {
+    flex: 1,
+  },
+  profileFloatingClose: {
+    position: "absolute",
+    top: 10,
+    right: 12,
+    zIndex: 50,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "#0b1120",
-    padding: spacing.lg,
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(24,24,27,0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 18,
+      },
+      android: { elevation: 10 },
+      default: {},
+    }),
   },
-  sectionTitle: {
+  profileFloatingClosePressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.96 }],
+  },
+  profileOverlayScrollContent: {
+    flexGrow: 1,
+    /** 画面中央より下寄り（上パディング多めで重心を下げる） */
+    justifyContent: "center",
+    /** 横に余白を多めにしてカードを視覚的に小さく */
+    paddingHorizontal: 22,
+    paddingTop: 96,
+    paddingBottom: 6,
+    alignItems: "center",
+    width: "100%",
+  },
+  /** Web `SettingsNeonCard` の shell + spin + inner */
+  settingsNeonShell: {
+    position: "relative",
+    width: "100%",
+    maxWidth: 420,
+    borderRadius: 16,
+    overflow: "hidden",
+    alignSelf: "center",
+  },
+  settingsNeonSpinWrap: {
+    position: "absolute",
+    width: "220%",
+    height: "220%",
+    left: "-60%",
+    top: "-60%",
+    zIndex: 0,
+  },
+  settingsNeonInner: {
+    position: "relative",
+    zIndex: 1,
+    margin: 1,
+    borderRadius: 15,
+    backgroundColor: "hsl(240, 15%, 9%)",
+    /** Web innerPad より一回り詰めてモバイルでコンパクトに */
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    overflow: "hidden",
+  },
+  settingsNeonInnerTopSheen: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 72,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+  },
+  settingsHeaderBlock: {
+    marginBottom: 16,
+  },
+  settingsTitle: {
+    color: "rgba(248,250,252,0.96)",
+    fontSize: 15,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  settingsSubtitle: {
+    marginTop: 4,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  settingsFormGap: {
+    gap: 14,
+  },
+  avatarEditWrap: {
+    position: "relative",
+    alignSelf: "center",
+    /** Web h-36(144) より一回り小さく */
+    width: 108,
+    height: 108,
+    marginBottom: 2,
+  },
+  avatarEditWrapPressed: {
+    opacity: 0.9,
+  },
+  avatarEditUploading: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 54,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarEditCircle: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    overflow: "hidden",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  avatarEditImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarEditFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarEditLetter: {
     color: colors.textPrimary,
-    fontSize: typography.title,
-    fontWeight: "700",
+    fontSize: 36,
+    fontWeight: "800",
   },
-  body: {
-    color: colors.textSecondary,
-    fontSize: typography.caption,
+  avatarEditRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 54,
+    borderWidth: 3,
+    borderColor: "rgba(0,0,0,0.4)",
   },
-  value: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
-    lineHeight: 22,
+  avatarEditCameraFab: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.1)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+      },
+      android: { elevation: 8 },
+      default: {},
+    }),
   },
-  metaText: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    alignSelf: "flex-end",
+  fieldBlock: {
+    gap: 4,
   },
-  input: {
-    minHeight: 44,
+  fieldLabel: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  /** Web `border-white/15 bg-black/20 rounded-xl` に相当（モバイルはややコンパクト） */
+  fieldInput: {
+    minHeight: 40,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(15,21,38,0.86)",
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(0,0,0,0.2)",
     color: colors.textPrimary,
-    fontSize: typography.body,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   bioInput: {
-    minHeight: 96,
+    minHeight: 76,
     textAlignVertical: "top",
   },
-  languageRow: {
+  selectRow: {
+    minHeight: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(0,0,0,0.2)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     flexDirection: "row",
-    gap: spacing.xs,
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
-  languageChip: {
+  selectRowPressed: {
+    opacity: 0.92,
+  },
+  selectRowText: {
     flex: 1,
-    minHeight: 38,
-    borderRadius: radius.chip,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(15,21,38,0.84)",
-  },
-  languageChipActive: {
-    borderColor: "rgba(103,232,249,0.46)",
-    backgroundColor: "rgba(124,92,255,0.22)",
-  },
-  languageChipText: {
+    minWidth: 0,
     color: colors.textPrimary,
-    fontSize: typography.caption,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "500",
   },
+  /** Web `mt-2` + `shadow-blue-500/30` に寄せる */
   saveButton: {
-    minHeight: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(103,232,249,0.3)",
+    minHeight: 42,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(45,99,235,0.92)",
-    marginTop: spacing.sm,
+    backgroundColor: "rgb(59,130,246)",
+    marginTop: 6,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgb(59,130,246)",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+      },
+      android: { elevation: 6 },
+      default: {},
+    }),
   },
   saveText: {
-    color: colors.textPrimary,
-    fontSize: typography.body,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  modalBackdropFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  modalSheet: {
+    position: "relative",
+    zIndex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(15,23,42,0.98)",
+    paddingVertical: 8,
+    overflow: "hidden",
+  },
+  modalSheetTall: {
+    position: "relative",
+    zIndex: 1,
+    maxHeight: 480,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(15,23,42,0.98)",
+    paddingVertical: 8,
+    overflow: "hidden",
+  },
+  modalScroll: {
+    maxHeight: 420,
+  },
+  modalSheetTitle: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    color: "rgba(248,250,252,0.92)",
+    fontSize: 14,
     fontWeight: "700",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  modalOptionPressed: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  modalOptionText: {
+    flex: 1,
+    color: "rgba(248,250,252,0.95)",
+    fontSize: 15,
   },
   buttonDisabled: {
     opacity: 0.6,

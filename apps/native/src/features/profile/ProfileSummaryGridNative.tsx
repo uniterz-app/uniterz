@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type TextStyle,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "./profileApi";
@@ -54,6 +55,60 @@ type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 
 const MIN_RECENT3_POSTS = 4;
 
+const WIN_RATE_GLOW_OFFSET: TextStyle["textShadowOffset"] = { width: 0, height: 0 };
+
+/** 勝率メイン数値の色（`evaluateWinRateV2` と累計投稿で判定） */
+function winRateValueTextStyle(totalPosts: number, winRate01: number) {
+  if (!Number.isFinite(totalPosts) || totalPosts <= 0) {
+    return styles.cellValueMutedWinRate;
+  }
+  const r = Number(winRate01);
+  if (!Number.isFinite(r) || r <= 0) return styles.cellValueMutedWinRate;
+  const h = evaluateWinRateV2(r);
+  if (h.level === "strong") return styles.cellValueStrong;
+  if (h.level === "yellow") return styles.cellValueYellow;
+  return styles.cellValueRoseWinRate;
+}
+
+/** 勝率メイン数値の発光（文字色に合わせた textShadow） */
+function winRateValueGlowStyle(totalPosts: number, winRate01: number): TextStyle {
+  if (!Number.isFinite(totalPosts) || totalPosts <= 0) {
+    return {
+      textShadowColor: "rgba(148, 163, 184, 0.55)",
+      textShadowOffset: WIN_RATE_GLOW_OFFSET,
+      textShadowRadius: 8,
+    };
+  }
+  const r = Number(winRate01);
+  if (!Number.isFinite(r) || r <= 0) {
+    return {
+      textShadowColor: "rgba(148, 163, 184, 0.5)",
+      textShadowOffset: WIN_RATE_GLOW_OFFSET,
+      textShadowRadius: 7,
+    };
+  }
+  const h = evaluateWinRateV2(r);
+  if (h.level === "strong") {
+    return {
+      textShadowColor: "rgba(253, 224, 71, 0.72)",
+      textShadowOffset: WIN_RATE_GLOW_OFFSET,
+      textShadowRadius: 12,
+    };
+  }
+  if (h.level === "yellow") {
+    return {
+      textShadowColor: "rgba(252, 211, 77, 0.65)",
+      textShadowOffset: WIN_RATE_GLOW_OFFSET,
+      textShadowRadius: 11,
+    };
+  }
+  return {
+    textShadowColor: "rgba(251, 113, 133, 0.78)",
+    textShadowOffset: WIN_RATE_GLOW_OFFSET,
+    textShadowRadius: 14,
+  };
+}
+
 type CellModel = {
   key: ProfileSummaryCellKey;
   label: string;
@@ -91,9 +146,8 @@ export default function ProfileSummaryGridNative({
   /** Web `SummaryCardsV2` と同じ閾値ロジック（プロフィールは累計寄りなので period は `all`） */
   const enoughPosts = (summary.recent3Posts ?? 0) >= MIN_RECENT3_POSTS;
   const NONE: HighlightV2 = { level: "none" };
-  const hWinRaw = enoughPosts ? evaluateWinRateV2(summary.winRate ?? 0) : NONE;
-  const hWin =
-    hWinRaw.level === "none" ? hWinRaw : { level: "yellow" as const };
+  const hWinRaw =
+    (summary.posts ?? 0) > 0 ? evaluateWinRateV2(summary.winRate ?? 0) : NONE;
   const hPrecisionRaw = enoughPosts
     ? evaluateScorePrecisionSumV2(summary.scorePrecisionSum ?? 0, "all")
     : NONE;
@@ -122,7 +176,7 @@ export default function ProfileSummaryGridNative({
       icon: "trophy-outline",
       valueMain: `${winPct}%`,
       rank: null,
-      valueHighlight: hWin,
+      valueHighlight: hWinRaw,
     },
     {
       key: "precision",
@@ -203,7 +257,16 @@ export default function ProfileSummaryGridNative({
                   : null
               }
               rankHighlight={c.rank != null && c.rank <= 20}
-              valueToneStyle={valueTextStyle(c.valueHighlight)}
+              valueToneStyle={
+                c.key === "winrate"
+                  ? winRateValueTextStyle(summary.posts ?? 0, summary.winRate ?? 0)
+                  : valueTextStyle(c.valueHighlight)
+              }
+              valueExtraStyle={
+                c.key === "winrate"
+                  ? winRateValueGlowStyle(summary.posts ?? 0, summary.winRate ?? 0)
+                  : undefined
+              }
               afterIcon={highlightAfterIcon(c.valueHighlight)}
             />
           </View>
@@ -282,6 +345,14 @@ const styles = StyleSheet.create({
   /** Tailwind `text-amber-300` */
   cellValueYellow: {
     color: "#fcd34d",
+  },
+  /** 65%未満（投稿数は閾値以上）— ゲージのローズ帯と揃える */
+  cellValueRoseWinRate: {
+    color: "rgba(251, 113, 133, 0.98)",
+  },
+  /** 勝率が算出不能・0% */
+  cellValueMutedWinRate: {
+    color: "rgba(148, 163, 184, 0.98)",
   },
   cellRankInline: {
     /** メイン数値に合わせて一段だけ大きく */
@@ -364,20 +435,24 @@ function SummaryMainValue({
   rankSuffix,
   rankHighlight,
   valueToneStyle,
+  valueExtraStyle,
   afterIcon,
 }: {
   valueMain: string;
   rankSuffix: string | null;
   rankHighlight: boolean;
   valueToneStyle: object;
+  /** 勝率グローなど、メイン数値 Text にだけ重ねるスタイル */
+  valueExtraStyle?: TextStyle;
   afterIcon: ReactNode;
 }) {
   const [suffixW, setSuffixW] = useState(0);
+  const mainTextStyle = [styles.cellValueBase, valueToneStyle, valueExtraStyle];
 
   if (rankSuffix == null) {
     return (
       <View style={styles.valueSimpleRow}>
-        <Text style={[styles.cellValueBase, valueToneStyle]} maxFontSizeMultiplier={1.25}>
+        <Text style={mainTextStyle} maxFontSizeMultiplier={1.25}>
           {valueMain}
         </Text>
         {afterIcon}
@@ -395,7 +470,7 @@ function SummaryMainValue({
           shift > 0 ? { transform: [{ translateX: shift }] } : null,
         ]}
       >
-        <Text style={[styles.cellValueBase, valueToneStyle]} maxFontSizeMultiplier={1.25}>
+        <Text style={mainTextStyle} maxFontSizeMultiplier={1.25}>
           {valueMain}
         </Text>
         <View

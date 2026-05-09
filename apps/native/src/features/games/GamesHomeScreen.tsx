@@ -375,13 +375,16 @@ export default function GamesHomeScreen({
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
   const [language, setLanguage] = useState<"ja" | "en">("ja");
+  /** ロード完了直後の日付チップのみ入場アニメ（窓移動での再マウント連打を防ぐ） */
+  const [dayStripEntranceEnabled, setDayStripEntranceEnabled] = useState(true);
+  /** 試合カード：`full` = 初回・リーグ切替の詳細入場、`light` = 日付変更のみ軽量 */
+  const [cardListEntranceVariant, setCardListEntranceVariant] = useState<"full" | "light">("full");
   const {
     loading,
     error,
     games,
     peerGamesForSeries,
     dateKeysWithGames,
-    dateKey,
     selectedDate,
     setSelectedDate,
     selectedLeague,
@@ -728,7 +731,19 @@ export default function GamesHomeScreen({
   const t = useMemo(() => getGamesTexts(language), [language]);
   const reduceMotion = useReducedMotion() ?? false;
   const dayStripChipEnter = (chipIndex: number) =>
-    reduceMotion ? undefined : gamesDayStripChipEnter(chipIndex);
+    reduceMotion || !dayStripEntranceEnabled
+      ? undefined
+      : gamesDayStripChipEnter(chipIndex);
+
+  /** フェッチでスケルトン→本表示になった直後だけチップ入場を付け、その後は日付窓がずれても再アニメしない */
+  useEffect(() => {
+    if (loading) {
+      setDayStripEntranceEnabled(true);
+      return;
+    }
+    const t = setTimeout(() => setDayStripEntranceEnabled(false), 900);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   useEffect(() => {
     mainScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -755,24 +770,28 @@ export default function GamesHomeScreen({
       (game) => resolveGameStatus(game as Record<string, unknown>) === "final"
     );
     if (!allFinished) return;
+    setCardListEntranceVariant("light");
     setSelectedDate((prev) => addDays(prev, 1));
   }, [loading, games, selectedDate, setSelectedDate, today]);
 
   function selectDateManually(nextDate: Date) {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
+    setCardListEntranceVariant("light");
     setSelectedDate(nextDate);
   }
 
   function goPrevDayManually() {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
+    setCardListEntranceVariant("light");
     goPrevDay();
   }
 
   function goNextDayManually() {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
+    setCardListEntranceVariant("light");
     goNextDay();
   }
 
@@ -1015,6 +1034,7 @@ export default function GamesHomeScreen({
               );
               const nextIdx =
                 currentIdx < 0 ? 0 : (currentIdx + 1) % LEAGUE_OPTIONS.length;
+              setCardListEntranceVariant("full");
               setSelectedLeague(LEAGUE_OPTIONS[nextIdx].id);
             }}
           >
@@ -1151,26 +1171,28 @@ export default function GamesHomeScreen({
       ) : null}
 
       {!loading && !error ? (
-        <GameCardList
-          key={`${selectedLeague}-${dateKey}`}
-          games={games}
-          predictedGameIds={predictedGameIds}
-          language={language}
-          t={t}
-          styles={styles}
-          openPredictModal={openPredictModal}
-          resolveGameTeamName={resolveGameTeamName}
-          toCompactTeamName={toCompactTeamName}
-          isSoccerLeague={isSoccerLeague}
-          resolveGameStatus={resolveGameStatus}
-          isGameStarted={isGameStarted}
-          resolveLeagueColor={resolveLeagueColor}
-          getGameCardCenterBlock={(game) => getGameCardCenterBlock(game, language)}
-          resolveSeriesLabel={resolveSeriesLabelForList}
-          resolveSeriesPair={resolveSeriesPairForList}
-          getTeamRecordLabel={formatSideRecord}
-          resolveTeamJerseyPalette={resolveTeamJerseyPalette}
-        />
+        <View>
+          <GameCardList
+            games={games}
+            entranceVariant={cardListEntranceVariant}
+            predictedGameIds={predictedGameIds}
+            language={language}
+            t={t}
+            styles={styles}
+            openPredictModal={openPredictModal}
+            resolveGameTeamName={resolveGameTeamName}
+            toCompactTeamName={toCompactTeamName}
+            isSoccerLeague={isSoccerLeague}
+            resolveGameStatus={resolveGameStatus}
+            isGameStarted={isGameStarted}
+            resolveLeagueColor={resolveLeagueColor}
+            getGameCardCenterBlock={(game) => getGameCardCenterBlock(game, language)}
+            resolveSeriesLabel={resolveSeriesLabelForList}
+            resolveSeriesPair={resolveSeriesPairForList}
+            getTeamRecordLabel={formatSideRecord}
+            resolveTeamJerseyPalette={resolveTeamJerseyPalette}
+          />
+        </View>
       ) : null}
       </ScrollView>
 
@@ -1479,13 +1501,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: spacing.xs,
   },
+  /** 今日だが選択中でない日 — 選択中のシアンと差別化（Last20 の当日強調と同系統） */
   dayChipToday: {
-    borderColor: "rgba(34,211,238,0.38)",
-    shadowColor: "rgb(34, 211, 238)",
+    borderColor: "rgba(250, 204, 21, 0.72)",
+    shadowColor: "rgb(250, 204, 21)",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 2,
   },
   dayChipActive: {
     borderColor: "rgba(34,211,238,0.62)",
