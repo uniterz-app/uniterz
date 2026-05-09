@@ -9,7 +9,7 @@ export const THUNDER_LAKERS_TEAM_IDS = ["nba-thunder", "nba-lakers"] as const;
 const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Lakers";
 
-/** 2025-26 Thunder vs Lakers（レギュラー4 + プレーオフ Game 1） */
+/** 2025-26 Thunder vs Lakers（レギュラー4 + プレーオフ Game 2まで） */
 export const thunderLakersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-thunder-lakers-2025-11-12",
@@ -101,6 +101,26 @@ export const thunderLakersH2HGames: NbaH2HGameCard[] = [
         "OKC could not pull away early but stretched the lead late in the third and through the fourth. Chet Holmgren finished with 24 points and 12 rebounds, while Shai Gilgeous-Alexander and Ajay Mitchell each scored 18. The Thunder won the bench scoring battle 34-15 and used a late surge to separate from the Lakers. LeBron James paced Los Angeles with 27 points, but Austin Reaves struggled and the offense looked heavy. A run of Jared McCain threes in the fourth swung momentum for good. It was a low offensive night by Lakers playoff standards, and losing Jarred Vanderbilt to injury hurt as well. Oklahoma City leads the series 1-0.",
     },
   },
+  {
+    id: "h2h-thunder-lakers-2026-05-07-po-g2",
+    dateEt: "2026-05-07",
+    dateJst: "2026-05-08",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 125,
+    scoreRight: 107,
+    /** Oklahoma City（Thunder）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["J. Williams"],
+    injuriesRight: ["L. Doncic", "J. Vanderbilt"],
+    inactiveFooterSummary: {
+      ja:
+        "Lakersは2Qに35点を取り、前半を58-57でリード。Game1よりオフェンスは改善し、Austin Reavesが31得点、LeBronが23得点、八村が16得点。ただし後半にOKCの圧力に耐えられなかった。Lakersは19ターンオーバーから26失点。OKCは3Qに23-5のランで逆転し、そのまま試合を壊した。Chet HolmgrenとSGAが各22得点、ベンチ得点48、セカンドチャンス17点。Lakersは前半は戦えたが、後半のボール保持とリバウンドで差が出て0-2。",
+      en:
+        "Los Angeles scored 35 in the second quarter and led 58-57 at halftime—an improved offensive night after Game 1, with Austin Reaves scoring 31, LeBron James 23, and Rui Hachimura 16. But the Lakers could not withstand OKC’s pressure after the break, coughing up 19 turnovers for 26 Thunder points. Oklahoma City flipped the game with a 23-5 run in the third and never looked back. Chet Holmgren and Shai Gilgeous-Alexander each had 22, the Thunder bench scored 48, and OKC added 17 second-chance points. Los Angeles competed early, but ball security and rebounding swung the second half as OKC took a 2-0 series lead.",
+    },
+  },
 ];
 
 /** 左=OKC・右=LAL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -139,7 +159,7 @@ function thunderLakersH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記5試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function thunderLakersH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
