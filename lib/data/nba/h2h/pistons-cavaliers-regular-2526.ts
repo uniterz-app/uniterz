@@ -13,7 +13,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Cavaliers";
 
 /**
- * 2025-26 Pistons vs Cavaliers（レギュラー4 + プレーオフ Game 2まで）
+ * 2025-26 Pistons vs Cavaliers（レギュラー5 + プレーオフ Game 3まで）
  * 欠場者表記は既存H2Hと同様（イニシャル + 姓）
  */
 export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
@@ -109,6 +109,26 @@ export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
         "Pistonsが序盤から主導権を握り、前半終了時点で54-43。Cavsは3QにMitchellを中心に追い上げ、4Q序盤に79-79まで戻したが、そこからDetroitが崩れなかった。Cade Cunninghamは25得点10アシスト、終盤6分で12得点。Tobias Harris、Duncan Robinsonの外角も効き、Cavsの反撃を止めた。CavsはMitchellが31得点、Jarrett Allenが22得点。ただし3Pが7/32、4Qは0/11で、追いついた後に決め切れなかった。Clevelandは0-2。",
       en:
         "Detroit controlled early and led 54-43 at halftime. Cleveland rallied behind Donovan Mitchell in the third and tied the game at 79-79 early in the fourth, but the Pistons never broke. Cade Cunningham finished with 25 points and 10 assists, including 12 points in the final six minutes, while Tobias Harris and Duncan Robinson hit timely perimeter shots to stall the comeback. Donovan Mitchell scored 31 and Jarrett Allen added 22, but Cleveland shot 7-for-32 from three (0-for-11 in the fourth) and could not finish after tying it. Cleveland trails the series 0-2.",
+    },
+  },
+  {
+    id: "h2h-pistons-cavaliers-2026-05-09-po-g3",
+    dateEt: "2026-05-09",
+    dateJst: "2026-05-10",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 109,
+    scoreRight: 116,
+    /** Cleveland（Cavaliers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["K. Huerter"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Cavsは0-3を避ける重要な試合で、前半からDonovan Mitchellを中心に主導権を握った。2Qに32-18で突き放し、Mitchell、Allen、Mobleyが攻守で流れを作った。ただPistonsも後半にCade Cunninghamを中心に反撃。Cadeは27点・10リバウンド・10アシストのトリプルダブルを記録し、一時は逆転圏内まで戻した。ただし8ターンオーバーが痛く、終盤のミスが勝敗を分けた。最後はMax StrusのスティールからCavsが流れを取り戻し、James Hardenが終盤にジャンパーと3Pを決めて試合を締めた。Cavsは完全な快勝ではないが、シリーズを2-1に戻した。",
+      en:
+        "Facing elimination down 0-2, Cleveland seized control early behind Donovan Mitchell and broke the game open with a 32-18 second quarter as Mitchell, Jarrett Allen, and Evan Mobley tilted the floor on both ends. Detroit rallied behind Cade Cunningham in the second half; he finished with a 27-point, 10-rebound, 10-assist triple-double and drew the Pistons within striking distance. But eight turnovers—including costly miscues late—proved decisive. Max Strus’s steal swung momentum back to the Cavaliers, and James Harden closed with key jumpers and a three-pointer. It was not a wire-to-wire blowout, but Cleveland stayed alive as the series moved to 2-1 in Detroit’s favor.",
     },
   },
 ];
