@@ -9,7 +9,7 @@ export const THUNDER_LAKERS_TEAM_IDS = ["nba-thunder", "nba-lakers"] as const;
 const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Lakers";
 
-/** 2025-26 Thunder vs Lakers（レギュラー4 + プレーオフ Game 2まで） */
+/** 2025-26 Thunder vs Lakers（レギュラー4 + プレーオフ Game 3まで） */
 export const thunderLakersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-thunder-lakers-2025-11-12",
@@ -121,6 +121,26 @@ export const thunderLakersH2HGames: NbaH2HGameCard[] = [
         "Los Angeles scored 35 in the second quarter and led 58-57 at halftime—an improved offensive night after Game 1, with Austin Reaves scoring 31, LeBron James 23, and Rui Hachimura 16. But the Lakers could not withstand OKC’s pressure after the break, coughing up 19 turnovers for 26 Thunder points. Oklahoma City flipped the game with a 23-5 run in the third and never looked back. Chet Holmgren and Shai Gilgeous-Alexander each had 22, the Thunder bench scored 48, and OKC added 17 second-chance points. Los Angeles competed early, but ball security and rebounding swung the second half as OKC took a 2-0 series lead.",
     },
   },
+  {
+    id: "h2h-thunder-lakers-2026-05-09-po-g3",
+    dateEt: "2026-05-09",
+    dateJst: "2026-05-10",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 131,
+    scoreRight: 108,
+    /** Los Angeles（Lakers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["J. Williams"],
+    injuriesRight: ["L. Doncic"],
+    inactiveFooterSummary: {
+      ja:
+        "前半はLakersが59-57でリード。Luka Doncic不在の中、八村塁が21点、LeBron JamesとAustin Reavesもプレーメイクで支え、前半までは十分に戦えていた。ただ後半はOKCの強度が一気に上回った。Thunderはトランジション、ペイントアタック、守備の圧力でLakersを崩し、Ajay Mitchellが24点・10アシスト、SGAも23点・9アシストで試合を支配した。Lakersは八村とLuke Kennardが得点したが、LeBronとReavesの効率が伸びず、後半の守備崩壊を止められなかった。OKCは3勝0敗でシリーズ突破に王手。",
+      en:
+        "Los Angeles led 59-57 at halftime without Luka Dončić—Rui Hachimura scored 21 while LeBron James and Austin Reaves kept the offense organized early. After the break, Oklahoma City’s intensity took over: transition attacks, paint pressure, and defensive heat broke the Lakers open. Ajay Mitchell posted 24 points and 10 assists, and Shai Gilgeous-Alexander added 23 points and 9 assists to steer the game. Hachimura and Luke Kennard chipped in scoring, but James and Reaves could not sustain efficiency as L.A.’s defense unraveled in the second half. OKC moved to a 3-0 series lead and earned match point.",
+    },
+  },
 ];
 
 /** 左=OKC・右=LAL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -159,7 +179,7 @@ function thunderLakersH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function thunderLakersH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
