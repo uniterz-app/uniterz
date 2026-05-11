@@ -6,6 +6,7 @@ import { Flame } from "lucide-react";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
@@ -20,8 +21,6 @@ type Props = {
   language?: Language;
 };
 
-const MAX_STREAK_TOOLTIP =
-  "全期間（All-time）の最高連勝数です。期間切替（7日/30日）とは連動しません。";
 
 function safeInt(v: any) {
   const n = typeof v === "number" ? v : Number(v);
@@ -41,7 +40,7 @@ function MaxStreakCard({
   className = "",
   language = "ja",
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
 
@@ -78,13 +77,9 @@ function MaxStreakCard({
   const shown = useMemo(() => safeInt(cu), [cu]);
   const valueColor = getStreakColor(shown);
 
-  const tooltipMsg = isEn
-    ? "All-time maximum win streak. It is not affected by the 7d/30d period switch."
-    : MAX_STREAK_TOOLTIP;
-  const title = isEn ? "Max Win Streak" : "最高連勝";
-  const subtitle = isEn
-    ? "All-time Max Win Streak"
-    : "全期間での最高連勝";
+  const tooltipMsg = m.profile.maxStreakTooltip;
+  const title = m.profile.maxWinStreak;
+  const subtitle = m.profile.allTimeMaxStreak;
 
   return (
     <>
@@ -116,7 +111,7 @@ function MaxStreakCard({
             type="button"
             className="ml-0.5 text-[9px] text-white/60 hover:text-white/80 md:ml-1 md:text-[16px]"
             onClick={(e) => openTooltip(e, tooltipMsg)}
-            aria-label={isEn ? "Max Win Streak description" : "最高連勝の説明"}
+            aria-label={`${m.profile.maxWinStreak} ⓘ`}
           >
             ⓘ
           </button>

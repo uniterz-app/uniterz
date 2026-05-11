@@ -32,6 +32,7 @@ import {
 } from "@/lib/predict/predictionRulesIntroPrefs";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import {
   SCHEDULE_MY_POST_DELETED_EVENT,
@@ -140,7 +141,7 @@ export default function ScheduleList({
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const scrollYRef = useRef(0);
@@ -708,7 +709,7 @@ export default function ScheduleList({
             <div className="relative w-full overflow-x-hidden">
               <button
                 type="button"
-                aria-label={isEn ? "Close" : "閉じる"}
+                aria-label={m.common.close}
                 className={[
                   "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md",
                   isMobile ? "" : "transition hover:bg-black/55",
@@ -938,7 +939,7 @@ export default function ScheduleList({
         ? createPortal(
             <PredictionRulesIntroModal
               open={rulesIntroOpen}
-              isEn={isEn}
+              language={language}
               onStart={handleRulesIntroStart}
               onCancel={handleRulesIntroCancel}
             />,

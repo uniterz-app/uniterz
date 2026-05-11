@@ -24,6 +24,7 @@ import { normalizeLeague } from "@/lib/leagues";
 import { getTeamAlias } from "@/lib/team-alias";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import type { ResultPlatform } from "@/lib/result/result-platform";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
@@ -111,7 +112,7 @@ function isRedUpset(v: unknown): boolean {
 
 function getStreakBadge(
   activeWinStreak: unknown,
-  isEn: boolean
+  language: Language
 ): {
   label: string;
   className: string;
@@ -124,9 +125,12 @@ function getStreakBadge(
 
   if (v < 3) return null;
 
+  const m = t(language);
+  const label = language === "en" ? `${v} ${m.results.winStreakLabel}` : `${v}${m.results.winStreakLabel}`;
+
   if (v >= 7) {
     return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      label,
       className:
         "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
       iconClassName: "text-yellow-200",
@@ -135,7 +139,7 @@ function getStreakBadge(
 
   if (v >= 5) {
     return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      label,
       className:
         "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
       iconClassName: "text-yellow-100",
@@ -143,7 +147,7 @@ function getStreakBadge(
   }
 
   return {
-    label: isEn ? `${v} Win Streak` : `${v}連勝`,
+    label,
     className:
       "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
     iconClassName: "text-red-500",
@@ -173,6 +177,7 @@ function ResultCardPresentationImpl({
       : Date.now();
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
   const teamNameFont = bracketMarketTeamTypography(isMobile);
+  const m = t(language);
   const isEn = language === "en";
   const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
 
@@ -251,7 +256,7 @@ function ResultCardPresentationImpl({
     (post.stats as any)?.pointsV3Detail?.activeWinStreak
   ) ?? 0;
 
-  const streakBadge = getStreakBadge(activeWinStreak, isEn);
+  const streakBadge = getStreakBadge(activeWinStreak, language);
 
   const scorePrecisionValueClass = isYellow10pt(post.stats?.scorePrecision)
     ? "text-yellow-300"
@@ -312,14 +317,14 @@ function ResultCardPresentationImpl({
     return [
       {
         key: "scorePrecision" as const,
-        label: isEn ? "Score Precision" : "スコア精度",
+        label: m.results.scorePrecisionLabel,
         value: scorePrecision,
         barMax: 10,
         format: (v: number) => v.toFixed(1),
       },
       {
         key: "upsetPoints" as const,
-        label: isEn ? "Upset Score" : "Upsetスコア",
+        label: m.results.upsetPointsLabel,
         value: upsetPoints,
         barMax: 10,
         format: (v: number) =>
@@ -327,14 +332,14 @@ function ResultCardPresentationImpl({
       },
       {
         key: "pointsV3" as const,
-        label: isEn ? "Total Score" : "総合スコア",
+        label: m.results.totalPointsLabel,
         value: pointsV3,
         barMax: 10,
         format: (v: number) =>
           `${(Math.round(v * 10) / 10).toFixed(1)}`,
       },
     ];
-  }, [post.stats, isEn, hadUpsetGame]);
+  }, [post.stats, m, hadUpsetGame]);
 
   const barAnimateMs = isMobile ? 480 : 520;
   const barStaggerMs = isMobile ? 80 : 90;
@@ -365,7 +370,7 @@ function ResultCardPresentationImpl({
   const liveMarkNode = isLiveGame ? (
     <LiveMatchMark
       density={isMobile ? "resultMobile" : "resultDesktop"}
-      isEn={isEn}
+      language={language}
       className="pointer-events-auto"
     />
   ) : null;
@@ -494,7 +499,7 @@ function ResultCardPresentationImpl({
                   isMobile ? "touch-manipulation" : "",
                   flyoutPenClass,
                 ].join(" ")}
-                aria-label={isEn ? "Edit prediction" : "予想を修正"}
+                aria-label={m.results.editPredictionAriaLabel}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -524,7 +529,7 @@ function ResultCardPresentationImpl({
                   isMobile ? "touch-manipulation" : "",
                   flyoutTrashClass,
                 ].join(" ")}
-                aria-label={isEn ? "Remove from list" : "一覧から除外"}
+                aria-label={m.results.removeFromList}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -549,7 +554,7 @@ function ResultCardPresentationImpl({
               ].join(" ")}
               aria-expanded={isMobile ? cornerFabOpen : undefined}
               aria-haspopup="true"
-              aria-label={isEn ? "Open actions" : "操作メニュー"}
+              aria-label={m.results.openActions}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

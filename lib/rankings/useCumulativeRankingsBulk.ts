@@ -12,6 +12,7 @@ import {
 } from "@/lib/rankings/cumulativeRankingInvalidate";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 /** 指標タブで既に読み込んだバンドルを捨てずにまとめて取り直す */
 const REFETCH_ALL_METRICS =
@@ -138,22 +139,29 @@ async function fetchBulkMetrics(
   metrics: string,
   uid: string | null,
   phase: RankingPhase,
-  round: PlayoffRoundKey
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
 ): Promise<Record<string, BulkMetricPayload> | null> {
   const params = new URLSearchParams();
   params.set("metrics", metrics);
   params.set("phase", phase);
   params.set("round", round);
+  if (wcStage) params.set("wcStage", wcStage);
   if (uid) params.set("uid", uid);
-  const res = await fetch(`/api/cumulative-ranking/bulk?${params.toString()}`);
+  const res = await fetch(
+    `/api/cumulative-ranking/bulk?${params.toString()}`,
+    { cache: "no-store" }
+  );
   const json = await res.json();
   if (!json?.ok || !json?.byMetric) return null;
+  if (wcStage != null && json.wcStage !== wcStage) return null;
   return json.byMetric as Record<string, BulkMetricPayload>;
 }
 
 export function useCumulativeRankingsBulk(
   phase: RankingPhase = "playoffs",
-  round: PlayoffRoundKey = "overall"
+  round: PlayoffRoundKey = "overall",
+  wcStage: WcRankingStage | null = null
 ) {
   const [authReady, setAuthReady] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
@@ -200,7 +208,13 @@ export function useCumulativeRankingsBulk(
       void (async () => {
         const uid = auth.currentUser?.uid ?? null;
         try {
-          const partial = await fetchBulkMetrics(REFETCH_ALL_METRICS, uid, phase, round);
+          const partial = await fetchBulkMetrics(
+            REFETCH_ALL_METRICS,
+            uid,
+            phase,
+            round,
+            wcStage
+          );
           if (seq !== invalidateSeqRef.current) return;
           if (partial) {
             const merged = mergeMetricBundles(null, partial);
@@ -223,7 +237,7 @@ export function useCumulativeRankingsBulk(
         onInvalidate
       );
     };
-  }, [phase, round]);
+  }, [phase, round, wcStage]);
 
   useEffect(() => {
     phaseRoundGenRef.current += 1;
@@ -237,7 +251,13 @@ export function useCumulativeRankingsBulk(
     void (async () => {
       const g = ++mountPrimaryGenRef.current;
       try {
-        const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round);
+        const partial = await fetchBulkMetrics(
+          PRIMARY_METRICS,
+          null,
+          phase,
+          round,
+          wcStage
+        );
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         if (partial) {
           setByMetric((p) =>
@@ -278,7 +298,13 @@ export function useCumulativeRankingsBulk(
         const g = ++mountPrimaryGenRef.current;
         void (async () => {
           try {
-            const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round);
+            const partial = await fetchBulkMetrics(
+              PRIMARY_METRICS,
+              null,
+              phase,
+              round,
+              wcStage
+            );
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             if (partial) {
               setByMetric((p) =>
@@ -311,7 +337,13 @@ export function useCumulativeRankingsBulk(
       const uq = ++uidPrimarySeqRef.current;
       void (async () => {
         try {
-          const partial = await fetchBulkMetrics(PRIMARY_METRICS, uid, phase, round);
+          const partial = await fetchBulkMetrics(
+            PRIMARY_METRICS,
+            uid,
+            phase,
+            round,
+            wcStage
+          );
           if (cancelled || uq !== uidPrimarySeqRef.current) return;
           if (partial) {
             setByMetric((p) =>
@@ -333,7 +365,7 @@ export function useCumulativeRankingsBulk(
       cancelled = true;
       unsub();
     };
-  }, [phase, round]);
+  }, [phase, round, wcStage]);
 
   const ensureMetric = useCallback(
     async (metric: string) => {
@@ -352,7 +384,13 @@ export function useCumulativeRankingsBulk(
       const genAtStart = phaseRoundGenRef.current;
       const seq = ++metricReqSeqRef.current;
       try {
-        const partial = await fetchBulkMetrics(metric, uidForMetric, phase, round);
+        const partial = await fetchBulkMetrics(
+          metric,
+          uidForMetric,
+          phase,
+          round,
+          wcStage
+        );
         if (genAtStart !== phaseRoundGenRef.current) return;
         if (seq !== metricReqSeqRef.current) return;
         if (partial) {
@@ -381,7 +419,7 @@ export function useCumulativeRankingsBulk(
         );
       }
     },
-    [authReady, byMetric, myUid, appliedTotalPointsUid, phase, round]
+    [authReady, byMetric, myUid, appliedTotalPointsUid, phase, round, wcStage]
   );
 
   const listReady = byMetric?.totalPoints != null;

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { useEffect, useId, useMemo, useState } from "react";
 
@@ -239,8 +240,8 @@ export default function WinRateOverviewDonut({
   labelTextClassName = "",
 }: WinRateOverviewDonutProps) {
   const gradientIdPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, "_");
-  const isEn = language === "en";
-  const winRateLabel = isEn ? "Win Rate" : "勝率";
+  const m = t(language);
+  const winRateLabel = m.profile.winRate;
   const winRate = clamp01(ratio01);
 
   const rateColor =

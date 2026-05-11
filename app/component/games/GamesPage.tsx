@@ -9,7 +9,11 @@ import React, {
   useCallback,
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import LeagueTabs from "./LeagueTabs";
+import GamesDrawerMenu from "./GamesDrawerMenu";
+import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
+import { Menu } from "lucide-react";
+import { nameBebas } from "@/lib/fonts";
+import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
 import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
@@ -28,6 +32,7 @@ import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import {
   TIMEZONE_ET,
   TIMEZONE_JST,
@@ -113,13 +118,14 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
-  const dayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
+  const m = t(language);
+  const dayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
   /* =========================
      League
   ========================= */
   const [league, setLeague] = useState<League>("nba");
+  const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
   const didInitLeague = useRef(false);
 
   // user_stats は後追いのみ。初回描画をブロックしない（試合カレンダーと並列で速く見せる）
@@ -152,6 +158,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           pl: data?.leagues?.pl?.posts ?? 0,
           bj: data?.leagues?.bj?.posts ?? 0,
           j1: data?.leagues?.j1?.posts ?? 0,
+          wc: data?.leagues?.wc?.posts ?? 0,
         };
 
         const sorted = (Object.entries(leaguePosts) as [League, number][]).sort(
@@ -573,17 +580,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const scheduleEmptyHint =
     hasAnyListFilter && !listLoading && filteredGames.length === 0
-      ? isEn
-        ? teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
-          ? "No head-to-head between these teams on this date."
-          : teamFilterIds.length > 0
-            ? "No games for the selected team(s) on this date."
-            : "No games match the score margin range on this date."
-        : teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
-          ? "この日は、この2チームの直接対決はありません。"
-          : teamFilterIds.length > 0
-            ? "この日は、選択したチームの試合がありません。"
-            : "この日付では、指定した点差の範囲に合う試合はありません。"
+      ? teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
+        ? m.games.noH2hOnDate
+        : teamFilterIds.length > 0
+          ? m.games.noTeamGamesOnDate
+          : m.games.noMarginGamesOnDate
       : null;
 
   /* =========================
@@ -793,32 +794,28 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
-      <div className="mb-2 mt-3 flex items-center justify-between gap-3">
-        <motion.div
-          initial={webGamesMotion ? { opacity: 0, x: -16 } : false}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{
-            duration: webGamesMotion ? 0.32 : 0,
-            ease: GAMES_CYBER_EASE,
-          }}
+      <div className="mb-2 mt-2 flex items-center gap-3 pl-2 pr-1 sm:pl-3">
+        <button
+          type="button"
+          onClick={() => setGamesDrawerOpen(true)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
+          aria-label={m.games.openMenu}
         >
-          <LeagueTabs
-            value={league}
-            onChange={(next) => {
-              setLeague(next);
-              const params = new URLSearchParams(searchParams.toString());
-              params.delete("team");
-              params.delete("team_mode");
-              params.delete("margin");
-              params.delete("margin_min");
-              params.delete("margin_max");
-              router.replace(`?${params.toString()}`, { scroll: false });
-            }}
-            size={dense ? "md" : "lg"}
-            layoutMobile={isMobile}
-          />
-        </motion.div>
+          <Menu className="h-5 w-5" strokeWidth={2.25} />
+        </button>
+        <span
+          className={[
+            nameBebas.className,
+            "min-w-0 flex-1 truncate text-center tracking-[0.28em] text-white/90",
+            isMobile ? "text-[20px]" : "text-[22px] sm:text-[24px]",
+          ].join(" ")}
+        >
+          {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
+        </span>
+        <div className="w-10 shrink-0" aria-hidden />
+      </div>
 
+      <div className="mb-2 mt-1 flex items-center justify-end gap-3">
         <div className="flex shrink-0 items-center gap-2">
           <motion.div
             initial={webGamesMotion ? { opacity: 0, x: 12 } : false}
@@ -840,7 +837,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               onMarginMinMaxChange={setMarginMinMax}
               onClearAllFilters={clearAllTeamAndMarginFilters}
               dense={dense}
-              isEn={isEn}
+              language={language}
               layoutMobile={isMobile}
             />
           </motion.div>
@@ -909,7 +906,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         navBusy={adjacentMonthHasGames.loading}
         centerDisabled={!gameDaysForStrip.length}
         timeZone={dayTimeZone}
-        isEn={isEn}
+        language={language}
         className="mb-0"
       />
       </motion.div>
@@ -954,7 +951,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         autoScrollOnInit={false}
         snapSelectOnScroll={isMobile}
         timeZone={dayTimeZone}
-        a11yLocale={isEn ? "en-US" : "ja-JP"}
+        a11yLocale={language === "en" ? "en-US" : "ja-JP"}
         wideItemGap={isMobile}
         compactWebGap={!isMobile}
       />
@@ -1012,6 +1009,41 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   </>
 )}
 
+      <SideMenuDrawer
+        open={gamesDrawerOpen}
+        onClose={() => setGamesDrawerOpen(false)}
+        variant={isMobile ? "mobile" : "web"}
+      >
+        <GamesDrawerMenu
+          variant={isMobile ? "mobile" : "web"}
+          language={language}
+          league={league}
+          onSelectNba={() => {
+            didInitLeague.current = true;
+            setLeague("nba");
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("team");
+            params.delete("team_mode");
+            params.delete("margin");
+            params.delete("margin_min");
+            params.delete("margin_max");
+            router.replace(`?${params.toString()}`, { scroll: false });
+            setGamesDrawerOpen(false);
+          }}
+          onSelectWorldCup={() => {
+            didInitLeague.current = true;
+            setLeague("wc");
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("team");
+            params.delete("team_mode");
+            params.delete("margin");
+            params.delete("margin_min");
+            params.delete("margin_max");
+            router.replace(`?${params.toString()}`, { scroll: false });
+            setGamesDrawerOpen(false);
+          }}
+        />
+      </SideMenuDrawer>
     </div>
   );
 }

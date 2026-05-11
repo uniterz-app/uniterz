@@ -17,4 +17,7 @@ export const SPORT_TYPE_BY_LEAGUE: Record<string, "basketball" | "football"> = {
   pl: "football",
   epl: "football",
   premier: "football",
+  /** World Cup / FIFA tournament bucket */
+  wc: "football",
+  fifa: "football",
 };

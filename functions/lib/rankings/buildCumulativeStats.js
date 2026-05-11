@@ -41,7 +41,7 @@ async function buildCumulativeStats() {
     let skipped = 0;
     let scanned = 0;
     const processDoc = async (doc) => {
-        var _a, _b, _c;
+        var _a, _b, _c, _d;
         const data = doc.data();
         const uid = doc.id.split("_")[0];
         if (!uid)
@@ -53,10 +53,11 @@ async function buildCumulativeStats() {
         const statsRanking = (_a = data.ranking) !== null && _a !== void 0 ? _a : data.all;
         const statsByPhase = (_b = data.rankingByPhase) !== null && _b !== void 0 ? _b : {};
         const statsByPlayoffRound = (_c = data.rankingByPlayoffRound) !== null && _c !== void 0 ? _c : {};
+        const statsByWcStage = (_d = data.rankingByWcStage) !== null && _d !== void 0 ? _d : {};
         const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
         const userRef = firestore.doc(`users/${uid}`);
         return firestore.runTransaction(async (tx) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37;
             const [cumulativeSnap, userSnap] = await Promise.all([
                 tx.get(cumulativeRef),
                 tx.get(userRef),
@@ -172,12 +173,39 @@ async function buildCumulativeStats() {
                         ? nextRoundRaw.totalWins / nextRoundRaw.totalPosts
                         : 0 });
             }
+            /* =========================
+             * World Cup ステージ別（overall / qualifying / main）
+             * =======================*/
+            const WC_STAGES = ["overall", "qualifying", "main"];
+            const prevByWc = ((_27 = cumulativeSnap.get("rankingByWcStage")) !== null && _27 !== void 0 ? _27 : {});
+            const nextByWc = {};
+            for (const wk of WC_STAGES) {
+                const prevW = (_28 = prevByWc[wk]) !== null && _28 !== void 0 ? _28 : {
+                    totalPosts: 0,
+                    totalWins: 0,
+                    totalPoints: 0,
+                    totalUpset: 0,
+                    totalPrecision: 0,
+                    winRate: 0,
+                };
+                const src = statsByWcStage[wk];
+                const nextWRaw = addRankingTotals(prevW, {
+                    posts: (_29 = src === null || src === void 0 ? void 0 : src.posts) !== null && _29 !== void 0 ? _29 : 0,
+                    wins: (_30 = src === null || src === void 0 ? void 0 : src.wins) !== null && _30 !== void 0 ? _30 : 0,
+                    pointsSumV3: (_31 = src === null || src === void 0 ? void 0 : src.pointsSumV3) !== null && _31 !== void 0 ? _31 : 0,
+                    upsetPointsSum: (_32 = src === null || src === void 0 ? void 0 : src.upsetPointsSum) !== null && _32 !== void 0 ? _32 : 0,
+                    scorePrecisionSum: (_33 = src === null || src === void 0 ? void 0 : src.scorePrecisionSum) !== null && _33 !== void 0 ? _33 : 0,
+                });
+                nextByWc[wk] = Object.assign(Object.assign({}, nextWRaw), { winRate: nextWRaw.totalPosts > 0
+                        ? nextWRaw.totalWins / nextWRaw.totalPosts
+                        : 0 });
+            }
             tx.set(cumulativeRef, {
                 uid,
-                displayName: (_27 = user.displayName) !== null && _27 !== void 0 ? _27 : "user",
-                handle: (_28 = user.handle) !== null && _28 !== void 0 ? _28 : null,
-                photoURL: (_29 = user.photoURL) !== null && _29 !== void 0 ? _29 : null,
-                countryCode: (_30 = user.countryCode) !== null && _30 !== void 0 ? _30 : null,
+                displayName: (_34 = user.displayName) !== null && _34 !== void 0 ? _34 : "user",
+                handle: (_35 = user.handle) !== null && _35 !== void 0 ? _35 : null,
+                photoURL: (_36 = user.photoURL) !== null && _36 !== void 0 ? _36 : null,
+                countryCode: (_37 = user.countryCode) !== null && _37 !== void 0 ? _37 : null,
                 plan: user.plan === "pro" ? "pro" : "free",
                 totalPosts: nextPosts,
                 totalWins: nextWins,
@@ -198,6 +226,7 @@ async function buildCumulativeStats() {
                     playoffs: nextPlayoffs,
                 },
                 rankingByPlayoffRound: nextByRound,
+                rankingByWcStage: nextByWc,
                 lastAggregatedDate: dateKey,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });

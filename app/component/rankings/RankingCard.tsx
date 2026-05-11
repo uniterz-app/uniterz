@@ -9,6 +9,7 @@ import { metricNum } from "@/lib/rankings/metric";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { streakShortLabel } from "@/lib/i18n/rankings";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
@@ -18,6 +19,7 @@ import {
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
 const rankHudNumClass = summaryMetricNumClass;
@@ -245,7 +247,7 @@ function ValueText({
           rank === 1 ? "text-[15px]" : isTop3 ? "text-[13px]" : "text-[9px]",
         ].join(" ")}
       >
-        pts
+        {t(language).rankings.pts}
       </span>
     </div>
   );
@@ -256,6 +258,7 @@ export default function RankingCard({
   rank,
   metric,
   rankPhase,
+  playoffRound,
   onCountDone,
   language = "ja",
 }: {
@@ -264,6 +267,8 @@ export default function RankingCard({
   metric: MobileMetric;
   /** ランキング画面からプロフィールへ行くときの戻り用（未指定時は playoffs） */
   rankPhase?: RankingPhase;
+  /** プレーオフラウンドタブ（TOTAL / 1ST / …）の戻り用 */
+  playoffRound?: PlayoffRoundKey;
   onCountDone?: () => void;
   language?: Language;
 }) {
@@ -280,6 +285,7 @@ export default function RankingCard({
   const profileHref = profileHrefWithRankingsReturn(pathname, base, handleOrUid, {
     metric,
     phase: rankPhase ?? "playoffs",
+    playoffRound,
   });
 
   const { n: target, d: decimals } = metricNum(r, metric);
@@ -411,9 +417,7 @@ export default function RankingCard({
                 <ProCyberBadge
                   {...proBadgeStaticMotion}
                   compact
-                  ariaLabel={
-                    language === "en" ? "Pro member" : "Pro 会員"
-                  }
+                  ariaLabel={t(language).common.proMember}
                 />
               ) : null}
             </div>

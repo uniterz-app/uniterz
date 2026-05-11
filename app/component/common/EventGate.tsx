@@ -36,7 +36,6 @@ export default function EventGate() {
   const pathname = usePathname();
   const isPublicLp = pathname === "/lp" || pathname === "/mobile/lp";
   const { language } = useUserLanguage(uid);
-  const isEn = language === "en";
 
   useEffect(() => {
     if (isPublicLp) return;
@@ -179,6 +178,6 @@ export default function EventGate() {
   if (!open || !displayEvent) return null;
 
   return (
-    <EventModal event={displayEvent} onClose={close} isEn={isEn} />
+    <EventModal event={displayEvent} onClose={close} language={language} />
   );
 }

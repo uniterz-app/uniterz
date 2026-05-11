@@ -2,6 +2,7 @@
 import React from "react";
 import { IBM_Plex_Sans } from "next/font/google";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -22,11 +23,11 @@ export default function PeriodToggle({
   onChange,
   language = "ja",
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
 
   const items: { key: Range; label: string }[] = [
-    { key: "7d", label: isEn ? "Last 7d" : "7日" },
-    { key: "30d", label: isEn ? "Last 30d" : "30日" },
+    { key: "7d", label: m.profile.last7d },
+    { key: "30d", label: m.profile.last30d },
   ];
 
   return (

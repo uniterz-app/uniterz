@@ -14,11 +14,17 @@ import cyberFieldStyles from "@/app/component/auth/cyberAuthField.module.css";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import type { Language } from "@/lib/i18n/language";
 import {
+  ALL_LANGUAGES,
+  LANGUAGE_NATIVE_NAMES,
   guessLanguageFromNavigator,
   normalizeLanguage,
 } from "@/lib/i18n/language";
-import { ui } from "@/lib/i18n/ui";
+import { t } from "@/lib/i18n/t";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
+import {
+  isProfileGamblingTermsError,
+  profileGamblingTermsUserMessage,
+} from "@/lib/profile/profileGamblingTerms";
 
 type Props = {
   onClose: () => void;
@@ -125,12 +131,11 @@ export default function ProfileEditSheet({
       onClose();
     } catch (err) {
       console.error(err);
-      alert(
-        ui(language, {
-          ja: "保存に失敗しました。時間をおいて再度お試しください。",
-          en: "Failed to save. Please try again later.",
-        })
-      );
+      if (isProfileGamblingTermsError(err)) {
+        alert(profileGamblingTermsUserMessage(language));
+        return;
+      }
+      alert(t(language).common.saveFailed);
     }
     // 保存後はメニューを自動では開かない
   };
@@ -163,16 +168,12 @@ export default function ProfileEditSheet({
             <header className="mb-5 flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <h1 className="text-2xl font-bold tracking-tight text-white">
-                  {ui(language, {
-                    ja: "プロフィール設定",
-                    en: "Profile Settings",
-                  })}
+                  {t(language).profile.settings}
                 </h1>
                 <p className="mt-1 text-sm text-white/70">
-                  {ui(language, {
-                    ja: "アイコン・名前・自己紹介・言語・国を編集できます",
-                    en: "Edit your icon, name, bio, language, and country.",
-                  })}
+                  {language === "en"
+                    ? "Edit your icon, name, bio, language, and country."
+                    : "アイコン・名前・自己紹介・言語・国を編集できます"}
                 </p>
               </div>
               {!embedded && (
@@ -180,7 +181,7 @@ export default function ProfileEditSheet({
                   type="button"
                   onClick={handleDismiss}
                   className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-zinc-900/85 text-white shadow-[0_8px_18px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:bg-zinc-800/90 active:scale-95"
-                  aria-label={ui(language, { ja: "戻る", en: "Back" })}
+                  aria-label={t(language).common.back}
                 >
                   <ChevronLeft className="h-6 w-6" strokeWidth={2.25} aria-hidden />
                 </button>
@@ -189,10 +190,7 @@ export default function ProfileEditSheet({
 
             {!ready ? (
               <div className="py-12 text-center text-sm text-white/55">
-                {ui(language, {
-                  ja: "読み込み中…",
-                  en: "Loading…",
-                })}
+                {t(language).common.loading}
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">
@@ -224,17 +222,14 @@ export default function ProfileEditSheet({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {ui(language, { ja: "名前", en: "Name" })}
+                    {t(language).profile.username}
                   </label>
                   <CyberAuthField
                     inputProps={{
                       type: "text",
                       name: "displayName",
                       autoComplete: "name",
-                      placeholder: ui(language, {
-                        ja: "名前",
-                        en: "Name",
-                      }),
+                      placeholder: t(language).profile.username,
                       value: name,
                       onChange: (e) => setName(e.target.value),
                     }}
@@ -248,15 +243,12 @@ export default function ProfileEditSheet({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {ui(language, { ja: "自己紹介", en: "Bio" })}
+                    {t(language).profile.bio}
                   </label>
                   <CyberAuthTextarea
                     textareaProps={{
                       name: "bio",
-                      placeholder: ui(language, {
-                        ja: "自己紹介",
-                        en: "Bio",
-                      }),
+                      placeholder: t(language).profile.bio,
                       value: bio,
                       onChange: (e) => setBio(e.target.value),
                       rows: 4,
@@ -266,10 +258,7 @@ export default function ProfileEditSheet({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {ui(language, {
-                      ja: "使用言語",
-                      en: "App Language",
-                    })}
+                    {t(language).profile.appLanguage}
                   </label>
                   <CyberAuthSelect
                     selectProps={{
@@ -277,21 +266,17 @@ export default function ProfileEditSheet({
                       onChange: (e) => setLanguage(e.target.value as Language),
                     }}
                   >
-                    <option value="ja">
-                      {ui(language, { ja: "日本語", en: "Japanese" })}
-                    </option>
-                    <option value="en">
-                      {ui(language, { ja: "English", en: "English" })}
-                    </option>
+                    {ALL_LANGUAGES.map((l) => (
+                      <option key={l} value={l}>
+                        {LANGUAGE_NATIVE_NAMES[l]}
+                      </option>
+                    ))}
                   </CyberAuthSelect>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-white/75">
-                    {ui(language, {
-                      ja: "住んでいる国（任意）",
-                      en: "Country (optional)",
-                    })}
+                    {t(language).auth.countryOptional}
                   </label>
                   <CyberAuthSelect
                     selectProps={{
@@ -300,10 +285,7 @@ export default function ProfileEditSheet({
                     }}
                   >
                     <option value="">
-                      {ui(language, {
-                        ja: "未設定",
-                        en: "Not set",
-                      })}
+                      {t(language).common.notSet}
                     </option>
                     {COUNTRY_OPTIONS.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -330,14 +312,8 @@ export default function ProfileEditSheet({
                 >
                   <span>
                     {uploading
-                      ? ui(language, {
-                          ja: "アップロード中...",
-                          en: "Uploading...",
-                        })
-                      : ui(language, {
-                          ja: "変更を保存",
-                          en: "Save changes",
-                        })}
+                      ? t(language).profile.uploading
+                      : t(language).profile.saveChanges}
                   </span>
                   {!uploading ? (
                     <span className="text-lg leading-none">↗</span>

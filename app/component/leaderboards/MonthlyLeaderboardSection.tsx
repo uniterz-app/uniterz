@@ -24,6 +24,7 @@ import { nameBebas, jp } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   league?: string;
@@ -122,6 +123,7 @@ export default function MonthlyLeaderboardSection({
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [myUid, setMyUid] = useState<string | null>(null);
   const { language } = useUserLanguage(myUid);
+  const m = t(language);
 
   const visibleMetrics: MobileMetric[] = [
     "totalScore",
@@ -203,9 +205,7 @@ export default function MonthlyLeaderboardSection({
               {titleDisplay}
             </h1>
             <p className={["mt-1 text-[12px] text-white/60", jp.className].join(" ")}>
-              {language === "en"
-                ? "Monthly Leaderboard based on last month's results"
-                : "先月の結果をもとにした月間リーダーボード"}
+              {m.leaderboard.monthlyDesc}
             </p>
           </div>
 
@@ -238,7 +238,7 @@ export default function MonthlyLeaderboardSection({
 
         {loading && (
           <div className="px-3 pt-2 text-[11px] text-white/40">
-            {language === "en" ? "loading..." : "読み込み中..."}
+            {m.common.loading}
           </div>
         )}
 

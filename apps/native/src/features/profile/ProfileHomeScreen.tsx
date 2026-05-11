@@ -53,6 +53,11 @@ import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import {
+  assertProfileTextsFreeOfGamblingTerms,
+  isProfileGamblingTermsError,
+  profileGamblingTermsUserMessage,
+} from "../../../../../lib/profile/profileGamblingTerms";
 import CyberGlassToastModal from "../../components/CyberGlassToastModal";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
 
@@ -452,6 +457,13 @@ export default function ProfileHomeScreen({
     const safePhoto = avatarUrl.trim();
     if (safeName.length > 50) {
       Alert.alert(t.invalidTitle, t.invalidName);
+      return;
+    }
+    try {
+      assertProfileTextsFreeOfGamblingTerms(safeName, safeBio);
+    } catch (e: unknown) {
+      if (!isProfileGamblingTermsError(e)) throw e;
+      Alert.alert(t.invalidTitle, profileGamblingTermsUserMessage(language));
       return;
     }
     setSaving(true);

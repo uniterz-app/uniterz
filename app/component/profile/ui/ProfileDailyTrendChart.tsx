@@ -21,6 +21,7 @@ import {
 } from "recharts";
 import type { BarShapeProps, XAxisTickContentProps } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
@@ -598,29 +599,22 @@ export default function ProfileDailyTrendChart({
   entranceSync = false,
   rechartsAfterEntrance = false,
 }: Props) {
-  const isEn = language === "en";
+  const msg = t(language);
 
-  const lockedMsg = isEn
-    ? "Pro lets you view monthly trends."
-    : "Proでは月ごとの推移が確認できます";
+  const lockedMsg = msg.profile.proMonthlyTrend;
 
-  const postsLabel = isEn ? "Posts" : "投稿数";
-  const hitsLabel = isEn ? "Correct Picks" : "的中数";
-  /** 内訳カード：的中数 / 投稿数（例: 2/3） */
-  const hitsPostsLabel = isEn ? "Hits / Posts" : "的中 / 投稿";
-  const totalLabel = isEn ? "Total Points" : "総合得点";
-  const scorePrecisionLabel = isEn ? "Score Precision" : "スコア精度";
-  const unitCount = isEn ? "items" : "件";
-  const unitPts = "pts";
-  const title = "Daily Combo Chart";
-  const subtitle = isEn
-    ? "Trend of stats over the last 10 days"
-    : "過去10日のスタッツの推移";
+  const postsLabel = msg.profile.postsCount;
+  const hitsLabel = msg.profile.correctPicks;
+  const hitsPostsLabel = msg.profile.hitsSlashPosts;
+  const totalLabel = msg.profile.totalPoints;
+  const scorePrecisionLabel = msg.profile.scorePrecision;
+  const unitCount = msg.profile.items;
+  const unitPts = msg.profile.ptsUnit;
+  const title = msg.profile.dailyComboChart;
+  const subtitle = msg.profile.dailyComboChartDesc;
 
   /** Info ツールチップ：凡例・操作の補足のみ */
-  const chartInfoTooltipMsg = isEn
-    ? "Orange / purple bars: daily posts and correct picks. Yellow / green lines: cumulative totals. Tap the chart for that day’s breakdown below."
-    : "オレンジ・紫の棒＝日ごとの投稿数・的中数。黄・緑の線＝累積の総合得点・スコア精度。グラフをタップすると下に内訳を表示します。";
+  const chartInfoTooltipMsg = msg.profile.dailyComboChartInfo;
 
   const ref = useRef<HTMLDivElement>(null);
   /** 折れ線パス query（ResponsiveContainer ラッパ） */
@@ -748,9 +742,7 @@ export default function ProfileDailyTrendChart({
     [limitedData, detailDate]
   );
 
-  const detailSelectHint = isEn
-    ? "Tap the chart to select a day."
-    : "グラフをタップで日付を選択";
+  const detailSelectHint = msg.profile.tapChartHint;
 
   const handleComposedChartClick = (
     state: { activeLabel?: string | number },
@@ -1084,7 +1076,7 @@ export default function ProfileDailyTrendChart({
                     <p
                       className={[
                         "leading-tight text-slate-400",
-                        isEn
+                        language !== "ja"
                           ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                           : "text-[9px] font-medium",
                       ].join(" ")}
@@ -1148,7 +1140,7 @@ export default function ProfileDailyTrendChart({
                     <p
                       className={[
                         "leading-tight text-slate-400",
-                        isEn
+                        language !== "ja"
                           ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                           : "text-[9px] font-medium",
                       ].join(" ")}
@@ -1192,7 +1184,7 @@ export default function ProfileDailyTrendChart({
                     <p
                       className={[
                         "leading-tight text-slate-400",
-                        isEn
+                        language !== "ja"
                           ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                           : "text-[9px] font-medium",
                       ].join(" ")}

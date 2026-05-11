@@ -6,6 +6,7 @@ import { Zap } from "lucide-react";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
@@ -35,8 +36,6 @@ function formatOrdinal(rank: number): string {
   return `${rank}th`;
 }
 
-const UPSET_TOOLTIP =
-  "アップセットが起きた試合で少数派を当てたときだけ加点されます（1試合0〜10）。「発生」は自分が予想した試合のうち、実際にアップセットが起きた試合数です。";
 
 function clampInt(v: number) {
   if (!Number.isFinite(v)) return 0;
@@ -53,7 +52,7 @@ function UpsetCard({
   className = "",
   language = "ja",
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
 
@@ -105,9 +104,7 @@ function UpsetCard({
   const cuChances = useCountUp(chances, 1000, inView, 0, "zero");
   const cuHitPct = useCountUp(hitPct, 1000, inView, 0, "zero");
 
-  const tooltipMsg = isEn
-    ? "You earn Upset Points only when you correctly predict an upset (0–10 points per match). “Occurred” means how many of your predicted matches actually had an upset."
-    : UPSET_TOOLTIP;
+  const tooltipMsg = m.profile.upsetTooltip;
   const rankText =
     totalUpsetRank != null ? ` / ${formatOrdinal(totalUpsetRank)}` : "";
   const rankClass =
@@ -140,13 +137,13 @@ function UpsetCard({
             <Zap className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
           </div>
 
-          <span className="text-white">{isEn ? "Upset" : "アップセット"}</span>
+          <span className="text-white">{m.profile.upsetLabel}</span>
 
           <button
             type="button"
             className="ml-0.5 text-[9px] text-white/60 hover:text-white/80 md:ml-1 md:text-[16px]"
             onClick={(e) => openTooltip(e, tooltipMsg)}
-            aria-label={isEn ? "Upset description" : "アップセットの説明"}
+            aria-label={`${m.profile.upsetLabel} ⓘ`}
           >
             ⓘ
           </button>
@@ -161,7 +158,7 @@ function UpsetCard({
         >
           {formatMetricDecimals(cuPoints, 1)}
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
-            pts
+            {m.profile.ptsUnit}
           </span>
           {rankText ? (
             <span className={`ml-1 text-[10px] md:text-sm ${rankClass}`}>
@@ -171,9 +168,9 @@ function UpsetCard({
         </div>
 
         <div className="mt-1.5 text-[9px] text-white/60 text-center leading-snug tracking-tight md:mt-4 md:text-[13px] md:leading-relaxed">
-          {isEn ? `Upsets ${cuChances} / Analyses ${cuAnalyzed}` : `発生 ${cuChances} / 分析 ${cuAnalyzed}`}
+          {`${m.profile.upsetOccurred} ${cuChances} / ${m.profile.upsetAnalyzed} ${cuAnalyzed}`}
           <br />
-          {isEn ? `Hit Rate ${cuHitPct}%` : `的中率 ${cuHitPct}%`}
+          {`${m.profile.hitRate} ${cuHitPct}%`}
         </div>
         </div>
       </div>

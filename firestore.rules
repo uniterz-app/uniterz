@@ -15,6 +15,25 @@ service cloud.firestore {
         || request.time < timestamp.date(2026, 4, 18) + duration.time(17, 0, 0, 0);
     }
 
+    /**
+     * 表示名・bio からギャンブル関連語を拒否（Web API `lib/profile/profileGamblingTerms.ts` と同趣旨）。
+     * 直接 Firestore を書くクライアント対策。英語は単語境界。
+     */
+    function profileTextGamblingFree(s) {
+      return s is string
+        && !(s.matches('.*ベット.*')
+            || s.matches('.*ベッド.*')
+            || s.matches('.*ベッティング.*')
+            || s.matches('.*賭け.*')
+            || s.matches('.*賭博.*')
+            || s.matches('.*ギャンブル.*')
+            || s.matches('(?i).*\\bbet\\b.*')
+            || s.matches('(?i).*\\bbetting\\b.*')
+            || s.matches('(?i).*\\bbets\\b.*')
+            || s.matches('(?i).*\\bbetted\\b.*')
+            || s.matches('(?i).*\\bbettor\\b.*'));
+    }
+
     // ========================================================================
     // users
     // 参照: AuthProvider, SignupForm, OnboardingForm, Profile 設定, useProfile(handle),
@@ -26,7 +45,15 @@ service cloud.firestore {
 
       allow create: if request.auth != null
         && request.auth.uid == userId
-        && !('plan' in request.resource.data);
+        && !('plan' in request.resource.data)
+        && (!('displayName' in request.resource.data)
+            || (request.resource.data.displayName is string
+                && request.resource.data.displayName.size() <= 50
+                && profileTextGamblingFree(request.resource.data.displayName)))
+        && (!('bio' in request.resource.data)
+            || (request.resource.data.bio is string
+                && request.resource.data.bio.size() <= 500
+                && profileTextGamblingFree(request.resource.data.bio)));
 
       allow update: if request.auth != null
         && request.auth.uid == userId
@@ -44,10 +71,12 @@ service cloud.firestore {
             || request.resource.data.createdAt == resource.data.createdAt)
         && (!('displayName' in request.resource.data)
             || (request.resource.data.displayName is string
-                && request.resource.data.displayName.size() <= 50))
+                && request.resource.data.displayName.size() <= 50
+                && profileTextGamblingFree(request.resource.data.displayName)))
         && (!('bio' in request.resource.data)
             || (request.resource.data.bio is string
-                && request.resource.data.bio.size() <= 500))
+                && request.resource.data.bio.size() <= 500
+                && profileTextGamblingFree(request.resource.data.bio)))
         && (!('photoURL' in request.resource.data)
             || request.resource.data.photoURL == null
             || request.resource.data.photoURL is string)

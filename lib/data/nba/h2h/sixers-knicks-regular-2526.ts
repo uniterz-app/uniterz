@@ -124,9 +124,9 @@ export const sixersKnicksH2HGames: NbaH2HGameCard[] = [
     },
   },
   {
-    id: "h2h-sixers-knicks-2026-05-10-po-g4",
-    dateEt: "2026-05-10",
-    dateJst: "2026-05-11",
+    id: "h2h-sixers-knicks-2026-05-11-po-g4",
+    dateEt: "2026-05-11",
+    dateJst: "2026-05-12",
     seriesGameLabel: "Game 4",
     leftTeamDisplay: H2H_LEFT,
     rightTeamDisplay: H2H_RIGHT,
@@ -138,9 +138,9 @@ export const sixersKnicksH2HGames: NbaH2HGameCard[] = [
     injuriesRight: [],
     inactiveFooterSummary: {
       ja:
-        "Knicksは序盤から3Pで試合を壊した。OG Anunoby欠場で先発したDeuce McBrideが25点・3P7本の大活躍。チーム全体でも25本の3Pを決め、76ersの守備を完全に崩した。Brunsonは22点で無理に背負いすぎず、HartとTownsも17点ずつ。76ersはEmbiidが24点、Maxeyが17点を取ったが、守備で修正できず完敗。Knicksがスイープで東決勝進出",
+        "Knicksは序盤から3Pで試合を壊した。OG Anunoby欠場で先発したDeuce McBrideが25点・3P7本の大活躍。チーム全体でも25本の3Pを決め、76ersの守備を完全に崩した。Brunsonは22点で無理に背負いすぎず、HartとTownsも17点ずつ。76ersはEmbiidが24点、Maxeyが17点を取ったが、守備で修正できず完敗。Knicksがスイープで東カンファレンス決勝進出。",
       en:
-        "New York broke the game open early from three. With OG Anunoby out, starter Deuce McBride exploded for 25 points and seven threes, and the team hit 25 threes overall to shred Philadelphia’s defense. Jalen Brunson scored 22 without forcing the load, while Josh Hart and Karl-Anthony Towns each had 17. Joel Embiid had 24 and Tyrese Maxey 17 for the 76ers, but they could not fix the defense in a blowout loss as the Knicks swept the series and advanced to the Eastern Conference Finals.",
+        "The Knicks blew the game open early with a three-point barrage. Deuce McBride, starting in place of the injured OG Anunoby, erupted for 25 points on seven threes. New York knocked down 25 three-pointers as a team, shredding Philadelphia's defense. Jalen Brunson added 22 without forcing the issue, while Josh Hart and Karl-Anthony Towns each chipped in 17. Joel Embiid had 24 and Tyrese Maxey 17 for the 76ers, but they could not make defensive adjustments and were swept. The Knicks advance to the Eastern Conference Finals with a 4-0 sweep.",
     },
   },
 ];

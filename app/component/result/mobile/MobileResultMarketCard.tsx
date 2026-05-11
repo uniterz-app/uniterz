@@ -11,6 +11,8 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { Scale } from "lucide-react";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
@@ -35,6 +37,7 @@ type Props = {
   };
   inOverlay?: boolean;
   donutDrawDelayMs?: number;
+  language?: Language;
 };
 
 function MobileResultMarketCard({
@@ -42,7 +45,9 @@ function MobileResultMarketCard({
   market,
   inOverlay = false,
   donutDrawDelayMs,
+  language = "ja",
 }: Props) {
+  const m = t(language);
   const normalizedLeague = normalizeLeague(post.league);
   const teamNameFont = bracketMarketTeamTypography(true);
 
@@ -68,14 +73,14 @@ function MobileResultMarketCard({
       post.home?.name ?? "",
       homeL1,
       homeL2
-    ) || "Home";
+    ) || m.predict.home;
   const awayLegendName =
     getMobileTeamName(
       post.league,
       post.away?.name ?? "",
       awayL1,
       awayL2
-    ) || "Away";
+    ) || m.predict.away;
 
   const segments = useMemo(
     () =>
@@ -87,7 +92,7 @@ function MobileResultMarketCard({
               color: homeColor,
             },
             {
-              label: "Draw",
+              label: m.results.drawLabel,
               value: market?.drawRate ?? 0,
               color: "#9CA3AF",
             },
@@ -118,6 +123,7 @@ function MobileResultMarketCard({
       market?.homeRate,
       market?.awayRate,
       market?.drawRate,
+      m,
     ]
   );
 
@@ -132,7 +138,7 @@ function MobileResultMarketCard({
       {/* Header */}
       <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-white">
         <Scale className="h-5 w-5 shrink-0 text-orange-400" aria-hidden />
-        <span>Market Bias</span>
+        <span>{m.results.marketBiasTitle}</span>
       </div>
 
       <div className="flex items-center gap-4">
@@ -156,12 +162,12 @@ function MobileResultMarketCard({
                 resultStatsMetricNumClass,
               ].join(" ")}
             >
-              Total: {market.total}
+              {m.results.totalPredictionsCount}{market.total}
             </div>
           )}
 
           {segments.map((seg, i) => {
-            const isDraw = seg.label === "Draw";
+            const isDraw = seg.label === m.results.drawLabel;
             return (
               <div key={i} className="flex items-start gap-2">
                 <span

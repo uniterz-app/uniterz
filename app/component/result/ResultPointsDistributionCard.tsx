@@ -6,6 +6,7 @@ import { m, useInView, useReducedMotion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
@@ -101,7 +102,7 @@ function ResultPointsDistributionCard({
   compact = false,
 }: Props) {
   const gid = useId().replace(/:/g, "");
-  const isEn = language === "en";
+  const msgs = t(language);
   const reduceMotion = useReducedMotion();
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const statsRowRef = useRef<HTMLDivElement>(null);
@@ -207,35 +208,21 @@ function ResultPointsDistributionCard({
         compact ? "p-4" : "p-6",
       ].join(" ");
 
-  const title = isEn ? "Score distribution" : "得点の分布";
+  const title = msgs.results.scoreDistTitle;
   const subtitle = !isMatchFinal
-    ? isEn
-      ? "Score distribution appears after the match ends."
-      : "試合が終了したら、得点の分布が表示されます。"
+    ? msgs.results.scoreDistAfterMatch
     : distLoading
-      ? isEn
-        ? "Loading…"
-        : "読み込み中…"
+      ? msgs.results.scoreDistLoading
       : distribution == null
-        ? isEn
-          ? "Could not load score distribution for this match."
-          : "この試合の得点分布を表示できません。"
-        : isEn
-          ? "All scored posts for this match (same rules as your result)."
-          : "この試合の採点済み予想の分布（あなたの得点と同じルール）";
-  const scoringNote = showChart
-    ? isEn
-      ? "Wrong winner → 0. Hits start at 4; streak/upset bonuses can exceed 10. Chart caps at 10 (ceiling). No 1–3."
-      : "勝者を外すと0点。的中は4点から。連勝・アップセットで10点超もあり得ますが、分布図の縦軸は10で頭打ち表示。1〜3点は出ません。"
-    : null;
-  const axisLabel = isEn ? "pointsV3" : "総合点 (pointsV3)";
-  const youLabel = isEn ? "You" : "あなた";
-  const medianLabel = isEn ? "Median" : "中央値";
-  const meanLabel = isEn ? "Mean" : "平均";
-  const nLabel = isEn ? "n" : "件数";
-  const axisFoot = isEn
-    ? "0 / 4–10+ · chart max 10"
-    : "0 / 4–10+ ・表示上限10";
+        ? msgs.results.scoreDistUnavailable
+        : msgs.results.scoreDistSubtitle;
+  const scoringNote = showChart ? msgs.results.scoreDistNote : null;
+  const axisLabel = msgs.results.scoreDistAxisLabel;
+  const youLabel = msgs.profile.you;
+  const medianLabel = msgs.profile.median;
+  const meanLabel = msgs.profile.mean;
+  const nLabel = msgs.results.scoreDistCount;
+  const axisFoot = msgs.results.scoreDistAxisFoot;
 
   const wantsAnim = !reduceMotion && chartInView;
   const showPeers = reduceMotion || peersReady;
@@ -676,7 +663,7 @@ function ResultPointsDistributionCard({
                     compact ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm",
                   ].join(" ")}
                 >
-                  {isEn ? "· on chart: 10+" : "· 図上は10+"}
+                  {msgs.results.scoreDistOnChart}
                 </span>
               )}
             </span>

@@ -65,6 +65,8 @@ type ApplyOptsV2 = {
   seasonPhase?: "regular" | "play_in" | "playoffs" | null;
   /** プレーオフラウンド別ランキング集計用 */
   seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
+  /** World Cup（league=wc）: 予選 / 本戦。overall は常に別途加算 */
+  wcStage?: "qualifying" | "main" | null;
 };
 
 function shouldCountForRanking(v: boolean | undefined) {
@@ -86,11 +88,44 @@ function normalizeSeasonRound(
 }
 
 const db = () => getFirestore();
-const LEAGUES = ["bj", "j1", "nba", "pl"] as const;
+const LEAGUES = ["bj", "j1", "nba", "pl", "wc"] as const;
 
 /* =========================================================
  * Utils
  * =======================================================*/
+
+function wcIncrementAtPath(
+  pathPrefix: string,
+  o: {
+    isWin: boolean;
+    scoreError: number;
+    scorePrecision: number;
+    hadUpsetGame: boolean;
+    points: number;
+    upsetHit: boolean;
+    upsetPoints: number;
+    upsetBonus: number;
+    streakBonus: number;
+  }
+): Record<string, unknown> {
+  return {
+    [`${pathPrefix}.posts`]: FieldValue.increment(1),
+    [`${pathPrefix}.wins`]: FieldValue.increment(o.isWin ? 1 : 0),
+    [`${pathPrefix}.scoreErrorSum`]: FieldValue.increment(o.scoreError),
+    [`${pathPrefix}.upsetOpportunityCount`]: FieldValue.increment(
+      o.hadUpsetGame ? 1 : 0
+    ),
+    [`${pathPrefix}.upsetHitCount`]: FieldValue.increment(o.upsetHit ? 1 : 0),
+    [`${pathPrefix}.upsetPickCount`]: FieldValue.increment(
+      o.hadUpsetGame ? 1 : 0
+    ),
+    [`${pathPrefix}.scorePrecisionSum`]: FieldValue.increment(o.scorePrecision),
+    [`${pathPrefix}.pointsSumV3`]: FieldValue.increment(o.points),
+    [`${pathPrefix}.upsetPointsSum`]: FieldValue.increment(o.upsetPoints),
+    [`${pathPrefix}.upsetBonusSum`]: FieldValue.increment(o.upsetBonus),
+    [`${pathPrefix}.streakBonusSum`]: FieldValue.increment(o.streakBonus),
+  };
+}
 
 function toDateKeyJST(ts: Timestamp) {
   const d = ts.toDate();
@@ -109,6 +144,7 @@ function normalizeLeague(raw?: string | null): string | null {
   if (v === "j1" || v === "j") return "j1";
   if (v === "nba") return "nba";
   if (v === "pl" || v.includes("premier")) return "pl";
+  if (v === "wc" || v === "fifa") return "wc";
 
   return null;
 }
@@ -181,6 +217,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     countsForRanking,
     seasonPhase,
     seasonRound,
+    wcStage,
   } = opts;
 
   const forRanking = shouldCountForRanking(countsForRanking);
@@ -227,6 +264,31 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         ? { rankingByPlayoffRound: { [roundKey]: inc } }
         : {}),
     };
+
+    const wcOpts = {
+      isWin,
+      scoreError,
+      scorePrecision,
+      hadUpsetGame,
+      points,
+      upsetHit,
+      upsetPoints,
+      upsetBonus,
+      streakBonus,
+    };
+
+    if (forRanking && leagueKey === "wc") {
+      Object.assign(
+        update,
+        wcIncrementAtPath("rankingByWcStage.overall", wcOpts),
+        wcStage === "qualifying"
+          ? wcIncrementAtPath("rankingByWcStage.qualifying", wcOpts)
+          : {},
+        wcStage === "main"
+          ? wcIncrementAtPath("rankingByWcStage.main", wcOpts)
+          : {}
+      );
+    }
 
     if (leagueKey) {
       update.leagues = {

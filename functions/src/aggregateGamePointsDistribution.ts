@@ -1,5 +1,6 @@
 import { buildGamePointsDistributionAgg } from "./gamePointsDistributionAgg";
 import { computePostSettlement } from "./computePostSettlement";
+import type { SettlementGameInput } from "./settlementGame";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 
 /**
@@ -13,11 +14,7 @@ export function aggregateGamePointsDistributionFromPostsSnap({
   streakResultMap,
 }: {
   postsSnap: FirebaseFirestore.QuerySnapshot;
-  game: {
-    homeScore: number;
-    awayScore: number;
-    league?: string;
-  };
+  game: SettlementGameInput;
   market: {
     majoritySide: string;
     majorityRatio: number;
@@ -32,9 +29,7 @@ export function aggregateGamePointsDistributionFromPostsSnap({
     const { totalPoints } = computePostSettlement({
       p,
       game: {
-        homeScore: game.homeScore,
-        awayScore: game.awayScore,
-        league: game.league,
+        ...game,
       },
       market,
       hadUpsetGame,

@@ -24,7 +24,10 @@ import NbaPostseasonMatchupPanel, {
 import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
+import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
+import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
 import {
   findNextUnpredictedScheduledGameInList,
@@ -181,7 +184,7 @@ export default function PredictionFormV2({
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const prefix = isMobile ? "/mobile" : "/web";
   const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   const gameDateKey = useMemo(() => {
     return game.startAtJst
@@ -229,7 +232,9 @@ export default function PredictionFormV2({
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const isSoccer = game.league === "pl" || game.league === "j1";
-  const showStandings = game.league === "nba";
+  const isWc = game.league === "wc";
+  // WC は Standings タブ（グループ順位 + FIFA ランク）を常に出す
+  const showStandings = game.league === "nba" || isWc;
   /** Playoffs / Play-In: 直接対決 / 市場 / 詳細スタッツの3タブ（順位表タブなし） */
   const isNbaPostseasonTools =
     game.league === "nba" &&
@@ -574,32 +579,20 @@ export default function PredictionFormV2({
     const a = Number(scoreAway);
 
     if (Number.isNaN(h) || Number.isNaN(a)) {
-      alert(isEn ? "Please enter valid scores." : "スコアを正しく入力してください");
+      alert(m.predict.enterValidScores);
       return;
     }
 
     if (winner === "home" && h <= a) {
-      alert(
-        isEn
-          ? "For a home-win prediction, the home score must be higher."
-          : "ホーム勝利予想の場合、ホーム得点を多くしてください"
-      );
+      alert(m.predict.enterValidScores);
       return;
     }
     if (winner === "away" && a <= h) {
-      alert(
-        isEn
-          ? "For an away-win prediction, the away score must be higher."
-          : "アウェイ勝利予想の場合、アウェイ得点を多くしてください"
-      );
+      alert(m.predict.enterValidScores);
       return;
     }
     if (isSoccer && winner === "draw" && h !== a) {
-      alert(
-        isEn
-          ? "For a draw prediction, both scores must be equal."
-          : "引き分け予想の場合、スコアは同点にしてください"
-      );
+      alert(m.predict.enterValidScores);
       return;
     }
 
@@ -648,7 +641,7 @@ export default function PredictionFormV2({
             rawPatch?.slice(0, 200);
           throw new Error(detailPatch || `更新失敗 (${res.status})`);
         }
-        toast.success(isEn ? "Prediction updated." : "予想を更新しました");
+        toast.success(m.predict.predictionUpdated);
         setExistingSnapshot((prev) =>
           typeof prev === "object" && prev !== null && "prediction" in prev
             ? {
@@ -711,7 +704,7 @@ export default function PredictionFormV2({
         throw new Error(detail || `投稿失敗 (${res.status})`);
       }
 
-      toast.success(isEn ? "Prediction submitted." : "予想を投稿しました");
+      toast.success(m.predict.predictionSubmitted);
       onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
 
       setWinner(null);
@@ -769,7 +762,7 @@ export default function PredictionFormV2({
         router.push(`${prefix}/games?date=${gameDateKey}`);
       }
     } catch (e: any) {
-      alert(e.message ?? (isEn ? "Failed to submit." : "送信に失敗しました"));
+      alert(e.message ?? m.predict.failedToSubmit);
     } finally {
       setSubmitting(false);
     }
@@ -799,7 +792,7 @@ export default function PredictionFormV2({
       ? createPortal(
           <PredictNextGameModal
             open
-            isEn={isEn}
+            language={language}
             league={nextGamePreview.league}
             homeName={nextGamePreview.home?.name ?? ""}
             awayName={nextGamePreview.away?.name ?? ""}
@@ -898,12 +891,10 @@ export default function PredictionFormV2({
             >
               <span className={isMobile ? "truncate" : ""}>
                 {isNbaPostseasonTools
-                  ? isEn
-                    ? "Matchup"
-                    : "直接対決"
-                  : isEn
-                    ? "Stats"
-                    : "詳細スタッツ"}
+                  ? m.predict.h2hStats
+                  : isWc
+                    ? m.predict.teamProfile
+                    : m.predict.teamStats}
               </span>
             </span>
           </button>
@@ -927,7 +918,7 @@ export default function PredictionFormV2({
               ].join(" ")}
             >
               <span className={isMobile ? "truncate" : ""}>
-                {isEn ? "Market" : "市場"}
+                {m.games.market}
               </span>
             </span>
           </button>
@@ -954,12 +945,8 @@ export default function PredictionFormV2({
           >
             <span className={isMobile ? "truncate" : ""}>
               {isNbaPostseasonTools
-                ? isEn
-                  ? "Stats"
-                  : "詳細スタッツ"
-                : isEn
-                  ? "Standings"
-                  : "順位表"}
+                ? m.predict.teamStats
+                : m.predict.groupStandings}
             </span>
           </button>
         </motion.div>
@@ -982,7 +969,7 @@ export default function PredictionFormV2({
                     "font-semibold text-white/90",
                   ].join(" ")}
                 >
-                  {isEn ? "Series Trend" : "Series Trend"}
+                  {m.predict.seriesTrend}
                 </div>
                 {h2hPoRecord ? (
                   <div className="text-center">
@@ -996,7 +983,7 @@ export default function PredictionFormV2({
                 ) : h2hRsRecordForSeriesTrend ? (
                   <div className="text-center">
                     <H2hSeasonRecordRow
-                      phaseLabel={isEn ? "RS" : "RS"}
+                      phaseLabel="RS"
                       leftTeamDisplay={h2hRsRecordForSeriesTrend.leftTeamDisplay}
                       rightTeamDisplay={
                         h2hRsRecordForSeriesTrend.rightTeamDisplay
@@ -1015,7 +1002,7 @@ export default function PredictionFormV2({
                 }
               >
                 <NbaPostseasonMatchupPanel
-                  isEn={isEn}
+                  language={language}
                   seriesGames={nbaH2HPack?.games}
                   h2hAverages={nbaH2HPack?.h2hAverages}
                   homeTeamName={game.home.name}
@@ -1037,7 +1024,7 @@ export default function PredictionFormV2({
                   isMobile ? "mb-2 text-xs font-semibold text-white/90" : "mb-3 text-sm font-semibold text-white/90"
                 }
               >
-                {isEn ? "Stats" : "詳細スタッツ"}
+                {isWc ? m.predict.teamProfile : m.predict.teamStats}
               </div>
               <div
                 className={
@@ -1046,12 +1033,23 @@ export default function PredictionFormV2({
                     : "border-t border-white/10 pt-3"
                 }
               >
-                <GameTeamStats
-                  league={game.league}
-                  homeTeamId={game.home.teamId ?? ""}
-                  awayTeamId={game.away.teamId ?? ""}
-                  language={language}
-                />
+                {isWc ? (
+                  <WcTeamProfilePanel
+                    homeTeamId={game.home.teamId ?? ""}
+                    awayTeamId={game.away.teamId ?? ""}
+                    homeName={homeSafe.name}
+                    awayName={awaySafe.name}
+                    language={language}
+                    isMobile={isMobile}
+                  />
+                ) : (
+                  <GameTeamStats
+                    league={game.league}
+                    homeTeamId={game.home.teamId ?? ""}
+                    awayTeamId={game.away.teamId ?? ""}
+                    language={language}
+                  />
+                )}
               </div>
             </div>
           </motion.div>
@@ -1091,7 +1089,7 @@ export default function PredictionFormV2({
                   : "mb-3 text-sm font-semibold text-white/90"
               }
             >
-              {isEn ? "Standings" : "順位表"}
+              {m.predict.groupStandings}
             </div>
             <div
               className={
@@ -1100,13 +1098,18 @@ export default function PredictionFormV2({
                   : "border-t border-white/10 pt-3"
               }
             >
-              {showStandings ? (
+              {isWc ? (
+                <WcStandingPanel
+                  homeTeamId={game.home.teamId ?? ""}
+                  awayTeamId={game.away.teamId ?? ""}
+                  language={language}
+                  isMobile={isMobile}
+                />
+              ) : showStandings ? (
                 <NbaStandingsPanel compact={isMobile} />
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-4 text-sm text-white/65">
-                  {isEn
-                    ? "Standings are not available for this league yet."
-                    : "このリーグでは Standings はまだ未対応です。"}
+                  {m.predict.standingsNotAvailable}
                 </div>
               )}
             </div>
@@ -1119,14 +1122,14 @@ export default function PredictionFormV2({
             variants={fadeUp}
             className={`py-6 text-center text-sm text-white/70 ${glassCard}`}
           >
-            {isEn ? "Loading…" : "読み込み中…"}
+            {m.common.loading}
           </motion.div>
         ) : null}
 
         {overlayFormLayout.showEditableSummary && snapPred ? (
           <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
             <div className="text-sm font-semibold text-white/88">
-              {isEn ? "Your prediction" : "あなたの予想"}
+              {m.predict.yourPrediction}
             </div>
             <div className="space-y-2 px-0.5">
               <div className="grid grid-cols-2 gap-3">
@@ -1183,7 +1186,7 @@ export default function PredictionFormV2({
               }}
               className="flex h-11 w-full items-center justify-center rounded-xl border border-amber-300/40 bg-amber-500/15 text-sm font-bold text-amber-100 transition hover:bg-amber-500/25 active:scale-[0.99]"
             >
-              {isEn ? "Edit" : "修正"}
+              {m.common.edit}
             </button>
           </motion.div>
         ) : null}
@@ -1191,9 +1194,7 @@ export default function PredictionFormV2({
         {overlayFormLayout.showLockedSummary && snapPred ? (
           <motion.div variants={fadeUp} className={`space-y-2 pt-1 ${glassCard}`}>
             <div className="text-sm font-semibold text-white/88">
-              {isEn
-                ? "Your prediction (locked)"
-                : "あなたの予想（試合開始後は変更できません）"}
+              {m.predict.yourPrediction}
             </div>
             <div className="space-y-2 px-0.5">
               <div className="grid grid-cols-2 gap-3">
@@ -1248,7 +1249,7 @@ export default function PredictionFormV2({
           <>
             <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
               <div className="text-sm font-semibold text-white/88">
-                {isEn ? "Score Prediction" : "スコア予想"}
+                {m.predict.scorePrediction}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1263,7 +1264,7 @@ export default function PredictionFormV2({
                     type="number"
                     inputMode="numeric"
                     className={scoreInputClass}
-                    placeholder={isEn ? "Score" : "得点"}
+                    placeholder={m.predict.scorePlaceholder}
                     value={scoreHome}
                     onChange={(e) => setScoreHome(e.target.value)}
                   />
@@ -1280,7 +1281,7 @@ export default function PredictionFormV2({
                     type="number"
                     inputMode="numeric"
                     className={scoreInputClass}
-                    placeholder={isEn ? "Score" : "得点"}
+                    placeholder={m.predict.scorePlaceholder}
                     value={scoreAway}
                     onChange={(e) => setScoreAway(e.target.value)}
                   />
@@ -1297,7 +1298,7 @@ export default function PredictionFormV2({
                   }}
                   className="mt-2 w-full text-center text-xs font-medium text-white/55 underline-offset-2 hover:text-white/80 hover:underline"
                 >
-                  {isEn ? "Cancel editing" : "修正をやめる"}
+                  {m.predict.cancelEditing}
                 </button>
               ) : null}
             </motion.div>
@@ -1336,16 +1337,10 @@ export default function PredictionFormV2({
                 }
               >
                 {submitting
-                  ? isEn
-                    ? "Submitting..."
-                    : "投稿中…"
+                  ? m.common.submitting
                   : effectivePostId && showScoreEdit
-                    ? isEn
-                      ? "Update prediction"
-                      : "予想を更新する"
-                    : isEn
-                      ? "Submit Prediction"
-                      : "予想する"}
+                    ? m.predict.predictionUpdated
+                    : m.predict.submitPrediction}
               </button>
             </motion.div>
           </>

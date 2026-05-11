@@ -18,10 +18,14 @@ import {
   authDisplayButton,
 } from "./authEnglishDisplay";
 import type { Language } from "@/lib/i18n/language";
-import { guessLanguageFromNavigator } from "@/lib/i18n/language";
+import { ALL_LANGUAGES, LANGUAGE_NATIVE_NAMES, guessLanguageFromNavigator } from "@/lib/i18n/language";
 import { ui as uiStr } from "@/lib/i18n/ui";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import { consumePostOnboardingRedirect } from "@/lib/auth/safeNextRedirect";
+import {
+  isProfileGamblingTermsError,
+  profileGamblingTermsUserMessage,
+} from "@/lib/profile/profileGamblingTerms";
 
 type Props = {
   variant?: "web" | "mobile";
@@ -106,6 +110,10 @@ export default function OnboardingForm({ variant }: Props) {
       router.replace(afterOnboarding ?? gamesPath);
     } catch (err) {
       console.error("onboarding save failed:", err);
+      if (isProfileGamblingTermsError(err)) {
+        alert(profileGamblingTermsUserMessage(language));
+        return;
+      }
       alert(
         uiStr(language, {
           ja: "保存に失敗しました。時間をおいて再度お試しください。",
@@ -208,12 +216,11 @@ export default function OnboardingForm({ variant }: Props) {
                   onChange: (e) => setLanguage(e.target.value as Language),
                 }}
               >
-                <option value="ja">
-                  {uiStr(language, { ja: "日本語", en: "Japanese" })}
-                </option>
-                <option value="en">
-                  {uiStr(language, { ja: "English", en: "English" })}
-                </option>
+                {ALL_LANGUAGES.map((l) => (
+                  <option key={l} value={l}>
+                    {LANGUAGE_NATIVE_NAMES[l]}
+                  </option>
+                ))}
               </CyberAuthSelect>
             </div>
 

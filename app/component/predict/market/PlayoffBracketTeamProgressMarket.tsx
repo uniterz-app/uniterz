@@ -11,6 +11,7 @@ import {
 import { TEAM_SHORT } from "@/lib/team-short";
 import { getPlayoffBracketConfig } from "@/lib/playoff-bracket-config";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
@@ -62,21 +63,21 @@ function getBestMetricLabel(row: {
   finals: number;
   champion: number;
 }, language: Language) {
-  const isEn = language === "en";
+  const m = t(language);
   const items = [
     {
-      label: isEn ? "R2" : "2回戦進出",
+      label: m.predict.r2,
       pct: row.r2,
       priority: 0,
     },
     {
-      label: isEn ? "CF" : "CF進出",
+      label: m.predict.cf,
       pct: row.cf,
       priority: 1,
     },
-    { label: "Finals", pct: row.finals, priority: 2 },
+    { label: m.predict.finals, pct: row.finals, priority: 2 },
     {
-      label: isEn ? "Champion" : "優勝",
+      label: m.predict.champion,
       pct: row.champion,
       priority: 3,
     },
@@ -99,13 +100,13 @@ function TeamProgressDetails({
   open: boolean;
   language: Language;
 }) {
-  const isEn = language === "en";
+  const m = t(language);
 
   const items = [
-    { label: isEn ? "R2" : "2回戦進出", pct: row.r2 },
-    { label: isEn ? "CF" : "CF進出", pct: row.cf },
-    { label: "Finals", pct: row.finals },
-    { label: isEn ? "Champion" : "優勝", pct: row.champion },
+    { label: m.predict.r2, pct: row.r2 },
+    { label: m.predict.cf, pct: row.cf },
+    { label: m.predict.finals, pct: row.finals },
+    { label: m.predict.champion, pct: row.champion },
   ];
 
   if (!open) return null;
@@ -245,7 +246,6 @@ export default function PlayoffBracketTeamProgressMarket({
   totalEntries,
   language = "ja",
 }: Props) {
-  const isEn = language === "en";
   const { eastCodes, westCodes, seedByTeam } = useMemo(() => {
     const config = getPlayoffBracketConfig(season);
 
@@ -327,7 +327,7 @@ export default function PlayoffBracketTeamProgressMarket({
           aria-hidden
         />
         <div className="relative z-1">
-          {language === "en" ? "No data available" : "データがありません"}
+          {t(language).common.noData}
         </div>
       </div>
     );

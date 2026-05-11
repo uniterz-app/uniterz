@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import type { Language } from "@/lib/i18n/language";
 import CommunityGroupDetailView from "./CommunityGroupDetailView";
 
 type Props = {
   open: boolean;
   groupId: string | null;
-  language: "ja" | "en";
+  language: Language;
   variant: "web" | "mobile";
   onClose: () => void;
   onRefreshList?: () => void;

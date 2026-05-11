@@ -11,6 +11,7 @@ import {
   GAMES_CYBER_SLOT_GAP_SEC,
 } from "./cyberMotion";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -76,8 +77,7 @@ export default function MobileMatchCard(props: MatchCardProps) {
   }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
-  const displayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
+  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
   const showPlayoffSeriesRow =
     isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
     seriesStanding != null;
@@ -224,7 +224,12 @@ export default function MobileMatchCard(props: MatchCardProps) {
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
           transition={entryTransition ? entryTransition(2) : undefined}
         >
-          {Icon === Jersey ? (
+          {normalizedLeague === "wc" ? (
+            <CountryFlag
+              teamId={home.teamId}
+              className="w-[5rem] h-[3.4rem] mb-2"
+            />
+          ) : Icon === Jersey ? (
             <HalftoneJerseyMark
               accent={homeJerseyColor}
               accentEnd={homeSecondaryColor}
@@ -323,7 +328,12 @@ export default function MobileMatchCard(props: MatchCardProps) {
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
           transition={entryTransition ? entryTransition(4) : undefined}
         >
-          {Icon === Jersey ? (
+          {normalizedLeague === "wc" ? (
+            <CountryFlag
+              teamId={away.teamId}
+              className="w-[5rem] h-[3.4rem] mb-2"
+            />
+          ) : Icon === Jersey ? (
             <HalftoneJerseyMark
               accent={awayJerseyColor}
               accentEnd={awaySecondaryColor}

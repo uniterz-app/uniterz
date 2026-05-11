@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { authDisplayButton } from "../auth/authEnglishDisplay";
 import cyberFieldStyles from "../auth/cyberAuthField.module.css";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
@@ -25,10 +26,10 @@ export default function LogoutConfirmModal({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const isEn = language === "en";
-  const title = isEn ? "Log out?" : "ログアウトしますか？";
-  const cancelLabel = "Cancel";
-  const confirmLabel = "Log out";
+  const m = t(language);
+  const title = m.auth.logoutMessage;
+  const cancelLabel = m.auth.logoutCancel;
+  const confirmLabel = m.auth.logoutConfirm;
 
   const titleClass =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-snug text-white/85 sm:text-[0.9375rem]";

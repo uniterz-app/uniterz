@@ -12,6 +12,7 @@ import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
@@ -22,6 +23,7 @@ import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { Crown } from "lucide-react";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
 
 const rankHudNumClass = summaryMetricNumClass;
@@ -292,7 +294,7 @@ function ScoreText({
               transform: "translateY(-1px)",
             }}
           >
-            pts
+            {t(language).rankings.pts}
           </span>
         </div>
 
@@ -380,6 +382,7 @@ export default function TopPodium({
   rows,
   metric,
   rankPhase,
+  playoffRound,
   onTopCountDone,
   language = "ja",
 }: {
@@ -387,6 +390,8 @@ export default function TopPodium({
   metric: MobileMetric;
   /** ランキングからプロフィールへの戻り用 */
   rankPhase?: RankingPhase;
+  /** プレーオフラウンドタブの戻り用 */
+  playoffRound?: PlayoffRoundKey;
   onTopCountDone?: () => void;
   /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
@@ -462,7 +467,7 @@ export default function TopPodium({
             pathname,
             base,
             row.handle || row.uid,
-            { metric, phase: phaseForReturn }
+            { metric, phase: phaseForReturn, playoffRound }
           );
           return (
             <Link
@@ -616,9 +621,7 @@ export default function TopPodium({
                             <ProCyberBadge
                               {...proBadgeStaticMotion}
                               compact
-                              ariaLabel={
-                                language === "en" ? "Pro member" : "Pro 会員"
-                              }
+                              ariaLabel={t(language).common.proMember}
                             />
                           ) : null}
                         </div>

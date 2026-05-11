@@ -18,5 +18,8 @@ exports.SPORT_TYPE_BY_LEAGUE = {
     pl: "football",
     epl: "football",
     premier: "football",
+    /** World Cup / FIFA tournament bucket */
+    wc: "football",
+    fifa: "football",
 };
 //# sourceMappingURL=sportTypes.js.map

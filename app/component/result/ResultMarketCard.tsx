@@ -12,6 +12,8 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { Scale } from "lucide-react";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
@@ -44,6 +46,7 @@ type Props = {
   sideBySideLayout?: boolean;
   /** リザルト詳細の入場に合わせてドーナツの円周描画を遅延（ms）。未指定は即時 */
   donutDrawDelayMs?: number;
+  language?: Language;
 };
 
 function ResultMarketCard({
@@ -52,10 +55,12 @@ function ResultMarketCard({
   inOverlay = false,
   sideBySideLayout = false,
   donutDrawDelayMs,
+  language = "ja",
 }: Props) {
   const pathname = usePathname();
   const isMobileRoute = pathname?.startsWith("/mobile") ?? false;
   const teamNameFont = bracketMarketTeamTypography(isMobileRoute);
+  const m = t(language);
 
   const normalizedLeague = normalizeLeague(post.league);
 
@@ -72,13 +77,13 @@ function ResultMarketCard({
       normalizedLeague,
       post.home?.name,
       isMobileRoute
-    ) || "Home";
+    ) || m.predict.home;
   const awayLegendName =
     formatResultMarketTeamLabel(
       normalizedLeague,
       post.away?.name,
       isMobileRoute
-    ) || "Away";
+    ) || m.predict.away;
 
   const segments = useMemo(
     () =>
@@ -90,7 +95,7 @@ function ResultMarketCard({
               color: homeColor,
             },
             {
-              label: "Draw",
+              label: m.results.drawLabel,
               value: market?.drawRate ?? 0,
               color: "#9CA3AF",
             },
@@ -121,6 +126,7 @@ function ResultMarketCard({
       market?.homeRate,
       market?.awayRate,
       market?.drawRate,
+      m,
     ]
   );
 
@@ -135,7 +141,7 @@ function ResultMarketCard({
       <div className="relative z-1">
       <div className="mb-4 flex items-center gap-2 text-base font-semibold text-white">
         <Scale className="h-5 w-5 shrink-0 text-orange-400" aria-hidden />
-        <span>Market Bias</span>
+        <span>{m.results.marketBiasTitle}</span>
       </div>
 
       <div className="flex flex-col items-center gap-6">
@@ -149,7 +155,7 @@ function ResultMarketCard({
         {/* 凡例 — ResultMatchHeader と同じ表示フォント（チーム名 / 数値） */}
         <div className="mt-4 w-full max-w-md space-y-3">
           {segments.map((seg, i) => {
-            const isDraw = seg.label === "Draw";
+            const isDraw = seg.label === m.results.drawLabel;
             return (
               <div
                 key={i}
@@ -190,7 +196,7 @@ function ResultMarketCard({
               resultStatsMetricNumClass,
             ].join(" ")}
           >
-            Total Predictions: {market.total}
+            {m.results.totalPredictionsCount}{market.total}
           </div>
         )}
       </div>

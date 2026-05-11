@@ -8,6 +8,8 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Image from "next/image";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
+import { DATE_LOCALE } from "@/lib/i18n/language";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 type PlanType = "monthly" | "annual" | null;
@@ -23,10 +25,10 @@ export default function PlanStatusPage() {
   const [uid, setUid] = useState<string | null>(null);
 
   const { language } = useUserLanguage(uid);
-  const isEn = language === "en";
+  const m = t(language);
 
   const formatDate = (d: Date | null) =>
-    d ? d.toLocaleDateString(isEn ? "en-US" : "ja-JP") : null;
+    d ? d.toLocaleDateString(DATE_LOCALE[language]) : null;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -61,7 +63,7 @@ export default function PlanStatusPage() {
 
   if (loading) {
     return (
-      <div className="p-4 text-white/60">{isEn ? "Loading..." : "loading..."}</div>
+      <div className="p-4 text-white/60">{m.common.loading}</div>
     );
   }
 
@@ -80,9 +82,7 @@ export default function PlanStatusPage() {
           />
           {plan === "pro" && planStart && (
             <div className="text-xs text-white/50">
-              {isEn
-                ? `Started on ${formatDate(planStart)}`
-                : `Started on ${formatDate(planStart)}`}
+              Started on {formatDate(planStart)}
             </div>
           )}
         </div>
@@ -90,19 +90,13 @@ export default function PlanStatusPage() {
         {/* プラン名 */}
         <div className="text-2xl font-extrabold text-white">
           {plan === "free" ? (
-            isEn ? "Free Plan" : "Free Plan"
+            m.settings.freePlan
           ) : (
             <>
-              {isEn ? "Pro Plan" : "Pro Plan"}
+              {m.settings.proPlan}
               {planType && (
                 <span className="ml-2 text-lg text-white/40">
-                  {isEn
-                    ? planType === "annual"
-                      ? "Yearly"
-                      : "Monthly"
-                    : planType === "annual"
-                    ? "Yearly"
-                    : "Monthly"}
+                  {planType === "annual" ? "Yearly" : "Monthly"}
                 </span>
               )}
             </>
@@ -111,11 +105,7 @@ export default function PlanStatusPage() {
 
         {/* 次回更新日 */}
         <div className="mt-2 text-sm text-white/70">
-          {isEn
-            ? `Next billing date: ${
-                plan === "pro" && proUntil ? formatDate(proUntil) : "-----"
-              }`
-            : `次回更新日：${plan === "pro" && proUntil ? formatDate(proUntil) : "-----"}`}
+          {`Next billing date: ${plan === "pro" && proUntil ? formatDate(proUntil) : "-----"}`}
         </div>
 
         {/* Divider */}
@@ -135,7 +125,7 @@ export default function PlanStatusPage() {
       background: "linear-gradient(90deg, #22d3ee, #3b82f6)",
     }}
   >
-    Pro にアップグレード
+    {m.settings.upgradeToPro}
   </button>
 ) : (
   <div className="flex gap-3">
@@ -152,7 +142,7 @@ export default function PlanStatusPage() {
     boxShadow: "0 10px 25px rgba(0,0,0,0.35)",
   }}
 >
-  {isEn ? "Change Plan" : "プラン変更"}
+  {m.settings.changePlan}
 </button>
 
     {/* 解約ボタン */}
@@ -166,7 +156,7 @@ export default function PlanStatusPage() {
     active:scale-95 active:bg-red-400/20
   "
 >
-  {isEn ? "Cancel" : "解約"}
+  {m.settings.cancelPlan}
 </button>
   </div>
 )}

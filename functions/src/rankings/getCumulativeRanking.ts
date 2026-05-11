@@ -6,11 +6,14 @@ import { getFirestore, FieldPath } from "firebase-admin/firestore";
 import {
   getYesterdayDateKeyJST,
   loadPlayoffRoundTop20RowsLive,
+  loadWcStageTop20RowsLive,
   RANK_SNAPSHOT_HISTORY_SUBCOL,
   RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
   subtractOneDayFromDateKeyJST,
   SNAPSHOT_BUILD_PHASES,
 } from "./buildCumulativeRankingSnapshot";
+import type { WcRankingStage } from "./wcRankingStage";
+import { isWcRankingStage } from "./wcRankingStage";
 
 function db() {
   return getFirestore();
@@ -123,6 +126,50 @@ function rankingSlice(
   };
 }
 
+function rankingSliceWc(d: any, stage: WcRankingStage) {
+  const block = d.rankingByWcStage?.[stage];
+  if (!block || typeof block !== "object") {
+    return {
+      totalPosts: 0,
+      totalWins: 0,
+      winRate: 0,
+      totalPoints: 0,
+      totalPrecision: 0,
+      totalUpset: 0,
+    };
+  }
+  const tp = block.totalPosts ?? 0;
+  const tw = block.totalWins ?? 0;
+  return {
+    totalPosts: tp,
+    totalWins: tw,
+    winRate: tp > 0 ? tw / tp : block.winRate ?? 0,
+    totalPoints: block.totalPoints ?? 0,
+    totalPrecision: block.totalPrecision ?? 0,
+    totalUpset: block.totalUpset ?? 0,
+  };
+}
+
+/** スナップショット行が誤って NBA 側と混ざった場合のガード（実際に WC ステージ投稿がある行のみ残す） */
+async function filterRankingRowsToWcStage(
+  rows: RankingRow[],
+  wcStage: WcRankingStage
+): Promise<RankingRow[]> {
+  if (rows.length === 0) return rows;
+  const refs = rows.map((r) => db().collection("cumulative_stats").doc(r.uid));
+  const snaps = await db().getAll(...refs);
+  const kept: RankingRow[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const s = snaps[i];
+    if (!s?.exists) continue;
+    const d = s.data() as any;
+    const rr = d?.rankingByWcStage?.[wcStage];
+    if ((rr?.totalPosts ?? 0) > 0) kept.push(row);
+  }
+  return kept;
+}
+
 type UserRankingSnaps = {
   mySnap: DocumentSnapshot | null;
   latestHistSnap: DocumentSnapshot | null;
@@ -196,11 +243,18 @@ async function rankingPayloadForMetric(
   phase: RankingPhase,
   round: PlayoffRoundKey,
   uid: string | undefined,
-  snaps: UserRankingSnaps
+  snaps: UserRankingSnaps,
+  wcStage?: WcRankingStage | null
 ): Promise<MetricPayload> {
+  const snapshotDocId = wcStage
+    ? `wc_${wcStage}_${metric}`
+    : round === "overall"
+      ? `${phase}_${metric}`
+      : `${phase}_${round}_${metric}`;
+
   const snapDoc = await db()
     .collection("cumulative_ranking_snapshots")
-    .doc(round === "overall" ? `${phase}_${metric}` : `${phase}_${round}_${metric}`)
+    .doc(snapshotDocId)
     .get();
 
   const rawRows: RankingRow[] = snapDoc.exists
@@ -211,8 +265,17 @@ async function rankingPayloadForMetric(
     plan: row.plan === "pro" ? "pro" : "free",
   }));
 
+  if (rows.length === 0 && wcStage) {
+    const live = await loadWcStageTop20RowsLive(wcStage, metric);
+    rows = live.map((row) => ({
+      ...row,
+      plan: row.plan === "pro" ? "pro" : "free",
+    }));
+  }
+
   if (
     rows.length === 0 &&
+    !wcStage &&
     phase === "playoffs" &&
     round !== "overall" &&
     (round === "r1" || round === "r2" || round === "cf" || round === "finals")
@@ -222,6 +285,10 @@ async function rankingPayloadForMetric(
       ...row,
       plan: row.plan === "pro" ? "pro" : "free",
     }));
+  }
+
+  if (wcStage && rows.length > 0) {
+    rows = await filterRankingRowsToWcStage(rows, wcStage);
   }
 
   const missingPlanUids = rows
@@ -290,9 +357,16 @@ async function rankingPayloadForMetric(
   if (uid && snaps.mySnap?.exists) {
     const mySnap = snaps.mySnap;
     const me = mySnap.data() as any;
-    const rk = rankingSlice(me, phase, round);
+    const rk = wcStage
+      ? rankingSliceWc(me, wcStage)
+      : rankingSlice(me, phase, round);
 
-    const minPosts = metric === "winRate" ? minPostsForWinRate(phase, round) : 1;
+    const minPosts =
+      metric === "winRate"
+        ? wcStage
+          ? 1
+          : minPostsForWinRate(phase, round)
+        : 1;
     if ((rk.totalPosts ?? 0) < minPosts) {
       return {
         count: rows.length,
@@ -300,6 +374,90 @@ async function rankingPayloadForMetric(
         myRank: null,
         myRow: null,
         myRankDeltaPlaces: null,
+      };
+    }
+
+    if (wcStage) {
+      const myValue =
+        metric === "activeWinStreak"
+          ? me.streakFootball ?? me.activeWinStreak ?? 0
+          : metric === "winRate"
+            ? rk.winRate ?? 0
+            : (rk as Record<string, number>)[metric] ?? 0;
+
+      const hasRankingObj =
+        me.rankingByWcStage?.[wcStage] &&
+        typeof me.rankingByWcStage[wcStage] === "object" &&
+        (me.rankingByWcStage[wcStage].totalPosts != null ||
+          me.rankingByWcStage[wcStage].totalPoints != null);
+
+      const rankField =
+        metric === "activeWinStreak"
+          ? new FieldPath("streakFootball")
+          : hasRankingObj
+            ? metric === "winRate"
+              ? new FieldPath("rankingByWcStage", wcStage, "winRate")
+              : new FieldPath("rankingByWcStage", wcStage, metric)
+            : metric === "winRate"
+              ? "winRate"
+              : metric;
+
+      const higherQuery = db()
+        .collection("cumulative_stats")
+        .where(rankField as any, ">", myValue);
+      const higherSnap =
+        metric === "winRate"
+          ? await higherQuery
+              .where(
+                new FieldPath(
+                  "rankingByWcStage",
+                  wcStage,
+                  "totalPosts"
+                ) as any,
+                ">=",
+                minPosts
+              )
+              .count()
+              .get()
+          : await higherQuery.count().get();
+
+      myRank = (higherSnap.data().count ?? 0) + 1;
+      myRankDeltaPlaces = null;
+
+      const myPlanResolvedWc: "free" | "pro" =
+        me.plan === "pro" ? "pro" : "free";
+      const myCountryFreshWc = uid ? countryByUid.get(uid) : undefined;
+
+      myRow = {
+        uid,
+        displayName: me.displayName ?? "",
+        handle: me.handle ?? null,
+        photoURL: me.photoURL ?? null,
+        countryCode:
+          myCountryFreshWc !== undefined
+            ? myCountryFreshWc
+            : (me.countryCode ?? null),
+        plan: myPlanResolvedWc,
+
+        totalPosts: rk.totalPosts,
+        totalWins: rk.totalWins,
+        winRate: rk.winRate,
+
+        totalPoints: rk.totalPoints,
+        totalPrecision: rk.totalPrecision,
+        totalUpset: rk.totalUpset,
+        activeWinStreak: me.streakFootball ?? me.activeWinStreak ?? 0,
+
+        rank: myRank,
+        rankDeltaPlaces: myRankDeltaPlaces,
+      };
+
+      return {
+        count: rows.length,
+        rows,
+        myRank,
+        myRow,
+        myRankDeltaPlaces,
       };
     }
 
@@ -476,27 +634,51 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
       ? rawRound
       : "overall";
 
+    const rawWcStage = req.query.wcStage;
+    const wcStage = isWcRankingStage(rawWcStage) ? rawWcStage : null;
+
     const bulkMetrics = parseMetricsParam(req.query.metrics);
     if (bulkMetrics) {
       const snaps = await loadUserRankingSnaps(uid);
       const byMetric: Record<string, MetricPayload> = {};
       for (const m of bulkMetrics) {
-        byMetric[m] = await rankingPayloadForMetric(m, phase, round, uid, snaps);
+        byMetric[m] = await rankingPayloadForMetric(
+          m,
+          phase,
+          round,
+          uid,
+          snaps,
+          wcStage
+        );
       }
-      res.status(200).json({ ok: true, phase, round, byMetric });
+      res.status(200).json({
+        ok: true,
+        phase,
+        round,
+        wcStage,
+        byMetric,
+      });
       return;
     }
 
     const rawMetric = req.query.metric;
     const metric: Metric = isMetric(rawMetric) ? rawMetric : "totalPoints";
     const snaps = await loadUserRankingSnaps(uid);
-    const payload = await rankingPayloadForMetric(metric, phase, round, uid, snaps);
+    const payload = await rankingPayloadForMetric(
+      metric,
+      phase,
+      round,
+      uid,
+      snaps,
+      wcStage
+    );
 
     res.status(200).json({
       ok: true,
       metric,
       phase,
       round,
+      wcStage,
       count: payload.count,
       rows: payload.rows,
       myRank: payload.myRank,

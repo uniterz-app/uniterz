@@ -11,6 +11,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 
 type Props = {
@@ -21,7 +22,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
   const router = useRouter();
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [nextConfirm, setNextConfirm] = useState("");
@@ -35,27 +36,17 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
 
     try {
       if (!auth.currentUser || !auth.currentUser.email) {
-        alert(
-          isEn
-            ? "Can't verify your session. Please sign in again."
-            : "ログイン状態を確認できません。いったんログインし直してください。"
-        );
+        alert(m.auth.loginRequired);
         return;
       }
 
       if (!current || !next) {
-        alert(
-          isEn
-            ? "Enter your current password and a new password."
-            : "現在のパスワードと新しいパスワードを入力してください。"
-        );
+        alert(m.settings.currentPassword);
         return;
       }
 
       if (next !== nextConfirm) {
-        alert(
-          isEn ? "New passwords don't match." : "新しいパスワードが一致していません。"
-        );
+        alert(m.settings.passwordsNoMatch);
         return;
       }
 
@@ -71,7 +62,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
       // 2) パスワード更新
       await updatePassword(auth.currentUser, next);
 
-      alert(isEn ? "Password updated." : "パスワードを変更しました。");
+      alert(m.settings.passwordUpdated);
       setCurrent("");
       setNext("");
       setNextConfirm("");
@@ -82,18 +73,11 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
     } catch (err: any) {
       console.error("change password error:", err);
       if (err?.code === "auth/wrong-password") {
-        alert(isEn ? "Current password is incorrect." : "現在のパスワードが違います。");
+        alert(m.settings.currentPasswordWrong);
       } else if (err?.code === "auth/weak-password") {
-        alert(
-          isEn
-            ? "New password is too weak. Use at least 6 characters."
-            : "新しいパスワードが簡単すぎます。6文字以上にしてください。"
-        );
+        alert(m.settings.passwordChangeFailed);
       } else {
-        alert(
-          err?.message ??
-            (isEn ? "Failed to change password." : "パスワード変更に失敗しました。")
-        );
+        alert(err?.message ?? m.settings.passwordChangeFailed);
       }
     } finally {
       setLoading(false);
@@ -113,7 +97,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
             marginBottom: 4,
           }}
         >
-          {isEn ? "Change password" : "パスワード変更"}
+          {m.settings.changePassword}
         </h1>
         <p
           style={{
@@ -122,16 +106,14 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
             marginBottom: 16,
           }}
         >
-          {isEn
-            ? "Enter your current password, then set a new one."
-            : "現在のパスワードを確認してから、新しいパスワードに更新します。"}
+          {m.settings.changePasswordDesc}
         </p>
 
         {/* 現在のパスワード */}
         <div style={{ position: "relative", marginTop: 10 }}>
           <input
             type="password"
-            placeholder={isEn ? "Current password" : "現在のパスワード"}
+            placeholder={m.settings.currentPassword}
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
             style={{
@@ -160,7 +142,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
         <div style={{ position: "relative", marginTop: 10 }}>
           <input
             type="password"
-            placeholder={isEn ? "New password" : "新しいパスワード"}
+            placeholder={m.settings.newPassword}
             value={next}
             onChange={(e) => setNext(e.target.value)}
             style={{
@@ -189,7 +171,7 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
         <div style={{ position: "relative", marginTop: 10 }}>
           <input
             type="password"
-            placeholder={isEn ? "Confirm new password" : "新しいパスワード（確認）"}
+            placeholder={m.settings.confirmNewPassword}
             value={nextConfirm}
             onChange={(e) => setNextConfirm(e.target.value)}
             style={{
@@ -236,12 +218,8 @@ export default function ChangePasswordForm({ variant = "web" }: Props) {
           }}
         >
           {loading
-            ? isEn
-              ? "Updating..."
-              : "更新中..."
-            : isEn
-              ? "Change password"
-              : "パスワードを変更する"}
+            ? m.common.saving
+            : m.settings.changePassword}
         </button>
       </SettingsNeonCard>
     </form>

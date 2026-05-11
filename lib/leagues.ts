@@ -6,9 +6,10 @@ export const LEAGUES = {
   J1: "j1",
   NBA: "nba",
   PL: "pl",
+  WC: "wc",
 } as const;
 
-/** TypeScript 用リーグ型（"bj" | "j1" | "nba" | "pl"） */
+/** TypeScript 用リーグ型（"bj" | "j1" | "nba" | "pl" | "wc"） */
 export type League = (typeof LEAGUES)[keyof typeof LEAGUES];
 
 /** 表示名（Analytics/UI表記に利用） */
@@ -17,6 +18,7 @@ export const LEAGUE_DISPLAY: Record<League, string> = {
   j1: "J1",
   nba: "NBA",
   pl: "Premier League",
+  wc: "World Cup",
 };
 
 /**
@@ -43,6 +45,11 @@ export function normalizeLeague(raw: any): League {
     v.includes("epl")
   ) {
     return "pl";
+  }
+
+  // world cup / fifa
+  if (v === "wc" || v === "fifa" || v.includes("world cup")) {
+    return "wc";
   }
 
   // ★ フォールバック（League 型として安全）

@@ -3,6 +3,7 @@
 import { jp, nameOxanium, summaryMetricNumClass } from "@/lib/fonts";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
@@ -36,12 +37,12 @@ type Props = {
   rankDeltaPlaces?: number | null;
 };
 
-function formatValue(metric: MobileMetric, value: number) {
+function formatValue(metric: MobileMetric, value: number, ptsLabel: string) {
   if (metric === "winRate") return `${Math.round(value)}%`;
   if (metric === "streak") {
     return `${Math.round(value)}`;
   }
-  return `${formatMetricDecimals(value, 1)} pts`;
+  return `${formatMetricDecimals(value, 1)} ${ptsLabel}`;
 }
 
 function getRankStyle(rank: number | null, loading: boolean) {
@@ -141,6 +142,7 @@ export default function MyRankCard({
   mobileWide = false,
   rankDeltaPlaces = null,
 }: Props) {
+  const m = t(language);
   const reduceMotion = useReducedMotion();
   const ready = !loading;
   const rankStyle = getRankStyle(rank, loading || statsScramble);
@@ -218,9 +220,7 @@ export default function MyRankCard({
           <ShellGridOverlay roundedClassName="rounded-[18px]" />
           {statsScramble && !loading && (
             <span className="sr-only">
-              {language === "en"
-                ? "Loading your rank and stats"
-                : "順位とスコアを読み込み中"}
+              {m.rankings.loadingRankStats}
             </span>
           )}
           <div className="relative z-1 flex items-center justify-between">
@@ -250,9 +250,7 @@ export default function MyRankCard({
                   <ProCyberBadge
                     {...proBadgeStaticMotion}
                     compact
-                    ariaLabel={
-                      language === "en" ? "Pro member" : "Pro 会員"
-                    }
+                    ariaLabel={m.common.proMember}
                   />
                 ) : null}
               </div>
@@ -265,7 +263,7 @@ export default function MyRankCard({
                 nameOxanium.className,
               ].join(" ")}
             >
-              YOUR RANK
+              {m.rankings.yourRank}
             </div>
             <div className="flex items-baseline justify-center gap-1">
               <div
@@ -320,7 +318,7 @@ export default function MyRankCard({
                   " "
                 )}
               >
-                {formatValue(metric, value)}
+                {formatValue(metric, value, m.rankings.pts)}
               </div>
             )}
             {!loading && metric === "winRate" && totalPosts !== undefined && (
@@ -371,9 +369,7 @@ export default function MyRankCard({
     >
       {statsScramble && !loading && (
         <span className="sr-only">
-          {language === "en"
-            ? "Loading your rank and stats"
-            : "順位とスコアを読み込み中"}
+          {m.rankings.loadingRankStats}
         </span>
       )}
       <motion.div
@@ -437,9 +433,7 @@ export default function MyRankCard({
                 <ProCyberBadge
                   {...proBadgeStaticMotion}
                   compact
-                  ariaLabel={
-                    language === "en" ? "Pro member" : "Pro 会員"
-                  }
+                  ariaLabel={m.common.proMember}
                 />
               ) : null}
             </div>
@@ -461,7 +455,7 @@ export default function MyRankCard({
               nameOxanium.className,
             ].join(" ")}
           >
-            YOUR RANK
+            {m.rankings.yourRank}
           </div>
           <div className="flex items-baseline justify-center gap-1">
             <div
@@ -525,7 +519,7 @@ export default function MyRankCard({
                 " "
               )}
             >
-              {formatValue(metric, valueCount)}
+              {formatValue(metric, valueCount, m.rankings.pts)}
             </div>
           )}
           {metric === "winRate" &&

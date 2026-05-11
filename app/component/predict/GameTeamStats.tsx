@@ -12,6 +12,7 @@ import {
   barPctMinPaNorm,
 } from "./teamStatsCompare";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 
 type TeamDoc = {
@@ -97,10 +98,10 @@ type CompareStatRow = {
   rightWin: boolean;
 };
 
-function formatStatRank(rank: number | undefined, isEn: boolean): string | null {
+function formatStatRank(rank: number | undefined, language: Language): string | null {
   if (rank == null || rank < 1 || !Number.isFinite(rank)) return null;
   const r = Math.round(rank);
-  return isEn ? `#${r}` : `${r}位`;
+  return language === "en" ? `#${r}` : `${r}位`;
 }
 
 function readNbaAdvancedRtg(t: TeamDoc): {
@@ -127,7 +128,7 @@ export default function GameTeamStats({
   awayTeamId,
   language = "ja",
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
   const [home, setHome] = useState<ViewStats | null>(null);
   const [away, setAway] = useState<ViewStats | null>(null);
 
@@ -204,17 +205,17 @@ export default function GameTeamStats({
   const rh = home.nbaStatRanks;
   const ra = away.nbaStatRanks;
   const rbPpgH =
-    league === "nba" ? formatStatRank(rh?.ppg, isEn) : null;
+    league === "nba" ? formatStatRank(rh?.ppg, language) : null;
   const rbPpgA =
-    league === "nba" ? formatStatRank(ra?.ppg, isEn) : null;
+    league === "nba" ? formatStatRank(ra?.ppg, language) : null;
   const rbPapgH =
-    league === "nba" ? formatStatRank(rh?.papg, isEn) : null;
+    league === "nba" ? formatStatRank(rh?.papg, language) : null;
   const rbPapgA =
-    league === "nba" ? formatStatRank(ra?.papg, isEn) : null;
+    league === "nba" ? formatStatRank(ra?.papg, language) : null;
   const rbDiffH =
-    league === "nba" ? formatStatRank(rh?.diff, isEn) : null;
+    league === "nba" ? formatStatRank(rh?.diff, language) : null;
   const rbDiffA =
-    league === "nba" ? formatStatRank(ra?.diff, isEn) : null;
+    league === "nba" ? formatStatRank(ra?.diff, language) : null;
 
   const [ppgBarL, ppgBarR] = barPctMaxNorm(home.avgFor, away.avgFor);
   const [papgBarL, papgBarR] = barPctMinPaNorm(home.avgAgainst, away.avgAgainst);
@@ -224,7 +225,7 @@ export default function GameTeamStats({
 
   const ppgRow: CompareStatRow = {
     key: "ppg",
-    label: isEn ? "PTS / G" : "平均得点",
+    label: m.predict.ptsPerGame,
     left: {
       primary: home.avgFor.toFixed(1),
       rank: null,
@@ -245,7 +246,7 @@ export default function GameTeamStats({
 
   const papgRow: CompareStatRow = {
     key: "papg",
-    label: isEn ? "OPP PTS / G" : "平均失点",
+    label: m.predict.oppPtsPerGame,
     left: {
       primary: home.avgAgainst.toFixed(1),
       rank: null,
@@ -266,7 +267,7 @@ export default function GameTeamStats({
 
   const diffRow: CompareStatRow = {
     key: "diff",
-    label: isEn ? "Point diff" : "得失点差",
+    label: m.predict.pointDiff,
     left: {
       primary: fmtDiff(home.diff),
       rank: null,
@@ -287,7 +288,7 @@ export default function GameTeamStats({
 
   const homeRow: CompareStatRow = {
     key: "home",
-    label: isEn ? "Home" : "ホーム戦績",
+    label: m.predict.homeRecord,
     left: {
       primary: `${Math.round(home.homeWinPct)}%`,
       rank: null,
@@ -306,7 +307,7 @@ export default function GameTeamStats({
 
   const awayRow: CompareStatRow = {
     key: "away",
-    label: isEn ? "Away" : "アウェイ戦績",
+    label: m.predict.awayRecord,
     left: {
       primary: `${Math.round(home.awayWinPct)}%`,
       rank: null,
@@ -333,12 +334,12 @@ export default function GameTeamStats({
     const hn = home.netRtg;
     const an = away.netRtg;
 
-    const rbOfH = formatStatRank(rh?.ofrtg, isEn);
-    const rbOfA = formatStatRank(ra?.ofrtg, isEn);
-    const rbDfH = formatStatRank(rh?.dfrtg, isEn);
-    const rbDfA = formatStatRank(ra?.dfrtg, isEn);
-    const rbNtH = formatStatRank(rh?.netrtg, isEn);
-    const rbNtA = formatStatRank(ra?.netrtg, isEn);
+    const rbOfH = formatStatRank(rh?.ofrtg, language);
+    const rbOfA = formatStatRank(ra?.ofrtg, language);
+    const rbDfH = formatStatRank(rh?.dfrtg, language);
+    const rbDfA = formatStatRank(ra?.dfrtg, language);
+    const rbNtH = formatStatRank(rh?.netrtg, language);
+    const rbNtA = formatStatRank(ra?.netrtg, language);
 
     const bothO = ho != null && ao != null;
     const bothD = hd != null && ad != null;

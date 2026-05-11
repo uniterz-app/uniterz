@@ -74,7 +74,8 @@ export async function buildCumulativeStats() {
     /** 日次に ranking が無い = デプロイ前データ → ランキング側も all と同じ増分 */
     const statsRanking = data.ranking ?? data.all;
     const statsByPhase = data.rankingByPhase ?? {};
-      const statsByPlayoffRound = data.rankingByPlayoffRound ?? {};
+    const statsByPlayoffRound = data.rankingByPlayoffRound ?? {};
+    const statsByWcStage = data.rankingByWcStage ?? {};
 
     const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
     const userRef = firestore.doc(`users/${uid}`);
@@ -237,6 +238,39 @@ export async function buildCumulativeStats() {
         };
       }
 
+      /* =========================
+       * World Cup ステージ別（overall / qualifying / main）
+       * =======================*/
+      const WC_STAGES = ["overall", "qualifying", "main"] as const;
+      const prevByWc = (cumulativeSnap.get("rankingByWcStage") ??
+        {}) as Record<string, RankingTotals | undefined>;
+      const nextByWc: Record<string, RankingTotals> = {};
+      for (const wk of WC_STAGES) {
+        const prevW = prevByWc[wk] ?? {
+          totalPosts: 0,
+          totalWins: 0,
+          totalPoints: 0,
+          totalUpset: 0,
+          totalPrecision: 0,
+          winRate: 0,
+        };
+        const src = statsByWcStage[wk];
+        const nextWRaw = addRankingTotals(prevW, {
+          posts: src?.posts ?? 0,
+          wins: src?.wins ?? 0,
+          pointsSumV3: src?.pointsSumV3 ?? 0,
+          upsetPointsSum: src?.upsetPointsSum ?? 0,
+          scorePrecisionSum: src?.scorePrecisionSum ?? 0,
+        });
+        nextByWc[wk] = {
+          ...nextWRaw,
+          winRate:
+            nextWRaw.totalPosts > 0
+              ? nextWRaw.totalWins / nextWRaw.totalPosts
+              : 0,
+        };
+      }
+
       tx.set(
         cumulativeRef,
         {
@@ -269,6 +303,7 @@ export async function buildCumulativeStats() {
             playoffs: nextPlayoffs,
           },
           rankingByPlayoffRound: nextByRound,
+          rankingByWcStage: nextByWc,
 
           lastAggregatedDate: dateKey,
           updatedAt: FieldValue.serverTimestamp(),

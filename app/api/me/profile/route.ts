@@ -4,7 +4,12 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
-import { normalizeLanguage, TIMEZONE_BY_LANGUAGE } from "@/lib/i18n/language";
+import { normalizeLanguage } from "@/lib/i18n/language";
+import { FALLBACK_TIMEZONE_BY_LANGUAGE } from "@/lib/i18n/countryTimezone";
+import {
+  assertProfileTextsFreeOfGamblingTerms,
+  isProfileGamblingTermsError,
+} from "@/lib/profile/profileGamblingTerms";
 
 async function requireUid(req: Request): Promise<string> {
   const authz =
@@ -40,6 +45,18 @@ export async function POST(req: Request) {
         : "";
     const bio =
       typeof body.bio === "string" ? body.bio.slice(0, 500) : "";
+
+    try {
+      assertProfileTextsFreeOfGamblingTerms(displayName, bio);
+    } catch (e: unknown) {
+      if (isProfileGamblingTermsError(e)) {
+        return NextResponse.json(
+          { error: "forbidden_gambling_terms" },
+          { status: 400 }
+        );
+      }
+      throw e;
+    }
     const photoURL =
       typeof body.photoURL === "string" ? body.photoURL.slice(0, 4096) : "";
 
@@ -63,7 +80,7 @@ export async function POST(req: Request) {
       photoURL,
       language: lang,
       locale: lang,
-      timeZone: TIMEZONE_BY_LANGUAGE[lang],
+      timeZone: FALLBACK_TIMEZONE_BY_LANGUAGE[lang],
       countryCode,
       updatedAt: FieldValue.serverTimestamp(),
     };

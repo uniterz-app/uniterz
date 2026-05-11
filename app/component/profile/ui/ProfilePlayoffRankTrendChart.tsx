@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { Info } from "lucide-react";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
@@ -157,14 +158,12 @@ export default function ProfilePlayoffRankTrendChart({
   rechartsAfterEntrance = false,
   loading = false,
 }: Props) {
-  const isEn = language === "en";
-  const title = "Ranking Progress";
-  const subtitle = "最新10件のランキングの変動を表示";
+  const msg = t(language);
+  const title = msg.profile.rankingProgress;
+  const subtitle = msg.profile.rankingProgressDesc;
   /** Info 用（サブタイトルと同じ文言のみ。他 UI は従来のまま） */
   const chartInfoTooltipMsg = subtitle;
-  const emptyHint = isEn
-    ? "Rank snapshots appear after scheduled updates."
-    : "ランキングの日次スナップショットが溜まると表示されます";
+  const emptyHint = msg.profile.rankingProgressNoData;
 
   const ref = useRef<HTMLDivElement>(null);
   const [ioVisible, setIoVisible] = useState(false);
@@ -381,7 +380,7 @@ export default function ProfilePlayoffRankTrendChart({
               currentRankIsTop20 ? "text-amber-200/90" : "text-cyan-100/72",
             ].join(" ")}
           >
-            {isEn ? "Current rank" : "現在の順位"}
+            {msg.profile.currentRank}
           </span>
           <span
             className={[
@@ -485,7 +484,7 @@ export default function ProfilePlayoffRankTrendChart({
                   axisLine={false}
                   width={28}
                   label={{
-                    value: isEn ? "Rank" : "順位",
+                    value: msg.profile.rank,
                     angle: -90,
                     position: "insideLeft",
                     style: { fill: "rgba(148,163,184,0.55)", fontSize: axisLabelFontSize },
@@ -573,12 +572,12 @@ export default function ProfilePlayoffRankTrendChart({
                         : trendSummary.bestJump < 0
                           ? "text-rose-300"
                           : "text-cyan-200",
-                    isEn
+                    language !== "ja"
                       ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                       : "text-[9px] font-medium",
                   ].join(" ")}
                 >
-                  {isEn ? "Best jump up" : "最高ジャンプアップ"}
+                  {msg.profile.bestJumpUp}
                 </p>
                 <p
                   className={[
@@ -608,12 +607,12 @@ export default function ProfilePlayoffRankTrendChart({
                         : trendSummary.worstDrop < 0
                           ? "text-rose-300"
                           : "text-cyan-200",
-                    isEn
+                    language !== "ja"
                       ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                       : "text-[9px] font-medium",
                   ].join(" ")}
                 >
-                  {isEn ? "Biggest drop" : "最大ドロップ"}
+                  {msg.profile.biggestDrop}
                 </p>
                 <p
                   className={[
@@ -643,12 +642,12 @@ export default function ProfilePlayoffRankTrendChart({
                         : trendSummary.netDelta < 0
                           ? "text-rose-300"
                           : "text-cyan-200",
-                    isEn
+                    language !== "ja"
                       ? "text-[9px] font-semibold uppercase tracking-[0.12em]"
                       : "text-[9px] font-medium",
                   ].join(" ")}
                 >
-                  {isEn ? "Net" : "純増減"}
+                  {msg.profile.netChange}
                 </p>
                 <p
                   className={[

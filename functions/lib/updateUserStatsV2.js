@@ -18,10 +18,25 @@ function normalizeSeasonRound(v) {
     return v === "r1" || v === "r2" || v === "cf" || v === "finals" ? v : null;
 }
 const db = () => (0, firestore_1.getFirestore)();
-const LEAGUES = ["bj", "j1", "nba", "pl"];
+const LEAGUES = ["bj", "j1", "nba", "pl", "wc"];
 /* =========================================================
  * Utils
  * =======================================================*/
+function wcIncrementAtPath(pathPrefix, o) {
+    return {
+        [`${pathPrefix}.posts`]: firestore_1.FieldValue.increment(1),
+        [`${pathPrefix}.wins`]: firestore_1.FieldValue.increment(o.isWin ? 1 : 0),
+        [`${pathPrefix}.scoreErrorSum`]: firestore_1.FieldValue.increment(o.scoreError),
+        [`${pathPrefix}.upsetOpportunityCount`]: firestore_1.FieldValue.increment(o.hadUpsetGame ? 1 : 0),
+        [`${pathPrefix}.upsetHitCount`]: firestore_1.FieldValue.increment(o.upsetHit ? 1 : 0),
+        [`${pathPrefix}.upsetPickCount`]: firestore_1.FieldValue.increment(o.hadUpsetGame ? 1 : 0),
+        [`${pathPrefix}.scorePrecisionSum`]: firestore_1.FieldValue.increment(o.scorePrecision),
+        [`${pathPrefix}.pointsSumV3`]: firestore_1.FieldValue.increment(o.points),
+        [`${pathPrefix}.upsetPointsSum`]: firestore_1.FieldValue.increment(o.upsetPoints),
+        [`${pathPrefix}.upsetBonusSum`]: firestore_1.FieldValue.increment(o.upsetBonus),
+        [`${pathPrefix}.streakBonusSum`]: firestore_1.FieldValue.increment(o.streakBonus),
+    };
+}
 function toDateKeyJST(ts) {
     const d = ts.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
@@ -42,6 +57,8 @@ function normalizeLeague(raw) {
         return "nba";
     if (v === "pl" || v.includes("premier"))
         return "pl";
+    if (v === "wc" || v === "fifa")
+        return "wc";
     return null;
 }
 /* =========================================================
@@ -78,7 +95,7 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, seasonPhase, seasonRound, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, seasonPhase, seasonRound, wcStage, } = opts;
     const forRanking = shouldCountForRanking(countsForRanking);
     const phaseKey = normalizeSeasonPhase(seasonPhase);
     const roundKey = normalizeSeasonRound(seasonRound);
@@ -107,6 +124,24 @@ async function applyPostToUserStatsV2(opts) {
         const update = Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {})), (forRanking && phaseKey === "playoffs" && roundKey
             ? { rankingByPlayoffRound: { [roundKey]: inc } }
             : {}));
+        const wcOpts = {
+            isWin,
+            scoreError,
+            scorePrecision,
+            hadUpsetGame,
+            points,
+            upsetHit,
+            upsetPoints,
+            upsetBonus,
+            streakBonus,
+        };
+        if (forRanking && leagueKey === "wc") {
+            Object.assign(update, wcIncrementAtPath("rankingByWcStage.overall", wcOpts), wcStage === "qualifying"
+                ? wcIncrementAtPath("rankingByWcStage.qualifying", wcOpts)
+                : {}, wcStage === "main"
+                ? wcIncrementAtPath("rankingByWcStage.main", wcOpts)
+                : {});
+        }
         if (leagueKey) {
             update.leagues = Object.assign(Object.assign({}, (update.leagues || {})), { [leagueKey]: inc });
             tx.set(userStatsRef, {

@@ -7,9 +7,9 @@ import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import BadgeDetailModal from "./BadgeDetailModal";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 import BadgePalette from "@/app/component/badges/BadgePalette";
-import type { Language } from "@/lib/i18n/language";
 
 type ResolvedBadge = MasterBadge & {
   grantedAt: Date | null;
@@ -19,6 +19,7 @@ export default function WebBadgesPage() {
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
   const { language } = useUserLanguage(uid);
+  const m = t(language);
 
   // 🔹 user_badges（badgeId + grantedAt）
   const { badges: userBadges } = useUserBadges(uid);
@@ -31,7 +32,7 @@ export default function WebBadgesPage() {
   if (status !== "ready") {
     return (
       <div className="p-6 text-white">
-        {language === "en" ? "Loading..." : "読み込み中..."}
+        {m.common.loading}
       </div>
     );
   }
@@ -56,7 +57,7 @@ export default function WebBadgesPage() {
       <div className="sticky top-0 z-10 border-b border-white/5 backdrop-blur supports-backdrop-filter:bg-[#08111A]/70">
         <div className="mx-auto max-w-[1200px] px-6">
           <h1 className="py-4 text-left text-xl font-bold tracking-wide md:text-2xl md:font-extrabold">
-            {language === "en" ? "Badge Palette" : "バッジパレット"}
+            {m.badges.badgePalette}
           </h1>
         </div>
       </div>
@@ -66,18 +67,14 @@ export default function WebBadgesPage() {
           badges={resolvedBadges}
           variant="web"
           onSelect={setSelected}
-          emptyLabel={
-            language === "en"
-              ? "No badges yet."
-              : "まだ獲得バッジがありません。"
-          }
+          emptyLabel={m.badges.noBadges}
         />
 
         {selected && (
           <BadgeDetailModal
             badge={selected}
             onClose={() => setSelected(null)}
-            language={language as Language}
+            language={language}
           />
         )}
       </div>
