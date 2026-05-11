@@ -135,7 +135,7 @@ function ResultStatsCard({
       <div className="relative z-1">
       <div className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
         <LineChart className="h-5 w-5 shrink-0 text-orange-400 sm:h-6 sm:w-6" aria-hidden />
-        <span>Performance Stats</span>
+        <span>{m.results.performanceStats}</span>
       </div>
 
       <div className="space-y-1">

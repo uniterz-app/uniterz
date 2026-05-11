@@ -35,8 +35,6 @@ function formatOrdinal(rank: number): string {
   return `${rank}th`;
 }
 
-const SCORE_PRECISION_TOOLTIP =
-  "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です。下のバーは1試合あたり平均（0〜10）を可視化しています。";
 
 function clamp01(v: number) {
   if (Number.isNaN(v)) return 0;
@@ -97,9 +95,7 @@ function ScorePrecisionCard({
 
   const bar01 = clamp01(avg / 10);
 
-  const tooltipMsg = language === "ja"
-    ? SCORE_PRECISION_TOOLTIP
-    : "Evaluate how close your predicted score is to the actual score on a 0–10 scale, summed within the selected period. The bar below visualizes your per-match average (0–10).";
+  const tooltipMsg = m.profile.scorePrecisionTooltip;
   const rankText =
     totalPrecisionRank != null ? ` / ${formatOrdinal(totalPrecisionRank)}` : "";
   const rankClass =
@@ -153,7 +149,7 @@ function ScorePrecisionCard({
         >
           {formatMetricDecimals(sumCu, 1)}
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
-            pts
+            {m.profile.ptsUnit}
           </span>
           {rankText ? (
             <span className={`ml-1 text-[10px] md:text-sm ${rankClass}`}>
@@ -164,7 +160,7 @@ function ScorePrecisionCard({
 
         <div className="mt-1 w-full md:mt-4">
           <div className="flex items-center justify-between text-[9px] tracking-tight text-white/60 md:text-[16px]">
-            <span>AVG</span>
+            <span>{m.profile.avgLabel}</span>
             <span
               className={[summaryMetricNumClass, "tabular-nums"].join(" ")}
             >

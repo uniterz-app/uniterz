@@ -11,13 +11,16 @@ type Props = {
   language?: Language;
 };
 
-const ITEMS: Array<{ key: PlayoffRoundKey; label: string }> = [
-  { key: "overall", label: "TOTAL" },
-  { key: "r1", label: "1ST" },
-  { key: "r2", label: "2ND" },
-  { key: "cf", label: "CF" },
-  { key: "finals", label: "FINALS" },
-];
+function roundItems(language: Language): Array<{ key: PlayoffRoundKey; label: string }> {
+  const m = t(language);
+  return [
+    { key: "overall", label: m.rankings.roundTotal },
+    { key: "r1", label: m.rankings.roundFirst },
+    { key: "r2", label: m.rankings.roundSecond },
+    { key: "cf", label: m.rankings.roundCF },
+    { key: "finals", label: m.rankings.roundFinals },
+  ];
+}
 
 export default function PlayoffRoundTabs({
   round,
@@ -25,6 +28,7 @@ export default function PlayoffRoundTabs({
   isMobile = false,
   language = "ja",
 }: Props) {
+  const items = roundItems(language);
   return (
     <div
       className={
@@ -33,7 +37,7 @@ export default function PlayoffRoundTabs({
           : "grid grid-cols-5 gap-1.5 rounded-xl border border-white/10 bg-white/3 p-1.5"
       }
     >
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const active = round === item.key;
         return (
           <button

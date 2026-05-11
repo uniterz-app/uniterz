@@ -9,6 +9,7 @@ import { metricNum } from "@/lib/rankings/metric";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { streakShortLabel } from "@/lib/i18n/rankings";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
@@ -246,7 +247,7 @@ function ValueText({
           rank === 1 ? "text-[15px]" : isTop3 ? "text-[13px]" : "text-[9px]",
         ].join(" ")}
       >
-        pts
+        {t(language).rankings.pts}
       </span>
     </div>
   );
@@ -416,9 +417,7 @@ export default function RankingCard({
                 <ProCyberBadge
                   {...proBadgeStaticMotion}
                   compact
-                  ariaLabel={
-                    language === "en" ? "Pro member" : "Pro 会員"
-                  }
+                  ariaLabel={t(language).common.proMember}
                 />
               ) : null}
             </div>

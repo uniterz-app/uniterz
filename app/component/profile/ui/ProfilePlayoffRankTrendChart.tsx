@@ -159,14 +159,11 @@ export default function ProfilePlayoffRankTrendChart({
   loading = false,
 }: Props) {
   const msg = t(language);
-  const m = t(language);
-  const title = "Ranking Progress";
-  const subtitle = "最新10件のランキングの変動を表示";
+  const title = msg.profile.rankingProgress;
+  const subtitle = msg.profile.rankingProgressDesc;
   /** Info 用（サブタイトルと同じ文言のみ。他 UI は従来のまま） */
   const chartInfoTooltipMsg = subtitle;
-  const emptyHint = language === "ja"
-    ? "ランキングの日次スナップショットが溜まると表示されます"
-    : "Rank snapshots appear after scheduled updates.";
+  const emptyHint = msg.profile.rankingProgressNoData;
 
   const ref = useRef<HTMLDivElement>(null);
   const [ioVisible, setIoVisible] = useState(false);

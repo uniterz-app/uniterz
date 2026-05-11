@@ -233,17 +233,13 @@ export default function StreakTrackerCard({
   /** 列内ブロックの積み上げ間隔 */
   const blockStagger = layout === "web" ? 0.098 : 0.078;
 
-  const subtitleJa = `直近${STREAK_TRACKER_LAST_N}試合の連勝・連敗を表示`;
-  const subtitleEn = `Win/loss streaks from your last ${STREAK_TRACKER_LAST_N} settled picks`;
-  const subtitle = language === "ja" ? subtitleJa : subtitleEn;
+  const subtitle = msg.profile.last20TrackerDesc.replace("{n}", String(STREAK_TRACKER_LAST_N));
   /** Info 用（表示サブタイトルと同じ文言のみ） */
   const chartInfoTooltipMsg = subtitle;
 
   const statWinLabel = msg.profile.bestWStreak;
   const statLossLabel = msg.profile.bestLStreak;
-  const statRecordLabel = language === "ja"
-    ? `直近${STREAK_TRACKER_LAST_N}試合の成績`
-    : `Last ${STREAK_TRACKER_LAST_N} games`;
+  const statRecordLabel = msg.profile.last20TrackerSubtitle.replace("{n}", String(STREAK_TRACKER_LAST_N));
   const statRecordValue = `${stats.wins}-${stats.losses}`;
 
   const shellCls =
@@ -276,7 +272,7 @@ export default function StreakTrackerCard({
                     : "text-lg",
                 ].join(" ")}
               >
-                Last20 Tracker
+                {msg.profile.last20Tracker}
               </div>
               <div className={styles.wrap}>
                 <button

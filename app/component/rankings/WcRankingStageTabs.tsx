@@ -3,6 +3,7 @@
 import { nameBebas } from "@/lib/fonts";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   stage: WcRankingStage;
@@ -11,19 +12,24 @@ type Props = {
   language?: Language;
 };
 
-const ITEMS: Array<{ key: WcRankingStage; label: string }> = [
-  { key: "overall", label: "ALL" },
-  { key: "qualifying", label: "GROUP" },
-  { key: "main", label: "KNOCKOUT" },
-];
+function stageItems(language: Language): Array<{ key: WcRankingStage; label: string }> {
+  const m = t(language);
+  return [
+    { key: "overall", label: m.rankings.stageAll },
+    { key: "qualifying", label: m.rankings.stageGroup },
+    { key: "main", label: m.rankings.stageKnockout },
+  ];
+}
 
 export default function WcRankingStageTabs({
   stage,
   onChange,
+  language = "ja",
 }: Props) {
+  const items = stageItems(language);
   return (
     <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/3 p-1">
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const active = stage === item.key;
         return (
           <button

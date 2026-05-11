@@ -413,7 +413,7 @@ export default function MobileResultMatchHeader({
                 className="text-[9px] font-bold uppercase tracking-wide text-white/50"
                 style={teamNameFont}
               >
-                Final
+                {m.results.final}
               </div>
               <div className="text-sm font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-base">
                 {finalScore}

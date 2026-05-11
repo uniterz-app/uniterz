@@ -4,6 +4,7 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { isRankingSnapshotBuiltDailyForPhase } from "@/lib/rankings/rankingPhase";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   phase: RankingPhase;
@@ -19,6 +20,7 @@ export default function RankingPhaseTabs({
   isMobile = false,
   language = "en",
 }: Props) {
+  const m = t(language);
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const playInFrozen = !isRankingSnapshotBuiltDailyForPhase("play_in");
   const containerClass = isMobile
@@ -45,10 +47,10 @@ export default function RankingPhaseTabs({
         style={teamNameFont}
       >
         <span className="inline-flex flex-col items-center gap-0 leading-tight">
-          <span>Play-In</span>
+          <span>{m.rankings.playIn}</span>
           {playInFrozen ? (
             <span className="text-[9px] font-semibold normal-case tracking-wide text-white/45">
-              {language === "ja" ? "確定" : "Final"}
+              {m.rankings.finalLabel}
             </span>
           ) : null}
         </span>
@@ -68,7 +70,7 @@ export default function RankingPhaseTabs({
         ].join(" ")}
         style={teamNameFont}
       >
-        Playoffs
+        {m.profile.playoffs}
       </button>
     </div>
   );

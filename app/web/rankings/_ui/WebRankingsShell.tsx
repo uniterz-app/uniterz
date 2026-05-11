@@ -275,12 +275,8 @@ export default function WebRankingsShell() {
             {metric === "winRate" && (
               <p className="px-1 text-xs leading-5 text-white/60">
                 {winRateMinPosts > 1
-                  ? language === "en"
-                    ? `Win Rate ranking requires at least ${winRateMinPosts} posts.`
-                    : `勝率ランキングは${winRateMinPosts}投稿以上が対象です。`
-                  : language === "en"
-                    ? "No minimum posts requirement for this round."
-                    : "このラウンドは投稿数の足切りはありません。"}
+                  ? m.rankings.minPostsRequired.replace("{n}", String(winRateMinPosts))
+                  : m.rankings.noMinPosts}
               </p>
             )}
           </>

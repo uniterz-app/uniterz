@@ -1,6 +1,8 @@
 "use client";
 
 import { jp } from "@/lib/fonts";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 export type RankingsMainView = "rankings" | "community";
 
@@ -33,7 +35,7 @@ function TabBtn({
 type Props = {
   view: RankingsMainView;
   onViewChange: (v: RankingsMainView) => void;
-  language: "ja" | "en";
+  language: Language;
 };
 
 export default function RankingsMainTabs({
@@ -41,15 +43,16 @@ export default function RankingsMainTabs({
   onViewChange,
   language,
 }: Props) {
+  const m = t(language);
   return (
     <div className="flex flex-wrap items-center justify-start gap-2">
       <TabBtn
-        label={language === "en" ? "Rankings" : "ランキング"}
+        label={m.rankings.title}
         active={view === "rankings"}
         onClick={() => onViewChange("rankings")}
       />
       <TabBtn
-        label={language === "en" ? "My community" : "マイコミュニティ"}
+        label={m.rankings.myCommunity}
         active={view === "community"}
         onClick={() => onViewChange("community")}
       />

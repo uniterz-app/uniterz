@@ -601,26 +601,20 @@ export default function ProfileDailyTrendChart({
 }: Props) {
   const msg = t(language);
 
-  const lockedMsg = language === "ja"
-    ? "Proでは月ごとの推移が確認できます"
-    : "Pro lets you view monthly trends.";
+  const lockedMsg = msg.profile.proMonthlyTrend;
 
   const postsLabel = msg.profile.postsCount;
   const hitsLabel = msg.profile.correctPicks;
-  const hitsPostsLabel = language === "ja" ? "的中 / 投稿" : "Hits / Posts";
+  const hitsPostsLabel = msg.profile.hitsSlashPosts;
   const totalLabel = msg.profile.totalPoints;
   const scorePrecisionLabel = msg.profile.scorePrecision;
   const unitCount = msg.profile.items;
-  const unitPts = "pts";
-  const title = "Daily Combo Chart";
-  const subtitle = language === "ja"
-    ? "過去10日のスタッツの推移"
-    : "Trend of stats over the last 10 days";
+  const unitPts = msg.profile.ptsUnit;
+  const title = msg.profile.dailyComboChart;
+  const subtitle = msg.profile.dailyComboChartDesc;
 
   /** Info ツールチップ：凡例・操作の補足のみ */
-  const chartInfoTooltipMsg = language === "ja"
-    ? "Orange / purple bars: daily posts and correct picks. Yellow / green lines: cumulative totals. Tap the chart for that day’s breakdown below."
-    : "オレンジ・紫の棒＝日ごとの投稿数・的中数。黄・緑の線＝累積の総合得点・スコア精度。グラフをタップすると下に内訳を表示します。";
+  const chartInfoTooltipMsg = msg.profile.dailyComboChartInfo;
 
   const ref = useRef<HTMLDivElement>(null);
   /** 折れ線パス query（ResponsiveContainer ラッパ） */
@@ -748,9 +742,7 @@ export default function ProfileDailyTrendChart({
     [limitedData, detailDate]
   );
 
-  const detailSelectHint = language === "ja"
-    ? "グラフをタップで日付を選択"
-    : "Tap the chart to select a day.";
+  const detailSelectHint = msg.profile.tapChartHint;
 
   const handleComposedChartClick = (
     state: { activeLabel?: string | number },

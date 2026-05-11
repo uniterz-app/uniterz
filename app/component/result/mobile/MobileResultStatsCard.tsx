@@ -134,7 +134,7 @@ function MobileResultStatsCard({
       <div className="relative z-1">
       <div className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-white">
         <LineChart className="h-5 w-5 shrink-0 text-orange-400" aria-hidden />
-        <span>Performance Stats</span>
+        <span>{m.results.performanceStats}</span>
       </div>
 
       <div className="space-y-0.5">

@@ -296,8 +296,9 @@ function h2hInjuryNameForWrap(name: string): string {
   return name.replace(/\b([A-Z]\.) /g, "$1\u00a0");
 }
 
-function h2hHomeAwayLabel(role: "home" | "away"): string {
-  return role === "home" ? "Home" : "Away";
+function h2hHomeAwayLabel(role: "home" | "away", language: Language): string {
+  const m = t(language);
+  return role === "home" ? m.predict.home : m.predict.away;
 }
 
 function H2hInjuryNamesTwoPerRow({
@@ -525,7 +526,7 @@ export default function NbaPostseasonMatchupPanel({
                       "mb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
                     ].join(" ")}
                   >
-                    {h2hHomeAwayLabel(g.homeTeamSide === "left" ? "home" : "away")}
+                    {h2hHomeAwayLabel(g.homeTeamSide === "left" ? "home" : "away", language)}
                   </span>
                 ) : null}
                 <span
@@ -602,7 +603,7 @@ export default function NbaPostseasonMatchupPanel({
                       "mb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
                     ].join(" ")}
                   >
-                    {h2hHomeAwayLabel(g.homeTeamSide === "right" ? "home" : "away")}
+                    {h2hHomeAwayLabel(g.homeTeamSide === "right" ? "home" : "away", language)}
                   </span>
                 ) : null}
                 <span
@@ -657,7 +658,7 @@ export default function NbaPostseasonMatchupPanel({
                       "text-[10px] font-semibold tracking-wide text-white/48 md:text-[11px]",
                     ].join(" ")}
                   >
-                    Game Summary
+                    {m.results.gameSummary}
                   </p>
                   <p
                     className={[
@@ -695,7 +696,7 @@ export default function NbaPostseasonMatchupPanel({
             className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/4 px-3 py-2 text-left"
           >
             <span className="text-[11px] font-semibold uppercase tracking-wide text-white/70 md:text-xs">
-              RS
+              {m.results.rsLabel}
             </span>
             <span className="text-[10px] text-white/60 md:text-[11px]">
               {rsExpanded

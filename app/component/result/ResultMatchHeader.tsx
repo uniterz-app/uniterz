@@ -426,7 +426,7 @@ function ResultMatchHeader({
             <div
               className={`mt-2 text-sm font-bold tabular-nums sm:mt-2.5 sm:text-base ${resultStatsMetricNumClass}`}
             >
-              <span className="text-white/55">Final: </span>
+              <span className="text-white/55">{m.results.final}: </span>
               <span className="text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)]">
                 {finalScore}
               </span>

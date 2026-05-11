@@ -36,8 +36,6 @@ function formatOrdinal(rank: number): string {
   return `${rank}th`;
 }
 
-const UPSET_TOOLTIP =
-  "アップセットが起きた試合で少数派を当てたときだけ加点されます（1試合0〜10）。「発生」は自分が予想した試合のうち、実際にアップセットが起きた試合数です。";
 
 function clampInt(v: number) {
   if (!Number.isFinite(v)) return 0;
@@ -106,9 +104,7 @@ function UpsetCard({
   const cuChances = useCountUp(chances, 1000, inView, 0, "zero");
   const cuHitPct = useCountUp(hitPct, 1000, inView, 0, "zero");
 
-  const tooltipMsg = language === "ja"
-    ? UPSET_TOOLTIP
-    : "You earn Upset Points only when you correctly predict an upset (0–10 points per match). “Occurred” means how many of your predicted matches actually had an upset.";
+  const tooltipMsg = m.profile.upsetTooltip;
   const rankText =
     totalUpsetRank != null ? ` / ${formatOrdinal(totalUpsetRank)}` : "";
   const rankClass =
@@ -162,7 +158,7 @@ function UpsetCard({
         >
           {formatMetricDecimals(cuPoints, 1)}
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
-            pts
+            {m.profile.ptsUnit}
           </span>
           {rankText ? (
             <span className={`ml-1 text-[10px] md:text-sm ${rankClass}`}>

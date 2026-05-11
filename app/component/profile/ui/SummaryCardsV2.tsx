@@ -186,12 +186,7 @@ export default function SummaryCardsV2({
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
-            openTooltip(
-              e,
-              language === "ja"
-                ? "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
-                : "Evaluate how close your predicted score is to the actual score on a 0–10 scale, then sum it within the selected period (higher is better)."
-            )
+            openTooltip(e, m.profile.scorePrecisionTooltip)
           }
         >
           ⓘ
@@ -209,12 +204,7 @@ export default function SummaryCardsV2({
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
-            openTooltip(
-              e,
-              language === "ja"
-                ? "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
-                : "Upset Points are awarded only when you correctly predict an upset (0–10 per match). This is the total within the selected period."
-            )
+            openTooltip(e, m.profile.upsetTooltip)
           }
         >
           ⓘ
@@ -232,12 +222,7 @@ export default function SummaryCardsV2({
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
-            openTooltip(
-              e,
-              language === "ja"
-                ? "この期間内で記録した最長の連勝数です。"
-                : "The longest win streak you recorded within this period."
-            )
+            openTooltip(e, m.profile.maxStreakTooltip)
           }
         >
           ⓘ
@@ -255,12 +240,7 @@ export default function SummaryCardsV2({
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
-            openTooltip(
-              e,
-              language === "ja"
-                ? "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
-                : "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
-            )
+            openTooltip(e, m.profile.totalScoreTooltip)
           }
         >
           ⓘ

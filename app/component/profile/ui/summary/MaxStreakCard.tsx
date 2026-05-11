@@ -21,8 +21,6 @@ type Props = {
   language?: Language;
 };
 
-const MAX_STREAK_TOOLTIP =
-  "全期間（All-time）の最高連勝数です。期間切替（7日/30日）とは連動しません。";
 
 function safeInt(v: any) {
   const n = typeof v === "number" ? v : Number(v);
@@ -79,13 +77,9 @@ function MaxStreakCard({
   const shown = useMemo(() => safeInt(cu), [cu]);
   const valueColor = getStreakColor(shown);
 
-  const tooltipMsg = language === "ja"
-    ? MAX_STREAK_TOOLTIP
-    : "All-time maximum win streak. It is not affected by the 7d/30d period switch.";
+  const tooltipMsg = m.profile.maxStreakTooltip;
   const title = m.profile.maxWinStreak;
-  const subtitle = language === "ja"
-    ? "全期間での最高連勝"
-    : "All-time Max Win Streak";
+  const subtitle = m.profile.allTimeMaxStreak;
 
   return (
     <>

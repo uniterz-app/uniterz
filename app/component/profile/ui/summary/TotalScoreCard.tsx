@@ -43,8 +43,6 @@ function formatOrdinal(rank: number): string {
   return `${rank}th`;
 }
 
-const TOTAL_SCORE_TOOLTIP =
-  "勝者的中・点差/合計点の近さで決まる基本点に、アップセットボーナスと連勝ボーナスを加えた包括スコア。";
 
 /** DonutChart のグラデ混色を踏まえ、暗背景でも隣接セグメントが判別しやすい色相差 */
 const SEG_BASE = "#2dd4bf"; // teal-400
@@ -118,9 +116,7 @@ function TotalScoreCard({
       ? formatMetricDecimals(totalPoints / analyses, 1)
       : "0";
 
-  const tooltipMsg = language === "ja"
-    ? TOTAL_SCORE_TOOLTIP
-    : "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus.";
+  const tooltipMsg = m.profile.totalScoreTooltip;
   const rankText =
     totalPointsRank != null ? ` / ${formatOrdinal(totalPointsRank)}` : "";
   const rankClass =
@@ -194,7 +190,7 @@ function TotalScoreCard({
             >
               {formatMetricDecimals(totalCu, 1)}
               <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-xl">
-                pts
+                {m.profile.ptsUnit}
               </span>
               {rankText ? (
                 <span className={`ml-1 text-[10px] md:text-sm ${rankClass}`}>
@@ -204,7 +200,7 @@ function TotalScoreCard({
             </div>
 
             <div className="mt-2 text-[9px] tracking-tight text-white/60 md:mt-4 md:text-[16px]">
-              AVG {avg} pts
+              {m.profile.avgLabel} {avg} {m.profile.ptsUnit}
             </div>
           </div>
 

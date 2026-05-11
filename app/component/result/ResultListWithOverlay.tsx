@@ -15,7 +15,7 @@ import {
   AnimatePresence,
   LazyMotion,
   domAnimation,
-  m,
+  m as motion,
   useReducedMotion,
   type Variants,
 } from "framer-motion";
@@ -32,6 +32,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
 import { SCHEDULE_MY_POST_DELETED_EVENT } from "@/lib/games/scheduleMyPostSyncEvents";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { nameBebas } from "@/lib/fonts";
 import {
   cyberNoDataLabelStyle,
@@ -230,6 +231,7 @@ function dayPointsHeaderForList(
   pendingShown: PostWithMillis[],
   language: Language
 ): ResultDayPointsHeader {
+  const msg = t(language);
   if (finalShown.length > 0 && finalShown.every(hasPointsV3Recorded)) {
     const total = sumDayPointsV3(finalShown);
     const fmt =
@@ -239,41 +241,23 @@ function dayPointsHeaderForList(
     const { wins: hitWins, total: hitTotal } = countWinnerHits(finalShown);
     const hitSuffix =
       hitTotal > 0
-        ? language === "en"
-          ? ` Winner predictions correct: ${hitWins} of ${hitTotal} settled.`
-          : ` 勝者予想の的中 ${hitWins}/${hitTotal} 試合。`
+        ? ` ${msg.results.hitWinsSummary.replace("{hits}", String(hitWins)).replace("{total}", String(hitTotal))}`
         : "";
-    if (language === "en") {
-      return {
-        variant: "total",
-        value: fmt,
-        prefix: "Total score",
-        unit: "pts",
-        aria: `Total score for this day: ${fmt} pts.${hitSuffix}`,
-        ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
-      };
-    }
     return {
       variant: "total",
       value: fmt,
-      prefix: "総合スコア",
-      unit: "pt",
-      aria: `この日の総合スコア（合算）${fmt} ポイント。${hitSuffix}`.trim(),
+      prefix: msg.results.dayTotalScore,
+      unit: msg.results.dayTotalScorePts,
+      aria: `${msg.results.dayTotalScoreAria.replace("{pts}", fmt)}${hitSuffix}`,
       ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
     };
   }
   if (finalShown.length > 0 || pendingShown.length > 0) {
-    return language === "en"
-      ? {
-          variant: "pending",
-          line: "Pending",
-          aria: "Points not yet available until matches are finalized",
-        }
-      : {
-          variant: "pending",
-          line: "得点未確定",
-          aria: "試合確定後に得点が表示されます",
-        };
+    return {
+      variant: "pending",
+      line: msg.results.dayPending,
+      aria: msg.results.dayPendingDesc,
+    };
   }
   return null;
 }
@@ -417,6 +401,7 @@ export default function ResultListWithOverlay({
 
   const isMobile = platform === "mobile";
   const gamesRoutePrefix = isMobile ? "/mobile" : "/web";
+  const m = t(language);
 
   /** リザルト一覧から予想をオーバーレイで修正 */
   type ResultPredictOverlayState =
@@ -496,7 +481,7 @@ export default function ResultListWithOverlay({
     return {
       name:
         (u?.displayName?.trim() ||
-          (language === "en" ? "User" : "ユーザー")) as string,
+          m.results.user) as string,
       avatarUrl: u?.photoURL ?? undefined,
       verified: !!u?.emailVerified,
     };
@@ -902,85 +887,44 @@ export default function ResultListWithOverlay({
     setOverlayPortalReady(true);
   }, []);
 
-  const fc =
-    language === "en"
-      ? {
-          panelTitle: "Filters",
-          reset: "Reset",
-          /** 折りたたみ時のみ表示（展開すると消える） */
-          filterFoldCollapsedLabel: "Filters",
-          filterFoldCollapse: "Close",
-          outcome: "Outcome",
-          settlement: "Match status",
-          league: "League",
-          upsetScore: "Upset score",
-          scorePrecision: "Score accuracy",
-          totalScore: "Total score",
-          outcomeOpt: { all: "All", win: "Wins", loss: "Losses" } as const,
-          settlementOpt: {
-            all: "All",
-            pending: "Pending",
-            final: "Final",
-          } as const,
-          leagueAll: "All",
-          upsetOpt: {
-            none: "None",
-            upsetBonus: "Bonus pts",
-          } as const,
-          tierOpt: {
-            all: "All",
-            high: "High (7+)",
-            mid: "Mid (4–6)",
-            low: "Low (≤3)",
-          } as const,
-          matchDaySection: "Match day (in list)",
-          datePlaceholder: "Select…",
-          noDaysYet: "No days loaded yet.",
-          dateFromLabel: "From",
-          dateToLabel: "To",
-          clearDateRange: "Clear period",
-          detailToggle: "More filters",
-          detailHint: "Status, league, scores…",
-          groupAria: "Filter result list",
-        }
-      : {
-          panelTitle: "",
-          reset: "リセット",
-          filterFoldCollapsedLabel: "絞り込み条件を指定",
-          filterFoldCollapse: "閉じる",
-          outcome: "勝敗",
-          settlement: "試合の状態",
-          league: "リーグ",
-          upsetScore: "Upset スコア",
-          scorePrecision: "スコア精度",
-          totalScore: "総合スコア",
-          outcomeOpt: { all: "すべて", win: "勝ち", loss: "負け" } as const,
-          settlementOpt: {
-            all: "すべて",
-            pending: "未確定",
-            final: "確定",
-          } as const,
-          leagueAll: "すべて",
-          upsetOpt: {
-            none: "なし",
-            upsetBonus: "加点あり",
-          } as const,
-          tierOpt: {
-            all: "すべて",
-            high: "高(7+)",
-            mid: "中(4–6)",
-            low: "3〜0",
-          } as const,
-          matchDaySection: "試合日（一覧にある日のみ）",
-          datePlaceholder: "選択…",
-          noDaysYet: "表示中の日付がまだありません。",
-          dateFromLabel: "開始",
-          dateToLabel: "終了",
-          clearDateRange: "期間をクリア",
-          detailToggle: "詳細条件",
-          detailHint: "試合状態・リーグ・各スコア帯など",
-          groupAria: "リザルトの絞り込み",
-        };
+  const fc = {
+    panelTitle: m.results.filterCollapsedLabel,
+    reset: m.results.filterReset,
+    filterFoldCollapsedLabel: m.results.filterTitle,
+    filterFoldCollapse: m.results.filterClose,
+    outcome: m.results.filterOutcome,
+    settlement: m.results.filterMatchStatus,
+    league: m.results.filterLeague,
+    upsetScore: m.results.filterUpsetScore,
+    scorePrecision: m.results.filterScoreAccuracy,
+    totalScore: m.results.filterTotalScore,
+    outcomeOpt: { all: m.results.filterAll, win: m.results.filterWins, loss: m.results.filterLosses },
+    settlementOpt: {
+      all: m.results.filterAll,
+      pending: m.results.filterPendingStatus,
+      final: m.results.filterFinalStatus,
+    },
+    leagueAll: m.results.filterAll,
+    upsetOpt: {
+      none: m.results.filterNone,
+      upsetBonus: m.results.filterBonusPts,
+    },
+    tierOpt: {
+      all: m.results.filterAll,
+      high: m.results.filterHighScore,
+      mid: m.results.filterMidScore,
+      low: m.results.filterLowScore,
+    },
+    matchDaySection: m.results.filterMatchDay,
+    datePlaceholder: m.results.filterSelect,
+    noDaysYet: m.results.filterNoDaysLoaded,
+    dateFromLabel: m.results.filterFrom,
+    dateToLabel: m.results.filterTo,
+    clearDateRange: m.results.filterClearPeriod,
+    detailToggle: m.results.filterMore,
+    detailHint: m.results.filterMoreDesc,
+    groupAria: m.results.filterResultList,
+  };
 
   const filterChipClass = (active: boolean) =>
     [
@@ -1103,7 +1047,7 @@ export default function ResultListWithOverlay({
           </button>
 
           {filterPanelOpen ? (
-        <m.div
+        <motion.div
           className={[
             "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain rounded-2xl border border-white/18 bg-black/30 px-3 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-xl backdrop-saturate-150 sm:px-4 sm:py-3.5",
             isMobile ? "pb-2" : "pb-3",
@@ -1157,7 +1101,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "win", "loss"] as const).map((k) => (
-                <m.button
+                <motion.button
                   key={k}
                   type="button"
                   aria-pressed={filters.outcome === k}
@@ -1182,7 +1126,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.outcome === k)}
                 >
                   {fc.outcomeOpt[k]}
-                </m.button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -1357,7 +1301,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "pending", "final"] as const).map((k) => (
-                <m.button
+                <motion.button
                   key={k}
                   type="button"
                   aria-pressed={filters.settlement === k}
@@ -1382,7 +1326,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.settlement === k)}
                 >
                   {fc.settlementOpt[k]}
-                </m.button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -1393,7 +1337,7 @@ export default function ResultListWithOverlay({
                 {fc.league}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <m.button
+                <motion.button
                   type="button"
                   aria-pressed={filters.league === "all"}
                   onClick={() => setFilters((s) => ({ ...s, league: "all" }))}
@@ -1415,9 +1359,9 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.league === "all")}
                 >
                   {fc.leagueAll}
-                </m.button>
+                </motion.button>
                 {LEAGUE_ORDER.map((lg) => (
-                  <m.button
+                  <motion.button
                     key={lg}
                     type="button"
                     aria-pressed={filters.league === lg}
@@ -1440,7 +1384,7 @@ export default function ResultListWithOverlay({
                     className={filterChipClass(filters.league === lg)}
                   >
                     {LEAGUE_DISPLAY[lg]}
-                  </m.button>
+                  </motion.button>
                 ))}
               </div>
             </div>
@@ -1452,7 +1396,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["none", "upsetBonus"] as const).map((k) => (
-                <m.button
+                <motion.button
                   key={k}
                   type="button"
                   aria-pressed={filters.specialty === k}
@@ -1477,7 +1421,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.specialty === k)}
                 >
                   {fc.upsetOpt[k]}
-                </m.button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -1488,7 +1432,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "high", "mid", "low"] as const).map((k) => (
-                <m.button
+                <motion.button
                   key={`sp-${k}`}
                   type="button"
                   aria-pressed={filters.scorePrecisionTier === k}
@@ -1513,7 +1457,7 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.scorePrecisionTier === k)}
                 >
                   {fc.tierOpt[k]}
-                </m.button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -1524,7 +1468,7 @@ export default function ResultListWithOverlay({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "high", "mid", "low"] as const).map((k) => (
-                <m.button
+                <motion.button
                   key={`ts-${k}`}
                   type="button"
                   aria-pressed={filters.pointsTier === k}
@@ -1549,18 +1493,18 @@ export default function ResultListWithOverlay({
                   className={filterChipClass(filters.pointsTier === k)}
                 >
                   {fc.tierOpt[k]}
-                </m.button>
+                </motion.button>
               ))}
             </div>
           </div>
               </div>
             ) : null}
           </div>
-        </m.div>
+        </motion.div>
           ) : null}
         </div>
 
-        <m.div
+        <motion.div
           className={["flex flex-col", isMobile ? "gap-3" : "gap-4"].join(" ")}
           variants={resultListCyberRoot}
           initial={prefersReducedMotion ? false : "hidden"}
@@ -1570,7 +1514,7 @@ export default function ResultListWithOverlay({
           {totalLoaded > 0 &&
             filteredGrouped.length === 0 &&
             !isDefaultResultFilters(filters) && (
-            <m.div
+            <motion.div
               key="empty-filter"
               role="status"
               initial={off ?? { opacity: 0, y: 12, scale: 0.98 }}
@@ -1579,16 +1523,14 @@ export default function ResultListWithOverlay({
               transition={{ duration: 0.35, ease: easeOut }}
               className="rounded-2xl border border-white/10 bg-white/3 px-4 py-8 text-center text-sm text-white/55"
             >
-              {language === "en"
-                ? "No results for this filter."
-                : "この条件に合うリザルトがありません。"}
-            </m.div>
+              {m.results.noResultsForFilter}
+            </motion.div>
           )}
         </AnimatePresence>
 
         {/* リザルト投稿が一件もないとき：背景なし・グロー付き NO DATA をエリア中央に */}
         {!loading && totalLoaded === 0 ? (
-          <m.div
+          <motion.div
             key="empty-no-posts"
             role="status"
             initial={off ?? { opacity: 0, scale: 0.98 }}
@@ -1605,7 +1547,7 @@ export default function ResultListWithOverlay({
             >
               NO DATA
             </p>
-          </m.div>
+          </motion.div>
         ) : null}
 
         {visibleGrouped.map((day) => {
@@ -1620,7 +1562,7 @@ export default function ResultListWithOverlay({
           );
 
           return (
-            <m.div
+            <motion.div
               key={day.dateLabel}
               variants={resultListCyberDaySlot}
               className="w-full"
@@ -1666,7 +1608,7 @@ export default function ResultListWithOverlay({
                     ))}
                   </div>
                 ) : (
-                  <m.div
+                  <motion.div
                     className={
                       isMobile
                         ? "flex min-w-0 w-full flex-col gap-3 pt-2"
@@ -1677,7 +1619,7 @@ export default function ResultListWithOverlay({
                     animate="show"
                   >
                     {displayPosts.map((post) => (
-                      <m.div
+                      <motion.div
                         key={post.id}
                         variants={resultCardCyberItem}
                         className="w-full"
@@ -1701,22 +1643,22 @@ export default function ResultListWithOverlay({
                           onRequestPredictEdit={requestPredictEditFromCard}
                           cardClockMs={listNowTick}
                         />
-                      </m.div>
+                      </motion.div>
                     ))}
-                  </m.div>
+                  </motion.div>
                 )}
               </ResultDayPipeGroup>
-            </m.div>
+            </motion.div>
           );
         })}
-        </m.div>
+        </motion.div>
 
         {!postsCacheCapped && hasMore && (
           <div ref={sentinelRef} className="h-10" />
         )}
 
         {loading && (
-          <m.div
+          <motion.div
             className="py-6 text-center text-white/60 text-sm"
             initial={prefersReducedMotion ? false : { opacity: 0.4 }}
             animate={
@@ -1730,20 +1672,18 @@ export default function ResultListWithOverlay({
                 : { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
             }
           >
-            {language === "en" ? "Loading…" : "読み込み中…"}
-          </m.div>
+            {m.common.loading}
+          </motion.div>
         )}
         {postsCacheCapped && (
-          <m.div
+          <motion.div
             initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: easeOut }}
             className="py-6 text-center text-white/60 text-xs sm:text-sm"
           >
-            {language === "en"
-              ? `Showing latest ${RESULT_POSTS_MAX_CACHED} results to keep the page responsive.`
-              : `動作を軽く保つため、最新 ${RESULT_POSTS_MAX_CACHED} 件まで表示しています。`}
-          </m.div>
+            {m.results.showingLatest.replace("{n}", String(RESULT_POSTS_MAX_CACHED))}
+          </motion.div>
         )}
       </div>
 
@@ -1752,7 +1692,7 @@ export default function ResultListWithOverlay({
       matchDayListboxBox
         ? createPortal(
             <AnimatePresence>
-              <m.div
+              <motion.div
                 key={matchDayPickerOpen}
                 ref={matchDayListboxPortalRef}
                 id={
@@ -1902,7 +1842,7 @@ export default function ResultListWithOverlay({
                     })}
                   </>
                 )}
-              </m.div>
+              </motion.div>
             </AnimatePresence>,
             document.body
           )
@@ -1912,7 +1852,7 @@ export default function ResultListWithOverlay({
         ? createPortal(
             <AnimatePresence>
               {deleteConfirmPost ? (
-                <m.div
+                <motion.div
                   key={`result-delete-${deleteConfirmPost.id}`}
                   role="presentation"
                   className="fixed inset-0 z-100002 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm pointer-events-auto"
@@ -1924,7 +1864,7 @@ export default function ResultListWithOverlay({
                     if (!deleteInProgress) setDeleteConfirmPost(null);
                   }}
                 >
-                  <m.div
+                  <motion.div
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="result-delete-confirm-title"
@@ -1951,11 +1891,11 @@ export default function ResultListWithOverlay({
                       id="result-delete-confirm-title"
                       className="px-1 py-1 text-center text-sm font-semibold text-white/95 drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)] sm:text-base"
                     >
-                      本当に削除しますか
+                      {m.results.deletePostConfirm}
                     </p>
                     {/* 参照デザイン：ガラス枠＋ホバー塗り＋矢印（左＝戻る／右＝進む）。英字は NO DATA と同系 */}
                     <div className="mt-5 flex w-full flex-row items-center justify-between gap-3">
-                      <m.button
+                      <motion.button
                         type="button"
                         disabled={deleteInProgress}
                         className={[
@@ -1983,10 +1923,10 @@ export default function ResultListWithOverlay({
                           ].join(" ")}
                           style={cyberNoDataLabelStyle}
                         >
-                          Cancel
+                          {m.common.cancel}
                         </span>
-                      </m.button>
-                      <m.button
+                      </motion.button>
+                      <motion.button
                         type="button"
                         disabled={deleteInProgress}
                         className={[
@@ -2006,7 +1946,7 @@ export default function ResultListWithOverlay({
                           ].join(" ")}
                           style={deleteConfirmDeleteLabelStyle}
                         >
-                          Delete
+                          {m.common.delete}
                         </span>
                         <ArrowRight
                           className={[
@@ -2016,10 +1956,10 @@ export default function ResultListWithOverlay({
                           ].join(" ")}
                           aria-hidden
                         />
-                      </m.button>
+                      </motion.button>
                     </div>
-                  </m.div>
-                </m.div>
+                  </motion.div>
+                </motion.div>
               ) : null}
             </AnimatePresence>,
             document.body
@@ -2030,7 +1970,7 @@ export default function ResultListWithOverlay({
         ? createPortal(
             <AnimatePresence>
               {openPostId && selectedPost && (
-                <m.div
+                <motion.div
                   key="result-overlay"
                   className={[
                     "fixed inset-0 pointer-events-auto",
@@ -2041,7 +1981,7 @@ export default function ResultListWithOverlay({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.22, ease: easeOut }}
                 >
-                  <m.div
+                  <motion.div
                     className={[
                       // 不透明度を下げつつ blur でガラス調（背面が透ける）
                       "flex min-h-dvh w-full flex-col overflow-hidden rounded-none border-x-0 border-b-0 border-t border-white/22",
@@ -2072,9 +2012,9 @@ export default function ResultListWithOverlay({
                         isMobile ? "min-h-10 pb-1" : "min-h-11 pb-1.5",
                       ].join(" ")}
                     >
-                      <m.button
+                      <motion.button
                         type="button"
-                        aria-label={language === "en" ? "Close" : "閉じる"}
+                        aria-label={m.common.close}
                         className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white/90 backdrop-blur-md transition hover:bg-white/15"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -2086,7 +2026,7 @@ export default function ResultListWithOverlay({
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.92 }}
                       >
                         <X size={18} strokeWidth={2.4} />
-                      </m.button>
+                      </motion.button>
                     </div>
                     <div
                       className={[
@@ -2124,8 +2064,8 @@ export default function ResultListWithOverlay({
                         />
                       )}
                     </div>
-                  </m.div>
-                </m.div>
+                  </motion.div>
+                </motion.div>
               )}
             </AnimatePresence>,
             document.body
@@ -2172,7 +2112,7 @@ export default function ResultListWithOverlay({
                   <div className="relative w-full overflow-x-hidden">
                     <button
                       type="button"
-                      aria-label={language === "en" ? "Close" : "閉じる"}
+                      aria-label={m.common.close}
                       className="absolute right-2 top-2 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white/90 backdrop-blur-md transition hover:bg-black/65 sm:right-3 sm:top-3"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2185,9 +2125,7 @@ export default function ResultListWithOverlay({
                     {predictOverlay.phase === "loading" ? (
                       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 px-4 pt-16 text-center text-sm text-white/70">
                         <p>
-                          {language === "en"
-                            ? "Loading match…"
-                            : "試合データを読み込み中…"}
+                          {m.results.loadingMatch}
                         </p>
                       </div>
                     ) : null}
@@ -2195,16 +2133,14 @@ export default function ResultListWithOverlay({
                     {predictOverlay.phase === "error" ? (
                       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-4 pt-16 text-center">
                         <p className="text-sm text-white/75">
-                          {language === "en"
-                            ? "Could not load this match."
-                            : "試合データを読み込めませんでした。"}
+                          {m.results.loadMatchError}
                         </p>
                         <button
                           type="button"
                           className="rounded-lg border border-cyan-500/40 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/60 hover:bg-cyan-500/25"
                           onClick={closePredictOverlay}
                         >
-                          {language === "en" ? "Close" : "閉じる"}
+                          {m.common.close}
                         </button>
                       </div>
                     ) : null}

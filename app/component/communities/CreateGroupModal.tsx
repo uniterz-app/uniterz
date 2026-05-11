@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import type { Language } from "@/lib/i18n/language";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "@/lib/firebase";
 import { jp } from "@/lib/fonts";
@@ -24,7 +25,7 @@ async function authHeader(): Promise<string | null> {
 type Props = {
   open: boolean;
   onClose: () => void;
-  language: "ja" | "en";
+  language: Language;
   onCreated: () => void;
 };
 
