@@ -12,7 +12,7 @@ export const SPURS_TIMBERWOLVES_TEAM_IDS = [
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Timberwolves";
 
-/** 2025-26 Spurs vs Timberwolves（レギュラー3 + プレーオフ Game 3まで） */
+/** 2025-26 Spurs vs Timberwolves（レギュラー3 + プレーオフ Game 4まで） */
 export const spursTimberwolvesH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-wolves-2025-11-30",
@@ -113,6 +113,26 @@ export const spursTimberwolvesH2HGames: NbaH2HGameCard[] = [
         "Victor Wembanyama dominated with 39 points, 15 rebounds, and 5 blocks—San Antonio’s interior size, rim protection, and late-game finishing carried the night. Anthony Edwards returned and kept Minnesota competitive, but the Wolves could not slow Wembanyama in the biggest moments as the Spurs seized control down the stretch. San Antonio leads the series 2-1.",
     },
   },
+  {
+    id: "h2h-spurs-wolves-2026-05-11-po-g4",
+    dateEt: "2026-05-11",
+    dateJst: "2026-05-12",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 109,
+    scoreRight: 114,
+    /** San Antonio（Spurs）ホーム */
+    homeTeamSide: "left",
+    injuriesLeft: ["D. Jones"],
+    injuriesRight: ["D. DiVincenzo"],
+    inactiveFooterSummary: {
+      ja:
+        "最大の分岐点はWembanyamaの2Q退場。Spursは守備の中心を失ったが、HarperとFoxが各24点、Castleも20点で粘り、終盤まで接戦に持ち込んだ。最後に試合を決めたのはAnthony Edwards。36点中16点を4Qに集中させ、勝負どころで連続得点。GobertとNaz Reidもインサイドで支えた。Wolvesが苦しみながらも勝ち切り、シリーズを2-2に戻した。",
+      en:
+        "The turning point was Wembanyama's ejection in the second quarter. Without their defensive anchor, the Spurs still fought—Harper and Fox scored 24 each, and Castle added 20 to keep it close down the stretch. But Anthony Edwards took over when it mattered most, pouring in 16 of his 36 points in the fourth quarter with clutch buckets in crunch time. Gobert and Naz Reid provided interior support. Minnesota gutted out a tough road win to even the series at 2-2.",
+    },
+  },
 ];
 
 /** 左=SAS・右=MIN のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -151,7 +171,7 @@ function spursTimberwolvesH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記6試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function spursTimberwolvesH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

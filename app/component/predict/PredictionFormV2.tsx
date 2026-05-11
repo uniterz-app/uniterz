@@ -893,7 +893,7 @@ export default function PredictionFormV2({
                 {isNbaPostseasonTools
                   ? m.predict.h2hStats
                   : isWc
-                    ? m.predict.teamStats
+                    ? m.predict.teamProfile
                     : m.predict.teamStats}
               </span>
             </span>
@@ -1024,7 +1024,7 @@ export default function PredictionFormV2({
                   isMobile ? "mb-2 text-xs font-semibold text-white/90" : "mb-3 text-sm font-semibold text-white/90"
                 }
               >
-                {m.predict.teamStats}
+                {isWc ? m.predict.teamProfile : m.predict.teamStats}
               </div>
               <div
                 className={

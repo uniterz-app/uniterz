@@ -9,7 +9,7 @@ export const SIXERS_KNICKS_TEAM_IDS = ["nba-76ers", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "76ers";
 
-/** 2025-26 Knicks vs 76ers（レギュラー4 + プレーオフ Game 3まで） */
+/** 2025-26 Knicks vs 76ers（レギュラー4 + プレーオフ Game 4まで） */
 export const sixersKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-sixers-knicks-2025-12-19",
@@ -123,6 +123,26 @@ export const sixersKnicksH2HGames: NbaH2HGameCard[] = [
         "Philadelphia built an early lead behind Paul George’s three-point shooting but stalled after the first quarter. Jalen Brunson led New York with 33 points and 9 assists, while Mikal Bridges added 23. Even without OG Anunoby, the Knicks broke the game open behind Brunson’s orchestration. Joel Embiid had 18, Tyrese Maxey 17, and Kelly Oubre Jr. 22 in Embiid’s return, but the offense lacked staying power—and George did not score after the opening period. New York leads the series 3-0.",
     },
   },
+  {
+    id: "h2h-sixers-knicks-2026-05-11-po-g4",
+    dateEt: "2026-05-11",
+    dateJst: "2026-05-12",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 144,
+    scoreRight: 114,
+    /** Philadelphia（76ers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["O. Anunoby"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Knicksは序盤から3Pで試合を壊した。OG Anunoby欠場で先発したDeuce McBrideが25点・3P7本の大活躍。チーム全体でも25本の3Pを決め、76ersの守備を完全に崩した。Brunsonは22点で無理に背負いすぎず、HartとTownsも17点ずつ。76ersはEmbiidが24点、Maxeyが17点を取ったが、守備で修正できず完敗。Knicksがスイープで東カンファレンス決勝進出。",
+      en:
+        "The Knicks blew the game open early with a three-point barrage. Deuce McBride, starting in place of the injured OG Anunoby, erupted for 25 points on seven threes. New York knocked down 25 three-pointers as a team, shredding Philadelphia's defense. Jalen Brunson added 22 without forcing the issue, while Josh Hart and Karl-Anthony Towns each chipped in 17. Joel Embiid had 24 and Tyrese Maxey 17 for the 76ers, but they could not make defensive adjustments and were swept. The Knicks advance to the Eastern Conference Finals with a 4-0 sweep.",
+    },
+  },
 ];
 
 /** 左=NYK・右=PHI のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -161,7 +181,7 @@ function sixersKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記8試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function sixersKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,
