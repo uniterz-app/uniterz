@@ -2,16 +2,22 @@
 
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { resolveUserTimezone } from "@/lib/i18n/countryTimezone";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
-  TIMEZONE_ET,
   TIMEZONE_JST,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "@/lib/time/zonedTime";
 
-function formatRankingsUpdateTime(language: Language) {
-  if (language !== "en") return "16:00";
+/**
+ * JST 16:00 をユーザーのローカルタイムゾーンに変換して返す。
+ */
+function formatRankingsUpdateTime(
+  language: Language,
+  countryCode: string | null | undefined,
+) {
+  const userTz = resolveUserTimezone(countryCode, language);
 
   const now = new Date();
   const todayKeyJst = toDateKeyInTimeZone(now, TIMEZONE_JST);
@@ -22,10 +28,12 @@ function formatRankingsUpdateTime(language: Language) {
   const MS_1D = 24 * 60 * 60 * 1000;
   const jstUpdateTodayMs = todayMidnightJst.getTime() + MS_16H;
   const jstUpdateMs =
-    now.getTime() >= jstUpdateTodayMs ? jstUpdateTodayMs + MS_1D : jstUpdateTodayMs;
+    now.getTime() >= jstUpdateTodayMs
+      ? jstUpdateTodayMs + MS_1D
+      : jstUpdateTodayMs;
 
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: TIMEZONE_ET,
+    timeZone: userTz,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -35,12 +43,17 @@ function formatRankingsUpdateTime(language: Language) {
 type Props = {
   phase: RankingPhase;
   language: Language;
+  countryCode?: string | null;
 };
 
-export default function RankingsScheduleNotice({ phase, language }: Props) {
+export default function RankingsScheduleNotice({
+  phase,
+  language,
+  countryCode,
+}: Props) {
   void phase;
   const m = t(language);
-  const time = formatRankingsUpdateTime(language);
+  const time = formatRankingsUpdateTime(language, countryCode);
 
   return (
     <div className="text-center">

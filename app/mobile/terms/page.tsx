@@ -11,15 +11,15 @@ export default function MobileTermsPage() {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
-  const isEn = language === "en";
+  const isJa = language === "ja";
 
   return (
     <LegalPageLayout
       title={m.settings.termsOfService}
       description={
-        isEn
-          ? "This page sets forth the terms and conditions for using Uniterz. Please review them carefully before using the Service."
-          : "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。"
+        isJa
+          ? "Uniterz におけるご利用条件を定めたページです。ご利用前に必ずご確認ください。"
+          : "This page sets forth the terms and conditions for using Uniterz. Please review them carefully before using the Service."
       }
       updatedAt="2026-03-23"
       variant="mobile"
@@ -29,9 +29,9 @@ export default function MobileTermsPage() {
         {/* 1 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "1. Service Overview" : "1. サービス概要"}
+            {!isJa ? "1. Service Overview" : "1. サービス概要"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <>
               <p>
                 Uniterz (the "Service") is a fantasy sports service where you predict sports match results and compete using scores.
@@ -64,9 +64,9 @@ export default function MobileTermsPage() {
         {/* 2 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "2. Definitions" : "2. 用語の定義"}
+            {!isJa ? "2. Definitions" : "2. 用語の定義"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <ul className="list-disc space-y-1 pl-5">
               <li>
                 "Prediction": a user's submission regarding match results (wins/losses, scores, etc.).
@@ -88,9 +88,9 @@ export default function MobileTermsPage() {
         {/* 3 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "3. Scope of Application" : "3. 規約の適用範囲"}
+            {!isJa ? "3. Scope of Application" : "3. 規約の適用範囲"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <p>
               These Terms apply to all services and features provided in connection with this Service, including the app, the web version, the API, and all related functionalities. Users are deemed to have agreed to these Terms upon starting to use the Service.
             </p>
@@ -108,9 +108,9 @@ export default function MobileTermsPage() {
         {/* 4 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "4. Account" : "4. アカウント"}
+            {!isJa ? "4. Account" : "4. アカウント"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <ul className="list-disc space-y-1 pl-5">
               <li>Please keep your registration information accurate and up to date.</li>
               <li>Responsibility for account management belongs to the user.</li>
@@ -128,9 +128,9 @@ export default function MobileTermsPage() {
         {/* 5 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "5. Handling of Points and Rankings" : "5. ポイント・ランキングの取り扱い"}
+            {!isJa ? "5. Handling of Points and Rankings" : "5. ポイント・ランキングの取り扱い"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <ul className="list-disc space-y-1 pl-5">
               <li>Points and rankings are calculated based on calculation logic determined by the operator.</li>
               <li>They do not guarantee future results.</li>
@@ -152,9 +152,9 @@ export default function MobileTermsPage() {
         {/* 6 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "6. Pro Plan" : "6. Proプラン"}
+            {!isJa ? "6. Pro Plan" : "6. Proプラン"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <ul className="list-disc space-y-1 pl-5">
               <li>The Pro Plan may include paid features.</li>
               <li>Pricing, content, and cancellation conditions follow the information displayed separately.</li>
@@ -172,9 +172,9 @@ export default function MobileTermsPage() {
         {/* 7 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "7. Prohibited" : "7. 禁止事項"}
+            {!isJa ? "7. Prohibited" : "7. 禁止事項"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <ul className="list-disc space-y-1 pl-5">
               <li>Impersonating other users or the operator.</li>
               <li>Acts that interfere with or misuse the operation of the Service (automated access, excessive requests, etc.).</li>
@@ -192,9 +192,9 @@ export default function MobileTermsPage() {
         {/* 8 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "8. Changes or Suspension" : "8. サービスの変更・停止"}
+            {!isJa ? "8. Changes or Suspension" : "8. サービスの変更・停止"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <p>
               The operator may add, change, suspend, or end functions without prior notice. In some cases, you may be temporarily unable to use the Service due to maintenance, etc.
             </p>
@@ -208,9 +208,9 @@ export default function MobileTermsPage() {
         {/* 9 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "9. Disclaimer" : "9. 免責事項"}
+            {!isJa ? "9. Disclaimer" : "9. 免責事項"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <ul className="list-disc space-y-1 pl-5">
               <li>We do not guarantee the accuracy or completeness of information.</li>
               <li>The operator will not be responsible for any damages arising from use.</li>
@@ -228,9 +228,9 @@ export default function MobileTermsPage() {
         {/* 10 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "10. Intellectual Property" : "10. 知的財産権"}
+            {!isJa ? "10. Intellectual Property" : "10. 知的財産権"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <p>
               All rights related to this Service belong to the operator or rightsholders. User-submitted content may be used for operating the Service, displaying content, and improving quality.
             </p>
@@ -245,9 +245,9 @@ export default function MobileTermsPage() {
         {/* 11 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "11. Changes to the Terms" : "11. 規約の変更"}
+            {!isJa ? "11. Changes to the Terms" : "11. 規約の変更"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <p>
               We will notify you of important changes within the app.
             </p>
@@ -261,9 +261,9 @@ export default function MobileTermsPage() {
         {/* 12 */}
         <div>
           <h2 className="mb-1 text-base font-semibold text-white">
-            {isEn ? "12. Governing Law and Jurisdiction" : "12. 準拠法・裁判管轄"}
+            {!isJa ? "12. Governing Law and Jurisdiction" : "12. 準拠法・裁判管轄"}
           </h2>
-          {isEn ? (
+          {!isJa ? (
             <p>
               These Terms are governed by Japanese law, and disputes shall be subject to the exclusive jurisdiction of courts in Japan.
             </p>
@@ -276,7 +276,7 @@ export default function MobileTermsPage() {
 
         {/* 13 */}
         <div>
-          {isEn ? (
+          {!isJa ? (
             <>
               <h2 className="mb-1 text-base font-semibold text-white">
                 13. Subscriptions (Recurring Billing)

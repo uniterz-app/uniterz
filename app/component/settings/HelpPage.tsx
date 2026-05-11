@@ -492,8 +492,7 @@ export default function HelpPage({ variant }: { variant: Variant }) {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
-  const isEn = language === "en";
-  const faqs = isEn ? faqsEn : faqsJa;
+  const faqs = language === "ja" ? faqsJa : faqsEn;
 
   return (
     <LegalPageLayout

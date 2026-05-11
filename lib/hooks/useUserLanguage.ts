@@ -13,11 +13,13 @@ export function useUserLanguage(uid: string | null | undefined) {
   const [language, setLanguage] = useState<Language>(() =>
     guessLanguageFromNavigator()
   );
+  const [countryCode, setCountryCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!uid) {
       setLanguage(guessLanguageFromNavigator());
+      setCountryCode(null);
       setLoading(false);
       return;
     }
@@ -31,6 +33,7 @@ export function useUserLanguage(uid: string | null | undefined) {
         const d = snap.data() as any | undefined;
         const resolved = normalizeLanguage(d?.language);
         setLanguage(resolved ?? guessLanguageFromNavigator());
+        setCountryCode(typeof d?.countryCode === "string" ? d.countryCode : null);
         setLoading(false);
       },
       () => {
@@ -41,6 +44,6 @@ export function useUserLanguage(uid: string | null | undefined) {
     return () => unsub();
   }, [uid]);
 
-  return { language, loading };
+  return { language, countryCode, loading };
 }
 

@@ -92,7 +92,7 @@ export default function WebRankingsShell() {
   } = useWebRankings(phase, effectiveRound, wcStageForHook);
 
   const { user } = useMyRankingUser(myUid);
-  const { language } = useUserLanguage(myUid);
+  const { language, countryCode } = useUserLanguage(myUid);
 
   const m = t(language);
   const langUi = language === "en" ? "en" : "ja";
@@ -220,7 +220,7 @@ export default function WebRankingsShell() {
           <div className="w-10 shrink-0" aria-hidden />
         </div>
 
-        <RankingsScheduleNotice phase={phase} language={language} />
+        <RankingsScheduleNotice phase={phase} language={language} countryCode={countryCode} />
         <div className="space-y-0.5">
           {rankingLeague === "nba" ? (
             <RankingsCategoryTabs
