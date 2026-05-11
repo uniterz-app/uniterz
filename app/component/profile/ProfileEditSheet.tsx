@@ -14,6 +14,8 @@ import cyberFieldStyles from "@/app/component/auth/cyberAuthField.module.css";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import type { Language } from "@/lib/i18n/language";
 import {
+  ALL_LANGUAGES,
+  LANGUAGE_NATIVE_NAMES,
   guessLanguageFromNavigator,
   normalizeLanguage,
 } from "@/lib/i18n/language";
@@ -264,8 +266,11 @@ export default function ProfileEditSheet({
                       onChange: (e) => setLanguage(e.target.value as Language),
                     }}
                   >
-                    <option value="ja">日本語</option>
-                    <option value="en">English</option>
+                    {ALL_LANGUAGES.map((l) => (
+                      <option key={l} value={l}>
+                        {LANGUAGE_NATIVE_NAMES[l]}
+                      </option>
+                    ))}
                   </CyberAuthSelect>
                 </div>
 

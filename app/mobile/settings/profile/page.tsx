@@ -13,6 +13,8 @@ import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 import type { Language } from "@/lib/i18n/language";
 import {
+  ALL_LANGUAGES,
+  LANGUAGE_NATIVE_NAMES,
   guessLanguageFromNavigator,
   normalizeLanguage,
 } from "@/lib/i18n/language";
@@ -249,12 +251,11 @@ export default function ProfileEditPage() {
               onChange={(e) => setLanguage(e.target.value as Language)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
             >
-              <option value="ja">
-                {t(language).profile.japanese}
-              </option>
-              <option value="en">
-                {t(language).profile.english}
-              </option>
+              {ALL_LANGUAGES.map((l) => (
+                <option key={l} value={l}>
+                  {LANGUAGE_NATIVE_NAMES[l]}
+                </option>
+              ))}
             </select>
           </div>
 

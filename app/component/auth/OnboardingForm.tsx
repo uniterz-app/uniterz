@@ -18,7 +18,7 @@ import {
   authDisplayButton,
 } from "./authEnglishDisplay";
 import type { Language } from "@/lib/i18n/language";
-import { guessLanguageFromNavigator } from "@/lib/i18n/language";
+import { ALL_LANGUAGES, LANGUAGE_NATIVE_NAMES, guessLanguageFromNavigator } from "@/lib/i18n/language";
 import { ui as uiStr } from "@/lib/i18n/ui";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import { consumePostOnboardingRedirect } from "@/lib/auth/safeNextRedirect";
@@ -216,12 +216,11 @@ export default function OnboardingForm({ variant }: Props) {
                   onChange: (e) => setLanguage(e.target.value as Language),
                 }}
               >
-                <option value="ja">
-                  {uiStr(language, { ja: "日本語", en: "Japanese" })}
-                </option>
-                <option value="en">
-                  {uiStr(language, { ja: "English", en: "English" })}
-                </option>
+                {ALL_LANGUAGES.map((l) => (
+                  <option key={l} value={l}>
+                    {LANGUAGE_NATIVE_NAMES[l]}
+                  </option>
+                ))}
               </CyberAuthSelect>
             </div>
 
