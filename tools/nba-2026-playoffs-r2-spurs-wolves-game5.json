@@ -1,0 +1,16 @@
+[
+  {
+    "id": "nba-20260513-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-13T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 5",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "away": { "name": "Minnesota Timberwolves", "teamId": "nba-timberwolves" },
+    "status": "scheduled"
+  }
+]

@@ -137,7 +137,17 @@
     "playoffRound": "r2",
     "home": { "name": "Philadelphia 76ers", "teamId": "nba-76ers" },
     "away": { "name": "New York Knicks", "teamId": "nba-knicks" },
-    "status": "scheduled"
+    "status": "final",
+    "final": true,
+    "homeScore": 114,
+    "awayScore": 144,
+    "score": { "home": 114, "away": 144 },
+    "seriesStanding": { "homeWins": 0, "awayWins": 4 },
+    "injuries": {
+      "home": [],
+      "away": ["OG Anunoby"]
+    },
+    "summaryJa": "Knicksは序盤から3Pで試合を壊した。OG Anunoby欠場で先発したDeuce McBrideが25点・3P7本の大活躍。チーム全体でも25本の3Pを決め、76ersの守備を完全に崩した。Brunsonは22点で無理に背負いすぎず、HartとTownsも17点ずつ。76ersはEmbiidが24点、Maxeyが17点を取ったが、守備で修正できず完敗。Knicksがスイープで東決勝進出"
   },
   {
     "id": "nba-20260511-02",
@@ -151,7 +161,17 @@
     "playoffRound": "r2",
     "home": { "name": "Minnesota Timberwolves", "teamId": "nba-timberwolves" },
     "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
-    "status": "scheduled"
+    "status": "final",
+    "final": true,
+    "homeScore": 114,
+    "awayScore": 109,
+    "score": { "home": 114, "away": 109 },
+    "seriesStanding": { "homeWins": 2, "awayWins": 2 },
+    "injuries": {
+      "home": ["Donte DiVincenzo"],
+      "away": ["David Jones"]
+    },
+    "summaryJa": "最大の分岐点はWembanyamaの2Q退場。Spursは守備の中心を失ったが、HarperとFoxが各24点、Castleも20点で粘り、終盤まで接戦に持ち込んだ。最後に試合を決めたのはAnthony Edwards。36点中16点を4Qに集中させ、勝負どころで連続得点。GobertとNaz Reidもインサイドで支えた。Wolvesが苦しみながらも勝ち切り、シリーズを2-2に戻した。"
   },
   {
     "id": "nba-20260512-02",
