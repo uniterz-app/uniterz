@@ -497,7 +497,7 @@ const ja = {
     marketBias: "市場の偏り",
     h2hAvgPoints: "H2H平均得点",
     teamStats: "チーム成績",
-    teamProfile: "チームプロフィール",
+    teamProfile: "チームデータ",
     distribution: "予想分布",
     predictionLocked: "予想はロックされました",
     predictionLockedDesc: "試合開始後は予想を変更できません。",

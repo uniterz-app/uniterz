@@ -484,7 +484,7 @@ const zh: Messages = {
     marketBias: "市场偏向",
     h2hAvgPoints: "H2H 场均得分",
     teamStats: "球队数据",
-    teamProfile: "球队简介",
+    teamProfile: "球队数据",
     distribution: "预测分布",
     predictionLocked: "预测已锁定",
     predictionLockedDesc: "比赛开始后无法更改预测。",

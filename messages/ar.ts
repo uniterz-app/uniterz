@@ -495,7 +495,7 @@ const ar: Messages = {
     marketBias: "ميل السوق",
     h2hAvgPoints: "معدل النقاط H2H",
     teamStats: "إحصائيات الفريق",
-    teamProfile: "ملف الفريق",
+    teamProfile: "بيانات الفريق",
     distribution: "التوزيع",
     predictionLocked: "التوقع مقفل",
     predictionLockedDesc: "لا يمكن تغيير التوقع بعد بدء المباراة.",

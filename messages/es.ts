@@ -497,7 +497,7 @@ const es: Messages = {
     marketBias: "Sesgo del mercado",
     h2hAvgPoints: "PTS H2H / P",
     teamStats: "Estadísticas del equipo",
-    teamProfile: "Perfil del equipo",
+    teamProfile: "Datos del equipo",
     distribution: "Distribución",
     predictionLocked: "Predicción bloqueada",
     predictionLockedDesc: "No se puede cambiar la predicción una vez iniciado el partido.",
