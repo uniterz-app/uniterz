@@ -26,6 +26,7 @@ import { ADMIN_UID } from "@/lib/constants";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
 import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
@@ -64,6 +65,7 @@ export default function SettingsMenu({
 
   const { fUser: user, status } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
+  const m = t(language);
   const isEn = language === "en";
 
   // ===== state =====
@@ -149,14 +151,11 @@ export default function SettingsMenu({
   );
   /** 試合カードの HOME/AWAY ラベルと同系統 */
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
-  const labelText = (en: string, ja: string) => (
-    <span className={cn(isEn && "uppercase")}>{isEn ? en : ja}</span>
-  );
 
   return (
     <>
       <nav className={cn(containerClasses, "overflow-x-hidden")}>
-        <p className={groupTitleClasses}>{isEn ? "Main" : "メイン"}</p>
+        <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionMain}</span></p>
 
         <div className="flex flex-col gap-2">
           <SideMenuItemButton
@@ -164,7 +163,7 @@ export default function SettingsMenu({
             labelStyle={menuLabelFont}
             onClick={openProfileEditOverlay}
           >
-            {labelText("Edit Profile", "プロフィール編集")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.editProfile}</span>
           </SideMenuItemButton>
 
           <SideMenuItemButton
@@ -172,7 +171,7 @@ export default function SettingsMenu({
             labelStyle={menuLabelFont}
             onClick={() => pushFromMenu(p("/web/badges", "/mobile/badges"))}
           >
-            {labelText("Badge Palette", "バッジパレット")}
+            <span className={cn(isEn && "uppercase")}>{m.profile.badgePalette}</span>
           </SideMenuItemButton>
 
           <SideMenuItemButton
@@ -187,11 +186,11 @@ export default function SettingsMenu({
               ) : undefined
             }
           >
-            {labelText("Announcements", "お知らせ")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.announcements}</span>
           </SideMenuItemButton>
         </div>
 
-        <p className={groupTitleClasses}>{isEn ? "Subscription" : "サブスクリプション"}</p>
+        <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionSubscription}</span></p>
 
         <div className="flex flex-col gap-2">
           <SideMenuItemButton
@@ -209,11 +208,11 @@ export default function SettingsMenu({
               )
             }
           >
-            {labelText("Plan Status", "プランの確認")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.planStatus}</span>
           </SideMenuItemButton>
         </div>
 
-        <p className={groupTitleClasses}>{isEn ? "Support" : "サポート"}</p>
+        <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionSupport}</span></p>
 
         <div className="flex flex-col gap-2">
           <SideMenuItemButton
@@ -223,7 +222,7 @@ export default function SettingsMenu({
             labelStyle={menuLabelFont}
             onClick={() => pushFromMenu(helpPath)}
           >
-            {labelText("Help", "ヘルプ")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.help}</span>
           </SideMenuItemButton>
 
           <SideMenuItemButton
@@ -233,7 +232,7 @@ export default function SettingsMenu({
             labelStyle={menuLabelFont}
             onClick={() => pushFromMenu(guidelinesPath)}
           >
-            {labelText("Community Guidelines", "ガイドライン")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.communityGuidelines}</span>
           </SideMenuItemButton>
 
           <SideMenuItemButton
@@ -243,7 +242,7 @@ export default function SettingsMenu({
             labelStyle={menuLabelFont}
             onClick={() => pushFromMenu(termsPath)}
           >
-            {labelText("Terms of Service", "利用規約")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.termsOfService}</span>
           </SideMenuItemButton>
 
           <SideMenuItemButton
@@ -253,13 +252,13 @@ export default function SettingsMenu({
             labelStyle={menuLabelFont}
             onClick={() => pushFromMenu(contactPath)}
           >
-            {labelText("Contact", "お問い合わせ")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.contact}</span>
           </SideMenuItemButton>
         </div>
 
         {isAdmin && (
           <>
-            <p className={groupTitleClasses}>{isEn ? "Admin" : "管理"}</p>
+            <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionAdmin}</span></p>
 
             <div className="flex flex-col gap-2">
               <SideMenuItemButton
@@ -267,7 +266,7 @@ export default function SettingsMenu({
                 labelStyle={menuLabelFont}
                 onClick={() => pushFromMenu("/admin")}
               >
-                {labelText("Admin Dashboard", "管理ダッシュボード")}
+                <span className={cn(isEn && "uppercase")}>{m.settings.adminDashboard}</span>
               </SideMenuItemButton>
 
               <SideMenuItemButton
@@ -275,7 +274,7 @@ export default function SettingsMenu({
                 labelStyle={menuLabelFont}
                 onClick={() => pushFromMenu("/admin/badges")}
               >
-                {labelText("Grant Badges", "バッジ付与")}
+                <span className={cn(isEn && "uppercase")}>{m.settings.grantBadges}</span>
               </SideMenuItemButton>
 
               <SideMenuItemButton
@@ -283,7 +282,7 @@ export default function SettingsMenu({
                 labelStyle={menuLabelFont}
                 onClick={() => pushFromMenu("/admin/announcements")}
               >
-                {labelText("Manage Announcements", "お知らせ管理")}
+                <span className={cn(isEn && "uppercase")}>{m.settings.manageAnnouncements}</span>
               </SideMenuItemButton>
 
               <SideMenuItemButton
@@ -291,7 +290,7 @@ export default function SettingsMenu({
                 labelStyle={menuLabelFont}
                 onClick={() => pushFromMenu("/admin/announcements/new")}
               >
-                {labelText("Create Announcement", "お知らせ作成")}
+                <span className={cn(isEn && "uppercase")}>{m.settings.createAnnouncement}</span>
               </SideMenuItemButton>
 
               <SideMenuItemButton
@@ -299,7 +298,7 @@ export default function SettingsMenu({
                 labelStyle={menuLabelFont}
                 onClick={() => pushFromMenu("/admin/games-import")}
               >
-                {labelText("Game Import", "試合インポート")}
+                <span className={cn(isEn && "uppercase")}>{m.settings.gameImport}</span>
               </SideMenuItemButton>
 
               <SideMenuItemButton
@@ -307,7 +306,7 @@ export default function SettingsMenu({
                 labelStyle={menuLabelFont}
                 onClick={() => pushFromMenu("/admin/plans")}
               >
-                {labelText("Plan Approval", "プラン承認")}
+                <span className={cn(isEn && "uppercase")}>{m.settings.planApproval}</span>
               </SideMenuItemButton>
             </div>
           </>
@@ -320,7 +319,7 @@ export default function SettingsMenu({
             labelStyle={menuLabelFont}
             onClick={() => setShowLogoutModal(true)}
           >
-            {labelText("Logout", "ログアウト")}
+            <span className={cn(isEn && "uppercase")}>{m.settings.logout}</span>
           </SideMenuItemButton>
         </div>
       </nav>

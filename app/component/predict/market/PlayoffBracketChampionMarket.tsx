@@ -6,6 +6,7 @@ import { nameBebas } from "@/lib/fonts";
 import { getTeamJerseyPrimaryColor } from "@/lib/team-colors";
 import { TEAM_SHORT } from "@/lib/team-short";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
@@ -80,7 +81,7 @@ export default function PlayoffBracketChampionMarket({
   language = "ja",
 }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const isEn = language === "en";
+  const m = t(language);
 
   const rows: Row[] = useMemo(() => {
     return Object.entries(championPickCounts)
@@ -109,7 +110,7 @@ export default function PlayoffBracketChampionMarket({
           aria-hidden
         />
         <div className="relative z-1">
-          {isEn ? "No data available" : "データがありません"}
+          {m.common.noData}
         </div>
       </div>
     );
@@ -190,13 +191,7 @@ export default function PlayoffBracketChampionMarket({
             onClick={() => setExpanded((v) => !v)}
             className="flex w-full items-center justify-center py-2 text-[12px] font-semibold text-white/65 transition hover:text-white"
           >
-            {expanded
-              ? isEn
-                ? "Close"
-                : "閉じる"
-              : isEn
-                ? "Show more"
-                : "もっとみる"}
+            {expanded ? m.common.close : m.common.showMore}
           </button>
         )}
       </div>

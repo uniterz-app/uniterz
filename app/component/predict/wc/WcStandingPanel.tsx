@@ -10,15 +10,15 @@ import { getWcGroupForTeam } from "@/lib/wc/groups";
 import { getWcTeamProfile } from "@/lib/wc/teams";
 import { useWcSeasonGames } from "@/lib/wc/useWcSeasonGames";
 import { teamIdToCountryName } from "@/lib/wc/wcCountry";
-
-type Lang = "ja" | "en";
+import { t } from "@/lib/i18n/t";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   homeTeamId: string;
   awayTeamId: string;
   /** "2025-26" など。未指定なら "2025-26" にフォールバック */
   season?: string | null;
-  language: Lang;
+  language: Language;
   isMobile: boolean;
 };
 
@@ -31,7 +31,7 @@ export default function WcStandingPanel({
   language,
   isMobile,
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
   const effectiveSeason = season ?? DEFAULT_SEASON;
   const group = useMemo(() => {
     return (
@@ -56,29 +56,21 @@ export default function WcStandingPanel({
     <div className="space-y-3">
       {/* グループ順位表 */}
       <section>
-        <SectionTitle isEn={isEn}>
+        <SectionTitle>
           {group
-            ? isEn
-              ? `Group ${group.code}`
-              : `グループ ${group.code}`
-            : isEn
-              ? "Group Standings"
-              : "グループ順位"}
+            ? `${m.wc.group} ${group.code}`
+            : m.predict.groupStandings}
         </SectionTitle>
 
         {!group ? (
-          <EmptyNote isEn={isEn}>
-            {isEn
-              ? "This match is not part of a defined group stage."
-              : "この試合はグループステージ対象外です。"}
+          <EmptyNote>
+            {m.predict.standingsNotAvailable}
           </EmptyNote>
         ) : loading || rows == null ? (
           <SkeletonTable isMobile={isMobile} />
         ) : error ? (
-          <EmptyNote isEn={isEn}>
-            {isEn
-              ? "Failed to load standings."
-              : "順位表の取得に失敗しました。"}
+          <EmptyNote>
+            {m.predict.standingsLoadFailed}
           </EmptyNote>
         ) : (
           <StandingsTable
@@ -92,8 +84,8 @@ export default function WcStandingPanel({
 
       {/* FIFA ランク比較 */}
       <section>
-        <SectionTitle isEn={isEn}>
-          {isEn ? "FIFA World Ranking" : "FIFA ランキング"}
+        <SectionTitle>
+          {m.predict.fifaRanking}
         </SectionTitle>
         <FifaRankCompare
           homeTeamId={homeTeamId}
@@ -109,7 +101,6 @@ function SectionTitle({
   children,
 }: {
   children: React.ReactNode;
-  isEn: boolean;
 }) {
   return (
     <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
@@ -122,7 +113,6 @@ function EmptyNote({
   children,
 }: {
   children: React.ReactNode;
-  isEn: boolean;
 }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/3 px-3 py-3 text-[12px] text-white/65">
@@ -139,10 +129,10 @@ function StandingsTable({
 }: {
   rows: WcStandingRow[];
   highlightSet: Set<string>;
-  language: Lang;
+  language: Language;
   isMobile: boolean;
 }) {
-  const isEn = language === "en";
+  const m = t(language);
   return (
     <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.025]">
       <table className="w-full table-fixed border-collapse text-[12px] text-white/85">
@@ -159,7 +149,7 @@ function StandingsTable({
         <thead>
           <tr className="border-b border-white/10 bg-white/[0.02] text-[10px] font-bold uppercase tracking-[0.12em] text-white/50">
             <th className="px-1.5 py-1.5 text-left">#</th>
-            <th className="px-1 py-1.5 text-left">{isEn ? "Team" : "チーム"}</th>
+            <th className="px-1 py-1.5 text-left">{m.predict.team}</th>
             <th className="px-0.5 py-1.5 text-center">P</th>
             <th className="px-0.5 py-1.5 text-center">W</th>
             <th className="px-0.5 py-1.5 text-center">D</th>
@@ -168,7 +158,7 @@ function StandingsTable({
               <th className="px-0.5 py-1.5 text-center">GD</th>
             )}
             <th className="px-1 py-1.5 text-center font-extrabold text-white/85">
-              {isEn ? "Pts" : "勝点"}
+              {m.wc.wcPoints}
             </th>
           </tr>
         </thead>
@@ -198,7 +188,7 @@ function StandingsTable({
                         highlighted ? "text-white" : "text-white/85",
                       ].join(" ")}
                     >
-                      {teamIdToCountryName(r.teamId, language) ?? r.teamId}
+                      {teamIdToCountryName(r.teamId, language === "ja" ? "ja" : "en") ?? r.teamId}
                     </span>
                   </div>
                 </td>
@@ -266,9 +256,9 @@ function FifaRankCompare({
 }: {
   homeTeamId: string;
   awayTeamId: string;
-  language: Lang;
+  language: Language;
 }) {
-  const isEn = language === "en";
+  const m = t(language);
   const home = getWcTeamProfile(homeTeamId);
   const away = getWcTeamProfile(awayTeamId);
 
@@ -278,14 +268,14 @@ function FifaRankCompare({
         teamId={homeTeamId}
         rank={home?.fifaRank}
         prevRank={home?.fifaRankPrev}
-        sideLabel={isEn ? "HOME" : "ホーム"}
+        sideLabel={m.predict.home}
         language={language}
       />
       <FifaRankCard
         teamId={awayTeamId}
         rank={away?.fifaRank}
         prevRank={away?.fifaRankPrev}
-        sideLabel={isEn ? "AWAY" : "アウェイ"}
+        sideLabel={m.predict.away}
         language={language}
       />
     </div>
@@ -303,9 +293,9 @@ function FifaRankCard({
   rank: number | undefined;
   prevRank: number | undefined;
   sideLabel: string;
-  language: Lang;
+  language: Language;
 }) {
-  const name = teamIdToCountryName(teamId, language) ?? teamId;
+  const name = teamIdToCountryName(teamId, language === "ja" ? "ja" : "en") ?? teamId;
   const diff =
     rank != null && prevRank != null ? prevRank - rank : null;
 

@@ -7,6 +7,7 @@ import {
 } from "framer-motion";
 import { useId, useMemo, useRef } from "react";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   summaryCardShadowLgClass,
@@ -76,6 +77,7 @@ export default function PointsSumV3BenchmarksCard({
   data,
   language = "ja",
 }: Props) {
+  const m = t(language);
   const isEn = language === "en";
   const uid = useId().replace(/:/g, "");
   const chartWrapRef = useRef<HTMLDivElement>(null);
@@ -116,6 +118,9 @@ export default function PointsSumV3BenchmarksCard({
   const cohortLabel = isEn
     ? `${Math.max(0, Math.round(cohortUserCount)).toLocaleString()} users`
     : `${Math.max(0, Math.round(cohortUserCount)).toLocaleString()}人`;
+  const youLabel = m.profile.you;
+  const medianLabel = m.profile.median;
+  const meanLabel = m.profile.mean;
   const rankLabel =
     selfRank != null &&
     Number.isFinite(selfRank) &&
@@ -217,35 +222,19 @@ export default function PointsSumV3BenchmarksCard({
       />
       <div className="relative z-1">
         <div className="mb-2 text-sm font-semibold text-white md:text-base">
-          {isEn ? "Total points comparison" : "総合得点の比較"}
+          {m.profile.totalPointsComparison}
         </div>
 
         <p className="mb-2 text-[11px] leading-snug text-white/55 md:text-xs">
-          {isEn ? (
+          <span className="text-white/70">{m.profile.cohort}: </span>
+          {cohortLabel}
+          {rankLabel ? (
             <>
-              <span className="text-white/70">Cohort: </span>
-              {cohortLabel}
-              {rankLabel ? (
-                <>
-                  <span className="mx-1.5 text-white/25">·</span>
-                  <span className="text-white/70">Your rank: </span>
-                  {rankLabel}
-                </>
-              ) : null}
+              <span className="mx-1.5 text-white/25">·</span>
+              <span className="text-white/70">{m.profile.yourRank}: </span>
+              {rankLabel}
             </>
-          ) : (
-            <>
-              <span className="text-white/70">母集団: </span>
-              {cohortLabel}
-              {rankLabel ? (
-                <>
-                  <span className="mx-1.5 text-white/25">·</span>
-                  <span className="text-white/70">あなたの順位: </span>
-                  {rankLabel}
-                </>
-              ) : null}
-            </>
-          )}
+          ) : null}
         </p>
 
         <div ref={chartWrapRef} className="w-full overflow-x-auto">
@@ -253,11 +242,7 @@ export default function PointsSumV3BenchmarksCard({
             viewBox={`0 0 ${CHART_W} ${CHART_H}`}
             className="mx-auto block h-auto w-full max-w-[328px]"
             role="img"
-            aria-label={
-              isEn
-                ? "Total points comparison versus monthly benchmarks"
-                : "総合得点の比較（月次の基準線）"
-            }
+            aria-label={m.profile.totalPointsComparison}
           >
             <defs>
               <filter
@@ -290,7 +275,7 @@ export default function PointsSumV3BenchmarksCard({
                 ease: FLOW_EASE,
               }}
             >
-              {isEn ? "Total pts" : "合計点（pts）"}
+              {m.profile.totalPtsLabel}
             </motion.text>
 
             {/* 縦軸（下→上） */}
@@ -493,9 +478,7 @@ export default function PointsSumV3BenchmarksCard({
         </motion.ul>
 
         <p className="mt-2 text-[10px] leading-relaxed text-white/45 md:text-[11px]">
-          {isEn
-            ? "All lines are monthly total points (sum of pointsV3) among users with settled posts that month. Mean = cohort average of those totals. Top 10% ≈ 90th percentile. 1st = highest total that month."
-            : "いずれも当月の総合得点の合計（pointsV3 の月内合計）です。平均はその母集団の合計の算術平均、上位10%は約90パーセンタイル、1位は当月最大の合計得点です。"}
+          {m.profile.benchmarkExplanation}
         </p>
       </div>
     </div>

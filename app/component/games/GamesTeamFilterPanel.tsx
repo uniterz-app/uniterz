@@ -8,6 +8,8 @@ import cn from "clsx";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
+import { t } from "@/lib/i18n/t";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   teams: ScheduleTeamOption[];
@@ -24,7 +26,7 @@ type Props = {
   /** チーム・点差・対決モードをまとめてクリア */
   onClearAllFilters: () => void;
   dense?: boolean;
-  isEn: boolean;
+  language: Language;
   layoutMobile: boolean;
 };
 
@@ -52,9 +54,10 @@ export default function GamesTeamFilterPanel({
   onMarginMinMaxChange,
   onClearAllFilters,
   dense = false,
-  isEn,
+  language,
   layoutMobile,
 }: Props) {
+  const m = t(language);
   const reduceMotion = useReducedMotion();
   const tabFont = bracketMarketTeamTypography(layoutMobile);
   /** モバイルで number/search 入力にフォーカスしたとき、16px 未満だと iOS がページを拡大するのを防ぐ */
@@ -131,32 +134,32 @@ export default function GamesTeamFilterPanel({
 
   const activeCount = selectedIds.length;
   const marginFilterActive = marginMin != null || marginMax != null;
-  const labelShort = isEn ? "Filter" : "絞り込み";
+  const labelShort = m.games.filter;
 
   const filterHelpText = useMemo(() => {
     if (activeCount === 0) {
-      return isEn
-        ? "Team filter is optional—you can use only the score margin below. Up to 2 teams if you want. Empty min/max side = no bound on that side. Scheduled games stay visible."
-        : "チームは選ばなくても、下の点差だけで絞れます（任意で最大2チーム）。点差は上下どちらか空欄ならその側は制限なし。未開始の試合はそのまま表示されます。";
+      return language === "ja"
+        ? "チームは選ばなくても、下の点差だけで絞れます（任意で最大2チーム）。点差は上下どちらか空欄ならその側は制限なし。未開始の試合はそのまま表示されます。"
+        : "Team filter is optional—you can use only the score margin below. Up to 2 teams if you want. Empty min/max side = no bound on that side. Scheduled games stay visible.";
     }
     if (activeCount === 1) {
       const n = teams.find((t) => t.id === selectedIds[0])?.name ?? selectedIds[0];
-      return isEn
-        ? `Showing games that include ${n}.`
-        : `「${n}」が出る試合を表示しています。`;
+      return language === "ja"
+        ? `「${n}」が出る試合を表示しています。`
+        : `Showing games that include ${n}.`;
     }
     const [id1, id2] = selectedIds;
     const n1 = teams.find((t) => t.id === id1)?.name ?? id1;
     const n2 = teams.find((t) => t.id === id2)?.name ?? id2;
     if (matchMode === "h2h") {
-      return isEn
-        ? `Showing only games between ${n1} and ${n2}.`
-        : `「${n1}」対「${n2}」の試合だけを表示しています。`;
+      return language === "ja"
+        ? `「${n1}」対「${n2}」の試合だけを表示しています。`
+        : `Showing only games between ${n1} and ${n2}.`;
     }
-    return isEn
-      ? `Showing games where ${n1} or ${n2} plays—including games vs other teams.`
-      : `「${n1}」または「${n2}」のどちらかが出る試合を表示しています（他チームとの対戦も含みます）。`;
-  }, [activeCount, selectedIds, teams, matchMode, isEn]);
+    return language === "ja"
+      ? `「${n1}」または「${n2}」のどちらかが出る試合を表示しています（他チームとの対戦も含みます）。`
+      : `Showing games where ${n1} or ${n2} plays—including games vs other teams.`;
+  }, [activeCount, selectedIds, teams, matchMode, language]);
 
   const overlay = (
     <AnimatePresence>
@@ -164,7 +167,7 @@ export default function GamesTeamFilterPanel({
         <motion.button
           key="games-filter-backdrop"
           type="button"
-          aria-label={isEn ? "Close overlay" : "閉じる"}
+          aria-label={m.games.closeOverlay}
           className="fixed inset-0 bg-black/60 backdrop-blur-[2px]"
           style={{ zIndex: OVERLAY_Z }}
           initial={{ opacity: reduceMotion ? 1 : 0 }}
@@ -231,7 +234,7 @@ export default function GamesTeamFilterPanel({
                 className="text-[15px] font-bold tracking-wide text-white/95 md:text-base"
                 style={tabFont}
               >
-                {isEn ? "Filter schedule" : "試合一覧の絞り込み"}
+                {m.games.filterSchedule}
               </h2>
               <p className="mt-1 max-w-[min(100%,340px)] text-[11px] leading-relaxed text-white/45 md:text-xs">
                 {filterHelpText}
@@ -241,7 +244,7 @@ export default function GamesTeamFilterPanel({
               type="button"
               onClick={() => setOpen(false)}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.06] text-white/80 transition hover:bg-white/10"
-              aria-label={isEn ? "Close" : "閉じる"}
+              aria-label={m.common.close}
             >
               <X size={18} strokeWidth={2.2} />
             </button>
@@ -252,17 +255,17 @@ export default function GamesTeamFilterPanel({
               className="mb-2 text-[10px] font-medium uppercase tracking-wide text-white/40"
               style={tabFont}
             >
-              {isEn ? "Margin range (pts)" : "点差の幅"}
+              {m.games.marginRange}
             </p>
             <p className="mb-2 text-[10px] leading-relaxed text-white/38">
-              {isEn
-                ? "|Home − Away| must be ≥ min and ≤ max (inclusive). Example: min 8, max 12 → wins by 8–12 points."
-                : "得点差（大きい方の差）が、左の数以上かつ右の数以下の試合に絞ります（両方入れたとき）。例: 8 と 12 → 8〜12点差のみ。"}
+              {language === "ja"
+                ? "得点差（大きい方の差）が、左の数以上かつ右の数以下の試合に絞ります（両方入れたとき）。例: 8 と 12 → 8〜12点差のみ。"
+                : "|Home − Away| must be ≥ min and ≤ max (inclusive). Example: min 8, max 12 → wins by 8–12 points."}
             </p>
             <div className="flex flex-wrap items-end gap-2">
               <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
                 <span className="text-[10px] text-white/45" style={tabFont}>
-                  {isEn ? "Min" : "以上"}
+                  {m.games.marginMin}
                 </span>
                 <input
                   type="number"
@@ -283,7 +286,7 @@ export default function GamesTeamFilterPanel({
               </label>
               <label className="flex min-w-[5.5rem] flex-1 flex-col gap-1">
                 <span className="text-[10px] text-white/45" style={tabFont}>
-                  {isEn ? "Max" : "以下"}
+                  {m.games.marginMax}
                 </span>
                 <input
                   type="number"
@@ -331,7 +334,7 @@ export default function GamesTeamFilterPanel({
                 className="mb-2 text-[10px] font-medium uppercase tracking-wide text-white/40"
                 style={tabFont}
               >
-                {isEn ? "Match list scope" : "一覧の出し方"}
+                {m.games.matchListScope}
               </p>
               <div className="flex gap-1.5 rounded-xl border border-white/10 bg-black/35 p-1">
                 <button
@@ -345,7 +348,7 @@ export default function GamesTeamFilterPanel({
                   )}
                   style={tabFont}
                 >
-                  {isEn ? "Either team" : "どちらかを含む"}
+                  {m.games.eitherTeam}
                 </button>
                 <button
                   type="button"
@@ -358,7 +361,7 @@ export default function GamesTeamFilterPanel({
                   )}
                   style={tabFont}
                 >
-                  {isEn ? "Head-to-head only" : "直接対決のみ"}
+                  {m.games.h2hOnly}
                 </button>
               </div>
             </div>
@@ -374,7 +377,7 @@ export default function GamesTeamFilterPanel({
                 type="search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder={isEn ? "Search teams…" : "チーム名で検索…"}
+                placeholder={m.games.searchTeams}
                 className={cn(
                   "w-full rounded-xl border border-white/12 bg-black/40 py-2.5 pl-9 pr-3 text-white/90 outline-none ring-0 transition placeholder:text-white/35 focus:border-cyan-400/40 focus:bg-black/50",
                   filterInputTextClass,
@@ -440,7 +443,7 @@ export default function GamesTeamFilterPanel({
               })}
               {filteredTeams.length === 0 && (
                 <p className="py-8 text-center text-xs text-white/40">
-                  {isEn ? "No teams match." : "該当するチームがありません。"}
+                  {m.games.noTeamMatch}
                 </p>
               )}
             </div>
@@ -454,7 +457,7 @@ export default function GamesTeamFilterPanel({
               className="rounded-lg border border-white/12 px-3 py-2 text-xs font-medium text-white/70 transition enabled:hover:border-white/20 enabled:hover:bg-white/[0.05] disabled:opacity-35"
               style={tabFont}
             >
-              {isEn ? "Clear all" : "すべて解除"}
+              {m.games.clearAll}
             </button>
             <button
               type="button"
@@ -466,7 +469,7 @@ export default function GamesTeamFilterPanel({
               className="rounded-lg border border-cyan-400/35 bg-cyan-500/15 px-4 py-2 text-xs font-bold text-cyan-100 transition hover:bg-cyan-500/25"
               style={tabFont}
             >
-              {isEn ? "Done" : "完了"}
+              {m.common.done}
             </button>
           </div>
         </motion.div>
@@ -506,7 +509,7 @@ export default function GamesTeamFilterPanel({
             className="max-w-[5.5rem] truncate rounded-md border border-cyan-400/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-bold normal-case leading-none text-cyan-100/95"
             style={tabFont}
           >
-            {isEn ? "H2H" : "対決のみ"}
+            {m.games.h2hShort}
           </span>
         )}
         {marginFilterActive && (
@@ -521,17 +524,17 @@ export default function GamesTeamFilterPanel({
                   : `≤${marginMax}`
             }
           >
-            {isEn
+            {language === "ja"
               ? marginMin != null && marginMax != null
-                ? `${marginMin}–${marginMax}`
-                : marginMin != null
-                  ? `≥${marginMin}`
-                  : `≤${marginMax}`
-              : marginMin != null && marginMax != null
                 ? `${marginMin}〜${marginMax}`
                 : marginMin != null
                   ? `${marginMin}+`
-                  : `${marginMax}以下`}
+                  : `${marginMax}以下`
+              : marginMin != null && marginMax != null
+                ? `${marginMin}–${marginMax}`
+                : marginMin != null
+                  ? `≥${marginMin}`
+                  : `≤${marginMax}`}
           </span>
         )}
       </button>

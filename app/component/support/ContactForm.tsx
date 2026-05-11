@@ -7,6 +7,7 @@ import { Send, AlertCircle, CheckCircle2, Image as ImageIcon } from "lucide-reac
 
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import {
   CONTACT_TYPE_OPTIONS,
   type ContactType,
@@ -25,11 +26,11 @@ type ContactFormProps = {
   hideTypeSelect?: boolean;
 };
 
-const CONTACT_TYPE_OPTIONS_EN: Record<ContactType, string> = {
-  bug: "Bug report",
-  feature: "Feature request",
-  report: "Report (abuse/rule violations)",
-  other: "Other",
+const CONTACT_TYPE_KEYS: Record<ContactType, "contactTypeBug" | "contactTypeFeature" | "contactTypeReport" | "contactTypeOther"> = {
+  bug: "contactTypeBug",
+  feature: "contactTypeFeature",
+  report: "contactTypeReport",
+  other: "contactTypeOther",
 };
 
 export default function ContactForm({
@@ -42,7 +43,7 @@ export default function ContactForm({
 
   const { fUser: user, status } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   const [handle, setHandle] = useState<string | null>(null);
 
@@ -85,7 +86,7 @@ export default function ContactForm({
 
   const contactTypeOptions = CONTACT_TYPE_OPTIONS.map((o) => ({
     value: o.value,
-    label: isEn ? CONTACT_TYPE_OPTIONS_EN[o.value] : o.label,
+    label: m.support[CONTACT_TYPE_KEYS[o.value]],
   }));
 
   // -----------------------------
@@ -124,21 +125,15 @@ export default function ContactForm({
     const newErrors: Record<string, string> = {};
 
     if (!form.message.trim()) {
-      newErrors.message = isEn
-        ? "Please enter your inquiry details."
-        : "お問い合わせ内容を入力してください。";
+      newErrors.message = m.support.validationRequired;
     } else if (form.message.trim().length < 10) {
-      newErrors.message = isEn
-        ? "Please enter at least 10 characters."
-        : "10文字以上で入力してください。";
+      newErrors.message = m.support.validationMinLength;
     }
 
     if (form.email.trim()) {
       const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!pattern.test(form.email.trim())) {
-        newErrors.email = isEn
-          ? "Please enter a valid email address."
-          : "メールアドレスの形式が正しくありません。";
+        newErrors.email = m.support.validationEmailInvalid;
       }
     }
 
@@ -180,7 +175,7 @@ export default function ContactForm({
 
     } catch (err) {
       console.error(err);
-      setSubmitError(isEn ? "Failed to send. Please try again." : "送信に失敗しました。再度お試しください。");
+      setSubmitError(m.support.sendFailed);
     } finally {
       setSubmitting(false);
     }
@@ -215,10 +210,10 @@ export default function ContactForm({
           </div>
           <div className="space-y-1">
             <h2 className="text-base md:text-lg font-semibold text-emerald-200">
-              {isEn ? "Inquiry submitted" : "お問い合わせが完了しました"}
+              {m.support.sent}
             </h2>
             <p className="text-xs md:text-sm text-slate-100/80">
-              {isEn ? "Returning to your profile in a few seconds..." : "数秒後にプロフィールへ戻ります…"}
+              {m.support.returnToProfile}
             </p>
           </div>
         </div>
@@ -243,7 +238,7 @@ export default function ContactForm({
       {!hideTypeSelect && (
         <div className="space-y-1.5">
           <label className="text-xs md:text-sm text-sky-100">
-            {isEn ? "Type of inquiry" : "お問い合わせの種類"}
+            {m.support.contactType}
           </label>
 
           <select
@@ -263,13 +258,13 @@ export default function ContactForm({
       {/* メール */}
       <div className="space-y-1.5">
         <label className="text-xs md:text-sm text-sky-100">
-          {isEn ? "Email address (optional)" : "メールアドレス（任意）"}
+          {m.support.email}
         </label>
         <input
           type="email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
-          placeholder={isEn ? "If you need a reply, enter it here" : "返信が必要な場合はこちら"}
+          placeholder={m.support.emailPlaceholder}
           className="w-full rounded-xl bg-slate-900/80 border border-white/10 px-3 py-2.5 text-xs md:text-sm text-slate-50"
         />
         {errors.email && <p className="text-[11px] text-rose-300">{errors.email}</p>}
@@ -278,7 +273,7 @@ export default function ContactForm({
       {/* 内容 */}
       <div className="space-y-1.5">
         <label className="text-xs md:text-sm text-sky-100">
-          {isEn ? "Message" : "お問い合わせ内容"}
+          {m.support.message}
         </label>
         <textarea
           rows={variant === "web" ? 6 : 5}
@@ -292,7 +287,7 @@ export default function ContactForm({
       {/* 写真 */}
       <div className="space-y-1.5">
         <label className="text-xs md:text-sm text-sky-100">
-          {isEn ? "Photo (optional)" : "写真（任意）"}
+          {m.support.attachImage}
         </label>
 
         <label
@@ -300,7 +295,7 @@ export default function ContactForm({
         >
           <ImageIcon className="h-4 w-4 text-slate-300" />
           <span className="text-xs md:text-sm text-slate-300">
-            {isEn ? "Select a photo" : "写真を選択する"}
+            {m.support.attachImage}
           </span>
           <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
         </label>
@@ -323,16 +318,8 @@ export default function ContactForm({
         >
           <Send className="h-4 w-4" />
           {submitting || uploading
-            ? isEn
-              ? "Sending..."
-              : "送信中..."
-            : isEn
-              ? form.type === "feature"
-                ? "Send request"
-                : "Send inquiry"
-              : form.type === "feature"
-                ? "要望を送信する"
-                : "お問い合わせを送信する"}
+            ? m.support.sending
+            : m.support.send}
         </button>
       </div>
     </form>

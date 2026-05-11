@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import DonutChart from "./DonutChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { auth } from "@/lib/firebase";
+import { t } from "@/lib/i18n/t";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 
@@ -34,14 +35,14 @@ function buildSegments(
   awayName: string,
   homeColor: string,
   awayColor: string,
-  isEn: boolean
+  drawLabel: string
 ): Seg[] {
   if (total <= 0) return [];
   if (isSoccer) {
     return [
       { label: homeName, value: homeCount / total, color: homeColor },
       {
-        label: isEn ? "Draw" : "引き分け",
+        label: drawLabel,
         value: drawCount / total,
         color: "#9ca3af",
       },
@@ -61,7 +62,7 @@ function buildFallbackSegments(
   awayName: string,
   homeColor: string,
   awayColor: string,
-  isEn: boolean
+  drawLabel: string
 ): Seg[] {
   const h = Math.max(0, bias.homePct);
   const a = Math.max(0, bias.awayPct);
@@ -70,7 +71,7 @@ function buildFallbackSegments(
     return [
       { label: homeName, value: h / s, color: homeColor },
       {
-        label: isEn ? "Draw" : "引き分け",
+        label: drawLabel,
         value: 0,
         color: "#9ca3af",
       },
@@ -99,7 +100,7 @@ export default function GamePredictionDistribution({
     pathname.startsWith("/mobile") || pathname.startsWith("/m/");
   const teamNameTy = bracketMarketTeamTypography(layoutMobile);
   const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
   const [homeCount, setHomeCount] = useState(0);
   const [awayCount, setAwayCount] = useState(0);
   const [drawCount, setDrawCount] = useState(0);
@@ -153,7 +154,7 @@ export default function GamePredictionDistribution({
           awayName,
           homeColor,
           awayColor,
-          isEn
+          m.predict.draw
         )
       : hasFallback && fallbackMarketBias
         ? buildFallbackSegments(
@@ -163,7 +164,7 @@ export default function GamePredictionDistribution({
             awayName,
             homeColor,
             awayColor,
-            isEn
+            m.predict.draw
           )
         : [];
 
@@ -174,9 +175,7 @@ export default function GamePredictionDistribution({
         : "rounded-xl border border-white/10 p-4 text-white/70";
     return (
       <div className={emptyCls}>
-        {isEn
-          ? "No predictions for this game yet."
-          : "まだこの試合の予想がありません。"}
+        {m.common.noData}
       </div>
     );
   }
@@ -186,7 +185,7 @@ export default function GamePredictionDistribution({
       <div className="text-white">
         <div className="mb-3 flex items-center justify-center md:mb-4">
           <span className="text-sm font-semibold md:text-base">
-            {isEn ? "Market bias" : "市場の偏り"}
+            {m.predict.marketBias}
           </span>
         </div>
 
@@ -197,21 +196,19 @@ export default function GamePredictionDistribution({
               segments={segments}
               size={176}
               thickness={56}
-              ariaLabel={isEn ? "Prediction market share" : "予想の割合"}
+              ariaLabel={m.predict.predictionMarketShare}
             />
           </div>
 
           <div className="w-full max-w-[280px] space-y-3 text-sm">
             {!fromFallback ? (
               <div className="mb-1 text-center text-[11px] text-white/70">
-                {isEn ? "Total predictions: " : "総予想数："}
+                {m.predict.totalPredictions}
                 <span className={resultStatsMetricNumClass}>{total}</span>
               </div>
             ) : (
               <div className="text-center text-[10px] leading-snug text-white/55">
-                {isEn
-                  ? "No posts yet — showing list market mix."
-                  : "まだ投稿がありません。一覧の市場バイアスを表示しています。"}
+                {m.predict.marketBias}
               </div>
             )}
             {segments.map((seg, i) => (
@@ -258,7 +255,7 @@ export default function GamePredictionDistribution({
 
         <div className="space-y-3 text-sm md:space-y-4 md:text-base">
           <div className="mb-2 text-center text-xs text-white/70 md:text-left md:text-sm">
-            {isEn ? "Total predictions: " : "総分析数："}
+            {m.predict.totalAnalyses}
             <span className={resultStatsMetricNumClass}>{total}</span>
           </div>
 
@@ -301,7 +298,7 @@ export default function GamePredictionDistribution({
                 className="whitespace-nowrap font-bold"
                 style={teamNameTy}
               >
-                {isEn ? "Draw" : "引き分け"}
+                {m.predict.draw}
               </span>
               <span className={resultStatsMetricNumClass}>
                 {((drawCount / total) * 100).toFixed(1)}%

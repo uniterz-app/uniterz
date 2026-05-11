@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import {
   Gamepad2,
   BarChart3,
@@ -490,18 +491,15 @@ export default function HelpPage({ variant }: { variant: Variant }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
+  const m = t(language);
   const isEn = language === "en";
   const faqs = isEn ? faqsEn : faqsJa;
 
   return (
     <LegalPageLayout
       variant={variant}
-      title={isEn ? "Help & Guide" : "ヘルプ & ガイド"}
-      description={
-        isEn
-          ? "Uniterz is a fantasy sports game based on sports predictions. Check the basics of the game and how to read scores."
-          : "Uniterz はスポーツ予想をベースにしたファンタジーゲームです。ゲームの基本ルールやスコアの見方を確認できます。"
-      }
+      title={m.settings.helpAndGuide}
+      description={m.settings.helpDescription}
       updatedAt="2026-03-23"
     >
       <section className="space-y-4">

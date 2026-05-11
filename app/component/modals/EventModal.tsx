@@ -3,16 +3,19 @@
 
 import EventNoticeBody from "@/app/component/events/EventNoticeBody";
 import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 export default function EventModal({
   event,
   onClose,
-  isEn = false,
+  language = "ja",
 }: {
   event: EventNoticeContent;
   onClose: () => void;
-  isEn?: boolean;
+  language?: Language;
 }) {
+  const isEn = language === "en";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
       <div
@@ -54,7 +57,7 @@ export default function EventModal({
                 "linear-gradient(180deg, rgba(120,180,255,0.18), rgba(80,120,255,0.1))",
             }}
           >
-            {isEn ? "Close" : "閉じる"}
+            {t(language).common.close}
           </button>
         </div>
       </div>

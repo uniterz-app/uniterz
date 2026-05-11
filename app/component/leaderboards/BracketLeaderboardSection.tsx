@@ -25,6 +25,7 @@ import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResul
 import PlayoffFullBracketWeb from "@/app/component/predict/PlayoffFullBracketWeb";
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 
 type Props = {
@@ -59,6 +60,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
     return () => unsub();
   }, []);
   const { language } = useUserLanguage(uid);
+  const m = t(language);
 
   const [selectedRow, setSelectedRow] = useState<BracketLeaderboardRow | null>(
     null
@@ -199,9 +201,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
         {titleDisplay}
       </h1>
       <p className={["mt-1 text-[11px] text-white/60 sm:text-[12px]", jp.className].join(" ")}>
-        {language === "en"
-          ? "Bracket scores, highest first"
-          : "ブラケットの得点が高い順に表示しています"}
+        {m.leaderboard.bracketDesc}
       </p>
     </div>
   );
@@ -212,7 +212,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
         {titleBlock}
         <div className="flex items-center justify-center py-16">
           <div className="text-white/60">
-            {language === "en" ? "Loading..." : "読み込み中..."}
+            {m.common.loading}
           </div>
         </div>
       </div>
@@ -330,7 +330,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                       {bracketLoading ? (
                         <div className="flex items-center justify-center py-16">
                           <div className="text-white/60">
-                            {language === "en" ? "Loading..." : "読み込み中..."}
+                            {m.common.loading}
                           </div>
                         </div>
                       ) : playoffDisplayData ? (
@@ -351,9 +351,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                               <button
                                 type="button"
                                 onClick={closeDetail}
-                                aria-label={
-                                  language === "en" ? "Close" : "閉じる"
-                                }
+                                aria-label={m.common.close}
                                 className={[
                                   "inline-flex items-center justify-center rounded-full border-2 border-white",
                                   "bg-black/50 p-2.5 text-white",
@@ -372,9 +370,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                         </>
                       ) : (
                         <div className="py-16 text-center text-white/60">
-                          {language === "en"
-                            ? "Couldn't load the bracket"
-                            : "ブラケットを読み込めませんでした"}
+                          {m.leaderboard.bracketLoadError}
                         </div>
                       )}
                     </div>
@@ -384,7 +380,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                     <button
                       type="button"
                       onClick={closeDetail}
-                      aria-label={language === "en" ? "Close" : "閉じる"}
+                      aria-label={m.common.close}
                       className={[
                         "pointer-events-auto fixed z-100000 inline-flex items-center justify-center",
                         "rounded-full border-2 border-white bg-black/45 p-4 text-white",

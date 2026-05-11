@@ -1,27 +1,29 @@
 "use client";
 
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   round: PlayoffRoundKey;
   onChange: (round: PlayoffRoundKey) => void;
   isMobile?: boolean;
-  isEn?: boolean;
+  language?: Language;
 };
 
-const ITEMS: Array<{ key: PlayoffRoundKey; ja: string; en: string }> = [
-  { key: "overall", ja: "TOTAL", en: "TOTAL" },
-  { key: "r1", ja: "1ST", en: "1ST" },
-  { key: "r2", ja: "2ND", en: "2ND" },
-  { key: "cf", ja: "CF", en: "CF" },
-  { key: "finals", ja: "FINALS", en: "FINALS" },
+const ITEMS: Array<{ key: PlayoffRoundKey; label: string }> = [
+  { key: "overall", label: "TOTAL" },
+  { key: "r1", label: "1ST" },
+  { key: "r2", label: "2ND" },
+  { key: "cf", label: "CF" },
+  { key: "finals", label: "FINALS" },
 ];
 
 export default function PlayoffRoundTabs({
   round,
   onChange,
   isMobile = false,
-  isEn = false,
+  language = "ja",
 }: Props) {
   return (
     <div
@@ -46,7 +48,7 @@ export default function PlayoffRoundTabs({
                 : "border-white/20 bg-transparent text-white/70 hover:border-white/35 hover:text-white",
             ].join(" ")}
           >
-            {isEn ? item.en : item.ja}
+            {item.label}
           </button>
         );
       })}

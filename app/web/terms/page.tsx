@@ -4,16 +4,18 @@
 import LegalPageLayout from "@/app/component/settings/LegalPageLayout";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 
 export default function WebTermsPage() {
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
+  const m = t(language);
   const isEn = language === "en";
 
   return (
     <LegalPageLayout
       variant="web"
-      title={isEn ? "Terms of Service" : "利用規約（Terms of Service）"}
+      title={m.settings.termsOfService}
       description={
         isEn
           ? "This page sets forth the terms and conditions for using Uniterz. Please review them carefully before using the Service."

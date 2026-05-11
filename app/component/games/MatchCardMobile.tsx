@@ -21,6 +21,7 @@ import {
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import { t } from "@/lib/i18n/t";
 
 import type { League } from "@/lib/leagues";
 import { getTeamPrimaryColor, getTeamSecondaryColor } from "@/lib/team-colors";
@@ -245,8 +246,8 @@ function MatchCard({
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
-  const displayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
+  const m = t(language);
+  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
     const [navigating, setNavigating] = useState(false);
 
@@ -464,7 +465,7 @@ let center: React.ReactNode = inPredictOverlay ? (
         className="text-[10px] font-medium text-white/75 md:text-xs"
         style={teamNameFont}
       >
-        {isEn ? "Final" : "試合終了"}
+        {m.games.finalLabel}
         {finalMeta?.ot ? " (OT)" : ""}
       </div>
     </div>
@@ -512,7 +513,7 @@ let center: React.ReactNode = inPredictOverlay ? (
 ) : isLive ? (
     <LiveMatchMark
       density={dense ? "matchDense" : "matchComfortable"}
-      isEn={isEn}
+      language={language}
     />
   ) : (
     <div
@@ -537,7 +538,7 @@ let center: React.ReactNode = inPredictOverlay ? (
       >
         <LiveMatchMark
           density={dense ? "matchDense" : "matchComfortable"}
-          isEn={isEn}
+          language={language}
         />
         <div
           className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
@@ -573,7 +574,7 @@ let center: React.ReactNode = inPredictOverlay ? (
           {score.home} <span className="opacity-70">–</span> {score.away}
         </div>
         <div className="text-xs opacity-80" style={teamNameFont}>
-          {isEn ? "Final" : "試合終了"}
+          {m.games.finalLabel}
           {finalMeta?.ot ? " (OT)" : ""}
         </div>
       </div>
@@ -1380,20 +1381,12 @@ background:
   style={isPredicted ? predictedStyle : normalStyle}
 >
 {status === "final"
-  ? isEn
-    ? "Final"
-    : "試合終了"
+  ? m.games.finalLabel
   : isGameStarted
-  ? isEn
-    ? "Live"
-    : "試合中"
+  ? m.games.live
   : isPredicted
-  ? isEn
-    ? "Predicted"
-    : "予想済み"
-  : isEn
-  ? "Predict"
-  : "予想をする"}
+  ? m.games.predicted
+  : m.games.predict}
 </button>
         </motion.div>
       )}

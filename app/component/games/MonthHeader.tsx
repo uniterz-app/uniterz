@@ -3,6 +3,7 @@
 
 import React, { useCallback, useRef } from "react";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   month: Date | null;
@@ -21,7 +22,7 @@ type Props = {
   centerDisabled?: boolean;
   className?: string;
   timeZone: string;
-  isEn: boolean;
+  language: Language;
 };
 
 export default function MonthHeader({
@@ -36,7 +37,7 @@ export default function MonthHeader({
   centerDisabled = false,
   className,
   timeZone,
-  isEn,
+  language,
 }: Props) {
   if (!month) {
     return (
@@ -117,9 +118,9 @@ export default function MonthHeader({
         aria-disabled={centerDisabledCombined}
         title={
           onCenterDoubleClick
-            ? isEn
-              ? "Double-tap to jump to the game day for today"
-              : "ダブルタップで当日の試合日へ"
+            ? language === "ja"
+              ? "ダブルタップで当日の試合日へ"
+              : "Double-tap to jump to the game day for today"
             : undefined
         }
         className={[
@@ -129,13 +130,13 @@ export default function MonthHeader({
             : "text-white hover:text-white/85",
         ].join(" ")}
       >
-        {isEn ? (
-          <span className={resultStatsMetricNumClass}>{enMonthLabel}</span>
-        ) : (
+        {language === "ja" ? (
           <>
             <span className={resultStatsMetricNumClass}>{y}</span>年{" "}
             <span className={resultStatsMetricNumClass}>{m}</span>月
           </>
+        ) : (
+          <span className={resultStatsMetricNumClass}>{enMonthLabel}</span>
         )}
       </button>
 

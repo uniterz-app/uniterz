@@ -22,6 +22,7 @@ import {
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import { t } from "@/lib/i18n/t";
 
 import type { League } from "@/lib/leagues";
 import {
@@ -250,8 +251,8 @@ function MatchCard({
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
-  const displayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
+  const m = t(language);
+  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
     const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
@@ -485,7 +486,7 @@ let center: React.ReactNode = inPredictOverlay ? (
         className="text-[10px] font-medium text-white/75 md:text-xs"
         style={teamNameFont}
       >
-        {isEn ? "Final" : "試合終了"}
+        {m.games.finalLabel}
         {finalMeta?.ot ? " (OT)" : ""}
       </div>
     </div>
@@ -533,7 +534,7 @@ let center: React.ReactNode = inPredictOverlay ? (
 ) : isLive ? (
     <LiveMatchMark
       density={dense ? "matchDense" : "matchComfortable"}
-      isEn={isEn}
+      language={language}
     />
   ) : (
     <div
@@ -558,7 +559,7 @@ let center: React.ReactNode = inPredictOverlay ? (
       >
         <LiveMatchMark
           density={dense ? "matchDense" : "matchComfortable"}
-          isEn={isEn}
+          language={language}
         />
         <div
           className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
@@ -594,7 +595,7 @@ let center: React.ReactNode = inPredictOverlay ? (
           {score.home} <span className="opacity-70">–</span> {score.away}
         </div>
         <div className="text-xs opacity-80" style={teamNameFont}>
-          {isEn ? "Final" : "試合終了"}
+          {m.games.finalLabel}
           {finalMeta?.ot ? " (OT)" : ""}
         </div>
       </div>
@@ -893,9 +894,7 @@ dense
           <motion.div
             role="button"
             tabIndex={0}
-            aria-label={
-              isEn ? "Open prediction for this game" : "この試合の予想を開く"
-            }
+            aria-label={m.games.openPrediction}
             className={[
               "absolute inset-0 z-[12] cursor-pointer touch-manipulation rounded-2xl",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
@@ -913,9 +912,7 @@ dense
         ) : (
           <Link
             href={effectiveFullCardLinkHref!}
-            aria-label={
-              isEn ? "Open this match prediction" : "この試合の予想ページへ"
-            }
+            aria-label={m.games.openMatchPrediction}
             className={[
               "absolute inset-0 z-[12] cursor-pointer touch-manipulation rounded-2xl",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
@@ -1534,20 +1531,12 @@ background:
               style={isPredicted ? predictedStyle : normalStyle}
             >
               {status === "final"
-                ? isEn
-                  ? "Final"
-                  : "試合終了"
+                ? m.games.finalLabel
                 : isGameStarted
-                  ? isEn
-                    ? "Live"
-                    : "試合中"
+                  ? m.games.live
                   : isPredicted
-                    ? isEn
-                      ? "Predicted"
-                      : "予想済み"
-                    : isEn
-                      ? "Predict"
-                      : "予想をする"}
+                    ? m.games.predicted
+                    : m.games.predict}
             </div>
           ) : (
             <button
@@ -1572,20 +1561,12 @@ background:
               style={isPredicted ? predictedStyle : normalStyle}
             >
               {status === "final"
-                ? isEn
-                  ? "Final"
-                  : "試合終了"
+                ? m.games.finalLabel
                 : isGameStarted
-                  ? isEn
-                    ? "Live"
-                    : "試合中"
+                  ? m.games.live
                   : isPredicted
-                    ? isEn
-                      ? "Predicted"
-                      : "予想済み"
-                    : isEn
-                      ? "Predict"
-                      : "予想をする"}
+                    ? m.games.predicted
+                    : m.games.predict}
             </button>
           )}
         </motion.div>

@@ -12,6 +12,8 @@ import {
   getTeamJerseySecondaryColor,
 } from "@/lib/team-colors";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import {
   isPlayoffStyleGameCard,
   type SeriesStanding,
@@ -26,7 +28,7 @@ type SideRecord = {
 
 type Props = {
   open: boolean;
-  isEn: boolean;
+  language: Language;
   league: League;
   homeName: string;
   awayName: string;
@@ -71,13 +73,13 @@ function formatKickoff(d: Date | null, timeZone: string) {
 
 function formatRecordLine(
   r: SideRecord | undefined,
-  isEn: boolean
+  language: Language
 ): string | null {
   if (!r || !Number.isFinite(r.wins) || !Number.isFinite(r.losses))
     return null;
   const core = `(${r.wins}-${r.losses})`;
   if (r.rank == null || !Number.isFinite(r.rank)) return core;
-  return isEn
+  return language === "en"
     ? `${core} :${r.rank}${ordinalEn(r.rank)}`
     : `${core}（${r.rank}位）`;
 }
@@ -86,9 +88,10 @@ function formatRecordLine(
 function scoreboardTeamLabel(
   league: League,
   rawName: string,
-  isEn: boolean
+  language: Language
 ): string {
   const lg = normalizeLeague(league);
+  const isEn = language === "en";
   if (lg !== "nba" && lg !== "bj" && lg !== "j1" && lg !== "pl") {
     const s = rawName.trim();
     return isEn ? s.toUpperCase() : s;
@@ -101,23 +104,25 @@ function scoreboardTeamLabel(
 }
 
 function broadcastDeckTitle(
-  isEn: boolean,
+  language: Language,
   seasonPhase: Props["seasonPhase"],
   roundLabel?: string | null
 ) {
+  const isEn = language === "en";
+  const msg = t(language);
   const rl = roundLabel?.trim();
   if (rl && isPlayoffStyleGameCard(seasonPhase, rl)) {
     return isEn ? rl.toUpperCase() : rl;
   }
   if (rl) return isEn ? rl.toUpperCase() : rl;
-  if (seasonPhase === "playoffs") return isEn ? "PLAYOFFS" : "プレーオフ";
-  if (seasonPhase === "play_in") return isEn ? "PLAY-IN" : "プレーイン";
-  return isEn ? "NEXT GAME" : "次の試合";
+  if (seasonPhase === "playoffs") return msg.predict.playoffsLabel;
+  if (seasonPhase === "play_in") return msg.predict.playInLabel;
+  return msg.predict.nextGame;
 }
 
 export default function PredictNextGameModal({
   open,
-  isEn,
+  language,
   league,
   homeName,
   awayName,
@@ -134,6 +139,8 @@ export default function PredictNextGameModal({
   onYes,
   onNo,
 }: Props) {
+  const m = t(language);
+  const isEn = language === "en";
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   useEffect(() => {
@@ -176,39 +183,31 @@ export default function PredictNextGameModal({
       };
     }, [lg, homeTeamId, awayTeamId, homeColorHex, awayColorHex]);
 
-  const deckTitle = broadcastDeckTitle(isEn, seasonPhase, roundLabel);
+  const deckTitle = broadcastDeckTitle(language, seasonPhase, roundLabel);
   const kickoff = formatKickoff(startAtJst, displayTz);
-  const homeLine = formatRecordLine(homeRecord, isEn);
-  const awayLine = formatRecordLine(awayRecord, isEn);
+  const homeLine = formatRecordLine(homeRecord, language);
+  const awayLine = formatRecordLine(awayRecord, language);
   const showSeriesRow =
     seriesStanding != null &&
     isPlayoffStyleGameCard(seasonPhase, roundLabel);
 
   const { homeTitle, awayTitle } = useMemo(
     () => ({
-      homeTitle: scoreboardTeamLabel(league, homeName, isEn),
-      awayTitle: scoreboardTeamLabel(league, awayName, isEn),
+      homeTitle: scoreboardTeamLabel(league, homeName, language),
+      awayTitle: scoreboardTeamLabel(league, awayName, language),
     }),
-    [league, homeName, awayName, isEn]
+    [league, homeName, awayName, language]
   );
 
   if (!open) return null;
 
-  const t = isEn
-    ? {
-        title: "Predict the next game too?",
-        sub: "The next match in the same league on the same day.",
-        skip: "Don’t show this again",
-        yes: "Yes",
-        no: "No (back to schedule)",
-      }
-    : {
-        title: "次の試合も予想しますか？",
-        sub: "同じリーグ・同じ日の直後の試合です。",
-        skip: "今後この案内を表示しない",
-        yes: "はい",
-        no: "いいえ\n（試合一覧へ）",
-      };
+  const txt = {
+    title: m.predict.predictNextTitle,
+    sub: m.predict.predictNextSub,
+    skip: m.predict.predictNextSkip,
+    yes: m.common.yes,
+    no: m.predict.predictNextNo,
+  };
 
   const gridBgStyle: CSSProperties = {
     backgroundColor: "#080c12",
@@ -252,7 +251,7 @@ export default function PredictNextGameModal({
             id="predict-next-title"
             className="relative mb-2 text-center text-[12px] font-bold leading-tight text-white sm:mb-2.5 sm:text-[13px]"
           >
-            {t.title}
+            {txt.title}
           </h2>
           <div
             className="pointer-events-none mb-2 h-px w-full bg-linear-to-r from-transparent via-cyan-400/22 to-transparent"
@@ -367,7 +366,7 @@ export default function PredictNextGameModal({
               id="predict-next-sub"
               className="relative border-t border-white/[0.09] bg-black/25 px-2 py-1.5 text-center text-[9px] leading-snug text-white/52 sm:px-2.5 sm:text-[10px]"
             >
-              {t.sub}
+              {txt.sub}
             </p>
             <label className="relative flex cursor-pointer items-start gap-1.5 border-t border-white/[0.09] bg-black/30 px-2 py-1.5 text-left text-[9px] leading-snug text-white/78 sm:px-2.5 sm:py-2 sm:text-[10px] sm:text-white/82">
               <input
@@ -376,7 +375,7 @@ export default function PredictNextGameModal({
                 onChange={(e) => setDontShowAgain(e.target.checked)}
                 className="mt-px size-2.5 shrink-0 rounded border-white/35 bg-black/50 text-cyan-500 shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset] focus:ring-cyan-400/40 sm:size-3"
               />
-              <span>{t.skip}</span>
+              <span>{txt.skip}</span>
             </label>
             </div>
           </div>
@@ -404,7 +403,7 @@ export default function PredictNextGameModal({
                 className="pointer-events-none absolute inset-x-2 top-0 h-px rounded-full bg-linear-to-r from-transparent via-white/40 to-transparent opacity-65"
                 aria-hidden
               />
-              {t.no}
+              {txt.no}
             </button>
             <button
               type="button"
@@ -426,7 +425,7 @@ export default function PredictNextGameModal({
                 className="pointer-events-none absolute inset-x-4 top-0.5 h-[36%] rounded-full bg-linear-to-b from-white/45 to-transparent opacity-50"
                 aria-hidden
               />
-              {t.yes}
+              {txt.yes}
             </button>
           </div>
         </div>

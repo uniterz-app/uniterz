@@ -21,6 +21,7 @@ import {
   getLocalAnnouncementReadIds,
 } from "@/lib/announcements/localAnnouncementReads";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 import { mergeSyntheticEventIntoAnnouncements } from "@/lib/announcements/inAppEventAnnouncement";
 import {
@@ -40,20 +41,20 @@ type Announcement = {
   pinned?: boolean;
 };
 
-const TYPE_META: Record<string, { label: string; grad: string; glow: string }> = {
-  event:       { label: "イベント",     grad: "from-[#00E5FF] to-[#0077FF]", glow: "shadow-[0_0_22px_rgba(0,229,255,0.35)]" },
-  campaign:    { label: "キャンペーン", grad: "from-[#FF4DFF] to-[#A64DFF]", glow: "shadow-[0_0_22px_rgba(255,77,255,0.35)]" },
-  update:      { label: "アップデート", grad: "from-[#9DFF00] to-[#3DFF75]", glow: "shadow-[0_0_22px_rgba(61,255,117,0.35)]" },
-  maintenance: { label: "メンテナンス", grad: "from-[#FFC400] to-[#FF7A00]", glow: "shadow-[0_0_22px_rgba(255,122,0,0.35)]" },
-  info:        { label: "お知らせ",     grad: "from-[#9CA3AF] to-[#6B7280]", glow: "shadow-[0_0_22px_rgba(156,163,175,0.25)]" },
+const TYPE_META: Record<string, { grad: string; glow: string }> = {
+  event:       { grad: "from-[#00E5FF] to-[#0077FF]", glow: "shadow-[0_0_22px_rgba(0,229,255,0.35)]" },
+  campaign:    { grad: "from-[#FF4DFF] to-[#A64DFF]", glow: "shadow-[0_0_22px_rgba(255,77,255,0.35)]" },
+  update:      { grad: "from-[#9DFF00] to-[#3DFF75]", glow: "shadow-[0_0_22px_rgba(61,255,117,0.35)]" },
+  maintenance: { grad: "from-[#FFC400] to-[#FF7A00]", glow: "shadow-[0_0_22px_rgba(255,122,0,0.35)]" },
+  info:        { grad: "from-[#9CA3AF] to-[#6B7280]", glow: "shadow-[0_0_22px_rgba(156,163,175,0.25)]" },
 };
 
-const TYPE_LABEL_EN: Record<string, string> = {
-  event: "Event",
-  campaign: "Campaign",
-  update: "Update",
-  maintenance: "Maintenance",
-  info: "News",
+const TYPE_LABEL_KEY: Record<string, "typeEvent" | "typeCampaign" | "typeUpdate" | "typeMaintenance" | "typeInfo"> = {
+  event: "typeEvent",
+  campaign: "typeCampaign",
+  update: "typeUpdate",
+  maintenance: "typeMaintenance",
+  info: "typeInfo",
 };
 
 function formatDate(d?: Timestamp | Date | null) {
@@ -74,7 +75,7 @@ export default function AnnouncementsPage() {
   // ログインユーザー（{ fUser, status }）
   const { fUser: user, status } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   // 既読ID集合
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -145,7 +146,7 @@ export default function AnnouncementsPage() {
       {/* ヘッダー */}
       <div className="sticky top-0 z-10 backdrop-blur supports-backdrop-filter:bg-[#0B0F17]/70 border-b border-white/5">
         <h1 className="text-center text-lg font-bold py-3">
-          {isEn ? "News" : "お知らせ"}
+          {m.settings.news}
         </h1>
       </div>
 
@@ -170,7 +171,7 @@ export default function AnnouncementsPage() {
 
         {!loading && items.length === 0 && (
           <p className="text-center text-sm text-white/60 mt-10">
-            {isEn ? "No announcements." : "現在お知らせはありません"}
+            {m.settings.noAnnouncements}
           </p>
         )}
 
@@ -179,9 +180,7 @@ export default function AnnouncementsPage() {
             const src = (a.heroImageURL ?? "").trim().replace(/\s+/g, "%20");
             const typeKey = a.type ?? "info";
             const meta = TYPE_META[typeKey];
-            const typeLabel = isEn
-              ? TYPE_LABEL_EN[typeKey] ?? meta.label
-              : meta.label;
+            const typeLabel = m.settings[TYPE_LABEL_KEY[typeKey] ?? "typeInfo"];
             const unread = isUnread(a.id);
 
             return (
@@ -205,7 +204,7 @@ export default function AnnouncementsPage() {
                   {unread && (
                     <span
                       className="pointer-events-none absolute right-2 top-2 z-20 h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(0,229,255,0.8)]"
-                      aria-label={isEn ? "Unread" : "未読"}
+                      aria-label={m.settings.unread}
                     />
                   )}
 

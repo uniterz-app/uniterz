@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { useFloatingBackNavigation } from "@/lib/hooks/useFloatingBackNavigation";
+import { t } from "@/lib/i18n/t";
 
 /**
  * 丸い戻る。サイドメニューから来た遷移ではプロフィールを開きドロワーを表示する。
@@ -12,16 +13,12 @@ export default function FloatingCloseButton() {
   const { goBack, prefersSideMenuAria } = useFloatingBackNavigation();
   const { fUser } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   const ariaLabel =
     prefersSideMenuAria && fUser
-      ? isEn
-        ? "Back to side menu"
-        : "サイドメニューに戻る"
-      : isEn
-        ? "Back"
-        : "戻る";
+      ? m.common.backToSideMenu
+      : m.common.back;
 
   return (
     <button

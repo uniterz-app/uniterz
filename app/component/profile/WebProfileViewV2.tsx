@@ -91,6 +91,7 @@ import { useProfileDailyTrendChart } from "@/lib/profile/useProfileDailyTrendCha
 import { useProfilePlayoffRankTrend } from "@/lib/profile/useProfilePlayoffRankTrend";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
@@ -179,7 +180,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const upsetChanceCount = (summary as any)?.upsetChanceCount ?? 0;
   const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
 
-  const periodLabel = language === "en" ? "Playoffs" : "プレーオフ";
+  const m = t(language);
+  const periodLabel = m.profile.playoffs;
 
   const maxStreak = profile.maxStreak ?? 0;
   const currentStreak = Math.max(
@@ -511,9 +513,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           <ProAnalysisLazy />
         ) : (
           <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
-            {language === "en"
-              ? "This user isn't on the Pro plan."
-              : "対象ユーザーはPro未加入"}
+            {m.pro.upgradeToSeeAll}
           </div>
         )}
       </div>

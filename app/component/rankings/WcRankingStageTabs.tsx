@@ -2,13 +2,13 @@
 
 import { nameBebas } from "@/lib/fonts";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import type { Language } from "@/lib/i18n/language";
 
 type Props = {
   stage: WcRankingStage;
   onChange: (stage: WcRankingStage) => void;
-  /** 互換のため残す（Playoffs / Bracket タブと見た目を揃えたため未使用） */
   isMobile?: boolean;
-  isEn?: boolean;
+  language?: Language;
 };
 
 const ITEMS: Array<{ key: WcRankingStage; label: string }> = [

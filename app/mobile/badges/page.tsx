@@ -7,6 +7,7 @@ import { useUserBadges } from "@/app/component/badges/useUserBadges";
 import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 import BadgePalette from "@/app/component/badges/BadgePalette";
 
@@ -20,6 +21,7 @@ export default function MobileBadgesPage() {
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
   const { language } = useUserLanguage(uid);
+  const m = t(language);
 
   // user_badges
   const { badges: userBadges } = useUserBadges(uid);
@@ -32,7 +34,7 @@ export default function MobileBadgesPage() {
   if (status !== "ready") {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
-        {language === "en" ? "Loading..." : "読み込み中…"}
+        {m.common.loading}
       </div>
     );
   }
@@ -56,7 +58,7 @@ export default function MobileBadgesPage() {
       {/* お知らせ一覧と同様：右上フローティング戻る＋中央タイトル */}
       <div className="sticky top-0 z-10 border-b border-white/5 backdrop-blur supports-backdrop-filter:bg-[#0A1118]/70">
         <h1 className="py-3 text-center text-lg font-bold">
-          {language === "en" ? "Badge Palette" : "バッジパレット"}
+          {m.badges.badgePalette}
         </h1>
       </div>
 
@@ -65,11 +67,7 @@ export default function MobileBadgesPage() {
           badges={resolvedBadges}
           variant="mobile"
           onSelect={setSelected}
-          emptyLabel={
-            language === "en"
-              ? "No badges yet."
-              : "まだ獲得バッジがありません。"
-          }
+          emptyLabel={m.badges.noBadges}
         />
 
         {selected && (

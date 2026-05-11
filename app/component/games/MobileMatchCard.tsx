@@ -77,8 +77,7 @@ export default function MobileMatchCard(props: MatchCardProps) {
   }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
-  const displayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
+  const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
   const showPlayoffSeriesRow =
     isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
     seriesStanding != null;

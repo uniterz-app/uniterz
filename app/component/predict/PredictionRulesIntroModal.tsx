@@ -2,10 +2,12 @@
 
 import { useEffect, type ReactNode } from "react";
 import { jp } from "@/lib/fonts";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   open: boolean;
-  isEn: boolean;
+  language: Language;
   onStart: () => void;
   onCancel: () => void;
 };
@@ -100,10 +102,12 @@ function EnRulesBody() {
 
 export default function PredictionRulesIntroModal({
   open,
-  isEn,
+  language,
   onStart,
   onCancel,
 }: Props) {
+  const m = t(language);
+  const isEn = language === "en";
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -115,17 +119,11 @@ export default function PredictionRulesIntroModal({
 
   if (!open) return null;
 
-  const t = isEn
-    ? {
-        foot: "Rankings update on a schedule—see the Rankings tab.",
-        start: "Start predicting",
-        cancel: "Close",
-      }
-    : {
-        foot: "更新タイミングなどはランキング画面をご確認ください。",
-        start: "予想を始める",
-        cancel: "閉じる",
-      };
+  const ui = {
+    foot: m.predict.rulesFootNote,
+    start: m.predict.rulesStart,
+    cancel: m.common.close,
+  };
 
   return (
     <div
@@ -173,7 +171,7 @@ export default function PredictionRulesIntroModal({
           {isEn ? <EnRulesBody /> : <JaRulesBody />}
 
           <p className="mt-3 border-l-2 border-cyan-400/30 pl-2.5 text-[10px] leading-relaxed text-white/45 sm:text-[11px]">
-            {t.foot}
+            {ui.foot}
           </p>
         </div>
 
@@ -183,14 +181,14 @@ export default function PredictionRulesIntroModal({
             onClick={onStart}
             className="mb-2 w-full rounded-lg border border-cyan-400/40 bg-cyan-400 py-2 text-[11px] font-bold text-black sm:text-xs"
           >
-            {t.start}
+            {ui.start}
           </button>
           <button
             type="button"
             onClick={onCancel}
             className="w-full rounded-lg border border-white/15 py-2 text-[10px] font-medium text-white/75 sm:text-[11px]"
           >
-            {t.cancel}
+            {ui.cancel}
           </button>
         </div>
         </div>

@@ -4,6 +4,8 @@ import { useLayoutEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
+import { DATE_LOCALE } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 
 function subscribeToBody() {
@@ -54,7 +56,7 @@ export default function BadgeDetailModal({
   language = "ja",
   shine = false,
 }: BadgeDetailModalProps) {
-  const isEn = language === "en";
+  const m = t(language);
   const awardedMs = resolveAwardedMs(badge);
   const portalRoot = useDocumentBody();
 
@@ -163,9 +165,7 @@ export default function BadgeDetailModal({
 
         {awardedMs != null ? (
           <p className="mt-1 shrink-0 text-center text-[10px] leading-none text-white/40 sm:text-[11px]">
-            {isEn
-              ? `Awarded on: ${new Date(awardedMs).toLocaleDateString("en-US")}`
-              : `付与日：${new Date(awardedMs).toLocaleDateString("ja-JP")}`}
+            {`${m.badges.awardedOn}${new Date(awardedMs).toLocaleDateString(DATE_LOCALE[language])}`}
           </p>
         ) : null}
 
@@ -177,7 +177,7 @@ export default function BadgeDetailModal({
             rounded-full border border-white/20 bg-white/10 backdrop-blur-sm
             transition hover:bg-white/20 sm:h-12 sm:w-12
           "
-          aria-label={isEn ? "Back" : "戻る"}
+          aria-label={m.common.back}
         >
           <ChevronLeft
             className="h-6 w-6 text-white sm:h-6 sm:w-6"

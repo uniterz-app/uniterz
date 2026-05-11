@@ -8,6 +8,7 @@ import { doc, getDoc, Timestamp } from "firebase/firestore";
 import { isAuthStateResolved, useFirebaseUser } from "@/lib/useFirebaseUser";
 import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { ChevronLeft } from "lucide-react";
 import EventNoticeBody from "@/app/component/events/EventNoticeBody";
 import {
@@ -16,20 +17,20 @@ import {
 } from "@/lib/announcements/inAppEventAnnouncement";
 
 /* 一覧と同じマッピング */
-const TYPE_META: Record<string, { label: string; grad: string; glow: string }> = {
-  event:       { label: "イベント",     grad: "from-[#00E5FF] to-[#0077FF]", glow: "shadow-[0_0_22px_rgba(0,229,255,0.35)]" },
-  campaign:    { label: "キャンペーン", grad: "from-[#FF4DFF] to-[#A64DFF]", glow: "shadow-[0_0_22px_rgba(255,77,255,0.35)]" },
-  update:      { label: "アップデート", grad: "from-[#9DFF00] to-[#3DFF75]", glow: "shadow-[0_0_22px_rgba(61,255,117,0.35)]" },
-  maintenance: { label: "メンテナンス", grad: "from-[#FFC400] to-[#FF7A00]", glow: "shadow-[0_0_22px_rgba(255,122,0,0.35)]" },
-  info:        { label: "お知らせ",     grad: "from-[#9CA3AF] to-[#6B7280]", glow: "shadow-[0_0_22px_rgba(156,163,175,0.25)]" },
+const TYPE_META: Record<string, { grad: string; glow: string }> = {
+  event:       { grad: "from-[#00E5FF] to-[#0077FF]", glow: "shadow-[0_0_22px_rgba(0,229,255,0.35)]" },
+  campaign:    { grad: "from-[#FF4DFF] to-[#A64DFF]", glow: "shadow-[0_0_22px_rgba(255,77,255,0.35)]" },
+  update:      { grad: "from-[#9DFF00] to-[#3DFF75]", glow: "shadow-[0_0_22px_rgba(61,255,117,0.35)]" },
+  maintenance: { grad: "from-[#FFC400] to-[#FF7A00]", glow: "shadow-[0_0_22px_rgba(255,122,0,0.35)]" },
+  info:        { grad: "from-[#9CA3AF] to-[#6B7280]", glow: "shadow-[0_0_22px_rgba(156,163,175,0.25)]" },
 };
 
-const TYPE_LABEL_EN: Record<string, string> = {
-  event: "Event",
-  campaign: "Campaign",
-  update: "Update",
-  maintenance: "Maintenance",
-  info: "News",
+const TYPE_LABEL_KEY: Record<string, "typeEvent" | "typeCampaign" | "typeUpdate" | "typeMaintenance" | "typeInfo"> = {
+  event: "typeEvent",
+  campaign: "typeCampaign",
+  update: "typeUpdate",
+  maintenance: "typeMaintenance",
+  info: "typeInfo",
 };
 
 type Ann = {
@@ -56,7 +57,7 @@ export default function WebAnnouncementDetailPage() {
   const router = useRouter();
   const { fUser: user, status } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   const [a, setA] = useState<Ann | null>(null);
   /** Firestore に無くアプリ内イベントで表示している */
@@ -104,7 +105,7 @@ export default function WebAnnouncementDetailPage() {
     return (
       <div className="min-h-screen bg-[#0B0F17] text-white">
         <div className="mx-auto max-w-[840px] px-5 py-10">
-          <p className="text-white/60">{isEn ? "Loading..." : "読み込み中..."}</p>
+          <p className="text-white/60">{m.common.loading}</p>
         </div>
       </div>
     );
@@ -122,7 +123,7 @@ export default function WebAnnouncementDetailPage() {
       <div className="min-h-screen bg-[#0B0F17] text-white">
         <div className="mx-auto max-w-[840px] px-5 py-10">
           <p className="text-white/60">
-            {isEn ? "This announcement was not found." : "お知らせが見つかりません。"}
+            {m.settings.announcementNotFound}
           </p>
         </div>
       </div>
@@ -131,12 +132,12 @@ export default function WebAnnouncementDetailPage() {
 
   const typeKey = syntheticEvent ? "event" : (a?.type ?? "info");
   const meta = TYPE_META[typeKey];
-  const typeLabel = isEn ? TYPE_LABEL_EN[typeKey] ?? meta.label : meta.label;
+  const typeLabel = m.settings[TYPE_LABEL_KEY[typeKey] ?? "typeInfo"];
   const postedAtTs = syntheticContent
     ? Timestamp.fromMillis(syntheticContent.postedAtMs)
     : a?.postedAt;
   const title = syntheticContent
-    ? (isEn && syntheticContent.titleEn
+    ? (language === "en" && syntheticContent.titleEn
         ? syntheticContent.titleEn
         : syntheticContent.title)
     : a!.title;
@@ -163,11 +164,11 @@ export default function WebAnnouncementDetailPage() {
             <button
               onClick={() => router.back()}
               className="p-1.5 rounded-full bg-white/10 hover:bg-white/15 active:scale-95"
-              aria-label={isEn ? "Back" : "戻る"}
+              aria-label={m.common.back}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-bold">{isEn ? "News" : "お知らせ"}</h1>
+            <h1 className="text-lg font-bold">{m.settings.news}</h1>
           </div>
         </div>
       </div>
@@ -189,7 +190,7 @@ export default function WebAnnouncementDetailPage() {
               <EventNoticeBody
                 event={syntheticContent}
                 heroHeight={320}
-                isEn={isEn}
+                isEn={language === "en"}
               />
             </div>
           </>

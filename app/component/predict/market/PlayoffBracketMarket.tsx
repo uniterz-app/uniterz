@@ -13,6 +13,7 @@ import PlayoffBracketChampionMarket from "@/app/component/predict/market/Playoff
 import PlayoffBracketTeamProgressMarket from "@/app/component/predict/market/PlayoffBracketTeamProgressMarket";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { nameBebas } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 
@@ -71,7 +72,7 @@ export default function PlayoffBracketMarket({
   }, []);
 
   const { language } = useUserLanguage(uid);
-  const isEn = language === "en";
+  const m = t(language);
 
   useEffect(() => {
     async function load() {
@@ -101,7 +102,7 @@ export default function PlayoffBracketMarket({
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-5xl text-white">
-        {isEn ? "Loading..." : "読み込み中..."}
+        {m.common.loading}
       </div>
     );
   }
@@ -136,7 +137,7 @@ export default function PlayoffBracketMarket({
         <div className="mb-2 flex items-center justify-center gap-2">
           <Trophy className="h-5 w-5 text-yellow-300" />
           <h2 className="text-lg font-bold">
-            {isEn ? "Champion Predictions" : "優勝予想"}
+            {m.predict.championPredictions}
           </h2>
         </div>
 
@@ -151,7 +152,7 @@ export default function PlayoffBracketMarket({
         <div className="flex items-center justify-center gap-2">
           <TrendingUp className="h-5 w-5 text-emerald-300" />
           <h2 className="text-lg font-bold">
-            {isEn ? "Advancement Predictions" : "勝ち上がり予想"}
+            {m.predict.advancementPredictions}
           </h2>
         </div>
 
@@ -167,7 +168,7 @@ export default function PlayoffBracketMarket({
         <div className="flex items-center justify-center gap-2">
           <Swords className="h-5 w-5 text-cyan-300" />
           <h2 className="text-lg font-bold">
-            {isEn ? "Round 1 Predictions" : "1stラウンド予想"}
+            {m.predict.round1Predictions}
           </h2>
         </div>
 

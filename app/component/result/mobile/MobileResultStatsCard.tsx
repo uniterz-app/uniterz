@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { LineChart } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
@@ -42,7 +43,7 @@ function MobileResultStatsCard({
   language = "ja",
   inOverlay = false,
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
 
   const fmt1 = (v: number) => (Number.isFinite(v) ? v.toFixed(1) : "--");
 
@@ -85,10 +86,8 @@ function MobileResultStatsCard({
       rows: [
         {
           key: "scorePrecision",
-          label: isEn ? "Score Precision" : "スコア精度",
-          desc: isEn
-            ? "How close your predicted score is to the actual score (0–10 per match). Higher means you predicted the score more accurately."
-            : "予想スコアが実スコアにどれだけ近いか（1試合 0〜10）。高いほどスコアまで当てている。",
+          label: m.results.scorePrecisionLabel,
+          desc: m.results.scorePrecisionDesc,
           value: scorePrecision,
           max: 10,
           barMax: 10,
@@ -96,10 +95,8 @@ function MobileResultStatsCard({
         },
         {
           key: "upsetPoints",
-          label: isEn ? "Upset Points" : "アップセット",
-          desc: isEn
-            ? "A separate metric (0–10 per match) awarded only when the match is an upset and you correctly predicted it with a minority pick. If conditions aren't met, it's 0."
-            : "その試合がアップセット（波乱）だったうえで、あなたが少数派予想で的中したときだけ加点される別指標（1試合 0〜10）。条件を満たさない場合は 0。",
+          label: m.results.upsetPointsLabel,
+          desc: m.results.upsetPointsDesc,
           value: upsetPoints,
           max: 10,
           barMax: 10,
@@ -110,10 +107,8 @@ function MobileResultStatsCard({
         },
         {
           key: "pointsV3",
-          label: isEn ? "Total Points" : "総合得点",
-          desc: isEn
-            ? "Overall score: base points determined by correct winner, closeness of the margin, and closeness of total points, plus the upset bonus and win-streak bonus."
-            : "勝者的中・点差の近さ・合計得点の近さで決まる基本点に、アップセットボーナスと連勝ボーナスを加えた包括スコア。",
+          label: m.results.totalPointsLabel,
+          desc: m.results.totalPointsDesc,
           value: pointsV3,
           /** バーは10点満点表示（ボーナス込みで実数値は10超えうる → バーは満タンで頭打ち） */
           barMax: 10,
@@ -121,7 +116,7 @@ function MobileResultStatsCard({
         },
       ],
     };
-  }, [post.stats, isEn]);
+  }, [post.stats, m]);
 
   const barAnimateMs = 480;
   const barStaggerMs = 80;
@@ -177,14 +172,14 @@ function MobileResultStatsCard({
       <div className="mt-2.5 rounded-lg border border-white/8 bg-white/4 px-2.5 py-1.5">
         <p className="text-center text-[10px] font-medium leading-snug text-white/75">
           <span className="text-white/90">
-            {isEn ? "Base points" : "基本点"}{" "}
+            {m.results.basePoints}{" "}
             <span className={resultStatsMetricNumClass}>{fmt1(basePoints)}</span>
           </span>
           {showUpsetBonus && (
             <>
               <span className="text-white/35"> + </span>
               <span className="text-white/90">
-                {isEn ? "Upset bonus" : "UPSETボーナス"}{" "}
+                {m.results.upsetBonusLabel}{" "}
                 <span className={resultStatsMetricNumClass}>
                   {fmt1(upsetBonus)}
                 </span>
@@ -195,7 +190,7 @@ function MobileResultStatsCard({
             <>
               <span className="text-white/35"> + </span>
               <span className="text-white/90">
-                {isEn ? "Win streak bonus" : "連勝ボーナス"}{" "}
+                {m.results.streakBonusLabel}{" "}
                 <span className={resultStatsMetricNumClass}>
                   {fmt1(streakBonus)}
                 </span>
@@ -223,9 +218,7 @@ function MobileResultStatsCard({
           href="/mobile/help"
           className="text-[11px] text-cyan-300 underline decoration-cyan-400/60 underline-offset-2 hover:text-cyan-200"
         >
-          {isEn
-            ? "See scoring logic on the Help page"
-            : "得点の計算方法はヘルプページを参照"}
+          {m.results.helpPageLink}
         </Link>
       </div>
       </div>

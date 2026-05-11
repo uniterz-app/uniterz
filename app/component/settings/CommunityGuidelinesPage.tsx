@@ -5,6 +5,7 @@ import Image from "next/image";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { useFloatingBackNavigation } from "@/lib/hooks/useFloatingBackNavigation";
 import { ChevronLeft } from "lucide-react";
 
@@ -18,16 +19,13 @@ export default function CommunityGuidelinesPage({
   const isWeb = variant === "web";
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
+  const m = t(language);
   const isEn = language === "en";
   const { goBack, prefersSideMenuAria } = useFloatingBackNavigation();
   const backAria =
     prefersSideMenuAria && user
-      ? isEn
-        ? "Back to side menu"
-        : "サイドメニューに戻る"
-      : isEn
-        ? "Back"
-        : "戻る";
+      ? m.common.backToSideMenu
+      : m.common.back;
   const updatedAt = "2026-03-23";
 
   return (
@@ -61,7 +59,7 @@ export default function CommunityGuidelinesPage({
             </div>
             <div className="flex flex-col">
               <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">
-                {isEn ? "Community Guidelines" : "コミュニティガイドライン"}
+                {m.settings.communityGuidelines}
               </h1>
               <p className="mt-1 text-xs text-white/60">
                 {isEn
@@ -69,7 +67,7 @@ export default function CommunityGuidelinesPage({
                   : "スポーツ予想ファンタジーゲームを健全に楽しむために"}
               </p>
               <p className="mt-1 text-xs text-white/50">
-                {isEn ? `Last updated: ${updatedAt}` : `最終更新日: ${updatedAt}`}
+                {m.settings.lastUpdated}{updatedAt}
               </p>
             </div>
           </div>

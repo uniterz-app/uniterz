@@ -7,6 +7,7 @@ import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
@@ -50,7 +51,7 @@ function ScorePrecisionCard({
   className = "",
   language = "ja",
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
 
@@ -96,9 +97,9 @@ function ScorePrecisionCard({
 
   const bar01 = clamp01(avg / 10);
 
-  const tooltipMsg = isEn
-    ? "Evaluate how close your predicted score is to the actual score on a 0–10 scale, summed within the selected period. The bar below visualizes your per-match average (0–10)."
-    : SCORE_PRECISION_TOOLTIP;
+  const tooltipMsg = language === "ja"
+    ? SCORE_PRECISION_TOOLTIP
+    : "Evaluate how close your predicted score is to the actual score on a 0–10 scale, summed within the selected period. The bar below visualizes your per-match average (0–10).";
   const rankText =
     totalPrecisionRank != null ? ` / ${formatOrdinal(totalPrecisionRank)}` : "";
   const rankClass =
@@ -131,13 +132,13 @@ function ScorePrecisionCard({
             <Gauge className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
           </div>
 
-          <span>{isEn ? "Score Precision" : "スコア精度"}</span>
+          <span>{m.profile.scorePrecision}</span>
 
           <button
             type="button"
             className="ml-0.5 text-[9px] text-white/60 hover:text-white/80 md:ml-1 md:text-[16px]"
             onClick={(e) => openTooltip(e, tooltipMsg)}
-            aria-label={isEn ? "Score Precision description" : "スコア精度の説明"}
+            aria-label={`${m.profile.scorePrecision} ⓘ`}
           >
             ⓘ
           </button>

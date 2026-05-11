@@ -32,6 +32,7 @@ import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import {
   TIMEZONE_ET,
   TIMEZONE_JST,
@@ -117,9 +118,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
-  const dayTimeZone = isEn ? TIMEZONE_ET : TIMEZONE_JST;
-  const langUi: "ja" | "en" = isEn ? "en" : "ja";
+  const m = t(language);
+  const dayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
   /* =========================
      League
@@ -580,17 +580,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const scheduleEmptyHint =
     hasAnyListFilter && !listLoading && filteredGames.length === 0
-      ? isEn
-        ? teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
-          ? "No head-to-head between these teams on this date."
-          : teamFilterIds.length > 0
-            ? "No games for the selected team(s) on this date."
-            : "No games match the score margin range on this date."
-        : teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
-          ? "この日は、この2チームの直接対決はありません。"
-          : teamFilterIds.length > 0
-            ? "この日は、選択したチームの試合がありません。"
-            : "この日付では、指定した点差の範囲に合う試合はありません。"
+      ? teamFilterIds.length === 2 && teamFilterMatchMode === "h2h"
+        ? m.games.noH2hOnDate
+        : teamFilterIds.length > 0
+          ? m.games.noTeamGamesOnDate
+          : m.games.noMarginGamesOnDate
       : null;
 
   /* =========================
@@ -805,7 +799,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           type="button"
           onClick={() => setGamesDrawerOpen(true)}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
-          aria-label={isEn ? "Open menu" : "メニューを開く"}
+          aria-label={m.games.openMenu}
         >
           <Menu className="h-5 w-5" strokeWidth={2.25} />
         </button>
@@ -843,7 +837,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               onMarginMinMaxChange={setMarginMinMax}
               onClearAllFilters={clearAllTeamAndMarginFilters}
               dense={dense}
-              isEn={isEn}
+              language={language}
               layoutMobile={isMobile}
             />
           </motion.div>
@@ -912,7 +906,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         navBusy={adjacentMonthHasGames.loading}
         centerDisabled={!gameDaysForStrip.length}
         timeZone={dayTimeZone}
-        isEn={isEn}
+        language={language}
         className="mb-0"
       />
       </motion.div>
@@ -957,7 +951,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         autoScrollOnInit={false}
         snapSelectOnScroll={isMobile}
         timeZone={dayTimeZone}
-        a11yLocale={isEn ? "en-US" : "ja-JP"}
+        a11yLocale={language === "en" ? "en-US" : "ja-JP"}
         wideItemGap={isMobile}
         compactWebGap={!isMobile}
       />
@@ -1022,7 +1016,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       >
         <GamesDrawerMenu
           variant={isMobile ? "mobile" : "web"}
-          language={langUi}
+          language={language}
           league={league}
           onSelectNba={() => {
             didInitLeague.current = true;

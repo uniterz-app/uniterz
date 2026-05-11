@@ -6,6 +6,7 @@ import { Suspense, useEffect, useLayoutEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { db } from "@/lib/firebase";
@@ -35,7 +36,7 @@ export default function Page() {
   const { id } = useParams<{ id: string }>();
   const { fUser, status } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   const [profile, setProfile] = useState<{ displayName?: string; photoURL?: string } | null>(null);
   const [gameProps, setGameProps] = useState<GameProps | null>(null);
@@ -113,7 +114,7 @@ export default function Page() {
     name:
       (profile?.displayName && profile.displayName.trim()) ||
       fUser.displayName ||
-      (isEn ? "User" : "ユーザー"),
+      m.results.user,
     avatarUrl:
       (profile?.photoURL && profile.photoURL.trim()) ||
       fUser.photoURL ||

@@ -21,6 +21,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -122,7 +123,7 @@ function getMobileTeamName(
 /** Web の ResultMatchHeader と同じ配色（モバイルは下の JSX で文字・アイコンサイズのみ調整） */
 function getStreakBadge(
   activeWinStreak: unknown,
-  isEn: boolean
+  language: Language
 ): {
   label: string;
   className: string;
@@ -135,9 +136,12 @@ function getStreakBadge(
 
   if (v < 3) return null;
 
+  const m = t(language);
+  const label = language === "en" ? `${v} ${m.results.winStreakLabel}` : `${v}${m.results.winStreakLabel}`;
+
   if (v >= 7) {
     return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      label,
       className:
         "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
       iconClassName: "text-yellow-200",
@@ -146,7 +150,7 @@ function getStreakBadge(
 
   if (v >= 5) {
     return {
-      label: isEn ? `${v} Win Streak` : `${v}連勝`,
+      label,
       className:
         "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
       iconClassName: "text-yellow-100",
@@ -154,7 +158,7 @@ function getStreakBadge(
   }
 
   return {
-    label: isEn ? `${v} Win Streak` : `${v}連勝`,
+    label,
     className:
       "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
     iconClassName: "text-red-500",
@@ -170,7 +174,7 @@ export default function MobileResultMatchHeader({
 }: Props) {
   const teamNameFont = bracketMarketTeamTypography(true);
   const normalizedLeague = normalizeLeague(post.league);
-  const isEn = language === "en";
+  const m = t(language);
   const Icon =
     normalizedLeague === "nba" || normalizedLeague === "bj" ? Jersey : Soccer;
 
@@ -229,7 +233,7 @@ export default function MobileResultMatchHeader({
 
   const activeWinStreak =
     toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getStreakBadge(activeWinStreak, isEn);
+  const streakBadge = getStreakBadge(activeWinStreak, language);
 
   let badge: "hit" | "upset" | "miss" | "streak" | null = null;
   if ((post.stats as any)?.upsetHit) badge = "upset";
@@ -345,7 +349,7 @@ export default function MobileResultMatchHeader({
           <Link
             href={predictEditHref}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100"
-            aria-label={isEn ? "Edit prediction" : "予想を修正"}
+            aria-label={m.results.editPredictionAriaLabel}
           >
             <Pencil className="h-3 w-3" aria-hidden />
           </Link>

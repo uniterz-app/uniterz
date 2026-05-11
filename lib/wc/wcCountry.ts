@@ -147,7 +147,7 @@ export function teamIdToFlagClass(
  */
 export function teamIdToCountryName(
   teamId: string | null | undefined,
-  language: "ja" | "en"
+  language: string
 ): string | null {
   const c = teamIdToWcCountry(teamId);
   if (!c) return null;

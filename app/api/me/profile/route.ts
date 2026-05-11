@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
-import { normalizeLanguage, TIMEZONE_BY_LANGUAGE } from "@/lib/i18n/language";
+import { normalizeLanguage } from "@/lib/i18n/language";
+import { FALLBACK_TIMEZONE_BY_LANGUAGE } from "@/lib/i18n/countryTimezone";
 import {
   assertProfileTextsFreeOfGamblingTerms,
   isProfileGamblingTermsError,
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
       photoURL,
       language: lang,
       locale: lang,
-      timeZone: TIMEZONE_BY_LANGUAGE[lang],
+      timeZone: FALLBACK_TIMEZONE_BY_LANGUAGE[lang],
       countryCode,
       updatedAt: FieldValue.serverTimestamp(),
     };

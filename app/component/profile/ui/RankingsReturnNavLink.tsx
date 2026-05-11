@@ -10,6 +10,7 @@ import {
   buildRankingsPathQuery,
 } from "@/lib/navigation/rankingsProfileFrom";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   language: Language;
@@ -27,7 +28,7 @@ export default function RankingsReturnNavLink({ language }: Props) {
       : "/web";
   const tabQuery = buildRankingsPathQuery(sp);
   const href = `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
-  const isEn = language === "en";
+  const m = t(language);
 
   return (
     <div className="mb-3">
@@ -36,7 +37,7 @@ export default function RankingsReturnNavLink({ language }: Props) {
         className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/30 bg-black/45 px-3 py-1.5 text-sm font-semibold text-cyan-50/95 shadow-[0_0_16px_rgba(34,211,238,0.12)] transition hover:border-cyan-300/50 hover:bg-black/60"
       >
         <ChevronLeft className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-        {isEn ? "Back to rankings" : "ランキングに戻る"}
+        {m.profile.backToRankings}
       </Link>
     </div>
   );

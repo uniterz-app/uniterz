@@ -43,6 +43,7 @@ import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
@@ -152,6 +153,7 @@ export default function MobileRankingsPage() {
 
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
+  const m = t(language);
   const langUi = language === "en" ? "en" : "ja";
 
   const apiKey = API_METRIC_BY_MOBILE[metric];
@@ -247,7 +249,7 @@ export default function MobileRankingsPage() {
               type="button"
               onClick={() => setRankingsDrawerOpen(true)}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
-              aria-label={langUi === "en" ? "Open menu" : "メニューを開く"}
+              aria-label={m.games.openMenu}
             >
               <Menu className="h-5 w-5" strokeWidth={2.25} />
             </button>
@@ -276,7 +278,7 @@ export default function MobileRankingsPage() {
                 round={round}
                 onChange={setRound}
                 isMobile
-                isEn={language === "en"}
+                language={language}
               />
             ) : null}
 
@@ -285,7 +287,7 @@ export default function MobileRankingsPage() {
                 stage={wcStage}
                 onChange={setWcStage}
                 isMobile
-                isEn={language === "en"}
+                language={language}
               />
             ) : null}
 

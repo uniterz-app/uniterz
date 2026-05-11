@@ -12,6 +12,7 @@ import {
 import Tooltip from "@/app/component/common/Tooltip";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 import {
   evaluateWinRateV2,
@@ -65,7 +66,7 @@ export default function SummaryCardsV2({
   language = "ja",
   reveal = false,
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
   const [tooltip, setTooltip] = useState<{
     rect: DOMRect | null;
     message: string;
@@ -180,16 +181,16 @@ export default function SummaryCardsV2({
   const ScorePrecisionLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        {isEn ? "Score Precision" : "スコア精度"}
+        {m.profile.scorePrecision}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              isEn
-                ? "Evaluate how close your predicted score is to the actual score on a 0–10 scale, then sum it within the selected period (higher is better)."
-                : "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
+              language === "ja"
+                ? "予想スコアと実際スコアの近さを0〜10で評価し、期間内で合計した値です（高いほど良い）。"
+                : "Evaluate how close your predicted score is to the actual score on a 0–10 scale, then sum it within the selected period (higher is better)."
             )
           }
         >
@@ -197,22 +198,22 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    [isEn]
+    [m, language]
   );
 
   const UpsetPointsLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        {isEn ? "Upset Points" : "アップセット得点"}
+        {m.profile.upsetPoints}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              isEn
-                ? "Upset Points are awarded only when you correctly predict an upset (0–10 per match). This is the total within the selected period."
-                : "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
+              language === "ja"
+                ? "アップセットが起きた試合で少数派を当てたときだけ加点（1試合0〜10）。期間内の合計点です。"
+                : "Upset Points are awarded only when you correctly predict an upset (0–10 per match). This is the total within the selected period."
             )
           }
         >
@@ -220,22 +221,22 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    [isEn]
+    [m, language]
   );
 
   const MaxStreakLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        {isEn ? "Max Win Streak" : "最大連勝"}
+        {m.profile.maxWinStreak}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              isEn
-                ? "The longest win streak you recorded within this period."
-                : "この期間内で記録した最長の連勝数です。"
+              language === "ja"
+                ? "この期間内で記録した最長の連勝数です。"
+                : "The longest win streak you recorded within this period."
             )
           }
         >
@@ -243,22 +244,22 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    [isEn]
+    [m, language]
   );
 
   const TotalPointsLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        {isEn ? "Total Points" : "総合得点"}
+        {m.profile.totalPoints}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
             openTooltip(
               e,
-              isEn
-                ? "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
-                : "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
+              language === "ja"
+                ? "勝者的中・点差/合計の近さ・（条件付き）アップセットボーナスを合算した pointsV3 の期間内合計点です。"
+                : "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
             )
           }
         >
@@ -266,7 +267,7 @@ export default function SummaryCardsV2({
         </button>
       </div>
     ),
-    [isEn]
+    [m, language]
   );
 
   const wrap = (i: number, node: React.ReactNode) => (
@@ -290,7 +291,7 @@ export default function SummaryCardsV2({
             0,
             <Card
               icon={<BarChartHorizontal size={iconSize} />}
-              label={isEn ? "Posts" : "投稿数"}
+              label={m.profile.postsCount}
               value={postsText}
               padCls={padCls}
               labelCls={labelCls}
@@ -303,7 +304,7 @@ export default function SummaryCardsV2({
             1,
             <Card
               icon={<Trophy size={iconSize} />}
-              label={isEn ? "Win Rate" : "勝率"}
+              label={m.profile.winRate}
               value={winRatePct}
               padCls={padCls}
               labelCls={labelCls}
@@ -393,7 +394,7 @@ export default function SummaryCardsV2({
         {wrap(
           0,
           <Card
-            label={isEn ? "Posts" : "投稿数"}
+            label={m.profile.postsCount}
             value={postsText}
             padCls={padCls}
             labelCls={labelCls}
@@ -404,7 +405,7 @@ export default function SummaryCardsV2({
         {wrap(
           1,
           <Card
-            label={isEn ? "Win Rate" : "勝率"}
+            label={m.profile.winRate}
             value={winRatePct}
             padCls={padCls}
             labelCls={labelCls}

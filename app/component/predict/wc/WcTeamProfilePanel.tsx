@@ -10,15 +10,15 @@ import {
 } from "@/lib/wc/teams";
 import { teamIdToCountryName } from "@/lib/wc/wcCountry";
 import { getWcRoster, type WcRosterPlayer } from "@/lib/wc/rosters";
-
-type Lang = "ja" | "en";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   homeTeamId: string;
   awayTeamId: string;
   homeName: string;
   awayName: string;
-  language: Lang;
+  language: Language;
   isMobile: boolean;
 };
 
@@ -65,22 +65,18 @@ function TeamCard({
   teamId: string;
   fallbackName: string;
   side: "home" | "away";
-  language: Lang;
+  language: Language;
   isMobile: boolean;
 }) {
-  const isEn = language === "en";
+  const m = t(language);
   const profile = getWcTeamProfile(teamId);
   const displayName =
-    teamIdToCountryName(teamId, language) ?? fallbackName ?? "—";
+    teamIdToCountryName(teamId, language === "ja" ? "ja" : "en") ?? fallbackName ?? "—";
   const roster = getWcRoster(teamId);
 
-  const sideLabel = isEn
-    ? side === "home"
-      ? "HOME"
-      : "AWAY"
-    : side === "home"
-      ? "ホーム"
-      : "アウェイ";
+  const sideLabel = side === "home"
+    ? m.predict.home.toUpperCase()
+    : m.predict.away.toUpperCase();
 
   return (
     <div
@@ -101,7 +97,7 @@ function TeamCard({
           </div>
           {profile?.nickname ? (
             <div className="truncate text-[11px] italic text-white/55">
-              {isEn ? profile.nickname.en : profile.nickname.ja}
+              {language === "ja" ? profile.nickname.ja : profile.nickname.en}
             </div>
           ) : null}
         </div>
@@ -110,14 +106,14 @@ function TeamCard({
       {/* 数値ストリップ */}
       <div className="mt-3 grid grid-cols-4 gap-1 rounded-xl border border-white/8 bg-white/[0.025] px-2 py-2">
         <Stat
-          label={isEn ? "FIFA" : "FIFA"}
+          label="FIFA"
           value={
             profile?.fifaRank != null ? `#${profile.fifaRank}` : "—"
           }
           delta={fifaDelta(profile)}
         />
         <Stat
-          label={isEn ? "WC App." : "出場"}
+          label={m.wc.wcAppShort}
           value={
             profile?.wcAppearances != null
               ? `${profile.wcAppearances}`
@@ -125,17 +121,17 @@ function TeamCard({
           }
         />
         <Stat
-          label={isEn ? "Titles" : "優勝"}
+          label={m.wc.titlesShort}
           value={profile?.wcTitles != null ? `${profile.wcTitles}` : "—"}
         />
         <Stat
-          label={isEn ? "Last" : "前回"}
+          label={m.wc.lastShort}
           value={
             profile?.lastWcResult
               ? lastResultShort(
                   profile.lastWcResult.round,
                   profile.lastWcResult.year,
-                  isEn,
+                  language,
                 )
               : "—"
           }
@@ -145,7 +141,7 @@ function TeamCard({
       {/* 概要 */}
       {profile?.description ? (
         <p className="mt-3 text-[12.5px] leading-snug text-white/80">
-          {isEn ? profile.description.en : profile.description.ja}
+          {language === "ja" ? profile.description.ja : profile.description.en}
         </p>
       ) : null}
 
@@ -153,20 +149,20 @@ function TeamCard({
       <div className="mt-3 space-y-1 text-[11.5px] text-white/65">
         {profile?.confederation ? (
           <MetaRow
-            label={isEn ? "Confederation" : "大陸連盟"}
-            value={formatWcConfederation(profile.confederation, language)}
+            label={m.wc.confederationFull}
+            value={formatWcConfederation(profile.confederation, language === "ja" ? "ja" : "en")}
           />
         ) : null}
         {profile?.manager ? (
           <MetaRow
-            label={isEn ? "Manager" : "監督"}
+            label={m.wc.managerLabel}
             value={profile.manager}
           />
         ) : null}
         {profile?.lastWcResult ? (
           <MetaRow
-            label={isEn ? "Last World Cup" : "直近大会"}
-            value={`${profile.lastWcResult.year} · ${formatWcRoundReached(profile.lastWcResult.round, language)}`}
+            label={m.wc.lastWorldCup}
+            value={`${profile.lastWcResult.year} · ${formatWcRoundReached(profile.lastWcResult.round, language === "ja" ? "ja" : "en")}`}
           />
         ) : null}
       </div>
@@ -175,11 +171,11 @@ function TeamCard({
       {roster.length > 0 ? (
         <div className="mt-3">
           <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">
-            {isEn ? "Key Players" : "キープレイヤー"}
+            {m.wc.keyPlayers}
           </div>
           <ul className="space-y-1">
             {roster.slice(0, 6).map((p) => (
-              <RosterRow key={`${p.no}-${p.name}`} player={p} isEn={isEn} />
+              <RosterRow key={`${p.no}-${p.name}`} player={p} />
             ))}
           </ul>
         </div>
@@ -238,10 +234,8 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 
 function RosterRow({
   player,
-  isEn,
 }: {
   player: WcRosterPlayer;
-  isEn: boolean;
 }) {
   return (
     <li className="flex items-center gap-2 text-[12px] text-white/85">
@@ -255,7 +249,7 @@ function RosterRow({
         {player.name}
         {player.captain ? (
           <span className="ml-1 inline-flex h-3.5 items-center rounded-sm bg-amber-300/85 px-1 text-[8px] font-extrabold text-black/85">
-            {isEn ? "C" : "C"}
+            C
           </span>
         ) : null}
       </span>
@@ -301,8 +295,8 @@ const ROUND_SHORT_EN: Record<WcRoundReached, string> = {
 function lastResultShort(
   round: WcRoundReached,
   year: number,
-  isEn: boolean,
+  language: Language,
 ): string {
-  const map = isEn ? ROUND_SHORT_EN : ROUND_SHORT_JA;
+  const map = language === "en" ? ROUND_SHORT_EN : ROUND_SHORT_JA;
   return `${map[round]} '${String(year).slice(-2)}`;
 }

@@ -2,6 +2,8 @@
 "use client";
 
 import { memo } from "react";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 /** ResultCard 右上 / MatchCard 中央など、配置先に合わせたサイズ */
 export type LiveMatchMarkDensity =
@@ -12,7 +14,7 @@ export type LiveMatchMarkDensity =
 
 type Props = {
   density: LiveMatchMarkDensity;
-  isEn?: boolean;
+  language?: Language;
   className?: string;
 };
 
@@ -28,10 +30,11 @@ const DENSITY_WRAP: Record<LiveMatchMarkDensity, string> = {
   matchComfortable: "px-2 py-0.5 text-[10px] md:text-[11px]",
 };
 
-function LiveMatchMarkImpl({ density, isEn = true, className = "" }: Props) {
+function LiveMatchMarkImpl({ density, language = "en", className = "" }: Props) {
+  const m = t(language);
   const wrap = [WRAP_BASE, DENSITY_WRAP[density], className].filter(Boolean).join(" ");
   return (
-    <span className={wrap} aria-label={isEn ? "Live" : "ライブ中"}>
+    <span className={wrap} aria-label={m.games.liveAriaLabel}>
       LIVE
     </span>
   );

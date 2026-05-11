@@ -10,6 +10,7 @@ import { Crown } from "lucide-react";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
@@ -62,7 +63,7 @@ function TotalScoreCard({
   className = "",
   language = "ja",
 }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
   const [wide, setWide] = useState(false);
@@ -117,9 +118,9 @@ function TotalScoreCard({
       ? formatMetricDecimals(totalPoints / analyses, 1)
       : "0";
 
-  const tooltipMsg = isEn
-    ? "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus."
-    : TOTAL_SCORE_TOOLTIP;
+  const tooltipMsg = language === "ja"
+    ? TOTAL_SCORE_TOOLTIP
+    : "Total Points within the selected period of pointsV3: winner accuracy, closeness of point difference/total, plus (conditional) upset bonus.";
   const rankText =
     totalPointsRank != null ? ` / ${formatOrdinal(totalPointsRank)}` : "";
   const rankClass =
@@ -169,13 +170,13 @@ function TotalScoreCard({
             <Crown className="h-2.5 w-2.5 text-orange-400 md:h-5 md:w-5" />
           </div>
 
-          <span>{isEn ? "Total Points" : "総合得点"}</span>
+          <span>{m.profile.totalPoints}</span>
 
           <button
             type="button"
             className="ml-0.5 text-[9px] text-white/60 hover:text-white/80 md:ml-1 md:text-[16px]"
             onClick={(e) => openTooltip(e, tooltipMsg)}
-            aria-label={isEn ? "Total Points description" : "総合得点の説明"}
+            aria-label={`${m.profile.totalPoints} ⓘ`}
           >
             ⓘ
           </button>
@@ -226,9 +227,7 @@ function TotalScoreCard({
                 size={chartSize}
                 thickness={chartThickness}
                 ariaLabel={
-                  isEn
-                    ? "Total points breakdown: base, upset bonus, streak bonus"
-                    : "総合得点の内訳：基本点・アップセット・連勝ボーナス"
+                    `${m.profile.totalPoints}: ${m.profile.basePoints}, ${m.profile.upsetPoints}, ${m.profile.winStreakBonus}`
                 }
               />
             ) : (
@@ -247,7 +246,7 @@ function TotalScoreCard({
           <div className="min-w-0 space-y-1.5 md:space-y-3 md:-translate-x-0.5">
             <div className="flex items-center justify-between gap-1">
               <span className="text-[8px] tracking-tight text-teal-200/80 md:text-[14px]">
-                {isEn ? "Base Points" : "基本点"}
+                {m.profile.basePoints}
               </span>
               <span
                 className={[
@@ -261,7 +260,7 @@ function TotalScoreCard({
 
             <div className="flex items-center justify-between gap-1">
               <span className="text-[8px] tracking-tight text-orange-200/80 md:text-[14px]">
-                Upset Bonus
+                {m.profile.upsetPoints}
               </span>
               <span
                 className={[
@@ -275,7 +274,7 @@ function TotalScoreCard({
 
             <div className="flex items-center justify-between gap-1">
               <span className="text-[8px] tracking-tight text-violet-200/80 md:text-[14px]">
-                {isEn ? "Win Streak Bonus" : "連勝ボーナス"}
+                {m.profile.winStreakBonus}
               </span>
               <span
                 className={[

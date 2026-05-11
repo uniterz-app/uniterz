@@ -15,7 +15,7 @@ import {
   guessLanguageFromNavigator,
   normalizeLanguage,
 } from "@/lib/i18n/language";
-import { ui } from "@/lib/i18n/ui";
+import { t } from "@/lib/i18n/t";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import {
   isProfileGamblingTermsError,
@@ -112,12 +112,7 @@ export default function ProfileEditPage() {
         alert(profileGamblingTermsUserMessage(language));
         return;
       }
-      alert(
-        ui(language, {
-          ja: "保存に失敗しました。時間をおいて再度お試しください。",
-          en: "Failed to save. Please try again later.",
-        })
-      );
+      alert(t(language).common.saveFailed);
     }
   };
 
@@ -146,16 +141,10 @@ export default function ProfileEditPage() {
         <header className="mb-6">
           <div>
             <h1 className="text-base font-semibold leading-tight">
-              {ui(language, {
-                ja: "プロフィール設定",
-                en: "Profile Settings",
-              })}
+              {t(language).profile.settings}
             </h1>
             <p className="text-xs text-white/60">
-              {ui(language, {
-                ja: "アイコン・名前・自己紹介を編集できます",
-                en: "Edit your icon, name, and bio.",
-              })}
+              {language === "ja" ? "アイコン・名前・自己紹介を編集できます" : "Edit your icon, name, and bio."}
             </p>
           </div>
         </header>
@@ -197,11 +186,11 @@ export default function ProfileEditPage() {
           {/* ===== 名前 ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {ui(language, { ja: "名前", en: "Name" })}
+              {t(language).profile.username}
             </label>
             <input
               type="text"
-              placeholder={ui(language, { ja: "名前", en: "Name" })}
+              placeholder={t(language).profile.username}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
@@ -211,10 +200,10 @@ export default function ProfileEditPage() {
           {/* ===== 自己紹介 ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {ui(language, { ja: "自己紹介", en: "Bio" })}
+              {t(language).profile.bio}
             </label>
             <textarea
-              placeholder={ui(language, { ja: "自己紹介", en: "Bio" })}
+              placeholder={t(language).profile.bio}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60 min-h-[96px]"
@@ -224,10 +213,7 @@ export default function ProfileEditPage() {
           {/* ===== 使用言語 ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {ui(language, {
-                ja: "使用言語",
-                en: "App Language",
-              })}
+              {t(language).profile.appLanguage}
             </label>
             <select
               value={language}
@@ -235,10 +221,10 @@ export default function ProfileEditPage() {
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
             >
               <option value="ja">
-                {ui(language, { ja: "日本語", en: "Japanese" })}
+                {t(language).profile.japanese}
               </option>
               <option value="en">
-                {ui(language, { ja: "English", en: "English" })}
+                {t(language).profile.english}
               </option>
             </select>
           </div>
@@ -246,10 +232,7 @@ export default function ProfileEditPage() {
           {/* ===== 住んでいる国（任意） ===== */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-white/70">
-              {ui(language, {
-                ja: "住んでいる国（任意）",
-                en: "Country (optional)",
-              })}
+              {t(language).profile.country}
             </label>
             <select
               value={countryCode}
@@ -257,7 +240,7 @@ export default function ProfileEditPage() {
               className="w-full rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60"
             >
               <option value="">
-                {ui(language, { ja: "未設定", en: "Not set" })}
+                {t(language).common.notSet}
               </option>
               {COUNTRY_OPTIONS.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -274,14 +257,8 @@ export default function ProfileEditPage() {
             className="mt-2 w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-400 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {uploading
-              ? ui(language, {
-                  ja: "アップロード中...",
-                  en: "Uploading...",
-                })
-              : ui(language, {
-                  ja: "変更を保存",
-                  en: "Save Changes",
-                })}
+              ? t(language).profile.uploading
+              : t(language).profile.saveChanges}
           </button>
         </form>
       </SettingsNeonCard>

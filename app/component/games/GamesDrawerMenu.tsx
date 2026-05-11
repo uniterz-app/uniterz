@@ -5,10 +5,12 @@ import { Globe2, Trophy } from "lucide-react";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { League } from "@/lib/leagues";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   variant?: "mobile" | "web";
-  language: "ja" | "en";
+  language: Language;
   league: League;
   onSelectNba: () => void;
   onSelectWorldCup: () => void;
@@ -22,7 +24,7 @@ export default function GamesDrawerMenu({
   onSelectWorldCup,
 }: Props) {
   const isMobile = variant === "mobile";
-  const isEn = language === "en";
+  const m = t(language);
 
   const containerClasses = cn(
     "relative flex flex-col text-white",
@@ -35,9 +37,6 @@ export default function GamesDrawerMenu({
   );
 
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
-  const labelText = (en: string, ja: string) => (
-    <span className={cn(isEn && "uppercase")}>{isEn ? en : ja}</span>
-  );
 
   const nbaActive = league === "nba";
   const wcActive = league === "wc";
@@ -45,7 +44,7 @@ export default function GamesDrawerMenu({
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
       <p className={cn(groupTitleClasses, "mt-0")}>
-        {isEn ? "Games" : "試合"}
+        {m.games.games}
       </p>
 
       <div className="flex flex-col gap-2">
@@ -55,7 +54,7 @@ export default function GamesDrawerMenu({
           onClick={onSelectNba}
           className={nbaActive ? "ring-1 ring-cyan-300/35" : undefined}
         >
-          {labelText("NBA", "NBA")}
+          <span className={cn(language !== "ja" && "uppercase")}>{m.games.nba}</span>
         </SideMenuItemButton>
 
         <SideMenuItemButton
@@ -64,7 +63,7 @@ export default function GamesDrawerMenu({
           onClick={onSelectWorldCup}
           className={wcActive ? "ring-1 ring-cyan-300/35" : undefined}
         >
-          {labelText("World Cup", "ワールドカップ")}
+          <span className={cn(language !== "ja" && "uppercase")}>{m.games.worldCup}</span>
         </SideMenuItemButton>
       </div>
     </nav>

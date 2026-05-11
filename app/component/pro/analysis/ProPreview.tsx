@@ -5,6 +5,7 @@ import ProAnalysisView from "@/app/component/pro/analysis/ProAnalysisView";
 import type { RadarAxisLevels } from "@/app/component/pro/analysis/radarLevelUtils";
 import { useRouter } from "next/navigation";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 
 const MONTHS = ["2025-11", "2025-12", "2026-01", "2026-02", "2026-03"];
 
@@ -19,6 +20,7 @@ const PREVIEW_RADAR_LEVELS: RadarAxisLevels = {
 export default function ProPreviewPage() {
   const router = useRouter();
   const { language } = useUserLanguage(null);
+  const m = t(language);
   const [month, setMonth] = useState("2026-01");
   const [pressed, setPressed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -35,9 +37,7 @@ export default function ProPreviewPage() {
     <>
       <div className="mt-6 flex flex-col items-center gap-2">
         <p className="text-center text-xs text-white/60">
-          {language === "en"
-            ? "This analysis is available for paid plans only."
-            : "※ この分析は有料プラン限定です"}
+          {m.pro.upgradeToSeeAll}
         </p>
         <div
           role="button"
@@ -63,7 +63,7 @@ export default function ProPreviewPage() {
             textAlign: "center",
           }}
         >
-          {language === "en" ? "View all Pro data" : "Proで全データを見る"}
+          {m.pro.viewAllData}
         </div>
       </div>
 
@@ -179,7 +179,7 @@ export default function ProPreviewPage() {
 
       <div className="mt-6 flex flex-col items-center gap-2">
         <p className="text-center text-xs text-white/60">
-          ※ この分析は有料プラン限定です
+          {m.pro.upgradeToSeeAll}
         </p>
         <div
           role="button"
@@ -205,7 +205,7 @@ export default function ProPreviewPage() {
             textAlign: "center",
           }}
         >
-          Proで全データを見る
+          {m.pro.viewAllData}
         </div>
       </div>
     </>

@@ -7,6 +7,7 @@ import Image from "next/image";
 import SettingsNeonCard from "@/app/component/settings/SettingsNeonCard";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { useFloatingBackNavigation } from "@/lib/hooks/useFloatingBackNavigation";
 import { ChevronLeft } from "lucide-react";
 
@@ -30,16 +31,12 @@ export default function LegalPageLayout({
   const isWeb = variant === "web";
   const { fUser: user } = useFirebaseUser();
   const { language } = useUserLanguage(user?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
   const { goBack, prefersSideMenuAria } = useFloatingBackNavigation();
   const backAria =
     prefersSideMenuAria && user
-      ? isEn
-        ? "Back to side menu"
-        : "サイドメニューに戻る"
-      : isEn
-        ? "Back"
-        : "戻る";
+      ? m.common.backToSideMenu
+      : m.common.back;
 
   return (
     <div className="min-h-screen w-full bg-[#050814] relative">
@@ -70,7 +67,7 @@ export default function LegalPageLayout({
               </h1>
               {updatedAt && (
                 <p className="mt-1 text-xs text-white/60">
-                  {isEn ? "Last updated: " : "最終更新日: "}
+                  {m.settings.lastUpdated}
                   {updatedAt}
                 </p>
               )}

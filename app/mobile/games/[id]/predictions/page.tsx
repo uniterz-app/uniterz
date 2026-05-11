@@ -16,6 +16,7 @@ import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 
 import { getTeamPrimaryColor } from "@/lib/team-colors";
 import { normalizeLeague } from "@/lib/leagues";
@@ -33,7 +34,7 @@ export default function Page() {
 
   const { fUser } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
   const uid = fUser?.uid ?? null;
 
   const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
@@ -120,7 +121,7 @@ export default function Page() {
     text-gray-500
     active:scale-95 transition-transform
   "
-  aria-label={isEn ? "Back" : "戻る"}
+  aria-label={m.common.back}
 >
   <ArrowLeft size={28} />
 </button>
@@ -157,7 +158,7 @@ export default function Page() {
       shadow-xl
       active:scale-90 transition-transform
     "
-    aria-label={isEn ? "Predict" : "分析する"}
+    aria-label={m.games.predict}
   >
     <Pencil size={22} strokeWidth={3} />
   </button>

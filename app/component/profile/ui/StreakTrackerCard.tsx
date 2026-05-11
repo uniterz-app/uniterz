@@ -10,6 +10,7 @@ import {
   type StreakTrackerPoint,
 } from "@/lib/profile/useProfileStreakTracker";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { jp, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useCountUp } from "@/lib/hooks/useCountUp";
@@ -119,7 +120,7 @@ export default function StreakTrackerCard({
   entranceReady,
   layout = "mobile",
 }: Props) {
-  const isEn = language === "en";
+  const msg = t(language);
   const reduceMotion = useReducedMotion();
   const S = streakSizes(layout);
   const chartSectionRef = useRef<HTMLDivElement>(null);
@@ -209,9 +210,9 @@ export default function StreakTrackerCard({
     points.length > 0 && !loading && headerMetricReveal;
   const countUp = useCountUp(displayTarget, 780, countEnabled, 1);
 
-  const winStreakCaption = isEn ? "Win streak" : "連勝中";
-  const lossStreakCaption = isEn ? "Loss streak" : "連敗中";
-  const flatCaption = isEn ? "Last pick" : "直近";
+  const winStreakCaption = msg.profile.winStreak;
+  const lossStreakCaption = msg.profile.lossStreak;
+  const flatCaption = msg.profile.lastPick;
   const caption =
     lastStreak > 0
       ? winStreakCaption
@@ -219,14 +220,12 @@ export default function StreakTrackerCard({
         ? lossStreakCaption
         : points.length > 0
           ? flatCaption
-          : isEn
-            ? "—"
-            : "—";
+          : "—";
 
-  const loadingMsg = isEn ? "Loading…" : "読み込み中…";
+  const loadingMsg = msg.common.loading;
 
-  const winLabel = isEn ? "Win" : "的中";
-  const lossLabel = isEn ? "Loss" : "外れ";
+  const winLabel = msg.profile.win;
+  const lossLabel = msg.profile.loss;
 
   /** 列が左→右へ流れるように stagger（間隔をほんの少し長め） */
   const staggerStep = layout === "web" ? 0.165 : 0.118;
@@ -236,14 +235,15 @@ export default function StreakTrackerCard({
 
   const subtitleJa = `直近${STREAK_TRACKER_LAST_N}試合の連勝・連敗を表示`;
   const subtitleEn = `Win/loss streaks from your last ${STREAK_TRACKER_LAST_N} settled picks`;
+  const subtitle = language === "ja" ? subtitleJa : subtitleEn;
   /** Info 用（表示サブタイトルと同じ文言のみ） */
-  const chartInfoTooltipMsg = isEn ? subtitleEn : subtitleJa;
+  const chartInfoTooltipMsg = subtitle;
 
-  const statWinLabel = isEn ? "Best W streak" : "最高連勝";
-  const statLossLabel = isEn ? "Best L streak" : "最高連敗";
-  const statRecordLabel = isEn
-    ? `Last ${STREAK_TRACKER_LAST_N} games`
-    : `直近${STREAK_TRACKER_LAST_N}試合の成績`;
+  const statWinLabel = msg.profile.bestWStreak;
+  const statLossLabel = msg.profile.bestLStreak;
+  const statRecordLabel = language === "ja"
+    ? `直近${STREAK_TRACKER_LAST_N}試合の成績`
+    : `Last ${STREAK_TRACKER_LAST_N} games`;
   const statRecordValue = `${stats.wins}-${stats.losses}`;
 
   const shellCls =
@@ -293,13 +293,13 @@ export default function StreakTrackerCard({
             </div>
             <p
               className={[
-                isEn ? "" : jp.className,
+                language === "ja" ? jp.className : "",
                 "mt-1.5 max-w-[560px] text-xs leading-relaxed text-slate-400 sm:text-[14px]",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
-              {isEn ? subtitleEn : subtitleJa}
+              {subtitle}
             </p>
           </div>
           <div className="flex flex-col items-center self-end text-center">
@@ -362,7 +362,7 @@ export default function StreakTrackerCard({
               className={[
                 "mt-1 max-w-36 leading-tight text-slate-400",
                 S.headerCaption,
-                !isEn ? jp.className : "",
+                language === "ja" ? jp.className : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -583,7 +583,7 @@ export default function StreakTrackerCard({
             <div
               className={[
                 "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3",
-                isEn ? "" : jp.className,
+                language === "ja" ? jp.className : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -598,7 +598,7 @@ export default function StreakTrackerCard({
                   <span
                     className={[
                       "min-w-0 leading-tight text-emerald-100/90",
-                      isEn
+                      language !== "ja"
                         ? "text-[10px] font-semibold uppercase tracking-[0.14em]"
                         : "text-[11px] font-medium",
                     ].join(" ")}
@@ -622,7 +622,7 @@ export default function StreakTrackerCard({
                   <span
                     className={[
                       "min-w-0 leading-tight text-rose-100/90",
-                      isEn
+                      language !== "ja"
                         ? "text-[10px] font-semibold uppercase tracking-[0.14em]"
                         : "text-[11px] font-medium",
                     ].join(" ")}
@@ -646,7 +646,7 @@ export default function StreakTrackerCard({
                   <span
                     className={[
                       "min-w-0 leading-tight text-slate-200/90",
-                      isEn
+                      language !== "ja"
                         ? "text-[10px] font-semibold uppercase tracking-[0.14em]"
                         : "text-[11px] font-medium",
                     ].join(" ")}

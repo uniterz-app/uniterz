@@ -5,10 +5,12 @@ import { Globe2, Trophy } from "lucide-react";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 
 type Props = {
   variant?: "mobile" | "web";
-  language: "ja" | "en";
+  language: Language;
   rankingLeague: RankingLeagueSource;
   onSelectNbaPlayoffs: () => void;
   onSelectWorldCup: () => void;
@@ -22,6 +24,7 @@ export default function RankingsDrawerMenu({
   onSelectWorldCup,
 }: Props) {
   const isMobile = variant === "mobile";
+  const m = t(language);
   const isEn = language === "en";
 
   const containerClasses = cn(
@@ -35,9 +38,6 @@ export default function RankingsDrawerMenu({
   );
 
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
-  const labelText = (en: string, ja: string) => (
-    <span className={cn(isEn && "uppercase")}>{isEn ? en : ja}</span>
-  );
 
   const nbaActive = rankingLeague === "nba";
   const wcActive = rankingLeague === "worldcup";
@@ -45,7 +45,7 @@ export default function RankingsDrawerMenu({
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
       <p className={cn(groupTitleClasses, "mt-0")}>
-        {isEn ? "Rankings" : "ランキング"}
+        {m.rankings.title}
       </p>
 
       <div className="flex flex-col gap-2">
@@ -55,7 +55,7 @@ export default function RankingsDrawerMenu({
           onClick={onSelectNbaPlayoffs}
           className={nbaActive ? "ring-1 ring-cyan-300/35" : undefined}
         >
-          {labelText("NBA Playoffs", "NBA プレーオフ")}
+          <span className={cn(isEn && "uppercase")}>{m.rankings.nbaPlayoffs}</span>
         </SideMenuItemButton>
 
         <SideMenuItemButton
@@ -64,7 +64,7 @@ export default function RankingsDrawerMenu({
           onClick={onSelectWorldCup}
           className={wcActive ? "ring-1 ring-cyan-300/35" : undefined}
         >
-          {labelText("World Cup", "ワールドカップ")}
+          <span className={cn(isEn && "uppercase")}>{m.rankings.worldCup}</span>
         </SideMenuItemButton>
       </div>
     </nav>

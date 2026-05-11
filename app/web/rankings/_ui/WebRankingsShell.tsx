@@ -35,6 +35,7 @@ import {
   WEB_RANKINGS_SCROLL_KEY,
   isMobileMetricParam,
 } from "@/lib/navigation/rankingsProfileFrom";
+import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
@@ -93,6 +94,7 @@ export default function WebRankingsShell() {
   const { user } = useMyRankingUser(myUid);
   const { language } = useUserLanguage(myUid);
 
+  const m = t(language);
   const langUi = language === "en" ? "en" : "ja";
 
   const restoreScrollAfterListRef = useRef(false);
@@ -203,7 +205,7 @@ export default function WebRankingsShell() {
             type="button"
             onClick={() => setRankingsDrawerOpen(true)}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
-            aria-label={langUi === "en" ? "Open menu" : "メニューを開く"}
+            aria-label={m.games.openMenu}
           >
             <Menu className="h-5 w-5" strokeWidth={2.25} />
           </button>
@@ -232,7 +234,7 @@ export default function WebRankingsShell() {
               round={round}
               onChange={setRound}
               isMobile={false}
-              isEn={language === "en"}
+              language={language}
             />
           ) : null}
 
@@ -241,7 +243,7 @@ export default function WebRankingsShell() {
               stage={wcStage}
               onChange={setWcStage}
               isMobile={false}
-              isEn={language === "en"}
+              language={language}
             />
           ) : null}
 
@@ -286,7 +288,7 @@ export default function WebRankingsShell() {
 
         {category === "playoffs" && !listReady && (
           <div className="pt-2 text-sm text-white/40">
-            {language === "en" ? "loading..." : "読み込み中..."}
+            {m.common.loading}
           </div>
         )}
 

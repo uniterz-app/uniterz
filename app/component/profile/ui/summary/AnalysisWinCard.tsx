@@ -3,6 +3,7 @@
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
@@ -20,10 +21,10 @@ type Props = {
 };
 
 function AnalysisWinCard({ language = "ja", ...props }: Props) {
-  const isEn = language === "en";
+  const m = t(language);
 
-  const hitLabel = isEn ? "Correct Picks" : "的中";
-  const totalLabel = isEn ? "Total Picks" : "確定";
+  const hitLabel = m.profile.correctPicks;
+  const totalLabel = m.profile.totalPicks;
 
   const ref = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);

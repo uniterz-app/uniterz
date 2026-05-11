@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { t } from "@/lib/i18n/t";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { db } from "@/lib/firebase";
@@ -22,7 +23,7 @@ export default function Page() {
   const { id } = useParams<{ id: string }>();
   const { fUser, status } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
-  const isEn = language === "en";
+  const m = t(language);
 
   // Firestore から読むプロフィール（displayName / photoURL）
   const [profile, setProfile] = useState<{ displayName?: string; photoURL?: string } | null>(null);
@@ -110,12 +111,12 @@ export default function Page() {
 
   // ローディング／エラー簡易表示（必要ならお好みでUI調整）
   if (gameState.kind === "loading" || gameState.kind === "idle") {
-    return <div style={{ padding: 16 }}>{isEn ? "Loading..." : "読み込み中…"}</div>;
+    return <div style={{ padding: 16 }}>{m.common.loading}</div>;
   }
   if (gameState.kind === "error") {
     return (
       <div style={{ padding: 16 }}>
-        {isEn ? "Failed to load game data." : "試合データの取得に失敗しました。"}
+        {m.common.error}
       </div>
     );
   }
@@ -125,7 +126,7 @@ export default function Page() {
     name:
       (profile?.displayName && profile.displayName.trim()) ||
       fUser.displayName ||
-      (isEn ? "User" : "ユーザー"),
+      m.results.user,
   avatarUrl:
       (profile?.photoURL && profile.photoURL.trim()) ||
       fUser.photoURL ||
@@ -137,7 +138,7 @@ export default function Page() {
     <Suspense
       fallback={
         <div style={{ padding: 16 }}>
-          {isEn ? "Loading..." : "読み込み中…"}
+          {m.common.loading}
         </div>
       }
     >
