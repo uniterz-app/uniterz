@@ -26,6 +26,7 @@ import AuthEntryScreen from "./src/features/auth/AuthEntryScreen";
 import GamesHomeScreen from "./src/features/games/GamesHomeScreen";
 import ProfileHomeScreen from "./src/features/profile/ProfileHomeScreen";
 import ResultHomeScreen from "./src/features/results/ResultHomeScreen";
+import RankingsHomeScreen from "./src/features/rankings/RankingsHomeScreen";
 import { useState } from "react";
 
 type MainTab = "games" | "insight" | "trophy" | "stats" | "profile";
@@ -37,7 +38,7 @@ const MAIN_NAV_ITEMS: Array<{
 }> = [
   { id: "games", icon: "sword-cross", enabled: true },
   { id: "insight", icon: "brain", enabled: true },
-  { id: "trophy", icon: "trophy-outline", enabled: false },
+  { id: "trophy", icon: "trophy-outline", enabled: true },
   { id: "stats", icon: "chart-bar", enabled: false },
   { id: "profile", icon: "account-outline", enabled: true },
 ];
@@ -90,6 +91,8 @@ function AppContent() {
                 />
               ) : tab === "insight" ? (
                 <ResultHomeScreen bottomReserveY={bottomContentReserveY} />
+              ) : tab === "trophy" ? (
+                <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />
               ) : (
                 <GamesHomeScreen
                   key={`games-${profileRefreshNonce}`}

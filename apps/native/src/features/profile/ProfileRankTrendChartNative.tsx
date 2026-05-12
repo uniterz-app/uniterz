@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, { Defs, Pattern, Rect, Path as SvgPath } from "react-native-svg";
-import { Canvas, Circle, Group, Path, RoundedRect, Skia } from "@shopify/react-native-skia";
+import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
 import type { RankPlayoffTrendPointNative } from "./profileApi";
 import {
   PROFILE_SHELL_GRID_NATIVE,
@@ -51,13 +51,21 @@ const TREND_THEME: Record<
   },
 };
 
-/** 4桁順位が折り返されないよう確保 */
-const LEFT_AXIS_W = 46;
-const PAD_R = 10;
-const PAD_T = 16;
-const PAD_B = 28;
-const PLOT_H = 168;
+/** Web `ProfilePlayoffRankTrendChart` のモバイル相当（margin / axis padding） */
+const LEFT_AXIS_W = 42;
+const PAD_R = 22;
+const PAD_T = 22;
+const PAD_B = 32;
+const PLOT_H = 154;
 const CHART_H = PAD_T + PLOT_H + PAD_B;
+const X_AXIS_PAD = 14;
+const Y_AXIS_TOP_PAD = 18;
+const MOBILE_DOT_R = 10;
+const MOBILE_DOT_FONT = 9;
+const MOBILE_DOT_GLOW_EXTRA = 1.5;
+const MOBILE_DOT_GLOW_STROKE = 3;
+const MOBILE_DOT_STROKE = 1.5;
+const X_AXIS_LABEL_W = 28;
 
 type Props = {
   data: RankPlayoffTrendPointNative[];
@@ -113,37 +121,106 @@ function horizontalDashedSegments(
   return paths;
 }
 
-/** 縦グリッド（データ点の列に合わせる） */
-function verticalDashedSegments(
-  x: number,
-  yTop: number,
-  height: number,
-  dash: number,
-  gap: number
-): ReturnType<typeof Skia.Path.Make>[] {
-  const paths: ReturnType<typeof Skia.Path.Make>[] = [];
-  let y = yTop;
-  const yEnd = yTop + height;
-  let draw = true;
-  while (y < yEnd - 1e-6) {
-    const len = Math.min(draw ? dash : gap, yEnd - y);
-    if (draw && len > 0.5) {
-      const p = Skia.Path.Make();
-      p.moveTo(x, y);
-      p.lineTo(x, y + len);
-      paths.push(p);
-    }
-    y += len;
-    draw = !draw;
+/** 小さめの丸に順位桁数に応じたラベル */
+function rankGlyphLayout(rank: number): { rDot: number; labelW: number; fontSize: number } {
+  const digits = String(rank).length;
+  if (digits >= 4) {
+    return { rDot: MOBILE_DOT_R, labelW: 30, fontSize: 8 };
   }
-  return paths;
+  if (digits >= 3) {
+    return { rDot: MOBILE_DOT_R, labelW: 26, fontSize: MOBILE_DOT_FONT };
+  }
+  return { rDot: MOBILE_DOT_R, labelW: 24, fontSize: MOBILE_DOT_FONT };
 }
 
-/** 桁に応じたノード半径・ラベル幅（4桁が折り返されないようにする） */
-function rankGlyphLayout(rank: number): { rDot: number; labelW: number; fontSize: number } {
-  if (rank >= 1000) return { rDot: 17, labelW: 52, fontSize: 9 };
-  if (rank >= 100) return { rDot: 15, labelW: 44, fontSize: 10 };
-  return { rDot: 14, labelW: 36, fontSize: 11 };
+/** Web `XAxis interval` と同じ間引き */
+function xAxisIntervalForCount(rowCount: number): number {
+  if (rowCount > 28) return 3;
+  if (rowCount > 18) return 2;
+  if (rowCount > 11) return 1;
+  return 0;
+}
+
+type XAxisLabelLayout = {
+  index: number;
+  centerX: number;
+  width: number;
+};
+
+/** 日付は各点の x に中心を合わせ、重なる場合だけ間引く */
+function layoutXAxisLabels(
+  dots: Array<{ x: number }>,
+  rowCount: number,
+  plotWidth: number
+): XAxisLabelLayout[] {
+  if (rowCount <= 0) return [];
+
+  const labelW = X_AXIS_LABEL_W;
+  const minGap = 6;
+  const usable = Math.max(4, plotWidth - 2 * X_AXIS_PAD);
+  const minSpacing = rowCount <= 1 ? usable : usable / (rowCount - 1);
+
+  let stride = 1;
+  if (minSpacing < labelW + minGap) {
+    stride = Math.max(2, Math.ceil((labelW + minGap) / minSpacing));
+  }
+  const interval = xAxisIntervalForCount(rowCount);
+  if (interval > 0) stride = Math.max(stride, interval + 1);
+
+  const candidates: number[] = [];
+  for (let i = 0; i < rowCount; i += stride) candidates.push(i);
+  if (candidates[candidates.length - 1] !== rowCount - 1) {
+    candidates.push(rowCount - 1);
+  }
+
+  const placed: XAxisLabelLayout[] = [];
+  let lastRight = -Infinity;
+  for (const index of candidates) {
+    const x = dots[index]?.x;
+    if (x == null) continue;
+    const left = x - labelW / 2;
+    const right = left + labelW;
+    if (placed.length > 0 && left < lastRight + minGap) continue;
+    placed.push({ index, centerX: x, width: labelW });
+    lastRight = right;
+  }
+
+  if (rowCount > 1) {
+    const lastIndex = rowCount - 1;
+    const lastX = dots[lastIndex]?.x;
+    if (lastX != null && !placed.some((label) => label.index === lastIndex)) {
+      const left = lastX - labelW / 2;
+      while (
+        placed.length > 0 &&
+        placed[placed.length - 1]!.centerX + placed[placed.length - 1]!.width / 2 + minGap >
+          left
+      ) {
+        placed.pop();
+      }
+      placed.push({ index: lastIndex, centerX: lastX, width: labelW });
+    }
+  }
+
+  return placed;
+}
+
+function buildMonotoneLinePath(
+  points: Array<{ x: number; y: number }>
+): ReturnType<typeof Skia.Path.Make> {
+  const path = Skia.Path.Make();
+  if (points.length === 0) return path;
+  if (points.length === 1) {
+    path.moveTo(points[0]!.x, points[0]!.y);
+    return path;
+  }
+  path.moveTo(points[0]!.x, points[0]!.y);
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i]!;
+    const p1 = points[i + 1]!;
+    const mx = (p0.x + p1.x) / 2;
+    path.cubicTo(mx, p0.y, mx, p1.y, p1.x, p1.y);
+  }
+  return path;
 }
 
 export default function ProfileRankTrendChartNative({
@@ -259,20 +336,13 @@ export default function ProfileRankTrendChartNative({
 
     const rankToY = (rank: number) => {
       const t = (rank - lo) / (hi - lo);
-      return PAD_T + t * PLOT_H;
+      return PAD_T + Y_AXIS_TOP_PAD + t * (PLOT_H - Y_AXIS_TOP_PAD);
     };
 
-    /** 端の点で順位ラベル・ドットがカード外にはみ出さないよう、左右に余白を確保 */
-    const rawEdgeInset = rows.reduce((acc, row) => {
-      const gl = rankGlyphLayout(row.rank);
-      return Math.max(acc, gl.labelW / 2 + gl.rDot + 6);
-    }, 10);
-    const maxEdgeInset = Math.max(6, plotInnerW / 2 - 4);
-    const edgeInset = Math.min(rawEdgeInset, maxEdgeInset);
-    const spanX = Math.max(4, plotInnerW - 2 * edgeInset);
+    const spanX = Math.max(4, plotInnerW - 2 * X_AXIS_PAD);
     const xForIndex = (i: number) => {
-      if (n === 1) return edgeInset + spanX / 2;
-      return edgeInset + (i / (n - 1)) * spanX;
+      if (n === 1) return X_AXIS_PAD + spanX / 2;
+      return X_AXIS_PAD + (i / (n - 1)) * spanX;
     };
 
     const dots = rows.map((row, i) => {
@@ -290,25 +360,21 @@ export default function ProfileRankTrendChartNative({
       };
     });
 
-    const linePath = Skia.Path.Make();
-    dots.forEach((d, i) => {
-      if (i === 0) linePath.moveTo(d.x, d.y);
-      else linePath.lineTo(d.x, d.y);
-    });
+    const linePath = buildMonotoneLinePath(dots);
 
     const gridPaths: ReturnType<typeof Skia.Path.Make>[] = [];
     for (const tick of yTicks) {
       const gy = rankToY(tick);
-      gridPaths.push(...horizontalDashedSegments(gy, plotInnerW, 4, 4));
-    }
-    /** 各スナップショット列に縦線（単一点は中央） */
-    for (let i = 0; i < n; i++) {
-      const vx = xForIndex(i);
-      gridPaths.push(...verticalDashedSegments(vx, PAD_T, PLOT_H, 4, 4));
+      gridPaths.push(...horizontalDashedSegments(gy, plotInnerW, 3, 3));
     }
 
     return { linePath, gridPaths, dots, yTicks, lo, hi };
   }, [chartRows, plotInnerW]);
+
+  const xAxisLabels = useMemo(
+    () => layoutXAxisLabels(model.dots, chartRows.length, plotInnerW),
+    [chartRows.length, model.dots, plotInnerW]
+  );
 
   const title = "Ranking Progress";
   const subtitle = isJa ? "最新10件のランキングの変動を表示" : "Shows ranking changes over recent snapshots";
@@ -415,7 +481,11 @@ export default function ProfileRankTrendChartNative({
                   .slice()
                   .reverse()
                   .map((t) => {
-                    const topPos = PAD_T + ((t - model.lo) / (model.hi - model.lo)) * PLOT_H - 7;
+                    const topPos =
+                      PAD_T +
+                      Y_AXIS_TOP_PAD +
+                      ((t - model.lo) / (model.hi - model.lo)) * (PLOT_H - Y_AXIS_TOP_PAD) -
+                      7;
                     return (
                       <Text
                         key={`yt-${t}`}
@@ -433,35 +503,15 @@ export default function ProfileRankTrendChartNative({
               <View style={{ width: plotInnerW, height: CHART_H }}>
                 <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
                   <Group>
-                    <RoundedRect
-                      x={0}
-                      y={PAD_T}
-                      width={plotInnerW}
-                      height={PLOT_H}
-                      r={8}
-                      color="rgba(255,255,255,0.03)"
-                    />
                     {model.gridPaths.map((gp, idx) => (
                       <Path
                         key={`g-${idx}`}
                         path={gp}
                         style="stroke"
                         strokeWidth={1}
-                        color="rgba(148,163,184,0.20)"
+                        color="rgba(148,163,184,0.12)"
                       />
                     ))}
-                    <Path
-                      path={(() => {
-                        const p = Skia.Path.Make();
-                        const yb = PAD_T + PLOT_H;
-                        p.moveTo(0, yb);
-                        p.lineTo(plotInnerW, yb);
-                        return p;
-                      })()}
-                      style="stroke"
-                      strokeWidth={1}
-                      color="rgba(255,255,255,0.08)"
-                    />
                     {chartRows.length > 1 ? (
                       <Path path={model.linePath} style="stroke" strokeWidth={2} color={LINE} />
                     ) : null}
@@ -469,7 +519,15 @@ export default function ProfileRankTrendChartNative({
                       const theme = TREND_THEME[d.trend];
                       return (
                         <Group key={`dot-${idx}`}>
-                          <Circle cx={d.x} cy={d.y} r={d.rDot + 3} color={theme.glowRing} opacity={0.35} />
+                          <Circle
+                            cx={d.x}
+                            cy={d.y}
+                            r={d.rDot + MOBILE_DOT_GLOW_EXTRA}
+                            color={theme.glowRing}
+                            style="stroke"
+                            strokeWidth={MOBILE_DOT_GLOW_STROKE}
+                            opacity={0.7}
+                          />
                           <Circle cx={d.x} cy={d.y} r={d.rDot} color={theme.fill} />
                           <Circle
                             cx={d.x}
@@ -477,7 +535,7 @@ export default function ProfileRankTrendChartNative({
                             r={d.rDot}
                             color={theme.stroke}
                             style="stroke"
-                            strokeWidth={2}
+                            strokeWidth={MOBILE_DOT_STROKE}
                           />
                         </Group>
                       );
@@ -492,7 +550,7 @@ export default function ProfileRankTrendChartNative({
                       styles.rankInCircle,
                       {
                         left: d.x - d.labelW / 2,
-                        top: d.y - d.fontSize * 0.55,
+                        top: d.y - d.fontSize * 0.5,
                         width: d.labelW,
                         fontSize: d.fontSize,
                       },
@@ -506,28 +564,23 @@ export default function ProfileRankTrendChartNative({
               </View>
 
               <View style={[styles.xAxisRow, { width: plotInnerW }]}>
-                {chartRows.map((r, i) => {
-                  const d = model.dots[i];
-                  if (!d) return null;
-                  const xTickW = 80;
-                  const xTickLeft = Math.max(
-                    0,
-                    Math.min(d.x - xTickW / 2, plotInnerW - xTickW)
-                  );
+                {xAxisLabels.map((label) => {
+                  const row = chartRows[label.index];
+                  if (!row) return null;
                   return (
                     <Text
-                      key={r.dateKey}
+                      key={row.dateKey}
                       style={[
                         styles.xTick,
                         {
                           position: "absolute",
-                          left: xTickLeft,
-                          width: xTickW,
+                          left: label.centerX - label.width / 2,
+                          width: label.width,
                         },
                       ]}
                       numberOfLines={1}
                     >
-                      {formatAxisDate(r.dateKey, language, showYearOnXAxis)}
+                      {formatAxisDate(row.dateKey, language, showYearOnXAxis)}
                     </Text>
                   );
                 })}
