@@ -9,7 +9,7 @@ export const THUNDER_LAKERS_TEAM_IDS = ["nba-thunder", "nba-lakers"] as const;
 const H2H_LEFT = "Thunder";
 const H2H_RIGHT = "Lakers";
 
-/** 2025-26 Thunder vs Lakers（レギュラー4 + プレーオフ Game 3まで） */
+/** 2025-26 Thunder vs Lakers（レギュラー4 + プレーオフ Game 4まで） */
 export const thunderLakersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-thunder-lakers-2025-11-12",
@@ -141,6 +141,26 @@ export const thunderLakersH2HGames: NbaH2HGameCard[] = [
         "Los Angeles led 59-57 at halftime without Luka Dončić—Rui Hachimura scored 21 while LeBron James and Austin Reaves kept the offense organized early. After the break, Oklahoma City’s intensity took over: transition attacks, paint pressure, and defensive heat broke the Lakers open. Ajay Mitchell posted 24 points and 10 assists, and Shai Gilgeous-Alexander added 23 points and 9 assists to steer the game. Hachimura and Luke Kennard chipped in scoring, but James and Reaves could not sustain efficiency as L.A.’s defense unraveled in the second half. OKC moved to a 3-0 series lead and earned match point.",
     },
   },
+  {
+    id: "h2h-thunder-lakers-2026-05-11-po-g4",
+    dateEt: "2026-05-11",
+    dateJst: "2026-05-12",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 115,
+    scoreRight: 110,
+    /** Los Angeles（Lakers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: ["J. Williams"],
+    injuriesRight: ["L. Doncic"],
+    inactiveFooterSummary: {
+      ja:
+        "Oklahoma Cityが終盤の接戦を制し、Lakersを4勝0敗でスイープした。Shai Gilgeous-Alexanderは35得点でチームを牽引し、勝負どころのフリースローやアイソレーションで試合を締めた。Ajay Mitchellも28得点と大きく貢献し、Lakersの守備がSGAに寄った場面で得点源になった。LakersはLuka Dončićを欠く中、Austin Reavesが27得点、八村塁が25得点、LeBron Jamesが24得点・12リバウンドと粘った。第4QにはLakersが一時リードする場面もあったが、OKCは終盤の遂行力で上回った。Thunderはプレーオフ8連勝でカンファレンスファイナル進出。",
+      en:
+        "Oklahoma City closed a tight finish and swept the Lakers in four. Shai Gilgeous-Alexander led with 35 points, sealing the game at the line and in isolation in the biggest moments. Ajay Mitchell added 28 and punished moments when Los Angeles tilted its defense toward SGA. Without Luka Dončić, the Lakers got 27 from Austin Reaves, 25 from Rui Hachimura, and 24 points and 12 rebounds from LeBron James. Los Angeles even led briefly in the fourth, but OKC’s execution down the stretch won out. The Thunder are on an eight-game playoff winning streak and advance to the conference finals.",
+    },
+  },
 ];
 
 /** 左=OKC・右=LAL のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -179,7 +199,7 @@ function thunderLakersH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記8試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function thunderLakersH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

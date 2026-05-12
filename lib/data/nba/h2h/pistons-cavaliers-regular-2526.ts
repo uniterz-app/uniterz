@@ -13,7 +13,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Cavaliers";
 
 /**
- * 2025-26 Pistons vs Cavaliers（レギュラー5 + プレーオフ Game 3まで）
+ * 2025-26 Pistons vs Cavaliers（レギュラー5 + プレーオフ Game 4まで）
  * 欠場者表記は既存H2Hと同様（イニシャル + 姓）
  */
 export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
@@ -129,6 +129,26 @@ export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
         "Cavsは0-3を避ける重要な試合で、前半からDonovan Mitchellを中心に主導権を握った。2Qに32-18で突き放し、Mitchell、Allen、Mobleyが攻守で流れを作った。ただPistonsも後半にCade Cunninghamを中心に反撃。Cadeは27点・10リバウンド・10アシストのトリプルダブルを記録し、一時は逆転圏内まで戻した。ただし8ターンオーバーが痛く、終盤のミスが勝敗を分けた。最後はMax StrusのスティールからCavsが流れを取り戻し、James Hardenが終盤にジャンパーと3Pを決めて試合を締めた。Cavsは完全な快勝ではないが、シリーズを2-1に戻した。",
       en:
         "Facing elimination down 0-2, Cleveland seized control early behind Donovan Mitchell and broke the game open with a 32-18 second quarter as Mitchell, Jarrett Allen, and Evan Mobley tilted the floor on both ends. Detroit rallied behind Cade Cunningham in the second half; he finished with a 27-point, 10-rebound, 10-assist triple-double and drew the Pistons within striking distance. But eight turnovers—including costly miscues late—proved decisive. Max Strus’s steal swung momentum back to the Cavaliers, and James Harden closed with key jumpers and a three-pointer. It was not a wire-to-wire blowout, but Cleveland stayed alive as the series moved to 2-1 in Detroit’s favor.",
+    },
+  },
+  {
+    id: "h2h-pistons-cavaliers-2026-05-11-po-g4",
+    dateEt: "2026-05-11",
+    dateJst: "2026-05-12",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 103,
+    scoreRight: 112,
+    /** Cleveland（Cavaliers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Clevelandは前半終了時点で52-56とリードされていたが、後半にDonovan Mitchellが完全に試合を支配した。前半4得点から一転、後半だけで39得点を奪い、最終的に43得点。第3Qの21得点を中心にCavsが一気に流れを変えた。Clevelandは最大の勝負所で24-0のランを作り、Detroitのオフェンスを止めながら逆転。Evan Mobleyも17得点・8リバウンド・5ブロックで守備面の存在感が大きかった。DetroitはCaris LeVertが24得点、Cade Cunninghamが19得点を記録したが、後半に得点が止まり、Mitchellの爆発に対応できなかった。シリーズは2勝2敗のタイに戻った。",
+      en:
+        "Cleveland trailed 52-56 at halftime, but Donovan Mitchell took over after the break. He scored only four in the first half, then erupted for 39 after intermission and finished with 43, including 21 in the third quarter as the Cavaliers flipped the game. Cleveland built a 24-0 run in the biggest moments, stalling Detroit’s offense while surging ahead. Evan Mobley added 17 points, 8 rebounds, and 5 blocks on the defensive end. Caris LeVert scored 24 and Cade Cunningham had 19 for the Pistons, but Detroit stalled after halftime and could not answer Mitchell’s explosion. The series is tied 2-2.",
     },
   },
 ];

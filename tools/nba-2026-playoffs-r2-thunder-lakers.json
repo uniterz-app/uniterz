@@ -53,6 +53,16 @@
     "playoffRound": "r2",
     "home": { "name": "Los Angeles Lakers", "teamId": "nba-lakers" },
     "away": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
-    "status": "scheduled"
+    "status": "final",
+    "final": true,
+    "homeScore": 110,
+    "awayScore": 115,
+    "score": { "home": 110, "away": 115 },
+    "seriesStanding": { "homeWins": 0, "awayWins": 4 },
+    "injuries": {
+      "home": ["Luka Doncic"],
+      "away": ["Jalen Williams"]
+    },
+    "summaryJa": "Oklahoma Cityが終盤の接戦を制し、Lakersを4勝0敗でスイープした。Shai Gilgeous-Alexanderは35得点でチームを牽引し、勝負どころのフリースローやアイソレーションで試合を締めた。Ajay Mitchellも28得点と大きく貢献し、Lakersの守備がSGAに寄った場面で得点源になった。LakersはLuka Dončićを欠く中、Austin Reavesが27得点、八村塁が25得点、LeBron Jamesが24得点・12リバウンドと粘った。第4QにはLakersが一時リードする場面もあったが、OKCは終盤の遂行力で上回った。Thunderはプレーオフ8連勝でカンファレンスファイナル進出"
   }
 ]

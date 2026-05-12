@@ -53,6 +53,30 @@
     "playoffRound": "r2",
     "home": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
     "away": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "status": "final",
+    "final": true,
+    "homeScore": 112,
+    "awayScore": 103,
+    "score": { "home": 112, "away": 103 },
+    "seriesStanding": { "homeWins": 2, "awayWins": 2 },
+    "injuries": {
+      "home": [],
+      "away": []
+    },
+    "summaryJa": "Clevelandは前半終了時点で52-56とリードされていたが、後半にDonovan Mitchellが完全に試合を支配した。前半4得点から一転、後半だけで39得点を奪い、最終的に43得点。第3Qの21得点を中心にCavsが一気に流れを変えた。Clevelandは最大の勝負所で24-0のランを作り、Detroitのオフェンスを止めながら逆転。Evan Mobleyも17得点・8リバウンド・5ブロックで守備面の存在感が大きかった。DetroitはCaris LeVertが24得点、Cade Cunninghamが19得点を記録したが、後半に得点が止まり、Mitchellの爆発に対応できなかった。シリーズは2勝2敗のタイに戻った。"
+  },
+  {
+    "id": "nba-20260514-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-14T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 5",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "away": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
     "status": "scheduled"
   }
 ]
