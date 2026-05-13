@@ -11,6 +11,30 @@
     "playoffRound": "r2",
     "home": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
     "away": { "name": "Minnesota Timberwolves", "teamId": "nba-timberwolves" },
+    "status": "final",
+    "final": true,
+    "homeScore": 126,
+    "awayScore": 97,
+    "score": { "home": 126, "away": 97 },
+    "seriesStanding": { "homeWins": 3, "awayWins": 2 },
+    "injuries": {
+      "home": [],
+      "away": ["Donte DiVincenzo"]
+    },
+    "summaryJa": "SpursはWembanyamaが第1Qから支配し、序盤に大きくリード。Wolvesも第3Q序盤に61-61まで追いついたが、そこからSpursが一気に30-12のランで試合を壊した。Game 4で退場したWembanyamaがしっかり反発し、インサイド、リバウンド、守備で試合全体をコントロール。WolvesはEdwards、Randle、McDanielsが得点したが、後半の守備崩壊とボール保持の乱れで一気に突き放された。SpursはベンチのKeldon Johnson、Harperも効いて、かなり完勝に近い内容。"
+  },
+  {
+    "id": "nba-20260516-02",
+    "league": "nba",
+    "startAtJstIso": "2026-05-16T10:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 6",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Minnesota Timberwolves", "teamId": "nba-timberwolves" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
     "status": "scheduled"
   }
 ]

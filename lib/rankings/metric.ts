@@ -1,8 +1,8 @@
 import type {
   MobileMetric,
   RankingRowWithCountry,
-}from "@/app/component/rankings/_data/mockRows";
-import { formatMetricDecimals, roundMetricDecimals } from "@/lib/format/metricDecimals";
+} from "../../app/component/rankings/_data/mockRows";
+import { formatMetricDecimals, roundMetricDecimals } from "../format/metricDecimals";
 
 export function metricNum(r: RankingRowWithCountry, metric: MobileMetric) {
   if (metric === "totalScore") {

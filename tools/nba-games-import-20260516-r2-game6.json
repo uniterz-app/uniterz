@@ -1,0 +1,30 @@
+[
+  {
+    "id": "nba-20260516-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-16T08:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 6",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "away": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260516-02",
+    "league": "nba",
+    "startAtJstIso": "2026-05-16T10:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 6",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Minnesota Timberwolves", "teamId": "nba-timberwolves" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "scheduled"
+  }
+]
