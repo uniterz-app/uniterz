@@ -484,7 +484,7 @@ const ko: Messages = {
     marketBias: "시장 편향",
     h2hAvgPoints: "H2H 평균 득점",
     teamStats: "팀 통계",
-    teamProfile: "팀 프로필",
+    teamProfile: "팀 데이터",
     distribution: "예측 분포",
     predictionLocked: "예측 잠김",
     predictionLockedDesc: "경기 시작 후에는 예측을 변경할 수 없습니다.",

@@ -501,7 +501,7 @@ const en: Messages = {
     marketBias: "Market bias",
     h2hAvgPoints: "H2H PTS / G",
     teamStats: "Team stats",
-    teamProfile: "Team Profile",
+    teamProfile: "Team Data",
     distribution: "Distribution",
     predictionLocked: "Prediction locked",
     predictionLockedDesc: "Cannot change prediction after game starts.",

@@ -492,7 +492,7 @@ const pt: Messages = {
     marketBias: "Tendência do mercado",
     h2hAvgPoints: "PTS H2H / J",
     teamStats: "Estatísticas do time",
-    teamProfile: "Perfil do time",
+    teamProfile: "Dados do time",
     distribution: "Distribuição",
     predictionLocked: "Palpite bloqueado",
     predictionLockedDesc: "Não é possível alterar o palpite após o início do jogo.",

@@ -494,7 +494,7 @@ const de: Messages = {
     marketBias: "Markttendenz",
     h2hAvgPoints: "H2H Pkt. / S",
     teamStats: "Teamstatistiken",
-    teamProfile: "Teamprofil",
+    teamProfile: "Teamdaten",
     distribution: "Verteilung",
     predictionLocked: "Vorhersage gesperrt",
     predictionLockedDesc: "Nach Spielbeginn kann die Vorhersage nicht mehr geändert werden.",
