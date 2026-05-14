@@ -13,7 +13,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Cavaliers";
 
 /**
- * 2025-26 Pistons vs Cavaliers（レギュラー5 + プレーオフ Game 4まで）
+ * 2025-26 Pistons vs Cavaliers（レギュラー5 + プレーオフ Game 5まで）
  * 欠場者表記は既存H2Hと同様（イニシャル + 姓）
  */
 export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
@@ -149,6 +149,27 @@ export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
         "Clevelandは前半終了時点で52-56とリードされていたが、後半にDonovan Mitchellが完全に試合を支配した。前半4得点から一転、後半だけで39得点を奪い、最終的に43得点。第3Qの21得点を中心にCavsが一気に流れを変えた。Clevelandは最大の勝負所で24-0のランを作り、Detroitのオフェンスを止めながら逆転。Evan Mobleyも17得点・8リバウンド・5ブロックで守備面の存在感が大きかった。DetroitはCaris LeVertが24得点、Cade Cunninghamが19得点を記録したが、後半に得点が止まり、Mitchellの爆発に対応できなかった。シリーズは2勝2敗のタイに戻った。",
       en:
         "Cleveland trailed 52-56 at halftime, but Donovan Mitchell took over after the break. He scored only four in the first half, then erupted for 39 after intermission and finished with 43, including 21 in the third quarter as the Cavaliers flipped the game. Cleveland built a 24-0 run in the biggest moments, stalling Detroit’s offense while surging ahead. Evan Mobley added 17 points, 8 rebounds, and 5 blocks on the defensive end. Caris LeVert scored 24 and Cade Cunningham had 19 for the Pistons, but Detroit stalled after halftime and could not answer Mitchell’s explosion. The series is tied 2-2.",
+    },
+  },
+  {
+    id: "h2h-pistons-cavaliers-2026-05-13-po-g5",
+    dateEt: "2026-05-13",
+    dateJst: "2026-05-14",
+    seriesGameLabel: "Game 5",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 113,
+    scoreRight: 117,
+    /** Detroit（Pistons）ホーム */
+    homeTeamSide: "left",
+    wentToOvertime: true,
+    injuriesLeft: ["D. Robinson"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "延長戦。PistonsはCade Cunninghamが39点・7リバウンド・9アシストで引っ張り、終盤まで勝てる展開だった。残り約2分半で9点リードを持っていたが、そこからオフェンスが止まり、Cavsに追いつかれて延長へ。CavsはJames Hardenが30点、Donovan Mitchellが21点。特にMitchellは延長で7点を取り、勝負どころを支配した。PistonsはDuncan Robinson欠場の影響で外の火力が足りず、Cade以外の得点支援が不足。勝ち試合を落とし、Cavsがシリーズ3勝2敗で王手。",
+      en:
+        "Overtime. Cade Cunningham carried Detroit with 39 points, 7 rebounds, and 9 assists, and the Pistons looked poised to close it out until their offense stalled with about two and a half minutes left and a nine-point lead, letting Cleveland force OT. James Harden scored 30 and Donovan Mitchell 21 for the Cavaliers; Mitchell added 7 in overtime to take over crunch time. Without Duncan Robinson, Detroit lacked perimeter punch and secondary scoring behind Cade. Cleveland stole a winnable game and took a 3-2 series lead.",
     },
   },
 ];

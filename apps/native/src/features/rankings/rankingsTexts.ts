@@ -25,6 +25,8 @@ export function rankingsTexts(language: RankingsLanguage) {
       : "Rankings update daily at 16:00 JST / Scores are cumulative",
     yourRank: "YOUR RANK",
     pts: "pts",
+    /** Web `streakShortLabel` に相当（点数横の短い単位） */
+    streakShort: ja ? "連勝" : "W",
     loading: ja ? "読み込み中…" : "Loading…",
     noData: "NO DATA",
     winRateMin: (n: number) =>
