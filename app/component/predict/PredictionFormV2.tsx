@@ -231,8 +231,8 @@ export default function PredictionFormV2({
 
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const isSoccer = game.league === "pl" || game.league === "j1";
   const isWc = game.league === "wc";
+  const isSoccer = game.league === "pl" || game.league === "j1" || isWc;
   // WC は Standings タブ（グループ順位 + FIFA ランク）を常に出す
   const showStandings = game.league === "nba" || isWc;
   /** Playoffs / Play-In: 直接対決 / 市場 / 詳細スタッツの3タブ（順位表タブなし） */

@@ -12,6 +12,7 @@ import React, {
 import { useRouter, usePathname } from "next/navigation";
 import { Flame, Menu, Pencil, Trash2 } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -89,6 +90,7 @@ const leaguePillBg: Record<string, string> = {
   bj: "#C8102E",
   pl: "#3A0CA3",
   j1: "#E10600",
+  wc: "#56042C",
 };
 
 const leagueLabel: Record<string, string> = {
@@ -96,6 +98,7 @@ const leagueLabel: Record<string, string> = {
   bj: "B1",
   pl: "PL",
   j1: "J1",
+  wc: "WC",
 };
 
 function toInt(v: unknown): number | null {
@@ -182,6 +185,7 @@ function ResultCardPresentationImpl({
   const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
 
   const normalizedLeague = normalizeLeague(post.league);
+  const isWc = normalizedLeague === "wc";
 
   const Icon =
     normalizedLeague === "nba" || normalizedLeague === "bj" ? Jersey : Soccer;
@@ -739,7 +743,16 @@ function ResultCardPresentationImpl({
           {isMobile ? (
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
-                {Icon === Jersey ? (
+                {isWc ? (
+                  <CountryFlag
+                    teamId={post.home?.teamId}
+                    className={
+                      mobileScheduleDense
+                        ? "ml-1 h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
+                        : "ml-1 h-[3.2rem] w-[4.4rem] shrink-0"
+                    }
+                  />
+                ) : Icon === Jersey ? (
                   <HalftoneJerseyMark
                     accent={homeJerseyColor}
                     accentEnd={homeJerseySecondaryColor}
@@ -779,7 +792,12 @@ function ResultCardPresentationImpl({
             </>
           ) : (
             <>
-              {Icon === Jersey ? (
+              {isWc ? (
+                <CountryFlag
+                  teamId={post.home?.teamId}
+                  className="h-[3.5rem] w-[4.8rem]"
+                />
+              ) : Icon === Jersey ? (
                 <HalftoneJerseyMark
                   accent={homeJerseyColor}
                   accentEnd={homeJerseySecondaryColor}
@@ -846,7 +864,16 @@ function ResultCardPresentationImpl({
           {isMobile ? (
             <>
               <div className="relative flex w-full min-w-0 items-center justify-center">
-                {Icon === Jersey ? (
+                {isWc ? (
+                  <CountryFlag
+                    teamId={post.away?.teamId}
+                    className={
+                      mobileScheduleDense
+                        ? "mr-1 h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
+                        : "mr-1 h-[3.2rem] w-[4.4rem] shrink-0"
+                    }
+                  />
+                ) : Icon === Jersey ? (
                   <HalftoneJerseyMark
                     accent={awayJerseyColor}
                     accentEnd={awayJerseySecondaryColor}
@@ -886,7 +913,12 @@ function ResultCardPresentationImpl({
             </>
           ) : (
             <>
-              {Icon === Jersey ? (
+              {isWc ? (
+                <CountryFlag
+                  teamId={post.away?.teamId}
+                  className="h-[3.5rem] w-[4.8rem]"
+                />
+              ) : Icon === Jersey ? (
                 <HalftoneJerseyMark
                   accent={awayJerseyColor}
                   accentEnd={awayJerseySecondaryColor}

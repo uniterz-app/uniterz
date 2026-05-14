@@ -99,7 +99,7 @@ export async function GET(req: NextRequest, ctx: any) {
 
 function isSoccerLeague(league: unknown): boolean {
   const s = String(league ?? "").toLowerCase();
-  return s === "pl" || s === "j1" || s.includes("premier");
+  return s === "pl" || s === "j1" || s === "wc" || s.includes("premier");
 }
 
 /** 予想 PATCH 用（POST /api/posts_v2 と同趣旨の検証） */

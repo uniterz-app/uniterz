@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Flame, Pencil } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -42,6 +43,7 @@ const leaguePillBg: Record<string, string> = {
   bj: "#C8102E",
   pl: "#3A0CA3",
   j1: "#E10600",
+  wc: "#56042C",
 };
 
 const leagueLabel: Record<string, string> = {
@@ -49,6 +51,7 @@ const leagueLabel: Record<string, string> = {
   bj: "B1",
   pl: "PL",
   j1: "J1",
+  wc: "WC",
 };
 
 function ordinal(n: number) {
@@ -174,6 +177,7 @@ export default function MobileResultMatchHeader({
 }: Props) {
   const teamNameFont = bracketMarketTeamTypography(true);
   const normalizedLeague = normalizeLeague(post.league);
+  const isWc = normalizedLeague === "wc";
   const m = t(language);
   const Icon =
     normalizedLeague === "nba" || normalizedLeague === "bj" ? Jersey : Soccer;
@@ -359,7 +363,12 @@ export default function MobileResultMatchHeader({
       <div className="relative z-10 px-4 pb-5 pt-11">
       <div className="grid grid-cols-3 items-center pt-1">
         <div className="flex flex-col items-center">
-          {Icon === Jersey ? (
+          {isWc ? (
+            <CountryFlag
+              teamId={post.home?.teamId}
+              className="h-[3rem] w-[4.2rem]"
+            />
+          ) : Icon === Jersey ? (
             <HalftoneJerseyMark
               accent={homeJerseyColor}
               accentEnd={homeJerseySecondaryColor}
@@ -423,7 +432,12 @@ export default function MobileResultMatchHeader({
         </div>
 
         <div className="flex flex-col items-center">
-          {Icon === Jersey ? (
+          {isWc ? (
+            <CountryFlag
+              teamId={post.away?.teamId}
+              className="h-[3rem] w-[4.2rem]"
+            />
+          ) : Icon === Jersey ? (
             <HalftoneJerseyMark
               accent={awayJerseyColor}
               accentEnd={awayJerseySecondaryColor}

@@ -116,8 +116,7 @@ export type ResultListFilters = {
 const DEFAULT_RESULT_FILTERS: ResultListFilters = {
   outcome: "all",
   settlement: "all",
-  /** 暫定：リザルト一覧は NBA のみ */
-  league: LEAGUES.NBA,
+  league: "all",
   specialty: "none",
   scorePrecisionTier: "all",
   pointsTier: "all",
@@ -125,8 +124,7 @@ const DEFAULT_RESULT_FILTERS: ResultListFilters = {
   dateTo: null,
 };
 
-/** フィルター UI に出すリーグ順（暫定で NBA のみ） */
-const LEAGUE_ORDER: League[] = [LEAGUES.NBA];
+const LEAGUE_ORDER: League[] = [LEAGUES.NBA, LEAGUES.WC];
 
 function isDefaultResultFilters(f: ResultListFilters): boolean {
   return (
@@ -632,12 +630,6 @@ export default function ResultListWithOverlay({
     });
   }, [availableDayKeysAsc]);
 
-  /** リーグ選択が1つだけのときは state をそのリーグに固定（暫定 NBA のみ用） */
-  useEffect(() => {
-    if (LEAGUE_ORDER.length !== 1) return;
-    const only = LEAGUE_ORDER[0];
-    setFilters((s) => (s.league === only ? s : { ...s, league: only }));
-  }, []);
 
   useEffect(() => {
     setInfiniteScrollEnabled?.(!postsCacheCapped);

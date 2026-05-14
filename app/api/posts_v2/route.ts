@@ -5,7 +5,7 @@ import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */
-type League = "bj" | "j1" | "nba" | "pl";
+type League = "bj" | "j1" | "nba" | "pl" | "wc";
 type Status = "scheduled" | "live" | "final";
 
 type ParsedOkV2 = {
@@ -64,8 +64,9 @@ function normalizeLeague(v: any): League {
   if (s === "j1" || s === "j") return "j1";
   if (s === "nba") return "nba";
   if (s === "pl" || s.includes("premier")) return "pl";
+  if (s === "wc" || s === "worldcup" || s.includes("world cup") || s === "fifa") return "wc";
 
-  return "bj"; // フォールバック
+  return "bj";
 }
 
 function toAdminTimestamp(v: any): Timestamp | null {

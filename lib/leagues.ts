@@ -48,7 +48,7 @@ export function normalizeLeague(raw: any): League {
   }
 
   // world cup / fifa
-  if (v === "wc" || v === "fifa" || v.includes("world cup")) {
+  if (v === "wc" || v === "worldcup" || v === "fifa" || v.includes("world cup") || v.includes("world_cup")) {
     return "wc";
   }
 
