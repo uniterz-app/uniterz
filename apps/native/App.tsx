@@ -27,7 +27,8 @@ import GamesHomeScreen from "./src/features/games/GamesHomeScreen";
 import ProfileHomeScreen from "./src/features/profile/ProfileHomeScreen";
 import ResultHomeScreen from "./src/features/results/ResultHomeScreen";
 import RankingsHomeScreen from "./src/features/rankings/RankingsHomeScreen";
-import { useState } from "react";
+import { prefetchRankingsLogoGlb } from "./src/features/rankings/rankingsLogoGlbCache";
+import { useEffect, useState } from "react";
 
 type MainTab = "games" | "insight" | "trophy" | "stats" | "profile";
 
@@ -75,6 +76,13 @@ function AppContent() {
   const bottomContentReserveY = pillBottomFromScreenBottom + 8 + 42 + 8 + 14;
 
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
+
+  useEffect(() => {
+    if (!isAuthed) return;
+    // ランキングタブを開く前に GLB と 3D キャンバス用チャンクを先読み
+    prefetchRankingsLogoGlb();
+    void import("./src/features/rankings/RankingsLogo3DCanvasNative");
+  }, [isAuthed]);
 
   return (
     <View style={styles.windowRoot}>

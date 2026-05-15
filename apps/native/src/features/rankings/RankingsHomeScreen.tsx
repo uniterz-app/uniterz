@@ -6,7 +6,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
 import type { RankingRowWithCountry } from "../../../../../app/component/rankings/_data/mockRows";
 import {
@@ -16,6 +15,7 @@ import {
 } from "../../../../../lib/rankings/rankingTransform";
 import type { RankingRow } from "../../../../../lib/rankings/useRanking";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
+import RankingsCyberBackgroundNative from "./RankingsCyberBackgroundNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
@@ -97,12 +97,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={["#050814", "#070b16", "#050814"]}
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      />
+      <View style={styles.bgLayer} collapsable={false}>
+        <RankingsCyberBackgroundNative />
+      </View>
       <ScrollView
+        style={styles.scrollLayer}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomReserveY + 16 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -159,8 +158,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
             {!listReady ? (
               <View style={styles.loadingWrap}>
-                <BlocksPulseLoader pixelScale={0.85} />
-                <Text style={styles.loadingText}>{t.loading}</Text>
+                <BlocksPulseLoader pixelScale={0.85} label="loading" />
               </View>
             ) : rankingHasNoEntries ? (
               <View style={styles.noDataWrap}>
@@ -192,7 +190,21 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#050814",
+    backgroundColor: "#020409",
+  },
+  /** 3D を背面に固定し、前面 ScrollView は透明にしてロゴが透けて見えるようにする */
+  bgLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  scrollLayer: {
+    flex: 1,
+    zIndex: 1,
+    backgroundColor: "transparent",
+    ...Platform.select({
+      android: { elevation: 0 },
+      default: {},
+    }),
   },
   scrollContent: {
     paddingHorizontal: 12,
@@ -249,10 +261,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 40,
     gap: 10,
-  },
-  loadingText: {
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 11,
   },
   noDataWrap: {
     minHeight: 220,

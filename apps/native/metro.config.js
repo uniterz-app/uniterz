@@ -8,6 +8,13 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 
 const config = getDefaultConfig(projectRoot);
 
+// GLB をアセットとして扱う（source 扱いだと .ios.ts 等を付け足して解決失敗する）
+const { assetExts, sourceExts } = config.resolver;
+if (!assetExts.includes("glb")) {
+  config.resolver.assetExts = [...assetExts, "glb"];
+}
+config.resolver.sourceExts = sourceExts.filter((ext) => ext !== "glb");
+
 // monorepo 配下の packages を解決できるようにする
 config.watchFolders = [workspaceRoot];
 config.resolver.nodeModulesPaths = [

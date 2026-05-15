@@ -77,7 +77,17 @@
     "playoffRound": "r2",
     "home": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
     "away": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
-    "status": "scheduled"
+    "status": "final",
+    "final": true,
+    "homeScore": 113,
+    "awayScore": 117,
+    "score": { "home": 113, "away": 117 },
+    "seriesStanding": { "homeWins": 2, "awayWins": 3 },
+    "injuries": {
+      "home": ["Duncan Robinson"],
+      "away": []
+    },
+    "summaryJa": "延長戦。PistonsはCade Cunninghamが39点・7リバウンド・9アシストで引っ張り、終盤まで勝てる展開だった。残り約2分半で9点リードを持っていたが、そこからオフェンスが止まり、Cavsに追いつかれて延長へ。CavsはJames Hardenが30点、Donovan Mitchellが21点。特にMitchellは延長で7点を取り、勝負どころを支配した。PistonsはDuncan Robinson欠場の影響で外の火力が足りず、Cade以外の得点支援が不足。勝ち試合を落とし、Cavsがシリーズ3勝2敗で王手。"
   },
   {
     "id": "nba-20260516-01",
