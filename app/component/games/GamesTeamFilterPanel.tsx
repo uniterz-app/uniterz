@@ -484,11 +484,11 @@ export default function GamesTeamFilterPanel({
         onClick={() => setOpen(true)}
         style={tabFont}
         className={cn(
-          "inline-flex shrink-0 items-center gap-2 rounded-xl border font-bold uppercase tracking-wide transition",
+          "inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border font-bold uppercase tracking-wide transition",
           activeCount > 0 || marginFilterActive
             ? "border-cyan-400/45 bg-cyan-500/15 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.12)] hover:bg-cyan-500/22"
             : "border-white/12 bg-white/[0.04] text-white/85 hover:border-white/18 hover:bg-white/[0.07]",
-          dense ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-xs md:text-sm",
+          dense ? "px-2.5 text-xs" : "px-3 text-xs md:text-sm",
         )}
       >
         <SlidersHorizontal
