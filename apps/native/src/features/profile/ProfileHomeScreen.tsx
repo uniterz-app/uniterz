@@ -256,7 +256,7 @@ export default function ProfileHomeScreen({
               "プレーオフブラケットは Web 版と同様の表示を順次対応します。",
             statsSoon: "詳細分析（Pro）は Web 版でご利用いただけます。",
             settingsTitle: "プロフィール設定",
-            settingsSubtitle: "アイコン・名前・自己紹介を編集できます",
+            settingsSubtitle: "アイコン・名前・自己紹介・使用言語・国を編集できます",
             settingsClose: "閉じる",
             nameLabel: "名前",
             namePlaceholder: "名前",
@@ -291,7 +291,7 @@ export default function ProfileHomeScreen({
             bracketSoon: "Playoff bracket view will match the web app in a future update.",
             statsSoon: "Pro analysis is available on the web app.",
             settingsTitle: "Profile Settings",
-            settingsSubtitle: "Edit your icon, name, and bio.",
+            settingsSubtitle: "Edit your icon, name, bio, language, and country.",
             settingsClose: "Close",
             nameLabel: "Name",
             namePlaceholder: "Name",
@@ -762,17 +762,25 @@ export default function ProfileHomeScreen({
       visible={settingsOpen}
       transparent
       animationType="fade"
-      onRequestClose={() => setSettingsOpen(false)}
+      onRequestClose={() => {
+        if (langModalOpen || countryModalOpen) {
+          setLangModalOpen(false);
+          setCountryModalOpen(false);
+          return;
+        }
+        setSettingsOpen(false);
+      }}
       {...(Platform.OS === "ios" ? ({ presentationStyle: "overFullScreen" } as const) : {})}
     >
       <View style={styles.profileModalRoot}>
         <ProfileSettingsBackdropBlur />
         <View pointerEvents="none" style={styles.profileModalTint} />
         <SafeAreaView style={styles.profileModalSafe}>
-          <KeyboardAvoidingView
-            style={styles.profileModalFill}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-          >
+          <View style={styles.profileModalLayer}>
+            <KeyboardAvoidingView
+              style={styles.profileModalFill}
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
+            >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t.settingsClose}
@@ -888,7 +896,11 @@ export default function ProfileHomeScreen({
                       <Text style={styles.fieldLabel}>{t.langLabel}</Text>
                       <Pressable
                         style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
-                        onPress={() => setLangModalOpen(true)}
+                        onPress={() => {
+                          setCountryModalOpen(false);
+                          setLangModalOpen(true);
+                        }}
+                        disabled={saving || uploadingAvatar}
                       >
                         <Text style={styles.selectRowText}>
                           {language === "ja" ? "日本語" : "English"}
@@ -905,7 +917,11 @@ export default function ProfileHomeScreen({
                       <Text style={styles.fieldLabel}>{t.countryLabel}</Text>
                       <Pressable
                         style={({ pressed }) => [styles.selectRow, pressed && styles.selectRowPressed]}
-                        onPress={() => setCountryModalOpen(true)}
+                        onPress={() => {
+                          setLangModalOpen(false);
+                          setCountryModalOpen(true);
+                        }}
+                        disabled={saving || uploadingAvatar}
                       >
                         <Text style={styles.selectRowText} numberOfLines={1}>
                           {profileCountryRowLabel(countryCode, language)}
@@ -932,91 +948,86 @@ export default function ProfileHomeScreen({
                 </View>
               </View>
             </ScrollView>
-          </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+            {(langModalOpen || countryModalOpen) && (
+              <View style={styles.profileInlinePickerRoot} pointerEvents="box-none">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t.settingsClose}
+                  style={styles.modalBackdropFill}
+                  onPress={() => {
+                    setLangModalOpen(false);
+                    setCountryModalOpen(false);
+                  }}
+                />
+                {langModalOpen ? (
+                  <View style={styles.modalSheet}>
+                    <Text style={styles.modalSheetTitle}>{t.langLabel}</Text>
+                    <Pressable
+                      style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                      onPress={() => {
+                        setLanguage("ja");
+                        setLangModalOpen(false);
+                      }}
+                    >
+                      <Text style={styles.modalOptionText}>日本語</Text>
+                      {language === "ja" ? (
+                        <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                      ) : null}
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                      onPress={() => {
+                        setLanguage("en");
+                        setLangModalOpen(false);
+                      }}
+                    >
+                      <Text style={styles.modalOptionText}>English</Text>
+                      {language === "en" ? (
+                        <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                      ) : null}
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={styles.modalSheetTall}>
+                    <Text style={styles.modalSheetTitle}>{t.countryLabel}</Text>
+                    <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+                      <Pressable
+                        style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                        onPress={() => {
+                          setCountryCode("");
+                          setCountryModalOpen(false);
+                        }}
+                      >
+                        <Text style={styles.modalOptionText}>{t.countryNotSet}</Text>
+                        {!countryCode.trim() ? (
+                          <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                        ) : null}
+                      </Pressable>
+                      {COUNTRY_OPTIONS.map((c) => (
+                        <Pressable
+                          key={c.code}
+                          style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
+                          onPress={() => {
+                            setCountryCode(c.code);
+                            setCountryModalOpen(false);
+                          }}
+                        >
+                          <Text style={styles.modalOptionText}>
+                            {language === "ja" ? c.labelJa : c.labelEn}
+                          </Text>
+                          {countryCode.trim() === c.code ? (
+                            <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
+                          ) : null}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         </SafeAreaView>
-      </View>
-    </Modal>
-
-    <Modal
-      visible={langModalOpen}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setLangModalOpen(false)}
-    >
-      <View style={styles.modalRoot}>
-        <Pressable style={styles.modalBackdropFill} onPress={() => setLangModalOpen(false)} />
-        <View style={styles.modalSheet}>
-          <Text style={styles.modalSheetTitle}>{t.langLabel}</Text>
-          <Pressable
-            style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-            onPress={() => {
-              setLanguage("ja");
-              setLangModalOpen(false);
-            }}
-          >
-            <Text style={styles.modalOptionText}>日本語</Text>
-            {language === "ja" ? (
-              <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-            ) : null}
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-            onPress={() => {
-              setLanguage("en");
-              setLangModalOpen(false);
-            }}
-          >
-            <Text style={styles.modalOptionText}>English</Text>
-            {language === "en" ? (
-              <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-            ) : null}
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-
-    <Modal
-      visible={countryModalOpen}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setCountryModalOpen(false)}
-    >
-      <View style={styles.modalRoot}>
-        <Pressable style={styles.modalBackdropFill} onPress={() => setCountryModalOpen(false)} />
-        <View style={styles.modalSheetTall}>
-          <Text style={styles.modalSheetTitle}>{t.countryLabel}</Text>
-          <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
-            <Pressable
-              style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-              onPress={() => {
-                setCountryCode("");
-                setCountryModalOpen(false);
-              }}
-            >
-              <Text style={styles.modalOptionText}>{t.countryNotSet}</Text>
-              {!countryCode.trim() ? (
-                <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-              ) : null}
-            </Pressable>
-            {COUNTRY_OPTIONS.map((c) => (
-              <Pressable
-                key={c.code}
-                style={({ pressed }) => [styles.modalOption, pressed && styles.modalOptionPressed]}
-                onPress={() => {
-                  setCountryCode(c.code);
-                  setCountryModalOpen(false);
-                }}
-              >
-                <Text style={styles.modalOptionText}>
-                  {language === "ja" ? c.labelJa : c.labelEn}
-                </Text>
-                {countryCode.trim() === c.code ? (
-                  <MaterialCommunityIcons name="check" size={18} color="rgba(147,197,253,0.95)" />
-                ) : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
       </View>
     </Modal>
 
@@ -1373,6 +1384,17 @@ const styles = StyleSheet.create({
   profileModalSafe: {
     flex: 1,
   },
+  /** 設定シート内に言語・国ピッカーを重ねる（ネスト Modal 回避） */
+  profileModalLayer: {
+    flex: 1,
+    position: "relative",
+  },
+  profileInlinePickerRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 80,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
   profileModalFill: {
     flex: 1,
   },
@@ -1607,11 +1629,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 20,
   },
   modalBackdropFill: {
     ...StyleSheet.absoluteFillObject,

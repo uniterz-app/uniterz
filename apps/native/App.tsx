@@ -81,7 +81,6 @@ function AppContent() {
     if (!isAuthed) return;
     // ランキングタブを開く前に GLB と 3D キャンバス用チャンクを先読み
     prefetchRankingsLogoGlb();
-    void import("./src/features/rankings/RankingsLogo3DCanvasNative");
   }, [isAuthed]);
 
   return (

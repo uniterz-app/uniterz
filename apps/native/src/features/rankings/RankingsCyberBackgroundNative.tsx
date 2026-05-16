@@ -1,17 +1,19 @@
 /**
  * Web の `CyberPageBackground` + `UniterzLogo3DBackground` に相当。
  *
- * - `expo-gl` がネイティブにリンク済み（`requireNativeModule('ExponentGLObjectManager')` が成功）→ 3D ロゴを遅延読み込み
+ * - `expo-gl` がネイティブにリンク済み（`requireNativeModule('ExponentGLObjectManager')` が成功）→ 3D ロゴを表示
+ * - 未リンク時は 3D 自体が出ない（回転の問題ではない）。`run:ios` / `run:android` で再ビルドすること。
  * - 未再ビルドの開発クライアント → 2D（ベース色・グロー・薄い「U」）のみ（クラッシュしない）
  *
  * 3D を常に使うには: `cd apps/native && npx expo run:ios` または `run:android` で再ビルド。
- * GLB は Next の `public/logo/...` を `EXPO_PUBLIC_UNITERZ_API_BASE_URL` 経由で取得（`RankingsLogo3DCanvasNative`）。
+ * GLB は `rankingsLogoGlbCache` で同梱を優先し、必要時のみ `EXPO_PUBLIC_UNITERZ_API_BASE_URL` 経由で取得（`RankingsLogo3DCanvasNative`）。
  */
-import { lazy, Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { requireNativeModule } from "expo-modules-core";
 import { prefetchRankingsLogoGlb } from "./rankingsLogoGlbCache";
+import RankingsLogo3DCanvasNative from "./RankingsLogo3DCanvasNative";
 
 const BG = "#020409";
 
@@ -30,10 +32,6 @@ function isExpoGLNativeLinked(): boolean {
     return false;
   }
 }
-
-const RankingsLogo3DCanvasLazy = lazy(
-  () => import("./RankingsLogo3DCanvasNative")
-);
 
 function GlowOverlays() {
   return (
@@ -63,22 +61,14 @@ export default function RankingsCyberBackgroundNative() {
 
   useEffect(() => {
     if (!use3d) return;
-    // GLB 取得と R3F チャンクを並列で先読み（Suspense 解除後の待ちを短縮）
     prefetchRankingsLogoGlb();
-    void import("./RankingsLogo3DCanvasNative");
   }, [use3d]);
 
   return (
     <View style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]} pointerEvents="none">
       <View style={[StyleSheet.absoluteFillObject, { zIndex: 0 }]} collapsable={false}>
         {use3d ? (
-          <Suspense
-            fallback={
-              <View style={[styles.fill, { backgroundColor: BG }]} />
-            }
-          >
-            <RankingsLogo3DCanvasLazy />
-          </Suspense>
+          <RankingsLogo3DCanvasNative />
         ) : (
           <>
             <View style={[StyleSheet.absoluteFillObject, { backgroundColor: BG }]} />

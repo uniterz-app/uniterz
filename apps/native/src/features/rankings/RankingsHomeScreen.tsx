@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  METRICS,
+  type MobileMetric,
+} from "../../../../../app/component/rankings/_data/mockRows";
 import type { RankingRowWithCountry } from "../../../../../app/component/rankings/_data/mockRows";
 import {
   API_METRIC_BY_MOBILE,
@@ -15,12 +21,14 @@ import {
 } from "../../../../../lib/rankings/rankingTransform";
 import type { RankingRow } from "../../../../../lib/rankings/useRanking";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
+import type { Language } from "../../../../../lib/i18n/language";
+import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import RankingsCyberBackgroundNative from "./RankingsCyberBackgroundNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
-import { rankingsTexts } from "./rankingsTexts";
+import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import {
   MyRankCardNative,
   PlayoffRoundTabsNative,
@@ -41,6 +49,14 @@ const VISIBLE_METRICS: MobileMetric[] = [
   "upsetScore",
   "streak",
 ];
+
+function scheduleNoticeForUser(
+  language: RankingsLanguage,
+  countryCode: string | null,
+): string {
+  const lang = (language === "en" ? "en" : "ja") as Language;
+  return getRankingsScheduleNoticeText(lang, countryCode);
+}
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
@@ -92,6 +108,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const rankingHasNoEntries =
     listReady && (rows.length === 0 || rankingListCount === 0);
 
+  const metricItems = useMemo(
+    () => METRICS.filter((m) => VISIBLE_METRICS.includes(m.key)).map((m) => m.key),
+    [],
+  );
+
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
 
@@ -106,10 +127,32 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <UniterzBrandShelfNative horizontalBleed={12} />
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{t.title}</Text>
+        <View style={styles.titleRow}>
+          <Pressable
+            style={styles.menuBtn}
+            accessibilityRole="button"
+            accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
+            onPress={() =>
+              Alert.alert(
+                "",
+                language === "ja" ? "メニューは準備中です。" : "Menu is not available yet.",
+              )
+            }
+          >
+            <MaterialCommunityIcons
+              name="menu"
+              size={22}
+              color="rgba(255,255,255,0.85)"
+            />
+          </Pressable>
+          <Text style={styles.headerTitle} maxFontSizeMultiplier={1.2}>
+            {t.title}
+          </Text>
+          <View style={styles.menuSpacer} />
         </View>
-        <Text style={styles.notice}>{t.updatedDaily}</Text>
+        <Text style={styles.notice} maxFontSizeMultiplier={1.15}>
+          {scheduleNoticeForUser(language, user.countryCode)}
+        </Text>
 
         <View style={styles.section}>
           <RankingsCategoryTabsNative
@@ -134,8 +177,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               rank={rankingHasNoEntries ? null : myRank}
               metric={metric}
               value={myValue}
-              displayName={user.displayName || (language === "ja" ? "あなた" : "You")}
+              displayName={user.displayName?.trim() ?? ""}
               photoURL={user.photoURL || null}
+              totalPosts={
+                typeof myRawRow?.totalPosts === "number" ? myRawRow.totalPosts : undefined
+              }
               loading={!listReady}
               statsScramble={listReady && personalPending}
               isPro={user.plan === "pro"}
@@ -144,7 +190,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             />
 
             <RankingsMetricRowNative
-              metrics={VISIBLE_METRICS}
+              metrics={metricItems}
               metric={metric}
               onChange={setMetric}
               language={language}
@@ -210,19 +256,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 4,
   },
-  headerCenter: {
-    alignItems: "center",
-    marginBottom: 6,
-  },
   headerTitle: {
+    flex: 1,
+    textAlign: "center",
     color: "rgba(248,250,252,0.9)",
     fontSize: 14,
-    letterSpacing: 4,
+    letterSpacing: 4.2,
     fontFamily: Platform.select({
       ios: "BebasNeue_400Regular",
       android: "BebasNeue_400Regular",
       default: "BebasNeue_400Regular",
     }),
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+    gap: 8,
+  },
+  menuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuSpacer: {
+    width: 40,
+    height: 40,
   },
   notice: {
     textAlign: "center",
