@@ -1,24 +1,21 @@
 /**
  * Web `app/component/background/UniterzLogo3DBackground.tsx` の Logo3D + シーンライトを RN 向けに移植。
  *
+ * 【回転が止まる主因（expo-gl）】R3F の既定 rAF ループだけでは `update` が進まず `useFrame` がほぼ動かないことがある。
+ * そのため `frameloop="never"` とし、`ExpoGlR3fFrameDriver` が毎フレーム `advance()` して `useFrame` を駆動する。
+ * 経過時間は `state.clock` ではなく `performance.now()` 差分（Clock が進まない対策）。
+ *
  * 【有効化の手順】expo-gl はネイティブモジュールのため、導入後に必ず再ビルドする:
  *   `cd apps/native && npx expo run:ios`（または `run:android`）
  * 未再ビルドだと `Cannot find native module 'ExponentGLObjectManager'` になる。
  * 再ビルド後、`RankingsCyberBackgroundNative.tsx` で本コンポーネントを import して差し替える。
  *
- * GLB は `EXPO_PUBLIC_UNITERZ_API_BASE_URL` + `/logo/uniterz-logo.glb`（Next の public）から取得。
+ * GLB は `rankingsLogoGlbCache` で同梱アセットを優先し、失敗時のみ Next 相当 URL（`EXPO_PUBLIC_...` + `/logo/...`）を fetch。
  * RN では `useLoader(GLTFLoader, url)` が URL 解決で落ちるため、`fetch` + `GLTFLoader.parse` を使う。
  * postprocessing（Bloom）はネイティブでは入れず、発光はマテリアル側で再現。
  */
 import { advance, Canvas, useFrame } from "@react-three/fiber/native";
-import {
-  Suspense,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -52,7 +49,8 @@ ensureNavigatorUserAgentForThreeGltf();
  * `frameloop="never"` と組み合わせ、毎フレーム `advance` で描画・useFrame を駆動する。
  */
 function ExpoGlR3fFrameDriver() {
-  useEffect(() => {
+  useLayoutEffect(() => {
+    advance(performance.now() / 1000);
     let raf = 0;
     const tick = () => {
       advance(performance.now() / 1000);
@@ -113,7 +111,7 @@ type GlowMat = THREE.MeshBasicMaterial & {
   };
 };
 
-/** Web の `public/logo/uniterz-logo.glb` と同じパスを Next オリジンから取得（Metro の glb 同梱を避ける） */
+/** Web の `public/logo/uniterz-logo.glb` と同じパス（リモート取得・`loadRankingsLogoGlbBuffer` のフォールバック用） */
 function remoteLogoGltfUrl(): string | null {
   const base = getUniterzApiBaseUrl();
   return base ? `${base}/logo/uniterz-logo.glb` : null;
@@ -162,6 +160,36 @@ function centerRootFromMeshes(root: THREE.Object3D) {
   }
 }
 
+/** 共有ジオメトリを二重 dispose しないよう Set でまとめて解放 */
+function disposeClonedLogoScene(root: THREE.Object3D) {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  root.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh)) return;
+    if (obj.geometry) geometries.add(obj.geometry);
+    const mat = obj.material;
+    if (Array.isArray(mat)) {
+      for (const m of mat) {
+        if (m) materials.add(m);
+      }
+    } else if (mat) {
+      materials.add(mat);
+    }
+  });
+  for (const g of geometries) {
+    g.dispose();
+  }
+  for (const m of materials) {
+    m.dispose();
+  }
+}
+
+type LogoBuild = {
+  scene: THREE.Group;
+  emissiveMats: NeonMat[];
+  glowMats: GlowMat[];
+};
+
 type LogoModelProps = { uri: string };
 
 function LogoModel({ uri }: LogoModelProps) {
@@ -175,32 +203,33 @@ function LogoModel({ uri }: LogoModelProps) {
 
   useEffect(() => {
     let cancelled = false;
+    setGltf(null);
     const loader = new GLTFLoader();
-    const slash = uri.lastIndexOf("/");
-    const basePath = slash >= 0 ? uri.slice(0, slash + 1) : "";
-
     void (async () => {
       try {
-        const buffer = await loadRankingsLogoGlbBuffer(uri);
-        if (!buffer) {
-          throw new Error("GLB取得失敗（キャッシュ／ネットワーク）");
+        const loaded = await loadRankingsLogoGlbBuffer(uri);
+        if (!loaded) {
+          throw new Error("GLB取得失敗（同梱・キャッシュ・ネットワーク）");
         }
         if (cancelled) return;
         loader.parse(
-          buffer,
-          basePath,
+          loaded.buffer,
+          loaded.resourcePath,
           (parsed) => {
-            if (!cancelled) {
-              setGltf(parsed as { scene: THREE.Group });
-            }
+            if (cancelled) return;
+            setGltf(parsed as { scene: THREE.Group });
           },
           (err) => {
             console.error("RankingsLogo3DCanvasNative GLTF parse:", err);
+            if (!cancelled) {
+              setGltf(null);
+            }
           },
         );
       } catch (e) {
         if (!cancelled) {
           console.error("RankingsLogo3DCanvasNative GLB fetch:", e);
+          setGltf(null);
         }
       }
     })();
@@ -210,12 +239,8 @@ function LogoModel({ uri }: LogoModelProps) {
     };
   }, [uri]);
 
-  const clonedScene = useMemo(() => {
-    if (!gltf) {
-      emissiveMatsRef.current = [];
-      glowMatsRef.current = [];
-      return null;
-    }
+  const logoBuild = useMemo((): LogoBuild | null => {
+    if (!gltf) return null;
     const s = gltf.scene.clone(true);
     const emissiveMats: NeonMat[] = [];
     const glowMats: GlowMat[] = [];
@@ -280,16 +305,32 @@ function LogoModel({ uri }: LogoModelProps) {
       }
     }
 
-    emissiveMatsRef.current = emissiveMats;
-    glowMatsRef.current = glowMats;
     centerRootFromMeshes(s);
-    return s;
+    return { scene: s, emissiveMats, glowMats };
   }, [gltf]);
 
   useLayoutEffect(() => {
-    if (!orientRef.current || !clonedScene) return;
+    if (!logoBuild) {
+      emissiveMatsRef.current = [];
+      glowMatsRef.current = [];
+      return;
+    }
+    emissiveMatsRef.current = logoBuild.emissiveMats;
+    glowMatsRef.current = logoBuild.glowMats;
+  }, [logoBuild]);
+
+  useEffect(() => {
+    return () => {
+      if (logoBuild) {
+        disposeClonedLogoScene(logoBuild.scene);
+      }
+    };
+  }, [logoBuild]);
+
+  useLayoutEffect(() => {
+    if (!orientRef.current || !logoBuild) return;
     orientRef.current.rotation.set(Math.PI / 2, 0, 0);
-  }, [clonedScene]);
+  }, [logoBuild]);
 
   // Web と同じ運動式。経過時間は performance.now() ベース（RN+expo-gl で Clock が止まる対策）
   useFrame(() => {
@@ -327,7 +368,7 @@ function LogoModel({ uri }: LogoModelProps) {
     }
   });
 
-  if (!clonedScene) {
+  if (!logoBuild) {
     return null;
   }
 
@@ -335,7 +376,7 @@ function LogoModel({ uri }: LogoModelProps) {
     <group position={POSITION} scale={SCALE}>
       <group ref={spinRef}>
         <group ref={orientRef}>
-          <primitive object={clonedScene} />
+          <primitive object={logoBuild.scene} />
         </group>
       </group>
     </group>
@@ -345,6 +386,8 @@ function LogoModel({ uri }: LogoModelProps) {
 function LogoScene({ uri }: { uri: string }) {
   return (
     <>
+      {/* 先頭で毎フレーム advance → useFrame（回転）が確実に駆動 */}
+      <ExpoGlR3fFrameDriver />
       <color attach="background" args={[THEME.bgColor]} />
       <fog attach="fog" args={[THEME.fogColor, 11, 26]} />
       <ambientLight intensity={THEME.ambientIntensity} />
@@ -366,10 +409,7 @@ function LogoScene({ uri }: { uri: string }) {
         distance={22}
       />
       <pointLight position={[0, 2, -8]} intensity={0.8} color="#08202a" distance={18} />
-      <ExpoGlR3fFrameDriver />
-      <Suspense fallback={null}>
-        <LogoModel uri={uri} />
-      </Suspense>
+      <LogoModel uri={uri} />
     </>
   );
 }

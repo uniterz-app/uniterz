@@ -1,0 +1,58 @@
+[
+  {
+    "id": "nba-20260518-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-18T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 7",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "r2",
+    "home": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
+    "away": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260519-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-19T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 1",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260521-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-21T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 2",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260523-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-23T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAY OFF GAME 3",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "away": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "status": "scheduled"
+  }
+]

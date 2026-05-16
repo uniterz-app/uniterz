@@ -20,9 +20,6 @@ export function rankingsTexts(language: RankingsLanguage) {
     bracketSoon: ja
       ? "ブラケットランキングは Web 版と同様に順次対応します。"
       : "Bracket rankings will match the web app in a future update.",
-    updatedDaily: ja
-      ? "ランキングは毎日 16:00 に更新 / スコアは累積"
-      : "Rankings update daily at 16:00 JST / Scores are cumulative",
     yourRank: "YOUR RANK",
     pts: "pts",
     /** Web `streakShortLabel` に相当（点数横の短い単位） */

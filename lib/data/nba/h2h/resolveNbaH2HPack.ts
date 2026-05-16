@@ -63,6 +63,11 @@ import {
   spursBlazersH2HGames,
 } from "./spurs-blazers-regular-2526";
 import {
+  SPURS_THUNDER_TEAM_IDS,
+  spursThunderH2HAveragesForSides,
+  spursThunderH2HGames,
+} from "./spurs-thunder-regular-2526";
+import {
   SPURS_TIMBERWOLVES_TEAM_IDS,
   spursTimberwolvesH2HAveragesForSides,
   spursTimberwolvesH2HGames,
@@ -185,6 +190,11 @@ function idsAreThunderSuns(homeTeamId: string, awayTeamId: string): boolean {
 function idsAreSpursBlazers(homeTeamId: string, awayTeamId: string): boolean {
   const s = new Set([homeTeamId, awayTeamId]);
   return SPURS_BLAZERS_TEAM_IDS.every((id) => s.has(id));
+}
+
+function idsAreSpursThunder(homeTeamId: string, awayTeamId: string): boolean {
+  const s = new Set([homeTeamId, awayTeamId]);
+  return SPURS_THUNDER_TEAM_IDS.every((id) => s.has(id));
 }
 
 function idsAreSpursTimberwolves(
@@ -727,6 +737,45 @@ function inferSpursTimberwolvesIdsFromNames(
   return { homeTeamId: hid, awayTeamId: aid };
 }
 
+function namesLookSpursThunder(homeName?: string, awayName?: string): boolean {
+  const blob = `${(homeName ?? "").toLowerCase()} ${(awayName ?? "").toLowerCase()}`;
+  const hasSpurs =
+    blob.includes("spur") ||
+    blob.includes("san antonio");
+  const hasThunder =
+    blob.includes("thunder") ||
+    blob.includes("oklahoma") ||
+    /\bokc\b/.test(blob);
+  return hasSpurs && hasThunder;
+}
+
+function inferSpursThunderIdsFromNames(
+  homeName?: string,
+  awayName?: string
+): { homeTeamId: string; awayTeamId: string } | null {
+  if (!namesLookSpursThunder(homeName, awayName)) return null;
+  const hn = (homeName ?? "").toLowerCase();
+  const an = (awayName ?? "").toLowerCase();
+  let hid = "";
+  let aid = "";
+  if (hn.includes("spur") || hn.includes("san antonio")) hid = "nba-spurs";
+  else if (
+    hn.includes("thunder") ||
+    hn.includes("oklahoma") ||
+    /\bokc\b/.test(hn)
+  )
+    hid = "nba-thunder";
+  if (an.includes("spur") || an.includes("san antonio")) aid = "nba-spurs";
+  else if (
+    an.includes("thunder") ||
+    an.includes("oklahoma") ||
+    /\bokc\b/.test(an)
+  )
+    aid = "nba-thunder";
+  if (!hid || !aid || hid === aid) return null;
+  return { homeTeamId: hid, awayTeamId: aid };
+}
+
 /** Playoffs H2H tab: games + averages when this NBA pair is supported. */
 export function resolveNbaH2HPack(
   homeTeamId: string | null | undefined,
@@ -804,6 +853,10 @@ export function resolveNbaH2HPack(
       homeName,
       awayName
     );
+    const inferredSpursThunder = inferSpursThunderIdsFromNames(
+      homeName,
+      awayName
+    );
     const inferred =
       inferredTorCle ??
       inferredMinDen ??
@@ -822,6 +875,7 @@ export function resolveNbaH2HPack(
       inferredClippersWarriors ??
       inferredLakersRockets ??
       inferredSpursTimberwolves ??
+      inferredSpursThunder ??
       inferredSpursBlazers;
     if (!inferred) return null;
     hid = inferred.homeTeamId;
@@ -1046,6 +1100,19 @@ export function resolveNbaH2HPack(
       games: spursTimberwolvesH2HGames,
       h2hAverages,
       seriesRecord: computeH2hSeriesRecord(spursTimberwolvesH2HGames),
+    };
+  }
+
+  if (idsAreSpursThunder(hid, aid)) {
+    const h2hAverages = spursThunderH2HAveragesForSides({
+      homeTeamId: hid,
+      awayTeamId: aid,
+    });
+    if (!h2hAverages) return null;
+    return {
+      games: spursThunderH2HGames,
+      h2hAverages,
+      seriesRecord: computeH2hSeriesRecord(spursThunderH2HGames),
     };
   }
 

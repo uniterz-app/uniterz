@@ -13,7 +13,7 @@ const H2H_LEFT = "Pistons";
 const H2H_RIGHT = "Cavaliers";
 
 /**
- * 2025-26 Pistons vs Cavaliers（レギュラー5 + プレーオフ Game 5まで）
+ * 2025-26 Pistons vs Cavaliers（レギュラー5 + プレーオフ Game 6まで）
  * 欠場者表記は既存H2Hと同様（イニシャル + 姓）
  */
 export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
@@ -170,6 +170,26 @@ export const pistonsCavaliersH2HGames: NbaH2HGameCard[] = [
         "延長戦。PistonsはCade Cunninghamが39点・7リバウンド・9アシストで引っ張り、終盤まで勝てる展開だった。残り約2分半で9点リードを持っていたが、そこからオフェンスが止まり、Cavsに追いつかれて延長へ。CavsはJames Hardenが30点、Donovan Mitchellが21点。特にMitchellは延長で7点を取り、勝負どころを支配した。PistonsはDuncan Robinson欠場の影響で外の火力が足りず、Cade以外の得点支援が不足。勝ち試合を落とし、Cavsがシリーズ3勝2敗で王手。",
       en:
         "Overtime. Cade Cunningham carried Detroit with 39 points, 7 rebounds, and 9 assists, and the Pistons looked poised to close it out until their offense stalled with about two and a half minutes left and a nine-point lead, letting Cleveland force OT. James Harden scored 30 and Donovan Mitchell 21 for the Cavaliers; Mitchell added 7 in overtime to take over crunch time. Without Duncan Robinson, Detroit lacked perimeter punch and secondary scoring behind Cade. Cleveland stole a winnable game and took a 3-2 series lead.",
+    },
+  },
+  {
+    id: "h2h-pistons-cavaliers-2026-05-15-po-g6",
+    dateEt: "2026-05-15",
+    dateJst: "2026-05-16",
+    seriesGameLabel: "Game 6",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 115,
+    scoreRight: 94,
+    /** Cleveland（Cavaliers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Pistonsが115-94でCavsに快勝し、シリーズを3勝3敗に戻した。前半は54-51の接戦だったが、後半はDetroitが守備の圧力を強め、Cavsにミスを誘発。Clevelandはターンオーバーが増え、攻撃がMitchell頼みの単発になった。PistonsはCade Cunninghamが試合を落ち着かせ、Jalen Durenがインサイドで存在感を発揮。さらにPaul Reedらベンチ陣も得点面で大きく貢献した。ペイントとベンチ得点でCavsを上回り、後半に一気に突き放した。Cavsはホームでシリーズを終わらせるチャンスだったが、オフェンスの停滞とターンオーバーが響いて完敗。Pistonsは敵地でGame 7に持ち込む大きな勝利をつかんだ。",
+      en:
+        "Detroit routed Cleveland 115-94 on the road to tie the series 3-3. The first half stayed tight at 54-51, but the Pistons ramped up defensive pressure after halftime, forcing turnovers and disjointed Cavaliers offense that leaned too heavily on Donovan Mitchell in isolation. Cade Cunningham steadied Detroit, Jalen Duren controlled the paint, and bench contributors including Paul Reed chipped in key scoring. Detroit won the paint and bench scoring battles and pulled away in the second half. Cleveland missed a chance to close the series at home as stagnant offense and turnovers led to a blowout loss, while Detroit earned a trip to Game 7.",
     },
   },
 ];

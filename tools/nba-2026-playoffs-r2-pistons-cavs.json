@@ -101,6 +101,16 @@
     "playoffRound": "r2",
     "home": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
     "away": { "name": "Detroit Pistons", "teamId": "nba-pistons" },
-    "status": "scheduled"
+    "status": "final",
+    "final": true,
+    "homeScore": 94,
+    "awayScore": 115,
+    "score": { "home": 94, "away": 115 },
+    "seriesStanding": { "homeWins": 3, "awayWins": 3 },
+    "injuries": {
+      "home": [],
+      "away": []
+    },
+    "summaryJa": "Pistonsが115-94でCavsに快勝し、シリーズを3勝3敗に戻した。前半は54-51の接戦だったが、後半はDetroitが守備の圧力を強め、Cavsにミスを誘発。Clevelandはターンオーバーが増え、攻撃がMitchell頼みの単発になった。PistonsはCade Cunninghamが試合を落ち着かせ、Jalen Durenがインサイドで存在感を発揮。さらにPaul Reedらベンチ陣も得点面で大きく貢献した。ペイントとベンチ得点でCavsを上回り、後半に一気に突き放した。Cavsはホームでシリーズを終わらせるチャンスだったが、オフェンスの停滞とターンオーバーが響いて完敗。Pistonsは敵地でGame 7に持ち込む大きな勝利をつかんだ。"
   }
 ]
