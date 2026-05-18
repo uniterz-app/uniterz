@@ -5,9 +5,9 @@ import type {
 
 export const SPURS_THUNDER_TEAM_IDS = ["nba-spurs", "nba-thunder"] as const;
 
-/** H2H カードは左=Spurs、右=OKC で固定 */
+/** H2H カードは左=Spurs、右=Thunder で固定 */
 const H2H_LEFT = "Spurs";
-const H2H_RIGHT = "OKC";
+const H2H_RIGHT = "Thunder";
 
 /** 2025-26 Spurs vs Thunder（レギュラー5試合・対戦成績 Spurs 4勝1敗） */
 export const spursThunderH2HGames: NbaH2HGameCard[] = [

@@ -21,6 +21,7 @@ import GameTeamStats from "@/app/component/predict/GameTeamStats";
 import NbaPostseasonMatchupPanel, {
   H2hSeasonRecordRow,
 } from "@/app/component/predict/NbaPostseasonMatchupPanel";
+import { shouldFlipH2hToMatchHomeAway } from "@/lib/data/nba/h2h/h2hAlignSides";
 import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
@@ -93,29 +94,6 @@ type H2HRecordLine = {
   rightWins: number;
 };
 
-function normalizeH2HName(v: string | undefined): string {
-  return (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function shouldFlipH2HSides(
-  games: Array<{ leftTeamDisplay: string; rightTeamDisplay: string }>,
-  homeTeamName: string | undefined,
-  awayTeamName: string | undefined
-): boolean {
-  if (!games.length) return false;
-  const first = games[0];
-  if (!first) return false;
-  const left = normalizeH2HName(first.leftTeamDisplay);
-  const right = normalizeH2HName(first.rightTeamDisplay);
-  const home = normalizeH2HName(homeTeamName);
-  const away = normalizeH2HName(awayTeamName);
-  if (!left || !right || !home || !away) return false;
-
-  if (home.includes(left) && away.includes(right)) return false;
-  if (home.includes(right) && away.includes(left)) return true;
-  return false;
-}
-
 /** MatchCard と同趣旨：試合開始済み（未投稿ならスコア予想 UI を出さない） */
 function isMatchStartedForPredict(game: MatchCardProps): boolean {
   const { status, startAtJst } = game;
@@ -141,7 +119,15 @@ function computeRecordByGames(
   awayTeamName?: string
 ): H2HRecordLine | null {
   if (!games.length) return null;
-  const flip = shouldFlipH2HSides(games, homeTeamName, awayTeamName);
+  const first = games[0];
+  const flip = first
+    ? shouldFlipH2hToMatchHomeAway({
+        leftTeamDisplay: first.leftTeamDisplay,
+        rightTeamDisplay: first.rightTeamDisplay,
+        homeTeamName,
+        awayTeamName,
+      })
+    : false;
   const normalized = flip
     ? games.map((g) => ({
         leftTeamDisplay: g.rightTeamDisplay,

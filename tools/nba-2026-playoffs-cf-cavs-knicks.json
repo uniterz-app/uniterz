@@ -1,0 +1,58 @@
+[
+  {
+    "id": "nba-20260520-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-20T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 1",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "away": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260522-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-22T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 2",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "away": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260524-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-24T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 3",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "away": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260526-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-26T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 4",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "Cleveland Cavaliers", "teamId": "nba-cavaliers" },
+    "away": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "status": "scheduled"
+  }
+]

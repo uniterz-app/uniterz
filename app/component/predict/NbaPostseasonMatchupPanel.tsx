@@ -18,6 +18,7 @@ import {
 } from "./teamStatsCompare";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import { shouldFlipH2hToMatchHomeAway } from "@/lib/data/nba/h2h/h2hAlignSides";
 
 /** 欠場ブロック直下のサマリー（日英いずれか一方だけでも可） */
 export type NbaH2HGameInactiveFooterSummary = {
@@ -147,35 +148,6 @@ function formatH2hGameCardDate(
 
 function fmtDiff(d: number) {
   return `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
-}
-
-function normalizeTeamNameForMatch(v: string | undefined): string {
-  return (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function detectNeedsFlipForCurrentSides(
-  games: NbaH2HGameCard[],
-  homeTeamName: string | undefined,
-  awayTeamName: string | undefined
-): boolean {
-  if (!games.length) return false;
-  const first = games[0];
-  if (!first) return false;
-  const left = normalizeTeamNameForMatch(first.leftTeamDisplay);
-  const right = normalizeTeamNameForMatch(first.rightTeamDisplay);
-  const home = normalizeTeamNameForMatch(homeTeamName);
-  const away = normalizeTeamNameForMatch(awayTeamName);
-  if (!left || !right || !home || !away) return false;
-
-  const homeLooksLeft = home.includes(left);
-  const awayLooksRight = away.includes(right);
-  if (homeLooksLeft && awayLooksRight) return false;
-
-  const homeLooksRight = home.includes(right);
-  const awayLooksLeft = away.includes(left);
-  if (homeLooksRight && awayLooksLeft) return true;
-
-  return false;
 }
 
 function flipH2HGameSides(game: NbaH2HGameCard): NbaH2HGameCard {
@@ -357,11 +329,15 @@ export default function NbaPostseasonMatchupPanel({
   const games = useMemo(() => {
     if (!seriesGames || seriesGames.length === 0) return SKELETON_GAMES;
     const reversed = [...seriesGames].reverse();
-    const shouldFlip = detectNeedsFlipForCurrentSides(
-      reversed,
-      homeTeamName,
-      awayTeamName
-    );
+    const first = reversed[0];
+    const shouldFlip = first
+      ? shouldFlipH2hToMatchHomeAway({
+          leftTeamDisplay: first.leftTeamDisplay,
+          rightTeamDisplay: first.rightTeamDisplay,
+          homeTeamName,
+          awayTeamName,
+        })
+      : false;
     return shouldFlip ? reversed.map(flipH2HGameSides) : reversed;
   }, [seriesGames, homeTeamName, awayTeamName]);
   const poGames = useMemo(
