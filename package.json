@@ -26,7 +26,9 @@
     "badges:po1:seed": "tsx scripts/seed-po-2026-1st-round-badges.ts",
     "badges:po1:grant:dry": "DRY_RUN=1 tsx scripts/grant-po-2026-1st-round-total-points-badges.ts",
     "badges:po1:grant": "tsx scripts/grant-po-2026-1st-round-total-points-badges.ts",
-    "badges:po1:revoke-test": "tsx scripts/revoke-po-2026-1st-round-test-grants.ts"
+    "badges:po1:revoke-test": "tsx scripts/revoke-po-2026-1st-round-test-grants.ts",
+    "badges:po2:seed": "tsx scripts/seed-po-2026-2nd-round-badges.ts",
+    "badges:po2:grant-test": "tsx scripts/grant-po-2026-2nd-round-badges-test.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
