@@ -18,6 +18,11 @@ import {
   hawksKnicksH2HGames,
 } from "./hawks-knicks-regular-2526";
 import {
+  KNICKS_CAVALIERS_TEAM_IDS,
+  knicksCavaliersH2HAveragesForSides,
+  knicksCavaliersH2HGames,
+} from "./knicks-cavaliers-regular-2526";
+import {
   LAKERS_ROCKETS_TEAM_IDS,
   lakersRocketsH2HAveragesForSides,
   lakersRocketsH2HGames,
@@ -145,6 +150,11 @@ function idsAreHeatHornets(homeTeamId: string, awayTeamId: string): boolean {
 function idsAreMagicPistons(homeTeamId: string, awayTeamId: string): boolean {
   const s = new Set([homeTeamId, awayTeamId]);
   return MAGIC_PISTONS_TEAM_IDS.every((id) => s.has(id));
+}
+
+function idsAreKnicksCavaliers(homeTeamId: string, awayTeamId: string): boolean {
+  const s = new Set([homeTeamId, awayTeamId]);
+  return KNICKS_CAVALIERS_TEAM_IDS.every((id) => s.has(id));
 }
 
 function idsArePistonsCavaliers(homeTeamId: string, awayTeamId: string): boolean {
@@ -311,6 +321,41 @@ function inferMagicPistonsIdsFromNames(
   else if (hn.includes("magic") || hn.includes("orlando")) hid = "nba-magic";
   if (an.includes("piston") || an.includes("detroit")) aid = "nba-pistons";
   else if (an.includes("magic") || an.includes("orlando")) aid = "nba-magic";
+  if (!hid || !aid || hid === aid) return null;
+  return { homeTeamId: hid, awayTeamId: aid };
+}
+
+function namesLookKnicksCavaliers(homeName?: string, awayName?: string): boolean {
+  const blob = `${(homeName ?? "").toLowerCase()} ${(awayName ?? "").toLowerCase()}`;
+  const hasKnicks = blob.includes("knick") || blob.includes("new york");
+  const hasCavalier =
+    blob.includes("cavalier") ||
+    blob.includes("cleveland");
+  const hasPiston = blob.includes("piston") || blob.includes("detroit");
+  const hasHawk = blob.includes("hawk") || blob.includes("atlanta");
+  const hasSixers =
+    blob.includes("76er") ||
+    blob.includes("sixer") ||
+    blob.includes("philadelphia");
+  const hasRaptor = blob.includes("raptor") || blob.includes("toronto");
+  return hasKnicks && hasCavalier && !hasPiston && !hasHawk && !hasSixers && !hasRaptor;
+}
+
+function inferKnicksCavaliersIdsFromNames(
+  homeName?: string,
+  awayName?: string
+): { homeTeamId: string; awayTeamId: string } | null {
+  if (!namesLookKnicksCavaliers(homeName, awayName)) return null;
+  const hn = (homeName ?? "").toLowerCase();
+  const an = (awayName ?? "").toLowerCase();
+  let hid = "";
+  let aid = "";
+  if (hn.includes("knick") || hn.includes("new york")) hid = "nba-knicks";
+  else if (hn.includes("cavalier") || hn.includes("cleveland"))
+    hid = "nba-cavaliers";
+  if (an.includes("knick") || an.includes("new york")) aid = "nba-knicks";
+  else if (an.includes("cavalier") || an.includes("cleveland"))
+    aid = "nba-cavaliers";
   if (!hid || !aid || hid === aid) return null;
   return { homeTeamId: hid, awayTeamId: aid };
 }
@@ -801,6 +846,10 @@ export function resolveNbaH2HPack(
       homeName,
       awayName
     );
+    const inferredKnicksCavaliers = inferKnicksCavaliersIdsFromNames(
+      homeName,
+      awayName
+    );
     const inferredPistonsCavaliers = inferPistonsCavaliersIdsFromNames(
       homeName,
       awayName
@@ -863,6 +912,7 @@ export function resolveNbaH2HPack(
       inferredHawksKnicks ??
       inferredHeatHornets ??
       inferredMagicPistons ??
+      inferredKnicksCavaliers ??
       inferredPistonsCavaliers ??
       inferredMagicHornets ??
       inferredSunsBlazers ??
@@ -944,6 +994,19 @@ export function resolveNbaH2HPack(
       games: magicPistonsH2HGames,
       h2hAverages,
       seriesRecord: computeH2hSeriesRecord(magicPistonsH2HGames),
+    };
+  }
+
+  if (idsAreKnicksCavaliers(hid, aid)) {
+    const h2hAverages = knicksCavaliersH2HAveragesForSides({
+      homeTeamId: hid,
+      awayTeamId: aid,
+    });
+    if (!h2hAverages) return null;
+    return {
+      games: knicksCavaliersH2HGames,
+      h2hAverages,
+      seriesRecord: computeH2hSeriesRecord(knicksCavaliersH2HGames),
     };
   }
 

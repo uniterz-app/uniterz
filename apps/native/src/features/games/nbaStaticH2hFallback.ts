@@ -1,4 +1,5 @@
 import type { PeerH2hLine } from "./peerH2hGames";
+import { shouldFlipH2hToMatchHomeAway } from "../../../../../lib/data/nba/h2h/h2hAlignSides";
 import {
   resolveNbaH2HPack,
   type NbaH2HPack,
@@ -53,10 +54,6 @@ export function resolveStaticNbaH2hAverages(
   return pack?.h2hAverages ?? null;
 }
 
-function normalizeName(v: string | undefined): string {
-  return (v ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 function parseJstYmdToMs(ymd: string): number {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((ymd ?? "").trim());
   if (!m) return 0;
@@ -65,25 +62,6 @@ function parseJstYmdToMs(ymd: string): number {
   const d = Number(m[3]);
   if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return 0;
   return Date.UTC(y, mo - 1, d, 0, 0, 0);
-}
-
-function shouldFlipByNames(
-  homeName: string | undefined,
-  awayName: string | undefined,
-  leftDisplay: string,
-  rightDisplay: string
-): boolean {
-  const home = normalizeName(homeName);
-  const away = normalizeName(awayName);
-  const left = normalizeName(leftDisplay);
-  const right = normalizeName(rightDisplay);
-  if (!home || !away || !left || !right) return false;
-  const homeLooksLeft = home.includes(left);
-  const awayLooksRight = away.includes(right);
-  if (homeLooksLeft && awayLooksRight) return false;
-  const homeLooksRight = home.includes(right);
-  const awayLooksLeft = away.includes(left);
-  return homeLooksRight && awayLooksLeft;
 }
 
 export function resolveStaticNbaH2hRows(
@@ -96,7 +74,12 @@ export function resolveStaticNbaH2hRows(
   if (!pack?.games?.length) return [];
   const first = pack.games[0];
   const flip = first
-    ? shouldFlipByNames(homeName, awayName, first.leftTeamDisplay, first.rightTeamDisplay)
+    ? shouldFlipH2hToMatchHomeAway({
+        leftTeamDisplay: first.leftTeamDisplay,
+        rightTeamDisplay: first.rightTeamDisplay,
+        homeTeamName: homeName,
+        awayTeamName: awayName,
+      })
     : false;
   return pack.games
     .map((g): PeerH2hLine | null => {
