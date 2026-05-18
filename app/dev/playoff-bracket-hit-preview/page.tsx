@@ -29,7 +29,7 @@ const PREVIEW_BRACKET: BracketState = {
 
 /**
  * 実際の結果（R1_E1 は勝者一致・試合数のみズレ = オレンジ）
- * R1_E2 は TOR が勝ち = 外れ（BOS にチェックなし）
+ * R1_E2 は TOR が勝ち = BOS にチェックなし（勝者外れ）
  */
 const PREVIEW_RESULTS: BracketState = {
   R1_E1: { winner: "DET", games: 5 },

@@ -194,7 +194,19 @@ function getSeriesHitStatus(
   const actualWinner = normalizeTeamId(results?.[seriesId]?.winner);
 
   if (!predictedWinner || !actualWinner) return "none";
+  if (predictedWinner !== actualWinner) return "none";
 
+  const predictedGames = bracket?.[seriesId]?.games;
+  const actualGames = results?.[seriesId]?.games;
+
+  const gamesMatch =
+    predictedGames != null &&
+    actualGames != null &&
+    Number(predictedGames) === Number(actualGames);
+
+  if (!gamesMatch) return "winner";
+
+  // 試合数ボーナス表示は採点と同様、対戦カード一致時のみ（R1 は固定対戦のため常に一致）
   const [predTop, predBottom] = getSeriesMatchup(
     seriesId,
     bracket,
@@ -206,22 +218,7 @@ function getSeriesHitStatus(
     round1InitialTeams
   );
 
-  if (!sameMatchup(predTop, predBottom, actualTop, actualBottom)) {
-    return "none";
-  }
-
-  if (predictedWinner !== actualWinner) {
-    return "none";
-  }
-
-  const predictedGames = bracket?.[seriesId]?.games;
-  const actualGames = results?.[seriesId]?.games;
-
-  if (
-    predictedGames != null &&
-    actualGames != null &&
-    Number(predictedGames) === Number(actualGames)
-  ) {
+  if (sameMatchup(predTop, predBottom, actualTop, actualBottom)) {
     return "winnerAndGames";
   }
 
