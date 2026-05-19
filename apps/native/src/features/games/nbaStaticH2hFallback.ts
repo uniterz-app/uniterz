@@ -16,6 +16,8 @@ type NbaPackGame = {
   injuriesLeft: string[];
   injuriesRight: string[];
   seriesGameLabel?: string;
+  wentToOvertime?: boolean;
+  overtimePeriods?: number;
   inactiveFooterSummary?: { ja: string; en: string };
 };
 
@@ -109,6 +111,8 @@ export function resolveStaticNbaH2hRows(
           homeScore: rowHomeScore,
           awayScore: rowAwayScore,
           seriesGameLabel: g.seriesGameLabel,
+          wentToOvertime: g.wentToOvertime === true,
+          overtimePeriods: g.overtimePeriods,
           injuriesLeft: Array.isArray(g.injuriesLeft) ? g.injuriesLeft : [],
           injuriesRight: Array.isArray(g.injuriesRight) ? g.injuriesRight : [],
           injuriesHome: Array.isArray(g.injuriesLeft) ? g.injuriesLeft : [],
@@ -137,6 +141,8 @@ export function resolveStaticNbaH2hRows(
         homeScore: r,
         awayScore: l,
         seriesGameLabel: g.seriesGameLabel,
+        wentToOvertime: g.wentToOvertime === true,
+        overtimePeriods: g.overtimePeriods,
         injuriesLeft: Array.isArray(g.injuriesRight) ? g.injuriesRight : [],
         injuriesRight: Array.isArray(g.injuriesLeft) ? g.injuriesLeft : [],
         injuriesHome: Array.isArray(g.injuriesRight) ? g.injuriesRight : [],

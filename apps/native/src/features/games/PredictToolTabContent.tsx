@@ -19,6 +19,7 @@ import Svg, {
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import { listFinalH2hGamesFromPeers } from "./peerH2hGames";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
+import { h2hOvertimeDisplayLabel } from "../../../../../lib/data/nba/h2h/h2hOvertimeLabel";
 import { resolveStaticNbaH2hAverages, resolveStaticNbaH2hRows } from "./nbaStaticH2hFallback";
 import { colors, spacing } from "../../theme/tokens";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
@@ -1028,7 +1029,7 @@ export function PredictToolTabContent({
               </View>
               <View style={s.h2hScoreCol}>
                 <Text style={s.h2hOvertimeTag}>
-                  {(row as { wentToOvertime?: unknown }).wentToOvertime === true ? "OT" : " "}
+                  {h2hOvertimeDisplayLabel(row.wentToOvertime, row.overtimePeriods) ?? " "}
                 </Text>
                 <Text style={s.h2hScore} numberOfLines={1}>
                   <Text

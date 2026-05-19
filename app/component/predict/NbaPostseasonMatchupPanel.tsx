@@ -19,6 +19,7 @@ import {
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { shouldFlipH2hToMatchHomeAway } from "@/lib/data/nba/h2h/h2hAlignSides";
+import { h2hOvertimeDisplayLabel } from "@/lib/data/nba/h2h/h2hOvertimeLabel";
 
 /** 欠場ブロック直下のサマリー（日英いずれか一方だけでも可） */
 export type NbaH2HGameInactiveFooterSummary = {
@@ -61,8 +62,10 @@ export type NbaH2HGameCard = {
    * 未指定ならホーム／アウェイラベルは出さない。
    */
   homeTeamSide?: "left" | "right";
-  /** true のとき得点の直上に OT を表示 */
+  /** true のとき得点の直上に OT / 2OT 等を表示 */
   wentToOvertime?: boolean;
+  /** 延長本数（省略時は 1OT 表記） */
+  overtimePeriods?: number;
   /** 日付とスコア行の間に表示（例: プレーオフの「Game 1」） */
   seriesGameLabel?: string;
   /** 欠場者の下に表示するサマリーカード（任意） */
@@ -516,16 +519,23 @@ export default function NbaPostseasonMatchupPanel({
               </div>
               {g.scoreLeft != null && g.scoreRight != null ? (
                 <div className="flex shrink-0 flex-col items-center">
-                  {g.wentToOvertime ? (
-                    <span
-                      className={[
-                        resultStatsMetricNumClass,
-                        "mb-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
-                      ].join(" ")}
-                    >
-                      OT
-                    </span>
-                  ) : null}
+                  {(() => {
+                    const otLabel = h2hOvertimeDisplayLabel(
+                      g.wentToOvertime,
+                      g.overtimePeriods
+                    );
+                    if (!otLabel) return null;
+                    return (
+                      <span
+                        className={[
+                          resultStatsMetricNumClass,
+                          "mb-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-white/48 md:text-[10px]",
+                        ].join(" ")}
+                      >
+                        {otLabel}
+                      </span>
+                    );
+                  })()}
                   <span
                     className={[
                       resultStatsMetricNumClass,

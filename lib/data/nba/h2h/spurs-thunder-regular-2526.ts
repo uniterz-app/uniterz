@@ -9,7 +9,7 @@ export const SPURS_THUNDER_TEAM_IDS = ["nba-spurs", "nba-thunder"] as const;
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Thunder";
 
-/** 2025-26 Spurs vs Thunder（レギュラー5試合・対戦成績 Spurs 4勝1敗） */
+/** 2025-26 Spurs vs Thunder（レギュラー5 + プレーオフ Game 1まで） */
 export const spursThunderH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-thunder-2025-12-13",
@@ -82,6 +82,28 @@ export const spursThunderH2HGames: NbaH2HGameCard[] = [
       "I. Hartenstein",
       "A. Mitchell",
     ],
+  },
+  {
+    id: "h2h-spurs-thunder-2026-05-18-po-g1",
+    dateEt: "2026-05-18",
+    dateJst: "2026-05-19",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 122,
+    scoreRight: 115,
+    /** Oklahoma City（Thunder）ホーム */
+    homeTeamSide: "right",
+    wentToOvertime: true,
+    overtimePeriods: 2,
+    injuriesLeft: ["D. Fox"],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "SpursはFox不在でもDylan Harperを先発起用し、Wembanyamaが41得点・24リバウンド・3ブロックの支配的な内容。Harperも24得点・11リバウンド・6アシスト・7スティールで大仕事。OKCはAlex Carusoが31得点、Jalen Williamsが26得点。SGAは24得点・12アシスト・5スティールだったが、FGは7/23と苦しんだ。試合は終盤まで接戦。Wembanyamaが1OT終盤に同点スリー、2OTでも勝負を決めるダンクとアリウープを決めた。OKCはターンオーバー誘発とCarusoの3Pで食らいついたが、リバウンドで大きく負け、Chet Holmgrenも8得点に抑えられた。",
+      en:
+        "Without De'Aaron Fox, San Antonio leaned on Dylan Harper in the starting lineup while Victor Wembanyama dominated with 41 points, 24 rebounds, and 3 blocks. Harper added 24 points, 11 rebounds, 6 assists, and 7 steals in a breakout night. Oklahoma City got 31 from Alex Caruso and 26 from Jalen Williams; Shai Gilgeous-Alexander had 24 points, 12 assists, and 5 steals but shot just 7-for-23. The game stayed tight into the closing stretch before Wembanyama hit a tying three late in the first overtime and sealed the second OT with a decisive dunk and alley-oop. The Thunder hung around with turnovers forced and Caruso’s perimeter shooting but lost the rebounding battle badly and held Chet Holmgren to 8 points in a 122-115 Spurs win.",
+    },
   },
 ];
 
