@@ -1,0 +1,26 @@
+[
+  {
+    "id": "nba-20260519-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-19T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 1",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "final",
+    "final": true,
+    "homeScore": 115,
+    "awayScore": 122,
+    "score": { "home": 115, "away": 122 },
+    "seriesStanding": { "homeWins": 0, "awayWins": 1 },
+    "injuries": {
+      "home": ["Thomas Sorber"],
+      "away": ["De'Aaron Fox"]
+    },
+    "summaryJa": "San AntonioがダブルOTの接戦を制し、カンファレンスファイナル第1戦を勝ち取った。Victor Wembanyamaが41点24リバウンド3ブロックと試合を支配し、2OT残り22秒ではChet Holmgrenを越えるダンク＋ファウルで決着。Fox欠場で先発したDylan Harperは24点11リバウンド7スティール6アシスト。ThunderはSGAが24点12アシスト（7/23）、Carusoがベンチから31点（3P8本）、Jalen Williamsが復帰26点と支えたが、2OTでWembyを止めきれなかった。Spursが1-0。"
+  }
+]

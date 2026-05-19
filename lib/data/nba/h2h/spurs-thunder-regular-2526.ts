@@ -9,7 +9,7 @@ export const SPURS_THUNDER_TEAM_IDS = ["nba-spurs", "nba-thunder"] as const;
 const H2H_LEFT = "Spurs";
 const H2H_RIGHT = "Thunder";
 
-/** 2025-26 Spurs vs Thunder（レギュラー5試合・対戦成績 Spurs 4勝1敗） */
+/** 2025-26 Spurs vs Thunder（レギュラー5試合 + プレーオフ） */
 export const spursThunderH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-thunder-2025-12-13",
@@ -82,6 +82,27 @@ export const spursThunderH2HGames: NbaH2HGameCard[] = [
       "I. Hartenstein",
       "A. Mitchell",
     ],
+  },
+  {
+    id: "h2h-spurs-thunder-2026-05-18-po-g1",
+    dateEt: "2026-05-18",
+    dateJst: "2026-05-19",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 122,
+    scoreRight: 115,
+    /** Oklahoma City（Thunder）ホーム */
+    homeTeamSide: "right",
+    wentToOvertime: true,
+    injuriesLeft: ["D. Fox"],
+    injuriesRight: ["T. Sorber"],
+    inactiveFooterSummary: {
+      ja:
+        "San AntonioがダブルOTの接戦を制し、カンファレンスファイナル第1戦を勝ち取った。Victor Wembanyamaが41点24リバウンド3ブロックと試合を支配し、2OT残り22秒ではChet Holmgrenを越えるダンク＋ファウルで決着。1OT終盤には28フィートの同点3Pも決めている。Fox欠場で先発したDylan Harperは24点11リバウンド7スティール6アシストと、守備でもOKCのリズムを崩した。ThunderはShai Gilgeous-Alexanderが24点12アシストながら7/23と低效率。Alex Carusoがベンチから31点（3P8本）、Jalen Williamsが復帰して26点と支えたが、2OTでWembyを止めきれなかった。シリーズはSpursが1-0。",
+      en:
+        "San Antonio survived double overtime to steal Game 1 of the conference finals. Victor Wembanyama dominated with 41 points, 24 rebounds, and 3 blocks, sealing it in the second overtime with a dunk over Chet Holmgren plus the foul and an alley-oop with 22 seconds left—after hitting a 28-foot tying three late in the first overtime. With De’Aaron Fox out, Dylan Harper started and delivered 24 points, 11 rebounds, 7 steals, and 6 assists, disrupting Oklahoma City on both ends. The Thunder got 24 points and 12 assists from Shai Gilgeous-Alexander on 7-of-23 shooting in his first game after the MVP ceremony; Alex Caruso scored 31 off the bench with eight threes and Jalen Williams returned for 26, but OKC could not slow Wembanyama in the second overtime. San Antonio leads the series 1-0.",
+    },
   },
 ];
 
