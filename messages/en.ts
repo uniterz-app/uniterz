@@ -172,6 +172,7 @@ const en: Messages = {
     worldCup: "World Cup",
     updatedDaily: "Rankings updated daily at {time}",
     scoresCumulative: "Scores are cumulative",
+    scheduleInfoToggle: "Show ranking update schedule",
     loadingRankStats: "Loading your rank and stats",
     yourRank: "YOUR RANK",
     pts: "pts",

@@ -170,6 +170,7 @@ const ja = {
     worldCup: "ワールドカップ",
     updatedDaily: "ランキングは毎日 {time} に更新",
     scoresCumulative: "スコアは累積",
+    scheduleInfoToggle: "更新スケジュールの説明を表示",
     loadingRankStats: "順位とスコアを読み込み中",
     yourRank: "YOUR RANK",
     pts: "pts",

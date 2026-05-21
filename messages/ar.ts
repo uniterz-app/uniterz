@@ -172,6 +172,7 @@ const ar: Messages = {
     worldCup: "كأس العالم",
     updatedDaily: "يتم تحديث التصنيفات يوميًا في {time}",
     scoresCumulative: "النقاط تراكمية",
+    scheduleInfoToggle: "عرض جدول التحديث",
     loadingRankStats: "جارٍ تحميل ترتيبك وإحصائياتك",
     yourRank: "YOUR RANK",
     pts: "pts",

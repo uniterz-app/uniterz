@@ -15,6 +15,9 @@ export function rankingsTexts(language: RankingsLanguage) {
   const ja = language === "ja";
   return {
     title: "RANKINGS",
+    scheduleInfoToggle: ja
+      ? "更新スケジュールの説明を表示"
+      : "Show ranking update schedule",
     playoffs: "PLAYOFFS",
     bracket: "BRACKET",
     bracketSoon: ja

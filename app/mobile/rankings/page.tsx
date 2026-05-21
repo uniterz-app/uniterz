@@ -248,10 +248,10 @@ export default function MobileRankingsPage() {
             <button
               type="button"
               onClick={() => setRankingsDrawerOpen(true)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
               aria-label={m.games.openMenu}
             >
-              <Menu className="h-5 w-5" strokeWidth={2.25} />
+              <Menu className="h-4 w-4" strokeWidth={2.25} />
             </button>
             <span
               className={[
@@ -261,10 +261,14 @@ export default function MobileRankingsPage() {
             >
               {rankingLeague === "worldcup" ? "WORLD CUP" : "RANKINGS"}
             </span>
-            <div className="w-10 shrink-0" aria-hidden />
+            <RankingsScheduleNotice
+              phase={phase}
+              language={language}
+              countryCode={countryCode}
+              compact
+            />
           </div>
 
-          <RankingsScheduleNotice phase={phase} language={language} countryCode={countryCode} />
           <div className="space-y-0.5">
             {rankingLeague === "nba" ? (
               <RankingsCategoryTabs

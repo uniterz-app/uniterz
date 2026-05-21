@@ -62,6 +62,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
+  const [scheduleNoticeOpen, setScheduleNoticeOpen] = useState(false);
 
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
     useNativeCumulativeRankingsBulk("playoffs", round, null);
@@ -141,18 +142,34 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           >
             <MaterialCommunityIcons
               name="menu"
-              size={22}
+              size={18}
               color="rgba(255,255,255,0.85)"
             />
           </Pressable>
           <Text style={styles.headerTitle} maxFontSizeMultiplier={1.2}>
             {t.title}
           </Text>
-          <View style={styles.menuSpacer} />
+          <Pressable
+            style={styles.infoBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t.scheduleInfoToggle}
+            accessibilityState={{ expanded: scheduleNoticeOpen }}
+            onPress={() => setScheduleNoticeOpen((open) => !open)}
+          >
+            <MaterialCommunityIcons
+              name="information-outline"
+              size={18}
+              color="rgba(255,255,255,0.7)"
+            />
+          </Pressable>
         </View>
-        <Text style={styles.notice} maxFontSizeMultiplier={1.15}>
-          {scheduleNoticeForUser(language, user.countryCode)}
-        </Text>
+        {scheduleNoticeOpen ? (
+          <View style={styles.noticeGlass}>
+            <Text style={styles.notice} maxFontSizeMultiplier={1.15}>
+              {scheduleNoticeForUser(language, user.countryCode)}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <RankingsCategoryTabsNative
@@ -275,29 +292,40 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   menuBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
     backgroundColor: "rgba(255,255,255,0.05)",
     alignItems: "center",
     justifyContent: "center",
   },
-  menuSpacer: {
+  infoBtn: {
     width: 40,
     height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noticeGlass: {
+    marginBottom: 10,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    overflow: "hidden",
   },
   notice: {
     textAlign: "center",
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.75)",
     fontSize: 11,
     lineHeight: 16,
-    marginBottom: 10,
   },
   section: {
-    gap: 6,
-    marginBottom: 10,
+    gap: 4,
+    marginBottom: 8,
   },
   bracketPlaceholder: {
     minHeight: 180,

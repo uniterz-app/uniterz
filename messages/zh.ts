@@ -169,6 +169,7 @@ const zh: Messages = {
     worldCup: "世界杯",
     updatedDaily: "排名每天 {time} 更新",
     scoresCumulative: "分数为累积制",
+    scheduleInfoToggle: "显示更新说明",
     loadingRankStats: "正在加载你的排名和数据",
     yourRank: "YOUR RANK",
     pts: "pts",

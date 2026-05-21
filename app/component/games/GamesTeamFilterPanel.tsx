@@ -26,6 +26,8 @@ type Props = {
   /** チーム・点差・対決モードをまとめてクリア */
   onClearAllFilters: () => void;
   dense?: boolean;
+  /** 試合一覧ヘッダー行に載せる極小トリガー（NBA タイトル横） */
+  compactHeader?: boolean;
   language: Language;
   layoutMobile: boolean;
 };
@@ -54,6 +56,7 @@ export default function GamesTeamFilterPanel({
   onMarginMinMaxChange,
   onClearAllFilters,
   dense = false,
+  compactHeader = false,
   language,
   layoutMobile,
 }: Props) {
@@ -484,27 +487,38 @@ export default function GamesTeamFilterPanel({
         onClick={() => setOpen(true)}
         style={tabFont}
         className={cn(
-          "inline-flex shrink-0 items-center gap-2 rounded-xl border font-bold uppercase tracking-wide transition",
+          "inline-flex shrink-0 items-center border font-bold uppercase tracking-wide transition",
           activeCount > 0 || marginFilterActive
             ? "border-cyan-400/45 bg-cyan-500/15 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.12)] hover:bg-cyan-500/22"
             : "border-white/12 bg-white/[0.04] text-white/85 hover:border-white/18 hover:bg-white/[0.07]",
-          dense ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-xs md:text-sm",
+          compactHeader
+            ? "min-h-7 gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] leading-none"
+            : dense
+              ? "gap-2 rounded-xl px-2.5 py-1.5 text-xs"
+              : "gap-2 rounded-xl px-3 py-2 text-xs md:text-sm",
         )}
       >
         <SlidersHorizontal
           className={cn(
             "shrink-0 opacity-90",
-            dense ? "h-3.5 w-3.5" : "h-4 w-4",
+            compactHeader ? "h-3.5 w-3.5" : dense ? "h-3.5 w-3.5" : "h-4 w-4",
           )}
           aria-hidden
         />
         <span>{labelShort}</span>
         {activeCount > 0 && (
-          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-md bg-cyan-400/25 px-1 text-[10px] text-cyan-50">
+          <span
+            className={cn(
+              "flex items-center justify-center rounded-md bg-cyan-400/25 text-cyan-50",
+              compactHeader
+                ? "h-4 min-w-4 px-0.5 text-[9px]"
+                : "h-5 min-w-[1.25rem] px-1 text-[10px]",
+            )}
+          >
             {activeCount}
           </span>
         )}
-        {activeCount === 2 && matchMode === "h2h" && (
+        {activeCount === 2 && matchMode === "h2h" && !compactHeader && (
           <span
             className="max-w-[5.5rem] truncate rounded-md border border-cyan-400/30 bg-cyan-500/10 px-1.5 py-0.5 text-[9px] font-bold normal-case leading-none text-cyan-100/95"
             style={tabFont}
@@ -512,7 +526,7 @@ export default function GamesTeamFilterPanel({
             {m.games.h2hShort}
           </span>
         )}
-        {marginFilterActive && (
+        {marginFilterActive && !compactHeader && (
           <span
             className="max-w-[7.5rem] truncate rounded-md border border-amber-400/35 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold normal-case leading-none text-amber-100/95"
             style={tabFont}
