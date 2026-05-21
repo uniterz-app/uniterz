@@ -172,6 +172,7 @@ const es: Messages = {
     worldCup: "Copa del Mundo",
     updatedDaily: "El ranking se actualiza diariamente a las {time}",
     scoresCumulative: "Las puntuaciones son acumulativas",
+    scheduleInfoToggle: "Mostrar horario de actualización",
     loadingRankStats: "Cargando tu posición y estadísticas",
     yourRank: "YOUR RANK",
     pts: "pts",

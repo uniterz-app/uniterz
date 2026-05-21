@@ -784,6 +784,63 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     );
   }, [scheduleBlockKey]);
 
+  const renderFilterControl = (compactHeader: boolean) => (
+    <motion.div
+      initial={webGamesMotion ? { opacity: 0, x: 12 } : false}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{
+        duration: webGamesMotion ? 0.28 : 0,
+        delay: webGamesMotion ? 0.04 : 0,
+        ease: GAMES_CYBER_EASE,
+      }}
+    >
+      <GamesTeamFilterPanel
+        teams={teams}
+        selectedIds={teamFilterIds}
+        onChange={setTeamFilterIds}
+        matchMode={teamFilterMatchMode}
+        onMatchModeChange={setTeamFilterMatchMode}
+        marginMin={marginMin}
+        marginMax={marginMax}
+        onMarginMinMaxChange={setMarginMinMax}
+        onClearAllFilters={clearAllTeamAndMarginFilters}
+        dense={dense || isMobile}
+        compactHeader={compactHeader}
+        language={language}
+        layoutMobile={isMobile}
+      />
+    </motion.div>
+  );
+
+  const renderBracketControl = (compactHeader: boolean) =>
+    league === "nba" ? (
+      <motion.div
+        initial={webGamesMotion ? { opacity: 0, x: 18 } : false}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{
+          duration: webGamesMotion ? 0.32 : 0,
+          delay: webGamesMotion ? 0.05 : 0,
+          ease: GAMES_CYBER_EASE,
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleBracketClick}
+          style={bracketMarketTeamTypography(isMobile)}
+          className={[
+            compactHeader
+              ? "inline-flex min-h-7 items-center justify-center rounded-lg px-2.5 py-1.5 text-[10px] leading-none"
+              : dense
+                ? "rounded-lg px-3 py-1.5 text-sm"
+                : "rounded-xl px-4 py-2 text-base",
+            "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
+          ].join(" ")}
+        >
+          Bracket
+        </button>
+      </motion.div>
+    ) : null;
+
   return (
     <div
       ref={pageRef}
@@ -794,80 +851,45 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
-
-      <motion.div
-        className="relative mb-2 mt-2 flex h-10 items-center pl-2 pr-1 sm:pl-3"
-      >
+      <div className="relative mb-2 mt-2 flex items-center gap-3 pl-2 pr-1 sm:pl-3">
         <button
           type="button"
           onClick={() => setGamesDrawerOpen(true)}
-          className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
           aria-label={m.games.openMenu}
         >
           <Menu className="h-5 w-5" strokeWidth={2.25} />
         </button>
-
         <span
           className={[
             nameBebas.className,
-            "pointer-events-none absolute inset-x-0 flex h-10 items-center justify-center truncate px-14 text-center tracking-[0.28em] text-white/90",
+            "min-w-0 flex-1 truncate text-center tracking-[0.28em] text-white/90",
             isMobile ? "text-[20px]" : "text-[22px] sm:text-[24px]",
           ].join(" ")}
-          aria-hidden
         >
           {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
         </span>
+        <div className="w-10 shrink-0" aria-hidden />
+        {isMobile ? (
+          <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-1.5">
+            <div className="pointer-events-auto flex items-center gap-1.5">
+              {renderFilterControl(true)}
+              {renderBracketControl(true)}
+            </div>
+          </div>
+        ) : null}
+      </div>
 
-        <motion.div
-          initial={webGamesMotion ? { opacity: 0, x: 12 } : false}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{
-            duration: webGamesMotion ? 0.28 : 0,
-            delay: webGamesMotion ? 0.04 : 0,
-            ease: GAMES_CYBER_EASE,
-          }}
-          className="relative z-10 ml-auto flex shrink-0 items-center gap-2"
-        >
-          <GamesTeamFilterPanel
-            teams={teams}
-            selectedIds={teamFilterIds}
-            onChange={setTeamFilterIds}
-            matchMode={teamFilterMatchMode}
-            onMatchModeChange={setTeamFilterMatchMode}
-            marginMin={marginMin}
-            marginMax={marginMax}
-            onMarginMinMaxChange={setMarginMinMax}
-            onClearAllFilters={clearAllTeamAndMarginFilters}
-            dense={dense}
-            language={language}
-            layoutMobile={isMobile}
-          />
-
-          {league === "nba" && (
-            <motion.div
-              initial={webGamesMotion ? { opacity: 0, x: 18 } : false}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{
-                duration: webGamesMotion ? 0.32 : 0,
-                delay: webGamesMotion ? 0.05 : 0,
-                ease: GAMES_CYBER_EASE,
-              }}
-            >
-              <button
-                type="button"
-                onClick={handleBracketClick}
-                style={bracketMarketTeamTypography(isMobile)}
-                className={[
-                  "inline-flex h-10 shrink-0 items-center justify-center border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
-                  dense ? "rounded-lg px-3 text-sm" : "rounded-xl px-4 text-sm",
-                ].join(" ")}
-              >
-                Bracket
-              </button>
-            </motion.div>
-          )}
-        </motion.div>
-      </motion.div>
+      {isMobile ? (
+        <div className="mb-2 mt-1 min-h-7" aria-hidden />
+      ) : (
+        <div className="mb-2 mt-1 flex items-center justify-end gap-3 pr-1 sm:pr-3">
+          <div className="flex shrink-0 items-center gap-2">
+            {renderFilterControl(false)}
+            {renderBracketControl(false)}
+          </div>
+        </div>
+      )}
 
       <motion.div
         initial={webGamesMotion ? { opacity: 0, y: -10, scale: 0.985 } : false}

@@ -16,6 +16,7 @@ declare module "@/app/component/predict/NbaPostseasonMatchupPanel" {
     injuriesRight: string[];
     homeTeamSide?: "left" | "right";
     wentToOvertime?: boolean;
+    overtimePeriods?: number;
     seriesGameLabel?: string;
     inactiveFooterSummary?: NbaH2HGameInactiveFooterSummary;
   };

@@ -20,6 +20,8 @@ export type PeerH2hLine = {
   homeScore: number;
   awayScore: number;
   seriesGameLabel?: string;
+  wentToOvertime?: boolean;
+  overtimePeriods?: number;
   injuriesLeft: string[];
   injuriesRight: string[];
   injuriesHome: string[];

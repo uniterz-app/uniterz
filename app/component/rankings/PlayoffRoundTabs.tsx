@@ -33,8 +33,8 @@ export default function PlayoffRoundTabs({
     <div
       className={
         isMobile
-          ? "grid grid-cols-5 gap-1 rounded-xl border border-white/10 bg-white/3 p-1"
-          : "grid grid-cols-5 gap-1.5 rounded-xl border border-white/10 bg-white/3 p-1.5"
+          ? "grid grid-cols-5 gap-0.5 rounded-lg border border-white/10 bg-white/3 p-0.5"
+          : "grid grid-cols-5 gap-1 rounded-lg border border-white/10 bg-white/3 p-1"
       }
     >
       {items.map((item) => {
@@ -45,8 +45,8 @@ export default function PlayoffRoundTabs({
             type="button"
             onClick={() => onChange(item.key)}
             className={[
-              "rounded-lg border text-center font-semibold transition-colors",
-              isMobile ? "h-7 text-[10px]" : "h-8 text-[11px]",
+              "rounded-md border text-center font-semibold leading-none transition-colors",
+              isMobile ? "h-6 text-[10px]" : "h-7 text-[10px]",
               active
                 ? "border-cyan-300/40 bg-cyan-300/20 text-cyan-100"
                 : "border-white/20 bg-transparent text-white/70 hover:border-white/35 hover:text-white",
