@@ -12,7 +12,7 @@ export const KNICKS_CAVALIERS_TEAM_IDS = [
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Cavaliers";
 
-/** 2025-26 Knicks vs Cavaliers（レギュラー3試合・対戦成績 Knicks 2勝1敗） */
+/** 2025-26 Knicks vs Cavaliers（レギュラー3 + プレーオフ CF Game 1まで） */
 export const knicksCavaliersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-knicks-cavaliers-2025-10-22",
@@ -52,6 +52,27 @@ export const knicksCavaliersH2HGames: NbaH2HGameCard[] = [
     homeTeamSide: "right",
     injuriesLeft: ["M. McBride"],
     injuriesRight: ["M. Strus"],
+  },
+  {
+    id: "h2h-knicks-cavaliers-2026-05-19-po-g1",
+    dateEt: "2026-05-19",
+    dateJst: "2026-05-20",
+    seriesGameLabel: "Game 1",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 115,
+    scoreRight: 104,
+    /** New York（Knicks）ホーム */
+    homeTeamSide: "left",
+    wentToOvertime: true,
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Cavsは4Q残り7:52で93-71、最大22点リード。しかしKnicksが終盤からOTにかけて44-11のラン。Jalen Brunsonが38点、終盤にHardenを狙う形で試合を壊した。Cavsは終盤12分45秒で11点、FG4本、ターンオーバー6。Landry Shametの同点3P、Mikal Bridgesのクラッチショットも大きかった。CavsはMitchell 29点、Harden 15点、Mobley 15点14R。シリーズはKnicksが1-0。",
+      en:
+        "Cleveland led 93-71 with 7:52 left in the fourth, up as many as 22, but New York closed regulation and overtime on a 44-11 run. Jalen Brunson scored 38 and targeted James Harden in the biggest moments down the stretch. The Cavaliers managed just 11 points on 4 field goals and 6 turnovers over the final 12:45. Landry Shamet’s tying three and Mikal Bridges’ clutch shot were pivotal. Cleveland got 29 from Donovan Mitchell, 15 from Harden, and 15 points and 14 rebounds from Evan Mobley. The Knicks lead the series 1-0 after a 115-104 overtime win.",
+    },
   },
 ];
 
