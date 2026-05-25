@@ -1,0 +1,30 @@
+[
+  {
+    "id": "nba-20260527-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-27T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 5",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260529-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-29T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 6",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "away": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "status": "scheduled"
+  }
+]
