@@ -12,7 +12,7 @@ export const KNICKS_CAVALIERS_TEAM_IDS = [
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Cavaliers";
 
-/** 2025-26 Knicks vs Cavaliers（レギュラー3 + プレーオフ CF Game 2まで） */
+/** 2025-26 Knicks vs Cavaliers（レギュラー3 + プレーオフ CF Game 3まで） */
 export const knicksCavaliersH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-knicks-cavaliers-2025-10-22",
@@ -89,9 +89,29 @@ export const knicksCavaliersH2HGames: NbaH2HGameCard[] = [
     injuriesRight: [],
     inactiveFooterSummary: {
       ja:
-        "Cavsは1Q、Mobleyの入りが良く27-24でリード。ただその後アウトサイドが止まり、最終的に3Pは9/35。3QにKnicksが18-0ランを作って試合を決定づけた。Cavsは4Q序盤に7点差まで戻したが、FTミスと空いた3Pの失敗で追い切れず。KnicksはBrunsonが得点よりもゲームメイクに回り、Hartが5本の3Pで流れを作った。シリーズはNYK 2-0。",
+        "Knicksが後半に突き放して2勝0敗。Josh Hartがプレーオフ自己最多26点、Brunsonは19点14アシストで得点よりもゲームメイクに回った。Knicksの先発5人で96点、3Pも12本。前半はCavsもついていったが、3Qの18-0ランで流れが決定的に変わった。CavsはMitchellが26点を取ったが、後半44点止まりで、オフェンスが単発になった。",
       en:
-        "Cleveland led 27-24 after the first quarter behind a strong start from Evan Mobley, but their perimeter offense stalled the rest of the way—they finished 9-for-35 from three. New York broke the game open with an 18-0 run in the third quarter. The Cavaliers trimmed the deficit to seven early in the fourth, but missed free throws and open threes prevented a full comeback. Jalen Brunson prioritized playmaking over scoring, while Josh Hart drilled five threes to swing momentum. The Knicks lead the series 2-0.",
+        "New York pulled away in the second half to take a 2-0 series lead. Josh Hart set a new playoff high with 26 points, while Jalen Brunson had 19 points and 14 assists, prioritizing playmaking over scoring. The Knicks’ starting five combined for 96 points and 12 threes. Cleveland hung in through the first half, but an 18-0 third-quarter run flipped the game for good. Donovan Mitchell scored 26 for the Cavaliers, but they managed just 44 second-half points as their offense turned into one-off possessions.",
+    },
+  },
+  {
+    id: "h2h-knicks-cavaliers-2026-05-23-po-g3",
+    dateEt: "2026-05-23",
+    dateJst: "2026-05-24",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 121,
+    scoreRight: 108,
+    /** Cleveland（Cavaliers）ホーム */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Knicksが敵地でも勝って3勝0敗。Brunsonが30点、Bridgesが22点、Anunobyが21点。Townsは13点8リバウンド7アシストで、得点だけでなくハブ役として効いた。CavsはMobleyが24点、Mitchellが23点、Hardenが19点だったが、3Pは12/41、FTも12/19で効率が悪かった。4QはLandry Shametの連続3PでKnicksが引き離し、Cavsは守備でも流れを止めきれなかった。",
+      en:
+        "New York won on the road to take a 3-0 series lead. Jalen Brunson scored 30, Mikal Bridges 22, and OG Anunoby 21. Karl-Anthony Towns added 13 points, 8 rebounds, and 7 assists as a hub, not just a scorer. Cleveland got 24 from Evan Mobley, 23 from Donovan Mitchell, and 19 from James Harden, but shot 12-for-41 from three and 12-for-19 at the line. Landry Shamet’s consecutive threes in the fourth quarter broke the game open, and the Cavaliers could not slow New York on either end.",
     },
   },
 ];
