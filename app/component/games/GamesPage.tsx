@@ -49,7 +49,10 @@ import {
   GAMES_SCHEDULE_SHELL_DURATION_SEC,
 } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
-import { fetchNextGameDayAfterLocalDay } from "@/lib/games/fetchNextGameDayAfter";
+import {
+  fetchNextGameDayAfterLocalDay,
+  fetchPreviousGameDayBeforeLocalDay,
+} from "@/lib/games/fetchNextGameDayAfter";
 import {
   gameInvolvesAnyTeam,
   gameIsHeadToHeadBetween,
@@ -574,6 +577,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [games, selectedDayKey, dayTimeZone]);
 
   const listLoading = loading || !gamesMatchSelectedDay;
+  const didResolveEmptyDayRef = useRef<Partial<Record<League, string>>>({});
 
   const hasAnyListFilter =
     teamFilterIds.length > 0 || marginMin != null || marginMax != null;
@@ -668,6 +672,60 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     todayKey,
     allFinished,
     nextGameDay,
+    league,
+    dayTimeZone,
+    setSelectedAndSync,
+  ]);
+
+  /**
+   * 今日に試合が無く、かつ近傍ウィンドウ（±3日）にも試合が無いときは
+   * 次の試合日へ、無ければ直近の過去試合日へ自動ジャンプする。
+   */
+  useEffect(() => {
+    if (loadingDays || loadingDayQuery) return;
+    if (!selected) return;
+    if ((games?.length ?? 0) > 0) return;
+    if (gameDaysForStrip.length > 0) return;
+
+    const currentKey = toDateKeyInTimeZone(selected, dayTimeZone);
+    if (didResolveEmptyDayRef.current[league] === currentKey) return;
+    didResolveEmptyDayRef.current[league] = currentKey;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const next = await fetchNextGameDayAfterLocalDay({
+          league,
+          timeZone: dayTimeZone,
+          day: selected,
+        });
+        if (cancelled) return;
+        if (next) {
+          setSelectedAndSync(next);
+          return;
+        }
+
+        const prev = await fetchPreviousGameDayBeforeLocalDay({
+          league,
+          timeZone: dayTimeZone,
+          day: selected,
+        });
+        if (cancelled) return;
+        if (prev) setSelectedAndSync(prev);
+      } catch {
+        // no-op: fallback jump failure should not break page rendering
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    loadingDays,
+    loadingDayQuery,
+    selected,
+    games,
+    gameDaysForStrip.length,
     league,
     dayTimeZone,
     setSelectedAndSync,
