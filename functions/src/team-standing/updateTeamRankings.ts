@@ -83,7 +83,7 @@ export async function updateTeamRankings() {
     const losses = Number(data.losses || 0);
     const draws = Number(data.d || data.draws || 0);
 
-    const isSoccer = league === "j1" || league === "pl";
+    const isSoccer = league === "j1" || league === "pl" || league === "wc";
 
     const games = isSoccer ? wins + losses + draws : wins + losses;
 

@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import { jp } from "@/lib/fonts";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import type { League } from "@/lib/leagues";
@@ -286,11 +287,18 @@ export default function PredictNextGameModal({
                   <span className="mb-1 text-[8px] font-semibold uppercase tracking-[0.2em] text-white/55 sm:text-[9px]">
                     HOME
                   </span>
-                  <HalftoneJerseyMark
-                    accent={homeJersey}
-                    accentEnd={homeJerseyEnd}
-                    className="h-[3.35rem] w-[3.35rem] sm:h-[3.85rem] sm:w-[3.85rem]"
-                  />
+                  {lg === "wc" ? (
+                    <CountryFlag
+                      teamId={homeTeamId ?? null}
+                      className="h-[2.25rem] w-[3.3rem] rounded-[6px] sm:h-[2.5rem] sm:w-[3.7rem]"
+                    />
+                  ) : (
+                    <HalftoneJerseyMark
+                      accent={homeJersey}
+                      accentEnd={homeJerseyEnd}
+                      className="h-[3.35rem] w-[3.35rem] sm:h-[3.85rem] sm:w-[3.85rem]"
+                    />
+                  )}
                   <p
                     className={[
                       "mt-1 min-w-0 text-[11px] font-bold leading-tight text-white sm:text-xs",
@@ -340,11 +348,18 @@ export default function PredictNextGameModal({
                   <span className="mb-1 text-[8px] font-semibold uppercase tracking-[0.2em] text-white/55 sm:text-[9px]">
                     AWAY
                   </span>
-                  <HalftoneJerseyMark
-                    accent={awayJersey}
-                    accentEnd={awayJerseyEnd}
-                    className="h-[3.35rem] w-[3.35rem] sm:h-[3.85rem] sm:w-[3.85rem]"
-                  />
+                  {lg === "wc" ? (
+                    <CountryFlag
+                      teamId={awayTeamId ?? null}
+                      className="h-[2.25rem] w-[3.3rem] rounded-[6px] sm:h-[2.5rem] sm:w-[3.7rem]"
+                    />
+                  ) : (
+                    <HalftoneJerseyMark
+                      accent={awayJersey}
+                      accentEnd={awayJerseyEnd}
+                      className="h-[3.35rem] w-[3.35rem] sm:h-[3.85rem] sm:w-[3.85rem]"
+                    />
+                  )}
                   <p
                     className={[
                       "mt-1 min-w-0 text-[11px] font-bold leading-tight text-white sm:text-xs",
