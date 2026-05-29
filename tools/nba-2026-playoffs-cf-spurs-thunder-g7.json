@@ -1,0 +1,16 @@
+[
+  {
+    "id": "nba-20260531-01",
+    "league": "nba",
+    "startAtJstIso": "2026-05-31T09:00:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 7",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "cf",
+    "home": { "name": "Oklahoma City Thunder", "teamId": "nba-thunder" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "scheduled"
+  }
+]
