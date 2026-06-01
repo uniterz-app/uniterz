@@ -1,0 +1,58 @@
+[
+  {
+    "id": "nba-20260604-01",
+    "league": "nba",
+    "startAtJstIso": "2026-06-04T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 1",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "finals",
+    "home": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "away": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260606-01",
+    "league": "nba",
+    "startAtJstIso": "2026-06-06T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 2",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "finals",
+    "home": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "away": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260609-01",
+    "league": "nba",
+    "startAtJstIso": "2026-06-09T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 3",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "finals",
+    "home": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "scheduled"
+  },
+  {
+    "id": "nba-20260611-01",
+    "league": "nba",
+    "startAtJstIso": "2026-06-11T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 4",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "finals",
+    "home": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "status": "scheduled"
+  }
+]
