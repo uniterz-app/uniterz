@@ -11,7 +11,8 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { summaryMetricNumClass } from "@/lib/fonts";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { metricValueMinWidthCh } from "@/lib/format/metricDecimals";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   summaryCardShadowLgClass,
@@ -183,12 +184,17 @@ function TotalScoreCard({
           <div className="flex min-w-0 flex-col items-center justify-center text-center md:translate-x-1">
             <div
               className={[
-                summaryMetricNumClass,
-                "text-xl tabular-nums tracking-tight text-white md:text-4xl",
+                resultStatsMetricNumClass,
+                "inline-flex items-baseline justify-center text-xl tracking-tight text-white md:text-4xl",
                 "leading-none",
               ].join(" ")}
             >
-              {formatMetricDecimals(totalCu, 1)}
+              <span
+                className="inline-block text-right tabular-nums"
+                style={{ minWidth: metricValueMinWidthCh(total, 1) }}
+              >
+                {formatMetricDecimals(totalCu, 1)}
+              </span>
               <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-xl">
                 {m.profile.ptsUnit}
               </span>
@@ -246,9 +252,10 @@ function TotalScoreCard({
               </span>
               <span
                 className={[
-                  summaryMetricNumClass,
-                  "tabular-nums text-xs tracking-tight text-teal-200 md:text-[22px]",
+                  resultStatsMetricNumClass,
+                  "inline-block text-right text-xs tracking-tight text-teal-200 tabular-nums md:text-[22px]",
                 ].join(" ")}
+                style={{ minWidth: metricValueMinWidthCh(base, 1) }}
               >
                 {formatMetricDecimals(baseCu, 1)}
               </span>
@@ -260,9 +267,10 @@ function TotalScoreCard({
               </span>
               <span
                 className={[
-                  summaryMetricNumClass,
-                  "tabular-nums text-xs tracking-tight text-orange-200 md:text-[22px]",
+                  resultStatsMetricNumClass,
+                  "inline-block text-right text-xs tracking-tight text-orange-200 tabular-nums md:text-[22px]",
                 ].join(" ")}
+                style={{ minWidth: metricValueMinWidthCh(upset, 1) }}
               >
                 {formatMetricDecimals(upsetCu, 1)}
               </span>
@@ -274,9 +282,10 @@ function TotalScoreCard({
               </span>
               <span
                 className={[
-                  summaryMetricNumClass,
-                  "tabular-nums text-xs tracking-tight text-violet-200 md:text-[22px]",
+                  resultStatsMetricNumClass,
+                  "inline-block text-right text-xs tracking-tight text-violet-200 tabular-nums md:text-[22px]",
                 ].join(" ")}
+                style={{ minWidth: metricValueMinWidthCh(streak, 1) }}
               >
                 {formatMetricDecimals(streakCu, 1)}
               </span>

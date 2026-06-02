@@ -1547,6 +1547,7 @@ export default function ResultListWithOverlay({
           const finalShown = day.final;
           // 未確定（試合前〜得点未確定）を上、試合確定済みを下（各バケット内の順は groupPostsByResultDay に従う）
           const displayPosts = [...pendingShown, ...finalShown];
+          const isSingleWebCard = !isMobile && displayPosts.length === 1;
           const dayPts = dayPointsHeaderForList(
             finalShown,
             pendingShown,
@@ -1572,11 +1573,16 @@ export default function ResultListWithOverlay({
                     className={
                       isMobile
                         ? "space-y-3 pt-2"
-                        : "grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
+                        : isSingleWebCard
+                          ? "flex justify-center pt-2"
+                          : "grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
                     }
                   >
                     {displayPosts.map((post) => (
-                      <div key={post.id} className="w-full">
+                      <div
+                        key={post.id}
+                        className={isSingleWebCard ? "w-full max-w-[640px]" : "w-full"}
+                      >
                         <ResultCard
                           post={post}
                           onOpen={open}
@@ -1604,7 +1610,9 @@ export default function ResultListWithOverlay({
                     className={
                       isMobile
                         ? "flex min-w-0 w-full flex-col gap-3 pt-2"
-                        : "grid min-w-0 w-full grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
+                        : isSingleWebCard
+                          ? "flex min-w-0 w-full justify-center pt-2"
+                          : "grid min-w-0 w-full grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
                     }
                     variants={resultCardsCyberOrch}
                     initial="hidden"
@@ -1614,7 +1622,7 @@ export default function ResultListWithOverlay({
                       <motion.div
                         key={post.id}
                         variants={resultCardCyberItem}
-                        className="w-full"
+                        className={isSingleWebCard ? "w-full max-w-[640px]" : "w-full"}
                       >
                         <ResultCard
                           post={post}

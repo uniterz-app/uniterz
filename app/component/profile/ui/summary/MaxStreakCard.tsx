@@ -7,18 +7,21 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { summaryMetricNumClass } from "@/lib/fonts";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { metricValueMinWidthCh } from "@/lib/format/metricDecimals";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   summaryCardShadowLgClass,
   summaryCardShadowSmClass,
 } from "@/lib/ui/profileCardEdgeGlow";
+import type { ProfileStreakCardLabels } from "@/lib/profile/profileStatsDisplay";
 
 type Props = {
   maxStreak: number;
   compact?: boolean;
   className?: string;
   language?: Language;
+  streakLabels?: ProfileStreakCardLabels;
 };
 
 
@@ -39,6 +42,7 @@ function MaxStreakCard({
   compact = true,
   className = "",
   language = "ja",
+  streakLabels,
 }: Props) {
   const m = t(language);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -77,9 +81,9 @@ function MaxStreakCard({
   const shown = useMemo(() => safeInt(cu), [cu]);
   const valueColor = getStreakColor(shown);
 
-  const tooltipMsg = m.profile.maxStreakTooltip;
-  const title = m.profile.maxWinStreak;
-  const subtitle = m.profile.allTimeMaxStreak;
+  const tooltipMsg = streakLabels?.tooltip ?? m.profile.maxStreakTooltip;
+  const title = streakLabels?.title ?? m.profile.maxWinStreak;
+  const subtitle = streakLabels?.subtitle ?? m.profile.allTimeMaxStreak;
 
   return (
     <>
@@ -120,12 +124,17 @@ function MaxStreakCard({
         <div className="flex flex-1 flex-col items-center justify-center">
           <div
             className={[
-              summaryMetricNumClass,
-              "text-xl leading-none text-center tabular-nums tracking-tight md:text-3xl",
+              resultStatsMetricNumClass,
+              "text-xl leading-none text-center tracking-tight md:text-3xl",
               valueColor,
             ].join(" ")}
           >
-            {cu}
+            <span
+              className="inline-block tabular-nums"
+              style={{ minWidth: metricValueMinWidthCh(base, 0) }}
+            >
+              {shown}
+            </span>
           </div>
 
           <div className="mt-2 text-[9px] text-white/60 text-center leading-snug tracking-tight md:mt-3 md:text-[15px]">

@@ -5,7 +5,48 @@
 
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import {
+  isWcRankingStage,
+  type WcRankingStage,
+} from "@/lib/rankings/wcRankingStage";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+
+export type ProfileDailyTrendContext = {
+  rankingLeague: RankingLeagueSource;
+  wcStage?: WcRankingStage;
+};
+
+export function resolveProfileDailyTrendContext(
+  rankingLeague: RankingLeagueSource,
+  wcStage?: WcRankingStage
+): ProfileDailyTrendContext {
+  if (rankingLeague === "worldcup") {
+    const stage =
+      wcStage && isWcRankingStage(wcStage) ? wcStage : ("overall" as const);
+    return { rankingLeague, wcStage: stage };
+  }
+  return { rankingLeague: "nba" };
+}
+
+function dailyBucketFromDoc(
+  d: Record<string, unknown>,
+  ctx: ProfileDailyTrendContext
+): Record<string, unknown> {
+  if (ctx.rankingLeague === "worldcup") {
+    const stage = ctx.wcStage ?? "overall";
+    const byWc = (d.rankingByWcStage ?? {}) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    return (byWc[stage] ?? byWc.overall ?? {}) as Record<string, unknown>;
+  }
+  const byPhase = (d.rankingByPhase ?? {}) as Record<
+    string,
+    Record<string, unknown>
+  >;
+  return (byPhase.playoffs ?? {}) as Record<string, unknown>;
+}
 
 type Bucket = {
   posts: number;
@@ -162,7 +203,8 @@ function resolveDailyDocDateKey(
 
 /** 1 日分のスナップショットを `ProfileDailyTrendRow` に（存在しない・日付なしは null） */
 export function dailyTrendRowFromDailySnap(
-  snap: DocumentSnapshot
+  snap: DocumentSnapshot,
+  ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
 ): ProfileDailyTrendRow | null {
   if (!snap.exists) return null;
   const d = snap.data();
@@ -170,16 +212,12 @@ export function dailyTrendRowFromDailySnap(
   const date = resolveDailyDocDateKey(d.date, snap.id);
   if (!date) return null;
 
-  const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
-  const bucket =
-    all != null && typeof all === "object"
-      ? (all as Record<string, unknown>)
-      : null;
-  const posts = safeInt(bucket?.posts);
-  const wins = safeInt(bucket?.wins);
-  const pointsV3 = safeNum(bucket?.pointsSumV3);
-  const upsetPoints = safeNum(bucket?.upsetPointsSum);
-  const scorePrecisionSum = safeNum(bucket?.scorePrecisionSum);
+  const bucket = dailyBucketFromDoc(d as Record<string, unknown>, ctx);
+  const posts = safeInt(bucket.posts);
+  const wins = safeInt(bucket.wins);
+  const pointsV3 = safeNum(bucket.pointsSumV3);
+  const upsetPoints = safeNum(bucket.upsetPointsSum);
+  const scorePrecisionSum = safeNum(bucket.scorePrecisionSum);
 
   return {
     date,
@@ -197,9 +235,10 @@ export function dailyTrendRowFromDailySnap(
  */
 export function mergeDailyTrendWithSnap(
   trend: ProfileDailyTrendRow[],
-  snap: DocumentSnapshot
+  snap: DocumentSnapshot,
+  ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
 ): ProfileDailyTrendRow[] {
-  const row = dailyTrendRowFromDailySnap(snap);
+  const row = dailyTrendRowFromDailySnap(snap, ctx);
   if (!row) return trend;
   const next = trend.filter((r) => r.date !== row.date);
   next.push(row);
@@ -209,11 +248,12 @@ export function mergeDailyTrendWithSnap(
 
 /** useUserStatsDailyTrend と同じ all / date の解決で行を作り、日付昇順に並べる */
 export function buildDailyTrendFromDailySnaps(
-  snaps: DocumentSnapshot[]
+  snaps: DocumentSnapshot[],
+  ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
 ): ProfileDailyTrendRow[] {
   const rows: ProfileDailyTrendRow[] = [];
   for (const snap of snaps) {
-    const row = dailyTrendRowFromDailySnap(snap);
+    const row = dailyTrendRowFromDailySnap(snap, ctx);
     if (row) rows.push(row);
   }
   rows.sort((a, b) => a.date.localeCompare(b.date));

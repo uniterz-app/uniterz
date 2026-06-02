@@ -3,10 +3,21 @@ import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { assertMember } from "@/lib/communities/groupAccess";
 import { adminDb } from "@/lib/firebaseAdmin";
 import {
+  parseCommunityLeague,
   parseCommunityMetric,
   parseCommunityPeriod,
 } from "@/lib/communities/types";
 import { buildMemberLeaderboard } from "@/lib/communities/groupStats";
+import { resolveRankingStartDateKey } from "@/lib/communities/rankingStartDate";
+import {
+  getCachedLeaderboardResponse,
+  setCachedLeaderboardResponse,
+} from "@/lib/communities/leaderboardResponseCache";
+import {
+  getLeaderboardSnapshotSlotKeyJst,
+  readLeaderboardSnapshot,
+  writeLeaderboardSnapshot,
+} from "@/lib/communities/leaderboardSnapshot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,17 +32,65 @@ export async function GET(req: Request, ctx: Ctx) {
     const d = groupSnap.data()!;
     const rankingMetric = parseCommunityMetric(d.rankingMetric);
     const periodType = parseCommunityPeriod(d.periodType);
+    const rankingLeague = parseCommunityLeague(d.rankingLeague);
+    const rankingStartDateKey = resolveRankingStartDateKey(d);
+    const memberCountFromGroup = Number(d.memberCount ?? 0);
+    const snapshotSlotKey = getLeaderboardSnapshotSlotKeyJst();
+
+    const snapshot = await readLeaderboardSnapshot(
+      adminDb,
+      groupId,
+      snapshotSlotKey
+    );
+    if (
+      snapshot &&
+      snapshot.rankingMetric === rankingMetric &&
+      snapshot.rankingLeague === rankingLeague &&
+      snapshot.periodType === periodType &&
+      snapshot.rankingStartDateKey === rankingStartDateKey &&
+      snapshot.memberCount === memberCountFromGroup
+    ) {
+      const myRowFromSnapshot =
+        snapshot.rows.find((x) => x.uid === uid) ?? null;
+      return NextResponse.json({
+        ok: true,
+        rankingMetric,
+        periodType,
+        rankingLeague,
+        rows: snapshot.rows,
+        myRow: myRowFromSnapshot,
+      });
+    }
 
     const members = await adminDb
       .collection(`groups/${groupId}/members`)
       .get();
     const memberUids = members.docs.map((x) => x.id);
+    const memberUidSample = memberUids
+      .slice(0, 8)
+      .sort()
+      .join(",");
+
+    const cached = getCachedLeaderboardResponse({
+      groupId,
+      rankingMetric,
+      rankingLeague,
+      periodType,
+      rankingStartDateKey,
+      memberCount: memberUids.length,
+      topMemberUidSample: memberUidSample,
+    });
+    if (cached) {
+      return NextResponse.json(cached);
+    }
 
     const rows = await buildMemberLeaderboard(
       adminDb,
       memberUids,
       rankingMetric,
-      periodType
+      periodType,
+      rankingLeague,
+      rankingStartDateKey
     );
 
     const ranked = rows.map((r, i) => ({
@@ -54,13 +113,37 @@ export async function GET(req: Request, ctx: Ctx) {
 
     const myRow = ranked.find((x) => x.uid === uid) ?? null;
 
-    return NextResponse.json({
+    const payload = {
       ok: true,
       rankingMetric,
       periodType,
+      rankingLeague,
       rows: ranked,
       myRow,
+    } as const;
+    await writeLeaderboardSnapshot(adminDb, groupId, {
+      slotKey: snapshotSlotKey,
+      rankingMetric,
+      rankingLeague,
+      periodType,
+      rankingStartDateKey,
+      memberCount: memberUids.length,
+      rows: ranked,
+      builtAtMs: Date.now(),
     });
+    setCachedLeaderboardResponse(
+      {
+        groupId,
+        rankingMetric,
+        rankingLeague,
+        periodType,
+        rankingStartDateKey,
+        memberCount: memberUids.length,
+        topMemberUidSample: memberUidSample,
+      },
+      payload
+    );
+    return NextResponse.json(payload);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "error";
     const status = (e as { status?: number }).status;

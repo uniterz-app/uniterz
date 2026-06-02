@@ -1,5 +1,17 @@
-import type { CommunityMetric, CommunityPeriodType } from "./types";
+import type {
+  CommunityLeague,
+  CommunityMetric,
+  CommunityPeriodType,
+} from "./types";
 import type { Language } from "@/lib/i18n/language";
+import { LEAGUE_DISPLAY, type League } from "@/lib/leagues";
+
+export function leagueLabel(league: CommunityLeague, lang: Language): string {
+  if (league === "all") {
+    return lang === "en" ? "All leagues" : "全リーグ";
+  }
+  return LEAGUE_DISPLAY[league as League] ?? league;
+}
 
 export function metricLabel(m: CommunityMetric, lang: Language): string {
   if (lang === "en") {
@@ -36,25 +48,7 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
 
 export function periodLabel(p: CommunityPeriodType, lang: Language): string {
   if (lang === "en") {
-    switch (p) {
-      case "all_time":
-        return "All time";
-      case "calendar_month":
-        return "This month (JST)";
-      case "rolling_30d":
-        return "Last 30 days (JST)";
-      default:
-        return p;
-    }
+    return p === "from_now" ? "From group start" : p;
   }
-  switch (p) {
-    case "all_time":
-      return "累計";
-    case "calendar_month":
-      return "今月（JST）";
-    case "rolling_30d":
-      return "直近30日（JST）";
-    default:
-      return p;
-  }
+  return p === "from_now" ? "グループ開始以降" : p;
 }

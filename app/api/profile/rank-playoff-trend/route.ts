@@ -3,6 +3,11 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
+import {
+  isRankingLeagueSource,
+  type RankingLeagueSource,
+} from "@/lib/rankings/rankingLeagueSource";
+import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,10 +20,35 @@ export type RankPlayoffTrendPoint = {
   rank: number;
 };
 
+type HistoryDoc = {
+  play_in?: Record<string, unknown>;
+  playoffs?: Record<string, unknown>;
+  wc?: Partial<Record<WcRankingStage, Record<string, unknown>>>;
+};
+
+function rankFromHistoryDoc(
+  data: HistoryDoc | undefined,
+  opts: {
+    rankingLeague: RankingLeagueSource;
+    phase: RankingPhase;
+    wcStage: WcRankingStage;
+  }
+): number | null {
+  if (!data) return null;
+  if (opts.rankingLeague === "worldcup") {
+    const block = data.wc?.[opts.wcStage];
+    return coerceTotalPointsRank(block?.totalPoints);
+  }
+  const raw =
+    opts.phase === "play_in" ? data.play_in?.totalPoints : data.playoffs?.totalPoints;
+  return coerceTotalPointsRank(raw);
+}
+
 /**
  * cumulative_stats/{uid}/rankSnapshotHistory の各 snapshot doc から
- * 指定 phase ブロックの totalPoints（順位）のみを返す。
- * ?phase=play_in|playoffs（省略時は playoffs）。
+ * 総合得点順位の推移を返す。
+ * NBA: ?phase=play_in|playoffs
+ * WC: ?league=worldcup&wcStage=overall|qualifying|main
  */
 export async function GET(req: Request) {
   try {
@@ -28,6 +58,15 @@ export async function GET(req: Request) {
     const phase: RankingPhase = isRankingPhase(rawPhase)
       ? rawPhase
       : "playoffs";
+    const rawLeague = searchParams.get("league");
+    const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
+      ? rawLeague
+      : "nba";
+    const rawWcStage = searchParams.get("wcStage");
+    const wcStage: WcRankingStage =
+      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
+        ? rawWcStage
+        : "overall";
     const uidParam = searchParams.get("uid")?.trim() ?? "";
     const handleParam = searchParams.get("handle")?.trim() ?? "";
 
@@ -49,10 +88,6 @@ export async function GET(req: Request) {
       );
     }
 
-    /**
-     * orderBy(documentId) は環境によってインデックス・挙動で取りこぼすことがある。
-     * サブコレクションは日次で件数が少ない想定なので全件取得し、ドキュメント ID（YYYY-MM-DD）でソートして直近 MAX_POINTS 件に絞る。
-     */
     const snap = await adminDb
       .collection("cumulative_stats")
       .doc(resolvedUid)
@@ -69,14 +104,12 @@ export async function GET(req: Request) {
 
     const points: RankPlayoffTrendPoint[] = [];
     recentDocs.forEach((d) => {
-      const data = d.data() as {
-        play_in?: Record<string, unknown>;
-        playoffs?: Record<string, unknown>;
-      };
-      const rank =
-        phase === "play_in"
-          ? coerceTotalPointsRank(data?.play_in?.totalPoints)
-          : coerceTotalPointsRank(data?.playoffs?.totalPoints);
+      const data = d.data() as HistoryDoc;
+      const rank = rankFromHistoryDoc(data, {
+        rankingLeague,
+        phase,
+        wcStage,
+      });
       if (rank != null) {
         points.push({ dateKey: d.id, rank });
       }
@@ -88,6 +121,8 @@ export async function GET(req: Request) {
       ok: true,
       resolvedUid,
       phase,
+      rankingLeague,
+      wcStage: rankingLeague === "worldcup" ? wcStage : null,
       points,
     });
   } catch (e: unknown) {

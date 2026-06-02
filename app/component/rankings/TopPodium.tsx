@@ -25,6 +25,8 @@ import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileF
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 const rankHudNumClass = summaryMetricNumClass;
 
@@ -383,6 +385,8 @@ export default function TopPodium({
   metric,
   rankPhase,
   playoffRound,
+  rankingLeague,
+  wcStage,
   onTopCountDone,
   language = "ja",
 }: {
@@ -392,6 +396,10 @@ export default function TopPodium({
   rankPhase?: RankingPhase;
   /** プレーオフラウンドタブの戻り用 */
   playoffRound?: PlayoffRoundKey;
+  /** NBA / WORLD CUP のリーグソース（戻りとプロフィール表示切替用） */
+  rankingLeague?: RankingLeagueSource;
+  /** WORLD CUP ステージ（overall / qualifying / main） */
+  wcStage?: WcRankingStage;
   onTopCountDone?: () => void;
   /** 互換のため残置（未使用。表示のたび 1→2→3 順でアニメーション） */
   intro?: boolean;
@@ -467,7 +475,7 @@ export default function TopPodium({
             pathname,
             base,
             row.handle || row.uid,
-            { metric, phase: phaseForReturn, playoffRound }
+            { metric, phase: phaseForReturn, playoffRound, rankingLeague, wcStage }
           );
           return (
             <Link

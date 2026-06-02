@@ -99,6 +99,28 @@ const en: Messages = {
     totalPicks: "Total Picks",
     upsetPoints: "Upset Points",
     maxWinStreak: "Max Win Streak",
+    statsTitlePlayoffs2026: "2026 NBA PLAYOFFS STATS",
+    statsTitleWcStage2026: "2026 WORLD CUP STAGE STATS",
+    maxWinStreakPlayoffs: "Playoff Max Streak",
+    maxWinStreakPlayoffsSubtitle: "2026 Playoffs",
+    maxWinStreakPlayoffsTooltip:
+      "Longest win streak in settled picks during the 2026 NBA Playoffs.",
+    maxWinStreakWcOverall: "WC Max Streak",
+    maxWinStreakWcOverallSubtitle: "2026 World Cup (all stages)",
+    maxWinStreakWcOverallTooltip:
+      "Longest win streak across all settled 2026 World Cup picks.",
+    maxWinStreakWcQualifying: "Group Max Streak",
+    maxWinStreakWcQualifyingSubtitle: "Group stage",
+    maxWinStreakWcQualifyingTooltip:
+      "Longest win streak in settled group-stage World Cup picks.",
+    maxWinStreakWcKnockout: "Knockout Max Streak",
+    maxWinStreakWcKnockoutSubtitle: "Knockout stage",
+    maxWinStreakWcKnockoutTooltip:
+      "Longest win streak in settled knockout-stage World Cup picks.",
+    activeWinStreakPlayoffs: "Playoff streak",
+    activeWinStreakWcOverall: "WC streak",
+    activeWinStreakWcQualifying: "Group streak",
+    activeWinStreakWcKnockout: "Knockout streak",
     winRate: "Win Rate",
     currentRank: "Current rank",
     bestJumpUp: "Best jump up",
@@ -140,6 +162,9 @@ const en: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "Win/loss streaks from your last {n} settled picks",
     last20TrackerSubtitle: "Last {n} games",
+    settledTodayResults: "Result Drop",
+    settledTodayResultsDesc: "Today's finalized analyses",
+    settledTodayEmpty: "No analyses finalized today yet",
     allTimeMaxStreak: "All-time Max Win Streak",
     allTimeMaxStreakNote: "This is your all-time best win streak. It doesn't change with 7d / 30d filters.",
     scorePrecisionTooltip:

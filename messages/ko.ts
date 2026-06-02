@@ -97,6 +97,28 @@ const ko: Messages = {
     totalPicks: "확정",
     upsetPoints: "이변 득점",
     maxWinStreak: "최대 연승",
+    statsTitlePlayoffs2026: "2026 NBA PLAYOFFS STATS",
+    statsTitleWcStage2026: "2026 WORLD CUP STAGE STATS",
+    maxWinStreakPlayoffs: "Playoff Max Streak",
+    maxWinStreakPlayoffsSubtitle: "2026 Playoffs",
+    maxWinStreakPlayoffsTooltip:
+      "Longest win streak in settled picks during the 2026 NBA Playoffs.",
+    maxWinStreakWcOverall: "WC Max Streak",
+    maxWinStreakWcOverallSubtitle: "2026 World Cup (all stages)",
+    maxWinStreakWcOverallTooltip:
+      "Longest win streak across all settled 2026 World Cup picks.",
+    maxWinStreakWcQualifying: "Group Max Streak",
+    maxWinStreakWcQualifyingSubtitle: "Group stage",
+    maxWinStreakWcQualifyingTooltip:
+      "Longest win streak in settled group-stage World Cup picks.",
+    maxWinStreakWcKnockout: "Knockout Max Streak",
+    maxWinStreakWcKnockoutSubtitle: "Knockout stage",
+    maxWinStreakWcKnockoutTooltip:
+      "Longest win streak in settled knockout-stage World Cup picks.",
+    activeWinStreakPlayoffs: "Playoff streak",
+    activeWinStreakWcOverall: "WC streak",
+    activeWinStreakWcQualifying: "Group streak",
+    activeWinStreakWcKnockout: "Knockout streak",
     winRate: "승률",
     currentRank: "현재 순위",
     bestJumpUp: "최고 상승",
@@ -138,6 +160,9 @@ const ko: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "최근 {n}경기의 연승/연패 현황",
     last20TrackerSubtitle: "최근 {n}경기 성적",
+    settledTodayResults: "Result Drop",
+    settledTodayResultsDesc: "오늘 확정된 분석 목록",
+    settledTodayEmpty: "오늘 확정된 분석이 없습니다",
     allTimeMaxStreak: "전체 기간 최고 연승",
     allTimeMaxStreakNote: "전체 기간(All-time) 최고 연승 기록입니다. 7일/30일 필터와 연동되지 않습니다.",
     scorePrecisionTooltip:

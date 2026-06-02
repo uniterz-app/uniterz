@@ -49,13 +49,17 @@ import { nameBebas } from "@/lib/fonts";
 import RankingsScheduleNotice from "@/app/component/rankings/RankingsScheduleNotice";
 import { useSearchParams } from "next/navigation";
 import {
+  RANKINGS_TAB_LEAGUE_PARAM,
   RANKINGS_TAB_METRIC_PARAM,
   RANKINGS_TAB_ROUND_PARAM,
+  RANKINGS_TAB_WC_STAGE_PARAM,
   isMobileMetricParam,
 } from "@/lib/navigation/rankingsProfileFrom";
 import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { Menu } from "lucide-react";
+import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
@@ -135,6 +139,13 @@ export default function MobileRankingsPage() {
     if (isMobileMetricParam(m)) setMetric(m);
     const r = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
     if (isPlayoffRoundKey(r)) setRound(r);
+    const league = searchParams.get(RANKINGS_TAB_LEAGUE_PARAM);
+    if (isRankingLeagueSource(league)) {
+      setRankingLeague(league);
+      if (league === "worldcup") setCategory("playoffs");
+    }
+    const stage = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
+    if (isWcRankingStage(stage)) setWcStage(stage);
   }, [searchParams]);
 
   useEffect(() => {
@@ -378,6 +389,8 @@ export default function MobileRankingsPage() {
                   metric={metric}
                   rankPhase={phase}
                   playoffRound={effectiveRound}
+                  rankingLeague={rankingLeague}
+                  wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
@@ -407,6 +420,8 @@ export default function MobileRankingsPage() {
                           metric={metric}
                           rankPhase={phase}
                           playoffRound={effectiveRound}
+                          rankingLeague={rankingLeague}
+                          wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                           language={language}
                         />
                       </motion.div>

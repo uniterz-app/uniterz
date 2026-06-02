@@ -1,9 +1,11 @@
 import type { DocumentReference, Firestore } from "firebase-admin/firestore";
-import type { CommunityMetric, CommunityPeriodType } from "./types";
-import {
-  currentMonthDateKeysJST,
-  rolling30DateKeysJST,
-} from "./dateRange";
+import type {
+  CommunityLeague,
+  CommunityMetric,
+  CommunityPeriodType,
+} from "./types";
+import { dateKeysFromStartToTodayJST } from "./dateRange";
+import { resolveRankingStartDateKey } from "./rankingStartDate";
 
 export type MemberAgg = {
   totalPosts: number;
@@ -31,6 +33,42 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+function addBucketToAgg(
+  agg: MemberAgg,
+  bucket: Record<string, unknown> | undefined | null
+) {
+  if (!bucket || typeof bucket !== "object") return;
+  agg.totalPosts += Number((bucket as { posts?: number }).posts ?? 0);
+  agg.totalWins += Number((bucket as { wins?: number }).wins ?? 0);
+  agg.totalPoints += Number(
+    (bucket as { pointsSumV3?: number }).pointsSumV3 ?? 0
+  );
+  agg.totalPrecision += Number(
+    (bucket as { scorePrecisionSum?: number }).scorePrecisionSum ?? 0
+  );
+  agg.totalUpset += Number(
+    (bucket as { upsetPointsSum?: number }).upsetPointsSum ?? 0
+  );
+}
+
+function dailyBucket(
+  data: Record<string, unknown> | undefined,
+  league: CommunityLeague
+): Record<string, unknown> | undefined {
+  if (!data) return undefined;
+  if (league === "all") {
+    const all = data.all;
+    return all && typeof all === "object"
+      ? (all as Record<string, unknown>)
+      : undefined;
+  }
+  const leagues = data.leagues as Record<string, unknown> | undefined;
+  const bucket = leagues?.[league];
+  return bucket && typeof bucket === "object"
+    ? (bucket as Record<string, unknown>)
+    : undefined;
+}
+
 /** daily doc id: {uid}_{yyyy-mm-dd} */
 function parseDailyDocId(id: string): { uid: string; dateKey: string } | null {
   const m = /^(.+)_(\d{4}-\d{2}-\d{2})$/.exec(id);
@@ -41,7 +79,8 @@ function parseDailyDocId(id: string): { uid: string; dateKey: string } | null {
 async function aggregateFromDaily(
   db: Firestore,
   uids: string[],
-  dateKeys: string[]
+  dateKeys: string[],
+  league: CommunityLeague
 ): Promise<Map<string, MemberAgg>> {
   const map = new Map<string, MemberAgg>();
   for (const uid of uids) map.set(uid, emptyAgg());
@@ -63,17 +102,7 @@ async function aggregateFromDaily(
       if (!parsed) continue;
       const agg = map.get(parsed.uid);
       if (!agg) continue;
-      const all = snap.data()?.all;
-      if (!all || typeof all !== "object") continue;
-      agg.totalPosts += Number((all as { posts?: number }).posts ?? 0);
-      agg.totalWins += Number((all as { wins?: number }).wins ?? 0);
-      agg.totalPoints += Number((all as { pointsSumV3?: number }).pointsSumV3 ?? 0);
-      agg.totalPrecision += Number(
-        (all as { scorePrecisionSum?: number }).scorePrecisionSum ?? 0
-      );
-      agg.totalUpset += Number(
-        (all as { upsetPointsSum?: number }).upsetPointsSum ?? 0
-      );
+      addBucketToAgg(agg, dailyBucket(snap.data(), league));
     }
   }
 
@@ -116,15 +145,29 @@ export function sortValueFromAgg(
   return 0;
 }
 
-export function sortValueFromCumulative(
-  row: CumulativeRow,
+function rowFromAgg(
+  uid: string,
+  agg: MemberAgg,
+  c: CumulativeRow | null,
   metric: CommunityMetric
-): number {
-  if (metric === "winRate") return row.winRate ?? 0;
-  if (metric === "totalPoints") return row.totalPoints ?? 0;
-  if (metric === "totalPrecision") return row.totalPrecision ?? 0;
-  if (metric === "totalUpset") return row.totalUpset ?? 0;
-  return row.activeWinStreak ?? 0;
+) {
+  const winRate = agg.totalPosts > 0 ? agg.totalWins / agg.totalPosts : 0;
+  return {
+    uid,
+    displayName: c?.displayName ?? "user",
+    handle: c?.handle ?? null,
+    photoURL: c?.photoURL ?? null,
+    countryCode: c?.countryCode ?? null,
+    plan: c?.plan ?? "free",
+    totalPosts: agg.totalPosts,
+    totalWins: agg.totalWins,
+    winRate,
+    totalPoints: agg.totalPoints,
+    totalPrecision: agg.totalPrecision,
+    totalUpset: agg.totalUpset,
+    activeWinStreak: c?.activeWinStreak ?? 0,
+    sortValue: sortValueFromAgg(agg, c, metric),
+  };
 }
 
 /**
@@ -134,7 +177,9 @@ export async function buildMemberLeaderboard(
   db: Firestore,
   memberUids: string[],
   metric: CommunityMetric,
-  period: CommunityPeriodType
+  _period: CommunityPeriodType,
+  league: CommunityLeague = "all",
+  rankingStartDateKey?: string | null
 ): Promise<
   {
     uid: string;
@@ -182,61 +227,22 @@ export async function buildMemberLeaderboard(
     });
   }
 
-  let dailyAgg: Map<string, MemberAgg> | null = null;
-  if (period === "calendar_month") {
-    dailyAgg = await aggregateFromDaily(db, uids, currentMonthDateKeysJST());
-  } else if (period === "rolling_30d") {
-    dailyAgg = await aggregateFromDaily(db, uids, rolling30DateKeysJST());
-  }
+  const startKey = rankingStartDateKey ?? resolveRankingStartDateKey(undefined);
+  const dailyAgg =
+    metric === "activeWinStreak"
+      ? new Map(uids.map((uid) => [uid, emptyAgg()] as const)
+      )
+      : await aggregateFromDaily(
+          db,
+          uids,
+          dateKeysFromStartToTodayJST(startKey),
+          league
+        );
 
   const rows = uids.map((uid) => {
     const c = cumulativeByUid.get(uid) ?? null;
-    const displayName = c?.displayName ?? "user";
-    const handle = c?.handle ?? null;
-    const photoURL = c?.photoURL ?? null;
-    const countryCode = c?.countryCode ?? null;
-    const plan = c?.plan ?? "free";
-
-    if (period === "all_time" && c) {
-      const sortValue = sortValueFromCumulative(c, metric);
-      return {
-        uid,
-        displayName,
-        handle,
-        photoURL,
-        countryCode,
-        plan,
-        totalPosts: c.totalPosts,
-        totalWins: c.totalWins,
-        winRate: c.winRate,
-        totalPoints: c.totalPoints,
-        totalPrecision: c.totalPrecision,
-        totalUpset: c.totalUpset,
-        activeWinStreak: c.activeWinStreak,
-        sortValue,
-      };
-    }
-
-    const agg = dailyAgg?.get(uid) ?? emptyAgg();
-    const winRate = agg.totalPosts > 0 ? agg.totalWins / agg.totalPosts : 0;
-    const sortValue = sortValueFromAgg(agg, c, metric);
-
-    return {
-      uid,
-      displayName,
-      handle,
-      photoURL,
-      countryCode,
-      plan,
-      totalPosts: agg.totalPosts,
-      totalWins: agg.totalWins,
-      winRate,
-      totalPoints: agg.totalPoints,
-      totalPrecision: agg.totalPrecision,
-      totalUpset: agg.totalUpset,
-      activeWinStreak: c?.activeWinStreak ?? 0,
-      sortValue,
-    };
+    const agg = dailyAgg.get(uid) ?? emptyAgg();
+    return rowFromAgg(uid, agg, c, metric);
   });
 
   rows.sort((a, b) => {

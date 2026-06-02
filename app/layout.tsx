@@ -28,6 +28,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  /** キーボード表示でレイアウト viewport を縮めない（入力時の画面ヨレ防止） */
+  interactiveWidget: "overlays-content",
 };
 
 export default function RootLayout({

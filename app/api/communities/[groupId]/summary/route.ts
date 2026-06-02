@@ -3,6 +3,7 @@ import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { assertMember } from "@/lib/communities/groupAccess";
 import { adminDb } from "@/lib/firebaseAdmin";
 import {
+  parseCommunityLeague,
   parseCommunityMetric,
   parseCommunityPeriod,
 } from "@/lib/communities/types";
@@ -24,13 +25,24 @@ export async function GET(req: Request, ctx: Ctx) {
       group: {
         id: groupId,
         name: String(d.name ?? ""),
+        description:
+          typeof d.description === "string" && d.description.trim()
+            ? d.description.trim()
+            : null,
         ownerUid: String(d.ownerUid ?? ""),
         memberCount: Number(d.memberCount ?? 0),
         headerImageUrl: (d.headerImageUrl as string) ?? null,
         rankingMetric: parseCommunityMetric(d.rankingMetric),
         periodType: parseCommunityPeriod(d.periodType),
+        rankingLeague: parseCommunityLeague(d.rankingLeague),
         archived: !!d.archivedAt,
         isOwner: d.ownerUid === uid,
+        inviteCode:
+          d.ownerUid === uid &&
+          typeof d.inviteCode === "string" &&
+          d.inviteCode.trim()
+            ? d.inviteCode.trim()
+            : null,
       },
     });
   } catch (e: unknown) {

@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  isWcRankingStage,
+  type WcRankingStage,
+} from "@/lib/rankings/wcRankingStage";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 
 export type PlayoffRankTrendPoint = {
   dateKey: string;
@@ -36,9 +41,19 @@ function rowsFromSnapshotHistory(
 
 export function useProfilePlayoffRankTrend(
   targetUid: string | null,
-  options?: { enabled?: boolean }
+  options?: {
+    enabled?: boolean;
+    rankingLeague?: RankingLeagueSource;
+    wcStage?: WcRankingStage;
+  }
 ) {
   const enabled = options?.enabled ?? true;
+  const rankingLeague = options?.rankingLeague ?? "nba";
+  const wcStage: WcRankingStage =
+    rankingLeague === "worldcup" && isWcRankingStage(options?.wcStage)
+      ? options.wcStage
+      : "overall";
+
   const [points, setPoints] = useState<PlayoffRankTrendPoint[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -57,7 +72,15 @@ export function useProfilePlayoffRankTrend(
 
       setLoading(true);
       try {
-        const trendUrl = `/api/profile/rank-playoff-trend?uid=${encodeURIComponent(uid)}&phase=${RANK_TREND_PHASE}`;
+        const qs = new URLSearchParams({
+          uid,
+          phase: RANK_TREND_PHASE,
+        });
+        if (rankingLeague === "worldcup") {
+          qs.set("league", "worldcup");
+          qs.set("wcStage", wcStage);
+        }
+        const trendUrl = `/api/profile/rank-playoff-trend?${qs.toString()}`;
         const trendRes = await fetch(trendUrl, { cache: "no-store" });
         const trendJson = (await trendRes.json()) as {
           ok?: boolean;
@@ -83,7 +106,7 @@ export function useProfilePlayoffRankTrend(
     return () => {
       cancelled = true;
     };
-  }, [enabled, targetUid]);
+  }, [enabled, rankingLeague, targetUid, wcStage]);
 
   const chartRows = useMemo(() => points, [points]);
 

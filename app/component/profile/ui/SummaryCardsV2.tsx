@@ -22,7 +22,7 @@ import {
   type HighlightV2,
 } from "@/lib/stats/thresholdsV2";
 import SummaryCardReveal from "./SummaryCardReveal";
-import { summaryMetricNumClass } from "@/lib/fonts";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   summaryCardShadowDesktopClass,
@@ -52,6 +52,8 @@ type Props = {
   language?: Language;
   /** 取得完了後にカードを順番に浮き上がらせる */
   reveal?: boolean;
+  maxStreakLabel?: string;
+  maxStreakTooltip?: string;
 };
 
 const MIN_RECENT3_POSTS = 4;
@@ -65,6 +67,8 @@ export default function SummaryCardsV2({
   summaryRanks,
   language = "ja",
   reveal = false,
+  maxStreakLabel,
+  maxStreakTooltip,
 }: Props) {
   const m = t(language);
   const [tooltip, setTooltip] = useState<{
@@ -153,8 +157,9 @@ export default function SummaryCardsV2({
     ? "text-[11px] md:text-[14px] tracking-tight"
     : "text-[14px]";
   const valueCls = compact
-    ? "text-[15px] md:text-[24px] tracking-tight"
-    : "text-[20px] md:text-[28px]";
+    ? "text-[15px] md:text-[24px] tracking-tight tabular-nums"
+    : "text-[20px] md:text-[28px] tabular-nums";
+  const animatedValueCls = `${resultStatsMetricNumClass} ${valueCls}`;
   const iconSize = compact ? 13 : 20;
 
   const isMobile = compact;
@@ -217,19 +222,19 @@ export default function SummaryCardsV2({
   const MaxStreakLabel = useMemo(
     () => (
       <div className="flex items-center gap-1">
-        {m.profile.maxWinStreak}
+        {maxStreakLabel ?? m.profile.maxWinStreak}
         <button
           type="button"
           className="opacity-70 text-xs"
           onClick={(e) =>
-            openTooltip(e, m.profile.maxStreakTooltip)
+            openTooltip(e, maxStreakTooltip ?? m.profile.maxStreakTooltip)
           }
         >
           ⓘ
         </button>
       </div>
     ),
-    [m, language]
+    [m, maxStreakLabel, maxStreakTooltip]
   );
 
   const TotalPointsLabel = useMemo(
@@ -275,7 +280,7 @@ export default function SummaryCardsV2({
               value={postsText}
               padCls={padCls}
               labelCls={labelCls}
-              valueCls={`${summaryMetricNumClass} ${valueCls}`}
+              valueCls={animatedValueCls}
               compactShell={compact}
             />
           )}
@@ -288,7 +293,7 @@ export default function SummaryCardsV2({
               value={winRatePct}
               padCls={padCls}
               labelCls={labelCls}
-              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hWin)}
+              valueCls={decorate(animatedValueCls, hWin)}
               afterIcon={highlightIcon(hWin, iconSize)}
               compactShell={compact}
             />
@@ -302,7 +307,7 @@ export default function SummaryCardsV2({
               value={scorePrecisionSumText}
               padCls={padCls}
               labelCls={labelCls}
-              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hPrecision)}
+              valueCls={decorate(animatedValueCls, hPrecision)}
               afterIcon={highlightIcon(hPrecision, iconSize)}
               rankLabel={toRankLabel(summaryRanks?.totalPrecision)}
               rankHighlight={summaryRanks?.totalPrecision != null && summaryRanks.totalPrecision <= 20}
@@ -318,7 +323,7 @@ export default function SummaryCardsV2({
               value={upsetPointsText}
               padCls={padCls}
               labelCls={labelCls}
-              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hUpset)}
+              valueCls={decorate(animatedValueCls, hUpset)}
               afterIcon={highlightIcon(hUpset, iconSize)}
               rankLabel={toRankLabel(summaryRanks?.totalUpset)}
               rankHighlight={summaryRanks?.totalUpset != null && summaryRanks.totalUpset <= 20}
@@ -334,7 +339,7 @@ export default function SummaryCardsV2({
               value={maxStreakText}
               padCls={padCls}
               labelCls={labelCls}
-              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hStreak)}
+              valueCls={decorate(animatedValueCls, hStreak)}
               afterIcon={highlightIcon(hStreak, iconSize)}
               compactShell={compact}
             />
@@ -348,7 +353,7 @@ export default function SummaryCardsV2({
               value={totalPointsText}
               padCls={padCls}
               labelCls={labelCls}
-              valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hTotal)}
+              valueCls={decorate(animatedValueCls, hTotal)}
               afterIcon={highlightIcon(hTotal, iconSize)}
               rankLabel={toRankLabel(summaryRanks?.totalPoints)}
               rankHighlight={summaryRanks?.totalPoints != null && summaryRanks.totalPoints <= 20}
@@ -378,7 +383,7 @@ export default function SummaryCardsV2({
             value={postsText}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={`${summaryMetricNumClass} ${valueCls}`}
+            valueCls={animatedValueCls}
           />
         )}
 
@@ -389,7 +394,7 @@ export default function SummaryCardsV2({
             value={winRatePct}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hWin)}
+            valueCls={decorate(animatedValueCls, hWin)}
             afterIcon={highlightIcon(hWin, iconSize)}
             compactShell={compact}
           />
@@ -402,7 +407,7 @@ export default function SummaryCardsV2({
             value={scorePrecisionSumText}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hPrecision)}
+            valueCls={decorate(animatedValueCls, hPrecision)}
             afterIcon={highlightIcon(hPrecision, iconSize)}
             rankLabel={toRankLabel(summaryRanks?.totalPrecision)}
             rankHighlight={summaryRanks?.totalPrecision != null && summaryRanks.totalPrecision <= 20}
@@ -417,7 +422,7 @@ export default function SummaryCardsV2({
             value={upsetPointsText}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hUpset)}
+            valueCls={decorate(animatedValueCls, hUpset)}
             afterIcon={highlightIcon(hUpset, iconSize)}
             rankLabel={toRankLabel(summaryRanks?.totalUpset)}
             rankHighlight={summaryRanks?.totalUpset != null && summaryRanks.totalUpset <= 20}
@@ -432,7 +437,7 @@ export default function SummaryCardsV2({
             value={maxStreakText}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hStreak)}
+            valueCls={decorate(animatedValueCls, hStreak)}
             afterIcon={highlightIcon(hStreak, iconSize)}
             compactShell={compact}
           />
@@ -445,7 +450,7 @@ export default function SummaryCardsV2({
             value={totalPointsText}
             padCls={padCls}
             labelCls={labelCls}
-            valueCls={decorate(`${summaryMetricNumClass} ${valueCls}`, hTotal)}
+            valueCls={decorate(animatedValueCls, hTotal)}
             afterIcon={highlightIcon(hTotal, iconSize)}
             rankLabel={toRankLabel(summaryRanks?.totalPoints)}
             rankHighlight={summaryRanks?.totalPoints != null && summaryRanks.totalPoints <= 20}

@@ -97,6 +97,28 @@ const zh: Messages = {
     totalPicks: "已确定",
     upsetPoints: "冷门得分",
     maxWinStreak: "最大连胜",
+    statsTitlePlayoffs2026: "2026 NBA PLAYOFFS STATS",
+    statsTitleWcStage2026: "2026 WORLD CUP STAGE STATS",
+    maxWinStreakPlayoffs: "Playoff Max Streak",
+    maxWinStreakPlayoffsSubtitle: "2026 Playoffs",
+    maxWinStreakPlayoffsTooltip:
+      "Longest win streak in settled picks during the 2026 NBA Playoffs.",
+    maxWinStreakWcOverall: "WC Max Streak",
+    maxWinStreakWcOverallSubtitle: "2026 World Cup (all stages)",
+    maxWinStreakWcOverallTooltip:
+      "Longest win streak across all settled 2026 World Cup picks.",
+    maxWinStreakWcQualifying: "Group Max Streak",
+    maxWinStreakWcQualifyingSubtitle: "Group stage",
+    maxWinStreakWcQualifyingTooltip:
+      "Longest win streak in settled group-stage World Cup picks.",
+    maxWinStreakWcKnockout: "Knockout Max Streak",
+    maxWinStreakWcKnockoutSubtitle: "Knockout stage",
+    maxWinStreakWcKnockoutTooltip:
+      "Longest win streak in settled knockout-stage World Cup picks.",
+    activeWinStreakPlayoffs: "Playoff streak",
+    activeWinStreakWcOverall: "WC streak",
+    activeWinStreakWcQualifying: "Group streak",
+    activeWinStreakWcKnockout: "Knockout streak",
     winRate: "胜率",
     currentRank: "当前排名",
     bestJumpUp: "最大跃升",
@@ -138,6 +160,9 @@ const zh: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "最近{n}场比赛的连胜/连败",
     last20TrackerSubtitle: "最近{n}场比赛",
+    settledTodayResults: "Result Drop",
+    settledTodayResultsDesc: "今日已结算的分析列表",
+    settledTodayEmpty: "今日尚无已结算的分析",
     allTimeMaxStreak: "全时段最高连胜",
     allTimeMaxStreakNote: "这是你的全时段最高连胜记录。不受7天/30天筛选的影响。",
     scorePrecisionTooltip:

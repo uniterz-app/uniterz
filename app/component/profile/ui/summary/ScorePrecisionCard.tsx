@@ -8,7 +8,8 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { summaryMetricNumClass } from "@/lib/fonts";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { metricValueMinWidthCh } from "@/lib/format/metricDecimals";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   summaryCardShadowLgClass,
@@ -91,7 +92,7 @@ function ScorePrecisionCard({
   );
 
   const sumCu = useCountUp(sum, 1000, visible, 1, "zero");
-  const avgCu = useCountUp(roundMetricDecimals(avg, 1), 1000, visible, 1, "zero");
+  const avgCu = useCountUp(avg, 1000, visible, 1, "zero");
 
   const bar01 = clamp01(avg / 10);
 
@@ -142,12 +143,17 @@ function ScorePrecisionCard({
 
         <div
           className={[
-            summaryMetricNumClass,
-            "text-base tabular-nums tracking-tight text-white md:text-3xl",
+            resultStatsMetricNumClass,
+            "inline-flex items-baseline justify-center text-base tracking-tight text-white md:text-3xl",
             "leading-none text-center",
           ].join(" ")}
         >
-          {formatMetricDecimals(sumCu, 1)}
+          <span
+            className="inline-block text-right tabular-nums"
+            style={{ minWidth: metricValueMinWidthCh(sum, 1) }}
+          >
+            {formatMetricDecimals(sumCu, 1)}
+          </span>
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
             {m.profile.ptsUnit}
           </span>
@@ -162,7 +168,16 @@ function ScorePrecisionCard({
           <div className="flex items-center justify-between text-[9px] tracking-tight text-white/60 md:text-[16px]">
             <span>{m.profile.avgLabel}</span>
             <span
-              className={[summaryMetricNumClass, "tabular-nums"].join(" ")}
+              className={[
+                resultStatsMetricNumClass,
+                "inline-block text-right tabular-nums",
+              ].join(" ")}
+              style={{
+                minWidth: metricValueMinWidthCh(
+                  analyses > 0 ? avg : 0,
+                  1
+                ),
+              }}
             >
               {formatMetricDecimals(avgCu, 1)}{" "}
               <span className="text-white/45">/ 10</span>

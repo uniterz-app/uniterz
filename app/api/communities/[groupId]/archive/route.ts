@@ -15,10 +15,13 @@ export async function POST(req: Request, ctx: Ctx) {
     const { groupId } = await ctx.params;
     const groupSnap = await assertOwner(adminDb, groupId, uid);
 
-    await groupSnap.ref.update({
+    const batch = adminDb.batch();
+    batch.update(groupSnap.ref, {
       archivedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
+    batch.delete(adminDb.doc(`users/${uid}/groups/${groupId}`));
+    await batch.commit();
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

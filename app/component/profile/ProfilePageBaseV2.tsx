@@ -1,7 +1,8 @@
 // app/component/profile/ProfilePageBaseV2.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useProfile, type Profile } from "./useProfile";
 
 import MobileProfileViewV2 from "./MobileProfileViewV2";
@@ -10,10 +11,23 @@ import WebProfileViewV2 from "./WebProfileViewV2";
 import { useUserStatsV2 } from "./useUserStatsV2";
 import type { SummaryForCardsV2, SummaryRanksV2 } from "./useUserStatsV2";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
+import { useProfileScopedStreak } from "@/lib/profile/useProfileScopedStreak";
+import {
+  RANKINGS_TAB_LEAGUE_PARAM,
+  RANKINGS_TAB_WC_STAGE_PARAM,
+} from "@/lib/navigation/rankingsProfileFrom";
+import {
+  isRankingLeagueSource,
+  type RankingLeagueSource,
+} from "@/lib/rankings/rankingLeagueSource";
+import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 type Props = { handle: string; variant?: "web" | "mobile" };
 
 export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const sp = useSearchParams();
   const {
     profile,
     loading,
@@ -24,8 +38,39 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     "overview"
   );
 
+  const profileStatsContext = useMemo<{
+    rankingLeague: RankingLeagueSource;
+    wcStage?: WcRankingStage;
+  }>(() => {
+    const rawLeague = sp.get(RANKINGS_TAB_LEAGUE_PARAM);
+    const rankingLeague = isRankingLeagueSource(rawLeague) ? rawLeague : "nba";
+    const rawWcStage = sp.get(RANKINGS_TAB_WC_STAGE_PARAM);
+    const wcStage =
+      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
+        ? rawWcStage
+        : undefined;
+    return { rankingLeague, wcStage };
+  }, [sp]);
+
   const { stats, summary, summaryRanks, statsLoading, dailyTrend } =
-    useUserStatsV2(targetUid);
+    useUserStatsV2(targetUid, profileStatsContext);
+
+  const scopedStreak = useProfileScopedStreak(targetUid, profileStatsContext);
+
+  const onToggleStatsLeague = useCallback(() => {
+    const current = profileStatsContext.rankingLeague;
+    const nextLeague: RankingLeagueSource =
+      current === "worldcup" ? "nba" : "worldcup";
+    const qs = new URLSearchParams(sp.toString());
+    qs.set(RANKINGS_TAB_LEAGUE_PARAM, nextLeague);
+    if (nextLeague === "worldcup") {
+      qs.set(RANKINGS_TAB_WC_STAGE_PARAM, profileStatsContext.wcStage ?? "overall");
+    } else {
+      qs.delete(RANKINGS_TAB_WC_STAGE_PARAM);
+    }
+    const nextUrl = `${pathname ?? ""}?${qs.toString()}`;
+    router.replace(nextUrl, { scroll: false });
+  }, [pathname, profileStatsContext.rankingLeague, profileStatsContext.wcStage, router, sp]);
 
   const normalizedProfile = useMemo<Profile | undefined>(() => {
     if (!profile) return undefined;
@@ -40,36 +85,27 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   }, [profile]);
 
   const mergedProfile = useMemo<Profile>(() => {
-    // 現在連勝：user_stats_v2.currentStreak を正（試合終了時に updateUserStreak で更新）
-    const currentStreak = (() => {
-      if (stats != null) {
-        const v = Number((stats as Record<string, unknown>).currentStreak);
-        if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
-      }
-      const u = Number(normalizedProfile?.currentStreak);
-      return Number.isFinite(u) ? Math.max(0, Math.floor(u)) : 0;
-    })();
-
-    // 最高連勝：maxWinStreak が正。maxStreak はレガシー／エイリアス
-    const maxStreak = (() => {
-      if (stats != null) {
-        const raw = (stats as Record<string, unknown>).maxWinStreak;
-        const legacy = (stats as Record<string, unknown>).maxStreak;
-        const v = Number(raw ?? legacy);
-        if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
-      }
-      const u = Number(normalizedProfile?.maxStreak);
-      return Number.isFinite(u) ? Math.max(0, Math.floor(u)) : 0;
-    })();
+    const currentStreak = Math.max(0, Math.floor(scopedStreak.currentStreak));
+    const maxStreak = Math.max(0, Math.floor(scopedStreak.maxWinStreak));
 
     return {
       ...normalizedProfile!,
       currentStreak,
       maxStreak,
     };
-  }, [normalizedProfile, stats]);
+  }, [
+    normalizedProfile,
+    scopedStreak.currentStreak,
+    scopedStreak.maxWinStreak,
+  ]);
 
-  const summaryV2: SummaryForCardsV2 | undefined = summary ?? undefined;
+  const summaryV2: SummaryForCardsV2 | undefined = useMemo(() => {
+    if (!summary) return undefined;
+    return {
+      ...summary,
+      activeWinStreak: Math.max(0, Math.floor(scopedStreak.currentStreak)),
+    };
+  }, [summary, scopedStreak.currentStreak]);
 
   if (loading) return <div style={{ padding: 24 }}>Loading...</div>;
   if (!normalizedProfile) return <div style={{ padding: 24 }}>Not found</div>;
@@ -83,6 +119,8 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     statsLoading,
     targetUid,
     profileDailyTrendSeed: dailyTrend,
+    profileStatsContext,
+    onToggleStatsLeague,
   };
 
   return variant === "web" ? (
@@ -106,4 +144,9 @@ export type ProfileViewPropsV2 = {
 
   /** user-stats API の dailyTrend（あれば日次チャートは Firestore を読まない） */
   profileDailyTrendSeed?: ProfileDailyTrendRow[] | null;
+  profileStatsContext: {
+    rankingLeague: RankingLeagueSource;
+    wcStage?: WcRankingStage;
+  };
+  onToggleStatsLeague: () => void;
 };

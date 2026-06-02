@@ -7,15 +7,22 @@ import {
   hashInviteCode,
 } from "@/lib/communities/inviteCode";
 import {
+  countActiveOwnedGroups,
   getEffectivePlan,
   maxOwnedGroupsForPlan,
+  pruneStaleGroupMirrors,
 } from "@/lib/communities/limits";
 import {
   normalizeRankingForPeriod,
+  parseCommunityLeague,
   parseCommunityMetric,
   parseCommunityPeriod,
 } from "@/lib/communities/types";
-import { sanitizeHeaderImageUrl } from "@/lib/communities/validate";
+import {
+  sanitizeGroupDescription,
+  sanitizeHeaderImageUrl,
+} from "@/lib/communities/validate";
+import { getTodayKeyInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,21 +39,31 @@ export async function POST(req: Request) {
       );
     }
 
+    const description = sanitizeGroupDescription(body?.description);
     const headerImageUrl = sanitizeHeaderImageUrl(body?.headerImageUrl);
     let rankingMetric = parseCommunityMetric(body?.rankingMetric);
-    let periodType = parseCommunityPeriod(body?.periodType);
-    ({ metric: rankingMetric, period: periodType } = normalizeRankingForPeriod(
+    const rankingLeague = parseCommunityLeague(body?.rankingLeague);
+    const periodType = parseCommunityPeriod("from_now");
+    ({ metric: rankingMetric } = normalizeRankingForPeriod(
       rankingMetric,
       periodType
     ));
 
+    const rankingStartDateKey = getTodayKeyInTimeZone(TIMEZONE_JST);
+
     const plan = await getEffectivePlan(adminDb, uid);
     const maxOwned = maxOwnedGroupsForPlan(plan);
-    const mine = await adminDb.collection(`users/${uid}/groups`).get();
-    const owned = mine.docs.filter((d) => d.data()?.role === "owner").length;
+    await pruneStaleGroupMirrors(adminDb, uid);
+    const owned = await countActiveOwnedGroups(adminDb, uid);
     if (owned >= maxOwned) {
       return NextResponse.json(
-        { ok: false, error: "owned_group_limit", maxOwned, plan },
+        {
+          ok: false,
+          error: "owned_group_limit",
+          maxOwned,
+          owned,
+          plan,
+        },
         { status: 403 }
       );
     }
@@ -65,12 +82,17 @@ export async function POST(req: Request) {
       const batch = adminDb.batch();
       batch.set(groupRef, {
         name,
+        description: description ?? null,
         ownerUid: uid,
         inviteCodeHash: hash,
+        /** オーナー向け表示用（summary API で owner のみ返却） */
+        inviteCode: invitePlain,
         memberCount: 1,
         headerImageUrl: headerImageUrl ?? null,
         rankingMetric,
         periodType,
+        rankingLeague,
+        rankingStartDateKey,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -81,11 +103,13 @@ export async function POST(req: Request) {
       batch.set(adminDb.doc(`users/${uid}/groups/${groupRef.id}`), {
         groupId: groupRef.id,
         groupName: name,
+        description: description ?? null,
         role: "owner",
         memberCount: 1,
         headerImageUrl: headerImageUrl ?? null,
         rankingMetric,
         periodType,
+        rankingLeague,
         joinedAt: FieldValue.serverTimestamp(),
       });
       await batch.commit();
@@ -96,6 +120,18 @@ export async function POST(req: Request) {
         inviteCode: invitePlain,
         rankingMetric,
         periodType,
+        rankingLeague,
+        group: {
+          id: groupRef.id,
+          name,
+          description: description ?? null,
+          memberCount: 1,
+          headerImageUrl: headerImageUrl ?? null,
+          rankingMetric,
+          periodType,
+          rankingLeague,
+          role: "owner",
+        },
       });
     }
 

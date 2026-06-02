@@ -4,6 +4,9 @@
 import { useMemo } from "react";
 import { useUserStatsDailyTrend } from "@/lib/stats/useUserStatsDailyTrend";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
+import { resolveProfileDailyTrendContext } from "@/lib/profile/userStatsV2ProfileRollup";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export type ProfileDailyTrendChartRow = ProfileDailyTrendRow;
 
@@ -13,11 +16,19 @@ export function useProfileDailyTrendChart(
     enabled?: boolean;
     /** user-stats API から渡すときは Firestore の日次取得をスキップ */
     seedRows?: ProfileDailyTrendRow[] | null;
+    rankingLeague?: RankingLeagueSource;
+    wcStage?: WcRankingStage;
   }
 ) {
   const enabled = options?.enabled ?? true;
+  const trendCtx = resolveProfileDailyTrendContext(
+    options?.rankingLeague ?? "nba",
+    options?.wcStage
+  );
   const seedRows = options?.seedRows;
+  /** WC は API ウィンドウキャッシュ（NBA 合算）の seed を使わない */
   const useSeed =
+    trendCtx.rankingLeague !== "worldcup" &&
     Array.isArray(seedRows) &&
     seedRows.length > 0 &&
     enabled;
@@ -30,7 +41,10 @@ export function useProfileDailyTrendChart(
   const {
     data: dailyTrend,
     loading,
-  } = useUserStatsDailyTrend(uidForDailyTrend, fetchEnabled);
+  } = useUserStatsDailyTrend(uidForDailyTrend, fetchEnabled, {
+    rankingLeague: trendCtx.rankingLeague,
+    wcStage: trendCtx.wcStage,
+  });
 
   const sourceRows = useSeed ? seedRows! : (dailyTrend ?? []);
 

@@ -97,6 +97,28 @@ const ja = {
     totalPicks: "確定",
     upsetPoints: "アップセット得点",
     maxWinStreak: "最大連勝",
+    statsTitlePlayoffs2026: "2026 NBA PLAYOFFS STATS",
+    statsTitleWcStage2026: "2026 WORLD CUP STAGE STATS",
+    maxWinStreakPlayoffs: "プレーオフ最大連勝",
+    maxWinStreakPlayoffsSubtitle: "2026 プレーオフ",
+    maxWinStreakPlayoffsTooltip:
+      "2026年NBAプレーオフ期間の確定試合における最長連勝です。",
+    maxWinStreakWcOverall: "WC最大連勝",
+    maxWinStreakWcOverallSubtitle: "2026 ワールドカップ全体",
+    maxWinStreakWcOverallTooltip:
+      "2026 FIFAワールドカップ（予選・本戦）の確定試合における最長連勝です。",
+    maxWinStreakWcQualifying: "予選最大連勝",
+    maxWinStreakWcQualifyingSubtitle: "グループステージ",
+    maxWinStreakWcQualifyingTooltip:
+      "2026ワールドカップ予選（グループステージ）の確定試合における最長連勝です。",
+    maxWinStreakWcKnockout: "ノックアウト最大連勝",
+    maxWinStreakWcKnockoutSubtitle: "決勝トーナメント",
+    maxWinStreakWcKnockoutTooltip:
+      "2026ワールドカップ決勝トーナメント（ベスト16以降）の確定試合における最長連勝です。",
+    activeWinStreakPlayoffs: "プレーオフ連勝",
+    activeWinStreakWcOverall: "WC連勝",
+    activeWinStreakWcQualifying: "予選連勝",
+    activeWinStreakWcKnockout: "ノックアウト連勝",
     winRate: "勝率",
     currentRank: "現在の順位",
     bestJumpUp: "最高ジャンプアップ",
@@ -138,6 +160,9 @@ const ja = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "直近{n}試合の連勝・連敗を表示",
     last20TrackerSubtitle: "直近{n}試合の成績",
+    settledTodayResults: "Result Drop",
+    settledTodayResultsDesc: "今日確定した分析一覧",
+    settledTodayEmpty: "今日確定した分析はまだありません",
     allTimeMaxStreak: "全期間での最高連勝",
     allTimeMaxStreakNote: "全期間（All-time）の最高連勝数です。期間切替（7日/30日）とは連動しません。",
     scorePrecisionTooltip:

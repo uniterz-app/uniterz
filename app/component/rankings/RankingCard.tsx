@@ -21,8 +21,12 @@ import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileF
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 const rankHudNumClass = summaryMetricNumClass;
+
+export type RankingCardSize = "default" | "compact";
 
 function medal(rank: number) {
   if (rank === 1) {
@@ -120,7 +124,7 @@ function FadedFlagBg({
     <div
       className={[
         "pointer-events-none absolute inset-y-0 w-[34%] overflow-hidden",
-        listRow ? "-right-[0%]" : "-right-[1%]",
+        listRow ? "right-[0%]" : "-right-[1%]",
       ].join(" ")}
     >
       <div
@@ -165,18 +169,30 @@ function ValueText({
   counted,
   isTop3,
   language,
+  size = "default",
 }: {
   rank: number;
   metric: MobileMetric;
   counted: number;
   isTop3: boolean;
   language: Language;
+  size?: RankingCardSize;
 }) {
   const m = medal(rank);
+  const compact = size === "compact";
   const justifyRow = isTop3 ? "justify-center" : "justify-end";
 
-  const baseTextClass =
-    rank === 1 ? "text-[32px]" : isTop3 ? "text-[28px]" : "text-[20px]";
+  const baseTextClass = compact
+    ? rank === 1
+      ? "text-[22px]"
+      : isTop3
+        ? "text-[20px]"
+        : "text-[16px]"
+    : rank === 1
+      ? "text-[32px]"
+      : isTop3
+        ? "text-[28px]"
+        : "text-[20px]";
 
   const valueStyle =
     rank <= 3
@@ -195,7 +211,21 @@ function ValueText({
         style={valueStyle}
       >
         <span>{Math.round(counted)}</span>
-        <span className={rank === 1 ? "text-[17px]" : isTop3 ? "text-[15px]" : "text-[11px]"}>
+        <span
+          className={
+            compact
+              ? rank === 1
+                ? "text-[13px]"
+                : isTop3
+                  ? "text-[12px]"
+                  : "text-[10px]"
+              : rank === 1
+                ? "text-[17px]"
+                : isTop3
+                  ? "text-[15px]"
+                  : "text-[11px]"
+          }
+        >
           {streakShortLabel(language)}
         </span>
       </div>
@@ -215,11 +245,17 @@ function ValueText({
         <span className={baseTextClass}>{Math.round(counted)}</span>
         <span
           className={
-            rank === 1
-              ? "ml-0.5 text-[16px]"
-              : isTop3
-              ? "ml-0.5 text-[14px]"
-              : "ml-0.5 text-[10px]"
+            compact
+              ? rank === 1
+                ? "ml-0.5 text-[12px]"
+                : isTop3
+                  ? "ml-0.5 text-[11px]"
+                  : "ml-0.5 text-[9px]"
+              : rank === 1
+                ? "ml-0.5 text-[16px]"
+                : isTop3
+                  ? "ml-0.5 text-[14px]"
+                  : "ml-0.5 text-[10px]"
           }
         >
           %
@@ -244,7 +280,17 @@ function ValueText({
       <span
         className={[
           "shrink-0",
-          rank === 1 ? "text-[15px]" : isTop3 ? "text-[13px]" : "text-[9px]",
+          compact
+            ? rank === 1
+              ? "text-[11px]"
+              : isTop3
+                ? "text-[10px]"
+                : "text-[8px]"
+            : rank === 1
+              ? "text-[15px]"
+              : isTop3
+                ? "text-[13px]"
+                : "text-[9px]",
         ].join(" ")}
       >
         {t(language).rankings.pts}
@@ -259,8 +305,12 @@ export default function RankingCard({
   metric,
   rankPhase,
   playoffRound,
+  rankingLeague,
+  wcStage,
   onCountDone,
   language = "ja",
+  size = "default",
+  animateValue = true,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -269,9 +319,17 @@ export default function RankingCard({
   rankPhase?: RankingPhase;
   /** プレーオフラウンドタブ（TOTAL / 1ST / …）の戻り用 */
   playoffRound?: PlayoffRoundKey;
+  /** NBA / WORLD CUP のリーグソース（戻りとプロフィール表示切替用） */
+  rankingLeague?: RankingLeagueSource;
+  /** WORLD CUP ステージ（overall / qualifying / main） */
+  wcStage?: WcRankingStage;
   onCountDone?: () => void;
   language?: Language;
+  /** マイコミュニティ等、同デザインで少し小さく */
+  size?: RankingCardSize;
+  animateValue?: boolean;
 }) {
+  const compact = size === "compact";
   const isTop3 = rank <= 3;
   const m = medal(rank);
   const tone = cardTone(rank);
@@ -286,6 +344,8 @@ export default function RankingCard({
     metric,
     phase: rankPhase ?? "playoffs",
     playoffRound,
+    rankingLeague,
+    wcStage,
   });
 
   const { n: target, d: decimals } = metricNum(r, metric);
@@ -293,19 +353,52 @@ export default function RankingCard({
     target,
     900,
     decimals,
-    true,
+    animateValue,
     rank === 1 ? onCountDone : undefined
   );
+
+  const rankNumClass = compact
+    ? rank === 1
+      ? "text-[26px]"
+      : rank <= 3
+        ? "text-[22px]"
+        : "text-[17px]"
+    : rank === 1
+      ? "text-[34px]"
+      : rank <= 3
+        ? "text-[29px]"
+        : "text-[20px]";
+
+  const nameClass = compact
+    ? rank === 1
+      ? "text-[16px]"
+      : isTop3
+        ? "text-[14px]"
+        : "text-[12px]"
+    : rank === 1
+      ? "text-[20px]"
+      : isTop3
+        ? "text-[17px]"
+        : "text-[13px]";
 
   return (
     <Link
       href={profileHref}
-      className={["block min-w-0", isTop3 ? "mb-1.5" : "mb-2"].join(" ")}
+      className={[
+        "block min-w-0",
+        compact ? (isTop3 ? "mb-1" : "mb-1.5") : isTop3 ? "mb-1.5" : "mb-2",
+      ].join(" ")}
     >
       <div
         className={[
           "relative overflow-hidden rounded-none border",
-          isTop3 ? "min-h-[76px]" : "min-h-[50px]",
+          compact
+            ? isTop3
+              ? "min-h-[58px]"
+              : "min-h-[44px]"
+            : isTop3
+              ? "min-h-[76px]"
+              : "min-h-[50px]",
         ].join(" ")}
         style={{
           borderColor: tone.border,
@@ -366,10 +459,15 @@ export default function RankingCard({
 
         <div
           className={[
-            "relative z-10 grid min-w-0 items-center gap-2.5 px-2.5",
-            isTop3
-              ? "grid-cols-[32px_56px_minmax(0,1fr)_84px] py-2.5"
-              : "grid-cols-[22px_36px_minmax(0,1fr)_auto] py-2",
+            "relative z-10 grid min-w-0 items-center",
+            compact ? "gap-2 px-2" : "gap-2.5 px-2.5",
+            compact
+              ? isTop3
+                ? "grid-cols-[26px_44px_minmax(0,1fr)_68px] py-2"
+                : "grid-cols-[20px_32px_minmax(0,1fr)_auto] py-1.5"
+              : isTop3
+                ? "grid-cols-[32px_56px_minmax(0,1fr)_84px] py-2.5"
+                : "grid-cols-[22px_36px_minmax(0,1fr)_auto] py-2",
           ].join(" ")}
         >
           <div className="flex items-center justify-center">
@@ -377,7 +475,7 @@ export default function RankingCard({
               className={[
                 "translate-y-px text-center leading-none",
                 rankHudNumClass,
-                rank === 1 ? "text-[34px]" : rank <= 3 ? "text-[29px]" : "text-[20px]",
+                rankNumClass,
               ].join(" ")}
               style={{
                 color: m.text,
@@ -391,8 +489,24 @@ export default function RankingCard({
             <RankingsAvatarCircle
               photoURL={r.photoURL}
               displayName={r.displayName ?? r.handle ?? "?"}
-              boxClassName={isTop3 ? "h-14 w-14" : "h-9 w-9"}
-              initialTextClassName={isTop3 ? "text-[22px]" : "text-[15px]"}
+              boxClassName={
+                compact
+                  ? isTop3
+                    ? "h-11 w-11"
+                    : "h-8 w-8"
+                  : isTop3
+                    ? "h-14 w-14"
+                    : "h-9 w-9"
+              }
+              initialTextClassName={
+                compact
+                  ? isTop3
+                    ? "text-[18px]"
+                    : "text-[13px]"
+                  : isTop3
+                    ? "text-[22px]"
+                    : "text-[15px]"
+              }
               gateReady
             />
           </div>
@@ -403,7 +517,7 @@ export default function RankingCard({
                 className={[
                   "min-w-0 truncate font-black tracking-[0.01em]",
                   jp.className,
-                  rank === 1 ? "text-[20px]" : isTop3 ? "text-[17px]" : "text-[13px]",
+                  nameClass,
                 ].join(" ")}
                 style={{
                   color: "rgba(255,255,255,0.92)",
@@ -432,9 +546,13 @@ export default function RankingCard({
             <div
               className={[
                 "flex min-w-0 max-w-full flex-col",
-                isTop3
-                  ? "min-w-[68px] items-center text-center"
-                  : "items-end text-right",
+                compact
+                  ? isTop3
+                    ? "min-w-[56px] items-center text-center"
+                    : "items-end text-right"
+                  : isTop3
+                    ? "min-w-[68px] items-center text-center"
+                    : "items-end text-right",
               ].join(" ")}
             >
               <ValueText
@@ -443,6 +561,7 @@ export default function RankingCard({
                 counted={counted}
                 isTop3={isTop3}
                 language={language}
+                size={size}
               />
             </div>
           </div>

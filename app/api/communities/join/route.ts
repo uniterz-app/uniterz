@@ -9,6 +9,7 @@ import {
   MAX_MEMBERS_PER_GROUP,
 } from "@/lib/communities/limits";
 import {
+  parseCommunityLeague,
   parseCommunityMetric,
   parseCommunityPeriod,
 } from "@/lib/communities/types";
@@ -65,7 +66,12 @@ export async function POST(req: Request) {
     const memberCount = Number(gdata?.memberCount ?? 0);
     if (memberCount >= MAX_MEMBERS_PER_GROUP) {
       return NextResponse.json(
-        { ok: false, error: "group_full" },
+        {
+          ok: false,
+          error: "group_full",
+          memberCount,
+          maxMembersPerGroup: MAX_MEMBERS_PER_GROUP,
+        },
         { status: 403 }
       );
     }
@@ -75,7 +81,13 @@ export async function POST(req: Request) {
     const userGroups = await adminDb.collection(`users/${uid}/groups`).get();
     if (userGroups.size >= maxMem) {
       return NextResponse.json(
-        { ok: false, error: "membership_limit", maxMemberships: maxMem, plan },
+        {
+          ok: false,
+          error: "membership_limit",
+          maxMemberships: maxMem,
+          currentMemberships: userGroups.size,
+          plan,
+        },
         { status: 403 }
       );
     }
@@ -92,15 +104,23 @@ export async function POST(req: Request) {
     const nextCount = memberCount + 1;
     const rankingMetric = parseCommunityMetric(gdata?.rankingMetric);
     const periodType = parseCommunityPeriod(gdata?.periodType);
+    const rankingLeague = parseCommunityLeague(gdata?.rankingLeague);
+
+    const description =
+      typeof gdata?.description === "string" && gdata.description.trim()
+        ? gdata.description.trim()
+        : null;
 
     batch.set(adminDb.doc(`users/${uid}/groups/${gid}`), {
       groupId: gid,
       groupName: String(gdata?.name ?? ""),
+      description,
       role: "member",
       memberCount: nextCount,
       headerImageUrl: gdata?.headerImageUrl ?? null,
       rankingMetric,
       periodType,
+      rankingLeague,
       joinedAt: FieldValue.serverTimestamp(),
     });
     await batch.commit();

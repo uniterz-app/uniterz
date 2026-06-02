@@ -33,6 +33,8 @@ type Props = {
   showProBadge?: boolean;
   showCurrentStreakBadge: boolean;
   currentStreak: number;
+  /** 例: プレーオフ連勝 / ノックアウト連勝 */
+  currentStreakLabel?: string;
   canOpenSettings: boolean;
   onOpenSettings: () => void;
   /** 未読お知らせ件数（0 より大きいときメニューボタンにバッジ） */
@@ -204,6 +206,7 @@ export default function ProfileHeroCard({
   showProBadge = false,
   showCurrentStreakBadge,
   currentStreak,
+  currentStreakLabel,
   canOpenSettings,
   onOpenSettings,
   menuUnreadCount = 0,
@@ -455,7 +458,8 @@ export default function ProfileHeroCard({
             <Flame className="h-3 w-3 text-orange-400" />
             <span className="ml-0.5 tabular-nums">{streakShown}</span>
             <span className="ml-0.5">
-              {language === "en" ? "Win streak" : "連勝中"}
+              {currentStreakLabel ??
+                (language === "en" ? "Win streak" : "連勝中")}
             </span>
           </div>
         </motion.div>

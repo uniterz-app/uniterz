@@ -39,3 +39,20 @@ export function rolling30DateKeysJST(now = new Date()): string[] {
   }
   return keys.reverse();
 }
+
+/** 開始日（JST）から今日までの日付キー（グループ「これから」用） */
+export function dateKeysFromStartToTodayJST(
+  startKey: string,
+  now = new Date()
+): string[] {
+  const endKey = getTodayKeyInTimeZone(TIMEZONE_JST, now);
+  const startDate = parseDateKeyInTimeZone(startKey, TIMEZONE_JST);
+  const endDate = parseDateKeyInTimeZone(endKey, TIMEZONE_JST);
+  if (!startDate || !endDate) return [];
+  const keys: string[] = [];
+  const ONE = 86400000;
+  for (let t = startDate.getTime(); t <= endDate.getTime(); t += ONE) {
+    keys.push(toDateKeyInTimeZone(new Date(t), TIMEZONE_JST));
+  }
+  return keys;
+}

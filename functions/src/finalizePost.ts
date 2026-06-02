@@ -101,6 +101,10 @@ export async function finalizePost({
     status: "final",
     settledAt: now,
     updatedAt: FieldValue.serverTimestamp(),
+
+    seasonPhase: game?.seasonPhase ?? null,
+    seasonRound: game?.seasonRound ?? null,
+    wcStage: game?.wcStage ?? null,
   });
 
   const uid = p.authorUid;

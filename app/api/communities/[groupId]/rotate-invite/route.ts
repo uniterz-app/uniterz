@@ -37,6 +37,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
       await groupSnap.ref.update({
         inviteCodeHash: hash,
+        inviteCode: invitePlain,
         updatedAt: FieldValue.serverTimestamp(),
       });
 

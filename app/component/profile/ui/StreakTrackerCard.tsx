@@ -9,9 +9,10 @@ import {
   STREAK_TRACKER_LAST_N,
   type StreakTrackerPoint,
 } from "@/lib/profile/useProfileStreakTracker";
+import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { jp, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
+import { jp, nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { BarChart3, Info, TrendingDown, TrendingUp } from "lucide-react";
@@ -24,6 +25,7 @@ type Props = {
   language?: Language;
   entranceReady?: boolean;
   layout?: Layout;
+  profileStatsContext?: ProfileStatsStreakContext;
 };
 
 function formatTick(n: number) {
@@ -119,6 +121,7 @@ export default function StreakTrackerCard({
   language = "ja",
   entranceReady,
   layout = "mobile",
+  profileStatsContext = { rankingLeague: "nba" },
 }: Props) {
   const msg = t(language);
   const reduceMotion = useReducedMotion();
@@ -131,7 +134,7 @@ export default function StreakTrackerCard({
     margin: "0px 0px -8% 0px",
   });
 
-  const { points, loading } = useProfileStreakTracker(uid);
+  const { points, loading } = useProfileStreakTracker(uid, profileStatsContext);
 
   const maxAbs = useMemo(() => streakChartLayoutMaxAbs(points), [points]);
   const ticks = useMemo(() => buildYTicks(maxAbs), [maxAbs]);
@@ -236,6 +239,7 @@ export default function StreakTrackerCard({
   const subtitle = msg.profile.last20TrackerDesc.replace("{n}", String(STREAK_TRACKER_LAST_N));
   /** Info 用（表示サブタイトルと同じ文言のみ） */
   const chartInfoTooltipMsg = subtitle;
+  const emptyHint = subtitle;
 
   const statWinLabel = msg.profile.bestWStreak;
   const statLossLabel = msg.profile.bestLStreak;
@@ -370,8 +374,13 @@ export default function StreakTrackerCard({
 
         <div
           ref={chartSectionRef}
-          className={`relative z-0 overflow-hidden rounded-2xl border border-white/10 bg-black/35 ${S.chartBorder}`}
+          className={`relative z-0 overflow-hidden rounded-2xl border border-white/10 bg-[#050814]/45 ${S.chartBorder}`}
         >
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.52]"
+            style={CHART_GRID_STYLE}
+            aria-hidden
+          />
           <div className="relative z-1">
             {loading ? (
               <div
@@ -386,12 +395,15 @@ export default function StreakTrackerCard({
               >
                 <p
                   className={[
-                    nameRajdhani.className,
-                    "font-semibold tracking-[0.14em] text-[clamp(1rem,3.2vw,1.5rem)]",
+                    nameBebas.className,
+                    "text-center text-[clamp(1.1rem,3.5vw,1.65rem)] leading-none tracking-[0.18em]",
                   ].join(" ")}
                   style={cyberNoDataLabelStyle}
                 >
                   NO DATA
+                </p>
+                <p className="mt-2 max-w-[240px] text-center text-[10px] text-white/45 sm:text-xs">
+                  {emptyHint}
                 </p>
               </div>
             ) : !gateOpen ? (
@@ -429,20 +441,6 @@ export default function StreakTrackerCard({
                     }}
                   >
                     <div className={`relative ${S.plotH} shrink-0`}>
-                      <m.div
-                        className="pointer-events-none absolute inset-0 rounded-lg"
-                        style={CHART_GRID_STYLE}
-                        initial={false}
-                        animate={
-                          axesReady ? { opacity: 0.5 } : { opacity: 0 }
-                        }
-                        transition={{
-                          duration: 0.58,
-                          delay: 0.1,
-                          ease: [0.22, 1, 0.36, 1],
-                        }}
-                        aria-hidden
-                      />
                       <m.div
                         className="pointer-events-none absolute left-0 right-0 top-1/2 z-2 h-px -translate-y-1/2 bg-cyan-200/45"
                         initial={false}

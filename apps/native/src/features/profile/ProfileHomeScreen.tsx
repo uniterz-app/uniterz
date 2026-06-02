@@ -249,7 +249,7 @@ export default function ProfileHomeScreen({
     () =>
       isJa
         ? {
-            playoffsTitle: "2026 PLAYOFFS STATS",
+            playoffsTitle: "2026 NBA PLAYOFFS STATS",
             apiMissing:
               "EXPO_PUBLIC_UNITERZ_API_BASE_URL を .env に設定し、Next.js を起動してください。",
             bracketSoon:
@@ -285,7 +285,7 @@ export default function ProfileHomeScreen({
             streakLabel: "連勝",
           }
         : {
-            playoffsTitle: "2026 PLAYOFFS STATS",
+            playoffsTitle: "2026 NBA PLAYOFFS STATS",
             apiMissing:
               "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL and run the Next.js app.",
             bracketSoon: "Playoff bracket view will match the web app in a future update.",

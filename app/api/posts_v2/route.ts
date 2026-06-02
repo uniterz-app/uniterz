@@ -216,6 +216,9 @@ export async function POST(req: Request) {
 
       gameId: parsed.gameId,
       league,
+      seasonPhase: g?.seasonPhase ?? null,
+      seasonRound: g?.playoffRound ?? g?.seasonRound ?? null,
+      wcStage: g?.wcStage ?? null,
       home: g?.home ?? null,
       away: g?.away ?? null,
       status: (g?.status as Status) || "scheduled",

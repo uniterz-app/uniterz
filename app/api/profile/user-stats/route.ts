@@ -13,16 +13,23 @@ import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import {
   buildDailyTrendFromDailySnaps,
   mergeDailyTrendWithSnap,
+  resolveProfileDailyTrendContext,
 } from "@/lib/profile/userStatsV2ProfileRollup";
 import { getPastDateKeysInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
+import {
+  isRankingLeagueSource,
+  type RankingLeagueSource,
+} from "@/lib/rankings/rankingLeagueSource";
+import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
+import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type StatsPart = "stats" | "phase" | "trend";
+type StatsPart = "stats" | "phase" | "trend" | "ranks";
 type RankingPhase = "play_in" | "playoffs";
 
-const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend"];
+const ALL_PARTS: StatsPart[] = ["stats", "phase", "trend", "ranks"];
 
 type SummaryForCards = {
   posts: number;
@@ -38,6 +45,7 @@ type SummaryForCards = {
   upsetBonusSum: number;
   streakBonusSum: number;
   basePointsSum: number;
+  activeWinStreak?: number;
 };
 
 type SummaryRanks = {
@@ -89,6 +97,40 @@ function summaryFromPhaseRanking(
     upsetBonusSum,
     streakBonusSum,
     basePointsSum,
+    activeWinStreak: safeInt(r.activeWinStreak),
+  };
+}
+
+function summaryFromWcStageRanking(
+  cumulative: Record<string, unknown> | null,
+  wcStage: WcRankingStage
+): SummaryForCards {
+  const byWcStage = ((cumulative?.rankingByWcStage as Record<string, unknown>) ??
+    {}) as Record<string, Record<string, unknown> | undefined>;
+  const r = byWcStage[wcStage] ?? {};
+  const posts = safeInt(r.totalPosts);
+  const wins = safeInt(r.totalWins);
+  const pointsSumV3 = safeNum(r.totalPoints);
+  const upsetPointsSum = safeNum(r.totalUpset);
+  const scorePrecisionSum = safeNum(r.totalPrecision);
+  const upsetBonusSum = safeNum(r.upsetBonusSum);
+  const streakBonusSum = safeNum(r.streakBonusSum);
+  const basePointsSum = Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum);
+  return {
+    posts,
+    fullPosts: posts,
+    recent3Posts: 0,
+    wins,
+    winRate: posts > 0 ? wins / posts : 0,
+    scorePrecisionSum,
+    upsetPointsSum,
+    pointsSumV3,
+    upsetChanceCount: safeInt(r.upsetOpportunityCount),
+    upsetHitCount: safeInt(r.upsetHitCount),
+    upsetBonusSum,
+    streakBonusSum,
+    basePointsSum,
+    activeWinStreak: safeInt(r.activeWinStreak),
   };
 }
 
@@ -105,10 +147,24 @@ function hasPhaseBonusFields(
   );
 }
 
+function hasWcStageBonusFields(
+  cumulative: Record<string, unknown> | null,
+  wcStage: WcRankingStage
+): boolean {
+  const byWcStage = ((cumulative?.rankingByWcStage as Record<string, unknown>) ??
+    {}) as Record<string, Record<string, unknown> | undefined>;
+  const r = byWcStage[wcStage] ?? {};
+  return (
+    Object.prototype.hasOwnProperty.call(r, "upsetBonusSum") &&
+    Object.prototype.hasOwnProperty.call(r, "streakBonusSum")
+  );
+}
+
 async function summaryFromDailyPhaseFallback(
   adminDb: ReturnType<typeof getAdminDb>,
   uid: string,
-  phase: RankingPhase
+  phase: RankingPhase,
+  wcStage?: WcRankingStage
 ): Promise<SummaryForCards> {
   const start = `${uid}_`;
   const end = `${uid}_\uf8ff`;
@@ -131,7 +187,10 @@ async function summaryFromDailyPhaseFallback(
   for (const d of snap.docs) {
     const data = d.data() as Record<string, unknown>;
     const byPhase = (data.rankingByPhase ?? {}) as Record<string, unknown>;
-    const row = (byPhase[phase] ?? {}) as Record<string, unknown>;
+    const byWc = (data.rankingByWcStage ?? {}) as Record<string, unknown>;
+    const row = wcStage
+      ? ((byWc[wcStage] ?? {}) as Record<string, unknown>)
+      : ((byPhase[phase] ?? {}) as Record<string, unknown>);
     posts += safeInt(row.posts);
     wins += safeInt(row.wins);
     scorePrecisionSum += safeNum(row.scorePrecisionSum);
@@ -157,70 +216,8 @@ async function summaryFromDailyPhaseFallback(
     upsetBonusSum,
     streakBonusSum,
     basePointsSum: Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum),
+    activeWinStreak: 0,
   };
-}
-
-function safeRank(v: unknown): number | null {
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isFinite(n)) return null;
-  const i = Math.floor(n);
-  return i > 0 ? i : null;
-}
-
-function summaryRanksFromSnapshot(
-  cumulative: Record<string, unknown> | null,
-  phase: RankingPhase
-): SummaryRanks {
-  const snapshotRanks = (cumulative?.snapshotRanks ?? {}) as Record<
-    string,
-    Record<string, unknown> | undefined
-  >;
-  const byPhase = snapshotRanks[phase] ?? {};
-  return {
-    totalPrecision: safeRank(byPhase.totalPrecision),
-    totalUpset: safeRank(byPhase.totalUpset),
-    totalPoints: safeRank(byPhase.totalPoints),
-  };
-}
-
-async function summaryRanksFromRankingBulk(
-  uid: string,
-  phase: RankingPhase
-): Promise<SummaryRanks> {
-  const baseUrl =
-    process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
-    process.env.NEXT_PUBLIC_CUMULATIVE_RANKING_FUNCTION_URL;
-  if (!baseUrl) {
-    return { totalPrecision: null, totalUpset: null, totalPoints: null };
-  }
-
-  const url = new URL(baseUrl);
-  url.searchParams.set("uid", uid);
-  url.searchParams.set("phase", phase);
-  url.searchParams.set("round", "overall");
-  url.searchParams.set("metrics", "totalPrecision,totalUpset,totalPoints");
-
-  try {
-    const res = await fetch(url.toString(), {
-      method: "GET",
-      cache: "no-store",
-    });
-    const json = await res.json();
-    if (!res.ok || !json?.ok || typeof json.byMetric !== "object") {
-      return { totalPrecision: null, totalUpset: null, totalPoints: null };
-    }
-    const byMetric = json.byMetric as Record<
-      string,
-      { myRank?: unknown } | undefined
-    >;
-    return {
-      totalPrecision: safeRank(byMetric.totalPrecision?.myRank),
-      totalUpset: safeRank(byMetric.totalUpset?.myRank),
-      totalPoints: safeRank(byMetric.totalPoints?.myRank),
-    };
-  } catch {
-    return { totalPrecision: null, totalUpset: null, totalPoints: null };
-  }
 }
 
 async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
@@ -291,6 +288,17 @@ export async function GET(req: Request) {
     const handleParam = searchParams.get("handle")?.trim() ?? "";
     const forceRefresh = searchParams.get("refresh") === "1";
     const phase = parsePhase(searchParams.get("phase"));
+    const rawLeague = searchParams.get("league");
+    const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
+      ? rawLeague
+      : "nba";
+    const rawWcStage = searchParams.get("wcStage");
+    const wcStage: WcRankingStage | undefined =
+      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
+        ? rawWcStage
+        : rankingLeague === "worldcup"
+          ? "overall"
+          : undefined;
     const parts =
       parsePartsParam(searchParams.get("parts")) ?? new Set<StatsPart>(ALL_PARTS);
 
@@ -316,6 +324,7 @@ export async function GET(req: Request) {
 
     const wantStats = parts.has("stats");
     const wantPhase = parts.has("phase");
+    const wantRanks = parts.has("ranks");
     const wantWindow = parts.has("trend");
 
     const statsSnap = wantStats
@@ -346,62 +355,88 @@ export async function GET(req: Request) {
       wantWindow &&
       (forceRefresh || stale || missingRollup || cacheTrendIncomplete);
 
-    let dailyTrend: ProfileDailyTrendRow[];
+    const dailyTrendCtx = resolveProfileDailyTrendContext(
+      rankingLeague,
+      wcStage
+    );
+    /** WC は window_cache の dailyTrend（NBA 合算）を使わず日次スナップショットから組み立てる */
+    const wcStageSpecificTrend = rankingLeague === "worldcup";
+
+    let dailyTrend: ProfileDailyTrendRow[] = [];
 
     if (wantWindow) {
-      if (needRebuild) {
-        const last30Snaps = await fetchLast30DailySnapshots(adminDb, uid);
+      let last30Snaps: Awaited<ReturnType<typeof fetchLast30DailySnapshots>> | null =
+        null;
+
+      if (wcStageSpecificTrend || needRebuild) {
+        last30Snaps = await fetchLast30DailySnapshots(adminDb, uid);
+      }
+
+      if (wcStageSpecificTrend && last30Snaps) {
+        dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
+      } else if (needRebuild && last30Snaps) {
         try {
           await buildWindowCacheForUserFromSnapshots(adminDb, uid, last30Snaps);
         } catch (e) {
           console.warn("[profile/user-stats] window cache rebuild failed:", e);
         }
-        dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps);
-      } else {
+        dailyTrend = buildDailyTrendFromDailySnaps(last30Snaps, dailyTrendCtx);
+      } else if (!wcStageSpecificTrend) {
         const w = windowData as Record<string, unknown>;
         const raw = w.dailyTrend;
         dailyTrend = Array.isArray(raw) ? (raw as ProfileDailyTrendRow[]) : [];
       }
-    } else {
-      dailyTrend = [];
-    }
 
-    /**
-     * キャッシュは当日ぶんが古いことがある。また再構築パスでも Race で取りこぼしうるため、
-     * 常に JST 当日ドキュメントを1読してマージする（冪等）。
-     */
-    if (wantWindow) {
       const todayKeys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 1);
       const todayKey = todayKeys[0];
       if (todayKey) {
         const todaySnap = await adminDb
           .doc(`user_stats_v2_daily/${uid}_${todayKey}`)
           .get();
-        dailyTrend = mergeDailyTrendWithSnap(dailyTrend, todaySnap);
+        dailyTrend = mergeDailyTrendWithSnap(dailyTrend, todaySnap, dailyTrendCtx);
       }
     }
 
     let summary = wantPhase
-      ? summaryFromPhaseRanking(
-          cumulative as Record<string, unknown> | null,
-          phase
-        )
+      ? rankingLeague === "worldcup" && wcStage
+        ? summaryFromWcStageRanking(cumulative as Record<string, unknown> | null, wcStage)
+        : summaryFromPhaseRanking(
+            cumulative as Record<string, unknown> | null,
+            phase
+          )
       : null;
-    if (
-      wantPhase &&
-      !hasPhaseBonusFields(cumulative as Record<string, unknown> | null, phase)
-    ) {
-      summary = await summaryFromDailyPhaseFallback(adminDb, uid, phase);
+    if (wantPhase) {
+      const missingBonus =
+        rankingLeague === "worldcup" && wcStage
+          ? !hasWcStageBonusFields(cumulative as Record<string, unknown> | null, wcStage)
+          : !hasPhaseBonusFields(cumulative as Record<string, unknown> | null, phase);
+      if (missingBonus) {
+        summary = await summaryFromDailyPhaseFallback(
+          adminDb,
+          uid,
+          phase,
+          wcStage
+        );
+      }
     }
-    const summaryRanks = wantPhase
-      ? await summaryRanksFromRankingBulk(uid, phase)
-      : null;
+    // 連勝はリーグ／WC ステージ単位（クライアントで投稿から算出）。グローバル streak は混ぜない。
+    /** Overview の順位は Functions 取得のため `ranks` パートで分離（`phase` だけなら高速） */
+    let summaryRanks: SummaryRanks | null = null;
+    if (wantRanks) {
+      summaryRanks = await fetchProfileSummaryRanks(
+        uid,
+        phase,
+        rankingLeague === "worldcup" ? wcStage : undefined
+      );
+    }
 
     const body: Record<string, unknown> = {
       ok: true,
       resolvedUid: uid,
       parts: [...parts],
       phase,
+      rankingLeague,
+      wcStage: wcStage ?? null,
     };
 
     if (wantStats) body.stats = stats;

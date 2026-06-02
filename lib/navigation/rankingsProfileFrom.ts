@@ -3,6 +3,11 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { isRankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
+import {
+  isRankingLeagueSource,
+  type RankingLeagueSource,
+} from "@/lib/rankings/rankingLeagueSource";
+import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 /** プロフィール URL：ランキングから来た印 */
 export const PROFILE_FROM_PARAM = "from";
@@ -13,6 +18,10 @@ export const RANKINGS_TAB_METRIC_PARAM = "rankMetric";
 export const RANKINGS_TAB_PHASE_PARAM = "rankPhase";
 /** プレーオフ 1ST / 2ND など（overall = TOTAL） */
 export const RANKINGS_TAB_ROUND_PARAM = "rankRound";
+/** NBA / WORLD CUP のリーグソース */
+export const RANKINGS_TAB_LEAGUE_PARAM = "rankLeague";
+/** WORLD CUP のステージ（overall/qualifying/main） */
+export const RANKINGS_TAB_WC_STAGE_PARAM = "rankWcStage";
 
 const SESSION_KEY = "uniterz.rankingsTabReturn.v1";
 
@@ -80,6 +89,10 @@ export type RankingsReturnTab = {
   phase: RankingPhase;
   /** プレーオフランキングのラウンドタブ（TOTAL / 1ST / …） */
   playoffRound?: PlayoffRoundKey;
+  /** ランキングのリーグソース（NBA / WORLD CUP） */
+  rankingLeague?: RankingLeagueSource;
+  /** WORLD CUP ステージ（overall / qualifying / main） */
+  wcStage?: WcRankingStage;
 };
 
 /**
@@ -102,6 +115,12 @@ export function profileHrefWithRankingsReturn(
   if (tab.playoffRound && isPlayoffRoundKey(tab.playoffRound)) {
     q.set(RANKINGS_TAB_ROUND_PARAM, tab.playoffRound);
   }
+  if (tab.rankingLeague && isRankingLeagueSource(tab.rankingLeague)) {
+    q.set(RANKINGS_TAB_LEAGUE_PARAM, tab.rankingLeague);
+  }
+  if (tab.wcStage && isWcRankingStage(tab.wcStage)) {
+    q.set(RANKINGS_TAB_WC_STAGE_PARAM, tab.wcStage);
+  }
   return `${path}?${q.toString()}`;
 }
 
@@ -110,9 +129,13 @@ export function buildRankingsPathQuery(sp: URLSearchParams): string {
   const m = sp.get(RANKINGS_TAB_METRIC_PARAM);
   const ph = sp.get(RANKINGS_TAB_PHASE_PARAM);
   const r = sp.get(RANKINGS_TAB_ROUND_PARAM);
+  const league = sp.get(RANKINGS_TAB_LEAGUE_PARAM);
+  const wcStage = sp.get(RANKINGS_TAB_WC_STAGE_PARAM);
   const q = new URLSearchParams();
   if (isMobileMetricParam(m)) q.set(RANKINGS_TAB_METRIC_PARAM, m);
   if (isRankingPhase(ph)) q.set(RANKINGS_TAB_PHASE_PARAM, ph);
   if (isPlayoffRoundKey(r)) q.set(RANKINGS_TAB_ROUND_PARAM, r);
+  if (isRankingLeagueSource(league)) q.set(RANKINGS_TAB_LEAGUE_PARAM, league);
+  if (isWcRankingStage(wcStage)) q.set(RANKINGS_TAB_WC_STAGE_PARAM, wcStage);
   return q.toString();
 }

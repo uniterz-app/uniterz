@@ -7,7 +7,8 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import Tooltip from "@/app/component/common/Tooltip";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { summaryMetricNumClass } from "@/lib/fonts";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { metricValueMinWidthCh } from "@/lib/format/metricDecimals";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   summaryCardShadowLgClass,
@@ -84,7 +85,7 @@ function UpsetCard({
   }
 
   const points = useMemo(
-    () => Math.max(0, Number((upsetPointsSum || 0).toFixed(1))),
+    () => roundMetricDecimals(Math.max(0, upsetPointsSum || 0), 1),
     [upsetPointsSum]
   );
   const analyzed = useMemo(() => clampInt(analyses || 0), [analyses]);
@@ -151,12 +152,17 @@ function UpsetCard({
 
         <div
           className={[
-            summaryMetricNumClass,
-            "mt-1 text-base tabular-nums tracking-tight text-white md:mt-4 md:text-3xl",
+            resultStatsMetricNumClass,
+            "mt-1 inline-flex items-baseline justify-center text-base tracking-tight text-white md:mt-4 md:text-3xl",
             "leading-none text-center",
           ].join(" ")}
         >
-          {formatMetricDecimals(cuPoints, 1)}
+          <span
+            className="inline-block text-right tabular-nums"
+            style={{ minWidth: metricValueMinWidthCh(points, 1) }}
+          >
+            {formatMetricDecimals(cuPoints, 1)}
+          </span>
           <span className="ml-1 text-xs text-white/70 md:ml-2 md:text-lg">
             {m.profile.ptsUnit}
           </span>

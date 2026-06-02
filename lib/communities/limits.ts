@@ -30,3 +30,55 @@ export function maxMembershipsForPlan(plan: PlanTier): number {
 export function maxOwnedGroupsForPlan(plan: PlanTier): number {
   return plan === "pro" ? PRO_MAX_OWNED_GROUPS : FREE_MAX_OWNED_GROUPS;
 }
+
+/** 作成上限: アーカイブ済み・削除済みは含めない（groups.ownerUid を正とする） */
+export async function countActiveOwnedGroups(
+  db: Firestore,
+  uid: string
+): Promise<number> {
+  const snap = await db
+    .collection("groups")
+    .where("ownerUid", "==", uid)
+    .get();
+  return snap.docs.filter((d) => !d.data()?.archivedAt).length;
+}
+
+/**
+ * ミラーだけ残っている owner 行を掃除（上限カウントの取りこぼし防止）
+ */
+export async function pruneStaleGroupMirrors(
+  db: Firestore,
+  uid: string
+): Promise<number> {
+  const mirrors = await db.collection(`users/${uid}/groups`).get();
+  if (mirrors.empty) return 0;
+
+  const groupIds = [
+    ...new Set(
+      mirrors.docs.map((m) => String(m.data()?.groupId ?? m.id).trim()).filter(Boolean)
+    ),
+  ];
+  const groupSnaps = await Promise.all(
+    groupIds.map((id) => db.doc(`groups/${id}`).get())
+  );
+  const groupById = new Map(groupIds.map((id, i) => [id, groupSnaps[i]]));
+
+  const batch = db.batch();
+  let removed = 0;
+
+  for (const m of mirrors.docs) {
+    const gid = String(m.data()?.groupId ?? m.id).trim();
+    const g = groupById.get(gid);
+    const archived = g?.exists && g.data()?.archivedAt;
+    const missing = !g?.exists;
+    if (missing || archived) {
+      batch.delete(m.ref);
+      removed++;
+    }
+  }
+
+  if (removed > 0) {
+    await batch.commit();
+  }
+  return removed;
+}

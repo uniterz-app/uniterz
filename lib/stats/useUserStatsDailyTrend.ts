@@ -9,6 +9,9 @@ import {
 import { db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { resolveProfileDailyTrendContext } from "@/lib/profile/userStatsV2ProfileRollup";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 type DailyTrendRow = {
   date: string;
@@ -20,7 +23,11 @@ type DailyTrendRow = {
   scorePrecision: number;
 };
 
-export function useUserStatsDailyTrend(uid?: string, enabled: boolean = true) {
+export function useUserStatsDailyTrend(
+  uid?: string,
+  enabled: boolean = true,
+  context?: { rankingLeague?: RankingLeagueSource; wcStage?: WcRankingStage }
+) {
   const [data, setData] = useState<DailyTrendRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,18 +61,37 @@ export function useUserStatsDailyTrend(uid?: string, enabled: boolean = true) {
 
       const snap = await getDocs(q);
 
-      const rows: DailyTrendRow[] = snap.docs.map((doc) => {
-        const d = doc.data();
-        const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
+      const trendCtx = resolveProfileDailyTrendContext(
+        context?.rankingLeague ?? "nba",
+        context?.wcStage
+      );
 
-        const posts = all?.posts ?? 0;
-        const wins = all?.wins ?? 0;
-        const pointsV3 = all?.pointsSumV3 ?? 0;
-        const upsetPoints = all?.upsetPointsSum ?? 0;
-        const scorePrecisionSum = all?.scorePrecisionSum ?? 0;
+      const rows: DailyTrendRow[] = snap.docs.map((doc) => {
+        const d = doc.data() as Record<string, unknown>;
+        let bucket: Record<string, unknown>;
+        if (trendCtx.rankingLeague === "worldcup") {
+          const stage = trendCtx.wcStage ?? "overall";
+          const byWc = (d.rankingByWcStage ?? {}) as Record<
+            string,
+            Record<string, unknown>
+          >;
+          bucket = (byWc[stage] ?? byWc.overall ?? {}) as Record<string, unknown>;
+        } else {
+          const byPhase = (d.rankingByPhase ?? {}) as Record<
+            string,
+            Record<string, unknown>
+          >;
+          bucket = (byPhase.playoffs ?? {}) as Record<string, unknown>;
+        }
+
+        const posts = Number(bucket.posts ?? 0);
+        const wins = Number(bucket.wins ?? 0);
+        const pointsV3 = Number(bucket.pointsSumV3 ?? 0);
+        const upsetPoints = Number(bucket.upsetPointsSum ?? 0);
+        const scorePrecisionSum = Number(bucket.scorePrecisionSum ?? 0);
 
         return {
-          date: d.date,
+          date: typeof d.date === "string" ? d.date : String(d.date ?? ""),
           posts,
           wins,
           pointsV3,
@@ -80,7 +106,7 @@ export function useUserStatsDailyTrend(uid?: string, enabled: boolean = true) {
     }
 
     fetchDaily();
-  }, [uid, enabled]);
+  }, [context?.rankingLeague, context?.wcStage, uid, enabled]);
 
   return { data, loading };
 }

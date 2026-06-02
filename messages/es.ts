@@ -99,6 +99,28 @@ const es: Messages = {
     totalPicks: "Total",
     upsetPoints: "Puntos por sorpresa",
     maxWinStreak: "Racha máxima",
+    statsTitlePlayoffs2026: "2026 NBA PLAYOFFS STATS",
+    statsTitleWcStage2026: "2026 WORLD CUP STAGE STATS",
+    maxWinStreakPlayoffs: "Playoff Max Streak",
+    maxWinStreakPlayoffsSubtitle: "2026 Playoffs",
+    maxWinStreakPlayoffsTooltip:
+      "Longest win streak in settled picks during the 2026 NBA Playoffs.",
+    maxWinStreakWcOverall: "WC Max Streak",
+    maxWinStreakWcOverallSubtitle: "2026 World Cup (all stages)",
+    maxWinStreakWcOverallTooltip:
+      "Longest win streak across all settled 2026 World Cup picks.",
+    maxWinStreakWcQualifying: "Group Max Streak",
+    maxWinStreakWcQualifyingSubtitle: "Group stage",
+    maxWinStreakWcQualifyingTooltip:
+      "Longest win streak in settled group-stage World Cup picks.",
+    maxWinStreakWcKnockout: "Knockout Max Streak",
+    maxWinStreakWcKnockoutSubtitle: "Knockout stage",
+    maxWinStreakWcKnockoutTooltip:
+      "Longest win streak in settled knockout-stage World Cup picks.",
+    activeWinStreakPlayoffs: "Playoff streak",
+    activeWinStreakWcOverall: "WC streak",
+    activeWinStreakWcQualifying: "Group streak",
+    activeWinStreakWcKnockout: "Knockout streak",
     winRate: "Tasa de acierto",
     currentRank: "Posición actual",
     bestJumpUp: "Mayor subida",
@@ -140,6 +162,9 @@ const es: Messages = {
     last20Tracker: "Last20 Tracker",
     last20TrackerDesc: "Rachas de victorias/derrotas de tus últimas {n} predicciones",
     last20TrackerSubtitle: "Últimos {n} partidos",
+    settledTodayResults: "Result Drop",
+    settledTodayResultsDesc: "Análisis finalizados hoy",
+    settledTodayEmpty: "Aún no hay análisis finalizados hoy",
     allTimeMaxStreak: "Racha máxima histórica",
     allTimeMaxStreakNote: "Esta es tu mejor racha de victorias de todos los tiempos. No cambia con los filtros de 7/30 días.",
     scorePrecisionTooltip:

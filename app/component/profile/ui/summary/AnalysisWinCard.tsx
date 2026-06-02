@@ -4,7 +4,8 @@ import { useCountUp } from "@/lib/hooks/useCountUp";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { summaryMetricNumClass } from "@/lib/fonts";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { metricValueMinWidthCh } from "@/lib/format/metricDecimals";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
   summaryCardShadowLgClass,
@@ -92,17 +93,27 @@ function AnalysisWinCard({ language = "ja", ...props }: Props) {
           </div>
 
           <div
-            className={`${summaryMetricNumClass} text-base tabular-nums tracking-tight text-white md:text-4xl`}
+            className={`${resultStatsMetricNumClass} text-base tracking-tight text-white md:text-4xl`}
           >
-            {cuHit}
+            <span
+              className="inline-block text-right tabular-nums"
+              style={{ minWidth: metricValueMinWidthCh(hit, 0) }}
+            >
+              {cuHit}
+            </span>
           </div>
 
           <div className="my-0.5 h-px w-8 bg-white/20 md:my-2 md:w-14" />
 
           <div
-            className={`${summaryMetricNumClass} text-base tabular-nums tracking-tight text-white/40 md:text-4xl`}
+            className={`${resultStatsMetricNumClass} text-base tracking-tight text-white/40 md:text-4xl`}
           >
-            {cuTotal}
+            <span
+              className="inline-block text-right tabular-nums"
+              style={{ minWidth: metricValueMinWidthCh(total, 0) }}
+            >
+              {cuTotal}
+            </span>
           </div>
 
           <div className="text-[9px] tracking-tight text-white/40 md:text-[16px]">

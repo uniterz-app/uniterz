@@ -30,8 +30,10 @@ import { type PlayoffRoundKey, isPlayoffRoundKey } from "@/lib/rankings/playoffR
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import {
+  RANKINGS_TAB_LEAGUE_PARAM,
   RANKINGS_TAB_METRIC_PARAM,
   RANKINGS_TAB_ROUND_PARAM,
+  RANKINGS_TAB_WC_STAGE_PARAM,
   WEB_RANKINGS_SCROLL_KEY,
   isMobileMetricParam,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -43,6 +45,8 @@ import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeade
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import type { RankingsCategory } from "@/app/component/rankings/RankingsCategoryTabs";
 import { Menu } from "lucide-react";
+import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 function getMyMetricValue(metric: MobileMetric, row: any): number {
   if (!row) return 0;
@@ -105,6 +109,13 @@ export default function WebRankingsShell() {
     if (isMobileMetricParam(m)) setMetric(m);
     const r = searchParams.get(RANKINGS_TAB_ROUND_PARAM);
     if (isPlayoffRoundKey(r)) setRound(r);
+    const league = searchParams.get(RANKINGS_TAB_LEAGUE_PARAM);
+    if (isRankingLeagueSource(league)) {
+      setRankingLeague(league);
+      if (league === "worldcup") setCategory("playoffs");
+    }
+    const stage = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
+    if (isWcRankingStage(stage)) setWcStage(stage);
     restoreScrollAfterListRef.current = isMobileMetricParam(
       searchParams.get(RANKINGS_TAB_METRIC_PARAM)
     );
@@ -319,6 +330,8 @@ export default function WebRankingsShell() {
                   metric={metric}
                   rankPhase={phase}
                   playoffRound={effectiveRound}
+                  rankingLeague={rankingLeague}
+                  wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
@@ -348,6 +361,8 @@ export default function WebRankingsShell() {
                           metric={metric}
                           rankPhase={phase}
                           playoffRound={effectiveRound}
+                          rankingLeague={rankingLeague}
+                          wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                           language={language}
                         />
                       </motion.div>
