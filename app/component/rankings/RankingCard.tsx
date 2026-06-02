@@ -18,6 +18,7 @@ import {
 } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
@@ -339,8 +340,8 @@ export default function RankingCard({
   const base = pathname.startsWith("/mobile") || pathname.startsWith("/m/")
     ? "/mobile"
     : "/web";
-  const handleOrUid = r.handle || r.uid;
-  const profileHref = profileHrefWithRankingsReturn(pathname, base, handleOrUid, {
+  const profileKey = profilePathKeyFromRow(r);
+  const profileHref = profileHrefWithRankingsReturn(pathname, base, profileKey, {
     metric,
     phase: rankPhase ?? "playoffs",
     playoffRound,

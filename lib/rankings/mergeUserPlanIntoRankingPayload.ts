@@ -2,11 +2,42 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 
 type RowLike = Record<string, unknown> & { uid?: string };
 
+function pickUserHandle(data: {
+  handle?: string;
+  slug?: string;
+  username?: string;
+}): string | undefined {
+  for (const v of [data.handle, data.slug, data.username]) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
+function pickUserDisplayName(data: {
+  displayName?: string;
+  name?: string;
+  handle?: string;
+  slug?: string;
+  username?: string;
+}): string | undefined {
+  if (typeof data.displayName === "string" && data.displayName.trim()) {
+    return data.displayName.trim();
+  }
+  if (typeof data.name === "string" && data.name.trim()) {
+    return data.name.trim();
+  }
+  const h = pickUserHandle(data);
+  return h;
+}
+
 /** users ドキュメントから plan と（存在する場合のみ）国旗用 countryCode を取り出す */
 type UserMergeFields = {
   plan: "free" | "pro";
   /** ドキュメントがあるときだけ付与。未設定は Functions の行をそのまま使う */
   countryCode?: string | null;
+  handle?: string;
+  displayName?: string;
+  photoURL?: string | null;
 };
 
 function planFromUserDoc(data: { plan?: string } | undefined): "free" | "pro" {
@@ -43,10 +74,22 @@ async function loadUserMergeFieldsByUid(
         out.set(id, { plan: "free" });
         return;
       }
-      const data = snap.data() as { plan?: string; countryCode?: unknown };
+      const data = snap.data() as {
+        plan?: string;
+        countryCode?: unknown;
+        handle?: string;
+        displayName?: string;
+        photoURL?: string | null;
+      };
       out.set(id, {
         plan: planFromUserDoc(data),
         countryCode: countryFromUserDoc(data),
+        handle: pickUserHandle(data),
+        displayName: pickUserDisplayName(data),
+        photoURL:
+          typeof data.photoURL === "string" && data.photoURL.trim()
+            ? data.photoURL.trim()
+            : null,
       });
     });
   }
@@ -89,6 +132,9 @@ export async function mergeUserPlansIntoBulkByMetric(
         if ("countryCode" in f) {
           next.countryCode = f.countryCode;
         }
+        if (f.handle) next.handle = f.handle;
+        if (f.displayName) next.displayName = f.displayName;
+        if (f.photoURL) next.photoURL = f.photoURL;
         return next;
       });
     }
@@ -100,6 +146,9 @@ export async function mergeUserPlansIntoBulkByMetric(
         if ("countryCode" in f) {
           next.countryCode = f.countryCode;
         }
+        if (f.handle) next.handle = f.handle;
+        if (f.displayName) next.displayName = f.displayName;
+        if (f.photoURL) next.photoURL = f.photoURL;
         bundle.myRow = next;
       }
     }
@@ -131,6 +180,9 @@ export async function mergeUserPlansIntoSingleRanking(body: {
     if ("countryCode" in f) {
       next.countryCode = f.countryCode;
     }
+    if (f.handle) next.handle = f.handle;
+    if (f.displayName) next.displayName = f.displayName;
+    if (f.photoURL) next.photoURL = f.photoURL;
     return next;
   });
 
@@ -142,6 +194,9 @@ export async function mergeUserPlansIntoSingleRanking(body: {
       if ("countryCode" in f) {
         next.countryCode = f.countryCode;
       }
+      if (f.handle) next.handle = f.handle;
+      if (f.displayName) next.displayName = f.displayName;
+      if (f.photoURL) next.photoURL = f.photoURL;
       body.myRow = next;
     }
   }

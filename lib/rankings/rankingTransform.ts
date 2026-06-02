@@ -48,7 +48,10 @@ export function toMobileRows(
     return {
       uid: row.uid,
       handle: row.handle ?? "",
-      displayName: row.displayName ?? "user",
+      displayName:
+        (typeof row.displayName === "string" && row.displayName.trim()) ||
+        (typeof row.handle === "string" && row.handle.trim()) ||
+        "User",
       photoURL: row.photoURL ?? undefined,
       plan: row.plan === "pro" ? "pro" : "free",
 

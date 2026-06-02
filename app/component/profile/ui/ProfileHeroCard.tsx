@@ -15,6 +15,11 @@ import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
 import type { Language } from "@/lib/i18n/language";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { profileHeroCardShadowClass } from "@/lib/ui/profileCardEdgeGlow";
+import {
+  getWinStreakBadge,
+  getWinStreakShellFrameClass,
+  showWinStreakSweep,
+} from "@/lib/ui/winStreakBadge";
 
 type DisplayProfile = {
   displayName: string;
@@ -31,10 +36,8 @@ type Props = {
   displayProfile: DisplayProfile;
   /** Firestore / 自分閲覧時の最新プランに基づき、課金ユーザー名の横に PRO を出す */
   showProBadge?: boolean;
-  showCurrentStreakBadge: boolean;
-  currentStreak: number;
-  /** 例: プレーオフ連勝 / ノックアウト連勝 */
-  currentStreakLabel?: string;
+  /** 3連勝以上でユーザー名横に連勝バッジ */
+  currentStreak?: number;
   canOpenSettings: boolean;
   onOpenSettings: () => void;
   /** 未読お知らせ件数（0 より大きいときメニューボタンにバッジ） */
@@ -45,10 +48,8 @@ type Props = {
 const SHELL_DURATION = 0.22;
 const INNER_DELAY = 0.02;
 const NAME_DURATION = 0.28;
-/** アバター motion の duration（連勝バッジの開始時刻と揃える） */
+/** アバター motion の duration */
 const AVATAR_DURATION = 0.36;
-/** アバターが落ち着いてから連勝バッジを出すまで */
-const STREAK_AFTER_AVATAR_GAP_MS = 90;
 /** 名前表示後、ハンドルスクランブルまでの余韻 */
 const HANDLE_SCRAMBLE_START_EXTRA_MS = 220;
 /** 1文字ロック間隔（大きいほどゆっくり解読） */
@@ -87,44 +88,6 @@ function buildScrambleString(text: string, lockedPrefix: number): string {
     }
   }
   return s;
-}
-
-type CountMode = "full" | "zero" | "animate";
-
-function useCountUpInt(
-  target: number,
-  mode: CountMode,
-  durationMs: number
-) {
-  const [value, setValue] = useState(() => (mode === "full" ? target : 0));
-
-  useEffect(() => {
-    if (mode === "full") {
-      setValue(target);
-      return;
-    }
-    if (mode === "zero") {
-      setValue(0);
-      return;
-    }
-
-    setValue(0);
-    if (target <= 0) return;
-
-    const start = performance.now();
-    let raf = 0;
-
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      setValue(Math.round(t * target));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, mode, durationMs]);
-
-  return value;
 }
 
 function useHandleScramble(
@@ -204,9 +167,7 @@ export default function ProfileHeroCard({
   language,
   displayProfile,
   showProBadge = false,
-  showCurrentStreakBadge,
-  currentStreak,
-  currentStreakLabel,
+  currentStreak = 0,
   canOpenSettings,
   onOpenSettings,
   menuUnreadCount = 0,
@@ -262,7 +223,6 @@ export default function ProfileHeroCard({
   const [handleScrambleActive, setHandleScrambleActive] = useState(false);
   const [bioVisible, setBioVisible] = useState(staticHero);
   const [badgesVisible, setBadgesVisible] = useState(staticHero);
-  const [streakReveal, setStreakReveal] = useState(staticHero);
   /** 写真ありのときは decode 完了まで円ごと隠し、円と写真を同じフェードにする */
   const [avatarLoaded, setAvatarLoaded] = useState(
     () => !displayProfile.avatarUrl
@@ -273,14 +233,12 @@ export default function ProfileHeroCard({
       setHandleScrambleActive(false);
       setBioVisible(true);
       setBadgesVisible(true);
-      setStreakReveal(true);
       setAvatarLoaded(true);
       return;
     }
     setHandleScrambleActive(false);
     setBioVisible(false);
     setBadgesVisible(false);
-    setStreakReveal(false);
     setAvatarLoaded(!displayProfile.avatarUrl);
   }, [staticHero, displayProfile.avatarUrl]);
 
@@ -316,26 +274,18 @@ export default function ProfileHeroCard({
     return () => window.clearTimeout(t);
   }, [innerPhase, staticHero]);
 
-  useEffect(() => {
-    if (staticHero || !innerPhase) return;
-    if (heroEntranceAnim && !avatarFadeReady) {
-      setStreakReveal(false);
-      return;
-    }
-
-    setStreakReveal(false);
-    const avatarDoneMs =
-      INNER_DELAY * 1000 +
-      AVATAR_DURATION * 1000 +
-      STREAK_AFTER_AVATAR_GAP_MS;
-    const t = window.setTimeout(() => setStreakReveal(true), avatarDoneMs);
-    return () => window.clearTimeout(t);
-  }, [innerPhase, staticHero, heroEntranceAnim, avatarFadeReady]);
-
   const onScrambleDoneRef = useRef<(() => void) | undefined>(undefined);
   onScrambleDoneRef.current = () => {
     setBioVisible(true);
   };
+
+  const winStreakBadge = getWinStreakBadge(currentStreak, language);
+  const streakSweep = showWinStreakSweep(currentStreak);
+  const streakShellFrame = getWinStreakShellFrameClass(currentStreak);
+  const shellBorder =
+    streakShellFrame.length > 0
+      ? streakShellFrame
+      : "border border-white/10";
 
   const showHandle = useHandleScramble(
     displayProfile.handle,
@@ -344,15 +294,6 @@ export default function ProfileHeroCard({
     HANDLE_MS_PER_CHAR,
     onScrambleDoneRef
   );
-
-  const streakMode: CountMode =
-    staticHero || !showCurrentStreakBadge
-      ? "full"
-      : streakReveal && innerMotionOn
-        ? "animate"
-        : "zero";
-
-  const streakShown = useCountUpInt(currentStreak, streakMode, 340);
 
   useEffect(() => {
     if (staticHero) return;
@@ -373,8 +314,8 @@ export default function ProfileHeroCard({
   const isWeb = layout === "web";
 
   const shellClass = isWeb
-    ? `relative isolate min-h-[128px] overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-5 ${profileHeroCardShadowClass}`
-    : `relative isolate overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 p-3 ${profileHeroCardShadowClass}`;
+    ? `relative isolate min-h-[128px] overflow-hidden rounded-xl ${shellBorder} bg-[#050814]/80 p-5 ${profileHeroCardShadowClass}`
+    : `relative isolate overflow-hidden rounded-xl ${shellBorder} bg-[#050814]/80 p-3 ${profileHeroCardShadowClass}`;
 
   /** innerPhase 以降に img を載せて読み込み、準備できてから円ごとフェード */
   const showAvatarMedia = staticHero || innerPhase;
@@ -433,37 +374,6 @@ export default function ProfileHeroCard({
           />
         ) : null}
       </motion.div>
-
-      {showCurrentStreakBadge && (
-        <motion.div
-          className={
-            isWeb
-              ? "absolute left-1/2 -bottom-1.5 z-10 -translate-x-1/2"
-              : "absolute left-1/2 -bottom-1 z-10 -translate-x-1/2"
-          }
-          initial={heroEntranceAnim ? { opacity: 0, y: 4 } : false}
-          animate={
-            !heroEntranceAnim
-              ? { opacity: 1, y: 0 }
-              : innerMotionOn && streakReveal
-                ? { opacity: 1, y: 0 }
-                : { opacity: 0, y: 4 }
-          }
-          transition={{
-            duration: 0.32,
-            ease: [0.16, 0.82, 0.32, 1],
-          }}
-        >
-          <div className="inline-flex whitespace-nowrap rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-bold text-yellow-300 shadow-[0_6px_14px_rgba(0,0,0,0.4)] backdrop-blur">
-            <Flame className="h-3 w-3 text-orange-400" />
-            <span className="ml-0.5 tabular-nums">{streakShown}</span>
-            <span className="ml-0.5">
-              {currentStreakLabel ??
-                (language === "en" ? "Win streak" : "連勝中")}
-            </span>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 
@@ -498,6 +408,29 @@ export default function ProfileHeroCard({
         >
           {displayProfile.displayName}
         </motion.h1>
+        {winStreakBadge ? (
+          <motion.span
+            className={[
+              "inline-flex max-w-[min(100%,9.5rem)] shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold shadow-md sm:max-w-none sm:text-[11px]",
+              winStreakBadge.className,
+            ].join(" ")}
+            initial={nameMotion.initial}
+            animate={nameMotion.animate}
+            transition={nameMotion.transition}
+            title={winStreakBadge.label}
+          >
+            <Flame
+              className={[
+                "h-3 w-3 shrink-0",
+                winStreakBadge.iconClassName,
+              ].join(" ")}
+              aria-hidden
+            />
+            <span className="min-w-0 truncate tabular-nums">
+              {winStreakBadge.label}
+            </span>
+          </motion.span>
+        ) : null}
         {showProBadge ? (
           <ProCyberBadge
             initial={nameMotion.initial}
@@ -677,6 +610,14 @@ export default function ProfileHeroCard({
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
+      {streakSweep ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-xl result-card-streak-sweep"
+          aria-hidden
+        >
+          <div className="result-card-streak-sweep__spin" />
+        </div>
+      ) : null}
       {body}
     </motion.div>
   );

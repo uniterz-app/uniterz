@@ -28,6 +28,7 @@ import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { getWinStreakBadge } from "@/lib/ui/winStreakBadge";
 
 type Props = {
   post: PredictionPostV2;
@@ -128,47 +129,6 @@ function getMobileTeamName(
   return [l1, l2].filter(Boolean).join(" ");
 }
 
-function getStreakBadge(activeWinStreak: unknown, language: Language): {
-  label: string;
-  className: string;
-  iconClassName: string;
-} | null {
-  const v =
-    typeof activeWinStreak === "number" && Number.isFinite(activeWinStreak)
-      ? Math.floor(activeWinStreak)
-      : 0;
-
-  if (v < 3) return null;
-
-  const m = t(language);
-  const label = language === "en" ? `${v} ${m.results.winStreakLabel}` : `${v}${m.results.winStreakLabel}`;
-
-  if (v >= 7) {
-    return {
-      label,
-      className:
-        "bg-linear-to-r from-red-600 via-red-500 to-orange-500 text-white border border-red-300/70 shadow-[0_0_18px_rgba(239,68,68,0.5)]",
-      iconClassName: "text-yellow-200",
-    };
-  }
-
-  if (v >= 5) {
-    return {
-      label,
-      className:
-        "bg-linear-to-r from-orange-500 via-amber-500 to-red-500 text-white border border-orange-200/70 shadow-[0_0_16px_rgba(249,115,22,0.42)]",
-      iconClassName: "text-yellow-100",
-    };
-  }
-
-  return {
-    label,
-    className:
-      "bg-linear-to-r from-yellow-300 via-amber-300 to-orange-400 text-black border border-yellow-100/80 shadow-[0_0_14px_rgba(250,204,21,0.38)]",
-      iconClassName: "text-red-500",
-    };
-}
-
 function ResultMatchHeader({
   post,
   language = "ja",
@@ -247,7 +207,7 @@ function ResultMatchHeader({
 
   const activeWinStreak =
     toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getStreakBadge(activeWinStreak, language);
+  const streakBadge = getWinStreakBadge(activeWinStreak, language);
 
   let badge: "hit" | "upset" | "miss" | "streak" | null = null;
   if ((post.stats as any)?.upsetHit) badge = "upset";

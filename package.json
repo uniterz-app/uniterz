@@ -31,7 +31,12 @@
     "badges:po2:grant-test": "tsx scripts/grant-po-2026-2nd-round-badges-test.ts",
     "badges:po2:grant:dry": "DRY_RUN=1 tsx scripts/grant-po-2026-2nd-round-total-points-badges.ts",
     "badges:po2:grant": "tsx scripts/grant-po-2026-2nd-round-total-points-badges.ts",
-    "badges:po2:revoke-test": "tsx scripts/revoke-po-2026-2nd-round-test-grants.ts"
+    "badges:po2:revoke-test": "tsx scripts/revoke-po-2026-2nd-round-test-grants.ts",
+    "badges:pocf:seed": "tsx scripts/seed-po-2026-cf-badges.ts",
+    "badges:pocf:grant-test": "tsx scripts/grant-po-2026-cf-badges-test.ts",
+    "badges:pocf:revoke-test": "tsx scripts/revoke-po-2026-cf-test-grants.ts",
+    "badges:pocf:grant:dry": "DRY_RUN=1 tsx scripts/grant-po-2026-cf-total-points-badges.ts",
+    "badges:pocf:grant": "tsx scripts/grant-po-2026-cf-total-points-badges.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -23,6 +23,7 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { communityMetricToMobile } from "@/lib/communities/leaderboardDisplayRow";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
@@ -609,7 +610,7 @@ export default function CommunityGroupDetailView({
                       role="link"
                       tabIndex={0}
                       onClick={() => {
-                        const handleOrUid = r.handle || r.uid;
+                        const handleOrUid = profilePathKeyFromRow(r);
                         const base = variant === "web" ? "/web" : "/mobile";
                         const href = profileHrefWithRankingsReturn(
                           pathname,
@@ -625,7 +626,7 @@ export default function CommunityGroupDetailView({
                       onKeyDown={(e) => {
                         if (e.key !== "Enter" && e.key !== " ") return;
                         e.preventDefault();
-                        const handleOrUid = r.handle || r.uid;
+                        const handleOrUid = profilePathKeyFromRow(r);
                         const base = variant === "web" ? "/web" : "/mobile";
                         const href = profileHrefWithRankingsReturn(
                           pathname,

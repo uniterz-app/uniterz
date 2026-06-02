@@ -27,6 +27,7 @@ import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracket
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 
 type Props = {
   season?: string;
@@ -165,7 +166,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
 
   const openProfileFromSheet = useCallback(
     (row: BracketLeaderboardRow) => {
-      const handleOrUid = row.handle || row.uid;
+      const handleOrUid = profilePathKeyFromRow(row);
       const base = isMobile ? "/mobile" : "/web";
       const href = profileHrefWithRankingsReturn(
         pathname,

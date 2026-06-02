@@ -22,6 +22,7 @@ import {
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { Crown } from "lucide-react";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
+import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
@@ -474,7 +475,7 @@ export default function TopPodium({
           const profileHref = profileHrefWithRankingsReturn(
             pathname,
             base,
-            row.handle || row.uid,
+            profilePathKeyFromRow(row),
             { metric, phase: phaseForReturn, playoffRound, rankingLeague, wcStage }
           );
           return (

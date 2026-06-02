@@ -106,7 +106,6 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { nameBebas } from "@/lib/fonts";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import {
-  getProfileActiveStreakBadgeLabel,
   getProfileMaxStreakLabels,
   getProfileStatsTitle,
 } from "@/lib/profile/profileStatsDisplay";
@@ -212,17 +211,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
     () => getProfileMaxStreakLabels(props.profileStatsContext, language),
     [language, props.profileStatsContext]
   );
-  const activeStreakBadgeLabel = useMemo(
-    () => getProfileActiveStreakBadgeLabel(props.profileStatsContext, language),
-    [language, props.profileStatsContext]
-  );
-
   const maxStreak = profile.maxStreak ?? 0;
-  const currentStreak = Math.max(
-    0,
-    (profile as any)?.currentStreak ?? 0
-  );
-  const showCurrentStreakBadge = currentStreak >= 3;
+  const currentStreak = Math.max(0, (profile as { currentStreak?: number }).currentStreak ?? 0);
 
   const proSummaryTotal = 5;
   const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}`;
@@ -277,9 +267,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           avatarUrl: profile.avatarUrl,
         }}
         showProBadge={isProView}
-        showCurrentStreakBadge={showCurrentStreakBadge}
         currentStreak={currentStreak}
-        currentStreakLabel={activeStreakBadgeLabel}
         canOpenSettings={canOpenSettings}
         onOpenSettings={() => setDrawerOpen(true)}
         menuUnreadCount={isMe ? menuUnreadCount : 0}

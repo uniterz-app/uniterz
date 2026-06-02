@@ -19,6 +19,7 @@ import {
 } from "@/app/component/common/ProCyberBadge";
 import { Crown } from "lucide-react";
 import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
+import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 
 /* =========================
  * Medal
@@ -488,7 +489,7 @@ export default function MonthlyTopPodium({
           return (
             <Link
               key={row.uid}
-              href={`${base}/u/${row.handle || row.uid}`}
+              href={`${base}/u/${profilePathKeyFromRow(row)}`}
               className="relative block"
             >
               {rank === 1 ? (
