@@ -99,7 +99,7 @@ const ja = {
     maxWinStreak: "最大連勝",
     statsTitlePlayoffs2026: "2026 NBA PLAYOFFS STATS",
     statsTitleWcStage2026: "2026 WORLD CUP STAGE STATS",
-    maxWinStreakPlayoffs: "プレーオフ最大連勝",
+    maxWinStreakPlayoffs: "PO最大連勝",
     maxWinStreakPlayoffsSubtitle: "2026 プレーオフ",
     maxWinStreakPlayoffsTooltip:
       "2026年NBAプレーオフ期間の確定試合における最長連勝です。",
