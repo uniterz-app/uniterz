@@ -23,13 +23,13 @@ import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { mergePlayoffSeriesPeersForWindowGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { getWcGamesPageQueryRange } from "@/lib/wc/wcGamesPageScheduleWindow";
 
-/** アンカー±3日（計7暦日）分の取得上限 */
+/** アンカー±10日（計21暦日）分の取得上限 */
 const GAME_DAYS_WINDOW_QUERY_LIMIT = 200;
 /** W杯: 一窓で本戦＋近接シード分を取得（件数多め） */
 const WC_GAMES_PAGE_WINDOW_LIMIT = 500;
 
-/** 日付ストリップ用：アンカーの前後に含める暦日数（今日含め前後3日＝計7日） */
-const GAME_DAYS_PLUS_MINUS = 3;
+/** 日付ストリップ用：アンカーの前後に含める暦日数（前後10日＝計21日） */
+const GAME_DAYS_PLUS_MINUS = 10;
 
 /** 月内の games 行から、タイムゾーン基準の「試合がある日」を重複なく昇順で返す */
 export function monthRowsToSortedGameDays(
@@ -69,8 +69,8 @@ const gameDaysRowsCache = new Map<
 
 /**
  * 試合がある日の一覧（日付ストリップ用）。
- * - 通常: アンカー日の暦日 ±3 日分を Firestore から取得
- * - World Cup: 本戦期間（タイムゾーン別に 2026-05-01〜07 月頃まで）を一窓で取得（今日±3 では遠い試合が落ちるため）
+ * - 通常: アンカー日の暦日 ±10 日分を Firestore から取得
+ * - World Cup: 本戦期間（タイムゾーン別に 2026-05-01〜07 月頃まで）を一窓で取得（狭い窓では遠い試合が落ちるため）
  */
 export function useGameDays(
   rawLeague: League,
@@ -89,7 +89,7 @@ export function useGameDays(
     [league, timeZone],
   );
 
-  /** WC はアンカー日と無関係に固定窓の 1 クエリ。それ以外は ±3 日でアンカー依存 */
+  /** WC はアンカー日と無関係に固定窓の 1 クエリ。それ以外は ±10 日でアンカー依存 */
   const fetchDepsKey = useMemo(() => {
     if (league === "wc") return wcWindowCacheKey;
     return `${league}|${timeZone}|${anchorDateKey}|pm${GAME_DAYS_PLUS_MINUS}`;

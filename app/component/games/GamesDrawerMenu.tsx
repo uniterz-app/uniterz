@@ -12,14 +12,28 @@ type Props = {
   variant?: "mobile" | "web";
   language: Language;
   league: League;
+  /** W杯追加の周知用（未確認時のみ） */
+  showWcNewBadge?: boolean;
   onSelectNba: () => void;
   onSelectWorldCup: () => void;
 };
+
+function WcNewBadge() {
+  return (
+    <span
+      className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[11px] font-black leading-none text-amber-950 shadow-[0_0_12px_rgba(251,191,36,0.45)]"
+      aria-hidden
+    >
+      !
+    </span>
+  );
+}
 
 export default function GamesDrawerMenu({
   variant = "web",
   language,
   league,
+  showWcNewBadge = false,
   onSelectNba,
   onSelectWorldCup,
 }: Props) {
@@ -61,6 +75,7 @@ export default function GamesDrawerMenu({
           icon={Globe2}
           labelStyle={menuLabelFont}
           onClick={onSelectWorldCup}
+          trailing={showWcNewBadge ? <WcNewBadge /> : undefined}
           className={wcActive ? "ring-1 ring-cyan-300/35" : undefined}
         >
           <span className={cn(language !== "ja" && "uppercase")}>{m.games.worldCup}</span>

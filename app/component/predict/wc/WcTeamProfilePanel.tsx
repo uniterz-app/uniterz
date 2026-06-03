@@ -9,7 +9,15 @@ import {
   type WcTeamProfile,
 } from "@/lib/wc/teams";
 import { teamIdToCountryName } from "@/lib/wc/wcCountry";
-import { getWcRoster, type WcRosterPlayer } from "@/lib/wc/rosters";
+import {
+  formatLeagueCountryName,
+  getClubLeagueIso2,
+} from "@/lib/wc/clubLeagueCountry";
+import {
+  getWcKeyPlayers,
+  isWcCaptainUnconfirmed,
+  type WcKeyPlayer,
+} from "@/lib/wc/rosters";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
@@ -40,14 +48,12 @@ export default function WcTeamProfilePanel({
       <TeamCard
         teamId={homeTeamId}
         fallbackName={homeName}
-        side="home"
         language={language}
         isMobile={isMobile}
       />
       <TeamCard
         teamId={awayTeamId}
         fallbackName={awayName}
-        side="away"
         language={language}
         isMobile={isMobile}
       />
@@ -58,13 +64,11 @@ export default function WcTeamProfilePanel({
 function TeamCard({
   teamId,
   fallbackName,
-  side,
   language,
   isMobile,
 }: {
   teamId: string;
   fallbackName: string;
-  side: "home" | "away";
   language: Language;
   isMobile: boolean;
 }) {
@@ -72,11 +76,7 @@ function TeamCard({
   const profile = getWcTeamProfile(teamId);
   const displayName =
     teamIdToCountryName(teamId, language === "ja" ? "ja" : "en") ?? fallbackName ?? "—";
-  const roster = getWcRoster(teamId);
-
-  const sideLabel = side === "home"
-    ? m.predict.home.toUpperCase()
-    : m.predict.away.toUpperCase();
+  const keyPlayers = getWcKeyPlayers(teamId);
 
   return (
     <div
@@ -89,9 +89,6 @@ function TeamCard({
       <div className="flex items-center gap-3">
         <CountryFlag teamId={teamId} className="w-[3.5rem] h-[2.4rem]" />
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">
-            {sideLabel}
-          </div>
           <div className="truncate text-base font-bold leading-tight text-white">
             {displayName}
           </div>
@@ -159,6 +156,12 @@ function TeamCard({
             value={profile.manager}
           />
         ) : null}
+        {isWcCaptainUnconfirmed(teamId) ? (
+          <MetaRow
+            label={m.wc.captainLabel}
+            value={m.wc.captainNotConfirmed}
+          />
+        ) : null}
         {profile?.lastWcResult ? (
           <MetaRow
             label={m.wc.lastWorldCup}
@@ -168,16 +171,30 @@ function TeamCard({
       </div>
 
       {/* キープレイヤー */}
-      {roster.length > 0 ? (
+      {keyPlayers.length > 0 ? (
         <div className="mt-3">
-          <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">
+          <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white/55">
             {m.wc.keyPlayers}
           </div>
-          <ul className="space-y-1">
-            {roster.slice(0, 6).map((p) => (
-              <RosterRow key={`${p.no}-${p.name}`} player={p} />
-            ))}
-          </ul>
+          <div className="overflow-hidden rounded-lg border border-white/8">
+            <div className="grid grid-cols-[2.25rem_1fr] gap-x-2 border-b border-white/8 bg-white/[0.04] px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/45">
+              <span>{m.wc.keyPlayerPos}</span>
+              <span>
+                {m.wc.keyPlayerName}
+                <span className="mx-1 font-normal text-white/30">·</span>
+                {m.wc.keyPlayerClub}
+              </span>
+            </div>
+            <ul className="divide-y divide-white/6">
+              {keyPlayers.map((p) => (
+                <KeyPlayerRow
+                  key={`${p.pos}-${p.name}`}
+                  player={p}
+                  language={language}
+                />
+              ))}
+            </ul>
+          </div>
         </div>
       ) : null}
     </div>
@@ -232,32 +249,62 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RosterRow({
+function KeyPlayerRow({
   player,
+  language,
 }: {
-  player: WcRosterPlayer;
+  player: WcKeyPlayer;
+  language: Language;
 }) {
+  const m = t(language);
+  const leagueIso2 = getClubLeagueIso2(player.club, player.leagueIso2);
+  const leagueLabel = leagueIso2
+    ? formatLeagueCountryName(leagueIso2, language)
+    : null;
+
   return (
-    <li className="flex items-center gap-2 text-[12px] text-white/85">
-      <span className="inline-flex h-5 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 text-[10px] font-bold tabular-nums text-white/85">
-        {player.no}
-      </span>
-      <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-white/8 px-1.5 text-[9.5px] font-bold uppercase tracking-wider text-white/65">
+    <li className="grid grid-cols-[2.25rem_1fr] items-center gap-x-2 px-2 py-2 text-[12px] text-white/85">
+      <span className="inline-flex h-5 shrink-0 items-center justify-center rounded-md bg-white/8 text-[9.5px] font-bold uppercase tracking-wider text-white/70">
         {player.pos}
       </span>
-      <span className="truncate font-semibold text-white">
-        {player.name}
-        {player.captain ? (
-          <span className="ml-1 inline-flex h-3.5 items-center rounded-sm bg-amber-300/85 px-1 text-[8px] font-extrabold text-black/85">
-            C
-          </span>
-        ) : null}
-      </span>
-      {player.club ? (
-        <span className="ml-auto truncate text-[10.5px] text-white/55">
-          {player.club}
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="flex min-w-0 shrink items-center gap-1">
+          <span className="truncate font-semibold text-white">{player.name}</span>
+          {player.captain ? (
+            <span
+              className="shrink-0 rounded-sm bg-amber-300/90 px-1 py-px text-[8px] font-extrabold uppercase text-black/85"
+              title={m.wc.keyPlayerCaptain}
+            >
+              {m.wc.keyPlayerCaptainShort}
+            </span>
+          ) : null}
         </span>
-      ) : null}
+        {player.club ? (
+          <>
+            <span className="shrink-0 text-[10px] text-white/35" aria-hidden>
+              ·
+            </span>
+            <span
+              className="flex min-w-0 items-center gap-1 text-[10.5px] text-white/55"
+              title={
+                leagueLabel
+                  ? `${player.club} (${leagueLabel})`
+                  : player.club
+              }
+            >
+              {leagueIso2 ? (
+                <CountryFlag
+                  iso2={leagueIso2}
+                  decorative
+                  variant="inline"
+                  className="aspect-[4/3] w-[0.9rem] shrink-0"
+                />
+              ) : null}
+              <span className="min-w-0 truncate">{player.club}</span>
+            </span>
+          </>
+        ) : null}
+      </div>
     </li>
   );
 }

@@ -643,6 +643,13 @@ const pt: Messages = {
     managerLabel: "Técnico",
     lastWorldCup: "Última Copa",
     keyPlayers: "Jogadores-chave",
+    keyPlayerPos: "POS",
+    keyPlayerName: "Nome",
+    keyPlayerClub: "Clube",
+    keyPlayerCaptain: "Capitão",
+    keyPlayerCaptainShort: "C",
+    captainLabel: "Capitão",
+    captainNotConfirmed: "Não confirmado oficialmente",
   },
 
   countries: {

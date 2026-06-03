@@ -649,6 +649,13 @@ const ar: Messages = {
     managerLabel: "المدرب",
     lastWorldCup: "آخر بطولة",
     keyPlayers: "اللاعبون الرئيسيون",
+    keyPlayerPos: "POS",
+    keyPlayerName: "Name",
+    keyPlayerClub: "Club",
+    keyPlayerCaptain: "Captain",
+    keyPlayerCaptainShort: "C",
+    captainLabel: "Captain",
+    captainNotConfirmed: "Not officially confirmed",
   },
 
   countries: {

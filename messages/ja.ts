@@ -649,6 +649,13 @@ const ja = {
     managerLabel: "監督",
     lastWorldCup: "直近大会",
     keyPlayers: "キープレイヤー",
+    keyPlayerPos: "POS",
+    keyPlayerName: "名前",
+    keyPlayerClub: "所属",
+    keyPlayerCaptain: "キャプテン",
+    keyPlayerCaptainShort: "C",
+    captainLabel: "キャプテン",
+    captainNotConfirmed: "公式未確定",
   },
 
   countries: {

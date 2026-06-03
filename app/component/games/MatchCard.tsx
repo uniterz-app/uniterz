@@ -121,6 +121,8 @@ homeRecord?: {
   heavyListEntry?: boolean;
   /** ルート要素に付与（例: VT ゴースト行の invisible） */
   className?: string;
+  /** W杯など試合数が少ない一覧向けの超コンパクト表示 */
+  compact?: boolean;
 };
 
 
@@ -246,6 +248,7 @@ function MatchCard({
   disableCardMotion = false,
   scheduleEntryIndex,
   heavyListEntry = true,
+  compact = false,
 }: MatchCardProps) {
   const router = useRouter();
 
@@ -265,8 +268,8 @@ const isPredicted = !!myPostId;
 const prefix = useSectionPrefix();
 const pathname = usePathname();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
-  /** モバイルの試合一覧（dense）：カード幅・ラウンド帯のレイアウト調整用 */
-  const mobileDense = dense && isMobile;
+  /** モバイル dense / W杯コンパクト一覧 */
+  const mobileDense = (dense && isMobile) || (compact && league === "wc");
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const showPlayoffSeriesRow =
     isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
@@ -774,7 +777,7 @@ return (
     !isMobile && !disableCardMotion && !sharedTransitionBaseKey
   }
   layoutId={isMobile ? undefined : sharedLayoutId}
-  initial={entryTransition ? { scale: 0.972, opacity: 0.92 } : false}
+  initial={entryTransition ? { scale: 0.992, opacity: 1 } : false}
   animate={
     entryTransition
       ? { scale: cardShellPressScale, opacity: 1 }

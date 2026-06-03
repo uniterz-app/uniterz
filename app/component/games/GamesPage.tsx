@@ -50,6 +50,10 @@ import {
 } from "./cyberMotion";
 import { fetchMonthHasGames } from "@/lib/games/fetchMonthHasGames";
 import {
+  markWcGamesTabAnnouncementSeen,
+  readWcGamesTabAnnouncementSeen,
+} from "@/lib/games/wcTabAnnouncementSeen";
+import {
   fetchNextGameDayAfterLocalDay,
   fetchPreviousGameDayBeforeLocalDay,
 } from "@/lib/games/fetchNextGameDayAfter";
@@ -129,7 +133,22 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ========================= */
   const [league, setLeague] = useState<League>("nba");
   const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
+  const [showWcTabBadge, setShowWcTabBadge] = useState(false);
   const didInitLeague = useRef(false);
+
+  useEffect(() => {
+    setShowWcTabBadge(!readWcGamesTabAnnouncementSeen());
+  }, []);
+
+  const dismissWcTabBadge = useCallback(() => {
+    markWcGamesTabAnnouncementSeen();
+    setShowWcTabBadge(false);
+  }, []);
+
+  useEffect(() => {
+    if (league !== "wc") return;
+    dismissWcTabBadge();
+  }, [league, dismissWcTabBadge]);
 
   // user_stats は後追いのみ。初回描画をブロックしない（試合カレンダーと並列で速く見せる）
   useEffect(() => {
@@ -218,7 +237,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   }, [dayTimeZone, league, selectedByLeague, todayKey]);
 
   /* =========================
-     Game days（アンカー日の暦日±3日＝計7日分を取得しストリップ用）
+     Game days（アンカー日の暦日±10日を取得しストリップ用）
   ========================= */
   const { gameDays, monthRows, peerRowsForSeriesInference, loading: loadingDays } =
     useGameDays(league, dayTimeZone, anchorForGameDays);
@@ -678,7 +697,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   ]);
 
   /**
-   * 今日に試合が無く、かつ近傍ウィンドウ（±3日）にも試合が無いときは
+   * 今日に試合が無く、かつ近傍ウィンドウ（±10日）にも試合が無いときは
    * 次の試合日へ、無ければ直近の過去試合日へ自動ジャンプする。
    */
   useEffect(() => {
@@ -913,10 +932,18 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         <button
           type="button"
           onClick={() => setGamesDrawerOpen(true)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
           aria-label={m.games.openMenu}
         >
           <Menu className="h-5 w-5" strokeWidth={2.25} />
+          {showWcTabBadge ? (
+            <span
+              className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+              aria-hidden
+            >
+              !
+            </span>
+          ) : null}
         </button>
         <span
           className={[
@@ -1097,6 +1124,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           variant={isMobile ? "mobile" : "web"}
           language={language}
           league={league}
+          showWcNewBadge={showWcTabBadge}
           onSelectNba={() => {
             didInitLeague.current = true;
             setLeague("nba");
@@ -1110,6 +1138,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
             setGamesDrawerOpen(false);
           }}
           onSelectWorldCup={() => {
+            dismissWcTabBadge();
             didInitLeague.current = true;
             setLeague("wc");
             const params = new URLSearchParams(searchParams.toString());

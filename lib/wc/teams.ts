@@ -625,8 +625,8 @@ const WC_TEAM_PROFILES: Record<string, WcTeamProfile> = {
     nickname: { en: "Three Lions", ja: "スリー・ライオンズ" },
     confederation: "UEFA",
     description: {
-      en: "Recent years have stacked up World Cup semifinals and Euro final runs without lifting silverware. Harry Kane, Jude Bellingham, Bukayo Saka and Phil Foden head one of the best attacks in the world. A near-golden generation arrives with the highest of expectations; the goal is a first World Cup since 1966.",
-      ja: "近年はW杯ベスト4、EURO決勝進出など結果を積み上げているが、タイトルには届いていない。Harry Kane、Jude Bellingham、Bukayo Saka、Phil Fodenらを擁し、攻撃陣は世界最高級。黄金世代に近い陣容で、期待値は非常に高い。目標は1966年以来のW杯優勝。",
+      en: "Recent years have stacked up World Cup semifinals and Euro final runs without lifting silverware. Harry Kane, Jude Bellingham and Bukayo Saka head one of the best attacks in the world. A near-golden generation arrives with the highest of expectations; the goal is a first World Cup since 1966.",
+      ja: "近年はW杯ベスト4、EURO決勝進出など結果を積み上げているが、タイトルには届いていない。Harry Kane、Jude Bellingham、Bukayo Sakaらを擁し、攻撃陣は世界最高級。黄金世代に近い陣容で、期待値は非常に高い。目標は1966年以来のW杯優勝。",
     },
     fifaRank: 4,
     wcAppearances: 16,

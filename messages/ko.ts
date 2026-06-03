@@ -631,6 +631,13 @@ const ko: Messages = {
     managerLabel: "감독",
     lastWorldCup: "최근 대회",
     keyPlayers: "핵심 선수",
+    keyPlayerPos: "POS",
+    keyPlayerName: "이름",
+    keyPlayerClub: "소속",
+    keyPlayerCaptain: "주장",
+    keyPlayerCaptainShort: "C",
+    captainLabel: "주장",
+    captainNotConfirmed: "공식 미확정",
   },
   countries: {
     US: "미국", JP: "일본", CN: "중국", KR: "대한민국", TW: "대만", HK: "홍콩",

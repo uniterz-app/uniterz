@@ -176,11 +176,11 @@ function StandingsTable({
                 <td className="px-1.5 py-1.5 text-left text-white/55 tabular-nums">
                   {idx + 1}
                 </td>
-                <td className="px-1 py-1.5">
-                  <div className="flex items-center gap-1.5">
+                <td className="overflow-visible px-1 py-1.5">
+                  <div className="flex items-center gap-1.5 overflow-visible">
                     <CountryFlag
                       teamId={r.teamId}
-                      className="w-[1.5rem] h-[1rem] shrink-0"
+                      variant="inline"
                     />
                     <span
                       className={[
@@ -258,7 +258,6 @@ function FifaRankCompare({
   awayTeamId: string;
   language: Language;
 }) {
-  const m = t(language);
   const home = getWcTeamProfile(homeTeamId);
   const away = getWcTeamProfile(awayTeamId);
 
@@ -268,14 +267,12 @@ function FifaRankCompare({
         teamId={homeTeamId}
         rank={home?.fifaRank}
         prevRank={home?.fifaRankPrev}
-        sideLabel={m.predict.home}
         language={language}
       />
       <FifaRankCard
         teamId={awayTeamId}
         rank={away?.fifaRank}
         prevRank={away?.fifaRankPrev}
-        sideLabel={m.predict.away}
         language={language}
       />
     </div>
@@ -286,13 +283,11 @@ function FifaRankCard({
   teamId,
   rank,
   prevRank,
-  sideLabel,
   language,
 }: {
   teamId: string;
   rank: number | undefined;
   prevRank: number | undefined;
-  sideLabel: string;
   language: Language;
 }) {
   const name = teamIdToCountryName(teamId, language === "ja" ? "ja" : "en") ?? teamId;
@@ -302,14 +297,13 @@ function FifaRankCard({
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.025] p-2.5">
       <div className="flex items-center gap-2">
-        <CountryFlag teamId={teamId} className="w-[2rem] h-[1.35rem]" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-white/55">
-            {sideLabel}
-          </div>
-          <div className="truncate text-[12px] font-bold text-white">
-            {name}
-          </div>
+        <CountryFlag
+          teamId={teamId}
+          variant="inline"
+          className="h-[1.5rem] w-[2rem]"
+        />
+        <div className="min-w-0 flex-1 truncate text-[12px] font-bold text-white">
+          {name}
         </div>
       </div>
 

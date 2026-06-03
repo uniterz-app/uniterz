@@ -631,6 +631,13 @@ const zh: Messages = {
     managerLabel: "主教练",
     lastWorldCup: "最近一届",
     keyPlayers: "关键球员",
+    keyPlayerPos: "位置",
+    keyPlayerName: "姓名",
+    keyPlayerClub: "俱乐部",
+    keyPlayerCaptain: "队长",
+    keyPlayerCaptainShort: "C",
+    captainLabel: "队长",
+    captainNotConfirmed: "尚未官方确认",
   },
   countries: {
     US: "美国",
