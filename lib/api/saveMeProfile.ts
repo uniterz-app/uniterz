@@ -11,6 +11,8 @@ import {
   dispatchCumulativeRankingPatchMyCountry,
   persistRankCountrySessionOverride,
 } from "@/lib/rankings/cumulativeRankingInvalidate";
+import type { PreferredLeague } from "@/lib/user/preferredLeague";
+import { invalidateUserDocCache } from "@/lib/user/userDocCache";
 
 /** 本人 users/{uid} のプロフィール欄をサーバー（Admin SDK）経由で merge 保存する */
 export type SaveMeProfilePayload = {
@@ -23,6 +25,8 @@ export type SaveMeProfilePayload = {
   photoCropY?: number;
   /** true のとき onboardingCompletedAt をサーバー時刻で付与 */
   completeOnboarding?: boolean;
+  /** オンボーディングで選択したメインリーグ（nba / wc） */
+  preferredLeague?: PreferredLeague;
 };
 
 export async function saveMeProfile(payload: SaveMeProfilePayload): Promise<void> {
@@ -52,4 +56,5 @@ export async function saveMeProfile(payload: SaveMeProfilePayload): Promise<void
   persistRankCountrySessionOverride(user.uid, payload.countryCode);
   dispatchCumulativeRankingPatchMyCountry(user.uid, payload.countryCode);
   dispatchCumulativeRankingInvalidate();
+  invalidateUserDocCache(user.uid);
 }

@@ -557,6 +557,7 @@ const ko: Messages = {
     predictNextNo: "아니오 (일정으로 돌아가기)",
     rulesFootNote: "랭킹은 일정에 따라 업데이트됩니다—랭킹 탭을 확인하세요.",
     rulesStart: "예측 시작",
+    scoringRulesChip: "채점 규칙",
   },
   gambling: {
     forbiddenChars: "사용할 수 없는 문자가 포함되어 있습니다.",

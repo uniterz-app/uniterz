@@ -557,6 +557,7 @@ const zh: Messages = {
     predictNextNo: "否（返回赛程）",
     rulesFootNote: "排名按计划更新——请查看排名标签页。",
     rulesStart: "开始预测",
+    scoringRulesChip: "评分规则",
   },
   gambling: {
     forbiddenChars: "输入包含不允许的字符。",

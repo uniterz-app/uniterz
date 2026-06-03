@@ -567,6 +567,7 @@ const de: Messages = {
     predictNextNo: "Nein (zurück zum Spielplan)",
     rulesFootNote: "Rankings werden planmäßig aktualisiert — siehe den Rankings-Tab.",
     rulesStart: "Vorhersage starten",
+    scoringRulesChip: "Bewertungsregeln",
   },
 
   gambling: {

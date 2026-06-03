@@ -27,6 +27,8 @@ import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import type { League } from "@/lib/leagues";
+import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
+import { preferredLeagueToGamesLeague } from "@/lib/user/preferredLeague";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { loadPlayoffBracket } from "@/lib/playoff-bracket-firestore";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
@@ -135,6 +137,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
   const [showWcTabBadge, setShowWcTabBadge] = useState(false);
   const didInitLeague = useRef(false);
+  const { preferredLeague, ready: preferredLeagueReady } =
+    useUserPreferredLeague(user?.uid);
 
   useEffect(() => {
     setShowWcTabBadge(!readWcGamesTabAnnouncementSeen());
@@ -156,10 +160,18 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
     const resolveInitialLeague = async () => {
       if (didInitLeague.current) return;
+      if (!preferredLeagueReady) return;
 
       const user = auth.currentUser;
       if (!user) {
         if (!alive) return;
+        didInitLeague.current = true;
+        return;
+      }
+
+      if (preferredLeague) {
+        if (!alive) return;
+        setLeague(preferredLeagueToGamesLeague(preferredLeague));
         didInitLeague.current = true;
         return;
       }
@@ -209,7 +221,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [preferredLeague, preferredLeagueReady]);
 
   /** B リーグタブ非表示中は bj を選べない。状態が bj のままなら NBA に戻す */
   useLayoutEffect(() => {

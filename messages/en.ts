@@ -574,6 +574,7 @@ const en: Messages = {
     predictNextNo: "No (back to schedule)",
     rulesFootNote: "Rankings update on a schedule—see the Rankings tab.",
     rulesStart: "Start predicting",
+    scoringRulesChip: "Grading rules",
   },
 
   gambling: {

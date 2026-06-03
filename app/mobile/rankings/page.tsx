@@ -60,9 +60,12 @@ import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { Menu } from "lucide-react";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useApplyPreferredRankingLeague } from "@/lib/hooks/useApplyPreferredRankingLeague";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
+  const { fUser } = useFirebaseUser();
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
@@ -147,6 +150,10 @@ export default function MobileRankingsPage() {
     const stage = searchParams.get(RANKINGS_TAB_WC_STAGE_PARAM);
     if (isWcRankingStage(stage)) setWcStage(stage);
   }, [searchParams]);
+
+  useApplyPreferredRankingLeague(fUser?.uid, searchParams, setRankingLeague, () =>
+    setCategory("playoffs")
+  );
 
   useEffect(() => {
     if (!visibleMetrics.includes(metric)) {

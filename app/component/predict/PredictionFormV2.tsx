@@ -41,6 +41,7 @@ import {
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
 
 /* ======================
    Motion
@@ -1247,9 +1248,16 @@ export default function PredictionFormV2({
 
         {overlayFormLayout.showScoreForm ? (
           <>
-            <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
-              <div className="text-sm font-semibold text-white/88">
-                {m.predict.scorePrediction}
+            <motion.div variants={fadeUp} className={`space-y-4 pt-1 ${glassCard}`}>
+              <div className="flex items-center justify-between gap-4 px-0.5">
+                <div className="min-w-0 text-sm font-semibold text-white/88">
+                  {m.predict.scorePrediction}
+                </div>
+                <PredictionScoringRulesChip
+                  league={game.league}
+                  language={language}
+                  size={isMobile ? "mobile" : "web"}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

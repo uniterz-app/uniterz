@@ -22,6 +22,8 @@ import { ALL_LANGUAGES, LANGUAGE_NATIVE_NAMES, guessLanguageFromNavigator } from
 import { ui as uiStr } from "@/lib/i18n/ui";
 import { saveMeProfile } from "@/lib/api/saveMeProfile";
 import { consumePostOnboardingRedirect } from "@/lib/auth/safeNextRedirect";
+import { LEAGUES } from "@/lib/leagues";
+import type { PreferredLeague } from "@/lib/user/preferredLeague";
 import {
   isProfileGamblingTermsError,
   profileGamblingTermsUserMessage,
@@ -45,6 +47,9 @@ export default function OnboardingForm({ variant }: Props) {
     guessLanguageFromNavigator()
   );
   const [countryCode, setCountryCode] = useState("");
+  const [preferredLeague, setPreferredLeague] = useState<PreferredLeague | null>(
+    null
+  );
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [pressed, setPressed] = useState(false);
@@ -63,7 +68,8 @@ export default function OnboardingForm({ variant }: Props) {
   const bodySans =
     "font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-white/85";
 
-  const canSubmit = displayName.trim().length > 0;
+  const canSubmit =
+    displayName.trim().length > 0 && preferredLeague !== null;
   const formWidth = resolvedVariant === "mobile" ? 320 : 380;
   const selectedCountryHasFlag = countryCode ? Boolean(FLAG_SRC[countryCode]) : false;
 
@@ -103,6 +109,7 @@ export default function OnboardingForm({ variant }: Props) {
         language,
         countryCode: countryCode || null,
         completeOnboarding: true,
+        preferredLeague: preferredLeague ?? undefined,
       });
 
       const gamesPath = resolvedVariant === "mobile" ? "/mobile/games" : "/web/games";
@@ -222,6 +229,57 @@ export default function OnboardingForm({ variant }: Props) {
                   </option>
                 ))}
               </CyberAuthSelect>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-white/75">
+                {uiStr(language, {
+                  ja: "主に予想する大会（必須）",
+                  en: "Main competition (required)",
+                })}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    {
+                      id: LEAGUES.NBA as PreferredLeague,
+                      labelJa: "NBA",
+                      labelEn: "NBA",
+                    },
+                    {
+                      id: LEAGUES.WC as PreferredLeague,
+                      labelJa: "ワールドカップ",
+                      labelEn: "World Cup",
+                    },
+                  ] as const
+                ).map((opt) => {
+                  const active = preferredLeague === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setPreferredLeague(opt.id)}
+                      className={[
+                        "rounded-xl border px-2 py-2.5 text-center text-sm font-semibold transition",
+                        active
+                          ? "border-cyan-400/55 bg-cyan-500/15 text-white shadow-[0_0_20px_rgba(34,211,238,0.15)]"
+                          : "border-white/12 bg-white/[0.04] text-white/65 hover:border-white/22 hover:text-white/85",
+                      ].join(" ")}
+                    >
+                      {uiStr(language, {
+                        ja: opt.labelJa,
+                        en: opt.labelEn,
+                      })}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="font-[family-name:var(--font-geist-sans)] text-xs leading-relaxed text-white/55">
+                {uiStr(language, {
+                  ja: "試合・ランキング・プロフィールの最初の表示に使います。あとから変更できます。",
+                  en: "Used for your initial Games, Rankings, and Profile views. You can change this later.",
+                })}
+              </p>
             </div>
 
             <div className="space-y-1.5">

@@ -569,6 +569,7 @@ const ar: Messages = {
     rulesFootNote:
       "يتم تحديث التصنيفات وفقًا لجدول زمني — راجع علامة التصنيفات.",
     rulesStart: "ابدأ التوقع",
+    scoringRulesChip: "قواعد التقييم",
   },
 
   gambling: {

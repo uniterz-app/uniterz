@@ -1,3 +1,5 @@
+import { footballPaceCategory } from "./footballPaceCategory";
+
 /** 誤差 0→1, 1〜11 で線形減衰, 12+ → 0 */
 function gradientScore(diff: number, zeroAt: number): number {
   if (diff <= 0) return 1;
@@ -50,10 +52,10 @@ export const scorePrecisionRules = {
         total15 += 6;
       }
 
-      /* ---- ② 試合テンポ一致（6） ---- */
-      const tempo = (sum: number) => (sum <= 2 ? "low" : sum === 3 ? "mid" : "high");
-
-      if (tempo(predH + predA) === tempo(actH + actA)) {
+      /* ---- ② 合計ゴール数テンポ一致（6）・総合得点と同区分 ---- */
+      if (
+        footballPaceCategory(predH + predA) === footballPaceCategory(actH + actA)
+      ) {
         total15 += 6;
       }
 

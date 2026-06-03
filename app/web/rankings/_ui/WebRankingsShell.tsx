@@ -47,6 +47,8 @@ import type { RankingsCategory } from "@/app/component/rankings/RankingsCategory
 import { Menu } from "lucide-react";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useApplyPreferredRankingLeague } from "@/lib/hooks/useApplyPreferredRankingLeague";
 
 function getMyMetricValue(metric: MobileMetric, row: any): number {
   if (!row) return 0;
@@ -65,6 +67,7 @@ function getMyMetricValue(metric: MobileMetric, row: any): number {
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
+  const { fUser } = useFirebaseUser();
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
@@ -120,6 +123,10 @@ export default function WebRankingsShell() {
       searchParams.get(RANKINGS_TAB_METRIC_PARAM)
     );
   }, [searchParams, setMetric]);
+
+  useApplyPreferredRankingLeague(fUser?.uid, searchParams, setRankingLeague, () =>
+    setCategory("playoffs")
+  );
 
   useLayoutEffect(() => {
     if (!listReady || !restoreScrollAfterListRef.current) return;

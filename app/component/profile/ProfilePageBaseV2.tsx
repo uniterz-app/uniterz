@@ -21,6 +21,10 @@ import {
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
+import { LEAGUES } from "@/lib/leagues";
+import { preferredLeagueToRankingSource } from "@/lib/user/preferredLeague";
 
 type Props = { handle: string; variant?: "web" | "mobile" };
 
@@ -33,6 +37,9 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     loading,
     targetUid,
   } = useProfile(handle);
+  const { fUser } = useFirebaseUser();
+  const { preferredLeague, ready: preferredLeagueReady } =
+    useUserPreferredLeague(fUser?.uid);
 
   const [tab, setTab] = useState<"overview" | "stats" | "bracket">(
     "overview"
@@ -43,14 +50,34 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     wcStage?: WcRankingStage;
   }>(() => {
     const rawLeague = sp.get(RANKINGS_TAB_LEAGUE_PARAM);
-    const rankingLeague = isRankingLeagueSource(rawLeague) ? rawLeague : "nba";
-    const rawWcStage = sp.get(RANKINGS_TAB_WC_STAGE_PARAM);
-    const wcStage =
-      rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
-        ? rawWcStage
-        : undefined;
-    return { rankingLeague, wcStage };
-  }, [sp]);
+    if (isRankingLeagueSource(rawLeague)) {
+      const rankingLeague = rawLeague;
+      const rawWcStage = sp.get(RANKINGS_TAB_WC_STAGE_PARAM);
+      const wcStage =
+        rankingLeague === "worldcup" && isWcRankingStage(rawWcStage)
+          ? rawWcStage
+          : undefined;
+      return { rankingLeague, wcStage };
+    }
+
+    const isOwnProfile =
+      Boolean(fUser?.uid) &&
+      Boolean(targetUid) &&
+      fUser!.uid === targetUid;
+
+    if (
+      isOwnProfile &&
+      preferredLeagueReady &&
+      preferredLeague === LEAGUES.WC
+    ) {
+      return {
+        rankingLeague: preferredLeagueToRankingSource(preferredLeague),
+        wcStage: "overall" as WcRankingStage,
+      };
+    }
+
+    return { rankingLeague: "nba" as RankingLeagueSource };
+  }, [sp, fUser?.uid, targetUid, preferredLeague, preferredLeagueReady]);
 
   const { stats, summary, summaryRanks, statsLoading, dailyTrend } =
     useUserStatsV2(targetUid, profileStatsContext);

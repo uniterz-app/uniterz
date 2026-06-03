@@ -25,11 +25,6 @@ import {
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
-import PredictionRulesIntroModal from "../predict/PredictionRulesIntroModal";
-import {
-  readPredictionRulesIntroSeen,
-  writePredictionRulesIntroSeen,
-} from "@/lib/predict/predictionRulesIntroPrefs";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -130,11 +125,6 @@ export default function ScheduleList({
   const [openGameId, setOpenGameId] = useState<string | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
   const [disableReturnLayout, setDisableReturnLayout] = useState(false);
-  const [rulesIntroOpen, setRulesIntroOpen] = useState(false);
-  const [pendingGameIdForRules, setPendingGameIdForRules] = useState<
-    string | null
-  >(null);
-
   const pathname = usePathname();
   const isMobile =
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
@@ -315,11 +305,6 @@ export default function ScheduleList({
       scrollYRef.current = window.scrollY;
       setStandingsOpenInOverlay(false);
       setDisableReturnLayout(false);
-      if (!readPredictionRulesIntroSeen()) {
-        setPendingGameIdForRules(String(gameId));
-        setRulesIntroOpen(true);
-        return;
-      }
       const gid = String(gameId);
       if (!vtUi) {
         setOpenGameId(gid);
@@ -340,35 +325,6 @@ export default function ScheduleList({
     },
     [vtUi]
   );
-
-  const handleRulesIntroStart = useCallback(() => {
-    writePredictionRulesIntroSeen();
-    const id = pendingGameIdForRules;
-    setPendingGameIdForRules(null);
-    setRulesIntroOpen(false);
-    if (!id) return;
-    if (!vtUi) {
-      setOpenGameId(id);
-      return;
-    }
-    sharedVtListSourceRef.current = String(id);
-    sharedVtListTargetRef.current = null;
-    flushSync(() => setVtListTransitionNonce((n) => n + 1));
-    startDomViewTransition(
-      () => {
-        flushSync(() => {
-          sharedVtListSourceRef.current = null;
-          setOpenGameId(String(id));
-        });
-      },
-      { skip: false }
-    );
-  }, [pendingGameIdForRules, vtUi]);
-
-  const handleRulesIntroCancel = useCallback(() => {
-    setRulesIntroOpen(false);
-    setPendingGameIdForRules(null);
-  }, []);
 
   const close = useCallback(() => {
     const closingId = openGameId;
@@ -936,18 +892,6 @@ export default function ScheduleList({
           </motion.div>
         </ScheduleSharedTransitionLayout>
       </LayoutGroup>
-
-      {rulesIntroOpen && typeof document !== "undefined"
-        ? createPortal(
-            <PredictionRulesIntroModal
-              open={rulesIntroOpen}
-              language={language}
-              onStart={handleRulesIntroStart}
-              onCancel={handleRulesIntroCancel}
-            />,
-            document.body
-          )
-        : null}
 
       {overlayContent && typeof document !== "undefined"
         ? createPortal(overlayContent, document.body)

@@ -1,12 +1,7 @@
 import { judgeWin } from "./judgeWin";
+import { footballPaceCategory } from "./footballPaceCategory";
 import type { SettlementGameInput } from "./settlementGame";
 import { getFootballLineScore } from "./settlementGame";
-
-function paceCategory(totalGoals: number): "low" | "mid" | "high" {
-  if (totalGoals <= 2) return "low";
-  if (totalGoals <= 4) return "mid";
-  return "high";
-}
 
 /** ノックアウトは進出側／それ以外はラインスコアで勝敗 */
 export function footballWinnerCorrect(
@@ -77,7 +72,7 @@ export function calcPointsFootball(
   const winPoints = 4;
 
   const paceMatch =
-    paceCategory(predHome + predAway) === paceCategory(lh + la);
+    footballPaceCategory(predHome + predAway) === footballPaceCategory(lh + la);
   const pacePoints = paceMatch ? 2 : 0;
 
   const predDiff = predHome - predAway;

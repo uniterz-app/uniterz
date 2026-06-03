@@ -569,6 +569,7 @@ const fr: Messages = {
     predictNextNo: "Non (retour au calendrier)",
     rulesFootNote: "Les classements sont mis à jour périodiquement — consultez l'onglet Classements.",
     rulesStart: "Commencer à prédire",
+    scoringRulesChip: "Règles de notation",
   },
 
   gambling: {

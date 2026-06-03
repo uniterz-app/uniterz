@@ -565,6 +565,7 @@ const pt: Messages = {
     predictNextNo: "Não (voltar ao calendário)",
     rulesFootNote: "Os rankings são atualizados periodicamente — veja a aba de Rankings.",
     rulesStart: "Começar a prever",
+    scoringRulesChip: "Regras de avaliação",
   },
 
   gambling: {

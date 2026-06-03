@@ -570,6 +570,7 @@ const ja = {
     predictNextNo: "いいえ\n（試合一覧へ）",
     rulesFootNote: "更新タイミングなどはランキング画面をご確認ください。",
     rulesStart: "予想を始める",
+    scoringRulesChip: "採点ルール",
   },
 
   gambling: {

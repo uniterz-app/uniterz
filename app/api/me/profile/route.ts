@@ -10,6 +10,7 @@ import {
   assertProfileTextsFreeOfGamblingTerms,
   isProfileGamblingTermsError,
 } from "@/lib/profile/profileGamblingTerms";
+import { isPreferredLeague } from "@/lib/user/preferredLeague";
 
 async function requireUid(req: Request): Promise<string> {
   const authz =
@@ -74,6 +75,11 @@ export async function POST(req: Request) {
 
     const completeOnboarding = body.completeOnboarding === true;
 
+    const rawPreferred = body.preferredLeague;
+    const preferredLeague = isPreferredLeague(rawPreferred)
+      ? rawPreferred
+      : undefined;
+
     const patch: Record<string, unknown> = {
       displayName,
       bio,
@@ -90,6 +96,9 @@ export async function POST(req: Request) {
     }
     if (completeOnboarding) {
       patch.onboardingCompletedAt = FieldValue.serverTimestamp();
+    }
+    if (preferredLeague) {
+      patch.preferredLeague = preferredLeague;
     }
 
     await getAdminDb().doc(`users/${uid}`).set(patch, { merge: true });
