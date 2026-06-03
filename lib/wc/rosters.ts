@@ -91,8 +91,8 @@ const WC_KEY_PLAYERS: Record<string, WcKeyPlayer[]> = {
     { name: "Kim Min-jae", pos: "DF", club: "Bayern Munich" },
     { name: "Lee Kang-in", pos: "MF", club: "PSG" },
     { name: "Lee Jae-sung", pos: "MF", club: "Mainz" },
+    { name: "Hwang Hee-chan", pos: "FW", club: "Wolves" },
     { name: "Cho Gue-sung", pos: "FW", club: "Midtjylland" },
-    { name: "Oh Hyeon-gyu", pos: "FW", club: "Beşiktaş" },
   ],
   cze: [
     { name: "Ladislav Krejčí", pos: "DF", club: "Wolves", captain: true },
@@ -157,7 +157,7 @@ const WC_KEY_PLAYERS: Record<string, WcKeyPlayer[]> = {
     { name: "Nayef Aguerd", pos: "DF", club: "Marseille" },
     { name: "Sofyan Amrabat", pos: "MF", club: "Real Betis" },
     { name: "Azzedine Ounahi", pos: "MF", club: "Girona" },
-    { name: "Bilal El Khannouss", pos: "MF", club: "Stuttgart" },
+    { name: "Ismael Saibari", pos: "MF", club: "PSV Eindhoven" },
     { name: "Brahim Díaz", pos: "FW", club: "Real Madrid" },
   ],
   hti: [
@@ -216,7 +216,7 @@ const WC_KEY_PLAYERS: Record<string, WcKeyPlayer[]> = {
     { name: "Hakan Çalhanoğlu", pos: "MF", club: "Inter Milan", captain: true },
     { name: "Arda Güler", pos: "MF", club: "Real Madrid" },
     { name: "Kenan Yıldız", pos: "FW", club: "Juventus" },
-    { name: "Kerem Aktürkoğlu", pos: "FW", club: "Fenerbahçe" },
+    { name: "Orkun Kökçü", pos: "MF", club: "Benfica" },
     { name: "Barış Alper Yılmaz", pos: "FW", club: "Galatasaray" },
     { name: "Ferdi Kadıoğlu", pos: "DF", club: "Brighton & Hove Albion" },
     { name: "Merih Demiral", pos: "DF", club: "Al-Ahli" },
