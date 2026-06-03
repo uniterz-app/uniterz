@@ -109,6 +109,7 @@ const CLUB_LEAGUE_ISO2: Record<string, string> = {
   Lyon: "fr",
   "Maccabi Tel Aviv": "il",
   Mainz: "de",
+  "Mainz 05": "de",
   Mallorca: "es",
   "Mamelodi Sundowns": "za",
   "Manchester City": "gb-eng",
