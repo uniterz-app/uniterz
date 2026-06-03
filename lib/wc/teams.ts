@@ -328,8 +328,8 @@ const WC_TEAM_PROFILES: Record<string, WcTeamProfile> = {
     nickname: { en: "Samurai Blue", ja: "サムライブルー" },
     confederation: "AFC",
     description: {
-      en: "Made global headlines in 2022, beating Germany and Spain to top the group, before losing to Croatia on penalties in the round of 16—again falling short of a first quarterfinal. Captain Wataru Endo anchors a Europe-based core of Kubo, Kamada, Tomiyasu and Doan, with Ayase Ueda up front—the deepest squad in the country's history. Beyond rapid counterattacks, the side now has the ability to break opponents down with the ball; the goal is a first-ever quarterfinal run.",
-      ja: "前回の2022年大会ではドイツとスペインを倒してグループ首位通過を果たし、世界に大きな衝撃を与えた。一方で、ベスト16ではクロアチアにPK戦で敗れ、またしてもベスト8の壁を越えられなかった。キャプテンの遠藤航を軸に、久保建英、神田孝鎮、冨安健洋、堂安律ら欧州組が中心で、前線には上田綺世もいる。選手層は過去最高級で、速攻だけでなくボールを持って崩す力も上がっており、目標は日本サッカー初のベスト8以上。",
+      en: "Made global headlines in 2022, beating Germany and Spain to top the group, before losing to Croatia on penalties in the round of 16—again falling short of a first quarterfinal. Captain Wataru Endo anchors the midfield, with Zion Suzuki in goal and a Europe-based core of Kubo, Daichi Kamada, Kaishu Sano and Doan, plus Ayase Ueda up front—the deepest squad in the country's history. Beyond rapid counterattacks, the side now has the ability to break opponents down with the ball; the goal is a first-ever quarterfinal run.",
+      ja: "前回の2022年大会ではドイツとスペインを倒してグループ首位通過を果たし、世界に大きな衝撃を与えた。一方で、ベスト16ではクロアチアにPK戦で敗れ、またしてもベスト8の壁を越えられなかった。キャプテンの遠藤航を軸に、GKの鈴木彩艶、久保建英、鎌田大地、佐野海舟、堂安律ら欧州組が中心で、前線には上田綺世もいる。選手層は過去最高級で、速攻だけでなくボールを持って崩す力も上がっており、目標は日本サッカー初のベスト8以上。",
     },
     fifaRank: 18,
     wcAppearances: 7,

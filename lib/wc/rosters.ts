@@ -278,10 +278,10 @@ const WC_KEY_PLAYERS: Record<string, WcKeyPlayer[]> = {
   jpn: [
     { name: "Wataru Endo", pos: "MF", club: "Liverpool", captain: true },
     { name: "Takefusa Kubo", pos: "MF", club: "Real Sociedad" },
-    { name: "Takehiro Tomiyasu", pos: "DF", club: "Ajax" },
+    { name: "Daichi Kamada", pos: "MF", club: "Crystal Palace" },
     { name: "Zion Suzuki", pos: "GK", club: "Parma" },
     { name: "Ritsu Doan", pos: "MF", club: "Eintracht Frankfurt" },
-    { name: "Daichi Kamada", pos: "MF", club: "Crystal Palace" },
+    { name: "Kaishu Sano", pos: "MF", club: "Mainz 05" },
     { name: "Hiroki Ito", pos: "DF", club: "Bayern Munich" },
     { name: "Ayase Ueda", pos: "FW", club: "Feyenoord" },
   ],
