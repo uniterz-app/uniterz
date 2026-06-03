@@ -702,7 +702,9 @@ export default function ScheduleList({
               "mx-auto w-full overflow-x-hidden",
               isMobile
                 ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6 md:px-6"
-                : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
+                : selectedProps.league === "wc"
+                  ? "max-w-7xl px-4 pb-24 pt-6 sm:px-8 md:px-10 lg:px-12"
+                  : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
             ].join(" ")}
             onClick={(e) => e.stopPropagation()}
           >

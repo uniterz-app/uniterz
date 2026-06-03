@@ -808,7 +808,11 @@ export default function PredictionFormV2({
       className={[
         "mx-auto w-full overflow-x-hidden text-white",
         /* 試合オーバーレイでは上の MatchCard と同じ横幅に揃える（/web でも max-w-[900px] に縮まない） */
-        embedded && inOverlay ? "max-w-none" : "max-w-[900px]",
+        embedded && inOverlay
+          ? "max-w-none"
+          : isWc && !isMobile
+            ? "max-w-[1120px]"
+            : "max-w-[900px]",
         embedded
           ? "min-h-0 overflow-y-visible pb-2"
           : [
@@ -1007,7 +1011,11 @@ export default function PredictionFormV2({
             <div className="relative z-1">
               <div
                 className={
-                  isMobile ? "mb-2 text-xs font-semibold text-white/90" : "mb-3 text-sm font-semibold text-white/90"
+                  isMobile
+                    ? "mb-2 text-xs font-semibold text-white/90"
+                    : isWc
+                      ? "mb-3 text-base font-semibold text-white/90"
+                      : "mb-3 text-sm font-semibold text-white/90"
                 }
               >
                 {isWc ? m.predict.teamProfile : m.predict.teamStats}
@@ -1016,7 +1024,9 @@ export default function PredictionFormV2({
                 className={
                   isMobile
                     ? "border-t border-white/10 pt-2"
-                    : "border-t border-white/10 pt-3"
+                    : isWc
+                      ? "border-t border-white/10 pt-4"
+                      : "border-t border-white/10 pt-3"
                 }
               >
                 {isWc ? (
@@ -1072,7 +1082,9 @@ export default function PredictionFormV2({
               className={
                 isMobile
                   ? "mb-2 text-xs font-semibold text-white/90"
-                  : "mb-3 text-sm font-semibold text-white/90"
+                  : isWc
+                    ? "mb-3 text-base font-semibold text-white/90"
+                    : "mb-3 text-sm font-semibold text-white/90"
               }
             >
               {m.predict.groupStandings}
@@ -1081,7 +1093,9 @@ export default function PredictionFormV2({
               className={
                 isMobile
                   ? "border-t border-white/10 pt-2"
-                  : "border-t border-white/10 pt-3"
+                  : isWc
+                    ? "border-t border-white/10 pt-4"
+                    : "border-t border-white/10 pt-3"
               }
             >
               {isWc ? (

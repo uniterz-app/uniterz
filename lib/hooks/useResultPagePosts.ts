@@ -21,17 +21,25 @@ import {
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { useResultLeagueFlags } from "@/lib/hooks/useResultLeagueFlags";
 import {
   groupPostsByResultDay,
   mapDocToPostWithMillis,
-  RESULT_INITIAL_PAGE_SIZE,
-  RESULT_NEXT_PAGE_SIZE,
   RESULT_POSTS_MAX_CACHED,
+  RESULT_TAB_PAGE_SIZE,
   type PostWithMillis,
   type ResultDayGroup,
+  type ResultListLeagueTab,
 } from "@/lib/result/result-page-data";
 
-export function useResultPagePosts(): {
+export function useResultPagePosts(
+  league: ResultListLeagueTab,
+  options?: {
+    enabled?: boolean;
+    /** true: users の hasNbaPost/hasWcPost 読み込み後に一覧取得を開始 */
+    waitForLeagueFlags?: boolean;
+  }
+): {
   uid: string | null;
   authReady: boolean;
   language: ReturnType<typeof useUserLanguage>["language"];
@@ -44,6 +52,9 @@ export function useResultPagePosts(): {
   sentinelRef: RefObject<HTMLDivElement | null>;
   grouped: ResultDayGroup[];
   refreshPosts: () => Promise<void>;
+  flagsReady: boolean;
+  showResultLeagueTabs: boolean;
+  defaultLeagueTab: ResultListLeagueTab;
 } {
   const [uid, setUid] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -54,6 +65,16 @@ export function useResultPagePosts(): {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [infiniteScrollEnabled, setInfiniteScrollEnabled] = useState(true);
+
+  const {
+    flagsReady,
+    showResultLeagueTabs,
+    defaultLeagueTab,
+  } = useResultLeagueFlags(uid);
+
+  const fetchEnabled =
+    options?.enabled !== false &&
+    (!options?.waitForLeagueFlags || flagsReady);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -66,11 +87,11 @@ export function useResultPagePosts(): {
   }, []);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !fetchEnabled) return;
     setPosts([]);
     setLastDoc(null);
     setHasMore(true);
-  }, [authReady, uid]);
+  }, [authReady, uid, league, fetchEnabled]);
 
   const loadPage = useCallback(
     async ({ reset = false }: { reset?: boolean } = {}) => {
@@ -85,9 +106,10 @@ export function useResultPagePosts(): {
       setLoading(true);
       try {
         if (!reset && !lastDoc) return;
-        const pageLimit = reset ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE;
+        const pageLimit = RESULT_TAB_PAGE_SIZE;
         const base = [
           where("authorUid", "==", uid),
+          where("league", "==", league),
           orderBy("createdAt", "desc"),
           limit(pageLimit),
         ] as const;
@@ -111,8 +133,8 @@ export function useResultPagePosts(): {
           if (reset) {
             const next =
               list.length > RESULT_POSTS_MAX_CACHED
-              ? list.slice(0, RESULT_POSTS_MAX_CACHED)
-              : list;
+                ? list.slice(0, RESULT_POSTS_MAX_CACHED)
+                : list;
             nextPostsLength = next.length;
             return next;
           }
@@ -121,32 +143,31 @@ export function useResultPagePosts(): {
           const merged = [...prev, ...filtered];
           const next =
             merged.length > RESULT_POSTS_MAX_CACHED
-            ? merged.slice(0, RESULT_POSTS_MAX_CACHED)
-            : merged;
+              ? merged.slice(0, RESULT_POSTS_MAX_CACHED)
+              : merged;
           nextPostsLength = next.length;
           return next;
         });
 
         setLastDoc(newLast);
         const cappedAfterLoad = nextPostsLength >= RESULT_POSTS_MAX_CACHED;
-        const fullPage =
-          snap.docs.length === (reset ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE);
+        const fullPage = snap.docs.length === pageLimit;
         setHasMore(!cappedAfterLoad && fullPage);
       } finally {
         setLoading(false);
       }
     },
-    [uid, loading, hasMore, lastDoc, posts.length]
+    [uid, loading, hasMore, lastDoc, posts.length, league]
   );
 
   useEffect(() => {
-    if (!authReady || !uid) return;
+    if (!authReady || !uid || !fetchEnabled) return;
     void loadPage({ reset: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady, uid]);
+  }, [authReady, uid, league, fetchEnabled]);
 
   useEffect(() => {
-    if (!authReady || !uid) return;
+    if (!authReady || !uid || !fetchEnabled) return;
     if (!infiniteScrollEnabled) return;
     if (!sentinelRef.current) return;
 
@@ -165,7 +186,17 @@ export function useResultPagePosts(): {
     obs.observe(el);
     return () => obs.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady, uid, loading, hasMore, lastDoc, infiniteScrollEnabled, loadPage]);
+  }, [
+    authReady,
+    uid,
+    league,
+    fetchEnabled,
+    loading,
+    hasMore,
+    lastDoc,
+    infiniteScrollEnabled,
+    loadPage,
+  ]);
 
   const grouped = useMemo(
     () => groupPostsByResultDay(posts, language),
@@ -190,5 +221,8 @@ export function useResultPagePosts(): {
     sentinelRef,
     grouped,
     refreshPosts,
+    flagsReady,
+    showResultLeagueTabs,
+    defaultLeagueTab,
   };
 }

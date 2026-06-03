@@ -15,6 +15,7 @@ import {
 } from "@/app/component/games/cyberMotion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MOBILE_RESULT_CARD_MAX_W_CLASS } from "@/lib/games/mobileListCardLayout";
+import { RESULT_WEB_DAY_STRIP_WIDTH_CLASS } from "@/lib/result/resultListWebLayout";
 
 /** 日付行右側の得点表示（確定合計 or 未確定） */
 export type ResultDayPointsHeader =
@@ -249,7 +250,7 @@ export function ResultDayPipeGroup({
       className={
         isMobile
           ? `mx-auto w-full ${MOBILE_RESULT_CARD_MAX_W_CLASS}`
-          : "mx-auto w-full max-w-xl sm:max-w-5xl"
+          : RESULT_WEB_DAY_STRIP_WIDTH_CLASS
       }
     >
       <div className="flex w-full flex-col items-center gap-2">

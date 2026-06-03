@@ -1,5 +1,10 @@
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
+import { LEAGUES, type League } from "@/lib/leagues";
+
+/** リザルト一覧のリーグタブ（NBA / ワールドカップ） */
+export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.NBA, LEAGUES.WC] as const;
+export type ResultListLeagueTab = (typeof RESULT_LIST_LEAGUE_TABS)[number];
 
 export type PostWithMillis = PredictionPostV2 & {
   createdAtMillis?: number | null;
@@ -168,6 +173,20 @@ export function groupPostsByResultDay(
   return days;
 }
 
+/** リザルト一覧のリーグタブ用（日付グループ・並び順は維持） */
+export function filterResultDayGroupsByLeague(
+  groups: readonly ResultDayGroup[],
+  league: League
+): ResultDayGroup[] {
+  return groups
+    .map((day) => ({
+      ...day,
+      pending: day.pending.filter((p) => p.league === league),
+      final: day.final.filter((p) => p.league === league),
+    }))
+    .filter((day) => day.pending.length + day.final.length > 0);
+}
+
 /**
  * 3D 表示（テーブル・ヘリックス共通）に含める「試合日」の最大数（一覧は新しい日が上のため、直近の日は先頭からこの件数）。
  */
@@ -239,7 +258,10 @@ export function flattenResultDayGroups(
   return out;
 }
 
-/** リザルト一覧：初回に読む件数 */
-export const RESULT_INITIAL_PAGE_SIZE = 20;
-/** リザルト一覧：下スクロール時に追加で読む件数（2ページ目以降） */
-export const RESULT_NEXT_PAGE_SIZE = 10;
+/** リザルト一覧（NBA / WC タブ）：1回あたりの取得件数 */
+export const RESULT_TAB_PAGE_SIZE = 10;
+
+/** @deprecated タブ別取得に移行。互換のため残す */
+export const RESULT_INITIAL_PAGE_SIZE = RESULT_TAB_PAGE_SIZE;
+/** @deprecated タブ別取得に移行 */
+export const RESULT_NEXT_PAGE_SIZE = RESULT_TAB_PAGE_SIZE;

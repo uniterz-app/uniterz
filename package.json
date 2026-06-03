@@ -20,6 +20,8 @@
     "native:android:dev": "npm --prefix apps/native run android:dev",
     "fix:nba:games": "tsx scripts/fix-nba-games.ts",
     "fix:nba:posts": "tsx scripts/fix-nba-posts.ts",
+    "backfill:result-league-flags:wc-users:dry": "tsx scripts/backfill-result-league-flags-for-wc-users.ts --dry-run",
+    "backfill:result-league-flags:wc-users": "tsx scripts/backfill-result-league-flags-for-wc-users.ts",
     "delete:posts:updated-before-jst": "tsx scripts/deletePostsByUpdatedBefore.ts",
     "delete:user-stats-v2-daily:date-before-jst": "tsx scripts/deleteUserStatsV2DailyByDateBefore.ts",
     "share:tunnel": "node scripts/sns-share-tunnel.mjs",

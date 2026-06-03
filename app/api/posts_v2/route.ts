@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
+import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */
@@ -242,6 +243,17 @@ export async function POST(req: Request) {
 
     try {
       const ref = await adminDb.collection("posts").add(data);
+      const leagueFlagPatch = resultLeagueFlagPatchForPost(league);
+      if (leagueFlagPatch) {
+        try {
+          await adminDb
+            .collection("users")
+            .doc(uid)
+            .set(leagueFlagPatch, { merge: true });
+        } catch (flagErr) {
+          console.error("[POST /api/posts_v2] user league flags", flagErr);
+        }
+      }
       return NextResponse.json({ ok: true, id: ref.id }, { status: 201 });
     } catch (e: any) {
       console.error("[POST /api/posts_v2]", e?.message ?? e);

@@ -53,16 +53,23 @@ import {
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { ResultPlatform } from "@/lib/result/result-platform";
 import {
+  RESULT_WEB_DAY_STRIP_WIDTH_CLASS,
+  RESULT_WEB_PIPE_RAIL_PX,
+} from "@/lib/result/resultListWebLayout";
+import {
   canDismissResultListPostNow,
   flattenResultDayGroups,
   isFinalResultPost,
   pruneDismissedResultListPostIds,
+  RESULT_LIST_LEAGUE_TABS,
   RESULT_POSTS_MAX_CACHED,
   hasPointsV3Recorded,
   sumDayPointsV3,
   type PostWithMillis,
   type ResultDayGroup,
+  type ResultListLeagueTab,
 } from "@/lib/result/result-page-data";
+import { UnderlineTabs } from "@/app/component/profile/ui/Tabs";
 import {
   readDismissedResultPostIds,
   writeDismissedResultPostIds,
@@ -73,7 +80,7 @@ import {
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
 import type { League } from "@/lib/leagues";
-import { LEAGUE_DISPLAY, LEAGUES } from "@/lib/leagues";
+import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import {
   GAMES_CYBER_EASE,
   GAMES_CYBER_ENTRY_DURATION_SEC,
@@ -124,8 +131,6 @@ const DEFAULT_RESULT_FILTERS: ResultListFilters = {
   dateTo: null,
 };
 
-const LEAGUE_ORDER: League[] = [LEAGUES.NBA, LEAGUES.WC];
-
 function isDefaultResultFilters(f: ResultListFilters): boolean {
   return (
     f.outcome === DEFAULT_RESULT_FILTERS.outcome &&
@@ -141,11 +146,8 @@ function isDefaultResultFilters(f: ResultListFilters): boolean {
 
 /** 詳細パネル内の条件のみ（試合日は外側ブロックのため点に含めない） */
 function hasDetailFilters(f: ResultListFilters): boolean {
-  const leagueCountsAsDetail =
-    LEAGUE_ORDER.length > 1 && f.league !== "all";
   return (
     f.settlement !== "all" ||
-    leagueCountsAsDetail ||
     f.specialty !== "none" ||
     f.scorePrecisionTier !== "all" ||
     f.pointsTier !== "all"
@@ -183,6 +185,10 @@ type MarketData = {
 };
 
 type Props = {
+  leagueTab: ResultListLeagueTab;
+  onLeagueTabChange: (tab: ResultListLeagueTab) => void;
+  /** hasNbaPost && hasWcPost のときだけタブを表示 */
+  showResultLeagueTabs: boolean;
   grouped: ResultDayGroup[];
   loading: boolean;
   hasMore: boolean;
@@ -361,6 +367,9 @@ function dateLabelForDayKey(
 }
 
 export default function ResultListWithOverlay({
+  leagueTab,
+  onLeagueTabChange,
+  showResultLeagueTabs,
   grouped,
   loading,
   hasMore,
@@ -592,6 +601,14 @@ export default function ResultListWithOverlay({
   useEffect(() => {
     if (!filterPanelOpen) setMatchDayPickerOpen(null);
   }, [filterPanelOpen]);
+
+  const resultLeagueTabLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        RESULT_LIST_LEAGUE_TABS.map((lg) => [lg, LEAGUE_DISPLAY[lg]])
+      ) as Record<ResultListLeagueTab, string>,
+    []
+  );
 
   const availableDayKeysAsc = useMemo(() => {
     const set = new Set<string>();
@@ -927,8 +944,10 @@ export default function ResultListWithOverlay({
         : "border-white/12 bg-white/[0.04] text-white/70 hover:border-white/18 hover:text-white/90",
     ].join(" ");
 
-  const totalLoaded =
-    grouped.reduce((a, d) => a + d.pending.length + d.final.length, 0);
+  const totalLoaded = grouped.reduce(
+    (a, d) => a + d.pending.length + d.final.length,
+    0
+  );
 
   const easeOut = [0.22, 1, 0.36, 1] as const;
   const off = prefersReducedMotion
@@ -1006,7 +1025,48 @@ export default function ResultListWithOverlay({
           isMobile ? "space-y-3" : "space-y-4",
         ].join(" ")}
       >
-        <div className="relative z-30 isolate mb-2">
+        {showResultLeagueTabs ? (
+          <div
+            className={[
+              isMobile ? "mb-4 -mx-[18px]" : "mb-5 -mx-4",
+            ].join(" ")}
+          >
+            <UnderlineTabs
+              layout="split"
+              value={leagueTab}
+              onChange={(tab) => {
+                onLeagueTabChange(tab);
+                setOpenPostId(null);
+                setDetailAnchor(null);
+                setMatchDayPickerOpen(null);
+                setFilters((s) => ({
+                  ...s,
+                  dateFrom: null,
+                  dateTo: null,
+                }));
+              }}
+              items={RESULT_LIST_LEAGUE_TABS}
+              labelMap={resultLeagueTabLabels}
+              size={isMobile ? "md" : "lg"}
+            />
+          </div>
+        ) : null}
+
+        <div className={isMobile ? "relative z-30 isolate mb-2" : "mb-2 flex w-full gap-0"}>
+          {!isMobile ? (
+            <div
+              className="shrink-0"
+              style={{ width: RESULT_WEB_PIPE_RAIL_PX }}
+              aria-hidden
+            />
+          ) : null}
+          <div
+            className={[
+              "relative z-30 isolate min-w-0",
+              isMobile ? "w-full" : "flex-1",
+            ].join(" ")}
+          >
+            <div className={isMobile ? "w-full" : RESULT_WEB_DAY_STRIP_WIDTH_CLASS}>
           <button
             type="button"
             aria-expanded={filterPanelOpen}
@@ -1323,65 +1383,6 @@ export default function ResultListWithOverlay({
             </div>
           </div>
 
-          {LEAGUE_ORDER.length > 1 ? (
-            <div className="mb-3">
-              <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
-                {fc.league}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <motion.button
-                  type="button"
-                  aria-pressed={filters.league === "all"}
-                  onClick={() => setFilters((s) => ({ ...s, league: "all" }))}
-                  variants={
-                    prefersReducedMotion
-                      ? undefined
-                      : {
-                          hidden: { opacity: 0, y: 10, filter: "blur(5px)" },
-                          visible: {
-                            opacity: 1,
-                            y: 0,
-                            filter: "blur(0px)",
-                            transition: { duration: 0.35, ease: easeOut },
-                          },
-                        }
-                  }
-                  whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
-                  whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                  className={filterChipClass(filters.league === "all")}
-                >
-                  {fc.leagueAll}
-                </motion.button>
-                {LEAGUE_ORDER.map((lg) => (
-                  <motion.button
-                    key={lg}
-                    type="button"
-                    aria-pressed={filters.league === lg}
-                    onClick={() => setFilters((s) => ({ ...s, league: lg }))}
-                    variants={
-                      prefersReducedMotion
-                        ? undefined
-                        : {
-                            hidden: { opacity: 0, y: 10, filter: "blur(5px)" },
-                            visible: {
-                              opacity: 1,
-                              y: 0,
-                              filter: "blur(0px)",
-                              transition: { duration: 0.35, ease: easeOut },
-                            },
-                          }
-                    }
-                    whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
-                    whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
-                    className={filterChipClass(filters.league === lg)}
-                  >
-                    {LEAGUE_DISPLAY[lg]}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           <div className="mb-3">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.upsetScore}
@@ -1494,6 +1495,8 @@ export default function ResultListWithOverlay({
           </div>
         </motion.div>
           ) : null}
+            </div>
+          </div>
         </div>
 
         <motion.div
@@ -2106,7 +2109,10 @@ export default function ResultListWithOverlay({
                     "mx-auto w-full overflow-x-hidden",
                     isMobile
                       ? "max-w-2xl px-3 pb-28 pt-4 sm:px-4 sm:pb-32 sm:pt-5"
-                      : "max-w-5xl px-4 pb-20 pt-5 sm:px-6 md:px-8",
+                      : predictOverlay.phase === "ready" &&
+                          predictOverlay.game.league === "wc"
+                        ? "max-w-7xl px-4 pb-20 pt-5 sm:px-8 md:px-10 lg:px-12"
+                        : "max-w-5xl px-4 pb-20 pt-5 sm:px-6 md:px-8",
                   ].join(" ")}
                 >
                   <div className="relative w-full overflow-x-hidden">

@@ -171,7 +171,9 @@ export default function GamePredictionDistribution({
   if (total === 0 && !hasFallback) {
     const emptyCls =
       variant === "predictForm"
-        ? "py-3 text-center text-xs text-white/60"
+        ? layoutMobile
+          ? "py-3 text-center text-xs text-white/60"
+          : "py-4 text-center text-sm text-white/60"
         : "rounded-xl border border-white/10 p-4 text-white/70";
     return (
       <div className={emptyCls}>
@@ -181,55 +183,106 @@ export default function GamePredictionDistribution({
   }
 
   if (variant === "predictForm") {
+    const web = !layoutMobile;
+    const chartSize = web ? 240 : 176;
+    const chartThickness = web ? 72 : 56;
+
     return (
       <div className="text-white">
-        <div className="mb-3 flex items-center justify-center md:mb-4">
-          <span className="text-sm font-semibold md:text-base">
+        <div
+          className={[
+            "flex items-center justify-center",
+            web ? "mb-4" : "mb-3 md:mb-4",
+          ].join(" ")}
+        >
+          <span
+            className={[
+              "font-semibold",
+              web ? "text-base" : "text-sm md:text-base",
+            ].join(" ")}
+          >
             {m.predict.marketBias}
           </span>
         </div>
 
-        <div className="flex flex-col items-center gap-5">
+        <div
+          className={[
+            "flex flex-col items-center",
+            web ? "gap-6" : "gap-5",
+          ].join(" ")}
+        >
           <div className="shrink-0">
             <DonutChart
               key={`pf-${chartReplayKey}`}
               segments={segments}
-              size={176}
-              thickness={56}
+              size={chartSize}
+              thickness={chartThickness}
               ariaLabel={m.predict.predictionMarketShare}
             />
           </div>
 
-          <div className="w-full max-w-[280px] space-y-3 text-sm">
+          <div
+            className={[
+              "w-full space-y-3",
+              web ? "max-w-[360px] space-y-4 text-base" : "max-w-[280px] text-sm",
+            ].join(" ")}
+          >
             {!fromFallback ? (
-              <div className="mb-1 text-center text-[11px] text-white/70">
+              <div
+                className={[
+                  "mb-1 text-center text-white/70",
+                  web ? "text-sm" : "text-[11px]",
+                ].join(" ")}
+              >
                 {m.predict.totalPredictions}
-                <span className={resultStatsMetricNumClass}>{total}</span>
+                <span
+                  className={[
+                    resultStatsMetricNumClass,
+                    web ? "text-base font-bold text-white/90" : "",
+                  ].join(" ")}
+                >
+                  {total}
+                </span>
               </div>
             ) : (
-              <div className="text-center text-[10px] leading-snug text-white/55">
+              <div
+                className={[
+                  "text-center leading-snug text-white/55",
+                  web ? "text-xs" : "text-[10px]",
+                ].join(" ")}
+              >
                 {m.predict.marketBias}
               </div>
             )}
             {segments.map((seg, i) => (
               <div
                 key={i}
-                className="flex items-center justify-center gap-3"
+                className={[
+                  "flex items-center justify-center",
+                  web ? "gap-4" : "gap-3",
+                ].join(" ")}
               >
                 <span
-                  className="h-3 w-3 rounded-sm"
+                  className={[
+                    "rounded-sm",
+                    web ? "h-4 w-4" : "h-3 w-3",
+                  ].join(" ")}
                   style={{ backgroundColor: seg.color }}
                 />
                 <span
-                  className="max-w-[58%] truncate text-xs font-bold text-white/85"
+                  className={[
+                    "max-w-[58%] truncate font-bold text-white/85",
+                    web ? "text-sm" : "text-xs",
+                  ].join(" ")}
                   style={teamNameTy}
                 >
                   {seg.label}
                 </span>
                 <span
-                  className={[resultStatsMetricNumClass, "text-white/70"].join(
-                    " "
-                  )}
+                  className={[
+                    resultStatsMetricNumClass,
+                    web ? "text-base font-bold text-white/85" : "text-white/70",
+                  ].join(" ")}
                 >
                   {(seg.value * 100).toFixed(1)}%
                 </span>

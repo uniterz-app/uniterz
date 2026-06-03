@@ -81,6 +81,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "authorUid", "order": "ASCENDING" },
+        { "fieldPath": "league", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorUid", "order": "ASCENDING" },
         { "fieldPath": "schemaVersion", "order": "ASCENDING" },
         { "fieldPath": "settledAt", "order": "DESCENDING" }
       ]
