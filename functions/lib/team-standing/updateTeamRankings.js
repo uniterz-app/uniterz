@@ -69,7 +69,7 @@ async function updateTeamRankings() {
         const wins = Number(data.wins || 0);
         const losses = Number(data.losses || 0);
         const draws = Number(data.d || data.draws || 0);
-        const isSoccer = league === "j1" || league === "pl";
+        const isSoccer = league === "j1" || league === "pl" || league === "wc";
         const games = isSoccer ? wins + losses + draws : wins + losses;
         const winRate = games > 0 ? wins / games : 0;
         const points = isSoccer ? wins * 3 + draws : 0;

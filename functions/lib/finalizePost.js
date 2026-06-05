@@ -6,7 +6,7 @@ const updateUserStatsV2_1 = require("./updateUserStatsV2");
 const buildUserStatsWindowCache_1 = require("./stats/buildUserStatsWindowCache");
 const computePostSettlement_1 = require("./computePostSettlement");
 async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch, userUpdateTasks, streakResultMap, }) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const p = postDoc.data();
     if (p.settledAt)
         return;
@@ -67,13 +67,16 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         status: "final",
         settledAt: now,
         updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        seasonPhase: (_a = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _a !== void 0 ? _a : null,
+        seasonRound: (_b = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _b !== void 0 ? _b : null,
+        wcStage: (_c = game === null || game === void 0 ? void 0 : game.wcStage) !== null && _c !== void 0 ? _c : null,
     });
     const uid = p.authorUid;
     userUpdateTasks.push((0, updateUserStatsV2_1.applyPostToUserStatsV2)({
         uid,
         postId: postDoc.id,
         createdAt: p.createdAt,
-        startAt: (_b = (_a = after.startAtJst) !== null && _a !== void 0 ? _a : after.startAt) !== null && _b !== void 0 ? _b : p.createdAt,
+        startAt: (_e = (_d = after.startAtJst) !== null && _d !== void 0 ? _d : after.startAt) !== null && _e !== void 0 ? _e : p.createdAt,
         league: game.league,
         isWin: result.isWin,
         scoreError: result.scoreError,
@@ -85,9 +88,9 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
         streakBonus,
         points: totalPoints,
         countsForRanking,
-        seasonPhase: (_c = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _c !== void 0 ? _c : null,
-        seasonRound: (_d = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _d !== void 0 ? _d : null,
-        wcStage: (_e = game === null || game === void 0 ? void 0 : game.wcStage) !== null && _e !== void 0 ? _e : null,
+        seasonPhase: (_f = game === null || game === void 0 ? void 0 : game.seasonPhase) !== null && _f !== void 0 ? _f : null,
+        seasonRound: (_g = game === null || game === void 0 ? void 0 : game.seasonRound) !== null && _g !== void 0 ? _g : null,
+        wcStage: (_h = game === null || game === void 0 ? void 0 : game.wcStage) !== null && _h !== void 0 ? _h : null,
     }).then(() => (0, buildUserStatsWindowCache_1.buildWindowCacheForUser)(uid)));
 }
 //# sourceMappingURL=finalizePost.js.map

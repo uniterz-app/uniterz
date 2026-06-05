@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, type ReactNode } from "react";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import {
   formatWcConfederation,
@@ -18,6 +19,7 @@ import {
   isWcCaptainUnconfirmed,
   type WcKeyPlayer,
 } from "@/lib/wc/rosters";
+import WcFormationPanel from "@/app/component/predict/wc/WcFormationPanel";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
@@ -30,6 +32,8 @@ type Props = {
   isMobile: boolean;
 };
 
+type TeamSide = "home" | "away";
+
 export default function WcTeamProfilePanel({
   homeTeamId,
   awayTeamId,
@@ -38,27 +42,196 @@ export default function WcTeamProfilePanel({
   language,
   isMobile,
 }: Props) {
+  const [side, setSide] = useState<TeamSide>("home");
+
+  useEffect(() => {
+    setSide("home");
+  }, [homeTeamId, awayTeamId]);
+
+  const homeDisplay =
+    teamIdToCountryName(homeTeamId, language === "ja" ? "ja" : "en") ??
+    homeName;
+  const awayDisplay =
+    teamIdToCountryName(awayTeamId, language === "ja" ? "ja" : "en") ??
+    awayName;
+
+  if (isMobile) {
+    const activeTeamId = side === "home" ? homeTeamId : awayTeamId;
+    const activeName = side === "home" ? homeName : awayName;
+
+    return (
+      <div>
+        <div className="grid grid-cols-2 gap-1.5 border-b border-white/10 pb-2">
+          {(
+            [
+              { side: "home" as const, teamId: homeTeamId, label: homeDisplay },
+              { side: "away" as const, teamId: awayTeamId, label: awayDisplay },
+            ] as const
+          ).map((item) => {
+            const active = side === item.side;
+            return (
+              <button
+                key={item.side}
+                type="button"
+                onClick={() => setSide(item.side)}
+                className={[
+                  "flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors",
+                  active
+                    ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                    : "border-white/10 bg-white/[0.035] text-white/70",
+                ].join(" ")}
+              >
+                <CountryFlag
+                  teamId={item.teamId}
+                  variant="inline"
+                  className="aspect-[4/3] h-[1.1rem] w-[1.45rem] shrink-0"
+                />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="pt-3">
+          <TeamCard
+            teamId={activeTeamId}
+            fallbackName={activeName}
+            language={language}
+            isMobile={isMobile}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={[
-        "grid",
-        isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 gap-6",
-      ].join(" ")}
-    >
-      <TeamCard
-        teamId={homeTeamId}
-        fallbackName={homeName}
-        language={language}
-        isMobile={isMobile}
+    <WebSyncedTeamGrid
+      homeTeamId={homeTeamId}
+      awayTeamId={awayTeamId}
+      homeName={homeName}
+      awayName={awayName}
+      language={language}
+    />
+  );
+}
+
+/** Web: 行ごとに2チームを並べ、説明文の行数差でも下のブロック開始位置を揃える */
+function WebSyncedTeamGrid({
+  homeTeamId,
+  awayTeamId,
+  homeName,
+  awayName,
+  language,
+}: {
+  homeTeamId: string;
+  awayTeamId: string;
+  homeName: string;
+  awayName: string;
+  language: Language;
+}) {
+  const home = getTeamProfileSections(homeTeamId, homeName, language, false);
+  const away = getTeamProfileSections(awayTeamId, awayName, language, false);
+
+  const rows: Array<{ key: string; home: ReactNode; away: ReactNode }> = [
+    { key: "header", home: home.header, away: away.header },
+    { key: "stats", home: home.stats, away: away.stats },
+    { key: "description", home: home.description, away: away.description },
+    { key: "meta", home: home.meta, away: away.meta },
+    { key: "formation", home: home.formation, away: away.formation },
+    { key: "keyPlayers", home: home.keyPlayers, away: away.keyPlayers },
+  ];
+
+  return (
+    <div className="relative">
+      <div
+        className="pointer-events-none absolute bottom-0 top-0 left-1/2 w-px -translate-x-1/2 bg-white/10"
+        aria-hidden
       />
-      <TeamCard
-        teamId={awayTeamId}
-        fallbackName={awayName}
-        language={language}
-        isMobile={isMobile}
-      />
+      <div className="grid grid-cols-2 items-stretch gap-x-6 gap-y-3">
+        {rows.flatMap((row) => [
+          <div key={`${row.key}-home`} className="flex min-h-0 min-w-0 flex-col">
+            {row.home}
+          </div>,
+          <div key={`${row.key}-away`} className="flex min-h-0 min-w-0 flex-col">
+            {row.away}
+          </div>,
+        ])}
+      </div>
     </div>
   );
+}
+
+function getTeamProfileSections(
+  teamId: string,
+  fallbackName: string,
+  language: Language,
+  isMobile: boolean,
+) {
+  const m = t(language);
+  const profile = getWcTeamProfile(teamId);
+  const displayName =
+    teamIdToCountryName(teamId, language === "ja" ? "ja" : "en") ??
+    fallbackName ??
+    "—";
+  const keyPlayers = getWcKeyPlayers(teamId);
+  const web = !isMobile;
+
+  return {
+    header: (
+      <TeamProfileHeader
+        teamId={teamId}
+        displayName={displayName}
+        nickname={
+          profile?.nickname
+            ? language === "ja"
+              ? profile.nickname.ja
+              : profile.nickname.en
+            : null
+        }
+        web={web}
+      />
+    ),
+    stats: (
+      <TeamProfileStats
+        profile={profile}
+        language={language}
+        m={m}
+        web={web}
+      />
+    ),
+    description: (
+      <TeamProfileDescription
+        profile={profile}
+        language={language}
+        web={web}
+      />
+    ),
+    meta: (
+      <TeamProfileMeta
+        teamId={teamId}
+        profile={profile}
+        language={language}
+        m={m}
+        web={web}
+      />
+    ),
+    formation: (
+      <WcFormationPanel
+        teamId={teamId}
+        language={language}
+        isMobile={isMobile}
+        className="!mt-0"
+      />
+    ),
+    keyPlayers: (
+      <TeamProfileKeyPlayers
+        keyPlayers={keyPlayers}
+        language={language}
+        m={m}
+        web={web}
+      />
+    ),
+  };
 }
 
 function TeamCard({
@@ -72,186 +245,261 @@ function TeamCard({
   language: Language;
   isMobile: boolean;
 }) {
-  const m = t(language);
-  const profile = getWcTeamProfile(teamId);
-  const displayName =
-    teamIdToCountryName(teamId, language === "ja" ? "ja" : "en") ?? fallbackName ?? "—";
-  const keyPlayers = getWcKeyPlayers(teamId);
-  const web = !isMobile;
+  const sections = getTeamProfileSections(teamId, fallbackName, language, isMobile);
+
+  return (
+    <div className="min-w-0 space-y-3">
+      {sections.header}
+      {sections.stats}
+      {sections.description}
+      {sections.meta}
+      {sections.formation}
+      {sections.keyPlayers}
+    </div>
+  );
+}
+
+function TeamProfileHeader({
+  teamId,
+  displayName,
+  nickname,
+  web,
+}: {
+  teamId: string;
+  displayName: string;
+  nickname: string | null;
+  web: boolean;
+}) {
+  return (
+    <div className={web ? "flex min-h-[3.5rem] items-center gap-4" : "flex items-center gap-3"}>
+      <CountryFlag
+        teamId={teamId}
+        className={web ? "h-[3.5rem] w-[5rem]" : "h-[2.4rem] w-[3.5rem]"}
+      />
+      <div className="min-w-0 flex-1">
+        <div
+          className={[
+            "truncate font-bold leading-tight text-white",
+            web ? "text-xl" : "text-base",
+          ].join(" ")}
+        >
+          {displayName}
+        </div>
+        <div
+          className={[
+            "truncate italic text-white/55",
+            web ? "min-h-[1.25rem] text-sm" : "min-h-[1rem] text-[11px]",
+            nickname ? "" : "invisible",
+          ].join(" ")}
+          aria-hidden={!nickname}
+        >
+          {nickname ?? "\u00a0"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TeamProfileStats({
+  profile,
+  language,
+  m,
+  web,
+}: {
+  profile: WcTeamProfile | null;
+  language: Language;
+  m: ReturnType<typeof t>;
+  web: boolean;
+}) {
+  return (
+    <div
+      className={[
+        "grid grid-cols-4 gap-1 rounded-xl border border-white/8 bg-white/[0.025]",
+        web ? "gap-2 px-3.5 py-3" : "px-2 py-2",
+      ].join(" ")}
+    >
+      <Stat
+        label="FIFA"
+        value={profile?.fifaRank != null ? `#${profile.fifaRank}` : "—"}
+        delta={fifaDelta(profile)}
+        web={web}
+      />
+      <Stat
+        label={m.wc.wcAppShort}
+        value={profile?.wcAppearances != null ? `${profile.wcAppearances}` : "—"}
+        web={web}
+      />
+      <Stat
+        label={m.wc.titlesShort}
+        value={profile?.wcTitles != null ? `${profile.wcTitles}` : "—"}
+        web={web}
+      />
+      <Stat
+        label={m.wc.lastShort}
+        value={
+          profile?.lastWcResult
+            ? lastResultShort(
+                profile.lastWcResult.round,
+                profile.lastWcResult.year,
+                language,
+              )
+            : "—"
+        }
+        web={web}
+      />
+    </div>
+  );
+}
+
+function TeamProfileDescription({
+  profile,
+  language,
+  web,
+}: {
+  profile: WcTeamProfile | null;
+  language: Language;
+  web: boolean;
+}) {
+  const text = profile?.description
+    ? language === "ja"
+      ? profile.description.ja
+      : profile.description.en
+    : null;
+
+  return (
+    <p
+      className={[
+        "text-white/80",
+        web ? "text-base leading-relaxed" : "text-[12.5px] leading-snug",
+      ].join(" ")}
+    >
+      {text ?? "\u00a0"}
+    </p>
+  );
+}
+
+function TeamProfileMeta({
+  teamId,
+  profile,
+  language,
+  m,
+  web,
+}: {
+  teamId: string;
+  profile: WcTeamProfile | null;
+  language: Language;
+  m: ReturnType<typeof t>;
+  web: boolean;
+}) {
+  const rows: ReactNode[] = [];
+  if (profile?.confederation) {
+    rows.push(
+      <MetaRow
+        key="confederation"
+        label={m.wc.confederationFull}
+        value={formatWcConfederation(
+          profile.confederation,
+          language === "ja" ? "ja" : "en",
+        )}
+        web={web}
+      />,
+    );
+  }
+  if (profile?.manager) {
+    rows.push(
+      <MetaRow key="manager" label={m.wc.managerLabel} value={profile.manager} web={web} />,
+    );
+  }
+  if (isWcCaptainUnconfirmed(teamId)) {
+    rows.push(
+      <MetaRow
+        key="captain"
+        label={m.wc.captainLabel}
+        value={m.wc.captainNotConfirmed}
+        web={web}
+      />,
+    );
+  }
+  if (profile?.lastWcResult) {
+    rows.push(
+      <MetaRow
+        key="lastWc"
+        label={m.wc.lastWorldCup}
+        value={`${profile.lastWcResult.year} · ${formatWcRoundReached(profile.lastWcResult.round, language === "ja" ? "ja" : "en")}`}
+        web={web}
+      />,
+    );
+  }
 
   return (
     <div
       className={[
-        "rounded-2xl border border-white/10 bg-white/[0.04]",
-        isMobile ? "p-3" : "p-6",
+        "text-white/65",
+        web ? "space-y-2 text-sm" : "space-y-1 text-[11.5px]",
       ].join(" ")}
     >
-      {/* ヘッダー */}
-      <div className={web ? "flex items-center gap-4" : "flex items-center gap-3"}>
-        <CountryFlag
-          teamId={teamId}
-          className={web ? "h-[3.5rem] w-[5rem]" : "h-[2.4rem] w-[3.5rem]"}
-        />
-        <div className="min-w-0 flex-1">
-          <div
-            className={[
-              "truncate font-bold leading-tight text-white",
-              web ? "text-xl" : "text-base",
-            ].join(" ")}
-          >
-            {displayName}
-          </div>
-          {profile?.nickname ? (
-            <div
-              className={[
-                "truncate italic text-white/55",
-                web ? "text-sm" : "text-[11px]",
-              ].join(" ")}
-            >
-              {language === "ja" ? profile.nickname.ja : profile.nickname.en}
-            </div>
-          ) : null}
-        </div>
-      </div>
+      {rows.length > 0 ? rows : web ? <span className="invisible block">\u00a0</span> : null}
+    </div>
+  );
+}
 
-      {/* 数値ストリップ */}
+function TeamProfileKeyPlayers({
+  keyPlayers,
+  language,
+  m,
+  web,
+}: {
+  keyPlayers: WcKeyPlayer[];
+  language: Language;
+  m: ReturnType<typeof t>;
+  web: boolean;
+}) {
+  if (keyPlayers.length === 0) {
+    return web ? <div className="min-h-0" aria-hidden /> : null;
+  }
+
+  return (
+    <div>
       <div
         className={[
-          "mt-3 grid grid-cols-4 gap-1 rounded-xl border border-white/8 bg-white/[0.025]",
-          web ? "gap-2 px-3.5 py-3" : "px-2 py-2",
+          "mb-2 font-bold uppercase tracking-[0.16em] text-white/55",
+          web ? "text-xs" : "text-[10px]",
         ].join(" ")}
       >
-        <Stat
-          label="FIFA"
-          value={
-            profile?.fifaRank != null ? `#${profile.fifaRank}` : "—"
-          }
-          delta={fifaDelta(profile)}
-          web={web}
-        />
-        <Stat
-          label={m.wc.wcAppShort}
-          value={
-            profile?.wcAppearances != null
-              ? `${profile.wcAppearances}`
-              : "—"
-          }
-          web={web}
-        />
-        <Stat
-          label={m.wc.titlesShort}
-          value={profile?.wcTitles != null ? `${profile.wcTitles}` : "—"}
-          web={web}
-        />
-        <Stat
-          label={m.wc.lastShort}
-          value={
-            profile?.lastWcResult
-              ? lastResultShort(
-                  profile.lastWcResult.round,
-                  profile.lastWcResult.year,
-                  language,
-                )
-              : "—"
-          }
-          web={web}
-        />
+        {m.wc.keyPlayers}
       </div>
-
-      {/* 概要 */}
-      {profile?.description ? (
-        <p
+      <div
+        className={[
+          "overflow-hidden border border-white/8",
+          web ? "rounded-xl" : "rounded-lg",
+        ].join(" ")}
+      >
+        <div
           className={[
-            "mt-3 text-white/80",
-            web ? "text-base leading-relaxed" : "text-[12.5px] leading-snug",
+            "grid gap-x-2 border-b border-white/8 bg-white/[0.04] font-semibold uppercase tracking-[0.12em] text-white/45",
+            web
+              ? "grid-cols-[3rem_1fr] px-3.5 py-2.5 text-[11px]"
+              : "grid-cols-[2.25rem_1fr] px-2 py-1.5 text-[9px]",
           ].join(" ")}
         >
-          {language === "ja" ? profile.description.ja : profile.description.en}
-        </p>
-      ) : null}
-
-      {/* メタ */}
-      <div
-        className={[
-          "mt-3 text-white/65",
-          web ? "space-y-2 text-sm" : "space-y-1 text-[11.5px]",
-        ].join(" ")}
-      >
-        {profile?.confederation ? (
-          <MetaRow
-            label={m.wc.confederationFull}
-            value={formatWcConfederation(profile.confederation, language === "ja" ? "ja" : "en")}
-            web={web}
-          />
-        ) : null}
-        {profile?.manager ? (
-          <MetaRow
-            label={m.wc.managerLabel}
-            value={profile.manager}
-            web={web}
-          />
-        ) : null}
-        {isWcCaptainUnconfirmed(teamId) ? (
-          <MetaRow
-            label={m.wc.captainLabel}
-            value={m.wc.captainNotConfirmed}
-            web={web}
-          />
-        ) : null}
-        {profile?.lastWcResult ? (
-          <MetaRow
-            label={m.wc.lastWorldCup}
-            value={`${profile.lastWcResult.year} · ${formatWcRoundReached(profile.lastWcResult.round, language === "ja" ? "ja" : "en")}`}
-            web={web}
-          />
-        ) : null}
-      </div>
-
-      {/* キープレイヤー */}
-      {keyPlayers.length > 0 ? (
-        <div className="mt-3">
-          <div
-            className={[
-              "mb-2 font-bold uppercase tracking-[0.16em] text-white/55",
-              web ? "text-xs" : "text-[10px]",
-            ].join(" ")}
-          >
-            {m.wc.keyPlayers}
-          </div>
-          <div
-            className={[
-              "overflow-hidden border border-white/8",
-              web ? "rounded-xl" : "rounded-lg",
-            ].join(" ")}
-          >
-            <div
-              className={[
-                "grid gap-x-2 border-b border-white/8 bg-white/[0.04] font-semibold uppercase tracking-[0.12em] text-white/45",
-                web
-                  ? "grid-cols-[3rem_1fr] px-3.5 py-2.5 text-[11px]"
-                  : "grid-cols-[2.25rem_1fr] px-2 py-1.5 text-[9px]",
-              ].join(" ")}
-            >
-              <span>{m.wc.keyPlayerPos}</span>
-              <span>
-                {m.wc.keyPlayerName}
-                <span className="mx-1 font-normal text-white/30">·</span>
-                {m.wc.keyPlayerClub}
-              </span>
-            </div>
-            <ul className="divide-y divide-white/6">
-              {keyPlayers.map((p) => (
-                <KeyPlayerRow
-                  key={`${p.pos}-${p.name}`}
-                  player={p}
-                  language={language}
-                  web={web}
-                />
-              ))}
-            </ul>
-          </div>
+          <span>{m.wc.keyPlayerPos}</span>
+          <span>
+            {m.wc.keyPlayerName}
+            <span className="mx-1 font-normal text-white/30">·</span>
+            {m.wc.keyPlayerClub}
+          </span>
         </div>
-      ) : null}
+        <ul className="divide-y divide-white/6">
+          {keyPlayers.map((p) => (
+            <KeyPlayerRow
+              key={`${p.pos}-${p.name}`}
+              player={p}
+              language={language}
+              web={web}
+            />
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

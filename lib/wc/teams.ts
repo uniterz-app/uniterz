@@ -78,7 +78,7 @@ const WC_TEAM_PROFILES: Record<string, WcTeamProfile> = {
     lastWcResult: { year: 2010, round: "Group" },
   },
   kor: {
-    nickname: { en: "Taegeuk Warriors", ja: "テグク戦士" },
+    nickname: { en: "Taegeuk Warriors", ja: "太極戦士" },
     confederation: "AFC",
     description: {
       en: "One of Asia's foremost World Cup nations, making their 12th finals appearance. They reached the semifinals at home in 2002 but have not gone past the round of 16 since. Son Heung-min, Kim Min-jae, Lee Kang-in and Hwang Hee-chan head a Europe-experienced core whose pace and individual quality drive the attack. Fitness and tactical cohesion among the key players remain concerns; the goal is escaping the group and a knockout-round berth.",

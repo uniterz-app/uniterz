@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.scorePrecisionRules = void 0;
+const footballPaceCategory_1 = require("./footballPaceCategory");
 /** 誤差 0→1, 1〜11 で線形減衰, 12+ → 0 */
 function gradientScore(diff, zeroAt) {
     if (diff <= 0)
@@ -46,9 +47,8 @@ exports.scorePrecisionRules = {
             if (result(predH, predA) === result(actH, actA)) {
                 total15 += 6;
             }
-            /* ---- ② 試合テンポ一致（6） ---- */
-            const tempo = (sum) => (sum <= 2 ? "low" : sum === 3 ? "mid" : "high");
-            if (tempo(predH + predA) === tempo(actH + actA)) {
+            /* ---- ② 合計ゴール数テンポ一致（6）・総合得点と同区分 ---- */
+            if ((0, footballPaceCategory_1.footballPaceCategory)(predH + predA) === (0, footballPaceCategory_1.footballPaceCategory)(actH + actA)) {
                 total15 += 6;
             }
             /* ---- ③ スコア誤差（3） ---- */

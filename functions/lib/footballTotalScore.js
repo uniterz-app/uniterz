@@ -3,14 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.footballWinnerCorrect = footballWinnerCorrect;
 exports.calcPointsFootball = calcPointsFootball;
 const judgeWin_1 = require("./judgeWin");
+const footballPaceCategory_1 = require("./footballPaceCategory");
 const settlementGame_1 = require("./settlementGame");
-function paceCategory(totalGoals) {
-    if (totalGoals <= 2)
-        return "low";
-    if (totalGoals <= 4)
-        return "mid";
-    return "high";
-}
 /** ノックアウトは進出側／それ以外はラインスコアで勝敗 */
 function footballWinnerCorrect(pred, g) {
     const line = (0, settlementGame_1.getFootballLineScore)(g);
@@ -54,7 +48,7 @@ function calcPointsFootball(prediction, g) {
     const lh = line.home;
     const la = line.away;
     const winPoints = 4;
-    const paceMatch = paceCategory(predHome + predAway) === paceCategory(lh + la);
+    const paceMatch = (0, footballPaceCategory_1.footballPaceCategory)(predHome + predAway) === (0, footballPaceCategory_1.footballPaceCategory)(lh + la);
     const pacePoints = paceMatch ? 2 : 0;
     const predDiff = predHome - predAway;
     const lineDiff = lh - la;

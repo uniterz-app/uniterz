@@ -657,6 +657,7 @@ const ar: Messages = {
     keyPlayerCaptainShort: "C",
     captainLabel: "Captain",
     captainNotConfirmed: "Not officially confirmed",
+    predictedLineup: "التشكيلة المتوقعة",
   },
 
   countries: {

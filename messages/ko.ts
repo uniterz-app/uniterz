@@ -639,6 +639,7 @@ const ko: Messages = {
     keyPlayerCaptainShort: "C",
     captainLabel: "주장",
     captainNotConfirmed: "공식 미확정",
+    predictedLineup: "예상 스타팅",
   },
   countries: {
     US: "미국", JP: "일본", CN: "중국", KR: "대한민국", TW: "대만", HK: "홍콩",

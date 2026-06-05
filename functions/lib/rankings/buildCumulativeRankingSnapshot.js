@@ -202,7 +202,7 @@ async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) 
                 .doc(key));
             const snaps = await firestore.getAll(...refs);
             snaps.forEach((s, j) => {
-                var _a, _b, _c;
+                var _a, _b, _c, _d;
                 const uid = chunk[j];
                 if (!pending.has(uid))
                     return;
@@ -212,6 +212,7 @@ async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) 
                         play_in: ((_a = d === null || d === void 0 ? void 0 : d.play_in) !== null && _a !== void 0 ? _a : {}),
                         playoffs: ((_b = d === null || d === void 0 ? void 0 : d.playoffs) !== null && _b !== void 0 ? _b : {}),
                         playoffRounds: ((_c = d === null || d === void 0 ? void 0 : d.playoffRounds) !== null && _c !== void 0 ? _c : {}),
+                        wc: ((_d = d === null || d === void 0 ? void 0 : d.wc) !== null && _d !== void 0 ? _d : {}),
                     });
                     pending.delete(uid);
                 }
@@ -312,7 +313,7 @@ async function loadWcStageTop20RowsLive(stage, metric) {
  * Main
  * =======================================================*/
 async function buildCumulativeRankingSnapshot() {
-    var _a;
+    var _a, _b, _c;
     const snap = await db().collection("cumulative_stats").get();
     const rankByUid = new Map();
     function ensure(uid) {
@@ -421,6 +422,13 @@ async function buildCumulativeRankingSnapshot() {
         }
     }
     const wcTop20Jobs = [];
+    const rankByUidWc = new Map();
+    function ensureWc(uid) {
+        if (!rankByUidWc.has(uid)) {
+            rankByUidWc.set(uid, {});
+        }
+        return rankByUidWc.get(uid);
+    }
     for (const stage of WC_RANKING_STAGES) {
         const baseRows = snap.docs
             .map((doc) => {
@@ -452,6 +460,12 @@ async function buildCumulativeRankingSnapshot() {
                 : baseRows;
             const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
             const ranks = assignCompetitionRanks(sortedFull, metric);
+            for (const [uid, rank] of ranks) {
+                const slot = ensureWc(uid);
+                if (!slot[stage])
+                    slot[stage] = {};
+                slot[stage][metric] = rank;
+            }
             const top20 = sortedFull.slice(0, 20).map((row) => {
                 var _a;
                 return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0 }));
@@ -512,7 +526,17 @@ async function buildCumulativeRankingSnapshot() {
         }, { merge: true });
     }
     for (const { stage, metric, rows } of wcTop20Jobs) {
-        const enriched = rows.map((row) => (Object.assign(Object.assign({}, row), { rankDeltaPlaces: null })));
+        const enriched = rows.map((row) => {
+            var _a, _b;
+            const prevBlock = prevByUid.get(row.uid);
+            const prevRaw = (_b = (_a = prevBlock === null || prevBlock === void 0 ? void 0 : prevBlock.wc) === null || _a === void 0 ? void 0 : _a[stage]) === null || _b === void 0 ? void 0 : _b[metric];
+            const prevRank = typeof prevRaw === "number" &&
+                Number.isFinite(prevRaw) &&
+                prevRaw >= 1
+                ? Math.floor(prevRaw)
+                : null;
+            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank) });
+        });
         await db()
             .collection("cumulative_ranking_snapshots")
             .doc(`wc_${stage}_${metric}`)
@@ -536,8 +560,11 @@ async function buildCumulativeRankingSnapshot() {
             ops = 0;
         }
     };
-    for (const [uid, per] of rankByUid) {
-        const playoffRounds = (_a = rankByUidPlayoffRound.get(uid)) !== null && _a !== void 0 ? _a : {};
+    const historyUids = new Set([...rankByUid.keys(), ...rankByUidWc.keys()]);
+    for (const uid of historyUids) {
+        const per = (_a = rankByUid.get(uid)) !== null && _a !== void 0 ? _a : { play_in: {}, playoffs: {} };
+        const playoffRounds = (_b = rankByUidPlayoffRound.get(uid)) !== null && _b !== void 0 ? _b : {};
+        const wc = (_c = rankByUidWc.get(uid)) !== null && _c !== void 0 ? _c : {};
         /**
          * merge のネストは play_in を消さないよう、更新するフィールドだけドットパスで書く。
          * （プレーインは SNAPSHOT_BUILD_PHASES 外のため per.play_in は空のまま）
@@ -546,6 +573,7 @@ async function buildCumulativeRankingSnapshot() {
             "snapshotRanks.updatedAt": firestore_1.FieldValue.serverTimestamp(),
             "snapshotRanks.playoffs": per.playoffs,
             "snapshotRanks.playoffRounds": playoffRounds,
+            "snapshotRanks.wc": wc,
         }, { merge: true });
         batch.set(firestore
             .collection("cumulative_stats")
@@ -555,6 +583,7 @@ async function buildCumulativeRankingSnapshot() {
             dateKey,
             playoffs: per.playoffs,
             playoffRounds,
+            wc,
             writtenAt: firestore_1.FieldValue.serverTimestamp(),
         }, { merge: true });
         ops += 2;

@@ -651,6 +651,7 @@ const pt: Messages = {
     keyPlayerCaptainShort: "C",
     captainLabel: "Capitão",
     captainNotConfirmed: "Não confirmado oficialmente",
+    predictedLineup: "Escalação prevista",
   },
 
   countries: {

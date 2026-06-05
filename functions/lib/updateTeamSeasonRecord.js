@@ -12,7 +12,7 @@ async function updateTeamSeasonRecord({ db, league, homeTeamId, awayTeamId, home
         console.warn("[updateTeamSeasonRecord] missing league, skip");
         return;
     }
-    const isSoccer = league === "j1" || league === "pl";
+    const isSoccer = league === "j1" || league === "pl" || league === "wc";
     const homeRef = db.doc(`teams/${homeTeamId}`);
     const awayRef = db.doc(`teams/${awayTeamId}`);
     const ts = firestore_1.FieldValue.serverTimestamp();

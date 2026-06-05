@@ -656,6 +656,7 @@ const fr: Messages = {
     keyPlayerCaptainShort: "C",
     captainLabel: "Capitaine",
     captainNotConfirmed: "Non confirmé officiellement",
+    predictedLineup: "Composition prévue",
   },
 
   countries: {

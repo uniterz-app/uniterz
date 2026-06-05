@@ -639,6 +639,7 @@ const zh: Messages = {
     keyPlayerCaptainShort: "C",
     captainLabel: "队长",
     captainNotConfirmed: "尚未官方确认",
+    predictedLineup: "预测首发",
   },
   countries: {
     US: "美国",
