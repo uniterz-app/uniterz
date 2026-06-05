@@ -272,6 +272,8 @@ function FootballTotalRulesJa() {
             </p>
             <p className="mt-1 text-white/55">
               例）予想 <Num>2–1</Num>（合計3）・結果 <Num>1–2</Num>（合計3）→ <Num>+2点</Num>
+              <br />
+              例）予想 <Num>1–0</Num>（合計1）・結果 <Num>2–1</Num>（合計3）→ くくりが違うので 0点
             </p>
           </li>
           <li>
@@ -322,6 +324,9 @@ function FootballTotalRulesEn() {
             </p>
             <p className="mt-1 text-white/55">
               e.g. pick <Num>2–1</Num> (3 total), result <Num>1–2</Num> (3 total) → <Num>+2</Num>
+              <br />
+              e.g. pick <Num>1–0</Num> (1 total), result <Num>2–1</Num> (3 total) → different
+              buckets, <Num>0</Num> for this item
             </p>
           </li>
           <li>
