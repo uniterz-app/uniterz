@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchGameContext = fetchGameContext;
+const resolveWcStage_1 = require("./wc/resolveWcStage");
 /* =========================
  * Helpers
  * ========================= */
@@ -11,7 +12,7 @@ function normalizePlayoffRoundKey(v) {
     return s === "r1" || s === "r2" || s === "cf" || s === "finals" ? s : null;
 }
 function normalizeGame(after, gameId) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
     const seasonPhase = (_a = after === null || after === void 0 ? void 0 : after.seasonPhase) !== null && _a !== void 0 ? _a : null;
     return {
         id: gameId,
@@ -31,9 +32,11 @@ function normalizeGame(after, gameId) {
         regulationEtScore: (_h = after === null || after === void 0 ? void 0 : after.regulationEtScore) !== null && _h !== void 0 ? _h : null,
         advancingTeamId: (_j = after === null || after === void 0 ? void 0 : after.advancingTeamId) !== null && _j !== void 0 ? _j : null,
         knockout: (after === null || after === void 0 ? void 0 : after.knockout) === true,
-        wcStage: (after === null || after === void 0 ? void 0 : after.wcStage) === "qualifying" || (after === null || after === void 0 ? void 0 : after.wcStage) === "main"
-            ? after.wcStage
-            : null,
+        wcStage: (0, resolveWcStage_1.resolveWcStageFromGame)({
+            knockout: (after === null || after === void 0 ? void 0 : after.knockout) === true,
+            roundLabel: (_k = after === null || after === void 0 ? void 0 : after.roundLabel) !== null && _k !== void 0 ? _k : null,
+            wcStage: (_l = after === null || after === void 0 ? void 0 : after.wcStage) !== null && _l !== void 0 ? _l : null,
+        }),
     };
 }
 /* =========================

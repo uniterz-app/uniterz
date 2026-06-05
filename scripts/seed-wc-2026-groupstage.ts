@@ -256,7 +256,7 @@ function gameId(group: string, home: string, away: string): string {
 
         venue,
         roundLabel: `Group ${group}`,
-        wcStage: "main",
+        wcStage: "qualifying",
         knockout: false,
 
         home: {

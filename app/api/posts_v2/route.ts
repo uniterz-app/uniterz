@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
+import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */
@@ -219,7 +220,7 @@ export async function POST(req: Request) {
       league,
       seasonPhase: g?.seasonPhase ?? null,
       seasonRound: g?.playoffRound ?? g?.seasonRound ?? null,
-      wcStage: g?.wcStage ?? null,
+      wcStage: resolveWcStageFromGame(g) ?? g?.wcStage ?? null,
       home: g?.home ?? null,
       away: g?.away ?? null,
       status: (g?.status as Status) || "scheduled",
