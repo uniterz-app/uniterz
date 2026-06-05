@@ -16,7 +16,7 @@
 
 import adminPkg from "firebase-admin";
 import fs from "fs";
-import { resolveWcStageFromGame } from "../lib/wc/resolveWcStage.ts";
+import { resolveWcStageFromGame } from "../lib/wc/resolveWcStage";
 
 const admin = adminPkg as typeof import("firebase-admin");
 
