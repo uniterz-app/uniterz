@@ -81,6 +81,8 @@ export const spursKnicksH2HGames: NbaH2HGameCard[] = [
         "The fourth quarter belonged to Jalen Brunson. His efficiency was not great, but he scored in bursts late, and the Knicks closed the game on an 11-0 run to complete the comeback. New York takes Game 1 and leads the series 1-0.",
     },
   },
+=======
+>>>>>>> origin/mobile-develop
 ];
 
 /** 左=NYK・右=SAS のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
