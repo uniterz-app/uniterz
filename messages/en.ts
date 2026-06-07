@@ -365,6 +365,7 @@ const en: Messages = {
     h2hShort: "H2H",
     market: "Market",
     closeOverlay: "Close overlay",
+    broadcasters: "Broadcast",
   },
 
   pro: {

@@ -4,6 +4,27 @@ exports.onPostDeletedV2 = void 0;
 // functions/src/onPostDeletedV2.ts
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
+function teamIdFromSide(side) {
+    if (!side || typeof side !== "object")
+        return null;
+    const id = side.teamId;
+    return typeof id === "string" && id.trim() ? id.trim() : null;
+}
+function uniqueGameTeamIds(homeTeamId, awayTeamId) {
+    const ids = [homeTeamId, awayTeamId]
+        .map((v) => (typeof v === "string" ? v.trim() : ""))
+        .filter(Boolean);
+    return [...new Set(ids)];
+}
+function teamDecrementFields(teamId, dec) {
+    const out = {};
+    for (const [k, v] of Object.entries(dec)) {
+        if (k === "updatedAt")
+            continue;
+        out[`teams.${teamId}.${k}`] = v;
+    }
+    return out;
+}
 exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     document: "posts/{postId}",
     region: "asia-northeast1",
@@ -57,10 +78,12 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const upsetPoints = (_e = stats.upsetPoints) !== null && _e !== void 0 ? _e : 0;
     const pointsV3 = (_f = stats.pointsV3) !== null && _f !== void 0 ? _f : 0;
     await db.runTransaction(async (tx) => {
-        var _a;
+        var _a, _b, _c, _d, _e;
         const dailySnap = await tx.get(dailyRef);
         if (!dailySnap.exists)
             return;
+        const markerSnap = await tx.get(markerRef);
+        const marker = markerSnap.data();
         const dec = {
             posts: firestore_2.FieldValue.increment(-1),
             wins: firestore_2.FieldValue.increment(isWin ? -1 : 0),
@@ -80,6 +103,13 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         const leagueKey = (_a = before.league) !== null && _a !== void 0 ? _a : null;
         if (leagueKey) {
             tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
+        }
+        const gameTeamIds = uniqueGameTeamIds((_c = (_b = marker === null || marker === void 0 ? void 0 : marker.homeTeamId) !== null && _b !== void 0 ? _b : teamIdFromSide(before.home)) !== null && _c !== void 0 ? _c : null, (_e = (_d = marker === null || marker === void 0 ? void 0 : marker.awayTeamId) !== null && _d !== void 0 ? _d : teamIdFromSide(before.away)) !== null && _e !== void 0 ? _e : null);
+        const countTeams = (marker === null || marker === void 0 ? void 0 : marker.countedForRanking) !== false && countRank;
+        if (countTeams && gameTeamIds.length > 0) {
+            for (const teamId of gameTeamIds) {
+                tx.set(dailyRef, teamDecrementFields(teamId, dec), { merge: true });
+            }
         }
         tx.delete(markerRef);
     });

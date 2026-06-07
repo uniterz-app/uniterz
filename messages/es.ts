@@ -358,6 +358,7 @@ const es: Messages = {
     h2hShort: "H2H",
     market: "Mercado",
     closeOverlay: "Cerrar",
+    broadcasters: "Emisión",
   },
 
   pro: {

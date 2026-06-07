@@ -61,6 +61,16 @@ function normalizeLeague(raw) {
         return "wc";
     return null;
 }
+function uniqueGameTeamIds(homeTeamId, awayTeamId) {
+    const ids = [homeTeamId, awayTeamId]
+        .map((v) => (typeof v === "string" ? v.trim() : ""))
+        .filter(Boolean);
+    return [...new Set(ids)];
+}
+function teamIncrementAtPath(teamId, o) {
+    const prefix = `teams.${teamId}`;
+    return wcIncrementAtPath(prefix, o);
+}
 /* =========================================================
  * Bucket helpers
  * =======================================================*/
@@ -95,7 +105,7 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, seasonPhase, seasonRound, wcStage, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, seasonPhase, seasonRound, wcStage, homeTeamId, awayTeamId, } = opts;
     const forRanking = shouldCountForRanking(countsForRanking);
     const phaseKey = normalizeSeasonPhase(seasonPhase);
     const roundKey = normalizeSeasonRound(seasonRound);
@@ -152,8 +162,39 @@ async function applyPostToUserStatsV2(opts) {
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
         }
+        const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
+        if (forRanking && gameTeamIds.length > 0) {
+            const teamOpts = {
+                isWin,
+                scoreError,
+                scorePrecision,
+                hadUpsetGame,
+                points,
+                upsetHit,
+                upsetPoints,
+                upsetBonus,
+                streakBonus,
+            };
+            for (const teamId of gameTeamIds) {
+                Object.assign(update, teamIncrementAtPath(teamId, teamOpts));
+            }
+        }
         tx.set(dailyRef, update, { merge: true });
-        tx.set(markerRef, { at: firestore_1.FieldValue.serverTimestamp() });
+        tx.set(markerRef, {
+            at: firestore_1.FieldValue.serverTimestamp(),
+            league: leagueKey,
+            homeTeamId: homeTeamId !== null && homeTeamId !== void 0 ? homeTeamId : null,
+            awayTeamId: awayTeamId !== null && awayTeamId !== void 0 ? awayTeamId : null,
+            posts: 1,
+            wins: isWin ? 1 : 0,
+            scoreErrorSum: scoreError,
+            scorePrecisionSum: scorePrecision,
+            pointsSumV3: points,
+            upsetPointsSum: upsetPoints,
+            upsetHitCount: upsetHit ? 1 : 0,
+            upsetOpportunityCount: hadUpsetGame ? 1 : 0,
+            countedForRanking: forRanking,
+        });
     });
 }
 /* =========================================================

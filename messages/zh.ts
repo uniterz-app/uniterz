@@ -353,6 +353,7 @@ const zh: Messages = {
     h2hShort: "直接对决",
     market: "市场",
     closeOverlay: "关闭",
+    broadcasters: "转播",
   },
   pro: {
     viewAllData: "升级 Pro 查看全部数据",

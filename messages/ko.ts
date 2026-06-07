@@ -353,6 +353,7 @@ const ko: Messages = {
     h2hShort: "직접대결",
     market: "시장",
     closeOverlay: "닫기",
+    broadcasters: "중계",
   },
   pro: {
     viewAllData: "Pro로 전체 데이터 보기",

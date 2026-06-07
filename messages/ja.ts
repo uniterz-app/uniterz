@@ -361,6 +361,7 @@ const ja = {
     h2hShort: "対決のみ",
     market: "市場",
     closeOverlay: "閉じる",
+    broadcasters: "放送局",
   },
 
   pro: {

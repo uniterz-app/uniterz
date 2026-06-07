@@ -358,6 +358,7 @@ const ar: Messages = {
     h2hShort: "H2H",
     market: "السوق",
     closeOverlay: "إغلاق",
+    broadcasters: "البث",
   },
 
   pro: {

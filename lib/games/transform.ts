@@ -13,6 +13,7 @@ import {
   isPlayoffStyleGameCard,
   type SeriesStanding,
 } from "@/lib/games/playoffSeriesUi";
+import { resolveWcBroadcastLabels } from "@/lib/wc/wcBroadcastLabels";
 
 /** プレーオフ：Firestore に seriesStanding が無いときの既定（0-0） */
 const PLAYOFF_SERIES_STANDING_FALLBACK = { homeWins: 0, awayWins: 0 } as const;
@@ -328,6 +329,10 @@ export type GameDoc = {
   series?: unknown;
   seriesStanding?: unknown;
   seriesRecord?: unknown;
+  /** WC など：放送媒体（複数可）。UI 未接続 */
+  broadcastLabels?: string[] | null;
+  /** @deprecated broadcastLabels を使用 */
+  broadcastLabel?: string | null;
 };
 
 /** MatchCardProps へ整形 */
@@ -440,6 +445,8 @@ export function toMatchCardProps(
     seasonPhase,
     venue: raw?.venue ?? "",
     roundLabel: roundLabelStr,
+    broadcastLabels:
+      league === "wc" ? resolveWcBroadcastLabels(id, raw) : [],
     startAtJst,
     status,
     home,

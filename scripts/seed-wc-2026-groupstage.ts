@@ -17,6 +17,7 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { lookupWcBroadcastLabels } from "../lib/wc/wcBroadcastLabels";
 // @ts-ignore
 import adminPkg from "firebase-admin";
 const admin = adminPkg;
@@ -243,6 +244,7 @@ function gameId(group: string, home: string, away: string): string {
     );
 
     const ref = db.collection("games").doc(id);
+    const broadcastLabels = lookupWcBroadcastLabels(id);
     batch.set(
       ref,
       {
@@ -258,6 +260,7 @@ function gameId(group: string, home: string, away: string): string {
         roundLabel: `Group ${group}`,
         wcStage: "qualifying",
         knockout: false,
+        ...(broadcastLabels.length > 0 ? { broadcastLabels } : {}),
 
         home: {
           teamId: `wc-${homeIso}`,
