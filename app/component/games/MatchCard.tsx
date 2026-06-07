@@ -264,12 +264,6 @@ function MatchCard({
   const m = t(language);
   const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
-    const showWcBroadcastRow =
-    !inPredictOverlay &&
-    league === "wc" &&
-    broadcastLabels.length > 0 &&
-    status !== "final";
-
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
   const [navigating, setNavigating] = useState(false);
@@ -285,6 +279,11 @@ const pathname = usePathname();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** モバイル dense / W杯コンパクト一覧 */
   const mobileDense = (dense && isMobile) || (compact && league === "wc");
+  const showWcBroadcastRow =
+    league === "wc" &&
+    broadcastLabels.length > 0 &&
+    status !== "final";
+  const wcBroadcastCompact = mobileDense || inPredictOverlay;
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const showPlayoffSeriesRow =
     isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
@@ -1485,7 +1484,7 @@ background:
         <motion.div
           className={[
             "flex w-full items-center justify-center gap-2 px-3 text-center",
-            mobileDense ? "mt-1 py-1 md:px-4" : "mt-2 py-1.5 md:px-4",
+            wcBroadcastCompact ? "mt-1 py-1 md:px-4" : "mt-2 py-1.5 md:px-4",
           ].join(" ")}
           initial={entryTransition ? { opacity: 0, y: 8 } : false}
           animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
@@ -1494,7 +1493,7 @@ background:
           <span
             className={[
               "shrink-0 font-semibold text-white/45",
-              mobileDense
+              wcBroadcastCompact
                 ? "text-xs md:text-sm"
                 : "text-sm md:text-base",
             ].join(" ")}
@@ -1511,10 +1510,10 @@ background:
             {broadcastLabels.map((label, index) => {
               const cjkName = broadcastNameUsesCjk(label);
               const nameSizeClass = cjkName
-                ? mobileDense
+                ? wcBroadcastCompact
                   ? "text-xs md:text-sm"
                   : "text-sm md:text-base"
-                : mobileDense
+                : wcBroadcastCompact
                   ? "text-sm md:text-base"
                   : "text-base md:text-lg";
               return (
