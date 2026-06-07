@@ -8,6 +8,7 @@ import {
   parseCommunityPeriod,
 } from "@/lib/communities/types";
 import { buildMemberLeaderboard } from "@/lib/communities/groupStats";
+import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
 import { resolveRankingStartDateKey } from "@/lib/communities/rankingStartDate";
 import {
   getCachedLeaderboardResponse,
@@ -24,6 +25,13 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ groupId: string }> };
 
+function sameTeamIds(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = [...a].sort();
+  const sb = [...b].sort();
+  return sa.every((v, i) => v === sb[i]);
+}
+
 export async function GET(req: Request, ctx: Ctx) {
   try {
     const uid = await requireUidFromRequest(req);
@@ -33,6 +41,7 @@ export async function GET(req: Request, ctx: Ctx) {
     const rankingMetric = parseCommunityMetric(d.rankingMetric);
     const periodType = parseCommunityPeriod(d.periodType);
     const rankingLeague = parseCommunityLeague(d.rankingLeague);
+    const rankingTeamIds = readRankingTeamIds(d);
     const rankingStartDateKey = resolveRankingStartDateKey(d);
     const memberCountFromGroup = Number(d.memberCount ?? 0);
     const snapshotSlotKey = getLeaderboardSnapshotSlotKeyJst();
@@ -46,6 +55,7 @@ export async function GET(req: Request, ctx: Ctx) {
       snapshot &&
       snapshot.rankingMetric === rankingMetric &&
       snapshot.rankingLeague === rankingLeague &&
+      sameTeamIds(snapshot.rankingTeamIds, rankingTeamIds) &&
       snapshot.periodType === periodType &&
       snapshot.rankingStartDateKey === rankingStartDateKey &&
       snapshot.memberCount === memberCountFromGroup
@@ -75,6 +85,7 @@ export async function GET(req: Request, ctx: Ctx) {
       groupId,
       rankingMetric,
       rankingLeague,
+      rankingTeamIds,
       periodType,
       rankingStartDateKey,
       memberCount: memberUids.length,
@@ -90,7 +101,8 @@ export async function GET(req: Request, ctx: Ctx) {
       rankingMetric,
       periodType,
       rankingLeague,
-      rankingStartDateKey
+      rankingStartDateKey,
+      rankingTeamIds
     );
 
     const ranked = rows.map((r, i) => ({
@@ -125,6 +137,7 @@ export async function GET(req: Request, ctx: Ctx) {
       slotKey: snapshotSlotKey,
       rankingMetric,
       rankingLeague,
+      rankingTeamIds,
       periodType,
       rankingStartDateKey,
       memberCount: memberUids.length,
@@ -136,6 +149,7 @@ export async function GET(req: Request, ctx: Ctx) {
         groupId,
         rankingMetric,
         rankingLeague,
+        rankingTeamIds,
         periodType,
         rankingStartDateKey,
         memberCount: memberUids.length,

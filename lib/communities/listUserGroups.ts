@@ -9,6 +9,7 @@ import {
   parseCommunityMetric,
   parseCommunityPeriod,
 } from "./types";
+import { readRankingTeamIds } from "./rankingTeams";
 import {
   fetchGroupMemberPreviews,
   type GroupMemberPreview,
@@ -23,6 +24,7 @@ export type ListedCommunityGroup = {
   rankingMetric: ReturnType<typeof parseCommunityMetric>;
   periodType: ReturnType<typeof parseCommunityPeriod>;
   rankingLeague: ReturnType<typeof parseCommunityLeague>;
+  rankingTeamIds: string[];
   role: string;
   archived: boolean;
   memberPreviews: GroupMemberPreview[];
@@ -130,6 +132,7 @@ export async function listUserGroups(
       rankingLeague: parseCommunityLeague(
         gd.rankingLeague ?? mirrorData?.rankingLeague
       ),
+      rankingTeamIds: readRankingTeamIds(gd),
       role: String(mirrorData?.role ?? (gd.ownerUid === uid ? "owner" : "member")),
       archived: false,
       memberPreviews: [],

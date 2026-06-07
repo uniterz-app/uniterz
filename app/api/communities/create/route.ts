@@ -19,6 +19,10 @@ import {
   parseCommunityPeriod,
 } from "@/lib/communities/types";
 import {
+  parseRankingTeamIds,
+  validateRankingTeamIds,
+} from "@/lib/communities/rankingTeams";
+import {
   sanitizeGroupDescription,
   sanitizeHeaderImageUrl,
 } from "@/lib/communities/validate";
@@ -43,6 +47,20 @@ export async function POST(req: Request) {
     const headerImageUrl = sanitizeHeaderImageUrl(body?.headerImageUrl);
     let rankingMetric = parseCommunityMetric(body?.rankingMetric);
     const rankingLeague = parseCommunityLeague(body?.rankingLeague);
+    const rankingTeamIds = parseRankingTeamIds(body?.rankingTeamIds);
+    const teamValidation = validateRankingTeamIds(rankingTeamIds, rankingLeague);
+    if (!teamValidation.ok) {
+      return NextResponse.json(
+        { ok: false, error: teamValidation.error },
+        { status: 400 }
+      );
+    }
+    if (rankingLeague === "all" && rankingTeamIds.length > 0) {
+      return NextResponse.json(
+        { ok: false, error: "teams_require_specific_league" },
+        { status: 400 }
+      );
+    }
     const periodType = parseCommunityPeriod("from_now");
     ({ metric: rankingMetric } = normalizeRankingForPeriod(
       rankingMetric,
@@ -92,6 +110,7 @@ export async function POST(req: Request) {
         rankingMetric,
         periodType,
         rankingLeague,
+        rankingTeamIds,
         rankingStartDateKey,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -110,6 +129,7 @@ export async function POST(req: Request) {
         rankingMetric,
         periodType,
         rankingLeague,
+        rankingTeamIds,
         joinedAt: FieldValue.serverTimestamp(),
       });
       await batch.commit();
@@ -121,6 +141,7 @@ export async function POST(req: Request) {
         rankingMetric,
         periodType,
         rankingLeague,
+        rankingTeamIds,
         group: {
           id: groupRef.id,
           name,
@@ -130,6 +151,7 @@ export async function POST(req: Request) {
           rankingMetric,
           periodType,
           rankingLeague,
+          rankingTeamIds,
           role: "owner",
         },
       });

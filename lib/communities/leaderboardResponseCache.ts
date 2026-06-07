@@ -36,10 +36,15 @@ type CacheEntry = {
 const CACHE_TTL_MS = 30_000;
 const cache = new Map<string, CacheEntry>();
 
+function teamIdsKey(teamIds: string[]): string {
+  return [...teamIds].sort().join(",");
+}
+
 function makeCacheKey(params: {
   groupId: string;
   rankingMetric: CommunityMetric;
   rankingLeague: CommunityLeague;
+  rankingTeamIds: string[];
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
   memberCount: number;
@@ -49,6 +54,7 @@ function makeCacheKey(params: {
     params.groupId,
     params.rankingMetric,
     params.rankingLeague,
+    teamIdsKey(params.rankingTeamIds),
     params.periodType,
     params.rankingStartDateKey,
     params.memberCount,
@@ -60,6 +66,7 @@ export function getCachedLeaderboardResponse(params: {
   groupId: string;
   rankingMetric: CommunityMetric;
   rankingLeague: CommunityLeague;
+  rankingTeamIds: string[];
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
   memberCount: number;
@@ -80,6 +87,7 @@ export function setCachedLeaderboardResponse(
     groupId: string;
     rankingMetric: CommunityMetric;
     rankingLeague: CommunityLeague;
+    rankingTeamIds: string[];
     periodType: CommunityPeriodType;
     rankingStartDateKey: string;
     memberCount: number;

@@ -67,6 +67,9 @@ type ApplyOptsV2 = {
   seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
   /** World Cup（league=wc）: 予選 / 本戦。overall は常に別途加算 */
   wcStage?: "qualifying" | "main" | null;
+  /** 試合のホーム / アウェイ teamId（teams.* バケット用） */
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
 };
 
 function shouldCountForRanking(v: boolean | undefined) {
@@ -149,6 +152,34 @@ function normalizeLeague(raw?: string | null): string | null {
   return null;
 }
 
+function uniqueGameTeamIds(
+  homeTeamId?: string | null,
+  awayTeamId?: string | null
+): string[] {
+  const ids = [homeTeamId, awayTeamId]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
+  return [...new Set(ids)];
+}
+
+function teamIncrementAtPath(
+  teamId: string,
+  o: {
+    isWin: boolean;
+    scoreError: number;
+    scorePrecision: number;
+    hadUpsetGame: boolean;
+    points: number;
+    upsetHit: boolean;
+    upsetPoints: number;
+    upsetBonus: number;
+    streakBonus: number;
+  }
+): Record<string, unknown> {
+  const prefix = `teams.${teamId}`;
+  return wcIncrementAtPath(prefix, o);
+}
+
 /* =========================================================
  * Bucket helpers
  * =======================================================*/
@@ -218,6 +249,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     seasonPhase,
     seasonRound,
     wcStage,
+    homeTeamId,
+    awayTeamId,
   } = opts;
 
   const forRanking = shouldCountForRanking(countsForRanking);
@@ -309,8 +342,40 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       );
     }
 
+    const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
+    if (forRanking && gameTeamIds.length > 0) {
+      const teamOpts = {
+        isWin,
+        scoreError,
+        scorePrecision,
+        hadUpsetGame,
+        points,
+        upsetHit,
+        upsetPoints,
+        upsetBonus,
+        streakBonus,
+      };
+      for (const teamId of gameTeamIds) {
+        Object.assign(update, teamIncrementAtPath(teamId, teamOpts));
+      }
+    }
+
     tx.set(dailyRef, update, { merge: true });
-    tx.set(markerRef, { at: FieldValue.serverTimestamp() });
+    tx.set(markerRef, {
+      at: FieldValue.serverTimestamp(),
+      league: leagueKey,
+      homeTeamId: homeTeamId ?? null,
+      awayTeamId: awayTeamId ?? null,
+      posts: 1,
+      wins: isWin ? 1 : 0,
+      scoreErrorSum: scoreError,
+      scorePrecisionSum: scorePrecision,
+      pointsSumV3: points,
+      upsetPointsSum: upsetPoints,
+      upsetHitCount: upsetHit ? 1 : 0,
+      upsetOpportunityCount: hadUpsetGame ? 1 : 0,
+      countedForRanking: forRanking,
+    });
   });
 }
 

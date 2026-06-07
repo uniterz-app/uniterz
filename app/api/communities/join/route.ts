@@ -13,6 +13,7 @@ import {
   parseCommunityMetric,
   parseCommunityPeriod,
 } from "@/lib/communities/types";
+import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,6 +106,7 @@ export async function POST(req: Request) {
     const rankingMetric = parseCommunityMetric(gdata?.rankingMetric);
     const periodType = parseCommunityPeriod(gdata?.periodType);
     const rankingLeague = parseCommunityLeague(gdata?.rankingLeague);
+    const rankingTeamIds = readRankingTeamIds(gdata);
 
     const description =
       typeof gdata?.description === "string" && gdata.description.trim()
@@ -121,6 +123,7 @@ export async function POST(req: Request) {
       rankingMetric,
       periodType,
       rankingLeague,
+      rankingTeamIds,
       joinedAt: FieldValue.serverTimestamp(),
     });
     await batch.commit();

@@ -11,11 +11,8 @@ import { toast } from "@/app/component/ui/toast";
 import { copyTextToClipboard } from "@/lib/clipboard/copyText";
 import { shareCommunityInvite } from "@/lib/communities/inviteShare";
 import type { CommunityMetric } from "@/lib/communities/types";
-import {
-  leagueLabel,
-  metricLabel,
-  periodLabel,
-} from "@/lib/communities/labels";
+import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
+import { periodLabel } from "@/lib/communities/labels";
 import type { CommunityLeague } from "@/lib/communities/types";
 import type { Language } from "@/lib/i18n/language";
 import {
@@ -473,9 +470,15 @@ export default function CommunityGroupDetailView({
               ].join(" ")}
             >
               {t.members}: {summary.memberCount} ·{" "}
-              {leagueLabel(summary.rankingLeague ?? "all", language)} ·{" "}
-              {metricLabel(metric, language)} ·{" "}
-              {periodLabel("from_now", language)}
+              {formatCommunityCompetitionLine(
+                {
+                  rankingLeague: summary.rankingLeague ?? "all",
+                  rankingMetric: metric,
+                  rankingTeamIds: summary.rankingTeamIds,
+                },
+                language
+              )}{" "}
+              · {periodLabel("from_now", language)}
             </p>
 
             {summary.archived && (

@@ -7,6 +7,7 @@ import {
   parseCommunityMetric,
   parseCommunityPeriod,
 } from "@/lib/communities/types";
+import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export async function GET(req: Request, ctx: Ctx) {
         rankingMetric: parseCommunityMetric(d.rankingMetric),
         periodType: parseCommunityPeriod(d.periodType),
         rankingLeague: parseCommunityLeague(d.rankingLeague),
+        rankingTeamIds: readRankingTeamIds(d),
         archived: !!d.archivedAt,
         isOwner: d.ownerUid === uid,
         inviteCode:

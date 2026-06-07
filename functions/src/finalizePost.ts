@@ -131,6 +131,8 @@ export async function finalizePost({
       seasonPhase: game?.seasonPhase ?? null,
       seasonRound: game?.seasonRound ?? null,
       wcStage: game?.wcStage ?? null,
+      homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
+      awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
     }).then(() => buildWindowCacheForUser(uid))
   );
 }

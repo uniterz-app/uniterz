@@ -13,6 +13,7 @@ export type CommunityGroupSummary = {
   rankingMetric: CommunityMetric;
   periodType: string;
   rankingLeague: CommunityLeague;
+  rankingTeamIds: string[];
   archived: boolean;
   isOwner: boolean;
   inviteCode: string | null;
@@ -51,6 +52,7 @@ export type CommunityGroupListPreview = {
   memberCount: number;
   rankingMetric: CommunityMetric;
   rankingLeague: CommunityLeague;
+  rankingTeamIds?: string[];
   isOwner: boolean;
 };
 
@@ -78,6 +80,7 @@ export function listPreviewToSummary(
     rankingMetric: preview.rankingMetric,
     periodType: "from_now",
     rankingLeague: preview.rankingLeague,
+    rankingTeamIds: preview.rankingTeamIds ?? [],
     archived: false,
     isOwner: preview.isOwner,
     inviteCode: null,
