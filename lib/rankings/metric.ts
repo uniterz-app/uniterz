@@ -33,6 +33,13 @@ export function metricNum(r: RankingRowWithCountry, metric: MobileMetric) {
     };
   }
 
+  if (metric === "goalScorerHits") {
+    return {
+      n: r.goalScorerHits ?? 0,
+      d: 0,
+    };
+  }
+
   return {
     n: r.streak ?? 0,
     d: 0,
@@ -54,6 +61,10 @@ export function getMetricSubText(
 
   if (metric === "upsetScore") {
     return `avg ${formatMetricDecimals(r.avgUpsetScore ?? 0, 1)}`;
+  }
+
+  if (metric === "goalScorerHits") {
+    return lang === "en" ? `Posts ${r.posts ?? 0}` : `投稿 ${r.posts ?? 0}`;
   }
 
   return lang === "en" ? `Posts ${r.posts ?? 0}` : `投稿 ${r.posts ?? 0}`;

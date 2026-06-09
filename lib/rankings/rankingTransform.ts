@@ -10,6 +10,7 @@ export const API_METRIC_BY_MOBILE: Record<MobileMetric, string> = {
   marginPrecision: "totalPrecision",
   upsetScore: "totalUpset",
   streak: "activeWinStreak",
+  goalScorerHits: "totalGoalScorerHits",
 };
 
 export type RankingApiRow = {
@@ -23,6 +24,7 @@ export type RankingApiRow = {
   totalPoints?: number;
   totalPrecision?: number;
   totalUpset?: number;
+  totalGoalScorerHits?: number;
   currentStreak?: number;
   activeWinStreak?: number;
   countryCode?: string | null;
@@ -44,6 +46,7 @@ export function toMobileRows(
     const totalPoints = row.totalPoints ?? 0;
     const totalPrecision = row.totalPrecision ?? 0;
     const totalUpset = row.totalUpset ?? 0;
+    const totalGoalScorerHits = row.totalGoalScorerHits ?? 0;
 
     return {
       uid: row.uid,
@@ -63,6 +66,8 @@ export function toMobileRows(
 
       upsetScore: totalUpset,
       avgUpsetScore: totalPosts > 0 ? totalUpset / totalPosts : 0,
+
+      goalScorerHits: totalGoalScorerHits,
 
       streak: row.activeWinStreak ?? 0,
       posts: totalPosts,

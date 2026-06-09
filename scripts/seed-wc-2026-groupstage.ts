@@ -283,6 +283,9 @@ function gameId(group: string, home: string, away: string): string {
         score: null,
         liveMeta: null,
         finalMeta: null,
+
+        /** 得点者（試合後に管理画面 or Firestore で更新） */
+        goalScorers: [],
       },
       { merge: true },
     );

@@ -15,8 +15,14 @@ import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 /** 指標タブで既に読み込んだバンドルを捨てずにまとめて取り直す */
-const REFETCH_ALL_METRICS =
+const REFETCH_ALL_METRICS_NBA =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
+const REFETCH_ALL_METRICS_WC =
+  "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
+
+function refetchAllMetrics(wcStage: WcRankingStage | null): string {
+  return wcStage ? REFETCH_ALL_METRICS_WC : REFETCH_ALL_METRICS_NBA;
+}
 
 export type BulkMetricPayload = {
   ok: boolean;
@@ -209,7 +215,7 @@ export function useCumulativeRankingsBulk(
         const uid = auth.currentUser?.uid ?? null;
         try {
           const partial = await fetchBulkMetrics(
-            REFETCH_ALL_METRICS,
+            refetchAllMetrics(wcStage),
             uid,
             phase,
             round,

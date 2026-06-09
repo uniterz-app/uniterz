@@ -5,7 +5,8 @@ export type MobileMetric =
   | "winRate"
   | "marginPrecision"
   | "upsetScore"
-  | "streak";
+  | "streak"
+  | "goalScorerHits";
 
 export const METRICS: { key: MobileMetric; label: string }[] = [
   { key: "totalScore", label: "総合スコア" },
@@ -13,6 +14,21 @@ export const METRICS: { key: MobileMetric; label: string }[] = [
   { key: "marginPrecision", label: "スコア精度" },
   { key: "upsetScore", label: "アップセットスコア" },
   { key: "streak", label: "連勝" },
+  { key: "goalScorerHits", label: "得点者的中" },
+];
+
+/** NBA 共通の指標（WC では goalScorerHits を追加表示） */
+export const NBA_RANKING_METRICS: MobileMetric[] = [
+  "totalScore",
+  "winRate",
+  "marginPrecision",
+  "upsetScore",
+  "streak",
+];
+
+export const WC_RANKING_METRICS: MobileMetric[] = [
+  ...NBA_RANKING_METRICS,
+  "goalScorerHits",
 ];
 
 // Firestore に保存された countryCode は将来的に増えるため、ここでは汎用stringで扱います。
@@ -28,4 +44,5 @@ export type RankingRowWithCountry = RankingRow & {
   avgMarginPrecision?: number;
   upsetScore?: number;
   avgUpsetScore?: number;
+  goalScorerHits?: number;
 };

@@ -23,6 +23,8 @@ export type StatsV2Bucket = {
   // 総合得点内訳ボーナス合計
   upsetBonusSum: number;
   streakBonusSum: number;
+  goalScorerHitCount: number;
+  goalScorerBonusSum: number;
 
   winRate: number;
   avgScoreError: number;
@@ -58,6 +60,8 @@ type ApplyOptsV2 = {
   // 総合得点内訳ボーナス
   upsetBonus: number;
   streakBonus: number;
+  goalScorerBonus?: number;
+  goalScorerHit?: boolean;
 
   /** false のとき（例: プレーイン）はランキング用日次・累積に含めない。未設定は従来どおり true */
   countsForRanking?: boolean;
@@ -109,6 +113,8 @@ function wcIncrementAtPath(
     upsetPoints: number;
     upsetBonus: number;
     streakBonus: number;
+    goalScorerBonus: number;
+    goalScorerHit: boolean;
   }
 ): Record<string, unknown> {
   return {
@@ -127,6 +133,12 @@ function wcIncrementAtPath(
     [`${pathPrefix}.upsetPointsSum`]: FieldValue.increment(o.upsetPoints),
     [`${pathPrefix}.upsetBonusSum`]: FieldValue.increment(o.upsetBonus),
     [`${pathPrefix}.streakBonusSum`]: FieldValue.increment(o.streakBonus),
+    [`${pathPrefix}.goalScorerHitCount`]: FieldValue.increment(
+      o.goalScorerHit ? 1 : 0
+    ),
+    [`${pathPrefix}.goalScorerBonusSum`]: FieldValue.increment(
+      o.goalScorerBonus
+    ),
   };
 }
 
@@ -174,10 +186,16 @@ function teamIncrementAtPath(
     upsetPoints: number;
     upsetBonus: number;
     streakBonus: number;
+    goalScorerBonus?: number;
+    goalScorerHit?: boolean;
   }
 ): Record<string, unknown> {
   const prefix = `teams.${teamId}`;
-  return wcIncrementAtPath(prefix, o);
+  return wcIncrementAtPath(prefix, {
+    ...o,
+    goalScorerBonus: o.goalScorerBonus ?? 0,
+    goalScorerHit: o.goalScorerHit ?? false,
+  });
 }
 
 /* =========================================================
@@ -198,6 +216,8 @@ function emptyBucket(): StatsV2Bucket {
 
     upsetBonusSum: 0,
     streakBonusSum: 0,
+    goalScorerHitCount: 0,
+    goalScorerBonusSum: 0,
 
     winRate: 0,
     avgScoreError: 0,
@@ -245,6 +265,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     upsetPoints,
     upsetBonus,
     streakBonus,
+    goalScorerBonus = 0,
+    goalScorerHit = false,
     countsForRanking,
     seasonPhase,
     seasonRound,
@@ -285,6 +307,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
       upsetBonusSum: FieldValue.increment(upsetBonus),
       streakBonusSum: FieldValue.increment(streakBonus),
+      goalScorerHitCount: FieldValue.increment(goalScorerHit ? 1 : 0),
+      goalScorerBonusSum: FieldValue.increment(goalScorerBonus),
     };
 
     const update: any = {
@@ -308,6 +332,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetPoints,
       upsetBonus,
       streakBonus,
+      goalScorerBonus,
+      goalScorerHit,
     };
 
     if (forRanking && leagueKey === "wc") {
@@ -354,6 +380,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         upsetPoints,
         upsetBonus,
         streakBonus,
+        goalScorerBonus,
+        goalScorerHit,
       };
       for (const teamId of gameTeamIds) {
         Object.assign(update, teamIncrementAtPath(teamId, teamOpts));
@@ -418,6 +446,8 @@ export async function getStatsForDateRangeV2(
 
     b.upsetBonusSum += src.upsetBonusSum || 0;
     b.streakBonusSum += src.streakBonusSum || 0;
+    b.goalScorerHitCount += src.goalScorerHitCount || 0;
+    b.goalScorerBonusSum += src.goalScorerBonusSum || 0;
   }
 
   return recomputeCache(b);

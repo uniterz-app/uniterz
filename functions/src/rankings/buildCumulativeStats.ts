@@ -27,6 +27,7 @@ type RankingTotals = {
   totalPoints: number;
   totalUpset: number;
   totalPrecision: number;
+  totalGoalScorerHits: number;
   winRate: number;
 };
 
@@ -38,6 +39,7 @@ function addRankingTotals(
     pointsSumV3?: number;
     upsetPointsSum?: number;
     scorePrecisionSum?: number;
+    goalScorerHitCount?: number;
   }
 ): Omit<RankingTotals, "winRate"> {
   return {
@@ -46,6 +48,8 @@ function addRankingTotals(
     totalPoints: base.totalPoints + (inc.pointsSumV3 ?? 0),
     totalUpset: base.totalUpset + (inc.upsetPointsSum ?? 0),
     totalPrecision: base.totalPrecision + (inc.scorePrecisionSum ?? 0),
+    totalGoalScorerHits:
+      base.totalGoalScorerHits + (inc.goalScorerHitCount ?? 0),
   };
 }
 
@@ -165,6 +169,7 @@ export async function buildCumulativeStats() {
         totalPoints: 0,
         totalUpset: 0,
         totalPrecision: 0,
+        totalGoalScorerHits: 0,
         winRate: 0,
       };
       const prevPlayoffs = prevByPhase.playoffs ?? {
@@ -173,6 +178,7 @@ export async function buildCumulativeStats() {
         totalPoints: 0,
         totalUpset: 0,
         totalPrecision: 0,
+        totalGoalScorerHits: 0,
         winRate: 0,
       };
 
@@ -182,6 +188,7 @@ export async function buildCumulativeStats() {
         pointsSumV3: statsByPhase.play_in?.pointsSumV3 ?? 0,
         upsetPointsSum: statsByPhase.play_in?.upsetPointsSum ?? 0,
         scorePrecisionSum: statsByPhase.play_in?.scorePrecisionSum ?? 0,
+        goalScorerHitCount: statsByPhase.play_in?.goalScorerHitCount ?? 0,
       });
       const nextPlayoffsRaw = addRankingTotals(prevPlayoffs, {
         posts: statsByPhase.playoffs?.posts ?? 0,
@@ -189,6 +196,7 @@ export async function buildCumulativeStats() {
         pointsSumV3: statsByPhase.playoffs?.pointsSumV3 ?? 0,
         upsetPointsSum: statsByPhase.playoffs?.upsetPointsSum ?? 0,
         scorePrecisionSum: statsByPhase.playoffs?.scorePrecisionSum ?? 0,
+        goalScorerHitCount: statsByPhase.playoffs?.goalScorerHitCount ?? 0,
       });
 
       const nextPlayIn: RankingTotals = {
@@ -220,6 +228,7 @@ export async function buildCumulativeStats() {
           totalPoints: 0,
           totalUpset: 0,
           totalPrecision: 0,
+          totalGoalScorerHits: 0,
           winRate: 0,
         };
         const nextRoundRaw = addRankingTotals(prevRound, {
@@ -228,6 +237,8 @@ export async function buildCumulativeStats() {
           pointsSumV3: statsByPlayoffRound[rk]?.pointsSumV3 ?? 0,
           upsetPointsSum: statsByPlayoffRound[rk]?.upsetPointsSum ?? 0,
           scorePrecisionSum: statsByPlayoffRound[rk]?.scorePrecisionSum ?? 0,
+          goalScorerHitCount:
+            statsByPlayoffRound[rk]?.goalScorerHitCount ?? 0,
         });
         nextByRound[rk] = {
           ...nextRoundRaw,
@@ -252,6 +263,7 @@ export async function buildCumulativeStats() {
           totalPoints: 0,
           totalUpset: 0,
           totalPrecision: 0,
+          totalGoalScorerHits: 0,
           winRate: 0,
         };
         const src = statsByWcStage[wk];
@@ -261,6 +273,7 @@ export async function buildCumulativeStats() {
           pointsSumV3: src?.pointsSumV3 ?? 0,
           upsetPointsSum: src?.upsetPointsSum ?? 0,
           scorePrecisionSum: src?.scorePrecisionSum ?? 0,
+          goalScorerHitCount: src?.goalScorerHitCount ?? 0,
         });
         nextByWc[wk] = {
           ...nextWRaw,

@@ -82,13 +82,23 @@ export default function MobileRankingsPage() {
       ? wcStage
       : null;
 
-  const visibleMetrics: MobileMetric[] = [
-    "totalScore",
-    "winRate",
-    "marginPrecision",
-    "upsetScore",
-    "streak",
-  ];
+  const visibleMetrics: MobileMetric[] =
+    rankingLeague === "worldcup"
+      ? [
+          "totalScore",
+          "winRate",
+          "marginPrecision",
+          "upsetScore",
+          "streak",
+          "goalScorerHits",
+        ]
+      : [
+          "totalScore",
+          "winRate",
+          "marginPrecision",
+          "upsetScore",
+          "streak",
+        ];
 
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const SWIPE_X_THRESHOLD_PX = 42;
@@ -210,6 +220,9 @@ export default function MobileRankingsPage() {
     if (metric === "winRate") {
       const raw = myRawRow.winRate ?? 0;
       return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
+    }
+    if (metric === "goalScorerHits") {
+      return myRawRow.totalGoalScorerHits ?? 0;
     }
     return myRawRow.activeWinStreak ?? 0;
   }, [metric, myRawRow]);

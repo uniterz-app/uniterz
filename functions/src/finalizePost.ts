@@ -3,6 +3,7 @@ import { applyPostToUserStatsV2 } from "./updateUserStatsV2";
 import { buildWindowCacheForUser } from "./stats/buildUserStatsWindowCache";
 import { computePostSettlement } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
+import { buildPostMatchGoalScorersFromGame } from "./wc/matchGoalScorersDisplay";
 
 export async function finalizePost({
   postDoc,
@@ -35,6 +36,7 @@ export async function finalizePost({
     upsetPoints,
     upsetBonus,
     streakBonus,
+    goalScorerBonus,
     activeWinStreak,
   } = computePostSettlement({
     p,
@@ -48,6 +50,7 @@ export async function finalizePost({
       advancingTeamId: game.advancingTeamId,
       knockout: game.knockout,
       countsForRanking: game.countsForRanking,
+      goalScorers: game.goalScorers,
     },
     market,
     hadUpsetGame,
@@ -58,8 +61,19 @@ export async function finalizePost({
 
   const now = Timestamp.now();
 
+  const isWc = String(game.league ?? "").toLowerCase() === "wc";
+  const matchGoalScorers = isWc
+    ? buildPostMatchGoalScorersFromGame(
+        game.goalScorers,
+        game.homeTeamId,
+        game.awayTeamId
+      )
+    : [];
+
   batch.update(postDoc.ref, {
     result: final,
+
+    ...(isWc ? { matchGoalScorers } : {}),
 
     marketMeta: {
       majoritySide: market.majoritySide,
@@ -80,6 +94,7 @@ export async function finalizePost({
       upsetPoints,
       upsetBonus,
       streakBonus,
+      goalScorerBonus,
 
       countedForRanking: countsForRanking,
 
@@ -92,6 +107,7 @@ export async function finalizePost({
         totalPoints: baseScore.totalPoints,
         upsetBonus,
         streakBonus,
+        goalScorerBonus,
         activeWinStreak,
         diffError: baseScore.diffError,
         totalError: baseScore.totalError,
@@ -125,6 +141,8 @@ export async function finalizePost({
       upsetPoints,
       upsetBonus,
       streakBonus,
+      goalScorerBonus,
+      goalScorerHit: goalScorerBonus > 0,
 
       points: totalPoints,
       countsForRanking,

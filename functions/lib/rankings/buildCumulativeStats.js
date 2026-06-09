@@ -20,13 +20,14 @@ function getTodayJST() {
     return toDateKeyJST(new Date());
 }
 function addRankingTotals(base, inc) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     return {
         totalPosts: base.totalPosts + ((_a = inc.posts) !== null && _a !== void 0 ? _a : 0),
         totalWins: base.totalWins + ((_b = inc.wins) !== null && _b !== void 0 ? _b : 0),
         totalPoints: base.totalPoints + ((_c = inc.pointsSumV3) !== null && _c !== void 0 ? _c : 0),
         totalUpset: base.totalUpset + ((_d = inc.upsetPointsSum) !== null && _d !== void 0 ? _d : 0),
         totalPrecision: base.totalPrecision + ((_e = inc.scorePrecisionSum) !== null && _e !== void 0 ? _e : 0),
+        totalGoalScorerHits: base.totalGoalScorerHits + ((_f = inc.goalScorerHitCount) !== null && _f !== void 0 ? _f : 0),
     };
 }
 /* =========================================================
@@ -57,7 +58,7 @@ async function buildCumulativeStats() {
         const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
         const userRef = firestore.doc(`users/${uid}`);
         return firestore.runTransaction(async (tx) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44;
             const [cumulativeSnap, userSnap] = await Promise.all([
                 tx.get(cumulativeRef),
                 tx.get(userRef),
@@ -117,6 +118,7 @@ async function buildCumulativeStats() {
                 totalPoints: 0,
                 totalUpset: 0,
                 totalPrecision: 0,
+                totalGoalScorerHits: 0,
                 winRate: 0,
             };
             const prevPlayoffs = (_u = prevByPhase.playoffs) !== null && _u !== void 0 ? _u : {
@@ -125,6 +127,7 @@ async function buildCumulativeStats() {
                 totalPoints: 0,
                 totalUpset: 0,
                 totalPrecision: 0,
+                totalGoalScorerHits: 0,
                 winRate: 0,
             };
             const nextPlayInRaw = addRankingTotals(prevPlayIn, {
@@ -133,13 +136,15 @@ async function buildCumulativeStats() {
                 pointsSumV3: (_0 = (_z = statsByPhase.play_in) === null || _z === void 0 ? void 0 : _z.pointsSumV3) !== null && _0 !== void 0 ? _0 : 0,
                 upsetPointsSum: (_2 = (_1 = statsByPhase.play_in) === null || _1 === void 0 ? void 0 : _1.upsetPointsSum) !== null && _2 !== void 0 ? _2 : 0,
                 scorePrecisionSum: (_4 = (_3 = statsByPhase.play_in) === null || _3 === void 0 ? void 0 : _3.scorePrecisionSum) !== null && _4 !== void 0 ? _4 : 0,
+                goalScorerHitCount: (_6 = (_5 = statsByPhase.play_in) === null || _5 === void 0 ? void 0 : _5.goalScorerHitCount) !== null && _6 !== void 0 ? _6 : 0,
             });
             const nextPlayoffsRaw = addRankingTotals(prevPlayoffs, {
-                posts: (_6 = (_5 = statsByPhase.playoffs) === null || _5 === void 0 ? void 0 : _5.posts) !== null && _6 !== void 0 ? _6 : 0,
-                wins: (_8 = (_7 = statsByPhase.playoffs) === null || _7 === void 0 ? void 0 : _7.wins) !== null && _8 !== void 0 ? _8 : 0,
-                pointsSumV3: (_10 = (_9 = statsByPhase.playoffs) === null || _9 === void 0 ? void 0 : _9.pointsSumV3) !== null && _10 !== void 0 ? _10 : 0,
-                upsetPointsSum: (_12 = (_11 = statsByPhase.playoffs) === null || _11 === void 0 ? void 0 : _11.upsetPointsSum) !== null && _12 !== void 0 ? _12 : 0,
-                scorePrecisionSum: (_14 = (_13 = statsByPhase.playoffs) === null || _13 === void 0 ? void 0 : _13.scorePrecisionSum) !== null && _14 !== void 0 ? _14 : 0,
+                posts: (_8 = (_7 = statsByPhase.playoffs) === null || _7 === void 0 ? void 0 : _7.posts) !== null && _8 !== void 0 ? _8 : 0,
+                wins: (_10 = (_9 = statsByPhase.playoffs) === null || _9 === void 0 ? void 0 : _9.wins) !== null && _10 !== void 0 ? _10 : 0,
+                pointsSumV3: (_12 = (_11 = statsByPhase.playoffs) === null || _11 === void 0 ? void 0 : _11.pointsSumV3) !== null && _12 !== void 0 ? _12 : 0,
+                upsetPointsSum: (_14 = (_13 = statsByPhase.playoffs) === null || _13 === void 0 ? void 0 : _13.upsetPointsSum) !== null && _14 !== void 0 ? _14 : 0,
+                scorePrecisionSum: (_16 = (_15 = statsByPhase.playoffs) === null || _15 === void 0 ? void 0 : _15.scorePrecisionSum) !== null && _16 !== void 0 ? _16 : 0,
+                goalScorerHitCount: (_18 = (_17 = statsByPhase.playoffs) === null || _17 === void 0 ? void 0 : _17.goalScorerHitCount) !== null && _18 !== void 0 ? _18 : 0,
             });
             const nextPlayIn = Object.assign(Object.assign({}, nextPlayInRaw), { winRate: nextPlayInRaw.totalPosts > 0
                     ? nextPlayInRaw.totalWins / nextPlayInRaw.totalPosts
@@ -150,24 +155,26 @@ async function buildCumulativeStats() {
             /* =========================
              * プレーオフラウンド別ランキング累積（r1 / r2 / cf / finals）
              * =======================*/
-            const prevByRound = ((_15 = cumulativeSnap.get("rankingByPlayoffRound")) !== null && _15 !== void 0 ? _15 : {});
+            const prevByRound = ((_19 = cumulativeSnap.get("rankingByPlayoffRound")) !== null && _19 !== void 0 ? _19 : {});
             const roundKeys = ["r1", "r2", "cf", "finals"];
             const nextByRound = {};
             for (const rk of roundKeys) {
-                const prevRound = (_16 = prevByRound[rk]) !== null && _16 !== void 0 ? _16 : {
+                const prevRound = (_20 = prevByRound[rk]) !== null && _20 !== void 0 ? _20 : {
                     totalPosts: 0,
                     totalWins: 0,
                     totalPoints: 0,
                     totalUpset: 0,
                     totalPrecision: 0,
+                    totalGoalScorerHits: 0,
                     winRate: 0,
                 };
                 const nextRoundRaw = addRankingTotals(prevRound, {
-                    posts: (_18 = (_17 = statsByPlayoffRound[rk]) === null || _17 === void 0 ? void 0 : _17.posts) !== null && _18 !== void 0 ? _18 : 0,
-                    wins: (_20 = (_19 = statsByPlayoffRound[rk]) === null || _19 === void 0 ? void 0 : _19.wins) !== null && _20 !== void 0 ? _20 : 0,
-                    pointsSumV3: (_22 = (_21 = statsByPlayoffRound[rk]) === null || _21 === void 0 ? void 0 : _21.pointsSumV3) !== null && _22 !== void 0 ? _22 : 0,
-                    upsetPointsSum: (_24 = (_23 = statsByPlayoffRound[rk]) === null || _23 === void 0 ? void 0 : _23.upsetPointsSum) !== null && _24 !== void 0 ? _24 : 0,
-                    scorePrecisionSum: (_26 = (_25 = statsByPlayoffRound[rk]) === null || _25 === void 0 ? void 0 : _25.scorePrecisionSum) !== null && _26 !== void 0 ? _26 : 0,
+                    posts: (_22 = (_21 = statsByPlayoffRound[rk]) === null || _21 === void 0 ? void 0 : _21.posts) !== null && _22 !== void 0 ? _22 : 0,
+                    wins: (_24 = (_23 = statsByPlayoffRound[rk]) === null || _23 === void 0 ? void 0 : _23.wins) !== null && _24 !== void 0 ? _24 : 0,
+                    pointsSumV3: (_26 = (_25 = statsByPlayoffRound[rk]) === null || _25 === void 0 ? void 0 : _25.pointsSumV3) !== null && _26 !== void 0 ? _26 : 0,
+                    upsetPointsSum: (_28 = (_27 = statsByPlayoffRound[rk]) === null || _27 === void 0 ? void 0 : _27.upsetPointsSum) !== null && _28 !== void 0 ? _28 : 0,
+                    scorePrecisionSum: (_30 = (_29 = statsByPlayoffRound[rk]) === null || _29 === void 0 ? void 0 : _29.scorePrecisionSum) !== null && _30 !== void 0 ? _30 : 0,
+                    goalScorerHitCount: (_32 = (_31 = statsByPlayoffRound[rk]) === null || _31 === void 0 ? void 0 : _31.goalScorerHitCount) !== null && _32 !== void 0 ? _32 : 0,
                 });
                 nextByRound[rk] = Object.assign(Object.assign({}, nextRoundRaw), { winRate: nextRoundRaw.totalPosts > 0
                         ? nextRoundRaw.totalWins / nextRoundRaw.totalPosts
@@ -177,24 +184,26 @@ async function buildCumulativeStats() {
              * World Cup ステージ別（overall / qualifying / main）
              * =======================*/
             const WC_STAGES = ["overall", "qualifying", "main"];
-            const prevByWc = ((_27 = cumulativeSnap.get("rankingByWcStage")) !== null && _27 !== void 0 ? _27 : {});
+            const prevByWc = ((_33 = cumulativeSnap.get("rankingByWcStage")) !== null && _33 !== void 0 ? _33 : {});
             const nextByWc = {};
             for (const wk of WC_STAGES) {
-                const prevW = (_28 = prevByWc[wk]) !== null && _28 !== void 0 ? _28 : {
+                const prevW = (_34 = prevByWc[wk]) !== null && _34 !== void 0 ? _34 : {
                     totalPosts: 0,
                     totalWins: 0,
                     totalPoints: 0,
                     totalUpset: 0,
                     totalPrecision: 0,
+                    totalGoalScorerHits: 0,
                     winRate: 0,
                 };
                 const src = statsByWcStage[wk];
                 const nextWRaw = addRankingTotals(prevW, {
-                    posts: (_29 = src === null || src === void 0 ? void 0 : src.posts) !== null && _29 !== void 0 ? _29 : 0,
-                    wins: (_30 = src === null || src === void 0 ? void 0 : src.wins) !== null && _30 !== void 0 ? _30 : 0,
-                    pointsSumV3: (_31 = src === null || src === void 0 ? void 0 : src.pointsSumV3) !== null && _31 !== void 0 ? _31 : 0,
-                    upsetPointsSum: (_32 = src === null || src === void 0 ? void 0 : src.upsetPointsSum) !== null && _32 !== void 0 ? _32 : 0,
-                    scorePrecisionSum: (_33 = src === null || src === void 0 ? void 0 : src.scorePrecisionSum) !== null && _33 !== void 0 ? _33 : 0,
+                    posts: (_35 = src === null || src === void 0 ? void 0 : src.posts) !== null && _35 !== void 0 ? _35 : 0,
+                    wins: (_36 = src === null || src === void 0 ? void 0 : src.wins) !== null && _36 !== void 0 ? _36 : 0,
+                    pointsSumV3: (_37 = src === null || src === void 0 ? void 0 : src.pointsSumV3) !== null && _37 !== void 0 ? _37 : 0,
+                    upsetPointsSum: (_38 = src === null || src === void 0 ? void 0 : src.upsetPointsSum) !== null && _38 !== void 0 ? _38 : 0,
+                    scorePrecisionSum: (_39 = src === null || src === void 0 ? void 0 : src.scorePrecisionSum) !== null && _39 !== void 0 ? _39 : 0,
+                    goalScorerHitCount: (_40 = src === null || src === void 0 ? void 0 : src.goalScorerHitCount) !== null && _40 !== void 0 ? _40 : 0,
                 });
                 nextByWc[wk] = Object.assign(Object.assign({}, nextWRaw), { winRate: nextWRaw.totalPosts > 0
                         ? nextWRaw.totalWins / nextWRaw.totalPosts
@@ -202,10 +211,10 @@ async function buildCumulativeStats() {
             }
             tx.set(cumulativeRef, {
                 uid,
-                displayName: (_34 = user.displayName) !== null && _34 !== void 0 ? _34 : "user",
-                handle: (_35 = user.handle) !== null && _35 !== void 0 ? _35 : null,
-                photoURL: (_36 = user.photoURL) !== null && _36 !== void 0 ? _36 : null,
-                countryCode: (_37 = user.countryCode) !== null && _37 !== void 0 ? _37 : null,
+                displayName: (_41 = user.displayName) !== null && _41 !== void 0 ? _41 : "user",
+                handle: (_42 = user.handle) !== null && _42 !== void 0 ? _42 : null,
+                photoURL: (_43 = user.photoURL) !== null && _43 !== void 0 ? _43 : null,
+                countryCode: (_44 = user.countryCode) !== null && _44 !== void 0 ? _44 : null,
                 plan: user.plan === "pro" ? "pro" : "free",
                 totalPosts: nextPosts,
                 totalWins: nextWins,

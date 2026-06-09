@@ -40,6 +40,7 @@ export default function LpV2Footer({ mobile = false }: LpV2FooterProps) {
     { href: `${base}/help`, label: "ヘルプ" },
     { href: `${base}/privacy`, label: "プライバシーポリシー" },
     { href: `${base}/terms`, label: "利用規約" },
+    { href: `${base}/electronic-notice`, label: "電子公告" },
     { href: `${base}/contact`, label: "お問い合わせ" },
   ] as const;
 

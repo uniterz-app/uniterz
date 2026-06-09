@@ -31,6 +31,7 @@ const METRIC_SET: ReadonlySet<MobileMetric> = new Set([
   "marginPrecision",
   "upsetScore",
   "streak",
+  "goalScorerHits",
 ]);
 
 export function isMobileMetricParam(

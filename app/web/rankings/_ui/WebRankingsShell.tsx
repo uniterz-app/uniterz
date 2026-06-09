@@ -62,6 +62,8 @@ function getMyMetricValue(metric: MobileMetric, row: any): number {
     return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
   }
 
+  if (metric === "goalScorerHits") return row.totalGoalScorerHits ?? 0;
+
   return row.activeWinStreak ?? 0;
 }
 

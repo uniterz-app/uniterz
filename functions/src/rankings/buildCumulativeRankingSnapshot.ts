@@ -15,7 +15,8 @@ type Metric =
   | "totalPoints"
   | "totalPrecision"
   | "totalUpset"
-  | "activeWinStreak";
+  | "activeWinStreak"
+  | "totalGoalScorerHits";
 
 const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
 
@@ -36,6 +37,9 @@ const METRICS: Metric[] = [
   "totalUpset",
   "activeWinStreak",
 ];
+
+/** World Cup 専用（得点者的中数） */
+const WC_METRICS: Metric[] = [...METRICS, "totalGoalScorerHits"];
 
 type RankingPhase = "play_in" | "playoffs";
 type PlayoffRoundKey = "r1" | "r2" | "cf" | "finals";
@@ -103,6 +107,7 @@ function rankingSlice(d: any, phase?: RankingPhase) {
         totalPoints: byPhase.totalPoints ?? 0,
         totalPrecision: byPhase.totalPrecision ?? 0,
         totalUpset: byPhase.totalUpset ?? 0,
+        totalGoalScorerHits: byPhase.totalGoalScorerHits ?? 0,
       };
     }
     return {
@@ -112,6 +117,7 @@ function rankingSlice(d: any, phase?: RankingPhase) {
       totalPoints: 0,
       totalPrecision: 0,
       totalUpset: 0,
+      totalGoalScorerHits: 0,
     };
   }
   const rk = d.ranking;
@@ -125,6 +131,7 @@ function rankingSlice(d: any, phase?: RankingPhase) {
       totalPoints: rk.totalPoints ?? 0,
       totalPrecision: rk.totalPrecision ?? 0,
       totalUpset: rk.totalUpset ?? 0,
+      totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
     };
   }
   const totalPosts = d.totalPosts ?? 0;
@@ -136,6 +143,7 @@ function rankingSlice(d: any, phase?: RankingPhase) {
     totalPoints: d.totalPoints ?? 0,
     totalPrecision: d.totalPrecision ?? 0,
     totalUpset: d.totalUpset ?? 0,
+    totalGoalScorerHits: d.totalGoalScorerHits ?? 0,
   };
 }
 
@@ -145,6 +153,7 @@ function getValue(d: any, metric: Metric, phase: RankingPhase) {
   if (metric === "winRate") return r.winRate ?? 0;
   if (metric === "totalPoints") return r.totalPoints ?? 0;
   if (metric === "totalPrecision") return r.totalPrecision ?? 0;
+  if (metric === "totalGoalScorerHits") return r.totalGoalScorerHits ?? 0;
   return r.totalUpset ?? 0;
 }
 
@@ -161,6 +170,7 @@ type BaseRow = {
   totalPoints: number;
   totalPrecision: number;
   totalUpset: number;
+  totalGoalScorerHits: number;
   activeWinStreak: number;
 };
 
@@ -169,6 +179,7 @@ function getRowMetricValue(row: BaseRow, metric: Metric): number {
   if (metric === "winRate") return row.winRate ?? 0;
   if (metric === "totalPoints") return row.totalPoints ?? 0;
   if (metric === "totalPrecision") return row.totalPrecision ?? 0;
+  if (metric === "totalGoalScorerHits") return row.totalGoalScorerHits ?? 0;
   return row.totalUpset ?? 0;
 }
 
@@ -316,6 +327,7 @@ export async function loadPlayoffRoundTop20RowsLive(
         totalPoints: rr?.totalPoints ?? 0,
         totalPrecision: rr?.totalPrecision ?? 0,
         totalUpset: rr?.totalUpset ?? 0,
+        totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
         activeWinStreak: d.activeWinStreak ?? 0,
       };
     })
@@ -371,6 +383,7 @@ export async function loadWcStageTop20RowsLive(
         totalPoints: rr?.totalPoints ?? 0,
         totalPrecision: rr?.totalPrecision ?? 0,
         totalUpset: rr?.totalUpset ?? 0,
+        totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
         activeWinStreak: d.streakFootball ?? d.activeWinStreak ?? 0,
       };
     })
@@ -438,6 +451,7 @@ export async function buildCumulativeRankingSnapshot() {
           totalPoints: r.totalPoints,
           totalPrecision: r.totalPrecision,
           totalUpset: r.totalUpset,
+          totalGoalScorerHits: 0,
           activeWinStreak: d.activeWinStreak ?? 0,
         };
       })
@@ -508,6 +522,7 @@ export async function buildCumulativeRankingSnapshot() {
           totalPoints: rr?.totalPoints ?? 0,
           totalPrecision: rr?.totalPrecision ?? 0,
           totalUpset: rr?.totalUpset ?? 0,
+          totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
           activeWinStreak: d.activeWinStreak ?? 0,
         };
       })
@@ -575,12 +590,13 @@ export async function buildCumulativeRankingSnapshot() {
           totalPoints: rr?.totalPoints ?? 0,
           totalPrecision: rr?.totalPrecision ?? 0,
           totalUpset: rr?.totalUpset ?? 0,
+          totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
           activeWinStreak: d.streakFootball ?? d.activeWinStreak ?? 0,
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);
 
-    for (const metric of METRICS) {
+    for (const metric of WC_METRICS) {
       const eligibleRows =
         metric === "winRate"
           ? baseRows.filter((row) => (row.totalPosts ?? 0) >= 1)

@@ -8,6 +8,9 @@ import { LineChart } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
+import WcGoalScorerResultRow, {
+  useWcGoalScorerResult,
+} from "@/app/component/result/WcGoalScorerResultRow";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
@@ -44,6 +47,7 @@ function MobileResultStatsCard({
   inOverlay = false,
 }: Props) {
   const m = t(language);
+  const wcGoalScorer = useWcGoalScorerResult(post);
 
   const fmt1 = (v: number) => (Number.isFinite(v) ? v.toFixed(1) : "--");
 
@@ -52,12 +56,14 @@ function MobileResultStatsCard({
     basePoints,
     upsetBonus,
     streakBonus,
+    goalScorerBonus,
     totalPoints,
   }: {
     rows: StatRow[];
     basePoints: number;
     upsetBonus: number;
     streakBonus: number;
+    goalScorerBonus: number;
     totalPoints: number;
   } = useMemo(() => {
     const scorePrecision = toNumber(post.stats?.scorePrecision, 0);
@@ -77,11 +83,17 @@ function MobileResultStatsCard({
       (post.stats as any)?.pointsV3Detail?.streakBonus,
       0
     );
+    const goalScorerBonus = toNumber(
+      (post.stats as any)?.goalScorerBonus ??
+        (post.stats as any)?.pointsV3Detail?.goalScorerBonus,
+      0
+    );
 
     return {
       basePoints,
       upsetBonus,
       streakBonus,
+      goalScorerBonus,
       totalPoints: pointsV3,
       rows: [
         {
@@ -127,6 +139,7 @@ function MobileResultStatsCard({
 
   const showUpsetBonus = upsetBonus > 1e-6;
   const showStreakBonus = streakBonus > 1e-6;
+  const showGoalScorerBonus = goalScorerBonus > 1e-6;
 
   return (
     <div className={[shell, minHeightClassName ?? "min-h-[280px]"].join(" ")}>
@@ -138,11 +151,20 @@ function MobileResultStatsCard({
       </div>
 
       <div className="space-y-0.5">
+        {wcGoalScorer ? (
+          <WcGoalScorerResultRow
+            label={m.results.wcGoalScorerLabel}
+            info={wcGoalScorer}
+            compact
+          />
+        ) : null}
+
         {rows.map((r, index) => {
           const cap = r.barMax ?? r.max ?? 1;
           const ratio = cap > 0 ? clamp01(r.value / cap) : 0;
           const display =
             r.format != null ? r.format(r.value) : String(r.value);
+          const rowIndex = wcGoalScorer ? index + 1 : index;
 
           return (
             <div key={r.key} className="flex items-center gap-2">
@@ -155,7 +177,7 @@ function MobileResultStatsCard({
               <ResultStatRatingBar
                 ratio={ratio}
                 animateMs={barAnimateMs}
-                delayMs={index * barStaggerMs}
+                delayMs={rowIndex * barStaggerMs}
                 size="md"
               />
 
@@ -193,6 +215,17 @@ function MobileResultStatsCard({
                 {m.results.streakBonusLabel}{" "}
                 <span className={resultStatsMetricNumClass}>
                   {fmt1(streakBonus)}
+                </span>
+              </span>
+            </>
+          )}
+          {showGoalScorerBonus && (
+            <>
+              <span className="text-white/35"> + </span>
+              <span className="text-white/90">
+                {m.results.goalScorerBonusLabel}{" "}
+                <span className={resultStatsMetricNumClass}>
+                  {fmt1(goalScorerBonus)}
                 </span>
               </span>
             </>

@@ -5,6 +5,7 @@ import { calcPointsFootball } from "./footballTotalScore";
 import type { SettlementGameInput } from "./settlementGame";
 import { leagueToSport } from "./settlementGame";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
+import { calcWcGoalScorerBonus } from "./wcGoalScorerBonus";
 
 function lerpByRange(
   value: number,
@@ -91,6 +92,7 @@ export type PostSettlementComputed = {
   upsetPoints: number;
   upsetBonus: number;
   streakBonus: number;
+  goalScorerBonus: number;
   activeWinStreak: number;
 };
 
@@ -106,7 +108,10 @@ export function computePostSettlement({
   streakResultMap,
 }: {
   p: FirebaseFirestore.DocumentData;
-  game: SettlementGameInput & { countsForRanking?: boolean };
+  game: SettlementGameInput & {
+    countsForRanking?: boolean;
+    goalScorers?: unknown;
+  };
   market: {
     majoritySide: string;
     majorityRatio: number;
@@ -178,7 +183,18 @@ export function computePostSettlement({
 
   const streakBonus = calcStreakBonus(activeWinStreak);
 
-  const totalPoints = baseScore.basePoints + upsetBonus + streakBonus;
+  const goalScorerBonus = calcWcGoalScorerBonus(
+    game.league,
+    p.prediction,
+    game.goalScorers,
+    {
+      homeTeamId: game.homeTeamId,
+      awayTeamId: game.awayTeamId,
+    }
+  );
+
+  const totalPoints =
+    baseScore.basePoints + upsetBonus + streakBonus + goalScorerBonus;
 
   return {
     totalPoints,
@@ -187,6 +203,7 @@ export function computePostSettlement({
     upsetPoints,
     upsetBonus,
     streakBonus,
+    goalScorerBonus,
     activeWinStreak,
   };
 }

@@ -24,7 +24,8 @@ type Metric =
   | "totalPoints"
   | "totalPrecision"
   | "totalUpset"
-  | "activeWinStreak";
+  | "activeWinStreak"
+  | "totalGoalScorerHits";
 
 const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
 
@@ -53,6 +54,7 @@ type RankingRow = {
   totalPoints: number;
   totalPrecision: number;
   totalUpset: number;
+  totalGoalScorerHits: number;
   activeWinStreak: number;
 
   rank: number;
@@ -65,7 +67,8 @@ function isMetric(v: unknown): v is Metric {
     v === "totalPoints" ||
     v === "totalPrecision" ||
     v === "totalUpset" ||
-    v === "activeWinStreak"
+    v === "activeWinStreak" ||
+    v === "totalGoalScorerHits"
   );
 }
 
@@ -100,6 +103,7 @@ function rankingSlice(
         totalPoints: byRound.totalPoints ?? 0,
         totalPrecision: byRound.totalPrecision ?? 0,
         totalUpset: byRound.totalUpset ?? 0,
+        totalGoalScorerHits: byRound.totalGoalScorerHits ?? 0,
       };
     }
   }
@@ -114,6 +118,7 @@ function rankingSlice(
       totalPoints: byPhase.totalPoints ?? 0,
       totalPrecision: byPhase.totalPrecision ?? 0,
       totalUpset: byPhase.totalUpset ?? 0,
+      totalGoalScorerHits: byPhase.totalGoalScorerHits ?? 0,
     };
   }
   return {
@@ -123,6 +128,7 @@ function rankingSlice(
     totalPoints: 0,
     totalPrecision: 0,
     totalUpset: 0,
+    totalGoalScorerHits: 0,
   };
 }
 
@@ -136,6 +142,7 @@ function rankingSliceWc(d: any, stage: WcRankingStage) {
       totalPoints: 0,
       totalPrecision: 0,
       totalUpset: 0,
+      totalGoalScorerHits: 0,
     };
   }
   const tp = block.totalPosts ?? 0;
@@ -147,6 +154,7 @@ function rankingSliceWc(d: any, stage: WcRankingStage) {
     totalPoints: block.totalPoints ?? 0,
     totalPrecision: block.totalPrecision ?? 0,
     totalUpset: block.totalUpset ?? 0,
+    totalGoalScorerHits: block.totalGoalScorerHits ?? 0,
   };
 }
 
@@ -446,6 +454,7 @@ async function rankingPayloadForMetric(
         totalPoints: rk.totalPoints,
         totalPrecision: rk.totalPrecision,
         totalUpset: rk.totalUpset,
+        totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
         activeWinStreak: me.streakFootball ?? me.activeWinStreak ?? 0,
 
         rank: myRank,
@@ -608,6 +617,7 @@ async function rankingPayloadForMetric(
       totalPoints: rk.totalPoints,
       totalPrecision: rk.totalPrecision,
       totalUpset: rk.totalUpset,
+      totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
       activeWinStreak: me.activeWinStreak ?? 0,
 
       rank: myRank,

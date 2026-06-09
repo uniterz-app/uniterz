@@ -15,6 +15,7 @@ type Props = {
   open: boolean;
   language: Language;
   sport: ScoringSport;
+  league?: string;
   displaySize?: ScoringRulesDisplaySize;
   onClose: () => void;
 };
@@ -23,6 +24,7 @@ export default function PredictionScoringRulesModal({
   open,
   language,
   sport,
+  league,
   displaySize = "mobile",
   onClose,
 }: Props) {
@@ -85,7 +87,11 @@ export default function PredictionScoringRulesModal({
             <div className="mb-3 h-px w-full bg-linear-to-r from-transparent via-cyan-400/25 to-transparent" />
 
             <ScoringRulesDisplayProvider size={displaySize}>
-              <PredictionScoringFullRulesBody sport={sport} language={language} />
+              <PredictionScoringFullRulesBody
+                sport={sport}
+                language={language}
+                league={league}
+              />
             </ScoringRulesDisplayProvider>
 
             <p

@@ -6,6 +6,7 @@ const calcUpsetPoints_1 = require("./calcUpsetPoints");
 const calcStreakBonus_1 = require("./calcStreakBonus");
 const footballTotalScore_1 = require("./footballTotalScore");
 const settlementGame_1 = require("./settlementGame");
+const wcGoalScorerBonus_1 = require("./wcGoalScorerBonus");
 function lerpByRange(value, min, max, start, end) {
     if (value <= min)
         return start;
@@ -121,7 +122,11 @@ function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap,
         ? p.stats.pointsV3Detail.activeWinStreak
         : 0);
     const streakBonus = (0, calcStreakBonus_1.calcStreakBonus)(activeWinStreak);
-    const totalPoints = baseScore.basePoints + upsetBonus + streakBonus;
+    const goalScorerBonus = (0, wcGoalScorerBonus_1.calcWcGoalScorerBonus)(game.league, p.prediction, game.goalScorers, {
+        homeTeamId: game.homeTeamId,
+        awayTeamId: game.awayTeamId,
+    });
+    const totalPoints = baseScore.basePoints + upsetBonus + streakBonus + goalScorerBonus;
     return {
         totalPoints,
         result,
@@ -129,6 +134,7 @@ function computePostSettlement({ p, game, market, hadUpsetGame, streakResultMap,
         upsetPoints,
         upsetBonus,
         streakBonus,
+        goalScorerBonus,
         activeWinStreak,
     };
 }

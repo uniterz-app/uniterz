@@ -59,6 +59,7 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
         regulationEtScore: (_e = game.regulationEtScore) !== null && _e !== void 0 ? _e : null,
         advancingTeamId: (_f = game.advancingTeamId) !== null && _f !== void 0 ? _f : null,
         knockout: game.knockout === true,
+        goalScorers: game.goalScorers,
     };
     /* ===== ② streak / team stats ===== */
     let streakResultMap = new Map();

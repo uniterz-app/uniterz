@@ -39,7 +39,7 @@ type Props = {
 
 function formatValue(metric: MobileMetric, value: number, ptsLabel: string) {
   if (metric === "winRate") return `${Math.round(value)}%`;
-  if (metric === "streak") {
+  if (metric === "streak" || metric === "goalScorerHits") {
     return `${Math.round(value)}`;
   }
   return `${formatMetricDecimals(value, 1)} ${ptsLabel}`;
