@@ -27,6 +27,7 @@ export type RankingRow = {
   totalPoints: number;
   totalPrecision: number;
   totalUpset: number;
+  totalGoalScorerHits?: number;
   currentStreak: number;
   activeWinStreak: number;
 
