@@ -106,9 +106,11 @@ export function readPostMatchGoalScorers(
     const side = (item as PostMatchGoalScorer).side;
     const label = String((item as PostMatchGoalScorer).label ?? "").trim();
     if ((side !== "home" && side !== "away") || !label) continue;
-    const minuteRaw = (item as PostMatchGoalScorer).minute;
+    const minuteRaw = (item as { minute?: unknown }).minute;
     const minute =
-      minuteRaw == null || minuteRaw === ""
+      minuteRaw == null ||
+      minuteRaw === "" ||
+      (typeof minuteRaw === "string" && minuteRaw.trim() === "")
         ? null
         : Number.isFinite(Number(minuteRaw))
           ? Number(minuteRaw)
