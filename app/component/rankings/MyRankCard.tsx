@@ -21,16 +21,9 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
-import ShareMyRankCardModal from "@/app/component/rankings/ShareMyRankCardModal";
 import { FLAG_SRC } from "@/lib/rankings/country";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
-import {
-  captureRankCardPng,
-  shareRankCardFile,
-  type RankCardImagePayload,
-} from "@/lib/rankings/shareMyRankCardImage";
-import { toast } from "@/app/component/ui/toast";
-import { Flame, Share2 } from "lucide-react";
+import { Flame } from "lucide-react";
 
 export type MyRankMiniMetric = {
   /** 選択中メトリクスのハイライト用（MobileMetric と一致させる） */
@@ -97,9 +90,6 @@ const CARD_LAYOUT: Record<
     name: string;
     subMeta: string;
     flame: string;
-    shareBtn: string;
-    shareInner: string;
-    shareIcon: string;
     cellPad: string;
     metricLabel: string;
     metricValue: string;
@@ -128,9 +118,6 @@ const CARD_LAYOUT: Record<
     name: "text-[13px]",
     subMeta: "text-[8px] tracking-[0.18em]",
     flame: "h-2.5 w-2.5",
-    shareBtn: "h-[42px] w-[42px]",
-    shareInner: "h-[30px] w-[30px]",
-    shareIcon: "h-[13px] w-[13px]",
     cellPad: "px-2.5 py-1.5",
     metricLabel: "text-[7.5px] tracking-[0.18em]",
     metricValue: "text-[15px]",
@@ -158,9 +145,6 @@ const CARD_LAYOUT: Record<
     name: "text-[15px]",
     subMeta: "text-[9px] tracking-[0.2em]",
     flame: "h-3 w-3",
-    shareBtn: "h-[48px] w-[48px]",
-    shareInner: "h-[36px] w-[36px]",
-    shareIcon: "h-[15px] w-[15px]",
     cellPad: "px-3.5 py-3",
     metricLabel: "text-[9px] tracking-[0.2em]",
     metricValue: "text-[19px]",
@@ -531,42 +515,6 @@ export default function MyRankCard({
   const tiltEnabled = reduceMotion !== true;
   const tilt = useHoloTilt(tiltEnabled);
 
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [sharing, setSharing] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [sharePayload, setSharePayload] = useState<RankCardImagePayload | null>(
-    null
-  );
-  const handleShare = useCallback(async () => {
-    const node = cardRef.current;
-    if (!node || sharing) return;
-    setSharing(true);
-    try {
-      const payload = await captureRankCardPng(node, {
-        language,
-        rank,
-        leagueLabel,
-        totalEntries,
-      });
-      const result = await shareRankCardFile(payload.file, payload.shareText);
-      if (result === "shared" || result === "cancelled") return;
-      setSharePayload(payload);
-      setShareOpen(true);
-    } catch (e) {
-      console.error("[MyRankCard] share capture failed", e);
-      toast.error(m.rankings.shareRankCardFailed);
-    } finally {
-      setSharing(false);
-    }
-  }, [
-    sharing,
-    language,
-    rank,
-    leagueLabel,
-    totalEntries,
-    m.rankings.shareRankCardFailed,
-  ]);
-
   const countEnabled = ready && reduceMotion !== true;
   const rankCount = useOvershootCount(
     rank ?? 0,
@@ -646,7 +594,6 @@ export default function MyRankCard({
 
   const body = (
     <div
-      ref={cardRef}
       className="relative overflow-hidden rounded-none"
       style={CARD_SHELL}
       aria-busy={statsScramble || undefined}
@@ -851,29 +798,6 @@ export default function MyRankCard({
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              data-share-exclude
-              onClick={handleShare}
-              disabled={sharing || loading}
-              aria-label={m.rankings.shareMyRank}
-              className={[
-                "-m-1 flex shrink-0 items-center justify-center p-1 text-cyan-300 transition-opacity active:opacity-60 disabled:opacity-35",
-                ui.shareBtn,
-              ].join(" ")}
-            >
-              <span
-                className={["flex items-center justify-center", ui.shareInner].join(
-                  " "
-                )}
-                style={{
-                  border: "1px solid rgba(34,211,238,0.35)",
-                  background: "rgba(34,211,238,0.08)",
-                }}
-              >
-                <Share2 className={ui.shareIcon} aria-hidden />
-              </span>
-            </button>
           </div>
 
           {hasCells ? (
@@ -1053,22 +977,11 @@ export default function MyRankCard({
   );
 
   if (reduceMotion === true) {
-    return (
-      <>
-        <div className={outerPad}>{tiltWrapped}</div>
-        <ShareMyRankCardModal
-          open={shareOpen}
-          payload={sharePayload}
-          language={language}
-          onClose={() => setShareOpen(false)}
-        />
-      </>
-    );
+    return <div className={outerPad}>{tiltWrapped}</div>;
   }
 
   /* key は固定 — タブ切替で再マウントせず、順位・ハイライトだけが変わる */
   return (
-    <>
     <motion.div
       className={outerPad}
       initial={{
@@ -1096,12 +1009,5 @@ export default function MyRankCard({
     >
       {tiltWrapped}
     </motion.div>
-    <ShareMyRankCardModal
-      open={shareOpen}
-      payload={sharePayload}
-      language={language}
-      onClose={() => setShareOpen(false)}
-    />
-    </>
   );
 }
