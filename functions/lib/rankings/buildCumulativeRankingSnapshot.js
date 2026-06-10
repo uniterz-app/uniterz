@@ -28,7 +28,14 @@ const METRICS = [
     "totalUpset",
     "activeWinStreak",
 ];
+/** World Cup 専用（得点者的中数） */
+const WC_METRICS = [...METRICS, "totalGoalScorerHits"];
 const PLAYOFF_ROUND_KEYS = ["r1", "r2", "cf", "finals"];
+const WC_RANKING_STAGES = [
+    "overall",
+    "qualifying",
+    "main",
+];
 /**
  * 日次スナップショットで再計算・書き込みするフェーズ。プレーイン終了後は確定表示のため除外する。
  * Next の `RANKING_SNAPSHOT_BUILD_PHASES` と同期すること。
@@ -72,7 +79,7 @@ exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS = 30;
  * =======================================================*/
 /** Leaderboard slice: prefer `rankingByPhase[phase]` when `phase` is set. */
 function rankingSlice(d, phase) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
     if (phase) {
         const byPhase = (_a = d.rankingByPhase) === null || _a === void 0 ? void 0 : _a[phase];
         if (byPhase && typeof byPhase === "object") {
@@ -85,6 +92,7 @@ function rankingSlice(d, phase) {
                 totalPoints: (_e = byPhase.totalPoints) !== null && _e !== void 0 ? _e : 0,
                 totalPrecision: (_f = byPhase.totalPrecision) !== null && _f !== void 0 ? _f : 0,
                 totalUpset: (_g = byPhase.totalUpset) !== null && _g !== void 0 ? _g : 0,
+                totalGoalScorerHits: (_h = byPhase.totalGoalScorerHits) !== null && _h !== void 0 ? _h : 0,
             };
         }
         return {
@@ -94,34 +102,37 @@ function rankingSlice(d, phase) {
             totalPoints: 0,
             totalPrecision: 0,
             totalUpset: 0,
+            totalGoalScorerHits: 0,
         };
     }
     const rk = d.ranking;
     if (rk && typeof rk === "object") {
-        const tp = (_h = rk.totalPosts) !== null && _h !== void 0 ? _h : 0;
-        const tw = (_j = rk.totalWins) !== null && _j !== void 0 ? _j : 0;
+        const tp = (_j = rk.totalPosts) !== null && _j !== void 0 ? _j : 0;
+        const tw = (_k = rk.totalWins) !== null && _k !== void 0 ? _k : 0;
         return {
             totalPosts: tp,
             totalWins: tw,
-            winRate: tp > 0 ? tw / tp : (_k = rk.winRate) !== null && _k !== void 0 ? _k : 0,
-            totalPoints: (_l = rk.totalPoints) !== null && _l !== void 0 ? _l : 0,
-            totalPrecision: (_m = rk.totalPrecision) !== null && _m !== void 0 ? _m : 0,
-            totalUpset: (_o = rk.totalUpset) !== null && _o !== void 0 ? _o : 0,
+            winRate: tp > 0 ? tw / tp : (_l = rk.winRate) !== null && _l !== void 0 ? _l : 0,
+            totalPoints: (_m = rk.totalPoints) !== null && _m !== void 0 ? _m : 0,
+            totalPrecision: (_o = rk.totalPrecision) !== null && _o !== void 0 ? _o : 0,
+            totalUpset: (_p = rk.totalUpset) !== null && _p !== void 0 ? _p : 0,
+            totalGoalScorerHits: (_q = rk.totalGoalScorerHits) !== null && _q !== void 0 ? _q : 0,
         };
     }
-    const totalPosts = (_p = d.totalPosts) !== null && _p !== void 0 ? _p : 0;
-    const totalWins = (_q = d.totalWins) !== null && _q !== void 0 ? _q : 0;
+    const totalPosts = (_r = d.totalPosts) !== null && _r !== void 0 ? _r : 0;
+    const totalWins = (_s = d.totalWins) !== null && _s !== void 0 ? _s : 0;
     return {
         totalPosts,
         totalWins,
-        winRate: (_r = d.winRate) !== null && _r !== void 0 ? _r : 0,
-        totalPoints: (_s = d.totalPoints) !== null && _s !== void 0 ? _s : 0,
-        totalPrecision: (_t = d.totalPrecision) !== null && _t !== void 0 ? _t : 0,
-        totalUpset: (_u = d.totalUpset) !== null && _u !== void 0 ? _u : 0,
+        winRate: (_t = d.winRate) !== null && _t !== void 0 ? _t : 0,
+        totalPoints: (_u = d.totalPoints) !== null && _u !== void 0 ? _u : 0,
+        totalPrecision: (_v = d.totalPrecision) !== null && _v !== void 0 ? _v : 0,
+        totalUpset: (_w = d.totalUpset) !== null && _w !== void 0 ? _w : 0,
+        totalGoalScorerHits: (_x = d.totalGoalScorerHits) !== null && _x !== void 0 ? _x : 0,
     };
 }
 function getValue(d, metric, phase) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     if (metric === "activeWinStreak")
         return (_a = d.activeWinStreak) !== null && _a !== void 0 ? _a : 0;
     const r = rankingSlice(d, phase);
@@ -131,10 +142,12 @@ function getValue(d, metric, phase) {
         return (_c = r.totalPoints) !== null && _c !== void 0 ? _c : 0;
     if (metric === "totalPrecision")
         return (_d = r.totalPrecision) !== null && _d !== void 0 ? _d : 0;
-    return (_e = r.totalUpset) !== null && _e !== void 0 ? _e : 0;
+    if (metric === "totalGoalScorerHits")
+        return (_e = r.totalGoalScorerHits) !== null && _e !== void 0 ? _e : 0;
+    return (_f = r.totalUpset) !== null && _f !== void 0 ? _f : 0;
 }
 function getRowMetricValue(row, metric) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f;
     if (metric === "activeWinStreak")
         return (_a = row.activeWinStreak) !== null && _a !== void 0 ? _a : 0;
     if (metric === "winRate")
@@ -143,7 +156,9 @@ function getRowMetricValue(row, metric) {
         return (_c = row.totalPoints) !== null && _c !== void 0 ? _c : 0;
     if (metric === "totalPrecision")
         return (_d = row.totalPrecision) !== null && _d !== void 0 ? _d : 0;
-    return (_e = row.totalUpset) !== null && _e !== void 0 ? _e : 0;
+    if (metric === "totalGoalScorerHits")
+        return (_e = row.totalGoalScorerHits) !== null && _e !== void 0 ? _e : 0;
+    return (_f = row.totalUpset) !== null && _f !== void 0 ? _f : 0;
 }
 /** Same ordering as snapshot sort (desc). Returns 0 when tied for rank. */
 function cmpSortRows(a, b, metric) {
@@ -170,6 +185,40 @@ function assignCompetitionRanks(sorted, metric) {
         out.set(sorted[i].uid, rank);
     }
     return out;
+}
+function toSnapshotMetricValues(r) {
+    var _a, _b, _c, _d, _e, _f;
+    const tp = (_a = r.totalPosts) !== null && _a !== void 0 ? _a : 0;
+    const tw = (_b = r.totalWins) !== null && _b !== void 0 ? _b : 0;
+    return {
+        totalPoints: (_c = r.totalPoints) !== null && _c !== void 0 ? _c : 0,
+        totalPrecision: (_d = r.totalPrecision) !== null && _d !== void 0 ? _d : 0,
+        totalUpset: (_e = r.totalUpset) !== null && _e !== void 0 ? _e : 0,
+        winRate: tp > 0 ? tw / tp : ((_f = r.winRate) !== null && _f !== void 0 ? _f : 0),
+    };
+}
+function buildMetricValuesBlock(d) {
+    var _a, _b, _c, _d;
+    const playoffRounds = {};
+    for (const round of PLAYOFF_ROUND_KEYS) {
+        const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
+        if (((_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0) > 0) {
+            playoffRounds[round] = toSnapshotMetricValues(rr);
+        }
+    }
+    const wc = {};
+    for (const stage of WC_RANKING_STAGES) {
+        const rr = (_c = d.rankingByWcStage) === null || _c === void 0 ? void 0 : _c[stage];
+        if (((_d = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _d !== void 0 ? _d : 0) > 0) {
+            wc[stage] = toSnapshotMetricValues(rr);
+        }
+    }
+    return {
+        play_in: toSnapshotMetricValues(rankingSlice(d, "play_in")),
+        playoffs: toSnapshotMetricValues(rankingSlice(d, "playoffs")),
+        playoffRounds,
+        wc,
+    };
 }
 function computeRankDeltaPlaces(prevRank, currentRank) {
     if (prevRank == null || currentRank < 1)
@@ -225,15 +274,11 @@ async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) 
     }
     return out;
 }
-/**
- * 日次スナップショット doc が無い/空のとき、getCumulativeRanking が一覧を出せるよう
- * cumulative_stats からラウンド別 Top20 をその場で算出する。
- */
 async function loadPlayoffRoundTop20RowsLive(round, metric) {
     const snap = await db().collection("cumulative_stats").get();
     const baseRows = snap.docs
         .map((doc) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
         const d = doc.data();
         const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
         const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -251,7 +296,8 @@ async function loadPlayoffRoundTop20RowsLive(round, metric) {
             totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
             totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
             totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-            activeWinStreak: (_m = d.activeWinStreak) !== null && _m !== void 0 ? _m : 0,
+            totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
+            activeWinStreak: (_o = d.activeWinStreak) !== null && _o !== void 0 ? _o : 0,
         };
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -260,16 +306,14 @@ async function loadPlayoffRoundTop20RowsLive(round, metric) {
         : baseRows;
     const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
     const ranks = assignCompetitionRanks(sortedFull, metric);
-    return sortedFull.slice(0, 20).map((row) => {
-        var _a;
-        return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
-    });
+    return {
+        totalCount: sortedFull.length,
+        rows: sortedFull.slice(0, 20).map((row) => {
+            var _a;
+            return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
+        }),
+    };
 }
-const WC_RANKING_STAGES = [
-    "overall",
-    "qualifying",
-    "main",
-];
 /**
  * World Cup ステージ別 Top20（スナップショットが空のときの live フォールバック）
  */
@@ -277,7 +321,7 @@ async function loadWcStageTop20RowsLive(stage, metric) {
     const snap = await db().collection("cumulative_stats").get();
     const baseRows = snap.docs
         .map((doc) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
         const d = doc.data();
         const rr = (_a = d.rankingByWcStage) === null || _a === void 0 ? void 0 : _a[stage];
         const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -295,7 +339,8 @@ async function loadWcStageTop20RowsLive(stage, metric) {
             totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
             totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
             totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-            activeWinStreak: (_o = (_m = d.streakFootball) !== null && _m !== void 0 ? _m : d.activeWinStreak) !== null && _o !== void 0 ? _o : 0,
+            totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
+            activeWinStreak: (_p = (_o = d.streakFootball) !== null && _o !== void 0 ? _o : d.activeWinStreak) !== null && _p !== void 0 ? _p : 0,
         };
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -304,10 +349,13 @@ async function loadWcStageTop20RowsLive(stage, metric) {
         : baseRows;
     const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
     const ranks = assignCompetitionRanks(sortedFull, metric);
-    return sortedFull.slice(0, 20).map((row) => {
-        var _a;
-        return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
-    });
+    return {
+        totalCount: sortedFull.length,
+        rows: sortedFull.slice(0, 20).map((row) => {
+            var _a;
+            return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
+        }),
+    };
 }
 /* =========================================================
  * Main
@@ -343,6 +391,7 @@ async function buildCumulativeRankingSnapshot() {
                 totalPoints: r.totalPoints,
                 totalPrecision: r.totalPrecision,
                 totalUpset: r.totalUpset,
+                totalGoalScorerHits: 0,
                 activeWinStreak: (_e = d.activeWinStreak) !== null && _e !== void 0 ? _e : 0,
             };
         })
@@ -363,7 +412,12 @@ async function buildCumulativeRankingSnapshot() {
             for (const r of top20) {
                 topUidSet.add(r.uid);
             }
-            top20Jobs.push({ phase, metric, rows: top20 });
+            top20Jobs.push({
+                phase,
+                metric,
+                rows: top20,
+                totalCount: sortedFull.length,
+            });
         }
     }
     const roundTop20Jobs = [];
@@ -377,7 +431,7 @@ async function buildCumulativeRankingSnapshot() {
     for (const round of PLAYOFF_ROUND_KEYS) {
         const baseRows = snap.docs
             .map((doc) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
             const d = doc.data();
             const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
             const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -395,7 +449,8 @@ async function buildCumulativeRankingSnapshot() {
                 totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
                 totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
                 totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-                activeWinStreak: (_m = d.activeWinStreak) !== null && _m !== void 0 ? _m : 0,
+                totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
+                activeWinStreak: (_o = d.activeWinStreak) !== null && _o !== void 0 ? _o : 0,
             };
         })
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -418,7 +473,12 @@ async function buildCumulativeRankingSnapshot() {
             for (const r of top20) {
                 topUidSet.add(r.uid);
             }
-            roundTop20Jobs.push({ round, metric, rows: top20 });
+            roundTop20Jobs.push({
+                round,
+                metric,
+                rows: top20,
+                totalCount: sortedFull.length,
+            });
         }
     }
     const wcTop20Jobs = [];
@@ -432,7 +492,7 @@ async function buildCumulativeRankingSnapshot() {
     for (const stage of WC_RANKING_STAGES) {
         const baseRows = snap.docs
             .map((doc) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
             const d = doc.data();
             const rr = (_a = d.rankingByWcStage) === null || _a === void 0 ? void 0 : _a[stage];
             const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -450,11 +510,12 @@ async function buildCumulativeRankingSnapshot() {
                 totalPoints: (_j = rr === null || rr === void 0 ? void 0 : rr.totalPoints) !== null && _j !== void 0 ? _j : 0,
                 totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
                 totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
-                activeWinStreak: (_o = (_m = d.streakFootball) !== null && _m !== void 0 ? _m : d.activeWinStreak) !== null && _o !== void 0 ? _o : 0,
+                totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
+                activeWinStreak: (_p = (_o = d.streakFootball) !== null && _o !== void 0 ? _o : d.activeWinStreak) !== null && _p !== void 0 ? _p : 0,
             };
         })
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
-        for (const metric of METRICS) {
+        for (const metric of WC_METRICS) {
             const eligibleRows = metric === "winRate"
                 ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= 1; })
                 : baseRows;
@@ -473,12 +534,17 @@ async function buildCumulativeRankingSnapshot() {
             for (const r of top20) {
                 topUidSet.add(r.uid);
             }
-            wcTop20Jobs.push({ stage, metric, rows: top20 });
+            wcTop20Jobs.push({
+                stage,
+                metric,
+                rows: top20,
+                totalCount: sortedFull.length,
+            });
         }
     }
     const yesterdayKey = getYesterdayDateKeyJST();
     const prevByUid = await fetchLatestPriorRankMapsForUids([...topUidSet], yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS);
-    for (const { phase, metric, rows } of top20Jobs) {
+    for (const { phase, metric, rows, totalCount } of top20Jobs) {
         const enriched = rows.map((row) => {
             var _a;
             const prevBlock = prevByUid.get(row.uid);
@@ -497,11 +563,12 @@ async function buildCumulativeRankingSnapshot() {
             phase,
             metric,
             rows: enriched,
+            totalCount,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
         }, { merge: true });
     }
-    for (const { round, metric, rows } of roundTop20Jobs) {
+    for (const { round, metric, rows, totalCount } of roundTop20Jobs) {
         const enriched = rows.map((row) => {
             var _a, _b;
             const prevBlock = prevByUid.get(row.uid);
@@ -521,11 +588,12 @@ async function buildCumulativeRankingSnapshot() {
             round,
             metric,
             rows: enriched,
+            totalCount,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
         }, { merge: true });
     }
-    for (const { stage, metric, rows } of wcTop20Jobs) {
+    for (const { stage, metric, rows, totalCount } of wcTop20Jobs) {
         const enriched = rows.map((row) => {
             var _a, _b;
             const prevBlock = prevByUid.get(row.uid);
@@ -545,6 +613,7 @@ async function buildCumulativeRankingSnapshot() {
             stage,
             metric,
             rows: enriched,
+            totalCount,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
         }, { merge: true });
@@ -561,6 +630,10 @@ async function buildCumulativeRankingSnapshot() {
         }
     };
     const historyUids = new Set([...rankByUid.keys(), ...rankByUidWc.keys()]);
+    const metricValuesByUid = new Map();
+    for (const doc of snap.docs) {
+        metricValuesByUid.set(doc.id, buildMetricValuesBlock(doc.data()));
+    }
     for (const uid of historyUids) {
         const per = (_a = rankByUid.get(uid)) !== null && _a !== void 0 ? _a : { play_in: {}, playoffs: {} };
         const playoffRounds = (_b = rankByUidPlayoffRound.get(uid)) !== null && _b !== void 0 ? _b : {};
@@ -584,6 +657,7 @@ async function buildCumulativeRankingSnapshot() {
             playoffs: per.playoffs,
             playoffRounds,
             wc,
+            metricValues: metricValuesByUid.get(uid),
             writtenAt: firestore_1.FieldValue.serverTimestamp(),
         }, { merge: true });
         ops += 2;

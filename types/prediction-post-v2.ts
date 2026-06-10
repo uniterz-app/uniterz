@@ -53,6 +53,14 @@ export type PredictionPostV2 = {
     away: number;
   } | null;
 
+  /** WC のみ：試合の実得点者（finalizePost で games.goalScorers からコピー） */
+  matchGoalScorers?: Array<{
+    side: "home" | "away";
+    minute: number | null;
+    label: string;
+    ownGoal?: boolean;
+  }> | null;
+
   /* ------------------------
      Market Meta（finalizePostで保存）
   ------------------------ */
@@ -80,6 +88,8 @@ export type PredictionPostV2 = {
     score: { home: number; away: number };
     /** UI 用（任意）。旧データは null の場合あり */
     confidence?: number | null;
+    /** WC のみ：ゴール得点者予想 */
+    goalScorer?: { playerId: string; teamId: string } | null;
   };
 
   note?: string;
@@ -118,6 +128,8 @@ export type PredictionPostV2 = {
       diffPoints: number;
       totalPoints: number;
       upsetBonus: number;
+      streakBonus?: number;
+      goalScorerBonus?: number;
       diffError: number | null;
       totalError: number | null;
       /** 当時点の連勝数（finalizePost / UI バッジと同期） */

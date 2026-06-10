@@ -80,6 +80,8 @@ export type MatchCardProps = {
   seasonPhase?: "regular" | "play_in" | "playoffs" | null;
   venue?: string;
   roundLabel?: string;
+  /** WC：仕切り線上に表示する放送媒体（複数可） */
+  broadcastLabels?: string[];
   startAtJst: Date | null;
   status: Status;
   home: TeamSide;
@@ -225,11 +227,16 @@ function useSectionPrefix() {
   return "/web";
 }
 
+function broadcastNameUsesCjk(label: string): boolean {
+  return /[\u3040-\u30ff\u4e00-\u9fff]/.test(label);
+}
+
 function MatchCard({
   id,
   league,
   venue,
   roundLabel,
+  broadcastLabels = [],
   startAtJst,
   status,
   home,
@@ -268,7 +275,9 @@ function MatchCard({
   const m = t(language);
   const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
-    const [navigating, setNavigating] = useState(false);
+  const wcBroadcastSep = language === "ja" ? "：" : ": ";
+
+  const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
   const [fullCardPressed, setFullCardPressed] = useState(false);
 
@@ -281,6 +290,11 @@ const pathname = usePathname();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** モバイル dense / W杯コンパクト一覧 */
   const mobileDense = (dense && isMobile) || (compact && league === "wc");
+  const showWcBroadcastRow =
+    league === "wc" &&
+    broadcastLabels.length > 0 &&
+    status !== "final";
+  const wcBroadcastCompact = mobileDense || inPredictOverlay;
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const showPlayoffSeriesRow =
     isPlayoffStyleGameCard(seasonPhase, roundLabel) &&
@@ -648,7 +662,10 @@ let center: React.ReactNode = inPredictOverlay ? (
   /** Same behavior as the predict CTA (schedule overlay when logged in). */
   const triggerOpenPredictLikeButton = () => {
     const me = auth.currentUser;
-    if (!me) return;
+    if (!me) {
+      router.push(isMobile ? "/mobile/login" : "/web/login");
+      return;
+    }
 
     // スケジュール一覧のオーバーレイ：予想済み・試合開始後も市場・詳細スタッツを見るために開く
     if (onOpenPredict) {
@@ -1515,6 +1532,62 @@ background:
 </motion.div>
 
       </div>
+
+      {showWcBroadcastRow && !hideLine && (
+        <motion.div
+          className={[
+            "flex w-full items-center justify-center gap-2 px-3 text-center",
+            wcBroadcastCompact ? "mt-1 py-1 md:px-4" : "mt-2 py-1.5 md:px-4",
+          ].join(" ")}
+          initial={entryTransition ? { opacity: 0, y: 8 } : false}
+          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
+          transition={entryTransition ? entryTransition(6) : undefined}
+        >
+          <span
+            className={[
+              "shrink-0 font-semibold text-white/45",
+              wcBroadcastCompact
+                ? "text-xs md:text-sm"
+                : "text-sm md:text-base",
+            ].join(" ")}
+            style={teamNameFont}
+          >
+            {m.games.broadcasters}
+          </span>
+          <span
+            className={[
+              "flex min-w-0 flex-wrap items-baseline justify-center font-bold tracking-wide text-cyan-100/90",
+            ].join(" ")}
+            style={teamNameFont}
+          >
+            {broadcastLabels.map((label, index) => {
+              const cjkName = broadcastNameUsesCjk(label);
+              const nameSizeClass = cjkName
+                ? wcBroadcastCompact
+                  ? "text-xs md:text-sm"
+                  : "text-sm md:text-base"
+                : wcBroadcastCompact
+                  ? "text-sm md:text-base"
+                  : "text-base md:text-lg";
+              return (
+                <span key={`${label}-${index}`} className="inline-flex items-baseline">
+                  {index > 0 ? (
+                    <span
+                      className={[
+                        nameSizeClass,
+                        "opacity-80",
+                      ].join(" ")}
+                    >
+                      {wcBroadcastSep}
+                    </span>
+                  ) : null}
+                  <span className={nameSizeClass}>{label}</span>
+                </span>
+              );
+            })}
+          </span>
+        </motion.div>
+      )}
 
       {/* 仕切り線 */}
 {!hideLine && (

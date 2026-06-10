@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import type { Language } from "@/lib/i18n/language";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "@/lib/firebase";
@@ -14,7 +15,16 @@ import {
   type CommunityMetric,
 } from "@/lib/communities/types";
 import { leagueLabel, metricLabel } from "@/lib/communities/labels";
+import {
+  FREE_MAX_MEMBERSHIPS,
+  FREE_MAX_OWNED_GROUPS,
+  PRO_MAX_MEMBERSHIPS,
+  PRO_MAX_OWNED_GROUPS,
+} from "@/lib/communities/limitValues";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import CommunityTeamPicker from "@/app/component/communities/CommunityTeamPicker";
+import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
+import { LEAGUES, type League } from "@/lib/leagues";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -32,6 +42,7 @@ export type CreatedGroupPayload = {
   rankingMetric: CommunityMetric;
   periodType: "from_now";
   rankingLeague: CommunityLeague;
+  rankingTeamIds: string[];
   role: string;
 };
 
@@ -39,6 +50,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   language: Language;
+  variant?: "web" | "mobile";
   onCreated: (
     group?: CreatedGroupPayload | null,
     inviteCode?: string
@@ -49,6 +61,7 @@ export default function CreateGroupModal({
   open,
   onClose,
   language,
+  variant = "mobile",
   onCreated,
 }: Props) {
   const [name, setName] = useState("");
@@ -57,9 +70,16 @@ export default function CreateGroupModal({
   const [preview, setPreview] = useState<string | null>(null);
   const [metric, setMetric] = useState<CommunityMetric>("totalPoints");
   const [league, setLeague] = useState<CommunityLeague>("all");
+  const [teamIds, setTeamIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
   const submitLockRef = useRef(false);
+  const isWeb = variant === "web";
+  const reduceMotion = useReducedMotion();
+  const scheduleLeague: League =
+    league === "all" ? LEAGUES.NBA : (league as League);
+  const { teams } = useScheduleTeams(scheduleLeague);
+  const showTeamPicker = league !== "all";
 
   useEffect(() => {
     setMounted(true);
@@ -122,12 +142,14 @@ export default function CreateGroupModal({
             header: "Header image",
             metric: "Compete on",
             league: "League",
+            teams: "Target teams",
             scoringNote:
               "Scores count from the day this group is created (JST). Past results are not included.",
             cancel: "Cancel",
             submit: "Create",
             streakNote:
               "Win streak uses your account-wide streak, not only from group start.",
+            planLimits: `Plan limits: Free users can create up to ${FREE_MAX_OWNED_GROUPS} groups and join up to ${FREE_MAX_MEMBERSHIPS} groups. Pro users can create up to ${PRO_MAX_OWNED_GROUPS} groups and join up to ${PRO_MAX_MEMBERSHIPS} groups.`,
           }
         : {
             title: "グループを作成",
@@ -138,12 +160,14 @@ export default function CreateGroupModal({
             header: "ヘッダー画像",
             metric: "競う項目",
             league: "リーグ",
+            teams: "対象チーム",
             scoringNote:
               "グループ作成日（JST）以降の予想だけが集計されます。過去の成績は含みません。",
             cancel: "キャンセル",
             submit: "作成",
             streakNote:
               "連勝はアカウント全体の累計です（グループ開始日以降だけにはなりません）。",
+            planLimits: `プラン上限: Free はグループを最大 ${FREE_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${FREE_MAX_MEMBERSHIPS} 件まで参加できます。Pro はグループを最大 ${PRO_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${PRO_MAX_MEMBERSHIPS} 件まで参加できます。`,
           },
     [language]
   );
@@ -167,6 +191,7 @@ export default function CreateGroupModal({
     });
     setMetric("totalPoints");
     setLeague("all");
+    setTeamIds([]);
     onClose();
   }, [onClose]);
 
@@ -226,6 +251,7 @@ export default function CreateGroupModal({
           rankingMetric: metric,
           periodType: "from_now",
           rankingLeague: league,
+          rankingTeamIds: teamIds,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -265,6 +291,7 @@ export default function CreateGroupModal({
             rankingMetric: metric,
             periodType: "from_now",
             rankingLeague: league,
+            rankingTeamIds: teamIds,
             role: "owner",
           };
       onCreated(payload, inv || undefined);
@@ -277,6 +304,7 @@ export default function CreateGroupModal({
       });
       setMetric("totalPoints");
       setLeague("all");
+      setTeamIds([]);
       onClose();
     } catch {
       releaseSubmitLock();
@@ -288,6 +316,7 @@ export default function CreateGroupModal({
     headerFile,
     metric,
     league,
+    teamIds,
     language,
     onCreated,
     onClose,
@@ -317,42 +346,104 @@ export default function CreateGroupModal({
         >
           <ShellGridOverlay />
           <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-          <div className="shrink-0 border-b border-white/10 px-4 py-3">
-            <h2 className="text-lg font-bold text-white">{t.title}</h2>
+          <div
+            className={[
+              "shrink-0 border-b border-white/10",
+              isWeb ? "px-6 py-4" : "px-4 py-3",
+            ].join(" ")}
+          >
+            <h2
+              className={[
+                "font-bold text-white",
+                isWeb ? "text-2xl" : "text-lg",
+              ].join(" ")}
+            >
+              {t.title}
+            </h2>
+            <p
+              className={[
+                "mt-2 leading-relaxed text-white/55",
+                isWeb ? "text-sm" : "text-xs",
+              ].join(" ")}
+            >
+              {t.planLimits}
+            </p>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-4 py-3">
-            <div className="space-y-3">
-          <label className="block text-xs text-white/55">{t.name}</label>
+          <div
+            className={[
+              "min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]",
+              isWeb ? "px-6 py-4" : "px-4 py-3",
+            ].join(" ")}
+          >
+            <div className={isWeb ? "space-y-4" : "space-y-3"}>
+          <label
+            className={[
+              "block text-white/55",
+              isWeb ? "text-sm" : "text-xs",
+            ].join(" ")}
+          >
+            {t.name}
+          </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onFocus={focusFieldWithoutPageJump}
             maxLength={60}
             autoComplete="off"
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-base text-white"
+            className={[
+              "w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white",
+              isWeb ? "py-3 text-lg" : "py-2.5 text-base",
+            ].join(" ")}
           />
 
-          <label className="block text-xs text-white/55">{t.description}</label>
+          <label
+            className={[
+              "block text-white/55",
+              isWeb ? "text-sm" : "text-xs",
+            ].join(" ")}
+          >
+            {t.description}
+          </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onFocus={focusFieldWithoutPageJump}
             maxLength={280}
-            rows={3}
+            rows={isWeb ? 4 : 3}
             placeholder={t.descriptionPh}
-            className="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-base leading-relaxed text-white placeholder:text-sm placeholder:leading-snug placeholder:text-white/30"
+            className={[
+              "w-full resize-none rounded-xl border border-white/10 bg-black/40 px-3 leading-relaxed text-white placeholder:leading-snug placeholder:text-white/30",
+              isWeb
+                ? "py-3 text-lg placeholder:text-base"
+                : "py-2.5 text-base placeholder:text-sm",
+            ].join(" ")}
           />
 
-          <label className="block text-xs text-white/55">{t.header}</label>
+          <label
+            className={[
+              "block text-white/55",
+              isWeb ? "text-sm" : "text-xs",
+            ].join(" ")}
+          >
+            {t.header}
+          </label>
           <input
             type="file"
             accept="image/*"
             onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-            className="text-xs text-white/70 file:mr-2 file:rounded-lg file:border-0 file:bg-white/10 file:px-2 file:py-1"
+            className={[
+              "text-white/70 file:mr-2 file:rounded-lg file:border-0 file:bg-white/10 file:px-2 file:py-1",
+              isWeb ? "text-sm file:text-sm" : "text-xs",
+            ].join(" ")}
           />
           {preview && (
-            <div className="aspect-square w-full max-w-[200px] overflow-hidden rounded-xl border border-white/10 bg-black/30">
+            <div
+              className={[
+                "aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-black/30",
+                isWeb ? "max-w-[240px]" : "max-w-[200px]",
+              ].join(" ")}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={preview}
@@ -362,15 +453,33 @@ export default function CreateGroupModal({
             </div>
           )}
 
-          <p className="text-[11px] leading-relaxed text-cyan-200/75">
+          <p
+            className={[
+              "leading-relaxed text-cyan-200/75",
+              isWeb ? "text-sm" : "text-[11px]",
+            ].join(" ")}
+          >
             {t.scoringNote}
           </p>
 
-          <label className="block text-xs text-white/55">{t.league}</label>
+          <label
+            className={[
+              "block text-white/55",
+              isWeb ? "text-sm" : "text-xs",
+            ].join(" ")}
+          >
+            {t.league}
+          </label>
           <select
             value={league}
-            onChange={(e) => setLeague(e.target.value as CommunityLeague)}
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+            onChange={(e) => {
+              setLeague(e.target.value as CommunityLeague);
+              setTeamIds([]);
+            }}
+            className={[
+              "w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white",
+              isWeb ? "py-2.5 text-base" : "py-2 text-sm",
+            ].join(" ")}
           >
             {COMMUNITY_LEAGUES.map((k) => (
               <option key={k} value={k}>
@@ -379,11 +488,41 @@ export default function CreateGroupModal({
             ))}
           </select>
 
-          <label className="block text-xs text-white/55">{t.metric}</label>
+          {showTeamPicker && (
+            <>
+              <label
+                className={[
+                  "block text-white/55",
+                  isWeb ? "text-sm" : "text-xs",
+                ].join(" ")}
+              >
+                {t.teams}
+              </label>
+              <CommunityTeamPicker
+                teams={teams}
+                selectedIds={teamIds}
+                onChange={setTeamIds}
+                language={language}
+                isWeb={isWeb}
+              />
+            </>
+          )}
+
+          <label
+            className={[
+              "block text-white/55",
+              isWeb ? "text-sm" : "text-xs",
+            ].join(" ")}
+          >
+            {t.metric}
+          </label>
           <select
             value={metric}
             onChange={(e) => setMetric(e.target.value as CommunityMetric)}
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+            className={[
+              "w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white",
+              isWeb ? "py-2.5 text-base" : "py-2 text-sm",
+            ].join(" ")}
           >
             {COMMUNITY_METRICS.map((k) => (
               <option key={k} value={k}>
@@ -393,33 +532,53 @@ export default function CreateGroupModal({
           </select>
 
           {metric === "activeWinStreak" && (
-            <p className="text-[11px] text-amber-200/80">{t.streakNote}</p>
+            <p
+              className={[
+                "text-amber-200/80",
+                isWeb ? "text-sm" : "text-[11px]",
+              ].join(" ")}
+            >
+              {t.streakNote}
+            </p>
           )}
             </div>
           </div>
 
-          <div className="flex shrink-0 justify-end gap-2 border-t border-white/10 px-4 py-3">
+          <div
+            className={[
+              "flex shrink-0 justify-end gap-2 border-t border-white/10",
+              isWeb ? "px-6 py-4" : "px-4 py-3",
+            ].join(" ")}
+          >
             <button
               type="button"
               onClick={closeReset}
               disabled={busy}
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/80 disabled:cursor-not-allowed disabled:opacity-40"
+              className={[
+                "rounded-xl border border-white/10 text-white/80 disabled:cursor-not-allowed disabled:opacity-40",
+                isWeb ? "px-5 py-2.5 text-base" : "px-4 py-2 text-sm",
+              ].join(" ")}
             >
               {t.cancel}
             </button>
-            <button
+            <motion.button
               type="button"
               disabled={busy || name.trim().length < 1}
               onClick={onSubmit}
               aria-busy={busy}
-              className="rounded-xl bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+              whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+              transition={{ duration: 0.1 }}
+              className={[
+                "rounded-xl bg-blue-500 font-semibold text-white shadow-lg shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50",
+                isWeb ? "px-5 py-2.5 text-base" : "px-4 py-2 text-sm",
+              ].join(" ")}
             >
               {busy
                 ? language === "en"
                   ? "Creating…"
                   : "作成中…"
                 : t.submit}
-            </button>
+            </motion.button>
           </div>
           </div>
         </div>

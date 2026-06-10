@@ -24,7 +24,8 @@ type Metric =
   | "totalPoints"
   | "totalPrecision"
   | "totalUpset"
-  | "activeWinStreak";
+  | "activeWinStreak"
+  | "totalGoalScorerHits";
 
 const MIN_POSTS_FOR_WIN_RATE_BASE = 1;
 
@@ -53,6 +54,7 @@ type RankingRow = {
   totalPoints: number;
   totalPrecision: number;
   totalUpset: number;
+  totalGoalScorerHits: number;
   activeWinStreak: number;
 
   rank: number;
@@ -65,7 +67,8 @@ function isMetric(v: unknown): v is Metric {
     v === "totalPoints" ||
     v === "totalPrecision" ||
     v === "totalUpset" ||
-    v === "activeWinStreak"
+    v === "activeWinStreak" ||
+    v === "totalGoalScorerHits"
   );
 }
 
@@ -100,6 +103,7 @@ function rankingSlice(
         totalPoints: byRound.totalPoints ?? 0,
         totalPrecision: byRound.totalPrecision ?? 0,
         totalUpset: byRound.totalUpset ?? 0,
+        totalGoalScorerHits: byRound.totalGoalScorerHits ?? 0,
       };
     }
   }
@@ -114,6 +118,7 @@ function rankingSlice(
       totalPoints: byPhase.totalPoints ?? 0,
       totalPrecision: byPhase.totalPrecision ?? 0,
       totalUpset: byPhase.totalUpset ?? 0,
+      totalGoalScorerHits: byPhase.totalGoalScorerHits ?? 0,
     };
   }
   return {
@@ -123,6 +128,7 @@ function rankingSlice(
     totalPoints: 0,
     totalPrecision: 0,
     totalUpset: 0,
+    totalGoalScorerHits: 0,
   };
 }
 
@@ -136,6 +142,7 @@ function rankingSliceWc(d: any, stage: WcRankingStage) {
       totalPoints: 0,
       totalPrecision: 0,
       totalUpset: 0,
+      totalGoalScorerHits: 0,
     };
   }
   const tp = block.totalPosts ?? 0;
@@ -147,6 +154,7 @@ function rankingSliceWc(d: any, stage: WcRankingStage) {
     totalPoints: block.totalPoints ?? 0,
     totalPrecision: block.totalPrecision ?? 0,
     totalUpset: block.totalUpset ?? 0,
+    totalGoalScorerHits: block.totalGoalScorerHits ?? 0,
   };
 }
 
@@ -238,6 +246,24 @@ type MetricPayload = {
   myRankDeltaPlaces: number | null;
 };
 
+function readSnapshotTotalCount(
+  snapData: Record<string, unknown> | undefined,
+  fallback: number
+): number {
+  const raw = snapData?.totalCount;
+  return typeof raw === "number" && Number.isFinite(raw) && raw >= 0
+    ? Math.floor(raw)
+    : fallback;
+}
+
+function resolveParticipantCount(
+  totalCount: number,
+  myRank: number | null
+): number {
+  if (myRank != null && myRank > totalCount) return myRank;
+  return totalCount;
+}
+
 async function rankingPayloadForMetric(
   metric: Metric,
   phase: RankingPhase,
@@ -257,6 +283,10 @@ async function rankingPayloadForMetric(
     .doc(snapshotDocId)
     .get();
 
+  const snapData = snapDoc.exists
+    ? (snapDoc.data() as Record<string, unknown>)
+    : undefined;
+
   const rawRows: RankingRow[] = snapDoc.exists
     ? (snapDoc.data()?.rows ?? [])
     : [];
@@ -264,13 +294,15 @@ async function rankingPayloadForMetric(
     ...row,
     plan: row.plan === "pro" ? "pro" : "free",
   }));
+  let totalCount = readSnapshotTotalCount(snapData, rows.length);
 
   if (rows.length === 0 && wcStage) {
     const live = await loadWcStageTop20RowsLive(wcStage, metric);
-    rows = live.map((row) => ({
+    rows = live.rows.map((row) => ({
       ...row,
       plan: row.plan === "pro" ? "pro" : "free",
     }));
+    totalCount = live.totalCount;
   }
 
   if (
@@ -281,10 +313,11 @@ async function rankingPayloadForMetric(
     (round === "r1" || round === "r2" || round === "cf" || round === "finals")
   ) {
     const live = await loadPlayoffRoundTop20RowsLive(round, metric);
-    rows = live.map((row) => ({
+    rows = live.rows.map((row) => ({
       ...row,
       plan: row.plan === "pro" ? "pro" : "free",
     }));
+    totalCount = live.totalCount;
   }
 
   if (wcStage && rows.length > 0) {
@@ -369,7 +402,7 @@ async function rankingPayloadForMetric(
         : 1;
     if ((rk.totalPosts ?? 0) < minPosts) {
       return {
-        count: rows.length,
+        count: resolveParticipantCount(totalCount, null),
         rows,
         myRank: null,
         myRow: null,
@@ -446,6 +479,7 @@ async function rankingPayloadForMetric(
         totalPoints: rk.totalPoints,
         totalPrecision: rk.totalPrecision,
         totalUpset: rk.totalUpset,
+        totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
         activeWinStreak: me.streakFootball ?? me.activeWinStreak ?? 0,
 
         rank: myRank,
@@ -453,7 +487,7 @@ async function rankingPayloadForMetric(
       };
 
       return {
-        count: rows.length,
+        count: resolveParticipantCount(totalCount, myRank),
         rows,
         myRank,
         myRow,
@@ -608,6 +642,7 @@ async function rankingPayloadForMetric(
       totalPoints: rk.totalPoints,
       totalPrecision: rk.totalPrecision,
       totalUpset: rk.totalUpset,
+      totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
       activeWinStreak: me.activeWinStreak ?? 0,
 
       rank: myRank,
@@ -616,7 +651,7 @@ async function rankingPayloadForMetric(
   }
 
   return {
-    count: rows.length,
+    count: resolveParticipantCount(totalCount, myRank),
     rows,
     myRank,
     myRow,

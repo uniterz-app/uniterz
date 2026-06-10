@@ -5,6 +5,7 @@ import type {
   CommunityPeriodType,
 } from "./types";
 import { dateKeysFromStartToTodayJST } from "./dateRange";
+import { aggregateFromDailyTeams } from "./groupStatsTeams";
 import { resolveRankingStartDateKey } from "./rankingStartDate";
 
 export type MemberAgg = {
@@ -179,7 +180,8 @@ export async function buildMemberLeaderboard(
   metric: CommunityMetric,
   _period: CommunityPeriodType,
   league: CommunityLeague = "all",
-  rankingStartDateKey?: string | null
+  rankingStartDateKey?: string | null,
+  rankingTeamIds: string[] = []
 ): Promise<
   {
     uid: string;
@@ -228,16 +230,20 @@ export async function buildMemberLeaderboard(
   }
 
   const startKey = rankingStartDateKey ?? resolveRankingStartDateKey(undefined);
+  const dateKeys = dateKeysFromStartToTodayJST(startKey);
+  const teamFilterActive = rankingTeamIds.length > 0;
   const dailyAgg =
     metric === "activeWinStreak"
-      ? new Map(uids.map((uid) => [uid, emptyAgg()] as const)
-      )
-      : await aggregateFromDaily(
-          db,
-          uids,
-          dateKeysFromStartToTodayJST(startKey),
-          league
-        );
+      ? new Map(uids.map((uid) => [uid, emptyAgg()] as const))
+      : teamFilterActive
+        ? await aggregateFromDailyTeams(
+            db,
+            uids,
+            dateKeys,
+            league,
+            rankingTeamIds
+          )
+        : await aggregateFromDaily(db, uids, dateKeys, league);
 
   const rows = uids.map((uid) => {
     const c = cumulativeByUid.get(uid) ?? null;

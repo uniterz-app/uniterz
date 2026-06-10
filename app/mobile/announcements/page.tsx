@@ -159,10 +159,10 @@ export default function AnnouncementsPage() {
                 key={i}
                 className="rounded-2xl overflow-hidden bg-white/5 border border-white/10"
               >
-                <div className="h-44 w-full animate-pulse bg-white/10" />
+                <div className="h-44 w-full skeleton-scan bg-white/10" />
                 <div className="p-3 space-y-2">
-                  <div className="h-4 w-20 bg-white/10 animate-pulse rounded" />
-                  <div className="h-5 w-4/5 bg-white/10 animate-pulse rounded" />
+                  <div className="h-4 w-20 bg-white/10 skeleton-scan rounded" />
+                  <div className="h-5 w-4/5 bg-white/10 skeleton-scan rounded" />
                 </div>
               </div>
             ))}

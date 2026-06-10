@@ -13,6 +13,8 @@ export type SettlementGameInput = {
   /** ノックアウトで PK 等を含め最終的に進んだ側の teamId */
   advancingTeamId?: string | null;
   knockout?: boolean;
+  /** WC: 得点者リスト（オウンゴールは ownGoal: true） */
+  goalScorers?: unknown;
 };
 
 export type RankingSport = "basketball" | "football";

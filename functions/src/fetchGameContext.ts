@@ -29,6 +29,8 @@ export type NormalizedGame = {
   knockout?: boolean;
   /** World Cup（league=wc）のステージ */
   wcStage?: "qualifying" | "main" | null;
+  /** WC: 得点者リスト */
+  goalScorers?: unknown;
 };
 
 export type GameContext = {
@@ -81,6 +83,7 @@ function normalizeGame(after: any, gameId: string): NormalizedGame {
       roundLabel: after?.roundLabel ?? null,
       wcStage: after?.wcStage ?? null,
     }),
+    goalScorers: after?.goalScorers ?? null,
   };
 }
 

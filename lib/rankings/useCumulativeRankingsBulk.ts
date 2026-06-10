@@ -13,10 +13,22 @@ import {
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+
+type BulkFetchResult = {
+  byMetric: Record<string, BulkMetricPayload>;
+  myMetricValueDeltas: MyRankMetricValueDeltas | null;
+};
 
 /** 指標タブで既に読み込んだバンドルを捨てずにまとめて取り直す */
-const REFETCH_ALL_METRICS =
+const REFETCH_ALL_METRICS_NBA =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
+const REFETCH_ALL_METRICS_WC =
+  "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
+
+function refetchAllMetrics(wcStage: WcRankingStage | null): string {
+  return wcStage ? REFETCH_ALL_METRICS_WC : REFETCH_ALL_METRICS_NBA;
+}
 
 export type BulkMetricPayload = {
   ok: boolean;
@@ -141,7 +153,7 @@ async function fetchBulkMetrics(
   phase: RankingPhase,
   round: PlayoffRoundKey,
   wcStage: WcRankingStage | null
-): Promise<Record<string, BulkMetricPayload> | null> {
+): Promise<BulkFetchResult | null> {
   const params = new URLSearchParams();
   params.set("metrics", metrics);
   params.set("phase", phase);
@@ -155,7 +167,12 @@ async function fetchBulkMetrics(
   const json = await res.json();
   if (!json?.ok || !json?.byMetric) return null;
   if (wcStage != null && json.wcStage !== wcStage) return null;
-  return json.byMetric as Record<string, BulkMetricPayload>;
+  return {
+    byMetric: json.byMetric as Record<string, BulkMetricPayload>,
+    myMetricValueDeltas:
+      (json.myMetricValueDeltas as MyRankMetricValueDeltas | null | undefined) ??
+      null,
+  };
 }
 
 export function useCumulativeRankingsBulk(
@@ -170,6 +187,8 @@ export function useCumulativeRankingsBulk(
     string,
     BulkMetricPayload
   > | null>(null);
+  const [myMetricValueDeltas, setMyMetricValueDeltas] =
+    useState<MyRankMetricValueDeltas | null>(null);
   const [appliedTotalPointsUid, setAppliedTotalPointsUid] = useState<
     string | null
   >(null);
@@ -209,7 +228,7 @@ export function useCumulativeRankingsBulk(
         const uid = auth.currentUser?.uid ?? null;
         try {
           const partial = await fetchBulkMetrics(
-            REFETCH_ALL_METRICS,
+            refetchAllMetrics(wcStage),
             uid,
             phase,
             round,
@@ -217,10 +236,11 @@ export function useCumulativeRankingsBulk(
           );
           if (seq !== invalidateSeqRef.current) return;
           if (partial) {
-            const merged = mergeMetricBundles(null, partial);
+            const merged = mergeMetricBundles(null, partial.byMetric);
             const withSession = applySessionCountryOverride(merged, uid);
             setByMetric(withSession);
-            if (uid) maybeClearSessionCountryAfterFetch(partial, uid);
+            setMyMetricValueDeltas(partial.myMetricValueDeltas);
+            if (uid) maybeClearSessionCountryAfterFetch(partial.byMetric, uid);
             setAppliedTotalPointsUid(uid ?? ANON_KEY);
           }
         } catch {
@@ -245,6 +265,7 @@ export function useCumulativeRankingsBulk(
     let cancelled = false;
     // Phase changed: drop previous phase bundles immediately
     setByMetric(null);
+    setMyMetricValueDeltas(null);
     setAppliedTotalPointsUid(null);
     setLoading(true);
 
@@ -261,8 +282,9 @@ export function useCumulativeRankingsBulk(
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         if (partial) {
           setByMetric((p) =>
-            applySessionCountryOverride(mergeMetricBundles(p, partial), null)
+            applySessionCountryOverride(mergeMetricBundles(p, partial.byMetric), null)
           );
+          setMyMetricValueDeltas(partial.myMetricValueDeltas);
           setAppliedTotalPointsUid(ANON_KEY);
         } else {
           setByMetric(
@@ -308,8 +330,12 @@ export function useCumulativeRankingsBulk(
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             if (partial) {
               setByMetric((p) =>
-                applySessionCountryOverride(mergeMetricBundles(p, partial), null)
+                applySessionCountryOverride(
+                  mergeMetricBundles(p, partial.byMetric),
+                  null
+                )
               );
+              setMyMetricValueDeltas(partial.myMetricValueDeltas);
               setAppliedTotalPointsUid(ANON_KEY);
             } else {
               setByMetric(
@@ -347,9 +373,13 @@ export function useCumulativeRankingsBulk(
           if (cancelled || uq !== uidPrimarySeqRef.current) return;
           if (partial) {
             setByMetric((p) =>
-              applySessionCountryOverride(mergeMetricBundles(p, partial), uid)
+              applySessionCountryOverride(
+                mergeMetricBundles(p, partial.byMetric),
+                uid
+              )
             );
-            maybeClearSessionCountryAfterFetch(partial, uid);
+            setMyMetricValueDeltas(partial.myMetricValueDeltas);
+            maybeClearSessionCountryAfterFetch(partial.byMetric, uid);
             setAppliedTotalPointsUid(uid);
           } else {
             setAppliedTotalPointsUid(uid);
@@ -396,11 +426,16 @@ export function useCumulativeRankingsBulk(
         if (partial) {
           setByMetric((p) =>
             applySessionCountryOverride(
-              mergeMetricBundles(p, partial),
+              mergeMetricBundles(p, partial.byMetric),
               uidForMetric
             )
           );
-          if (uidForMetric) maybeClearSessionCountryAfterFetch(partial, uidForMetric);
+          if (partial.myMetricValueDeltas) {
+            setMyMetricValueDeltas(partial.myMetricValueDeltas);
+          }
+          if (uidForMetric) {
+            maybeClearSessionCountryAfterFetch(partial.byMetric, uidForMetric);
+          }
         } else {
           setByMetric((p) =>
             applySessionCountryOverride(
@@ -434,6 +469,7 @@ export function useCumulativeRankingsBulk(
     personalPending,
     myUid,
     byMetric,
+    myMetricValueDeltas,
     authReady,
     ensureMetric,
   };

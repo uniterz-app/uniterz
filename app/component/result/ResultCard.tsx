@@ -37,7 +37,12 @@ import {
   MOBILE_RESULT_CARD_OUTER_CLASS,
 } from "@/lib/games/mobileListCardLayout";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
-import { ResultLeagueLabelNbaWeb } from "@/app/component/result/ResultLeagueLabelNbaWeb";
+import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
+import WcGoalScorerResultRow, {
+  useWcGoalScorerResult,
+} from "@/app/component/result/WcGoalScorerResultRow";
+import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
+import { readPostMatchGoalScorers } from "@/lib/wc/matchGoalScorers";
 import { getWinStreakBadge } from "@/lib/ui/winStreakBadge";
 
 function clamp01(x: number) {
@@ -86,22 +91,6 @@ export type ResultCardPresentationProps = Props & {
   listDateLabel?: string;
 };
 
-const leaguePillBg: Record<string, string> = {
-  nba: "#1D428A",
-  bj: "#C8102E",
-  pl: "#3A0CA3",
-  j1: "#E10600",
-  wc: "#56042C",
-};
-
-const leagueLabel: Record<string, string> = {
-  nba: "NBA",
-  bj: "B1",
-  pl: "PL",
-  j1: "J1",
-  wc: "WC",
-};
-
 function toInt(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
 }
@@ -140,6 +129,7 @@ function ResultCardPresentationImpl({
   const m = t(language);
   const isEn = language === "en";
   const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
+  const wcGoalScorer = useWcGoalScorerResult(post);
 
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
@@ -201,6 +191,11 @@ function ResultCardPresentationImpl({
     ? `${post.result!.home} - ${post.result!.away}`
     : null;
 
+  const wcMatchGoalScorers = useMemo(() => {
+    if (!isWc || !hasFinal) return [];
+    return readPostMatchGoalScorers(post.matchGoalScorers);
+  }, [isWc, hasFinal, post.matchGoalScorers]);
+
   const handle = (e: React.MouseEvent<HTMLDivElement>) => {
     if (onOpen) {
       onOpen(post, { clientX: e.clientX, clientY: e.clientY });
@@ -208,10 +203,6 @@ function ResultCardPresentationImpl({
       onNavigate(href);
     }
   };
-
-  const pillBg = leaguePillBg[normalizedLeague] ?? "#334155";
-  const pillText =
-    leagueLabel[normalizedLeague] ?? normalizedLeague.toUpperCase();
 
   const activeWinStreak = toInt(
     (post.stats as any)?.pointsV3Detail?.activeWinStreak
@@ -600,18 +591,11 @@ function ResultCardPresentationImpl({
               listDateLabel ? "top-10" : "top-2",
             ].join(" ")}
           >
-            {normalizedLeague === "nba" ? (
-              <span className="pointer-events-auto mt-1 inline-flex shrink-0 items-center">
-                <ResultLeagueLabelNbaWeb />
-              </span>
-            ) : (
-              <span
-                className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest"
-                style={{ backgroundColor: pillBg, ...teamNameFont }}
-              >
-                {pillText}
-              </span>
-            )}
+            <ResultLeagueBadge
+              league={normalizedLeague}
+              teamNameFont={teamNameFont}
+              compact
+            />
           </div>
         </>
       ) : (
@@ -621,18 +605,10 @@ function ResultCardPresentationImpl({
             listDateLabel ? "top-6 pt-0.5 sm:top-7 sm:pt-1" : "top-0 pt-1 sm:pt-1.5",
           ].join(" ")}
         >
-          {normalizedLeague === "nba" ? (
-            <span className="pointer-events-auto mt-1 inline-flex shrink-0 items-center pt-1 sm:mt-1.5 sm:pt-1.5">
-              <ResultLeagueLabelNbaWeb />
-            </span>
-          ) : (
-            <span
-              className="pointer-events-auto inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest sm:text-[11px]"
-              style={{ backgroundColor: pillBg, ...teamNameFont }}
-            >
-              {pillText}
-            </span>
-          )}
+          <ResultLeagueBadge
+            league={normalizedLeague}
+            teamNameFont={teamNameFont}
+          />
           <div
             className={[
               "flex min-w-0 flex-1 flex-col items-end gap-1.5",
@@ -682,7 +658,7 @@ function ResultCardPresentationImpl({
         className={`relative z-10 transition-transform active:scale-[0.98] ${contentPad}`}
       >
       <div
-        className={`grid items-center ${
+        className={`grid items-start ${
           isMobile
             ? "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-1.5"
             : "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-8"
@@ -746,6 +722,13 @@ function ResultCardPresentationImpl({
                   homeL2
                 )}
               </div>
+              {wcMatchGoalScorers.length > 0 ? (
+                <WcMatchGoalScorersColumn
+                  scorers={wcMatchGoalScorers}
+                  side="home"
+                  compact={isMobile}
+                />
+              ) : null}
             </>
           ) : (
             <>
@@ -771,6 +754,13 @@ function ResultCardPresentationImpl({
                   {homeL1} {homeL2}
                 </span>
               </div>
+              {wcMatchGoalScorers.length > 0 ? (
+                <WcMatchGoalScorersColumn
+                  scorers={wcMatchGoalScorers}
+                  side="home"
+                  compact={isMobile}
+                />
+              ) : null}
             </>
           )}
         </div>
@@ -778,8 +768,8 @@ function ResultCardPresentationImpl({
         <div
           className={
             mobileScheduleDense
-              ? "mt-0 flex max-w-full shrink-0 flex-col items-center justify-center px-0.5"
-              : "mt-2 flex max-w-full shrink-0 flex-col items-center justify-center px-0.5"
+              ? "mt-0 flex max-w-full shrink-0 flex-col items-center justify-start px-0.5 pt-0"
+              : "mt-2 flex max-w-full shrink-0 flex-col items-center justify-start px-0.5 pt-2.5 sm:pt-3.5"
           }
         >
           <div
@@ -867,6 +857,13 @@ function ResultCardPresentationImpl({
                   awayL2
                 )}
               </div>
+              {wcMatchGoalScorers.length > 0 ? (
+                <WcMatchGoalScorersColumn
+                  scorers={wcMatchGoalScorers}
+                  side="away"
+                  compact={isMobile}
+                />
+              ) : null}
             </>
           ) : (
             <>
@@ -892,6 +889,13 @@ function ResultCardPresentationImpl({
                   {awayL1} {awayL2}
                 </span>
               </div>
+              {wcMatchGoalScorers.length > 0 ? (
+                <WcMatchGoalScorersColumn
+                  scorers={wcMatchGoalScorers}
+                  side="away"
+                  compact={isMobile}
+                />
+              ) : null}
             </>
           )}
         </div>
@@ -908,6 +912,14 @@ function ResultCardPresentationImpl({
       <div
         className={`${mobileScheduleDense ? "mt-1" : "mt-2"} ${isMobile ? "space-y-0.5" : "space-y-1"}`}
       >
+        {wcGoalScorer ? (
+          <WcGoalScorerResultRow
+            label={m.results.wcGoalScorerLabel}
+            info={wcGoalScorer}
+            compact={isMobile}
+          />
+        ) : null}
+
         {statRows.map((r, index) => {
           const cap = r.barMax;
           const ratio =
@@ -917,6 +929,7 @@ function ResultCardPresentationImpl({
                 ? clamp01(r.value / cap)
                 : 0;
           const display = r.format(r.value);
+          const rowIndex = wcGoalScorer ? index + 1 : index;
 
           const valueClass =
             r.key === "scorePrecision"
@@ -955,7 +968,7 @@ function ResultCardPresentationImpl({
               <ResultStatRatingBar
                 ratio={ratio}
                 animateMs={barAnimateMs}
-                delayMs={index * barStaggerMs}
+                delayMs={rowIndex * barStaggerMs}
                 size={isMobile ? "sm" : "md"}
                 animationActive={
                   ratingBarsImmediate ? true : undefined

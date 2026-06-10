@@ -62,6 +62,38 @@ export function findSquadPlayer(
   return squad.find((p) => p.id === playerId);
 }
 
+/** 名前照合用（大小文字・連続スペースを無視） */
+export function normalizePlayerNameForMatch(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * 名簿から選手名で検索（完全一致 → 姓/部分一致で一意のときのみ）
+ */
+export function findSquadPlayerByName(
+  squad: WcSquadPlayer[],
+  name: string,
+): WcSquadPlayer | undefined {
+  const q = normalizePlayerNameForMatch(name);
+  if (!q) return undefined;
+
+  const exact = squad.filter(
+    (p) => normalizePlayerNameForMatch(p.name) === q,
+  );
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return undefined;
+
+  const partial = squad.filter((p) => {
+    const pn = normalizePlayerNameForMatch(p.name);
+    if (pn === q) return true;
+    if (pn.includes(q) || q.includes(pn)) return true;
+    const parts = pn.split(" ");
+    return parts.some((part) => part.length >= 2 && part === q);
+  });
+  if (partial.length === 1) return partial[0];
+  return undefined;
+}
+
 /** 予想スタメン11人を名簿と突き合わせて返す */
 export function resolveLineupPlayers(
   squad: WcSquadPlayer[],

@@ -11,7 +11,8 @@ export const PROFILE_SUMMARY_RANK_METRICS = [
 export type BulkRankingMetric =
   | (typeof PROFILE_SUMMARY_RANK_METRICS)[number]
   | "activeWinStreak"
-  | "winRate";
+  | "winRate"
+  | "totalGoalScorerHits";
 
 export type BulkMetricPayload = {
   ok: boolean;

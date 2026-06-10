@@ -29,6 +29,7 @@ import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { getWinStreakBadge } from "@/lib/ui/winStreakBadge";
+import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 
 type Props = {
   post: PredictionPostV2;
@@ -39,22 +40,6 @@ type Props = {
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
-
-const leaguePillBg: Record<string, string> = {
-  nba: "#1D428A",
-  bj: "#C8102E",
-  pl: "#3A0CA3",
-  j1: "#E10600",
-  wc: "#56042C",
-};
-
-const leagueLabel: Record<string, string> = {
-  nba: "NBA",
-  bj: "B1",
-  pl: "PL",
-  j1: "J1",
-  wc: "WC",
-};
 
 function ordinal(n: number) {
   if (n % 100 >= 11 && n % 100 <= 13) return "th";
@@ -201,10 +186,6 @@ function ResultMatchHeader({
   const homeRecord = useTeamRecord(post.home?.teamId);
   const awayRecord = useTeamRecord(post.away?.teamId);
 
-  const pillBg = leaguePillBg[normalizedLeague] ?? "#334155";
-  const pillText =
-    leagueLabel[normalizedLeague] ?? normalizedLeague.toUpperCase();
-
   const activeWinStreak =
     toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
   const streakBadge = getWinStreakBadge(activeWinStreak, language);
@@ -275,12 +256,10 @@ function ResultMatchHeader({
         aria-hidden
       />
       <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2 sm:px-3 sm:pt-2.5">
-        <span
-          className="inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest sm:px-3 sm:py-1 sm:text-[11px]"
-          style={{ backgroundColor: pillBg, ...teamNameFont }}
-        >
-          {pillText}
-        </span>
+        <ResultLeagueBadge
+          league={normalizedLeague}
+          teamNameFont={teamNameFont}
+        />
         <div
           className={[
             "flex min-w-0 flex-1 flex-col items-end gap-1 sm:gap-1.5",

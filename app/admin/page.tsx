@@ -41,6 +41,11 @@ export default function AdminHomePage() {
           title="試合データ インポート"
           desc="JSONプレビュー → Firestoreへ一括書込み"
         />
+        <Card
+          href="/admin/wc-goal-scorers"
+          title="WC 得点者入力"
+          desc="W杯試合の得点者を手入力（ボーナス判定用）"
+        />
         {/* 先々のプレースホルダ */}
         <Card
           href="/admin/plans"

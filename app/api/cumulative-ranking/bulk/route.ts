@@ -15,6 +15,12 @@ import {
   type BulkRankingMetric,
 } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
 import { loadSnapshotTotalPointsRankAndDelta } from "@/lib/rankings/server/rankSnapshotHistoryTotalPoints";
+import { loadMyRankMetricValueDeltas } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
+import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+import {
+  isRankingLeagueSource,
+  type RankingLeagueSource,
+} from "@/lib/rankings/rankingLeagueSource";
 import {
   isWcRankingStage,
   type WcRankingStage,
@@ -30,7 +36,12 @@ const BULK_METRICS = [
   "winRate",
 ] as const satisfies readonly BulkRankingMetric[];
 
-const METRIC_SET = new Set<string>(BULK_METRICS);
+const WC_BULK_METRICS = [
+  ...BULK_METRICS,
+  "totalGoalScorerHits",
+] as const satisfies readonly BulkRankingMetric[];
+
+const METRIC_SET = new Set<string>([...BULK_METRICS, "totalGoalScorerHits"]);
 
 function dateKeyJST(now: Date = new Date()): string {
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
@@ -40,8 +51,12 @@ function dateKeyJST(now: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
-function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
-  if (!raw?.trim()) return [...BULK_METRICS];
+function parseMetricsParam(
+  raw: string | null,
+  wcStage: WcRankingStage | null
+): BulkRankingMetric[] {
+  const defaults = wcStage ? [...WC_BULK_METRICS] : [...BULK_METRICS];
+  if (!raw?.trim()) return defaults;
   const parts = raw
     .split(",")
     .map((s) => s.trim())
@@ -50,7 +65,7 @@ function parseMetricsParam(raw: string | null): BulkRankingMetric[] {
   for (const p of parts) {
     if (METRIC_SET.has(p)) picked.push(p as BulkRankingMetric);
   }
-  if (picked.length === 0) return [...BULK_METRICS];
+  if (picked.length === 0) return defaults;
   return [...new Set(picked)].sort() as BulkRankingMetric[];
 }
 
@@ -75,9 +90,9 @@ const getCachedBulk = unstable_cache(
     const parts = metricsKey
       .split(",")
       .filter((m): m is BulkRankingMetric => METRIC_SET.has(m));
-    const metrics = (
-      parts.length ? parts : [...BULK_METRICS]
-    ) as BulkRankingMetric[];
+    const defaults =
+      wcStageKey !== "__no_wc__" ? [...WC_BULK_METRICS] : [...BULK_METRICS];
+    const metrics = (parts.length ? parts : defaults) as BulkRankingMetric[];
     const wcStage: WcRankingStage | null =
       wcStageKey === "__no_wc__"
         ? null
@@ -99,7 +114,11 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const uid = searchParams.get("uid") ?? undefined;
-    const metricsList = parseMetricsParam(searchParams.get("metrics"));
+    const rawWcStage = searchParams.get("wcStage");
+    const wcStage: WcRankingStage | null = isWcRankingStage(rawWcStage)
+      ? rawWcStage
+      : null;
+    const metricsList = parseMetricsParam(searchParams.get("metrics"), wcStage);
     const rawPhase = searchParams.get("phase");
     const phase: RankingPhase = isRankingPhase(rawPhase)
       ? rawPhase
@@ -108,10 +127,6 @@ export async function GET(req: Request) {
     const round: PlayoffRoundKey = isPlayoffRoundKey(rawRound)
       ? rawRound
       : "overall";
-    const rawWcStage = searchParams.get("wcStage");
-    const wcStage: WcRankingStage | null = isWcRankingStage(rawWcStage)
-      ? rawWcStage
-      : null;
     const metricsKey = metricsToKey(metricsList);
     const todayKey = dateKeyJST();
 
@@ -147,6 +162,8 @@ export async function GET(req: Request) {
         : (JSON.parse(JSON.stringify(source)) as typeof source);
     await mergeUserPlansIntoBulkByMetric(data.byMetric);
 
+    let myMetricValueDeltas: MyRankMetricValueDeltas | null = null;
+
     /**
      * Ranking Progress と同じ「最新 snapshot」を Your Rank（totalPoints）にも反映する。
      * プレーオフ通算・ラウンド別とも rankSnapshotHistory を参照してトータルと揃える。
@@ -167,13 +184,32 @@ export async function GET(req: Request) {
       }
     }
 
+    if (uid && data.byMetric?.totalPoints?.myRow) {
+      const rawLeague = searchParams.get("league");
+      const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
+        ? rawLeague
+        : wcStage
+          ? "worldcup"
+          : "nba";
+      myMetricValueDeltas = await loadMyRankMetricValueDeltas(
+        uid,
+        data.byMetric.totalPoints.myRow as {
+          totalPoints?: number;
+          totalPrecision?: number;
+          totalUpset?: number;
+          winRate?: number;
+        },
+        { phase, round, wcStage, rankingLeague }
+      );
+    }
+
     const maxAge = 0;
     const cacheControl = uid
       ? "private, no-store"
       : `public, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(
-      { ...data, wcStage },
+      { ...data, wcStage, myMetricValueDeltas },
       {
         status: 200,
         headers: { "Cache-Control": cacheControl },

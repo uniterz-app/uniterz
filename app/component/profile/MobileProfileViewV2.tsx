@@ -495,16 +495,16 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             </div>
             ) : (
               <div className="mt-6 space-y-4">
-                <div className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
-                <div className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
-                <div className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}
               </>
             ) : (
               <div className="mt-6 space-y-4">
-                <div className="h-28 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
-                <div className="h-44 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-28 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}
           </>

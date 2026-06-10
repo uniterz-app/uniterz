@@ -4,20 +4,29 @@ import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
 import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
+import {
+  normalizeWcGoalScorerPick,
+  validateWcGoalScorerPickForGame,
+  type WcGoalScorerPick,
+} from "@/lib/wc/goalScorer";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */
 type League = "bj" | "j1" | "nba" | "pl" | "wc";
 type Status = "scheduled" | "live" | "final";
 
+type PredictionPayloadV2 = {
+  winner: "home" | "away" | "draw";
+  score: { home: number; away: number };
+  goalScorer?: WcGoalScorerPick;
+};
+
 type ParsedOkV2 = {
   ok: true;
   gameId: string;
-  prediction: {
-    winner: "home" | "away" | "draw";
-    score: { home: number; away: number };
-  };
+  prediction: PredictionPayloadV2;
   comment: string;
+  rawGoalScorer: unknown;
 };
 type ParsedNg = { ok: false; error: string };
 
@@ -52,6 +61,7 @@ function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
         score: { home, away },
       },
       comment,
+      rawGoalScorer: p.goalScorer,
     };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "bad payload" };
@@ -193,6 +203,38 @@ export async function POST(req: Request) {
       );
     }
 
+    const homeTeamId = g?.home?.teamId ?? g?.homeTeamId ?? null;
+    const awayTeamId = g?.away?.teamId ?? g?.awayTeamId ?? null;
+    const goalScorerPick = normalizeWcGoalScorerPick(parsed.rawGoalScorer);
+    if (league === "wc" && parsed.rawGoalScorer != null && !goalScorerPick) {
+      return NextResponse.json(
+        { ok: false, error: "goalScorer invalid" },
+        { status: 400 }
+      );
+    }
+    if (league !== "wc" && goalScorerPick) {
+      return NextResponse.json(
+        { ok: false, error: "goalScorer only allowed for wc" },
+        { status: 400 }
+      );
+    }
+    if (goalScorerPick) {
+      const v = validateWcGoalScorerPickForGame(
+        goalScorerPick,
+        homeTeamId,
+        awayTeamId,
+        parsed.prediction.score
+      );
+      if (!v.ok) {
+        return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+      }
+    }
+
+    const prediction: PredictionPayloadV2 = {
+      ...parsed.prediction,
+      ...(goalScorerPick ? { goalScorer: goalScorerPick } : {}),
+    };
+
     const dup = await adminDb
       .collection("posts")
       .where("authorUid", "==", uid)
@@ -229,7 +271,7 @@ export async function POST(req: Request) {
       startAtMillis,
       startAtIso,
 
-      prediction: parsed.prediction,
+      prediction,
       comment: parsed.comment,
 
       result: null,

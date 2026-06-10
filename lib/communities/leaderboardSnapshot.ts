@@ -1,6 +1,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import type { CommunityLeague, CommunityMetric, CommunityPeriodType } from "@/lib/communities/types";
+import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
 import { TIMEZONE_JST, getZonedYMD } from "@/lib/time/zonedTime";
 
 type RankedRow = {
@@ -25,6 +26,7 @@ export type LeaderboardSnapshot = {
   slotKey: string;
   rankingMetric: CommunityMetric;
   rankingLeague: CommunityLeague;
+  rankingTeamIds: string[];
   periodType: CommunityPeriodType;
   rankingStartDateKey: string;
   memberCount: number;
@@ -71,6 +73,7 @@ export async function readLeaderboardSnapshot(
     slotKey: String(d.slotKey ?? slotKey),
     rankingMetric: String(d.rankingMetric ?? "totalPoints") as CommunityMetric,
     rankingLeague: String(d.rankingLeague ?? "all") as CommunityLeague,
+    rankingTeamIds: readRankingTeamIds(d),
     periodType: String(d.periodType ?? "from_now") as CommunityPeriodType,
     rankingStartDateKey: String(d.rankingStartDateKey ?? ""),
     memberCount: Number(d.memberCount ?? 0),
@@ -89,6 +92,7 @@ export async function writeLeaderboardSnapshot(
       slotKey: snapshot.slotKey,
       rankingMetric: snapshot.rankingMetric,
       rankingLeague: snapshot.rankingLeague,
+      rankingTeamIds: snapshot.rankingTeamIds,
       periodType: snapshot.periodType,
       rankingStartDateKey: snapshot.rankingStartDateKey,
       memberCount: snapshot.memberCount,

@@ -59,6 +59,7 @@ export default function PredictionScoringRulesChip({
               open={open}
               language={language}
               sport={sport}
+              league={league}
               displaySize={size}
               onClose={() => setOpen(false)}
             />,

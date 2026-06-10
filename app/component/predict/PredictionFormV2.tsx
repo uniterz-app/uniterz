@@ -27,6 +27,12 @@ import GamePredictionDistribution from "@/app/component/predict/GamePredictionDi
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
 import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
 import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
+import WcGoalScorerPicker from "@/app/component/predict/wc/WcGoalScorerPicker";
+import {
+  isWcGoalScorerPickValidForPredictedScore,
+  type WcGoalScorerPick,
+} from "@/lib/wc/goalScorer";
+import { getWcSquadPlayer } from "@/lib/wc/squads";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
@@ -182,6 +188,9 @@ export default function PredictionFormV2({
   const [winner, setWinner] = useState<Winner | null>(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
+  const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(
+    null
+  );
   const [submitting, setSubmitting] = useState(false);
   const [toolsTab, setToolsTab] = useState<
     null | "stats" | "market" | "standings" | "h2h"
@@ -200,6 +209,7 @@ export default function PredictionFormV2({
         prediction: {
           winner: Winner;
           score: { home: number; away: number };
+          goalScorer?: WcGoalScorerPick | null;
         };
       };
 
@@ -431,7 +441,11 @@ export default function PredictionFormV2({
           exists?: boolean;
           mine?: boolean;
           editable?: boolean;
-          prediction?: { winner: Winner; score: { home: number; away: number } };
+          prediction?: {
+            winner: Winner;
+            score: { home: number; away: number };
+            goalScorer?: WcGoalScorerPick;
+          };
         };
         if (!alive) return;
         if (!json.ok || !json.exists || !json.mine || !json.prediction) {
@@ -537,6 +551,62 @@ export default function PredictionFormV2({
   const canSubmit =
     !!winner && !submitting && scoreHome !== "" && scoreAway !== "";
 
+  const predictedScoreForGoalScorer = useMemo(() => {
+    if (scoreHome === "" || scoreAway === "") return null;
+    const h = Number(scoreHome);
+    const a = Number(scoreAway);
+    if (!Number.isInteger(h) || !Number.isInteger(a) || h < 0 || a < 0) {
+      return null;
+    }
+    return { home: h, away: a };
+  }, [scoreHome, scoreAway]);
+
+  const buildPredictionPayload = (
+    h: number,
+    a: number
+  ): {
+    winner: Winner;
+    score: { home: number; away: number };
+    goalScorer?: WcGoalScorerPick | null;
+  } => {
+    const score = { home: h, away: a };
+    const goalScorer =
+      isWc &&
+      goalScorerPick &&
+      isWcGoalScorerPickValidForPredictedScore(
+        goalScorerPick,
+        score,
+        game.home?.teamId,
+        game.away?.teamId
+      )
+        ? goalScorerPick
+        : null;
+    return {
+      winner: winner!,
+      score,
+      ...(isWc ? { goalScorer } : {}),
+    };
+  };
+
+  const resolvedGoalScorerLabel = useMemo(() => {
+    if (!snapPred?.goalScorer) return null;
+    if (
+      !isWcGoalScorerPickValidForPredictedScore(
+        snapPred.goalScorer,
+        snapPred.score,
+        game.home?.teamId,
+        game.away?.teamId
+      )
+    ) {
+      return null;
+    }
+    const p = getWcSquadPlayer(
+      snapPred.goalScorer.teamId,
+      snapPred.goalScorer.playerId
+    );
+    return p?.name ?? null;
+  }, [snapPred?.goalScorer, snapPred?.score, game.home?.teamId, game.away?.teamId]);
+
   const scoreInputClass = [
     "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
     resultStatsMetricNumClass,
@@ -605,10 +675,7 @@ export default function PredictionFormV2({
               Authorization: `Bearer ${idToken}`,
             },
             body: JSON.stringify({
-              prediction: {
-                winner,
-                score: { home: h, away: a },
-              },
+              prediction: buildPredictionPayload(h, a),
             }),
           }
         );
@@ -633,10 +700,7 @@ export default function PredictionFormV2({
           typeof prev === "object" && prev !== null && "prediction" in prev
             ? {
                 ...prev,
-                prediction: {
-                  winner: winner!,
-                  score: { home: h, away: a },
-                },
+                prediction: buildPredictionPayload(h, a),
               }
             : prev
         );
@@ -644,6 +708,7 @@ export default function PredictionFormV2({
         setWinner(null);
         setScoreHome("");
         setScoreAway("");
+        setGoalScorerPick(null);
         setSubmitting(false);
         return;
       }
@@ -652,10 +717,7 @@ export default function PredictionFormV2({
         gameId: (game as any).id,
         league: game.league,
         authorUid: me.uid,
-        prediction: {
-          winner,
-          score: { home: h, away: a },
-        },
+        prediction: buildPredictionPayload(h, a),
       };
 
       const res = await fetch("/api/posts_v2", {
@@ -697,6 +759,7 @@ export default function PredictionFormV2({
       setWinner(null);
       setScoreHome("");
       setScoreAway("");
+      setGoalScorerPick(null);
 
       if (inOverlay) {
         if (readPredictNextGameModalSkip()) {
@@ -1178,11 +1241,18 @@ export default function PredictionFormV2({
                 </div>
               </div>
             </div>
+            {isWc && resolvedGoalScorerLabel ? (
+              <p className="text-center text-xs text-cyan-200/80 sm:text-sm">
+                {m.predict.wcGoalScorerTitle}: {resolvedGoalScorerLabel}
+              </p>
+            ) : null}
             <button
               type="button"
               onClick={() => {
                 setScoreHome(String(snapPred.score.home));
                 setScoreAway(String(snapPred.score.away));
+                setGoalScorerPick(snapPred.goalScorer ?? null);
+                setWinner(snapPred.winner);
                 setShowScoreEdit(true);
               }}
               className="flex h-11 w-full items-center justify-center rounded-xl border border-amber-300/40 bg-amber-500/15 text-sm font-bold text-amber-100 transition hover:bg-amber-500/25 active:scale-[0.99]"
@@ -1242,6 +1312,11 @@ export default function PredictionFormV2({
                   {snapPred.score.away}
                 </div>
               </div>
+              {isWc && resolvedGoalScorerLabel ? (
+                <p className="text-center text-xs text-cyan-200/80 sm:text-sm">
+                  {m.predict.wcGoalScorerTitle}: {resolvedGoalScorerLabel}
+                </p>
+              ) : null}
             </div>
           </motion.div>
         ) : null}
@@ -1303,11 +1378,26 @@ export default function PredictionFormV2({
                     setScoreHome("");
                     setScoreAway("");
                     setWinner(null);
+                    setGoalScorerPick(null);
                   }}
                   className="mt-2 w-full text-center text-xs font-medium text-white/55 underline-offset-2 hover:text-white/80 hover:underline"
                 >
                   {m.predict.cancelEditing}
                 </button>
+              ) : null}
+
+              {isWc ? (
+                <WcGoalScorerPicker
+                  homeTeamId={game.home?.teamId}
+                  awayTeamId={game.away?.teamId}
+                  homeLabel={homeLabel}
+                  awayLabel={awayLabel}
+                  predictedScore={predictedScoreForGoalScorer}
+                  value={goalScorerPick}
+                  onChange={setGoalScorerPick}
+                  language={language}
+                  isMobile={isMobile}
+                />
               ) : null}
             </motion.div>
 

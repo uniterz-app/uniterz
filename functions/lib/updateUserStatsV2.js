@@ -35,6 +35,8 @@ function wcIncrementAtPath(pathPrefix, o) {
         [`${pathPrefix}.upsetPointsSum`]: firestore_1.FieldValue.increment(o.upsetPoints),
         [`${pathPrefix}.upsetBonusSum`]: firestore_1.FieldValue.increment(o.upsetBonus),
         [`${pathPrefix}.streakBonusSum`]: firestore_1.FieldValue.increment(o.streakBonus),
+        [`${pathPrefix}.goalScorerHitCount`]: firestore_1.FieldValue.increment(o.goalScorerHit ? 1 : 0),
+        [`${pathPrefix}.goalScorerBonusSum`]: firestore_1.FieldValue.increment(o.goalScorerBonus),
     };
 }
 function toDateKeyJST(ts) {
@@ -61,6 +63,17 @@ function normalizeLeague(raw) {
         return "wc";
     return null;
 }
+function uniqueGameTeamIds(homeTeamId, awayTeamId) {
+    const ids = [homeTeamId, awayTeamId]
+        .map((v) => (typeof v === "string" ? v.trim() : ""))
+        .filter(Boolean);
+    return [...new Set(ids)];
+}
+function teamIncrementAtPath(teamId, o) {
+    var _a, _b;
+    const prefix = `teams.${teamId}`;
+    return wcIncrementAtPath(prefix, Object.assign(Object.assign({}, o), { goalScorerBonus: (_a = o.goalScorerBonus) !== null && _a !== void 0 ? _a : 0, goalScorerHit: (_b = o.goalScorerHit) !== null && _b !== void 0 ? _b : false }));
+}
 /* =========================================================
  * Bucket helpers
  * =======================================================*/
@@ -76,6 +89,8 @@ function emptyBucket() {
         upsetPointsSum: 0,
         upsetBonusSum: 0,
         streakBonusSum: 0,
+        goalScorerHitCount: 0,
+        goalScorerBonusSum: 0,
         winRate: 0,
         avgScoreError: 0,
         upsetHitRate: 0,
@@ -95,7 +110,7 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, countsForRanking, seasonPhase, seasonRound, wcStage, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, countsForRanking, seasonPhase, seasonRound, wcStage, homeTeamId, awayTeamId, } = opts;
     const forRanking = shouldCountForRanking(countsForRanking);
     const phaseKey = normalizeSeasonPhase(seasonPhase);
     const roundKey = normalizeSeasonRound(seasonRound);
@@ -120,6 +135,8 @@ async function applyPostToUserStatsV2(opts) {
             upsetPointsSum: firestore_1.FieldValue.increment(upsetPoints),
             upsetBonusSum: firestore_1.FieldValue.increment(upsetBonus),
             streakBonusSum: firestore_1.FieldValue.increment(streakBonus),
+            goalScorerHitCount: firestore_1.FieldValue.increment(goalScorerHit ? 1 : 0),
+            goalScorerBonusSum: firestore_1.FieldValue.increment(goalScorerBonus),
         };
         const update = Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {})), (forRanking && phaseKey === "playoffs" && roundKey
             ? { rankingByPlayoffRound: { [roundKey]: inc } }
@@ -134,6 +151,8 @@ async function applyPostToUserStatsV2(opts) {
             upsetPoints,
             upsetBonus,
             streakBonus,
+            goalScorerBonus,
+            goalScorerHit,
         };
         if (forRanking && leagueKey === "wc") {
             Object.assign(update, wcIncrementAtPath("rankingByWcStage.overall", wcOpts), wcStage === "qualifying"
@@ -152,8 +171,41 @@ async function applyPostToUserStatsV2(opts) {
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
         }
+        const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
+        if (forRanking && gameTeamIds.length > 0) {
+            const teamOpts = {
+                isWin,
+                scoreError,
+                scorePrecision,
+                hadUpsetGame,
+                points,
+                upsetHit,
+                upsetPoints,
+                upsetBonus,
+                streakBonus,
+                goalScorerBonus,
+                goalScorerHit,
+            };
+            for (const teamId of gameTeamIds) {
+                Object.assign(update, teamIncrementAtPath(teamId, teamOpts));
+            }
+        }
         tx.set(dailyRef, update, { merge: true });
-        tx.set(markerRef, { at: firestore_1.FieldValue.serverTimestamp() });
+        tx.set(markerRef, {
+            at: firestore_1.FieldValue.serverTimestamp(),
+            league: leagueKey,
+            homeTeamId: homeTeamId !== null && homeTeamId !== void 0 ? homeTeamId : null,
+            awayTeamId: awayTeamId !== null && awayTeamId !== void 0 ? awayTeamId : null,
+            posts: 1,
+            wins: isWin ? 1 : 0,
+            scoreErrorSum: scoreError,
+            scorePrecisionSum: scorePrecision,
+            pointsSumV3: points,
+            upsetPointsSum: upsetPoints,
+            upsetHitCount: upsetHit ? 1 : 0,
+            upsetOpportunityCount: hadUpsetGame ? 1 : 0,
+            countedForRanking: forRanking,
+        });
     });
 }
 /* =========================================================
@@ -185,6 +237,8 @@ async function getStatsForDateRangeV2(uid, start, end, league) {
         b.upsetPointsSum += src.upsetPointsSum || 0;
         b.upsetBonusSum += src.upsetBonusSum || 0;
         b.streakBonusSum += src.streakBonusSum || 0;
+        b.goalScorerHitCount += src.goalScorerHitCount || 0;
+        b.goalScorerBonusSum += src.goalScorerBonusSum || 0;
     }
     return recomputeCache(b);
 }

@@ -113,10 +113,20 @@ function WarnBlock({ children }: { children: ReactNode }) {
   );
 }
 
-function TotalScoreBonusRulesJa() {
+function TotalScoreBonusRulesJa({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
   const ui = useScoringRulesUi();
   return (
     <ul className={["list-disc pl-4 text-white/70", ui.listSpacing].join(" ")}>
+      {showWcGoalScorer ? (
+        <li className="space-y-1">
+          <span>
+            <Em>得点者ボーナス</Em> … <Num>+2点</Num>
+          </span>
+          <p className={ui.muted}>
+            ゴールする選手を1人予想して的中（オウンゴール除く。勝者予想とは別枠）
+          </p>
+        </li>
+      ) : null}
       <li className="space-y-1">
         <span>
           <Em>アップセットボーナス</Em> … <Num>+2点</Num>
@@ -146,10 +156,20 @@ function TotalScoreBonusRulesJa() {
   );
 }
 
-function TotalScoreBonusRulesEn() {
+function TotalScoreBonusRulesEn({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
   const ui = useScoringRulesUi();
   return (
     <ul className={["list-disc pl-4 text-white/70", ui.listSpacing].join(" ")}>
+      {showWcGoalScorer ? (
+        <li className="space-y-1">
+          <span>
+            <Em>Goal scorer bonus</Em> … <Num>+2</Num>
+          </span>
+          <p className={ui.muted}>
+            Pick one scorer; +2 if they score (own goals excluded; separate from winner pick)
+          </p>
+        </li>
+      ) : null}
       <li className="space-y-1">
         <span>
           <Em>Upset bonus</Em> … <Num>+2</Num>
@@ -247,11 +267,14 @@ function BasketballTotalRulesEn() {
   );
 }
 
-function FootballTotalRulesJa() {
+function FootballTotalRulesJa({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
   return (
     <ul className="space-y-2">
       <WarnBlock>
-        <Em>勝者予想が外れた試合</Em>は <Zero>0点</Zero>（ボーナスもなし）。
+        <Em>勝者予想が外れた試合</Em>は基本点 <Zero>0点</Zero>
+        {showWcGoalScorer
+          ? "（得点者ボーナスは別枠で加点あり）。"
+          : "（ボーナスもなし）。"}
       </WarnBlock>
       <RuleBlock>
         <span className="text-white/60">
@@ -292,7 +315,7 @@ function FootballTotalRulesJa() {
       </HighlightBlock>
       <RuleBlock>
         <BlockSubhead>ボーナス（基本点に上乗せ）</BlockSubhead>
-        <TotalScoreBonusRulesJa />
+        <TotalScoreBonusRulesJa showWcGoalScorer={showWcGoalScorer} />
       </RuleBlock>
       <RuleBlock>
         <Em>総合得点</Em> ＝ 基本点 ＋ ボーナス
@@ -301,11 +324,14 @@ function FootballTotalRulesJa() {
   );
 }
 
-function FootballTotalRulesEn() {
+function FootballTotalRulesEn({ showWcGoalScorer = false }: { showWcGoalScorer?: boolean }) {
   return (
     <ul className="space-y-2">
       <WarnBlock>
-        Wrong <Em>winner</Em> → <Zero>0</Zero> (no bonuses).
+        Wrong <Em>winner</Em> → <Zero>0</Zero> base
+        {showWcGoalScorer
+          ? " (goal scorer bonus is separate)."
+          : " (no bonuses)."}
       </WarnBlock>
       <RuleBlock>
         Line score = <Em>regulation + extra time</Em> (penalty shootout goals not counted).
@@ -345,7 +371,7 @@ function FootballTotalRulesEn() {
       </HighlightBlock>
       <RuleBlock>
         <BlockSubhead>Bonuses (added on top)</BlockSubhead>
-        <TotalScoreBonusRulesEn />
+        <TotalScoreBonusRulesEn showWcGoalScorer={showWcGoalScorer} />
       </RuleBlock>
       <RuleBlock>
         <Em>Total score</Em> = base + bonuses
@@ -555,10 +581,13 @@ function UpsetPointsRulesEn() {
 export function PredictionScoringFullRulesBody({
   sport,
   language,
+  league,
 }: {
   sport: ScoringSport;
   language: Language;
+  league?: string;
 }) {
+  const showWcGoalScorer = String(league ?? "").toLowerCase() === "wc";
   const isEn = language === "en";
   const totalTitle = isEn ? "Total score" : "総合得点";
   const precisionTitle = isEn ? "Score precision" : "スコア精度";
@@ -576,8 +605,8 @@ export function PredictionScoringFullRulesBody({
   const total =
     sport === "football"
       ? isEn
-        ? <FootballTotalRulesEn />
-        : <FootballTotalRulesJa />
+        ? <FootballTotalRulesEn showWcGoalScorer={showWcGoalScorer} />
+        : <FootballTotalRulesJa showWcGoalScorer={showWcGoalScorer} />
       : isEn
         ? <BasketballTotalRulesEn />
         : <BasketballTotalRulesJa />;

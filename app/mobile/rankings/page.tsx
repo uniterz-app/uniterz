@@ -35,6 +35,7 @@ import {
   toMobileRows,
 } from "@/lib/rankings/rankingTransform";
 import type { RankingRow } from "@/lib/rankings/useRanking";
+import { buildMyRankMiniMetrics, isMyRankMiniMetricsReady } from "@/lib/rankings/buildMyRankMiniMetrics";
 import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -82,13 +83,23 @@ export default function MobileRankingsPage() {
       ? wcStage
       : null;
 
-  const visibleMetrics: MobileMetric[] = [
-    "totalScore",
-    "winRate",
-    "marginPrecision",
-    "upsetScore",
-    "streak",
-  ];
+  const visibleMetrics: MobileMetric[] =
+    rankingLeague === "worldcup"
+      ? [
+          "totalScore",
+          "winRate",
+          "marginPrecision",
+          "upsetScore",
+          "streak",
+          "goalScorerHits",
+        ]
+      : [
+          "totalScore",
+          "winRate",
+          "marginPrecision",
+          "upsetScore",
+          "streak",
+        ];
 
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const SWIPE_X_THRESHOLD_PX = 42;
@@ -166,7 +177,7 @@ export default function MobileRankingsPage() {
     [visibleMetrics]
   );
 
-  const { listReady, personalPending, myUid, byMetric, ensureMetric } =
+  const { listReady, personalPending, myUid, byMetric, myMetricValueDeltas, ensureMetric } =
     useCumulativeRankingsBulk(phase, effectiveRound, wcStageForHook);
 
   const { user } = useMyRankingUser(myUid);
@@ -179,6 +190,13 @@ export default function MobileRankingsPage() {
   useEffect(() => {
     void ensureMetric(apiKey);
   }, [apiKey, ensureMetric]);
+
+  /** カードの 4 指標バー用 — タブ切替前に各指標のリーダー行を先読み */
+  useEffect(() => {
+    void ensureMetric("totalPoints");
+    void ensureMetric("totalPrecision");
+    void ensureMetric("totalUpset");
+  }, [ensureMetric, phase, effectiveRound, wcStageForHook, rankingLeague]);
   const rawRows = useMemo(
     () =>
       Array.isArray(bundle?.rows) ? (bundle.rows as RankingApiRow[]) : [],
@@ -188,6 +206,10 @@ export default function MobileRankingsPage() {
   const myRank = bundle?.myRank ?? null;
   const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
+  /** 累積スコアは指標タブに依存しない — totalPoints 側の myRow を優先 */
+  const myStatsRow =
+    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ??
+    myRawRow;
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count)
       ? bundle.count
@@ -211,8 +233,34 @@ export default function MobileRankingsPage() {
       const raw = myRawRow.winRate ?? 0;
       return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
     }
+    if (metric === "goalScorerHits") {
+      return myRawRow.totalGoalScorerHits ?? 0;
+    }
     return myRawRow.activeWinStreak ?? 0;
   }, [metric, myRawRow]);
+  /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
+  const myMiniMetrics = useMemo(
+    () =>
+      buildMyRankMiniMetrics(
+        myStatsRow,
+        {
+          ptsRows: byMetric?.totalPoints?.rows as RankingRow[] | undefined,
+          precRows: byMetric?.totalPrecision?.rows as RankingRow[] | undefined,
+          upsetRows: byMetric?.totalUpset?.rows as RankingRow[] | undefined,
+        },
+        myMetricValueDeltas
+      ),
+    [
+      myStatsRow,
+      myMetricValueDeltas,
+      byMetric?.totalPoints?.rows,
+      byMetric?.totalPrecision?.rows,
+      byMetric?.totalUpset?.rows,
+    ]
+  );
+
+  const cardBarsReady = isMyRankMiniMetricsReady(byMetric);
+
   const winRateMinPosts =
     rankingLeague === "worldcup"
       ? 1
@@ -332,6 +380,19 @@ export default function MobileRankingsPage() {
                 mobileWide
                 rankDeltaPlaces={
                   rankingHasNoEntries ? null : myRankDeltaPlaces
+                }
+                totalEntries={
+                  rankingHasNoEntries
+                    ? null
+                    : rankingListCount || rows.length || null
+                }
+                streak={myRawRow?.activeWinStreak ?? null}
+                countryCode={countryCode}
+                miniMetrics={myMiniMetrics}
+                barsReady={cardBarsReady}
+                cardResetKey={pageKey}
+                leagueLabel={
+                  rankingLeague === "worldcup" ? "WORLD CUP" : "NBA"
                 }
               />
             ) : null}

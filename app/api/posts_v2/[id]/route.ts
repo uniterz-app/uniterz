@@ -3,6 +3,11 @@ export const runtime = "nodejs";
 
 import { NextResponse, NextRequest } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
+import {
+  normalizeWcGoalScorerPick,
+  validateWcGoalScorerPickForGame,
+  type WcGoalScorerPick,
+} from "@/lib/wc/goalScorer";
 import { FieldValue } from "firebase-admin/firestore";
 
 /* ========= 認証 ========= */
@@ -103,10 +108,16 @@ function isSoccerLeague(league: unknown): boolean {
 }
 
 /** 予想 PATCH 用（POST /api/posts_v2 と同趣旨の検証） */
+type PredictionPatch = {
+  winner: "home" | "away" | "draw";
+  score: { home: number; away: number };
+  goalScorer?: WcGoalScorerPick;
+};
+
 function parsePredictionPatch(
   raw: unknown,
   league: unknown
-): { ok: true; prediction: { winner: "home" | "away" | "draw"; score: { home: number; away: number } } } | { ok: false; error: string } {
+): { ok: true; prediction: PredictionPatch; rawGoalScorer: unknown } | { ok: false; error: string } {
   const soccer = isSoccerLeague(league);
   const p = (raw as any)?.prediction ?? raw;
   if (!p || typeof p !== "object")
@@ -138,6 +149,7 @@ function parsePredictionPatch(
       winner: winner as "home" | "away" | "draw",
       score: { home, away },
     },
+    rawGoalScorer: (p as any).goalScorer,
   };
 }
 
@@ -175,10 +187,70 @@ export async function PATCH(req: NextRequest, ctx: any) {
           { status: 400 }
         );
       }
+
+      const league = String(data.league ?? "").toLowerCase();
+      const gameSnap = await getAdminDb()
+        .collection("games")
+        .doc(String(data.gameId ?? ""))
+        .get();
+      const g = gameSnap.exists ? gameSnap.data() : null;
+      const homeTeamId = g?.home?.teamId ?? g?.homeTeamId ?? data.home?.teamId ?? null;
+      const awayTeamId = g?.away?.teamId ?? g?.awayTeamId ?? data.away?.teamId ?? null;
+
+      const rawGoalScorer = parsed.rawGoalScorer;
+      const goalScorerPick = normalizeWcGoalScorerPick(rawGoalScorer);
+      const predRaw = body.prediction;
+      const hasGoalScorerField =
+        league === "wc" &&
+        predRaw !== null &&
+        typeof predRaw === "object" &&
+        "goalScorer" in (predRaw as object);
+
+      if (
+        league === "wc" &&
+        rawGoalScorer != null &&
+        rawGoalScorer !== undefined &&
+        !goalScorerPick
+      ) {
+        return NextResponse.json(
+          { ok: false, error: "goalScorer invalid" },
+          { status: 400 }
+        );
+      }
+      if (league !== "wc" && goalScorerPick) {
+        return NextResponse.json(
+          { ok: false, error: "goalScorer only allowed for wc" },
+          { status: 400 }
+        );
+      }
+      if (goalScorerPick) {
+        const v = validateWcGoalScorerPickForGame(
+          goalScorerPick,
+          homeTeamId,
+          awayTeamId,
+          parsed.prediction.score
+        );
+        if (!v.ok) {
+          return NextResponse.json({ ok: false, error: v.error }, { status: 400 });
+        }
+      }
+
+      const prediction: PredictionPatch = { ...parsed.prediction };
       const updates: Record<string, unknown> = {
-        prediction: parsed.prediction,
         updatedAt: FieldValue.serverTimestamp(),
       };
+
+      if (league === "wc" && hasGoalScorerField) {
+        if (goalScorerPick) {
+          prediction.goalScorer = goalScorerPick;
+          updates.prediction = prediction;
+        } else {
+          updates.prediction = prediction;
+          updates["prediction.goalScorer"] = FieldValue.delete();
+        }
+      } else {
+        updates.prediction = prediction;
+      }
       if (typeof body.comment === "string") {
         updates.comment = body.comment.slice(0, 2000);
       }

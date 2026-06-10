@@ -23,6 +23,8 @@ export type StatsV2Bucket = {
   // 総合得点内訳ボーナス合計
   upsetBonusSum: number;
   streakBonusSum: number;
+  goalScorerHitCount: number;
+  goalScorerBonusSum: number;
 
   winRate: number;
   avgScoreError: number;
@@ -58,6 +60,8 @@ type ApplyOptsV2 = {
   // 総合得点内訳ボーナス
   upsetBonus: number;
   streakBonus: number;
+  goalScorerBonus?: number;
+  goalScorerHit?: boolean;
 
   /** false のとき（例: プレーイン）はランキング用日次・累積に含めない。未設定は従来どおり true */
   countsForRanking?: boolean;
@@ -67,6 +71,9 @@ type ApplyOptsV2 = {
   seasonRound?: "r1" | "r2" | "cf" | "finals" | null;
   /** World Cup（league=wc）: 予選 / 本戦。overall は常に別途加算 */
   wcStage?: "qualifying" | "main" | null;
+  /** 試合のホーム / アウェイ teamId（teams.* バケット用） */
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
 };
 
 function shouldCountForRanking(v: boolean | undefined) {
@@ -106,6 +113,8 @@ function wcIncrementAtPath(
     upsetPoints: number;
     upsetBonus: number;
     streakBonus: number;
+    goalScorerBonus: number;
+    goalScorerHit: boolean;
   }
 ): Record<string, unknown> {
   return {
@@ -124,6 +133,12 @@ function wcIncrementAtPath(
     [`${pathPrefix}.upsetPointsSum`]: FieldValue.increment(o.upsetPoints),
     [`${pathPrefix}.upsetBonusSum`]: FieldValue.increment(o.upsetBonus),
     [`${pathPrefix}.streakBonusSum`]: FieldValue.increment(o.streakBonus),
+    [`${pathPrefix}.goalScorerHitCount`]: FieldValue.increment(
+      o.goalScorerHit ? 1 : 0
+    ),
+    [`${pathPrefix}.goalScorerBonusSum`]: FieldValue.increment(
+      o.goalScorerBonus
+    ),
   };
 }
 
@@ -149,6 +164,40 @@ function normalizeLeague(raw?: string | null): string | null {
   return null;
 }
 
+function uniqueGameTeamIds(
+  homeTeamId?: string | null,
+  awayTeamId?: string | null
+): string[] {
+  const ids = [homeTeamId, awayTeamId]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
+  return [...new Set(ids)];
+}
+
+function teamIncrementAtPath(
+  teamId: string,
+  o: {
+    isWin: boolean;
+    scoreError: number;
+    scorePrecision: number;
+    hadUpsetGame: boolean;
+    points: number;
+    upsetHit: boolean;
+    upsetPoints: number;
+    upsetBonus: number;
+    streakBonus: number;
+    goalScorerBonus?: number;
+    goalScorerHit?: boolean;
+  }
+): Record<string, unknown> {
+  const prefix = `teams.${teamId}`;
+  return wcIncrementAtPath(prefix, {
+    ...o,
+    goalScorerBonus: o.goalScorerBonus ?? 0,
+    goalScorerHit: o.goalScorerHit ?? false,
+  });
+}
+
 /* =========================================================
  * Bucket helpers
  * =======================================================*/
@@ -167,6 +216,8 @@ function emptyBucket(): StatsV2Bucket {
 
     upsetBonusSum: 0,
     streakBonusSum: 0,
+    goalScorerHitCount: 0,
+    goalScorerBonusSum: 0,
 
     winRate: 0,
     avgScoreError: 0,
@@ -214,10 +265,14 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     upsetPoints,
     upsetBonus,
     streakBonus,
+    goalScorerBonus = 0,
+    goalScorerHit = false,
     countsForRanking,
     seasonPhase,
     seasonRound,
     wcStage,
+    homeTeamId,
+    awayTeamId,
   } = opts;
 
   const forRanking = shouldCountForRanking(countsForRanking);
@@ -252,6 +307,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
       upsetBonusSum: FieldValue.increment(upsetBonus),
       streakBonusSum: FieldValue.increment(streakBonus),
+      goalScorerHitCount: FieldValue.increment(goalScorerHit ? 1 : 0),
+      goalScorerBonusSum: FieldValue.increment(goalScorerBonus),
     };
 
     const update: any = {
@@ -275,6 +332,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetPoints,
       upsetBonus,
       streakBonus,
+      goalScorerBonus,
+      goalScorerHit,
     };
 
     if (forRanking && leagueKey === "wc") {
@@ -309,8 +368,42 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       );
     }
 
+    const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
+    if (forRanking && gameTeamIds.length > 0) {
+      const teamOpts = {
+        isWin,
+        scoreError,
+        scorePrecision,
+        hadUpsetGame,
+        points,
+        upsetHit,
+        upsetPoints,
+        upsetBonus,
+        streakBonus,
+        goalScorerBonus,
+        goalScorerHit,
+      };
+      for (const teamId of gameTeamIds) {
+        Object.assign(update, teamIncrementAtPath(teamId, teamOpts));
+      }
+    }
+
     tx.set(dailyRef, update, { merge: true });
-    tx.set(markerRef, { at: FieldValue.serverTimestamp() });
+    tx.set(markerRef, {
+      at: FieldValue.serverTimestamp(),
+      league: leagueKey,
+      homeTeamId: homeTeamId ?? null,
+      awayTeamId: awayTeamId ?? null,
+      posts: 1,
+      wins: isWin ? 1 : 0,
+      scoreErrorSum: scoreError,
+      scorePrecisionSum: scorePrecision,
+      pointsSumV3: points,
+      upsetPointsSum: upsetPoints,
+      upsetHitCount: upsetHit ? 1 : 0,
+      upsetOpportunityCount: hadUpsetGame ? 1 : 0,
+      countedForRanking: forRanking,
+    });
   });
 }
 
@@ -353,6 +446,8 @@ export async function getStatsForDateRangeV2(
 
     b.upsetBonusSum += src.upsetBonusSum || 0;
     b.streakBonusSum += src.streakBonusSum || 0;
+    b.goalScorerHitCount += src.goalScorerHitCount || 0;
+    b.goalScorerBonusSum += src.goalScorerBonusSum || 0;
   }
 
   return recomputeCache(b);

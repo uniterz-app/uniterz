@@ -11,11 +11,8 @@ import { toast } from "@/app/component/ui/toast";
 import { copyTextToClipboard } from "@/lib/clipboard/copyText";
 import { shareCommunityInvite } from "@/lib/communities/inviteShare";
 import type { CommunityMetric } from "@/lib/communities/types";
-import {
-  leagueLabel,
-  metricLabel,
-  periodLabel,
-} from "@/lib/communities/labels";
+import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
+import { periodLabel } from "@/lib/communities/labels";
 import type { CommunityLeague } from "@/lib/communities/types";
 import type { Language } from "@/lib/i18n/language";
 import {
@@ -473,9 +470,15 @@ export default function CommunityGroupDetailView({
               ].join(" ")}
             >
               {t.members}: {summary.memberCount} ·{" "}
-              {leagueLabel(summary.rankingLeague ?? "all", language)} ·{" "}
-              {metricLabel(metric, language)} ·{" "}
-              {periodLabel("from_now", language)}
+              {formatCommunityCompetitionLine(
+                {
+                  rankingLeague: summary.rankingLeague ?? "all",
+                  rankingMetric: metric,
+                  rankingTeamIds: summary.rankingTeamIds,
+                },
+                language
+              )}{" "}
+              · {periodLabel("from_now", language)}
             </p>
 
             {summary.archived && (
@@ -573,9 +576,9 @@ export default function CommunityGroupDetailView({
             </h2>
             {loadingRows ? (
               <div className="space-y-2 rounded-xl border border-white/10 bg-white/4 p-4">
-                <div className="h-3 w-2/5 animate-pulse rounded bg-white/10" />
-                <div className="h-8 animate-pulse rounded-lg bg-white/8" />
-                <div className="h-8 animate-pulse rounded-lg bg-white/8" />
+                <div className="h-3 w-2/5 skeleton-scan rounded bg-white/10" />
+                <div className="h-8 skeleton-scan rounded-lg bg-white/8" />
+                <div className="h-8 skeleton-scan rounded-lg bg-white/8" />
               </div>
             ) : null}
             <div

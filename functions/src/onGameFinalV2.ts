@@ -80,6 +80,7 @@ export const onGameFinalV2 = onDocumentWritten(
       regulationEtScore: game.regulationEtScore ?? null,
       advancingTeamId: game.advancingTeamId ?? null,
       knockout: game.knockout === true,
+      goalScorers: game.goalScorers,
     };
 
     /* ===== ② streak / team stats ===== */
