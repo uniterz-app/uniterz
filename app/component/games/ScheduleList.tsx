@@ -18,10 +18,9 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import MatchCard, { type MatchCardProps } from "./MatchCard";
 import ScheduleSharedTransitionLayout from "./ScheduleSharedTransitionLayout";
 import {
-  GAMES_CYBER_EASE,
   GAMES_CYBER_EASE_SNAP,
   GAMES_DAY_SWITCH_EASE,
-  GAMES_SCHEDULE_SHELL_MOTION_COMPLETE_SEC,
+  GAMES_LIST_REST_CARDS_DELAY_SEC,
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
@@ -207,61 +206,44 @@ export default function ScheduleList({
     leagueProp ?? (propsList[0]?.league as League | undefined) ?? "nba";
 
   const isDaySwitchShell = listShellIntro === "daySwitch";
-  const isPageShell = listShellIntro === "page";
 
+  /** 子（行）へ variants を伝搬するだけのコンテナ。スタッガーは各行の delay で制御する */
   const scheduleContainer = useMemo(
     () => ({
       hidden: {},
-      show: {
-        transition: {
-          staggerChildren:
-            !listShellAnimations || isDaySwitchShell
-              ? 0
-              : isPageShell
-                ? 0
-                : 0.032,
-          delayChildren:
-            !listShellAnimations || isDaySwitchShell
-              ? 0
-              : isPageShell
-                ? 0
-                : 0.022,
-        },
-      },
+      show: {},
     }),
-    [listShellAnimations, isDaySwitchShell, isPageShell]
+    []
   );
 
-  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch は先頭から順に（遅延に上限あり）。page はラッパー完了後に残りをスタッガー */
+  /**
+   * 行レベルの入場。
+   * - daySwitch: 先頭から順に上方向からフェードイン
+   * - page: 先頭3枚はカード内部（MatchCard のグループ入場）が担うため行は動かさず、
+   *   4枚目以降のみラッパー完了後にフェード＋上昇
+   */
   const scheduleItem = useMemo(
     () => ({
       hidden: (i: number) => {
         if (!listShellAnimations) {
-          return { opacity: 1, y: 0, scale: 1 };
+          return { opacity: 1, y: 0 };
         }
         if (isDaySwitchShell) {
-          return { opacity: 0, y: -11, scale: 1 };
+          return { opacity: 0, y: -11 };
         }
-        if (isPageShell && i >= 3) {
-          return { opacity: 0, y: 12, scale: 1 };
+        if (i >= 3) {
+          return { opacity: 0, y: 12 };
         }
-        if (i >= 3) return { opacity: 1, y: 0, scale: 1 };
-        return { opacity: 0, y: -22, scale: 0.985 };
+        return { opacity: 1, y: 0 };
       },
       show: (i: number) => {
         if (!listShellAnimations) {
-          return {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            transition: { duration: 0 },
-          };
+          return { opacity: 1, y: 0, transition: { duration: 0 } };
         }
         if (isDaySwitchShell) {
           return {
             opacity: 1,
             y: 0,
-            scale: 1,
             transition: {
               opacity: { duration: 0.52, ease: GAMES_DAY_SWITCH_EASE },
               y: { duration: 0.56, ease: GAMES_DAY_SWITCH_EASE },
@@ -269,35 +251,23 @@ export default function ScheduleList({
             },
           };
         }
-        if (isPageShell && i >= 3) {
+        if (i >= 3) {
           return {
             opacity: 1,
             y: 0,
-            scale: 1,
             transition: {
               duration: 0.24,
               ease: SCHEDULE_STAGGER_EASE,
               delay:
-                GAMES_SCHEDULE_SHELL_MOTION_COMPLETE_SEC +
+                GAMES_LIST_REST_CARDS_DELAY_SEC +
                 (i - 3) * PAGE_REST_CARD_STAGGER_SEC,
             },
           };
         }
-        return {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          transition: {
-            duration: 0.26,
-            ease: SCHEDULE_STAGGER_EASE,
-            delay: isPageShell
-              ? 0.02 + i * 0.045
-              : Math.min(i * 0.024, 0.1),
-          },
-        };
+        return { opacity: 1, y: 0, transition: { duration: 0 } };
       },
     }),
-    [listShellAnimations, isDaySwitchShell, isPageShell]
+    [listShellAnimations, isDaySwitchShell]
   );
 
   const open = useCallback(
@@ -869,17 +839,7 @@ export default function ScheduleList({
     <>
       <LayoutGroup id="schedule-list">
         <ScheduleSharedTransitionLayout data-vt-nonce={vtListTransitionNonce}>
-          <motion.div
-            className={openGameId ? "pointer-events-none" : ""}
-            animate={{
-              scale: 1,
-              opacity: 1,
-            }}
-            transition={{
-              duration: listShellAnimations ? 0.2 : 0,
-              ease: GAMES_CYBER_EASE,
-            }}
-          >
+          <div className={openGameId ? "pointer-events-none" : ""}>
             <motion.div
               key={leagueAnimKey}
               className={scheduleGridClass}
@@ -889,7 +849,7 @@ export default function ScheduleList({
             >
               {listRows}
             </motion.div>
-          </motion.div>
+          </div>
         </ScheduleSharedTransitionLayout>
       </LayoutGroup>
 

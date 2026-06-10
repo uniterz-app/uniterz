@@ -1,6 +1,8 @@
 "use client";
 
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
+import { usePathname } from "next/navigation";
+import GamesPageBackground from "@/app/component/games/GamesPageBackground";
 import "@/app/globals.css";
 
 const montserrat = Montserrat({
@@ -24,12 +26,17 @@ export default function WebLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  // ランキングは専用の 3D 背景（CyberPageBackground）を持つため除外
+  const showCyberBackground = !pathname?.startsWith("/web/rankings");
+
   return (
     <div
       className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased bg-app min-h-screen`}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {children}
+      {showCyberBackground && <GamesPageBackground />}
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }

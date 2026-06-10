@@ -1,27 +1,142 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
+
+const WORDMARK_LETTERS = "UNITERZ".split("");
+
 export default function Header() {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <header className="relative z-10 overflow-hidden bg-app px-6 py-2 md:px-10 md:py-4 text-white shadow-[0_10px_30px_rgba(0,0,0,0.62)]">
-      {/* background glow */}
-      <div className="pointer-events-none absolute inset-0 opacity-40">
-        <div className="absolute left-0 top-0 h-full w-full bg-[radial-gradient(circle_at_top,rgba(255,140,60,0.16),transparent_58%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,120,40,0.06),transparent_45%)]" />
-      </div>
+    <header className="relative z-10 overflow-hidden px-6 py-2 md:px-10 md:py-4 text-white">
+      {/* 背景は透過させ、上端だけうっすら暗くして文字の可読性を確保 */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.10) 60%, rgba(0,0,0,0) 100%)",
+        }}
+        aria-hidden
+      />
 
       {/* container */}
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col items-center gap-0.5 md:max-w-[900px] lg:max-w-[1200px]">
-        {/* UNITERZ */}
-        <div
-          className="text-[22px] tracking-[0.35em] text-orange-100/85 md:text-[28px]"
-          style={{ fontFamily: "Bebas Neue" }}
-        >
-          UNITERZ
+        {/* UNITERZ：サイドアクセント + レター入場 + シマー */}
+        <div className="flex w-full items-center justify-center gap-3 md:gap-4">
+          {/* 左アクセント（線 + ダイヤ） */}
+          <motion.div
+            className="hidden h-px max-w-[110px] flex-1 origin-right bg-gradient-to-l from-cyan-200/45 to-transparent sm:block"
+            initial={reduceMotion ? false : { scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
+            aria-hidden
+          />
+          <motion.div
+            className="hidden h-1.5 w-1.5 rotate-45 border border-cyan-200/55 sm:block"
+            initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
+            animate={
+              reduceMotion
+                ? { opacity: 0.7 }
+                : { opacity: [0.4, 0.85, 0.4], scale: 1 }
+            }
+            transition={
+              reduceMotion
+                ? undefined
+                : {
+                    opacity: {
+                      delay: 0.9,
+                      duration: 3.2,
+                      ease: "easeInOut",
+                      repeat: Infinity,
+                    },
+                    scale: { delay: 0.55, duration: 0.4, ease: "easeOut" },
+                  }
+            }
+            style={{ boxShadow: "0 0 6px rgba(103,232,249,0.45)" }}
+            aria-hidden
+          />
+
+          {/* ワードマーク（ベース文字 + シマーオーバーレイの二層） */}
+          <div
+            className="relative text-[22px] tracking-[0.35em] md:text-[28px]"
+            style={{ fontFamily: "Bebas Neue" }}
+            aria-label="UNITERZ"
+          >
+            <div
+              className="text-orange-100/85"
+              style={{ textShadow: "0 0 22px rgba(103,232,249,0.16)" }}
+              aria-hidden
+            >
+              {WORDMARK_LETTERS.map((ch, i) => (
+                <motion.span
+                  key={`${ch}-${i}`}
+                  className="inline-block"
+                  // blur フィルターのアニメは毎フレーム再描画になるため opacity / y のみで表現
+                  initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.08 + i * 0.055,
+                    duration: 0.5,
+                    ease: [0.22, 0.61, 0.36, 1],
+                  }}
+                >
+                  {ch}
+                </motion.span>
+              ))}
+            </div>
+            {/* 時折ハイライトが走るシマー層 */}
+            {!reduceMotion && (
+              <div
+                className="header-wordmark-shimmer pointer-events-none absolute inset-0"
+                aria-hidden
+              >
+                UNITERZ
+              </div>
+            )}
+          </div>
+
+          {/* 右アクセント（ダイヤ + 線） */}
+          <motion.div
+            className="hidden h-1.5 w-1.5 rotate-45 border border-cyan-200/55 sm:block"
+            initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
+            animate={
+              reduceMotion
+                ? { opacity: 0.7 }
+                : { opacity: [0.4, 0.85, 0.4], scale: 1 }
+            }
+            transition={
+              reduceMotion
+                ? undefined
+                : {
+                    opacity: {
+                      delay: 2.5,
+                      duration: 3.2,
+                      ease: "easeInOut",
+                      repeat: Infinity,
+                    },
+                    scale: { delay: 0.55, duration: 0.4, ease: "easeOut" },
+                  }
+            }
+            style={{ boxShadow: "0 0 6px rgba(103,232,249,0.45)" }}
+            aria-hidden
+          />
+          <motion.div
+            className="hidden h-px max-w-[110px] flex-1 origin-left bg-gradient-to-r from-cyan-200/45 to-transparent sm:block"
+            initial={reduceMotion ? false : { scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
+            aria-hidden
+          />
         </div>
 
         {/* cyber line + light sweep */}
         <div className="relative w-full">
-          <div className="relative z-1 h-[2px] w-full overflow-hidden rounded-full">
+          <motion.div
+            className="relative z-1 h-[2px] w-full overflow-hidden rounded-full"
+            initial={reduceMotion ? false : { scaleX: 0.1, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            transition={{ delay: 0.25, duration: 0.8, ease: [0.22, 0.61, 0.36, 1] }}
+          >
             <div className="absolute inset-0 bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-95" />
             <div
               className="animate-header-cyber-sweep pointer-events-none absolute inset-y-0 left-0 w-[42%] max-w-[220px] opacity-90 will-change-transform"
@@ -31,9 +146,19 @@ export default function Header() {
               }}
               aria-hidden
             />
-          </div>
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[2px] bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-70 blur-sm"
+          </motion.div>
+          {/* グロー（ゆっくり脈動） */}
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[2px] bg-linear-to-r from-transparent via-cyan-300 to-transparent blur-sm"
+            initial={false}
+            animate={
+              reduceMotion ? { opacity: 0.7 } : { opacity: [0.45, 0.85, 0.45] }
+            }
+            transition={
+              reduceMotion
+                ? undefined
+                : { duration: 4.5, ease: "easeInOut", repeat: Infinity }
+            }
             aria-hidden
           />
         </div>

@@ -873,16 +873,26 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     );
   }, [scheduleBlockKey]);
 
+  /** 上部バー共通：スライド＋着地時に一瞬明滅する「ロックオン」入場 */
+  const topBarEntry = (delay: number, dx: number) =>
+    webGamesMotion
+      ? {
+          initial: { opacity: 0, x: dx },
+          animate: { opacity: [0, 1, 0.5, 1], x: 0 },
+          transition: {
+            x: { duration: 0.3, delay, ease: GAMES_CYBER_EASE },
+            opacity: {
+              duration: 0.4,
+              delay,
+              times: [0, 0.5, 0.66, 1] as number[],
+              ease: "linear" as const,
+            },
+          },
+        }
+      : { initial: false as const, animate: { opacity: 1, x: 0 } };
+
   const renderFilterControl = (compactHeader: boolean) => (
-    <motion.div
-      initial={webGamesMotion ? { opacity: 0, x: 12 } : false}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{
-        duration: webGamesMotion ? 0.28 : 0,
-        delay: webGamesMotion ? 0.04 : 0,
-        ease: GAMES_CYBER_EASE,
-      }}
-    >
+    <motion.div {...topBarEntry(0.18, 14)}>
       <GamesTeamFilterPanel
         teams={teams}
         selectedIds={teamFilterIds}
@@ -903,15 +913,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const renderBracketControl = (compactHeader: boolean) =>
     league === "nba" ? (
-      <motion.div
-        initial={webGamesMotion ? { opacity: 0, x: 18 } : false}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{
-          duration: webGamesMotion ? 0.32 : 0,
-          delay: webGamesMotion ? 0.05 : 0,
-          ease: GAMES_CYBER_EASE,
-        }}
-      >
+      <motion.div {...topBarEntry(0.27, 18)}>
         <button
           type="button"
           onClick={handleBracketClick}
@@ -941,11 +943,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       style={{ touchAction: "pan-y" }}
     >
       <div className="relative mb-2 mt-2 flex items-center gap-3 pl-2 pr-1 sm:pl-3">
-        <button
+        <motion.button
           type="button"
           onClick={() => setGamesDrawerOpen(true)}
           className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
           aria-label={m.games.openMenu}
+          {...topBarEntry(0, -10)}
         >
           <Menu className="h-5 w-5" strokeWidth={2.25} />
           {showWcTabBadge ? (
@@ -956,16 +959,44 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               !
             </span>
           ) : null}
-        </button>
-        <span
+        </motion.button>
+        {/* リーグ名：広がった字間が収束しながらロックオンする */}
+        <motion.span
           className={[
             nameBebas.className,
             "min-w-0 flex-1 truncate text-center tracking-[0.28em] text-white/90",
             isMobile ? "text-[20px]" : "text-[22px] sm:text-[24px]",
           ].join(" ")}
+          initial={
+            webGamesMotion
+              ? { opacity: 0, letterSpacing: "0.5em" }
+              : false
+          }
+          animate={
+            webGamesMotion
+              ? { opacity: [0, 1, 0.55, 1], letterSpacing: "0.28em" }
+              : { opacity: 1 }
+          }
+          transition={
+            webGamesMotion
+              ? {
+                  letterSpacing: {
+                    duration: 0.42,
+                    delay: 0.09,
+                    ease: GAMES_CYBER_EASE,
+                  },
+                  opacity: {
+                    duration: 0.46,
+                    delay: 0.09,
+                    times: [0, 0.5, 0.66, 1],
+                    ease: "linear",
+                  },
+                }
+              : { duration: 0 }
+          }
         >
           {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
-        </span>
+        </motion.span>
         <div className="w-10 shrink-0" aria-hidden />
         {isMobile ? (
           <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-1.5">
@@ -989,14 +1020,26 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       )}
 
       <motion.div
-        initial={webGamesMotion ? { opacity: 0, y: -10, scale: 0.985 } : false}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{
-          duration: webGamesMotion ? 0.34 : 0,
-          delay: webGamesMotion ? 0.04 : 0,
-          ease: GAMES_CYBER_EASE,
-        }}
-        className="mb-1"
+        initial={webGamesMotion ? { opacity: 0, y: -10 } : false}
+        animate={
+          webGamesMotion
+            ? { opacity: [0, 1, 0.5, 1], y: 0 }
+            : { opacity: 1, y: 0 }
+        }
+        transition={
+          webGamesMotion
+            ? {
+                y: { duration: 0.34, delay: 0.38, ease: GAMES_CYBER_EASE },
+                opacity: {
+                  duration: 0.44,
+                  delay: 0.38,
+                  times: [0, 0.5, 0.66, 1],
+                  ease: "linear",
+                },
+              }
+              : { duration: 0 }
+        }
+        className="mb-0"
       >
       <MonthHeader
         month={monthValue}
@@ -1052,13 +1095,25 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     <motion.div
       key={`day-strip-${league}-${teamFilterKey}`}
       className="mb-2"
-      initial={webGamesMotion ? { opacity: 0 } : false}
-      animate={{ opacity: 1 }}
-      transition={{
-        duration: webGamesMotion ? 0.24 : 0,
-        delay: webGamesMotion ? 0.06 : 0,
-        ease: GAMES_CYBER_EASE,
-      }}
+      initial={webGamesMotion ? { opacity: 0, x: -12 } : false}
+      animate={
+        webGamesMotion
+          ? { opacity: [0, 1, 0.55, 1], x: 0 }
+          : { opacity: 1, x: 0 }
+      }
+      transition={
+        webGamesMotion
+          ? {
+              x: { duration: 0.3, delay: 0.5, ease: GAMES_CYBER_EASE },
+              opacity: {
+                duration: 0.4,
+                delay: 0.5,
+                times: [0, 0.5, 0.66, 1],
+                ease: "linear",
+              },
+            }
+          : { duration: 0 }
+      }
     >
       <DayStrip
         dates={gameDaysForStrip}
