@@ -563,7 +563,7 @@ export default function NavBar() {
               ? {
                   animation: isMobile
                     ? "none"
-                    : "popActive 0.28s cubic-bezier(0.34, 1.45, 0.64, 1) both",
+                    : "popActive 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
                   transform: isMobile ? "scale(1.04)" : "scale(1.08)",
                   position: "relative",
                   zIndex: 2,

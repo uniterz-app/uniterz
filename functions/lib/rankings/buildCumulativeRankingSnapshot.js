@@ -31,6 +31,11 @@ const METRICS = [
 /** World Cup 専用（得点者的中数） */
 const WC_METRICS = [...METRICS, "totalGoalScorerHits"];
 const PLAYOFF_ROUND_KEYS = ["r1", "r2", "cf", "finals"];
+const WC_RANKING_STAGES = [
+    "overall",
+    "qualifying",
+    "main",
+];
 /**
  * 日次スナップショットで再計算・書き込みするフェーズ。プレーイン終了後は確定表示のため除外する。
  * Next の `RANKING_SNAPSHOT_BUILD_PHASES` と同期すること。
@@ -181,6 +186,40 @@ function assignCompetitionRanks(sorted, metric) {
     }
     return out;
 }
+function toSnapshotMetricValues(r) {
+    var _a, _b, _c, _d, _e, _f;
+    const tp = (_a = r.totalPosts) !== null && _a !== void 0 ? _a : 0;
+    const tw = (_b = r.totalWins) !== null && _b !== void 0 ? _b : 0;
+    return {
+        totalPoints: (_c = r.totalPoints) !== null && _c !== void 0 ? _c : 0,
+        totalPrecision: (_d = r.totalPrecision) !== null && _d !== void 0 ? _d : 0,
+        totalUpset: (_e = r.totalUpset) !== null && _e !== void 0 ? _e : 0,
+        winRate: tp > 0 ? tw / tp : ((_f = r.winRate) !== null && _f !== void 0 ? _f : 0),
+    };
+}
+function buildMetricValuesBlock(d) {
+    var _a, _b, _c, _d;
+    const playoffRounds = {};
+    for (const round of PLAYOFF_ROUND_KEYS) {
+        const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
+        if (((_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0) > 0) {
+            playoffRounds[round] = toSnapshotMetricValues(rr);
+        }
+    }
+    const wc = {};
+    for (const stage of WC_RANKING_STAGES) {
+        const rr = (_c = d.rankingByWcStage) === null || _c === void 0 ? void 0 : _c[stage];
+        if (((_d = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _d !== void 0 ? _d : 0) > 0) {
+            wc[stage] = toSnapshotMetricValues(rr);
+        }
+    }
+    return {
+        play_in: toSnapshotMetricValues(rankingSlice(d, "play_in")),
+        playoffs: toSnapshotMetricValues(rankingSlice(d, "playoffs")),
+        playoffRounds,
+        wc,
+    };
+}
 function computeRankDeltaPlaces(prevRank, currentRank) {
     if (prevRank == null || currentRank < 1)
         return null;
@@ -235,10 +274,6 @@ async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) 
     }
     return out;
 }
-/**
- * 日次スナップショット doc が無い/空のとき、getCumulativeRanking が一覧を出せるよう
- * cumulative_stats からラウンド別 Top20 をその場で算出する。
- */
 async function loadPlayoffRoundTop20RowsLive(round, metric) {
     const snap = await db().collection("cumulative_stats").get();
     const baseRows = snap.docs
@@ -271,16 +306,14 @@ async function loadPlayoffRoundTop20RowsLive(round, metric) {
         : baseRows;
     const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
     const ranks = assignCompetitionRanks(sortedFull, metric);
-    return sortedFull.slice(0, 20).map((row) => {
-        var _a;
-        return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
-    });
+    return {
+        totalCount: sortedFull.length,
+        rows: sortedFull.slice(0, 20).map((row) => {
+            var _a;
+            return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
+        }),
+    };
 }
-const WC_RANKING_STAGES = [
-    "overall",
-    "qualifying",
-    "main",
-];
 /**
  * World Cup ステージ別 Top20（スナップショットが空のときの live フォールバック）
  */
@@ -316,10 +349,13 @@ async function loadWcStageTop20RowsLive(stage, metric) {
         : baseRows;
     const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
     const ranks = assignCompetitionRanks(sortedFull, metric);
-    return sortedFull.slice(0, 20).map((row) => {
-        var _a;
-        return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
-    });
+    return {
+        totalCount: sortedFull.length,
+        rows: sortedFull.slice(0, 20).map((row) => {
+            var _a;
+            return (Object.assign(Object.assign({}, row), { rank: (_a = ranks.get(row.uid)) !== null && _a !== void 0 ? _a : 0, rankDeltaPlaces: null }));
+        }),
+    };
 }
 /* =========================================================
  * Main
@@ -376,7 +412,12 @@ async function buildCumulativeRankingSnapshot() {
             for (const r of top20) {
                 topUidSet.add(r.uid);
             }
-            top20Jobs.push({ phase, metric, rows: top20 });
+            top20Jobs.push({
+                phase,
+                metric,
+                rows: top20,
+                totalCount: sortedFull.length,
+            });
         }
     }
     const roundTop20Jobs = [];
@@ -432,7 +473,12 @@ async function buildCumulativeRankingSnapshot() {
             for (const r of top20) {
                 topUidSet.add(r.uid);
             }
-            roundTop20Jobs.push({ round, metric, rows: top20 });
+            roundTop20Jobs.push({
+                round,
+                metric,
+                rows: top20,
+                totalCount: sortedFull.length,
+            });
         }
     }
     const wcTop20Jobs = [];
@@ -488,12 +534,17 @@ async function buildCumulativeRankingSnapshot() {
             for (const r of top20) {
                 topUidSet.add(r.uid);
             }
-            wcTop20Jobs.push({ stage, metric, rows: top20 });
+            wcTop20Jobs.push({
+                stage,
+                metric,
+                rows: top20,
+                totalCount: sortedFull.length,
+            });
         }
     }
     const yesterdayKey = getYesterdayDateKeyJST();
     const prevByUid = await fetchLatestPriorRankMapsForUids([...topUidSet], yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS);
-    for (const { phase, metric, rows } of top20Jobs) {
+    for (const { phase, metric, rows, totalCount } of top20Jobs) {
         const enriched = rows.map((row) => {
             var _a;
             const prevBlock = prevByUid.get(row.uid);
@@ -512,11 +563,12 @@ async function buildCumulativeRankingSnapshot() {
             phase,
             metric,
             rows: enriched,
+            totalCount,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
         }, { merge: true });
     }
-    for (const { round, metric, rows } of roundTop20Jobs) {
+    for (const { round, metric, rows, totalCount } of roundTop20Jobs) {
         const enriched = rows.map((row) => {
             var _a, _b;
             const prevBlock = prevByUid.get(row.uid);
@@ -536,11 +588,12 @@ async function buildCumulativeRankingSnapshot() {
             round,
             metric,
             rows: enriched,
+            totalCount,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
         }, { merge: true });
     }
-    for (const { stage, metric, rows } of wcTop20Jobs) {
+    for (const { stage, metric, rows, totalCount } of wcTop20Jobs) {
         const enriched = rows.map((row) => {
             var _a, _b;
             const prevBlock = prevByUid.get(row.uid);
@@ -560,6 +613,7 @@ async function buildCumulativeRankingSnapshot() {
             stage,
             metric,
             rows: enriched,
+            totalCount,
             updatedAt: firestore_1.FieldValue.serverTimestamp(),
             rankDeltaBasisDateKey: yesterdayKey,
         }, { merge: true });
@@ -576,6 +630,10 @@ async function buildCumulativeRankingSnapshot() {
         }
     };
     const historyUids = new Set([...rankByUid.keys(), ...rankByUidWc.keys()]);
+    const metricValuesByUid = new Map();
+    for (const doc of snap.docs) {
+        metricValuesByUid.set(doc.id, buildMetricValuesBlock(doc.data()));
+    }
     for (const uid of historyUids) {
         const per = (_a = rankByUid.get(uid)) !== null && _a !== void 0 ? _a : { play_in: {}, playoffs: {} };
         const playoffRounds = (_b = rankByUidPlayoffRound.get(uid)) !== null && _b !== void 0 ? _b : {};
@@ -599,6 +657,7 @@ async function buildCumulativeRankingSnapshot() {
             playoffs: per.playoffs,
             playoffRounds,
             wc,
+            metricValues: metricValuesByUid.get(uid),
             writtenAt: firestore_1.FieldValue.serverTimestamp(),
         }, { merge: true });
         ops += 2;

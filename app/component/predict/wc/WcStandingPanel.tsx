@@ -292,7 +292,7 @@ function SkeletonTable({ isMobile }: { isMobile: boolean }) {
         <div
           key={i}
           className={[
-            "w-full animate-pulse rounded-md bg-white/[0.05]",
+            "w-full skeleton-scan rounded-md bg-white/[0.05]",
             web ? "h-9" : "h-6",
           ].join(" ")}
           style={{ opacity: isMobile ? 0.7 : 1 }}

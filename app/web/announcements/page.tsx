@@ -158,10 +158,10 @@ export default function WebAnnouncementsPage() {
           <div className="space-y-5">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="rounded-2xl overflow-hidden bg-white/5 border border-white/10">
-                <div className="h-56 w-full animate-pulse bg-white/10" />
+                <div className="h-56 w-full skeleton-scan bg-white/10" />
                 <div className="p-4 space-y-3">
-                  <div className="h-4 w-24 bg-white/10 animate-pulse rounded" />
-                  <div className="h-6 w-3/4 bg-white/10 animate-pulse rounded" />
+                  <div className="h-4 w-24 bg-white/10 skeleton-scan rounded" />
+                  <div className="h-6 w-3/4 bg-white/10 skeleton-scan rounded" />
                 </div>
               </div>
             ))}

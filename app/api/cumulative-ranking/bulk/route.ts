@@ -15,6 +15,12 @@ import {
   type BulkRankingMetric,
 } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
 import { loadSnapshotTotalPointsRankAndDelta } from "@/lib/rankings/server/rankSnapshotHistoryTotalPoints";
+import { loadMyRankMetricValueDeltas } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
+import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+import {
+  isRankingLeagueSource,
+  type RankingLeagueSource,
+} from "@/lib/rankings/rankingLeagueSource";
 import {
   isWcRankingStage,
   type WcRankingStage,
@@ -156,6 +162,8 @@ export async function GET(req: Request) {
         : (JSON.parse(JSON.stringify(source)) as typeof source);
     await mergeUserPlansIntoBulkByMetric(data.byMetric);
 
+    let myMetricValueDeltas: MyRankMetricValueDeltas | null = null;
+
     /**
      * Ranking Progress と同じ「最新 snapshot」を Your Rank（totalPoints）にも反映する。
      * プレーオフ通算・ラウンド別とも rankSnapshotHistory を参照してトータルと揃える。
@@ -176,13 +184,32 @@ export async function GET(req: Request) {
       }
     }
 
+    if (uid && data.byMetric?.totalPoints?.myRow) {
+      const rawLeague = searchParams.get("league");
+      const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
+        ? rawLeague
+        : wcStage
+          ? "worldcup"
+          : "nba";
+      myMetricValueDeltas = await loadMyRankMetricValueDeltas(
+        uid,
+        data.byMetric.totalPoints.myRow as {
+          totalPoints?: number;
+          totalPrecision?: number;
+          totalUpset?: number;
+          winRate?: number;
+        },
+        { phase, round, wcStage, rankingLeague }
+      );
+    }
+
     const maxAge = 0;
     const cacheControl = uid
       ? "private, no-store"
       : `public, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(
-      { ...data, wcStage },
+      { ...data, wcStage, myMetricValueDeltas },
       {
         status: 200,
         headers: { "Cache-Control": cacheControl },

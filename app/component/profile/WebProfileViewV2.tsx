@@ -488,16 +488,16 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
             </div>
             ) : (
               <div className="mt-6 space-y-4">
-                <div className="h-56 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
-                <div className="h-52 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
-                <div className="h-52 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-56 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-52 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-52 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}
               </>
             ) : (
               <div className="mt-6 space-y-4">
-                <div className="h-36 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
-                <div className="h-56 animate-pulse rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-36 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
+                <div className="h-56 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}
           </>

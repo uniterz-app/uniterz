@@ -11,7 +11,15 @@ import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { streakShortLabel } from "@/lib/i18n/rankings";
-import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import {
+  RankingsGlowWireFrame,
+  RankingsNoiseTexture,
+  RankingsScanTexture,
+} from "@/app/component/rankings/RankingsCyberDecor";
+import {
+  listCardShellStyle,
+  listRankMedal,
+} from "@/lib/rankings/rankingsCyberTheme";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
@@ -30,81 +38,7 @@ const rankHudNumClass = summaryMetricNumClass;
 export type RankingCardSize = "default" | "compact";
 
 function medal(rank: number) {
-  if (rank === 1) {
-    return {
-      text: "#FFD65A",
-      glow: "rgba(255,215,90,0.08)",
-      tint: "rgba(255,215,90,0.06)",
-    };
-  }
-  if (rank === 2) {
-    return {
-      text: "#E9EDF6",
-      glow: "rgba(230,235,245,0.06)",
-      tint: "rgba(230,235,245,0.05)",
-    };
-  }
-  if (rank === 3) {
-    return {
-      text: "#D59A5A",
-      glow: "rgba(205,127,50,0.06)",
-      tint: "rgba(205,127,50,0.05)",
-    };
-  }
-  return {
-    text: "#FFFFFF",
-    glow: "rgba(255,255,255,0.04)",
-    tint: "rgba(255,255,255,0.035)",
-  };
-}
-
-function cardTone(rank: number) {
-  if (rank === 1) {
-    return {
-      border: "rgba(255,255,255,0.18)",
-      outerGlow: "rgba(255,215,90,0.07)",
-    };
-  }
-  if (rank === 2) {
-    return {
-      border: "rgba(255,255,255,0.18)",
-      outerGlow: "rgba(230,235,245,0.06)",
-    };
-  }
-  if (rank === 3) {
-    return {
-      border: "rgba(255,255,255,0.18)",
-      outerGlow: "rgba(205,127,50,0.055)",
-    };
-  }
-  return {
-    border: "rgba(255,255,255,0.14)",
-    outerGlow: "rgba(255,255,255,0.035)",
-  };
-}
-
-function MonoCornerFrame() {
-  const color = "rgba(226,232,240,0.72)";
-  const glow = "rgba(226,232,240,0.16)";
-  return (
-    <>
-      <div className="pointer-events-none absolute inset-0 z-30">
-        <div
-          className="absolute inset-0 border"
-          style={{
-            inset: "0.5px",
-            borderColor: color,
-            borderWidth: 0.6,
-            boxShadow: `0 0 10px ${glow}`,
-          }}
-        />
-        <div className="absolute left-0 top-0 h-4 w-4 border-l-[2.5px] border-t-[2.5px]" style={{ borderColor: color }} />
-        <div className="absolute right-0 top-0 h-4 w-4 border-r-[2.5px] border-t-[2.5px]" style={{ borderColor: color }} />
-        <div className="absolute bottom-0 left-0 h-4 w-4 border-b-[2.5px] border-l-[2.5px]" style={{ borderColor: color }} />
-        <div className="absolute bottom-0 right-0 h-4 w-4 border-b-[2.5px] border-r-[2.5px]" style={{ borderColor: color }} />
-      </div>
-    </>
-  );
+  return listRankMedal(rank);
 }
 
 function FadedFlagBg({
@@ -114,7 +48,6 @@ function FadedFlagBg({
   rank: number;
   countryCode?: string;
 }) {
-  const m = medal(rank);
   const src = countryCode ? FLAG_SRC[countryCode] : undefined;
   /** 4位以下の一覧行：国旗をわずかに右へ */
   const listRow = rank > 3;
@@ -122,44 +55,17 @@ function FadedFlagBg({
   if (!src) return null;
 
   return (
-    <div
-      className={[
-        "pointer-events-none absolute inset-y-0 w-[34%] overflow-hidden",
-        listRow ? "right-[0%]" : "-right-[1%]",
-      ].join(" ")}
-    >
-      <div
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <img
+        src={src}
+        alt=""
         className={[
-          "absolute inset-y-[2.5%] w-[92%] overflow-hidden rounded-none",
-          listRow ? "right-0" : "right-[3%]",
+          "absolute top-1/2 -translate-y-1/2 object-contain",
+          listRow ? "right-0 h-[110%]" : "right-[-4%] h-[120%]",
         ].join(" ")}
-        style={{
-          opacity: listRow ? 0.72 : 0.46,
-          boxShadow: listRow
-            ? [
-                "0 0 12px rgba(255,255,255,0.28)",
-                "0 0 26px rgba(170,210,255,0.22)",
-                "0 0 44px rgba(120,180,255,0.12)",
-                `0 0 20px ${m.glow}`,
-              ].join(", ")
-            : `0 0 24px ${m.glow}`,
-          maskImage:
-            "linear-gradient(90deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.42) 20%, rgba(0,0,0,0.76) 50%, rgba(0,0,0,0.98) 100%)",
-          WebkitMaskImage:
-            "linear-gradient(90deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.42) 20%, rgba(0,0,0,0.76) 50%, rgba(0,0,0,0.98) 100%)",
-        }}
-      >
-        <img
-          src={src}
-          alt=""
-          className={
-            listRow
-              ? "h-full w-full object-contain object-right drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]"
-              : "h-full w-full object-contain object-right"
-          }
-          draggable={false}
-        />
-      </div>
+        style={{ opacity: listRow ? 0.07 : 0.08 }}
+        draggable={false}
+      />
     </div>
   );
 }
@@ -198,7 +104,7 @@ function ValueText({
   const valueStyle =
     rank <= 3
       ? ({ color: m.text } as const)
-      : ({ color: "rgba(255,255,255,0.9)" } as const);
+      : ({ color: "rgba(140,240,255,0.92)" } as const);
 
   if (metric === "streak") {
     return (
@@ -229,6 +135,22 @@ function ValueText({
         >
           {streakShortLabel(language)}
         </span>
+      </div>
+    );
+  }
+
+  if (metric === "goalScorerHits") {
+    return (
+      <div
+        className={[
+          "inline-flex max-w-full items-baseline leading-none",
+          justifyRow,
+          rankHudNumClass,
+          baseTextClass,
+        ].join(" ")}
+        style={valueStyle}
+      >
+        <span className="tabular-nums">{Math.round(counted)}</span>
       </div>
     );
   }
@@ -333,7 +255,6 @@ export default function RankingCard({
   const compact = size === "compact";
   const isTop3 = rank <= 3;
   const m = medal(rank);
-  const tone = cardTone(rank);
   const countryCode = getCountryCode(r);
 
   const pathname = usePathname() ?? "";
@@ -401,60 +322,17 @@ export default function RankingCard({
               ? "min-h-[76px]"
               : "min-h-[50px]",
         ].join(" ")}
-        style={{
-          borderColor: tone.border,
-          background:
-            "linear-gradient(160deg, rgba(255,255,255,0.095) 0%, rgba(255,255,255,0.04) 44%, rgba(8,13,24,0.86) 100%)",
-          boxShadow: [
-            isTop3
-              ? "0 12px 28px rgba(0,0,0,0.22)"
-              : "0 6px 14px rgba(0,0,0,0.16)",
-            "inset 0 1px 0 rgba(255,255,255,0.22)",
-            "inset 0 -1px 0 rgba(255,255,255,0.05)",
-            `inset 0 0 0 1px ${tone.border}`,
-            `0 0 18px ${tone.outerGlow}`,
-          ].join(", "),
-        }}
+        style={listCardShellStyle(rank)}
       >
-        <MonoCornerFrame />
-        <ShellGridOverlay roundedClassName="rounded-none" />
+        <RankingsScanTexture />
+        <RankingsNoiseTexture />
+        <RankingsGlowWireFrame variant="compact" />
         <FadedFlagBg rank={rank} countryCode={countryCode} />
 
         <div
-          className="pointer-events-none absolute inset-0"
+          className="pointer-events-none absolute inset-0 z-[2]"
           style={{
-            background: `
-              linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.07) 18%, rgba(255,255,255,0.03) 38%, rgba(255,255,255,0.02) 100%),
-              radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,0.14) 0%, transparent 42%),
-              radial-gradient(90% 70% at 100% 100%, ${m.tint} 0%, transparent 48%)
-            `,
-          }}
-        />
-
-        <div
-          className="pointer-events-none absolute left-3 right-3 top-0 h-px"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0))",
-            opacity: 0.55,
-          }}
-        />
-
-        <div
-          className="pointer-events-none absolute -left-[12%] top-0 h-[65%] w-[58%]"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.10) 22%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0) 62%)",
-            transform: "skewX(-18deg)",
-            opacity: 0.38,
-          }}
-        />
-
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%]"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.10) 100%)",
+            background: `radial-gradient(90% 70% at 100% 100%, ${m.tint} 0%, transparent 52%)`,
           }}
         />
 

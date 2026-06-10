@@ -1032,7 +1032,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 {isInitialLoading ? (
   <>
     <div className="mb-2">
-      <div className="h-14 rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
+      <div className="h-14 rounded-2xl border border-white/10 bg-white/5 skeleton-scan" />
     </div>
 
     <div
@@ -1170,7 +1170,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+    <div className="skeleton-scan rounded-2xl border border-white/10 bg-white/5 p-4">
       <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
     </div>
   );

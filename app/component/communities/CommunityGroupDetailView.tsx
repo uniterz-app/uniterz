@@ -576,9 +576,9 @@ export default function CommunityGroupDetailView({
             </h2>
             {loadingRows ? (
               <div className="space-y-2 rounded-xl border border-white/10 bg-white/4 p-4">
-                <div className="h-3 w-2/5 animate-pulse rounded bg-white/10" />
-                <div className="h-8 animate-pulse rounded-lg bg-white/8" />
-                <div className="h-8 animate-pulse rounded-lg bg-white/8" />
+                <div className="h-3 w-2/5 skeleton-scan rounded bg-white/10" />
+                <div className="h-8 skeleton-scan rounded-lg bg-white/8" />
+                <div className="h-8 skeleton-scan rounded-lg bg-white/8" />
               </div>
             ) : null}
             <div

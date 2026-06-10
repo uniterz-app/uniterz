@@ -175,6 +175,17 @@ function parseMetricsParam(raw) {
         return null;
     return [...new Set(out)];
 }
+function readSnapshotTotalCount(snapData, fallback) {
+    const raw = snapData === null || snapData === void 0 ? void 0 : snapData.totalCount;
+    return typeof raw === "number" && Number.isFinite(raw) && raw >= 0
+        ? Math.floor(raw)
+        : fallback;
+}
+function resolveParticipantCount(totalCount, myRank) {
+    if (myRank != null && myRank > totalCount)
+        return myRank;
+    return totalCount;
+}
 async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12;
     const snapshotDocId = wcStage
@@ -186,13 +197,18 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
         .collection("cumulative_ranking_snapshots")
         .doc(snapshotDocId)
         .get();
+    const snapData = snapDoc.exists
+        ? snapDoc.data()
+        : undefined;
     const rawRows = snapDoc.exists
         ? ((_b = (_a = snapDoc.data()) === null || _a === void 0 ? void 0 : _a.rows) !== null && _b !== void 0 ? _b : [])
         : [];
     let rows = rawRows.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
+    let totalCount = readSnapshotTotalCount(snapData, rows.length);
     if (rows.length === 0 && wcStage) {
         const live = await (0, buildCumulativeRankingSnapshot_1.loadWcStageTop20RowsLive)(wcStage, metric);
-        rows = live.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
+        rows = live.rows.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
+        totalCount = live.totalCount;
     }
     if (rows.length === 0 &&
         !wcStage &&
@@ -200,7 +216,8 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
         round !== "overall" &&
         (round === "r1" || round === "r2" || round === "cf" || round === "finals")) {
         const live = await (0, buildCumulativeRankingSnapshot_1.loadPlayoffRoundTop20RowsLive)(round, metric);
-        rows = live.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
+        rows = live.rows.map((row) => (Object.assign(Object.assign({}, row), { plan: row.plan === "pro" ? "pro" : "free" })));
+        totalCount = live.totalCount;
     }
     if (wcStage && rows.length > 0) {
         rows = await filterRankingRowsToWcStage(rows, wcStage);
@@ -278,7 +295,7 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
             : 1;
         if (((_d = rk.totalPosts) !== null && _d !== void 0 ? _d : 0) < minPosts) {
             return {
-                count: rows.length,
+                count: resolveParticipantCount(totalCount, null),
                 rows,
                 myRank: null,
                 myRow: null,
@@ -338,7 +355,7 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
                 rankDeltaPlaces: myRankDeltaPlaces,
             };
             return {
-                count: rows.length,
+                count: resolveParticipantCount(totalCount, myRank),
                 rows,
                 myRank,
                 myRow,
@@ -461,7 +478,7 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
         };
     }
     return {
-        count: rows.length,
+        count: resolveParticipantCount(totalCount, myRank),
         rows,
         myRank,
         myRow,

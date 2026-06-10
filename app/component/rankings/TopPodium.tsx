@@ -14,7 +14,17 @@ import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { postsLabel, streakShortLabel } from "@/lib/i18n/rankings";
-import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
+import {
+  RankingsGlowWireFrame,
+  RankingsNoiseTexture,
+  RankingsPodiumMedalBrackets,
+  RankingsScanTexture,
+} from "@/app/component/rankings/RankingsCyberDecor";
+import {
+  podiumCardShellStyle,
+  podiumMedalAccent,
+  podiumMedalTintOverlay,
+} from "@/lib/rankings/rankingsCyberTheme";
 import {
   ProCyberBadge,
   proBadgeStaticMotion,
@@ -97,53 +107,34 @@ const medal = (rank: 1 | 2 | 3) => {
     };
 };
 
-function PodiumCornerFrame({ rank }: { rank: 1 | 2 | 3 }) {
-  const tone =
-    rank === 1
-      ? { c: "rgba(255,214,90,0.8)", g: "rgba(255,214,90,0.28)" }
-      : rank === 2
-        ? { c: "rgba(233,237,246,0.8)", g: "rgba(226,232,240,0.24)" }
-        : { c: "rgba(213,154,90,0.8)", g: "rgba(213,154,90,0.24)" };
+function FadedFlagBg({
+  rank,
+  countryCode,
+}: {
+  rank: 1 | 2 | 3;
+  countryCode?: string;
+}) {
+  const m = medal(rank);
+  const src = countryCode ? FLAG_SRC[countryCode] : undefined;
+  if (!src) return null;
+
   return (
-    <div className="pointer-events-none absolute inset-0 z-30">
-      {rank === 1 ? (
-        <>
-          <div
-            className="absolute left-[0.5px] top-[0.5px] bottom-[0.5px]"
-            style={{ width: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
-          />
-          <div
-            className="absolute right-[0.5px] top-[0.5px] bottom-[0.5px]"
-            style={{ width: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
-          />
-          <div
-            className="absolute bottom-[0.5px] left-[0.5px] right-[0.5px]"
-            style={{ height: "0.6px", background: tone.c, boxShadow: `0 0 12px ${tone.g}` }}
-          />
-          <div
-            className="absolute top-[0.5px] left-[0.5px]"
-            style={{ width: "42px", height: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
-          />
-          <div
-            className="absolute top-[0.5px]"
-            style={{ left: "100px", right: "0.5px", height: "0.6px", background: tone.c, boxShadow: `0 0 10px ${tone.g}` }}
-          />
-        </>
-      ) : (
-        <div
-          className="absolute inset-0 border"
-          style={{
-            inset: "0.5px",
-            borderColor: tone.c,
-            borderWidth: 0.6,
-            boxShadow: `0 0 12px ${tone.g}`,
-          }}
-        />
-      )}
-      <div className="absolute left-0 top-0 h-5 w-5 border-l-[2.5px] border-t-[2.5px]" style={{ borderColor: tone.c }} />
-      <div className="absolute right-0 top-0 h-5 w-5 border-r-[2.5px] border-t-[2.5px]" style={{ borderColor: tone.c }} />
-      <div className="absolute bottom-0 left-0 h-5 w-5 border-b-[2.5px] border-l-[2.5px]" style={{ borderColor: tone.c }} />
-      <div className="absolute bottom-0 right-0 h-5 w-5 border-b-[2.5px] border-r-[2.5px]" style={{ borderColor: tone.c }} />
+    <div
+      data-capture-skip
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+    >
+      <img
+        src={src}
+        alt=""
+        className="absolute right-[-6%] top-1/2 h-[120%] -translate-y-1/2 object-contain"
+        style={{ opacity: rank === 1 ? 0.09 : 0.07 }}
+        draggable={false}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{ boxShadow: `inset -40px 0 48px ${m.glow}` }}
+      />
     </div>
   );
 }
@@ -204,48 +195,6 @@ function rankPreset(rank: 1 | 2 | 3) {
     scoreMain: "text-[18px] lg:text-[25px]",
     scoreSub: "text-[9px] lg:text-[11px]",
   };
-}
-
-/* =========================
- * Flag background
- * ========================= */
-function FadedFlagBg({
-  rank,
-  countryCode,
-}: {
-  rank: 1 | 2 | 3;
-  countryCode?: string;
-}) {
-  const m = medal(rank);
-  const src = countryCode ? FLAG_SRC[countryCode] : undefined;
-
-  return (
-    <div className="pointer-events-none absolute inset-y-0 right-0 w-[38%] overflow-hidden">
-      <div
-        className="absolute inset-y-[4%] right-0 w-full overflow-hidden rounded-none"
-        style={{
-          opacity: 0.64,
-          boxShadow: `0 0 24px ${m.glow}`,
-          backgroundImage: src
-            ? undefined
-            : "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 42%, rgba(255,255,255,0.06) 100%)",
-          maskImage:
-            "linear-gradient(90deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.44) 20%, rgba(0,0,0,0.78) 50%, rgba(0,0,0,0.98) 100%)",
-          WebkitMaskImage:
-            "linear-gradient(90deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.44) 20%, rgba(0,0,0,0.78) 50%, rgba(0,0,0,0.98) 100%)",
-        }}
-      >
-        {src ? (
-          <img
-            src={src}
-            alt=""
-            className="h-full w-full object-contain object-right"
-            draggable={false}
-          />
-        ) : null}
-      </div>
-    </div>
-  );
 }
 
 /* =========================
@@ -375,6 +324,26 @@ function ScoreText({
     );
   }
 
+  if (metric === "goalScorerHits") {
+    return (
+      <div className="flex flex-col items-end leading-none">
+        <div
+          className={[
+            "inline-flex items-baseline justify-end leading-none",
+            rankHudNumClass,
+          ].join(" ")}
+        >
+          <span className={s.scoreMain} style={scoreStyle}>
+            {Math.round(n)}
+          </span>
+        </div>
+        <span className="mt-1 text-[11px] leading-none text-white/40">
+          {postsLabel(language)} {row.posts ?? 0}
+        </span>
+      </div>
+    );
+  }
+
   return null;
 }
 
@@ -468,7 +437,7 @@ export default function TopPodium({
       <div className="flex flex-col gap-3">
         {topRows.map(({ rank, row, value }) => {
           const ink = rankInk(rank);
-          const m = medal(rank);
+          const accent = podiumMedalAccent(rank);
           const s = rankPreset(rank);
           const countryCode = getCountryCode(row);
 
@@ -505,67 +474,25 @@ export default function TopPodium({
                   "relative overflow-hidden rounded-none border",
                   s.cardMinH,
                 ].join(" ")}
-                style={{
-                  borderColor: m.ring,
-                  background:
-                    "linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.045) 42%, rgba(8,13,24,0.86) 100%)",
-                  boxShadow: [
-                    rank === 1
-                      ? "0 12px 30px rgba(0,0,0,0.24)"
-                      : rank === 2
-                      ? "0 10px 24px rgba(0,0,0,0.22)"
-                      : "0 8px 20px rgba(0,0,0,0.20)",
-                    "inset 0 1px 0 rgba(255,255,255,0.22)",
-                    "inset 0 -1px 0 rgba(255,255,255,0.05)",
-                    `inset 0 0 0 1px ${m.ring}`,
-                    `0 0 18px ${m.glow}`,
-                  ].join(", "),
-                }}
+                style={podiumCardShellStyle(rank)}
                 variants={cardVariants}
                 initial={reduceMotion ? "show" : "hidden"}
                 animate="show"
                 custom={rank - 1}
               >
-                <PodiumCornerFrame rank={rank} />
-                <ShellGridOverlay roundedClassName="rounded-none" />
+                <RankingsScanTexture />
+                <RankingsNoiseTexture />
+                <RankingsGlowWireFrame variant="full" />
+                <RankingsPodiumMedalBrackets
+                  rank={rank}
+                  bracketColor={accent.bracket}
+                  bracketGlow={accent.bracketGlow}
+                />
                 <FadedFlagBg rank={rank} countryCode={countryCode} />
 
                 <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    background: `
-                      linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.07) 18%, rgba(255,255,255,0.03) 38%, rgba(255,255,255,0.02) 100%),
-                      radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,0.12) 0%, transparent 42%),
-                      radial-gradient(90% 70% at 100% 100%, ${m.tint} 0%, transparent 48%)
-                    `,
-                  }}
-                />
-
-                <div
-                  className="pointer-events-none absolute left-3 right-3 top-0 h-px"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.75), rgba(255,255,255,0))",
-                    opacity: 0.55,
-                  }}
-                />
-
-                <div
-                  className="pointer-events-none absolute -left-[12%] top-0 h-[65%] w-[58%]"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.10) 22%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0) 62%)",
-                    transform: "skewX(-18deg)",
-                    opacity: 0.34,
-                  }}
-                />
-
-                <div
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%]"
-                  style={{
-                    background:
-                      "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.10) 100%)",
-                  }}
+                  className="pointer-events-none absolute inset-0 z-[2]"
+                  style={podiumMedalTintOverlay(rank)}
                 />
 
                 <div

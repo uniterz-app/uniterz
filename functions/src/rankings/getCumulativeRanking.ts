@@ -246,6 +246,24 @@ type MetricPayload = {
   myRankDeltaPlaces: number | null;
 };
 
+function readSnapshotTotalCount(
+  snapData: Record<string, unknown> | undefined,
+  fallback: number
+): number {
+  const raw = snapData?.totalCount;
+  return typeof raw === "number" && Number.isFinite(raw) && raw >= 0
+    ? Math.floor(raw)
+    : fallback;
+}
+
+function resolveParticipantCount(
+  totalCount: number,
+  myRank: number | null
+): number {
+  if (myRank != null && myRank > totalCount) return myRank;
+  return totalCount;
+}
+
 async function rankingPayloadForMetric(
   metric: Metric,
   phase: RankingPhase,
@@ -265,6 +283,10 @@ async function rankingPayloadForMetric(
     .doc(snapshotDocId)
     .get();
 
+  const snapData = snapDoc.exists
+    ? (snapDoc.data() as Record<string, unknown>)
+    : undefined;
+
   const rawRows: RankingRow[] = snapDoc.exists
     ? (snapDoc.data()?.rows ?? [])
     : [];
@@ -272,13 +294,15 @@ async function rankingPayloadForMetric(
     ...row,
     plan: row.plan === "pro" ? "pro" : "free",
   }));
+  let totalCount = readSnapshotTotalCount(snapData, rows.length);
 
   if (rows.length === 0 && wcStage) {
     const live = await loadWcStageTop20RowsLive(wcStage, metric);
-    rows = live.map((row) => ({
+    rows = live.rows.map((row) => ({
       ...row,
       plan: row.plan === "pro" ? "pro" : "free",
     }));
+    totalCount = live.totalCount;
   }
 
   if (
@@ -289,10 +313,11 @@ async function rankingPayloadForMetric(
     (round === "r1" || round === "r2" || round === "cf" || round === "finals")
   ) {
     const live = await loadPlayoffRoundTop20RowsLive(round, metric);
-    rows = live.map((row) => ({
+    rows = live.rows.map((row) => ({
       ...row,
       plan: row.plan === "pro" ? "pro" : "free",
     }));
+    totalCount = live.totalCount;
   }
 
   if (wcStage && rows.length > 0) {
@@ -377,7 +402,7 @@ async function rankingPayloadForMetric(
         : 1;
     if ((rk.totalPosts ?? 0) < minPosts) {
       return {
-        count: rows.length,
+        count: resolveParticipantCount(totalCount, null),
         rows,
         myRank: null,
         myRow: null,
@@ -462,7 +487,7 @@ async function rankingPayloadForMetric(
       };
 
       return {
-        count: rows.length,
+        count: resolveParticipantCount(totalCount, myRank),
         rows,
         myRank,
         myRow,
@@ -626,7 +651,7 @@ async function rankingPayloadForMetric(
   }
 
   return {
-    count: rows.length,
+    count: resolveParticipantCount(totalCount, myRank),
     rows,
     myRank,
     myRow,

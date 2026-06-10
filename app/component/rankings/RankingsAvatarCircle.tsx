@@ -68,7 +68,7 @@ export function RankingsAvatarCircle({
         "relative shrink-0 overflow-hidden rounded-full",
         boxClassName,
         showSolidShell ? "bg-[#0f2d35] ring-2 ring-[#0f2d35]" : "",
-        showPulse ? "bg-white/10 ring-1 ring-white/18 animate-pulse" : "",
+        showPulse ? "bg-white/10 ring-1 ring-white/18 skeleton-scan" : "",
         !showSolidShell && !showPulse ? "bg-transparent" : "",
       ]
         .filter(Boolean)

@@ -49,6 +49,8 @@ import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useApplyPreferredRankingLeague } from "@/lib/hooks/useApplyPreferredRankingLeague";
+import { buildMyRankMiniMetrics, isMyRankMiniMetricsReady } from "@/lib/rankings/buildMyRankMiniMetrics";
+import type { RankingRow } from "@/lib/rankings/useRanking";
 
 function getMyMetricValue(metric: MobileMetric, row: any): number {
   if (!row) return 0;
@@ -98,7 +100,12 @@ export default function WebRankingsShell() {
     myRow,
     myUid,
     rankingListCount,
+    byMetric,
+    myMetricValueDeltas,
   } = useWebRankings(phase, effectiveRound, wcStageForHook);
+
+  const myStatsRow =
+    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ?? myRow;
 
   const { user } = useMyRankingUser(myUid);
   const { language, countryCode } = useUserLanguage(myUid);
@@ -176,6 +183,30 @@ export default function WebRankingsShell() {
   const myValue = useMemo(() => {
     return getMyMetricValue(metric as MobileMetric, myRow);
   }, [metric, myRow]);
+
+  /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
+  const myMiniMetrics = useMemo(
+    () =>
+      buildMyRankMiniMetrics(
+        myStatsRow,
+        {
+          ptsRows: byMetric?.totalPoints?.rows as RankingRow[] | undefined,
+          precRows: byMetric?.totalPrecision?.rows as RankingRow[] | undefined,
+          upsetRows: byMetric?.totalUpset?.rows as RankingRow[] | undefined,
+        },
+        myMetricValueDeltas
+      ),
+    [
+      myStatsRow,
+      myMetricValueDeltas,
+      byMetric?.totalPoints?.rows,
+      byMetric?.totalPrecision?.rows,
+      byMetric?.totalUpset?.rows,
+    ]
+  );
+
+  const cardBarsReady = isMyRankMiniMetricsReady(byMetric);
+
   const winRateMinPosts =
     rankingLeague === "worldcup"
       ? 1
@@ -219,7 +250,7 @@ export default function WebRankingsShell() {
         <Header />
       </div>
 
-      <div className="mx-auto max-w-[860px] space-y-3 px-3 pt-2">
+      <div className="mx-auto max-w-[920px] space-y-3 px-3 pt-2">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -272,6 +303,7 @@ export default function WebRankingsShell() {
 
           {category === "playoffs" ? (
             <MyRankCard
+              layout="web"
               rank={rankingHasNoEntries ? null : myRank}
               metric={metric as MobileMetric}
               value={myValue}
@@ -283,6 +315,17 @@ export default function WebRankingsShell() {
               language={language}
               isPro={user.plan === "pro"}
               rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
+              totalEntries={
+                rankingHasNoEntries
+                  ? null
+                  : rankingListCount || rows.length || null
+              }
+              streak={myRow?.activeWinStreak ?? null}
+              countryCode={countryCode}
+              miniMetrics={myMiniMetrics}
+              barsReady={cardBarsReady}
+              cardResetKey={pageKey}
+              leagueLabel={rankingLeague === "worldcup" ? "WORLD CUP" : "NBA"}
             />
           ) : null}
         </div>

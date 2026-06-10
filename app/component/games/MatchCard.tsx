@@ -625,7 +625,10 @@ let center: React.ReactNode = inPredictOverlay ? (
   /** Same behavior as the predict CTA (schedule overlay when logged in). */
   const triggerOpenPredictLikeButton = () => {
     const me = auth.currentUser;
-    if (!me) return;
+    if (!me) {
+      router.push(isMobile ? "/mobile/login" : "/web/login");
+      return;
+    }
 
     // スケジュール一覧のオーバーレイ：予想済み・試合開始後も市場・詳細スタッツを見るために開く
     if (onOpenPredict) {

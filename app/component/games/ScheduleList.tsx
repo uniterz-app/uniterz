@@ -577,13 +577,13 @@ export default function ScheduleList({
   if (loading) {
     return (
       <div className="grid gap-6 px-4 md:px-6 lg:px-8">
-        <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="skeleton-scan rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
         </div>
-        <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="skeleton-scan rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
         </div>
-        <div className="animate-pulse rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="skeleton-scan rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="mx-auto mb-3 h-4 w-40 rounded bg-white/10" />
         </div>
       </div>
@@ -591,14 +591,14 @@ export default function ScheduleList({
   }
 
   if (!propsList.length) {
-    if (emptyHint) {
-      return (
-        <div className="rounded-xl border border-white/10 bg-white/4 px-4 py-12 text-center text-sm leading-relaxed text-white/55 md:px-6">
-          {emptyHint}
-        </div>
-      );
-    }
-    return null;
+    return (
+      <div
+        role="status"
+        className="rounded-xl border border-white/10 bg-white/4 px-4 py-12 text-center text-sm leading-relaxed text-white/70 md:px-6"
+      >
+        {emptyHint ?? m.games.noGames}
+      </div>
+    );
   }
 
   const overlayContent =
