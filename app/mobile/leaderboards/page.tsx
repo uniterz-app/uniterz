@@ -4,7 +4,7 @@ import LeaderboardsTabbedView from "@/app/component/leaderboards/LeaderboardsTab
 
 export default function LeaderboardsPage() {
   return (
-    <div className="min-h-dvh bg-app">
+    <div className="min-h-dvh">
       <main className="pb-bottom-nav">
         <LeaderboardsTabbedView variant="mobile" />
       </main>

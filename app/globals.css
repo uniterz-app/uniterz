@@ -31,8 +31,9 @@
   --bottom-nav-clearance: calc(26px + 72px + env(safe-area-inset-bottom, 0px));
 }
 
+/* レイアウト用：実背景はルートの AppPageBackground。ここは透過して重ねる */
 .bg-app {
-  background: var(--color-app-bg);
+  background: transparent;
 }
 
 /* -------------------------------
@@ -70,9 +71,12 @@
   }
 }
 
+.bg-card {
+  background: var(--color-card-bg);
+}
+
 /* -------------------------------
-   MyRankCard セグメントバー — 左→右チャージ + 常時グロー波
-   skew はトラック全体に1回だけ（セグメント個別 skew はずれの原因）
+   MyRankCard セグメントバー — skew はトラック全体に1回だけ
 -------------------------------- */
 .my-rank-seg-track {
   width: 100%;
@@ -88,29 +92,544 @@
   background: rgba(255, 255, 255, 0.09);
 }
 
-/* MyRankCard シリアル帯のステータスドット点滅 */
-@keyframes my-rank-dot-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.25;
-  }
+/* MyRankCard 選択中メトリクス — 枠を走る光（conic 回転） */
+.my-rank-metric-sweep-dim {
+  border: 1px solid var(--metric-sweep-mid, rgba(34, 211, 238, 0.45));
+  opacity: 0.55;
 }
 
-.my-rank-footer-dot {
-  animation: my-rank-dot-pulse 1.6s ease-in-out infinite;
+.my-rank-metric-sweep {
+  padding: 2.5px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 5px var(--metric-sweep-tail, rgba(34, 211, 238, 0.5)));
+}
+
+.my-rank-metric-sweep__spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin-left: -100vmax;
+  margin-top: -100vmax;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 228deg,
+    var(--metric-sweep-tail, rgba(34, 211, 238, 0.35)) 262deg,
+    var(--metric-sweep-hi, #8cf0ff) 292deg,
+    var(--metric-sweep-core, #ffffff) 308deg,
+    var(--metric-sweep-hi, #8cf0ff) 322deg,
+    var(--metric-sweep-tail, rgba(34, 211, 238, 0.35)) 338deg,
+    transparent 360deg
+  );
+  animation: my-rank-metric-sweep-spin 3.2s linear infinite;
+}
+
+@keyframes my-rank-metric-sweep-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .my-rank-footer-dot {
+  .my-rank-metric-sweep__spin {
     animation: none;
+    opacity: 0.9;
+  }
+
+  .my-rank-metric-sweep {
+    filter: none;
   }
 }
 
-.bg-card {
-  background: var(--color-card-bg);
+/* MyRankCard 2×2 — 十字線（中央は円の直径分だけ欠け、円が縁に被る） */
+.my-rank-metrics-frame {
+  --my-rank-hub-half: 26px;
+  --my-rank-cell-pad-y: 1px;
+  --my-rank-cell-pad-top: 10px;
+  --my-rank-cell-pad-bottom: 4px;
+  --my-rank-cell-pad-x: 4px;
+  --my-rank-cell-gap: 0px;
+  --my-rank-hub-clear: 1px;
+  isolation: isolate;
+}
+
+.my-rank-metrics-frame--web {
+  --my-rank-hub-half: 28px;
+  --my-rank-cell-pad-y: 2px;
+  --my-rank-cell-pad-top: 11px;
+  --my-rank-cell-pad-bottom: 5px;
+  --my-rank-cell-pad-x: 5px;
+  --my-rank-cell-gap: 0px;
+  --my-rank-hub-clear: 1px;
+}
+
+.my-rank-metrics-grid {
+  min-height: 0;
+}
+
+.my-rank-metric-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  min-width: 0;
+  padding: var(--my-rank-cell-pad-y) var(--my-rank-cell-pad-x)
+    var(--my-rank-cell-pad-bottom);
+}
+
+.my-rank-metric-cell--tl {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: var(--my-rank-cell-pad-top);
+  padding-right: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+  padding-bottom: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+}
+
+.my-rank-metric-cell--tr {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: var(--my-rank-cell-pad-top);
+  padding-left: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+  padding-bottom: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+}
+
+/* 下段 — 上段と同じ上余白（左右寄せは維持、縦中央揃えしない） */
+.my-rank-metric-cell--bl {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: var(--my-rank-cell-pad-top);
+  padding-right: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+  padding-bottom: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+}
+
+.my-rank-metric-cell--br {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: var(--my-rank-cell-pad-top);
+  padding-left: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+  padding-bottom: calc(var(--my-rank-hub-half) + var(--my-rank-hub-clear));
+}
+
+.my-rank-metric-cell__body {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.my-rank-metric-cell--tl .my-rank-metric-cell__body,
+.my-rank-metric-cell--tr .my-rank-metric-cell__body {
+  justify-content: flex-start;
+}
+
+.my-rank-metric-cell--bl .my-rank-metric-cell__body,
+.my-rank-metric-cell--br .my-rank-metric-cell__body {
+  justify-content: flex-start;
+}
+
+.my-rank-metric-cell--tl .my-rank-metric-cell__body,
+.my-rank-metric-cell--bl .my-rank-metric-cell__body {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.my-rank-metric-cell--tr .my-rank-metric-cell__body,
+.my-rank-metric-cell--br .my-rank-metric-cell__body {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.my-rank-metric-cell__stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.my-rank-metric-cell--tr .my-rank-metric-cell__label,
+.my-rank-metric-cell--br .my-rank-metric-cell__label {
+  text-align: right;
+}
+
+.my-rank-metric-cell--tr .my-rank-metric-cell__value-row,
+.my-rank-metric-cell--br .my-rank-metric-cell__value-row {
+  justify-content: flex-end;
+}
+
+.my-rank-metric-cell__label {
+  line-height: 1;
+}
+
+.my-rank-metric-cell__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: var(--my-rank-cell-gap);
+  line-height: 1;
+}
+
+.my-rank-metric-cell__bar {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 2px;
+  align-self: stretch;
+}
+
+.my-rank-streak-hub-slot {
+  position: absolute;
+  width: calc(var(--my-rank-hub-half) * 2);
+  height: calc(var(--my-rank-hub-half) * 2);
+}
+
+.my-rank-hub-occluder {
+  z-index: 0;
+  background: #0a101c;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.my-rank-metrics-crosshair {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.my-rank-metrics-crosshair::before,
+.my-rank-metrics-crosshair::after {
+  content: "";
+  position: absolute;
+}
+
+.my-rank-metrics-crosshair::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.12) 0,
+    rgba(255, 255, 255, 0.12) calc(50% - var(--my-rank-hub-half)),
+    transparent calc(50% - var(--my-rank-hub-half)),
+    transparent calc(50% + var(--my-rank-hub-half)),
+    rgba(255, 255, 255, 0.12) calc(50% + var(--my-rank-hub-half)),
+    rgba(255, 255, 255, 0.12) 100%
+  );
+}
+
+.my-rank-metrics-crosshair::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.12) 0,
+    rgba(255, 255, 255, 0.12) calc(50% - var(--my-rank-hub-half)),
+    transparent calc(50% - var(--my-rank-hub-half)),
+    transparent calc(50% + var(--my-rank-hub-half)),
+    rgba(255, 255, 255, 0.12) calc(50% + var(--my-rank-hub-half)),
+    rgba(255, 255, 255, 0.12) 100%
+  );
+}
+
+/* MyRankCard 中央ハブ — 連勝 + 炎 */
+.my-rank-streak-hub {
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background:
+    linear-gradient(
+      155deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.04) 30%,
+      #0a101c 65%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 14px rgba(0, 0, 0, 0.35);
+}
+
+/* 連勝ティア — ハブ枠（光彩は円の内側のみ） */
+.my-rank-streak-hub--tier-ember {
+  border-color: rgba(251, 146, 60, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 214, 170, 0.2),
+    inset 0 0 18px rgba(249, 115, 22, 0.3);
+}
+
+.my-rank-streak-hub--tier-warm {
+  border-color: rgba(251, 191, 36, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 251, 235, 0.22),
+    inset 0 0 20px rgba(251, 191, 36, 0.28);
+}
+
+.my-rank-streak-hub--tier-blaze {
+  border-color: rgba(148, 163, 184, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(224, 242, 254, 0.2),
+    inset 0 0 22px rgba(34, 211, 238, 0.26);
+}
+
+.my-rank-streak-hub--tier-legend {
+  border-color: rgba(248, 113, 113, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(254, 243, 199, 0.22),
+    inset 0 0 24px rgba(239, 68, 68, 0.32),
+    inset 0 0 36px rgba(251, 191, 36, 0.1);
+}
+
+/* 連勝タブ選択時 — 円枠の内側だけグリーンに光らせる */
+.my-rank-streak-hub.my-rank-streak-hub--selected {
+  z-index: 2;
+  border-color: rgba(57, 255, 136, 0.85);
+  background: linear-gradient(
+    155deg,
+    rgba(57, 255, 136, 0.18) 0%,
+    rgba(57, 255, 136, 0.07) 34%,
+    #0a101c 68%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 22px rgba(57, 255, 136, 0.42),
+    inset 0 0 40px rgba(57, 255, 136, 0.16);
+}
+
+.my-rank-metrics-frame--streak-selected .my-rank-metrics-crosshair::before,
+.my-rank-metrics-frame--streak-selected .my-rank-metrics-crosshair::after,
+.my-rank-metrics-frame--goal-scorer-selected .my-rank-metrics-crosshair::before,
+.my-rank-metrics-frame--goal-scorer-selected .my-rank-metrics-crosshair::after {
+  opacity: 0.55;
+}
+
+.my-rank-metrics-frame--goal-scorer-selected {
+  box-shadow: inset 0 0 0 1px rgba(244, 114, 182, 0.22);
+}
+
+.my-rank-streak-flame-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(7px);
+}
+
+.my-rank-streak-flame-wrap--tier-ember {
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.42));
+}
+
+.my-rank-streak-flame-wrap--tier-warm {
+  filter: drop-shadow(0 0 9px rgba(251, 191, 36, 0.52));
+}
+
+.my-rank-streak-flame-wrap--tier-blaze {
+  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.48));
+}
+
+.my-rank-streak-flame-wrap--tier-legend {
+  filter: drop-shadow(0 0 11px rgba(239, 68, 68, 0.52))
+    drop-shadow(0 0 6px rgba(251, 191, 36, 0.38));
+}
+
+.my-rank-streak-flame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: #fb923c;
+  pointer-events: none;
+}
+
+.my-rank-streak-flame--back path {
+  fill: rgba(234, 88, 12, 0.4);
+  stroke: rgba(251, 191, 36, 0.65);
+  stroke-width: 1.15;
+}
+
+.my-rank-streak-flame--tier-ember path {
+  fill: rgba(249, 115, 22, 0.46);
+  stroke: rgba(253, 230, 138, 0.78);
+}
+
+.my-rank-streak-flame--tier-warm path {
+  fill: rgba(251, 191, 36, 0.5);
+  stroke: rgba(255, 251, 235, 0.88);
+}
+
+.my-rank-streak-flame--tier-blaze path {
+  fill: rgba(34, 211, 238, 0.4);
+  stroke: rgba(224, 242, 254, 0.9);
+}
+
+.my-rank-streak-flame--tier-legend path {
+  fill: rgba(239, 68, 68, 0.5);
+  stroke: rgba(252, 211, 77, 0.92);
+}
+
+.my-rank-streak-flame--back {
+  z-index: 0;
+  transform: scale(1.32);
+  transform-origin: center bottom;
+}
+
+.my-rank-streak-flame--hot {
+  animation: my-rank-flame-flicker 1.6s ease-in-out infinite;
+}
+
+.my-rank-streak-flame--cold path {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 1.2;
+}
+
+.my-rank-streak-flame--cold {
+  opacity: 0.85;
+}
+
+.my-rank-streak-flame--static {
+  animation: none !important;
+}
+
+.my-rank-streak-num {
+  position: relative;
+  z-index: 2;
+  line-height: 1;
+  transform: translateY(1px);
+}
+
+.my-rank-streak-num--hot {
+  color: #fffbeb;
+  paint-order: stroke fill;
+}
+
+.my-rank-streak-num--tier-ember {
+  -webkit-text-stroke: 0.45px rgba(67, 20, 7, 0.88);
+  text-shadow:
+    0 0 0 1.5px rgba(67, 20, 7, 0.95),
+    0 1px 3px rgba(0, 0, 0, 0.82),
+    0 0 10px rgba(249, 115, 22, 0.5);
+}
+
+.my-rank-streak-num--tier-warm {
+  -webkit-text-stroke: 0.45px rgba(120, 53, 15, 0.85);
+  text-shadow:
+    0 0 0 1.5px rgba(120, 53, 15, 0.9),
+    0 1px 3px rgba(0, 0, 0, 0.8),
+    0 0 10px rgba(251, 191, 36, 0.55);
+}
+
+.my-rank-streak-num--tier-blaze {
+  color: #f0fdfa;
+  -webkit-text-stroke: 0.45px rgba(15, 76, 92, 0.85);
+  text-shadow:
+    0 0 0 1.5px rgba(15, 76, 92, 0.9),
+    0 1px 3px rgba(0, 0, 0, 0.78),
+    0 0 10px rgba(34, 211, 238, 0.5);
+}
+
+.my-rank-streak-num--tier-legend {
+  color: #fff7ed;
+  -webkit-text-stroke: 0.45px rgba(127, 29, 29, 0.88);
+  text-shadow:
+    0 0 0 1.5px rgba(127, 29, 29, 0.92),
+    0 1px 3px rgba(0, 0, 0, 0.82),
+    0 0 12px rgba(239, 68, 68, 0.55),
+    0 0 6px rgba(251, 191, 36, 0.35);
+}
+
+.my-rank-streak-num--cold {
+  color: rgba(255, 255, 255, 0.72);
+  -webkit-text-stroke: 0.4px rgba(0, 0, 0, 0.55);
+  text-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes my-rank-flame-flicker {
+  0%,
+  100% {
+    transform: scale(1.32) translateY(0);
+    opacity: 0.9;
+  }
+
+  50% {
+    transform: scale(1.38) translateY(-1px);
+    opacity: 0.96;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-rank-streak-flame--back {
+    animation: none !important;
+    transform: scale(1.32);
+    opacity: 0.88;
+  }
+}
+
+/* MyRankCard 順位塔 — ランク数字のティア色（光彩は drop-shadow でグラデを潰さない） */
+.my-rank-tower-num--tier-podium {
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.42));
+}
+
+.my-rank-tower-num--tier-elite {
+  filter: drop-shadow(0 0 12px rgba(252, 211, 77, 0.4));
+}
+
+.my-rank-tower-num--tier-gold {
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.45));
+}
+
+.my-rank-tower-num--tier-amber {
+  filter: drop-shadow(0 0 14px rgba(251, 146, 60, 0.48));
+}
+
+.my-rank-tower-num--tier-orange {
+  filter: drop-shadow(0 0 12px rgba(249, 115, 22, 0.42));
+}
+
+.my-rank-tower-num--tier-cyan {
+  filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.38));
+}
+
+.my-rank-tower-num--tier-green {
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.36));
+}
+
+.my-rank-tower-num--tier-slate {
+  filter: drop-shadow(0 0 8px rgba(148, 163, 184, 0.28));
+}
+
+.my-rank-tower-num--tier-champion {
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.45));
+  animation: my-rank-tower-champion-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes my-rank-tower-champion-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.28));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.38));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-rank-tower-num--tier-champion {
+    animation: none !important;
+  }
 }
 
 /* ResultCard 連勝時：枠を走るスイープ（conic 回転 + リングマスク） */
@@ -788,6 +1307,94 @@ body.splash-bg {
   }
 }
 
+/* スプラッシュ：オーブローダー（Uiverse.io by fateself をベースに調整） */
+
+.splash-orb-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2rem, 6vh, 3.25rem);
+  padding-top: clamp(2rem, 9vh, 4.5rem);
+  overflow: hidden;
+  background: transparent;
+}
+
+.splash-orb-loader {
+  position: relative;
+  width: clamp(8.75rem, 36vw, 13.5rem);
+  height: clamp(8.75rem, 36vw, 13.5rem);
+}
+
+.splash-orb-loader span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(calc(18deg * var(--i)));
+}
+
+.splash-orb-loader span::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #00ff0a;
+  box-shadow:
+    0 0 10px #00ff0a,
+    0 0 20px #00ff0a,
+    0 0 40px #00ff0a,
+    0 0 60px #00ff0a,
+    0 0 80px #00ff0a,
+    0 0 100px #00ff0a;
+  animation: splash-orb-pulse 2s linear infinite;
+  animation-delay: calc(0.1s * var(--i));
+}
+
+@keyframes splash-orb-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  80%,
+  100% {
+    transform: scale(0);
+  }
+}
+
+.splash-orb-brand {
+  margin: 0;
+  font-size: clamp(2.35rem, 10.5vw, 3.85rem);
+  font-weight: 400;
+  letter-spacing: 0.38em;
+  color: rgba(255, 237, 213, 0.88);
+  text-shadow:
+    0 0 22px rgba(103, 232, 249, 0.2),
+    0 0 12px rgba(0, 255, 136, 0.55);
+}
+
+.splash-orb-loader--static span::before {
+  animation: none;
+  transform: scale(0.65);
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-orb-loader span::before {
+    animation: none;
+    transform: scale(0.65);
+    opacity: 0.85;
+  }
+}
+
 /* スプラッシュ：充填率は AnimatedSplashScreen の loadProgress01 と同期（inline transform） */
 
 .splash-loading-track {
@@ -989,11 +1596,204 @@ body.splash-bg {
   animation: headerCyberLineSweep 9s ease-in-out infinite;
 }
 
+/* ヘッダーワードマーク：時折シアン寄りのハイライトが文字上を走るシマー（オーバーレイ層） */
+.header-wordmark-shimmer {
+  background-image: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.95) 49%,
+    rgba(186, 230, 253, 0.9) 53%,
+    transparent 62%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: headerWordmarkShimmer 7s ease-in-out infinite;
+}
+
+@keyframes headerWordmarkShimmer {
+  0% {
+    background-position: 160% 0;
+  }
+  38% {
+    background-position: -60% 0;
+  }
+  100% {
+    background-position: -60% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-wordmark-shimmer {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-header-cyber-sweep {
     animation: none;
     opacity: 0;
     transform: translate3d(-100%, 0, 0);
+  }
+}
+
+/* =========================
+   GamesPageBackground のループアニメ
+   ページ遷移を跨いで位相を継続させるため、負の animation-delay が
+   仕様で保証されている CSS アニメーションで再生する
+========================= */
+
+/* オーロラ4相：緑 → 青 → 紫 → 琥珀を順にクロスフェード */
+@keyframes gamesAuroraGreen {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.92;
+  }
+  28%,
+  88% {
+    opacity: 0.03;
+  }
+  96% {
+    opacity: 0.88;
+  }
+}
+
+@keyframes gamesAuroraBlue {
+  0%,
+  16% {
+    opacity: 0.03;
+  }
+  25%,
+  38% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0.03;
+  }
+}
+
+@keyframes gamesAuroraViolet {
+  0%,
+  41% {
+    opacity: 0.03;
+  }
+  50%,
+  63% {
+    opacity: 1;
+  }
+  71%,
+  100% {
+    opacity: 0.03;
+  }
+}
+
+@keyframes gamesAuroraAmber {
+  0%,
+  66% {
+    opacity: 0.03;
+  }
+  75%,
+  88% {
+    opacity: 1;
+  }
+  96%,
+  100% {
+    opacity: 0.03;
+  }
+}
+
+/* ベース闇の色相シフト（全面 filter より軽い） */
+@keyframes gamesBaseTintGreen {
+  0%,
+  100% {
+    opacity: 0.58;
+  }
+  50% {
+    opacity: 0.16;
+  }
+}
+
+@keyframes gamesBaseTintBlue {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes gamesBaseTintViolet {
+  0%,
+  24% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.46;
+  }
+  76%,
+  100% {
+    opacity: 0.1;
+  }
+}
+
+/* 微細グリッドのゆっくりした縦流れ */
+@keyframes gamesFieldDrift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(32px);
+  }
+}
+
+/* ワイヤーフレーム地形のスクロール（56px = グリッド1マス分） */
+@keyframes gamesTerrainFlow {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(56px);
+  }
+}
+
+/* スキャンライン：12s 降下 + 3s 待機（80% = 12/15） */
+@keyframes gamesScanlineSweep {
+  0% {
+    transform: translateY(-18vh);
+  }
+  80%,
+  100% {
+    transform: translateY(118vh);
+  }
+}
+
+/* 上昇モート：y は等速、x は --mote-drift まで膨らんで戻る（opacity は固定値で全ブラウザ互換） */
+@keyframes gamesMoteRise {
+  0% {
+    transform: translate3d(var(--mote-start-x, 0), 0, 0);
+    opacity: 0;
+  }
+  33% {
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate3d(var(--mote-drift), -56vh, 0);
+  }
+  66% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate3d(var(--mote-end-x, 0), -112vh, 0);
+    opacity: 0;
   }
 }
 

@@ -16,8 +16,9 @@ import {
   GAMES_CYBER_EASE,
   GAMES_CYBER_ENTRY_DURATION_MS,
   GAMES_CYBER_ENTRY_DURATION_SEC,
+  GAMES_CYBER_GROUP_GAP_SEC,
   GAMES_CYBER_LEAD_IN_SEC,
-  GAMES_CYBER_SLOT_GAP_SEC,
+  GAMES_LIST_CARDS_LEAD_IN_SEC,
 } from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -37,9 +38,12 @@ import { getGameEventTag } from "@/lib/events/eventRules";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
+  LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
   MOBILE_LIST_CARD_OUTER_CLASS,
   MOBILE_LIST_CARD_PANEL_DENSE,
   MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS,
+  WEB_LIST_CARD_PANEL,
+  listCardPanelClass,
 } from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
@@ -53,6 +57,16 @@ import {
 } from "@/lib/games/scheduleSharedTransitionKeys";
 
 
+
+/**
+ * 入場アニメーションのグループ。
+ * 以前は 9 要素を細かくずらしていたが、
+ * 「シェル → ヘッダー行 → チーム行 → フッター行」の 4 段にまとめている
+ */
+const ENTRY_GROUP_SHELL = 0;
+const ENTRY_GROUP_HEADER = 1;
+const ENTRY_GROUP_TEAMS = 2;
+const ENTRY_GROUP_FOOTER = 3;
 
 export type Status = "scheduled" | "live" | "final";
 
@@ -277,8 +291,17 @@ const isPredicted = !!myPostId;
 const prefix = useSectionPrefix();
 const pathname = usePathname();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
+  /** 一覧のガラス面・レイアウト dense（リザルト一覧 scheduleDense と同条件） */
+  const listScheduleDense = dense || (isMobile && !inPredictOverlay);
+  const listPanelClass = listCardPanelClass(listScheduleDense);
+  /** Web は外枠にガラス面を直付け（従来どおり）。モバイルは transform 外の分割シェル */
+  const useSplitGlassShell = isMobile;
+  const webPanelClass = listScheduleDense
+    ? MOBILE_LIST_CARD_PANEL_DENSE
+    : WEB_LIST_CARD_PANEL;
   /** モバイル dense / W杯コンパクト一覧 */
-  const mobileDense = (dense && isMobile) || (compact && league === "wc");
+  const mobileDense =
+    (listScheduleDense && isMobile) || (compact && league === "wc");
   const showWcBroadcastRow =
     league === "wc" &&
     broadcastLabels.length > 0 &&
@@ -420,39 +443,65 @@ const marketMajority = useMemo(() => {
 
   const entryTransition = useMemo(() => {
     if (!showContentEntry || reduceMotion) return null;
+    /** カード間のずれはここで一元管理（行レベルのスタッガーは page モードでは行わない） */
     const listStagger =
       scheduleEntryIndex !== undefined
-        ? Math.min(scheduleEntryIndex * 0.032, 0.14)
+        ? Math.min(scheduleEntryIndex * 0.05, 0.14)
         : 0;
     const ease = GAMES_CYBER_EASE;
     const duration = GAMES_CYBER_ENTRY_DURATION_SEC;
-    /** 狭めのスロット間＝データが順にロックオンする感じ */
-    const slotGap = GAMES_CYBER_SLOT_GAP_SEC;
-    const leadIn = GAMES_CYBER_LEAD_IN_SEC;
-    return (slot: number) => ({
-      delay: listStagger + leadIn + slot * slotGap,
+    const groupGap = GAMES_CYBER_GROUP_GAP_SEC;
+    /** 一覧では上部バー〜日付ストリップの起動を待ってからカードを始める */
+    const leadIn =
+      scheduleEntryIndex !== undefined
+        ? GAMES_LIST_CARDS_LEAD_IN_SEC
+        : GAMES_CYBER_LEAD_IN_SEC;
+    return (group: number) => ({
+      delay: listStagger + leadIn + group * groupGap,
       duration,
       ease,
     });
   }, [showContentEntry, reduceMotion, scheduleEntryIndex]);
 
   /**
-   * ドットは最終要素の後ではなく、各チーム列（HOME=4 / AWAY=6）の入場に同期
+   * グループ入場：下からスライド＋着地直後に一瞬明滅する「ロックオン」フリッカー。
+   * opacity / transform のみで構成（backdrop-blur や filter は使わない）
    */
-  const { jerseyDotHomeDelayMs, jerseyDotAwayDelayMs } = useMemo(() => {
-    if (!jerseyDotRevealEnabled || reduceMotion || !entryTransition) {
-      return { jerseyDotHomeDelayMs: 0, jerseyDotAwayDelayMs: 0 };
+  const entryGroupProps = (group: number, dy: number = 10) => {
+    if (!entryTransition) {
+      return { initial: false as const };
     }
-    const entryItemDurationMs = GAMES_CYBER_ENTRY_DURATION_MS;
-    /** 列の入場が始まってから少し経ってからドット開始 */
-    const duringColumnMs = Math.round(entryItemDurationMs * 0.32);
-    const tailMs = 28;
-    const msForSlot = (slot: number) =>
-      Math.round(entryTransition(slot).delay * 1000) + duringColumnMs + tailMs;
+    const t = entryTransition(group);
     return {
-      jerseyDotHomeDelayMs: msForSlot(4),
-      jerseyDotAwayDelayMs: msForSlot(6),
+      initial: { opacity: 0, y: dy },
+      animate: { opacity: [0, 1, 0.45, 1], y: 0 },
+      transition: {
+        y: t,
+        opacity: {
+          delay: t.delay,
+          duration: t.duration * 1.25,
+          times: [0, 0.5, 0.66, 1],
+          ease: "linear" as const,
+        },
+      },
     };
+  };
+
+  /**
+   * ドット開幕はチーム行グループの入場に同期（HOME / AWAY 同時）
+   */
+  const jerseyDotDelayMs = useMemo(() => {
+    if (!jerseyDotRevealEnabled || reduceMotion || !entryTransition) {
+      return 0;
+    }
+    /** 行の入場が始まってから少し経ってからドット開始 */
+    const duringRowMs = Math.round(GAMES_CYBER_ENTRY_DURATION_MS * 0.32);
+    const tailMs = 28;
+    return (
+      Math.round(entryTransition(ENTRY_GROUP_TEAMS).delay * 1000) +
+      duringRowMs +
+      tailMs
+    );
   }, [jerseyDotRevealEnabled, reduceMotion, entryTransition]);
 
   // 現在のルートから /m or /web を決める & lg を引き継ぎ
@@ -788,126 +837,89 @@ const normalStyle: React.CSSProperties = {
   boxShadow: "none",
 };
 
-return (
-<motion.div
-  layout={
-    !isMobile && !disableCardMotion && !sharedTransitionBaseKey
-  }
-  layoutId={isMobile ? undefined : sharedLayoutId}
-  initial={entryTransition ? { scale: 0.992, opacity: 1 } : false}
-  animate={
-    entryTransition
-      ? { scale: cardShellPressScale, opacity: 1 }
-      : useFullCardHitLayer
-        ? { scale: cardShellPressScale }
-        : undefined
-  }
-  transition={
-    isMobile
-      ? entryTransition
-        ? {
-            scale: {
-              type: "tween" as const,
-              delay: entryTransition(0).delay,
-              ...(useFullCardHitLayer && !reduceMotion
-                ? {
-                    duration: 0.12,
-                    ease: "easeOut" as const,
-                  }
-                : {
-                    duration: entryTransition(0).duration + 0.06,
-                    ease: entryTransition(0).ease,
-                  }),
-            },
-            opacity: {
-              type: "tween" as const,
-              delay: entryTransition(0).delay,
-              duration: entryTransition(0).duration * 0.55,
-              ease: entryTransition(0).ease,
-            },
-          }
-        : useFullCardHitLayer && !reduceMotion
-          ? {
-              scale: {
-                type: "tween" as const,
-                duration: 0.12,
-                ease: "easeOut",
-              },
-            }
-          : {}
-      : {
-          layout: { duration: 0.22 },
-          ...(entryTransition
-            ? {
-                scale: {
-                  type: "tween" as const,
-                  delay: entryTransition(0).delay,
-                  ...(useFullCardHitLayer && !reduceMotion
-                    ? {
-                        duration: 0.12,
-                        ease: "easeOut",
-                      }
-                    : {
-                        duration: entryTransition(0).duration + 0.06,
-                        ease: entryTransition(0).ease,
-                      }),
-                },
-                opacity: {
-                  type: "tween" as const,
-                  delay: entryTransition(0).delay,
-                  duration: entryTransition(0).duration * 0.55,
-                  ease: entryTransition(0).ease,
-                },
-              }
-            : useFullCardHitLayer && !reduceMotion
-              ? {
-                  scale: {
-                    type: "tween" as const,
-                    duration: 0.12,
-                    ease: "easeOut",
-                  },
-                }
-              : {}),
-        }
-  }
-className={[
-  "group relative overflow-hidden text-white",
-  inPredictOverlay && isMobile
-    ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
-    : mobileDense
-      ? MOBILE_LIST_CARD_OUTER_CLASS
-      : "mx-auto max-w-[1200px] w-full",
-disableCardMotion
-  ? ""
-  : isMobile
-    ? ""
-    : [
-        "transition-opacity duration-200",
-        navigating ? "opacity-90" : "",
-      ].join(" "),
-dense
-  ? MOBILE_LIST_CARD_PANEL_DENSE
-  : "rounded-2xl border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
-    isPredicted ? "!border-zinc-500/50" : "",
+  // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
+  const shellClassName = [
+    "group relative overflow-hidden text-white",
+    inPredictOverlay && isMobile
+      ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
+      : mobileDense
+        ? MOBILE_LIST_CARD_OUTER_CLASS
+        : "mx-auto max-w-[1200px] w-full",
+    !useSplitGlassShell ? webPanelClass : "",
+    !useSplitGlassShell && isPredicted ? "!border-zinc-500/50" : "",
+    disableCardMotion
+      ? ""
+      : isMobile
+        ? ""
+        : [
+            "transition-opacity duration-200",
+            navigating ? "opacity-90" : "",
+          ].join(" "),
     hideLine
       ? mobileDense
         ? "pb-1 md:pb-2"
         : "pb-2 md:pb-3"
       : "",
     className || "",
-  ].join(" ")}
- style={{
-  transformOrigin: "50% 50%",
-  ...(isMobile ? {} : { willChange: "transform" as const }),
-  ...(vtBoundsName
-    ? ({
-        viewTransitionName: vtBoundsName,
-        ...(vtBoundsName !== "none"
-          ? { viewTransitionClass: "schedule-shared-bounds" }
-          : {}),
-      } as React.CSSProperties)
-    : {}),
-}}
+  ].join(" ");
+
+  const glassShellClassName = useSplitGlassShell
+    ? [
+        "pointer-events-none absolute inset-0 z-0",
+        listPanelClass,
+        isPredicted ? "!border-zinc-500/50" : "",
+      ].join(" ")
+    : null;
+
+  const shellVtStyle: React.CSSProperties = {
+    ...(vtBoundsName
+      ? ({
+          viewTransitionName: vtBoundsName,
+          ...(vtBoundsName !== "none"
+            ? { viewTransitionClass: "schedule-shared-bounds" }
+            : {}),
+        } as React.CSSProperties)
+      : {}),
+  };
+
+  const contentShellTransition =
+    entryTransition
+      ? {
+          opacity: {
+            type: "tween" as const,
+            delay: entryTransition(ENTRY_GROUP_SHELL).delay,
+            duration: entryTransition(ENTRY_GROUP_SHELL).duration * 0.55,
+            ease: entryTransition(ENTRY_GROUP_SHELL).ease,
+          },
+          scale: {
+            type: "tween" as const,
+            duration: 0.12,
+            ease: "easeOut" as const,
+          },
+        }
+      : useFullCardHitLayer && !reduceMotion
+        ? {
+            scale: {
+              type: "tween" as const,
+              duration: 0.12,
+              ease: "easeOut" as const,
+            },
+          }
+        : undefined;
+
+  const Shell = isMobile ? "div" : motion.div;
+  const shellMotionProps = isMobile
+    ? {}
+    : {
+        layout: !disableCardMotion && !sharedTransitionBaseKey,
+        layoutId: sharedLayoutId,
+      };
+
+return (
+<Shell
+  {...shellMotionProps}
+  className={shellClassName}
+  style={shellVtStyle}
 >
       {useFullCardHitLayer ? (
         onOpenPredict ? (
@@ -944,22 +956,22 @@ dense
         )
       ) : null}
 
-      <motion.div
-        className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl"
-        initial={entryTransition ? { opacity: 0, y: 8 } : false}
-        animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-        transition={entryTransition ? entryTransition(1) : undefined}
-        aria-hidden
-      >
+      {glassShellClassName ? (
+        <div className={glassShellClassName} aria-hidden />
+      ) : null}
+
       <div
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-[0.32]"
+        className={[
+          "pointer-events-none absolute inset-0 z-[1] rounded-2xl",
+          LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
+        ].join(" ")}
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
 
 {/* 試合終了後は市場バイアスの色帯・境界線を出さない */}
 {showMarketBias && marketBias && status !== "final" && (
-  <div className="pointer-events-none absolute inset-0 z-1 overflow-hidden rounded-2xl">
+  <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
     {/* HOME 側バー */}
     <div
       className="absolute left-0 top-0 h-full"
@@ -1010,28 +1022,35 @@ dense
   </div>
 )}
 
-<div
-  aria-hidden
-  className="pointer-events-none absolute inset-px rounded-2xl"
-  style={{
-    boxShadow: `
-      inset 0 0 0 1px rgba(255,255,255,0.06),
-      inset 0 12px 24px rgba(255,255,255,0.03)
-    `,
-  }}
-/>
-
-
-
-      <div
-  aria-hidden
-  className="pointer-events-none absolute inset-0 rounded-2xl"
-  style={{
-background:
-  "linear-gradient(180deg, rgba(255,255,255,0.025) 0%, rgba(255,255,255,0.008) 26%, rgba(255,255,255,0.00) 46%)",
-  }}
-/>
-      </motion.div>
+      <motion.div
+        className="relative z-10"
+        style={{ transformOrigin: "50% 50%" }}
+        initial={entryTransition ? { opacity: 0 } : false}
+        animate={{
+          opacity: entryTransition ? 1 : undefined,
+          scale: cardShellPressScale,
+        }}
+        transition={contentShellTransition}
+      >
+      {/* 入場時に一度だけ上→下へ走るスキャン光（カードを走査して実体化させる演出） */}
+      {entryTransition && !reduceMotion && (
+        <motion.div
+          className="pointer-events-none absolute inset-x-0 top-0 z-[13] h-[34%]"
+          style={{
+            willChange: "transform, opacity",
+            background:
+              "linear-gradient(180deg, transparent 0%, rgba(94,234,212,0.05) 30%, rgba(186,230,253,0.13) 50%, rgba(94,234,212,0.05) 70%, transparent 100%)",
+          }}
+          aria-hidden
+          initial={{ y: "-110%", opacity: 0 }}
+          animate={{ y: ["-110%", "330%"], opacity: [0, 1, 1, 0] }}
+          transition={{
+            delay: entryTransition(ENTRY_GROUP_SHELL).delay + 0.05,
+            duration: 0.62,
+            ease: [0.3, 0, 0.55, 1],
+          }}
+        />
+      )}
       {(() => {
   const tag = getGameEventTag(roundLabel);
   if (!tag) return null;
@@ -1039,9 +1058,7 @@ background:
   return (
     <motion.div
       className={mobileDense ? "absolute top-1 right-1 z-20" : "absolute top-2 right-2 z-20"}
-      initial={entryTransition ? { opacity: 0, y: 8 } : false}
-      animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-      transition={entryTransition ? entryTransition(2) : undefined}
+      {...entryGroupProps(ENTRY_GROUP_HEADER, 8)}
     >
       <EventPill label={tag.label} color={tag.color} />
     </motion.div>
@@ -1058,9 +1075,7 @@ background:
               : "mb-0.5 px-4 pt-2",
           inPredictOverlay ? "pb-0" : "",
         ].join(" ")}
-        initial={entryTransition ? { opacity: 0, y: 10 } : false}
-        animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-        transition={entryTransition ? entryTransition(3) : undefined}
+        {...entryGroupProps(ENTRY_GROUP_HEADER)}
       >
         {!!roundLabel && (
           <div
@@ -1110,9 +1125,7 @@ background:
             "mc-home flex flex-col items-center",
             mobileDense ? "mt-0" : "-mt-5 md:mt-0",
           ].join(" ")}
-          initial={entryTransition ? { opacity: 0, y: 12 } : false}
-          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-          transition={entryTransition ? entryTransition(4) : undefined}
+          {...entryGroupProps(ENTRY_GROUP_TEAMS, 12)}
         >
 
   {/* HOME：Web はラベルを大きく */}
@@ -1141,7 +1154,7 @@ background:
       accentEnd={homeSecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
-      dotRevealDelayMs={jerseyDotHomeDelayMs}
+      dotRevealDelayMs={jerseyDotDelayMs}
     />
   ) : (
     <Icon
@@ -1264,9 +1277,7 @@ background:
                 ? ""
                 : "mt-4 md:mt-1"
           }`}
-          initial={entryTransition ? { opacity: 0, y: 12 } : false}
-          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-          transition={entryTransition ? entryTransition(5) : undefined}
+          {...entryGroupProps(ENTRY_GROUP_TEAMS, 12)}
         >
           {center}
           {showPlayoffSeriesRow && seriesStanding ? (
@@ -1338,9 +1349,7 @@ background:
             "mc-away flex flex-col items-center",
             mobileDense ? "mt-0" : "-mt-5 md:mt-0",
           ].join(" ")}
-          initial={entryTransition ? { opacity: 0, y: 12 } : false}
-          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-          transition={entryTransition ? entryTransition(6) : undefined}
+          {...entryGroupProps(ENTRY_GROUP_TEAMS, 12)}
         >
 
   {league !== "wc" && (
@@ -1369,7 +1378,7 @@ background:
       accentEnd={awaySecondaryColor}
       className={teamMarkSizeJersey}
       enableDotReveal={jerseyDotRevealEnabled}
-      dotRevealDelayMs={jerseyDotAwayDelayMs}
+      dotRevealDelayMs={jerseyDotDelayMs}
     />
   ) : (
     <Icon
@@ -1542,39 +1551,47 @@ background:
       {/* 仕切り線 */}
 {!hideLine && (
   <motion.div
-    className={
+    className={[
+      "relative overflow-hidden",
       dense
         ? mobileDense
           ? "h-[2px] w-full mt-1.5 md:mt-2"
           : "h-[2px] w-full mt-2 md:mt-2.5"
-        : "h-[3px] w-full mt-2.5 md:mt-3"
-    }
+        : "h-[3px] w-full mt-2.5 md:mt-3",
+    ].join(" ")}
     style={{
       backgroundColor: leagueLineColor[league],
       transformOrigin: "50% 50%",
+      // グローは静的に持たせ、入場は opacity / scaleX のみ（boxShadow の tween は毎フレーム再描画になる）
+      boxShadow:
+        "0 0 16px rgba(34,211,238,0.5), 0 0 5px rgba(94,234,212,0.35)",
     }}
     aria-hidden={true}
-    initial={
-      entryTransition
-        ? {
-            opacity: 0,
-            scaleX: 0.06,
-            boxShadow: "0 0 0 rgba(34,211,238,0)",
-          }
-        : false
-    }
-    animate={
-      entryTransition
-        ? {
-            opacity: 1,
-            scaleX: 1,
-            boxShadow:
-              "0 0 16px rgba(34,211,238,0.5), 0 0 5px rgba(94,234,212,0.35)",
-          }
-        : undefined
-    }
-    transition={entryTransition ? entryTransition(7) : undefined}
-  />
+    initial={entryTransition ? { opacity: 0, scaleX: 0.06 } : false}
+    animate={entryTransition ? { opacity: 1, scaleX: 1 } : undefined}
+    transition={entryTransition ? entryTransition(ENTRY_GROUP_FOOTER) : undefined}
+  >
+    {/* 展開直後に左→右へ一度だけ走るエナジーパルス */}
+    {entryTransition && !reduceMotion && (
+      <motion.span
+        className="absolute inset-y-0 left-0 w-[16%]"
+        style={{
+          willChange: "transform, opacity",
+          background:
+            "linear-gradient(90deg, transparent 0%, rgba(220,252,231,0.95) 50%, transparent 100%)",
+        }}
+        initial={{ x: "-110%", opacity: 0 }}
+        animate={{ x: ["-110%", "660%"], opacity: [0, 1, 0.9, 0] }}
+        transition={{
+          delay:
+            entryTransition(ENTRY_GROUP_FOOTER).delay +
+            entryTransition(ENTRY_GROUP_FOOTER).duration * 0.45,
+          duration: 0.6,
+          ease: [0.2, 0, 0.6, 1],
+        }}
+      />
+    )}
+  </motion.div>
 )}
 
       {/* ボタン行 */}
@@ -1585,9 +1602,7 @@ background:
               ? "grid grid-cols-1 gap-1 px-2 py-0.5 md:gap-3 md:px-4 md:py-3"
               : "grid grid-cols-1 gap-2 px-3 py-1.5 md:gap-3 md:px-4 md:py-2.5"
           }
-          initial={entryTransition ? { opacity: 0, y: 10 } : false}
-          animate={entryTransition ? { opacity: 1, y: 0 } : undefined}
-          transition={entryTransition ? entryTransition(8) : undefined}
+          {...entryGroupProps(ENTRY_GROUP_FOOTER)}
         >
           {/* ▼ 試合別タイムラインへ */}
           {/* ▼ 予想作成ページへ（自分の投稿があれば詳細へ／開始後は未投稿なら“見る”へ） */}
@@ -1647,7 +1662,8 @@ background:
           )}
         </motion.div>
       )}
-    </motion.div>
+      </motion.div>
+    </Shell>
   );
 }
 export default React.memo(MatchCard);

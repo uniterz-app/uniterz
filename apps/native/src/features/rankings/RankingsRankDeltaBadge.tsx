@@ -22,8 +22,8 @@ export function RankDeltaBadgeNative({
   const isMd = size === "md";
   const iconSize = isMd ? 15 : 11;
   const fontSize = isMd ? 13 : 10;
-  const iconColor = up ? "rgba(253,224,71,0.96)" : "rgba(226,232,240,0.72)";
-  const textColor = up ? "rgba(253,224,71,0.96)" : "rgba(255,255,255,0.6)";
+  const iconColor = up ? "rgba(74,222,128,0.96)" : "rgba(251,146,60,0.96)";
+  const textColor = up ? "rgba(74,222,128,0.96)" : "rgba(251,146,60,0.96)";
 
   return (
     <View
@@ -32,7 +32,7 @@ export function RankDeltaBadgeNative({
       accessibilityLabel={up ? `順位アップ ${amount}` : `順位ダウン ${amount}`}
     >
       <MaterialCommunityIcons
-        name={up ? "arrow-top-right" : "arrow-bottom-right"}
+        name={up ? "arrow-up" : "arrow-down"}
         size={iconSize}
         color={iconColor}
       />

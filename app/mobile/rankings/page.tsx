@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type TouchEvent as ReactTouchEvent,
 } from "react";
 import {
   METRICS,
@@ -16,7 +14,6 @@ import {
 } from "@/app/component/rankings/_data/mockRows";
 import { motion, AnimatePresence } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
-import CyberPageBackground from "@/app/component/rankings/CyberPageBackground";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
@@ -63,6 +60,14 @@ import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useApplyPreferredRankingLeague } from "@/lib/hooks/useApplyPreferredRankingLeague";
+import {
+  buildRankingsPageKey,
+  computeRankingHasNoEntries,
+  computeWinRateMinPosts,
+  getMyMetricValue,
+} from "@/lib/rankings/rankingsPageShared";
+import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
+import { visibleMetricsForLeague } from "@/lib/rankings/wcVisibleMetrics";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
@@ -83,68 +88,9 @@ export default function MobileRankingsPage() {
       ? wcStage
       : null;
 
-  const visibleMetrics: MobileMetric[] =
-    rankingLeague === "worldcup"
-      ? [
-          "totalScore",
-          "winRate",
-          "marginPrecision",
-          "upsetScore",
-          "streak",
-          "goalScorerHits",
-        ]
-      : [
-          "totalScore",
-          "winRate",
-          "marginPrecision",
-          "upsetScore",
-          "streak",
-        ];
-
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
-  const SWIPE_X_THRESHOLD_PX = 42;
-  const SWIPE_Y_TOLERANCE_PX = 24;
-
-  const moveMetricBy = useCallback(
-    (delta: number) => {
-      if (visibleMetrics.length <= 1) return;
-      const currentIndex = visibleMetrics.indexOf(metric);
-      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-      const nextIndex =
-        (safeIndex + delta + visibleMetrics.length) % visibleMetrics.length;
-      setMetric(visibleMetrics[nextIndex]);
-    },
-    [metric, visibleMetrics]
-  );
-
-  const handleCardsTouchStart = useCallback(
-    (e: ReactTouchEvent<HTMLDivElement>) => {
-      const t = e.touches[0];
-      if (!t) return;
-      swipeStartRef.current = { x: t.clientX, y: t.clientY };
-    },
-    []
-  );
-
-  const handleCardsTouchEnd = useCallback(
-    (e: ReactTouchEvent<HTMLDivElement>) => {
-      const start = swipeStartRef.current;
-      swipeStartRef.current = null;
-      if (!start) return;
-      const t = e.changedTouches[0];
-      if (!t) return;
-      const dx = t.clientX - start.x;
-      const dy = t.clientY - start.y;
-      if (Math.abs(dx) < SWIPE_X_THRESHOLD_PX) return;
-      if (Math.abs(dy) > SWIPE_Y_TOLERANCE_PX && Math.abs(dy) > Math.abs(dx))
-        return;
-      if (dx < 0) {
-        moveMetricBy(1);
-        return;
-      }
-      moveMetricBy(-1);
-    },
-    [moveMetricBy]
+  const visibleMetrics = useMemo(
+    () => visibleMetricsForLeague(rankingLeague),
+    [rankingLeague]
   );
 
   /** プロフィールの「ランキングに戻る」で付いた rankPhase / rankMetric / rankRound を反映 */
@@ -223,21 +169,10 @@ export default function MobileRankingsPage() {
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
 
-  const myValue = useMemo(() => {
-    if (!myRawRow) return 0;
-
-    if (metric === "totalScore") return myRawRow.totalPoints ?? 0;
-    if (metric === "marginPrecision") return myRawRow.totalPrecision ?? 0;
-    if (metric === "upsetScore") return myRawRow.totalUpset ?? 0;
-    if (metric === "winRate") {
-      const raw = myRawRow.winRate ?? 0;
-      return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
-    }
-    if (metric === "goalScorerHits") {
-      return myRawRow.totalGoalScorerHits ?? 0;
-    }
-    return myRawRow.activeWinStreak ?? 0;
-  }, [metric, myRawRow]);
+  const myValue = useMemo(
+    () => getMyMetricValue(metric, myRawRow),
+    [metric, myRawRow]
+  );
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
   const myMiniMetrics = useMemo(
     () =>
@@ -261,55 +196,38 @@ export default function MobileRankingsPage() {
 
   const cardBarsReady = isMyRankMiniMetricsReady(byMetric);
 
-  const winRateMinPosts =
-    rankingLeague === "worldcup"
-      ? 1
-      : phase === "playoffs" && (round === "overall" || round === "r1")
-        ? 20
-        : 1;
+  const winRateMinPosts = computeWinRateMinPosts(
+    rankingLeague,
+    phase,
+    effectiveRound
+  );
 
-  const rankingHasNoEntries =
-    listReady &&
-    (rows.length === 0 ||
-      (rankingLeague === "worldcup" && rankingListCount === 0));
+  const rankingHasNoEntries = computeRankingHasNoEntries({
+    listReady,
+    rowsLength: rows.length,
+    rankingLeague,
+    rankingListCount,
+  });
 
-  const introRef = useRef(true);
-  const intro = introRef.current;
-
-  useEffect(() => {
-    introRef.current = false;
-  }, []);
-
-  const [topDone, setTopDone] = useState(false);
-
-  const pageKey =
-    rankingLeague === "worldcup"
-      ? `${phase}-${effectiveRound}-${wcStage}-${metric}`
-      : `${phase}-${effectiveRound}-${metric}`;
-  const pageKeyRef = useRef(pageKey);
-  pageKeyRef.current = pageKey;
-
-  useEffect(() => {
-    setTopDone(false);
-  }, [pageKey]);
-
-  const handleTopCountDone = useCallback(() => {
-    if (pageKeyRef.current !== pageKey) return;
-    setTopDone(true);
-  }, [pageKey]);
+  const pageKey = buildRankingsPageKey({
+    phase,
+    effectiveRound,
+    metric,
+    rankingLeague,
+    wcStage,
+  });
+  const { intro, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-app">
-      <div className="pointer-events-none absolute inset-0">
-        <CyberPageBackground />
+    <div
+      className="relative min-h-svh overflow-y-auto overscroll-y-contain pb-bottom-nav text-white"
+      style={{ touchAction: "pan-y" }}
+    >
+      <div className="sticky top-0 z-40">
+        <Header />
       </div>
 
-      <div className="relative z-10 h-full max-w-full overflow-x-clip overflow-y-auto overscroll-y-contain pb-bottom-nav">
-        <div className="sticky top-0 z-40">
-          <Header />
-        </div>
-
-        <div className="max-w-full space-y-3 overflow-x-clip px-3 pt-2">
+      <div className="space-y-3 px-3 pt-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -325,7 +243,9 @@ export default function MobileRankingsPage() {
                 "min-w-0 flex-1 text-center text-[14px] tracking-[0.26em] text-white/90",
               ].join(" ")}
             >
-              {rankingLeague === "worldcup" ? "WORLD CUP" : "RANKINGS"}
+              {rankingLeague === "worldcup"
+                ? m.rankings.pageTitleWorldCup
+                : m.rankings.pageTitleRankings}
             </span>
             <RankingsScheduleNotice
               phase={phase}
@@ -410,12 +330,11 @@ export default function MobileRankingsPage() {
               {metric === "winRate" && (
                 <p className="px-1 text-[11px] leading-4 text-white/60">
                   {winRateMinPosts > 1
-                    ? language === "en"
-                      ? `Win Rate ranking requires at least ${winRateMinPosts} posts.`
-                      : `勝率ランキングは${winRateMinPosts}投稿以上が対象です。`
-                    : language === "en"
-                      ? "No minimum posts requirement for this round."
-                      : "このラウンドは投稿数の足切りはありません。"}
+                    ? m.rankings.minPostsRequired.replace(
+                        "{n}",
+                        String(winRateMinPosts)
+                      )
+                    : m.rankings.noMinPosts}
                 </p>
               )}
             </>
@@ -423,8 +342,12 @@ export default function MobileRankingsPage() {
         </div>
 
         {category === "playoffs" && !listReady && (
-          <div className="px-3 pt-2 text-[11px] text-white/40">
-            loading...
+          <div
+            role="status"
+            aria-live="polite"
+            className="px-3 pt-2 text-[11px] text-white/40"
+          >
+            {m.common.loading}
           </div>
         )}
 
@@ -448,8 +371,7 @@ export default function MobileRankingsPage() {
             </p>
           </div>
         ) : listReady ? (
-          <div onTouchStart={handleCardsTouchStart} onTouchEnd={handleCardsTouchEnd} className="max-w-full overflow-x-clip">
-            <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
               <div className="relative z-10">
                 <TopPodium
@@ -472,7 +394,7 @@ export default function MobileRankingsPage() {
                 variants={restContainer}
                 initial="hidden"
                 animate={topDone ? "show" : "hidden"}
-                style={{ pointerEvents: topDone ? "auto" : "none" }}
+                style={{ opacity: topDone ? 1 : 0.35 }}
               >
                 {restRows.length > 0 && (
                   <div className="space-y-2 pt-0.5">
@@ -499,9 +421,7 @@ export default function MobileRankingsPage() {
               </motion.div>
               </motion.div>
             </AnimatePresence>
-          </div>
         ) : null}
-      </div>
 
       <SideMenuDrawer
         open={rankingsDrawerOpen}

@@ -5,7 +5,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { jp } from "@/lib/fonts";
 import Header from "@/app/component/Header";
-import CyberPageBackground from "@/app/component/rankings/CyberPageBackground";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import CommunityGroupDetailView from "./CommunityGroupDetailView";
 
@@ -27,10 +26,7 @@ export default function CommunityDetailClient({
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-app">
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <CyberPageBackground />
-      </div>
+    <div className="relative min-h-screen">
       <div className="relative z-10 min-h-screen pb-bottom-nav">
         <div className="sticky top-0 z-40">
           <Header />

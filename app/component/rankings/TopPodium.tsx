@@ -552,7 +552,10 @@ export default function TopPodium({
                               {row.displayName ?? row.handle ?? "Unknown"}
                             </span>
                           </div>
-                          <RankDeltaBadge delta={row.rankDeltaPlaces} />
+                          <RankDeltaBadge
+                            delta={row.rankDeltaPlaces}
+                            language={language}
+                          />
                           {row.plan === "pro" ? (
                             <ProCyberBadge
                               {...proBadgeStaticMotion}

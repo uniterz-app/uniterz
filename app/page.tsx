@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import AnimatedSplashScreen from "@/app/component/splash/AnimatedSplashScreen";
+import CssAnimatedSplashScreen from "@/app/component/splash/CssAnimatedSplashScreen";
 import { MIN_SPLASH_DURATION_MS } from "@/app/component/splash/splashTiming";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
@@ -13,9 +13,14 @@ export default function Page() {
   const { status, fUser } = useFirebaseUser();
   const [splashVisible, setSplashVisible] = useState(true);
   const [splashExitDone, setSplashExitDone] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const openedAtRef = useRef(Date.now());
   const [handle, setHandle] = useState<string | null>(null);
   const [handleResolved, setHandleResolved] = useState(false);
+
+  useEffect(() => {
+    setIsMobileViewport(window.innerWidth < 768);
+  }, []);
 
   useEffect(() => {
     if (!fUser) {
@@ -86,7 +91,7 @@ export default function Page() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
-            <AnimatedSplashScreen />
+            <CssAnimatedSplashScreen />
           </motion.div>
         )}
       </AnimatePresence>

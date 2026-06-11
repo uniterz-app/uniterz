@@ -61,7 +61,7 @@ const PlayoffFullBracketWebLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[320px] rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center text-white/60">
+      <div className={`${CYBER_GLASS_PANEL} min-h-[320px] p-6 text-center text-white/60`}>
         loading...
       </div>
     ),
@@ -103,6 +103,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { nameBebas } from "@/lib/fonts";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import {
@@ -503,11 +504,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           </>
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
-            <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
+            <div className={`${CYBER_GLASS_PANEL} p-6 text-center`}>
               loading...
             </div>
           ) : !playoffDisplayData ? (
-            <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
+            <div className={`${CYBER_GLASS_PANEL} p-6 text-center`}>
               <p
                 className={[
                   nameBebas.className,
@@ -547,7 +548,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
         ) : isMyPro && isTargetPro ? (
           <ProAnalysisLazy />
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-[#050814]/80 p-6 text-center">
+          <div className={`${CYBER_GLASS_PANEL} p-6 text-center`}>
             {m.pro.upgradeToSeeAll}
           </div>
         )}

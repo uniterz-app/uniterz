@@ -162,8 +162,8 @@ const BarStyle = {
     border: "1px solid rgba(148,163,184,0.14)",
     boxShadow:
       "0 14px 24px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)",
-    backdropFilter: "saturate(106%) blur(10px)",
-    WebkitBackdropFilter: "saturate(106%) blur(10px)",
+    backdropFilter: "saturate(106%) blur(4px)",
+    WebkitBackdropFilter: "saturate(106%) blur(4px)",
     pointerEvents: "auto",
     isolation: "isolate",
   } as CSSProperties,
@@ -412,7 +412,6 @@ export default function NavBar() {
           0% {
             opacity: 0;
             transform: translateY(48px) scale(0.88) rotateX(10deg);
-            filter: blur(12px) saturate(0.85);
             box-shadow:
               0 32px 70px rgba(0, 0, 0, 0.6),
               0 0 0 rgba(34, 211, 238, 0),
@@ -420,7 +419,6 @@ export default function NavBar() {
           }
           28% {
             opacity: 1;
-            filter: blur(3px) saturate(1.05);
             transform: translateY(-8px) scale(1.04) rotateX(2deg);
             box-shadow:
               0 24px 56px rgba(0, 0, 0, 0.45),
@@ -430,7 +428,6 @@ export default function NavBar() {
               inset 0 1px 0 rgba(255, 255, 255, 0.1);
           }
           48% {
-            filter: blur(0) saturate(1.02);
             transform: translateY(4px) scale(0.985) rotateX(0deg);
             box-shadow:
               0 16px 40px rgba(0, 0, 0, 0.5),
@@ -446,7 +443,6 @@ export default function NavBar() {
           }
           100% {
             opacity: 1;
-            filter: blur(0) saturate(1);
             transform: translateY(0) scale(1) rotateX(0deg);
             box-shadow:
               0 12px 32px rgba(0, 0, 0, 0.5),
@@ -470,12 +466,12 @@ export default function NavBar() {
           0% {
             opacity: 0;
             transform: translateY(28px) scale(0.5) rotate(-8deg);
-            filter: blur(5px) drop-shadow(0 0 0 rgba(103, 232, 249, 0));
+            filter: drop-shadow(0 0 0 rgba(103, 232, 249, 0));
           }
           38% {
             opacity: 1;
             transform: translateY(-10px) scale(1.14) rotate(2deg);
-            filter: blur(0) drop-shadow(0 0 12px rgba(103, 232, 249, 0.55));
+            filter: drop-shadow(0 0 12px rgba(103, 232, 249, 0.55));
           }
           58% {
             transform: translateY(5px) scale(0.94) rotate(-1deg);
@@ -488,7 +484,7 @@ export default function NavBar() {
           100% {
             opacity: 1;
             transform: translateY(0) scale(1) rotate(0deg);
-            filter: blur(0) drop-shadow(0 0 0 rgba(103, 232, 249, 0));
+            filter: drop-shadow(0 0 0 rgba(103, 232, 249, 0));
           }
         }
       `}</style>
@@ -542,15 +538,9 @@ export default function NavBar() {
               />
             </div>
           ) : null}
-          <div
-            style={{
-              ...BarStyle.bottomGlow,
-              zIndex: 1,
-              ...(isMobile
-                ? { left: "14%", right: "14%", bottom: -13, height: 22, opacity: 0.3 }
-                : {}),
-            }}
-          />
+          {!isMobile ? (
+            <div style={{ ...BarStyle.bottomGlow, zIndex: 1 }} />
+          ) : null}
           <div style={{ ...BarStyle.glassSheen, zIndex: 1 }} />
 
           {items.map((item, index) => {

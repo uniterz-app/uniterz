@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_FILL, CYBER_GLASS_PANEL_XL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
 import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
@@ -246,8 +247,7 @@ export default function StreakTrackerCard({
   const statRecordLabel = msg.profile.last20TrackerSubtitle.replace("{n}", String(STREAK_TRACKER_LAST_N));
   const statRecordValue = `${stats.wins}-${stats.losses}`;
 
-  const shellCls =
-    "relative overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 shadow-[0_10px_30px_rgba(0,0,0,0.45)] md:rounded-xl md:border-white/10";
+  const shellCls = `${CYBER_GLASS_PANEL_XL} shadow-[0_10px_30px_rgba(0,0,0,0.45)]`;
 
   return (
     <div className={[shellCls, S.outerPad].join(" ")}>
@@ -374,7 +374,7 @@ export default function StreakTrackerCard({
 
         <div
           ref={chartSectionRef}
-          className={`relative z-0 overflow-hidden rounded-2xl border border-white/10 bg-[#050814]/45 ${S.chartBorder}`}
+          className={`relative z-0 overflow-hidden rounded-2xl border border-white/10 ${CYBER_GLASS_FILL} ${CYBER_GLASS_SHADOW} ${S.chartBorder}`}
         >
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.52]"

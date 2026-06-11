@@ -4,7 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import {
+  AnimatePresence,
+  LayoutGroup,
+  motion,
+  useReducedMotion,
+} from "framer-motion";
 import {
   safeViewTransitionToken,
   startDomViewTransition,
@@ -18,10 +23,9 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import MatchCard, { type MatchCardProps } from "./MatchCard";
 import ScheduleSharedTransitionLayout from "./ScheduleSharedTransitionLayout";
 import {
-  GAMES_CYBER_EASE,
   GAMES_CYBER_EASE_SNAP,
   GAMES_DAY_SWITCH_EASE,
-  GAMES_SCHEDULE_SHELL_MOTION_COMPLETE_SEC,
+  GAMES_LIST_REST_CARDS_DELAY_SEC,
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
 import PredictionFormV2 from "../predict/PredictionFormV2";
@@ -33,6 +37,13 @@ import {
   SCHEDULE_MY_POST_DELETED_EVENT,
   type ScheduleMyPostDeletedDetail,
 } from "@/lib/games/scheduleMyPostSyncEvents";
+import {
+  predictOverlayBackdrop,
+  predictOverlayCard,
+  predictOverlayContentOrch,
+  predictOverlayPanel,
+  predictOverlayRoot,
+} from "@/lib/predict/predictPageMotion";
 
 export type GameItemRaw = any;
 
@@ -207,61 +218,44 @@ export default function ScheduleList({
     leagueProp ?? (propsList[0]?.league as League | undefined) ?? "nba";
 
   const isDaySwitchShell = listShellIntro === "daySwitch";
-  const isPageShell = listShellIntro === "page";
 
+  /** 子（行）へ variants を伝搬するだけのコンテナ。スタッガーは各行の delay で制御する */
   const scheduleContainer = useMemo(
     () => ({
       hidden: {},
-      show: {
-        transition: {
-          staggerChildren:
-            !listShellAnimations || isDaySwitchShell
-              ? 0
-              : isPageShell
-                ? 0
-                : 0.032,
-          delayChildren:
-            !listShellAnimations || isDaySwitchShell
-              ? 0
-              : isPageShell
-                ? 0
-                : 0.022,
-        },
-      },
+      show: {},
     }),
-    [listShellAnimations, isDaySwitchShell, isPageShell]
+    []
   );
 
-  /** 先頭3枚のみ：上から落ち＋フェード。daySwitch は先頭から順に（遅延に上限あり）。page はラッパー完了後に残りをスタッガー */
+  /**
+   * 行レベルの入場。
+   * - daySwitch: 先頭から順に上方向からフェードイン
+   * - page: 先頭3枚はカード内部（MatchCard のグループ入場）が担うため行は動かさず、
+   *   4枚目以降のみラッパー完了後にフェード＋上昇
+   */
   const scheduleItem = useMemo(
     () => ({
       hidden: (i: number) => {
         if (!listShellAnimations) {
-          return { opacity: 1, y: 0, scale: 1 };
+          return { opacity: 1, y: 0 };
         }
         if (isDaySwitchShell) {
-          return { opacity: 0, y: -11, scale: 1 };
+          return { opacity: 0, y: -11 };
         }
-        if (isPageShell && i >= 3) {
-          return { opacity: 0, y: 12, scale: 1 };
+        if (i >= 3) {
+          return { opacity: 0, y: 12 };
         }
-        if (i >= 3) return { opacity: 1, y: 0, scale: 1 };
-        return { opacity: 0, y: -22, scale: 0.985 };
+        return { opacity: 1, y: 0 };
       },
       show: (i: number) => {
         if (!listShellAnimations) {
-          return {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            transition: { duration: 0 },
-          };
+          return { opacity: 1, y: 0, transition: { duration: 0 } };
         }
         if (isDaySwitchShell) {
           return {
             opacity: 1,
             y: 0,
-            scale: 1,
             transition: {
               opacity: { duration: 0.52, ease: GAMES_DAY_SWITCH_EASE },
               y: { duration: 0.56, ease: GAMES_DAY_SWITCH_EASE },
@@ -269,35 +263,23 @@ export default function ScheduleList({
             },
           };
         }
-        if (isPageShell && i >= 3) {
+        if (i >= 3) {
           return {
             opacity: 1,
             y: 0,
-            scale: 1,
             transition: {
               duration: 0.24,
               ease: SCHEDULE_STAGGER_EASE,
               delay:
-                GAMES_SCHEDULE_SHELL_MOTION_COMPLETE_SEC +
+                GAMES_LIST_REST_CARDS_DELAY_SEC +
                 (i - 3) * PAGE_REST_CARD_STAGGER_SEC,
             },
           };
         }
-        return {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          transition: {
-            duration: 0.26,
-            ease: SCHEDULE_STAGGER_EASE,
-            delay: isPageShell
-              ? 0.02 + i * 0.045
-              : Math.min(i * 0.024, 0.1),
-          },
-        };
+        return { opacity: 1, y: 0, transition: { duration: 0 } };
       },
     }),
-    [listShellAnimations, isDaySwitchShell, isPageShell]
+    [listShellAnimations, isDaySwitchShell]
   );
 
   const open = useCallback(
@@ -601,27 +583,40 @@ export default function ScheduleList({
     );
   }
 
+  const overlayMotionEnabled = !reduceMotion;
+  const overlayPresenceProps = overlayMotionEnabled
+    ? {
+        initial: "hidden" as const,
+        animate: "show" as const,
+        exit: "exit" as const,
+      }
+    : { initial: false as const };
+
   const overlayContent =
     openGameId && selectedProps ? (
-      <div
-        key="prediction-page"
+      <motion.div
+        key={String(openGameId)}
         className="fixed inset-0 z-100000 overflow-hidden"
+        variants={overlayMotionEnabled ? predictOverlayRoot : undefined}
+        {...overlayPresenceProps}
       >
-        <div
+        <motion.div
           className={[
             "absolute inset-0 z-0 bg-black/35 backdrop-blur-md",
             standingsOpenInOverlay
               ? "pointer-events-none"
               : "pointer-events-auto",
           ].join(" ")}
+          variants={overlayMotionEnabled ? predictOverlayBackdrop : undefined}
           onClick={() => {
             if (standingsOpenInOverlay) return;
             close();
           }}
         />
 
-        <div
+        <motion.div
           className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
+          variants={overlayMotionEnabled ? predictOverlayPanel : undefined}
           style={{
             WebkitOverflowScrolling: "touch",
             overscrollBehaviorY: "contain",
@@ -664,59 +659,66 @@ export default function ScheduleList({
             ].join(" ")}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative w-full overflow-x-hidden">
-              <button
-                type="button"
-                aria-label={m.common.close}
-                className={[
-                  "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md",
-                  isMobile ? "" : "transition hover:bg-black/55",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  close();
-                }}
+            <motion.div
+              className="relative w-full overflow-x-hidden"
+              variants={
+                overlayMotionEnabled ? predictOverlayContentOrch : undefined
+              }
+              {...(overlayMotionEnabled
+                ? { initial: "hidden" as const, animate: "show" as const }
+                : {})}
+            >
+              <motion.div
+                className="relative w-full"
+                variants={
+                  overlayMotionEnabled ? predictOverlayCard : undefined
+                }
               >
-                <X size={18} strokeWidth={2.4} />
-              </button>
+                <button
+                  type="button"
+                  aria-label={m.common.close}
+                  className={[
+                    "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md",
+                    isMobile ? "" : "transition hover:bg-black/55",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    close();
+                  }}
+                >
+                  <X size={18} strokeWidth={2.4} />
+                </button>
 
-              <MatchCard
-                {...selectedProps}
-                myPostId={myPostMap[String(selectedProps.id)] ?? null}
-                homeRecord={
-                  selectedProps.home?.teamId
-                    ? teamRecordMap[selectedProps.home.teamId] ?? null
-                    : null
-                }
-                awayRecord={
-                  selectedProps.away?.teamId
-                    ? teamRecordMap[selectedProps.away.teamId] ?? null
-                    : null
-                }
-                sharedLayoutId={undefined}
-                sharedTransitionBaseKey={
-                  vtUi
-                    ? safeViewTransitionToken(String(selectedProps.id))
-                    : undefined
-                }
-                disableCardMotion
-                hideActions
-                showMarketBias
-                inPredictOverlay
-              />
+                <MatchCard
+                  {...selectedProps}
+                  myPostId={myPostMap[String(selectedProps.id)] ?? null}
+                  homeRecord={
+                    selectedProps.home?.teamId
+                      ? teamRecordMap[selectedProps.home.teamId] ?? null
+                      : null
+                  }
+                  awayRecord={
+                    selectedProps.away?.teamId
+                      ? teamRecordMap[selectedProps.away.teamId] ?? null
+                      : null
+                  }
+                  sharedLayoutId={undefined}
+                  sharedTransitionBaseKey={
+                    vtUi
+                      ? safeViewTransitionToken(String(selectedProps.id))
+                      : undefined
+                  }
+                  disableCardMotion
+                  hideActions
+                  showMarketBias
+                  inPredictOverlay
+                />
+              </motion.div>
 
-              <div
-                key={String(openGameId)}
-                className={[
-                  isMobile ? "" : "schedule-overlay-form-enter",
-                  "mt-2 overflow-x-hidden px-0 py-0",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <PredictionFormV2
+              <PredictionFormV2
+                  key={String(openGameId)}
                   dense={dense}
                   game={selectedProps}
                   user={{ name: "You" }}
@@ -755,11 +757,10 @@ export default function ScheduleList({
                     }
                   }}
                 />
-              </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     ) : null;
 
   const listRows = propsList.map((props, index) => {
@@ -869,17 +870,7 @@ export default function ScheduleList({
     <>
       <LayoutGroup id="schedule-list">
         <ScheduleSharedTransitionLayout data-vt-nonce={vtListTransitionNonce}>
-          <motion.div
-            className={openGameId ? "pointer-events-none" : ""}
-            animate={{
-              scale: 1,
-              opacity: 1,
-            }}
-            transition={{
-              duration: listShellAnimations ? 0.2 : 0,
-              ease: GAMES_CYBER_EASE,
-            }}
-          >
+          <div className={openGameId ? "pointer-events-none" : ""}>
             <motion.div
               key={leagueAnimKey}
               className={scheduleGridClass}
@@ -889,12 +880,17 @@ export default function ScheduleList({
             >
               {listRows}
             </motion.div>
-          </motion.div>
+          </div>
         </ScheduleSharedTransitionLayout>
       </LayoutGroup>
 
-      {overlayContent && typeof document !== "undefined"
-        ? createPortal(overlayContent, document.body)
+      {typeof document !== "undefined"
+        ? createPortal(
+            <AnimatePresence>
+              {overlayContent}
+            </AnimatePresence>,
+            document.body,
+          )
         : null}
     </>
   );

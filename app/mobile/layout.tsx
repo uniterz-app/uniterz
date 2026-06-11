@@ -26,10 +26,10 @@ export default function MobileLayout({
 }) {
   return (
     <div
-      className={`mobile-route-root ${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased bg-app min-h-screen`}
+      className={`mobile-route-root ${geistSans.variable} ${geistMono.variable} ${montserrat.variable} antialiased min-h-screen`}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {children}
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }

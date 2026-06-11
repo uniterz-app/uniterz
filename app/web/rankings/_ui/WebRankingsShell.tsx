@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -51,23 +50,13 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useApplyPreferredRankingLeague } from "@/lib/hooks/useApplyPreferredRankingLeague";
 import { buildMyRankMiniMetrics, isMyRankMiniMetricsReady } from "@/lib/rankings/buildMyRankMiniMetrics";
 import type { RankingRow } from "@/lib/rankings/useRanking";
-
-function getMyMetricValue(metric: MobileMetric, row: any): number {
-  if (!row) return 0;
-
-  if (metric === "totalScore") return row.totalPoints ?? 0;
-  if (metric === "marginPrecision") return row.totalPrecision ?? 0;
-  if (metric === "upsetScore") return row.totalUpset ?? 0;
-
-  if (metric === "winRate") {
-    const raw = row.winRate ?? 0;
-    return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
-  }
-
-  if (metric === "goalScorerHits") return row.totalGoalScorerHits ?? 0;
-
-  return row.activeWinStreak ?? 0;
-}
+import {
+  buildRankingsPageKey,
+  computeRankingHasNoEntries,
+  computeWinRateMinPosts,
+  getMyMetricValue,
+} from "@/lib/rankings/rankingsPageShared";
+import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
@@ -180,9 +169,10 @@ export default function WebRankingsShell() {
     };
   }, []);
 
-  const myValue = useMemo(() => {
-    return getMyMetricValue(metric as MobileMetric, myRow);
-  }, [metric, myRow]);
+  const myValue = useMemo(
+    () => getMyMetricValue(metric as MobileMetric, myRow),
+    [metric, myRow]
+  );
 
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
   const myMiniMetrics = useMemo(
@@ -207,42 +197,27 @@ export default function WebRankingsShell() {
 
   const cardBarsReady = isMyRankMiniMetricsReady(byMetric);
 
-  const winRateMinPosts =
-    rankingLeague === "worldcup"
-      ? 1
-      : phase === "playoffs" && (round === "overall" || round === "r1")
-        ? 20
-        : 1;
+  const winRateMinPosts = computeWinRateMinPosts(
+    rankingLeague,
+    phase,
+    effectiveRound
+  );
 
-  const rankingHasNoEntries =
-    listReady &&
-    (rows.length === 0 ||
-      (rankingLeague === "worldcup" && rankingListCount === 0));
+  const rankingHasNoEntries = computeRankingHasNoEntries({
+    listReady,
+    rowsLength: rows.length,
+    rankingLeague,
+    rankingListCount,
+  });
 
-  const introRef = useRef(true);
-  const intro = introRef.current;
-
-  useEffect(() => {
-    introRef.current = false;
-  }, []);
-
-  const [topDone, setTopDone] = useState(false);
-
-  const pageKey =
-    rankingLeague === "worldcup"
-      ? `${phase}-${effectiveRound}-${wcStage}-${metric}`
-      : `${phase}-${effectiveRound}-${metric}`;
-  const pageKeyRef = useRef(pageKey);
-  pageKeyRef.current = pageKey;
-
-  useEffect(() => {
-    setTopDone(false);
-  }, [pageKey]);
-
-  const handleTopCountDone = useCallback(() => {
-    if (pageKeyRef.current !== pageKey) return;
-    setTopDone(true);
-  }, [pageKey]);
+  const pageKey = buildRankingsPageKey({
+    phase,
+    effectiveRound,
+    metric: metric as MobileMetric,
+    rankingLeague,
+    wcStage,
+  });
+  const { intro, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
     <div className="relative z-10 min-h-full w-full overflow-x-hidden">
@@ -266,7 +241,9 @@ export default function WebRankingsShell() {
               "min-w-0 flex-1 text-center text-[15px] tracking-[0.28em] text-white/90 sm:text-base",
             ].join(" ")}
           >
-            {rankingLeague === "worldcup" ? "WORLD CUP" : "RANKINGS"}
+            {rankingLeague === "worldcup"
+              ? m.rankings.pageTitleWorldCup
+              : m.rankings.pageTitleRankings}
           </span>
           <RankingsScheduleNotice
             phase={phase}
@@ -303,7 +280,6 @@ export default function WebRankingsShell() {
 
           {category === "playoffs" ? (
             <MyRankCard
-              layout="web"
               rank={rankingHasNoEntries ? null : myRank}
               metric={metric as MobileMetric}
               value={myValue}
@@ -314,6 +290,8 @@ export default function WebRankingsShell() {
               statsScramble={listReady && personalPending}
               language={language}
               isPro={user.plan === "pro"}
+              mobileWide
+              layout="web"
               rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
               totalEntries={
                 rankingHasNoEntries
@@ -349,7 +327,11 @@ export default function WebRankingsShell() {
         ) : null}
 
         {category === "playoffs" && !listReady && (
-          <div className="pt-2 text-sm text-white/40">
+          <div
+            role="status"
+            aria-live="polite"
+            className="pt-2 text-sm text-white/40"
+          >
             {m.common.loading}
           </div>
         )}
@@ -397,7 +379,7 @@ export default function WebRankingsShell() {
                 variants={restContainer}
                 initial="hidden"
                 animate={topDone ? "show" : "hidden"}
-                style={{ pointerEvents: topDone ? "auto" : "none" }}
+                style={{ opacity: topDone ? 1 : 0.35 }}
               >
                 {restRows.length > 0 && (
                   <div className="space-y-2 pt-0.5">

@@ -25,6 +25,10 @@ import SummaryCardReveal from "./SummaryCardReveal";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import {
+  CYBER_GLASS_PANEL_SM,
+  CYBER_GLASS_PANEL_XL,
+} from "@/lib/ui/matchOverlayGlass";
+import {
   summaryCardShadowDesktopClass,
   summaryCardShadowLgClass,
   summaryCardShadowSmClass,
@@ -515,13 +519,12 @@ function Card({
 }) {
   const shell = compactShell
     ? [
-        "relative min-w-0 overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 text-center",
+        `${CYBER_GLASS_PANEL_SM} min-w-0 text-center`,
         summaryCardShadowSmClass,
-        "md:rounded-xl md:border-white/10",
         summaryCardShadowLgClass,
       ].join(" ")
     : [
-        "relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 text-center",
+        `${CYBER_GLASS_PANEL_XL} min-w-0 text-center`,
         summaryCardShadowDesktopClass,
       ].join(" ");
 

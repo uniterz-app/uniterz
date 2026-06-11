@@ -410,7 +410,10 @@ export default function RankingCard({
               >
                 {r.displayName ?? r.handle ?? "Unknown"}
               </div>
-              <RankDeltaBadge delta={r.rankDeltaPlaces} />
+              <RankDeltaBadge
+                delta={r.rankDeltaPlaces}
+                language={language}
+              />
               {r.plan === "pro" ? (
                 <ProCyberBadge
                   {...proBadgeStaticMotion}

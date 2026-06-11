@@ -11,6 +11,7 @@ import { t } from "@/lib/i18n/t";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { metricValueMinWidthCh } from "@/lib/format/metricDecimals";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL_SM } from "@/lib/ui/matchOverlayGlass";
 import {
   summaryCardShadowLgClass,
   summaryCardShadowSmClass,
@@ -109,7 +110,7 @@ function ScorePrecisionCard({
       <div
         ref={ref}
         className={[
-          "relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 md:rounded-xl md:border-white/10",
+          CYBER_GLASS_PANEL_SM,
           "p-2 md:p-6",
           summaryCardShadowSmClass,
           summaryCardShadowLgClass,

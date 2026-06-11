@@ -82,10 +82,9 @@ import {
 import type { League } from "@/lib/leagues";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import {
-  GAMES_CYBER_EASE,
-  GAMES_CYBER_ENTRY_DURATION_SEC,
-  GAMES_CYBER_SLOT_GAP_SEC,
-} from "@/app/component/games/cyberMotion";
+  resultCardPageSlot,
+  resultPageSlotItem,
+} from "@/lib/result/resultCyberMotion";
 import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
@@ -951,82 +950,38 @@ export default function ResultListWithOverlay({
 
   const easeOut = [0.22, 1, 0.36, 1] as const;
   const off = prefersReducedMotion
-    ? { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }
+    ? { opacity: 1, y: 0 }
     : undefined;
 
-  /** 日付帯→複数カードのスタッガーが終わる目安で次の日ブロックをずらす */
-  const resultListDayStaggerSec =
-    GAMES_CYBER_SLOT_GAP_SEC + GAMES_CYBER_ENTRY_DURATION_SEC * 2.12;
-
-  const resultListCyberRoot: Variants = prefersReducedMotion
+  const pageSlotVariants: Variants = prefersReducedMotion
     ? { hidden: {}, show: {} }
-    : {
-        hidden: {},
-        show: {
-          transition: {
-            staggerChildren: resultListDayStaggerSec,
-            delayChildren: 0.04,
-          },
-        },
-      };
+    : resultPageSlotItem;
 
-  const resultListCyberDaySlot: Variants = prefersReducedMotion
+  const resultCardSlotVariants: Variants = prefersReducedMotion
     ? { hidden: {}, show: {} }
-    : {
-        hidden: { opacity: 0, y: -10, filter: "blur(4px)" },
-        show: {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          transition: { duration: 0.22, ease: GAMES_CYBER_EASE },
-        },
-      };
+    : resultCardPageSlot;
 
-  /** 同一日内：各 Result カードを上から順に（DOM 順＝グリッドでは左→右・上→下） */
-  const resultCardsCyberOrch: Variants = prefersReducedMotion
-    ? { hidden: {}, show: {} }
-    : {
-        hidden: {},
-        show: {
-          transition: {
-            staggerChildren: GAMES_CYBER_SLOT_GAP_SEC * 0.88,
-            delayChildren: 0.02,
-          },
-        },
-      };
+  let entrySlot = 0;
+  const takeEntrySlot = () => entrySlot++;
 
-  const resultCardCyberItem: Variants = prefersReducedMotion
-    ? { hidden: {}, show: {} }
-    : {
-        hidden: {
-          opacity: 0,
-          y: -12,
-          scale: 0.99,
-          filter: "blur(5px)",
-        },
-        show: {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          filter: "blur(0px)",
-          transition: {
-            duration: GAMES_CYBER_ENTRY_DURATION_SEC * 0.92,
-            ease: GAMES_CYBER_EASE,
-          },
-        },
-      };
+  const pageMotionRoot = prefersReducedMotion
+    ? { initial: false as const, animate: undefined }
+    : { initial: "hidden" as const, animate: "show" as const };
 
   return (
     <LazyMotion features={domAnimation}>
     <>
-      <div
+      <motion.div
+        {...pageMotionRoot}
         className={[
           "relative z-20",
           isMobile ? "space-y-3" : "space-y-4",
         ].join(" ")}
       >
         {showResultLeagueTabs ? (
-          <div
+          <motion.div
+            variants={pageSlotVariants}
+            custom={takeEntrySlot()}
             className={[
               isMobile ? "mb-4 -mx-[18px]" : "mb-5 -mx-4",
             ].join(" ")}
@@ -1049,10 +1004,14 @@ export default function ResultListWithOverlay({
               labelMap={resultLeagueTabLabels}
               size={isMobile ? "md" : "lg"}
             />
-          </div>
+          </motion.div>
         ) : null}
 
-        <div className={isMobile ? "relative z-30 isolate mb-2" : "mb-2 flex w-full gap-0"}>
+        <motion.div
+          variants={pageSlotVariants}
+          custom={takeEntrySlot()}
+          className={isMobile ? "relative z-30 isolate mb-2" : "mb-2 flex w-full gap-0"}
+        >
           {!isMobile ? (
             <div
               className="shrink-0"
@@ -1164,12 +1123,11 @@ export default function ResultListWithOverlay({
                     prefersReducedMotion
                       ? undefined
                       : {
-                          hidden: { opacity: 0, y: 10, filter: "blur(5px)" },
+                          hidden: { opacity: 0, y: 8 },
                           visible: {
                             opacity: 1,
                             y: 0,
-                            filter: "blur(0px)",
-                            transition: { duration: 0.35, ease: easeOut },
+                            transition: { duration: 0.24, ease: easeOut },
                           },
                         }
                   }
@@ -1364,12 +1322,11 @@ export default function ResultListWithOverlay({
                     prefersReducedMotion
                       ? undefined
                       : {
-                          hidden: { opacity: 0, y: 10, filter: "blur(5px)" },
+                          hidden: { opacity: 0, y: 8 },
                           visible: {
                             opacity: 1,
                             y: 0,
-                            filter: "blur(0px)",
-                            transition: { duration: 0.35, ease: easeOut },
+                            transition: { duration: 0.24, ease: easeOut },
                           },
                         }
                   }
@@ -1400,12 +1357,11 @@ export default function ResultListWithOverlay({
                     prefersReducedMotion
                       ? undefined
                       : {
-                          hidden: { opacity: 0, y: 10, filter: "blur(5px)" },
+                          hidden: { opacity: 0, y: 8 },
                           visible: {
                             opacity: 1,
                             y: 0,
-                            filter: "blur(0px)",
-                            transition: { duration: 0.35, ease: easeOut },
+                            transition: { duration: 0.24, ease: easeOut },
                           },
                         }
                   }
@@ -1436,12 +1392,11 @@ export default function ResultListWithOverlay({
                     prefersReducedMotion
                       ? undefined
                       : {
-                          hidden: { opacity: 0, y: 10, filter: "blur(5px)" },
+                          hidden: { opacity: 0, y: 8 },
                           visible: {
                             opacity: 1,
                             y: 0,
-                            filter: "blur(0px)",
-                            transition: { duration: 0.35, ease: easeOut },
+                            transition: { duration: 0.24, ease: easeOut },
                           },
                         }
                   }
@@ -1472,12 +1427,11 @@ export default function ResultListWithOverlay({
                     prefersReducedMotion
                       ? undefined
                       : {
-                          hidden: { opacity: 0, y: 10, filter: "blur(5px)" },
+                          hidden: { opacity: 0, y: 8 },
                           visible: {
                             opacity: 1,
                             y: 0,
-                            filter: "blur(0px)",
-                            transition: { duration: 0.35, ease: easeOut },
+                            transition: { duration: 0.24, ease: easeOut },
                           },
                         }
                   }
@@ -1497,13 +1451,10 @@ export default function ResultListWithOverlay({
           ) : null}
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <motion.div
+        <div
           className={["flex flex-col", isMobile ? "gap-3" : "gap-4"].join(" ")}
-          variants={resultListCyberRoot}
-          initial={prefersReducedMotion ? false : "hidden"}
-          animate="show"
         >
         <AnimatePresence mode="wait">
           {totalLoaded > 0 &&
@@ -1557,104 +1508,77 @@ export default function ResultListWithOverlay({
             language
           );
 
+          const cardsGridClass = isMobile
+            ? "flex min-w-0 w-full flex-col gap-3"
+            : isSingleWebCard
+              ? "flex min-w-0 w-full justify-center"
+              : "grid min-w-0 w-full grid-cols-1 gap-4 sm:grid-cols-2";
+
+          const headerSlot = prefersReducedMotion ? undefined : takeEntrySlot();
+
           return (
-            <motion.div
+            <ResultDayPipeGroup
               key={day.dateLabel}
-              variants={resultListCyberDaySlot}
-              className="w-full"
+              dateLabel={day.dateLabel}
+              isMobile={isMobile}
+              reducedMotion={Boolean(prefersReducedMotion)}
+              dayPoints={dayPts}
+              headerEntrySlot={headerSlot}
+              cardsClassName={cardsGridClass}
             >
-              <ResultDayPipeGroup
-                dateLabel={day.dateLabel}
-                isMobile={isMobile}
-                reducedMotion={Boolean(prefersReducedMotion)}
-                dayPoints={dayPts}
-                listCyberStagger={!prefersReducedMotion}
-                listCyberCardStagger={!prefersReducedMotion}
-              >
-                {prefersReducedMotion ? (
-                  <div
-                    className={
-                      isMobile
-                        ? "space-y-3 pt-2"
-                        : isSingleWebCard
-                          ? "flex justify-center pt-2"
-                          : "grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
+              {displayPosts.map((post) => {
+                const card = (
+                  <ResultCard
+                    post={post}
+                    onOpen={open}
+                    language={language}
+                    platform={platform}
+                    scheduleDense={isMobile}
+                    ratingBarsImmediate={filteredTotalLoaded === 1}
+                    showPreKickoffDismiss={canDismissResultListPostNow(
+                      post,
+                      listNowTick
+                    )}
+                    onPreKickoffDismiss={() =>
+                      setDeleteConfirmPost(post)
                     }
-                  >
-                    {displayPosts.map((post) => (
-                      <div
-                        key={post.id}
-                        className={isSingleWebCard ? "w-full max-w-[640px]" : "w-full"}
-                      >
-                        <ResultCard
-                          post={post}
-                          onOpen={open}
-                          language={language}
-                          platform={platform}
-                          scheduleDense={isMobile}
-                          ratingBarsImmediate={filteredTotalLoaded === 1}
-                          showPreKickoffDismiss={canDismissResultListPostNow(
-                            post,
-                            listNowTick
-                          )}
-                          onPreKickoffDismiss={() =>
-                            setDeleteConfirmPost(post)
-                          }
-                          viewerUid={viewerUid}
-                          gamesRoutePrefix={gamesRoutePrefix}
-                          onRequestPredictEdit={requestPredictEditFromCard}
-                          cardClockMs={listNowTick}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
+                    viewerUid={viewerUid}
+                    gamesRoutePrefix={gamesRoutePrefix}
+                    onRequestPredictEdit={requestPredictEditFromCard}
+                    cardClockMs={listNowTick}
+                  />
+                );
+
+                if (prefersReducedMotion) {
+                  return (
+                    <div
+                      key={post.id}
+                      className={
+                        isSingleWebCard ? "w-full max-w-[640px]" : "w-full"
+                      }
+                    >
+                      {card}
+                    </div>
+                  );
+                }
+
+                return (
                   <motion.div
+                    key={post.id}
+                    variants={resultCardSlotVariants}
+                    custom={takeEntrySlot()}
                     className={
-                      isMobile
-                        ? "flex min-w-0 w-full flex-col gap-3 pt-2"
-                        : isSingleWebCard
-                          ? "flex min-w-0 w-full justify-center pt-2"
-                          : "grid min-w-0 w-full grid-cols-1 gap-4 pt-2 sm:grid-cols-2"
+                      isSingleWebCard ? "w-full max-w-[640px]" : "w-full"
                     }
-                    variants={resultCardsCyberOrch}
-                    initial="hidden"
-                    animate="show"
                   >
-                    {displayPosts.map((post) => (
-                      <motion.div
-                        key={post.id}
-                        variants={resultCardCyberItem}
-                        className={isSingleWebCard ? "w-full max-w-[640px]" : "w-full"}
-                      >
-                        <ResultCard
-                          post={post}
-                          onOpen={open}
-                          language={language}
-                          platform={platform}
-                          scheduleDense={isMobile}
-                          ratingBarsImmediate={filteredTotalLoaded === 1}
-                          showPreKickoffDismiss={canDismissResultListPostNow(
-                            post,
-                            listNowTick
-                          )}
-                          onPreKickoffDismiss={() =>
-                            setDeleteConfirmPost(post)
-                          }
-                          viewerUid={viewerUid}
-                          gamesRoutePrefix={gamesRoutePrefix}
-                          onRequestPredictEdit={requestPredictEditFromCard}
-                          cardClockMs={listNowTick}
-                        />
-                      </motion.div>
-                    ))}
+                    {card}
                   </motion.div>
-                )}
-              </ResultDayPipeGroup>
-            </motion.div>
+                );
+              })}
+            </ResultDayPipeGroup>
           );
         })}
-        </motion.div>
+        </div>
 
         {!postsCacheCapped && hasMore && (
           <div ref={sentinelRef} className="h-10" />
@@ -1688,7 +1612,7 @@ export default function ResultListWithOverlay({
             {m.results.showingLatest.replace("{n}", String(RESULT_POSTS_MAX_CACHED))}
           </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {overlayPortalReady &&
       matchDayPickerOpen &&
