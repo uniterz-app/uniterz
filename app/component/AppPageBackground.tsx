@@ -9,7 +9,11 @@ import GamesPageBackground from "@/app/component/games/GamesPageBackground";
  */
 export default function AppPageBackground() {
   const pathname = usePathname();
-  const lite = pathname?.startsWith("/mobile") ?? false;
+  const isMobile = pathname?.startsWith("/mobile") ?? false;
+  /** ランキングはオーロラ・モートをフル表示（lite だと粒と色相が弱く見える） */
+  const isRankings =
+    pathname === "/mobile/rankings" || pathname === "/web/rankings";
+  const lite = isMobile && !isRankings;
 
   return <GamesPageBackground lite={lite} />;
 }

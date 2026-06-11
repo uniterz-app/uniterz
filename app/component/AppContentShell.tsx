@@ -16,6 +16,7 @@ export default function AppContentShell({ children }: AppContentShellProps) {
 
   return (
     <div
+      className="relative z-10"
       style={{
         perspective: isMobileRoute ? undefined : "1400px",
         width: "100%",
