@@ -304,12 +304,12 @@ export default function MobileRankingsPage() {
         <CyberPageBackground />
       </div>
 
-      <div className="relative z-10 h-full overflow-y-auto overscroll-y-contain pb-bottom-nav">
+      <div className="relative z-10 h-full max-w-full overflow-x-clip overflow-y-auto overscroll-y-contain pb-bottom-nav">
         <div className="sticky top-0 z-40">
           <Header />
         </div>
 
-        <div className="space-y-3 px-3 pt-2">
+        <div className="max-w-full space-y-3 overflow-x-clip px-3 pt-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -448,7 +448,7 @@ export default function MobileRankingsPage() {
             </p>
           </div>
         ) : listReady ? (
-          <div onTouchStart={handleCardsTouchStart} onTouchEnd={handleCardsTouchEnd}>
+          <div onTouchStart={handleCardsTouchStart} onTouchEnd={handleCardsTouchEnd} className="max-w-full overflow-x-clip">
             <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
               <div className="relative z-10">

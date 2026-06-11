@@ -108,7 +108,7 @@ const CARD_LAYOUT: Record<
   }
 > = {
   mobile: {
-    outerPad: "overflow-visible px-3 pt-3",
+    outerPad: "max-w-full overflow-x-clip px-3 pt-3",
     gridCols: "grid-cols-[118px_1fr]",
     rankTower: "px-2 pb-2 pt-2.5",
     rankLabel: "text-[11px] tracking-[0.22em]",
@@ -135,7 +135,7 @@ const CARD_LAYOUT: Record<
     fallbackValue: "text-[21px]",
   },
   web: {
-    outerPad: "overflow-visible px-0 pt-4",
+    outerPad: "max-w-full overflow-x-clip px-0 pt-4",
     gridCols: "grid-cols-[156px_1fr]",
     rankTower: "px-3 pb-3 pt-3",
     rankLabel: "text-[13px] tracking-[0.24em]",
@@ -554,7 +554,7 @@ export default function MyRankCard({
   }, [ready, barsReady, cardResetKey]);
 
   const outerPad = mobileWide
-    ? "overflow-visible -mx-1.5 px-0 pt-3 sm:mx-0 sm:px-3"
+    ? "max-w-full overflow-x-clip px-0 pt-3 sm:px-3"
     : ui.outerPad;
 
   const rankDisplay =
@@ -968,7 +968,7 @@ export default function MyRankCard({
   const tiltWrapped = (
     <div
       data-rank-card-root
-      className="relative isolate"
+      className="relative isolate max-w-full overflow-x-clip"
     >
       <MyRankCardBacklight />
       <div
