@@ -1,9 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import AnimatedSplashScreen from "@/app/component/splash/AnimatedSplashScreen";
+import CssAnimatedSplashScreen from "@/app/component/splash/CssAnimatedSplashScreen";
 import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplashVisible";
+import { isPerfDebugSplashWebglDisabled } from "@/lib/perf/mobilePerfDebug";
+
+const WebAnimatedSplashScreen = dynamic(
+  () => import("@/app/component/splash/AnimatedSplashScreen"),
+  { ssr: false },
+);
 import { sanitizeInternalNext } from "@/lib/auth/safeNextRedirect";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { usePathname, useRouter } from "next/navigation";
@@ -66,6 +73,11 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
   const blocking = status === "loading" || mustBlockForGuest;
   const showBlockingSplash = useMinimumSplashVisible(blocking);
 
+  const SplashScreen =
+    platform === "mobile" || isPerfDebugSplashWebglDisabled()
+      ? CssAnimatedSplashScreen
+      : WebAnimatedSplashScreen;
+
   useEffect(() => {
     if (status !== "guest" || isPublic) return;
     const pathOnly = pathname ?? "";
@@ -75,7 +87,7 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
   }, [status, isPublic, guestSignupHref, router, pathname]);
 
   return (
-    <div className="min-h-dvh bg-app">
+    <div className="min-h-dvh">
       <AnimatePresence mode="wait">
         {showBlockingSplash ? (
           <motion.div
@@ -86,7 +98,7 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-0 z-100"
           >
-            <AnimatedSplashScreen />
+            <SplashScreen />
           </motion.div>
         ) : (
           <motion.div

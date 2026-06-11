@@ -1,3 +1,8 @@
+import {
+  CYBER_GLASS_SURFACE,
+  MATCH_OVERLAY_GLASS_PANEL,
+} from "@/lib/ui/matchOverlayGlass";
+
 /**
  * モバイルの試合一覧（dense）とリザルト一覧でカード横幅を揃える（MatchCard と同一値）。
  */
@@ -15,6 +20,19 @@ export const MOBILE_RESULT_CARD_MAX_W_CLASS = "max-w-[min(100%,21.5rem)]";
 export const MOBILE_RESULT_CARD_OUTER_CLASS =
   `mx-auto w-full ${MOBILE_RESULT_CARD_MAX_W_CLASS}`;
 
+/** モバイルリザルト日付帯：カード（21.5rem）より少し広め */
+export const MOBILE_RESULT_DAY_STRIP_MAX_W_CLASS =
+  "max-w-[min(100%,23.75rem)]";
+export const MOBILE_RESULT_DAY_STRIP_OUTER_CLASS =
+  `mx-auto w-full ${MOBILE_RESULT_DAY_STRIP_MAX_W_CLASS}`;
+
 /** MatchCard dense 時の外枠（リザルト一覧 scheduleDense と共有） */
-export const MOBILE_LIST_CARD_PANEL_DENSE =
-  "rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045)_0%,rgba(255,255,255,0.018)_42%,rgba(255,255,255,0.010)_100%),linear-gradient(180deg,rgba(8,8,8,0.18)_0%,rgba(8,8,8,0.18)_100%)] backdrop-blur-xl shadow-[0_12px_28px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.10),inset_0_-1px_0_rgba(255,255,255,0.03)]";
+export const MOBILE_LIST_CARD_PANEL_DENSE = `rounded-2xl ${CYBER_GLASS_SURFACE}`;
+
+/** カード内グリッド模様の不透明度（試合・リザルト一覧で共通） */
+export const LIST_CARD_GRID_OVERLAY_OPACITY_CLASS = "opacity-[0.32]";
+
+/** 一覧カードのガラス面（scheduleDense=true でモバイル dense パネル） */
+export function listCardPanelClass(scheduleDense: boolean): string {
+  return scheduleDense ? MOBILE_LIST_CARD_PANEL_DENSE : MATCH_OVERLAY_GLASS_PANEL;
+}

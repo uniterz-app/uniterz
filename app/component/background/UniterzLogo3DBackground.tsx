@@ -170,7 +170,16 @@ type GlowMat = THREE.MeshBasicMaterial & {
   };
 };
 
-function Logo3D({ scale = SCALE }: { scale?: number }) {
+function Logo3D({
+  scale = SCALE,
+  theme = THEME,
+  edgeGlowOpacity = 0.045,
+}: {
+  scale?: number;
+  theme?: BgColorTheme;
+  /** embed 時は縁の発光を強めてサイバー背景上でも視認できるようにする */
+  edgeGlowOpacity?: number;
+}) {
   const spinRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
   const emissiveMatsRef = useRef<NeonMat[]>([]);
@@ -194,14 +203,14 @@ function Logo3D({ scale = SCALE }: { scale?: number }) {
       obj.renderOrder = 1;
 
       const baseMat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color(THEME.baseColor),
-        emissive: new THREE.Color(THEME.emissiveColor),
-        emissiveIntensity: THEME.emissiveIntensity,
-        metalness: THEME.metalness,
-        roughness: THEME.roughness,
-        clearcoat: THEME.clearcoat,
-        clearcoatRoughness: THEME.clearcoatRoughness,
-        reflectivity: THEME.reflectivity,
+        color: new THREE.Color(theme.baseColor),
+        emissive: new THREE.Color(theme.emissiveColor),
+        emissiveIntensity: theme.emissiveIntensity,
+        metalness: theme.metalness,
+        roughness: theme.roughness,
+        clearcoat: theme.clearcoat,
+        clearcoatRoughness: theme.clearcoatRoughness,
+        reflectivity: theme.reflectivity,
         transparent: true,
         opacity: 0.92,
         side: THREE.DoubleSide,
@@ -210,7 +219,7 @@ function Logo3D({ scale = SCALE }: { scale?: number }) {
       }) as NeonMat;
 
       baseMat.userData = {
-        baseEmissiveIntensity: THEME.emissiveIntensity,
+        baseEmissiveIntensity: theme.emissiveIntensity,
         pulseOffset: Math.random() * Math.PI * 2,
         pulseSpeed: 0.62 + Math.random() * 0.06,
       };
@@ -220,9 +229,9 @@ function Logo3D({ scale = SCALE }: { scale?: number }) {
 
       if (obj.geometry) {
         const edgeGlowMat = new THREE.MeshBasicMaterial({
-          color: new THREE.Color(THEME.edgeGlowColor),
+          color: new THREE.Color(theme.edgeGlowColor),
           transparent: true,
-          opacity: 0.045,
+          opacity: edgeGlowOpacity,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
           side: THREE.DoubleSide,
@@ -230,7 +239,7 @@ function Logo3D({ scale = SCALE }: { scale?: number }) {
         }) as GlowMat;
 
         edgeGlowMat.userData = {
-          baseOpacity: 0.045,
+          baseOpacity: edgeGlowOpacity,
           pulseOffset: Math.random() * Math.PI * 2,
           pulseSpeed: 0.68 + Math.random() * 0.06,
         };
@@ -248,7 +257,7 @@ function Logo3D({ scale = SCALE }: { scale?: number }) {
     emissiveMatsRef.current = emissiveMats;
     glowMatsRef.current = glowMats;
     return s;
-  }, [scene]);
+  }, [scene, theme, edgeGlowOpacity]);
 
   useEffect(() => {
     if (!orientRef.current) return;
@@ -273,7 +282,7 @@ function Logo3D({ scale = SCALE }: { scale?: number }) {
     for (const mat of emissiveMatsRef.current) {
       const { baseEmissiveIntensity, pulseOffset, pulseSpeed } = mat.userData;
       const pulse = (Math.sin(t * pulseSpeed + pulseOffset) + 1) * 0.5;
-      mat.emissiveIntensity = baseEmissiveIntensity + pulse * THEME.pulseAmount;
+      mat.emissiveIntensity = baseEmissiveIntensity + pulse * theme.pulseAmount;
     }
 
     for (const mat of glowMatsRef.current) {
@@ -312,9 +321,12 @@ function FirstFrameSignal({ onFirstFrame }: { onFirstFrame?: () => void }) {
 }
 
 export type UniterzLogo3DBackgroundProps = {
-  /** page: ランキング等の背景。splash: 起動スプラッシュ用（やや大きめ・DPR 抑制） */
-  variant?: "page" | "splash";
+  /** page: ランキング等の背景。splash: 起動スプラッシュ用。embed: サイバー背景の奥に透過合成 */
+  variant?: "page" | "splash" | "embed";
   className?: string;
+  style?: React.CSSProperties;
+  /** embed / page でロゴの表示倍率を上書き */
+  logoScale?: number;
   /** splash 向け: WebGL 初回描画後に1回だけ呼ぶ */
   onFirstFrame?: () => void;
 };
@@ -322,11 +334,16 @@ export type UniterzLogo3DBackgroundProps = {
 export default function UniterzLogo3DBackground({
   variant = "page",
   className,
+  style,
+  logoScale: logoScaleProp,
   onFirstFrame,
 }: UniterzLogo3DBackgroundProps) {
   const isSplash = variant === "splash";
-  const logoScale = isSplash ? SPLASH_LOGO_SCALE : SCALE;
-  const dpr: [number, number] = isSplash ? [1, 1.25] : [1, 1.5];
+  const isEmbed = variant === "embed";
+  /** embed はサイバー背景上で視認できるようシアン系の current テーマを使う */
+  const activeTheme = isEmbed ? COLOR_THEMES.current : THEME;
+  const logoScale = logoScaleProp ?? (isSplash ? SPLASH_LOGO_SCALE : SCALE);
+  const dpr: [number, number] = isSplash ? [1, 1.25] : isEmbed ? [1, 1.35] : [1, 1.5];
 
   return (
     <div
@@ -334,40 +351,43 @@ export default function UniterzLogo3DBackground({
         "pointer-events-none absolute inset-0 z-0 h-full w-full",
         className ?? "",
       ].join(" ")}
-      style={{ backgroundColor: THEME.bgColor }}
+      style={{
+        ...(isEmbed ? undefined : { backgroundColor: THEME.bgColor }),
+        ...style,
+      }}
     >
       <Canvas
         className="h-full w-full"
         dpr={dpr}
         gl={{
           antialias: true,
-          alpha: false,
+          alpha: isEmbed,
           powerPreference: "high-performance",
         }}
         camera={{ position: [0, 0, 8], fov: 28 }}
       >
-        <color attach="background" args={[THEME.bgColor]} />
-        <fog attach="fog" args={[THEME.fogColor, 9, 22]} />
+        {!isEmbed && <color attach="background" args={[THEME.bgColor]} />}
+        {!isEmbed && <fog attach="fog" args={[THEME.fogColor, 9, 22]} />}
 
-        <ambientLight intensity={THEME.ambientIntensity} />
+        <ambientLight intensity={activeTheme.ambientIntensity} />
 
         <directionalLight
           position={[4, 6, 8]}
-          intensity={THEME.directionalIntensity}
+          intensity={activeTheme.directionalIntensity}
           color="#dcfffd"
         />
 
         <pointLight
           position={[-4, 4, 7]}
-          intensity={THEME.pointLightAIntensity}
-          color={THEME.pointLightAColor}
+          intensity={activeTheme.pointLightAIntensity}
+          color={activeTheme.pointLightAColor}
           distance={24}
         />
 
         <pointLight
           position={[4, -1, 7]}
-          intensity={THEME.pointLightBIntensity}
-          color={THEME.pointLightBColor}
+          intensity={activeTheme.pointLightBIntensity}
+          color={activeTheme.pointLightBColor}
           distance={22}
         />
 
@@ -378,14 +398,18 @@ export default function UniterzLogo3DBackground({
           distance={18}
         />
 
-        <Logo3D scale={logoScale} />
+        <Logo3D
+          scale={logoScale}
+          theme={activeTheme}
+          edgeGlowOpacity={isEmbed ? 0.11 : 0.045}
+        />
 
         <EffectComposer multisampling={0}>
           <Bloom
             blendFunction={BlendFunction.SCREEN}
-            intensity={THEME.bloomIntensity}
-            luminanceThreshold={THEME.bloomThreshold}
-            luminanceSmoothing={THEME.bloomSmoothing}
+            intensity={activeTheme.bloomIntensity}
+            luminanceThreshold={activeTheme.bloomThreshold}
+            luminanceSmoothing={activeTheme.bloomSmoothing}
             mipmapBlur
           />
         </EffectComposer>
@@ -393,7 +417,7 @@ export default function UniterzLogo3DBackground({
         {onFirstFrame ? <FirstFrameSignal onFirstFrame={onFirstFrame} /> : null}
       </Canvas>
 
-      {/* splash では Canvas の上に HTML を重ねず、まず3Dだけを見せる（装飾は AnimatedSplashScreen 側） */}
+      {/* splash では Canvas の上に HTML を重ねず。embed も透過合成のためオーバーレイなし */}
       {variant === "page" && (
         <>
           <div

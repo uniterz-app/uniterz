@@ -61,7 +61,7 @@ const PlayoffFullBracketMobileLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="mt-4 min-h-[280px] rounded-2xl border border-white/15 bg-white/5 p-6 text-center text-sm text-white/70">
+      <div className={`${CYBER_GLASS_PANEL} mt-4 min-h-[280px] p-6 text-center text-sm text-white/70`}>
         loading...
       </div>
     ),
@@ -103,6 +103,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import {
   getProfileMaxStreakLabels,
@@ -510,11 +511,11 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           </>
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
-            <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
+            <div className={`${CYBER_GLASS_PANEL} mt-4 space-y-3 p-6 text-center`}>
               <p className="text-sm text-white/70">loading...</p>
             </div>
           ) : !playoffDisplayData ? (
-            <div className="mt-4 space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
+            <div className={`${CYBER_GLASS_PANEL} mt-4 space-y-3 p-6 text-center`}>
               <p
                 className={[
                   nameBebas.className,
@@ -567,7 +568,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
         ) : isMyPro && isTargetPro ? (
           <ProAnalysisLazy />
         ) : (
-          <div className="space-y-3 rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
+          <div className={`${CYBER_GLASS_PANEL} space-y-3 p-6 text-center`}>
             <p className="text-sm text-white/70">
               {m.pro.upgradeToSeeAll}
             </p>

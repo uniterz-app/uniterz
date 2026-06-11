@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { nameBebas } from "@/lib/fonts";
 import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 
 type Props = {
   season: string;
@@ -53,7 +54,7 @@ export default function PlayoffBracketMarketHeader({
   const bracketCount = useCountUp(totalEntries, true, 1200);
 
   return (
-    <header className="relative overflow-hidden rounded-2xl bg-[#050814]/80 px-6 py-2 text-white shadow-[0_10px_30px_rgba(0,0,0,0.55)]">
+    <header className={`${CYBER_GLASS_PANEL} px-6 py-2 text-white shadow-[0_10px_30px_rgba(0,0,0,0.55)]`}>
       <div
         className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
         style={PROFILE_SHELL_GRID_STYLE}

@@ -9,6 +9,7 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 
 type MarketCountMap = Record<string, number>;
 
@@ -103,7 +104,7 @@ export default function PlayoffBracketChampionMarket({
 
   if (rows.length === 0) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+      <div className={`${CYBER_GLASS_PANEL} p-5 text-sm text-white/60`}>
         <div
           className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
           style={PROFILE_SHELL_GRID_STYLE}
@@ -117,7 +118,7 @@ export default function PlayoffBracketChampionMarket({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.55)]">
+    <div className={`${CYBER_GLASS_PANEL} p-2 shadow-[0_10px_30px_rgba(0,0,0,0.55)]`}>
       <div
         className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
         style={PROFILE_SHELL_GRID_STYLE}

@@ -14,6 +14,7 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 
 type MarketCountMap = Record<string, number>;
 
@@ -164,7 +165,7 @@ function TeamCard({
         delay: cardIndex * 0.05,
         ease: [0.22, 1, 0.36, 1],
       }}
-      className="relative overflow-hidden w-full rounded-2xl border border-white/15 bg-[#050814]/80 px-3 py-3 text-left text-white md:px-4 md:py-4"
+      className={`${CYBER_GLASS_PANEL} w-full px-3 py-3 text-left text-white md:px-4 md:py-4`}
     >
       <div
         className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
@@ -320,7 +321,7 @@ export default function PlayoffBracketTeamProgressMarket({
 
   if (rows.length === 0) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-white/60">
+      <div className={`${CYBER_GLASS_PANEL} p-5 text-sm text-white/60`}>
         <div
           className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
           style={PROFILE_SHELL_GRID_STYLE}

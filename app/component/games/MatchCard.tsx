@@ -38,9 +38,10 @@ import { getGameEventTag } from "@/lib/events/eventRules";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
+  LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
   MOBILE_LIST_CARD_OUTER_CLASS,
-  MOBILE_LIST_CARD_PANEL_DENSE,
   MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS,
+  listCardPanelClass,
 } from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
@@ -288,8 +289,12 @@ const isPredicted = !!myPostId;
 const prefix = useSectionPrefix();
 const pathname = usePathname();
 const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
+  /** 一覧のガラス面・レイアウト dense（リザルト一覧 scheduleDense と同条件） */
+  const listScheduleDense = dense || (isMobile && !inPredictOverlay);
+  const listPanelClass = listCardPanelClass(listScheduleDense);
   /** モバイル dense / W杯コンパクト一覧 */
-  const mobileDense = (dense && isMobile) || (compact && league === "wc");
+  const mobileDense =
+    (listScheduleDense && isMobile) || (compact && league === "wc");
   const showWcBroadcastRow =
     league === "wc" &&
     broadcastLabels.length > 0 &&
@@ -825,128 +830,85 @@ const normalStyle: React.CSSProperties = {
   boxShadow: "none",
 };
 
-return (
-<motion.div
-  layout={
-    !isMobile && !disableCardMotion && !sharedTransitionBaseKey
-  }
-  layoutId={isMobile ? undefined : sharedLayoutId}
-  // backdrop-blur 要素の transform は毎フレーム再ブラーを誘発するため、入場は opacity のみ。
-  // 行レベルでは動かさず、カードの出現はこのフェード一本に集約する
-  initial={entryTransition ? { opacity: 0 } : false}
-  animate={
-    entryTransition
-      ? { scale: cardShellPressScale, opacity: 1 }
-      : useFullCardHitLayer
-        ? { scale: cardShellPressScale }
-        : undefined
-  }
-  transition={
-    isMobile
-      ? entryTransition
-        ? {
-            scale: {
-              type: "tween" as const,
-              delay: entryTransition(ENTRY_GROUP_SHELL).delay,
-              ...(useFullCardHitLayer && !reduceMotion
-                ? {
-                    duration: 0.12,
-                    ease: "easeOut" as const,
-                  }
-                : {
-                    duration: entryTransition(ENTRY_GROUP_SHELL).duration + 0.06,
-                    ease: entryTransition(ENTRY_GROUP_SHELL).ease,
-                  }),
-            },
-            opacity: {
-              type: "tween" as const,
-              delay: entryTransition(ENTRY_GROUP_SHELL).delay,
-              duration: entryTransition(ENTRY_GROUP_SHELL).duration * 0.55,
-              ease: entryTransition(ENTRY_GROUP_SHELL).ease,
-            },
-          }
-        : useFullCardHitLayer && !reduceMotion
-          ? {
-              scale: {
-                type: "tween" as const,
-                duration: 0.12,
-                ease: "easeOut",
-              },
-            }
-          : {}
-      : {
-          layout: { duration: 0.22 },
-          ...(entryTransition
-            ? {
-                scale: {
-                  type: "tween" as const,
-                  delay: entryTransition(ENTRY_GROUP_SHELL).delay,
-                  ...(useFullCardHitLayer && !reduceMotion
-                    ? {
-                        duration: 0.12,
-                        ease: "easeOut",
-                      }
-                    : {
-                        duration: entryTransition(ENTRY_GROUP_SHELL).duration + 0.06,
-                        ease: entryTransition(ENTRY_GROUP_SHELL).ease,
-                      }),
-                },
-                opacity: {
-                  type: "tween" as const,
-                  delay: entryTransition(ENTRY_GROUP_SHELL).delay,
-                  duration: entryTransition(ENTRY_GROUP_SHELL).duration * 0.55,
-                  ease: entryTransition(ENTRY_GROUP_SHELL).ease,
-                },
-              }
-            : useFullCardHitLayer && !reduceMotion
-              ? {
-                  scale: {
-                    type: "tween" as const,
-                    duration: 0.12,
-                    ease: "easeOut",
-                  },
-                }
-              : {}),
-        }
-  }
-className={[
-  "group relative overflow-hidden text-white",
-  inPredictOverlay && isMobile
-    ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
-    : mobileDense
-      ? MOBILE_LIST_CARD_OUTER_CLASS
-      : "mx-auto max-w-[1200px] w-full",
-disableCardMotion
-  ? ""
-  : isMobile
-    ? ""
-    : [
-        "transition-opacity duration-200",
-        navigating ? "opacity-90" : "",
-      ].join(" "),
-dense
-  ? MOBILE_LIST_CARD_PANEL_DENSE
-  : "rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_42%,rgba(255,255,255,0.012)_100%),linear-gradient(180deg,rgba(8,8,8,0.18)_0%,rgba(8,8,8,0.18)_100%)] backdrop-blur-xl shadow-[0_14px_36px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(255,255,255,0.04)]",
-    isPredicted ? "!border-zinc-500/50" : "",
+  // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
+  const shellClassName = [
+    "group relative overflow-hidden text-white",
+    inPredictOverlay && isMobile
+      ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
+      : mobileDense
+        ? MOBILE_LIST_CARD_OUTER_CLASS
+        : "mx-auto max-w-[1200px] w-full",
+    disableCardMotion
+      ? ""
+      : isMobile
+        ? ""
+        : [
+            "transition-opacity duration-200",
+            navigating ? "opacity-90" : "",
+          ].join(" "),
     hideLine
       ? mobileDense
         ? "pb-1 md:pb-2"
         : "pb-2 md:pb-3"
       : "",
     className || "",
-  ].join(" ")}
- style={{
-  transformOrigin: "50% 50%",
-  ...(isMobile ? {} : { willChange: "transform" as const }),
-  ...(vtBoundsName
-    ? ({
-        viewTransitionName: vtBoundsName,
-        ...(vtBoundsName !== "none"
-          ? { viewTransitionClass: "schedule-shared-bounds" }
-          : {}),
-      } as React.CSSProperties)
-    : {}),
-}}
+  ].join(" ");
+
+  const glassShellClassName = [
+    "pointer-events-none absolute inset-0 z-0",
+    listPanelClass,
+    isPredicted ? "!border-zinc-500/50" : "",
+  ].join(" ");
+
+  const shellVtStyle: React.CSSProperties = {
+    ...(vtBoundsName
+      ? ({
+          viewTransitionName: vtBoundsName,
+          ...(vtBoundsName !== "none"
+            ? { viewTransitionClass: "schedule-shared-bounds" }
+            : {}),
+        } as React.CSSProperties)
+      : {}),
+  };
+
+  const contentShellTransition =
+    entryTransition
+      ? {
+          opacity: {
+            type: "tween" as const,
+            delay: entryTransition(ENTRY_GROUP_SHELL).delay,
+            duration: entryTransition(ENTRY_GROUP_SHELL).duration * 0.55,
+            ease: entryTransition(ENTRY_GROUP_SHELL).ease,
+          },
+          scale: {
+            type: "tween" as const,
+            duration: 0.12,
+            ease: "easeOut" as const,
+          },
+        }
+      : useFullCardHitLayer && !reduceMotion
+        ? {
+            scale: {
+              type: "tween" as const,
+              duration: 0.12,
+              ease: "easeOut" as const,
+            },
+          }
+        : undefined;
+
+  const Shell = isMobile ? "div" : motion.div;
+  const shellMotionProps = isMobile
+    ? {}
+    : {
+        layout: !disableCardMotion && !sharedTransitionBaseKey,
+        layoutId: sharedLayoutId,
+      };
+
+return (
+<Shell
+  {...shellMotionProps}
+  className={shellClassName}
+  style={shellVtStyle}
 >
       {useFullCardHitLayer ? (
         onOpenPredict ? (
@@ -983,23 +945,20 @@ dense
         )
       ) : null}
 
-      <motion.div
-        className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl"
-        // 背景テクスチャはシェルと同時にフェードのみ（カード内で別々に動かさない）
-        initial={entryTransition ? { opacity: 0 } : false}
-        animate={entryTransition ? { opacity: 1 } : undefined}
-        transition={entryTransition ? entryTransition(ENTRY_GROUP_SHELL) : undefined}
-        aria-hidden
-      >
+      <div className={glassShellClassName} aria-hidden />
+
       <div
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-[0.14]"
+        className={[
+          "pointer-events-none absolute inset-0 z-[1] rounded-2xl",
+          LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
+        ].join(" ")}
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
 
 {/* 試合終了後は市場バイアスの色帯・境界線を出さない */}
 {showMarketBias && marketBias && status !== "final" && (
-  <div className="pointer-events-none absolute inset-0 z-1 overflow-hidden rounded-2xl">
+  <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
     {/* HOME 側バー */}
     <div
       className="absolute left-0 top-0 h-full"
@@ -1050,29 +1009,16 @@ dense
   </div>
 )}
 
-<div
-  aria-hidden
-  className="pointer-events-none absolute inset-px rounded-2xl"
-  style={{
-    boxShadow: `
-      inset 0 0 0 1px rgba(255,255,255,0.04),
-      inset 0 12px 24px rgba(255,255,255,0.018)
-    `,
-  }}
-/>
-
-
-
-      <div
-  aria-hidden
-  className="pointer-events-none absolute inset-0 rounded-2xl"
-  style={{
-background:
-  "linear-gradient(180deg, rgba(255,255,255,0.016) 0%, rgba(255,255,255,0.006) 26%, rgba(255,255,255,0.00) 46%)",
-  }}
-/>
-      </motion.div>
-
+      <motion.div
+        className="relative z-10"
+        style={{ transformOrigin: "50% 50%" }}
+        initial={entryTransition ? { opacity: 0 } : false}
+        animate={{
+          opacity: entryTransition ? 1 : undefined,
+          scale: cardShellPressScale,
+        }}
+        transition={contentShellTransition}
+      >
       {/* 入場時に一度だけ上→下へ走るスキャン光（カードを走査して実体化させる演出） */}
       {entryTransition && !reduceMotion && (
         <motion.div
@@ -1703,7 +1649,8 @@ background:
           )}
         </motion.div>
       )}
-    </motion.div>
+      </motion.div>
+    </Shell>
   );
 }
 export default React.memo(MatchCard);

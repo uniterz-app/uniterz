@@ -34,7 +34,7 @@ export default function LegalPageLayout({
     prefersSideMenuAria && user ? m.common.backToSideMenu : m.common.back;
 
   return (
-    <div className="min-h-screen w-full bg-[#050814]">
+    <div className="min-h-screen w-full">
       <button
         type="button"
         onClick={goBack}

@@ -16,7 +16,6 @@ import {
 } from "@/app/component/rankings/_data/mockRows";
 import { motion, AnimatePresence } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
-import CyberPageBackground from "@/app/component/rankings/CyberPageBackground";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
@@ -300,10 +299,6 @@ export default function MobileRankingsPage() {
 
   return (
     <div className="relative h-dvh overflow-hidden bg-app">
-      <div className="pointer-events-none absolute inset-0">
-        <CyberPageBackground />
-      </div>
-
       <div className="relative z-10 h-full overflow-y-auto overscroll-y-contain pb-bottom-nav">
         <div className="sticky top-0 z-40">
           <Header />

@@ -12,7 +12,7 @@ type Props = {
   teamId?: string | null | undefined;
   /** リーグ国など teamId 以外の旗（例: "de" / "gb-eng"） */
   iso2?: string | null | undefined;
-  /** 試合カード用の枠サイズ等を渡す（横長矩形なら例: w-[4.5rem] h-[3rem]） */
+  /** 試合カード用の枠サイズ等を渡す（4:3 なら例: aspect-[4/3] w-[5.1rem]） */
   className?: string;
   /** 円形にしたいとき true（既定: false。横長フラッグはソフトな角丸） */
   rounded?: boolean;
@@ -22,9 +22,20 @@ type Props = {
   decorative?: boolean;
   /**
    * inline: キープレイヤー横などの小旗（4:3 矩形・角丸最小・影なし）
+   * hologram: 予想ページ台座内（枠線なし・ドロップシャドウで浮遊感）
    * default: 試合カード等の通常サイズ
    */
-  variant?: "default" | "inline";
+  variant?: "default" | "inline" | "hologram";
+};
+
+/** 予想アリーナ内の国旗用ドロップシャドウ */
+const HOLOGRAM_FLAG_DROP_SHADOW =
+  "drop-shadow(0 1px 3px rgba(0,0,0,0.72)) drop-shadow(0 5px 14px rgba(0,0,0,0.48)) drop-shadow(0 0 8px rgba(255,255,255,0.12))";
+
+/** 台座の perspective で縦が潰れないよう、旗面を手前に傾ける */
+const HOLOGRAM_FLAG_TILT_STYLE: CSSProperties = {
+  transform: "rotateX(-20deg)",
+  transformStyle: "preserve-3d",
 };
 
 /**
@@ -57,7 +68,7 @@ export default function CountryFlag({
         : teamIdToCountryName(teamId, "en") ?? "Country flag");
 
   const outerStyle: CSSProperties =
-    variant === "inline"
+    variant === "inline" || variant === "hologram"
       ? {}
       : {
           boxShadow:
@@ -68,7 +79,9 @@ export default function CountryFlag({
     ? "rounded-full"
     : variant === "inline"
       ? "rounded-[1px]"
-      : "rounded-md";
+      : variant === "hologram"
+        ? "rounded-[2px]"
+        : "rounded-md";
 
   if (!iso2) {
     return (
@@ -89,13 +102,52 @@ export default function CountryFlag({
       ? { objectFit: "fill", objectPosition: "center" }
       : { objectFit: "cover", objectPosition: "center" };
 
+  if (variant === "hologram") {
+    return (
+      <span
+        className={clsx(
+          "inline-block shrink-0 overflow-hidden",
+          shapeClass,
+          className,
+        )}
+        style={HOLOGRAM_FLAG_TILT_STYLE}
+        aria-hidden={decorative ? true : undefined}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/flags/4x3/${iso2}.svg`}
+          alt={decorative ? "" : countryName}
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          className="block h-full w-full select-none border-0 shadow-none outline-none"
+          style={{
+            objectFit: "cover",
+            objectPosition: "center",
+            border: "none",
+            outline: "none",
+            boxShadow: "none",
+            background: "transparent",
+            filter: HOLOGRAM_FLAG_DROP_SHADOW,
+            WebkitFilter: HOLOGRAM_FLAG_DROP_SHADOW,
+          }}
+        />
+      </span>
+    );
+  }
+
+  const ringClass =
+    variant === "inline"
+      ? "h-[1.125rem] w-[1.5rem] shrink-0 ring-1 ring-inset ring-white/20"
+      : variant === "hologram"
+        ? ""
+        : "ring-1 ring-white/15";
+
   return (
     <span
       className={clsx(
         "inline-block overflow-hidden",
-        variant === "inline"
-          ? "h-[1.125rem] w-[1.5rem] shrink-0 ring-1 ring-inset ring-white/20"
-          : "ring-1 ring-white/15",
+        ringClass,
         shapeClass,
         className,
       )}

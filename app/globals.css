@@ -31,13 +31,9 @@
   --bottom-nav-clearance: calc(26px + 72px + env(safe-area-inset-bottom, 0px));
 }
 
-/* 全ページ共通背景：ベース色に控えめなエメラルド／ティールのグローを重ねる */
+/* レイアウト用：実背景はルートの AppPageBackground。ここは透過して重ねる */
 .bg-app {
-  background:
-    radial-gradient(1100px 720px at 88% -12%, rgba(52, 211, 153, 0.08), transparent 62%),
-    radial-gradient(900px 640px at -12% 28%, rgba(34, 197, 94, 0.06), transparent 62%),
-    radial-gradient(1200px 700px at 50% 112%, rgba(45, 212, 191, 0.06), transparent 65%),
-    var(--color-app-bg);
+  background: transparent;
 }
 
 /* -------------------------------
@@ -1045,25 +1041,111 @@ body.splash-bg {
    仕様で保証されている CSS アニメーションで再生する
 ========================= */
 
-/* 緑系オーロラ：明 → 暗 → 明 */
-@keyframes gamesAuroraDim {
+/* オーロラ4相：緑 → 青 → 紫 → 琥珀を順にクロスフェード */
+@keyframes gamesAuroraGreen {
   0%,
   100% {
     opacity: 1;
   }
-  50% {
-    opacity: 0.25;
+  20% {
+    opacity: 0.92;
+  }
+  28%,
+  88% {
+    opacity: 0.03;
+  }
+  96% {
+    opacity: 0.88;
   }
 }
 
-/* 青系オーロラ：暗 → 明 → 暗（緑系とクロスフェード） */
-@keyframes gamesAuroraGlow {
+@keyframes gamesAuroraBlue {
+  0%,
+  16% {
+    opacity: 0.03;
+  }
+  25%,
+  38% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0.03;
+  }
+}
+
+@keyframes gamesAuroraViolet {
+  0%,
+  41% {
+    opacity: 0.03;
+  }
+  50%,
+  63% {
+    opacity: 1;
+  }
+  71%,
+  100% {
+    opacity: 0.03;
+  }
+}
+
+@keyframes gamesAuroraAmber {
+  0%,
+  66% {
+    opacity: 0.03;
+  }
+  75%,
+  88% {
+    opacity: 1;
+  }
+  96%,
+  100% {
+    opacity: 0.03;
+  }
+}
+
+/* ベース闇の色相シフト（全面 filter より軽い） */
+@keyframes gamesBaseTintGreen {
   0%,
   100% {
-    opacity: 0;
+    opacity: 0.58;
   }
   50% {
-    opacity: 0.9;
+    opacity: 0.16;
+  }
+}
+
+@keyframes gamesBaseTintBlue {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes gamesBaseTintViolet {
+  0%,
+  24% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.46;
+  }
+  76%,
+  100% {
+    opacity: 0.1;
+  }
+}
+
+/* 微細グリッドのゆっくりした縦流れ */
+@keyframes gamesFieldDrift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(32px);
   }
 }
 
@@ -1088,23 +1170,23 @@ body.splash-bg {
   }
 }
 
-/* 上昇モート：y は等速、x は --mote-drift まで膨らんで戻る */
+/* 上昇モート：y は等速、x は --mote-drift まで膨らんで戻る（各粒は CSS 変数で個別化） */
 @keyframes gamesMoteRise {
   0% {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(var(--mote-start-x, 0), 0, 0);
     opacity: 0;
   }
   33% {
-    opacity: 0.7;
+    opacity: var(--mote-opacity-peak, 0.7);
   }
   50% {
     transform: translate3d(var(--mote-drift), -56vh, 0);
   }
   66% {
-    opacity: 0.55;
+    opacity: var(--mote-opacity-mid, 0.55);
   }
   100% {
-    transform: translate3d(0, -112vh, 0);
+    transform: translate3d(var(--mote-end-x, 0), -112vh, 0);
     opacity: 0;
   }
 }
