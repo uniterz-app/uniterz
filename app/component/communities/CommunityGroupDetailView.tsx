@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Copy, Share2 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { jp } from "@/lib/fonts";
@@ -16,12 +16,14 @@ import { periodLabel } from "@/lib/communities/labels";
 import type { CommunityLeague } from "@/lib/communities/types";
 import type { Language } from "@/lib/i18n/language";
 import {
-  ProCyberBadge,
-  proBadgeStaticMotion,
-} from "@/app/component/common/ProCyberBadge";
-import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
-import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
-import { communityMetricToMobile } from "@/lib/communities/leaderboardDisplayRow";
+  communityMetricToMobile,
+  communityRowToRankingCardRow,
+} from "@/lib/communities/leaderboardDisplayRow";
+import RankingCard from "@/app/component/rankings/RankingCard";
+import {
+  RankingsCyberPanel,
+  RankingsCyberSectionLabel,
+} from "@/app/component/rankings/RankingsCyberPanel";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import {
   fetchCommunityGroupDetail,
@@ -54,20 +56,6 @@ const rankRowEase = [0.22, 1, 0.36, 1] as const;
 function rankRowRevealDelay(index: number): number {
   if (index < RANK_ROW_STAGGER_COUNT) return index * RANK_ROW_STAGGER_STEP_S;
   return RANK_ROW_STAGGER_COUNT * RANK_ROW_STAGGER_STEP_S;
-}
-
-function displayMain(metric: CommunityMetric, row: CommunityGroupLeaderboardRow): string {
-  if (metric === "activeWinStreak") {
-    return String(Math.round(row.activeWinStreak));
-  }
-  if (metric === "winRate") {
-    const v = row.winRate <= 1 ? row.winRate : row.winRate / 100;
-    return `${Math.round(v * 1000) / 10}%`;
-  }
-  if (metric === "totalPrecision" || metric === "totalUpset") {
-    return (Math.round(row.sortValue * 10) / 10).toLocaleString();
-  }
-  return (Math.round(row.sortValue * 100) / 100).toLocaleString();
 }
 
 export type CommunityGroupDetailViewProps = {
@@ -105,7 +93,6 @@ export default function CommunityGroupDetailView({
   className = "",
 }: CommunityGroupDetailViewProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const initialCached = getCachedCommunityGroupDetail(groupId);
   const [summary, setSummary] = useState<CommunityGroupSummary | null>(
     () =>
@@ -389,12 +376,12 @@ export default function CommunityGroupDetailView({
     >
       {inOverlay ? <ShellGridOverlay /> : null}
       {(showBackLink || showCloseButton) && (
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-cyan-400/20 px-3 py-2.5">
           <div className="min-w-0">
             {showBackLink ? (
               <Link
                 href={rankingsHref}
-                className="text-xs text-cyan-300/90 underline"
+                className="font-mono text-[11px] uppercase tracking-[0.18em] text-cyan-300/90 underline-offset-2 hover:underline"
               >
                 ← {t.back}
               </Link>
@@ -406,7 +393,7 @@ export default function CommunityGroupDetailView({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-white/15 px-3 py-1 text-xs text-white/80 hover:bg-white/5"
+              className="rounded-none border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-100/90 hover:bg-cyan-500/15"
             >
               {t.close}
             </button>
@@ -445,62 +432,57 @@ export default function CommunityGroupDetailView({
 
         {!loadingDetail && summary && (
           <>
-            <h1
-              className={[
-                "font-bold leading-tight text-white",
-                isWeb ? "text-2xl" : "text-lg sm:text-xl",
-              ].join(" ")}
-            >
-              {summary.name}
-            </h1>
-            {summary.description ? (
-              <p
+            <RankingsCyberPanel subtle className="mb-4">
+              <h1
                 className={[
-                  "mt-2 whitespace-pre-wrap leading-relaxed text-white/65",
-                  isWeb ? "text-base" : "text-sm",
+                  "font-bold leading-tight text-cyan-50/95",
+                  isWeb ? "text-2xl" : "text-lg sm:text-xl",
                 ].join(" ")}
               >
-                {summary.description}
-              </p>
-            ) : null}
-            <p
-              className={[
-                "mt-2 text-white/55",
-                isWeb ? "text-sm" : "text-xs sm:text-sm",
-              ].join(" ")}
-            >
-              {t.members}: {summary.memberCount} ·{" "}
-              {formatCommunityCompetitionLine(
-                {
-                  rankingLeague: summary.rankingLeague ?? "all",
-                  rankingMetric: metric,
-                  rankingTeamIds: summary.rankingTeamIds,
-                },
-                language
-              )}{" "}
-              · {periodLabel("from_now", language)}
-            </p>
-
-            {summary.archived && (
-              <p className="mt-2 text-sm text-amber-200/90">{t.ended}</p>
-            )}
-
-            {summary.isOwner && !summary.archived && (
-              <div className="mt-4 space-y-2 rounded-xl border border-blue-400/20 bg-blue-500/8 p-3">
+                {summary.name}
+              </h1>
+              {summary.description ? (
                 <p
                   className={[
-                    "font-medium uppercase tracking-wide text-blue-200/70",
-                    isWeb ? "text-xs" : "text-[11px]",
+                    "mt-2 whitespace-pre-wrap leading-relaxed text-white/65",
+                    isWeb ? "text-base" : "text-sm",
                   ].join(" ")}
                 >
-                  {t.inviteLabel}
+                  {summary.description}
                 </p>
+              ) : null}
+              <p
+                className={[
+                  "mt-3 font-mono uppercase tracking-[0.1em] text-white/45",
+                  isWeb ? "text-xs" : "text-[11px] sm:text-xs",
+                ].join(" ")}
+              >
+                {t.members}: {summary.memberCount} ·{" "}
+                {formatCommunityCompetitionLine(
+                  {
+                    rankingLeague: summary.rankingLeague ?? "all",
+                    rankingMetric: metric,
+                    rankingTeamIds: summary.rankingTeamIds,
+                  },
+                  language
+                )}{" "}
+                · {periodLabel("from_now", language)}
+              </p>
+
+              {summary.archived && (
+                <p className="mt-2 text-sm text-amber-200/90">{t.ended}</p>
+              )}
+            </RankingsCyberPanel>
+
+            {summary.isOwner && !summary.archived && (
+              <RankingsCyberPanel subtle compact className="mb-4">
+                <RankingsCyberSectionLabel subtle>{t.inviteLabel}</RankingsCyberSectionLabel>
                 {summary.inviteCode ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <p
                       className={[
-                        "min-w-0 flex-1 font-mono font-bold tracking-[0.18em] text-white tabular-nums",
-                        isWeb ? "text-xl" : "text-lg",
+                        "min-w-0 flex-1 font-mono font-semibold tracking-[0.14em] text-cyan-50/90 tabular-nums",
+                        isWeb ? "text-lg" : "text-base",
                       ].join(" ")}
                     >
                       {summary.inviteCode}
@@ -510,7 +492,7 @@ export default function CommunityGroupDetailView({
                         type="button"
                         onClick={() => void onCopyInvite()}
                         className={[
-                          "flex items-center gap-1 rounded-lg border border-white/15 bg-white/10 px-2.5 py-1.5 font-semibold text-white/90",
+                          "flex items-center gap-1 rounded-none border border-cyan-400/18 bg-cyan-500/6 px-2.5 py-1.5 font-medium text-cyan-100/80",
                           isWeb ? "text-sm" : "text-xs",
                         ].join(" ")}
                       >
@@ -521,7 +503,7 @@ export default function CommunityGroupDetailView({
                         type="button"
                         onClick={() => void onShareInvite()}
                         className={[
-                          "flex items-center gap-1 rounded-lg border border-blue-400/35 bg-blue-500/15 px-2.5 py-1.5 font-semibold text-blue-100",
+                          "flex items-center gap-1 rounded-none border border-cyan-400/22 bg-cyan-500/8 px-2.5 py-1.5 font-medium text-cyan-50/90",
                           isWeb ? "text-sm" : "text-xs",
                         ].join(" ")}
                       >
@@ -544,13 +526,13 @@ export default function CommunityGroupDetailView({
                   type="button"
                   onClick={() => requestEndGroup(summary.name)}
                   className={[
-                    "mt-2 w-full rounded-lg border border-red-400/30 bg-red-500/10 py-2 text-red-200",
+                    "mt-3 w-full rounded-none border border-red-400/35 bg-red-950/30 py-2 text-red-200",
                     isWeb ? "text-base" : "text-sm",
                   ].join(" ")}
                 >
                   {t.endGroup}
                 </button>
-              </div>
+              </RankingsCyberPanel>
             )}
 
             {!summary.isOwner && !summary.archived && (
@@ -558,7 +540,7 @@ export default function CommunityGroupDetailView({
                 type="button"
                 onClick={() => void onLeave()}
                 className={[
-                  "mt-4 w-full rounded-xl border border-white/15 py-2 text-white/80",
+                  "mb-4 w-full rounded-none border border-cyan-400/16 bg-cyan-500/5 py-2 font-mono text-sm uppercase tracking-[0.1em] text-cyan-100/70",
                   isWeb ? "text-base" : "text-sm",
                 ].join(" ")}
               >
@@ -566,157 +548,51 @@ export default function CommunityGroupDetailView({
               </button>
             )}
 
-            <h2
-              className={[
-                "mb-2 mt-6 font-bold text-white/85",
-                isWeb ? "text-base" : "text-sm",
-              ].join(" ")}
-            >
-              {t.ranking}
-            </h2>
+            <RankingsCyberSectionLabel subtle>{t.ranking}</RankingsCyberSectionLabel>
             {loadingRows ? (
-              <div className="space-y-2 rounded-xl border border-white/10 bg-white/4 p-4">
-                <div className="h-3 w-2/5 skeleton-scan rounded bg-white/10" />
-                <div className="h-8 skeleton-scan rounded-lg bg-white/8" />
-                <div className="h-8 skeleton-scan rounded-lg bg-white/8" />
+              <RankingsCyberPanel subtle compact>
+                <div className="space-y-2">
+                  <div className="h-3 w-2/5 skeleton-scan rounded-none bg-cyan-400/10" />
+                  <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
+                  <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
+                  <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
+                </div>
+              </RankingsCyberPanel>
+            ) : (
+              <div key={rankListAnimKey} className="space-y-0">
+                {rows.map((r, index) => (
+                  <motion.div
+                    key={r.uid}
+                    initial={
+                      prefersReducedMotion ? false : { opacity: 0, y: 8 }
+                    }
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: prefersReducedMotion ? 0 : 0.32,
+                      delay: prefersReducedMotion
+                        ? 0
+                        : rankRowRevealDelay(index),
+                      ease: rankRowEase,
+                    }}
+                    className={
+                      r.uid === myUid
+                        ? "rounded-none ring-1 ring-cyan-400/22 ring-offset-0"
+                        : undefined
+                    }
+                  >
+                    <RankingCard
+                      row={communityRowToRankingCardRow(r, metric)}
+                      rank={r.rank}
+                      metric={rankMetricForProfile}
+                      language={language}
+                      size="compact"
+                      shellTone="subtle"
+                      animateValue={false}
+                    />
+                  </motion.div>
+                ))}
               </div>
-            ) : null}
-            <div
-              className={[
-                "overflow-hidden rounded-xl border border-white/10",
-                loadingRows ? "hidden" : "",
-              ].join(" ")}
-            >
-              <table className={["w-full text-left", isWeb ? "text-base" : "text-sm"].join(" ")}>
-                <thead
-                  className={[
-                    "border-b border-white/10 bg-white/6 text-white/55",
-                    isWeb ? "text-sm" : "text-xs",
-                  ].join(" ")}
-                >
-                  <tr>
-                    <th className="px-2 py-2">{t.rank}</th>
-                    <th className="px-2 py-2">{t.player}</th>
-                    <th className="px-2 py-2 text-right">{t.score}</th>
-                  </tr>
-                </thead>
-                <tbody key={rankListAnimKey}>
-                  {rows.map((r, index) => (
-                    <motion.tr
-                      key={r.uid}
-                      className={[
-                        "border-b text-white/90 transition-colors cursor-pointer hover:bg-white/6",
-                        r.uid === myUid
-                          ? "border-cyan-400/30 bg-cyan-500/10"
-                          : "border-white/5",
-                      ].join(" ")}
-                      role="link"
-                      tabIndex={0}
-                      onClick={() => {
-                        const handleOrUid = profilePathKeyFromRow(r);
-                        const base = variant === "web" ? "/web" : "/mobile";
-                        const href = profileHrefWithRankingsReturn(
-                          pathname,
-                          base,
-                          handleOrUid,
-                          {
-                            metric: rankMetricForProfile,
-                            phase: "playoffs",
-                          }
-                        );
-                        router.push(href);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key !== "Enter" && e.key !== " ") return;
-                        e.preventDefault();
-                        const handleOrUid = profilePathKeyFromRow(r);
-                        const base = variant === "web" ? "/web" : "/mobile";
-                        const href = profileHrefWithRankingsReturn(
-                          pathname,
-                          base,
-                          handleOrUid,
-                          {
-                            metric: rankMetricForProfile,
-                            phase: "playoffs",
-                          }
-                        );
-                        router.push(href);
-                      }}
-                      initial={
-                        prefersReducedMotion ? false : { opacity: 0, y: 8 }
-                      }
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: prefersReducedMotion ? 0 : 0.32,
-                        delay: prefersReducedMotion
-                          ? 0
-                          : rankRowRevealDelay(index),
-                        ease: rankRowEase,
-                      }}
-                    >
-                      <td className={["px-2 py-2 font-mono", isWeb ? "text-sm" : "text-xs"].join(" ")}>{r.rank}</td>
-                      <td className="px-2 py-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <div className="relative h-7 w-7 shrink-0">
-                            {r.plan === "pro" ? (
-                              <>
-                                <span
-                                  className="pointer-events-none absolute -inset-[2px] z-0 rounded-full border border-cyan-400/22 shadow-[0_0_10px_rgba(34,211,238,0.14)]"
-                                  aria-hidden
-                                />
-                                <span
-                                  className="pointer-events-none absolute inset-0 z-[1] rounded-full border border-white/[0.08]"
-                                  aria-hidden
-                                />
-                              </>
-                            ) : null}
-                            <div className="relative z-[2] h-full w-full overflow-hidden rounded-full">
-                              {r.photoURL ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={r.photoURL}
-                                  alt=""
-                                  className="h-7 w-7 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="h-7 w-7 rounded-full bg-white/10" />
-                              )}
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex min-w-0 max-w-full items-center gap-1 overflow-hidden">
-                              <span
-                                className={[
-                                  "truncate font-medium text-white/90",
-                                  isWeb ? "text-sm" : "text-xs",
-                                ].join(" ")}
-                              >
-                                {r.displayName}
-                              </span>
-                              {r.plan === "pro" ? (
-                                <ProCyberBadge
-                                  {...proBadgeStaticMotion}
-                                  compact
-                                  ariaLabel={
-                                    commMsg(language, {
-                                      en: "Pro member",
-                                      ja: "Pro 会員",
-                                    })
-                                  }
-                                />
-                              ) : null}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className={["px-2 py-2 text-right font-mono", isWeb ? "text-sm" : "text-xs"].join(" ")}>
-                        {displayMain(metric, r)}
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            )}
           </>
         )}
       </div>

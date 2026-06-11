@@ -16,6 +16,7 @@ import {
 } from "@/lib/communities/leaderboardResponseCache";
 import {
   getLeaderboardSnapshotSlotKeyJst,
+  isLeaderboardSnapshotFresh,
   readLeaderboardSnapshot,
   writeLeaderboardSnapshot,
 } from "@/lib/communities/leaderboardSnapshot";
@@ -43,34 +44,7 @@ export async function GET(req: Request, ctx: Ctx) {
     const rankingLeague = parseCommunityLeague(d.rankingLeague);
     const rankingTeamIds = readRankingTeamIds(d);
     const rankingStartDateKey = resolveRankingStartDateKey(d);
-    const memberCountFromGroup = Number(d.memberCount ?? 0);
     const snapshotSlotKey = getLeaderboardSnapshotSlotKeyJst();
-
-    const snapshot = await readLeaderboardSnapshot(
-      adminDb,
-      groupId,
-      snapshotSlotKey
-    );
-    if (
-      snapshot &&
-      snapshot.rankingMetric === rankingMetric &&
-      snapshot.rankingLeague === rankingLeague &&
-      sameTeamIds(snapshot.rankingTeamIds, rankingTeamIds) &&
-      snapshot.periodType === periodType &&
-      snapshot.rankingStartDateKey === rankingStartDateKey &&
-      snapshot.memberCount === memberCountFromGroup
-    ) {
-      const myRowFromSnapshot =
-        snapshot.rows.find((x) => x.uid === uid) ?? null;
-      return NextResponse.json({
-        ok: true,
-        rankingMetric,
-        periodType,
-        rankingLeague,
-        rows: snapshot.rows,
-        myRow: myRowFromSnapshot,
-      });
-    }
 
     const members = await adminDb
       .collection(`groups/${groupId}/members`)
@@ -81,7 +55,7 @@ export async function GET(req: Request, ctx: Ctx) {
       .sort()
       .join(",");
 
-    const cached = getCachedLeaderboardResponse({
+    const cacheParams = {
       groupId,
       rankingMetric,
       rankingLeague,
@@ -90,9 +64,40 @@ export async function GET(req: Request, ctx: Ctx) {
       rankingStartDateKey,
       memberCount: memberUids.length,
       topMemberUidSample: memberUidSample,
-    });
+    } as const;
+
+    const cached = getCachedLeaderboardResponse(cacheParams);
     if (cached) {
       return NextResponse.json(cached);
+    }
+
+    const snapshot = await readLeaderboardSnapshot(
+      adminDb,
+      groupId,
+      snapshotSlotKey
+    );
+    if (
+      snapshot &&
+      isLeaderboardSnapshotFresh(snapshot.builtAtMs) &&
+      snapshot.rankingMetric === rankingMetric &&
+      snapshot.rankingLeague === rankingLeague &&
+      sameTeamIds(snapshot.rankingTeamIds, rankingTeamIds) &&
+      snapshot.periodType === periodType &&
+      snapshot.rankingStartDateKey === rankingStartDateKey &&
+      snapshot.memberCount === memberUids.length
+    ) {
+      const myRowFromSnapshot =
+        snapshot.rows.find((x) => x.uid === uid) ?? null;
+      const payload = {
+        ok: true as const,
+        rankingMetric,
+        periodType,
+        rankingLeague,
+        rows: snapshot.rows,
+        myRow: myRowFromSnapshot,
+      };
+      setCachedLeaderboardResponse(cacheParams, payload);
+      return NextResponse.json(payload);
     }
 
     const rows = await buildMemberLeaderboard(
@@ -144,19 +149,7 @@ export async function GET(req: Request, ctx: Ctx) {
       rows: ranked,
       builtAtMs: Date.now(),
     });
-    setCachedLeaderboardResponse(
-      {
-        groupId,
-        rankingMetric,
-        rankingLeague,
-        rankingTeamIds,
-        periodType,
-        rankingStartDateKey,
-        memberCount: memberUids.length,
-        topMemberUidSample: memberUidSample,
-      },
-      payload
-    );
+    setCachedLeaderboardResponse(cacheParams, payload);
     return NextResponse.json(payload);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "error";

@@ -34,6 +34,18 @@ export type LeaderboardSnapshot = {
   builtAtMs: number;
 };
 
+/** Firestore スナップショットの最大有効期間（それ以上古いものは再集計する） */
+export const LEADERBOARD_SNAPSHOT_MAX_AGE_MS = 30_000;
+
+export function isLeaderboardSnapshotFresh(
+  builtAtMs: number,
+  maxAgeMs = LEADERBOARD_SNAPSHOT_MAX_AGE_MS,
+  now = Date.now()
+): boolean {
+  if (!Number.isFinite(builtAtMs) || builtAtMs <= 0) return false;
+  return now - builtAtMs <= maxAgeMs;
+}
+
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }

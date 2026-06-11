@@ -58,6 +58,10 @@ function dailyBucket(
 ): Record<string, unknown> | undefined {
   if (!data) return undefined;
   if (league === "all") {
+    const ranking = data.ranking;
+    if (ranking && typeof ranking === "object") {
+      return ranking as Record<string, unknown>;
+    }
     const all = data.all;
     return all && typeof all === "object"
       ? (all as Record<string, unknown>)

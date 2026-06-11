@@ -36,6 +36,7 @@ import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 const rankHudNumClass = summaryMetricNumClass;
 
 export type RankingCardSize = "default" | "compact";
+export type RankingCardShellTone = "default" | "subtle";
 
 function medal(rank: number) {
   return listRankMedal(rank);
@@ -91,10 +92,10 @@ function ValueText({
 
   const baseTextClass = compact
     ? rank === 1
-      ? "text-[22px]"
+      ? "text-[19px]"
       : isTop3
-        ? "text-[20px]"
-        : "text-[16px]"
+        ? "text-[17px]"
+        : "text-[14px]"
     : rank === 1
       ? "text-[32px]"
       : isTop3
@@ -122,10 +123,10 @@ function ValueText({
           className={
             compact
               ? rank === 1
-                ? "text-[13px]"
+                ? "text-[11px]"
                 : isTop3
-                  ? "text-[12px]"
-                  : "text-[10px]"
+                  ? "text-[10px]"
+                  : "text-[9px]"
               : rank === 1
                 ? "text-[17px]"
                 : isTop3
@@ -170,10 +171,10 @@ function ValueText({
           className={
             compact
               ? rank === 1
-                ? "ml-0.5 text-[12px]"
+                ? "ml-0.5 text-[10px]"
                 : isTop3
-                  ? "ml-0.5 text-[11px]"
-                  : "ml-0.5 text-[9px]"
+                  ? "ml-0.5 text-[9px]"
+                  : "ml-0.5 text-[8px]"
               : rank === 1
                 ? "ml-0.5 text-[16px]"
                 : isTop3
@@ -205,10 +206,10 @@ function ValueText({
           "shrink-0",
           compact
             ? rank === 1
-              ? "text-[11px]"
+              ? "text-[9px]"
               : isTop3
-                ? "text-[10px]"
-                : "text-[8px]"
+                ? "text-[8px]"
+                : "text-[7px]"
             : rank === 1
               ? "text-[15px]"
               : isTop3
@@ -233,6 +234,7 @@ export default function RankingCard({
   onCountDone,
   language = "ja",
   size = "default",
+  shellTone = "default",
   animateValue = true,
 }: {
   row: RankingRowWithCountry;
@@ -250,9 +252,12 @@ export default function RankingCard({
   language?: Language;
   /** マイコミュニティ等、同デザインで少し小さく */
   size?: RankingCardSize;
+  /** コミュニティモーダル等、枠・発光を抑える */
+  shellTone?: RankingCardShellTone;
   animateValue?: boolean;
 }) {
   const compact = size === "compact";
+  const subtleShell = shellTone === "subtle";
   const isTop3 = rank <= 3;
   const m = medal(rank);
   const countryCode = getCountryCode(r);
@@ -281,10 +286,10 @@ export default function RankingCard({
 
   const rankNumClass = compact
     ? rank === 1
-      ? "text-[26px]"
+      ? "text-[22px]"
       : rank <= 3
-        ? "text-[22px]"
-        : "text-[17px]"
+        ? "text-[18px]"
+        : "text-[15px]"
     : rank === 1
       ? "text-[34px]"
       : rank <= 3
@@ -293,10 +298,10 @@ export default function RankingCard({
 
   const nameClass = compact
     ? rank === 1
-      ? "text-[16px]"
+      ? "text-[14px]"
       : isTop3
-        ? "text-[14px]"
-        : "text-[12px]"
+        ? "text-[13px]"
+        : "text-[11px]"
     : rank === 1
       ? "text-[20px]"
       : isTop3
@@ -316,17 +321,17 @@ export default function RankingCard({
           "relative overflow-hidden rounded-none border",
           compact
             ? isTop3
-              ? "min-h-[58px]"
-              : "min-h-[44px]"
+              ? "min-h-[50px]"
+              : "min-h-[38px]"
             : isTop3
               ? "min-h-[76px]"
               : "min-h-[50px]",
         ].join(" ")}
-        style={listCardShellStyle(rank)}
+        style={listCardShellStyle(rank, subtleShell ? "subtle" : "default")}
       >
-        <RankingsScanTexture />
-        <RankingsNoiseTexture />
-        <RankingsGlowWireFrame variant="compact" />
+        {!subtleShell ? <RankingsScanTexture /> : null}
+        {!subtleShell ? <RankingsNoiseTexture /> : null}
+        {!subtleShell ? <RankingsGlowWireFrame variant="compact" /> : null}
         <FadedFlagBg rank={rank} countryCode={countryCode} />
 
         <div
@@ -342,8 +347,8 @@ export default function RankingCard({
             compact ? "gap-2 px-2" : "gap-2.5 px-2.5",
             compact
               ? isTop3
-                ? "grid-cols-[26px_44px_minmax(0,1fr)_68px] py-2"
-                : "grid-cols-[20px_32px_minmax(0,1fr)_auto] py-1.5"
+                ? "grid-cols-[22px_32px_minmax(0,1fr)_56px] py-1.5"
+                : "grid-cols-[18px_28px_minmax(0,1fr)_auto] py-1"
               : isTop3
                 ? "grid-cols-[32px_56px_minmax(0,1fr)_84px] py-2.5"
                 : "grid-cols-[22px_36px_minmax(0,1fr)_auto] py-2",
@@ -371,8 +376,8 @@ export default function RankingCard({
               boxClassName={
                 compact
                   ? isTop3
-                    ? "h-11 w-11"
-                    : "h-8 w-8"
+                    ? "h-9 w-9"
+                    : "h-7 w-7"
                   : isTop3
                     ? "h-14 w-14"
                     : "h-9 w-9"
@@ -380,8 +385,8 @@ export default function RankingCard({
               initialTextClassName={
                 compact
                   ? isTop3
-                    ? "text-[18px]"
-                    : "text-[13px]"
+                    ? "text-[15px]"
+                    : "text-[11px]"
                   : isTop3
                     ? "text-[22px]"
                     : "text-[15px]"
@@ -427,7 +432,7 @@ export default function RankingCard({
                 "flex min-w-0 max-w-full flex-col",
                 compact
                   ? isTop3
-                    ? "min-w-[56px] items-center text-center"
+                    ? "min-w-[48px] items-center text-center"
                     : "items-end text-right"
                   : isTop3
                     ? "min-w-[68px] items-center text-center"

@@ -21,6 +21,10 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
+import {
+  MyRankCardBacklight,
+  MY_RANK_CARD_RIM_FILTER,
+} from "@/app/component/rankings/MyRankCardBacklight";
 import { FLAG_SRC } from "@/lib/rankings/country";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
 import { Flame } from "lucide-react";
@@ -189,8 +193,8 @@ const CARD_SHELL: CSSProperties = {
   WebkitClipPath: CARD_NOTCH_CLIP,
 };
 
-/** ノッチ形状に追従する落ち影（ラッパー側） */
-const CARD_DROP_SHADOW = "drop-shadow(0 14px 26px rgba(0,0,0,0.42))";
+/** ノッチ形状に追従する落ち影 + 案C リムライト（ラッパー側） */
+const CARD_DROP_SHADOW = MY_RANK_CARD_RIM_FILTER;
 
 /** 金属パネルのざらつき（SVG fractal noise・静的） */
 const NOISE_TEXTURE_URL =
@@ -963,16 +967,23 @@ export default function MyRankCard({
 
   const tiltWrapped = (
     <div
-      ref={tilt.ref}
-      style={{
-        filter: CARD_DROP_SHADOW,
-        ...(tiltEnabled ? tilt.style : undefined),
-      }}
-      onPointerMove={tiltEnabled ? tilt.onMove : undefined}
-      onPointerLeave={tiltEnabled ? tilt.onLeave : undefined}
-      onPointerCancel={tiltEnabled ? tilt.onLeave : undefined}
+      data-rank-card-root
+      className="relative isolate"
     >
-      {body}
+      <MyRankCardBacklight />
+      <div
+        ref={tilt.ref}
+        className="relative z-10"
+        style={{
+          filter: CARD_DROP_SHADOW,
+          ...(tiltEnabled ? tilt.style : undefined),
+        }}
+        onPointerMove={tiltEnabled ? tilt.onMove : undefined}
+        onPointerLeave={tiltEnabled ? tilt.onLeave : undefined}
+        onPointerCancel={tiltEnabled ? tilt.onLeave : undefined}
+      >
+        {body}
+      </div>
     </div>
   );
 

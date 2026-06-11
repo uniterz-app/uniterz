@@ -21,8 +21,11 @@ import {
   PRO_MAX_MEMBERSHIPS,
   PRO_MAX_OWNED_GROUPS,
 } from "@/lib/communities/limitValues";
-import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import CommunityTeamPicker from "@/app/component/communities/CommunityTeamPicker";
+import {
+  communityCrtMono,
+  communityCrtPanelStyle,
+} from "@/app/component/communities/CommunityCrtTheme";
 import { useScheduleTeams } from "@/lib/games/useScheduleTeams";
 import { LEAGUES, type League } from "@/lib/leagues";
 
@@ -325,6 +328,17 @@ export default function CreateGroupModal({
 
   if (!open || !mounted) return null;
 
+  const fieldClass = [
+    "w-full rounded-none border border-white/12 bg-black/40 text-cyan-50/90",
+    "focus:border-cyan-400/25 focus:outline-none focus:ring-1 focus:ring-cyan-400/12",
+    isWeb ? "px-3 py-2.5 text-base" : "px-2.5 py-2 text-sm",
+  ].join(" ");
+
+  const labelClass = [
+    "block font-medium uppercase tracking-[0.14em] text-white/50",
+    isWeb ? "text-xs" : "text-[10px]",
+  ].join(" ");
+
   return createPortal(
     <div
       className="fixed inset-0 z-[1000020] overflow-hidden overscroll-none"
@@ -336,15 +350,24 @@ export default function CreateGroupModal({
         aria-label={language === "en" ? "Close" : "閉じる"}
         onClick={closeReset}
         disabled={busy}
-        className="absolute inset-0 bg-transparent backdrop-blur-md disabled:pointer-events-none"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm disabled:pointer-events-none"
       />
       <div className="pointer-events-none fixed inset-0 z-10 flex items-center justify-center p-3 pb-[max(0.75rem,var(--bottom-nav-clearance))] sm:p-4">
         <div
-          className={`pointer-events-auto relative isolate flex h-[min(34rem,calc(100svh-var(--bottom-nav-clearance)-1.5rem))] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/12 bg-[#0c1419]/95 shadow-[0_18px_44px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:h-[min(34rem,calc(100svh-2rem))] lg:max-w-5xl ${jp.className}`}
-          style={{ touchAction: "manipulation" }}
+          className={[
+            "pointer-events-auto relative isolate flex w-full flex-col overflow-hidden border",
+            "h-[min(34rem,calc(100svh-var(--bottom-nav-clearance)-1.5rem))] sm:h-[min(34rem,calc(100svh-2rem))]",
+            isWeb ? "max-w-2xl" : "max-w-md",
+            communityCrtMono.className,
+            jp.className,
+          ].join(" ")}
+          style={{
+            ...communityCrtPanelStyle("subtle"),
+            boxShadow: "0 14px 36px rgba(0,0,0,0.48)",
+            touchAction: "manipulation",
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          <ShellGridOverlay />
           <div className="relative z-10 flex min-h-0 flex-1 flex-col">
           <div
             className={[
@@ -354,16 +377,16 @@ export default function CreateGroupModal({
           >
             <h2
               className={[
-                "font-bold text-white",
-                isWeb ? "text-2xl" : "text-lg",
+                "font-bold tracking-[0.04em] text-cyan-50/95",
+                isWeb ? "text-xl" : "text-base",
               ].join(" ")}
             >
               {t.title}
             </h2>
             <p
               className={[
-                "mt-2 leading-relaxed text-white/55",
-                isWeb ? "text-sm" : "text-xs",
+                "mt-2 leading-relaxed text-white/40",
+                isWeb ? "text-xs" : "text-[10px]",
               ].join(" ")}
             >
               {t.planLimits}
@@ -376,35 +399,18 @@ export default function CreateGroupModal({
               isWeb ? "px-6 py-4" : "px-4 py-3",
             ].join(" ")}
           >
-            <div className={isWeb ? "space-y-4" : "space-y-3"}>
-          <label
-            className={[
-              "block text-white/55",
-              isWeb ? "text-sm" : "text-xs",
-            ].join(" ")}
-          >
-            {t.name}
-          </label>
+            <div className={isWeb ? "space-y-4" : "space-y-2.5"}>
+          <label className={labelClass}>{t.name}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             onFocus={focusFieldWithoutPageJump}
             maxLength={60}
             autoComplete="off"
-            className={[
-              "w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white",
-              isWeb ? "py-3 text-lg" : "py-2.5 text-base",
-            ].join(" ")}
+            className={fieldClass}
           />
 
-          <label
-            className={[
-              "block text-white/55",
-              isWeb ? "text-sm" : "text-xs",
-            ].join(" ")}
-          >
-            {t.description}
-          </label>
+          <label className={labelClass}>{t.description}</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -413,35 +419,27 @@ export default function CreateGroupModal({
             rows={isWeb ? 4 : 3}
             placeholder={t.descriptionPh}
             className={[
-              "w-full resize-none rounded-xl border border-white/10 bg-black/40 px-3 leading-relaxed text-white placeholder:leading-snug placeholder:text-white/30",
-              isWeb
-                ? "py-3 text-lg placeholder:text-base"
-                : "py-2.5 text-base placeholder:text-sm",
+              fieldClass,
+              "resize-none leading-relaxed placeholder:text-white/30",
+              isWeb ? "placeholder:text-sm" : "placeholder:text-xs",
             ].join(" ")}
           />
 
-          <label
-            className={[
-              "block text-white/55",
-              isWeb ? "text-sm" : "text-xs",
-            ].join(" ")}
-          >
-            {t.header}
-          </label>
+          <label className={labelClass}>{t.header}</label>
           <input
             type="file"
             accept="image/*"
             onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
             className={[
-              "text-white/70 file:mr-2 file:rounded-lg file:border-0 file:bg-white/10 file:px-2 file:py-1",
+              "text-cyan-100/60 file:mr-2 file:rounded-none file:border file:border-white/12 file:bg-white/5 file:px-2 file:py-1 file:text-cyan-100/80",
               isWeb ? "text-sm file:text-sm" : "text-xs",
             ].join(" ")}
           />
           {preview && (
             <div
               className={[
-                "aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-black/30",
-                isWeb ? "max-w-[240px]" : "max-w-[200px]",
+                "aspect-square w-full overflow-hidden border border-white/10 bg-black/35",
+                isWeb ? "max-w-[200px]" : "max-w-[120px]",
               ].join(" ")}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -455,31 +453,21 @@ export default function CreateGroupModal({
 
           <p
             className={[
-              "leading-relaxed text-cyan-200/75",
-              isWeb ? "text-sm" : "text-[11px]",
+              "leading-relaxed text-white/45",
+              isWeb ? "text-xs" : "text-[10px]",
             ].join(" ")}
           >
             {t.scoringNote}
           </p>
 
-          <label
-            className={[
-              "block text-white/55",
-              isWeb ? "text-sm" : "text-xs",
-            ].join(" ")}
-          >
-            {t.league}
-          </label>
+          <label className={labelClass}>{t.league}</label>
           <select
             value={league}
             onChange={(e) => {
               setLeague(e.target.value as CommunityLeague);
               setTeamIds([]);
             }}
-            className={[
-              "w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white",
-              isWeb ? "py-2.5 text-base" : "py-2 text-sm",
-            ].join(" ")}
+            className={fieldClass}
           >
             {COMMUNITY_LEAGUES.map((k) => (
               <option key={k} value={k}>
@@ -490,14 +478,7 @@ export default function CreateGroupModal({
 
           {showTeamPicker && (
             <>
-              <label
-                className={[
-                  "block text-white/55",
-                  isWeb ? "text-sm" : "text-xs",
-                ].join(" ")}
-              >
-                {t.teams}
-              </label>
+              <label className={labelClass}>{t.teams}</label>
               <CommunityTeamPicker
                 teams={teams}
                 selectedIds={teamIds}
@@ -508,21 +489,11 @@ export default function CreateGroupModal({
             </>
           )}
 
-          <label
-            className={[
-              "block text-white/55",
-              isWeb ? "text-sm" : "text-xs",
-            ].join(" ")}
-          >
-            {t.metric}
-          </label>
+          <label className={labelClass}>{t.metric}</label>
           <select
             value={metric}
             onChange={(e) => setMetric(e.target.value as CommunityMetric)}
-            className={[
-              "w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white",
-              isWeb ? "py-2.5 text-base" : "py-2 text-sm",
-            ].join(" ")}
+            className={fieldClass}
           >
             {COMMUNITY_METRICS.map((k) => (
               <option key={k} value={k}>
@@ -534,8 +505,8 @@ export default function CreateGroupModal({
           {metric === "activeWinStreak" && (
             <p
               className={[
-                "text-amber-200/80",
-                isWeb ? "text-sm" : "text-[11px]",
+                "text-white/55",
+                isWeb ? "text-xs" : "text-[10px]",
               ].join(" ")}
             >
               {t.streakNote}
@@ -555,8 +526,8 @@ export default function CreateGroupModal({
               onClick={closeReset}
               disabled={busy}
               className={[
-                "rounded-xl border border-white/10 text-white/80 disabled:cursor-not-allowed disabled:opacity-40",
-                isWeb ? "px-5 py-2.5 text-base" : "px-4 py-2 text-sm",
+                "rounded-none border border-white/12 text-white/65 disabled:cursor-not-allowed disabled:opacity-40",
+                isWeb ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs",
               ].join(" ")}
             >
               {t.cancel}
@@ -569,8 +540,9 @@ export default function CreateGroupModal({
               whileTap={reduceMotion ? undefined : { scale: 0.97 }}
               transition={{ duration: 0.1 }}
               className={[
-                "rounded-xl bg-blue-500 font-semibold text-white shadow-lg shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50",
-                isWeb ? "px-5 py-2.5 text-base" : "px-4 py-2 text-sm",
+                "rounded-none border border-cyan-400/28 bg-cyan-500/14 font-semibold text-cyan-50/95",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                isWeb ? "px-5 py-2.5 text-sm" : "px-4 py-2 text-xs",
               ].join(" ")}
             >
               {busy

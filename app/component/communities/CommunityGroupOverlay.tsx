@@ -169,10 +169,10 @@ export default function CommunityGroupOverlay({
               <div
                 className={[
                   "overflow-hidden rounded-2xl",
-                  "border border-white/12",
-                  "bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.03)_42%,rgba(255,255,255,0.018)_100%),linear-gradient(180deg,rgba(5,8,20,0.80)_0%,rgba(5,8,20,0.80)_100%)]",
+                  "border border-white/10",
+                  "bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_42%,rgba(255,255,255,0.012)_100%),linear-gradient(180deg,rgba(5,8,20,0.88)_0%,rgba(5,8,20,0.88)_100%)]",
                   "backdrop-blur-xl",
-                  "shadow-[0_18px_44px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.05)]",
+                  "shadow-[0_14px_36px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.12)]",
                 ].join(" ")}
               >
                 <CommunityGroupDetailView

@@ -12,6 +12,35 @@ export const RANKINGS_PANEL_BG =
 export const RANKINGS_NOISE_TEXTURE_URL =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
+/** MyRankCard と同じ右下コーナーカット */
+export const RANKINGS_CARD_NOTCH_CLIP =
+  "polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)";
+
+export const RANKINGS_CARD_DROP_SHADOW =
+  "drop-shadow(0 14px 26px rgba(0,0,0,0.42))";
+
+export function rankingsCardShellStyle(
+  tone: "default" | "subtle" = "default"
+): CSSProperties {
+  if (tone === "subtle") {
+    return {
+      border: "1px solid rgba(34,211,238,0.18)",
+      background: "linear-gradient(170deg, rgba(14,20,32,0.98), rgba(6,10,16,1))",
+      boxShadow: "inset 0 0 0 1px rgba(8,14,26,0.85), inset 0 0 12px rgba(0,0,0,0.18)",
+      clipPath: RANKINGS_CARD_NOTCH_CLIP,
+      WebkitClipPath: RANKINGS_CARD_NOTCH_CLIP,
+    };
+  }
+  return {
+    border: `1px solid ${RANKINGS_BORDER}`,
+    background: RANKINGS_PANEL_BG,
+    boxShadow:
+      "inset 0 0 0 1px rgba(8,14,26,0.9), inset 0 0 24px rgba(34,211,238,0.05)",
+    clipPath: RANKINGS_CARD_NOTCH_CLIP,
+    WebkitClipPath: RANKINGS_CARD_NOTCH_CLIP,
+  };
+}
+
 /** Top3 表彰台 — 金銀銅アクセント（特別感は維持） */
 export function podiumMedalAccent(rank: 1 | 2 | 3) {
   if (rank === 1) {
@@ -89,9 +118,19 @@ export function podiumCardShellStyle(rank: 1 | 2 | 3): CSSProperties {
   };
 }
 
-export function listCardShellStyle(rank: number): CSSProperties {
+export function listCardShellStyle(
+  rank: number,
+  tone: "default" | "subtle" = "default"
+): CSSProperties {
   const m = listRankMedal(rank);
   const isTop3 = rank <= 3;
+  if (tone === "subtle") {
+    return {
+      borderColor: isTop3 ? "rgba(34,211,238,0.22)" : "rgba(34,211,238,0.14)",
+      background: "linear-gradient(170deg, rgba(14,20,32,0.98), rgba(6,10,16,1))",
+      boxShadow: "inset 0 0 0 1px rgba(8,14,26,0.85), inset 0 0 12px rgba(0,0,0,0.18)",
+    };
+  }
   return {
     borderColor: isTop3 ? RANKINGS_BORDER : RANKINGS_BORDER_LIST,
     background: RANKINGS_PANEL_BG,
