@@ -62,7 +62,7 @@ export default function GamesPageBackground({
 
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-[1] overflow-x-hidden overflow-y-visible"
       aria-hidden
     >
       {/* ベース：ダークグリーンの闇 */}
@@ -182,7 +182,6 @@ export default function GamesPageBackground({
             className="absolute inset-0"
             style={{
               willChange: "opacity",
-              opacity: 0.03,
               background: `
                 radial-gradient(ellipse 68% 50% at 14% 4%, rgba(34,211,238,${auroraA}) 0%, transparent 66%),
                 radial-gradient(ellipse 58% 46% at 88% 18%, rgba(59,130,246,${lite ? 0.11 : 0.15}) 0%, transparent 68%),
@@ -195,7 +194,6 @@ export default function GamesPageBackground({
             className="absolute inset-0"
             style={{
               willChange: "opacity",
-              opacity: 0.03,
               background: `
                 radial-gradient(ellipse 68% 50% at 14% 4%, rgba(168,85,247,${lite ? 0.16 : 0.21}) 0%, transparent 66%),
                 radial-gradient(ellipse 58% 46% at 88% 18%, rgba(217,70,239,${lite ? 0.1 : 0.13}) 0%, transparent 68%),
@@ -208,7 +206,6 @@ export default function GamesPageBackground({
             className="absolute inset-0"
             style={{
               willChange: "opacity",
-              opacity: 0.03,
               background: `
                 radial-gradient(ellipse 68% 50% at 14% 4%, rgba(251,191,36,${lite ? 0.13 : 0.16}) 0%, transparent 66%),
                 radial-gradient(ellipse 58% 46% at 88% 18%, rgba(245,158,11,${lite ? 0.09 : 0.11}) 0%, transparent 68%),

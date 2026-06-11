@@ -37,11 +37,9 @@ export default function SplashWrapper({
 
   useEffect(() => {
     if (!fadeDone) {
-      document.body.classList.remove("bg-black");
       document.body.classList.add("splash-bg");
     } else {
       document.body.classList.remove("splash-bg");
-      document.body.classList.add("bg-black");
     }
   }, [fadeDone]);
 
@@ -60,7 +58,7 @@ export default function SplashWrapper({
         {showSplashOverlay && (
           <motion.div
             key="firebase-splash"
-            className="fixed inset-0 z-[100]"
+            className="fixed inset-0 z-[100] bg-transparent"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
