@@ -26,7 +26,6 @@ import {
   CyberRankingListRow,
   CyberRankingScore,
 } from "@/app/component/rankings/CyberRankingListParts";
-import { listMetricBarPct } from "@/lib/rankings/podiumMetricBar";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
 
 export default function TopPodium({
@@ -38,7 +37,6 @@ export default function TopPodium({
   wcStage,
   onTopCountDone,
   language = "ja",
-  barMaxValue = 0,
   compact = false,
   shellTone = "default",
 }: {
@@ -49,11 +47,7 @@ export default function TopPodium({
   rankingLeague?: RankingLeagueSource;
   wcStage?: WcRankingStage;
   onTopCountDone?: () => void;
-  /** 互換のため残置（未使用） */
-  intro?: boolean;
   language?: Language;
-  /** 1位の指標値。セグメントバーの 100% 基準 */
-  barMaxValue?: number;
   /** コミュニティ等 — コンパクト行 */
   compact?: boolean;
   shellTone?: "default" | "subtle";
@@ -114,6 +108,8 @@ export default function TopPodium({
   }>;
 
   const metricTag = cyberMetricTag(metric, language);
+  const isWebList = base === "/web" && !compact;
+  const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
 
   return (
     <div className="pt-3 pb-0">
@@ -145,14 +141,19 @@ export default function TopPodium({
                   rank={rank}
                   displayName={row.displayName ?? row.handle ?? "Unknown"}
                   photoURL={row.photoURL}
-                  barPct={listMetricBarPct(metric, row, barMaxValue)}
                   metric={metric}
                   metricTag={metricTag}
                   posts={row.posts ?? 0}
-                  language={language}
+                  countryCode={row.countryCode}
+                  metricValueDelta={row.metricValueDelta}
+                  avgRow={{
+                    avgTotalScore: row.avgTotalScore,
+                    avgMarginPrecision: row.avgMarginPrecision,
+                    avgUpsetScore: row.avgUpsetScore,
+                  }}
                   compact={compact}
+                  scoreLayout={scoreLayout}
                   subtleShell={shellTone === "subtle"}
-                  barEnterDelay={0.12 + (rank - 1) * 0.11}
                   showCrownSlot={
                     rank === 1 ? (
                       <motion.div
@@ -203,6 +204,8 @@ export default function TopPodium({
                       rank={rank}
                       metric={metric}
                       counted={value}
+                      compact={compact}
+                      scoreLayout={scoreLayout}
                     />
                   }
                 />

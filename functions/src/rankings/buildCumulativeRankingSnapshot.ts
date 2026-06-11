@@ -233,6 +233,7 @@ type PriorRankBlock = {
 type SnapshotRow = BaseRow & {
   rank: number;
   rankDeltaPlaces: number | null;
+  metricValueDelta?: number | null;
 };
 
 type SnapshotMetricValues = {
@@ -326,6 +327,68 @@ function computeRankDeltaPlaces(
   return d;
 }
 
+function pickPriorMetricValues(
+  block: HistoryMetricValuesBlock | null | undefined,
+  opts:
+    | { kind: "phase"; phase: RankingPhase }
+    | { kind: "round"; round: PlayoffRoundKey }
+    | { kind: "wc"; stage: WcRankingStage }
+): SnapshotMetricValues | null {
+  if (!block) return null;
+  if (opts.kind === "wc") {
+    return block.wc?.[opts.stage] ?? null;
+  }
+  if (opts.kind === "round") {
+    return block.playoffRounds?.[opts.round] ?? null;
+  }
+  return block[opts.phase] ?? null;
+}
+
+function metricValueFromRow(row: BaseRow, metric: Metric): number | null {
+  if (metric === "activeWinStreak") return row.activeWinStreak ?? 0;
+  if (metric === "totalGoalScorerHits") return row.totalGoalScorerHits ?? 0;
+  if (metric === "winRate") return row.winRate ?? 0;
+  if (metric === "totalPoints") return row.totalPoints ?? 0;
+  if (metric === "totalPrecision") return row.totalPrecision ?? 0;
+  return row.totalUpset ?? 0;
+}
+
+function metricValueFromSnapshot(
+  values: SnapshotMetricValues,
+  metric: Metric
+): number | null {
+  if (metric === "activeWinStreak" || metric === "totalGoalScorerHits") {
+    return null;
+  }
+  if (metric === "winRate") return values.winRate ?? 0;
+  if (metric === "totalPoints") return values.totalPoints ?? 0;
+  if (metric === "totalPrecision") return values.totalPrecision ?? 0;
+  return values.totalUpset ?? 0;
+}
+
+function computeMetricValueDelta(
+  row: BaseRow,
+  metric: Metric,
+  prior: SnapshotMetricValues | null
+): number | null {
+  if (!prior) return null;
+  const curRaw = metricValueFromRow(row, metric);
+  const prevRaw = metricValueFromSnapshot(prior, metric);
+  if (curRaw == null || prevRaw == null) return null;
+
+  if (metric === "winRate") {
+    const curPct = curRaw <= 1 ? curRaw * 100 : curRaw;
+    const prevPct = prevRaw <= 1 ? prevRaw * 100 : prevRaw;
+    const d = curPct - prevPct;
+    if (!Number.isFinite(d) || Math.abs(d) < 1e-9) return null;
+    return d;
+  }
+
+  const d = curRaw - prevRaw;
+  if (!Number.isFinite(d) || Math.abs(d) < 1e-9) return null;
+  return d;
+}
+
 /**
  * For each uid, use the first existing rankSnapshotHistory doc when walking back
  * from startKey (usually yesterday) up to maxLookbackDays days.
@@ -373,6 +436,52 @@ async function fetchLatestPriorRankMapsForUids(
             wc: (d?.wc ?? {}) as WcRankBlock,
           });
           pending.delete(uid);
+        }
+      });
+    }
+    key = subtractOneDayFromDateKeyJST(key);
+  }
+
+  for (const uid of pending) {
+    out.set(uid, null);
+  }
+  return out;
+}
+
+async function fetchLatestPriorMetricValuesForUids(
+  uids: string[],
+  startKey: string,
+  maxLookbackDays: number
+): Promise<Map<string, HistoryMetricValuesBlock | null>> {
+  const out = new Map<string, HistoryMetricValuesBlock | null>();
+  if (uids.length === 0) return out;
+
+  const pending = new Set(uids);
+  let key = startKey;
+  const firestore = db();
+  const CHUNK = 200;
+
+  for (let day = 0; day < maxLookbackDays && pending.size > 0; day++) {
+    const chunkList = [...pending];
+    for (let i = 0; i < chunkList.length; i += CHUNK) {
+      const chunk = chunkList.slice(i, i + CHUNK);
+      const refs = chunk.map((uid) =>
+        firestore
+          .collection("cumulative_stats")
+          .doc(uid)
+          .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+          .doc(key)
+      );
+      const snaps = await firestore.getAll(...refs);
+      snaps.forEach((s, j) => {
+        const uid = chunk[j]!;
+        if (!pending.has(uid)) return;
+        if (s.exists) {
+          const d = s.data() as { metricValues?: HistoryMetricValuesBlock };
+          if (d?.metricValues) {
+            out.set(uid, d.metricValues);
+            pending.delete(uid);
+          }
         }
       });
     }
@@ -732,11 +841,19 @@ export async function buildCumulativeRankingSnapshot() {
   }
 
   const yesterdayKey = getYesterdayDateKeyJST();
-  const prevByUid = await fetchLatestPriorRankMapsForUids(
-    [...topUidSet],
-    yesterdayKey,
-    RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
-  );
+  const topUids = [...topUidSet];
+  const [prevByUid, priorMetricByUid] = await Promise.all([
+    fetchLatestPriorRankMapsForUids(
+      topUids,
+      yesterdayKey,
+      RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
+    ),
+    fetchLatestPriorMetricValuesForUids(
+      topUids,
+      yesterdayKey,
+      RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS
+    ),
+  ]);
 
   for (const { phase, metric, rows, totalCount } of top20Jobs) {
     const enriched: SnapshotRow[] = rows.map((row) => {
@@ -748,9 +865,14 @@ export async function buildCumulativeRankingSnapshot() {
         prevRaw >= 1
           ? Math.floor(prevRaw)
           : null;
+      const priorMetrics = pickPriorMetricValues(
+        priorMetricByUid.get(row.uid),
+        { kind: "phase", phase }
+      );
       return {
         ...row,
         rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
+        metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics),
       };
     });
 
@@ -780,9 +902,14 @@ export async function buildCumulativeRankingSnapshot() {
         prevRaw >= 1
           ? Math.floor(prevRaw)
           : null;
+      const priorMetrics = pickPriorMetricValues(
+        priorMetricByUid.get(row.uid),
+        { kind: "round", round }
+      );
       return {
         ...row,
         rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
+        metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics),
       };
     });
 
@@ -813,9 +940,14 @@ export async function buildCumulativeRankingSnapshot() {
         prevRaw >= 1
           ? Math.floor(prevRaw)
           : null;
+      const priorMetrics = pickPriorMetricValues(
+        priorMetricByUid.get(row.uid),
+        { kind: "wc", stage }
+      );
       return {
         ...row,
         rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank),
+        metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics),
       };
     });
 

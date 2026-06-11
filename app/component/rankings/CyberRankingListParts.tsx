@@ -1,8 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import { nameBebas, nameOxanium, nameRajdhani, jp } from "@/lib/fonts";
 import { summaryMetricNumClass } from "@/lib/fonts";
 import { RankingsAvatarCircle } from "@/app/component/rankings/RankingsAvatarCircle";
@@ -13,104 +11,18 @@ import {
 } from "@/lib/rankings/cyberRankVisual";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
-import { rankingMetricAccent } from "@/lib/rankings/rankingMetricAccent";
 import { RankFirstBorderEdgeScan } from "@/app/component/rankings/RankFirstBorderEdgeScan";
 import {
   hasJaScript,
   rankingFontSizePx,
 } from "@/lib/rankings/rankingJaTextSize";
-import type { Language } from "@/lib/i18n/language";
-import { postsLabel } from "@/lib/i18n/rankings";
+import { FLAG_SRC, getCountryCode } from "@/lib/rankings/country";
+import {
+  formatListMetricDayDelta,
+  listRowAvgText,
+} from "@/lib/rankings/listRowMetricMeta";
 
-const SEGMENTS = 10;
-const SEG_STAGGER_S = 0.055;
-const SEG_OPACITY_DURATION_S = 0.32;
-
-function filledSegCount(pct: number): number {
-  return Math.round((Math.min(100, Math.max(0, pct)) / 100) * SEGMENTS);
-}
-
-export function CyberListSegBar({
-  pct,
-  metric,
-  compact,
-  enterDelay = 0,
-}: {
-  pct: number;
-  metric: MobileMetric;
-  compact?: boolean;
-  /** 行の登場アニメと合わせるための遅延（秒） */
-  enterDelay?: number;
-}) {
-  const reduceMotion = useReducedMotion();
-  const [enter, setEnter] = useState(reduceMotion === true);
-  const accent = rankingMetricAccent(metric);
-  const segMinH = compact ? "h-[4px]" : "h-[5px]";
-  const filled = enter ? filledSegCount(pct) : 0;
-  const motionOff = reduceMotion === true;
-
-  useEffect(() => {
-    if (motionOff) {
-      setEnter(true);
-      return;
-    }
-    setEnter(false);
-    const id = window.setTimeout(() => setEnter(true), enterDelay * 1000);
-    return () => window.clearTimeout(id);
-  }, [pct, metric, enterDelay, motionOff]);
-
-  return (
-    <div
-      className={[
-        "flex w-full gap-[3px]",
-        compact ? "max-w-[120px]" : "max-w-[168px]",
-      ].join(" ")}
-      role="presentation"
-    >
-      {Array.from({ length: SEGMENTS }).map((_, i) => {
-        const lit = i < filled;
-        const delay = i * SEG_STAGGER_S;
-        const shown = enter || motionOff;
-
-        return (
-          <motion.div
-            key={i}
-            className={["flex-1 rounded-[1px]", segMinH].join(" ")}
-            initial={false}
-            animate={{
-              opacity: shown ? (lit ? 1 : 0.38) : 0,
-              scaleY: shown ? 1 : 0.3,
-            }}
-            transition={
-              motionOff
-                ? { duration: 0 }
-                : {
-                    opacity: {
-                      delay: enter ? delay : 0,
-                      duration: SEG_OPACITY_DURATION_S,
-                    },
-                    scaleY: {
-                      delay: enter ? delay : 0,
-                      type: "spring",
-                      stiffness: 380,
-                      damping: 28,
-                    },
-                  }
-            }
-            style={{
-              transformOrigin: "center bottom",
-              background: lit ? accent.border : "rgba(255,255,255,0.07)",
-              boxShadow: lit ? `0 0 6px ${accent.bar.glow}` : "none",
-              border: lit
-                ? `1px solid ${accent.bg}`
-                : "1px solid rgba(255,255,255,0.04)",
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
+export type CyberRankingScoreLayout = "stack" | "web";
 
 export function CyberRankNumber({
   rank,
@@ -162,20 +74,27 @@ export function CyberRankingScore({
   metric,
   counted,
   compact = false,
+  scoreLayout = "stack",
 }: {
   rank: number;
   metric: MobileMetric;
   counted: number;
   compact?: boolean;
+  scoreLayout?: CyberRankingScoreLayout;
 }) {
   const color = cyberScoreColor(rank);
-  const mainSize = compact
-    ? rank <= 3
-      ? "text-[15px]"
-      : "text-[13px]"
-    : rank <= 3
-      ? "text-[23px]"
-      : "text-[19px]";
+  const mainSize =
+    scoreLayout === "web"
+      ? rank <= 3
+        ? "text-[28px]"
+        : "text-[24px]"
+      : compact
+        ? rank <= 3
+          ? "text-[15px]"
+          : "text-[13px]"
+        : rank <= 3
+          ? "text-[23px]"
+          : "text-[19px]";
 
   const valueStyle = {
     color,
@@ -189,14 +108,75 @@ export function CyberRankingScore({
 
   return (
     <div
-      className={[
-        rankHudNumClass,
-        mainSize,
-        "tabular-nums leading-none",
-      ].join(" ")}
+      className={[rankHudNumClass, mainSize, "tabular-nums leading-none"].join(
+        " "
+      )}
       style={valueStyle}
     >
       {displayValue}
+    </div>
+  );
+}
+
+function CyberListRowMeta({
+  countryCode,
+  posts,
+  metric,
+  avgRow,
+  compact,
+}: {
+  countryCode?: string | null;
+  posts: number;
+  metric: MobileMetric;
+  avgRow: {
+    avgTotalScore?: number;
+    avgMarginPrecision?: number;
+    avgUpsetScore?: number;
+  };
+  compact?: boolean;
+}) {
+  const code = getCountryCode({ countryCode });
+  const flagSrc = code ? FLAG_SRC[code] : undefined;
+  const volText = `VOL:${posts}`;
+  const avgText = listRowAvgText(metric, avgRow);
+  const metaSize = compact ? 8 : 9;
+
+  return (
+    <div
+      className={[
+        "flex min-w-0 items-center gap-1.5",
+        compact ? "mt-1" : "mt-1.5",
+      ].join(" ")}
+    >
+      {flagSrc ? (
+        <img
+          src={flagSrc}
+          alt=""
+          width={16}
+          height={11}
+          className="h-[11px] w-4 shrink-0 rounded-[1px] object-cover opacity-75"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : null}
+      <span
+        className={[nameOxanium.className, "shrink-0 font-bold uppercase tracking-[0.14em] tabular-nums leading-none"].join(
+          " "
+        )}
+        style={{ color: "rgba(255,255,255,0.42)", fontSize: metaSize }}
+      >
+        {volText}
+      </span>
+      {avgText ? (
+        <span
+          className={[nameOxanium.className, "min-w-0 truncate font-bold uppercase tracking-[0.12em] tabular-nums leading-none"].join(
+            " "
+          )}
+          style={{ color: "rgba(0,245,255,0.55)", fontSize: metaSize }}
+        >
+          {avgText}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -205,22 +185,22 @@ export function CyberRankingListRow({
   rank,
   displayName,
   photoURL,
-  barPct,
   metric,
   metricTag,
   scoreSlot,
   nameExtra,
   compact = false,
   showCrownSlot,
-  posts,
-  language = "ja",
+  posts = 0,
+  countryCode,
+  metricValueDelta,
+  avgRow,
+  scoreLayout = "stack",
   subtleShell = false,
-  barEnterDelay = 0,
 }: {
   rank: number;
   displayName: string;
   photoURL?: string | null;
-  barPct: number;
   metric: MobileMetric;
   metricTag: string;
   scoreSlot: ReactNode;
@@ -228,19 +208,62 @@ export function CyberRankingListRow({
   compact?: boolean;
   showCrownSlot?: ReactNode;
   posts?: number;
-  language?: Language;
+  countryCode?: string | null;
+  metricValueDelta?: number | null;
+  avgRow?: {
+    avgTotalScore?: number;
+    avgMarginPrecision?: number;
+    avgUpsetScore?: number;
+  };
+  scoreLayout?: CyberRankingScoreLayout;
   subtleShell?: boolean;
-  barEnterDelay?: number;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = palette.firstPlaceFrame && !subtleShell;
   const nameJa = hasJaScript(displayName);
   const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
   const tagJa = hasJaScript(metricTag);
-  const tagFontSize = rankingFontSizePx(compact ? 7 : 8, metricTag);
-  const postsText = `${postsLabel(language)} ${posts ?? 0}`;
-  const postsJa = hasJaScript(postsText);
-  const postsFontSize = rankingFontSizePx(compact ? 8 : 9, postsText);
+  const isWebScore = scoreLayout === "web" && !compact;
+  const tagFontSize = rankingFontSizePx(
+    isWebScore ? 10 : compact ? 7 : 8,
+    metricTag
+  );
+  const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
+  const dayDeltaFontSize = rankingFontSizePx(
+    isWebScore ? 11 : compact ? 9 : 10,
+    dayDeltaText ?? "p+0.0"
+  );
+
+  const tagEl = (
+    <span
+      className={[
+        isWebScore ? "" : "mt-1",
+        "font-bold tracking-[0.2em]",
+        tagJa ? jp.className : nameOxanium.className,
+        tagJa ? "" : "uppercase",
+      ].join(" ")}
+      style={{ color: "#FF2BD6", fontSize: tagFontSize }}
+    >
+      {metricTag}
+    </span>
+  );
+
+  const dayDeltaEl = dayDeltaText ? (
+    <span
+      className={[
+        isWebScore ? "mt-0.5" : "mt-0.5",
+        nameOxanium.className,
+        "font-extrabold tabular-nums leading-none tracking-[0.06em]",
+      ].join(" ")}
+      style={{
+        color: "#FFD65A",
+        fontSize: dayDeltaFontSize,
+        textShadow: "0 0 8px rgba(255,214,90,0.45)",
+      }}
+    >
+      {dayDeltaText}
+    </span>
+  ) : null;
 
   return (
     <article
@@ -298,7 +321,7 @@ export function CyberRankingListRow({
               className={[
                 "font-bold leading-none",
                 nameOxanium.className,
-                compact ? "text-[6px] tracking-[0.08em]" : "text-[7px] tracking-[0.1em]",
+                compact ? "text-[6px] tracking-[0.08em]" : "text-[7px] tracking-widest",
               ].join(" ")}
               style={{
                 color: "#B8FF3C",
@@ -355,43 +378,31 @@ export function CyberRankingListRow({
             </div>
             {nameExtra}
           </div>
-          <div className={compact ? "mt-1.5" : "mt-2"}>
-            <CyberListSegBar
-              pct={barPct}
-              metric={metric}
-              compact={compact}
-              enterDelay={barEnterDelay}
-            />
-          </div>
+          <CyberListRowMeta
+            countryCode={countryCode}
+            posts={posts}
+            metric={metric}
+            avgRow={avgRow ?? {}}
+            compact={compact}
+          />
         </div>
 
         <div className="flex shrink-0 flex-col items-end justify-center pl-1">
-          {scoreSlot}
-          <span
-            className={[
-              "mt-1 font-bold tracking-[0.2em]",
-              tagJa ? jp.className : nameOxanium.className,
-              tagJa ? "" : "uppercase",
-            ].join(" ")}
-            style={{ color: "#FF2BD6", fontSize: tagFontSize }}
-          >
-            {metricTag}
-          </span>
-          {typeof posts === "number" ? (
-            <span
-              className={[
-                "mt-0.5 tabular-nums leading-none",
-                postsJa ? jp.className : nameOxanium.className,
-                postsJa ? "" : "uppercase tracking-[0.12em]",
-              ].join(" ")}
-              style={{
-                color: "rgba(255,255,255,0.48)",
-                fontSize: postsFontSize,
-              }}
-            >
-              {postsText}
-            </span>
-          ) : null}
+          {isWebScore ? (
+            <div className="flex items-start gap-2.5">
+              {scoreSlot}
+              <div className="flex flex-col items-end">
+                {tagEl}
+                {dayDeltaEl}
+              </div>
+            </div>
+          ) : (
+            <>
+              {scoreSlot}
+              {tagEl}
+              {dayDeltaEl}
+            </>
+          )}
         </div>
       </div>
     </article>

@@ -29,6 +29,7 @@ import {
   rankingMetricAccent,
 } from "@/lib/rankings/rankingMetricAccent";
 import { MyRankCardFrame } from "@/app/component/rankings/MyRankCardFrame";
+import { CyberSlantedSegBar } from "@/app/component/rankings/CyberSlantedSegBar";
 
 export type MyRankMiniMetric = {
   /** 選択中メトリクスのハイライト用（MobileMetric と一致させる） */
@@ -502,19 +503,17 @@ function metricAccent(key: string) {
 }
 
 /* ============================================================
- * 案B — 10 分割 HUD セグメントバー（フラット・指標色）
+ * HUD セグメントバー — ランキングリストと共通の斜めセグ
  * ============================================================ */
-const SEG_COUNT = 10;
-const SEG_STAGGER_S = 0.032;
 
 function HudSegBar({
   pct,
   enter,
-  reduceMotion,
-  segMinHClass,
+  segMinHClass: _segMinHClass,
   accentColor,
   glow,
   accentDim,
+  compact = false,
 }: {
   pct: number;
   enter: boolean;
@@ -523,53 +522,20 @@ function HudSegBar({
   accentColor: string;
   glow: string;
   accentDim: string;
+  compact?: boolean;
 }) {
-  const filled = enter
-    ? Math.round((Math.min(100, Math.max(0, pct)) / 100) * SEG_COUNT)
-    : 0;
-  const motionOff = reduceMotion === true;
-
   return (
-    <div className="flex gap-[3px]" role="presentation">
-      {Array.from({ length: SEG_COUNT }).map((_, i) => {
-        const lit = i < filled;
-        const delay = i * SEG_STAGGER_S;
-        const shown = enter || motionOff;
-
-        return (
-          <motion.div
-            key={i}
-            className={["flex-1 rounded-[1px]", segMinHClass].join(" ")}
-            initial={false}
-            animate={{
-              opacity: shown ? (lit ? 1 : 0.38) : 0,
-              scaleY: shown ? 1 : 0.3,
-            }}
-            transition={
-              motionOff
-                ? { duration: 0 }
-                : {
-                    opacity: { delay: enter ? delay : 0, duration: 0.22 },
-                    scaleY: {
-                      delay: enter ? delay : 0,
-                      type: "spring",
-                      stiffness: 520,
-                      damping: 26,
-                    },
-                  }
-            }
-            style={{
-              transformOrigin: "center bottom",
-              background: lit ? accentColor : "rgba(255,255,255,0.07)",
-              boxShadow: lit ? `0 0 6px ${glow}` : "none",
-              border: lit
-                ? `1px solid ${accentDim}`
-                : "1px solid rgba(255,255,255,0.04)",
-            }}
-          />
-        );
-      })}
-    </div>
+    <CyberSlantedSegBar
+      pct={pct}
+      compact={compact}
+      enter={enter}
+      accent={{
+        border: accentColor,
+        glow,
+        bg: accentDim,
+      }}
+      maxWidthClass="max-w-full"
+    />
   );
 }
 
@@ -684,6 +650,7 @@ function MyRankHudStatCell({
           accentColor={accent.border}
           glow={accent.bar.glow}
           accentDim={accent.bg}
+          compact={compact}
         />
       </div>
     </div>

@@ -22,7 +22,6 @@ import {
   CyberRankingListRow,
   CyberRankingScore,
 } from "@/app/component/rankings/CyberRankingListParts";
-import { listMetricBarPct } from "@/lib/rankings/podiumMetricBar";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
 
 export type RankingCardSize = "default" | "compact";
@@ -41,8 +40,6 @@ export default function RankingCard({
   size = "default",
   shellTone = "default",
   animateValue = true,
-  barMaxValue = 0,
-  barEnterDelay = 0,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -56,10 +53,6 @@ export default function RankingCard({
   size?: RankingCardSize;
   shellTone?: RankingCardShellTone;
   animateValue?: boolean;
-  /** 1位の指標値。セグメントバーの 100% 基準 */
-  barMaxValue?: number;
-  /** セグメントバー左から点灯の開始遅延（秒） */
-  barEnterDelay?: number;
 }) {
   const compact = size === "compact";
   const subtleShell = shellTone === "subtle";
@@ -87,8 +80,9 @@ export default function RankingCard({
   );
 
   const displayName = r.displayName ?? r.handle ?? "Unknown";
-  const barPct = listMetricBarPct(metric, r, barMaxValue);
   const metricTag = cyberMetricTag(metric, language);
+  const isWebList = base === "/web" && !compact;
+  const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
 
   return (
     <Link href={profileHref} className="block min-w-0">
@@ -96,14 +90,19 @@ export default function RankingCard({
         rank={rank}
         displayName={displayName}
         photoURL={r.photoURL}
-        barPct={barPct}
         metric={metric}
         metricTag={metricTag}
         posts={r.posts ?? 0}
-        language={language}
+        countryCode={r.countryCode}
+        metricValueDelta={r.metricValueDelta}
+        avgRow={{
+          avgTotalScore: r.avgTotalScore,
+          avgMarginPrecision: r.avgMarginPrecision,
+          avgUpsetScore: r.avgUpsetScore,
+        }}
         compact={compact}
+        scoreLayout={scoreLayout}
         subtleShell={subtleShell}
-        barEnterDelay={barEnterDelay}
         nameExtra={
           <>
             <RankDeltaBadge delta={r.rankDeltaPlaces} language={language} />
@@ -122,6 +121,7 @@ export default function RankingCard({
             metric={metric}
             counted={counted}
             compact={compact}
+            scoreLayout={scoreLayout}
           />
         }
       />

@@ -38,6 +38,8 @@ export type RankingRowWithCountry = RankingRow & {
   countryCode?: CountryCode;
   /** 前日比順位差（正=上昇）。スナップショット行のみ。 */
   rankDeltaPlaces?: number;
+  /** 選択指標の前日比。スナップショット行のみ。 */
+  metricValueDelta?: number;
   totalScore?: number;
   avgTotalScore?: number;
   marginPrecisionScore?: number;

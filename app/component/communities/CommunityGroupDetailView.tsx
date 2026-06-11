@@ -21,7 +21,6 @@ import {
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
-import { leaderMetricValue } from "@/lib/rankings/podiumMetricBar";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import {
   RankingsCyberPanel,
@@ -329,15 +328,6 @@ export default function CommunityGroupDetailView({
     summary?.headerImageUrl;
   const rankMetricForProfile = communityMetricToMobile(metric);
 
-  const barMaxValue = useMemo(() => {
-    const leader = rows.find((r) => r.rank === 1) ?? rows[0];
-    if (!leader) return 0;
-    return leaderMetricValue(
-      communityRowToRankingCardRow(leader, metric),
-      rankMetricForProfile
-    );
-  }, [rows, metric, rankMetricForProfile]);
-
   const rankingCardRows = useMemo(
     () => rows.map((r) => communityRowToRankingCardRow(r, metric)),
     [rows, metric]
@@ -353,7 +343,7 @@ export default function CommunityGroupDetailView({
     [groupId, metric, rows]
   );
 
-  const { intro, topDone, handleTopCountDone } = useRankingsTopDone(rankListAnimKey);
+  const { topDone, handleTopCountDone } = useRankingsTopDone(rankListAnimKey);
 
   return (
     <>
@@ -582,9 +572,7 @@ export default function CommunityGroupDetailView({
                   rows={top3}
                   metric={rankMetricForProfile}
                   language={language}
-                  barMaxValue={barMaxValue}
                   onTopCountDone={handleTopCountDone}
-                  intro={intro}
                   compact
                   shellTone="subtle"
                 />
@@ -607,8 +595,6 @@ export default function CommunityGroupDetailView({
                         language={language}
                         size="compact"
                         shellTone="subtle"
-                        barMaxValue={barMaxValue}
-                        barEnterDelay={0.08 + i * 0.05}
                       />
                     </motion.div>
                   ))}

@@ -50,7 +50,7 @@ export default function RankingsMetricRow({
             }
       }
     >
-      <CyberSlantedTabBar aria-label={msgs.rankings.metricTabsLabel}>
+      <CyberSlantedTabBar fill aria-label={msgs.rankings.metricTabsLabel}>
         {metrics.map((item) => (
           <CyberSlantedTab
             key={item.key}

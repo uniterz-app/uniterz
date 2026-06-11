@@ -5,7 +5,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 import RankingCard from "@/app/component/rankings/RankingCard";
-import { leaderMetricValue } from "@/lib/rankings/podiumMetricBar";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import {
@@ -170,10 +169,6 @@ export default function MonthlyLeaderboardSection({
 
   const top3 = useMemo(() => rows.slice(0, 3), [rows]);
   const restRows = useMemo(() => rows.slice(3), [rows]);
-  const barMaxValue = useMemo(
-    () => leaderMetricValue(rows[0], metric),
-    [rows, metric]
-  );
 
   const myRawRow = useMemo(() => findMyRow(rawRows, myUid), [rawRows, myUid]);
 
@@ -294,7 +289,6 @@ export default function MonthlyLeaderboardSection({
                           rank={i + 4}
                           metric={metric}
                           language={language}
-                          barMaxValue={barMaxValue}
                         />
                       </motion.div>
                     ))}

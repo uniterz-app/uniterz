@@ -426,6 +426,30 @@
   pointer-events: none;
 }
 
+/* ランキング行 / MyRankCard — 斜めセグメントバー */
+.cyber-slanted-seg-track {
+  transform-origin: left center;
+}
+
+.cyber-slanted-seg {
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.cyber-slanted-seg__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 0, 0, 0.18) 1px,
+    rgba(0, 0, 0, 0.18) 2px
+  );
+  pointer-events: none;
+}
+
 .my-rank-hud-panel:not(.my-rank-hud-panel--web) .my-rank-hud-cell__accent {
   top: 6px;
   bottom: 6px;

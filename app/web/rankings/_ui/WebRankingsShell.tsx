@@ -11,7 +11,6 @@ import { useSearchParams } from "next/navigation";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
-import { leaderMetricValue } from "@/lib/rankings/podiumMetricBar";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
@@ -218,12 +217,7 @@ export default function WebRankingsShell() {
     rankingLeague,
     wcStage,
   });
-  const { intro, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
-
-  const barMaxValue = useMemo(
-    () => leaderMetricValue(rows[0], metric as MobileMetric),
-    [rows, metric]
-  );
+  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
     <div className="relative z-10 min-h-full w-full overflow-x-hidden">
@@ -374,9 +368,7 @@ export default function WebRankingsShell() {
                   rankingLeague={rankingLeague}
                   wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                   onTopCountDone={handleTopCountDone}
-                  intro={intro}
                   language={language}
-                  barMaxValue={barMaxValue}
                 />
 
               <motion.div
@@ -403,8 +395,6 @@ export default function WebRankingsShell() {
                         rankingLeague={rankingLeague}
                         wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                         language={language}
-                        barMaxValue={barMaxValue}
-                        barEnterDelay={0.08 + i * 0.05}
                       />
                     </motion.div>
                   ))}

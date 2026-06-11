@@ -59,6 +59,7 @@ type RankingRow = {
 
   rank: number;
   rankDeltaPlaces?: number | null;
+  metricValueDelta?: number | null;
 };
 
 function isMetric(v: unknown): v is Metric {

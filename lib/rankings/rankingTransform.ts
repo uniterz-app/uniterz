@@ -30,6 +30,8 @@ export type RankingApiRow = {
   countryCode?: string | null;
   /** Day-over-day rank change (positive = improved). From snapshot job. */
   rankDeltaPlaces?: number | null;
+  /** 選択指標の前日比（スナップショット行のみ） */
+  metricValueDelta?: number | null;
 };
 
 export function toApiMetric(metric: MobileMetric) {
@@ -80,6 +82,13 @@ export function toMobileRows(
         Number.isFinite(row.rankDeltaPlaces) &&
         row.rankDeltaPlaces !== 0
           ? row.rankDeltaPlaces
+          : undefined,
+
+      metricValueDelta:
+        typeof row.metricValueDelta === "number" &&
+        Number.isFinite(row.metricValueDelta) &&
+        row.metricValueDelta !== 0
+          ? row.metricValueDelta
           : undefined,
     };
   });

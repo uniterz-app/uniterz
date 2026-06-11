@@ -16,7 +16,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
-import { leaderMetricValue } from "@/lib/rankings/podiumMetricBar";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
@@ -169,10 +168,6 @@ export default function MobileRankingsPage() {
 
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
-  const barMaxValue = useMemo(
-    () => leaderMetricValue(rows[0], metric),
-    [rows, metric]
-  );
 
   const myValue = useMemo(
     () => getMyMetricValue(metric, myRawRow),
@@ -221,7 +216,7 @@ export default function MobileRankingsPage() {
     rankingLeague,
     wcStage,
   });
-  const { intro, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
+  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
     <div
@@ -389,9 +384,7 @@ export default function MobileRankingsPage() {
                   rankingLeague={rankingLeague}
                   wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                   onTopCountDone={handleTopCountDone}
-                  intro={intro}
                   language={language}
-                  barMaxValue={barMaxValue}
                 />
               <motion.div
                 key={`rest-${pageKey}`}
@@ -416,8 +409,6 @@ export default function MobileRankingsPage() {
                           rankingLeague={rankingLeague}
                           wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                           language={language}
-                          barMaxValue={barMaxValue}
-                          barEnterDelay={0.08 + i * 0.05}
                         />
                     </motion.div>
                   ))}
