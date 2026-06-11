@@ -34,15 +34,6 @@ export function MyRankCardBacklight() {
         }}
       />
       <div
-        className="absolute left-0 right-0 top-[44%] h-px -translate-y-1/2"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, rgba(255,255,255,0.65) 50%, transparent)",
-          boxShadow:
-            "0 0 24px rgba(34,211,238,0.75), 0 0 48px rgba(34,211,238,0.35)",
-        }}
-      />
-      <div
         className="absolute left-1/2 top-[44%] size-48 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[48px]"
         style={{ background: "rgba(34,211,238,0.28)" }}
       />
