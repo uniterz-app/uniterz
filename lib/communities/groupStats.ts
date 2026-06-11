@@ -134,7 +134,8 @@ export type CumulativeRow = {
 export function sortValueFromAgg(
   agg: MemberAgg,
   cumulative: CumulativeRow | null,
-  metric: CommunityMetric
+  metric: CommunityMetric,
+  league: CommunityLeague = "all"
 ): number {
   if (metric === "winRate") {
     const posts = agg.totalPosts;
@@ -150,13 +151,29 @@ export function sortValueFromAgg(
   return 0;
 }
 
+function streakFromCumulative(
+  d: Record<string, unknown>,
+  league: CommunityLeague
+): number {
+  if (league === "wc") {
+    return Number(d.streakFootball ?? d.activeWinStreak ?? 0);
+  }
+  if (league === "nba") {
+    const bySport = d.streakBySport as { basketball?: number } | undefined;
+    return Number(bySport?.basketball ?? d.activeWinStreak ?? 0);
+  }
+  return Number(d.activeWinStreak ?? 0);
+}
+
 function rowFromAgg(
   uid: string,
   agg: MemberAgg,
   c: CumulativeRow | null,
-  metric: CommunityMetric
+  metric: CommunityMetric,
+  league: CommunityLeague
 ) {
   const winRate = agg.totalPosts > 0 ? agg.totalWins / agg.totalPosts : 0;
+  const streak = c?.activeWinStreak ?? 0;
   return {
     uid,
     displayName: c?.displayName ?? "user",
@@ -170,8 +187,8 @@ function rowFromAgg(
     totalPoints: agg.totalPoints,
     totalPrecision: agg.totalPrecision,
     totalUpset: agg.totalUpset,
-    activeWinStreak: c?.activeWinStreak ?? 0,
-    sortValue: sortValueFromAgg(agg, c, metric),
+    activeWinStreak: streak,
+    sortValue: sortValueFromAgg(agg, c, metric, league),
   };
 }
 
@@ -229,7 +246,7 @@ export async function buildMemberLeaderboard(
       totalPoints: Number(d.totalPoints ?? 0),
       totalPrecision: Number(d.totalPrecision ?? 0),
       totalUpset: Number(d.totalUpset ?? 0),
-      activeWinStreak: Number(d.activeWinStreak ?? 0),
+      activeWinStreak: streakFromCumulative(d, league),
     });
   }
 
@@ -252,7 +269,7 @@ export async function buildMemberLeaderboard(
   const rows = uids.map((uid) => {
     const c = cumulativeByUid.get(uid) ?? null;
     const agg = dailyAgg.get(uid) ?? emptyAgg();
-    return rowFromAgg(uid, agg, c, metric);
+    return rowFromAgg(uid, agg, c, metric, league);
   });
 
   rows.sort((a, b) => {

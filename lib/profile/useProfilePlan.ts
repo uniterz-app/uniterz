@@ -16,8 +16,10 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
 
   const isMe = !!(myUid && targetUid && myUid === targetUid);
 
-  const [myPlan, setMyPlan] = useState<string | null>(null);
-  const [loadingPlan, setLoadingPlan] = useState(isMe);
+  const [myPlan, setMyPlan] = useState<string | null>(() =>
+    isMe && profilePlan ? profilePlan : null
+  );
+  const [loadingPlan, setLoadingPlan] = useState(isMe && !profilePlan);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,7 +34,7 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
       }
 
       try {
-        if (!cancelled) setLoadingPlan(true);
+        if (!cancelled && !(isMe && profilePlan)) setLoadingPlan(true);
 
         const userDocRef = doc(db, "users", myUid);
         const snap = await getDoc(userDocRef);
@@ -91,7 +93,7 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
     return () => {
       cancelled = true;
     };
-  }, [myUid, isMe]);
+  }, [myUid, isMe, profilePlan]);
 
   const isMyPro = myPlan === "pro";
   const isTargetPro = (profilePlan ?? "free") === "pro";

@@ -233,6 +233,7 @@ export async function updateUserStreak({
           {
             streakBySport: { basketball: curB, football: curF },
             currentStreak: curB,
+            streakFootball: curF,
             activeWinStreak,
             updatedAt: FieldValue.serverTimestamp(),
           },

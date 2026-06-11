@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
+import { leaderMetricValue } from "@/lib/rankings/podiumMetricBar";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
@@ -33,9 +34,8 @@ import {
 } from "@/lib/rankings/rankingTransform";
 import type { RankingRow } from "@/lib/rankings/useRanking";
 import { buildMyRankMiniMetrics, isMyRankMiniMetricsReady } from "@/lib/rankings/buildMyRankMiniMetrics";
-import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
 import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsBulk";
-import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import { isPlayoffRoundKey } from "@/lib/rankings/playoffRound";
@@ -126,8 +126,9 @@ export default function MobileRankingsPage() {
   const { listReady, personalPending, myUid, byMetric, myMetricValueDeltas, ensureMetric } =
     useCumulativeRankingsBulk(phase, effectiveRound, wcStageForHook);
 
-  const { user } = useMyRankingUser(myUid);
-  const { language, countryCode } = useUserLanguage(myUid);
+  const { user: sessionUser } = useRankingSessionUser(myUid);
+  const language = sessionUser.language;
+  const countryCode = sessionUser.countryCode;
   const m = t(language);
   const langUi = language === "en" ? "en" : "ja";
 
@@ -168,6 +169,10 @@ export default function MobileRankingsPage() {
 
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
+  const barMaxValue = useMemo(
+    () => leaderMetricValue(rows[0], metric),
+    [rows, metric]
+  );
 
   const myValue = useMemo(
     () => getMyMetricValue(metric, myRawRow),
@@ -286,8 +291,8 @@ export default function MobileRankingsPage() {
                 rank={rankingHasNoEntries ? null : myRank}
                 metric={metric}
                 value={myValue}
-                displayName={user.displayName || "You"}
-                photoURL={user.photoURL || null}
+                displayName={sessionUser.displayName || "You"}
+                photoURL={sessionUser.photoURL || null}
                 totalPosts={
                   typeof myRawRow?.totalPosts === "number"
                     ? myRawRow.totalPosts
@@ -296,7 +301,7 @@ export default function MobileRankingsPage() {
                 loading={!listReady}
                 statsScramble={listReady && personalPending}
                 language={language}
-                isPro={user.plan === "pro"}
+                isPro={sessionUser.plan === "pro"}
                 mobileWide
                 rankDeltaPlaces={
                   rankingHasNoEntries ? null : myRankDeltaPlaces
@@ -374,7 +379,8 @@ export default function MobileRankingsPage() {
           <div className="max-w-full overflow-x-clip">
           <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
-              <div className="relative z-10">
+              <div className="relative z-10 px-2">
+                <div className="cyber-rank-list-panel">
                 <TopPodium
                   rows={top3}
                   metric={metric}
@@ -385,26 +391,22 @@ export default function MobileRankingsPage() {
                   onTopCountDone={handleTopCountDone}
                   intro={intro}
                   language={language}
+                  barMaxValue={barMaxValue}
                 />
-                <div className="h-[2px]" />
-              </div>
-
               <motion.div
                 key={`rest-${pageKey}`}
-                className="px-2 pt-4"
                 variants={restContainer}
                 initial="hidden"
                 animate={topDone ? "show" : "hidden"}
                 style={{ opacity: topDone ? 1 : 0.35 }}
               >
-                {restRows.length > 0 && (
-                  <div className="space-y-2 pt-0.5">
-                    {restRows.map((r, i) => (
-                      <motion.div
-                        key={`${metric}-${r.uid}`}
-                        variants={restItem}
-                        custom={i}
-                      >
+                {restRows.length > 0 &&
+                  restRows.map((r, i) => (
+                    <motion.div
+                      key={`${metric}-${r.uid}`}
+                      variants={restItem}
+                      custom={i}
+                    >
                         <RankingCard
                           row={r}
                           rank={i + 4}
@@ -414,12 +416,14 @@ export default function MobileRankingsPage() {
                           rankingLeague={rankingLeague}
                           wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                           language={language}
+                          barMaxValue={barMaxValue}
+                          barEnterDelay={0.08 + i * 0.05}
                         />
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+                    </motion.div>
+                  ))}
               </motion.div>
+                </div>
+              </div>
               </motion.div>
             </AnimatePresence>
           </div>

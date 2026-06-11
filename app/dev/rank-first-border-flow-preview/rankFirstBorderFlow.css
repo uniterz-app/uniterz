@@ -1,0 +1,276 @@
+/* 1位行 — 枠を流れる光（dev / 将来本番用） */
+
+.rank-first-flow-dim {
+  box-shadow: inset 0 0 0 1px rgba(184, 255, 60, 0.32);
+  opacity: 0.85;
+}
+
+/* ── 案A: ライム conic スイープ ── */
+.rank-first-flow--conic {
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 6px rgba(184, 255, 60, 0.45));
+}
+
+.rank-first-flow--conic .rank-first-flow__spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin-left: -100vmax;
+  margin-top: -100vmax;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 232deg,
+    rgba(184, 255, 60, 0.25) 258deg,
+    rgba(255, 214, 90, 0.95) 288deg,
+    #ffffff 304deg,
+    rgba(255, 214, 90, 0.95) 318deg,
+    rgba(184, 255, 60, 0.25) 336deg,
+    transparent 360deg
+  );
+  animation: rank-first-flow-spin 3.4s linear infinite;
+}
+
+/* ── 案C: 金 + シアン デュアル conic ── */
+.rank-first-flow--dual {
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 5px rgba(0, 245, 255, 0.35))
+    drop-shadow(0 0 8px rgba(255, 214, 90, 0.35));
+}
+
+.rank-first-flow--dual .rank-first-flow__spin--gold {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin-left: -100vmax;
+  margin-top: -100vmax;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 240deg,
+    rgba(255, 214, 90, 0.4) 272deg,
+    #ffd65a 296deg,
+    rgba(255, 214, 90, 0.4) 320deg,
+    transparent 360deg
+  );
+  animation: rank-first-flow-spin 2.8s linear infinite;
+}
+
+.rank-first-flow--dual .rank-first-flow__spin--cyan {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin-left: -100vmax;
+  margin-top: -100vmax;
+  background: conic-gradient(
+    from 180deg,
+    transparent 0deg,
+    transparent 248deg,
+    rgba(0, 245, 255, 0.35) 278deg,
+    #00f5ff 300deg,
+    rgba(0, 245, 255, 0.35) 322deg,
+    transparent 360deg
+  );
+  animation: rank-first-flow-spin 2.8s linear infinite reverse;
+  opacity: 0.88;
+}
+
+/* ── 案B: SVG ダッシュ追走 ── */
+.rank-first-flow-svg-dash {
+  animation: rank-first-svg-dash 2.6s linear infinite;
+}
+
+.rank-first-flow-svg-dash--cyan {
+  animation-duration: 3.2s;
+  animation-direction: reverse;
+  opacity: 0.55;
+}
+
+@keyframes rank-first-svg-dash {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+/* ── 案D: 上下エッジスキャン ── */
+.rank-first-flow--edge-scan {
+  pointer-events: none;
+}
+
+.rank-first-flow--edge-scan::before,
+.rank-first-flow--edge-scan::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  width: 38%;
+  filter: blur(0.2px);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(184, 255, 60, 0.15),
+    rgba(255, 214, 90, 0.95),
+    rgba(0, 245, 255, 0.75),
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(184, 255, 60, 0.55);
+}
+
+.rank-first-flow--edge-scan::before {
+  top: 0;
+  left: -40%;
+  animation: rank-first-edge-h 2.4s linear infinite;
+}
+
+.rank-first-flow--edge-scan::after {
+  bottom: 0;
+  left: 100%;
+  animation: rank-first-edge-h-rev 2.4s linear infinite;
+  opacity: 0.75;
+}
+
+@keyframes rank-first-edge-h {
+  to {
+    left: 100%;
+  }
+}
+
+@keyframes rank-first-edge-h-rev {
+  to {
+    left: -40%;
+  }
+}
+
+.rank-first-flow--edge-scan-v {
+  pointer-events: none;
+}
+
+.rank-first-flow--edge-scan-v span {
+  position: absolute;
+  width: 2px;
+  height: 34%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 214, 90, 0.85),
+    rgba(184, 255, 60, 0.5),
+    transparent
+  );
+  box-shadow: 0 0 8px rgba(255, 214, 90, 0.45);
+}
+
+.rank-first-flow--edge-scan-v span:first-child {
+  right: 0;
+  top: -36%;
+  animation: rank-first-edge-v 3s linear infinite;
+}
+
+.rank-first-flow--edge-scan-v span:last-child {
+  left: 0;
+  bottom: -36%;
+  animation: rank-first-edge-v-rev 3s linear infinite;
+  opacity: 0.65;
+}
+
+@keyframes rank-first-edge-v {
+  to {
+    top: 100%;
+  }
+}
+
+@keyframes rank-first-edge-v-rev {
+  to {
+    bottom: 100%;
+  }
+}
+
+/* ── 案E: チャンピオン呼吸 + スロー conic ── */
+.rank-first-flow--pulse {
+  padding: 1.5px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: rank-first-flow-pulse-glow 2.2s ease-in-out infinite;
+}
+
+.rank-first-flow--pulse .rank-first-flow__spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin-left: -100vmax;
+  margin-top: -100vmax;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 250deg,
+    rgba(255, 214, 90, 0.55) 280deg,
+    rgba(255, 255, 255, 0.92) 300deg,
+    rgba(255, 214, 90, 0.55) 320deg,
+    transparent 360deg
+  );
+  animation: rank-first-flow-spin 5.5s linear infinite;
+}
+
+@keyframes rank-first-flow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rank-first-flow-pulse-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(184, 255, 60, 0.35));
+    opacity: 0.82;
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(255, 214, 90, 0.65));
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-first-flow__spin,
+  .rank-first-flow--edge-scan::before,
+  .rank-first-flow--edge-scan::after,
+  .rank-first-flow--edge-scan-v span,
+  .rank-first-flow-svg-dash,
+  .rank-first-flow--pulse {
+    animation: none !important;
+  }
+
+  .rank-first-flow--conic,
+  .rank-first-flow--dual,
+  .rank-first-flow--pulse {
+    filter: none;
+    opacity: 0.95;
+  }
+}

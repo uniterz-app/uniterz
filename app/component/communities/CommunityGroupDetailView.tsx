@@ -13,13 +13,16 @@ import { shareCommunityInvite } from "@/lib/communities/inviteShare";
 import type { CommunityMetric } from "@/lib/communities/types";
 import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
 import { periodLabel } from "@/lib/communities/labels";
-import type { CommunityLeague } from "@/lib/communities/types";
 import type { Language } from "@/lib/i18n/language";
 import {
   communityMetricToMobile,
   communityRowToRankingCardRow,
 } from "@/lib/communities/leaderboardDisplayRow";
 import RankingCard from "@/app/component/rankings/RankingCard";
+import TopPodium from "@/app/component/rankings/TopPodium";
+import { restContainer, restItem } from "@/app/component/rankings/anim";
+import { leaderMetricValue } from "@/lib/rankings/podiumMetricBar";
+import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import {
   RankingsCyberPanel,
   RankingsCyberSectionLabel,
@@ -47,15 +50,6 @@ async function authHeader(): Promise<string | null> {
 function commMsg(lang: Language, m: { ja: string; en: string }) {
   if (lang === "en") return m.en;
   return m.ja;
-}
-
-const RANK_ROW_STAGGER_COUNT = 10;
-const RANK_ROW_STAGGER_STEP_S = 0.07;
-const rankRowEase = [0.22, 1, 0.36, 1] as const;
-
-function rankRowRevealDelay(index: number): number {
-  if (index < RANK_ROW_STAGGER_COUNT) return index * RANK_ROW_STAGGER_STEP_S;
-  return RANK_ROW_STAGGER_COUNT * RANK_ROW_STAGGER_STEP_S;
 }
 
 export type CommunityGroupDetailViewProps = {
@@ -333,8 +327,23 @@ export default function CommunityGroupDetailView({
   const showBanner =
     headerBanner === "wide_when_image" &&
     summary?.headerImageUrl;
-  const myUid = auth.currentUser?.uid ?? null;
   const rankMetricForProfile = communityMetricToMobile(metric);
+
+  const barMaxValue = useMemo(() => {
+    const leader = rows.find((r) => r.rank === 1) ?? rows[0];
+    if (!leader) return 0;
+    return leaderMetricValue(
+      communityRowToRankingCardRow(leader, metric),
+      rankMetricForProfile
+    );
+  }, [rows, metric, rankMetricForProfile]);
+
+  const rankingCardRows = useMemo(
+    () => rows.map((r) => communityRowToRankingCardRow(r, metric)),
+    [rows, metric]
+  );
+  const top3 = rankingCardRows.slice(0, 3);
+  const restRows = rankingCardRows.slice(3);
 
   const prefersReducedMotion = useReducedMotion();
 
@@ -343,6 +352,8 @@ export default function CommunityGroupDetailView({
       `${groupId}:${metric}:${rows.map((r) => `${r.uid}:${r.rank}`).join("|")}`,
     [groupId, metric, rows]
   );
+
+  const { intro, topDone, handleTopCountDone } = useRankingsTopDone(rankListAnimKey);
 
   return (
     <>
@@ -558,39 +569,50 @@ export default function CommunityGroupDetailView({
                   <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
                 </div>
               </RankingsCyberPanel>
+            ) : rows.length === 0 ? (
+              <p className="py-8 text-center text-sm text-white/45">
+                {commMsg(language, {
+                  en: "No entries yet.",
+                  ja: "まだエントリーがありません。",
+                })}
+              </p>
             ) : (
-              <div key={rankListAnimKey} className="space-y-0">
-                {rows.map((r, index) => (
-                  <motion.div
-                    key={r.uid}
-                    initial={
-                      prefersReducedMotion ? false : { opacity: 0, y: 8 }
-                    }
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: prefersReducedMotion ? 0 : 0.32,
-                      delay: prefersReducedMotion
-                        ? 0
-                        : rankRowRevealDelay(index),
-                      ease: rankRowEase,
-                    }}
-                    className={
-                      r.uid === myUid
-                        ? "rounded-none ring-1 ring-cyan-400/22 ring-offset-0"
-                        : undefined
-                    }
-                  >
-                    <RankingCard
-                      row={communityRowToRankingCardRow(r, metric)}
-                      rank={r.rank}
-                      metric={rankMetricForProfile}
-                      language={language}
-                      size="compact"
-                      shellTone="subtle"
-                      animateValue={false}
-                    />
-                  </motion.div>
-                ))}
+              <div key={rankListAnimKey} className="cyber-rank-list-panel">
+                <TopPodium
+                  rows={top3}
+                  metric={rankMetricForProfile}
+                  language={language}
+                  barMaxValue={barMaxValue}
+                  onTopCountDone={handleTopCountDone}
+                  intro={intro}
+                  compact
+                  shellTone="subtle"
+                />
+                <motion.div
+                  variants={restContainer}
+                  initial={prefersReducedMotion ? "show" : "hidden"}
+                  animate={topDone || prefersReducedMotion ? "show" : "hidden"}
+                  style={{ opacity: topDone || prefersReducedMotion ? 1 : 0.35 }}
+                >
+                  {restRows.map((r, i) => (
+                    <motion.div
+                      key={r.uid}
+                      variants={restItem}
+                      custom={i}
+                    >
+                      <RankingCard
+                        row={r}
+                        rank={i + 4}
+                        metric={rankMetricForProfile}
+                        language={language}
+                        size="compact"
+                        shellTone="subtle"
+                        barMaxValue={barMaxValue}
+                        barEnterDelay={0.08 + i * 0.05}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
               </div>
             )}
           </>

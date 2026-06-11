@@ -20,6 +20,7 @@ type Props = {
   /** false の間はプレースホルダー非表示（My rank の loading など） */
   gateReady?: boolean;
   onDisplayReadyChange?: (ok: boolean) => void;
+  shape?: "circle" | "square";
 };
 
 /**
@@ -32,6 +33,7 @@ export function RankingsAvatarCircle({
   initialTextClassName = "text-[18px]",
   gateReady = true,
   onDisplayReadyChange,
+  shape = "circle",
 }: Props) {
   const useLetter = shouldUseInitialLetter(displayName);
   const initial = (displayName?.slice(0, 1) ?? "?").toUpperCase();
@@ -62,13 +64,24 @@ export function RankingsAvatarCircle({
     onDisplayReadyChange?.(ok);
   }, [ok, onDisplayReadyChange]);
 
+  const isSquare = shape === "square";
+  const ringClass = isSquare
+    ? ""
+    : showSolidShell
+      ? "ring-2 ring-[#0f2d35]"
+      : showPulse
+        ? "ring-1 ring-white/18 skeleton-scan"
+        : "";
+
   return (
     <div
       className={[
-        "relative shrink-0 overflow-hidden rounded-full",
+        "relative shrink-0 overflow-hidden",
+        isSquare ? "rounded-none" : "rounded-full",
         boxClassName,
-        showSolidShell ? "bg-[#0f2d35] ring-2 ring-[#0f2d35]" : "",
-        showPulse ? "bg-white/10 ring-1 ring-white/18 skeleton-scan" : "",
+        showSolidShell ? (isSquare ? "bg-[#0a0c14]" : "bg-[#0f2d35]") : "",
+        ringClass,
+        showPulse ? "bg-white/10 skeleton-scan" : "",
         !showSolidShell && !showPulse ? "bg-transparent" : "",
       ]
         .filter(Boolean)

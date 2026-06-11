@@ -501,9 +501,10 @@ exports.getCumulativeRanking = (0, https_1.onRequest)(async (req, res) => {
         if (bulkMetrics) {
             const snaps = await loadUserRankingSnaps(uid);
             const byMetric = {};
-            for (const m of bulkMetrics) {
-                byMetric[m] = await rankingPayloadForMetric(m, phase, round, uid, snaps, wcStage);
-            }
+            const payloads = await Promise.all(bulkMetrics.map((m) => rankingPayloadForMetric(m, phase, round, uid, snaps, wcStage)));
+            bulkMetrics.forEach((m, i) => {
+                byMetric[m] = payloads[i];
+            });
             res.status(200).json({
                 ok: true,
                 phase,

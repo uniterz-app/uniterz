@@ -10,7 +10,7 @@ import * as functions from "firebase-functions";
 
 import { buildCumulativeStats } from "./rankings/buildCumulativeStats";
 import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankingSnapshot";
-import { hasNbaGameScheduledJstToday } from "./schedule/hasNbaGameScheduledJstToday";
+import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
 
 // ★追加
 import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
@@ -69,7 +69,7 @@ export const updateTeamRankingsDaily = onSchedule(
 );
 
 /* ============================================================================
- * Cumulative Stats (15:40) — JST 当日に NBA 試合がある日のみ
+ * Cumulative Stats (15:40) — JST 当日に NBA / WC 試合がある日
  * ==========================================================================*/
 
 export const buildCumulativeStatsCron = onSchedule(
@@ -80,9 +80,9 @@ export const buildCumulativeStatsCron = onSchedule(
     timeoutSeconds: 540,
   },
   async () => {
-    if (!(await hasNbaGameScheduledJstToday())) {
+    if (!(await hasRankingAggregationScheduledJstToday())) {
       console.log(
-        "[buildCumulativeStatsCron] skip: no NBA games scheduled this JST date"
+        "[buildCumulativeStatsCron] skip: no NBA/WC games scheduled this JST date"
       );
       return;
     }
@@ -91,16 +91,15 @@ export const buildCumulativeStatsCron = onSchedule(
 );
 
 /* ============================================================================
- * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA 試合がある日のみ
- * （プレーイン順位は確定のため再集計しない。`buildCumulativeRankingSnapshot` は playoffs のみ更新）
+ * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA / WC 試合がある日
  * ==========================================================================*/
 
 export const buildCumulativeRankingSnapshotCron = onSchedule(
   { schedule: "55 15 * * *", timeZone: "Asia/Tokyo" },
   async () => {
-    if (!(await hasNbaGameScheduledJstToday())) {
+    if (!(await hasRankingAggregationScheduledJstToday())) {
       console.log(
-        "[buildCumulativeRankingSnapshotCron] skip: no NBA games scheduled this JST date"
+        "[buildCumulativeRankingSnapshotCron] skip: no NBA/WC games scheduled this JST date"
       );
       return;
     }

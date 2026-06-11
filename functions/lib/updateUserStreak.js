@@ -158,6 +158,7 @@ async function updateUserStreak({ db, gameId, settlementGame, }) {
             tx.set(cumulativeRef, {
                 streakBySport: { basketball: curB, football: curF },
                 currentStreak: curB,
+                streakFootball: curF,
                 activeWinStreak,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });

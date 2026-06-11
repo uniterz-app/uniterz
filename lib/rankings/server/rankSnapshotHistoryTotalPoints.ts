@@ -12,6 +12,8 @@ type HistoryDoc = {
 /**
  * cumulative_stats/{uid}/rankSnapshotHistory から totalPoints 順位（最新日・前日）を読む。
  * プレーオフ通算は playoffs、ラウンド別は playoffRounds.{round}.totalPoints。
+ *
+ * 日付キー（YYYY-MM-DD）の doc を全件取得してソート（orderBy インデックス不要）。
  */
 export async function loadSnapshotTotalPointsRankAndDelta(
   uid: string,

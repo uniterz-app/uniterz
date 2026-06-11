@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 import RankingCard from "@/app/component/rankings/RankingCard";
+import { leaderMetricValue } from "@/lib/rankings/podiumMetricBar";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import {
@@ -13,7 +14,7 @@ import {
   type RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
 import { auth } from "@/lib/firebase";
-import { useMyRankingUser } from "@/lib/rankings/useMyRankingUser";
+import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import MonthlyTopPodium from "@/app/component/leaderboards/MonthlyTopPodium";
 import MonthlySelector from "@/app/component/leaderboards/MonthlySelector";
 import useMonthlyLeaderboard, {
@@ -23,7 +24,6 @@ import useMonthlyLeaderboard, {
 import { nameBebas, jp } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
-import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 
 type Props = {
@@ -122,7 +122,8 @@ export default function MonthlyLeaderboardSection({
 }: Props) {
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [myUid, setMyUid] = useState<string | null>(null);
-  const { language } = useUserLanguage(myUid);
+  const { user: sessionUser, loading: userLoading } = useRankingSessionUser(myUid);
+  const language = sessionUser.language;
   const m = t(language);
 
   const visibleMetrics: MobileMetric[] = [
@@ -169,9 +170,12 @@ export default function MonthlyLeaderboardSection({
 
   const top3 = useMemo(() => rows.slice(0, 3), [rows]);
   const restRows = useMemo(() => rows.slice(3), [rows]);
+  const barMaxValue = useMemo(
+    () => leaderMetricValue(rows[0], metric),
+    [rows, metric]
+  );
 
   const myRawRow = useMemo(() => findMyRow(rawRows, myUid), [rawRows, myUid]);
-  const { user, loading: userLoading } = useMyRankingUser(myUid);
 
   const myRank = myRawRow?.rank ?? null;
 
@@ -220,12 +224,12 @@ export default function MonthlyLeaderboardSection({
             rank={myRank}
             metric={metric}
             value={myValue}
-            displayName={user.displayName || "You"}
-            photoURL={user.photoURL || null}
+            displayName={sessionUser.displayName || "You"}
+            photoURL={sessionUser.photoURL || null}
             totalPosts={myRawRow?.posts}
             loading={loading || userLoading}
             language={language}
-            isPro={user.plan === "pro"}
+            isPro={sessionUser.plan === "pro"}
           />
 
           <RankingsMetricRow
@@ -290,6 +294,7 @@ export default function MonthlyLeaderboardSection({
                           rank={i + 4}
                           metric={metric}
                           language={language}
+                          barMaxValue={barMaxValue}
                         />
                       </motion.div>
                     ))}

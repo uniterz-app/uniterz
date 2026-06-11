@@ -164,13 +164,41 @@ export async function GET(req: Request) {
 
     let myMetricValueDeltas: MyRankMetricValueDeltas | null = null;
 
-    /**
-     * Ranking Progress と同じ「最新 snapshot」を Your Rank（totalPoints）にも反映する。
-     * プレーオフ通算・ラウンド別とも rankSnapshotHistory を参照してトータルと揃える。
-     */
-    if (uid && data.byMetric?.totalPoints && !wcStage) {
-      const { latestRank, deltaPlaces } =
-        await loadSnapshotTotalPointsRankAndDelta(uid, phase, round);
+    const snapshotWork =
+      uid && data.byMetric?.totalPoints && !wcStage
+        ? loadSnapshotTotalPointsRankAndDelta(uid, phase, round)
+        : Promise.resolve(null);
+
+    const deltaWork =
+      uid && data.byMetric?.totalPoints?.myRow
+        ? loadMyRankMetricValueDeltas(
+            uid,
+            data.byMetric.totalPoints.myRow as {
+              totalPoints?: number;
+              totalPrecision?: number;
+              totalUpset?: number;
+              winRate?: number;
+            },
+            {
+              phase,
+              round,
+              wcStage,
+              rankingLeague: isRankingLeagueSource(searchParams.get("league"))
+                ? (searchParams.get("league") as RankingLeagueSource)
+                : wcStage
+                  ? "worldcup"
+                  : "nba",
+            }
+          )
+        : Promise.resolve(null);
+
+    const [snapshotResult, deltasResult] = await Promise.all([
+      snapshotWork.catch(() => null),
+      deltaWork.catch(() => null),
+    ]);
+
+    if (snapshotResult) {
+      const { latestRank, deltaPlaces } = snapshotResult;
       if (latestRank != null) {
         data.byMetric.totalPoints.myRank = latestRank;
         data.byMetric.totalPoints.myRankDeltaPlaces = deltaPlaces;
@@ -184,24 +212,7 @@ export async function GET(req: Request) {
       }
     }
 
-    if (uid && data.byMetric?.totalPoints?.myRow) {
-      const rawLeague = searchParams.get("league");
-      const rankingLeague: RankingLeagueSource = isRankingLeagueSource(rawLeague)
-        ? rawLeague
-        : wcStage
-          ? "worldcup"
-          : "nba";
-      myMetricValueDeltas = await loadMyRankMetricValueDeltas(
-        uid,
-        data.byMetric.totalPoints.myRow as {
-          totalPoints?: number;
-          totalPrecision?: number;
-          totalUpset?: number;
-          winRate?: number;
-        },
-        { phase, round, wcStage, rankingLeague }
-      );
-    }
+    myMetricValueDeltas = deltasResult;
 
     const maxAge = 0;
     const cacheControl = uid

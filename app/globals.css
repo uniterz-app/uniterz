@@ -150,7 +150,288 @@
   }
 }
 
-/* MyRankCard 2×2 — 十字線（中央は円の直径分だけ欠け、円が縁に被る） */
+/* MyRankCard 案B — 2×2 HUD スタッツ（divide グリッド） */
+.my-rank-hud-panel {
+  isolation: isolate;
+}
+
+.my-rank-hud-cell__accent {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 2px;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.my-rank-hud-panel--streak-selected .my-rank-hud-cell,
+.my-rank-hud-panel--goal-scorer-selected .my-rank-hud-cell {
+  filter: saturate(0.85);
+}
+
+/* MyRankCard モバイル — 横長コンパクト + レーシング順位数字 */
+.my-rank-card__grid--mobile {
+  min-height: 0;
+}
+
+/* MyRankCard — 直角フレーム（薄い緑の縁 + コーナー装飾） */
+.my-rank-card-frame {
+  background: linear-gradient(
+    165deg,
+    rgba(14, 16, 22, 0.98) 0%,
+    rgba(9, 11, 16, 0.99) 52%,
+    rgba(6, 7, 10, 1) 100%
+  );
+}
+
+.my-rank-card-frame__grid {
+  z-index: 0;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.07) 0.6px,
+    transparent 0.6px
+  );
+  background-size: 5px 5px;
+  opacity: 0.35;
+  mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.my-rank-card-frame__edge {
+  z-index: 1;
+  box-shadow:
+    inset 0 1px 0 rgba(184, 255, 60, 0.26),
+    inset 1px 0 0 rgba(184, 255, 60, 0.22),
+    inset 0 -1px 0 rgba(184, 255, 60, 0.2),
+    inset -1px 0 0 rgba(184, 255, 60, 0.18);
+}
+
+.my-rank-card-frame__corner-tl {
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border-top: 1px solid rgba(184, 255, 60, 0.28);
+  border-left: 1px solid rgba(184, 255, 60, 0.28);
+}
+
+.my-rank-card-frame__corner-tl::after {
+  content: "+";
+  position: absolute;
+  left: 2px;
+  top: -1px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(184, 255, 60, 0.32);
+  font-family: ui-monospace, monospace;
+}
+
+.my-rank-card-frame__corner-tr {
+  z-index: 2;
+  width: 28px;
+  height: 14px;
+  background: repeating-linear-gradient(
+    -52deg,
+    rgba(184, 255, 60, 0.28) 0 2px,
+    transparent 2px 5px
+  );
+  opacity: 0.65;
+  mask-image: linear-gradient(135deg, black 40%, transparent 100%);
+}
+
+.my-rank-card-frame__corner-bl {
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border-bottom: 1px solid rgba(184, 255, 60, 0.24);
+  border-left: 1px solid rgba(184, 255, 60, 0.24);
+}
+
+.my-rank-card-frame__corner-bl::after {
+  content: "+";
+  position: absolute;
+  left: 2px;
+  bottom: 0;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(184, 255, 60, 0.3);
+  font-family: ui-monospace, monospace;
+}
+
+.my-rank-card-frame__corner-br {
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  border-right: 1px solid rgba(184, 255, 60, 0.3);
+  border-bottom: 1px solid rgba(184, 255, 60, 0.3);
+}
+
+.my-rank-tower-num--mobile-race {
+  display: inline-block;
+  transform: skewX(-10deg);
+  letter-spacing: 0.05em;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* ランキング一覧 — 斜め順位数字 + スキャンライン */
+.cyber-rank-num {
+  position: relative;
+  isolation: isolate;
+}
+
+.cyber-rank-num__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.22) 2px,
+    rgba(0, 0, 0, 0.22) 3px
+  );
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.cyber-rank-list-panel {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+/* 1位ランキング行 — 枠 EDGE SCAN（案D） */
+.rank-first-flow-dim {
+  box-shadow: inset 0 0 0 1px rgba(184, 255, 60, 0.32);
+  opacity: 0.85;
+}
+
+.rank-first-flow--edge-scan {
+  pointer-events: none;
+}
+
+.rank-first-flow--edge-scan::before,
+.rank-first-flow--edge-scan::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  width: 38%;
+  filter: blur(0.2px);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(184, 255, 60, 0.15),
+    rgba(255, 214, 90, 0.95),
+    rgba(0, 245, 255, 0.75),
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(184, 255, 60, 0.55);
+}
+
+.rank-first-flow--edge-scan::before {
+  top: 0;
+  left: -40%;
+  animation: rank-first-edge-h 2.4s linear infinite;
+}
+
+.rank-first-flow--edge-scan::after {
+  bottom: 0;
+  left: 100%;
+  animation: rank-first-edge-h-rev 2.4s linear infinite;
+  opacity: 0.75;
+}
+
+@keyframes rank-first-edge-h {
+  to {
+    left: 100%;
+  }
+}
+
+@keyframes rank-first-edge-h-rev {
+  to {
+    left: -40%;
+  }
+}
+
+.rank-first-flow--edge-scan-v {
+  pointer-events: none;
+}
+
+.rank-first-flow--edge-scan-v span {
+  position: absolute;
+  width: 2px;
+  height: 34%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 214, 90, 0.85),
+    rgba(184, 255, 60, 0.5),
+    transparent
+  );
+  box-shadow: 0 0 8px rgba(255, 214, 90, 0.45);
+}
+
+.rank-first-flow--edge-scan-v span:first-child {
+  right: 0;
+  top: -36%;
+  animation: rank-first-edge-v 3s linear infinite;
+}
+
+.rank-first-flow--edge-scan-v span:last-child {
+  left: 0;
+  bottom: -36%;
+  animation: rank-first-edge-v-rev 3s linear infinite;
+  opacity: 0.65;
+}
+
+@keyframes rank-first-edge-v {
+  to {
+    top: 100%;
+  }
+}
+
+@keyframes rank-first-edge-v-rev {
+  to {
+    bottom: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-first-flow--edge-scan::before,
+  .rank-first-flow--edge-scan::after,
+  .rank-first-flow--edge-scan-v span {
+    animation: none !important;
+  }
+}
+
+/* サイバー斜めタブ（ランキング / スタッツ指標） */
+.cyber-slanted-tab {
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.cyber-slanted-tab__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.14) 2px,
+    rgba(0, 0, 0, 0.14) 3px
+  );
+  pointer-events: none;
+}
+
+.my-rank-hud-panel:not(.my-rank-hud-panel--web) .my-rank-hud-cell__accent {
+  top: 6px;
+  bottom: 6px;
+}
+
+/* MyRankCard 2×2 — 十字線（連勝オーバーレイ等・レガシー） */
 .my-rank-metrics-frame {
   --my-rank-hub-half: 26px;
   --my-rank-cell-pad-y: 1px;
@@ -224,10 +505,40 @@
 }
 
 .my-rank-metric-cell__body {
+  position: relative;
   display: flex;
   width: 100%;
   flex-direction: column;
   justify-content: center;
+}
+
+.my-rank-metric-cell--tl .my-rank-metric-cell__body,
+.my-rank-metric-cell--bl .my-rank-metric-cell__body {
+  padding-left: 7px;
+}
+
+.my-rank-metric-cell--tr .my-rank-metric-cell__body,
+.my-rank-metric-cell--br .my-rank-metric-cell__body {
+  padding-right: 7px;
+}
+
+.my-rank-metric-cell__accent {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  width: 2px;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.my-rank-metric-cell--tl .my-rank-metric-cell__accent,
+.my-rank-metric-cell--bl .my-rank-metric-cell__accent {
+  left: 0;
+}
+
+.my-rank-metric-cell--tr .my-rank-metric-cell__accent,
+.my-rank-metric-cell--br .my-rank-metric-cell__accent {
+  right: 0;
 }
 
 .my-rank-metric-cell--tl .my-rank-metric-cell__body,

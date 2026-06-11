@@ -152,6 +152,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const { chartData: dailyTrendForChart, loading: dailyTrendLoading } =
     useProfileDailyTrendChart(resolvedUid, {
       enabled: fetchOverviewExtras,
+      seedRows: props.profileDailyTrendSeed ?? undefined,
       rankingLeague,
       wcStage: props.profileStatsContext.wcStage,
     });
