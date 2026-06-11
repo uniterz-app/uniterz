@@ -220,14 +220,14 @@ export default function MobileRankingsPage() {
 
   return (
     <div
-      className="relative min-h-svh overflow-y-auto overscroll-y-contain pb-bottom-nav text-white"
+      className="relative min-h-svh max-w-full overflow-x-clip overflow-y-auto overscroll-y-contain pb-bottom-nav text-white"
       style={{ touchAction: "pan-y" }}
     >
       <div className="sticky top-0 z-40">
         <Header />
       </div>
 
-      <div className="space-y-3 px-3 pt-2">
+      <div className="max-w-full space-y-3 overflow-x-clip px-3 pt-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -371,6 +371,7 @@ export default function MobileRankingsPage() {
             </p>
           </div>
         ) : listReady ? (
+          <div className="max-w-full overflow-x-clip">
           <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
               <div className="relative z-10">
@@ -421,6 +422,7 @@ export default function MobileRankingsPage() {
               </motion.div>
               </motion.div>
             </AnimatePresence>
+          </div>
         ) : null}
 
       <SideMenuDrawer

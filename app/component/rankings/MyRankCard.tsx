@@ -21,6 +21,10 @@ import {
   proBadgeStaticMotion,
 } from "@/app/component/common/ProCyberBadge";
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
+import {
+  MyRankCardBacklight,
+  MY_RANK_CARD_RIM_FILTER,
+} from "@/app/component/rankings/MyRankCardBacklight";
 import { FLAG_SRC } from "@/lib/rankings/country";
 import { metricLabel } from "@/lib/i18n/rankings";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
@@ -109,7 +113,7 @@ type CardLayoutTokens = {
 };
 
 const MOBILE_CARD_LAYOUT: CardLayoutTokens = {
-  outerPad: "overflow-visible px-3 pt-3",
+  outerPad: "max-w-full overflow-x-clip px-3 pt-3",
   gridCols: "grid-cols-[100px_1fr]",
   rankTower: "px-1.5 pb-2 pt-3.5",
   rankLeagueLabel: "text-[8px] tracking-[0.2em]",
@@ -341,8 +345,7 @@ const CARD_SHELL: CSSProperties = {
   WebkitBackdropFilter: "blur(20px) saturate(165%)",
 };
 
-const CARD_DROP_SHADOW =
-  "drop-shadow(0 10px 28px rgba(0,0,0,0.42)) drop-shadow(0 0 1px rgba(255,255,255,0.08))";
+const CARD_DROP_SHADOW = MY_RANK_CARD_RIM_FILTER;
 
 /** 初回マウント時のみのブラー段階解除（タブ切替では再生しない） */
 const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
@@ -940,7 +943,7 @@ export default function MyRankCard({
   }, [ready, barsReady, cardResetKey]);
 
   const outerPad = mobileWide
-    ? "overflow-visible -mx-1.5 px-0 pt-3 sm:mx-0 sm:px-3"
+    ? "max-w-full overflow-x-clip -mx-1.5 px-0 pt-3 sm:mx-0 sm:px-3"
     : ui.outerPad;
 
   /** カード表示用（NBA はページ文脈で自明なため省略） */
@@ -1417,13 +1420,20 @@ export default function MyRankCard({
 
   const tiltWrapped = (
     <div
-      ref={tilt.wrapRef}
-      style={{ filter: CARD_DROP_SHADOW }}
-      onPointerMove={tiltEnabled ? tilt.onMove : undefined}
-      onPointerLeave={tiltEnabled ? tilt.onLeave : undefined}
-      onPointerCancel={tiltEnabled ? tilt.onLeave : undefined}
+      data-rank-card-root
+      className="relative isolate max-w-full overflow-x-clip"
     >
-      {body}
+      <MyRankCardBacklight />
+      <div
+        ref={tilt.wrapRef}
+        className="relative z-10"
+        style={{ filter: CARD_DROP_SHADOW }}
+        onPointerMove={tiltEnabled ? tilt.onMove : undefined}
+        onPointerLeave={tiltEnabled ? tilt.onLeave : undefined}
+        onPointerCancel={tiltEnabled ? tilt.onLeave : undefined}
+      >
+        {body}
+      </div>
     </div>
   );
 
