@@ -89,7 +89,7 @@ function buildRisingMotes(count: number): RisingMote[] {
 
 const RISING_MOTES = buildRisingMotes(20);
 /** lite（モバイル）でも十分見える粒数 */
-export const LITE_MOTE_COUNT = 12;
+export const LITE_MOTE_COUNT = 16;
 
 type RisingMotesLayerProps = {
   lite?: boolean;

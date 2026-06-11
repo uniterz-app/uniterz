@@ -15,7 +15,7 @@
    任意：色のユーティリティ
 -------------------------------- */
 :root {
-  --color-app-bg: #081116;
+  --color-app-bg: #021208;
   --color-card-bg: #334155;
   /* Fixed bottom NavBar: offset + pill height (~56–64px) + home indicator */
   --bottom-nav-clearance: calc(12px + 72px + env(safe-area-inset-bottom, 0px));
@@ -827,6 +827,7 @@
 
   body {
     margin: 0;
+    /* フォールバック単色。実背景は layout の AppPageBackground */
     background-color: var(--color-app-bg);
   }
 }
@@ -837,7 +838,8 @@
 
 .splash-screen-bg,
 body.splash-bg {
-  background-color: var(--color-app-bg);
+  /* 実背景は AppPageBackground。body は透過してオーロラを見せる */
+  background-color: transparent;
   background-image: none;
 }
 

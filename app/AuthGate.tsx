@@ -84,7 +84,7 @@ export default function AuthGate({ children, platform }: AuthGateProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-100"
+            className="fixed inset-0 z-100 bg-transparent"
           >
             <CssAnimatedSplashScreen />
           </motion.div>
