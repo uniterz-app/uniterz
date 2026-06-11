@@ -40,7 +40,9 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
   LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
   MOBILE_LIST_CARD_OUTER_CLASS,
+  MOBILE_LIST_CARD_PANEL_DENSE,
   MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS,
+  WEB_LIST_CARD_PANEL,
   listCardPanelClass,
 } from "@/lib/games/mobileListCardLayout";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
@@ -292,6 +294,11 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** 一覧のガラス面・レイアウト dense（リザルト一覧 scheduleDense と同条件） */
   const listScheduleDense = dense || (isMobile && !inPredictOverlay);
   const listPanelClass = listCardPanelClass(listScheduleDense);
+  /** Web は外枠にガラス面を直付け（従来どおり）。モバイルは transform 外の分割シェル */
+  const useSplitGlassShell = isMobile;
+  const webPanelClass = listScheduleDense
+    ? MOBILE_LIST_CARD_PANEL_DENSE
+    : WEB_LIST_CARD_PANEL;
   /** モバイル dense / W杯コンパクト一覧 */
   const mobileDense =
     (listScheduleDense && isMobile) || (compact && league === "wc");
@@ -838,6 +845,8 @@ const normalStyle: React.CSSProperties = {
       : mobileDense
         ? MOBILE_LIST_CARD_OUTER_CLASS
         : "mx-auto max-w-[1200px] w-full",
+    !useSplitGlassShell ? webPanelClass : "",
+    !useSplitGlassShell && isPredicted ? "!border-zinc-500/50" : "",
     disableCardMotion
       ? ""
       : isMobile
@@ -854,11 +863,13 @@ const normalStyle: React.CSSProperties = {
     className || "",
   ].join(" ");
 
-  const glassShellClassName = [
-    "pointer-events-none absolute inset-0 z-0",
-    listPanelClass,
-    isPredicted ? "!border-zinc-500/50" : "",
-  ].join(" ");
+  const glassShellClassName = useSplitGlassShell
+    ? [
+        "pointer-events-none absolute inset-0 z-0",
+        listPanelClass,
+        isPredicted ? "!border-zinc-500/50" : "",
+      ].join(" ")
+    : null;
 
   const shellVtStyle: React.CSSProperties = {
     ...(vtBoundsName
@@ -945,7 +956,9 @@ return (
         )
       ) : null}
 
-      <div className={glassShellClassName} aria-hidden />
+      {glassShellClassName ? (
+        <div className={glassShellClassName} aria-hidden />
+      ) : null}
 
       <div
         className={[

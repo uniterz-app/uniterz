@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "framer-motion";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import RisingMotesLayer from "@/app/component/games/RisingMotesLayer";
 
 type GamesPageBackgroundProps = {
@@ -34,13 +34,19 @@ export default function GamesPageBackground({
   lite = false,
 }: GamesPageBackgroundProps) {
   const reduceMotion = useReducedMotion();
+  const [hydrated, setHydrated] = useState(false);
 
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  /** SSR / 初回クライアント描画は固定値に揃え、ハイドレーション後に位相を再開 */
   const phase = useMemo(
     () => ({
-      aurora: cssResumeDelay(0),
-      field: cssResumeDelay(0),
+      aurora: hydrated ? cssResumeDelay(0) : "0s",
+      field: hydrated ? cssResumeDelay(0) : "0s",
     }),
-    [],
+    [hydrated],
   );
 
   const auroraCycleSec = lite ? 42 : 28;
@@ -240,6 +246,7 @@ export default function GamesPageBackground({
         }}
       />
 
+      {/* ビネットより手前に描画してモートの視認性を確保 */}
       <RisingMotesLayer lite={lite} />
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import AnimatedSplashScreen from "@/app/component/splash/AnimatedSplashScreen";
+import CssAnimatedSplashScreen from "@/app/component/splash/CssAnimatedSplashScreen";
 import { useMinimumSplashVisible } from "@/app/component/splash/useMinimumSplashVisible";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 
@@ -65,7 +65,7 @@ export default function SplashWrapper({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
-            <AnimatedSplashScreen />
+            <CssAnimatedSplashScreen />
           </motion.div>
         )}
       </AnimatePresence>

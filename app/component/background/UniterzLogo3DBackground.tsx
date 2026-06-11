@@ -174,11 +174,14 @@ function Logo3D({
   scale = SCALE,
   theme = THEME,
   edgeGlowOpacity = 0.045,
+  staticPose = false,
 }: {
   scale?: number;
   theme?: BgColorTheme;
   /** embed 時は縁の発光を強めてサイバー背景上でも視認できるようにする */
   edgeGlowOpacity?: number;
+  /** true のとき回転・浮遊・呼吸スケールを止める（スプラッシュ用） */
+  staticPose?: boolean;
 }) {
   const spinRef = useRef<THREE.Group>(null);
   const orientRef = useRef<THREE.Group>(null);
@@ -267,7 +270,7 @@ function Logo3D({
   useFrame((state) => {
     const t = state.clock.elapsedTime;
 
-    if (spinRef.current) {
+    if (spinRef.current && !staticPose) {
       spinRef.current.rotation.y = t * ROTATE_SPEED;
       spinRef.current.position.y = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE;
       const phase = (t % BREATH_PERIOD_SEC) / BREATH_PERIOD_SEC; // 0..1
@@ -340,6 +343,8 @@ export default function UniterzLogo3DBackground({
 }: UniterzLogo3DBackgroundProps) {
   const isSplash = variant === "splash";
   const isEmbed = variant === "embed";
+  /** splash / embed は AppPageBackground を透かすため Canvas を透過 */
+  const isTransparentBg = isEmbed || isSplash;
   /** embed はサイバー背景上で視認できるようシアン系の current テーマを使う */
   const activeTheme = isEmbed ? COLOR_THEMES.current : THEME;
   const logoScale = logoScaleProp ?? (isSplash ? SPLASH_LOGO_SCALE : SCALE);
@@ -352,7 +357,7 @@ export default function UniterzLogo3DBackground({
         className ?? "",
       ].join(" ")}
       style={{
-        ...(isEmbed ? undefined : { backgroundColor: THEME.bgColor }),
+        ...(isTransparentBg ? undefined : { backgroundColor: THEME.bgColor }),
         ...style,
       }}
     >
@@ -361,13 +366,13 @@ export default function UniterzLogo3DBackground({
         dpr={dpr}
         gl={{
           antialias: true,
-          alpha: isEmbed,
+          alpha: isTransparentBg,
           powerPreference: "high-performance",
         }}
         camera={{ position: [0, 0, 8], fov: 28 }}
       >
-        {!isEmbed && <color attach="background" args={[THEME.bgColor]} />}
-        {!isEmbed && <fog attach="fog" args={[THEME.fogColor, 9, 22]} />}
+        {!isTransparentBg && <color attach="background" args={[THEME.bgColor]} />}
+        {!isTransparentBg && <fog attach="fog" args={[THEME.fogColor, 9, 22]} />}
 
         <ambientLight intensity={activeTheme.ambientIntensity} />
 
@@ -402,6 +407,7 @@ export default function UniterzLogo3DBackground({
           scale={logoScale}
           theme={activeTheme}
           edgeGlowOpacity={isEmbed ? 0.11 : 0.045}
+          staticPose={isSplash}
         />
 
         <EffectComposer multisampling={0}>

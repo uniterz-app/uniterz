@@ -1,7 +1,7 @@
 "use client";
 
 import { useReducedMotion } from "framer-motion";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * ページ遷移などで再マウントされても位相がリセットされないよう、
@@ -88,7 +88,8 @@ function buildRisingMotes(count: number): RisingMote[] {
 }
 
 const RISING_MOTES = buildRisingMotes(20);
-export const LITE_MOTE_COUNT = 8;
+/** lite（モバイル）でも十分見える粒数 */
+export const LITE_MOTE_COUNT = 12;
 
 type RisingMotesLayerProps = {
   lite?: boolean;
@@ -97,46 +98,67 @@ type RisingMotesLayerProps = {
 /** 上昇する発光バーティクル（モート） */
 export default function RisingMotesLayer({ lite = false }: RisingMotesLayerProps) {
   const reduceMotion = useReducedMotion();
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const phase = useMemo(
     () => ({
-      motes: RISING_MOTES.map((m) => cssResumeDelay(m.delay)),
+      motes: RISING_MOTES.map((m) =>
+        hydrated ? cssResumeDelay(m.delay) : `${m.delay.toFixed(2)}s`,
+      ),
     }),
-    [],
+    [hydrated],
   );
 
-  if (reduceMotion) return null;
+  if (hydrated && reduceMotion) return null;
 
   const motes = lite ? RISING_MOTES.slice(0, LITE_MOTE_COUNT) : RISING_MOTES;
 
   return (
-    <>
-      {motes.map((mote, i) => (
-        <span
-          key={mote.id}
-          className="absolute rounded-full"
-          style={
-            {
-              left: mote.left,
-              bottom: mote.bottom,
-              width: mote.size,
-              height: mote.size,
-              opacity: 0,
-              willChange: "transform, opacity",
-              background: mote.background,
-              boxShadow: `0 0 ${mote.glow}px ${mote.shadow}`,
-              filter: mote.blur > 0.05 ? `blur(${mote.blur}px)` : undefined,
-              "--mote-drift": `${mote.drift}px`,
-              "--mote-start-x": `${mote.startX}px`,
-              "--mote-end-x": `${mote.endX}px`,
-              "--mote-opacity-peak": mote.opacityPeak,
-              "--mote-opacity-mid": mote.opacityMid,
-              animation: `gamesMoteRise ${mote.duration}s linear infinite`,
-              animationDelay: phase.motes[i],
-            } as React.CSSProperties
-          }
-        />
-      ))}
-    </>
+    <div
+      className="pointer-events-none absolute inset-0 z-[6] overflow-visible"
+      aria-hidden
+    >
+      {motes.map((mote, i) => {
+        const size = lite ? Math.max(mote.size, 2.2) : mote.size;
+        const background = lite
+          ? "rgba(187,247,208,0.92)"
+          : mote.background;
+        const boxShadow = lite
+          ? "0 0 7px rgba(74,222,128,0.85)"
+          : `0 0 ${mote.glow}px ${mote.shadow}`;
+
+        return (
+          <span
+            key={mote.id}
+            className="absolute rounded-full"
+            style={
+              {
+                left: mote.left,
+                bottom: lite ? -8 : mote.bottom,
+                width: size,
+                height: size,
+                opacity: 0,
+                willChange: "transform, opacity",
+                background,
+                boxShadow,
+                filter:
+                  !lite && mote.blur > 0.05
+                    ? `blur(${mote.blur}px)`
+                    : undefined,
+                "--mote-drift": `${mote.drift}px`,
+                "--mote-start-x": `${mote.startX}px`,
+                "--mote-end-x": `${mote.endX}px`,
+                animation: `gamesMoteRise ${mote.duration}s linear infinite`,
+                animationDelay: phase.motes[i],
+              } as React.CSSProperties
+            }
+          />
+        );
+      })}
+    </div>
   );
 }

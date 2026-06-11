@@ -1,30 +1,83 @@
 "use client";
 
+import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import type { Language } from "@/lib/i18n/language";
+import { t } from "@/lib/i18n/t";
+
 type Props = {
   delta?: number | null;
+  /** 自分カードの順位タワーは lg */
+  size?: "sm" | "md" | "lg";
+  language?: Language;
 };
 
-export function RankDeltaBadge({ delta }: Props) {
-  if (typeof delta !== "number" || !Number.isFinite(delta) || delta === 0) {
+const SIZE_STYLES = {
+  sm: {
+    wrap: "gap-0.5",
+    icon: "h-2.5 w-2.5",
+    text: "text-[10px]",
+  },
+  md: {
+    wrap: "gap-0.5",
+    icon: "h-3.5 w-3.5",
+    text: "text-[12px]",
+  },
+  lg: {
+    wrap: "gap-1",
+    icon: "h-[18px] w-[18px]",
+    text: "text-[14px]",
+  },
+} as const;
+
+export function RankDeltaBadge({
+  delta,
+  size = "sm",
+  language = "ja",
+}: Props) {
+  if (typeof delta !== "number" || !Number.isFinite(delta)) {
     return null;
+  }
+
+  const m = t(language).rankings;
+  const s = SIZE_STYLES[size];
+
+  if (delta === 0) {
+    return (
+      <span
+        className={[
+          "inline-flex items-center font-bold tabular-nums leading-none text-white/45",
+          s.wrap,
+          s.text,
+        ].join(" ")}
+        aria-label={m.rankUnchanged}
+        title={m.rankUnchanged}
+      >
+        <Minus className={s.icon} strokeWidth={2.5} aria-hidden />
+        <span>0</span>
+      </span>
+    );
   }
 
   const up = delta > 0;
   const amount = Math.abs(Math.trunc(delta));
-  const text = `${up ? "↗" : "↘"}${amount}`;
+  const Icon = up ? ArrowUp : ArrowDown;
+  const aria = up
+    ? m.rankUpAria.replace("{n}", String(amount))
+    : m.rankDownAria.replace("{n}", String(amount));
 
   return (
     <span
       className={[
-        "inline-flex items-center text-[10px] font-bold leading-none",
-        up
-          ? "text-yellow-300"
-          : "text-white/60",
+        "inline-flex items-center font-extrabold tabular-nums leading-none",
+        s.wrap,
+        s.text,
+        up ? "text-emerald-400" : "text-orange-400",
       ].join(" ")}
-      aria-label={up ? `Rank up ${text}` : `Rank down ${text}`}
-      title={up ? `Rank up ${text}` : `Rank down ${text}`}
+      aria-label={aria}
+      title={aria}
     >
-      {text}
+      <Icon className={s.icon} strokeWidth={2.75} aria-hidden />
+      {amount}
     </span>
   );
 }
