@@ -298,13 +298,15 @@ export default function MobileRankingsPage() {
   }, [pageKey]);
 
   return (
-    <div className="relative h-dvh overflow-hidden bg-app">
-      <div className="relative z-10 h-full overflow-y-auto overscroll-y-contain pb-bottom-nav">
-        <div className="sticky top-0 z-40">
-          <Header />
-        </div>
+    <div
+      className="relative min-h-svh overflow-y-auto overscroll-y-contain pb-bottom-nav text-white"
+      style={{ touchAction: "pan-y" }}
+    >
+      <div className="sticky top-0 z-40">
+        <Header />
+      </div>
 
-        <div className="space-y-3 px-3 pt-2">
+      <div className="space-y-3 px-3 pt-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -496,7 +498,6 @@ export default function MobileRankingsPage() {
             </AnimatePresence>
           </div>
         ) : null}
-      </div>
 
       <SideMenuDrawer
         open={rankingsDrawerOpen}
