@@ -129,7 +129,7 @@ const MOBILE_CARD_LAYOUT: CardLayoutTokens = {
   streakHubLabel: "text-[6px] tracking-[0.12em]",
   streakFlame: "h-10 w-10",
   streakFlameWrap: "h-10 w-10",
-  metricsMinH: "min-h-[84px]",
+  metricsMinH: "min-h-[144px]",
   cellPad: "px-2.5 py-1.5",
   metricLabel: "text-[7.5px] tracking-[0.18em]",
   metricValue: "text-[22px]",
@@ -156,7 +156,7 @@ const WEB_CARD_LAYOUT: CardLayoutTokens = {
   streakFlame: "h-11 w-11",
   streakFlameWrap: "h-11 w-11",
   metricValue: "text-[26px]",
-  metricsMinH: "min-h-[90px]",
+  metricsMinH: "min-h-[156px]",
 };
 
 /** 4 象限セル（余白・寄せは CSS で統一） */
@@ -644,7 +644,7 @@ function MyRankMetricsSkeleton({
         reduceMotion={reduceMotion}
         selected={false}
       />
-      <div className="my-rank-metrics-grid relative z-[1] grid h-full grid-cols-2 grid-rows-2">
+      <div className="my-rank-metrics-grid grid grid-cols-2 grid-rows-2">
         {METRICS_SKELETON_CELLS.map((cell, i) => (
           <div key={cell.key} className={METRIC_CELL_CLASS[i]}>
             <div className="my-rank-metric-cell__body">
@@ -1265,7 +1265,7 @@ export default function MyRankCard({
                 reduceMotion={reduceMotion}
                 selected={streakMetricSelected}
               />
-              <div className="my-rank-metrics-grid relative z-[1] grid h-full grid-cols-2 grid-rows-2">
+              <div className="my-rank-metrics-grid grid grid-cols-2 grid-rows-2">
               {goalScorerMetricSelected ? (
                 <div className="pointer-events-none absolute left-1/2 top-1/2 z-[9] -translate-x-1/2 -translate-y-1/2">
                   <div
