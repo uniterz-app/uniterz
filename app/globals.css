@@ -450,6 +450,39 @@
   pointer-events: none;
 }
 
+/* ランキングページタイトル — 走査線（/dev/rankings-title-preview 案F） */
+.rankings-title-scan__beam {
+  position: absolute;
+  inset: -20% -10%;
+  z-index: 1;
+  background: linear-gradient(
+    105deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 58%
+  );
+  animation: rankings-title-scan 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes rankings-title-scan {
+  0%,
+  100% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateX(120%);
+    opacity: 0.85;
+  }
+  82% {
+    opacity: 0;
+  }
+}
+
 .my-rank-hud-panel:not(.my-rank-hud-panel--web) .my-rank-hud-cell__accent {
   top: 6px;
   bottom: 6px;

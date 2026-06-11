@@ -20,6 +20,7 @@ import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs from "@/app/component/rankings/RankingsCategoryTabs";
+import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import Header from "@/app/component/Header";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import { useWebRankings } from "../_lib/useWebRankings";
@@ -235,16 +236,17 @@ export default function WebRankingsShell() {
           >
             <Menu className="h-4 w-4" strokeWidth={2.25} />
           </button>
-          <span
-            className={[
-              nameBebas.className,
-              "min-w-0 flex-1 text-center text-[15px] tracking-[0.28em] text-white/90 sm:text-base",
-            ].join(" ")}
-          >
-            {rankingLeague === "worldcup"
-              ? m.rankings.pageTitleWorldCup
-              : m.rankings.pageTitleRankings}
-          </span>
+          <div className="flex min-w-0 flex-1 justify-center">
+            <RankingsPageTitleCyber
+              variant="horizon-chrome"
+              title={
+                rankingLeague === "worldcup"
+                  ? m.rankings.pageTitleWorldCup
+                  : m.rankings.pageTitleRankings
+              }
+              size="sm"
+            />
+          </div>
           <RankingsScheduleNotice
             phase={phase}
             language={language}

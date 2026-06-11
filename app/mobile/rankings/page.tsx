@@ -25,6 +25,7 @@ import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs, {
   type RankingsCategory,
 } from "@/app/component/rankings/RankingsCategoryTabs";
+import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import Header from "@/app/component/Header";
 import {
   API_METRIC_BY_MOBILE,
@@ -237,16 +238,17 @@ export default function MobileRankingsPage() {
             >
               <Menu className="h-4 w-4" strokeWidth={2.25} />
             </button>
-            <span
-              className={[
-                nameBebas.className,
-                "min-w-0 flex-1 text-center text-[14px] tracking-[0.26em] text-white/90",
-              ].join(" ")}
-            >
-              {rankingLeague === "worldcup"
-                ? m.rankings.pageTitleWorldCup
-                : m.rankings.pageTitleRankings}
-            </span>
+            <div className="flex min-w-0 flex-1 justify-center">
+              <RankingsPageTitleCyber
+                variant="horizon-chrome"
+                title={
+                  rankingLeague === "worldcup"
+                    ? m.rankings.pageTitleWorldCup
+                    : m.rankings.pageTitleRankings
+                }
+                size="sm"
+              />
+            </div>
             <RankingsScheduleNotice
               phase={phase}
               language={language}

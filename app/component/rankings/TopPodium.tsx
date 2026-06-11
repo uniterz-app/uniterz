@@ -157,7 +157,7 @@ export default function TopPodium({
                   showCrownSlot={
                     rank === 1 ? (
                       <motion.div
-                        className="pointer-events-none absolute -top-2 left-1 z-40"
+                        className="pointer-events-none leading-none"
                         initial={
                           reduceMotion
                             ? { opacity: 1, y: 0, scale: 1 }
@@ -175,7 +175,11 @@ export default function TopPodium({
                         }
                       >
                         <Crown
-                          className="h-[16px] w-[22px] text-[#F4C542] lg:h-[19px] lg:w-[26px]"
+                          className={
+                            compact
+                              ? "h-[12px] w-[17px] text-[#F4C542]"
+                              : "h-[14px] w-[20px] text-[#F4C542] sm:h-[16px] sm:w-[22px]"
+                          }
                           fill="currentColor"
                           stroke="currentColor"
                           strokeWidth={1.7}
