@@ -173,6 +173,9 @@
 }
 
 .my-rank-metrics-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   min-height: 0;
 }
 
