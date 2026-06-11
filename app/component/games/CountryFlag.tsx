@@ -139,9 +139,7 @@ export default function CountryFlag({
   const ringClass =
     variant === "inline"
       ? "h-[1.125rem] w-[1.5rem] shrink-0 ring-1 ring-inset ring-white/20"
-      : variant === "hologram"
-        ? ""
-        : "ring-1 ring-white/15";
+      : "ring-1 ring-white/15";
 
   return (
     <span
