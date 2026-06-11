@@ -4,7 +4,7 @@ export type RankingsLanguage = "ja" | "en";
 
 export function metricLabel(metric: MobileMetric, language: RankingsLanguage): string {
   const ja = language === "ja";
-  if (metric === "totalScore") return ja ? "総合スコア" : "Total";
+  if (metric === "totalScore") return ja ? "総合スコア" : "Total Score";
   if (metric === "winRate") return ja ? "勝率" : "Win Rate";
   if (metric === "marginPrecision") return ja ? "スコア精度" : "Precision";
   if (metric === "upsetScore") return ja ? "アップセット" : "Upset";

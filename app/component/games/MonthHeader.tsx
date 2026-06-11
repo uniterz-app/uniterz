@@ -100,7 +100,7 @@ export default function MonthHeader({
         disabled={prevDisabled}
         aria-disabled={prevDisabled}
         className={[
-          "rounded-md px-3 py-2 transition",
+          "rounded-md px-3 py-1 transition",
           prevDisabled
             ? "cursor-not-allowed text-white/25"
             : "text-white/70 hover:text-white",
@@ -146,7 +146,7 @@ export default function MonthHeader({
         disabled={nextDisabled}
         aria-disabled={nextDisabled}
         className={[
-          "rounded-md px-3 py-2 transition",
+          "rounded-md px-3 py-1 transition",
           nextDisabled
             ? "cursor-not-allowed text-white/25"
             : "text-white/70 hover:text-white",

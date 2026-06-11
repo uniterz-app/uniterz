@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n/t";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL_XL } from "@/lib/ui/matchOverlayGlass";
 import { jp, nameRajdhani } from "@/lib/fonts";
 
 const ResultCard = dynamic(
@@ -43,7 +44,7 @@ export default function ProfileSettledTodayResults({
   const loadingMsg = msg.common.loading;
 
   return (
-    <section className="relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-[#050814]/80 shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+    <section className={`${CYBER_GLASS_PANEL_XL} min-w-0 shadow-[0_10px_30px_rgba(0,0,0,0.45)]`}>
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.36]"
         style={PROFILE_SHELL_GRID_STYLE}

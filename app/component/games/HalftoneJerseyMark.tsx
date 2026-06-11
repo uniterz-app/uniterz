@@ -15,6 +15,8 @@ export type HalftoneJerseyMarkProps = {
   enableDotReveal?: boolean;
   /** ドット開幕のディレイ（ms） */
   dotRevealDelayMs?: number;
+  /** ホログラム台座内：黒い落ち影を付けない */
+  hologram?: boolean;
 };
 
 type Rgb = { r: number; g: number; b: number };
@@ -69,16 +71,18 @@ export default function HalftoneJerseyMark({
   className,
   enableDotReveal = false,
   dotRevealDelayMs = 0,
+  hologram = false,
 }: HalftoneJerseyMarkProps) {
   const glowFilter = useMemo(() => {
+    if (hologram) return "none";
     const { r, g, b } = accentRgbForGlow(accent, accentEnd);
+    // ドット開幕中は canvas が毎フレーム更新されるため、filter 層は最小限に抑える
     return [
-      `drop-shadow(0 0 3px rgba(${r},${g},${b},0.52))`,
-      `drop-shadow(0 0 8px rgba(${r},${g},${b},0.30))`,
-      `drop-shadow(0 0 14px rgba(${r},${g},${b},0.15))`,
+      `drop-shadow(0 0 4px rgba(${r},${g},${b},0.55))`,
+      `drop-shadow(0 0 12px rgba(${r},${g},${b},0.26))`,
       "drop-shadow(0 1px 4px rgba(0,0,0,0.42))",
     ].join(" ");
-  }, [accent, accentEnd]);
+  }, [accent, accentEnd, hologram]);
 
   return (
     <div

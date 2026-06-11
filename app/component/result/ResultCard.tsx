@@ -29,12 +29,12 @@ import { t } from "@/lib/i18n/t";
 import type { ResultPlatform } from "@/lib/result/result-platform";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
-  MOBILE_LIST_CARD_PANEL_DENSE,
+  LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
   MOBILE_RESULT_CARD_OUTER_CLASS,
+  listCardPanelClass,
 } from "@/lib/games/mobileListCardLayout";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
@@ -306,9 +306,7 @@ function ResultCardPresentationImpl({
     return listDateLabel ? "px-2 pb-2 pt-11" : "px-2 pb-2 pt-9";
   })();
 
-  const listPanelClass = mobileScheduleDense
-    ? MOBILE_LIST_CARD_PANEL_DENSE
-    : MATCH_OVERLAY_GLASS_PANEL;
+  const listPanelClass = listCardPanelClass(mobileScheduleDense);
 
   /** 試合開始〜確定まで：LIVE 表示（一覧の MatchCard と同趣旨） */
   const isLiveGame =
@@ -420,7 +418,10 @@ function ResultCardPresentationImpl({
         </div>
       ) : null}
       <div
-        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
+        className={[
+          "pointer-events-none absolute inset-0 z-0 rounded-2xl",
+          LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
+        ].join(" ")}
         style={PROFILE_SHELL_GRID_STYLE}
         aria-hidden
       />
@@ -429,8 +430,8 @@ function ResultCardPresentationImpl({
           ref={cornerFabRef}
           className={[
             /* ホバーでペンへ移る途中でも閉じにくいようホットエリアを広げる（見た目位置は維持） */
-            "group pointer-events-auto absolute -m-6 p-6",
-            isMobile ? "right-2 top-2 z-[50]" : "right-3 top-3 z-40 sm:right-4 sm:top-4",
+            "group pointer-events-auto absolute",
+            isMobile ? "-m-3 p-3 right-1.5 top-1.5 z-[50]" : "-m-5 p-5 right-3 top-3 z-40 sm:right-4 sm:top-4",
           ].join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
@@ -445,7 +446,8 @@ function ResultCardPresentationImpl({
               <button
                 type="button"
                 className={[
-                  "absolute right-full top-1/2 mr-2 flex size-8 items-center justify-center rounded-sm border border-cyan-400/55 bg-black/75 text-cyan-200 shadow-[0_0_14px_rgba(34,211,238,0.22),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md transition-all duration-300 ease-out sm:size-9",
+                  "absolute right-full top-1/2 mr-1.5 flex items-center justify-center rounded-sm border border-cyan-400/55 bg-black/75 text-cyan-200 shadow-[0_0_14px_rgba(34,211,238,0.22),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md transition-all duration-300 ease-out",
+                  isMobile ? "size-7" : "size-8",
                   isMobile ? "z-[55]" : "z-30",
                   "hover:border-cyan-300/90 hover:bg-cyan-500/12 hover:text-cyan-50 hover:shadow-[0_0_22px_rgba(34,211,238,0.4)]",
                   isMobile ? "touch-manipulation" : "",
@@ -464,7 +466,7 @@ function ResultCardPresentationImpl({
                 }}
               >
                 <Pencil
-                  className={isMobile ? "h-3.5 w-3.5" : "h-[15px] w-[15px]"}
+                  className={isMobile ? "h-3 w-3" : "h-[14px] w-[14px]"}
                   strokeWidth={2.2}
                   aria-hidden
                 />
@@ -475,7 +477,8 @@ function ResultCardPresentationImpl({
               <button
                 type="button"
                 className={[
-                  "absolute top-full left-1/2 mt-2 flex size-8 items-center justify-center rounded-sm border border-red-500/50 bg-black/75 text-red-300 shadow-[0_0_14px_rgba(248,113,113,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 ease-out sm:size-9",
+                  "absolute top-full left-1/2 mt-1.5 flex items-center justify-center rounded-sm border border-red-500/50 bg-black/75 text-red-300 shadow-[0_0_14px_rgba(248,113,113,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 ease-out",
+                  isMobile ? "size-7" : "size-8",
                   isMobile ? "z-[55]" : "z-30",
                   "hover:border-red-400/85 hover:bg-red-950/45 hover:text-red-100 hover:shadow-[0_0_22px_rgba(239,68,68,0.32)]",
                   isMobile ? "touch-manipulation" : "",
@@ -490,7 +493,7 @@ function ResultCardPresentationImpl({
                 }}
               >
                 <Trash2
-                  className={isMobile ? "h-3.5 w-3.5" : "h-[15px] w-[15px]"}
+                  className={isMobile ? "h-3 w-3" : "h-[14px] w-[14px]"}
                   strokeWidth={2.2}
                   aria-hidden
                 />
@@ -501,7 +504,7 @@ function ResultCardPresentationImpl({
               type="button"
               className={[
                 "relative flex items-center justify-center rounded-sm border border-cyan-400/50 bg-linear-to-b from-zinc-800/95 to-black/92 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
-                isMobile ? "z-[52] size-8 touch-manipulation" : "z-20 size-9",
+                isMobile ? "z-[52] size-6 touch-manipulation" : "z-20 size-8",
                 "hover:border-cyan-300/90 hover:from-zinc-800 hover:to-zinc-950 hover:text-white hover:shadow-[0_0_26px_rgba(34,211,238,0.42)]",
               ].join(" ")}
               aria-expanded={isMobile ? cornerFabOpen : undefined}
@@ -514,8 +517,8 @@ function ResultCardPresentationImpl({
               }}
             >
               <Menu
-                className={isMobile ? "h-2.5 w-2.5" : "h-3.5 w-3.5"}
-                strokeWidth={isMobile ? 2 : 2.1}
+                className={isMobile ? "h-2 w-2" : "h-3 w-3"}
+                strokeWidth={isMobile ? 2.2 : 2.1}
                 aria-hidden
               />
             </button>
@@ -657,20 +660,19 @@ function ResultCardPresentationImpl({
       <div
         className={`relative z-10 transition-transform active:scale-[0.98] ${contentPad}`}
       >
-      <div
-        className={`grid items-start ${
-          isMobile
-            ? "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-1.5"
-            : "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-8"
-        }`}
-      >
+      <div className="relative">
+        <div
+          className={`grid grid-cols-2 items-start ${
+            isMobile ? "gap-x-1" : "gap-x-4"
+          }`}
+        >
         <div
           className={
             isMobile
               ? mobileScheduleDense
-                ? "flex min-w-0 flex-col items-stretch pt-0"
-                : "flex min-w-0 flex-col items-stretch pt-1.5"
-              : "flex min-w-0 flex-col items-center ml-1 translate-x-2 pt-2.5 sm:ml-3 sm:translate-x-2.5 sm:pt-3.5"
+                ? "flex min-w-0 flex-col items-center pt-0 pr-6 sm:pr-8"
+                : "flex min-w-0 flex-col items-center pt-1.5 pr-7 sm:pr-9"
+              : "flex min-w-0 flex-col items-center pt-2.5 pr-10 sm:pt-3.5 sm:pr-12"
           }
         >
           {isMobile ? (
@@ -681,8 +683,8 @@ function ResultCardPresentationImpl({
                     teamId={post.home?.teamId}
                     className={
                       mobileScheduleDense
-                        ? "ml-1 h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
-                        : "ml-1 h-[3.2rem] w-[4.4rem] shrink-0"
+                        ? "h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
+                        : "h-[3.2rem] w-[4.4rem] shrink-0"
                     }
                   />
                 ) : Icon === Jersey ? (
@@ -691,16 +693,16 @@ function ResultCardPresentationImpl({
                     accentEnd={homeJerseySecondaryColor}
                     className={
                       mobileScheduleDense
-                        ? "jersey-icon ml-1 h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
-                        : "ml-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                        ? "jersey-icon h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
+                        : "h-[4.5rem] w-[4.5rem] shrink-0"
                     }
                   />
                 ) : (
                   <Icon
                     className={
                       mobileScheduleDense
-                        ? "jersey-icon ml-1 h-16 w-16 shrink-0 md:h-20 md:w-20"
-                        : "ml-1 h-16 w-16 shrink-0"
+                        ? "jersey-icon h-16 w-16 shrink-0 md:h-20 md:w-20"
+                        : "h-16 w-16 shrink-0"
                     }
                     fill={homeColor}
                     stroke="#fff"
@@ -767,45 +769,11 @@ function ResultCardPresentationImpl({
 
         <div
           className={
-            mobileScheduleDense
-              ? "mt-0 flex max-w-full shrink-0 flex-col items-center justify-start px-0.5 pt-0"
-              : "mt-2 flex max-w-full shrink-0 flex-col items-center justify-start px-0.5 pt-2.5 sm:pt-3.5"
-          }
-        >
-          <div
-            className={[
-              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white/85",
-              isMobile
-                ? mobileScheduleDense
-                  ? "text-xl md:text-4xl"
-                  : "text-[clamp(1.32rem,5.4vw,1.78rem)]"
-                : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
-              resultStatsMetricNumClass,
-            ].join(" ")}
-          >
-            {predictedScore}
-          </div>
-
-          {finalScore && (
-            <div
-              className={`mt-1 whitespace-nowrap tabular-nums text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:mt-1.5 ${
-                isMobile
-                  ? "text-[13px] font-bold leading-tight"
-                  : "text-base font-bold md:text-lg"
-              } ${resultStatsMetricNumClass}`}
-            >
-              {finalScore}
-            </div>
-          )}
-        </div>
-
-        <div
-          className={
             isMobile
               ? mobileScheduleDense
-                ? "flex min-w-0 flex-col items-stretch pt-0"
-                : "flex min-w-0 flex-col items-stretch pt-1.5"
-              : "flex min-w-0 flex-col items-center mr-1 -translate-x-2 pt-2.5 sm:mr-3 sm:-translate-x-2.5 sm:pt-3.5"
+                ? "flex min-w-0 flex-col items-center pt-0 pl-6 sm:pl-8"
+                : "flex min-w-0 flex-col items-center pt-1.5 pl-7 sm:pl-9"
+              : "flex min-w-0 flex-col items-center pt-2.5 pl-10 sm:pt-3.5 sm:pl-12"
           }
         >
           {isMobile ? (
@@ -816,8 +784,8 @@ function ResultCardPresentationImpl({
                     teamId={post.away?.teamId}
                     className={
                       mobileScheduleDense
-                        ? "mr-1 h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
-                        : "mr-1 h-[3.2rem] w-[4.4rem] shrink-0"
+                        ? "h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
+                        : "h-[3.2rem] w-[4.4rem] shrink-0"
                     }
                   />
                 ) : Icon === Jersey ? (
@@ -826,16 +794,16 @@ function ResultCardPresentationImpl({
                     accentEnd={awayJerseySecondaryColor}
                     className={
                       mobileScheduleDense
-                        ? "jersey-icon mr-1 h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
-                        : "mr-1 h-[4.5rem] w-[4.5rem] shrink-0"
+                        ? "jersey-icon h-[3.875rem] w-[3.875rem] shrink-0 md:h-20 md:w-20"
+                        : "h-[4.5rem] w-[4.5rem] shrink-0"
                     }
                   />
                 ) : (
                   <Icon
                     className={
                       mobileScheduleDense
-                        ? "jersey-icon mr-1 h-16 w-16 shrink-0 md:h-20 md:w-20"
-                        : "mr-1 h-16 w-16 shrink-0"
+                        ? "jersey-icon h-16 w-16 shrink-0 md:h-20 md:w-20"
+                        : "h-16 w-16 shrink-0"
                     }
                     fill={awayColor}
                     stroke="#fff"
@@ -897,6 +865,44 @@ function ResultCardPresentationImpl({
                 />
               ) : null}
             </>
+          )}
+        </div>
+        </div>
+
+        <div
+          className={[
+            "pointer-events-none absolute left-1/2 z-10 flex max-w-[min(100%,11.5rem)] -translate-x-1/2 flex-col items-center text-center",
+            mobileScheduleDense
+              ? "top-4"
+              : isMobile
+                ? "top-5"
+                : "top-5 sm:top-6",
+          ].join(" ")}
+        >
+          <div
+            className={[
+              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white/85",
+              isMobile
+                ? mobileScheduleDense
+                  ? "text-xl md:text-4xl"
+                  : "text-[clamp(1.32rem,5.4vw,1.78rem)]"
+                : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
+              resultStatsMetricNumClass,
+            ].join(" ")}
+          >
+            {predictedScore}
+          </div>
+
+          {finalScore && (
+            <div
+              className={`mt-1 whitespace-nowrap tabular-nums text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:mt-1.5 ${
+                isMobile
+                  ? "text-[13px] font-bold leading-tight"
+                  : "text-base font-bold md:text-lg"
+              } ${resultStatsMetricNumClass}`}
+            >
+              {finalScore}
+            </div>
           )}
         </div>
       </div>

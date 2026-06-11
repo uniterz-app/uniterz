@@ -25,6 +25,7 @@ import { t } from "@/lib/i18n/t";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL, CYBER_GLASS_PANEL_XL } from "@/lib/ui/matchOverlayGlass";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { m, useReducedMotion } from "framer-motion";
 import { Info } from "lucide-react";
@@ -812,7 +813,7 @@ export default function ProfileDailyTrendChart({
     <div
       ref={ref}
       className={[
-        "relative overflow-x-clip rounded-xl border border-white/[0.12] bg-[#050814]/55 p-3",
+        `${CYBER_GLASS_PANEL_XL} overflow-x-clip p-3`,
         "backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_10px_30px_rgba(0,0,0,0.42)]",
         "ring-1 ring-inset ring-white/[0.05]",
       ].join(" ")}
@@ -1012,7 +1013,7 @@ export default function ProfileDailyTrendChart({
             {isLocked && (
               <div className="absolute inset-0 z-20 flex items-center justify-center">
                 <div className="absolute inset-0 bg-[#050814]/58 backdrop-blur-[3px]" />
-                <div className="relative mx-4 rounded-2xl border border-white/15 bg-black/35 px-4 py-4 text-center shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+                <div className={`relative mx-4 px-4 py-4 text-center ${CYBER_GLASS_PANEL}`}>
                   <div className="text-sm font-semibold text-white">
                     {lockedMsg}
                   </div>

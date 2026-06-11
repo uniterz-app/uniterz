@@ -253,7 +253,7 @@ export default function DayStrip({
     >
       <motion.div
         className={cn(
-          `flex ${gapClass} pt-1 pb-2`,
+          `flex ${gapClass} pt-0.5 pb-2`,
           distributeFewDays && "min-w-full justify-evenly",
         )}
         variants={dayStripContainer}

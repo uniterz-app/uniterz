@@ -14,6 +14,7 @@ import {
 import { ProCyberBadge } from "@/app/component/common/ProCyberBadge";
 import type { Language } from "@/lib/i18n/language";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_FILL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
 import { profileHeroCardShadowClass } from "@/lib/ui/profileCardEdgeGlow";
 import {
   getWinStreakBadge,
@@ -314,8 +315,8 @@ export default function ProfileHeroCard({
   const isWeb = layout === "web";
 
   const shellClass = isWeb
-    ? `relative isolate min-h-[128px] overflow-hidden rounded-xl ${shellBorder} bg-[#050814]/80 p-5 ${profileHeroCardShadowClass}`
-    : `relative isolate overflow-hidden rounded-xl ${shellBorder} bg-[#050814]/80 p-3 ${profileHeroCardShadowClass}`;
+    ? `relative isolate min-h-[128px] overflow-hidden rounded-xl ${shellBorder} ${CYBER_GLASS_FILL} ${CYBER_GLASS_SHADOW} p-5 ${profileHeroCardShadowClass}`
+    : `relative isolate overflow-hidden rounded-xl ${shellBorder} ${CYBER_GLASS_FILL} ${CYBER_GLASS_SHADOW} p-3 ${profileHeroCardShadowClass}`;
 
   /** innerPhase 以降に img を載せて読み込み、準備できてから円ごとフェード */
   const showAvatarMedia = staticHero || innerPhase;

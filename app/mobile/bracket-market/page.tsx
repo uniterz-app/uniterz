@@ -7,7 +7,7 @@ export default function MobilePlayoffBracketMarketPage() {
   const season = getCurrentPlayoffSeason();
 
   return (
-    <main className="min-h-screen bg-[#050b14] px-3 py-5 text-white">
+    <main className="min-h-screen px-3 py-5 text-white">
       <div className="mx-auto max-w-md">
         <PlayoffBracketMarket season={season} />
       </div>

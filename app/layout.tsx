@@ -14,6 +14,9 @@ import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
 import AppChrome from "@/app/component/AppChrome";
+import AppContentShell from "@/app/component/AppContentShell";
+import AppPageBackground from "@/app/component/AppPageBackground";
+import SplashGlbPreload from "@/app/component/splash/SplashGlbPreload";
 
 export const metadata: Metadata = {
   title: "Uniterz",
@@ -41,18 +44,11 @@ export default function RootLayout({
 
   return (
     <html lang="ja">
-      <head>
-        <link
-          rel="preload"
-          href="/logo/uniterz-logo.glb"
-          as="fetch"
-          crossOrigin="anonymous"
-        />
-      </head>
+      <head />
       <body
         className={`${jp.className} ${authCondensed.variable}`}
         style={{
-          backgroundColor: "#081116",
+          backgroundColor: "#021208",
           margin: 0,
           padding: 0,
         }}
@@ -61,22 +57,18 @@ export default function RootLayout({
           <MaintenanceOverlay />
         ) : (
           <>
+            <SplashGlbPreload />
+            <AppPageBackground />
             <EventGate />
 
-            <div
-              style={{
-                perspective: "1400px",
-                width: "100%",
-                minHeight: "100vh",
-              }}
-            >
+            <AppContentShell>
               <AppProviders>
                 <WebOrMobileSplash>
                   <AppChrome />
                   {children}
                 </WebOrMobileSplash>
               </AppProviders>
-            </div>
+            </AppContentShell>
 
             <ToastHost />
           </>

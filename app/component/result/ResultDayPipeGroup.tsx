@@ -7,15 +7,23 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { m, type Variants } from "framer-motion";
+import { m } from "framer-motion";
 import {
-  GAMES_CYBER_EASE,
-  GAMES_CYBER_ENTRY_DURATION_SEC,
-  GAMES_CYBER_SLOT_GAP_SEC,
-} from "@/app/component/games/cyberMotion";
+  RESULT_DAY_METRICS_DELAY_SEC,
+  RESULT_LIST_LEAD_IN_SEC,
+  RESULT_PAGE_SLOT_GAP_SEC,
+  RESULT_SLOT_DURATION_SEC,
+  resultCardsCyberOrch,
+  resultDayCyberGroup,
+  resultDayHeaderBracketItem,
+  resultDayHeaderBracketOrch,
+  resultDayHeaderCyber,
+  resultDayHeaderPageSlot,
+} from "@/lib/result/resultCyberMotion";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { MOBILE_RESULT_CARD_MAX_W_CLASS } from "@/lib/games/mobileListCardLayout";
+import { MOBILE_RESULT_DAY_STRIP_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { RESULT_WEB_DAY_STRIP_WIDTH_CLASS } from "@/lib/result/resultListWebLayout";
+import { CYBER_GLASS_FILL } from "@/lib/ui/matchOverlayGlass";
 
 /** 日付行右側の得点表示（確定合計 or 未確定） */
 export type ResultDayPointsHeader =
@@ -50,17 +58,23 @@ type Props = {
   listCyberStagger?: boolean;
   /**
    * true のとき、日付の次に各 Result カードを上から順にスタッガー表示する。
-   * 子は先頭が `m.div`（variants でカード列のオーケストレーション）で、その直下にカード用 `m.div` が並ぶ想定。
+   * 子は `variants={resultCardCyberItem}` 付きの `m.div` が CardsOrch 直下に並ぶ想定。
    */
   listCyberCardStagger?: boolean;
+  /** カード列のレイアウト（grid / flex 等） */
+  cardsClassName?: string;
+  /** 指定時は一覧全体の上から順スロットで日付帯を入場 */
+  headerEntrySlot?: number;
 };
 
 function AnimatedDayPointsValue({
   value,
   reducedMotion,
+  startDelayMs = 0,
 }: {
   value: string;
   reducedMotion: boolean;
+  startDelayMs?: number;
 }) {
   const target = Number.parseFloat(value);
   const safeTarget = Number.isFinite(target) ? target : 0;
@@ -82,24 +96,34 @@ function AnimatedDayPointsValue({
     const to = safeTarget;
     const durationMs = 700;
     let rafId = 0;
-    const start = performance.now();
-
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      // 終盤を少しゆっくりにして読み取りやすくする。
-      const eased = 1 - Math.pow(1 - t, 3);
-      const next = from + (to - from) * eased;
-      setDisplay(next);
-      if (t < 1) {
-        rafId = window.requestAnimationFrame(step);
-      } else {
-        fromRef.current = to;
-      }
+    let delayTimer = 0;
+    const startAnim = () => {
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / durationMs);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const next = from + (to - from) * eased;
+        setDisplay(next);
+        if (t < 1) {
+          rafId = window.requestAnimationFrame(step);
+        } else {
+          fromRef.current = to;
+        }
+      };
+      rafId = window.requestAnimationFrame(step);
     };
 
-    rafId = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(rafId);
-  }, [safeTarget, reducedMotion]);
+    if (startDelayMs > 0) {
+      delayTimer = window.setTimeout(startAnim, startDelayMs);
+    } else {
+      startAnim();
+    }
+
+    return () => {
+      window.clearTimeout(delayTimer);
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [safeTarget, reducedMotion, startDelayMs]);
 
   if (!Number.isFinite(target)) return <>{value}</>;
   return <>{display.toFixed(decimals)}</>;
@@ -108,9 +132,11 @@ function AnimatedDayPointsValue({
 function AnimatedIntegerValue({
   value,
   reducedMotion,
+  startDelayMs = 0,
 }: {
   value: number;
   reducedMotion: boolean;
+  startDelayMs?: number;
 }) {
   const safeTarget = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
   const [display, setDisplay] = useState<number>(() =>
@@ -129,23 +155,34 @@ function AnimatedIntegerValue({
     const to = safeTarget;
     const durationMs = 620;
     let rafId = 0;
-    const start = performance.now();
-
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const next = from + (to - from) * eased;
-      setDisplay(next);
-      if (t < 1) {
-        rafId = window.requestAnimationFrame(step);
-      } else {
-        fromRef.current = to;
-      }
+    let delayTimer = 0;
+    const startAnim = () => {
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / durationMs);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const next = from + (to - from) * eased;
+        setDisplay(next);
+        if (t < 1) {
+          rafId = window.requestAnimationFrame(step);
+        } else {
+          fromRef.current = to;
+        }
+      };
+      rafId = window.requestAnimationFrame(step);
     };
 
-    rafId = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(rafId);
-  }, [safeTarget, reducedMotion]);
+    if (startDelayMs > 0) {
+      delayTimer = window.setTimeout(startAnim, startDelayMs);
+    } else {
+      startAnim();
+    }
+
+    return () => {
+      window.clearTimeout(delayTimer);
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [safeTarget, reducedMotion, startDelayMs]);
 
   return <>{Math.round(display)}</>;
 }
@@ -162,6 +199,8 @@ export function ResultDayPipeGroup({
   children,
   listCyberStagger = false,
   listCyberCardStagger = false,
+  cardsClassName = "",
+  headerEntrySlot,
 }: Props) {
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [spineTopPx, setSpineTopPx] = useState<number | null>(null);
@@ -192,113 +231,37 @@ export function ResultDayPipeGroup({
   const spineTop =
     spineTopPx != null ? `${spineTopPx}px` : isMobile ? "3rem" : "3.5rem";
 
-  const easeOut = [0.22, 1, 0.36, 1] as const;
-  const useCyberStagger = listCyberStagger && !reducedMotion;
-  const useCardSlotStagger = Boolean(
-    listCyberCardStagger && useCyberStagger
-  );
+  const useFlatEntry =
+    headerEntrySlot != null && !reducedMotion;
+  const useCyberStagger =
+    listCyberStagger && !reducedMotion && !useFlatEntry;
+  const metricsDelayMs = useFlatEntry
+    ? Math.round(
+        (RESULT_LIST_LEAD_IN_SEC +
+          headerEntrySlot * RESULT_PAGE_SLOT_GAP_SEC +
+          RESULT_SLOT_DURATION_SEC * 0.55) *
+          1000,
+      )
+    : useCyberStagger
+      ? Math.round(RESULT_DAY_METRICS_DELAY_SEC * 1000)
+      : 0;
+  const headerScanDelaySec = useFlatEntry
+    ? RESULT_LIST_LEAD_IN_SEC +
+      headerEntrySlot * RESULT_PAGE_SLOT_GAP_SEC +
+      0.06
+    : 0.1;
 
-  /** スクロール連動は使わず、マウント時のみ（reduce 時は無効） */
-  const headerMotion =
-    useCyberStagger || reducedMotion
-      ? {}
-      : {
-          initial: { opacity: 0, x: -14, filter: "blur(4px)" },
-          animate: {
-            opacity: 1,
-            x: 0,
-            filter: "blur(0px)",
-            transition: { duration: 0.45, ease: easeOut },
-          },
-        };
+  const BracketShell = useCyberStagger || useFlatEntry ? m.span : "span";
+  const HeaderSlot = useCyberStagger || useFlatEntry ? m.div : "div";
+  const CardsRow = useCyberStagger ? m.div : "div";
+  const CardsOrch =
+    useCyberStagger && listCyberCardStagger ? m.div : "div";
 
-  /** 日付帯とカード列の順番入場（親リストの staggerChildren と組み合わせる） */
-  const dayCyberOrch: Variants = {
-    hidden: {},
-    show: {
-      transition: {
-        staggerChildren: GAMES_CYBER_SLOT_GAP_SEC,
-        delayChildren: 0.02,
-      },
-    },
-  };
-
-  const dayCyberSegment: Variants = reducedMotion
-    ? { hidden: {}, show: {} }
-    : {
-        hidden: {
-          opacity: 0,
-          y: -16,
-          scale: 0.985,
-          filter: "blur(6px)",
-        },
-        show: {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          filter: "blur(0px)",
-          transition: {
-            duration: GAMES_CYBER_ENTRY_DURATION_SEC,
-            ease: GAMES_CYBER_EASE,
-          },
-        },
-      };
-
-  /** 日付カード（サイバー列と通常列で共通） */
-  const dateStrip = (
-    <div
-      className={
-        isMobile
-          ? `mx-auto w-full ${MOBILE_RESULT_CARD_MAX_W_CLASS}`
-          : RESULT_WEB_DAY_STRIP_WIDTH_CLASS
-      }
-    >
-      <div className="flex w-full flex-col items-center gap-2">
-        <m.div
-          className={[
-            "group relative w-full max-w-full overflow-hidden",
-            "border border-cyan-400/70 bg-[#030308]/95",
-            "shadow-[0_0_32px_-4px_rgba(34,211,238,0.35),inset_0_1px_0_0_rgba(34,211,238,0.25)]",
-            isMobile ? "px-3 py-3" : "px-4 py-3.5 sm:px-5",
-          ].join(" ")}
-          style={{
-            clipPath:
-              "polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)",
-          }}
-          {...headerMotion}
-        >
-          {/* グリッド */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(34,211,238,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.5)_1px,transparent_1px)] [background-size:11px_11px]"
-            aria-hidden
-          />
-          {/* スキャンライン風 */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.06] [background:repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(34,211,238,0.12)_2px,rgba(34,211,238,0.12)_3px)]"
-            aria-hidden
-          />
-          {/* コーナーブラケット */}
-          <span
-            className="pointer-events-none absolute left-0 top-0 z-[1] h-3 w-3 border-l-2 border-t-2 border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"
-            aria-hidden
-          />
-          <span
-            className="pointer-events-none absolute bottom-0 right-0 z-[1] h-3 w-3 border-b-2 border-r-2 border-fuchsia-500/90 shadow-[0_0_10px_rgba(217,70,239,0.55)]"
-            aria-hidden
-          />
-          <span
-            className="pointer-events-none absolute right-0 top-0 z-[1] h-3 w-3 border-r-2 border-t-2 border-cyan-400/50"
-            aria-hidden
-          />
-          <span
-            className="pointer-events-none absolute bottom-0 left-0 z-[1] h-3 w-3 border-b-2 border-l-2 border-cyan-400/40"
-            aria-hidden
-          />
-
+  const dateStripContentRow = (
           <div
             className={[
-              "relative flex min-w-0 flex-row items-center gap-2",
-              isMobile ? "sm:gap-3" : "gap-4 sm:gap-6",
+              "relative z-[3] flex min-w-0 w-full flex-row items-center gap-2",
+              isMobile ? "gap-2.5" : "gap-4 sm:gap-6",
             ].join(" ")}
             aria-label={
               dayPoints?.variant === "total"
@@ -341,6 +304,7 @@ export function ResultDayPipeGroup({
                       <AnimatedIntegerValue
                         value={dayPoints.hitWins ?? 0}
                         reducedMotion={reducedMotion}
+                        startDelayMs={metricsDelayMs}
                       />
                     </span>
                     <span>/</span>
@@ -348,6 +312,7 @@ export function ResultDayPipeGroup({
                       <AnimatedIntegerValue
                         value={dayPoints.hitTotal}
                         reducedMotion={reducedMotion}
+                        startDelayMs={metricsDelayMs}
                       />
                     </span>
                   </div>
@@ -382,7 +347,7 @@ export function ResultDayPipeGroup({
                     </span>
                   ) : null}
                   {/* ResultCard 中央スコアと同じ数値タイポ（Oxanium + サイズ階層） */}
-                  <m.span
+                  <span
                     className={[
                       "inline-block whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white",
                       isMobile
@@ -390,22 +355,13 @@ export function ResultDayPipeGroup({
                         : "text-xl md:text-5xl",
                       resultStatsMetricNumClass,
                     ].join(" ")}
-                    initial={
-                      reducedMotion ? false : { scale: 0.88, opacity: 0.55 }
-                    }
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 420,
-                      damping: 26,
-                      mass: 0.55,
-                    }}
                   >
                     <AnimatedDayPointsValue
                       value={dayPoints.value}
                       reducedMotion={reducedMotion}
+                      startDelayMs={metricsDelayMs}
                     />
-                  </m.span>
+                  </span>
                   <span
                     className={
                       isMobile
@@ -433,13 +389,124 @@ export function ResultDayPipeGroup({
               </div>
             )}
           </div>
+  );
+
+  /** 日付帯：モバイルはページ横いっぱいのバナー、Web はコンテンツ幅いっぱい */
+  const dateStrip = isMobile ? (
+    <div className={MOBILE_RESULT_DAY_STRIP_OUTER_CLASS}>
+      <div
+        className={[
+          "group relative w-full overflow-hidden rounded-md",
+          "border border-cyan-400/40",
+          CYBER_GLASS_FILL,
+          "shadow-[0_0_24px_-8px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(34,211,238,0.16)]",
+          "px-3 py-2.5",
+        ].join(" ")}
+      >
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-[linear-gradient(180deg,rgba(34,211,238,0.95)_0%,rgba(34,211,238,0.2)_100%)] shadow-[0_0_12px_rgba(34,211,238,0.55)]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(34,211,238,0.45)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.45)_1px,transparent_1px)] [background-size:14px_14px]"
+          aria-hidden
+        />
+        {useCyberStagger && !isMobile ? (
+          <m.div
+            className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-[42%] bg-[linear-gradient(180deg,rgba(34,211,238,0.12)_0%,transparent_100%)]"
+            aria-hidden
+            initial={{ opacity: 0, y: "-100%" }}
+            animate={{ opacity: [0, 0.75, 0], y: ["-100%", "130%"] }}
+            transition={{
+              duration: 0.55,
+              delay: headerScanDelaySec,
+              ease: [0.22, 1, 0.36, 1],
+              times: [0, 0.45, 1],
+            }}
+          />
+        ) : null}
+        {dateStripContentRow}
+      </div>
+    </div>
+  ) : (
+    <div className={RESULT_WEB_DAY_STRIP_WIDTH_CLASS}>
+      <div
+        className={[
+          "group relative w-full overflow-hidden rounded-md",
+          "border border-cyan-400/55",
+          CYBER_GLASS_FILL,
+          "shadow-[0_0_28px_-6px_rgba(34,211,238,0.32),inset_0_1px_0_rgba(34,211,238,0.2)]",
+          "px-4 py-3.5 sm:px-5",
+        ].join(" ")}
+        style={{
+          clipPath:
+            "polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)",
+        }}
+      >
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.1] [background-image:linear-gradient(rgba(34,211,238,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.5)_1px,transparent_1px)] [background-size:11px_11px]"
+          aria-hidden
+        />
+        <m.div
+          className="pointer-events-none absolute inset-0 z-[1]"
+          aria-hidden
+          variants={
+            useCyberStagger || useFlatEntry
+              ? resultDayHeaderBracketOrch
+              : undefined
+          }
+        >
+          <BracketShell
+            className="absolute left-0 top-0 h-3 w-3 border-l-2 border-t-2 border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"
+            {...(useCyberStagger || useFlatEntry
+              ? { variants: resultDayHeaderBracketItem }
+              : {})}
+          />
+          <BracketShell
+            className="absolute bottom-0 right-0 h-3 w-3 border-b-2 border-r-2 border-fuchsia-500/90 shadow-[0_0_10px_rgba(217,70,239,0.55)]"
+            {...(useCyberStagger || useFlatEntry
+              ? { variants: resultDayHeaderBracketItem }
+              : {})}
+          />
+          <BracketShell
+            className="absolute right-0 top-0 h-3 w-3 border-r-2 border-t-2 border-cyan-400/50"
+            {...(useCyberStagger || useFlatEntry
+              ? { variants: resultDayHeaderBracketItem }
+              : {})}
+          />
+          <BracketShell
+            className="absolute bottom-0 left-0 h-3 w-3 border-b-2 border-l-2 border-cyan-400/40"
+            {...(useCyberStagger || useFlatEntry
+              ? { variants: resultDayHeaderBracketItem }
+              : {})}
+          />
         </m.div>
+        {useCyberStagger ? (
+          <m.div
+            className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-[38%] bg-[linear-gradient(180deg,rgba(34,211,238,0.14)_0%,transparent_100%)]"
+            aria-hidden
+            initial={{ opacity: 0, y: "-100%" }}
+            animate={{ opacity: [0, 0.85, 0], y: ["-100%", "120%"] }}
+            transition={{
+              duration: 0.55,
+              delay: headerScanDelaySec,
+              ease: [0.22, 1, 0.36, 1],
+              times: [0, 0.45, 1],
+            }}
+          />
+        ) : null}
+        {dateStripContentRow}
       </div>
     </div>
   );
 
+  const DayRoot = useCyberStagger ? m.div : "div";
+
   return (
-    <div className="relative">
+    <DayRoot
+      className="relative w-full"
+      {...(useCyberStagger ? { variants: resultDayCyberGroup } : {})}
+    >
       {railW > 0 && (
         <div
           className="pointer-events-none absolute bottom-3 w-px -translate-x-1/2 bg-white/45"
@@ -451,42 +518,51 @@ export function ResultDayPipeGroup({
         />
       )}
 
-      <div className={isMobile ? "flex flex-col gap-3" : "flex flex-col gap-4"}>
-        <div ref={headerRef} className="flex gap-0">
-          {railW > 0 ? (
-            <div
-              className="shrink-0"
-              style={{ width: railW }}
-              aria-hidden
-            />
-          ) : null}
-          {useCyberStagger ? (
-            <m.div
-              className="flex min-w-0 flex-1 flex-col"
-              variants={dayCyberOrch}
-              initial="hidden"
-              animate="show"
-            >
-              <m.div variants={dayCyberSegment} className="min-w-0 w-full">
-                {dateStrip}
-              </m.div>
-              {useCardSlotStagger ? (
-                children
-              ) : (
-                <m.div variants={dayCyberSegment} className="min-w-0 w-full pt-2">
-                  {children}
-                </m.div>
-              )}
-            </m.div>
-          ) : (
-            <div className="min-w-0 flex-1">
-              {dateStrip}
-              <div className="min-w-0 w-full pt-2">{children}</div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+      <HeaderSlot
+        ref={headerRef}
+        className="flex gap-0"
+        {...(useFlatEntry
+          ? {
+              variants: resultDayHeaderPageSlot,
+              custom: headerEntrySlot,
+            }
+          : useCyberStagger
+            ? { variants: resultDayHeaderCyber }
+            : {})}
+      >
+        {railW > 0 ? (
+          <div
+            className="shrink-0"
+            style={{ width: railW }}
+            aria-hidden
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">{dateStrip}</div>
+      </HeaderSlot>
+      <CardsRow
+        className={[
+          "flex gap-0",
+          isMobile ? "pt-3" : "pt-4",
+        ].join(" ")}
+        {...(useCyberStagger ? { variants: { hidden: {}, show: {} } } : {})}
+      >
+        {railW > 0 ? (
+          <div
+            className="shrink-0"
+            style={{ width: railW }}
+            aria-hidden
+          />
+        ) : null}
+        <CardsOrch
+          className={["min-w-0 flex-1", cardsClassName].filter(Boolean).join(" ")}
+          {...(useCyberStagger && listCyberCardStagger
+            ? { variants: resultCardsCyberOrch }
+            : {})}
+        >
+          {children}
+        </CardsOrch>
+      </CardsRow>
+    </DayRoot>
   );
 }
 

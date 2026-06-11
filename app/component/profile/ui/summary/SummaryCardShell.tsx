@@ -3,6 +3,7 @@
 
 import React from "react";
 
+import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { summaryCardShellShadowClass } from "@/lib/ui/profileCardEdgeGlow";
 
 type Props = {
@@ -24,7 +25,7 @@ export default function SummaryCardShell({
 }: Props) {
   const pad = compact ? "p-3" : "p-4";
   const base = [
-    "relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl",
+    CYBER_GLASS_PANEL,
     summaryCardShellShadowClass,
   ].join(" ");
 

@@ -4,7 +4,7 @@ export const metadata = { title: "Admin | Uniterz" };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-[100svh] bg-[#080c12] text-white">
+    <div className="relative z-10 min-h-[100svh] text-white">
       <FloatingCloseButton />
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
         <header className="mb-6">

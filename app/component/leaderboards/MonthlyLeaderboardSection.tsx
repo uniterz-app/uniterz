@@ -187,7 +187,7 @@ export default function MonthlyLeaderboardSection({
   const titleDisplay = useScrambleDecode(title, true);
 
   return (
-    <div className="relative min-h-dvh bg-app">
+    <div className="relative min-h-dvh">
       <div className="relative z-10 min-h-dvh overflow-y-auto overscroll-y-contain pb-bottom-nav">
         <div className="space-y-2 px-3 pt-2">
           <div className="text-center">

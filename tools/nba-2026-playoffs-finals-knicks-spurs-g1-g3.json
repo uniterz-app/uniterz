@@ -54,5 +54,19 @@
     "home": { "name": "New York Knicks", "teamId": "nba-knicks" },
     "away": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
     "status": "scheduled"
+  },
+  {
+    "id": "nba-20260614-01",
+    "league": "nba",
+    "startAtJstIso": "2026-06-14T09:30:00+09:00",
+    "season": "2025-26",
+    "venue": "",
+    "roundLabel": "PLAYOFF GAME 5",
+    "seasonPhase": "playoffs",
+    "countsForRanking": true,
+    "playoffRound": "finals",
+    "home": { "name": "San Antonio Spurs", "teamId": "nba-spurs" },
+    "away": { "name": "New York Knicks", "teamId": "nba-knicks" },
+    "status": "scheduled"
   }
 ]

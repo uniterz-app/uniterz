@@ -4,7 +4,7 @@ import LeaderboardsTabbedView from "@/app/component/leaderboards/LeaderboardsTab
 
 export default function WebLeaderboardsPage() {
   return (
-    <div className="min-h-dvh bg-app text-white">
+    <div className="min-h-dvh text-white">
       <main className="mx-auto w-full max-w-7xl px-6 pb-bottom-nav pt-6 lg:px-10">
         <LeaderboardsTabbedView variant="web" />
       </main>

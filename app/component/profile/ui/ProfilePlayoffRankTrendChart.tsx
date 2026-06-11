@@ -16,6 +16,7 @@ import { Info } from "lucide-react";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL_XL } from "@/lib/ui/matchOverlayGlass";
 import styles from "./profileChartInfoFaq.module.css";
 
 export type ProfilePlayoffRankTrendRow = {
@@ -362,7 +363,7 @@ export default function ProfilePlayoffRankTrendChart({
     <div
       ref={ref}
       className={[
-        "relative overflow-hidden rounded-xl border border-white/[0.12] bg-[#050814]/55 p-3",
+        `${CYBER_GLASS_PANEL_XL} p-3`,
         "backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_10px_30px_rgba(0,0,0,0.42)]",
         "ring-1 ring-inset ring-white/[0.05]",
       ].join(" ")}

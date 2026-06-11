@@ -5,6 +5,7 @@ import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import { jp } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { metricLabel, upsetShortLabel } from "@/lib/i18n/rankings";
+import { t } from "@/lib/i18n/t";
 import { motion, useReducedMotion } from "framer-motion";
 
 const tabFadeEase: [number, number, number, number] = [0.16, 0.82, 0.32, 1];
@@ -75,9 +76,12 @@ function RankingsMetricRowMobile({
   const prevMetric = metrics[prevIndex];
   const currentMetric = metrics[currentIndex];
   const nextMetric = metrics[nextIndex];
+  const m = t(language);
 
   return (
     <motion.div
+      role="tablist"
+      aria-label={m.rankings.metricTabsLabel}
       className="flex items-center justify-center px-2"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -97,6 +101,8 @@ function RankingsMetricRowMobile({
         {metrics.length > 1 && (
           <button
             type="button"
+            role="tab"
+            aria-selected={false}
             onClick={() => setMetric(prevMetric.key)}
             className={[
               "absolute left-0 z-0 box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none rounded-xl border border-[#ffffff80] bg-transparent px-2 text-[9px] font-medium text-[#ffffff80] shadow-none backdrop-blur-md opacity-70 [-webkit-tap-highlight-color:transparent] transition-[color,border-color,box-shadow,text-shadow] duration-500 ease-in-out hover:border-[#008cff] hover:text-white hover:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] focus-visible:outline-none focus-visible:border-[#008cff] focus-visible:text-white focus-visible:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] active:border-[#008cff] active:text-white active:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] sm:h-[40px] sm:min-w-[90px] sm:text-[11px]",
@@ -115,6 +121,8 @@ function RankingsMetricRowMobile({
 
         <button
           type="button"
+          role="tab"
+          aria-selected
           onClick={() => setMetric(nextMetric.key)}
           className={[
             "relative z-10 box-border flex h-[38px] min-w-[106px] max-w-[54%] items-center justify-center rounded-xl border border-[rgba(57,255,136,0.72)] bg-white/7 px-3 text-[12px] font-black tracking-[0.03em] text-white shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.22),0_0_10px_rgba(57,255,136,0.14)] backdrop-blur-md [-webkit-tap-highlight-color:transparent] transition-[border-color,box-shadow,text-shadow] duration-500 ease-in-out hover:shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.85),0_0_12px_rgba(57,255,136,0.55),0_0_28px_rgba(57,255,136,0.35)] focus-visible:outline-none focus-visible:shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.85),0_0_12px_rgba(57,255,136,0.55),0_0_28px_rgba(57,255,136,0.35)] active:shadow-[0_8px_24px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.14),0_0_0_1px_rgba(57,255,136,0.85),0_0_12px_rgba(57,255,136,0.55),0_0_28px_rgba(57,255,136,0.35)] sm:h-[44px] sm:min-w-[132px] sm:text-[14px]",
@@ -132,6 +140,8 @@ function RankingsMetricRowMobile({
         {metrics.length > 1 && (
           <button
             type="button"
+            role="tab"
+            aria-selected={false}
             onClick={() => setMetric(nextMetric.key)}
             className={[
               "absolute right-0 z-0 box-border flex h-[32px] min-w-[68px] max-w-[30%] items-center justify-center leading-none rounded-xl border border-[#ffffff80] bg-transparent px-2 text-[9px] font-medium text-[#ffffff80] shadow-none backdrop-blur-md opacity-70 [-webkit-tap-highlight-color:transparent] transition-[color,border-color,box-shadow,text-shadow] duration-500 ease-in-out hover:border-[#008cff] hover:text-white hover:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] focus-visible:outline-none focus-visible:border-[#008cff] focus-visible:text-white focus-visible:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] active:border-[#008cff] active:text-white active:shadow-[0_0_5px_#008cff,0_0_20px_rgba(0,140,255,0.55),0_0_40px_rgba(0,140,255,0.35)] sm:h-[40px] sm:min-w-[90px] sm:text-[11px]",
@@ -160,6 +170,8 @@ export default function RankingsMetricRow({
   compactMobile = false,
 }: Props) {
   const reduceMotion = useReducedMotion();
+
+  const msgs = t(language);
 
   if (compactMobile) {
     return (
@@ -191,6 +203,8 @@ export default function RankingsMetricRow({
     >
       <div className="w-full">
         <div
+          role="tablist"
+          aria-label={msgs.rankings.metricTabsLabel}
           className="flex w-full flex-wrap justify-center gap-2 py-2.5 [transform-style:preserve-3d] transform-gpu"
           style={
             reduceMotion
@@ -201,13 +215,15 @@ export default function RankingsMetricRow({
                 }
           }
         >
-          {metrics.map((m) => {
-            const active = m.key === metric;
+          {metrics.map((item) => {
+            const active = item.key === metric;
             return (
               <button
-                key={m.key}
+                key={item.key}
                 type="button"
-                onClick={() => setMetric(m.key)}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setMetric(item.key)}
                 className={[
                   jp.className,
                   "group relative h-[40px] min-w-[5.5rem] max-w-[min(100%,11rem)] shrink-0 cursor-pointer select-none rounded-xl p-0 outline-none focus-visible:outline-none [-webkit-tap-highlight-color:transparent] sm:h-[44px] sm:min-w-[6.25rem]",
@@ -244,7 +260,7 @@ export default function RankingsMetricRow({
                   }}
                 >
                   <span className="line-clamp-2 text-center sm:line-clamp-1">
-                    {formatLabel(m.key, language)}
+                    {formatLabel(item.key, language)}
                   </span>
                 </motion.span>
               </button>

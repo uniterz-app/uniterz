@@ -7,6 +7,7 @@ import { t } from "@/lib/i18n/t";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { metricValueMinWidthCh } from "@/lib/format/metricDecimals";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import { CYBER_GLASS_PANEL_SM } from "@/lib/ui/matchOverlayGlass";
 import {
   summaryCardShadowLgClass,
   summaryCardShadowSmClass,
@@ -75,7 +76,7 @@ function AnalysisWinCard({ language = "ja", ...props }: Props) {
     <div
       ref={ref}
       className={[
-        "relative overflow-hidden rounded-lg border border-white/15 bg-[#050814]/80 p-2",
+        `${CYBER_GLASS_PANEL_SM} p-2`,
         summaryCardShadowSmClass,
         "md:rounded-xl md:border-white/10 md:p-5",
         summaryCardShadowLgClass,

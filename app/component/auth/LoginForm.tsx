@@ -12,6 +12,7 @@ import CyberAuthField from "./CyberAuthField";
 import AuthFormBranding from "./AuthFormBranding";
 import cyberFieldStyles from "./cyberAuthField.module.css";
 import { authDisplayHeadingLong, authDisplayButton } from "./authEnglishDisplay";
+import { mapAuthErrorMessage } from "@/lib/auth/mapAuthErrorMessage";
 import {
   sanitizeInternalNext,
   stashPostOnboardingRedirect,
@@ -27,6 +28,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pressed, setPressed] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -69,6 +71,7 @@ export default function LoginForm({ variant }: LoginFormProps) {
     e.preventDefault();
     try {
       if (submitting) return;
+      setFormError(null);
       setSubmitting(true);
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -101,9 +104,12 @@ export default function LoginForm({ variant }: LoginFormProps) {
         stashPostOnboardingRedirect(sp.get("next"));
         router.replace(onboardingPath);
       }
-    } catch (error: any) {
-      console.error("ログイン失敗:", error);
-      alert(error?.message ?? "Login failed");
+    } catch (error: unknown) {
+      // 想定内の認証失敗を console.error に出すと Next.js dev で赤いオーバーレイになる
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[login]", error);
+      }
+      setFormError(mapAuthErrorMessage(error, "login"));
     } finally {
       setSubmitting(false);
     }
@@ -165,6 +171,15 @@ export default function LoginForm({ variant }: LoginFormProps) {
             }
           />
         </div>
+
+        {formError ? (
+          <p
+            role="alert"
+            className="mt-4 rounded-lg border border-red-400/35 bg-red-950/35 px-3 py-2.5 text-left text-sm leading-relaxed text-red-100/95"
+          >
+            {formError}
+          </p>
+        ) : null}
 
         <button
           type="submit"

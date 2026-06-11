@@ -26,6 +26,7 @@ import {
   MY_RANK_CARD_RIM_FILTER,
 } from "@/app/component/rankings/MyRankCardBacklight";
 import { FLAG_SRC } from "@/lib/rankings/country";
+import { metricLabel } from "@/lib/i18n/rankings";
 import { dateKeyJST } from "@/lib/rankings/rankSnapshotDate";
 import { Flame } from "lucide-react";
 
@@ -71,134 +72,280 @@ type Props = {
   barsReady?: boolean;
   /** リーグ/ラウンド切替でセグメント入場をリセット */
   cardResetKey?: string;
-  /** web ランキングは余白・タイポ・バーを一回り大きく */
+  /** web も mobile と同一レイアウト */
   layout?: "mobile" | "web";
 };
 
 type CardLayout = NonNullable<Props["layout"]>;
 
-const CARD_LAYOUT: Record<
-  CardLayout,
-  {
-    outerPad: string;
-    gridCols: string;
-    rankTower: string;
-    rankLabel: string;
-    rankNum: string;
-    rankGlow: string;
-    totalEntries: string;
-    rankMetaRow: string;
-    topChip: string;
-    headerPad: string;
-    avatar: string;
-    name: string;
-    subMeta: string;
-    flame: string;
-    cellPad: string;
-    metricLabel: string;
-    metricValue: string;
-    dayDelta: string;
-    barMt: string;
-    segRow: string;
-    segMinH: string;
-    footerPad: string;
-    footerText: string;
-    decorStripe: string;
-    fallbackValue: string;
-  }
-> = {
-  mobile: {
-    outerPad: "max-w-full overflow-x-clip px-3 pt-3",
-    gridCols: "grid-cols-[118px_1fr]",
-    rankTower: "px-2 pb-2 pt-2.5",
-    rankLabel: "text-[11px] tracking-[0.22em]",
-    rankNum: "text-[68px] leading-[0.84]",
-    rankGlow: "0 0 34px rgba(34,211,238,0.22)",
-    totalEntries: "text-[9px] tracking-[0.08em]",
-    rankMetaRow: "min-h-[18px] gap-1.5",
-    topChip: "text-[9px]",
-    headerPad: "px-2.5 py-1.5",
-    avatar: "h-7 w-7",
-    name: "text-[13px]",
-    subMeta: "text-[8px] tracking-[0.18em]",
-    flame: "h-2.5 w-2.5",
-    cellPad: "px-2.5 py-1.5",
-    metricLabel: "text-[7.5px] tracking-[0.18em]",
-    metricValue: "text-[15px]",
-    dayDelta: "text-[9px]",
-    barMt: "mt-1.5",
-    segRow: "h-[5px] gap-[2px]",
-    segMinH: "min-h-[5px]",
-    footerPad: "px-2.5 py-[5px]",
-    footerText: "text-[8px] tracking-[0.26em]",
-    decorStripe: "h-[44px] w-[44px]",
-    fallbackValue: "text-[21px]",
-  },
-  web: {
-    outerPad: "max-w-full overflow-x-clip px-0 pt-4",
-    gridCols: "grid-cols-[156px_1fr]",
-    rankTower: "px-3 pb-3 pt-3",
-    rankLabel: "text-[13px] tracking-[0.24em]",
-    rankNum: "text-[92px] leading-[0.82]",
-    rankGlow: "0 0 42px rgba(34,211,238,0.26)",
-    totalEntries: "text-[10px] tracking-[0.1em]",
-    rankMetaRow: "min-h-[22px] gap-2",
-    topChip: "text-[10px]",
-    headerPad: "px-3.5 py-2.5",
-    avatar: "h-9 w-9",
-    name: "text-[15px]",
-    subMeta: "text-[9px] tracking-[0.2em]",
-    flame: "h-3 w-3",
-    cellPad: "px-3.5 py-3",
-    metricLabel: "text-[9px] tracking-[0.2em]",
-    metricValue: "text-[19px]",
-    dayDelta: "text-[10px]",
-    barMt: "mt-2",
-    segRow: "h-[7px] gap-[3px]",
-    segMinH: "min-h-[7px]",
-    footerPad: "px-3.5 py-2",
-    footerText: "text-[9px] tracking-[0.28em]",
-    decorStripe: "h-[52px] w-[52px]",
-    fallbackValue: "text-[24px]",
-  },
+type CardLayoutTokens = {
+  outerPad: string;
+  gridCols: string;
+  rankTower: string;
+  rankLeagueLabel: string;
+  rankLabel: string;
+  rankNum: string;
+  rankGlow: string;
+  totalEntries: string;
+  rankMetaRow: string;
+  topChip: string;
+  headerPad: string;
+  avatar: string;
+  name: string;
+  postsChip: string;
+  subMeta: string;
+  flame: string;
+  streakHubNum: string;
+  streakHubLabel: string;
+  streakFlame: string;
+  streakFlameWrap: string;
+  metricsMinH: string;
+  cellPad: string;
+  metricLabel: string;
+  metricValue: string;
+  dayDelta: string;
+  barMt: string;
+  segRow: string;
+  segMinH: string;
+  footerPad: string;
+  footerText: string;
+  fallbackValue: string;
 };
 
-const CYAN = "#22d3ee";
-const HAIRLINE = "rgba(34,211,238,0.16)";
+const MOBILE_CARD_LAYOUT: CardLayoutTokens = {
+  outerPad: "max-w-full overflow-x-clip px-3 pt-3",
+  gridCols: "grid-cols-[100px_1fr]",
+  rankTower: "px-1.5 pb-2 pt-3.5",
+  rankLeagueLabel: "text-[8px] tracking-[0.2em]",
+  rankLabel: "text-[11px] tracking-[0.22em]",
+  rankNum: "text-[56px] leading-[0.84]",
+  rankGlow: "0 0 30px rgba(34,211,238,0.3)",
+  totalEntries: "text-[9px] tracking-[0.08em]",
+  rankMetaRow: "min-h-[20px] flex-col items-center gap-0.5",
+  topChip: "text-[9px]",
+  headerPad: "px-2.5 py-3",
+  avatar: "h-12 w-12",
+  name: "text-[16px]",
+  postsChip: "text-[7.5px] tracking-[0.12em]",
+  subMeta: "text-[8px] tracking-[0.18em]",
+  flame: "h-2.5 w-2.5",
+  streakHubNum: "text-[18px] leading-none",
+  streakHubLabel: "text-[6px] tracking-[0.12em]",
+  streakFlame: "h-10 w-10",
+  streakFlameWrap: "h-10 w-10",
+  metricsMinH: "min-h-[144px]",
+  cellPad: "px-2.5 py-1.5",
+  metricLabel: "text-[7.5px] tracking-[0.18em]",
+  metricValue: "text-[22px]",
+  dayDelta: "text-[9px]",
+  barMt: "mt-1.5",
+  segRow: "h-[8px] gap-[3px]",
+  segMinH: "min-h-[8px]",
+  footerPad: "px-2.5 py-[5px]",
+  footerText: "text-[8px] tracking-[0.22em]",
+  fallbackValue: "text-[21px]",
+};
+
+const WEB_CARD_LAYOUT: CardLayoutTokens = {
+  ...MOBILE_CARD_LAYOUT,
+  gridCols: "grid-cols-[118px_1fr]",
+  rankTower: "px-2 pb-2 pt-4",
+  headerPad: "px-3 py-3.5",
+  avatar: "h-14 w-14",
+  name: "text-[18px]",
+  rankNum: "text-[68px] leading-[0.84]",
+  rankGlow: "0 0 38px rgba(34,211,238,0.32)",
+  streakHubNum: "text-[20px] leading-none",
+  streakHubLabel: "text-[6.5px] tracking-[0.14em]",
+  streakFlame: "h-11 w-11",
+  streakFlameWrap: "h-11 w-11",
+  metricValue: "text-[26px]",
+  metricsMinH: "min-h-[156px]",
+};
+
+/** 4 象限セル（余白・寄せは CSS で統一） */
+const METRIC_CELL_CLASS = [
+  "my-rank-metric-cell my-rank-metric-cell--tl",
+  "my-rank-metric-cell my-rank-metric-cell--tr",
+  "my-rank-metric-cell my-rank-metric-cell--bl",
+  "my-rank-metric-cell my-rank-metric-cell--br",
+] as const;
+
+const CARD_LAYOUT: Record<CardLayout, CardLayoutTokens> = {
+  mobile: MOBILE_CARD_LAYOUT,
+  web: WEB_CARD_LAYOUT,
+};
+
+const HAIRLINE = "rgba(255,255,255,0.12)";
+const HAIRLINE_ACCENT = "rgba(34,211,238,0.28)";
 const GOLD = "#FFD65A";
 
 /** 連勝スイープを出す閾値 */
 const STREAK_SWEEP_MIN = 3;
 
-const RANK_GRADIENT: CSSProperties = {
-  backgroundImage:
-    "linear-gradient(180deg, #F2FEFF 0%, #9BEAF6 38%, #22d3ee 72%, #0E7490 100%)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
+/** TOP ◯% バッジを出す上限（上位50%以内のみ） */
+const TOP_PERCENT_SHOW_MAX = 50;
+
+function rankTextGradient(gradient: string): CSSProperties {
+  return {
+    backgroundImage: gradient,
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+    WebkitTextFillColor: "transparent",
+  };
+}
+
+type RankTowerTier =
+  | "champion"
+  | "podium"
+  | "elite"
+  | "gold"
+  | "amber"
+  | "orange"
+  | "cyan"
+  | "green"
+  | "slate";
+
+const RANK_TIER_ORDER: RankTowerTier[] = [
+  "champion",
+  "podium",
+  "elite",
+  "gold",
+  "amber",
+  "orange",
+  "cyan",
+  "green",
+  "slate",
+];
+
+const RANK_TIER_VISUAL: Record<
+  RankTowerTier,
+  { gradient: CSSProperties; tierClass: string }
+> = {
+  champion: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #FFF7ED 0%, #FDE68A 18%, #F59E0B 42%, #EF4444 70%, #991B1B 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-champion",
+  },
+  podium: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #FFFBEB 0%, #FDE68A 24%, #F59E0B 55%, #B45309 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-podium",
+  },
+  elite: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #FFFFFF 0%, #FEF3C7 28%, #FCD34D 58%, #D97706 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-elite",
+  },
+  gold: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #FFFBEB 0%, #FDE68A 32%, #F59E0B 68%, #B45309 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-gold",
+  },
+  amber: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #FFFBEB 0%, #FCD34D 30%, #FB923C 68%, #EA580C 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-amber",
+  },
+  orange: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #FFF7ED 0%, #FDBA74 38%, #F97316 72%, #C2410C 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-orange",
+  },
+  cyan: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #E0F2FE 0%, #67E8F9 38%, #06B6D4 72%, #0E7490 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-cyan",
+  },
+  green: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #D1FAE5 0%, #6EE7B7 38%, #10B981 72%, #047857 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-green",
+  },
+  slate: {
+    gradient: rankTextGradient(
+      "linear-gradient(180deg, #E2E8F0 0%, #94A3B8 48%, #475569 100%)"
+    ),
+    tierClass: "my-rank-tower-num--tier-slate",
+  },
 };
 
-/** 右下コーナーカット（14px ノッチ） */
-const CARD_NOTCH_CLIP =
-  "polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)";
+type RankTowerVisual = {
+  gradient: CSSProperties;
+  tierClass: string;
+};
+
+function pickBetterRankTier(a: RankTowerTier, b: RankTowerTier): RankTowerTier {
+  return RANK_TIER_ORDER.indexOf(a) <= RANK_TIER_ORDER.indexOf(b) ? a : b;
+}
+
+function rankTierFromPercentile(pct: number): RankTowerTier {
+  if (pct <= 1) return "champion";
+  if (pct <= 3) return "elite";
+  if (pct <= 7) return "gold";
+  if (pct <= 15) return "amber";
+  if (pct <= 25) return "orange";
+  if (pct <= 40) return "cyan";
+  if (pct <= 55) return "green";
+  return "slate";
+}
+
+function rankTierFromAbsolute(rank: number): RankTowerTier {
+  if (rank === 1) return "champion";
+  if (rank <= 3) return "podium";
+  if (rank <= 10) return "orange";
+  if (rank <= 25) return "cyan";
+  if (rank <= 100) return "green";
+  return "slate";
+}
+
+function resolveRankTowerTier(
+  rank: number,
+  totalEntries: number | null | undefined
+): RankTowerTier {
+  const absTier = rankTierFromAbsolute(rank);
+  const pct =
+    typeof totalEntries === "number" && totalEntries > 0
+      ? (rank / totalEntries) * 100
+      : null;
+
+  if (pct == null) return absTier;
+  return pickBetterRankTier(absTier, rankTierFromPercentile(pct));
+}
+
+/** 順位が上がるほど（数値が小さいほど）ランク数字の色が豪華になる */
+function rankTowerVisual(
+  rank: number | null,
+  totalEntries: number | null | undefined,
+  loading: boolean
+): RankTowerVisual {
+  if (loading || rank == null || rank < 1) return RANK_TIER_VISUAL.cyan;
+
+  const tier = resolveRankTowerTier(rank, totalEntries);
+  return RANK_TIER_VISUAL[tier];
+}
 
 const CARD_SHELL: CSSProperties = {
-  border: "1px solid rgba(34,211,238,0.5)",
+  border: "1px solid rgba(255,255,255,0.16)",
+  borderRadius: 12,
   background:
-    "linear-gradient(170deg, rgba(22,34,54,0.98) 0%, rgba(7,12,24,1) 60%)",
-  // 外側の落ち影は clip-path で切れるためラッパーの drop-shadow が担う
+    "linear-gradient(148deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.04) 38%, rgba(8,16,32,0.55) 100%)",
   boxShadow:
-    "inset 0 0 0 1px rgba(8,14,26,0.9), inset 0 0 24px rgba(34,211,238,0.05)",
-  clipPath: CARD_NOTCH_CLIP,
-  WebkitClipPath: CARD_NOTCH_CLIP,
+    "inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.18)",
+  backdropFilter: "blur(20px) saturate(165%)",
+  WebkitBackdropFilter: "blur(20px) saturate(165%)",
 };
 
-/** ノッチ形状に追従する落ち影 + 案C リムライト（ラッパー側） */
 const CARD_DROP_SHADOW = MY_RANK_CARD_RIM_FILTER;
-
-/** 金属パネルのざらつき（SVG fractal noise・静的） */
-const NOISE_TEXTURE_URL =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 /** 初回マウント時のみのブラー段階解除（タブ切替では再生しない） */
 const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
@@ -262,62 +409,130 @@ function useOvershootCount(
 }
 
 /* ============================================================
- * ホロカード傾き（CSS transform のみ・±8度）
- * touchAction は固定しない＝スクロールは阻害しない
+ * ホロカード傾き（ref 直接操作・再レンダーなし）
+ * マウスのみ有効 — タッチスクロール中の誤傾きを防ぐ
  * ============================================================ */
 function useHoloTilt(enabled: boolean) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<CSSProperties>({});
-  const [glare, setGlare] = useState({ x: 50, y: 50, o: 0 });
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const glareRef = useRef<HTMLDivElement>(null);
 
   const onMove = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!enabled || !ref.current) return;
-      const r = ref.current.getBoundingClientRect();
+      if (!enabled || e.pointerType !== "mouse") return;
+      const wrap = wrapRef.current;
+      const glare = glareRef.current;
+      if (!wrap) return;
+      const r = wrap.getBoundingClientRect();
       if (r.width <= 0 || r.height <= 0) return;
       const px = (e.clientX - r.left) / r.width;
       const py = (e.clientY - r.top) / r.height;
       const rotY = (px - 0.5) * 16;
       const rotX = (0.5 - py) * 16;
-      setStyle({
-        transform: `perspective(900px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`,
-        transition: "transform 60ms linear",
-      });
-      setGlare({ x: px * 100, y: py * 100, o: 0.45 });
+      wrap.style.transform = `perspective(900px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+      wrap.style.transition = "transform 60ms linear";
+      if (glare) {
+        glare.style.background = `radial-gradient(380px circle at ${px * 100}% ${py * 100}%, rgba(255,255,255,0.12) 0%, transparent 55%)`;
+        glare.style.opacity = "0.45";
+      }
     },
     [enabled]
   );
 
   const onLeave = useCallback(() => {
-    setStyle({
-      transform: "perspective(900px) rotateX(0deg) rotateY(0deg)",
-      transition: "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)",
-    });
-    setGlare((g) => ({ ...g, o: 0 }));
+    const wrap = wrapRef.current;
+    const glare = glareRef.current;
+    if (wrap) {
+      wrap.style.transform =
+        "perspective(900px) rotateX(0deg) rotateY(0deg)";
+      wrap.style.transition =
+        "transform 420ms cubic-bezier(0.22, 1, 0.36, 1)";
+    }
+    if (glare) {
+      glare.style.opacity = "0";
+    }
   }, []);
 
-  return { ref, style, glare, onMove, onLeave };
+  return { wrapRef, glareRef, onMove, onLeave };
 }
 
 /* ============================================================
- * 案A 由来: 12分割セグメントバー（skew 付き）
- * 左→右で冷色→シアン→金→白と段階的に色が変わる
+ * 4 指標ごとのアクセントカラー
  * ============================================================ */
-const SEG_TIERS = [
-  { hi: "#5EEAD4", lo: "#0E7490", glow: "rgba(14,116,144,0.45)" },
-  { hi: "#8CF0FF", lo: "#22d3ee", glow: "rgba(34,211,238,0.55)" },
-  { hi: "#FFE38A", lo: "#FFBE3B", glow: "rgba(255,190,59,0.5)" },
-  { hi: "#FFFDE8", lo: "#FFFFFF", glow: "rgba(255,255,255,0.65)" },
-] as const;
+const METRIC_ACCENT: Record<
+  string,
+  {
+    label: string;
+    labelDim: string;
+    border: string;
+    value: string;
+    bg: string;
+    bar: { hi: string; lo: string; glow: string };
+  }
+> = {
+  totalScore: {
+    label: "#67e8f9",
+    labelDim: "rgba(103,232,249,0.42)",
+    border: "rgba(34,211,238,0.92)",
+    value: "#ecfeff",
+    bg: "rgba(34,211,238,0.1)",
+    bar: { hi: "#8CF0FF", lo: "#0891b2", glow: "rgba(34,211,238,0.55)" },
+  },
+  winRate: {
+    label: "#4ade80",
+    labelDim: "rgba(74,222,128,0.42)",
+    border: "rgba(74,222,128,0.92)",
+    value: "#ecfdf5",
+    bg: "rgba(74,222,128,0.1)",
+    bar: { hi: "#86efac", lo: "#16a34a", glow: "rgba(34,197,94,0.5)" },
+  },
+  marginPrecision: {
+    label: "#c4b5fd",
+    labelDim: "rgba(196,181,253,0.42)",
+    border: "rgba(167,139,250,0.92)",
+    value: "#f5f3ff",
+    bg: "rgba(167,139,250,0.1)",
+    bar: { hi: "#ddd6fe", lo: "#7c3aed", glow: "rgba(139,92,246,0.5)" },
+  },
+  upsetScore: {
+    label: "#fb923c",
+    labelDim: "rgba(251,146,60,0.42)",
+    border: "rgba(251,146,60,0.92)",
+    value: "#fff7ed",
+    bg: "rgba(251,146,60,0.1)",
+    bar: { hi: "#fcd34d", lo: "#d97706", glow: "rgba(245,158,11,0.5)" },
+  },
+  streak: {
+    label: "#86efac",
+    labelDim: "rgba(134,239,172,0.42)",
+    border: "rgba(57,255,136,0.85)",
+    value: "#ecfdf5",
+    bg: "rgba(57,255,136,0.12)",
+    bar: { hi: "#bbf7d0", lo: "#22c55e", glow: "rgba(57,255,136,0.5)" },
+  },
+  goalScorerHits: {
+    label: "#f9a8d4",
+    labelDim: "rgba(249,168,212,0.42)",
+    border: "rgba(244,114,182,0.92)",
+    value: "#fdf2f8",
+    bg: "rgba(244,114,182,0.12)",
+    bar: { hi: "#fbcfe8", lo: "#db2777", glow: "rgba(244,114,182,0.5)" },
+  },
+};
 
-function segTierStyle(index: number, total: number) {
-  const t = total <= 1 ? 0 : index / (total - 1);
-  const tier =
-    t < 0.34 ? 0 : t < 0.67 ? 1 : t < 0.84 ? 2 : 3;
-  const { hi, lo, glow } = SEG_TIERS[tier];
+const DEFAULT_METRIC_ACCENT = METRIC_ACCENT.totalScore;
+
+function metricAccent(key: string) {
+  return METRIC_ACCENT[key] ?? DEFAULT_METRIC_ACCENT;
+}
+
+/* ============================================================
+ * 10分割セグメントバー（skew 付き）
+ * ============================================================ */
+const SEG_COUNT = 10;
+function segMetricStyle(accent: { hi: string; lo: string; glow: string }) {
   return {
-    background: `linear-gradient(180deg, ${hi}, ${lo})`,
-    boxShadow: `0 0 6px ${glow}`,
+    background: `linear-gradient(180deg, ${accent.hi}, ${accent.lo})`,
+    boxShadow: `0 0 6px ${accent.glow}`,
   };
 }
 
@@ -329,17 +544,17 @@ function SegBar({
   reduceMotion,
   segRowClass,
   segMinHClass,
+  accent,
 }: {
   pct: number;
-  /** true で全セグメントが左→右に同期スタagger（4 指標同時） */
   enter: boolean;
   reduceMotion: boolean | null;
   segRowClass: string;
   segMinHClass: string;
+  accent: { hi: string; lo: string; glow: string };
 }) {
-  const SEGS = 12;
   const filled = enter
-    ? Math.round((Math.min(100, Math.max(0, pct)) / 100) * SEGS)
+    ? Math.round((Math.min(100, Math.max(0, pct)) / 100) * SEG_COUNT)
     : 0;
   const motionOff = reduceMotion === true;
 
@@ -349,9 +564,9 @@ function SegBar({
       style={{ transform: "skewX(-12deg)" }}
     >
       <div className={["flex", segRowClass, segMinHClass].join(" ")}>
-        {Array.from({ length: SEGS }).map((_, i) => {
+        {Array.from({ length: SEG_COUNT }).map((_, i) => {
           const lit = i < filled;
-          const tier = lit ? segTierStyle(i, SEGS) : null;
+          const tier = lit ? segMetricStyle(accent) : null;
           const delay = i * SEG_STAGGER_S;
           const shown = enter || motionOff;
 
@@ -389,103 +604,277 @@ function SegBar({
   );
 }
 
-/** 微細スキャンライン（質感） */
+/** 個人統計取得中のプレースホルダ（ネイティブと同じ） */
+const STATS_PENDING_MARK = "···";
+
+/** 2×2 指標のスケルトン（myRow 未到着時） */
+const METRICS_SKELETON_CELLS = [
+  { key: "totalScore", label: "totalPTS" },
+  { key: "winRate", label: "WIN%" },
+  { key: "marginPrecision", label: "PREC" },
+  { key: "upsetScore", label: "UPSET" },
+] as const;
+
+function MyRankMetricsSkeleton({
+  ui,
+  layout,
+  language,
+  streak,
+  reduceMotion,
+}: {
+  ui: CardLayoutTokens;
+  layout: CardLayout;
+  language: Language;
+  streak: number | null;
+  reduceMotion: boolean | null;
+}) {
+  return (
+    <div
+      className={[
+        "my-rank-metrics-frame relative shrink-0",
+        ui.metricsMinH,
+        layout === "web" ? "my-rank-metrics-frame--web" : "",
+      ].join(" ")}
+      aria-hidden
+    >
+      <div className="my-rank-metrics-crosshair" aria-hidden />
+      <StreakHub
+        streak={streak}
+        loading
+        language={language}
+        ui={ui}
+        streakSweep={false}
+        reduceMotion={reduceMotion}
+        selected={false}
+      />
+      <div className="my-rank-metrics-grid grid grid-cols-2 grid-rows-2">
+        {METRICS_SKELETON_CELLS.map((cell, i) => (
+          <div key={cell.key} className={METRIC_CELL_CLASS[i]}>
+            <div className="my-rank-metric-cell__body">
+              <div className="my-rank-metric-cell__stack">
+                <div
+                  className={[
+                    "my-rank-metric-cell__label font-semibold uppercase text-white/30",
+                    ui.metricLabel,
+                    nameOxanium.className,
+                  ].join(" ")}
+                >
+                  {cell.label}
+                </div>
+                <div
+                  className={[
+                    summaryMetricNumClass,
+                    "leading-none text-white/35",
+                    ui.metricValue,
+                  ].join(" ")}
+                >
+                  {STATS_PENDING_MARK}
+                </div>
+                <div className={["my-rank-metric-cell__bar", ui.barMt].join(" ")}>
+                  <div
+                    className={["animate-pulse rounded-sm bg-white/10", ui.segMinH].join(
+                      " "
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 微細スキャンライン（控えめ） */
 function ScanTexture() {
   return (
     <div
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none absolute inset-0 rounded-[12px]"
       style={{
         background:
-          "repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px)",
+          "repeating-linear-gradient(0deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 4px)",
       }}
     />
   );
 }
 
-/** ノイズ質感（静的・キャプチャ可） */
-function NoiseTexture() {
+/** 連勝数ごとの炎・ハブ色（3 / 5 / 7 連勝で段階アップ） */
+type StreakFlameVisual = {
+  hubExtra: string;
+  wrapExtra: string;
+  flameExtra: string;
+  numExtra: string;
+  labelExtra: string;
+};
+
+function streakFlameVisual(count: number): StreakFlameVisual {
+  if (count <= 0) {
+    return {
+      hubExtra: "",
+      wrapExtra: "",
+      flameExtra: "my-rank-streak-flame--cold",
+      numExtra: "my-rank-streak-num--cold",
+      labelExtra: "text-white/35",
+    };
+  }
+  if (count >= 7) {
+    return {
+      hubExtra: "my-rank-streak-hub--tier-legend",
+      wrapExtra: "my-rank-streak-flame-wrap--tier-legend",
+      flameExtra:
+        "my-rank-streak-flame--hot my-rank-streak-flame--tier-legend",
+      numExtra: "my-rank-streak-num--hot my-rank-streak-num--tier-legend",
+      labelExtra: "text-amber-200/85",
+    };
+  }
+  if (count >= 5) {
+    return {
+      hubExtra: "my-rank-streak-hub--tier-blaze",
+      wrapExtra: "my-rank-streak-flame-wrap--tier-blaze",
+      flameExtra: "my-rank-streak-flame--hot my-rank-streak-flame--tier-blaze",
+      numExtra: "my-rank-streak-num--hot my-rank-streak-num--tier-blaze",
+      labelExtra: "text-cyan-200/80",
+    };
+  }
+  if (count >= 3) {
+    return {
+      hubExtra: "my-rank-streak-hub--tier-warm",
+      wrapExtra: "my-rank-streak-flame-wrap--tier-warm",
+      flameExtra: "my-rank-streak-flame--hot my-rank-streak-flame--tier-warm",
+      numExtra: "my-rank-streak-num--hot my-rank-streak-num--tier-warm",
+      labelExtra: "text-amber-300/80",
+    };
+  }
+  return {
+    hubExtra: "my-rank-streak-hub--tier-ember",
+    wrapExtra: "my-rank-streak-flame-wrap--tier-ember",
+    flameExtra: "my-rank-streak-flame--hot my-rank-streak-flame--tier-ember",
+    numExtra: "my-rank-streak-num--hot my-rank-streak-num--tier-ember",
+    labelExtra: "text-orange-300/75",
+  };
+}
+
+/** 2×2 グリッド中央 — 連勝数 + 炎アニメ */
+function StreakHub({
+  streak,
+  loading,
+  language,
+  ui,
+  streakSweep,
+  reduceMotion,
+  selected,
+}: {
+  streak: number | null;
+  loading: boolean;
+  language: Language;
+  ui: CardLayoutTokens;
+  streakSweep: boolean;
+  reduceMotion: boolean | null;
+  selected: boolean;
+}) {
+  const label = streakShortLabel(language);
+  const streakCount = loading ? 0 : Math.max(0, streak ?? 0);
+  const display = loading ? "--" : String(streakCount);
+  const flameVisual = streakFlameVisual(streakCount);
+  const streakAccent = metricAccent("streak");
+  const motionOn = reduceMotion !== true;
+
   return (
     <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0"
-      style={{
-        backgroundImage: NOISE_TEXTURE_URL,
-        backgroundRepeat: "repeat",
-        opacity: 0.045,
-      }}
-    />
-  );
-}
+      className={[
+        "my-rank-streak-hub-slot pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+        selected ? "z-[8]" : "z-[6]",
+      ].join(" ")}
+      aria-label={
+        loading
+          ? undefined
+          : `${display}${label}`
+      }
+    >
+      <div className="my-rank-hub-occluder absolute inset-0 rounded-full" aria-hidden />
+      <div
+        className={[
+          "my-rank-streak-hub relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-full transition-[border-color,box-shadow,background] duration-200",
+          flameVisual.hubExtra,
+          selected ? "my-rank-streak-hub--selected" : "",
+        ].join(" ")}
+      >
+        {streakSweep ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-full result-card-streak-sweep"
+            aria-hidden
+          >
+            <div className="result-card-streak-sweep__spin" />
+          </div>
+        ) : null}
 
-/** 順位タワー右縁の目盛り（計器パネル風・静的） */
-function RulerTicks() {
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-y-2 right-0">
-      {/* 小目盛り */}
-      <div
-        className="absolute inset-y-0 right-0 w-[4px]"
-        style={{
-          background:
-            "repeating-linear-gradient(180deg, rgba(34,211,238,0.2) 0 1px, transparent 1px 6px)",
-        }}
-      />
-      {/* 大目盛り */}
-      <div
-        className="absolute inset-y-0 right-0 w-[7px]"
-        style={{
-          background:
-            "repeating-linear-gradient(180deg, rgba(34,211,238,0.4) 0 1px, transparent 1px 24px)",
-        }}
-      />
+        <div className="relative z-[2] flex flex-col items-center justify-center gap-px pt-1">
+          <div
+            className={[
+              "my-rank-streak-flame-wrap",
+              ui.streakFlameWrap,
+              flameVisual.wrapExtra,
+            ].join(" ")}
+          >
+            <Flame
+              aria-hidden
+              className={[
+                "my-rank-streak-flame my-rank-streak-flame--back",
+                ui.streakFlame,
+                flameVisual.flameExtra,
+                motionOn ? "" : "my-rank-streak-flame--static",
+              ].join(" ")}
+            />
+            <span
+              className={[
+                "my-rank-streak-num",
+                summaryMetricNumClass,
+                ui.streakHubNum,
+                flameVisual.numExtra,
+              ].join(" ")}
+            >
+              {display}
+            </span>
+          </div>
+          <span
+            className={[
+              "font-bold uppercase transition-colors duration-200",
+              ui.streakHubLabel,
+              nameOxanium.className,
+              selected ? "" : flameVisual.labelExtra,
+            ].join(" ")}
+            style={selected ? { color: streakAccent.label } : undefined}
+          >
+            {label}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
 
-/** 上辺・左辺だけ光る配線（HUD の電源ライン） */
-function GlowWireFrame() {
-  const wire =
-    "linear-gradient(90deg, rgba(140,240,255,0.95), rgba(34,211,238,0.75), rgba(34,211,238,0.2))";
-  const wireV =
-    "linear-gradient(180deg, rgba(140,240,255,0.95), rgba(34,211,238,0.7), rgba(34,211,238,0.12))";
-  const glow = "0 0 10px rgba(34,211,238,0.7), 0 0 22px rgba(34,211,238,0.22)";
+/** ガラス面のハイライト */
+function GlassSheen() {
   return (
-    <div className="pointer-events-none absolute inset-0 z-[25]">
+    <>
       <div
-        className="absolute left-0 right-0 top-0 h-[1.5px]"
-        style={{ background: wire, boxShadow: glow }}
-      />
-      <div
-        className="absolute bottom-0 left-0 top-0 w-[1.5px]"
-        style={{ background: wireV, boxShadow: glow }}
-      />
-      <div
-        className="absolute left-0 top-0 h-4 w-4 border-l-2 border-t-2"
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-[12px]"
         style={{
-          borderColor: "rgba(140,240,255,0.92)",
-          boxShadow: "0 0 10px rgba(34,211,238,0.55)",
-        }}
-      />
-      {/* 右下ノッチの斜めエッジライン */}
-      <div
-        className="absolute right-0 h-[1.5px] w-[20px]"
-        style={{
-          bottom: "13px",
-          transform: "rotate(45deg)",
-          transformOrigin: "100% 50%",
           background:
-            "linear-gradient(90deg, rgba(34,211,238,0.2), rgba(140,240,255,0.85))",
-          boxShadow: "0 0 8px rgba(34,211,238,0.5)",
+            "linear-gradient(145deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.03) 28%, transparent 52%)",
         }}
       />
-      {/* 右下の L 字ブラケット（左上と対） */}
       <div
-        className="absolute bottom-2 right-2 h-3.5 w-3.5 border-b border-r"
+        aria-hidden
+        className="pointer-events-none absolute inset-x-3 top-0 h-px"
         style={{
-          borderColor: "rgba(140,240,255,0.55)",
-          boxShadow: "0 0 8px rgba(34,211,238,0.3)",
+          background:
+            "linear-gradient(90deg, transparent, rgba(255,255,255,0.42), transparent)",
         }}
       />
-    </div>
+    </>
   );
 }
 
@@ -554,13 +943,25 @@ export default function MyRankCard({
   }, [ready, barsReady, cardResetKey]);
 
   const outerPad = mobileWide
-    ? "max-w-full overflow-x-clip px-0 pt-3 sm:px-3"
+    ? "max-w-full overflow-x-clip -mx-1.5 px-0 pt-3 sm:mx-0 sm:px-3"
     : ui.outerPad;
 
-  const rankDisplay =
-    loading || rank == null
-      ? "--"
-      : String(reduceMotion === true ? rank : rankCount);
+  /** カード表示用（NBA はページ文脈で自明なため省略） */
+  const leagueDisplay =
+    leagueLabel && leagueLabel.toUpperCase() !== "NBA" ? leagueLabel : null;
+
+  const rankTowerLeague = leagueLabel?.trim() || null;
+
+  const statsPending = statsScramble && !loading;
+  const rankDisplay = loading
+    ? "--"
+    : statsPending
+      ? STATS_PENDING_MARK
+      : rank == null
+        ? "--"
+        : String(reduceMotion === true ? rank : rankCount);
+
+  const rankVisual = rankTowerVisual(rank, totalEntries, loading);
 
   const topPercent =
     !loading &&
@@ -568,8 +969,16 @@ export default function MyRankCard({
     typeof totalEntries === "number" &&
     totalEntries > 0
       ? (() => {
-          const pct = Math.max(0.1, (rank / totalEntries) * 100);
-          return pct < 10 ? pct.toFixed(1) : String(Math.round(pct));
+          const pct = (rank / totalEntries) * 100;
+          // 上位50%以内のみ表示（TOP 50%が表示上限・下位50%は非表示）
+          if (pct > TOP_PERCENT_SHOW_MAX) return null;
+          const clamped = Math.min(
+            TOP_PERCENT_SHOW_MAX,
+            Math.max(0.1, pct)
+          );
+          return clamped < 10
+            ? clamped.toFixed(1)
+            : String(Math.round(clamped));
         })()
       : null;
 
@@ -577,12 +986,12 @@ export default function MyRankCard({
     !loading &&
     typeof totalEntries === "number" &&
     totalEntries > 0
-      ? (() => {
-          const n = totalEntries.toLocaleString(
+      ? m.rankings.entriesOf.replace(
+          "{n}",
+          totalEntries.toLocaleString(
             language === "ja" ? "ja-JP" : "en-US"
-          );
-          return language === "ja" ? `/ ${n}人` : `/ ${n}`;
-        })()
+          )
+        )
       : null;
 
   const streakN = typeof streak === "number" && streak > 0 ? streak : null;
@@ -592,21 +1001,33 @@ export default function MyRankCard({
   const flagSrc = countryCode ? FLAG_SRC[countryCode.toUpperCase()] : undefined;
 
   const hasCells = !!miniMetrics && miniMetrics.length > 0;
+  const showMetricsSkeleton = statsPending && !hasCells;
+  const streakMetricSelected = metric === "streak";
+  const goalScorerMetricSelected = metric === "goalScorerHits";
+  const outsideGridMetricSelected =
+    goalScorerMetricSelected ||
+    (streakMetricSelected && !miniMetrics?.some((mt) => mt.key === "streak"));
 
+  const fallbackMetricValue = loading
+    ? "--"
+    : metric === "winRate"
+      ? `${Math.round(value)}%`
+      : metric === "streak" || metric === "goalScorerHits"
+        ? `${Math.round(value)}`
+        : `${formatMetricDecimals(value, 1)} ${m.rankings.pts}`;
   /** シリアル帯の日付（JST・マウント時固定） */
   const serialDateKey = useRef(dateKeyJST()).current;
 
   const body = (
     <div
-      className="relative overflow-hidden rounded-none"
+      className="relative overflow-hidden rounded-[12px] backdrop-blur-xl backdrop-saturate-150"
       style={CARD_SHELL}
       aria-busy={statsScramble || undefined}
     >
-      {/* 連勝スイープ（3連勝以上） */}
       {streakSweep ? (
         <div
           data-capture-skip
-          className="pointer-events-none absolute inset-0 z-30 overflow-hidden rounded-none result-card-streak-sweep"
+          className="pointer-events-none absolute inset-0 z-30 overflow-hidden rounded-[12px] result-card-streak-sweep"
           aria-hidden
         >
           <div className="result-card-streak-sweep__spin" />
@@ -616,45 +1037,37 @@ export default function MyRankCard({
       {flagSrc ? (
         <div
           data-capture-skip
-          className="pointer-events-none absolute inset-0 overflow-hidden"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[12px]"
         >
           <img
             src={flagSrc}
             alt=""
             crossOrigin="anonymous"
-            className="absolute right-[-8%] top-1/2 h-[130%] -translate-y-1/2 object-contain"
-            style={{ opacity: 0.07 }}
+            className="absolute right-[-6%] top-1/2 h-[120%] -translate-y-1/2 object-contain"
+            style={{
+              opacity: 0.05,
+              maskImage:
+                "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 50%, black 100%)",
+              WebkitMaskImage:
+                "linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.45) 50%, black 100%)",
+            }}
             draggable={false}
           />
         </div>
       ) : null}
 
+      <GlassSheen />
       <ScanTexture />
-      <NoiseTexture />
-      <GlowWireFrame />
 
-      {/* 左上の斜めストライプ装飾 */}
-      <div
-        className={["pointer-events-none absolute left-0 top-0", ui.decorStripe].join(
-          " "
-        )}
-        style={{
-          background:
-            "repeating-linear-gradient(135deg, rgba(34,211,238,0.55) 0 2px, transparent 2px 6px)",
-          maskImage: "linear-gradient(135deg, black 0%, transparent 62%)",
-          WebkitMaskImage: "linear-gradient(135deg, black 0%, transparent 62%)",
-          opacity: 0.5,
-        }}
-      />
-
-      {/* ホロのグレア */}
       {tiltEnabled ? (
         <div
+          ref={tilt.glareRef}
           data-capture-skip
-          className="pointer-events-none absolute inset-0 z-20"
+          className="pointer-events-none absolute inset-0 z-20 rounded-[12px]"
           style={{
-            background: `radial-gradient(420px circle at ${tilt.glare.x}% ${tilt.glare.y}%, rgba(140,240,255,0.14) 0%, rgba(140,240,255,0.04) 32%, transparent 60%)`,
-            opacity: tilt.glare.o,
+            background:
+              "radial-gradient(380px circle at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 55%)",
+            opacity: 0,
             transition: "opacity 300ms ease",
           }}
         />
@@ -693,33 +1106,47 @@ export default function MyRankCard({
             ui.rankTower,
           ].join(" ")}
           style={{
-            borderRight: `1px solid ${HAIRLINE}`,
-            background: "rgba(34,211,238,0.045)",
+            borderRight: `1px solid ${HAIRLINE_ACCENT}`,
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
           }}
         >
-          <RulerTicks />
+          <div className="flex w-full flex-col items-center gap-0.5">
+            {rankTowerLeague ? (
+              <span
+                className={[
+                  "text-center font-bold uppercase text-cyan-300/55",
+                  ui.rankLeagueLabel,
+                  nameOxanium.className,
+                ].join(" ")}
+              >
+                {rankTowerLeague}
+              </span>
+            ) : null}
+            <span
+              className={[
+                "text-center font-bold uppercase text-white/55",
+                ui.rankLabel,
+                nameOxanium.className,
+              ].join(" ")}
+            >
+              {m.rankings.yourRank}
+            </span>
+          </div>
           <span
             className={[
-              "self-stretch text-center font-extrabold uppercase text-cyan-300/80",
-              ui.rankLabel,
-              nameOxanium.className,
+              nameBebas.className,
+              ui.rankNum,
+              rankVisual.tierClass,
             ].join(" ")}
-          >
-            {m.rankings.yourRank}
-          </span>
-          <span
-            className={[nameBebas.className, ui.rankNum].join(" ")}
-            style={{
-              ...RANK_GRADIENT,
-              textShadow: ui.rankGlow,
-            }}
+            style={rankVisual.gradient}
           >
             {rankDisplay}
           </span>
           {totalEntriesLabel ? (
             <span
               className={[
-                "-mt-0.5 font-bold tabular-nums text-cyan-300/45",
+                "-mt-0.5 font-medium tabular-nums text-white/35",
                 ui.totalEntries,
                 nameOxanium.className,
               ].join(" ")}
@@ -727,35 +1154,36 @@ export default function MyRankCard({
               {totalEntriesLabel}
             </span>
           ) : null}
-          <div className={["flex items-center", ui.rankMetaRow].join(" ")}>
-            {!loading && rank != null ? (
-              <RankDeltaBadge delta={rankDeltaPlaces} />
+          <div className={["flex", ui.rankMetaRow].join(" ")}>
+            {!loading && !statsPending && rank != null ? (
+              <RankDeltaBadge
+                delta={rankDeltaPlaces}
+                size="lg"
+                language={language}
+              />
             ) : null}
-            {topPercent ? (
+            {!statsPending && topPercent ? (
               <span
                 className={[
-                  "px-1.5 py-[3px] font-extrabold",
+                  "rounded px-1.5 py-[2px] font-bold tracking-wide",
                   ui.topChip,
                   nameOxanium.className,
                 ].join(" ")}
                 style={{
-                  border: "1px solid rgba(255,214,90,0.4)",
                   color: GOLD,
-                  background: "rgba(255,214,90,0.06)",
+                  background: "rgba(255,214,90,0.08)",
                 }}
               >
-                TOP {topPercent}%
+                {m.rankings.topPercent.replace("{n}", topPercent)}
               </span>
             ) : null}
           </div>
         </div>
 
         {/* 右: ヘッダー行 + 2×2 メトリクスセル */}
-        <div className="flex flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <div
-            className={["flex items-center justify-between gap-2", ui.headerPad].join(
-              " "
-            )}
+            className={["flex flex-1 items-center gap-2", ui.headerPad].join(" ")}
             style={{ borderBottom: `1px solid ${HAIRLINE}` }}
           >
             <div className="flex min-w-0 items-center gap-2">
@@ -766,7 +1194,7 @@ export default function MyRankCard({
                 gateReady={ready}
               />
               <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-1">
+                <div className="flex min-w-0 items-center gap-1.5">
                   <div
                     className={[
                       "min-w-0 truncate font-black leading-none text-white",
@@ -783,108 +1211,174 @@ export default function MyRankCard({
                       ariaLabel={m.common.proMember}
                     />
                   ) : null}
-                </div>
-                <div
-                  className={[
-                    "mt-1 flex items-center gap-1.5 font-bold uppercase text-cyan-300/60",
-                    ui.subMeta,
-                    nameOxanium.className,
-                  ].join(" ")}
-                >
-                  {leagueLabel ? <span>{leagueLabel}</span> : null}
-                  {streakN ? (
-                    <span className="flex items-center gap-0.5 text-orange-400">
-                      <Flame className={ui.flame} aria-hidden />
-                      {streakN}
-                      {streakShortLabel(language)}
+                  {typeof totalPosts === "number" ? (
+                    <span
+                      className={[
+                        "shrink-0 font-semibold uppercase text-white/45",
+                        ui.postsChip,
+                        nameOxanium.className,
+                      ].join(" ")}
+                    >
+                      {postsLabel(language)} {totalPosts}
                     </span>
                   ) : null}
                 </div>
+                {leagueDisplay ? (
+                  <div
+                    className={[
+                      "mt-1 font-bold uppercase text-cyan-300/60",
+                      ui.subMeta,
+                      nameOxanium.className,
+                    ].join(" ")}
+                  >
+                    {leagueDisplay}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
 
-          {hasCells ? (
-            <div className="grid flex-1 grid-cols-2">
-              {miniMetrics!.slice(0, 4).map((mt, i) => {
-                const selected = mt.key === metric;
-                return (
+          {showMetricsSkeleton ? (
+            <MyRankMetricsSkeleton
+              ui={ui}
+              layout={layout}
+              language={language}
+              streak={streak}
+              reduceMotion={reduceMotion}
+            />
+          ) : hasCells ? (
+            <div
+              className={[
+                "my-rank-metrics-frame relative shrink-0",
+                ui.metricsMinH,
+                layout === "web" ? "my-rank-metrics-frame--web" : "",
+                streakMetricSelected ? "my-rank-metrics-frame--streak-selected" : "",
+                goalScorerMetricSelected
+                  ? "my-rank-metrics-frame--goal-scorer-selected"
+                  : "",
+              ].join(" ")}
+            >
+              <div className="my-rank-metrics-crosshair" aria-hidden />
+              <StreakHub
+                streak={streak}
+                loading={loading}
+                language={language}
+                ui={ui}
+                streakSweep={streakSweep}
+                reduceMotion={reduceMotion}
+                selected={streakMetricSelected}
+              />
+              <div className="my-rank-metrics-grid grid grid-cols-2 grid-rows-2">
+              {goalScorerMetricSelected ? (
+                <div className="pointer-events-none absolute left-1/2 top-1/2 z-[9] -translate-x-1/2 -translate-y-1/2">
                   <div
-                    key={mt.key}
-                    className={[
-                      "relative flex flex-col justify-center",
-                      ui.cellPad,
-                    ].join(" ")}
+                    className="flex min-w-[108px] flex-col items-center rounded-xl border px-3 py-2 text-center"
                     style={{
-                      borderRight:
-                        i % 2 === 0 ? `1px solid ${HAIRLINE}` : undefined,
-                      borderBottom: i < 2 ? `1px solid ${HAIRLINE}` : undefined,
-                      background: selected ? "rgba(34,211,238,0.05)" : undefined,
-                      transition: "background 240ms ease",
+                      borderColor: metricAccent("goalScorerHits").border,
+                      background: metricAccent("goalScorerHits").bg,
+                      boxShadow: "0 0 24px rgba(244,114,182,0.18)",
                     }}
                   >
-                    {selected ? (
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute left-0 top-0 h-[7px] w-[7px]"
-                        style={{
-                          background: CYAN,
-                          clipPath: "polygon(0 0, 100% 0, 0 100%)",
-                          WebkitClipPath: "polygon(0 0, 100% 0, 0 100%)",
-                          filter: "drop-shadow(0 0 4px rgba(34,211,238,0.7))",
-                        }}
-                      />
-                    ) : null}
-                    <div
+                    <span
                       className={[
-                        "font-bold uppercase transition-colors duration-200",
-                        selected ? "text-cyan-300/90" : "text-cyan-300/55",
+                        "font-semibold uppercase",
                         ui.metricLabel,
                         nameOxanium.className,
                       ].join(" ")}
+                      style={{ color: metricAccent("goalScorerHits").label }}
                     >
-                      {mt.label}
-                    </div>
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                      <div
-                        className={[
-                          summaryMetricNumClass,
-                          "leading-none text-white",
-                          ui.metricValue,
-                        ].join(" ")}
-                      >
-                        {loading ? "--" : mt.value}
-                      </div>
-                      {!loading && mt.dayDelta ? (
-                        <span
+                      {metricLabel("goalScorerHits", language)}
+                    </span>
+                    <span
+                      className={[
+                        summaryMetricNumClass,
+                        "mt-1 leading-none",
+                        ui.metricValue,
+                      ].join(" ")}
+                      style={{ color: metricAccent("goalScorerHits").value }}
+                    >
+                      {statsPending ? STATS_PENDING_MARK : fallbackMetricValue}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+              {miniMetrics!.slice(0, 4).map((mt, i) => {
+                const selected = mt.key === metric;
+                const accent = metricAccent(mt.key);
+                const dimmed =
+                  (outsideGridMetricSelected || streakMetricSelected) &&
+                  !selected;
+                return (
+                  <div
+                    key={mt.key}
+                    className={METRIC_CELL_CLASS[i]}
+                    style={{
+                      background: selected ? accent.bg : undefined,
+                      zIndex: selected ? 2 : 0,
+                      opacity: dimmed ? 0.58 : 1,
+                      transition: "opacity 200ms ease",
+                    }}
+                  >
+                    <div className="my-rank-metric-cell__body">
+                      <div className="my-rank-metric-cell__stack">
+                        <div
                           className={[
-                            "font-extrabold tabular-nums leading-none",
-                            ui.dayDelta,
+                            "my-rank-metric-cell__label font-semibold uppercase transition-colors duration-200",
+                            ui.metricLabel,
                             nameOxanium.className,
                           ].join(" ")}
                           style={{
-                            color:
-                              mt.dayDelta.startsWith("-")
-                                ? "rgba(255,255,255,0.45)"
-                                : GOLD,
+                            color: selected ? accent.label : accent.labelDim,
                           }}
                         >
-                          {mt.dayDelta}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className={ui.barMt}>
-                      <SegBar
-                        pct={mt.pct}
-                        enter={segEnter}
-                        reduceMotion={reduceMotion}
-                        segRowClass={ui.segRow}
-                        segMinHClass={ui.segMinH}
-                      />
+                          {mt.label}
+                        </div>
+                        <div className="my-rank-metric-cell__value-row">
+                          <div
+                            className={[
+                              summaryMetricNumClass,
+                              "leading-none",
+                              ui.metricValue,
+                            ].join(" ")}
+                            style={{
+                              color: selected ? accent.value : "rgba(255,255,255,0.92)",
+                            }}
+                          >
+                            {loading || statsPending ? STATS_PENDING_MARK : mt.value}
+                          </div>
+                          {!loading && !statsPending && mt.dayDelta ? (
+                            <span
+                              className={[
+                                "font-bold tabular-nums leading-none",
+                                ui.dayDelta,
+                                nameOxanium.className,
+                              ].join(" ")}
+                              style={{
+                                color: mt.dayDelta.startsWith("-")
+                                  ? "rgba(251,146,60,0.88)"
+                                  : GOLD,
+                              }}
+                            >
+                              {mt.dayDelta}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="my-rank-metric-cell__bar">
+                          <SegBar
+                            pct={mt.pct}
+                            enter={segEnter}
+                            reduceMotion={reduceMotion}
+                            segRowClass={ui.segRow}
+                            segMinHClass={ui.segMinH}
+                            accent={accent.bar}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
               })}
+              </div>
             </div>
           ) : (
             /* miniMetrics 未提供の文脈（月間リーダーボード等）は現在値のみ */
@@ -896,13 +1390,7 @@ export default function MyRankCard({
                   ui.fallbackValue,
                 ].join(" ")}
               >
-                {loading
-                  ? "--"
-                  : metric === "winRate"
-                    ? `${Math.round(value)}%`
-                    : metric === "streak" || metric === "goalScorerHits"
-                      ? `${Math.round(value)}`
-                      : `${formatMetricDecimals(value, 1)} ${m.rankings.pts}`}
+                {loading || statsPending ? STATS_PENDING_MARK : fallbackMetricValue}
               </div>
             </div>
           )}
@@ -911,55 +1399,20 @@ export default function MyRankCard({
 
       {/* 下部シリアル帯 */}
       <div
-        className={["relative z-10 flex items-center justify-between", ui.footerPad].join(
-          " "
-        )}
+        className={["relative z-10", ui.footerPad].join(" ")}
         style={{
           borderTop: `1px solid ${HAIRLINE}`,
-          background: "rgba(0,0,0,0.25)",
         }}
       >
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span
-            aria-hidden
-            className="my-rank-footer-dot inline-block h-[5px] w-[5px] shrink-0 rounded-full"
-            style={{
-              background: CYAN,
-              boxShadow: "0 0 6px rgba(34,211,238,0.8)",
-            }}
-          />
-          <span
-            className={[
-              "truncate font-semibold uppercase text-white/30",
-              ui.footerText,
-              nameOxanium.className,
-            ].join(" ")}
-          >
-            UNITERZ{leagueLabel ? ` · ${leagueLabel}` : ""}
-            {` // ${serialDateKey}`}
-          </span>
-        </span>
-        <span className="flex shrink-0 items-center gap-2">
-          <span
-            className={[
-              "font-semibold uppercase text-white/30",
-              ui.footerText,
-              nameOxanium.className,
-            ].join(" ")}
-          >
-            {typeof totalPosts === "number"
-              ? `${postsLabel(language).toUpperCase()} ${totalPosts}`
-              : ""}
-          </span>
-          {/* バーコード風ストライプ */}
-          <span
-            aria-hidden
-            className="h-[10px] w-[28px]"
-            style={{
-              background:
-                "repeating-linear-gradient(90deg, rgba(255,255,255,0.24) 0 1px, transparent 1px 3px, rgba(255,255,255,0.24) 3px 5px, transparent 5px 8px, rgba(255,255,255,0.24) 8px 10px, transparent 10px 11px)",
-            }}
-          />
+        <span
+          className={[
+            "block min-w-0 truncate font-medium uppercase text-white/32",
+            ui.footerText,
+            nameOxanium.className,
+          ].join(" ")}
+        >
+          UNITERZ{leagueDisplay ? ` · ${leagueDisplay}` : ""}
+          {` // ${serialDateKey}`}
         </span>
       </div>
     </div>
@@ -972,12 +1425,9 @@ export default function MyRankCard({
     >
       <MyRankCardBacklight />
       <div
-        ref={tilt.ref}
+        ref={tilt.wrapRef}
         className="relative z-10"
-        style={{
-          filter: CARD_DROP_SHADOW,
-          ...(tiltEnabled ? tilt.style : undefined),
-        }}
+        style={{ filter: CARD_DROP_SHADOW }}
         onPointerMove={tiltEnabled ? tilt.onMove : undefined}
         onPointerLeave={tiltEnabled ? tilt.onLeave : undefined}
         onPointerCancel={tiltEnabled ? tilt.onLeave : undefined}

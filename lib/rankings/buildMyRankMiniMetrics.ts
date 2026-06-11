@@ -50,7 +50,7 @@ export function buildMyRankMiniMetrics(
   return [
     {
       key: "totalScore",
-      label: "PTS",
+      label: "totalPTS",
       value: Math.round(pts).toLocaleString("en-US"),
       pct: ratio(pts, maxPts),
       dayDelta: dayDeltaLabelForMetric("totalScore", valueDeltas),
