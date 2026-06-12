@@ -88,6 +88,7 @@ export function resultBadgeAccent(
 ): ResultBadgeAccent {
   if (badge === "upset") {
     return {
+      edge: "",
       frameBorder: "border-2 border-red-500/75",
       shadow: "",
     };
@@ -96,18 +97,21 @@ export function resultBadgeAccent(
     const tier = resultStreakTier(activeWinStreak);
     if (tier === "gold") {
       return {
+        edge: "",
         frameBorder: "border-2 border-amber-400/60",
         shadow: "",
       };
     }
     if (tier === "platinum") {
       return {
+        edge: "",
         frameBorder: "border-2 border-cyan-400/55",
         shadow: "",
       };
     }
     if (tier === "silver") {
       return {
+        edge: "",
         frameBorder: "border-2 border-slate-300/55",
         shadow: "",
       };
