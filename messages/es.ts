@@ -395,6 +395,7 @@ const es: Messages = {
     h2hShort: "H2H",
     market: "Mercado",
     closeOverlay: "Cerrar",
+    kickoffAt: "Hora del partido",
     broadcasters: "Emisión",
   },
 

@@ -8,6 +8,7 @@ import { useMasterBadges } from "@/app/component/badges/useMasterBadges";
 import type { MasterBadge } from "@/app/component/badges/useMasterBadges";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 import BadgePalette from "@/app/component/badges/BadgePalette";
 
@@ -33,8 +34,8 @@ export default function MobileBadgesPage() {
 
   if (status !== "ready") {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        {m.common.loading}
+      <div className="flex min-h-screen items-center justify-center text-white">
+        <CandleChartLoader label={m.common.loading} />
       </div>
     );
   }

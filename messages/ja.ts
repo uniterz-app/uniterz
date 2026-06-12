@@ -398,6 +398,7 @@ const ja = {
     h2hShort: "対決のみ",
     market: "市場",
     closeOverlay: "閉じる",
+    kickoffAt: "試合時間",
     broadcasters: "放送局",
   },
 

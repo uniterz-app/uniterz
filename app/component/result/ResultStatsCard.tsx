@@ -7,11 +7,12 @@ import { LineChart } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
+import { RESULT_STAT_ROW_GRID_DEFAULT } from "@/lib/result/resultStatRowGrid";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { resultDetailPanelClass } from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
@@ -134,9 +135,7 @@ function ResultStatsCard({
   const barAnimateMs = 520;
   const barStaggerMs = 90;
 
-  const shell = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} relative overflow-hidden p-5`
-    : "relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-5 shadow-[0_14px_40px_rgba(0,0,0,0.55)]";
+  const shell = resultDetailPanelClass({ padding: "p-5" });
 
   const showUpsetBonus = upsetBonus > 1e-6;
   const showStreakBonus = streakBonus > 1e-6;
@@ -169,9 +168,9 @@ function ResultStatsCard({
           return (
             <div
               key={r.key}
-              className="flex items-center gap-2.5 sm:gap-3"
+              className={RESULT_STAT_ROW_GRID_DEFAULT}
             >
-              <div className="flex w-32 min-w-0 shrink-0 sm:w-34">
+              <div className="min-w-0">
                 <span className="truncate text-[13px] font-semibold text-white sm:text-[15px]">
                   {r.label}
                 </span>
@@ -179,13 +178,14 @@ function ResultStatsCard({
 
               <ResultStatRatingBar
                 ratio={ratio}
+                metricKey={r.key}
                 animateMs={barAnimateMs}
                 delayMs={rowIndex * barStaggerMs}
                 size="md"
               />
 
               <div
-                className={`w-12 shrink-0 text-right text-[14px] text-white sm:w-14 sm:text-[16px] ${resultStatsMetricNumClass}`}
+                className={`min-w-0 text-right text-[14px] text-white sm:text-[16px] ${resultStatsMetricNumClass}`}
               >
                 {display}
               </div>

@@ -390,6 +390,7 @@ const ko: Messages = {
     h2hShort: "직접대결",
     market: "시장",
     closeOverlay: "닫기",
+    kickoffAt: "경기 시간",
     broadcasters: "중계",
   },
   pro: {

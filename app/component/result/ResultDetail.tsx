@@ -63,9 +63,7 @@ export default function ResultDetail({
     <div
       className={[
         "text-white",
-        inOverlay
-          ? "min-h-0 bg-transparent"
-          : "min-h-screen bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827]",
+        inOverlay ? "min-h-0 bg-transparent" : "min-h-screen bg-transparent",
         inOverlay
           ? "px-0 py-0"
           : isMobile

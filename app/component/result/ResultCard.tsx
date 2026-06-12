@@ -10,7 +10,7 @@ import React, {
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Flame, Menu, Pencil, Trash2 } from "lucide-react";
+import { Menu, Pencil, Trash2 } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -27,15 +27,14 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import type { ResultPlatform } from "@/lib/result/result-platform";
-import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
-import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import MatchScoreLine from "@/app/component/games/MatchScoreLine";
+import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
+import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
-import {
-  LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
-  MOBILE_RESULT_CARD_OUTER_CLASS,
-  listCardPanelClass,
-} from "@/lib/games/mobileListCardLayout";
+import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
+import ResultGlassShell from "@/app/component/result/ResultGlassShell";
+import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
+import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 import WcGoalScorerResultRow, {
@@ -43,16 +42,6 @@ import WcGoalScorerResultRow, {
 } from "@/app/component/result/WcGoalScorerResultRow";
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
 import { readPostMatchGoalScorers } from "@/lib/wc/matchGoalScorers";
-import { getWinStreakBadge } from "@/lib/ui/winStreakBadge";
-
-function clamp01(x: number) {
-  return Math.max(0, Math.min(1, x));
-}
-
-function toNumber(v: unknown, fallback = 0) {
-  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
-}
-
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
 type Props = {
@@ -81,6 +70,8 @@ type Props = {
   onRequestPredictEdit?: (post: PredictionPostV2) => void;
   /** キックオフ・LIVE 判定の基準時刻（一覧の定期 tick と揃える） */
   cardClockMs?: number;
+  /** 予想オーバーレイ等：一覧遷移なしの埋め込み（リフト・クリック無効） */
+  embedded?: boolean;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -90,18 +81,6 @@ export type ResultCardPresentationProps = Props & {
   /** 3D テーブル配置時など、一覧の日付グループと揃えたラベルを出す */
   listDateLabel?: string;
 };
-
-function toInt(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
-}
-
-function isYellow10pt(v: unknown): boolean {
-  return typeof v === "number" && Number.isFinite(v) && v >= 7;
-}
-
-function isRedUpset(v: unknown): boolean {
-  return typeof v === "number" && Number.isFinite(v) && v > 0;
-}
 
 function ResultCardPresentationImpl({
   post,
@@ -119,6 +98,7 @@ function ResultCardPresentationImpl({
   gamesRoutePrefix,
   onRequestPredictEdit,
   cardClockMs,
+  embedded = false,
 }: ResultCardPresentationProps) {
   const clock =
     typeof cardClockMs === "number" && Number.isFinite(cardClockMs)
@@ -128,7 +108,6 @@ function ResultCardPresentationImpl({
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const m = t(language);
   const isEn = language === "en";
-  const hadUpsetGame = Boolean((post.stats as any)?.hadUpsetGame);
   const wcGoalScorer = useWcGoalScorerResult(post);
 
   const normalizedLeague = normalizeLeague(post.league);
@@ -182,14 +161,14 @@ function ResultCardPresentationImpl({
     return [l1, l2].filter(Boolean).join(" ");
   }
 
-  const predictedScore = `${post.prediction.score.home} - ${post.prediction.score.away}`;
+  const predictedHome = post.prediction.score.home;
+  const predictedAway = post.prediction.score.away;
 
   const hasFinal =
     typeof post.result?.home === "number" &&
     typeof post.result?.away === "number";
-  const finalScore = hasFinal
-    ? `${post.result!.home} - ${post.result!.away}`
-    : null;
+  const finalHome = hasFinal ? post.result!.home : null;
+  const finalAway = hasFinal ? post.result!.away : null;
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWc || !hasFinal) return [];
@@ -204,109 +183,28 @@ function ResultCardPresentationImpl({
     }
   };
 
-  const activeWinStreak = toInt(
-    (post.stats as any)?.pointsV3Detail?.activeWinStreak
-  ) ?? 0;
-
-  const streakBadge = getWinStreakBadge(activeWinStreak, language);
-
-  const scorePrecisionValueClass = isYellow10pt(post.stats?.scorePrecision)
-    ? "text-yellow-300"
-    : "text-white";
-  const pointsV3ValueClass = isYellow10pt((post.stats as any)?.pointsV3)
-    ? "text-yellow-300"
-    : "text-white";
-  const upsetValueClass = hadUpsetGame && isRedUpset((post.stats as any)?.upsetPoints)
-    ? "text-red-400"
-    : "text-white";
-
-  let badge: "hit" | "upset" | "miss" | "streak" | null = null;
-  if (post.stats?.upsetHit) badge = "upset";
-  else if (streakBadge) badge = "streak";
-  else if (post.stats?.isWin) badge = "hit";
-  else if (post.stats && post.stats.isWin === false) badge = "miss";
-
-  let frame = "";
-  if (badge === "upset") {
-    frame =
-      "border border-red-700 ring-4 ring-red-700/90 shadow-[0_0_28px_rgba(220,38,38,0.75)]";
-  } else if (badge === "streak") {
-    if (activeWinStreak >= 7) {
-      frame =
-        "border border-red-400 ring-2 ring-red-400/70 shadow-[0_0_22px_rgba(239,68,68,0.45)]";
-    } else if (activeWinStreak >= 5) {
-      frame =
-        "border border-orange-300 ring-2 ring-orange-300/60 shadow-[0_0_18px_rgba(249,115,22,0.38)]";
-    } else {
-      frame =
-        "border border-yellow-300 ring-1 ring-yellow-300/60 shadow-[0_0_16px_rgba(250,204,21,0.32)]";
-    }
-  } else if (badge === "hit") {
-    frame =
-      "border border-yellow-400 ring-1 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.45)]";
-  } else if (badge === "miss") {
-    frame = "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
-  }
+  const { badge, activeWinStreak, streakBadge } = resolveResultCardBadge(
+    post,
+    language
+  );
 
   const nameMt = mobileScheduleDense
     ? "mt-0.5"
     : isMobile
       ? "mt-1"
       : "mt-1.5";
-  const mobileBadgeClass = isMobile
-    ? "text-[10px] px-1.5 py-0.5"
-    : "text-[11px] px-2 py-0.5";
-  const mobileStreakBadgeClass = isMobile
-    ? "text-[9px] px-1.5 py-0.5 gap-1"
-    : "text-[11px] px-2.5 py-0.5 gap-1.5";
-  const mobileStreakIconClass = isMobile ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
-
-  const statRows = useMemo(() => {
-    const scorePrecision = toNumber(post.stats?.scorePrecision, 0);
-    const upsetPoints = toNumber((post.stats as any)?.upsetPoints, 0);
-    const pointsV3 = toNumber((post.stats as any)?.pointsV3, 0);
-
-    return [
-      {
-        key: "scorePrecision" as const,
-        label: m.results.scorePrecisionLabel,
-        value: scorePrecision,
-        barMax: 10,
-        format: (v: number) => v.toFixed(1),
-      },
-      {
-        key: "upsetPoints" as const,
-        label: m.results.upsetPointsLabel,
-        value: upsetPoints,
-        barMax: 10,
-        format: (v: number) =>
-          hadUpsetGame ? `${(Math.round(v * 10) / 10).toFixed(1)}` : "--",
-      },
-      {
-        key: "pointsV3" as const,
-        label: m.results.totalPointsLabel,
-        value: pointsV3,
-        barMax: 10,
-        format: (v: number) =>
-          `${(Math.round(v * 10) / 10).toFixed(1)}`,
-      },
-    ];
-  }, [post.stats, m, hadUpsetGame]);
-
-  const barAnimateMs = isMobile ? 480 : 520;
-  const barStaggerMs = isMobile ? 80 : 90;
+  const hideStatsSection = embedded && post.status !== "final";
 
   // モバイルはリーグ／ステータスをグリッド内に入れるため、日付バッジ分だけ上余白
   const contentPad = (() => {
-    if (!isMobile) return "px-8 pb-5 pt-9";
+    if (!isMobile) {
+      return "px-8 pb-5 pt-9";
+    }
     if (mobileScheduleDense) {
-      // 角のリーグ／HIT バッジ分の上余白（日付ラベルありは2段）
       return listDateLabel ? "px-2 pb-1.5 pt-10" : "px-2 pb-1.5 pt-7";
     }
     return listDateLabel ? "px-2 pb-2 pt-11" : "px-2 pb-2 pt-9";
   })();
-
-  const listPanelClass = listCardPanelClass(mobileScheduleDense);
 
   /** 試合開始〜確定まで：LIVE 表示（一覧の MatchCard と同趣旨） */
   const isLiveGame =
@@ -387,44 +285,27 @@ function ResultCardPresentationImpl({
     : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover:pointer-events-auto group-hover:visible group-hover:-translate-y-1/2 group-hover:translate-x-0 group-hover:opacity-100";
 
   return (
-    <div
-      onClick={handle}
+    <ResultGlassShell
+      onClick={embedded ? undefined : handle}
+      badge={badge}
+      activeWinStreak={activeWinStreak}
+      showSweep={false}
+      dense={mobileScheduleDense}
+      lift={!embedded}
       className={[
         "relative text-white",
-        /* モバイル：飛び出しボタンがカード外にはみ出すため、メニュー展開中だけクリップ解除（タップを受け付ける） */
-        isMobile && cornerFabOpen ? "overflow-visible" : "overflow-hidden",
-        isMobile
-          ? MOBILE_RESULT_CARD_OUTER_CLASS
-          : "mx-auto w-full max-w-[1200px]",
-        "cursor-pointer select-none",
-        listPanelClass,
-        frame,
+        isMobile && cornerFabOpen ? "overflow-visible" : "",
+        embedded
+          ? "w-full"
+          : isMobile
+            ? MOBILE_RESULT_CARD_OUTER_CLASS
+            : "mx-auto w-full max-w-[1200px]",
+        embedded ? "" : "cursor-pointer select-none",
       ].join(" ")}
+      extraPanelClassName={
+        isMobile && cornerFabOpen ? "!overflow-visible" : ""
+      }
     >
-      {badge === "streak" ? (
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-streak-sweep"
-          aria-hidden
-        >
-          <div className="result-card-streak-sweep__spin" />
-        </div>
-      ) : null}
-      {badge === "upset" ? (
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-upset-sweep"
-          aria-hidden
-        >
-          <div className="result-card-upset-sweep__spin" />
-        </div>
-      ) : null}
-      <div
-        className={[
-          "pointer-events-none absolute inset-0 z-0 rounded-2xl",
-          LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
-        ].join(" ")}
-        style={PROFILE_SHELL_GRID_STYLE}
-        aria-hidden
-      />
       {hasCornerActions ? (
         <div
           ref={cornerFabRef}
@@ -446,10 +327,10 @@ function ResultCardPresentationImpl({
               <button
                 type="button"
                 className={[
-                  "absolute right-full top-1/2 mr-1.5 flex items-center justify-center rounded-sm border border-cyan-400/55 bg-black/75 text-cyan-200 shadow-[0_0_14px_rgba(34,211,238,0.22),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md transition-all duration-300 ease-out",
+                  "absolute right-full top-1/2 mr-1.5 flex items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
                   isMobile ? "size-7" : "size-8",
                   isMobile ? "z-[55]" : "z-30",
-                  "hover:border-cyan-300/90 hover:bg-cyan-500/12 hover:text-cyan-50 hover:shadow-[0_0_22px_rgba(34,211,238,0.4)]",
+                  "hover:border-white/40 hover:bg-white/10 hover:text-white",
                   isMobile ? "touch-manipulation" : "",
                   flyoutPenClass,
                 ].join(" ")}
@@ -503,9 +384,9 @@ function ResultCardPresentationImpl({
             <button
               type="button"
               className={[
-                "relative flex items-center justify-center rounded-sm border border-cyan-400/50 bg-linear-to-b from-zinc-800/95 to-black/92 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
+                "relative flex items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
                 isMobile ? "z-[52] size-6 touch-manipulation" : "z-20 size-8",
-                "hover:border-cyan-300/90 hover:from-zinc-800 hover:to-zinc-950 hover:text-white hover:shadow-[0_0_26px_rgba(34,211,238,0.42)]",
+                "hover:border-white/40 hover:bg-white/10 hover:text-white",
               ].join(" ")}
               aria-expanded={isMobile ? cornerFabOpen : undefined}
               aria-haspopup="true"
@@ -534,7 +415,8 @@ function ResultCardPresentationImpl({
         >
           <span
             className={[
-              "inline-block rounded-full border border-cyan-300/35 bg-black/65 font-semibold tracking-wide text-cyan-50/95 shadow-[0_0_6px_rgba(34,211,238,0.08)] backdrop-blur-sm",
+              RESULT_GLASS_CHIP,
+              "inline-block font-semibold tracking-wide text-white/85",
               isMobile ? "px-2.5 py-0.5 text-[9px]" : "px-3 py-1 text-[10px]",
             ].join(" ")}
           >
@@ -547,46 +429,17 @@ function ResultCardPresentationImpl({
         <>
           <div
             className={[
-              "pointer-events-none absolute top-2 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
+              "pointer-events-none absolute top-0.5 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
               hasCornerActions ? "right-11" : "right-2",
             ].join(" ")}
           >
-            <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
-              {badge === "streak" && streakBadge && (
-                <span
-                  className={`pointer-events-auto inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-                >
-                  <Flame
-                    className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
-                  />
-                  <span className="min-w-0 truncate text-[9px] leading-tight">
-                    {streakBadge.label}
-                  </span>
-                </span>
-              )}
-              {badge === "hit" && (
-                <span
-                  className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
-                >
-                  HIT
-                </span>
-              )}
-              {badge === "upset" && (
-                <span
-                  className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-                >
-                  UPSET
-                </span>
-              )}
-              {badge === "miss" && (
-                <span
-                  className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-                >
-                  MISS
-                </span>
-              )}
-              {liveMarkNode}
-            </div>
+            <ResultOutcomeBadges
+              badge={badge}
+              streakBadge={streakBadge}
+              isMobile={isMobile}
+              hitBadgeSubtle
+              trailing={liveMarkNode}
+            />
           </div>
           <div
             className={[
@@ -618,40 +471,13 @@ function ResultCardPresentationImpl({
               hasCornerActions ? "pr-12 sm:pr-14" : "",
             ].join(" ")}
           >
-            <div className="flex flex-row flex-wrap items-start justify-end gap-1">
-              {badge === "streak" && streakBadge && (
-                <span
-                  className={`pointer-events-auto inline-flex max-w-full items-center rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-                >
-                  <Flame
-                    className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
-                  />
-                  <span className="min-w-0 truncate">{streakBadge.label}</span>
-                </span>
-              )}
-              {badge === "hit" && (
-                <span
-                  className={`pointer-events-auto shrink-0 rounded-md bg-yellow-400 text-black font-extrabold shadow-md ${mobileBadgeClass}`}
-                >
-                  HIT
-                </span>
-              )}
-              {badge === "upset" && (
-                <span
-                  className={`pointer-events-auto shrink-0 rounded-md bg-red-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-                >
-                  UPSET
-                </span>
-              )}
-              {badge === "miss" && (
-                <span
-                  className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
-                >
-                  MISS
-                </span>
-              )}
-              {liveMarkNode}
-            </div>
+            <ResultOutcomeBadges
+              badge={badge}
+              streakBadge={streakBadge}
+              isMobile={isMobile}
+              hitBadgeSubtle
+              trailing={liveMarkNode}
+            />
           </div>
         </div>
       )}
@@ -871,7 +697,7 @@ function ResultCardPresentationImpl({
 
         <div
           className={[
-            "pointer-events-none absolute left-1/2 z-10 flex max-w-[min(100%,11.5rem)] -translate-x-1/2 flex-col items-center text-center",
+            "pointer-events-none absolute left-1/2 z-10 flex w-max max-w-[calc(100%-5.25rem)] -translate-x-1/2 flex-col items-center text-center",
             mobileScheduleDense
               ? "top-4"
               : isMobile
@@ -879,44 +705,52 @@ function ResultCardPresentationImpl({
                 : "top-5 sm:top-6",
           ].join(" ")}
         >
-          <div
+          <MatchScoreLine
+            home={predictedHome}
+            away={predictedAway}
             className={[
-              "whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white/85",
+              "leading-none tracking-tight font-black text-white/85",
               isMobile
                 ? mobileScheduleDense
-                  ? "text-xl md:text-4xl"
-                  : "text-[clamp(1.32rem,5.4vw,1.78rem)]"
+                  ? "text-base md:text-4xl"
+                  : "text-[clamp(0.9rem,3.4vw,1.2rem)]"
                 : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
-              resultStatsMetricNumClass,
             ].join(" ")}
-          >
-            {predictedScore}
-          </div>
+          />
 
-          {finalScore && (
-            <div
-              className={`mt-1 whitespace-nowrap tabular-nums text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:mt-1.5 ${
+          {finalHome != null && finalAway != null ? (
+            <MatchScoreLine
+              home={finalHome}
+              away={finalAway}
+              className={[
+                "mt-1 text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:mt-1.5",
                 isMobile
-                  ? "text-[13px] font-bold leading-tight"
-                  : "text-base font-bold md:text-lg"
-              } ${resultStatsMetricNumClass}`}
-            >
-              {finalScore}
-            </div>
-          )}
+                  ? "text-[10px] font-bold leading-tight"
+                  : "text-base font-bold md:text-lg",
+              ].join(" ")}
+            />
+          ) : null}
         </div>
       </div>
 
-      <div
-        className={
-          mobileScheduleDense
-            ? "mt-1.5 border-t border-dashed border-white/15"
-            : "mt-3 border-t border-dashed border-white/15"
-        }
-      />
+      {hideStatsSection && !wcGoalScorer ? null : (
+        <div
+          className={mobileScheduleDense ? "mt-1.5" : "mt-3"}
+          aria-hidden
+        >
+          <div className={RESULT_HAIRLINE} />
+        </div>
+      )}
 
       <div
-        className={`${mobileScheduleDense ? "mt-1" : "mt-2"} ${isMobile ? "space-y-0.5" : "space-y-1"}`}
+        className={[
+          mobileScheduleDense ? "mt-1" : "mt-2",
+          isMobile
+            ? mobileScheduleDense
+              ? "space-y-1.5"
+              : "space-y-2.5"
+            : "space-y-1",
+        ].join(" ")}
       >
         {wcGoalScorer ? (
           <WcGoalScorerResultRow
@@ -926,76 +760,18 @@ function ResultCardPresentationImpl({
           />
         ) : null}
 
-        {statRows.map((r, index) => {
-          const cap = r.barMax;
-          const ratio =
-            r.key === "upsetPoints" && !hadUpsetGame
-              ? 0
-              : cap > 0
-                ? clamp01(r.value / cap)
-                : 0;
-          const display = r.format(r.value);
-          const rowIndex = wcGoalScorer ? index + 1 : index;
-
-          const valueClass =
-            r.key === "scorePrecision"
-              ? scorePrecisionValueClass
-              : r.key === "upsetPoints"
-                ? upsetValueClass
-                : pointsV3ValueClass;
-
-          return (
-            <div
-              key={r.key}
-              className={
-                isMobile
-                  ? "flex items-center gap-2"
-                  : "flex items-center gap-2.5 sm:gap-3"
-              }
-            >
-              <div
-                className={
-                  isMobile
-                    ? "w-26 min-w-0 shrink-0"
-                    : "flex w-29 min-w-0 shrink-0 sm:w-31"
-                }
-              >
-                <span
-                  className={
-                    isMobile
-                      ? "truncate text-[11px] font-semibold leading-tight text-white"
-                      : "truncate text-[12px] font-semibold text-white sm:text-[13px]"
-                  }
-                >
-                  {r.label}
-                </span>
-              </div>
-
-              <ResultStatRatingBar
-                ratio={ratio}
-                animateMs={barAnimateMs}
-                delayMs={rowIndex * barStaggerMs}
-                size={isMobile ? "sm" : "md"}
-                animationActive={
-                  ratingBarsImmediate ? true : undefined
-                }
-              />
-
-              <div
-                className={
-                  isMobile
-                    ? `w-10 shrink-0 text-right text-[11px] ${resultStatsMetricNumClass}`
-                    : `w-11 shrink-0 text-right text-[12px] text-white sm:w-12 sm:text-[13px] ${resultStatsMetricNumClass}`
-                }
-              >
-                <span className={valueClass}>{display}</span>
-              </div>
-            </div>
-          );
-        })}
+        {hideStatsSection ? null : (
+          <ResultStatsRows
+            post={post}
+            language={language}
+            isMobile={isMobile}
+            ratingBarsImmediate={ratingBarsImmediate}
+            rowIndexOffset={wcGoalScorer ? 1 : 0}
+          />
+        )}
       </div>
     </div>
-    </div>
+    </ResultGlassShell>
   );
 }
 

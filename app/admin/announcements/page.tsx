@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { ADMIN_UID } from "@/lib/constants";
 
 type Row = {
@@ -48,7 +49,13 @@ export default function AdminAnnouncementsListPage() {
 
   const empty = useMemo(() => !loading && rows.length === 0, [loading, rows]);
 
-  if (status !== "ready") return <div className="p-6 text-white">読み込み中…</div>;
+  if (status !== "ready") {
+    return (
+      <div className="flex justify-center p-6 text-white">
+        <CandleChartLoader />
+      </div>
+    );
+  }
   if (!isAdmin) return <div className="p-6 text-white">権限がありません</div>;
 
   return (
@@ -64,7 +71,7 @@ export default function AdminAnnouncementsListPage() {
           </Link>
         </div>
 
-        {loading && <p className="text-white/70">読み込み中…</p>}
+        {loading && <CandleChartLoader />}
         {empty && <p className="text-white/60">まだありません。</p>}
 
         {!loading && rows.length > 0 && (

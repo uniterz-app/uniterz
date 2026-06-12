@@ -23,9 +23,13 @@ import { doc, getDoc } from "firebase/firestore";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
-import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
+import ResultGlassShell from "@/app/component/result/ResultGlassShell";
+import {
+  resultHitBadgeClass,
+  resultUpsetBadgeClass,
+} from "@/lib/result/resultGlass";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { getWinStreakBadge } from "@/lib/ui/winStreakBadge";
 import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
@@ -151,14 +155,14 @@ export default function MobileResultMatchHeader({
     post.away?.name ?? ""
   );
 
-  const predictedScore = `${post.prediction.score.home} - ${post.prediction.score.away}`;
+  const predictedHome = post.prediction.score.home;
+  const predictedAway = post.prediction.score.away;
 
   const hasFinal =
     typeof post.result?.home === "number" &&
     typeof post.result?.away === "number";
-  const finalScore = hasFinal
-    ? `${post.result!.home} - ${post.result!.away}`
-    : null;
+  const finalHome = hasFinal ? post.result!.home : null;
+  const finalAway = hasFinal ? post.result!.away : null;
 
   const matchDate = post.startAtMillis
     ? (() => {
@@ -182,31 +186,6 @@ export default function MobileResultMatchHeader({
   else if (post.stats?.isWin) badge = "hit";
   else if (post.stats && post.stats.isWin === false) badge = "miss";
 
-  let frame = "border border-white/10";
-  if (badge === "upset") {
-    frame =
-      "border border-red-700 ring-4 ring-red-700/90 shadow-[0_0_28px_rgba(220,38,38,0.75)]";
-  } else if (badge === "streak") {
-    if (activeWinStreak >= 7) {
-      frame =
-        "border border-red-400 ring-2 ring-red-400/70 shadow-[0_0_22px_rgba(239,68,68,0.45)]";
-    } else if (activeWinStreak >= 5) {
-      frame =
-        "border border-orange-300 ring-2 ring-orange-300/60 shadow-[0_0_18px_rgba(249,115,22,0.38)]";
-    } else {
-      frame =
-        "border border-yellow-300 ring-1 ring-yellow-300/60 shadow-[0_0_16px_rgba(250,204,21,0.32)]";
-    }
-  } else if (badge === "hit") {
-    frame =
-      "border border-yellow-400 ring-1 ring-yellow-400/70 shadow-[0_0_14px_rgba(250,204,21,0.45)]";
-  } else if (badge === "miss") {
-    frame =
-      "border border-gray-500/60 shadow-[0_0_14px_rgba(107,114,128,0.35)]";
-  }
-
-  const cardBase = `${MATCH_OVERLAY_GLASS_PANEL} overflow-hidden text-white`;
-
   const predictEditHref = useMemo(() => {
     if (!viewerUid || !post.gameId) return null;
     if (post.authorUid !== viewerUid) return null;
@@ -218,29 +197,16 @@ export default function MobileResultMatchHeader({
   }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, gamesRoutePrefix]);
 
   return (
-    <div className={`relative ${cardBase} ${frame}`}>
-      {badge === "streak" ? (
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-streak-sweep"
-          aria-hidden
-        >
-          <div className="result-card-streak-sweep__spin" />
-        </div>
-      ) : null}
-      {badge === "upset" ? (
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl result-card-upset-sweep"
-          aria-hidden
-        >
-          <div className="result-card-upset-sweep__spin" />
-        </div>
-      ) : null}
-      <div
-        className="pointer-events-none absolute inset-0 z-0 rounded-2xl opacity-[0.32]"
-        style={PROFILE_SHELL_GRID_STYLE}
-        aria-hidden
-      />
-      <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2">
+    <ResultGlassShell
+      badge={badge}
+      activeWinStreak={activeWinStreak}
+      showSweep={badge === "streak" || badge === "upset" || badge === "hit"}
+      dense
+      lift={false}
+      extraPanelClassName="text-white"
+      className="relative"
+    >
+      <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-0.5">
         <ResultLeagueBadge
           league={normalizedLeague}
           teamNameFont={teamNameFont}
@@ -266,14 +232,12 @@ export default function MobileResultMatchHeader({
               </span>
             )}
             {badge === "hit" && (
-              <span className="shrink-0 rounded-md bg-yellow-400 px-1.5 py-0.5 text-[10px] font-extrabold text-black shadow-md">
+              <span className={resultHitBadgeClass(true, { subtle: true })}>
                 HIT
               </span>
             )}
             {badge === "upset" && (
-              <span className="shrink-0 rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
-                UPSET
-              </span>
+              <span className={resultUpsetBadgeClass(true)}>UPSET</span>
             )}
             {badge === "miss" && (
               <span className="shrink-0 rounded-md bg-gray-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white shadow-md">
@@ -340,30 +304,27 @@ export default function MobileResultMatchHeader({
             </div>
           )}
 
-          <div
-            className={[
-              "font-black leading-none tracking-tight tabular-nums text-xl text-white/85 md:text-5xl",
-              resultStatsMetricNumClass,
-            ].join(" ")}
-          >
-            {predictedScore}
-          </div>
+          <MatchScoreLine
+            home={predictedHome}
+            away={predictedAway}
+            className="font-black text-[clamp(0.9rem,3.4vw,1.2rem)] leading-none tracking-tight text-white/85 md:text-5xl"
+          />
 
-          {finalScore && (
-            <div
-              className={`mt-1 flex flex-col items-center tabular-nums ${resultStatsMetricNumClass}`}
-            >
+          {finalHome != null && finalAway != null ? (
+            <div className="mt-1 flex flex-col items-center">
               <div
                 className="text-[9px] font-bold uppercase tracking-wide text-white/50"
                 style={teamNameFont}
               >
                 {m.results.final}
               </div>
-              <div className="text-sm font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-base">
-                {finalScore}
-              </div>
+              <MatchScoreLine
+                home={finalHome}
+                away={finalAway}
+                className="text-sm font-bold text-amber-200 drop-shadow-[0_0_12px_rgba(251,191,36,0.32)] md:text-base"
+              />
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="flex flex-col items-center">
@@ -400,6 +361,6 @@ export default function MobileResultMatchHeader({
         </div>
       </div>
     </div>
-    </div>
+    </ResultGlassShell>
   );
 }

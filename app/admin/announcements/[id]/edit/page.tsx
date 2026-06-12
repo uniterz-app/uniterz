@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { ADMIN_UID } from "@/lib/constants";
 import { db, storage } from "@/lib/firebase";
@@ -66,7 +67,11 @@ export default function AdminAnnouncementEditPage() {
   }, [isAdmin, id, router]);
 
   if (status !== "ready") {
-    return <div className="min-h-screen bg-[#0B0F17] text-white p-6">読み込み中...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0B0F17] p-6 text-white">
+        <CandleChartLoader />
+      </div>
+    );
   }
   if (!isAdmin) {
     return <div className="min-h-screen bg-[#0B0F17] text-white p-6">権限がありません</div>;

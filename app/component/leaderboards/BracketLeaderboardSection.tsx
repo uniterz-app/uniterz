@@ -11,6 +11,7 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useScrambleDecode } from "@/lib/hooks/useScrambleDecode";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import BracketUserCard from "./BracketUserCard";
 import useBracketLeaderboard, {
   type BracketLeaderboardRow,
@@ -212,9 +213,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
       <div className="space-y-2 px-3 pt-2">
         {titleBlock}
         <div className="flex items-center justify-center py-16">
-          <div className="text-white/60">
-            {m.common.loading}
-          </div>
+          <CandleChartLoader label={m.common.loading} />
         </div>
       </div>
     );
@@ -330,9 +329,7 @@ export default function BracketLeaderboardSection({ season: propSeason }: Props)
                     >
                       {bracketLoading ? (
                         <div className="flex items-center justify-center py-16">
-                          <div className="text-white/60">
-                            {m.common.loading}
-                          </div>
+                          <CandleChartLoader label={m.common.loading} />
                         </div>
                       ) : playoffDisplayData ? (
                         <>

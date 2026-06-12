@@ -13,7 +13,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { Scale } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { resultDetailPanelClass } from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 function getMobileTeamName(
@@ -127,9 +127,7 @@ function MobileResultMarketCard({
     ]
   );
 
-  const shell = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} relative overflow-hidden p-4 text-white`
-    : "relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)] text-white";
+  const shell = `${resultDetailPanelClass({ padding: "p-4", mobile: true })} text-white`;
 
   return (
     <div className={shell}>

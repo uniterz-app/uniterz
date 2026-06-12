@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Check, X } from "lucide-react";
+import CountryFlag from "@/app/component/games/CountryFlag";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { normalizeLeague } from "@/lib/leagues";
 import { isFinalResultPost, type PostWithMillis } from "@/lib/result/result-page-data";
@@ -10,9 +11,14 @@ import {
   normalizeWcGoalScorerPick,
 } from "@/lib/wc/goalScorer";
 import { getWcSquadPlayer } from "@/lib/wc/squads";
+import {
+  RESULT_STAT_ROW_GRID_COMPACT,
+  RESULT_STAT_ROW_GRID_DEFAULT,
+} from "@/lib/result/resultStatRowGrid";
 
 export type WcGoalScorerResultInfo = {
   playerName: string;
+  teamId: string;
   /** 試合確定前は null（一覧では選手名のみ表示） */
   hit: boolean | null;
 };
@@ -48,7 +54,7 @@ export function useWcGoalScorerResult(
       post.game?.status === "final";
 
     if (!isFinal) {
-      return { playerName, hit: null };
+      return { playerName, teamId: pick.teamId, hit: null };
     }
 
     const stats = post.stats as
@@ -64,6 +70,7 @@ export function useWcGoalScorerResult(
 
     return {
       playerName,
+      teamId: pick.teamId,
       hit: Number.isFinite(bonus) && bonus > 1e-6,
     };
   }, [post]);
@@ -82,21 +89,15 @@ export default function WcGoalScorerResultRow({
 }: RowProps) {
   return (
     <div
-      className={[
-        "flex items-center",
-        compact ? "gap-2" : "gap-2.5 sm:gap-3",
-      ].join(" ")}
+      className={
+        compact ? RESULT_STAT_ROW_GRID_COMPACT : RESULT_STAT_ROW_GRID_DEFAULT
+      }
     >
-      <div
-        className={[
-          "min-w-0 shrink-0",
-          compact ? "w-26" : "flex w-29 sm:w-31",
-        ].join(" ")}
-      >
+      <div className="min-w-0">
         <span
           className={
             compact
-              ? "truncate text-[11px] font-semibold leading-tight text-white"
+              ? "block truncate whitespace-nowrap text-[10px] font-semibold leading-none text-white"
               : "truncate text-[12px] font-semibold text-white sm:text-[13px]"
           }
         >
@@ -106,21 +107,25 @@ export default function WcGoalScorerResultRow({
 
       <div
         className={[
-          "min-w-0 flex-1 truncate font-medium text-white/85",
+          "flex min-w-0 items-center gap-1 font-medium text-white/85",
           compact
-            ? "text-[11px] leading-tight"
+            ? "text-[10px] leading-none"
             : "text-[12px] sm:text-[13px]",
         ].join(" ")}
       >
-        {info.playerName}
+        <CountryFlag
+          teamId={info.teamId}
+          variant="inline"
+          decorative
+          className={[
+            "aspect-[4/3] shrink-0",
+            compact ? "h-3 w-[1.05rem]" : "h-3.5 w-[1.2rem]",
+          ].join(" ")}
+        />
+        <span className="min-w-0 truncate">{info.playerName}</span>
       </div>
 
-      <div
-        className={[
-          "flex shrink-0 justify-end",
-          compact ? "w-10" : "w-11 sm:w-12",
-        ].join(" ")}
-      >
+      <div className="flex min-w-0 justify-end">
         {info.hit === true ? (
           <Check
             className={[

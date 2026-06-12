@@ -20,6 +20,7 @@ export function CyberSlantedSegBar({
   pct,
   segments = 10,
   compact = false,
+  tall = false,
   enterDelay = 0,
   accent,
   maxWidthClass,
@@ -28,6 +29,8 @@ export function CyberSlantedSegBar({
   pct: number;
   segments?: number;
   compact?: boolean;
+  /** md より少し高いセグメント（MatchCard 評価行向け） */
+  tall?: boolean;
   enterDelay?: number;
   accent: CyberSegAccent;
   /** 例: max-w-[108px] */
@@ -41,9 +44,10 @@ export function CyberSlantedSegBar({
   const enterActive = controlledEnter ?? internalEnter;
   const filled = enterActive ? filledSegCount(pct, segments) : 0;
   const motionOff = reduceMotion === true;
-  const segH = compact ? 9 : 11;
+  const segH = compact ? 9 : tall ? 13 : 11;
   const widthClass =
-    maxWidthClass ?? (compact ? "max-w-[96px]" : "max-w-[128px]");
+    maxWidthClass ??
+    (compact ? "max-w-[96px]" : tall ? "max-w-[136px]" : "max-w-[128px]");
 
   useEffect(() => {
     if (controlledEnter !== undefined) return;

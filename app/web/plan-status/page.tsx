@@ -10,6 +10,7 @@ import Image from "next/image";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { DATE_LOCALE } from "@/lib/i18n/language";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import FloatingCloseButton from "@/app/component/common/FloatingCloseButton";
 
 type PlanType = "monthly" | "annual" | null;
@@ -63,7 +64,9 @@ export default function PlanStatusPage() {
 
   if (loading) {
     return (
-      <div className="p-4 text-white/60">{m.common.loading}</div>
+      <div className="flex justify-center p-4">
+        <CandleChartLoader label={m.common.loading} />
+      </div>
     );
   }
 

@@ -7,6 +7,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage, auth } from "@/lib/firebase";
 import { COUNTRY_OPTIONS } from "@/lib/rankings/country";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import CyberAuthField from "@/app/component/auth/CyberAuthField";
 import CyberAuthTextarea from "@/app/component/auth/CyberAuthTextarea";
 import CyberAuthSelect from "@/app/component/auth/CyberAuthSelect";
@@ -189,8 +190,8 @@ export default function ProfileEditSheet({
             </header>
 
             {!ready ? (
-              <div className="py-12 text-center text-sm text-white/55">
-                {t(language).common.loading}
+              <div className="flex justify-center py-12">
+                <CandleChartLoader label={t(language).common.loading} />
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-left">

@@ -10,6 +10,7 @@ import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { ChevronLeft } from "lucide-react";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import EventNoticeBody from "@/app/component/events/EventNoticeBody";
 import {
   getSyntheticEventById,
@@ -102,10 +103,8 @@ export default function MobileAnnouncementDetailPage() {
 
   if (loadState === "loading") {
     return (
-      <div className="min-h-screen bg-[#0B0F17] text-white p-4">
-        <p className="text-center text-white/60">
-          {m.common.loading}
-        </p>
+      <div className="flex min-h-screen items-center justify-center bg-[#0B0F17] p-4 text-white">
+        <CandleChartLoader label={m.common.loading} />
       </div>
     );
   }

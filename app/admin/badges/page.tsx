@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -182,7 +183,7 @@ export default function AdminBadgesPage() {
       <section className="p-4 rounded-xl bg-white/5 border border-white/10">
         <h2 className="font-semibold mb-3">ランキング（{league}）</h2>
 
-        {loading && <p className="text-white/60">読み込み中…</p>}
+        {loading && <CandleChartLoader />}
         {error && <p className="text-red-400 text-sm">エラー: {error}</p>}
 
         {!loading && rows.length === 0 && (

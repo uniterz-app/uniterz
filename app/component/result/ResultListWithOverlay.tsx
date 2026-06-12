@@ -27,6 +27,7 @@ import {
   ChevronDown,
   X,
 } from "lucide-react";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getCachedGameDocForResult } from "@/lib/result/resultDetailFirestoreCache";
@@ -87,6 +88,8 @@ import {
 } from "@/lib/result/resultCyberMotion";
 import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
+import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 
 const PredictionFormV2 = dynamic(
@@ -1599,7 +1602,7 @@ export default function ResultListWithOverlay({
                 : { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
             }
           >
-            {m.common.loading}
+            <CandleChartLoader label={m.common.loading} />
           </motion.div>
         )}
         {postsCacheCapped && (
@@ -1782,7 +1785,7 @@ export default function ResultListWithOverlay({
                 <motion.div
                   key={`result-delete-${deleteConfirmPost.id}`}
                   role="presentation"
-                  className="fixed inset-0 z-100002 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm pointer-events-auto"
+                  className="fixed inset-0 z-100002 flex items-center justify-center bg-black/60 p-4 pointer-events-auto"
                   initial={prefersReducedMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={prefersReducedMotion ? undefined : { opacity: 0 }}
@@ -1798,7 +1801,6 @@ export default function ResultListWithOverlay({
                     className={[
                       "relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/18 p-5",
                       "bg-linear-to-b from-white/12 via-cyan-950/25 to-zinc-950/50",
-                      "backdrop-blur-2xl backdrop-saturate-[1.8]",
                       "shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.25),0_28px_96px_rgba(0,0,0,0.55)]",
                       "ring-1 ring-cyan-400/25",
                     ].join(" ")}
@@ -1827,7 +1829,7 @@ export default function ResultListWithOverlay({
                         disabled={deleteInProgress}
                         className={[
                           "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-start gap-2 overflow-hidden rounded-[11px]",
-                          "border-2 border-cyan-400/55 bg-white/6 px-3 backdrop-blur-md",
+                          "border-2 border-cyan-400/55 bg-white/6 px-3",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]",
                           "transition-all duration-500 ease-out",
                           "hover:border-cyan-300/85 hover:bg-cyan-500/22 disabled:pointer-events-none disabled:opacity-45",
@@ -1858,7 +1860,7 @@ export default function ResultListWithOverlay({
                         disabled={deleteInProgress}
                         className={[
                           "group relative flex h-[2.9em] min-w-[8.5em] shrink-0 items-center justify-end gap-2 overflow-hidden rounded-[11px]",
-                          "border-2 border-red-600 bg-white/6 px-3 backdrop-blur-md",
+                          "border-2 border-red-600 bg-white/6 px-3",
                           "shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_22px_rgba(220,38,38,0.45),0_0_40px_rgba(185,28,28,0.22)]",
                           "transition-all duration-500 ease-out",
                           "hover:border-red-500 hover:bg-red-700/45 hover:shadow-[0_0_36px_rgba(239,68,68,0.55),0_0_56px_rgba(220,38,38,0.35)] disabled:pointer-events-none disabled:opacity-45",
@@ -1912,7 +1914,7 @@ export default function ResultListWithOverlay({
                     className={[
                       // 不透明度を下げつつ blur でガラス調（背面が透ける）
                       "flex min-h-dvh w-full flex-col overflow-hidden rounded-none border-x-0 border-b-0 border-t border-white/22",
-                      "bg-black/32 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-2xl backdrop-saturate-[1.4]",
+                      "bg-black/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
                       "pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]",
                     ].join(" ")}
                     style={detailPanelStyle}
@@ -2007,7 +2009,7 @@ export default function ResultListWithOverlay({
             >
               <div
                 className={[
-                  "absolute inset-0 z-0 bg-black/40 backdrop-blur-md",
+                  `absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`,
                   predictStandingsOpen
                     ? "pointer-events-none"
                     : "pointer-events-auto",
@@ -2040,23 +2042,20 @@ export default function ResultListWithOverlay({
                   ].join(" ")}
                 >
                   <div className="relative w-full overflow-x-hidden">
-                    <button
-                      type="button"
-                      aria-label={m.common.close}
-                      className="absolute right-2 top-2 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white/90 backdrop-blur-md transition hover:bg-black/65 sm:right-3 sm:top-3"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        closePredictOverlay();
-                      }}
-                    >
-                      <X size={18} strokeWidth={2.4} />
-                    </button>
-
                     {predictOverlay.phase === "loading" ? (
-                      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 px-4 pt-16 text-center text-sm text-white/70">
-                        <p>
-                          {m.results.loadingMatch}
-                        </p>
+                      <div className="relative flex min-h-[40vh] flex-col items-center justify-center gap-3 px-4 pt-16 text-center">
+                        <button
+                          type="button"
+                          aria-label={m.common.close}
+                          className="absolute right-2 top-2 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90 transition hover:bg-black/75 sm:right-3 sm:top-3"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closePredictOverlay();
+                          }}
+                        >
+                          <X size={18} strokeWidth={2.4} />
+                        </button>
+                        <CandleChartLoader label={m.results.loadingMatch} />
                       </div>
                     ) : null}
 
@@ -2077,6 +2076,17 @@ export default function ResultListWithOverlay({
 
                     {predictOverlay.phase === "ready" ? (
                       <>
+                        <button
+                          type="button"
+                          aria-label={m.common.close}
+                          className="absolute right-2 top-2 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90 transition hover:bg-black/75 sm:right-3 sm:top-3"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            closePredictOverlay();
+                          }}
+                        >
+                          <X size={18} strokeWidth={2.4} />
+                        </button>
                         <MatchCard
                           {...predictOverlay.game}
                           myPostId={predictOverlay.post.id}
@@ -2085,11 +2095,16 @@ export default function ResultListWithOverlay({
                           disableCardMotion
                           hideActions
                           showMarketBias
-                          inPredictOverlay
+                          attachOverlayMarketBar
+                          className={
+                            isMobile
+                              ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
+                              : undefined
+                          }
                           homeRecord={null}
                           awayRecord={null}
                         />
-                        <div className="mt-2 overflow-x-hidden">
+                        <div className="overflow-x-hidden">
                           <PredictionFormV2
                             dense={isMobile}
                             game={predictOverlay.game}

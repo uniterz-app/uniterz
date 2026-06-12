@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
@@ -236,9 +237,7 @@ export default function MonthlyLeaderboardSection({
         </div>
 
         {loading && (
-          <div className="px-3 pt-2 text-[11px] text-white/40">
-            {m.common.loading}
-          </div>
+          <CandleChartLoader className="px-3 pt-2" label={m.common.loading} />
         )}
 
         {!loading && error && (

@@ -7,7 +7,8 @@ import { BarChart3 } from "lucide-react";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import { resultDetailPanelClass } from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
 import {
@@ -200,19 +201,16 @@ function ResultPointsDistributionCard({
     };
   }, [chartInView, reduceMotion, animMountKey, peerDots.length, compact]);
 
-  const shell = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} relative overflow-hidden text-white ${compact ? "p-4" : "p-6"}`
-    : [
-        "relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 text-white",
-        "shadow-[0_14px_40px_rgba(0,0,0,0.55)]",
-        compact ? "p-4" : "p-6",
-      ].join(" ");
+  const shell = `${resultDetailPanelClass({
+    padding: compact ? "p-4" : "p-6",
+    mobile: compact,
+  })} text-white`;
 
   const title = msgs.results.scoreDistTitle;
   const subtitle = !isMatchFinal
     ? msgs.results.scoreDistAfterMatch
     : distLoading
-      ? msgs.results.scoreDistLoading
+      ? ""
       : distribution == null
         ? msgs.results.scoreDistUnavailable
         : msgs.results.scoreDistSubtitle;
@@ -627,6 +625,8 @@ function ResultPointsDistributionCard({
             {axisLabel}（{axisFoot}）
           </m.text>
           </svg>
+        ) : distLoading ? (
+          <CandleChartLoader label={msgs.results.scoreDistLoading} />
         ) : null}
       </div>
 

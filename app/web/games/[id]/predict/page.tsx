@@ -11,6 +11,7 @@ import { toMatchCardProps } from "@/lib/games/transform";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 const PredictionForm = dynamic(
@@ -111,7 +112,11 @@ export default function Page() {
 
   // ローディング／エラー簡易表示（必要ならお好みでUI調整）
   if (gameState.kind === "loading" || gameState.kind === "idle") {
-    return <div style={{ padding: 16 }}>{m.common.loading}</div>;
+    return (
+      <div className="flex justify-center" style={{ padding: 16 }}>
+        <CandleChartLoader label={m.common.loading} />
+      </div>
+    );
   }
   if (gameState.kind === "error") {
     return (
@@ -137,8 +142,8 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div style={{ padding: 16 }}>
-          {m.common.loading}
+        <div className="flex justify-center" style={{ padding: 16 }}>
+          <CandleChartLoader label={m.common.loading} />
         </div>
       }
     >

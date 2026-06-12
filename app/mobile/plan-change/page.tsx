@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 
 type Plan = "monthly" | "annual";
 
@@ -33,7 +34,11 @@ export default function PlanChangePage() {
   }, []);
 
   if (loading) {
-    return <div className="p-4 text-white/60">loading...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <CandleChartLoader />
+      </div>
+    );
   }
 
   return (

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation } from "framer-motion";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 const ProfileDailyTrendChartLazy = dynamic(
@@ -41,7 +42,9 @@ const ProAnalysisLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="p-6 text-center text-white/60">loading...</div>
+      <div className="flex justify-center p-6">
+        <CandleChartLoader />
+      </div>
     ),
   }
 );
@@ -51,7 +54,9 @@ const ProPreviewLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="p-6 text-center text-white/60">loading...</div>
+      <div className="flex justify-center p-6">
+        <CandleChartLoader />
+      </div>
     ),
   }
 );
@@ -61,8 +66,8 @@ const PlayoffFullBracketWebLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className={`${CYBER_GLASS_PANEL} min-h-[320px] p-6 text-center text-white/60`}>
-        loading...
+      <div className={`${CYBER_GLASS_PANEL} flex min-h-[320px] items-center justify-center p-6`}>
+        <CandleChartLoader />
       </div>
     ),
   }
@@ -247,7 +252,11 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const playHeroEntrance = !heroEntranceLocked;
 
   if (isMe && loadingPlan) {
-    return <div className="p-4 text-white/60">loading...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <CandleChartLoader />
+      </div>
+    );
   }
 
   return (
@@ -505,8 +514,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           </>
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
-            <div className={`${CYBER_GLASS_PANEL} p-6 text-center`}>
-              loading...
+            <div className={`${CYBER_GLASS_PANEL} flex justify-center p-6`}>
+              <CandleChartLoader />
             </div>
           ) : !playoffDisplayData ? (
             <div className={`${CYBER_GLASS_PANEL} p-6 text-center`}>

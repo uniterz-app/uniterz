@@ -8,6 +8,7 @@ import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { compareNbaStandingsSortRows } from "@/lib/nba/compareNbaStandingsSort";
 
 /* ================= util ================= */
@@ -154,7 +155,7 @@ export default function NbaStandingsPanel({
       </div>
 
       {loading ? (
-        <div className="text-sm text-white/70">Loading...</div>
+        <CandleChartLoader />
       ) : (
         <Conference
           teams={filtered}

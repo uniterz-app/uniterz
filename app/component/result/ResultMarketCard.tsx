@@ -14,7 +14,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { Scale } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { resultDetailPanelClass } from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 function formatResultMarketTeamLabel(
@@ -131,9 +131,7 @@ function ResultMarketCard({
   );
 
   const minH = sideBySideLayout ? "min-h-0" : "min-h-[480px]";
-  const shell = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} relative overflow-hidden p-6 ${minH} text-white`
-    : `relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-6 shadow-[0_14px_40px_rgba(0,0,0,0.55)] ${minH} text-white`;
+  const shell = `${resultDetailPanelClass({ padding: "p-6", minHeight: minH })} text-white`;
 
   return (
     <div className={shell}>

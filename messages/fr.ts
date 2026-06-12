@@ -395,6 +395,7 @@ const fr: Messages = {
     h2hShort: "H2H",
     market: "Marché",
     closeOverlay: "Fermer",
+    kickoffAt: "Coup d'envoi",
     broadcasters: "Diffusion",
   },
 

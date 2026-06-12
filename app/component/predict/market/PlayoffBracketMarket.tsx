@@ -7,6 +7,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { Trophy, Swords, TrendingUp } from "lucide-react";
 
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import PlayoffBracketMarketHeader from "@/app/component/predict/market/PlayoffBracketMarketHeader";
 import PlayoffBracketRound1Market from "@/app/component/predict/market/PlayoffBracketRound1Market";
 import PlayoffBracketChampionMarket from "@/app/component/predict/market/PlayoffBracketChampionMarket";
@@ -101,8 +102,8 @@ export default function PlayoffBracketMarket({
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-5xl text-white">
-        {m.common.loading}
+      <div className="mx-auto flex w-full max-w-5xl justify-center text-white">
+        <CandleChartLoader label={m.common.loading} />
       </div>
     );
   }

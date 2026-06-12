@@ -6,6 +6,7 @@ import { getAuth } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Image from "next/image";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 
 export default function CancelPlanPage() {
   const router = useRouter();
@@ -38,7 +39,11 @@ export default function CancelPlanPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-4 text-white/60">loading...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <CandleChartLoader />
+      </div>
+    );
   }
 
   const handleCancel = async () => {

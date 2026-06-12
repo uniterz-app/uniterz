@@ -1,5 +1,6 @@
 "use client";
 
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { ComposableMap, Geographies, Marker } from "react-simple-maps";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
@@ -829,11 +830,13 @@ export default function ProfileNbaPredictionMap({ uid, language }: Props) {
           </motion.div>
           {loading ? (
             <motion.div
-              className="flex items-center justify-center text-sm text-white/50"
+              className="flex items-center justify-center"
               style={{ minHeight: mapH }}
               variants={fadeItem}
             >
-              {language === "en" ? "Loading map…" : "読み込み中…"}
+              <CandleChartLoader
+                label={language === "en" ? "Loading map…" : "読み込み中…"}
+              />
             </motion.div>
           ) : (
             <motion.div className="relative" variants={fadeItem}>

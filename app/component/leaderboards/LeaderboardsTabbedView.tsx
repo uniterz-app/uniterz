@@ -23,7 +23,12 @@ export default function LeaderboardsTabbedView({ variant }: Props) {
   }, []);
 
   return (
-    <div className={isWeb ? "pt-6" : undefined}>
+    <div
+      className={[
+        "relative min-h-0 text-white",
+        isWeb ? "pt-6" : "pt-1",
+      ].join(" ")}
+    >
       <RankingsCommunityPanel language={language} variant={variant} active />
     </div>
   );

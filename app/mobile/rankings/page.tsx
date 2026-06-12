@@ -18,6 +18,7 @@ import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
@@ -342,13 +343,7 @@ export default function MobileRankingsPage() {
         </div>
 
         {category === "playoffs" && !listReady && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="px-3 pt-2 text-[11px] text-white/40"
-          >
-            {m.common.loading}
-          </div>
+          <CandleChartLoader className="px-3 pt-2" label={m.common.loading} />
         )}
 
         {category === "bracket" ? (

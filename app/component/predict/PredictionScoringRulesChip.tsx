@@ -32,14 +32,13 @@ export default function PredictionScoringRulesChip({
         type="button"
         onClick={() => setOpen(true)}
         className={[
-          "inline-flex shrink-0 items-center rounded-full border border-cyan-400/35 bg-cyan-500/10",
-          "font-semibold text-cyan-100/95 transition",
+          "inline-flex shrink-0 items-center justify-center rounded-full border border-cyan-400/35 bg-cyan-500/10",
+          "text-cyan-100/95 transition",
           "hover:border-cyan-300/50 hover:bg-cyan-500/16 active:scale-[0.98]",
-          size === "web"
-            ? "gap-1.5 px-3.5 py-1.5 text-[13px]"
-            : "gap-1 px-2.5 py-1 text-[11px]",
+          size === "web" ? "h-8 w-8" : "h-7 w-7",
           className,
         ].join(" ")}
+        aria-label={m.predict.scoringRulesChip}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
@@ -50,7 +49,6 @@ export default function PredictionScoringRulesChip({
           ].join(" ")}
           aria-hidden
         />
-        <span>{m.predict.scoringRulesChip}</span>
       </button>
 
       {open && typeof document !== "undefined"

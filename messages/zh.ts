@@ -390,6 +390,7 @@ const zh: Messages = {
     h2hShort: "直接对决",
     market: "市场",
     closeOverlay: "关闭",
+    kickoffAt: "开球时间",
     broadcasters: "转播",
   },
   pro: {

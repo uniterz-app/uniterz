@@ -23,7 +23,7 @@ import {
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { MOBILE_RESULT_DAY_STRIP_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { RESULT_WEB_DAY_STRIP_WIDTH_CLASS } from "@/lib/result/resultListWebLayout";
-import { CYBER_GLASS_FILL } from "@/lib/ui/matchOverlayGlass";
+import { resultDayStripPanelClass } from "@/lib/result/resultGlass";
 
 /** 日付行右側の得点表示（確定合計 or 未確定） */
 export type ResultDayPointsHeader =
@@ -394,15 +394,7 @@ export function ResultDayPipeGroup({
   /** 日付帯：モバイルはページ横いっぱいのバナー、Web はコンテンツ幅いっぱい */
   const dateStrip = isMobile ? (
     <div className={MOBILE_RESULT_DAY_STRIP_OUTER_CLASS}>
-      <div
-        className={[
-          "group relative w-full overflow-hidden rounded-md",
-          "border border-cyan-400/40",
-          CYBER_GLASS_FILL,
-          "shadow-[0_0_24px_-8px_rgba(34,211,238,0.28),inset_0_1px_0_rgba(34,211,238,0.16)]",
-          "px-3 py-2.5",
-        ].join(" ")}
-      >
+      <div className={resultDayStripPanelClass(true)}>
         <div
           className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-[linear-gradient(180deg,rgba(34,211,238,0.95)_0%,rgba(34,211,238,0.2)_100%)] shadow-[0_0_12px_rgba(34,211,238,0.55)]"
           aria-hidden
@@ -431,13 +423,7 @@ export function ResultDayPipeGroup({
   ) : (
     <div className={RESULT_WEB_DAY_STRIP_WIDTH_CLASS}>
       <div
-        className={[
-          "group relative w-full overflow-hidden rounded-md",
-          "border border-cyan-400/55",
-          CYBER_GLASS_FILL,
-          "shadow-[0_0_28px_-6px_rgba(34,211,238,0.32),inset_0_1px_0_rgba(34,211,238,0.2)]",
-          "px-4 py-3.5 sm:px-5",
-        ].join(" ")}
+        className={resultDayStripPanelClass(false)}
         style={{
           clipPath:
             "polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)",

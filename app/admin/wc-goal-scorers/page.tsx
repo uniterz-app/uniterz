@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import AdminGuard from "@/app/admin/_components/AdminGuard";
 import { auth } from "@/lib/firebase";
 import type { WcGameGoalScorer } from "@/lib/wc/goalScorer";
@@ -209,7 +210,7 @@ export default function AdminWcGoalScorersPage() {
         </div>
 
         {loading ? (
-          <p className="text-white/60">読み込み中…</p>
+          <CandleChartLoader />
         ) : (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">

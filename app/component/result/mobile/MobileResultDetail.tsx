@@ -60,7 +60,7 @@ export default function MobileResultDetail({
         "text-white",
         inOverlay
           ? "min-h-0 bg-transparent px-0 py-0"
-          : "min-h-screen bg-linear-to-br from-[#0b1220] via-[#0f172a] to-[#111827] px-4 py-4",
+          : "min-h-screen bg-transparent px-4 py-4",
       ].join(" ")}
     >
       <LazyMotion features={domAnimation}>

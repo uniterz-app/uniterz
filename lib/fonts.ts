@@ -2,6 +2,7 @@
 
 import {
   Alfa_Slab_One,
+  Montserrat,
   Noto_Sans_JP,
   Oxanium,
   Rajdhani,
@@ -26,6 +27,22 @@ export const nameRajdhani = Rajdhani({
   weight: ["500", "600", "700"],
   display: "swap",
 });
+
+/** 試合カード中央の VS（Black Italic Sans Serif） */
+const matchVsMontserrat = Montserrat({
+  subsets: ["latin"],
+  weight: "900",
+  style: "italic",
+  display: "swap",
+});
+
+export const matchVsLabelClass = matchVsMontserrat.className;
+
+/** 試合カード・リザルトのスコア（VS と同じ Montserrat Black Italic） */
+export const matchScoreClass = [
+  matchVsMontserrat.className,
+  "tabular-nums",
+].join(" ");
 
 export const nameSpace = Space_Grotesk({
   subsets: ["latin"],

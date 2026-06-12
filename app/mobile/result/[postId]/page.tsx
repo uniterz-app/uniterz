@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import MobileResultDetail from "@/app/component/result/mobile/MobileResultDetail";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -70,8 +71,8 @@ export default function MobileResultPostPage() {
 
   if (state.status === "loading") {
     return (
-      <div className="min-h-screen grid place-items-center text-white">
-        Loading...
+      <div className="grid min-h-screen place-items-center text-white">
+        <CandleChartLoader />
       </div>
     );
   }

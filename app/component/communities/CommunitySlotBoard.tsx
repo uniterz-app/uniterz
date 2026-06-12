@@ -11,7 +11,11 @@ import type { GroupMemberPreview } from "@/lib/communities/memberPreviews";
 import CommunityMemberAvatarStack from "@/app/component/communities/CommunityMemberAvatarStack";
 import {
   CommunityCrtSectionLabel,
-  CommunityCrtShell,
+  CommunityGlassCorners,
+  CommunityGlassSheen,
+  CommunitySlotPage,
+  CommunitySlotSection,
+  communityCrtPanelClass,
   communityCrtPanelStyle,
 } from "@/app/component/communities/CommunityCrtTheme";
 import { preserveScrollOnInputFocus } from "@/lib/dom/preserveScrollOnInputFocus";
@@ -55,7 +59,6 @@ type SlotSizing = {
   emptyIcon: string;
   joinInput: string;
   joinBtn: string;
-  shellPad: string;
   showDescription: boolean;
 };
 
@@ -78,7 +81,6 @@ function slotSizing(isWeb: boolean): SlotSizing {
       emptyIcon: "h-6 w-6",
       joinInput: "px-3 py-2.5 text-base",
       joinBtn: "py-2 text-sm",
-      shellPad: "p-4 sm:p-5",
       showDescription: true,
     };
   }
@@ -99,7 +101,6 @@ function slotSizing(isWeb: boolean): SlotSizing {
     emptyIcon: "h-4 w-4",
     joinInput: "px-2 py-1.5 text-xs",
     joinBtn: "py-1.5 text-[11px]",
-    shellPad: "p-2.5",
     showDescription: false,
   };
 }
@@ -151,13 +152,15 @@ function GroupFilledSlot({
       aria-label={`${g.name} — ${labels.openRanking}`}
       onClick={onOpen}
       className={[
-        "group/slot w-full border text-left transition-[filter,border-color] duration-150 hover:brightness-105",
+        "group/slot w-full text-left transition-[filter,border-color,box-shadow] duration-200 hover:brightness-[1.04]",
+        communityCrtPanelClass("cyan"),
         sizing.pad,
         sizing.emptyMinH,
       ].join(" ")}
-      style={communityCrtPanelStyle("cyan")}
     >
-      <div className={["flex items-center", sizing.gap].join(" ")}>
+      <CommunityGlassSheen />
+      <CommunityGlassCorners />
+      <div className={["relative z-10 flex items-center", sizing.gap].join(" ")}>
         <div
           className={[
             "flex shrink-0 flex-col items-center gap-1.5",
@@ -187,10 +190,14 @@ function GroupFilledSlot({
           </span>
           <div
             className={[
-              "flex items-center justify-center overflow-hidden border",
+              "flex items-center justify-center overflow-hidden rounded-md border backdrop-blur-sm",
               sizing.thumb,
             ].join(" ")}
-            style={{ borderColor: "rgba(34,211,238,0.25)" }}
+            style={{
+              borderColor: "rgba(34,211,238,0.28)",
+              background: "rgba(4,12,18,0.22)",
+              boxShadow: "inset 0 0 12px rgba(34,211,238,0.05)",
+            }}
           >
             {g.headerImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -267,12 +274,15 @@ function CreateEmptySlot({
       onClick={onCreate}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       className={[
-        "flex w-full flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-cyan-400/45 hover:bg-cyan-500/5",
+        "flex w-full flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 transition-[border-color,box-shadow,background] duration-200",
+        communityCrtPanelClass("empty"),
         sizing.emptyMinH,
       ].join(" ")}
-      style={communityCrtPanelStyle("empty")}
     >
-      <Plus className={["text-cyan-300/55", sizing.emptyIcon].join(" ")} aria-hidden />
+      <Plus
+        className={["text-cyan-300/65 drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]", sizing.emptyIcon].join(" ")}
+        aria-hidden
+      />
       <span
         className={[
           "text-center font-medium text-cyan-100/80",
@@ -329,12 +339,16 @@ function JoinEmptySlot({
         onClick={onExpand}
         whileTap={reduceMotion ? undefined : { scale: 0.98 }}
         className={[
-          "flex w-full flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-amber-400/40 hover:bg-amber-500/5",
+          "flex w-full flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 transition-[border-color,box-shadow,background] duration-200",
+          communityCrtPanelClass("empty"),
           sizing.emptyMinH,
         ].join(" ")}
-        style={communityCrtPanelStyle("empty")}
+        style={{ borderColor: "rgba(251,191,36,0.24)" }}
       >
-        <Plus className={["text-amber-300/50", sizing.emptyIcon].join(" ")} aria-hidden />
+        <Plus
+          className={["text-amber-300/60 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]", sizing.emptyIcon].join(" ")}
+          aria-hidden
+        />
         <span
           className={[
             "text-center font-medium text-amber-100/75",
@@ -350,11 +364,13 @@ function JoinEmptySlot({
 
   return (
     <div
-      className={["border", sizing.pad].join(" ")}
+      className={[communityCrtPanelClass("amber"), sizing.pad].join(" ")}
       style={communityCrtPanelStyle("amber")}
       data-slot-key={slotKey}
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <CommunityGlassSheen tone="amber" />
+      <CommunityGlassCorners tone="amber" />
+      <div className="relative z-10 mb-3 flex items-center justify-between gap-2">
         <p
           className="text-xs tracking-[0.18em] sm:text-sm"
           style={{ color: "rgba(251,191,36,0.75)" }}
@@ -370,7 +386,7 @@ function JoinEmptySlot({
         </button>
       </div>
       <form
-        className="flex flex-col gap-3"
+        className="relative z-10 flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!joinBusy && code.trim().length >= 4) {
@@ -390,10 +406,13 @@ function JoinEmptySlot({
           spellCheck={false}
           enterKeyHint="go"
           className={[
-            "w-full border bg-black/60 tracking-[0.14em] text-amber-100/90 outline-none placeholder:text-white/30",
+            "w-full rounded-md border bg-black/35 tracking-[0.14em] text-amber-100/90 outline-none backdrop-blur-sm placeholder:text-white/30 focus:border-amber-400/55 focus:shadow-[0_0_16px_rgba(251,191,36,0.12)]",
             sizing.joinInput,
           ].join(" ")}
-          style={{ borderColor: "rgba(251,191,36,0.3)" }}
+          style={{
+            borderColor: "rgba(251,191,36,0.32)",
+            boxShadow: "inset 0 1px 0 rgba(251,191,36,0.08)",
+          }}
         />
         <div className="flex gap-2">
           <button
@@ -401,12 +420,13 @@ function JoinEmptySlot({
             disabled={joinBusy}
             onClick={() => void handlePaste()}
             className={[
-              "inline-flex flex-1 items-center justify-center gap-1.5 border font-medium",
+              "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border font-medium backdrop-blur-sm transition-[box-shadow,border-color] hover:shadow-[0_0_14px_rgba(34,211,238,0.15)]",
               sizing.joinBtn,
             ].join(" ")}
             style={{
-              borderColor: "rgba(34,211,238,0.35)",
-              color: "rgba(34,211,238,0.9)",
+              borderColor: "rgba(34,211,238,0.38)",
+              color: "rgba(34,211,238,0.92)",
+              background: "rgba(34,211,238,0.06)",
             }}
           >
             <Clipboard className="h-4 w-4 shrink-0" aria-hidden />
@@ -417,13 +437,13 @@ function JoinEmptySlot({
             disabled={joinBusy || code.trim().length < 4}
             whileTap={reduceMotion ? undefined : { scale: 0.97 }}
             className={[
-              "flex-1 border font-semibold disabled:opacity-40",
+              "flex-1 rounded-md border font-semibold backdrop-blur-sm transition-[box-shadow] hover:shadow-[0_0_16px_rgba(251,191,36,0.18)] disabled:opacity-40",
               sizing.joinBtn,
             ].join(" ")}
             style={{
-              borderColor: "rgba(251,191,36,0.45)",
-              color: "rgba(251,191,36,0.95)",
-              background: "rgba(251,191,36,0.08)",
+              borderColor: "rgba(251,191,36,0.48)",
+              color: "rgba(251,191,36,0.96)",
+              background: "rgba(251,191,36,0.1)",
             }}
           >
             {joinBusy ? "…" : submitLabel}
@@ -440,8 +460,7 @@ function LoadingSlots({ count, sizing }: { count: number; sizing: SlotSizing }) 
       {Array.from({ length: count }, (_, i) => (
         <div
           key={i}
-          className={["skeleton-scan border", sizing.emptyMinH].join(" ")}
-          style={communityCrtPanelStyle("empty")}
+          className={["skeleton-scan", communityCrtPanelClass("empty"), sizing.emptyMinH].join(" ")}
         />
       ))}
     </div>
@@ -514,12 +533,12 @@ export default function CommunitySlotBoard({
     [onPreviewJoin]
   );
 
-  const slotGridClass = "grid grid-cols-1 gap-3";
+  const slotGridClass = "grid grid-cols-1 gap-2.5 sm:gap-3";
 
   return (
-    <CommunityCrtShell>
-      <div className={[sizing.shellPad, jp.className].join(" ")}>
-        <section>
+    <CommunitySlotPage>
+      <div className={jp.className}>
+        <CommunitySlotSection accent="cyan">
           <CommunityCrtSectionLabel
             large
             suffix={labels.slotCount(ownedGroups.length, limits.maxOwned)}
@@ -552,9 +571,9 @@ export default function CommunitySlotBoard({
               ))}
             </ul>
           )}
-        </section>
+        </CommunitySlotSection>
 
-        <section className="mt-6">
+        <CommunitySlotSection accent="amber">
           <CommunityCrtSectionLabel
             large
             suffix={labels.slotCount(
@@ -569,10 +588,10 @@ export default function CommunitySlotBoard({
           ) : memberSlots.length === 0 ? (
             <p
               className={[
-                "border px-4 py-5 text-center text-cyan-100/45",
+                communityCrtPanelClass("empty"),
+                "px-4 py-5 text-center text-cyan-100/50",
                 isWeb ? "text-sm" : "text-xs",
               ].join(" ")}
-              style={communityCrtPanelStyle("empty")}
             >
               {language === "en" ? "All slots in use." : "スロットがいっぱいです。"}
             </p>
@@ -609,8 +628,8 @@ export default function CommunitySlotBoard({
               ))}
             </ul>
           )}
-        </section>
+        </CommunitySlotSection>
       </div>
-    </CommunityCrtShell>
+    </CommunitySlotPage>
   );
 }

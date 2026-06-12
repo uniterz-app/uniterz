@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation } from "framer-motion";
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 const ProfileDailyTrendChartLazy = dynamic(
@@ -41,7 +42,9 @@ const ProAnalysisLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="p-6 text-center text-sm text-white/70">loading...</div>
+      <div className="flex justify-center p-6">
+        <CandleChartLoader />
+      </div>
     ),
   }
 );
@@ -51,7 +54,9 @@ const ProPreviewLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="p-6 text-center text-sm text-white/70">loading...</div>
+      <div className="flex justify-center p-6">
+        <CandleChartLoader />
+      </div>
     ),
   }
 );
@@ -61,8 +66,8 @@ const PlayoffFullBracketMobileLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className={`${CYBER_GLASS_PANEL} mt-4 min-h-[280px] p-6 text-center text-sm text-white/70`}>
-        loading...
+      <div className={`${CYBER_GLASS_PANEL} mt-4 flex min-h-[280px] items-center justify-center p-6`}>
+        <CandleChartLoader />
       </div>
     ),
   }
@@ -249,7 +254,11 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const playHeroEntrance = !heroEntranceLocked;
 
   if (isMe && loadingPlan) {
-    return <div className="p-4 text-white/60">loading...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <CandleChartLoader />
+      </div>
+    );
   }
 
   return (
@@ -512,8 +521,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           </>
         ) : tab === "bracket" ? (
           playoffBracketLoading ? (
-            <div className={`${CYBER_GLASS_PANEL} mt-4 space-y-3 p-6 text-center`}>
-              <p className="text-sm text-white/70">loading...</p>
+            <div className={`${CYBER_GLASS_PANEL} mt-4 flex justify-center p-6`}>
+              <CandleChartLoader />
             </div>
           ) : !playoffDisplayData ? (
             <div className={`${CYBER_GLASS_PANEL} mt-4 space-y-3 p-6 text-center`}>

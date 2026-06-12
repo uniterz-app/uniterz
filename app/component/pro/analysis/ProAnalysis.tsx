@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import ProAnalysisView from "@/app/component/pro/analysis/ProAnalysisView";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserMonthlyStatsV2 } from "@/lib/stats/useUserMonthlyStatsV2";
@@ -161,7 +162,11 @@ export default function ProAnalysisPage() {
     (prevMonthSummary != null && globalPrevMonthLoading) ||
     !month
   ) {
-    return <div className="p-4 text-white/60">loading...</div>;
+    return (
+      <div className="flex justify-center p-4">
+        <CandleChartLoader />
+      </div>
+    );
   }
 
   if (!uid || plan === "free") {

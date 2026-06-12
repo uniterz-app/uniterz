@@ -46,3 +46,10 @@ export function splitTeamNameByLeague(
   // ▼ 3) どうしても分割できない場合の fallback
   return [name, "\u00A0"];
 }
+
+/** 表示用：line2 が nbsp プレースホルダだけのときは line1 のみ（中央揃えの見た目ずれ防止） */
+export function joinTeamNameLines(l1: string, l2: string): string {
+  const second = l2.replace(/\u00A0/g, " ").trim();
+  if (!second) return l1.trim();
+  return `${l1} ${second}`.trim();
+}

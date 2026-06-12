@@ -10,6 +10,7 @@ import { markAnnouncementRead } from "@/lib/announcements/markAnnouncementRead";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { ChevronLeft } from "lucide-react";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import EventNoticeBody from "@/app/component/events/EventNoticeBody";
 import {
   getSyntheticEventById,
@@ -104,8 +105,8 @@ export default function WebAnnouncementDetailPage() {
   if (loadState === "loading") {
     return (
       <div className="min-h-screen bg-[#0B0F17] text-white">
-        <div className="mx-auto max-w-[840px] px-5 py-10">
-          <p className="text-white/60">{m.common.loading}</p>
+        <div className="mx-auto flex max-w-[840px] justify-center px-5 py-10">
+          <CandleChartLoader label={m.common.loading} />
         </div>
       </div>
     );

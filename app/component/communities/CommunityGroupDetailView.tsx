@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Copy, Share2 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { jp } from "@/lib/fonts";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { toast } from "@/app/component/ui/toast";
 import { copyTextToClipboard } from "@/lib/clipboard/copyText";
 import { shareCommunityInvite } from "@/lib/communities/inviteShare";
@@ -423,12 +424,12 @@ export default function CommunityGroupDetailView({
           .join(" ")}
       >
         {loadingDetail && (
-          <p className="text-sm text-white/45">
-            {commMsg(language, {
+          <CandleChartLoader
+            label={commMsg(language, {
               en: "Loading…",
               ja: "読み込み中…",
             })}
-          </p>
+          />
         )}
 
         {!loadingDetail && summary && (

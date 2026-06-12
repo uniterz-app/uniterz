@@ -16,7 +16,7 @@ import CommunitySlotBoard, {
   type CommunityListLimits,
 } from "@/app/component/communities/CommunitySlotBoard";
 import {
-  CommunityCrtShell,
+  communityCrtPanelClass,
 } from "@/app/component/communities/CommunityCrtTheme";
 import {
   FREE_MAX_MEMBERSHIPS,
@@ -362,8 +362,8 @@ export default function RankingsCommunityPanel({
   return (
     <div
       className={[
-        "mx-auto w-full pb-bottom-nav pt-2",
-        isWeb ? "w-full px-0" : "max-w-md px-2",
+        "mx-auto w-full pb-bottom-nav",
+        isWeb ? "w-full px-0 pt-2" : "max-w-md px-3 pt-2",
         jp.className,
       ].join(" ")}
     >
@@ -404,21 +404,23 @@ export default function RankingsCommunityPanel({
       />
 
       {err ? (
-        <p className="mb-3 rounded-none border border-red-400/35 bg-red-950/40 px-3 py-2 text-sm text-red-200 shadow-[inset_0_0_16px_rgba(239,68,68,0.08)]">
+        <p className="mb-3 rounded-xl border border-red-400/35 bg-red-950/35 px-3 py-2 text-sm text-red-200 shadow-[inset_0_0_16px_rgba(239,68,68,0.08)] backdrop-blur-md">
           {err}
         </p>
       ) : null}
 
       {!uid ? (
-        <CommunityCrtShell>
-          <div className="p-5">
-            <p className="text-center text-base text-cyan-100/55 sm:text-lg">
+        <div className="flex min-h-[min(40dvh,320px)] items-center justify-center">
+          <div
+            className={[communityCrtPanelClass("subtle"), "px-6 py-8 text-center"].join(" ")}
+          >
+            <p className="text-base text-cyan-100/55 sm:text-lg">
               {language === "en"
                 ? "Sign in to view your community slots."
                 : "ログインするとスロットが表示されます。"}
             </p>
           </div>
-        </CommunityCrtShell>
+        </div>
       ) : (
         <CommunitySlotBoard
           language={language}

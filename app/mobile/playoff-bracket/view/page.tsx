@@ -8,6 +8,7 @@ import {
   type BracketState,
 } from "@/lib/playoff-bracket-firestore";
 import { buildPlayoffDisplayData } from "@/lib/playoff-bracket-display";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import PlayoffFullBracketMobile from "@/app/component/predict/PlayoffFullBracketMobile";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
 import { usePlayoffOfficialResults } from "@/lib/playoff/usePlayoffOfficialResults";
@@ -82,7 +83,7 @@ export default function MobilePlayoffBracketViewPage() {
   if (loading || !display) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050b14] text-white">
-        読み込み中...
+        <CandleChartLoader />
       </div>
     );
   }

@@ -395,6 +395,7 @@ const de: Messages = {
     h2hShort: "H2H",
     market: "Markt",
     closeOverlay: "Schließen",
+    kickoffAt: "Anpfiff",
     broadcasters: "Übertragung",
   },
 

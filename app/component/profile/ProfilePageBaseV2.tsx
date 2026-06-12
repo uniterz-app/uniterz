@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useProfile, type Profile } from "./useProfile";
 
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import MobileProfileViewV2 from "./MobileProfileViewV2";
 import WebProfileViewV2 from "./WebProfileViewV2";
 
@@ -134,7 +135,13 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     };
   }, [summary, scopedStreak.currentStreak]);
 
-  if (loading) return <div style={{ padding: 24 }}>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center" style={{ padding: 24 }}>
+        <CandleChartLoader />
+      </div>
+    );
+  }
   if (!normalizedProfile) return <div style={{ padding: 24 }}>Not found</div>;
 
   const viewProps = {

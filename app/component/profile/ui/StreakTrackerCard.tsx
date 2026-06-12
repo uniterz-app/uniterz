@@ -14,6 +14,7 @@ import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { jp, nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { BarChart3, Info, TrendingDown, TrendingUp } from "lucide-react";
@@ -226,8 +227,6 @@ export default function StreakTrackerCard({
           ? flatCaption
           : "—";
 
-  const loadingMsg = msg.common.loading;
-
   const winLabel = msg.profile.win;
   const lossLabel = msg.profile.loss;
 
@@ -383,10 +382,8 @@ export default function StreakTrackerCard({
           />
           <div className="relative z-1">
             {loading ? (
-              <div
-                className={`grid place-items-center text-sm text-white/60 ${S.loadingEmptyH}`}
-              >
-                {loadingMsg}
+              <div className={`grid place-items-center ${S.loadingEmptyH}`}>
+                <CandleChartLoader label={msg.common.loading} />
               </div>
             ) : points.length === 0 ? (
               <div

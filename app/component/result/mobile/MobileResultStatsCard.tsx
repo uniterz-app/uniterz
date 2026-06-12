@@ -8,11 +8,12 @@ import { LineChart } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
+import { RESULT_STAT_ROW_GRID_COMPACT } from "@/lib/result/resultStatRowGrid";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { MATCH_OVERLAY_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { resultDetailPanelClass } from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
@@ -133,9 +134,7 @@ function MobileResultStatsCard({
   const barAnimateMs = 480;
   const barStaggerMs = 80;
 
-  const shell = inOverlay
-    ? `${MATCH_OVERLAY_GLASS_PANEL} relative overflow-hidden p-4 text-white`
-    : "relative overflow-hidden rounded-2xl border border-white/15 bg-[#050814]/80 p-4 shadow-[0_14px_40px_rgba(0,0,0,0.55)] text-white";
+  const shell = `${resultDetailPanelClass({ padding: "p-4", mobile: true })} text-white`;
 
   const showUpsetBonus = upsetBonus > 1e-6;
   const showStreakBonus = streakBonus > 1e-6;
@@ -167,22 +166,26 @@ function MobileResultStatsCard({
           const rowIndex = wcGoalScorer ? index + 1 : index;
 
           return (
-            <div key={r.key} className="flex items-center gap-2">
-              <div className="w-29 min-w-0 shrink-0">
-                <span className="truncate text-[13px] font-semibold leading-tight">
+            <div
+              key={r.key}
+              className={RESULT_STAT_ROW_GRID_COMPACT}
+            >
+              <div className="min-w-0">
+                <span className="block truncate whitespace-nowrap text-[10px] font-semibold leading-none text-white">
                   {r.label}
                 </span>
               </div>
 
               <ResultStatRatingBar
                 ratio={ratio}
+                metricKey={r.key}
                 animateMs={barAnimateMs}
                 delayMs={rowIndex * barStaggerMs}
-                size="md"
+                size="sm"
               />
 
               <div
-                className={`w-11 shrink-0 text-right text-[13px] ${resultStatsMetricNumClass}`}
+                className={`min-w-0 text-right text-[10px] leading-none ${resultStatsMetricNumClass}`}
               >
                 {display}
               </div>

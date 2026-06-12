@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {
+  fetchGamePredictionCounts,
+  isSoccerMarketLeague,
+} from "@/lib/predict/gameMarketDistribution";
 import DonutChart from "./DonutChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { auth } from "@/lib/firebase";
@@ -107,35 +109,27 @@ export default function GamePredictionDistribution({
 
   useEffect(() => {
     let alive = true;
-    const q = query(
-      collection(db, "posts"),
-      where("gameId", "==", gameId),
-      where("schemaVersion", "==", 2)
-    );
 
-    getDocs(q).then((snap) => {
-      if (!alive) return;
-      let h = 0;
-      let a2 = 0;
-      let d = 0;
-      snap.docs.forEach((docSnap) => {
-        const data = docSnap.data() as any;
-        const winner = data?.prediction?.winner ?? data?.winner ?? null;
-        if (winner === "home") h++;
-        else if (winner === "away") a2++;
-        else if (winner === "draw") d++;
+    fetchGamePredictionCounts(gameId)
+      .then(({ homeCount, awayCount, drawCount }) => {
+        if (!alive) return;
+        setHomeCount(homeCount);
+        setAwayCount(awayCount);
+        setDrawCount(drawCount);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setHomeCount(0);
+        setAwayCount(0);
+        setDrawCount(0);
       });
-      setHomeCount(h);
-      setAwayCount(a2);
-      setDrawCount(d);
-    });
 
     return () => {
       alive = false;
     };
   }, [gameId]);
 
-  const isSoccer = league === "j1" || league === "pl" || league === "wc";
+  const isSoccer = isSoccerMarketLeague(league);
   const total = homeCount + awayCount + (isSoccer ? drawCount : 0);
   const sumFb =
     (fallbackMarketBias?.homePct ?? 0) + (fallbackMarketBias?.awayPct ?? 0);
