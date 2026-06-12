@@ -10,9 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { auth } from "@/lib/firebase";
-import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard";
-import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
+import type { MatchCardProps } from "@/app/component/games/MatchCard";
 import { toast } from "@/app/component/ui/toast";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
@@ -34,6 +32,7 @@ import {
   isWcGoalScorerPickValidForPredictedScore,
   type WcGoalScorerPick,
 } from "@/lib/wc/goalScorer";
+import { getWcSquadPlayer } from "@/lib/wc/squads";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import PredictNextGameModal from "@/app/component/predict/PredictNextGameModal";
@@ -45,12 +44,11 @@ import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "@/lib/predict/nextGameModalPrefs";
-import { matchScoreClass } from "@/lib/fonts";
+import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
-import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
-import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
-import type { PredictionPostV2 } from "@/types/prediction-post-v2";
+import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 
 /* ======================
    Motion
@@ -78,6 +76,11 @@ type Props = {
   game: MatchCardProps;
   user: { name: string; avatarUrl?: string | null; verified?: boolean };
   onPostCreated?: (payload: { id: string; at: Date }) => void;
+  /** オーバーレイの MatchCard 市場バイアス帯をリアルタイム同期 */
+  onMarketDistributionChange?: (bias: {
+    homePct: number;
+    awayPct: number;
+  }) => void;
   onStandingsOpenChange?: (open: boolean) => void;
   inOverlay?: boolean;
   embedded?: boolean;
@@ -93,16 +96,6 @@ type Props = {
   overlayPredictedGameIds?: string[];
   /** Games オーバーレイ: この試合の自分の投稿 ID（あれば修正 UI） */
   overlayExistingPostId?: string | null;
-  /** ロック後リザルトを親の MatchCard に渡すための通知 */
-  onExistingResultPostChange?: (post: PredictionPostV2 | null) => void;
-  /** 自分の勝者予想（市場棒グラフマーカー用） */
-  onUserPredictionWinnerChange?: (
-    winner: "home" | "away" | "draw" | null
-  ) => void;
-  /** 親 MatchCard の修正メニューから編集を起動（nonce が増えたときだけ反映） */
-  predictEditTriggerNonce?: number;
-  /** 予想修正の送信完了後（親の nonce リセット用） */
-  onPredictEditEnd?: () => void;
 };
 
 type Winner = "home" | "away" | "draw";
@@ -126,32 +119,6 @@ function isMatchStartedForPredict(game: MatchCardProps): boolean {
     }
   }
   return false;
-}
-
-function mergeGameIntoResultPost(
-  post: PredictionPostV2,
-  game: MatchCardProps
-): PredictionPostV2 {
-  const homeTeamId = game.home?.teamId ?? post.home?.teamId ?? "";
-  const awayTeamId = game.away?.teamId ?? post.away?.teamId ?? "";
-  return {
-    ...post,
-    status: game.status,
-    result:
-      game.status === "final" && game.score
-        ? { home: game.score.home, away: game.score.away }
-        : (post.result ?? null),
-    home: {
-      ...post.home,
-      name: game.home.name,
-      teamId: homeTeamId,
-    },
-    away: {
-      ...post.away,
-      name: game.away.name,
-      teamId: awayTeamId,
-    },
-  };
 }
 
 function computeRecordByGames(
@@ -199,6 +166,7 @@ export default function PredictionFormV2({
   game,
   user,
   onPostCreated,
+  onMarketDistributionChange,
   onStandingsOpenChange,
   inOverlay = false,
   embedded = false,
@@ -208,10 +176,6 @@ export default function PredictionFormV2({
   overlayScheduleGames,
   overlayPredictedGameIds,
   overlayExistingPostId = null,
-  onExistingResultPostChange,
-  onUserPredictionWinnerChange,
-  predictEditTriggerNonce = 0,
-  onPredictEditEnd,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -239,6 +203,12 @@ export default function PredictionFormV2({
     null | "stats" | "market" | "standings" | "h2h"
   >(null);
   const [marketChartKey, setMarketChartKey] = useState(0);
+  const gameId = String((game as { id: string }).id);
+  const {
+    data: postDistribution,
+    loading: postDistributionLoading,
+    applyOptimistic: applyPostDistributionOptimistic,
+  } = usePredictionPostDistribution(gameId);
   /** Games オーバーレイ: 投稿後モーダル用の次試合 */
   const [nextGamePreview, setNextGamePreview] = useState<MatchCardProps | null>(
     null
@@ -249,7 +219,11 @@ export default function PredictionFormV2({
     | "loading"
     | {
         editable: boolean;
-        post: PredictionPostV2;
+        prediction: {
+          winner: Winner;
+          score: { home: number; away: number };
+          goalScorer?: WcGoalScorerPick | null;
+        };
       };
 
   /** オーバーレイで既存投稿を読み込んだ結果（修正可否・表示用） */
@@ -332,6 +306,25 @@ export default function PredictionFormV2({
       setToolsTab(null);
     }
   }, [isNbaPostseasonTools, toolsTab]);
+
+  useLayoutEffect(() => {
+    if (toolsTab === "market") {
+      setMarketChartKey((k) => k + 1);
+    }
+  }, [toolsTab]);
+
+  useEffect(() => {
+    if (!onMarketDistributionChange) return;
+    const total =
+      postDistribution.home +
+      postDistribution.away +
+      (isSoccer ? postDistribution.draw : 0);
+    if (total <= 0) return;
+    onMarketDistributionChange({
+      homePct: (postDistribution.home / total) * 100,
+      awayPct: (postDistribution.away / total) * 100,
+    });
+  }, [postDistribution, isSoccer, onMarketDistributionChange]);
 
   // チーム詳細から戻ったとき ?standings=1 でスタンディングを開いた状態にする
   useEffect(() => {
@@ -461,17 +454,34 @@ export default function PredictionFormV2({
           if (alive) setExistingSnapshot(null);
           return;
         }
-        const detail = await loadResultPostDetailClient(effectivePostId);
+        const token = await me.getIdToken();
+        const res = await fetch(
+          `/api/posts_v2/${encodeURIComponent(effectivePostId)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: "include",
+          }
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          exists?: boolean;
+          mine?: boolean;
+          editable?: boolean;
+          prediction?: {
+            winner: Winner;
+            score: { home: number; away: number };
+            goalScorer?: WcGoalScorerPick;
+          };
+        };
         if (!alive) return;
-        if (!detail.ok || detail.post.authorUid !== me.uid) {
+        if (!json.ok || !json.exists || !json.mine || !json.prediction) {
           setExistingSnapshot(null);
           return;
         }
-        const post = detail.post;
-        const editable =
-          typeof post.startAtMillis === "number" &&
-          Date.now() < post.startAtMillis;
-        setExistingSnapshot({ editable, post });
+        setExistingSnapshot({
+          editable: Boolean(json.editable),
+          prediction: json.prediction,
+        });
       } catch {
         if (alive) setExistingSnapshot(null);
       }
@@ -519,7 +529,7 @@ export default function PredictionFormV2({
       };
     }
     const snap = existingSnapshot;
-    if (!snap.post.prediction) {
+    if (!snap.prediction) {
       return {
         showLoadingExisting: false,
         showEditableSummary: false,
@@ -557,87 +567,12 @@ export default function PredictionFormV2({
     showScoreEdit,
   ]);
 
-  const existingResultPost = useMemo((): PredictionPostV2 | null => {
-    if (
-      existingSnapshot === null ||
-      existingSnapshot === "loading" ||
-      !("post" in existingSnapshot)
-    ) {
-      return null;
-    }
-    return mergeGameIntoResultPost(existingSnapshot.post, game);
-  }, [existingSnapshot, game]);
-
-  /** オーバーレイ／統合 MatchCard 表示時は市場棒グラフと重複するため市場タブを隠す */
-  const showMergedMatchCard =
-    !inOverlay &&
-    (overlayFormLayout.showLockedSummary ||
-      overlayFormLayout.showEditableSummary) &&
-    Boolean(existingResultPost);
-  const hideMarketTab =
-    (embedded && inOverlay) || showMergedMatchCard;
-
-  useEffect(() => {
-    if (!onExistingResultPostChange) return;
-    const shouldNotify =
-      (overlayFormLayout.showLockedSummary ||
-        overlayFormLayout.showEditableSummary) &&
-      Boolean(existingResultPost);
-    if (shouldNotify && existingResultPost) {
-      onExistingResultPostChange(existingResultPost);
-    } else {
-      onExistingResultPostChange(null);
-    }
-  }, [
-    onExistingResultPostChange,
-    overlayFormLayout.showLockedSummary,
-    overlayFormLayout.showEditableSummary,
-    existingResultPost,
-  ]);
-
-  useEffect(() => {
-    if (!onUserPredictionWinnerChange) return;
-    onUserPredictionWinnerChange(
-      existingResultPost?.prediction?.winner ?? null
-    );
-  }, [onUserPredictionWinnerChange, existingResultPost]);
-
-  useLayoutEffect(() => {
-    if (!hideMarketTab && toolsTab === "market") {
-      setMarketChartKey((k) => k + 1);
-    }
-  }, [toolsTab, hideMarketTab]);
-
-  useEffect(() => {
-    if (hideMarketTab && toolsTab === "market") {
-      setToolsTab(null);
-    }
-  }, [hideMarketTab, toolsTab]);
-
-  const openPredictEditFromResultCard = useCallback(
-    (post: PredictionPostV2) => {
-      const pred = post.prediction;
-      if (!pred) return;
-      setScoreHome(String(pred.score.home));
-      setScoreAway(String(pred.score.away));
-      setGoalScorerPick(pred.goalScorer ?? null);
-      setWinner(pred.winner);
-      setShowScoreEdit(true);
-    },
-    []
-  );
-
-  const lastPredictEditNonceRef = useRef(0);
-  useEffect(() => {
-    if (predictEditTriggerNonce === lastPredictEditNonceRef.current) return;
-    lastPredictEditNonceRef.current = predictEditTriggerNonce;
-    if (!predictEditTriggerNonce || !existingResultPost) return;
-    openPredictEditFromResultCard(existingResultPost);
-  }, [
-    predictEditTriggerNonce,
-    existingResultPost,
-    openPredictEditFromResultCard,
-  ]);
+  const snapPred =
+    existingSnapshot !== null &&
+    existingSnapshot !== "loading" &&
+    "prediction" in existingSnapshot
+      ? existingSnapshot.prediction
+      : null;
 
   const canSubmit =
     !!winner && !submitting && scoreHome !== "" && scoreAway !== "";
@@ -679,35 +614,38 @@ export default function PredictionFormV2({
     };
   };
 
+  const resolvedGoalScorerLabel = useMemo(() => {
+    if (!snapPred?.goalScorer) return null;
+    if (
+      !isWcGoalScorerPickValidForPredictedScore(
+        snapPred.goalScorer,
+        snapPred.score,
+        game.home?.teamId,
+        game.away?.teamId
+      )
+    ) {
+      return null;
+    }
+    const p = getWcSquadPlayer(
+      snapPred.goalScorer.teamId,
+      snapPred.goalScorer.playerId
+    );
+    return p?.name ?? null;
+  }, [snapPred?.goalScorer, snapPred?.score, game.home?.teamId, game.away?.teamId]);
+
   const scoreInputClass = [
     "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
-    matchScoreClass,
+    resultStatsMetricNumClass,
     // iOS Safari: 16px 未満だとフォーカス時に自動ズームする
     isMobile ? "px-3.5 py-2.5 text-base" : "px-4 py-3 text-base",
   ].join(" ");
 
-  const overlayEmbedded = embedded && inOverlay;
-  /** 単体ページ：方眼オーバーレイなし・半透明面のみ（blur によるチラつきを避ける） */
-  const standaloneGlassFill =
-    "border border-white/10 bg-[linear-gradient(172deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.025)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]";
+  const glassCard =
+    "relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-4 py-3";
 
-  const glassCard = overlayEmbedded
-    ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-4 py-3`
-    : `relative w-full overflow-hidden rounded-2xl ${standaloneGlassFill} px-4 py-3`;
-
-  const glassCardStatsPanel = overlayEmbedded
-    ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-3 py-2.5`
-    : isMobile
-      ? `relative w-full overflow-hidden rounded-xl ${standaloneGlassFill} px-3 py-2.5`
-      : glassCard;
-
-  const toolButtonInactiveClass = overlayEmbedded
-    ? "border-white/10 bg-white/[0.08] text-white/88 hover:bg-white/12"
-    : "border-white/10 bg-white/[0.04] text-white/88 hover:bg-white/6";
-
-  const fadeUpMotionProps = overlayEmbedded
-    ? ({ initial: false as const } as const)
-    : ({ variants: fadeUp } as const);
+  const glassCardStatsPanel = isMobile
+    ? "relative w-full overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] backdrop-blur-md px-3 py-2.5"
+    : glassCard;
 
   const toolButtonBase = isMobile
     ? "flex h-9 w-full items-center justify-center rounded-xl border px-1.5 text-xs font-semibold transition-all duration-200"
@@ -784,26 +722,19 @@ export default function PredictionFormV2({
           throw new Error(detailPatch || `更新失敗 (${res.status})`);
         }
         toast.success(m.predict.predictionUpdated);
-        const nextPrediction = buildPredictionPayload(h, a);
-        let mergedPostForOverlay: PredictionPostV2 | null = null;
-        setExistingSnapshot((prev) => {
-          if (typeof prev !== "object" || prev === null || !("post" in prev)) {
-            return prev;
-          }
-          const nextPost = { ...prev.post, prediction: nextPrediction };
-          mergedPostForOverlay = mergeGameIntoResultPost(nextPost, game);
-          return { ...prev, post: nextPost };
-        });
+        setExistingSnapshot((prev) =>
+          typeof prev === "object" && prev !== null && "prediction" in prev
+            ? {
+                ...prev,
+                prediction: buildPredictionPayload(h, a),
+              }
+            : prev
+        );
         setShowScoreEdit(false);
         setWinner(null);
         setScoreHome("");
         setScoreAway("");
         setGoalScorerPick(null);
-        if (inOverlay && mergedPostForOverlay) {
-          onExistingResultPostChange?.(mergedPostForOverlay);
-          onUserPredictionWinnerChange?.(nextPrediction.winner);
-        }
-        onPredictEditEnd?.();
         setSubmitting(false);
         return;
       }
@@ -849,6 +780,8 @@ export default function PredictionFormV2({
       }
 
       toast.success(m.predict.predictionSubmitted);
+      const submittedWinner = buildPredictionPayload(h, a).winner;
+      applyPostDistributionOptimistic(submittedWinner);
       onPostCreated?.({ id: json.id ?? "(local)", at: new Date() });
 
       setWinner(null);
@@ -961,13 +894,13 @@ export default function PredictionFormV2({
   return (
     <>
     <motion.div
-      variants={overlayEmbedded ? undefined : pageContainer}
-      initial={overlayEmbedded ? false : "hidden"}
-      animate={overlayEmbedded ? undefined : "show"}
+      variants={pageContainer}
+      initial="hidden"
+      animate="show"
       className={[
         "mx-auto w-full overflow-x-hidden text-white",
         /* 試合オーバーレイでは上の MatchCard と同じ横幅に揃える（/web でも max-w-[900px] に縮まない） */
-        overlayEmbedded
+        embedded && inOverlay
           ? "max-w-none"
           : isWc && !isMobile
             ? "max-w-[1120px]"
@@ -1010,49 +943,12 @@ export default function PredictionFormV2({
         formTouchStartRef.current = null;
       }}
     >
-      <div
-        className={[
-          "overflow-x-hidden",
-          overlayEmbedded
-            ? isMobile
-              ? "space-y-3 pt-2"
-              : "space-y-3 pt-2.5"
-            : "space-y-4",
-        ].join(" ")}
-      >
-        {showMergedMatchCard && existingResultPost ? (
-          <motion.div {...fadeUpMotionProps}>
-            <MatchCard
-              {...game}
-              hideActions
-              showMarketBias
-              attachOverlayMarketBar
-              disableCardMotion
-              resultPost={existingResultPost}
-              resultRatingBarsImmediate
-              myPostId={effectivePostId}
-              userPredictionWinner={
-                existingResultPost?.prediction?.winner ?? null
-              }
-              onRequestPredictEdit={
-                overlayFormLayout.showEditableSummary
-                  ? openPredictEditFromResultCard
-                  : undefined
-              }
-              className={
-                isMobile ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS : undefined
-              }
-            />
-          </motion.div>
-        ) : null}
-
+      <div className="space-y-4 overflow-x-hidden">
         <motion.div
-          {...fadeUpMotionProps}
-          className={[
-            "grid",
-            hideMarketTab ? "grid-cols-2" : "grid-cols-3",
-            isMobile ? "gap-2" : "gap-2.5",
-          ].join(" ")}
+          variants={fadeUp}
+          className={["grid grid-cols-3", isMobile ? "gap-1.5" : "gap-2"].join(
+            " "
+          )}
         >
           <button
             type="button"
@@ -1066,7 +962,7 @@ export default function PredictionFormV2({
               toolButtonBase,
               (isNbaPostseasonTools ? toolsTab === "h2h" : toolsTab === "stats")
                 ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                : toolButtonInactiveClass,
+                : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
             ].join(" ")}
           >
             <span
@@ -1085,31 +981,29 @@ export default function PredictionFormV2({
             </span>
           </button>
 
-          {!hideMarketTab ? (
-            <button
-              type="button"
-              onClick={() =>
-                setToolsTab((t) => (t === "market" ? null : "market"))
-              }
+          <button
+            type="button"
+            onClick={() =>
+              setToolsTab((t) => (t === "market" ? null : "market"))
+            }
+            className={[
+              toolButtonBase,
+              toolsTab === "market"
+                ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                : "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6",
+            ].join(" ")}
+          >
+            <span
               className={[
-                toolButtonBase,
-                toolsTab === "market"
-                  ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                  : toolButtonInactiveClass,
+                "inline-flex max-w-full items-center justify-center gap-1.5",
+                isMobile ? "min-w-0" : "",
               ].join(" ")}
             >
-              <span
-                className={[
-                  "inline-flex max-w-full items-center justify-center gap-1.5",
-                  isMobile ? "min-w-0" : "",
-                ].join(" ")}
-              >
-                <span className={isMobile ? "truncate" : ""}>
-                  {m.games.market}
-                </span>
+              <span className={isMobile ? "truncate" : ""}>
+                {m.games.market}
               </span>
-            </button>
-          ) : null}
+            </span>
+          </button>
 
           <button
             type="button"
@@ -1127,7 +1021,7 @@ export default function PredictionFormV2({
               (isNbaPostseasonTools ? toolsTab === "stats" : toolsTab === "standings")
                 ? "border-cyan-300/35 bg-cyan-300/12 text-white"
                 : isNbaPostseasonTools || showStandings
-                  ? toolButtonInactiveClass
+                  ? "border-white/10 bg-white/[0.035] text-white/88 hover:bg-white/6"
                   : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
             ].join(" ")}
           >
@@ -1140,7 +1034,10 @@ export default function PredictionFormV2({
         </motion.div>
 
         {toolsTab === "h2h" && isNbaPostseasonTools && (
-          <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
+          <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <ShellGridOverlay
+              roundedClassName={isMobile ? "rounded-xl" : "rounded-2xl"}
+            />
             <div className="relative z-1">
               <div
                 className={[
@@ -1199,7 +1096,10 @@ export default function PredictionFormV2({
         )}
 
         {toolsTab === "stats" && (
-          <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
+          <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <ShellGridOverlay
+              roundedClassName={isMobile ? "rounded-xl" : "rounded-2xl"}
+            />
             <div className="relative z-1">
               <div
                 className={
@@ -1243,11 +1143,14 @@ export default function PredictionFormV2({
           </motion.div>
         )}
 
-        {!hideMarketTab && toolsTab === "market" && (
-          <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
+        {toolsTab === "market" && (
+          <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <ShellGridOverlay
+              roundedClassName={isMobile ? "rounded-xl" : "rounded-2xl"}
+            />
             <div className="relative z-1">
             <GamePredictionDistribution
-              gameId={(game as { id: string }).id}
+              gameId={gameId}
               league={game.league}
               homeName={homeSafe.name}
               awayName={awaySafe.name}
@@ -1256,13 +1159,18 @@ export default function PredictionFormV2({
               variant="predictForm"
               chartReplayKey={marketChartKey}
               fallbackMarketBias={game.marketBias}
+              distribution={postDistribution}
+              distributionLoading={postDistributionLoading}
             />
             </div>
           </motion.div>
         )}
 
         {toolsTab === "standings" && (
-          <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
+          <motion.div variants={fadeUp} className={glassCardStatsPanel}>
+            <ShellGridOverlay
+              roundedClassName={isMobile ? "rounded-xl" : "rounded-2xl"}
+            />
             <div className="relative z-1">
             <div
               className={
@@ -1305,30 +1213,159 @@ export default function PredictionFormV2({
 
         {overlayFormLayout.showLoadingExisting ? (
           <motion.div
-            {...fadeUpMotionProps}
-            className="flex justify-center py-6"
+            variants={fadeUp}
+            className={`py-6 text-center text-sm text-white/70 ${glassCard}`}
           >
-            <CandleChartLoader label={m.common.loading} />
+            {m.common.loading}
+          </motion.div>
+        ) : null}
+
+        {overlayFormLayout.showEditableSummary && snapPred ? (
+          <motion.div variants={fadeUp} className={`space-y-3 pt-1 ${glassCard}`}>
+            <div className="text-sm font-semibold text-white/88">
+              {m.predict.yourPrediction}
+            </div>
+            <div className="space-y-2 px-0.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/88 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {homeLabel}
+                </div>
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/88 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {awayLabel}
+                </div>
+              </div>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.home}
+                </div>
+                <span
+                  className={[
+                    "shrink-0 font-black tabular-nums text-white/55",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                  aria-hidden
+                >
+                  –
+                </span>
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.away}
+                </div>
+              </div>
+            </div>
+            {isWc && resolvedGoalScorerLabel ? (
+              <p className="text-center text-xs text-cyan-200/80 sm:text-sm">
+                {m.predict.wcGoalScorerTitle}: {resolvedGoalScorerLabel}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setScoreHome(String(snapPred.score.home));
+                setScoreAway(String(snapPred.score.away));
+                setGoalScorerPick(snapPred.goalScorer ?? null);
+                setWinner(snapPred.winner);
+                setShowScoreEdit(true);
+              }}
+              className="flex h-11 w-full items-center justify-center rounded-xl border border-amber-300/40 bg-amber-500/15 text-sm font-bold text-amber-100 transition hover:bg-amber-500/25 active:scale-[0.99]"
+            >
+              {m.common.edit}
+            </button>
+          </motion.div>
+        ) : null}
+
+        {overlayFormLayout.showLockedSummary && snapPred ? (
+          <motion.div variants={fadeUp} className={`space-y-2 pt-1 ${glassCard}`}>
+            <div className="text-sm font-semibold text-white/88">
+              {m.predict.yourPrediction}
+            </div>
+            <div className="space-y-2 px-0.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/85 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {homeLabel}
+                </div>
+                <div
+                  className="min-w-0 truncate text-center text-sm font-bold text-white/85 sm:text-base md:text-lg"
+                  style={predictTeamNameTy}
+                >
+                  {awayLabel}
+                </div>
+              </div>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white/90",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.home}
+                </div>
+                <span
+                  className={[
+                    "shrink-0 font-black tabular-nums text-white/50",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                  aria-hidden
+                >
+                  –
+                </span>
+                <div
+                  className={[
+                    "text-center font-black tabular-nums text-white/90",
+                    isMobile ? "text-2xl" : "text-3xl",
+                    resultStatsMetricNumClass,
+                  ].join(" ")}
+                >
+                  {snapPred.score.away}
+                </div>
+              </div>
+              {isWc && resolvedGoalScorerLabel ? (
+                <p className="text-center text-xs text-cyan-200/80 sm:text-sm">
+                  {m.predict.wcGoalScorerTitle}: {resolvedGoalScorerLabel}
+                </p>
+              ) : null}
+            </div>
           </motion.div>
         ) : null}
 
         {overlayFormLayout.showScoreForm ? (
           <>
-            <motion.div
-              {...fadeUpMotionProps}
-              className={`relative space-y-4 pt-1 ${glassCard}`}
-            >
-              <PredictionScoringRulesChip
-                league={game.league}
-                language={language}
-                size={isMobile ? "mobile" : "web"}
-                className="absolute right-1 top-1 z-10"
-              />
-              <div className="relative z-1 min-w-0 pr-9 text-sm font-semibold text-white/88">
-                {m.predict.scorePrediction}
+            <motion.div variants={fadeUp} className={`space-y-4 pt-1 ${glassCard}`}>
+              <div className="flex items-center justify-between gap-4 px-0.5">
+                <div className="min-w-0 text-sm font-semibold text-white/88">
+                  {m.predict.scorePrediction}
+                </div>
+                <PredictionScoringRulesChip
+                  league={game.league}
+                  language={language}
+                  size={isMobile ? "mobile" : "web"}
+                />
               </div>
 
-              <div className="relative z-1 grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div
                     className="mb-2 text-sm font-bold text-white/88"
@@ -1394,13 +1431,13 @@ export default function PredictionFormV2({
               ) : null}
             </motion.div>
 
-            <motion.div {...fadeUpMotionProps} className="pt-0">
+            <motion.div variants={fadeUp} className="pt-0">
               <button
                 disabled={!canSubmit}
                 onClick={handleSubmit}
                 className={[
                   "flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold text-white",
-                  "border backdrop-blur-md transition-all duration-200",
+                  "border backdrop-blur-xl transition-all duration-200",
                   "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]",
                   canSubmit
                     ? [

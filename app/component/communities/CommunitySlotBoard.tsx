@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { ChevronRight, Clipboard, Plus } from "lucide-react";
+import { Clipboard, Plus } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { jp } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
@@ -11,14 +11,14 @@ import type { GroupMemberPreview } from "@/lib/communities/memberPreviews";
 import CommunityMemberAvatarStack from "@/app/component/communities/CommunityMemberAvatarStack";
 import {
   CommunityCrtSectionLabel,
-  CommunityGlassCorners,
-  CommunityGlassSheen,
-  CommunitySlotPage,
-  CommunitySlotSection,
-  communityCrtPanelClass,
+  communityCrtMono,
   communityCrtPanelStyle,
 } from "@/app/component/communities/CommunityCrtTheme";
 import { preserveScrollOnInputFocus } from "@/lib/dom/preserveScrollOnInputFocus";
+
+const CYAN = "#22d3ee";
+const NOTCH_CLIP =
+  "polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)";
 
 export type CommunityListGroup = {
   id: string;
@@ -44,64 +44,52 @@ export type CommunityListLimits = {
 
 type SlotSizing = {
   pad: string;
-  gap: string;
-  thumbCol: string;
   thumb: string;
   thumbIcon: string;
   roleBadge: string;
   name: string;
   meta: string;
-  members: string;
-  chevron: string;
   avatarStack: string;
   emptyMinH: string;
   emptyLabel: string;
   emptyIcon: string;
   joinInput: string;
   joinBtn: string;
-  showDescription: boolean;
+  shellPad: string;
 };
 
 function slotSizing(isWeb: boolean): SlotSizing {
   if (isWeb) {
     return {
       pad: "p-4 sm:p-5",
-      gap: "gap-4",
-      thumbCol: "w-[6.5rem] sm:w-28",
-      thumb: "size-[6.5rem] sm:size-28",
+      thumb: "size-[4.5rem] sm:size-28",
       thumbIcon: "text-3xl",
       roleBadge: "py-1 text-[11px] tracking-[0.14em]",
-      name: "text-lg sm:text-xl",
-      meta: "text-sm",
-      members: "text-sm",
-      chevron: "h-6 w-6",
+      name: "text-sm sm:text-[15px]",
+      meta: "text-xs sm:text-sm",
       avatarStack: "size-8",
-      emptyMinH: "min-h-[120px] sm:min-h-[128px]",
+      emptyMinH: "min-h-[148px]",
       emptyLabel: "text-sm tracking-[0.14em]",
       emptyIcon: "h-6 w-6",
       joinInput: "px-3 py-2.5 text-base",
       joinBtn: "py-2 text-sm",
-      showDescription: true,
+      shellPad: "p-4 sm:p-5",
     };
   }
   return {
     pad: "p-2",
-    gap: "gap-2",
-    thumbCol: "w-[3.25rem]",
     thumb: "size-[3.25rem]",
     thumbIcon: "text-base",
-    roleBadge: "py-px text-[9px] tracking-[0.1em]",
+    roleBadge: "py-px text-[9px] tracking-[0.1em] sm:text-[10px]",
     name: "text-[15px] leading-snug",
     meta: "text-[11px] leading-snug",
-    members: "text-[11px]",
-    chevron: "h-4 w-4",
     avatarStack: "size-5",
-    emptyMinH: "min-h-[68px]",
+    emptyMinH: "min-h-[72px]",
     emptyLabel: "text-[11px] tracking-[0.12em]",
     emptyIcon: "h-4 w-4",
     joinInput: "px-2 py-1.5 text-xs",
     joinBtn: "py-1.5 text-[11px]",
-    showDescription: false,
+    shellPad: "p-2.5",
   };
 }
 
@@ -132,7 +120,109 @@ type Props = {
   };
 };
 
-function GroupFilledSlot({
+function GroupThumbnail({
+  headerImageUrl,
+  sizeClass,
+  iconClass,
+}: {
+  headerImageUrl: string | null;
+  sizeClass: string;
+  iconClass: string;
+}) {
+  return (
+    <div
+      className={[
+        "flex shrink-0 items-center justify-center overflow-hidden border",
+        sizeClass,
+      ].join(" ")}
+      style={{ borderColor: "rgba(34,211,238,0.25)", background: "#0a1018" }}
+    >
+      {headerImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={headerImageUrl}
+          alt=""
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span className={["text-cyan-300/25", iconClass].join(" ")}>▣</span>
+      )}
+    </div>
+  );
+}
+
+function RoleBadge({
+  isOwner,
+  label,
+  className,
+}: {
+  isOwner: boolean;
+  label: string;
+  className: string;
+}) {
+  return (
+    <span
+      className={["shrink-0 border px-1.5 font-medium tracking-widest", className].join(
+        " "
+      )}
+      style={
+        isOwner
+          ? {
+              borderColor: "rgba(251,191,36,0.45)",
+              color: "rgba(251,191,36,0.9)",
+              background: "rgba(251,191,36,0.08)",
+            }
+          : {
+              borderColor: "rgba(34,211,238,0.3)",
+              color: "rgba(186,230,253,0.75)",
+              background: "rgba(34,211,238,0.06)",
+            }
+      }
+    >
+      {label}
+    </span>
+  );
+}
+
+function GroupMetaRow({
+  memberCount,
+  memberPreviews,
+  membersLabel,
+  stackSize,
+}: {
+  memberCount: number;
+  memberPreviews: GroupMemberPreview[];
+  membersLabel: string;
+  stackSize: string;
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <span className="text-[11px] font-medium tabular-nums text-cyan-200/75 sm:text-xs">
+        {membersLabel.replace("{n}", String(memberCount))}
+      </span>
+      {(memberPreviews?.length ?? 0) > 0 ? (
+        <CommunityMemberAvatarStack
+          previews={memberPreviews}
+          sizeClassName={stackSize}
+          variant="square"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function competitionLine(g: CommunityListGroup, language: Language) {
+  return formatCommunityCompetitionLine(
+    {
+      rankingLeague: g.rankingLeague ?? "all",
+      rankingMetric: g.rankingMetric,
+      rankingTeamIds: g.rankingTeamIds,
+    },
+    language
+  );
+}
+
+function GroupFilledSlotMobile({
   g,
   language,
   sizing,
@@ -151,109 +241,150 @@ function GroupFilledSlot({
       type="button"
       aria-label={`${g.name} — ${labels.openRanking}`}
       onClick={onOpen}
-      className={[
-        "group/slot w-full text-left transition-[filter,border-color,box-shadow] duration-200 hover:brightness-[1.04]",
-        communityCrtPanelClass("cyan"),
-        sizing.pad,
-        sizing.emptyMinH,
-      ].join(" ")}
+      className="group/slot relative flex w-full overflow-hidden text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
+      style={{ background: "rgba(255,255,255,0.02)" }}
     >
-      <CommunityGlassSheen />
-      <CommunityGlassCorners />
-      <div className={["relative z-10 flex items-center", sizing.gap].join(" ")}>
-        <div
-          className={[
-            "flex shrink-0 flex-col items-center gap-1.5",
-            sizing.thumbCol,
-          ].join(" ")}
-        >
-          <span
-            className={[
-              "w-full border text-center font-medium",
-              sizing.roleBadge,
-            ].join(" ")}
-            style={
-              isOwner
-                ? {
-                    borderColor: "rgba(251,191,36,0.45)",
-                    color: "rgba(251,191,36,0.9)",
-                    background: "rgba(251,191,36,0.08)",
-                  }
-                : {
-                    borderColor: "rgba(34,211,238,0.3)",
-                    color: "rgba(186,230,253,0.75)",
-                    background: "rgba(34,211,238,0.06)",
-                  }
-            }
-          >
-            {isOwner ? labels.owner : labels.member}
-          </span>
-          <div
-            className={[
-              "flex items-center justify-center overflow-hidden rounded-md border backdrop-blur-sm",
-              sizing.thumb,
-            ].join(" ")}
-            style={{
-              borderColor: "rgba(34,211,238,0.28)",
-              background: "rgba(4,12,18,0.22)",
-              boxShadow: "inset 0 0 12px rgba(34,211,238,0.05)",
-            }}
-          >
-            {g.headerImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={g.headerImageUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className={["text-cyan-300/25", sizing.thumbIcon].join(" ")}>
-                ▣
-              </span>
-            )}
-          </div>
+      <span
+        className="w-[3px] shrink-0"
+        style={{
+          background: CYAN,
+          boxShadow: `0 0 14px ${CYAN}55`,
+        }}
+        aria-hidden
+      />
+      <div className="flex min-w-0 flex-1 items-stretch gap-3 px-3 py-3">
+        <div className="flex shrink-0 flex-col items-center gap-1.5">
+          <RoleBadge
+            isOwner={isOwner}
+            label={isOwner ? labels.owner : labels.member}
+            className={sizing.roleBadge}
+          />
+          <GroupThumbnail
+            headerImageUrl={g.headerImageUrl}
+            sizeClass={sizing.thumb}
+            iconClass={sizing.thumbIcon}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <p
             className={["truncate font-semibold text-cyan-50/95", sizing.name].join(" ")}
+            style={{ textShadow: `0 0 14px ${CYAN}22` }}
           >
             {g.name}
           </p>
-          {sizing.showDescription && g.description ? (
-            <p className={["mt-0.5 line-clamp-1 text-white/55", sizing.meta].join(" ")}>
-              {g.description}
-            </p>
-          ) : null}
-          <p className={["mt-1 line-clamp-2 text-white/45", sizing.meta].join(" ")}>
-            {formatCommunityCompetitionLine(
-              {
-                rankingLeague: g.rankingLeague ?? "all",
-                rankingMetric: g.rankingMetric,
-                rankingTeamIds: g.rankingTeamIds,
-              },
-              language
-            )}
+          <p className={["mt-1 line-clamp-2 text-white/40", sizing.meta].join(" ")}>
+            {competitionLine(g, language)}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <p className={["font-medium tabular-nums text-cyan-200/75", sizing.members].join(" ")}>
-              {labels.nMembers.replace("{n}", String(g.memberCount))}
-            </p>
-            {(g.memberPreviews?.length ?? 0) > 0 ? (
-              <CommunityMemberAvatarStack
-                previews={g.memberPreviews ?? []}
-                sizeClassName={sizing.avatarStack}
-              />
-            ) : null}
-          </div>
+          <GroupMetaRow
+            memberCount={g.memberCount}
+            memberPreviews={g.memberPreviews ?? []}
+            membersLabel={labels.nMembers}
+            stackSize={sizing.avatarStack}
+          />
         </div>
-        <ChevronRight
-          className={[
-            "shrink-0 text-cyan-400/35 group-hover/slot:text-cyan-300/70",
-            sizing.chevron,
-          ].join(" ")}
-        />
       </div>
     </button>
+  );
+}
+
+function GroupFilledSlotWeb({
+  g,
+  language,
+  sizing,
+  labels,
+  onOpen,
+}: {
+  g: CommunityListGroup;
+  language: Language;
+  sizing: SlotSizing;
+  labels: Props["labels"];
+  onOpen: () => void;
+}) {
+  const isOwner = g.role === "owner";
+  return (
+    <button
+      type="button"
+      aria-label={`${g.name} — ${labels.openRanking}`}
+      onClick={onOpen}
+      className="group/slot relative w-full text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
+      style={{
+        clipPath: NOTCH_CLIP,
+        background:
+          "linear-gradient(145deg, rgba(34,211,238,0.04) 0%, rgba(255,255,255,0.02) 40%, rgba(0,0,0,0.2) 100%)",
+        border: "1px solid rgba(34,211,238,0.12)",
+      }}
+    >
+      <div className="px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-4 sm:pt-3.5">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <RoleBadge
+            isOwner={isOwner}
+            label={isOwner ? labels.owner : labels.member}
+            className={sizing.roleBadge}
+          />
+        </div>
+        <div className="flex gap-3 sm:gap-3.5">
+          <GroupThumbnail
+            headerImageUrl={g.headerImageUrl}
+            sizeClass={sizing.thumb}
+            iconClass={sizing.thumbIcon}
+          />
+          <div className="min-w-0 flex-1">
+            <p
+              className={["truncate font-semibold text-cyan-50/95", sizing.name].join(" ")}
+              style={{ textShadow: `0 0 16px ${CYAN}28` }}
+            >
+              {g.name}
+            </p>
+            <p className={["mt-1.5 text-cyan-200/50", sizing.meta].join(" ")}>
+              {competitionLine(g, language)}
+            </p>
+            <GroupMetaRow
+              memberCount={g.memberCount}
+              memberPreviews={g.memberPreviews ?? []}
+              membersLabel={labels.nMembers}
+              stackSize={sizing.avatarStack}
+            />
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function GroupFilledSlot({
+  g,
+  language,
+  sizing,
+  labels,
+  onOpen,
+  isWeb,
+}: {
+  g: CommunityListGroup;
+  language: Language;
+  sizing: SlotSizing;
+  labels: Props["labels"];
+  onOpen: () => void;
+  isWeb: boolean;
+}) {
+  if (isWeb) {
+    return (
+      <GroupFilledSlotWeb
+        g={g}
+        language={language}
+        sizing={sizing}
+        labels={labels}
+        onOpen={onOpen}
+      />
+    );
+  }
+  return (
+    <GroupFilledSlotMobile
+      g={g}
+      language={language}
+      sizing={sizing}
+      labels={labels}
+      onOpen={onOpen}
+    />
   );
 }
 
@@ -262,11 +393,13 @@ function CreateEmptySlot({
   sizing,
   onCreate,
   reduceMotion,
+  isWeb,
 }: {
   label: string;
   sizing: SlotSizing;
   onCreate: () => void;
   reduceMotion: boolean | null;
+  isWeb: boolean;
 }) {
   return (
     <motion.button
@@ -274,15 +407,15 @@ function CreateEmptySlot({
       onClick={onCreate}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       className={[
-        "flex w-full flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 transition-[border-color,box-shadow,background] duration-200",
-        communityCrtPanelClass("empty"),
-        sizing.emptyMinH,
+        "flex w-full items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-cyan-400/45 hover:bg-cyan-500/5",
+        isWeb ? "min-h-[148px]" : sizing.emptyMinH,
       ].join(" ")}
+      style={{
+        ...communityCrtPanelStyle("empty"),
+        clipPath: isWeb ? NOTCH_CLIP : undefined,
+      }}
     >
-      <Plus
-        className={["text-cyan-300/65 drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]", sizing.emptyIcon].join(" ")}
-        aria-hidden
-      />
+      <Plus className={["text-cyan-300/55", sizing.emptyIcon].join(" ")} aria-hidden />
       <span
         className={[
           "text-center font-medium text-cyan-100/80",
@@ -306,6 +439,7 @@ function JoinEmptySlot({
   submitLabel,
   joinBusy,
   reduceMotion,
+  isWeb,
   onExpand,
   onCollapse,
   onPaste,
@@ -320,6 +454,7 @@ function JoinEmptySlot({
   submitLabel: string;
   joinBusy: boolean;
   reduceMotion: boolean | null;
+  isWeb: boolean;
   onExpand: () => void;
   onCollapse: () => void;
   onPaste: () => Promise<string | null>;
@@ -339,16 +474,15 @@ function JoinEmptySlot({
         onClick={onExpand}
         whileTap={reduceMotion ? undefined : { scale: 0.98 }}
         className={[
-          "flex w-full flex-col items-center justify-center gap-2 border border-dashed px-4 py-5 transition-[border-color,box-shadow,background] duration-200",
-          communityCrtPanelClass("empty"),
-          sizing.emptyMinH,
+          "flex w-full items-center justify-center gap-2 border border-dashed px-4 py-5 transition-colors hover:border-amber-400/40 hover:bg-amber-500/5",
+          isWeb ? "min-h-[148px]" : sizing.emptyMinH,
         ].join(" ")}
-        style={{ borderColor: "rgba(251,191,36,0.24)" }}
+        style={{
+          ...communityCrtPanelStyle("empty"),
+          clipPath: isWeb ? NOTCH_CLIP : undefined,
+        }}
       >
-        <Plus
-          className={["text-amber-300/60 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]", sizing.emptyIcon].join(" ")}
-          aria-hidden
-        />
+        <Plus className={["text-amber-300/50", sizing.emptyIcon].join(" ")} aria-hidden />
         <span
           className={[
             "text-center font-medium text-amber-100/75",
@@ -364,13 +498,14 @@ function JoinEmptySlot({
 
   return (
     <div
-      className={[communityCrtPanelClass("amber"), sizing.pad].join(" ")}
-      style={communityCrtPanelStyle("amber")}
+      className={["border", sizing.pad].join(" ")}
+      style={{
+        ...communityCrtPanelStyle("amber"),
+        clipPath: isWeb ? NOTCH_CLIP : undefined,
+      }}
       data-slot-key={slotKey}
     >
-      <CommunityGlassSheen tone="amber" />
-      <CommunityGlassCorners tone="amber" />
-      <div className="relative z-10 mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <p
           className="text-xs tracking-[0.18em] sm:text-sm"
           style={{ color: "rgba(251,191,36,0.75)" }}
@@ -386,7 +521,7 @@ function JoinEmptySlot({
         </button>
       </div>
       <form
-        className="relative z-10 flex flex-col gap-3"
+        className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!joinBusy && code.trim().length >= 4) {
@@ -406,13 +541,10 @@ function JoinEmptySlot({
           spellCheck={false}
           enterKeyHint="go"
           className={[
-            "w-full rounded-md border bg-black/35 tracking-[0.14em] text-amber-100/90 outline-none backdrop-blur-sm placeholder:text-white/30 focus:border-amber-400/55 focus:shadow-[0_0_16px_rgba(251,191,36,0.12)]",
+            "w-full border bg-black/60 tracking-[0.14em] text-amber-100/90 outline-none placeholder:text-white/30",
             sizing.joinInput,
           ].join(" ")}
-          style={{
-            borderColor: "rgba(251,191,36,0.32)",
-            boxShadow: "inset 0 1px 0 rgba(251,191,36,0.08)",
-          }}
+          style={{ borderColor: "rgba(251,191,36,0.3)" }}
         />
         <div className="flex gap-2">
           <button
@@ -420,13 +552,12 @@ function JoinEmptySlot({
             disabled={joinBusy}
             onClick={() => void handlePaste()}
             className={[
-              "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border font-medium backdrop-blur-sm transition-[box-shadow,border-color] hover:shadow-[0_0_14px_rgba(34,211,238,0.15)]",
+              "inline-flex flex-1 items-center justify-center gap-1.5 border font-medium",
               sizing.joinBtn,
             ].join(" ")}
             style={{
-              borderColor: "rgba(34,211,238,0.38)",
-              color: "rgba(34,211,238,0.92)",
-              background: "rgba(34,211,238,0.06)",
+              borderColor: "rgba(34,211,238,0.35)",
+              color: "rgba(34,211,238,0.9)",
             }}
           >
             <Clipboard className="h-4 w-4 shrink-0" aria-hidden />
@@ -437,13 +568,13 @@ function JoinEmptySlot({
             disabled={joinBusy || code.trim().length < 4}
             whileTap={reduceMotion ? undefined : { scale: 0.97 }}
             className={[
-              "flex-1 rounded-md border font-semibold backdrop-blur-sm transition-[box-shadow] hover:shadow-[0_0_16px_rgba(251,191,36,0.18)] disabled:opacity-40",
+              "flex-1 border font-semibold disabled:opacity-40",
               sizing.joinBtn,
             ].join(" ")}
             style={{
-              borderColor: "rgba(251,191,36,0.48)",
-              color: "rgba(251,191,36,0.96)",
-              background: "rgba(251,191,36,0.1)",
+              borderColor: "rgba(251,191,36,0.45)",
+              color: "rgba(251,191,36,0.95)",
+              background: "rgba(251,191,36,0.08)",
             }}
           >
             {joinBusy ? "…" : submitLabel}
@@ -454,13 +585,32 @@ function JoinEmptySlot({
   );
 }
 
-function LoadingSlots({ count, sizing }: { count: number; sizing: SlotSizing }) {
+function LoadingSlots({
+  count,
+  sizing,
+  isWeb,
+}: {
+  count: number;
+  sizing: SlotSizing;
+  isWeb: boolean;
+}) {
   return (
-    <div className="grid grid-cols-1 gap-3">
+    <div
+      className={
+        isWeb ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "space-y-2"
+      }
+    >
       {Array.from({ length: count }, (_, i) => (
         <div
           key={i}
-          className={["skeleton-scan", communityCrtPanelClass("empty"), sizing.emptyMinH].join(" ")}
+          className={[
+            "skeleton-scan border",
+            isWeb ? "min-h-[148px]" : sizing.emptyMinH,
+          ].join(" ")}
+          style={{
+            ...communityCrtPanelStyle("empty"),
+            clipPath: isWeb ? NOTCH_CLIP : undefined,
+          }}
         />
       ))}
     </div>
@@ -533,12 +683,13 @@ export default function CommunitySlotBoard({
     [onPreviewJoin]
   );
 
-  const slotGridClass = "grid grid-cols-1 gap-2.5 sm:gap-3";
+  const slotGridClass = isWeb
+    ? "grid grid-cols-1 gap-3 sm:grid-cols-2"
+    : "space-y-2";
 
   return (
-    <CommunitySlotPage>
-      <div className={jp.className}>
-        <CommunitySlotSection accent="cyan">
+    <div className={[sizing.shellPad, jp.className, communityCrtMono.className].join(" ")}>
+        <section>
           <CommunityCrtSectionLabel
             large
             suffix={labels.slotCount(ownedGroups.length, limits.maxOwned)}
@@ -546,7 +697,7 @@ export default function CommunitySlotBoard({
             {labels.hostSection}
           </CommunityCrtSectionLabel>
           {loading ? (
-            <LoadingSlots count={limits.maxOwned} sizing={sizing} />
+            <LoadingSlots count={limits.maxOwned} sizing={sizing} isWeb={isWeb} />
           ) : (
             <ul className={slotGridClass}>
               {hostSlots.map((slot) => (
@@ -558,6 +709,7 @@ export default function CommunitySlotBoard({
                       sizing={sizing}
                       labels={labels}
                       onOpen={() => onOpenGroup(slot.group)}
+                      isWeb={isWeb}
                     />
                   ) : (
                     <CreateEmptySlot
@@ -565,15 +717,16 @@ export default function CommunitySlotBoard({
                       sizing={sizing}
                       onCreate={onCreate}
                       reduceMotion={reduceMotion}
+                      isWeb={isWeb}
                     />
                   )}
                 </li>
               ))}
             </ul>
           )}
-        </CommunitySlotSection>
+        </section>
 
-        <CommunitySlotSection accent="amber">
+        <section className="mt-6">
           <CommunityCrtSectionLabel
             large
             suffix={labels.slotCount(
@@ -584,14 +737,18 @@ export default function CommunitySlotBoard({
             {labels.memberSection}
           </CommunityCrtSectionLabel>
           {loading ? (
-            <LoadingSlots count={Math.min(4, limits.maxMemberships)} sizing={sizing} />
+            <LoadingSlots
+              count={Math.min(4, limits.maxMemberships)}
+              sizing={sizing}
+              isWeb={isWeb}
+            />
           ) : memberSlots.length === 0 ? (
             <p
               className={[
-                communityCrtPanelClass("empty"),
-                "px-4 py-5 text-center text-cyan-100/50",
+                "border px-4 py-5 text-center text-cyan-100/45",
                 isWeb ? "text-sm" : "text-xs",
               ].join(" ")}
+              style={communityCrtPanelStyle("empty")}
             >
               {language === "en" ? "All slots in use." : "スロットがいっぱいです。"}
             </p>
@@ -606,6 +763,7 @@ export default function CommunitySlotBoard({
                       sizing={sizing}
                       labels={labels}
                       onOpen={() => onOpenGroup(slot.group)}
+                      isWeb={isWeb}
                     />
                   ) : (
                     <JoinEmptySlot
@@ -618,6 +776,7 @@ export default function CommunitySlotBoard({
                       submitLabel={labels.checkCode}
                       joinBusy={joinBusy}
                       reduceMotion={reduceMotion}
+                      isWeb={isWeb}
                       onExpand={() => setExpandedJoinSlot(slot.key)}
                       onCollapse={() => setExpandedJoinSlot(null)}
                       onPaste={onPasteJoin}
@@ -628,8 +787,7 @@ export default function CommunitySlotBoard({
               ))}
             </ul>
           )}
-        </CommunitySlotSection>
-      </div>
-    </CommunitySlotPage>
+        </section>
+    </div>
   );
 }

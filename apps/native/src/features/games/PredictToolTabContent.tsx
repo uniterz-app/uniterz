@@ -862,7 +862,8 @@ export function PredictToolTabContent({
   );
 
   const { data: postDist, loading: postLoad, error: postErr } = usePredictionPostDistribution(
-    tab === "market" ? gameId : null
+    gameId,
+    true
   );
   const { home: sHome, away: sAway, loading: stLoad, error: stErr } = usePairTeamStats(
     tab === "stats" ? homeId : null,

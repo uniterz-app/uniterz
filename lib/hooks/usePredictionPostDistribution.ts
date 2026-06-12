@@ -1,6 +1,8 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { db } from "@/lib/firebase";
 
 export type PostDistribution = {
   home: number;
@@ -10,7 +12,7 @@ export type PostDistribution = {
 
 const EMPTY: PostDistribution = { home: 0, away: 0, draw: 0 };
 
-function countPostDistribution(
+export function countPostDistribution(
   docs: ReadonlyArray<{ data: () => unknown }>
 ): PostDistribution {
   let home = 0;
@@ -18,11 +20,11 @@ function countPostDistribution(
   let draw = 0;
 
   for (const docSnap of docs) {
-    const r = docSnap.data() as {
+    const data = docSnap.data() as {
       prediction?: { winner?: string };
       winner?: string;
     };
-    const winner = r?.prediction?.winner ?? r?.winner ?? null;
+    const winner = data?.prediction?.winner ?? data?.winner ?? null;
     if (winner === "home") home++;
     else if (winner === "away") away++;
     else if (winner === "draw") draw++;
@@ -32,19 +34,14 @@ function countPostDistribution(
 }
 
 /**
- * Web `GamePredictionDistribution` と同条件: `posts` をリアルタイム購読
+ * 試合ごとの勝敗予想分布。`posts` をリアルタイム購読する（Web/Native 共通）。
  */
 export function usePredictionPostDistribution(
-  gameId: string | null,
+  gameId: string | null | undefined,
   enabled = true
-): {
-  data: PostDistribution;
-  loading: boolean;
-  error: string | null;
-  applyOptimistic: (winner: "home" | "away" | "draw") => void;
-} {
+) {
   const [data, setData] = useState<PostDistribution>(EMPTY);
-  const [loading, setLoading] = useState(Boolean(gameId));
+  const [loading, setLoading] = useState(Boolean(enabled && gameId));
   const [error, setError] = useState<string | null>(null);
   const optimisticRef = useRef<PostDistribution>(EMPTY);
 
