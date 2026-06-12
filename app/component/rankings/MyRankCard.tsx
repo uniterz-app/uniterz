@@ -583,7 +583,13 @@ export default function MyRankCard({
 
             <div className="flex flex-col items-center gap-1">
               <CyberRankNumber
-                rank={rankVisualMuted ? 4 : rankVisualValue}
+                rank={
+                  rankVisualMuted
+                    ? 4
+                    : reduceMotion === true
+                      ? rank!
+                      : rankCount
+                }
                 compact={layout === "mobile"}
                 variant="tower"
                 displayValue={

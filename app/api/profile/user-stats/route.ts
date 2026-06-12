@@ -21,6 +21,7 @@ import {
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
+import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export const runtime = "nodejs";
@@ -141,12 +142,16 @@ async function summaryFromDailyPhaseFallback(
   for (const d of snap.docs) {
     const data = d.data() as Record<string, unknown>;
     const byPhase = (data.rankingByPhase ?? {}) as Record<string, unknown>;
-    const byWc = (data.rankingByWcStage ?? {}) as Record<string, unknown>;
     const leagues = (data.leagues ?? {}) as Record<string, unknown>;
     const row = wcStage
-      ? ((byWc[wcStage] ??
-          (wcStage === "overall" ? leagues.wc : null) ??
-          {}) as Record<string, unknown>)
+      ? (() => {
+          const stageBucket = readDailyWcStageBucket(data, wcStage);
+          if (Number(stageBucket.posts ?? 0) > 0) {
+            return stageBucket as Record<string, unknown>;
+          }
+          return ((wcStage === "overall" ? leagues.wc : null) ??
+            {}) as Record<string, unknown>;
+        })()
       : ((byPhase[phase] ?? {}) as Record<string, unknown>);
     posts += safeInt(row.posts);
     wins += safeInt(row.wins);
