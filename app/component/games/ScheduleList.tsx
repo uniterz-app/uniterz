@@ -28,12 +28,15 @@ import {
   GAMES_LIST_REST_CARDS_DELAY_SEC,
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
+import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
+import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
 import dynamic from "next/dynamic";
 
 const PredictionFormV2 = dynamic(() => import("../predict/PredictionFormV2"), {
   loading: () => null,
   ssr: false,
 });
+import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -139,6 +142,11 @@ export default function ScheduleList({
   extraPeerGamesForSeriesInference?: GameItemRaw[] | null;
 }) {
   const [openGameId, setOpenGameId] = useState<string | null>(null);
+  const [overlayResultPost, setOverlayResultPost] =
+    useState<PredictionPostV2 | null>(null);
+  const [overlayUserPredictionWinner, setOverlayUserPredictionWinner] =
+    useState<"home" | "away" | "draw" | null>(null);
+  const [predictEditTriggerNonce, setPredictEditTriggerNonce] = useState(0);
   const [overlayLiveMarketBias, setOverlayLiveMarketBias] = useState<{
     homePct: number;
     awayPct: number;
@@ -562,6 +570,9 @@ export default function ScheduleList({
   }, [openGameId]);
 
   useEffect(() => {
+    setOverlayResultPost(null);
+    setOverlayUserPredictionWinner(null);
+    setPredictEditTriggerNonce(0);
     setOverlayLiveMarketBias(null);
   }, [openGameId]);
 
@@ -592,7 +603,8 @@ export default function ScheduleList({
     );
   }
 
-  const overlayMotionEnabled = !reduceMotion;
+  /** View Transition 時は Framer のパネル移動と二重になるためオフ */
+  const overlayMotionEnabled = !reduceMotion && !vtUi;
   const overlayPresenceProps = overlayMotionEnabled
     ? {
         initial: "hidden" as const,
@@ -611,7 +623,7 @@ export default function ScheduleList({
       >
         <motion.div
           className={[
-            "absolute inset-0 z-0 bg-black/35 backdrop-blur-md",
+            `absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`,
             standingsOpenInOverlay
               ? "pointer-events-none"
               : "pointer-events-auto",
@@ -687,8 +699,8 @@ export default function ScheduleList({
                   type="button"
                   aria-label={m.common.close}
                   className={[
-                    "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md",
-                    isMobile ? "" : "transition hover:bg-black/55",
+                    "absolute left-1 top-1 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-white/12 bg-black/45 text-white/85 backdrop-blur-sm",
+                    isMobile ? "" : "transition hover:bg-black/60",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -697,16 +709,24 @@ export default function ScheduleList({
                     close();
                   }}
                 >
-                  <X size={18} strokeWidth={2.4} />
+                  <X size={14} strokeWidth={2.25} />
                 </button>
 
                 <MatchCard
                   {...selectedProps}
                   language={language}
+                  resultPost={overlayResultPost}
+                  userPredictionWinner={overlayUserPredictionWinner}
+                  resultRatingBarsImmediate
                   marketBias={
                     overlayLiveMarketBias ?? selectedProps.marketBias
                   }
                   myPostId={myPostMap[String(selectedProps.id)] ?? null}
+                  onRequestPredictEdit={
+                    overlayResultPost
+                      ? () => setPredictEditTriggerNonce((n) => n + 1)
+                      : undefined
+                  }
                   homeRecord={
                     selectedProps.home?.teamId
                       ? teamRecordMap[selectedProps.home.teamId] ?? null
@@ -726,51 +746,56 @@ export default function ScheduleList({
                   disableCardMotion
                   hideActions
                   showMarketBias
-                  inPredictOverlay
+                  attachOverlayMarketBar
+                  className={
+                    isMobile ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS : undefined
+                  }
                 />
               </motion.div>
 
               <PredictionFormV2
-                  key={String(openGameId)}
-                  dense={dense}
-                  game={selectedProps}
-                  user={{ name: "You" }}
-                  embedded
-                  inOverlay
-                  overlayExistingPostId={
-                    selectedProps
-                      ? myPostMap[String(selectedProps.id)] ?? null
-                      : null
+                key={String(openGameId)}
+                dense={dense}
+                game={selectedProps}
+                user={{ name: "You" }}
+                embedded
+                inOverlay
+                predictEditTriggerNonce={predictEditTriggerNonce}
+                overlayExistingPostId={
+                  myPostMap[String(selectedProps.id)] ?? null
+                }
+                onExistingResultPostChange={setOverlayResultPost}
+                onUserPredictionWinnerChange={setOverlayUserPredictionWinner}
+                onPredictEditEnd={() => setPredictEditTriggerNonce(0)}
+                overlayScheduleGameIds={gameIds}
+                overlayScheduleGames={propsList}
+                overlayPredictedGameIds={overlayPredictedGameIds}
+                onClosePredictOverlay={close}
+                onSwitchOverlayGame={(id) => {
+                  startDomViewTransition(
+                    () => {
+                      setOpenGameId(String(id));
+                      setStandingsOpenInOverlay(false);
+                      setDisableReturnLayout(false);
+                    },
+                    { skip: !vtUi }
+                  );
+                }}
+                onStandingsOpenChange={(open) => {
+                  setStandingsOpenInOverlay(open);
+                  if (open) setDisableReturnLayout(true);
+                }}
+                onPostCreated={(payload) => {
+                  const gameId = selectedProps?.id;
+                  if (gameId && payload?.id) {
+                    setMyPostMap((prev) => ({
+                      ...prev,
+                      [String(gameId)]: payload.id,
+                    }));
                   }
-                  overlayScheduleGameIds={gameIds}
-                  overlayScheduleGames={propsList}
-                  overlayPredictedGameIds={overlayPredictedGameIds}
-                  onClosePredictOverlay={close}
-                  onSwitchOverlayGame={(id) => {
-                    startDomViewTransition(
-                      () => {
-                        setOpenGameId(String(id));
-                        setStandingsOpenInOverlay(false);
-                        setDisableReturnLayout(false);
-                      },
-                      { skip: !vtUi }
-                    );
-                  }}
-                  onStandingsOpenChange={(open) => {
-                    setStandingsOpenInOverlay(open);
-                    if (open) setDisableReturnLayout(true);
-                  }}
-                  onPostCreated={(payload) => {
-                    const gameId = selectedProps?.id;
-                    if (gameId && payload?.id) {
-                      setMyPostMap((prev) => ({
-                        ...prev,
-                        [String(gameId)]: payload.id,
-                      }));
-                    }
-                  }}
-                  onMarketDistributionChange={setOverlayLiveMarketBias}
-                />
+                }}
+                onMarketDistributionChange={setOverlayLiveMarketBias}
+              />
             </motion.div>
           </div>
         </motion.div>
@@ -778,25 +803,20 @@ export default function ScheduleList({
     ) : null;
 
   const listRows = propsList.map((props, index) => {
-    const isVtGhostRow =
-      vtUi && openGameId && String(openGameId) === String(props.id);
+    const isOverlaySourceRow =
+      !!openGameId && String(openGameId) === String(props.id);
+    const isVtGhostRow = vtUi && isOverlaySourceRow;
+    /** オーバーレイ表示中は一覧側カードを隠す（ポータル内カードとの二重表示を防ぐ） */
+    const hideListCardForOverlay = isOverlaySourceRow;
 
-    const isOpen =
-      !!selectedProps && String(selectedProps.id) === String(props.id);
-
-    /** Web の VT 用：対象行以外をぼかし。モバイルは遷移アニメ無しのため付けない */
+    /** Web VT 時：対象行以外を薄く（filter blur は全行合成が重いため opacity のみ） */
     const activeListTargetId =
       openGameId ?? sharedVtListSourceRef.current ?? null;
     const dimPeerRow =
       !isMobile &&
       activeListTargetId != null &&
       String(props.id) !== String(activeListTargetId);
-    const peerBackdropClass =
-      dimPeerRow && !reduceMotion
-        ? "blur-[10px] brightness-[0.84] saturate-[0.92]"
-        : dimPeerRow && reduceMotion
-          ? "opacity-55"
-          : "";
+    const peerBackdropClass = dimPeerRow ? "opacity-45" : "";
 
     const listSharedTransitionBaseKey =
       vtUi && !isVtGhostRow
@@ -823,9 +843,9 @@ export default function ScheduleList({
 
     const rowClass = [
       "relative",
-      isOpen || isVtGhostRow ? "pointer-events-none" : "",
+      hideListCardForOverlay ? "pointer-events-none" : "",
       peerBackdropClass,
-      dimPeerRow ? "transition-none" : "",
+      dimPeerRow ? "transition-opacity duration-200" : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -834,7 +854,9 @@ export default function ScheduleList({
       <MatchCard
         {...props}
         language={language}
-        className={isVtGhostRow ? "invisible select-none" : undefined}
+        className={
+          hideListCardForOverlay ? "invisible select-none" : undefined
+        }
         scheduleEntryIndex={index}
         heavyListEntry={!isDaySwitchShell}
         myPostId={myPostMap[String(props.id)] ?? null}
@@ -856,9 +878,6 @@ export default function ScheduleList({
         sharedTransitionBaseKey={listSharedTransitionBaseKey}
         forceViewTransitionNameNone={forceViewTransitionNameNone}
         onOpenPredict={open}
-        showMarketBias={isOpen && !isVtGhostRow}
-        hideActions={isOpen && !isVtGhostRow}
-        inPredictOverlay={isOpen && !isVtGhostRow}
         disableCardMotion={!!openGameId}
       />
     );
@@ -870,7 +889,7 @@ export default function ScheduleList({
         custom={index}
         variants={scheduleItem}
         className={rowClass}
-        aria-hidden={isOpen || isVtGhostRow ? true : undefined}
+        aria-hidden={hideListCardForOverlay ? true : undefined}
       >
         {card}
       </motion.div>
@@ -901,9 +920,13 @@ export default function ScheduleList({
 
       {typeof document !== "undefined"
         ? createPortal(
-            <AnimatePresence>
-              {overlayContent}
-            </AnimatePresence>,
+            /*
+             * View Transitions 利用時は AnimatePresence の exit 待ちでオーバーレイが DOM に残り、
+             * 一覧カードと同じ view-transition-name が重複して InvalidStateError になるため即時アンマウント。
+             */
+            vtUi ? overlayContent : (
+              <AnimatePresence>{overlayContent}</AnimatePresence>
+            ),
             document.body,
           )
         : null}
