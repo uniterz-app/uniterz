@@ -54,6 +54,7 @@ import type { RankingRow } from "@/lib/rankings/useRanking";
 import {
   buildRankingsPageKey,
   computeRankingHasNoEntries,
+  computeRankingListContentReady,
   computeWinRateMinPosts,
   getMyMetricValue,
 } from "@/lib/rankings/rankingsPageShared";
@@ -79,6 +80,7 @@ export default function WebRankingsShell() {
       : null;
   const {
     listReady,
+    metricReady,
     personalPending,
     metric,
     setMetric,
@@ -206,8 +208,13 @@ export default function WebRankingsShell() {
     effectiveRound
   );
 
+  const listContentReady = computeRankingListContentReady({
+    listReady,
+    metricReady,
+  });
   const rankingHasNoEntries = computeRankingHasNoEntries({
     listReady,
+    metricReady,
     rowsLength: rows.length,
     rankingLeague,
     rankingListCount,
@@ -339,7 +346,7 @@ export default function WebRankingsShell() {
           </>
         ) : null}
 
-        {category === "playoffs" && !listReady && (
+        {category === "playoffs" && !listContentReady && (
           <CandleChartLoader className="pt-2" label={m.common.loading} />
         )}
 
@@ -362,7 +369,7 @@ export default function WebRankingsShell() {
               NO DATA
             </p>
           </div>
-        ) : listReady ? (
+        ) : listContentReady ? (
           <AnimatePresence mode="wait">
             <motion.div key={pageKey} className="relative">
               <div className="mx-auto max-w-[860px] px-2 pt-3">

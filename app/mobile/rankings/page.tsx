@@ -64,6 +64,7 @@ import { useApplyPreferredRankingLeague } from "@/lib/hooks/useApplyPreferredRan
 import {
   buildRankingsPageKey,
   computeRankingHasNoEntries,
+  computeRankingListContentReady,
   computeWinRateMinPosts,
   getMyMetricValue,
 } from "@/lib/rankings/rankingsPageShared";
@@ -205,8 +206,14 @@ export default function MobileRankingsPage() {
     effectiveRound
   );
 
+  const metricReady = bundle != null;
+  const listContentReady = computeRankingListContentReady({
+    listReady,
+    metricReady,
+  });
   const rankingHasNoEntries = computeRankingHasNoEntries({
     listReady,
+    metricReady,
     rowsLength: rows.length,
     rankingLeague,
     rankingListCount,
@@ -354,7 +361,7 @@ export default function MobileRankingsPage() {
           ) : null}
         </div>
 
-        {category === "playoffs" && !listReady && (
+        {category === "playoffs" && !listContentReady && (
           <CandleChartLoader className="px-3 pt-2" label={m.common.loading} />
         )}
 
@@ -377,7 +384,7 @@ export default function MobileRankingsPage() {
               NO DATA
             </p>
           </div>
-        ) : listReady ? (
+        ) : listContentReady ? (
           <div className="max-w-full overflow-x-clip">
           <AnimatePresence mode="wait">
               <motion.div key={pageKey} className="relative">
