@@ -24,6 +24,7 @@ const REFETCH_ALL_METRICS_NBA =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
 const REFETCH_ALL_METRICS_WC =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
+const INITIAL_RANKING_METRICS = "totalPoints,totalPrecision,totalUpset";
 
 function refetchAllMetrics(wcStage: WcRankingStage | null): string {
   return wcStage ? REFETCH_ALL_METRICS_WC : REFETCH_ALL_METRICS_NBA;
@@ -343,7 +344,7 @@ export function useCumulativeRankingsBulk(
     const runFetch = async (uid: string | null, seq: number) => {
       try {
         const partial = await fetchBulkMetrics(
-          refetchAllMetrics(wcStage),
+          INITIAL_RANKING_METRICS,
           uid,
           phase,
           round,

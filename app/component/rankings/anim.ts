@@ -19,13 +19,13 @@ export const restContainer: Variants = {
 };
 
 export const restItem: Variants = {
-  hidden: { opacity: 0, y: 10 },
+  hidden: { opacity: 0, y: 6 },
   show: (i: number = 0) => ({
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.34,
-      delay: 0.08 + Math.min(i * 0.07, 0.45),
+      duration: 0.2,
+      delay: Math.min(i * 0.025, 0.16),
       ease: [0.22, 1, 0.36, 1],
     },
   }),

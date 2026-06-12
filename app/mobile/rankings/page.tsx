@@ -67,6 +67,7 @@ import {
   getMyMetricValue,
 } from "@/lib/rankings/rankingsPageShared";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
+import { useProgressiveRenderCount } from "@/lib/hooks/useProgressiveRenderCount";
 import { visibleMetricsForLeague } from "@/lib/rankings/wcVisibleMetrics";
 
 export default function MobileRankingsPage() {
@@ -217,7 +218,14 @@ export default function MobileRankingsPage() {
     rankingLeague,
     wcStage,
   });
-  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
+  const { handleTopCountDone } = useRankingsTopDone(pageKey);
+  const visibleRestCount = useProgressiveRenderCount(
+    restRows.length,
+    pageKey,
+    24,
+    24
+  );
+  const visibleRestRows = restRows.slice(0, visibleRestCount);
 
   return (
     <div
@@ -394,11 +402,11 @@ export default function MobileRankingsPage() {
                 key={`rest-${pageKey}`}
                 variants={restContainer}
                 initial="hidden"
-                animate={topDone ? "show" : "hidden"}
-                style={{ opacity: topDone ? 1 : 0.35 }}
+                animate="show"
+                style={{ opacity: 1 }}
               >
                 {restRows.length > 0 &&
-                  restRows.map((r, i) => (
+                  visibleRestRows.map((r, i) => (
                     <motion.div
                       key={`${metric}-${r.uid}`}
                       variants={restItem}
@@ -413,6 +421,7 @@ export default function MobileRankingsPage() {
                           rankingLeague={rankingLeague}
                           wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                           language={language}
+                          animateValue={i < 12}
                         />
                     </motion.div>
                   ))}

@@ -76,19 +76,10 @@ type CardLayout = NonNullable<Props["layout"]>;
 const GOLD = "#FFD65A";
 const STREAK_SWEEP_MIN = 3;
 const STATS_PENDING_MARK = "···";
-const RANK_COUNT_DURATION_MS = 900;
+const RANK_COUNT_DURATION_MS = 520;
 
 const ENTER_EASE = [0.22, 1, 0.36, 1] as const;
-const ENTER_DURATION = 0.5;
-const BLUR_DURATION = 0.88;
-const BLUR_KEYFRAMES = [
-  "blur(22px) brightness(0.88) saturate(0.82)",
-  "blur(14px) brightness(0.93) saturate(0.9)",
-  "blur(7px) brightness(0.97) saturate(0.96)",
-  "blur(2px) brightness(0.99) saturate(0.99)",
-  "blur(0px) brightness(1) saturate(1)",
-] as const;
-const BLUR_TIMES = [0, 0.22, 0.42, 0.64, 1] as const;
+const ENTER_DURATION = 0.28;
 
 const LAYOUT = {
   mobile: {
@@ -773,22 +764,15 @@ export default function MyRankCard({
       className={outerPad}
       initial={{
         opacity: 0,
-        y: 22,
-        filter: BLUR_KEYFRAMES[0],
+        y: 12,
       }}
       animate={{
         opacity: 1,
         y: 0,
-        filter: [...BLUR_KEYFRAMES],
       }}
       transition={{
         opacity: { duration: ENTER_DURATION, ease: ENTER_EASE },
-        y: { duration: ENTER_DURATION + 0.04, ease: ENTER_EASE },
-        filter: {
-          duration: BLUR_DURATION,
-          ease: "linear",
-          times: [...BLUR_TIMES],
-        },
+        y: { duration: ENTER_DURATION, ease: ENTER_EASE },
       }}
     >
       {tiltWrapped}
