@@ -27,11 +27,37 @@ export type CyberRankingScoreLayout = "stack" | "web";
 export function CyberRankNumber({
   rank,
   compact,
+  displayValue,
+  muted = false,
+  variant = "list",
 }: {
   rank: number;
   compact?: boolean;
+  /** 順位以外の表示（-- / ··· など） */
+  displayValue?: string;
+  /** 未取得・ローディング — リストと同フォントでニュートラル表示 */
+  muted?: boolean;
+  /** tower = MyRankCard 塔（やや大きめ） */
+  variant?: "list" | "tower";
 }) {
-  const label = String(rank).padStart(2, "0");
+  const label = displayValue ?? String(rank).padStart(2, "0");
+  const isCompact = !!compact;
+  const style = muted
+    ? {
+        fontSize:
+          variant === "tower"
+            ? isCompact
+              ? "2.4rem"
+              : "3.2rem"
+            : isCompact
+              ? "1.65rem"
+              : "2.25rem",
+        transform: "skewX(-12deg)",
+        display: "inline-block" as const,
+        color: "rgba(255,255,255,0.42)",
+        letterSpacing: "0.05em",
+      }
+    : cyberRankNumStyle(rank, isCompact, variant);
 
   return (
     <span className="cyber-rank-num relative inline-block">
@@ -39,11 +65,13 @@ export function CyberRankNumber({
         className={[nameBebas.className, "relative z-[1] block tabular-nums leading-none"].join(
           " "
         )}
-        style={cyberRankNumStyle(rank, !!compact)}
+        style={style}
       >
         {label}
       </span>
-      <span aria-hidden className="cyber-rank-num__scan pointer-events-none" />
+      {!muted ? (
+        <span aria-hidden className="cyber-rank-num__scan pointer-events-none" />
+      ) : null}
     </span>
   );
 }

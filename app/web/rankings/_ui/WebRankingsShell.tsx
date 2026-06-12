@@ -306,6 +306,7 @@ export default function WebRankingsShell() {
               barsReady={cardBarsReady}
               cardResetKey={pageKey}
               leagueLabel={rankingLeague === "worldcup" ? "WORLD CUP" : "NBA"}
+              statsSource={myStatsRow}
             />
           ) : null}
         </div>

@@ -177,12 +177,48 @@
 
 /* MyRankCard — 直角フレーム（薄い緑の縁 + コーナー装飾） */
 .my-rank-card-frame {
+  --mrc-edge-a: rgba(184, 255, 60, 0.26);
+  --mrc-edge-b: rgba(184, 255, 60, 0.22);
+  --mrc-edge-c: rgba(184, 255, 60, 0.2);
+  --mrc-edge-d: rgba(184, 255, 60, 0.18);
+  --mrc-corner: rgba(184, 255, 60, 0.28);
+  --mrc-corner-mid: rgba(184, 255, 60, 0.24);
+  --mrc-corner-br: rgba(184, 255, 60, 0.3);
+  --mrc-corner-plus: rgba(184, 255, 60, 0.32);
+  --mrc-corner-plus-bl: rgba(184, 255, 60, 0.3);
+  --mrc-stripe: rgba(184, 255, 60, 0.28);
   background: linear-gradient(
     165deg,
     rgba(14, 16, 22, 0.98) 0%,
     rgba(9, 11, 16, 0.99) 52%,
     rgba(6, 7, 10, 1) 100%
   );
+}
+
+.my-rank-card-frame--rank-down {
+  --mrc-edge-a: rgba(34, 211, 238, 0.3);
+  --mrc-edge-b: rgba(34, 211, 238, 0.26);
+  --mrc-edge-c: rgba(34, 211, 238, 0.22);
+  --mrc-edge-d: rgba(34, 211, 238, 0.2);
+  --mrc-corner: rgba(34, 211, 238, 0.34);
+  --mrc-corner-mid: rgba(34, 211, 238, 0.28);
+  --mrc-corner-br: rgba(34, 211, 238, 0.36);
+  --mrc-corner-plus: rgba(34, 211, 238, 0.42);
+  --mrc-corner-plus-bl: rgba(34, 211, 238, 0.38);
+  --mrc-stripe: rgba(34, 211, 238, 0.32);
+}
+
+.my-rank-card-frame--rank-neutral {
+  --mrc-edge-a: rgba(255, 255, 255, 0.14);
+  --mrc-edge-b: rgba(255, 255, 255, 0.12);
+  --mrc-edge-c: rgba(255, 255, 255, 0.1);
+  --mrc-edge-d: rgba(255, 255, 255, 0.09);
+  --mrc-corner: rgba(255, 255, 255, 0.16);
+  --mrc-corner-mid: rgba(255, 255, 255, 0.14);
+  --mrc-corner-br: rgba(255, 255, 255, 0.18);
+  --mrc-corner-plus: rgba(255, 255, 255, 0.22);
+  --mrc-corner-plus-bl: rgba(255, 255, 255, 0.2);
+  --mrc-stripe: rgba(255, 255, 255, 0.14);
 }
 
 .my-rank-card-frame__grid {
@@ -198,19 +234,21 @@
 
 .my-rank-card-frame__edge {
   z-index: 1;
+  transition: box-shadow 320ms ease;
   box-shadow:
-    inset 0 1px 0 rgba(184, 255, 60, 0.26),
-    inset 1px 0 0 rgba(184, 255, 60, 0.22),
-    inset 0 -1px 0 rgba(184, 255, 60, 0.2),
-    inset -1px 0 0 rgba(184, 255, 60, 0.18);
+    inset 0 1px 0 var(--mrc-edge-a),
+    inset 1px 0 0 var(--mrc-edge-b),
+    inset 0 -1px 0 var(--mrc-edge-c),
+    inset -1px 0 0 var(--mrc-edge-d);
 }
 
 .my-rank-card-frame__corner-tl {
   z-index: 2;
   width: 14px;
   height: 14px;
-  border-top: 1px solid rgba(184, 255, 60, 0.28);
-  border-left: 1px solid rgba(184, 255, 60, 0.28);
+  transition: border-color 320ms ease;
+  border-top: 1px solid var(--mrc-corner);
+  border-left: 1px solid var(--mrc-corner);
 }
 
 .my-rank-card-frame__corner-tl::after {
@@ -221,8 +259,9 @@
   font-size: 8px;
   font-weight: 700;
   line-height: 1;
-  color: rgba(184, 255, 60, 0.32);
+  color: var(--mrc-corner-plus);
   font-family: ui-monospace, monospace;
+  transition: color 320ms ease;
 }
 
 .my-rank-card-frame__corner-tr {
@@ -231,19 +270,21 @@
   height: 14px;
   background: repeating-linear-gradient(
     -52deg,
-    rgba(184, 255, 60, 0.28) 0 2px,
+    var(--mrc-stripe) 0 2px,
     transparent 2px 5px
   );
   opacity: 0.65;
   mask-image: linear-gradient(135deg, black 40%, transparent 100%);
+  transition: background 320ms ease;
 }
 
 .my-rank-card-frame__corner-bl {
   z-index: 2;
   width: 14px;
   height: 14px;
-  border-bottom: 1px solid rgba(184, 255, 60, 0.24);
-  border-left: 1px solid rgba(184, 255, 60, 0.24);
+  transition: border-color 320ms ease;
+  border-bottom: 1px solid var(--mrc-corner-mid);
+  border-left: 1px solid var(--mrc-corner-mid);
 }
 
 .my-rank-card-frame__corner-bl::after {
@@ -254,16 +295,18 @@
   font-size: 8px;
   font-weight: 700;
   line-height: 1;
-  color: rgba(184, 255, 60, 0.3);
+  color: var(--mrc-corner-plus-bl);
   font-family: ui-monospace, monospace;
+  transition: color 320ms ease;
 }
 
 .my-rank-card-frame__corner-br {
   z-index: 2;
   width: 18px;
   height: 18px;
-  border-right: 1px solid rgba(184, 255, 60, 0.3);
-  border-bottom: 1px solid rgba(184, 255, 60, 0.3);
+  transition: border-color 320ms ease;
+  border-right: 1px solid var(--mrc-corner-br);
+  border-bottom: 1px solid var(--mrc-corner-br);
 }
 
 .my-rank-tower-num--mobile-race {

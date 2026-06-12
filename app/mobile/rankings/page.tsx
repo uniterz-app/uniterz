@@ -316,6 +316,7 @@ export default function MobileRankingsPage() {
                 leagueLabel={
                   rankingLeague === "worldcup" ? "WORLD CUP" : "NBA"
                 }
+                statsSource={myRawRow}
               />
             ) : null}
           </div>

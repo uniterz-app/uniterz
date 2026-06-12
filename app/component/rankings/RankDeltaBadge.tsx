@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { nameBebas } from "@/lib/fonts";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
@@ -8,6 +9,8 @@ type Props = {
   delta?: number | null;
   /** 自分カードの順位タワーは lg */
   size?: "sm" | "md" | "lg";
+  /** tower = MyRankCard 順位横（Bebas・順位数字に合わせる） */
+  variant?: "default" | "tower";
   language?: Language;
 };
 
@@ -29,9 +32,16 @@ const SIZE_STYLES = {
   },
 } as const;
 
+const TOWER_SIZE = {
+  sm: { fontSize: "1.2rem", icon: "h-3 w-3", gap: "gap-0.5" },
+  md: { fontSize: "1.45rem", icon: "h-3.5 w-3.5", gap: "gap-0.5" },
+  lg: { fontSize: "1.65rem", icon: "h-4 w-4", gap: "gap-1" },
+} as const;
+
 export function RankDeltaBadge({
   delta,
   size = "sm",
+  variant = "default",
   language = "ja",
 }: Props) {
   if (typeof delta !== "number" || !Number.isFinite(delta)) {
@@ -40,19 +50,36 @@ export function RankDeltaBadge({
 
   const m = t(language).rankings;
   const s = SIZE_STYLES[size];
+  const tower = TOWER_SIZE[size];
+  const isTower = variant === "tower";
+
+  const wrapClass = isTower ? tower.gap : s.wrap;
+  const iconClass = isTower ? tower.icon : s.icon;
+  const textClass = isTower ? nameBebas.className : s.text;
+
+  const towerStyle = isTower
+    ? {
+        fontSize: tower.fontSize,
+        transform: "skewX(-10deg)",
+        display: "inline-flex" as const,
+        letterSpacing: "0.04em",
+      }
+    : undefined;
 
   if (delta === 0) {
     return (
       <span
         className={[
-          "inline-flex items-center font-bold tabular-nums leading-none text-white/45",
-          s.wrap,
-          s.text,
+          "inline-flex items-center tabular-nums leading-none",
+          isTower ? "font-normal text-white/45" : "font-bold text-white/45",
+          wrapClass,
+          textClass,
         ].join(" ")}
+        style={towerStyle}
         aria-label={m.rankUnchanged}
         title={m.rankUnchanged}
       >
-        <Minus className={s.icon} strokeWidth={2.5} aria-hidden />
+        <Minus className={iconClass} strokeWidth={2.5} aria-hidden />
         <span>0</span>
       </span>
     );
@@ -68,15 +95,17 @@ export function RankDeltaBadge({
   return (
     <span
       className={[
-        "inline-flex items-center font-extrabold tabular-nums leading-none",
-        s.wrap,
-        s.text,
+        "inline-flex items-center tabular-nums leading-none",
+        isTower ? "font-normal" : "font-extrabold",
+        wrapClass,
+        textClass,
         up ? "text-emerald-400" : "text-orange-400",
       ].join(" ")}
+      style={towerStyle}
       aria-label={aria}
       title={aria}
     >
-      <Icon className={s.icon} strokeWidth={2.75} aria-hidden />
+      <Icon className={iconClass} strokeWidth={2.75} aria-hidden />
       {amount}
     </span>
   );
