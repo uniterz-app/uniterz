@@ -64,7 +64,7 @@ export default function WebRankingsShell() {
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
-    useState<RankingLeagueSource>("nba");
+    useState<RankingLeagueSource>("worldcup");
   const phase: RankingPhase = "playoffs";
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
@@ -317,6 +317,7 @@ export default function WebRankingsShell() {
               metric={metric}
               setMetric={setMetric}
               language={language}
+              gridColumns={rankingLeague === "worldcup" ? 3 : undefined}
             />
             {metric === "winRate" && (
               <p className="px-1 text-xs leading-5 text-white/60">

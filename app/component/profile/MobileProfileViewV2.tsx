@@ -223,9 +223,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}`;
   /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
   const summaryReady = !resolvedUid || !statsLoading;
-  const overviewReady =
-    !resolvedUid ||
-    (!statsLoading && !dailyTrendLoading && !rankTrendLoading);
+  const overviewExtrasReady = !resolvedUid || !statsLoading;
 
   useEffect(() => {
     if (tab !== "bracket") {
@@ -460,15 +458,19 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               )}
               </div>
 
-            {overviewReady ? (
+            {overviewExtrasReady ? (
             <div className="mt-6 space-y-4">
               <div className="min-w-0 overflow-hidden">
-                <ProfileDailyTrendChartLazy
-                  data={dailyTrendForChart}
-                  range="30d"
-                  allowAll={currentIsProView}
-                  language={language}
-                />
+                {dailyTrendLoading ? (
+                  <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
+                ) : (
+                  <ProfileDailyTrendChartLazy
+                    data={dailyTrendForChart}
+                    range="30d"
+                    allowAll={currentIsProView}
+                    language={language}
+                  />
+                )}
               </div>
               <div className="min-w-0 overflow-hidden pt-0">
                 <ProfilePlayoffRankTrendChartLazy
@@ -497,8 +499,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             </div>
             ) : (
               <div className="mt-6 space-y-4">
-                <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
-                <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
                 <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}

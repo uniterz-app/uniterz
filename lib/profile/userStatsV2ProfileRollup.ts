@@ -39,7 +39,11 @@ function dailyBucketFromDoc(
       string,
       Record<string, unknown>
     >;
-    return (byWc[stage] ?? byWc.overall ?? {}) as Record<string, unknown>;
+    const leagues = (d.leagues ?? {}) as Record<string, Record<string, unknown>>;
+    return (byWc[stage] ??
+      byWc.overall ??
+      (stage === "overall" ? leagues.wc : null) ??
+      {}) as Record<string, unknown>;
   }
   const byPhase = (d.rankingByPhase ?? {}) as Record<
     string,

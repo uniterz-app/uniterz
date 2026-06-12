@@ -4,11 +4,12 @@ import { useEffect, useRef } from "react";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 import { RANKINGS_TAB_LEAGUE_PARAM } from "@/lib/navigation/rankingsProfileFrom";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
-import { LEAGUES } from "@/lib/leagues";
 import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
+import { preferredLeagueToRankingSource } from "@/lib/user/preferredLeague";
 
 /**
- * URL に rankLeague が無いとき、users.preferredLeague === wc なら WC ランキングを初期表示。
+ * URL に rankLeague が無いとき、users.preferredLeague をランキング初期表示へ反映。
+ * preferredLeague 未設定時は呼び出し側のデフォルト（現在は World Cup）を使う。
  */
 export function useApplyPreferredRankingLeague(
   uid: string | null | undefined,
@@ -29,9 +30,17 @@ export function useApplyPreferredRankingLeague(
       return;
     }
 
-    if (preferredLeague === LEAGUES.WC) {
-      setRankingLeague("worldcup");
-      onWcRef.current?.();
+    if (preferredLeague) {
+      const next = preferredLeagueToRankingSource(preferredLeague);
+      setRankingLeague(next);
+      if (next === "worldcup") {
+        onWcRef.current?.();
+      }
+    } else {
+      const current = searchParams.get(RANKINGS_TAB_LEAGUE_PARAM);
+      if (current === "worldcup") {
+        onWcRef.current?.();
+      }
     }
 
     didApplyRef.current = true;

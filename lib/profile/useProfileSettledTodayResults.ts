@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { loadProfileSettledTodayResultPosts } from "@/lib/profile/profileSettledTodayPosts";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import type { PostWithMillis } from "@/lib/result/result-page-data";
@@ -10,15 +10,21 @@ export function useProfileSettledTodayResults(
   ctx: ProfileStatsStreakContext,
   enabled = true
 ) {
-  const [posts, setPosts] = useState<PostWithMillis[]>([]);
-  const [loading, setLoading] = useState(enabled && !!uid);
-
   const scopeKey = JSON.stringify(ctx);
+  const requestKey = enabled && uid ? `${uid}:${scopeKey}` : null;
+  const [state, setState] = useState<{
+    key: string | null;
+    posts: PostWithMillis[];
+    loading: boolean;
+  }>(() => ({
+    key: requestKey,
+    posts: [],
+    loading: Boolean(requestKey),
+  }));
 
   useEffect(() => {
-    if (!enabled || !uid) {
-      setPosts([]);
-      setLoading(false);
+    if (!requestKey || !uid) {
+      setState({ key: null, posts: [], loading: false });
       return;
     }
 
@@ -26,15 +32,17 @@ export function useProfileSettledTodayResults(
     let alive = true;
 
     async function run() {
-      setLoading(true);
+      setState((prev) => ({
+        key: requestKey,
+        posts: prev.key === requestKey ? prev.posts : [],
+        loading: true,
+      }));
       try {
         const list = await loadProfileSettledTodayResultPosts(safeUid, ctx);
-        if (alive) setPosts(list);
+        if (alive) setState({ key: requestKey, posts: list, loading: false });
       } catch (e) {
         console.error("[useProfileSettledTodayResults]", e);
-        if (alive) setPosts([]);
-      } finally {
-        if (alive) setLoading(false);
+        if (alive) setState({ key: requestKey, posts: [], loading: false });
       }
     }
 
@@ -42,7 +50,13 @@ export function useProfileSettledTodayResults(
     return () => {
       alive = false;
     };
-  }, [enabled, scopeKey, uid]);
+  }, [requestKey, scopeKey, uid]);
 
-  return { posts, loading };
+  return useMemo(
+    () => ({
+      posts: state.key === requestKey ? state.posts : [],
+      loading: Boolean(requestKey) && (state.loading || state.key !== requestKey),
+    }),
+    [requestKey, state.key, state.loading, state.posts]
+  );
 }

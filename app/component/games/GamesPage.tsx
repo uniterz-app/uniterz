@@ -24,8 +24,7 @@ import {
   useGamesByDate,
 } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
 import { useUserPreferredLeague } from "@/lib/hooks/useUserPreferredLeague";
 import { preferredLeagueToGamesLeague } from "@/lib/user/preferredLeague";
@@ -133,7 +132,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   /* =========================
      League
   ========================= */
-  const [league, setLeague] = useState<League>("nba");
+  const [league, setLeague] = useState<League>("wc");
   const [gamesDrawerOpen, setGamesDrawerOpen] = useState(false);
   const [showWcTabBadge, setShowWcTabBadge] = useState(false);
   const didInitLeague = useRef(false);
@@ -154,73 +153,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     dismissWcTabBadge();
   }, [league, dismissWcTabBadge]);
 
-  // user_stats は後追いのみ。初回描画をブロックしない（試合カレンダーと並列で速く見せる）
   useEffect(() => {
-    let alive = true;
-
-    const resolveInitialLeague = async () => {
-      if (didInitLeague.current) return;
-      if (!preferredLeagueReady) return;
-
-      const user = auth.currentUser;
-      if (!user) {
-        if (!alive) return;
-        didInitLeague.current = true;
-        return;
-      }
-
-      if (preferredLeague) {
-        if (!alive) return;
-        setLeague(preferredLeagueToGamesLeague(preferredLeague));
-        didInitLeague.current = true;
-        return;
-      }
-
-      try {
-        const snap = await getDoc(doc(db, "user_stats_v2", user.uid));
-        if (!alive) return;
-
-        didInitLeague.current = true;
-
-        if (!snap.exists()) {
-          return;
-        }
-
-        const data = snap.data();
-        const leaguePosts: Record<League, number> = {
-          nba: data?.leagues?.nba?.posts ?? 0,
-          pl: data?.leagues?.pl?.posts ?? 0,
-          bj: data?.leagues?.bj?.posts ?? 0,
-          j1: data?.leagues?.j1?.posts ?? 0,
-          wc: data?.leagues?.wc?.posts ?? 0,
-        };
-
-        const sorted = (Object.entries(leaguePosts) as [League, number][]).sort(
-          (a, b) => b[1] - a[1]
-        );
-
-        const [, topCount] = sorted[0];
-        if (topCount > 0) {
-          const top = sorted[0][0];
-          /** B リーグタブ非表示中は初期リーグに bj を選ばない */
-          if (top === "bj") {
-            const fallback = sorted.find(([k, c]) => k !== "bj" && c > 0);
-            if (fallback) setLeague(fallback[0]);
-          } else {
-            setLeague(top);
-          }
-        }
-      } catch {
-        if (!alive) return;
-        didInitLeague.current = true;
-      }
-    };
-
-    resolveInitialLeague();
-
-    return () => {
-      alive = false;
-    };
+    if (didInitLeague.current || !preferredLeagueReady) return;
+    didInitLeague.current = true;
+    if (preferredLeague) {
+      setLeague(preferredLeagueToGamesLeague(preferredLeague));
+    }
   }, [preferredLeague, preferredLeagueReady]);
 
   /** B リーグタブ非表示中は bj を選べない。状態が bj のままなら NBA に戻す */

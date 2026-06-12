@@ -101,39 +101,6 @@ function summaryFromPhaseRanking(
   };
 }
 
-function summaryFromWcStageRanking(
-  cumulative: Record<string, unknown> | null,
-  wcStage: WcRankingStage
-): SummaryForCards {
-  const byWcStage = ((cumulative?.rankingByWcStage as Record<string, unknown>) ??
-    {}) as Record<string, Record<string, unknown> | undefined>;
-  const r = byWcStage[wcStage] ?? {};
-  const posts = safeInt(r.totalPosts);
-  const wins = safeInt(r.totalWins);
-  const pointsSumV3 = safeNum(r.totalPoints);
-  const upsetPointsSum = safeNum(r.totalUpset);
-  const scorePrecisionSum = safeNum(r.totalPrecision);
-  const upsetBonusSum = safeNum(r.upsetBonusSum);
-  const streakBonusSum = safeNum(r.streakBonusSum);
-  const basePointsSum = Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum);
-  return {
-    posts,
-    fullPosts: posts,
-    recent3Posts: 0,
-    wins,
-    winRate: posts > 0 ? wins / posts : 0,
-    scorePrecisionSum,
-    upsetPointsSum,
-    pointsSumV3,
-    upsetChanceCount: safeInt(r.upsetOpportunityCount),
-    upsetHitCount: safeInt(r.upsetHitCount),
-    upsetBonusSum,
-    streakBonusSum,
-    basePointsSum,
-    activeWinStreak: safeInt(r.activeWinStreak),
-  };
-}
-
 function hasPhaseBonusFields(
   cumulative: Record<string, unknown> | null,
   phase: RankingPhase
@@ -141,19 +108,6 @@ function hasPhaseBonusFields(
   const byPhase = ((cumulative?.rankingByPhase as Record<string, unknown>) ??
     {}) as Record<string, Record<string, unknown> | undefined>;
   const r = byPhase[phase] ?? {};
-  return (
-    Object.prototype.hasOwnProperty.call(r, "upsetBonusSum") &&
-    Object.prototype.hasOwnProperty.call(r, "streakBonusSum")
-  );
-}
-
-function hasWcStageBonusFields(
-  cumulative: Record<string, unknown> | null,
-  wcStage: WcRankingStage
-): boolean {
-  const byWcStage = ((cumulative?.rankingByWcStage as Record<string, unknown>) ??
-    {}) as Record<string, Record<string, unknown> | undefined>;
-  const r = byWcStage[wcStage] ?? {};
   return (
     Object.prototype.hasOwnProperty.call(r, "upsetBonusSum") &&
     Object.prototype.hasOwnProperty.call(r, "streakBonusSum")
@@ -188,8 +142,11 @@ async function summaryFromDailyPhaseFallback(
     const data = d.data() as Record<string, unknown>;
     const byPhase = (data.rankingByPhase ?? {}) as Record<string, unknown>;
     const byWc = (data.rankingByWcStage ?? {}) as Record<string, unknown>;
+    const leagues = (data.leagues ?? {}) as Record<string, unknown>;
     const row = wcStage
-      ? ((byWc[wcStage] ?? {}) as Record<string, unknown>)
+      ? ((byWc[wcStage] ??
+          (wcStage === "overall" ? leagues.wc : null) ??
+          {}) as Record<string, unknown>)
       : ((byPhase[phase] ?? {}) as Record<string, unknown>);
     posts += safeInt(row.posts);
     wins += safeInt(row.wins);
@@ -397,26 +354,24 @@ export async function GET(req: Request) {
       }
     }
 
-    let summary = wantPhase
-      ? rankingLeague === "worldcup" && wcStage
-        ? summaryFromWcStageRanking(cumulative as Record<string, unknown> | null, wcStage)
-        : summaryFromPhaseRanking(
-            cumulative as Record<string, unknown> | null,
-            phase
-          )
-      : null;
+    let summary: SummaryForCards | null = null;
     if (wantPhase) {
-      const missingBonus =
-        rankingLeague === "worldcup" && wcStage
-          ? !hasWcStageBonusFields(cumulative as Record<string, unknown> | null, wcStage)
-          : !hasPhaseBonusFields(cumulative as Record<string, unknown> | null, phase);
-      if (missingBonus) {
+      if (rankingLeague === "worldcup" && wcStage) {
+        /** WC overview は cumulative 更新待ちを避け、日次スナップショットを直接集計する。 */
         summary = await summaryFromDailyPhaseFallback(
           adminDb,
           uid,
           phase,
           wcStage
         );
+      } else {
+        summary = summaryFromPhaseRanking(
+          cumulative as Record<string, unknown> | null,
+          phase
+        );
+        if (!hasPhaseBonusFields(cumulative as Record<string, unknown> | null, phase)) {
+          summary = await summaryFromDailyPhaseFallback(adminDb, uid, phase);
+        }
       }
     }
     // 連勝はリーグ／WC ステージ単位（クライアントで投稿から算出）。グローバル streak は混ぜない。

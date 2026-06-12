@@ -137,6 +137,8 @@ async function updateUserStreak({ db, gameId, settlementGame, }) {
                     ? curB
                     : 0;
             const currentForSport = sportKey === "football" ? curF : curB;
+            const activeWinStreakBasketball = curB > 0 ? curB : 0;
+            const activeWinStreakFootball = curF > 0 ? curF : 0;
             tx.set(userRef, {
                 streakBySport: { basketball: curB, football: curF },
                 maxWinStreakBySport: { basketball: maxB, football: maxF },
@@ -160,6 +162,8 @@ async function updateUserStreak({ db, gameId, settlementGame, }) {
                 currentStreak: curB,
                 streakFootball: curF,
                 activeWinStreak,
+                activeWinStreakBasketball,
+                activeWinStreakFootball,
                 updatedAt: firestore_1.FieldValue.serverTimestamp(),
             }, { merge: true });
             tx.set(markerRef, {

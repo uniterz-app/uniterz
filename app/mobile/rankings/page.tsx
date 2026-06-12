@@ -75,7 +75,7 @@ export default function MobileRankingsPage() {
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
-    useState<RankingLeagueSource>("nba");
+    useState<RankingLeagueSource>("worldcup");
   const phase: RankingPhase = "playoffs";
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
@@ -327,6 +327,7 @@ export default function MobileRankingsPage() {
                 metric={metric}
                 setMetric={setMetric}
                 language={language}
+                gridColumns={rankingLeague === "worldcup" ? 3 : undefined}
                 compactMobile
               />
               {metric === "winRate" && (

@@ -75,7 +75,14 @@ export function useUserStatsDailyTrend(
             string,
             Record<string, unknown>
           >;
-          bucket = (byWc[stage] ?? byWc.overall ?? {}) as Record<string, unknown>;
+          const leagues = (d.leagues ?? {}) as Record<
+            string,
+            Record<string, unknown>
+          >;
+          bucket = (byWc[stage] ??
+            byWc.overall ??
+            (stage === "overall" ? leagues.wc : null) ??
+            {}) as Record<string, unknown>;
         } else {
           const byPhase = (d.rankingByPhase ?? {}) as Record<
             string,

@@ -176,11 +176,11 @@ export default function StreakTrackerCard({
     setAxesReady(false);
     setBlocksReady(false);
     const tA = requestAnimationFrame(() => setAxesReady(true));
-    /** 軸・格子・横ラベルのアニメが終わってからブロック段階へ */
+    /** 軸・格子を軽く出したらすぐブロックへ。プロフィール閲覧では即時性を優先する。 */
     const axisPhaseMs =
       layout === "web"
-        ? 1120 + Math.min(points.length, STREAK_TRACKER_LAST_N) * 30
-        : 990 + Math.min(points.length, STREAK_TRACKER_LAST_N) * 26;
+        ? 260 + Math.min(points.length, STREAK_TRACKER_LAST_N) * 8
+        : 220 + Math.min(points.length, STREAK_TRACKER_LAST_N) * 7;
     const tB = setTimeout(() => setBlocksReady(true), axisPhaseMs);
     return () => {
       cancelAnimationFrame(tA);

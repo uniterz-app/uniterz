@@ -159,6 +159,33 @@ function rankingSliceWc(d: any, stage: WcRankingStage) {
   };
 }
 
+function activeBasketballStreak(d: any): number {
+  const signed =
+    d.activeWinStreakBasketball ??
+    d.streakBySport?.basketball ??
+    d.currentStreak ??
+    d.activeWinStreak ??
+    0;
+  return typeof signed === "number" && signed > 0 ? signed : 0;
+}
+
+function activeFootballStreak(d: any): number {
+  const signed =
+    d.activeWinStreakFootball ??
+    d.streakBySport?.football ??
+    d.streakFootball ??
+    0;
+  return typeof signed === "number" && signed > 0 ? signed : 0;
+}
+
+function activeBasketballStreakRankField(): FieldPath {
+  return new FieldPath("currentStreak");
+}
+
+function activeFootballStreakRankField(): FieldPath {
+  return new FieldPath("streakFootball");
+}
+
 /** スナップショット行が誤って NBA 側と混ざった場合のガード（実際に WC ステージ投稿がある行のみ残す） */
 async function filterRankingRowsToWcStage(
   rows: RankingRow[],
@@ -384,6 +411,26 @@ async function rankingPayloadForMetric(
     });
   }
 
+  if (metric === "activeWinStreak" && rows.length > 0) {
+    const streakRefs = [...new Set(rows.map((r) => r.uid).filter(Boolean))].map(
+      (id) => db().collection("cumulative_stats").doc(id)
+    );
+    const streakSnaps = await db().getAll(...streakRefs);
+    const streakByUid = new Map<string, number>();
+    streakSnaps.forEach((s) => {
+      if (!s.exists) return;
+      const d = s.data() as any;
+      streakByUid.set(
+        s.id,
+        wcStage ? activeFootballStreak(d) : activeBasketballStreak(d)
+      );
+    });
+    rows = rows.map((r) => ({
+      ...r,
+      activeWinStreak: streakByUid.get(r.uid) ?? r.activeWinStreak,
+    }));
+  }
+
   let myRank: number | null = null;
   let myRow: RankingRow | null = null;
   let myRankDeltaPlaces: number | null = null;
@@ -414,7 +461,7 @@ async function rankingPayloadForMetric(
     if (wcStage) {
       const myValue =
         metric === "activeWinStreak"
-          ? me.streakFootball ?? me.activeWinStreak ?? 0
+          ? activeFootballStreak(me)
           : metric === "winRate"
             ? rk.winRate ?? 0
             : (rk as Record<string, number>)[metric] ?? 0;
@@ -427,7 +474,7 @@ async function rankingPayloadForMetric(
 
       const rankField =
         metric === "activeWinStreak"
-          ? new FieldPath("streakFootball")
+          ? activeFootballStreakRankField()
           : hasRankingObj
             ? metric === "winRate"
               ? new FieldPath("rankingByWcStage", wcStage, "winRate")
@@ -481,7 +528,7 @@ async function rankingPayloadForMetric(
         totalPrecision: rk.totalPrecision,
         totalUpset: rk.totalUpset,
         totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
-        activeWinStreak: me.streakFootball ?? me.activeWinStreak ?? 0,
+        activeWinStreak: activeFootballStreak(me),
 
         rank: myRank,
         rankDeltaPlaces: myRankDeltaPlaces,
@@ -535,9 +582,9 @@ async function rankingPayloadForMetric(
         ? Math.floor(storedRankRaw)
         : null;
 
-    if (latestHistRank != null) {
+    if (metric !== "activeWinStreak" && latestHistRank != null) {
       myRank = latestHistRank;
-    } else if (storedRank != null) {
+    } else if (metric !== "activeWinStreak" && storedRank != null) {
       myRank = storedRank;
     } else if (!isPhaseSnapshotBuiltDaily(phase)) {
       /** プレーイン確定後はスナップショットに無いユーザーは live count しない（順位が動かない前提） */
@@ -545,7 +592,7 @@ async function rankingPayloadForMetric(
     } else {
       const myValue =
         metric === "activeWinStreak"
-          ? me.activeWinStreak ?? 0
+          ? activeBasketballStreak(me)
           : metric === "winRate"
             ? rk.winRate ?? 0
             : rk[metric] ?? 0;
@@ -563,7 +610,7 @@ async function rankingPayloadForMetric(
 
       const rankField =
         metric === "activeWinStreak"
-          ? new FieldPath("activeWinStreak")
+          ? activeBasketballStreakRankField()
           : hasRankingObj
             ? round === "overall"
               ? metric === "winRate"
@@ -644,7 +691,7 @@ async function rankingPayloadForMetric(
       totalPrecision: rk.totalPrecision,
       totalUpset: rk.totalUpset,
       totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
-      activeWinStreak: me.activeWinStreak ?? 0,
+      activeWinStreak: activeBasketballStreak(me),
 
       rank: myRank,
       rankDeltaPlaces: myRankDeltaPlaces,
