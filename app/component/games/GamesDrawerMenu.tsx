@@ -2,6 +2,7 @@
 
 import cn from "clsx";
 import { Globe2, Trophy } from "lucide-react";
+import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { League } from "@/lib/leagues";
@@ -42,12 +43,7 @@ export default function GamesDrawerMenu({
 
   const containerClasses = cn(
     "relative flex flex-col text-white",
-    isMobile ? "w-full p-4" : "w-full p-6"
-  );
-
-  const groupTitleClasses = cn(
-    "mb-2 mt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300/55",
-    isMobile ? "pl-7" : "pl-5"
+    isMobile ? "w-full p-4" : "w-full p-5"
   );
 
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
@@ -57,16 +53,16 @@ export default function GamesDrawerMenu({
 
   return (
     <nav className={cn(containerClasses, "overflow-x-hidden")}>
-      <p className={cn(groupTitleClasses, "mt-0")}>
+      <CyberSideMenuSectionTitle first>
         {m.games.games}
-      </p>
+      </CyberSideMenuSectionTitle>
 
       <div className="flex flex-col gap-2">
         <SideMenuItemButton
           icon={Trophy}
           labelStyle={menuLabelFont}
+          active={nbaActive}
           onClick={onSelectNba}
-          className={nbaActive ? "ring-1 ring-cyan-300/35" : undefined}
         >
           <span className={cn(language !== "ja" && "uppercase")}>{m.games.nba}</span>
         </SideMenuItemButton>
@@ -74,9 +70,9 @@ export default function GamesDrawerMenu({
         <SideMenuItemButton
           icon={Globe2}
           labelStyle={menuLabelFont}
+          active={wcActive}
           onClick={onSelectWorldCup}
           trailing={showWcNewBadge ? <WcNewBadge /> : undefined}
-          className={wcActive ? "ring-1 ring-cyan-300/35" : undefined}
         >
           <span className={cn(language !== "ja" && "uppercase")}>{m.games.worldCup}</span>
         </SideMenuItemButton>

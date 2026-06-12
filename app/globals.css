@@ -345,6 +345,301 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
+/* サイドメニュー — ランキング / MatchCard と同系 HUD */
+.cyber-side-menu-panel {
+  border: 1px solid rgba(0, 245, 255, 0.14);
+  background: linear-gradient(
+    168deg,
+    rgba(7, 10, 16, 0.98) 0%,
+    rgba(4, 6, 11, 0.99) 55%,
+    rgba(3, 5, 9, 1) 100%
+  );
+  box-shadow:
+    0 0 32px rgba(0, 245, 255, 0.05),
+    0 22px 56px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(0, 245, 255, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.cyber-side-menu-grid {
+  background-image:
+    linear-gradient(rgba(0, 245, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.055) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.cyber-side-menu-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 245, 255, 0.018) 3px,
+    rgba(0, 245, 255, 0.018) 4px
+  );
+}
+
+.cyber-side-menu-top-beam {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 245, 255, 0.55),
+    rgba(255, 255, 255, 0.85),
+    rgba(0, 245, 255, 0.55),
+    transparent
+  );
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.45);
+}
+
+.cyber-side-menu-edge-h::before,
+.cyber-side-menu-edge-h::after {
+  content: "";
+  position: absolute;
+  height: 1px;
+  width: 42%;
+  filter: blur(0.2px);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 245, 255, 0.2),
+    rgba(0, 245, 255, 0.85),
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.35);
+  pointer-events: none;
+}
+
+.cyber-side-menu-edge-h::before {
+  top: 0;
+  left: -44%;
+  animation: cyber-side-menu-edge-h 3.2s linear infinite;
+}
+
+.cyber-side-menu-edge-h::after {
+  bottom: 0;
+  left: 100%;
+  animation: cyber-side-menu-edge-h-rev 3.2s linear infinite;
+  opacity: 0.7;
+}
+
+@keyframes cyber-side-menu-edge-h {
+  to {
+    left: 100%;
+  }
+}
+
+@keyframes cyber-side-menu-edge-h-rev {
+  to {
+    left: -44%;
+  }
+}
+
+/* メニュー行 — 角切り + 走査線 */
+.cyber-side-menu-item {
+  isolation: isolate;
+  overflow: hidden;
+  clip-path: polygon(
+    10px 0%,
+    100% 0%,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0% 100%,
+    0% 10px
+  );
+}
+
+.cyber-side-menu-item__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.16) 2px,
+    rgba(0, 0, 0, 0.16) 3px
+  );
+  pointer-events: none;
+}
+
+.cyber-side-menu-item__rail {
+  position: absolute;
+  left: 0;
+  top: 12%;
+  bottom: 12%;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 245, 255, 0.9),
+    transparent
+  );
+  box-shadow: 0 0 8px rgba(0, 245, 255, 0.55);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.cyber-side-menu-item--active .cyber-side-menu-item__rail,
+.cyber-side-menu-item:hover .cyber-side-menu-item__rail {
+  opacity: 1;
+}
+
+.cyber-side-menu-item__corner {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-color: rgba(0, 245, 255, 0.55);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.cyber-side-menu-item--active .cyber-side-menu-item__corner {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyber-side-menu-edge-h::before,
+  .cyber-side-menu-edge-h::after {
+    animation: none !important;
+  }
+}
+
+/* 予想オーバーレイ — MatchCard / 市場棒 / ツールデッキ */
+.predict-overlay-cyber-card {
+  clip-path: polygon(
+    12px 0%,
+    calc(100% - 12px) 0%,
+    100% 12px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    12px 100%,
+    0% calc(100% - 12px),
+    0% 12px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  background: linear-gradient(
+    168deg,
+    rgba(10, 14, 22, 0.94) 0%,
+    rgba(6, 9, 15, 0.9) 48%,
+    rgba(4, 6, 11, 0.88) 100%
+  );
+  box-shadow:
+    0 0 28px rgba(0, 245, 255, 0.06),
+    0 14px 40px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0 rgba(0, 245, 255, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.predict-overlay-cyber-grid {
+  background-image:
+    linear-gradient(rgba(0, 245, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.045) 1px, transparent 1px);
+  background-size: 18px 18px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, transparent 92%);
+}
+
+.predict-overlay-cyber-form {
+  clip-path: polygon(
+    10px 0%,
+    calc(100% - 10px) 0%,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0% calc(100% - 10px),
+    0% 10px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.16);
+  background: linear-gradient(
+    168deg,
+    rgba(8, 12, 20, 0.94) 0%,
+    rgba(5, 8, 14, 0.92) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(0, 245, 255, 0.1),
+    0 8px 22px rgba(0, 0, 0, 0.36);
+}
+
+.predict-overlay-market-frame {
+  clip-path: polygon(
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% calc(100% - 8px),
+    0% 8px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.14);
+  background: rgba(0, 245, 255, 0.03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.predict-overlay-stat-box {
+  clip-path: polygon(
+    7px 0%,
+    calc(100% - 7px) 0%,
+    100% 7px,
+    100% calc(100% - 7px),
+    calc(100% - 7px) 100%,
+    7px 100%,
+    0% calc(100% - 7px),
+    0% 7px
+  );
+}
+
+.predict-overlay-cyber-deck {
+  clip-path: polygon(
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% calc(100% - 8px),
+    0% 8px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.28);
+  background: rgba(4, 8, 14, 0.9);
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.06),
+    inset 0 1px 0 rgba(0, 245, 255, 0.1);
+}
+
+.predict-overlay-cyber-deck > button + button {
+  border-left: 1px solid rgba(0, 245, 255, 0.14);
+}
+
+.predict-overlay-goal-box {
+  clip-path: polygon(
+    5px 0%,
+    calc(100% - 5px) 0%,
+    100% 5px,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    5px 100%,
+    0% calc(100% - 5px),
+    0% 5px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.18);
+  background: rgba(0, 245, 255, 0.04);
+  box-shadow: inset 0 0 12px rgba(0, 245, 255, 0.04);
+}
+
+.predict-overlay-close-btn {
+  clip-path: polygon(
+    5px 0%,
+    100% 0%,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    0% 100%,
+    0% 5px
+  );
+  box-shadow: 0 0 14px rgba(0, 245, 255, 0.12);
+}
+
 /* 1位ランキング行 — 枠 EDGE SCAN（案D） */
 .rank-first-flow-dim {
   box-shadow: inset 0 0 0 1px rgba(184, 255, 60, 0.32);

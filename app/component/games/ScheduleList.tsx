@@ -699,8 +699,9 @@ export default function ScheduleList({
                   type="button"
                   aria-label={m.common.close}
                   className={[
-                    "absolute left-1 top-1 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-white/12 bg-black/45 text-white/85 backdrop-blur-sm",
-                    isMobile ? "" : "transition hover:bg-black/60",
+                    "predict-overlay-close-btn absolute left-1.5 top-1.5 z-30 flex h-8 w-8 items-center justify-center",
+                    "border border-cyan-400/35 bg-[rgba(4,10,18,0.82)] text-cyan-50/90 backdrop-blur-sm",
+                    isMobile ? "" : "transition hover:border-cyan-300/55 hover:bg-[rgba(6,14,24,0.9)]",
                   ]
                     .filter(Boolean)
                     .join(" ")}

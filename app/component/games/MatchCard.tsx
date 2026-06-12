@@ -63,6 +63,8 @@ import {
   resultStatsMetricNumClass,
 } from "@/lib/fonts";
 import MatchCardOverlayMarketBar from "@/app/component/games/MatchCardOverlayMarketBar";
+import PredictOverlayCyberDecor from "@/app/component/predict/PredictOverlayCyberDecor";
+import { PREDICT_OVERLAY_CYBER_GRID_CLASS } from "@/lib/ui/predictOverlayCyber";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
   LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
@@ -1226,14 +1228,26 @@ return (
         <ResultHitCyberFrame />
       ) : null}
 
-      {attachOverlayMarketBar ? null : inPredictOverlay ? (
-        <div
-          className={[
-            "pointer-events-none absolute inset-0 z-[1]",
-            PREDICT_OVERLAY_MATCH_CARD_GLASS,
-          ].join(" ")}
-          aria-hidden
-        />
+      {attachOverlayMarketBar || inPredictOverlay ? (
+        <>
+          {attachOverlayMarketBar ? null : (
+            <div
+              className={[
+                "pointer-events-none absolute inset-0 z-[1]",
+                PREDICT_OVERLAY_MATCH_CARD_GLASS,
+              ].join(" ")}
+              aria-hidden
+            />
+          )}
+          <div
+            className={[
+              "pointer-events-none absolute inset-0 z-[2] opacity-70",
+              PREDICT_OVERLAY_CYBER_GRID_CLASS,
+            ].join(" ")}
+            aria-hidden
+          />
+          <PredictOverlayCyberDecor />
+        </>
       ) : (
         <div
           className={[
@@ -2099,6 +2113,7 @@ return (
                 label={m.results.wcGoalScorerLabel}
                 info={wcGoalScorerResult}
                 compact={isMobile}
+                cyberValue={attachOverlayMarketBar || inPredictOverlay}
               />
             ) : null}
             {!hideMergedStatsSection ? (
