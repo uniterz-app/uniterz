@@ -22,23 +22,6 @@ const LEAGUES = ["bj", "j1", "nba", "pl", "wc"];
 /* =========================================================
  * Utils
  * =======================================================*/
-function wcIncrementAtPath(pathPrefix, o) {
-    return {
-        [`${pathPrefix}.posts`]: firestore_1.FieldValue.increment(1),
-        [`${pathPrefix}.wins`]: firestore_1.FieldValue.increment(o.isWin ? 1 : 0),
-        [`${pathPrefix}.scoreErrorSum`]: firestore_1.FieldValue.increment(o.scoreError),
-        [`${pathPrefix}.upsetOpportunityCount`]: firestore_1.FieldValue.increment(o.hadUpsetGame ? 1 : 0),
-        [`${pathPrefix}.upsetHitCount`]: firestore_1.FieldValue.increment(o.upsetHit ? 1 : 0),
-        [`${pathPrefix}.upsetPickCount`]: firestore_1.FieldValue.increment(o.hadUpsetGame ? 1 : 0),
-        [`${pathPrefix}.scorePrecisionSum`]: firestore_1.FieldValue.increment(o.scorePrecision),
-        [`${pathPrefix}.pointsSumV3`]: firestore_1.FieldValue.increment(o.points),
-        [`${pathPrefix}.upsetPointsSum`]: firestore_1.FieldValue.increment(o.upsetPoints),
-        [`${pathPrefix}.upsetBonusSum`]: firestore_1.FieldValue.increment(o.upsetBonus),
-        [`${pathPrefix}.streakBonusSum`]: firestore_1.FieldValue.increment(o.streakBonus),
-        [`${pathPrefix}.goalScorerHitCount`]: firestore_1.FieldValue.increment(o.goalScorerHit ? 1 : 0),
-        [`${pathPrefix}.goalScorerBonusSum`]: firestore_1.FieldValue.increment(o.goalScorerBonus),
-    };
-}
 function toDateKeyJST(ts) {
     const d = ts.toDate();
     const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
@@ -68,11 +51,6 @@ function uniqueGameTeamIds(homeTeamId, awayTeamId) {
         .map((v) => (typeof v === "string" ? v.trim() : ""))
         .filter(Boolean);
     return [...new Set(ids)];
-}
-function teamIncrementAtPath(teamId, o) {
-    var _a, _b;
-    const prefix = `teams.${teamId}`;
-    return wcIncrementAtPath(prefix, Object.assign(Object.assign({}, o), { goalScorerBonus: (_a = o.goalScorerBonus) !== null && _a !== void 0 ? _a : 0, goalScorerHit: (_b = o.goalScorerHit) !== null && _b !== void 0 ? _b : false }));
 }
 /* =========================================================
  * Bucket helpers
@@ -120,6 +98,7 @@ async function applyPostToUserStatsV2(opts) {
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
     const userStatsRef = db().doc(`user_stats_v2/${uid}`);
     await db().runTransaction(async (tx) => {
+        var _a;
         const marker = await tx.get(markerRef);
         if (marker.exists)
             return;
@@ -141,25 +120,8 @@ async function applyPostToUserStatsV2(opts) {
         const update = Object.assign(Object.assign(Object.assign({ date: dateKey, updatedAt: firestore_1.FieldValue.serverTimestamp(), all: inc }, (forRanking ? { ranking: inc } : {})), (phaseKey ? { rankingByPhase: { [phaseKey]: inc } } : {})), (forRanking && phaseKey === "playoffs" && roundKey
             ? { rankingByPlayoffRound: { [roundKey]: inc } }
             : {}));
-        const wcOpts = {
-            isWin,
-            scoreError,
-            scorePrecision,
-            hadUpsetGame,
-            points,
-            upsetHit,
-            upsetPoints,
-            upsetBonus,
-            streakBonus,
-            goalScorerBonus,
-            goalScorerHit,
-        };
         if (forRanking && leagueKey === "wc") {
-            Object.assign(update, wcIncrementAtPath("rankingByWcStage.overall", wcOpts), wcStage === "qualifying"
-                ? wcIncrementAtPath("rankingByWcStage.qualifying", wcOpts)
-                : {}, wcStage === "main"
-                ? wcIncrementAtPath("rankingByWcStage.main", wcOpts)
-                : {});
+            update.rankingByWcStage = Object.assign(Object.assign({ overall: inc }, (wcStage === "qualifying" ? { qualifying: inc } : {})), (wcStage === "main" ? { main: inc } : {}));
         }
         if (leagueKey) {
             update.leagues = Object.assign(Object.assign({}, (update.leagues || {})), { [leagueKey]: inc });
@@ -173,22 +135,7 @@ async function applyPostToUserStatsV2(opts) {
         }
         const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
         if (forRanking && gameTeamIds.length > 0) {
-            const teamOpts = {
-                isWin,
-                scoreError,
-                scorePrecision,
-                hadUpsetGame,
-                points,
-                upsetHit,
-                upsetPoints,
-                upsetBonus,
-                streakBonus,
-                goalScorerBonus,
-                goalScorerHit,
-            };
-            for (const teamId of gameTeamIds) {
-                Object.assign(update, teamIncrementAtPath(teamId, teamOpts));
-            }
+            update.teams = Object.assign(Object.assign({}, ((_a = update.teams) !== null && _a !== void 0 ? _a : {})), Object.fromEntries(gameTeamIds.map((teamId) => [teamId, inc])));
         }
         tx.set(dailyRef, update, { merge: true });
         tx.set(markerRef, {

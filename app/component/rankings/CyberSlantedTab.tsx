@@ -67,7 +67,7 @@ export function CyberSlantedTab({
       ) : null}
       <span
         className={[
-          "relative z-[1] block",
+          "relative z-1 block",
           fill ? "w-full truncate text-center" : "",
           jaLabel ? "" : "uppercase",
         ].join(" ")}
@@ -83,24 +83,34 @@ export function CyberSlantedTabBar({
   children,
   className = "",
   fill = false,
+  gridColumns,
   "aria-label": ariaLabel,
 }: {
   children: ReactNode;
   className?: string;
   /** 子タブを均等幅で横いっぱいに並べる */
   fill?: boolean;
+  /** 指標が多いランキング用。例: WC の 6 指標を 3×2 にする */
+  gridColumns?: 3;
   "aria-label"?: string;
 }) {
+  const layoutClass =
+    gridColumns === 3
+      ? "grid w-full grid-cols-3 gap-x-2 gap-y-2 pb-1"
+      : [
+          "flex gap-2 pb-1",
+          fill
+            ? "w-full"
+            : "overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+        ].join(" ");
+
   return (
     <CyberSlantedTabFillContext.Provider value={fill}>
       <div
         role="tablist"
         aria-label={ariaLabel}
         className={[
-          "flex gap-2 pb-1",
-          fill
-            ? "w-full"
-            : "overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
+          layoutClass,
           className,
         ].join(" ")}
       >

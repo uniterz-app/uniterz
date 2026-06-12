@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildCumulativeStats = buildCumulativeStats;
 const firestore_1 = require("firebase-admin/firestore");
+const dailyWcStageBuckets_1 = require("./dailyWcStageBuckets");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
@@ -42,7 +43,7 @@ async function buildCumulativeStats() {
     let skipped = 0;
     let scanned = 0;
     const processDoc = async (doc) => {
-        var _a, _b, _c, _d;
+        var _a, _b, _c;
         const data = doc.data();
         const uid = doc.id.split("_")[0];
         if (!uid)
@@ -54,11 +55,11 @@ async function buildCumulativeStats() {
         const statsRanking = (_a = data.ranking) !== null && _a !== void 0 ? _a : data.all;
         const statsByPhase = (_b = data.rankingByPhase) !== null && _b !== void 0 ? _b : {};
         const statsByPlayoffRound = (_c = data.rankingByPlayoffRound) !== null && _c !== void 0 ? _c : {};
-        const statsByWcStage = (_d = data.rankingByWcStage) !== null && _d !== void 0 ? _d : {};
+        const statsByWcStage = (0, dailyWcStageBuckets_1.readDailyWcStageBuckets)(data);
         const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
         const userRef = firestore.doc(`users/${uid}`);
         return firestore.runTransaction(async (tx) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38;
             const [cumulativeSnap, userSnap] = await Promise.all([
                 tx.get(cumulativeRef),
                 tx.get(userRef),
@@ -183,10 +184,9 @@ async function buildCumulativeStats() {
             /* =========================
              * World Cup ステージ別（overall / qualifying / main）
              * =======================*/
-            const WC_STAGES = ["overall", "qualifying", "main"];
             const prevByWc = ((_33 = cumulativeSnap.get("rankingByWcStage")) !== null && _33 !== void 0 ? _33 : {});
             const nextByWc = {};
-            for (const wk of WC_STAGES) {
+            for (const wk of dailyWcStageBuckets_1.WC_RANKING_STAGES) {
                 const prevW = (_34 = prevByWc[wk]) !== null && _34 !== void 0 ? _34 : {
                     totalPosts: 0,
                     totalWins: 0,
@@ -197,13 +197,17 @@ async function buildCumulativeStats() {
                     winRate: 0,
                 };
                 const src = statsByWcStage[wk];
+                const num = (v) => {
+                    const n = typeof v === "number" ? v : Number(v);
+                    return Number.isFinite(n) ? n : 0;
+                };
                 const nextWRaw = addRankingTotals(prevW, {
-                    posts: (_35 = src === null || src === void 0 ? void 0 : src.posts) !== null && _35 !== void 0 ? _35 : 0,
-                    wins: (_36 = src === null || src === void 0 ? void 0 : src.wins) !== null && _36 !== void 0 ? _36 : 0,
-                    pointsSumV3: (_37 = src === null || src === void 0 ? void 0 : src.pointsSumV3) !== null && _37 !== void 0 ? _37 : 0,
-                    upsetPointsSum: (_38 = src === null || src === void 0 ? void 0 : src.upsetPointsSum) !== null && _38 !== void 0 ? _38 : 0,
-                    scorePrecisionSum: (_39 = src === null || src === void 0 ? void 0 : src.scorePrecisionSum) !== null && _39 !== void 0 ? _39 : 0,
-                    goalScorerHitCount: (_40 = src === null || src === void 0 ? void 0 : src.goalScorerHitCount) !== null && _40 !== void 0 ? _40 : 0,
+                    posts: num(src === null || src === void 0 ? void 0 : src.posts),
+                    wins: num(src === null || src === void 0 ? void 0 : src.wins),
+                    pointsSumV3: num(src === null || src === void 0 ? void 0 : src.pointsSumV3),
+                    upsetPointsSum: num(src === null || src === void 0 ? void 0 : src.upsetPointsSum),
+                    scorePrecisionSum: num(src === null || src === void 0 ? void 0 : src.scorePrecisionSum),
+                    goalScorerHitCount: num(src === null || src === void 0 ? void 0 : src.goalScorerHitCount),
                 });
                 nextByWc[wk] = Object.assign(Object.assign({}, nextWRaw), { winRate: nextWRaw.totalPosts > 0
                         ? nextWRaw.totalWins / nextWRaw.totalPosts
@@ -211,10 +215,10 @@ async function buildCumulativeStats() {
             }
             tx.set(cumulativeRef, {
                 uid,
-                displayName: (_41 = user.displayName) !== null && _41 !== void 0 ? _41 : "user",
-                handle: (_42 = user.handle) !== null && _42 !== void 0 ? _42 : null,
-                photoURL: (_43 = user.photoURL) !== null && _43 !== void 0 ? _43 : null,
-                countryCode: (_44 = user.countryCode) !== null && _44 !== void 0 ? _44 : null,
+                displayName: (_35 = user.displayName) !== null && _35 !== void 0 ? _35 : "user",
+                handle: (_36 = user.handle) !== null && _36 !== void 0 ? _36 : null,
+                photoURL: (_37 = user.photoURL) !== null && _37 !== void 0 ? _37 : null,
+                countryCode: (_38 = user.countryCode) !== null && _38 !== void 0 ? _38 : null,
                 plan: user.plan === "pro" ? "pro" : "free",
                 totalPosts: nextPosts,
                 totalWins: nextWins,

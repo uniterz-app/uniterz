@@ -6,6 +6,7 @@
 import type { DocumentSnapshot } from "firebase-admin/firestore";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 import {
   isWcRankingStage,
   type WcRankingStage,
@@ -29,17 +30,27 @@ export function resolveProfileDailyTrendContext(
   return { rankingLeague: "nba" };
 }
 
+function safeInt(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
 function dailyBucketFromDoc(
   d: Record<string, unknown>,
   ctx: ProfileDailyTrendContext
 ): Record<string, unknown> {
   if (ctx.rankingLeague === "worldcup") {
     const stage = ctx.wcStage ?? "overall";
-    const byWc = (d.rankingByWcStage ?? {}) as Record<
-      string,
-      Record<string, unknown>
-    >;
-    return (byWc[stage] ?? byWc.overall ?? {}) as Record<string, unknown>;
+    const byWc = readDailyWcStageBucket(d, stage);
+    const leagues = (d.leagues ?? {}) as Record<string, Record<string, unknown>>;
+    const hasWcPosts = safeInt(byWc.posts) > 0;
+    if (hasWcPosts) return byWc as Record<string, unknown>;
+    const overall = readDailyWcStageBucket(d, "overall");
+    if (stage !== "overall" && safeInt(overall.posts) > 0) {
+      return overall as Record<string, unknown>;
+    }
+    return ((stage === "overall" ? leagues.wc : null) ??
+      {}) as Record<string, unknown>;
   }
   const byPhase = (d.rankingByPhase ?? {}) as Record<
     string,
@@ -89,11 +100,6 @@ const empty = (): Bucket => ({
   upsetBonusSum: 0,
   streakBonusSum: 0,
 });
-
-function safeInt(v: unknown): number {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-}
 
 function safeNum(v: unknown): number {
   const n = typeof v === "number" ? v : Number(v);

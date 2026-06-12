@@ -4,6 +4,7 @@ import { buildWindowCacheForUser } from "./stats/buildUserStatsWindowCache";
 import { computePostSettlement } from "./computePostSettlement";
 import type { UpdatedUserStreakResult } from "./updateUserStreak";
 import { buildPostMatchGoalScorersFromGame } from "./wc/matchGoalScorersDisplay";
+import { resolveWcStageFromGame } from "./wc/resolveWcStage";
 
 export async function finalizePost({
   postDoc,
@@ -58,6 +59,11 @@ export async function finalizePost({
   });
 
   const countsForRanking = game?.countsForRanking !== false;
+  const resolvedWcStage = resolveWcStageFromGame({
+    knockout: game?.knockout,
+    roundLabel: game?.roundLabel,
+    wcStage: game?.wcStage,
+  });
 
   const now = Timestamp.now();
 
@@ -120,7 +126,7 @@ export async function finalizePost({
 
     seasonPhase: game?.seasonPhase ?? null,
     seasonRound: game?.seasonRound ?? null,
-    wcStage: game?.wcStage ?? null,
+    wcStage: resolvedWcStage,
   });
 
   const uid = p.authorUid;
@@ -148,7 +154,7 @@ export async function finalizePost({
       countsForRanking,
       seasonPhase: game?.seasonPhase ?? null,
       seasonRound: game?.seasonRound ?? null,
-      wcStage: game?.wcStage ?? null,
+      wcStage: resolvedWcStage,
       homeTeamId: game.homeTeamId ?? p.home?.teamId ?? null,
       awayTeamId: game.awayTeamId ?? p.away?.teamId ?? null,
     }).then(() => buildWindowCacheForUser(uid))

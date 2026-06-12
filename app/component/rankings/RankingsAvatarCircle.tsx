@@ -77,7 +77,7 @@ export function RankingsAvatarCircle({
     <div
       className={[
         "relative shrink-0 overflow-hidden",
-        isSquare ? "rounded-none" : "rounded-full",
+        isSquare ? "rounded-sm" : "rounded-full",
         boxClassName,
         showSolidShell ? (isSquare ? "bg-[#0a0c14]" : "bg-[#0f2d35]") : "",
         ringClass,

@@ -1,19 +1,14 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+import ResultCard from "@/app/component/result/ResultCard";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { CYBER_GLASS_PANEL_XL } from "@/lib/ui/matchOverlayGlass";
 import { jp, nameRajdhani } from "@/lib/fonts";
-
-const ResultCard = dynamic(
-  () => import("@/app/component/result/ResultCard"),
-  { ssr: false }
-);
 
 type Props = {
   uid: string | null | undefined;

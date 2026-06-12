@@ -27,11 +27,37 @@ export type CyberRankingScoreLayout = "stack" | "web";
 export function CyberRankNumber({
   rank,
   compact,
+  displayValue,
+  muted = false,
+  variant = "list",
 }: {
   rank: number;
   compact?: boolean;
+  /** 順位以外の表示（-- / ··· など） */
+  displayValue?: string;
+  /** 未取得・ローディング — リストと同フォントでニュートラル表示 */
+  muted?: boolean;
+  /** tower = MyRankCard 塔（やや大きめ） */
+  variant?: "list" | "tower";
 }) {
-  const label = String(rank).padStart(2, "0");
+  const label = displayValue ?? String(rank).padStart(2, "0");
+  const isCompact = !!compact;
+  const style = muted
+    ? {
+        fontSize:
+          variant === "tower"
+            ? isCompact
+              ? "2.4rem"
+              : "3.2rem"
+            : isCompact
+              ? "1.65rem"
+              : "2.25rem",
+        transform: "skewX(-12deg)",
+        display: "inline-block" as const,
+        color: "rgba(255,255,255,0.42)",
+        letterSpacing: "0.05em",
+      }
+    : cyberRankNumStyle(rank, isCompact, variant);
 
   return (
     <span className="cyber-rank-num relative inline-block">
@@ -39,11 +65,13 @@ export function CyberRankNumber({
         className={[nameBebas.className, "relative z-[1] block tabular-nums leading-none"].join(
           " "
         )}
-        style={cyberRankNumStyle(rank, !!compact)}
+        style={style}
       >
         {label}
       </span>
-      <span aria-hidden className="cyber-rank-num__scan pointer-events-none" />
+      {!muted ? (
+        <span aria-hidden className="cyber-rank-num__scan pointer-events-none" />
+      ) : null}
     </span>
   );
 }
@@ -124,6 +152,7 @@ function CyberListRowMeta({
   metric,
   avgRow,
   compact,
+  scoreLayout = "stack",
 }: {
   countryCode?: string | null;
   posts: number;
@@ -134,27 +163,36 @@ function CyberListRowMeta({
     avgUpsetScore?: number;
   };
   compact?: boolean;
+  scoreLayout?: CyberRankingScoreLayout;
 }) {
   const code = getCountryCode({ countryCode });
   const flagSrc = code ? FLAG_SRC[code] : undefined;
   const volText = `VOL:${posts}`;
   const avgText = listRowAvgText(metric, avgRow);
-  const metaSize = compact ? 8 : 9;
+  const isWeb = scoreLayout === "web" && !compact;
+  const metaSize = isWeb ? 13 : compact ? 10 : 11;
+  const flagClass = isWeb
+    ? "h-[18px] w-[27px]"
+    : compact
+      ? "h-[12px] w-[18px]"
+      : "h-[14px] w-[21px]";
 
   return (
     <div
       className={[
-        "flex min-w-0 items-center gap-1.5",
-        compact ? "mt-1" : "mt-1.5",
+        "flex min-w-0 items-center",
+        isWeb ? "mt-2.5 gap-2.5" : compact ? "mt-1 gap-1.5" : "mt-1.5 gap-1.5",
       ].join(" ")}
     >
       {flagSrc ? (
         <img
           src={flagSrc}
           alt=""
-          width={16}
-          height={11}
-          className="h-[11px] w-4 shrink-0 rounded-[1px] object-cover opacity-75"
+          width={isWeb ? 27 : compact ? 18 : 21}
+          height={isWeb ? 18 : compact ? 12 : 14}
+          className={[flagClass, "shrink-0 rounded-[1px] object-cover opacity-80"].join(
+            " "
+          )}
           loading="lazy"
           decoding="async"
         />
@@ -221,9 +259,12 @@ export function CyberRankingListRow({
   const palette = cyberRankPalette(rank);
   const firstFrame = palette.firstPlaceFrame && !subtleShell;
   const nameJa = hasJaScript(displayName);
-  const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
-  const tagJa = hasJaScript(metricTag);
   const isWebScore = scoreLayout === "web" && !compact;
+  const nameFontSize = rankingFontSizePx(
+    isWebScore ? 20 : compact ? 13 : 15,
+    displayName
+  );
+  const tagJa = hasJaScript(metricTag);
   const tagFontSize = rankingFontSizePx(
     isWebScore ? 10 : compact ? 7 : 8,
     metricTag
@@ -269,7 +310,7 @@ export function CyberRankingListRow({
     <article
       className={[
         "relative flex items-stretch overflow-hidden",
-        compact ? "min-h-[56px]" : "min-h-[72px]",
+        compact ? "min-h-[56px]" : isWebScore ? "min-h-[82px]" : "min-h-[72px]",
       ].join(" ")}
       style={{
         background: subtleShell
@@ -305,31 +346,42 @@ export function CyberRankingListRow({
             compact ? "w-[42px]" : "w-[52px] sm:w-[58px]",
           ].join(" ")}
         >
-          {showCrownSlot}
           <CyberRankNumber rank={rank} compact={compact} />
         </div>
 
         <div
           className={[
-            "flex shrink-0 flex-col items-end",
+            "flex shrink-0 flex-col items-center",
             rank === 1 && !subtleShell ? (compact ? "gap-0.5" : "gap-1") : "",
           ].join(" ")}
         >
           {rank === 1 && !subtleShell ? (
-            <span
-              aria-hidden
+            <div
               className={[
-                "font-bold leading-none",
-                nameOxanium.className,
-                compact ? "text-[6px] tracking-[0.08em]" : "text-[7px] tracking-widest",
+                "flex items-end justify-center",
+                compact ? "gap-0.5" : "gap-1",
               ].join(" ")}
-              style={{
-                color: "#B8FF3C",
-                textShadow: "0 0 6px rgba(184,255,60,0.55)",
-              }}
             >
-              +++
-            </span>
+              {showCrownSlot ? (
+                <div className="flex shrink-0 items-center justify-center leading-none">
+                  {showCrownSlot}
+                </div>
+              ) : null}
+              <span
+                aria-hidden
+                className={[
+                  "font-bold leading-none",
+                  nameOxanium.className,
+                  compact ? "text-[6px] tracking-[0.08em]" : "text-[7px] tracking-widest",
+                ].join(" ")}
+                style={{
+                  color: "#B8FF3C",
+                  textShadow: "0 0 6px rgba(184,255,60,0.55)",
+                }}
+              >
+                +++
+              </span>
+            </div>
           ) : null}
           <div
             className="relative shrink-0 overflow-hidden rounded-sm"
@@ -384,6 +436,7 @@ export function CyberRankingListRow({
             metric={metric}
             avgRow={avgRow ?? {}}
             compact={compact}
+            scoreLayout={scoreLayout}
           />
         </div>
 

@@ -26,6 +26,7 @@ import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs, {
   type RankingsCategory,
 } from "@/app/component/rankings/RankingsCategoryTabs";
+import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import Header from "@/app/component/Header";
 import {
   API_METRIC_BY_MOBILE,
@@ -67,6 +68,7 @@ import {
   getMyMetricValue,
 } from "@/lib/rankings/rankingsPageShared";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
+import { useProgressiveRenderCount } from "@/lib/hooks/useProgressiveRenderCount";
 import { visibleMetricsForLeague } from "@/lib/rankings/wcVisibleMetrics";
 
 export default function MobileRankingsPage() {
@@ -75,7 +77,7 @@ export default function MobileRankingsPage() {
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
-    useState<RankingLeagueSource>("nba");
+    useState<RankingLeagueSource>("worldcup");
   const phase: RankingPhase = "playoffs";
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
@@ -217,7 +219,14 @@ export default function MobileRankingsPage() {
     rankingLeague,
     wcStage,
   });
-  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
+  const { handleTopCountDone } = useRankingsTopDone(pageKey);
+  const visibleRestCount = useProgressiveRenderCount(
+    restRows.length,
+    pageKey,
+    24,
+    24
+  );
+  const visibleRestRows = restRows.slice(0, visibleRestCount);
 
   return (
     <div
@@ -238,16 +247,17 @@ export default function MobileRankingsPage() {
             >
               <Menu className="h-4 w-4" strokeWidth={2.25} />
             </button>
-            <span
-              className={[
-                nameBebas.className,
-                "min-w-0 flex-1 text-center text-[14px] tracking-[0.26em] text-white/90",
-              ].join(" ")}
-            >
-              {rankingLeague === "worldcup"
-                ? m.rankings.pageTitleWorldCup
-                : m.rankings.pageTitleRankings}
-            </span>
+            <div className="flex min-w-0 flex-1 justify-center">
+              <RankingsPageTitleCyber
+                variant="horizon-chrome"
+                title={
+                  rankingLeague === "worldcup"
+                    ? m.rankings.pageTitleWorldCup
+                    : m.rankings.pageTitleRankings
+                }
+                size="sm"
+              />
+            </div>
             <RankingsScheduleNotice
               phase={phase}
               language={language}
@@ -315,6 +325,7 @@ export default function MobileRankingsPage() {
                 leagueLabel={
                   rankingLeague === "worldcup" ? "WORLD CUP" : "NBA"
                 }
+                statsSource={myRawRow}
               />
             ) : null}
           </div>
@@ -326,6 +337,7 @@ export default function MobileRankingsPage() {
                 metric={metric}
                 setMetric={setMetric}
                 language={language}
+                gridColumns={rankingLeague === "worldcup" ? 3 : undefined}
                 compactMobile
               />
               {metric === "winRate" && (
@@ -385,11 +397,11 @@ export default function MobileRankingsPage() {
                 key={`rest-${pageKey}`}
                 variants={restContainer}
                 initial="hidden"
-                animate={topDone ? "show" : "hidden"}
-                style={{ opacity: topDone ? 1 : 0.35 }}
+                animate="show"
+                style={{ opacity: 1 }}
               >
                 {restRows.length > 0 &&
-                  restRows.map((r, i) => (
+                  visibleRestRows.map((r, i) => (
                     <motion.div
                       key={`${metric}-${r.uid}`}
                       variants={restItem}
@@ -404,6 +416,7 @@ export default function MobileRankingsPage() {
                           rankingLeague={rankingLeague}
                           wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                           language={language}
+                          animateValue={i < 12}
                         />
                     </motion.div>
                   ))}

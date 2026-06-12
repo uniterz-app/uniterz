@@ -75,19 +75,39 @@ export function cyberRankPalette(rank: number): CyberRankPalette {
   };
 }
 
+export type CyberRankNumVariant = "list" | "tower";
+
+function cyberRankNumFontSize(
+  rank: number,
+  compact: boolean,
+  variant: CyberRankNumVariant
+): string {
+  if (variant === "tower") {
+    return compact
+      ? rank <= 3
+        ? "2.65rem"
+        : "2.4rem"
+      : rank <= 3
+        ? "3.5rem"
+        : "3.2rem";
+  }
+  return compact
+    ? rank <= 3
+      ? "1.85rem"
+      : "1.65rem"
+    : rank <= 3
+      ? "2.55rem"
+      : "2.25rem";
+}
+
 export function cyberRankNumStyle(
   rank: number,
-  compact: boolean
+  compact: boolean,
+  variant: CyberRankNumVariant = "list"
 ): CSSProperties {
   const p = cyberRankPalette(rank);
   return {
-    fontSize: compact
-      ? rank <= 3
-        ? "1.85rem"
-        : "1.65rem"
-      : rank <= 3
-        ? "2.55rem"
-        : "2.25rem",
+    fontSize: cyberRankNumFontSize(rank, compact, variant),
     transform: "skewX(-12deg)",
     display: "inline-block",
     color: p.textFill,

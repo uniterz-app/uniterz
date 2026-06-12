@@ -162,6 +162,25 @@ function getValue(d: any, metric: Metric, phase: RankingPhase) {
   return r.totalUpset ?? 0;
 }
 
+function activeBasketballStreak(d: any): number {
+  const signed =
+    d.activeWinStreakBasketball ??
+    d.streakBySport?.basketball ??
+    d.currentStreak ??
+    d.activeWinStreak ??
+    0;
+  return typeof signed === "number" && signed > 0 ? signed : 0;
+}
+
+function activeFootballStreak(d: any): number {
+  const signed =
+    d.activeWinStreakFootball ??
+    d.streakBySport?.football ??
+    d.streakFootball ??
+    0;
+  return typeof signed === "number" && signed > 0 ? signed : 0;
+}
+
 type BaseRow = {
   uid: string;
   displayName: string;
@@ -529,7 +548,7 @@ export async function loadPlayoffRoundTop20RowsLive(
         totalPrecision: rr?.totalPrecision ?? 0,
         totalUpset: rr?.totalUpset ?? 0,
         totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
-        activeWinStreak: d.activeWinStreak ?? 0,
+        activeWinStreak: activeBasketballStreak(d),
       };
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
@@ -582,7 +601,7 @@ export async function loadWcStageTop20RowsLive(
         totalPrecision: rr?.totalPrecision ?? 0,
         totalUpset: rr?.totalUpset ?? 0,
         totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
-        activeWinStreak: d.streakFootball ?? d.activeWinStreak ?? 0,
+        activeWinStreak: activeFootballStreak(d),
       };
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
@@ -654,7 +673,7 @@ export async function buildCumulativeRankingSnapshot() {
           totalPrecision: r.totalPrecision,
           totalUpset: r.totalUpset,
           totalGoalScorerHits: 0,
-          activeWinStreak: d.activeWinStreak ?? 0,
+          activeWinStreak: activeBasketballStreak(d),
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);
@@ -731,7 +750,7 @@ export async function buildCumulativeRankingSnapshot() {
           totalPrecision: rr?.totalPrecision ?? 0,
           totalUpset: rr?.totalUpset ?? 0,
           totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
-          activeWinStreak: d.activeWinStreak ?? 0,
+          activeWinStreak: activeBasketballStreak(d),
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);
@@ -805,7 +824,7 @@ export async function buildCumulativeRankingSnapshot() {
           totalPrecision: rr?.totalPrecision ?? 0,
           totalUpset: rr?.totalUpset ?? 0,
           totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
-          activeWinStreak: d.streakFootball ?? d.activeWinStreak ?? 0,
+          activeWinStreak: activeFootballStreak(d),
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);

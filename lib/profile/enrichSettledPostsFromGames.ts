@@ -1,8 +1,14 @@
-import { doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  documentId,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { SettledPostRow } from "@/lib/profile/profileStreakPostsCompute";
 
-const GAME_FETCH_CHUNK = 25;
+const GAME_FETCH_CHUNK = 30;
 
 function needsGameLookup(row: SettledPostRow): boolean {
   if (row.seasonPhase != null && row.seasonPhase !== "") return false;
@@ -31,24 +37,29 @@ export async function enrichSettledPostsFromGames(
     { seasonPhase: unknown; wcStage: unknown }
   >();
 
+  const chunks: string[][] = [];
   for (let i = 0; i < gameIds.length; i += GAME_FETCH_CHUNK) {
-    const chunk = gameIds.slice(i, i + GAME_FETCH_CHUNK);
-    await Promise.all(
-      chunk.map(async (gameId) => {
-        try {
-          const snap = await getDoc(doc(db, "games", gameId));
-          if (!snap.exists()) return;
-          const d = snap.data() as Record<string, unknown>;
-          meta.set(gameId, {
-            seasonPhase: d.seasonPhase ?? null,
-            wcStage: d.wcStage ?? null,
-          });
-        } catch {
-          /* 1件失敗しても他は続行 */
-        }
-      })
-    );
+    chunks.push(gameIds.slice(i, i + GAME_FETCH_CHUNK));
   }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, "games"), where(documentId(), "in", chunk))
+        );
+        for (const d of snap.docs) {
+          const data = d.data() as Record<string, unknown>;
+          meta.set(d.id, {
+            seasonPhase: data.seasonPhase ?? null,
+            wcStage: data.wcStage ?? null,
+          });
+        }
+      } catch {
+        // 補完に失敗しても posts 側の値だけで表示を続ける。
+      }
+    })
+  );
 
   return rows.map((row) => {
     if (!row.gameId) return row;

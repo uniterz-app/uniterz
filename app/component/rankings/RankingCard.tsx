@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback } from "react";
 import type { RankingRowWithCountry, MobileMetric } from "./_data/mockRows";
 import { metricNum } from "@/lib/rankings/metric";
 import { useRankCountUp } from "@/lib/hooks/useCountUpRanking";
@@ -14,6 +15,7 @@ import {
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -56,6 +58,7 @@ export default function RankingCard({
 }) {
   const compact = size === "compact";
   const subtleShell = shellTone === "subtle";
+  const router = useRouter();
 
   const pathname = usePathname() ?? "";
   const base = pathname.startsWith("/mobile") || pathname.startsWith("/m/")
@@ -69,6 +72,11 @@ export default function RankingCard({
     rankingLeague,
     wcStage,
   });
+
+  const warmProfileRoute = useCallback(() => {
+    primeProfileCacheFromRankingRow(profileKey, r);
+    router.prefetch(profileHref);
+  }, [profileHref, profileKey, r, router]);
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(
@@ -85,7 +93,15 @@ export default function RankingCard({
   const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
 
   return (
-    <Link href={profileHref} className="block min-w-0">
+    <Link
+      href={profileHref}
+      className="block min-w-0"
+      prefetch
+      onPointerEnter={warmProfileRoute}
+      onFocus={warmProfileRoute}
+      onTouchStart={warmProfileRoute}
+      onClick={warmProfileRoute}
+    >
       <CyberRankingListRow
         rank={rank}
         displayName={displayName}

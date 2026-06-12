@@ -146,6 +146,16 @@ function getValue(d, metric, phase) {
         return (_e = r.totalGoalScorerHits) !== null && _e !== void 0 ? _e : 0;
     return (_f = r.totalUpset) !== null && _f !== void 0 ? _f : 0;
 }
+function activeBasketballStreak(d) {
+    var _a, _b, _c, _d, _e;
+    const signed = (_e = (_d = (_c = (_a = d.activeWinStreakBasketball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.basketball) !== null && _c !== void 0 ? _c : d.currentStreak) !== null && _d !== void 0 ? _d : d.activeWinStreak) !== null && _e !== void 0 ? _e : 0;
+    return typeof signed === "number" && signed > 0 ? signed : 0;
+}
+function activeFootballStreak(d) {
+    var _a, _b, _c, _d;
+    const signed = (_d = (_c = (_a = d.activeWinStreakFootball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.football) !== null && _c !== void 0 ? _c : d.streakFootball) !== null && _d !== void 0 ? _d : 0;
+    return typeof signed === "number" && signed > 0 ? signed : 0;
+}
 function getRowMetricValue(row, metric) {
     var _a, _b, _c, _d, _e, _f;
     if (metric === "activeWinStreak")
@@ -228,6 +238,65 @@ function computeRankDeltaPlaces(prevRank, currentRank) {
         return null;
     return d;
 }
+function pickPriorMetricValues(block, opts) {
+    var _a, _b, _c, _d, _e;
+    if (!block)
+        return null;
+    if (opts.kind === "wc") {
+        return (_b = (_a = block.wc) === null || _a === void 0 ? void 0 : _a[opts.stage]) !== null && _b !== void 0 ? _b : null;
+    }
+    if (opts.kind === "round") {
+        return (_d = (_c = block.playoffRounds) === null || _c === void 0 ? void 0 : _c[opts.round]) !== null && _d !== void 0 ? _d : null;
+    }
+    return (_e = block[opts.phase]) !== null && _e !== void 0 ? _e : null;
+}
+function metricValueFromRow(row, metric) {
+    var _a, _b, _c, _d, _e, _f;
+    if (metric === "activeWinStreak")
+        return (_a = row.activeWinStreak) !== null && _a !== void 0 ? _a : 0;
+    if (metric === "totalGoalScorerHits")
+        return (_b = row.totalGoalScorerHits) !== null && _b !== void 0 ? _b : 0;
+    if (metric === "winRate")
+        return (_c = row.winRate) !== null && _c !== void 0 ? _c : 0;
+    if (metric === "totalPoints")
+        return (_d = row.totalPoints) !== null && _d !== void 0 ? _d : 0;
+    if (metric === "totalPrecision")
+        return (_e = row.totalPrecision) !== null && _e !== void 0 ? _e : 0;
+    return (_f = row.totalUpset) !== null && _f !== void 0 ? _f : 0;
+}
+function metricValueFromSnapshot(values, metric) {
+    var _a, _b, _c, _d;
+    if (metric === "activeWinStreak" || metric === "totalGoalScorerHits") {
+        return null;
+    }
+    if (metric === "winRate")
+        return (_a = values.winRate) !== null && _a !== void 0 ? _a : 0;
+    if (metric === "totalPoints")
+        return (_b = values.totalPoints) !== null && _b !== void 0 ? _b : 0;
+    if (metric === "totalPrecision")
+        return (_c = values.totalPrecision) !== null && _c !== void 0 ? _c : 0;
+    return (_d = values.totalUpset) !== null && _d !== void 0 ? _d : 0;
+}
+function computeMetricValueDelta(row, metric, prior) {
+    if (!prior)
+        return null;
+    const curRaw = metricValueFromRow(row, metric);
+    const prevRaw = metricValueFromSnapshot(prior, metric);
+    if (curRaw == null || prevRaw == null)
+        return null;
+    if (metric === "winRate") {
+        const curPct = curRaw <= 1 ? curRaw * 100 : curRaw;
+        const prevPct = prevRaw <= 1 ? prevRaw * 100 : prevRaw;
+        const d = curPct - prevPct;
+        if (!Number.isFinite(d) || Math.abs(d) < 1e-9)
+            return null;
+        return d;
+    }
+    const d = curRaw - prevRaw;
+    if (!Number.isFinite(d) || Math.abs(d) < 1e-9)
+        return null;
+    return d;
+}
 /**
  * For each uid, use the first existing rankSnapshotHistory doc when walking back
  * from startKey (usually yesterday) up to maxLookbackDays days.
@@ -274,11 +343,49 @@ async function fetchLatestPriorRankMapsForUids(uids, startKey, maxLookbackDays) 
     }
     return out;
 }
+async function fetchLatestPriorMetricValuesForUids(uids, startKey, maxLookbackDays) {
+    const out = new Map();
+    if (uids.length === 0)
+        return out;
+    const pending = new Set(uids);
+    let key = startKey;
+    const firestore = db();
+    const CHUNK = 200;
+    for (let day = 0; day < maxLookbackDays && pending.size > 0; day++) {
+        const chunkList = [...pending];
+        for (let i = 0; i < chunkList.length; i += CHUNK) {
+            const chunk = chunkList.slice(i, i + CHUNK);
+            const refs = chunk.map((uid) => firestore
+                .collection("cumulative_stats")
+                .doc(uid)
+                .collection(exports.RANK_SNAPSHOT_HISTORY_SUBCOL)
+                .doc(key));
+            const snaps = await firestore.getAll(...refs);
+            snaps.forEach((s, j) => {
+                const uid = chunk[j];
+                if (!pending.has(uid))
+                    return;
+                if (s.exists) {
+                    const d = s.data();
+                    if (d === null || d === void 0 ? void 0 : d.metricValues) {
+                        out.set(uid, d.metricValues);
+                        pending.delete(uid);
+                    }
+                }
+            });
+        }
+        key = subtractOneDayFromDateKeyJST(key);
+    }
+    for (const uid of pending) {
+        out.set(uid, null);
+    }
+    return out;
+}
 async function loadPlayoffRoundTop20RowsLive(round, metric) {
     const snap = await db().collection("cumulative_stats").get();
     const baseRows = snap.docs
         .map((doc) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         const d = doc.data();
         const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
         const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -297,7 +404,7 @@ async function loadPlayoffRoundTop20RowsLive(round, metric) {
             totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
             totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
             totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
-            activeWinStreak: (_o = d.activeWinStreak) !== null && _o !== void 0 ? _o : 0,
+            activeWinStreak: activeBasketballStreak(d),
         };
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -321,7 +428,7 @@ async function loadWcStageTop20RowsLive(stage, metric) {
     const snap = await db().collection("cumulative_stats").get();
     const baseRows = snap.docs
         .map((doc) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         const d = doc.data();
         const rr = (_a = d.rankingByWcStage) === null || _a === void 0 ? void 0 : _a[stage];
         const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -340,7 +447,7 @@ async function loadWcStageTop20RowsLive(stage, metric) {
             totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
             totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
             totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
-            activeWinStreak: (_p = (_o = d.streakFootball) !== null && _o !== void 0 ? _o : d.activeWinStreak) !== null && _p !== void 0 ? _p : 0,
+            activeWinStreak: activeFootballStreak(d),
         };
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -375,7 +482,7 @@ async function buildCumulativeRankingSnapshot() {
     for (const phase of exports.SNAPSHOT_BUILD_PHASES) {
         const baseRows = snap.docs
             .map((doc) => {
-            var _a, _b, _c, _d, _e;
+            var _a, _b, _c, _d;
             const d = doc.data();
             const r = rankingSlice(d, phase);
             return {
@@ -392,7 +499,7 @@ async function buildCumulativeRankingSnapshot() {
                 totalPrecision: r.totalPrecision,
                 totalUpset: r.totalUpset,
                 totalGoalScorerHits: 0,
-                activeWinStreak: (_e = d.activeWinStreak) !== null && _e !== void 0 ? _e : 0,
+                activeWinStreak: activeBasketballStreak(d),
             };
         })
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -431,7 +538,7 @@ async function buildCumulativeRankingSnapshot() {
     for (const round of PLAYOFF_ROUND_KEYS) {
         const baseRows = snap.docs
             .map((doc) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
             const d = doc.data();
             const rr = (_a = d.rankingByPlayoffRound) === null || _a === void 0 ? void 0 : _a[round];
             const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -450,7 +557,7 @@ async function buildCumulativeRankingSnapshot() {
                 totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
                 totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
                 totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
-                activeWinStreak: (_o = d.activeWinStreak) !== null && _o !== void 0 ? _o : 0,
+                activeWinStreak: activeBasketballStreak(d),
             };
         })
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -492,7 +599,7 @@ async function buildCumulativeRankingSnapshot() {
     for (const stage of WC_RANKING_STAGES) {
         const baseRows = snap.docs
             .map((doc) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
             const d = doc.data();
             const rr = (_a = d.rankingByWcStage) === null || _a === void 0 ? void 0 : _a[stage];
             const tp = (_b = rr === null || rr === void 0 ? void 0 : rr.totalPosts) !== null && _b !== void 0 ? _b : 0;
@@ -511,7 +618,7 @@ async function buildCumulativeRankingSnapshot() {
                 totalPrecision: (_k = rr === null || rr === void 0 ? void 0 : rr.totalPrecision) !== null && _k !== void 0 ? _k : 0,
                 totalUpset: (_l = rr === null || rr === void 0 ? void 0 : rr.totalUpset) !== null && _l !== void 0 ? _l : 0,
                 totalGoalScorerHits: (_m = rr === null || rr === void 0 ? void 0 : rr.totalGoalScorerHits) !== null && _m !== void 0 ? _m : 0,
-                activeWinStreak: (_p = (_o = d.streakFootball) !== null && _o !== void 0 ? _o : d.activeWinStreak) !== null && _p !== void 0 ? _p : 0,
+                activeWinStreak: activeFootballStreak(d),
             };
         })
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
@@ -543,7 +650,11 @@ async function buildCumulativeRankingSnapshot() {
         }
     }
     const yesterdayKey = getYesterdayDateKeyJST();
-    const prevByUid = await fetchLatestPriorRankMapsForUids([...topUidSet], yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS);
+    const topUids = [...topUidSet];
+    const [prevByUid, priorMetricByUid] = await Promise.all([
+        fetchLatestPriorRankMapsForUids(topUids, yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS),
+        fetchLatestPriorMetricValuesForUids(topUids, yesterdayKey, exports.RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS),
+    ]);
     for (const { phase, metric, rows, totalCount } of top20Jobs) {
         const enriched = rows.map((row) => {
             var _a;
@@ -554,7 +665,8 @@ async function buildCumulativeRankingSnapshot() {
                 prevRaw >= 1
                 ? Math.floor(prevRaw)
                 : null;
-            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank) });
+            const priorMetrics = pickPriorMetricValues(priorMetricByUid.get(row.uid), { kind: "phase", phase });
+            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank), metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics) });
         });
         await db()
             .collection("cumulative_ranking_snapshots")
@@ -578,7 +690,8 @@ async function buildCumulativeRankingSnapshot() {
                 prevRaw >= 1
                 ? Math.floor(prevRaw)
                 : null;
-            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank) });
+            const priorMetrics = pickPriorMetricValues(priorMetricByUid.get(row.uid), { kind: "round", round });
+            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank), metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics) });
         });
         await db()
             .collection("cumulative_ranking_snapshots")
@@ -603,7 +716,8 @@ async function buildCumulativeRankingSnapshot() {
                 prevRaw >= 1
                 ? Math.floor(prevRaw)
                 : null;
-            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank) });
+            const priorMetrics = pickPriorMetricValues(priorMetricByUid.get(row.uid), { kind: "wc", stage });
+            return Object.assign(Object.assign({}, row), { rankDeltaPlaces: computeRankDeltaPlaces(prevRank, row.rank), metricValueDelta: computeMetricValueDelta(row, metric, priorMetrics) });
         });
         await db()
             .collection("cumulative_ranking_snapshots")

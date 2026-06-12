@@ -9,6 +9,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
+import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 import { resolveProfileDailyTrendContext } from "@/lib/profile/userStatsV2ProfileRollup";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -71,11 +72,21 @@ export function useUserStatsDailyTrend(
         let bucket: Record<string, unknown>;
         if (trendCtx.rankingLeague === "worldcup") {
           const stage = trendCtx.wcStage ?? "overall";
-          const byWc = (d.rankingByWcStage ?? {}) as Record<
+          const stageBucket = readDailyWcStageBucket(d, stage);
+          const leagues = (d.leagues ?? {}) as Record<
             string,
             Record<string, unknown>
           >;
-          bucket = (byWc[stage] ?? byWc.overall ?? {}) as Record<string, unknown>;
+          const stagePosts = Number(stageBucket.posts ?? 0);
+          bucket = (
+            (stagePosts > 0
+              ? stageBucket
+              : stage !== "overall"
+                ? readDailyWcStageBucket(d, "overall")
+                : null) ??
+            (stage === "overall" ? leagues.wc : null) ??
+            {}
+          ) as Record<string, unknown>;
         } else {
           const byPhase = (d.rankingByPhase ?? {}) as Record<
             string,

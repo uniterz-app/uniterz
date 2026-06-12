@@ -101,47 +101,6 @@ const LEAGUES = ["bj", "j1", "nba", "pl", "wc"] as const;
  * Utils
  * =======================================================*/
 
-function wcIncrementAtPath(
-  pathPrefix: string,
-  o: {
-    isWin: boolean;
-    scoreError: number;
-    scorePrecision: number;
-    hadUpsetGame: boolean;
-    points: number;
-    upsetHit: boolean;
-    upsetPoints: number;
-    upsetBonus: number;
-    streakBonus: number;
-    goalScorerBonus: number;
-    goalScorerHit: boolean;
-  }
-): Record<string, unknown> {
-  return {
-    [`${pathPrefix}.posts`]: FieldValue.increment(1),
-    [`${pathPrefix}.wins`]: FieldValue.increment(o.isWin ? 1 : 0),
-    [`${pathPrefix}.scoreErrorSum`]: FieldValue.increment(o.scoreError),
-    [`${pathPrefix}.upsetOpportunityCount`]: FieldValue.increment(
-      o.hadUpsetGame ? 1 : 0
-    ),
-    [`${pathPrefix}.upsetHitCount`]: FieldValue.increment(o.upsetHit ? 1 : 0),
-    [`${pathPrefix}.upsetPickCount`]: FieldValue.increment(
-      o.hadUpsetGame ? 1 : 0
-    ),
-    [`${pathPrefix}.scorePrecisionSum`]: FieldValue.increment(o.scorePrecision),
-    [`${pathPrefix}.pointsSumV3`]: FieldValue.increment(o.points),
-    [`${pathPrefix}.upsetPointsSum`]: FieldValue.increment(o.upsetPoints),
-    [`${pathPrefix}.upsetBonusSum`]: FieldValue.increment(o.upsetBonus),
-    [`${pathPrefix}.streakBonusSum`]: FieldValue.increment(o.streakBonus),
-    [`${pathPrefix}.goalScorerHitCount`]: FieldValue.increment(
-      o.goalScorerHit ? 1 : 0
-    ),
-    [`${pathPrefix}.goalScorerBonusSum`]: FieldValue.increment(
-      o.goalScorerBonus
-    ),
-  };
-}
-
 function toDateKeyJST(ts: Timestamp) {
   const d = ts.toDate();
   const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
@@ -172,30 +131,6 @@ function uniqueGameTeamIds(
     .map((v) => (typeof v === "string" ? v.trim() : ""))
     .filter(Boolean);
   return [...new Set(ids)];
-}
-
-function teamIncrementAtPath(
-  teamId: string,
-  o: {
-    isWin: boolean;
-    scoreError: number;
-    scorePrecision: number;
-    hadUpsetGame: boolean;
-    points: number;
-    upsetHit: boolean;
-    upsetPoints: number;
-    upsetBonus: number;
-    streakBonus: number;
-    goalScorerBonus?: number;
-    goalScorerHit?: boolean;
-  }
-): Record<string, unknown> {
-  const prefix = `teams.${teamId}`;
-  return wcIncrementAtPath(prefix, {
-    ...o,
-    goalScorerBonus: o.goalScorerBonus ?? 0,
-    goalScorerHit: o.goalScorerHit ?? false,
-  });
 }
 
 /* =========================================================
@@ -322,31 +257,12 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
         : {}),
     };
 
-    const wcOpts = {
-      isWin,
-      scoreError,
-      scorePrecision,
-      hadUpsetGame,
-      points,
-      upsetHit,
-      upsetPoints,
-      upsetBonus,
-      streakBonus,
-      goalScorerBonus,
-      goalScorerHit,
-    };
-
     if (forRanking && leagueKey === "wc") {
-      Object.assign(
-        update,
-        wcIncrementAtPath("rankingByWcStage.overall", wcOpts),
-        wcStage === "qualifying"
-          ? wcIncrementAtPath("rankingByWcStage.qualifying", wcOpts)
-          : {},
-        wcStage === "main"
-          ? wcIncrementAtPath("rankingByWcStage.main", wcOpts)
-          : {}
-      );
+      update.rankingByWcStage = {
+        overall: inc,
+        ...(wcStage === "qualifying" ? { qualifying: inc } : {}),
+        ...(wcStage === "main" ? { main: inc } : {}),
+      };
     }
 
     if (leagueKey) {
@@ -370,22 +286,12 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
     const gameTeamIds = uniqueGameTeamIds(homeTeamId, awayTeamId);
     if (forRanking && gameTeamIds.length > 0) {
-      const teamOpts = {
-        isWin,
-        scoreError,
-        scorePrecision,
-        hadUpsetGame,
-        points,
-        upsetHit,
-        upsetPoints,
-        upsetBonus,
-        streakBonus,
-        goalScorerBonus,
-        goalScorerHit,
+      update.teams = {
+        ...(update.teams ?? {}),
+        ...Object.fromEntries(
+          gameTeamIds.map((teamId) => [teamId, inc])
+        ),
       };
-      for (const teamId of gameTeamIds) {
-        Object.assign(update, teamIncrementAtPath(teamId, teamOpts));
-      }
     }
 
     tx.set(dailyRef, update, { merge: true });

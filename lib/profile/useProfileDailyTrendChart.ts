@@ -26,9 +26,8 @@ export function useProfileDailyTrendChart(
     options?.wcStage
   );
   const seedRows = options?.seedRows;
-  /** WC は API ウィンドウキャッシュ（NBA 合算）の seed を使わない */
+  /** user-stats API は league/wcStage 済みの rows を返すため、seed を優先する */
   const useSeed =
-    trendCtx.rankingLeague !== "worldcup" &&
     Array.isArray(seedRows) &&
     seedRows.length > 0 &&
     enabled;

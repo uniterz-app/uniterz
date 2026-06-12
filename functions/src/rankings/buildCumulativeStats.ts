@@ -1,6 +1,10 @@
 // functions/src/rankings/buildCumulativeStats.ts
 
 import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
+import {
+  readDailyWcStageBuckets,
+  WC_RANKING_STAGES,
+} from "./dailyWcStageBuckets";
 
 function db() {
   return getFirestore();
@@ -79,7 +83,9 @@ export async function buildCumulativeStats() {
     const statsRanking = data.ranking ?? data.all;
     const statsByPhase = data.rankingByPhase ?? {};
     const statsByPlayoffRound = data.rankingByPlayoffRound ?? {};
-    const statsByWcStage = data.rankingByWcStage ?? {};
+    const statsByWcStage = readDailyWcStageBuckets(
+      data as Record<string, unknown>
+    );
 
     const cumulativeRef = firestore.doc(`cumulative_stats/${uid}`);
     const userRef = firestore.doc(`users/${uid}`);
@@ -252,11 +258,10 @@ export async function buildCumulativeStats() {
       /* =========================
        * World Cup ステージ別（overall / qualifying / main）
        * =======================*/
-      const WC_STAGES = ["overall", "qualifying", "main"] as const;
       const prevByWc = (cumulativeSnap.get("rankingByWcStage") ??
         {}) as Record<string, RankingTotals | undefined>;
       const nextByWc: Record<string, RankingTotals> = {};
-      for (const wk of WC_STAGES) {
+      for (const wk of WC_RANKING_STAGES) {
         const prevW = prevByWc[wk] ?? {
           totalPosts: 0,
           totalWins: 0,
@@ -267,13 +272,17 @@ export async function buildCumulativeStats() {
           winRate: 0,
         };
         const src = statsByWcStage[wk];
+        const num = (v: unknown) => {
+          const n = typeof v === "number" ? v : Number(v);
+          return Number.isFinite(n) ? n : 0;
+        };
         const nextWRaw = addRankingTotals(prevW, {
-          posts: src?.posts ?? 0,
-          wins: src?.wins ?? 0,
-          pointsSumV3: src?.pointsSumV3 ?? 0,
-          upsetPointsSum: src?.upsetPointsSum ?? 0,
-          scorePrecisionSum: src?.scorePrecisionSum ?? 0,
-          goalScorerHitCount: src?.goalScorerHitCount ?? 0,
+          posts: num(src?.posts),
+          wins: num(src?.wins),
+          pointsSumV3: num(src?.pointsSumV3),
+          upsetPointsSum: num(src?.upsetPointsSum),
+          scorePrecisionSum: num(src?.scorePrecisionSum),
+          goalScorerHitCount: num(src?.goalScorerHitCount),
         });
         nextByWc[wk] = {
           ...nextWRaw,

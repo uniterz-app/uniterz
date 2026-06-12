@@ -17,6 +17,7 @@ type Props = {
   metric: MobileMetric;
   setMetric: (v: MobileMetric) => void;
   language?: Language;
+  gridColumns?: 3;
   /** @deprecated モバイルも斜めタブに統一 */
   compactMobile?: boolean;
 };
@@ -31,6 +32,7 @@ export default function RankingsMetricRow({
   metric,
   setMetric,
   language = "ja",
+  gridColumns,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const msgs = t(language);
@@ -50,7 +52,11 @@ export default function RankingsMetricRow({
             }
       }
     >
-      <CyberSlantedTabBar fill aria-label={msgs.rankings.metricTabsLabel}>
+      <CyberSlantedTabBar
+        fill
+        gridColumns={gridColumns}
+        aria-label={msgs.rankings.metricTabsLabel}
+      >
         {metrics.map((item) => (
           <CyberSlantedTab
             key={item.key}

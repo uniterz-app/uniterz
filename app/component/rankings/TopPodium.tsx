@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Crown } from "lucide-react";
 import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
 import { metricNum } from "@/lib/rankings/metric";
@@ -18,6 +18,7 @@ import {
 import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
+import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -53,6 +54,7 @@ export default function TopPodium({
   shellTone?: "default" | "subtle";
 }) {
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
   const cardVariants = useMemo<Variants>(
     () => ({
       hidden: {
@@ -110,15 +112,23 @@ export default function TopPodium({
   const metricTag = cyberMetricTag(metric, language);
   const isWebList = base === "/web" && !compact;
   const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
+  const warmProfileRoute = useCallback(
+    (profileKey: string, row: RankingRowWithCountry, href: string) => {
+      primeProfileCacheFromRankingRow(profileKey, row);
+      router.prefetch(href);
+    },
+    [router]
+  );
 
   return (
     <div className="pt-3 pb-0">
       <div className="flex flex-col">
         {topRows.map(({ rank, row, value }) => {
+          const profileKey = profilePathKeyFromRow(row);
           const profileHref = profileHrefWithRankingsReturn(
             pathname,
             base,
-            profilePathKeyFromRow(row),
+            profileKey,
             {
               metric,
               phase: phaseForReturn,
@@ -136,7 +146,19 @@ export default function TopPodium({
               animate="show"
               custom={rank - 1}
             >
-              <Link href={profileHref} className="relative block">
+              <Link
+                href={profileHref}
+                className="relative block"
+                prefetch
+                onPointerEnter={() =>
+                  warmProfileRoute(profileKey, row, profileHref)
+                }
+                onFocus={() => warmProfileRoute(profileKey, row, profileHref)}
+                onTouchStart={() =>
+                  warmProfileRoute(profileKey, row, profileHref)
+                }
+                onClick={() => warmProfileRoute(profileKey, row, profileHref)}
+              >
                 <CyberRankingListRow
                   rank={rank}
                   displayName={row.displayName ?? row.handle ?? "Unknown"}
@@ -157,7 +179,7 @@ export default function TopPodium({
                   showCrownSlot={
                     rank === 1 ? (
                       <motion.div
-                        className="pointer-events-none absolute -top-2 left-1 z-40"
+                        className="pointer-events-none leading-none"
                         initial={
                           reduceMotion
                             ? { opacity: 1, y: 0, scale: 1 }
@@ -175,7 +197,11 @@ export default function TopPodium({
                         }
                       >
                         <Crown
-                          className="h-[16px] w-[22px] text-[#F4C542] lg:h-[19px] lg:w-[26px]"
+                          className={
+                            compact
+                              ? "h-[12px] w-[17px] text-[#F4C542]"
+                              : "h-[14px] w-[20px] text-[#F4C542] sm:h-[16px] sm:w-[22px]"
+                          }
                           fill="currentColor"
                           stroke="currentColor"
                           strokeWidth={1.7}

@@ -199,6 +199,8 @@ export async function updateUserStreak({
               : 0;
 
         const currentForSport = sportKey === "football" ? curF : curB;
+        const activeWinStreakBasketball = curB > 0 ? curB : 0;
+        const activeWinStreakFootball = curF > 0 ? curF : 0;
 
         tx.set(
           userRef,
@@ -235,6 +237,8 @@ export async function updateUserStreak({
             currentStreak: curB,
             streakFootball: curF,
             activeWinStreak,
+            activeWinStreakBasketball,
+            activeWinStreakFootball,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }

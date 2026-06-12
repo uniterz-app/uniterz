@@ -21,6 +21,7 @@ import RankingsDrawerMenu from "@/app/component/rankings/RankingsDrawerMenu";
 import PlayoffRoundTabs from "@/app/component/rankings/PlayoffRoundTabs";
 import WcRankingStageTabs from "@/app/component/rankings/WcRankingStageTabs";
 import RankingsCategoryTabs from "@/app/component/rankings/RankingsCategoryTabs";
+import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import Header from "@/app/component/Header";
 import { useRankingSessionUser } from "@/lib/rankings/useRankingSessionUser";
 import { useWebRankings } from "../_lib/useWebRankings";
@@ -57,6 +58,7 @@ import {
   getMyMetricValue,
 } from "@/lib/rankings/rankingsPageShared";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
+import { useProgressiveRenderCount } from "@/lib/hooks/useProgressiveRenderCount";
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
@@ -64,7 +66,7 @@ export default function WebRankingsShell() {
   const [rankingsDrawerOpen, setRankingsDrawerOpen] = useState(false);
   const [category, setCategory] = useState<RankingsCategory>("playoffs");
   const [rankingLeague, setRankingLeague] =
-    useState<RankingLeagueSource>("nba");
+    useState<RankingLeagueSource>("worldcup");
   const phase: RankingPhase = "playoffs";
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
@@ -218,7 +220,14 @@ export default function WebRankingsShell() {
     rankingLeague,
     wcStage,
   });
-  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
+  const { handleTopCountDone } = useRankingsTopDone(pageKey);
+  const visibleRestCount = useProgressiveRenderCount(
+    restRows.length,
+    pageKey,
+    24,
+    24
+  );
+  const visibleRestRows = restRows.slice(0, visibleRestCount);
 
   return (
     <div className="relative z-10 min-h-full w-full overflow-x-hidden">
@@ -236,16 +245,17 @@ export default function WebRankingsShell() {
           >
             <Menu className="h-4 w-4" strokeWidth={2.25} />
           </button>
-          <span
-            className={[
-              nameBebas.className,
-              "min-w-0 flex-1 text-center text-[15px] tracking-[0.28em] text-white/90 sm:text-base",
-            ].join(" ")}
-          >
-            {rankingLeague === "worldcup"
-              ? m.rankings.pageTitleWorldCup
-              : m.rankings.pageTitleRankings}
-          </span>
+          <div className="flex min-w-0 flex-1 justify-center">
+            <RankingsPageTitleCyber
+              variant="horizon-chrome"
+              title={
+                rankingLeague === "worldcup"
+                  ? m.rankings.pageTitleWorldCup
+                  : m.rankings.pageTitleRankings
+              }
+              size="sm"
+            />
+          </div>
           <RankingsScheduleNotice
             phase={phase}
             language={language}
@@ -305,6 +315,7 @@ export default function WebRankingsShell() {
               barsReady={cardBarsReady}
               cardResetKey={pageKey}
               leagueLabel={rankingLeague === "worldcup" ? "WORLD CUP" : "NBA"}
+              statsSource={myStatsRow}
             />
           ) : null}
         </div>
@@ -316,6 +327,7 @@ export default function WebRankingsShell() {
               metric={metric}
               setMetric={setMetric}
               language={language}
+              gridColumns={rankingLeague === "worldcup" ? 3 : undefined}
             />
             {metric === "winRate" && (
               <p className="px-1 text-xs leading-5 text-white/60">
@@ -371,11 +383,11 @@ export default function WebRankingsShell() {
                 className="pb-bottom-nav"
                 variants={restContainer}
                 initial="hidden"
-                animate={topDone ? "show" : "hidden"}
-                style={{ opacity: topDone ? 1 : 0.35 }}
+                animate="show"
+                style={{ opacity: 1 }}
               >
                 {restRows.length > 0 &&
-                  restRows.map((r, i) => (
+                  visibleRestRows.map((r, i) => (
                     <motion.div
                       key={`${metric}-${r.uid}`}
                       variants={restItem}
@@ -390,6 +402,7 @@ export default function WebRankingsShell() {
                         rankingLeague={rankingLeague}
                         wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                         language={language}
+                        animateValue={i < 12}
                       />
                     </motion.div>
                   ))}
