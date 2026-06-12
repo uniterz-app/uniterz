@@ -42,6 +42,7 @@ import {
 } from "./cyberMotion";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
+import type { Language } from "@/lib/i18n/language";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 import { t } from "@/lib/i18n/t";
 
@@ -180,6 +181,8 @@ homeRecord?: {
   userPredictionWinner?: "home" | "away" | "draw" | null;
   /** 統合カード右上：キックオフ前の予想修正（オーバーレイ等） */
   onRequestPredictEdit?: (post: PredictionPostV2) => void;
+  /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
+  language?: Language;
 };
 
 
@@ -292,7 +295,7 @@ function broadcastNameUsesCjk(label: string): boolean {
   return /[\u3040-\u30ff\u4e00-\u9fff]/.test(label);
 }
 
-function MatchCard({
+function MatchCardView({
   id,
   league,
   venue,
@@ -333,11 +336,11 @@ function MatchCard({
   resultRatingBarsImmediate = false,
   userPredictionWinner = null,
   onRequestPredictEdit,
-}: MatchCardProps) {
+  language,
+}: MatchCardProps & { language: Language }) {
   const router = useRouter();
 
   const { fUser: user } = useFirebaseUser();
-  const { language } = useUserLanguage(user?.uid ?? null);
   const m = t(language);
   const displayTimeZone = language === "en" ? TIMEZONE_ET : TIMEZONE_JST;
 
@@ -2058,6 +2061,7 @@ return (
             league={league}
             status={status}
             score={score}
+            language={language}
             fallbackMarketBias={marketBias}
             homeColor={homeColor}
             awayColor={awayColor}
@@ -2229,4 +2233,18 @@ return (
     </Shell>
   );
 }
+
+function MatchCardWithUserLanguage(props: MatchCardProps) {
+  const { fUser: user } = useFirebaseUser();
+  const { language } = useUserLanguage(user?.uid ?? null);
+  return <MatchCardView {...props} language={language} />;
+}
+
+function MatchCard(props: MatchCardProps) {
+  if (props.language != null) {
+    return <MatchCardView {...props} language={props.language} />;
+  }
+  return <MatchCardWithUserLanguage {...props} />;
+}
+
 export default React.memo(MatchCard);

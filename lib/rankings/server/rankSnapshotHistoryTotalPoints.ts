@@ -1,7 +1,7 @@
-import { getAdminDb } from "@/lib/firebaseAdmin";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
+import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 
 type HistoryDoc = {
   play_in?: Record<string, unknown>;
@@ -13,29 +13,22 @@ type HistoryDoc = {
  * cumulative_stats/{uid}/rankSnapshotHistory から totalPoints 順位（最新日・前日）を読む。
  * プレーオフ通算は playoffs、ラウンド別は playoffRounds.{round}.totalPoints。
  *
- * 日付キー（YYYY-MM-DD）の doc を全件取得してソート（orderBy インデックス不要）。
+ * 最新 2 件の snapshot doc のみ遡って読む（サブコレクション全件 get を避ける）。
  */
 export async function loadSnapshotTotalPointsRankAndDelta(
   uid: string,
   phase: RankingPhase,
   round: PlayoffRoundKey
 ): Promise<{ latestRank: number | null; deltaPlaces: number | null }> {
-  const adminDb = getAdminDb();
-  const snap = await adminDb
-    .collection("cumulative_stats")
-    .doc(uid)
-    .collection("rankSnapshotHistory")
-    .get();
+  const sorted = await loadRankSnapshotHistoryDocsWalkBack(uid, { maxDocs: 2 });
+  if (sorted.length === 0) return { latestRank: null, deltaPlaces: null };
 
-  if (snap.empty) return { latestRank: null, deltaPlaces: null };
-
-  const sorted = [...snap.docs].sort((a, b) => a.id.localeCompare(b.id));
   const latest = sorted[sorted.length - 1];
   const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
   if (!latest) return { latestRank: null, deltaPlaces: null };
 
-  const latestData = latest.data() as HistoryDoc | undefined;
-  const prevData = prev?.data() as HistoryDoc | undefined;
+  const latestData = latest.data as HistoryDoc | undefined;
+  const prevData = prev?.data as HistoryDoc | undefined;
 
   let latestRankRaw: unknown;
   let prevRankRaw: unknown;

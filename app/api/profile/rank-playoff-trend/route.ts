@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { resolveUidByHandleCached } from "@/lib/profile/resolveUidByHandleCached";
+import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
@@ -88,23 +89,14 @@ export async function GET(req: Request) {
       );
     }
 
-    const snap = await adminDb
-      .collection("cumulative_stats")
-      .doc(resolvedUid)
-      .collection("rankSnapshotHistory")
-      .get();
-
-    const sortedDocs = [...snap.docs].sort((a, b) =>
-      a.id.localeCompare(b.id)
-    );
-    const recentDocs =
-      sortedDocs.length > MAX_POINTS
-        ? sortedDocs.slice(-MAX_POINTS)
-        : sortedDocs;
+    const historyDocs = await loadRankSnapshotHistoryDocsWalkBack(resolvedUid, {
+      maxDocs: MAX_POINTS,
+      maxLookbackDays: 90,
+    });
 
     const points: RankPlayoffTrendPoint[] = [];
-    recentDocs.forEach((d) => {
-      const data = d.data() as HistoryDoc;
+    historyDocs.forEach((d) => {
+      const data = d.data as HistoryDoc;
       const rank = rankFromHistoryDoc(data, {
         rankingLeague,
         phase,

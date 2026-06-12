@@ -65,18 +65,24 @@ export default function RankingCard({
     ? "/mobile"
     : "/web";
   const profileKey = profilePathKeyFromRow(r);
+  const statsLeague = rankingLeague ?? "worldcup";
+  const statsContext = {
+    rankingLeague: statsLeague,
+    wcStage:
+      statsLeague === "worldcup" ? (wcStage ?? ("overall" as const)) : undefined,
+  };
   const profileHref = profileHrefWithRankingsReturn(pathname, base, profileKey, {
     metric,
     phase: rankPhase ?? "playoffs",
     playoffRound,
-    rankingLeague,
-    wcStage,
+    rankingLeague: statsLeague,
+    wcStage: statsContext.wcStage,
   });
 
   const warmProfileRoute = useCallback(() => {
-    primeProfileCacheFromRankingRow(profileKey, r);
+    primeProfileCacheFromRankingRow(profileKey, r, statsContext);
     router.prefetch(profileHref);
-  }, [profileHref, profileKey, r, router]);
+  }, [profileHref, profileKey, r, router, statsContext]);
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(

@@ -21,6 +21,7 @@ type Props = {
   gateReady?: boolean;
   onDisplayReadyChange?: (ok: boolean) => void;
   shape?: "circle" | "square";
+  imageLoading?: "lazy" | "eager";
 };
 
 /**
@@ -34,6 +35,7 @@ export function RankingsAvatarCircle({
   gateReady = true,
   onDisplayReadyChange,
   shape = "circle",
+  imageLoading = "eager",
 }: Props) {
   const useLetter = shouldUseInitialLetter(displayName);
   const initial = (displayName?.slice(0, 1) ?? "?").toUpperCase();
@@ -97,7 +99,7 @@ export function RankingsAvatarCircle({
             "h-full w-full object-cover",
             imgLoaded ? "opacity-100" : "opacity-0",
           ].join(" ")}
-          loading="eager"
+          loading={imageLoading}
           decoding="async"
           onLoad={() => setImgLoaded(true)}
         />

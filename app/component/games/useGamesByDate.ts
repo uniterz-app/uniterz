@@ -216,9 +216,7 @@ export function useGamesByDate(
           ...d.data(),
         }));
 
-        if (rows.length > 0) {
-          gamesByDayCache.set(cacheKey, { games: rows, savedAt: Date.now() });
-        }
+        gamesByDayCache.set(cacheKey, { games: rows, savedAt: Date.now() });
         setGames(rows);
         setLoading(false);
       } catch (e: any) {

@@ -1,7 +1,11 @@
 // app/component/profile/useProfile.ts
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { prefetchProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
+import { primeProfileStatsFromRankingRow } from "./useUserStatsV2";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -90,7 +94,11 @@ function writeProfileCache(
 
 export function primeProfileCacheFromRankingRow(
   routeKey: string,
-  row: RankingRowWithCountry
+  row: RankingRowWithCountry,
+  statsContext?: {
+    rankingLeague: RankingLeagueSource;
+    wcStage?: WcRankingStage;
+  }
 ) {
   const uid = typeof row.uid === "string" ? row.uid.trim() : "";
   const handle = typeof row.handle === "string" ? row.handle.trim() : "";
@@ -113,6 +121,11 @@ export function primeProfileCacheFromRankingRow(
       plan: row.plan === "pro" ? "pro" : "free",
     },
   });
+
+  if (uid && statsContext) {
+    primeProfileStatsFromRankingRow(uid, row, statsContext);
+    prefetchProfileSettledTodayResults(uid, statsContext);
+  }
 }
 
 async function fetchUserDocByRouteKey(
@@ -155,18 +168,20 @@ export function useProfile(handle: string) {
     return cached ?? initialLoadState;
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
+  useLayoutEffect(() => {
     const cached = readProfileCache(decodedHandle);
     if (cached) {
       setState(cached);
-    } else {
-      setState({
-        ...initialLoadState,
-        loading: true,
-      });
+      return;
     }
+    setState({
+      ...initialLoadState,
+      loading: true,
+    });
+  }, [decodedHandle]);
+
+  useEffect(() => {
+    let cancelled = false;
 
     (async () => {
       try {

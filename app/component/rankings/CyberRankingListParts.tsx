@@ -397,6 +397,7 @@ export function CyberRankingListRow({
             <RankingsAvatarCircle
               photoURL={photoURL}
               displayName={displayName}
+              imageLoading="lazy"
               boxClassName="h-full w-full rounded-sm"
               initialTextClassName={
                 nameJa

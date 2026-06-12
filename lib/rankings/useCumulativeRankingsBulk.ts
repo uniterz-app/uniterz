@@ -24,7 +24,11 @@ const REFETCH_ALL_METRICS_NBA =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
 const REFETCH_ALL_METRICS_WC =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
-const INITIAL_RANKING_METRICS = "totalPoints,totalPrecision,totalUpset";
+const INITIAL_RANKING_METRICS = "totalPoints";
+const DEFERRED_RANKING_METRICS = [
+  "totalPrecision",
+  "totalUpset",
+] as const;
 
 function refetchAllMetrics(wcStage: WcRankingStage | null): string {
   return wcStage ? REFETCH_ALL_METRICS_WC : REFETCH_ALL_METRICS_NBA;
@@ -198,7 +202,7 @@ async function fetchBulkMetrics(
   if (wcStage) params.set("wcStage", wcStage);
   if (uid) params.set("uid", uid);
   const res = await fetch(`/api/cumulative-ranking/bulk?${params.toString()}`, {
-    cache: uid ? "no-store" : "default",
+    cache: "default",
   });
   const json = await res.json();
   if (!json?.ok || !json?.byMetric) return null;
@@ -520,6 +524,35 @@ export function useCumulativeRankingsBulk(
   );
 
   const listReady = byMetric?.totalPoints != null;
+
+  useEffect(() => {
+    if (!listReady || loading) return;
+
+    let cancelled = false;
+    const loadDeferred = () => {
+      if (cancelled) return;
+      for (const metric of DEFERRED_RANKING_METRICS) {
+        void ensureMetric(metric);
+      }
+    };
+
+    let idleId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    if (typeof requestIdleCallback !== "undefined") {
+      idleId = requestIdleCallback(loadDeferred, { timeout: 2500 });
+    } else {
+      timeoutId = setTimeout(loadDeferred, 1200);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId != null && typeof cancelIdleCallback !== "undefined") {
+        cancelIdleCallback(idleId);
+      }
+      if (timeoutId != null) clearTimeout(timeoutId);
+    };
+  }, [listReady, loading, ensureMetric, phase, round, wcStage]);
   const personalPending =
     myUid != null &&
     appliedTotalPointsUid != null &&

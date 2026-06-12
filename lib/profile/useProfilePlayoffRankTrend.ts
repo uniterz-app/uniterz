@@ -25,6 +25,20 @@ function shortLabelFromDateKey(dateKey: string): string {
 /** プレーイン終了後は日次スナップショットが止まるため、推移はプレーオフを表示 */
 const RANK_TREND_PHASE = "playoffs" as const;
 
+const RANK_TREND_CACHE_TTL_MS = 5 * 60 * 1000;
+const rankTrendCache = new Map<
+  string,
+  { at: number; points: PlayoffRankTrendPoint[] }
+>();
+
+function rankTrendCacheKey(
+  uid: string,
+  rankingLeague: RankingLeagueSource,
+  wcStage: WcRankingStage
+) {
+  return `${uid}:${rankingLeague}:${wcStage}`;
+}
+
 /** rankSnapshotHistory のみ（API が返す points を整形）。 */
 function rowsFromSnapshotHistory(
   history: { dateKey: string; rank: number }[]
@@ -54,8 +68,22 @@ export function useProfilePlayoffRankTrend(
       ? options.wcStage
       : "overall";
 
-  const [points, setPoints] = useState<PlayoffRankTrendPoint[]>([]);
-  const [loading, setLoading] = useState(false);
+  const cacheKey =
+    targetUid && enabled
+      ? rankTrendCacheKey(targetUid, rankingLeague, wcStage)
+      : "";
+
+  const [points, setPoints] = useState<PlayoffRankTrendPoint[]>(() => {
+    if (!cacheKey) return [];
+    const hit = rankTrendCache.get(cacheKey);
+    if (!hit || Date.now() - hit.at > RANK_TREND_CACHE_TTL_MS) return [];
+    return hit.points;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (!cacheKey) return false;
+    const hit = rankTrendCache.get(cacheKey);
+    return !hit || Date.now() - hit.at > RANK_TREND_CACHE_TTL_MS;
+  });
 
   useEffect(() => {
     if (!enabled || !targetUid) {
@@ -64,12 +92,18 @@ export function useProfilePlayoffRankTrend(
       return;
     }
 
+    const uid = targetUid;
+    const key = rankTrendCacheKey(uid, rankingLeague, wcStage);
+    const cached = rankTrendCache.get(key);
+    if (cached && Date.now() - cached.at <= RANK_TREND_CACHE_TTL_MS) {
+      setPoints(cached.points);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function run() {
-      const uid = targetUid;
-      if (!uid) return;
-
       setLoading(true);
       try {
         const qs = new URLSearchParams({
@@ -94,7 +128,9 @@ export function useProfilePlayoffRankTrend(
             ? trendJson.points
             : [];
 
-        setPoints(rowsFromSnapshotHistory(history));
+        const nextPoints = rowsFromSnapshotHistory(history);
+        rankTrendCache.set(key, { at: Date.now(), points: nextPoints });
+        setPoints(nextPoints);
       } catch {
         if (!cancelled) setPoints([]);
       } finally {

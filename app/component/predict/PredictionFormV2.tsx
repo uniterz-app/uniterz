@@ -49,6 +49,7 @@ import { matchScoreClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
+import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
@@ -78,6 +79,11 @@ type Props = {
   game: MatchCardProps;
   user: { name: string; avatarUrl?: string | null; verified?: boolean };
   onPostCreated?: (payload: { id: string; at: Date }) => void;
+  /** オーバーレイの MatchCard 市場棒グラフをリアルタイム同期 */
+  onMarketDistributionChange?: (bias: {
+    homePct: number;
+    awayPct: number;
+  }) => void;
   onStandingsOpenChange?: (open: boolean) => void;
   inOverlay?: boolean;
   embedded?: boolean;
@@ -199,6 +205,7 @@ export default function PredictionFormV2({
   game,
   user,
   onPostCreated,
+  onMarketDistributionChange,
   onStandingsOpenChange,
   inOverlay = false,
   embedded = false,
@@ -221,6 +228,9 @@ export default function PredictionFormV2({
   const prefix = isMobile ? "/mobile" : "/web";
   const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
   const m = t(language);
+  const gameId = String((game as { id: string }).id);
+  const { data: postDistribution, loading: postDistributionLoading } =
+    usePredictionPostDistribution(gameId);
 
   const gameDateKey = useMemo(() => {
     return game.startAtJst
@@ -322,6 +332,19 @@ export default function PredictionFormV2({
       nbaH2HPack?.games?.filter((g) => !g.seriesGameLabel) ?? [];
     return computeRecordByGames(rsGames, game.home.name, game.away.name);
   }, [nbaH2HPack?.games, game.home.name, game.away.name]);
+
+  useEffect(() => {
+    if (!onMarketDistributionChange) return;
+    const total =
+      postDistribution.home +
+      postDistribution.away +
+      (isSoccer ? postDistribution.draw : 0);
+    if (total <= 0) return;
+    onMarketDistributionChange({
+      homePct: (postDistribution.home / total) * 100,
+      awayPct: (postDistribution.away / total) * 100,
+    });
+  }, [postDistribution, isSoccer, onMarketDistributionChange]);
 
   useEffect(() => {
     onStandingsOpenChange?.(toolsTab === "standings");
@@ -1247,7 +1270,7 @@ export default function PredictionFormV2({
           <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
             <div className="relative z-1">
             <GamePredictionDistribution
-              gameId={(game as { id: string }).id}
+              gameId={gameId}
               league={game.league}
               homeName={homeSafe.name}
               awayName={awaySafe.name}
@@ -1256,6 +1279,8 @@ export default function PredictionFormV2({
               variant="predictForm"
               chartReplayKey={marketChartKey}
               fallbackMarketBias={game.marketBias}
+              distribution={postDistribution}
+              distributionLoading={postDistributionLoading}
             />
             </div>
           </motion.div>

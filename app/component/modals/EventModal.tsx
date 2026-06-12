@@ -1,10 +1,28 @@
 // app/component/modals/EventModal.tsx
 "use client";
 
-import EventNoticeBody from "@/app/component/events/EventNoticeBody";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { IBM_Plex_Mono } from "next/font/google";
+import CyberEventModalFrame from "@/app/component/modals/CyberEventModalFrame";
 import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+function pickLocalized(event: EventNoticeContent, isEn: boolean) {
+  return {
+    tag: isEn && event.tagEn ? event.tagEn : event.tag,
+    title: isEn && event.titleEn ? event.titleEn : event.title,
+    description:
+      isEn && event.descriptionEn ? event.descriptionEn : event.description,
+  };
+}
 
 export default function EventModal({
   event,
@@ -16,51 +34,59 @@ export default function EventModal({
   language?: Language;
 }) {
   const isEn = language === "en";
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
-      <div
-        className="relative w-[340px] max-h-[90vh] overflow-y-auto rounded-2xl"
-        style={{
-          background:
-            "radial-gradient(120% 120% at 50% 0%, #2A0F3A 0%, #120818 55%, #07030A 100%)",
-          border: "1px solid rgba(120,180,255,0.35)",
-          boxShadow:
-            "0 0 40px rgba(120,180,255,0.18), 0 0 80px rgba(120,120,255,0.15)",
-        }}
-      >
-        {/* Header title */}
-        <div
-          className="px-4 py-3 text-center text-xs tracking-[0.35em]"
-          style={{
-            color: "#FFFFFF",
-            borderBottom: "1px solid rgba(120,180,255,0.25)",
-          }}
-        >
-          INFORMATION
-        </div>
+  const [mounted, setMounted] = useState(false);
+  const loc = useMemo(() => pickLocalized(event, isEn), [event, isEn]);
+  const m = t(language);
 
-        <EventNoticeBody event={event} heroHeight={160} embedInModal isEn={isEn} />
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-        {/* Back */}
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[1000030] overflow-hidden"
+      role="dialog"
+      aria-modal
+      aria-labelledby="cyber-event-modal-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-transparent"
+        onClick={onClose}
+        aria-label={m.common.close}
+      />
+
+      <div className="pointer-events-none relative flex h-full min-h-0 items-center justify-center p-4 pb-[max(1rem,var(--bottom-nav-clearance,0px))]">
         <div
-          className="p-4"
-          style={{
-            borderTop: "1px solid rgba(120,180,255,0.25)",
-          }}
+          className="pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={onClose}
-            className="w-full py-2 rounded-full text-xs tracking-[0.35em] text-white"
-            style={{
-              border: "1px solid rgba(120,180,255,0.5)",
-              background:
-                "linear-gradient(180deg, rgba(120,180,255,0.18), rgba(80,120,255,0.1))",
-            }}
-          >
-            {t(language).common.close}
-          </button>
+          <CyberEventModalFrame
+            monoClassName={mono.className}
+            tagLabel={loc.tag}
+            title={loc.title}
+            body={
+              <p id="cyber-event-modal-title" className="whitespace-pre-wrap">
+                {loc.description}
+              </p>
+            }
+            confirmLabel="OK"
+            closeAriaLabel={m.common.close}
+            onClose={onClose}
+          />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

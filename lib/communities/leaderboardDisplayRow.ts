@@ -4,6 +4,16 @@ import type {
   MobileMetric,
   RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+
+/** コミュニティの competition → プロフィール成績タブのリーグ */
+export function communityLeagueForProfile(
+  raw: string | null | undefined
+): { rankingLeague: RankingLeagueSource; wcStage?: WcRankingStage } {
+  if (raw === "nba") return { rankingLeague: "nba" };
+  return { rankingLeague: "worldcup", wcStage: "overall" };
+}
 
 export function communityMetricToMobile(
   metric: CommunityMetric

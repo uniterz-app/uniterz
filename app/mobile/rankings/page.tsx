@@ -12,7 +12,7 @@ import {
   type MobileMetric,
   type RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
@@ -141,12 +141,6 @@ export default function MobileRankingsPage() {
     void ensureMetric(apiKey);
   }, [apiKey, ensureMetric]);
 
-  /** カードの 4 指標バー用 — タブ切替前に各指標のリーダー行を先読み */
-  useEffect(() => {
-    void ensureMetric("totalPoints");
-    void ensureMetric("totalPrecision");
-    void ensureMetric("totalUpset");
-  }, [ensureMetric, phase, effectiveRound, wcStageForHook, rankingLeague]);
   const rawRows = useMemo(
     () =>
       Array.isArray(bundle?.rows) ? (bundle.rows as RankingApiRow[]) : [],
@@ -226,7 +220,8 @@ export default function MobileRankingsPage() {
     rankingLeague,
     wcStage,
   });
-  const { handleTopCountDone } = useRankingsTopDone(pageKey);
+  const prefersReducedMotion = useReducedMotion();
+  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
   const visibleRestCount = useProgressiveRenderCount(
     restRows.length,
     pageKey,
@@ -403,9 +398,9 @@ export default function MobileRankingsPage() {
               <motion.div
                 key={`rest-${pageKey}`}
                 variants={restContainer}
-                initial="hidden"
-                animate="show"
-                style={{ opacity: 1 }}
+                initial={prefersReducedMotion ? "show" : "hidden"}
+                animate={topDone || prefersReducedMotion ? "show" : "hidden"}
+                style={{ opacity: topDone || prefersReducedMotion ? 1 : 0.35 }}
               >
                 {restRows.length > 0 &&
                   visibleRestRows.map((r, i) => (
@@ -423,7 +418,7 @@ export default function MobileRankingsPage() {
                           rankingLeague={rankingLeague}
                           wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                           language={language}
-                          animateValue={i < 12}
+                          animateValue={i < 6}
                         />
                     </motion.div>
                   ))}

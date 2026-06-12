@@ -118,6 +118,12 @@ export function profileHrefWithRankingsReturn(
       [PROFILE_FROM_PARAM]: PROFILE_FROM_COMMUNITY_VALUE,
       [PROFILE_FROM_COMMUNITY_ID_PARAM]: communityId,
     });
+    if (tab.rankingLeague && isRankingLeagueSource(tab.rankingLeague)) {
+      q.set(RANKINGS_TAB_LEAGUE_PARAM, tab.rankingLeague);
+    }
+    if (tab.wcStage && isWcRankingStage(tab.wcStage)) {
+      q.set(RANKINGS_TAB_WC_STAGE_PARAM, tab.wcStage);
+    }
     return `${path}?${q.toString()}`;
   }
   if (!p.includes("/rankings")) return path;

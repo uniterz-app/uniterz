@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getUserDocDataCached } from "@/lib/user/userDocCache";
 
 type Params = {
   targetUid: string | null;
@@ -33,21 +34,27 @@ export function useProfilePlan({ targetUid, profilePlan }: Params) {
         return;
       }
 
+      if (isMe && profilePlan) {
+        if (!cancelled) {
+          setMyPlan(profilePlan);
+          setLoadingPlan(false);
+        }
+        return;
+      }
+
       try {
-        if (!cancelled && !(isMe && profilePlan)) setLoadingPlan(true);
+        if (!cancelled) setLoadingPlan(true);
 
         const userDocRef = doc(db, "users", myUid);
-        const snap = await getDoc(userDocRef);
+        const data = await getUserDocDataCached(myUid);
 
-        if (!snap.exists()) {
+        if (!data) {
           if (!cancelled) {
             setMyPlan("free");
             setLoadingPlan(false);
           }
           return;
         }
-
-        const data = snap.data() as any;
 
         let nextPlan = data.plan ?? "free";
 

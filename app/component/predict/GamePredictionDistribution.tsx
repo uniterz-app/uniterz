@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { usePathname } from "next/navigation";
-import {
-  fetchGamePredictionCounts,
-  isSoccerMarketLeague,
-} from "@/lib/predict/gameMarketDistribution";
 import DonutChart from "./DonutChart";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { auth } from "@/lib/firebase";
 import { t } from "@/lib/i18n/t";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import {
+  usePredictionPostDistribution,
+  type PostDistribution,
+} from "@/lib/hooks/usePredictionPostDistribution";
 
 type Props = {
   gameId: string;
@@ -23,6 +23,9 @@ type Props = {
   variant?: "default" | "predictForm";
   chartReplayKey?: number;
   fallbackMarketBias?: { homePct: number; awayPct: number };
+  /** 親で先読み済みの分布（PredictionForm など） */
+  distribution?: PostDistribution;
+  distributionLoading?: boolean;
 };
 
 type Seg = { label: string; value: number; color: string };
@@ -96,6 +99,8 @@ export default function GamePredictionDistribution({
   variant = "default",
   chartReplayKey = 0,
   fallbackMarketBias,
+  distribution: distributionProp,
+  distributionLoading: distributionLoadingProp,
 }: Props) {
   const pathname = usePathname() ?? "";
   const layoutMobile =
@@ -103,33 +108,18 @@ export default function GamePredictionDistribution({
   const teamNameTy = bracketMarketTeamTypography(layoutMobile);
   const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
   const m = t(language);
-  const [homeCount, setHomeCount] = useState(0);
-  const [awayCount, setAwayCount] = useState(0);
-  const [drawCount, setDrawCount] = useState(0);
+  const internalDistribution = usePredictionPostDistribution(
+    gameId,
+    distributionProp == null
+  );
+  const distribution = distributionProp ?? internalDistribution.data;
+  const distributionLoading =
+    distributionLoadingProp ?? internalDistribution.loading;
+  const homeCount = distribution.home;
+  const awayCount = distribution.away;
+  const drawCount = distribution.draw;
 
-  useEffect(() => {
-    let alive = true;
-
-    fetchGamePredictionCounts(gameId)
-      .then(({ homeCount, awayCount, drawCount }) => {
-        if (!alive) return;
-        setHomeCount(homeCount);
-        setAwayCount(awayCount);
-        setDrawCount(drawCount);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setHomeCount(0);
-        setAwayCount(0);
-        setDrawCount(0);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [gameId]);
-
-  const isSoccer = isSoccerMarketLeague(league);
+  const isSoccer = league === "j1" || league === "pl" || league === "wc";
   const total = homeCount + awayCount + (isSoccer ? drawCount : 0);
   const sumFb =
     (fallbackMarketBias?.homePct ?? 0) + (fallbackMarketBias?.awayPct ?? 0);
@@ -171,7 +161,7 @@ export default function GamePredictionDistribution({
         : "rounded-xl border border-white/10 p-4 text-white/70";
     return (
       <div className={emptyCls}>
-        {m.common.noData}
+        {distributionLoading ? m.common.loading : m.common.noData}
       </div>
     );
   }

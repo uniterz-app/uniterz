@@ -128,7 +128,9 @@ export default function Page() {
 
 
       {/* ゲームカード */}
-      {!loading && matchProps && <MatchCard {...matchProps} />}
+      {!loading && matchProps && (
+        <MatchCard {...matchProps} language={language} />
+      )}
 
       {/* 🎯 V2 勝敗ドーナツグラフ */}
       <div className="mt-2">

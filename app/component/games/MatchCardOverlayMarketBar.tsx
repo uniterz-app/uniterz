@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { auth } from "@/lib/firebase";
-import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { useGameMarketDistribution } from "@/lib/hooks/useGameMarketDistribution";
+import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import type { League } from "@/lib/leagues";
@@ -20,6 +19,7 @@ type Props = {
   homeLabel: string;
   awayLabel: string;
   compact?: boolean;
+  language: Language;
   /** ログインユーザーの勝者予想（home / away / draw） */
   userPredictionWinner?: MarketKey | null;
 };
@@ -384,9 +384,9 @@ export default function MatchCardOverlayMarketBar({
   homeLabel,
   awayLabel,
   compact = false,
+  language,
   userPredictionWinner = null,
 }: Props) {
-  const { language } = useUserLanguage(auth.currentUser?.uid ?? null);
   const m = t(language);
   const { isSoccer, total, homePct, awayPct, drawPct, fromFallback } =
     useGameMarketDistribution(gameId, league, fallbackMarketBias);

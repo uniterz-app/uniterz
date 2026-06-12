@@ -30,7 +30,12 @@ import {
 import { toMatchCardProps } from "@/lib/games/transform";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
-import PredictionFormV2 from "../predict/PredictionFormV2";
+import dynamic from "next/dynamic";
+
+const PredictionFormV2 = dynamic(() => import("../predict/PredictionFormV2"), {
+  loading: () => null,
+  ssr: false,
+});
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
@@ -142,6 +147,10 @@ export default function ScheduleList({
   const [overlayUserPredictionWinner, setOverlayUserPredictionWinner] =
     useState<"home" | "away" | "draw" | null>(null);
   const [predictEditTriggerNonce, setPredictEditTriggerNonce] = useState(0);
+  const [overlayLiveMarketBias, setOverlayLiveMarketBias] = useState<{
+    homePct: number;
+    awayPct: number;
+  } | null>(null);
   const [standingsOpenInOverlay, setStandingsOpenInOverlay] = useState(false);
   const [disableReturnLayout, setDisableReturnLayout] = useState(false);
   const pathname = usePathname();
@@ -439,15 +448,11 @@ export default function ScheduleList({
 
       if (alive) setTeamRecordMap(immediateMap);
 
-      /** NBA: always refetch team docs so MatchCard rank matches updateTeamRankings */
-      const missingTeamIds =
-        leagueAnimKey === "nba"
-          ? teamIds
-          : teamIds.filter(
-              (teamId) =>
-                !memoryTeamRecordCache.has(teamRecordMemKey(teamId)) &&
-                !sessionCache[teamId]
-            );
+      const missingTeamIds = teamIds.filter(
+        (teamId) =>
+          !memoryTeamRecordCache.has(teamRecordMemKey(teamId)) &&
+          !sessionCache[teamId]
+      );
 
       let merged: Record<string, TeamRecord> = { ...immediateMap };
       let nextSessionCache: Record<string, TeamRecord> = { ...sessionCache };
@@ -568,6 +573,7 @@ export default function ScheduleList({
     setOverlayResultPost(null);
     setOverlayUserPredictionWinner(null);
     setPredictEditTriggerNonce(0);
+    setOverlayLiveMarketBias(null);
   }, [openGameId]);
 
   if (loading) {
@@ -708,9 +714,13 @@ export default function ScheduleList({
 
                 <MatchCard
                   {...selectedProps}
+                  language={language}
                   resultPost={overlayResultPost}
                   userPredictionWinner={overlayUserPredictionWinner}
                   resultRatingBarsImmediate
+                  marketBias={
+                    overlayLiveMarketBias ?? selectedProps.marketBias
+                  }
                   myPostId={myPostMap[String(selectedProps.id)] ?? null}
                   onRequestPredictEdit={
                     overlayResultPost
@@ -784,6 +794,7 @@ export default function ScheduleList({
                     }));
                   }
                 }}
+                onMarketDistributionChange={setOverlayLiveMarketBias}
               />
             </motion.div>
           </div>
@@ -842,6 +853,7 @@ export default function ScheduleList({
     const card = (
       <MatchCard
         {...props}
+        language={language}
         className={
           hideListCardForOverlay ? "invisible select-none" : undefined
         }

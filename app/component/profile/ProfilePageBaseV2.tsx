@@ -63,7 +63,10 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
   }, [sp]);
 
   const { stats, summary, summaryRanks, statsLoading, dailyTrend } =
-    useUserStatsV2(targetUid, profileStatsContext);
+    useUserStatsV2(targetUid, {
+      ...profileStatsContext,
+      prefetchOtherLeague: false,
+    });
 
   const scopedStreak = useProfileScopedStreak(targetUid, profileStatsContext);
 
@@ -94,12 +97,13 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     return { ...p, avatarUrl: merged };
   }, [profile]);
 
-  const mergedProfile = useMemo<Profile>(() => {
+  const mergedProfile = useMemo<Profile | null>(() => {
+    if (!normalizedProfile) return null;
     const currentStreak = Math.max(0, Math.floor(scopedStreak.currentStreak));
     const maxStreak = Math.max(0, Math.floor(scopedStreak.maxWinStreak));
 
     return {
-      ...normalizedProfile!,
+      ...normalizedProfile,
       currentStreak,
       maxStreak,
     };
@@ -117,14 +121,23 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     };
   }, [summary, scopedStreak.currentStreak]);
 
-  if (loading) {
+  if (loading && !targetUid) {
     return (
       <div className="flex justify-center" style={{ padding: 24 }}>
         <CandleChartLoader />
       </div>
     );
   }
-  if (!normalizedProfile) return <div style={{ padding: 24 }}>Not found</div>;
+  if (!loading && !targetUid) {
+    return <div style={{ padding: 24 }}>Not found</div>;
+  }
+  if (!mergedProfile) {
+    return (
+      <div className="flex justify-center" style={{ padding: 24 }}>
+        <CandleChartLoader />
+      </div>
+    );
+  }
 
   const viewProps = {
     profile: mergedProfile,
