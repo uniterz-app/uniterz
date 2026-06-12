@@ -12,6 +12,8 @@ import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingS
 /** プロフィール URL：ランキングから来た印 */
 export const PROFILE_FROM_PARAM = "from";
 export const PROFILE_FROM_RANKINGS_VALUE = "rankings";
+export const PROFILE_FROM_COMMUNITY_VALUE = "community";
+export const PROFILE_FROM_COMMUNITY_ID_PARAM = "communityId";
 
 /** 戻り時に同じタブを復元するためのクエリキー */
 export const RANKINGS_TAB_METRIC_PARAM = "rankMetric";
@@ -107,6 +109,17 @@ export function profileHrefWithRankingsReturn(
 ): string {
   const path = `${base}/u/${handleOrUid}`;
   const p = pathname ?? "";
+  const communityMatch = p.match(/\/(?:web|mobile)\/communities\/([^/?#]+)/);
+  const communityId = communityMatch?.[1]
+    ? decodeURIComponent(communityMatch[1])
+    : "";
+  if (communityId) {
+    const q = new URLSearchParams({
+      [PROFILE_FROM_PARAM]: PROFILE_FROM_COMMUNITY_VALUE,
+      [PROFILE_FROM_COMMUNITY_ID_PARAM]: communityId,
+    });
+    return `${path}?${q.toString()}`;
+  }
   if (!p.includes("/rankings")) return path;
   const q = new URLSearchParams({
     [PROFILE_FROM_PARAM]: PROFILE_FROM_RANKINGS_VALUE,

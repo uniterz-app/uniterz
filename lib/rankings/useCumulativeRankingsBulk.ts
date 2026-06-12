@@ -39,6 +39,49 @@ export type BulkMetricPayload = {
 };
 
 const ANON_KEY = "__anon__";
+const BULK_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type BulkCacheEntry = {
+  at: number;
+  bundles: Record<string, BulkMetricPayload>;
+  deltas: MyRankMetricValueDeltas | null;
+  appliedUid: string;
+};
+
+const bulkCache = new Map<string, BulkCacheEntry>();
+
+function bulkCacheKey(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null,
+  uidKey: string
+): string {
+  return `${phase}:${round}:${wcStage ?? "-"}:${uidKey}`;
+}
+
+function readBulkCache(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null,
+  uidKey: string
+): BulkCacheEntry | null {
+  const cached = bulkCache.get(bulkCacheKey(phase, round, wcStage, uidKey));
+  if (!cached) return null;
+  if (Date.now() - cached.at > BULK_CACHE_TTL_MS) return null;
+  return cached;
+}
+
+function writeBulkCache(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null,
+  entry: Omit<BulkCacheEntry, "at">
+): void {
+  bulkCache.set(bulkCacheKey(phase, round, wcStage, entry.appliedUid), {
+    ...entry,
+    at: Date.now(),
+  });
+}
 
 function emptyBulkMetric(): BulkMetricPayload {
   return {
@@ -186,6 +229,15 @@ function applyBulkResult(
   };
 }
 
+function applyCacheResult(
+  cached: BulkCacheEntry,
+  uid: string | null
+): BulkCacheEntry {
+  const bundles =
+    applySessionCountryOverride(cached.bundles, uid) ?? cached.bundles;
+  return { ...cached, bundles };
+}
+
 export function useCumulativeRankingsBulk(
   phase: RankingPhase = "playoffs",
   round: PlayoffRoundKey = "overall",
@@ -246,6 +298,11 @@ export function useCumulativeRankingsBulk(
           setByMetric(applied.bundles);
           setMyMetricValueDeltas(applied.deltas);
           setAppliedTotalPointsUid(applied.appliedUid);
+          writeBulkCache(phase, round, wcStage, {
+            bundles: applied.bundles,
+            deltas: applied.deltas,
+            appliedUid: applied.appliedUid,
+          });
         } catch {
           if (seq !== invalidateSeqRef.current) return;
         }
@@ -268,10 +325,20 @@ export function useCumulativeRankingsBulk(
     let cancelled = false;
     let lastFetchUidKey: string | undefined;
 
-    setByMetric(null);
-    setMyMetricValueDeltas(null);
-    setAppliedTotalPointsUid(null);
-    setLoading(true);
+    const currentUidKey = myUid ?? ANON_KEY;
+    const visibleCache = readBulkCache(phase, round, wcStage, currentUidKey);
+    if (visibleCache) {
+      const applied = applyCacheResult(visibleCache, myUid);
+      setByMetric(applied.bundles);
+      setMyMetricValueDeltas(applied.deltas);
+      setAppliedTotalPointsUid(applied.appliedUid);
+      setLoading(false);
+    } else {
+      setByMetric(null);
+      setMyMetricValueDeltas(null);
+      setAppliedTotalPointsUid(null);
+      setLoading(true);
+    }
 
     const runFetch = async (uid: string | null, seq: number) => {
       try {
@@ -289,24 +356,41 @@ export function useCumulativeRankingsBulk(
           setByMetric(applied.bundles);
           setMyMetricValueDeltas(applied.deltas);
           setAppliedTotalPointsUid(applied.appliedUid);
+          writeBulkCache(phase, round, wcStage, {
+            bundles: applied.bundles,
+            deltas: applied.deltas,
+            appliedUid: applied.appliedUid,
+          });
         } else {
-          setByMetric(
+          const appliedUid = uid ?? ANON_KEY;
+          const fallback =
             applySessionCountryOverride(
               mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
               uid
-            )
-          );
-          setAppliedTotalPointsUid(uid ?? ANON_KEY);
+            ) ?? mergeMetricBundles(null, { totalPoints: emptyBulkMetric() });
+          setByMetric(fallback);
+          setAppliedTotalPointsUid(appliedUid);
+          writeBulkCache(phase, round, wcStage, {
+            bundles: fallback,
+            deltas: null,
+            appliedUid,
+          });
         }
       } catch {
         if (cancelled || seq !== fetchSeqRef.current) return;
-        setByMetric(
+        const appliedUid = uid ?? ANON_KEY;
+        const fallback =
           applySessionCountryOverride(
             mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
             uid
-          )
-        );
-        setAppliedTotalPointsUid(uid ?? ANON_KEY);
+          ) ?? mergeMetricBundles(null, { totalPoints: emptyBulkMetric() });
+        setByMetric(fallback);
+        setAppliedTotalPointsUid(appliedUid);
+        writeBulkCache(phase, round, wcStage, {
+          bundles: fallback,
+          deltas: null,
+          appliedUid,
+        });
       } finally {
         if (!cancelled && seq === fetchSeqRef.current) {
           setLoading(false);
@@ -324,6 +408,16 @@ export function useCumulativeRankingsBulk(
 
       if (lastFetchUidKey === uidKey) return;
       lastFetchUidKey = uidKey;
+
+      const cached = readBulkCache(phase, round, wcStage, uidKey);
+      if (cached) {
+        const applied = applyCacheResult(cached, uid);
+        setByMetric(applied.bundles);
+        setMyMetricValueDeltas(applied.deltas);
+        setAppliedTotalPointsUid(applied.appliedUid);
+        setLoading(false);
+        return;
+      }
 
       const seq = ++fetchSeqRef.current;
       void runFetch(uid, seq);
@@ -361,12 +455,19 @@ export function useCumulativeRankingsBulk(
         if (genAtStart !== phaseRoundGenRef.current) return;
         if (seq !== metricReqSeqRef.current) return;
         if (partial) {
-          setByMetric((p) =>
-            applySessionCountryOverride(
-              mergeMetricBundles(p, partial.byMetric),
-              uidForMetric
-            )
-          );
+          setByMetric((p) => {
+            const merged =
+              applySessionCountryOverride(
+                mergeMetricBundles(p, partial.byMetric),
+                uidForMetric
+              ) ?? mergeMetricBundles(p, partial.byMetric);
+            writeBulkCache(phase, round, wcStage, {
+              bundles: merged,
+              deltas: partial.myMetricValueDeltas ?? myMetricValueDeltas,
+              appliedUid: uidForMetric ?? ANON_KEY,
+            });
+            return merged;
+          });
           if (partial.myMetricValueDeltas) {
             setMyMetricValueDeltas(partial.myMetricValueDeltas);
           }
@@ -374,24 +475,47 @@ export function useCumulativeRankingsBulk(
             maybeClearSessionCountryAfterFetch(partial.byMetric, uidForMetric);
           }
         } else {
-          setByMetric((p) =>
-            applySessionCountryOverride(
-              mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
-              uidForMetric
-            )
-          );
+          setByMetric((p) => {
+            const merged =
+              applySessionCountryOverride(
+                mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
+                uidForMetric
+              ) ?? mergeMetricBundles(p, { [metric]: emptyBulkMetric() });
+            writeBulkCache(phase, round, wcStage, {
+              bundles: merged,
+              deltas: myMetricValueDeltas,
+              appliedUid: uidForMetric ?? ANON_KEY,
+            });
+            return merged;
+          });
         }
       } catch {
         if (seq !== metricReqSeqRef.current) return;
-        setByMetric((p) =>
-          applySessionCountryOverride(
-            mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
-            uidForMetric
-          )
-        );
+        setByMetric((p) => {
+          const merged =
+            applySessionCountryOverride(
+              mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
+              uidForMetric
+            ) ?? mergeMetricBundles(p, { [metric]: emptyBulkMetric() });
+          writeBulkCache(phase, round, wcStage, {
+            bundles: merged,
+            deltas: myMetricValueDeltas,
+            appliedUid: uidForMetric ?? ANON_KEY,
+          });
+          return merged;
+        });
       }
     },
-    [authReady, byMetric, myUid, appliedTotalPointsUid, phase, round, wcStage]
+    [
+      authReady,
+      byMetric,
+      myUid,
+      appliedTotalPointsUid,
+      phase,
+      round,
+      wcStage,
+      myMetricValueDeltas,
+    ]
   );
 
   const listReady = byMetric?.totalPoints != null;

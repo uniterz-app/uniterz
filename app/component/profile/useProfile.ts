@@ -17,6 +17,7 @@ import {
   parseUserProfileFields,
   profileDisplayFromUser,
 } from "@/lib/profile/parseUserProfileFields";
+import type { RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
 
 export type Profile = {
   displayName: string;
@@ -61,6 +62,59 @@ const initialLoadState: ProfileLoadState = {
   counts: EMPTY_COUNTS,
 };
 
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
+const profileCache = new Map<string, { at: number; state: ProfileLoadState }>();
+
+function normalizeProfileCacheKey(key: string): string {
+  return decodeURIComponent(key).trim().toLowerCase();
+}
+
+function readProfileCache(key: string): ProfileLoadState | null {
+  const cached = profileCache.get(normalizeProfileCacheKey(key));
+  if (!cached) return null;
+  if (Date.now() - cached.at > PROFILE_CACHE_TTL_MS) return null;
+  return cached.state;
+}
+
+function writeProfileCache(
+  keys: Array<string | null | undefined>,
+  state: ProfileLoadState
+) {
+  const at = Date.now();
+  for (const key of keys) {
+    const k = typeof key === "string" ? key.trim() : "";
+    if (!k) continue;
+    profileCache.set(normalizeProfileCacheKey(k), { at, state });
+  }
+}
+
+export function primeProfileCacheFromRankingRow(
+  routeKey: string,
+  row: RankingRowWithCountry
+) {
+  const uid = typeof row.uid === "string" ? row.uid.trim() : "";
+  const handle = typeof row.handle === "string" ? row.handle.trim() : "";
+  const displayName =
+    typeof row.displayName === "string" && row.displayName.trim()
+      ? row.displayName
+      : handle || "User";
+
+  writeProfileCache([routeKey, uid, handle], {
+    loading: false,
+    targetUid: uid || null,
+    counts: { posts: row.posts ?? 0 },
+    user: {
+      displayName,
+      handle,
+      bio: "",
+      photoURL: typeof row.photoURL === "string" ? row.photoURL : "",
+      currentStreak: row.streak ?? 0,
+      maxStreak: 0,
+      plan: row.plan === "pro" ? "pro" : "free",
+    },
+  });
+}
+
 async function fetchUserDocByRouteKey(
   decodedHandle: string
 ): Promise<{ id: string; data: Record<string, unknown> } | null> {
@@ -96,15 +150,23 @@ async function fetchUserDocByRouteKey(
 export function useProfile(handle: string) {
   const decodedHandle = useMemo(() => decodeURIComponent(handle), [handle]);
 
-  const [state, setState] = useState<ProfileLoadState>(initialLoadState);
+  const [state, setState] = useState<ProfileLoadState>(() => {
+    const cached = readProfileCache(decodedHandle);
+    return cached ?? initialLoadState;
+  });
 
   useEffect(() => {
     let cancelled = false;
 
-    setState({
-      ...initialLoadState,
-      loading: true,
-    });
+    const cached = readProfileCache(decodedHandle);
+    if (cached) {
+      setState(cached);
+    } else {
+      setState({
+        ...initialLoadState,
+        loading: true,
+      });
+    }
 
     (async () => {
       try {
@@ -129,7 +191,7 @@ export function useProfile(handle: string) {
         const plan: "free" | "pro" = rawPlan === "pro" ? "pro" : "free";
         const countsRaw = d.counts as { posts?: number } | undefined;
 
-        setState({
+        const nextState: ProfileLoadState = {
           loading: false,
           targetUid: docSnap.id,
           counts: {
@@ -145,7 +207,9 @@ export function useProfile(handle: string) {
             maxStreak: typeof d.maxStreak === "number" ? d.maxStreak : 0,
             plan,
           },
-        });
+        };
+        writeProfileCache([decodedHandle, docSnap.id, userHandle], nextState);
+        setState(nextState);
       } catch {
         if (!cancelled) {
           setState((prev) => ({ ...prev, loading: false }));
