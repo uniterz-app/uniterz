@@ -114,13 +114,6 @@ export function useWebRankings(
     void ensureMetric(API_METRIC_BY_MOBILE[metric]);
   }, [metric, ensureMetric]);
 
-  /** カードの 4 指標バー用 — タブ切替前に各指標のリーダー行を先読み */
-  useEffect(() => {
-    void ensureMetric("totalPoints");
-    void ensureMetric("totalPrecision");
-    void ensureMetric("totalUpset");
-  }, [ensureMetric, phase, round, wcStage]);
-
   const rowsMap = useMemo(() => {
     if (!byMetric) return EMPTY_MAP;
 

@@ -17,6 +17,7 @@ import { periodLabel } from "@/lib/communities/labels";
 import type { Language } from "@/lib/i18n/language";
 import {
   communityMetricToMobile,
+  communityLeagueForProfile,
   communityRowToRankingCardRow,
 } from "@/lib/communities/leaderboardDisplayRow";
 import RankingCard from "@/app/component/rankings/RankingCard";
@@ -328,6 +329,7 @@ export default function CommunityGroupDetailView({
     headerBanner === "wide_when_image" &&
     summary?.headerImageUrl;
   const rankMetricForProfile = communityMetricToMobile(metric);
+  const profileStatsLeague = communityLeagueForProfile(summary?.rankingLeague);
 
   const rankingCardRows = useMemo(
     () => rows.map((r) => communityRowToRankingCardRow(r, metric)),
@@ -572,6 +574,8 @@ export default function CommunityGroupDetailView({
                 <TopPodium
                   rows={top3}
                   metric={rankMetricForProfile}
+                  rankingLeague={profileStatsLeague.rankingLeague}
+                  wcStage={profileStatsLeague.wcStage}
                   language={language}
                   onTopCountDone={handleTopCountDone}
                   compact
@@ -593,6 +597,8 @@ export default function CommunityGroupDetailView({
                         row={r}
                         rank={i + 4}
                         metric={rankMetricForProfile}
+                        rankingLeague={profileStatsLeague.rankingLeague}
+                        wcStage={profileStatsLeague.wcStage}
                         language={language}
                         size="compact"
                         shellTone="subtle"

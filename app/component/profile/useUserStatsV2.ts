@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -65,7 +66,53 @@ const statsCache = new Map<string, CacheEntry>();
 type UseUserStatsContext = {
   rankingLeague?: RankingLeagueSource;
   wcStage?: WcRankingStage;
+  /** false のとき表示中リーグのみ取得（プロフィール初回表示用） */
+  prefetchOtherLeague?: boolean;
 };
+
+/** ランキング行から成績サマリーを先読み（プロフィール初回の即時描画用） */
+export function primeProfileStatsFromRankingRow(
+  uid: string,
+  row: RankingRowWithCountry,
+  context: { rankingLeague: RankingLeagueSource; wcStage?: WcRankingStage }
+) {
+  const safeUid = uid.trim();
+  if (!safeUid) return;
+
+  const posts = row.posts ?? 0;
+  const winRateRaw = row.winRate ?? 0;
+  const winRate = winRateRaw <= 1 ? winRateRaw : winRateRaw / 100;
+  const ext = row as RankingRowWithCountry & {
+    totalPoints?: number;
+    totalPrecision?: number;
+    totalUpset?: number;
+    activeWinStreak?: number;
+  };
+  const totalPoints = ext.totalPoints ?? ext.totalScore ?? 0;
+  const totalPrecision = ext.totalPrecision ?? ext.marginPrecisionScore ?? 0;
+  const totalUpset = ext.totalUpset ?? ext.upsetScore ?? 0;
+
+  const summary: SummaryForCardsV2 = {
+    posts,
+    fullPosts: posts,
+    recent3Posts: Math.min(3, posts),
+    wins: Math.round(winRate * posts),
+    winRate,
+    scorePrecisionSum: totalPrecision,
+    upsetPointsSum: totalUpset,
+    pointsSumV3: totalPoints,
+    basePointsSum: totalPoints,
+    upsetBonusSum: 0,
+    streakBonusSum: 0,
+    upsetChanceCount: 0,
+    upsetHitCount: 0,
+    activeWinStreak: row.streak ?? ext.activeWinStreak ?? 0,
+  };
+
+  mergeCacheEntry(statsCacheKey(safeUid, context.rankingLeague, context.wcStage), {
+    summary,
+  });
+}
 
 function statsCacheKey(
   uid: string,
@@ -211,6 +258,7 @@ function prefetchLeagueStats(uid: string, rankingLeague: RankingLeagueSource) {
 export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContext) {
   const rankingLeague: RankingLeagueSource = context?.rankingLeague ?? "nba";
   const wcStage = context?.wcStage;
+  const prefetchOtherLeague = context?.prefetchOtherLeague !== false;
   const cacheKey = uid ? statsCacheKey(uid, rankingLeague, wcStage) : "";
 
   const [loading, setLoading] = useState(() => {
@@ -263,9 +311,15 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
 
   useEffect(() => {
     if (!uid) return;
-    prefetchLeagueStats(uid, "nba");
-    prefetchLeagueStats(uid, "worldcup");
-  }, [uid]);
+    prefetchLeagueStats(uid, rankingLeague);
+    if (!prefetchOtherLeague) return;
+    const otherLeague: RankingLeagueSource =
+      rankingLeague === "nba" ? "worldcup" : "nba";
+    const deferredId = window.setTimeout(() => {
+      prefetchLeagueStats(uid, otherLeague);
+    }, 4000);
+    return () => window.clearTimeout(deferredId);
+  }, [prefetchOtherLeague, uid, rankingLeague]);
 
   useEffect(() => {
     let cancelled = false;

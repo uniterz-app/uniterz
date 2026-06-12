@@ -13,6 +13,7 @@ import GamePredictionDistributionV2 from "@/app/component/predict/GamePrediction
 import { toMatchCardProps } from "@/lib/games/transform";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { getTeamPrimaryColor } from "@/lib/team-colors";
@@ -28,6 +29,7 @@ export default function Page() {
 
   const router = useRouter();
   const { fUser } = useFirebaseUser();
+  const { language } = useUserLanguage(fUser?.uid ?? null);
   const uid = fUser?.uid ?? null;
 
   const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
@@ -116,7 +118,9 @@ export default function Page() {
       <h1 className="sr-only">Predictions for {gameId}</h1>
 
       {/* ==== ゲームカード ==== */}
-      {!loading && matchProps && <MatchCard {...matchProps} />}
+      {!loading && matchProps && (
+        <MatchCard {...matchProps} language={language} />
+      )}
 
       {/* ==== 🎯 V2 勝者予想ドーナツ ==== */}
       <div className="mt-3 md:mt-4">

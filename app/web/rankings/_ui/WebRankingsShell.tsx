@@ -12,7 +12,7 @@ import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
@@ -220,7 +220,8 @@ export default function WebRankingsShell() {
     rankingLeague,
     wcStage,
   });
-  const { handleTopCountDone } = useRankingsTopDone(pageKey);
+  const prefersReducedMotion = useReducedMotion();
+  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
   const visibleRestCount = useProgressiveRenderCount(
     restRows.length,
     pageKey,
@@ -382,9 +383,9 @@ export default function WebRankingsShell() {
                 key={`rest-${pageKey}`}
                 className="pb-bottom-nav"
                 variants={restContainer}
-                initial="hidden"
-                animate="show"
-                style={{ opacity: 1 }}
+                initial={prefersReducedMotion ? "show" : "hidden"}
+                animate={topDone || prefersReducedMotion ? "show" : "hidden"}
+                style={{ opacity: topDone || prefersReducedMotion ? 1 : 0.35 }}
               >
                 {restRows.length > 0 &&
                   visibleRestRows.map((r, i) => (
@@ -402,7 +403,7 @@ export default function WebRankingsShell() {
                         rankingLeague={rankingLeague}
                         wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                         language={language}
-                        animateValue={i < 12}
+                        animateValue={i < 6}
                       />
                     </motion.div>
                   ))}

@@ -4,7 +4,10 @@
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
-import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
+import {
+  mergeUserPlansForUids,
+  mergeUserPlansIntoBulkByMetric,
+} from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import {
   isPlayoffRoundKey,
   type PlayoffRoundKey,
@@ -14,6 +17,7 @@ import {
   fetchBulkFromFunctions,
   type BulkRankingMetric,
 } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
+import { mergePersonalIntoBulkByMetric } from "@/lib/rankings/server/mergePersonalBulkOverlay";
 import { loadSnapshotTotalPointsRankAndDelta } from "@/lib/rankings/server/rankSnapshotHistoryTotalPoints";
 import { loadMyRankMetricValueDeltas } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
@@ -101,9 +105,17 @@ const getCachedBulk = unstable_cache(
           : null;
     // dayKey は unstable_cache のキー分離用（当日中は同一キーで再利用）
     void dayKey;
-    return fetchBulkFromFunctions(uid, metrics, phase, round, wcStage);
+    const fetched = await fetchBulkFromFunctions(
+      uid,
+      metrics,
+      phase,
+      round,
+      wcStage
+    );
+    await mergeUserPlansIntoBulkByMetric(fetched.byMetric);
+    return fetched;
   },
-  ["cumulative-ranking-bulk-v4"],
+  ["cumulative-ranking-bulk-v5"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -142,25 +154,38 @@ export async function GET(req: Request) {
     }
 
     /**
-     * myRank（uid 付き）は最新性を優先して毎回 Functions 取得。
-     * 一覧のみ（uid なし）は dayKey 単位キャッシュを使う。
+     * 一覧は常に anon キャッシュ（plan マージ済み）。
+     * uid 付きは一覧を再利用し、Functions では myRank / myRow のみ上書き。
      */
-    const source = uid
-      ? await fetchBulkFromFunctions(uid, metricsList, phase, round, wcStage)
-      : await getCachedBulk(
-          "__anon__",
-          metricsKey,
-          phase,
-          round,
-          wcStageCacheKey(wcStage),
-          todayKey
-        );
+    const listSource = await getCachedBulk(
+      "__anon__",
+      metricsKey,
+      phase,
+      round,
+      wcStageCacheKey(wcStage),
+      todayKey
+    );
 
     const data =
       typeof structuredClone === "function"
-        ? structuredClone(source)
-        : (JSON.parse(JSON.stringify(source)) as typeof source);
-    await mergeUserPlansIntoBulkByMetric(data.byMetric);
+        ? structuredClone(listSource)
+        : (JSON.parse(JSON.stringify(listSource)) as typeof listSource);
+
+    if (uid) {
+      const personal = await fetchBulkFromFunctions(
+        uid,
+        metricsList,
+        phase,
+        round,
+        wcStage
+      );
+      mergePersonalIntoBulkByMetric(
+        data.byMetric,
+        personal.byMetric,
+        metricsList
+      );
+      await mergeUserPlansForUids(data.byMetric, [uid]);
+    }
 
     let myMetricValueDeltas: MyRankMetricValueDeltas | null = null;
 
@@ -214,10 +239,9 @@ export async function GET(req: Request) {
 
     myMetricValueDeltas = deltasResult;
 
-    const maxAge = 0;
     const cacheControl = uid
-      ? "private, no-store"
-      : `public, max-age=${maxAge}, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
+      ? `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
+      : `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
 
     return NextResponse.json(
       { ...data, wcStage, myMetricValueDeltas },

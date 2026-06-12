@@ -8,6 +8,8 @@ import { TIMEZONE_JST, toDateKeyInTimeZone } from "@/lib/time/zonedTime";
 
 type SettledTodayCacheEntry = {
   posts: PostWithMillis[];
+  /** 取得完了後のみ true（空配列でも確定結果として扱う） */
+  resolved: boolean;
   promise?: Promise<PostWithMillis[]>;
 };
 
@@ -25,21 +27,39 @@ function settledTodayCacheKey(
   return `${dateKey}:${uid}:${JSON.stringify(ctx)}`;
 }
 
+function readResolvedPosts(key: string): PostWithMillis[] | null {
+  const cached = settledTodayCache.get(key);
+  if (!cached?.resolved) return null;
+  return cached.posts;
+}
+
 async function loadSettledTodayOnce(
   uid: string,
   ctx: ProfileStatsStreakContext,
   key: string
 ): Promise<PostWithMillis[]> {
   const cached = settledTodayCache.get(key);
-  if (cached?.posts) return cached.posts;
+  if (cached?.resolved) return cached.posts;
   if (cached?.promise) return cached.promise;
 
   const promise = loadProfileSettledTodayResultPosts(uid, ctx).then((posts) => {
-    settledTodayCache.set(key, { posts });
+    settledTodayCache.set(key, { posts, resolved: true });
     return posts;
   });
-  settledTodayCache.set(key, { posts: [], promise });
+  settledTodayCache.set(key, { posts: [], resolved: false, promise });
   return promise;
+}
+
+/** ランキング→プロフィール遷移前に今日の確定投稿を先読み */
+export function prefetchProfileSettledTodayResults(
+  uid: string,
+  ctx: ProfileStatsStreakContext
+): void {
+  const safeUid = uid.trim();
+  if (!safeUid) return;
+  const key = settledTodayCacheKey(safeUid, ctx, todayCacheDateKey());
+  if (settledTodayCache.get(key)?.resolved) return;
+  void loadSettledTodayOnce(safeUid, ctx, key).catch(() => {});
 }
 
 export function useProfileSettledTodayResults(
@@ -50,17 +70,15 @@ export function useProfileSettledTodayResults(
   const scopeKey = JSON.stringify(ctx);
   const dateKey = todayCacheDateKey();
   const requestKey = enabled && uid ? settledTodayCacheKey(uid, ctx, dateKey) : null;
-  const cachedPosts = requestKey
-    ? settledTodayCache.get(requestKey)?.posts
-    : undefined;
+  const resolvedPosts = requestKey ? readResolvedPosts(requestKey) : null;
   const [state, setState] = useState<{
     key: string | null;
     posts: PostWithMillis[];
     loading: boolean;
   }>(() => ({
     key: requestKey,
-    posts: cachedPosts ?? [],
-    loading: Boolean(requestKey) && cachedPosts == null,
+    posts: resolvedPosts ?? [],
+    loading: Boolean(requestKey) && resolvedPosts == null,
   }));
 
   useEffect(() => {
@@ -69,32 +87,50 @@ export function useProfileSettledTodayResults(
       return;
     }
 
-    const cached = settledTodayCache.get(requestKey);
-    if (cached?.posts) {
-      setState({ key: requestKey, posts: cached.posts, loading: false });
-      return;
-    }
-
     const safeUid = uid;
     const safeRequestKey = requestKey;
     let alive = true;
 
-    async function run() {
-      setState((prev) => ({
-        key: requestKey,
-        posts: prev.key === requestKey ? prev.posts : [],
-        loading: prev.key === requestKey && prev.posts.length > 0 ? false : true,
-      }));
-      try {
-        const list = await loadSettledTodayOnce(safeUid, ctx, safeRequestKey);
-        if (alive) setState({ key: safeRequestKey, posts: list, loading: false });
-      } catch (e) {
-        console.error("[useProfileSettledTodayResults]", e);
-        if (alive) setState({ key: requestKey, posts: [], loading: false });
-      }
+    const resolved = readResolvedPosts(safeRequestKey);
+    if (resolved != null) {
+      setState({ key: safeRequestKey, posts: resolved, loading: false });
+      return;
     }
 
-    void run();
+    const inFlight = settledTodayCache.get(safeRequestKey)?.promise;
+    if (inFlight) {
+      setState((prev) => ({
+        key: safeRequestKey,
+        posts: prev.key === safeRequestKey ? prev.posts : [],
+        loading: true,
+      }));
+      void inFlight.then((list) => {
+        if (!alive) return;
+        setState({ key: safeRequestKey, posts: list, loading: false });
+      });
+      return () => {
+        alive = false;
+      };
+    }
+
+    setState((prev) => ({
+      key: safeRequestKey,
+      posts: prev.key === safeRequestKey ? prev.posts : [],
+      loading: true,
+    }));
+
+    void loadSettledTodayOnce(safeUid, ctx, safeRequestKey)
+      .then((list) => {
+        if (!alive) return;
+        setState({ key: safeRequestKey, posts: list, loading: false });
+      })
+      .catch((e) => {
+        console.error("[useProfileSettledTodayResults]", e);
+        if (!alive) return;
+        setState({ key: safeRequestKey, posts: [], loading: false });
+        settledTodayCache.set(safeRequestKey, { posts: [], resolved: true });
+      });
+
     return () => {
       alive = false;
     };

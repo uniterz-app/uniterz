@@ -2089,6 +2089,7 @@ export default function ResultListWithOverlay({
                         </button>
                         <MatchCard
                           {...predictOverlay.game}
+                          language={language}
                           myPostId={predictOverlay.post.id}
                           sharedLayoutId={undefined}
                           sharedTransitionBaseKey={undefined}

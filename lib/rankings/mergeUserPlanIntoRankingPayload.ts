@@ -119,6 +119,24 @@ export async function mergeUserPlansIntoBulkByMetric(
   byMetric: Record<string, { rows?: unknown[]; myRow?: unknown | null }>
 ): Promise<void> {
   const fieldsByUid = await loadUserMergeFieldsByUid(collectUidsFromBulk(byMetric));
+  applyUserMergeFieldsToBulk(byMetric, fieldsByUid);
+}
+
+/** ログイン時の myRow だけ plan / 国旗を最新化するとき用 */
+export async function mergeUserPlansForUids(
+  byMetric: Record<string, { rows?: unknown[]; myRow?: unknown | null }>,
+  uids: string[]
+): Promise<void> {
+  const unique = [...new Set(uids.filter(Boolean))];
+  if (unique.length === 0) return;
+  const fieldsByUid = await loadUserMergeFieldsByUid(unique);
+  applyUserMergeFieldsToBulk(byMetric, fieldsByUid);
+}
+
+function applyUserMergeFieldsToBulk(
+  byMetric: Record<string, { rows?: unknown[]; myRow?: unknown | null }>,
+  fieldsByUid: Map<string, UserMergeFields>
+): void {
 
   for (const bundle of Object.values(byMetric)) {
     if (Array.isArray(bundle.rows)) {

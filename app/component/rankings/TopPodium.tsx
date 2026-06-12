@@ -112,12 +112,19 @@ export default function TopPodium({
   const metricTag = cyberMetricTag(metric, language);
   const isWebList = base === "/web" && !compact;
   const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
+  const statsLeague = rankingLeague ?? "worldcup";
+  const statsContext = {
+    rankingLeague: statsLeague,
+    wcStage:
+      statsLeague === "worldcup" ? (wcStage ?? ("overall" as const)) : undefined,
+  };
+
   const warmProfileRoute = useCallback(
     (profileKey: string, row: RankingRowWithCountry, href: string) => {
-      primeProfileCacheFromRankingRow(profileKey, row);
+      primeProfileCacheFromRankingRow(profileKey, row, statsContext);
       router.prefetch(href);
     },
-    [router]
+    [router, statsContext]
   );
 
   return (

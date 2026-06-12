@@ -5,6 +5,7 @@ import { LazyMotion, domAnimation } from "framer-motion";
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+import { useProfileOverviewStage } from "@/lib/profile/useProfileOverviewStage";
 import type { ProfileViewPropsV2 } from "./ProfilePageBaseV2";
 
 const ProfileDailyTrendChartLazy = dynamic(
@@ -226,9 +227,10 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const proSummaryTotal = 5;
   const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}`;
-  /** 成績APIと日次トレンドの両方が揃うまでサマリー・グラフを出さない */
-  const summaryReady = !resolvedUid || !statsLoading;
-  const overviewExtrasReady = !resolvedUid || !statsLoading;
+  /** ランキング行プライム or API 取得後は即サマリー表示。未取得時のみスケルトン */
+  const summaryReady = !resolvedUid || !!summary || !statsLoading;
+  const chartsReady = !resolvedUid || !statsLoading;
+  const overviewStage = useProfileOverviewStage(chartsReady);
 
   useEffect(() => {
     if (tab !== "bracket") {
@@ -467,8 +469,21 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
               )}
               </div>
 
-            {overviewExtrasReady ? (
+            {resolvedUid ? (
+              <div className="mt-6 min-w-0 overflow-hidden">
+                <ProfileSettledTodayResultsLazy
+                  uid={resolvedUid}
+                  language={language}
+                  layout="mobile"
+                  profileStatsContext={props.profileStatsContext}
+                  viewerUid={isMe ? targetUid : null}
+                  gamesRoutePrefix="/mobile"
+                />
+              </div>
+            ) : null}
+            {chartsReady ? (
             <div className="mt-6 space-y-4">
+              {overviewStage >= 1 ? (
               <div className="min-w-0 overflow-hidden">
                 {dailyTrendLoading ? (
                   <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
@@ -481,6 +496,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                   />
                 )}
               </div>
+              ) : null}
+              {overviewStage >= 2 ? (
               <div className="min-w-0 overflow-hidden pt-0">
                 <ProfilePlayoffRankTrendChartLazy
                   data={rankPlayoffTrendRows}
@@ -488,6 +505,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                   language={language}
                 />
               </div>
+              ) : null}
+              {overviewStage >= 3 ? (
               <div className="min-w-0 overflow-hidden">
                 <StreakTrackerCardLazy
                   uid={resolvedUid}
@@ -495,16 +514,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                   profileStatsContext={props.profileStatsContext}
                 />
               </div>
-              <div className="min-w-0 overflow-hidden">
-                <ProfileSettledTodayResultsLazy
-                  uid={resolvedUid}
-                  language={language}
-                  layout="mobile"
-                  profileStatsContext={props.profileStatsContext}
-                  viewerUid={isMe ? targetUid : null}
-                  gamesRoutePrefix="/mobile"
-                />
-              </div>
+              ) : null}
             </div>
             ) : (
               <div className="mt-6 space-y-4">

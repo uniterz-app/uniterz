@@ -28,7 +28,12 @@ import {
   GAMES_LIST_REST_CARDS_DELAY_SEC,
 } from "./cyberMotion";
 import { toMatchCardProps } from "@/lib/games/transform";
-import PredictionFormV2 from "../predict/PredictionFormV2";
+import dynamic from "next/dynamic";
+
+const PredictionFormV2 = dynamic(() => import("../predict/PredictionFormV2"), {
+  loading: () => null,
+  ssr: false,
+});
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -435,15 +440,11 @@ export default function ScheduleList({
 
       if (alive) setTeamRecordMap(immediateMap);
 
-      /** NBA: always refetch team docs so MatchCard rank matches updateTeamRankings */
-      const missingTeamIds =
-        leagueAnimKey === "nba"
-          ? teamIds
-          : teamIds.filter(
-              (teamId) =>
-                !memoryTeamRecordCache.has(teamRecordMemKey(teamId)) &&
-                !sessionCache[teamId]
-            );
+      const missingTeamIds = teamIds.filter(
+        (teamId) =>
+          !memoryTeamRecordCache.has(teamRecordMemKey(teamId)) &&
+          !sessionCache[teamId]
+      );
 
       let merged: Record<string, TeamRecord> = { ...immediateMap };
       let nextSessionCache: Record<string, TeamRecord> = { ...sessionCache };
@@ -701,6 +702,7 @@ export default function ScheduleList({
 
                 <MatchCard
                   {...selectedProps}
+                  language={language}
                   marketBias={
                     overlayLiveMarketBias ?? selectedProps.marketBias
                   }
@@ -831,6 +833,7 @@ export default function ScheduleList({
     const card = (
       <MatchCard
         {...props}
+        language={language}
         className={isVtGhostRow ? "invisible select-none" : undefined}
         scheduleEntryIndex={index}
         heavyListEntry={!isDaySwitchShell}
