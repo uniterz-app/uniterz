@@ -7,7 +7,6 @@ export default function PredictOverlayCyberDecor() {
   return (
     <>
       <span className={`${CORNER} left-2 top-2 h-3 w-3 border-l-2 border-t-2`} aria-hidden />
-      <span className={`${CORNER} right-2 top-2 h-3 w-3 border-r-2 border-t-2`} aria-hidden />
       <span
         className={`${CORNER} bottom-2 left-2 h-3 w-3 border-b-2 border-l-2`}
         aria-hidden

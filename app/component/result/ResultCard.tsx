@@ -32,6 +32,7 @@ import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
+import { PREDICT_OVERLAY_MENU_BTN_CLASS } from "@/lib/ui/predictOverlayCyber";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
@@ -261,28 +262,23 @@ function ResultCardPresentationImpl({
   }, [isMatchStarted]);
 
   useEffect(() => {
-    if (!isMobile || !cornerFabOpen) return;
+    if (!cornerFabOpen) return;
     const onDocPointer = (e: PointerEvent) => {
       const el = cornerFabRef.current;
       if (el && !el.contains(e.target as Node)) setCornerFabOpen(false);
     };
     document.addEventListener("pointerdown", onDocPointer, true);
     return () => document.removeEventListener("pointerdown", onDocPointer, true);
-  }, [isMobile, cornerFabOpen]);
+  }, [cornerFabOpen]);
 
-  /** 下に飛び出すゴミ箱（中央揃え＋縦方向の出現） */
-  const flyoutTrashClass = isMobile
-    ? cornerFabOpen
-      ? "pointer-events-auto visible -translate-x-1/2 translate-y-0 opacity-100"
-      : "pointer-events-none invisible -translate-x-1/2 -translate-y-2 opacity-0"
-    : "pointer-events-none invisible -translate-x-1/2 -translate-y-2 opacity-0 group-hover:pointer-events-auto group-hover:visible group-hover:-translate-x-1/2 group-hover:translate-y-0 group-hover:opacity-100";
+  /** タップで開閉。カード hover でもサブメニューを出す */
+  const flyoutTrashClass = cornerFabOpen
+    ? "pointer-events-auto visible -translate-x-1/2 translate-y-0 opacity-100"
+    : "pointer-events-none invisible -translate-x-1/2 -translate-y-2 opacity-0 group-hover/card:pointer-events-auto group-hover/card:visible group-hover/card:-translate-x-1/2 group-hover/card:translate-y-0 group-hover/card:opacity-100";
 
-  /** 左へ飛び出すペン（overflow 内に収める）。translate は y 中央揃えと合成 */
-  const flyoutPenClass = isMobile
-    ? cornerFabOpen
-      ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
-      : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0"
-    : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover:pointer-events-auto group-hover:visible group-hover:-translate-y-1/2 group-hover:translate-x-0 group-hover:opacity-100";
+  const flyoutPenClass = cornerFabOpen
+    ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
+    : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover/card:pointer-events-auto group-hover/card:visible group-hover/card:translate-x-0 group-hover/card:opacity-100";
 
   return (
     <ResultGlassShell
@@ -293,8 +289,8 @@ function ResultCardPresentationImpl({
       dense={mobileScheduleDense}
       lift={!embedded}
       className={[
-        "relative text-white",
-        isMobile && cornerFabOpen ? "overflow-visible" : "",
+        "group/card relative text-white",
+        cornerFabOpen ? "overflow-visible" : "",
         embedded
           ? "w-full"
           : isMobile
@@ -303,7 +299,7 @@ function ResultCardPresentationImpl({
         embedded ? "" : "cursor-pointer select-none",
       ].join(" ")}
       extraPanelClassName={
-        isMobile && cornerFabOpen ? "!overflow-visible" : ""
+        cornerFabOpen ? "!overflow-visible" : ""
       }
     >
       {hasCornerActions ? (
@@ -311,7 +307,7 @@ function ResultCardPresentationImpl({
           ref={cornerFabRef}
           className={[
             /* ホバーでペンへ移る途中でも閉じにくいようホットエリアを広げる（見た目位置は維持） */
-            "group pointer-events-auto absolute",
+            "pointer-events-auto absolute",
             isMobile ? "-m-3 p-3 right-1.5 top-1.5 z-[50]" : "-m-5 p-5 right-3 top-3 z-40 sm:right-4 sm:top-4",
           ].join(" ")}
           onClick={(e) => e.stopPropagation()}
@@ -327,7 +323,7 @@ function ResultCardPresentationImpl({
               <button
                 type="button"
                 className={[
-                  "absolute right-full top-1/2 mr-1.5 flex items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
+                  "absolute right-full top-1/2 mr-1.5 flex -translate-y-1/2 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
                   isMobile ? "size-7" : "size-8",
                   isMobile ? "z-[55]" : "z-30",
                   "hover:border-white/40 hover:bg-white/10 hover:text-white",
@@ -384,17 +380,17 @@ function ResultCardPresentationImpl({
             <button
               type="button"
               className={[
-                "relative flex items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
-                isMobile ? "z-[52] size-6 touch-manipulation" : "z-20 size-8",
-                "hover:border-white/40 hover:bg-white/10 hover:text-white",
+                PREDICT_OVERLAY_MENU_BTN_CLASS,
+                "relative flex touch-manipulation items-center justify-center transition-all duration-300 ease-out",
+                isMobile ? "z-[52] size-6" : "z-20 size-8",
               ].join(" ")}
-              aria-expanded={isMobile ? cornerFabOpen : undefined}
+              aria-expanded={cornerFabOpen}
               aria-haspopup="true"
               aria-label={m.results.openActions}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (isMobile) setCornerFabOpen((v) => !v);
+                setCornerFabOpen((v) => !v);
               }}
             >
               <Menu
@@ -436,6 +432,7 @@ function ResultCardPresentationImpl({
             <ResultOutcomeBadges
               badge={badge}
               streakBadge={streakBadge}
+              activeWinStreak={activeWinStreak}
               isMobile={isMobile}
               hitBadgeSubtle
               trailing={liveMarkNode}
@@ -474,6 +471,7 @@ function ResultCardPresentationImpl({
             <ResultOutcomeBadges
               badge={badge}
               streakBadge={streakBadge}
+              activeWinStreak={activeWinStreak}
               isMobile={isMobile}
               hitBadgeSubtle
               trailing={liveMarkNode}

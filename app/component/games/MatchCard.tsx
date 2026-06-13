@@ -66,7 +66,10 @@ import MatchCardOverlayMarketBar from "@/app/component/games/MatchCardOverlayMar
 import MatchListCyberDecor from "@/app/component/games/MatchListCyberDecor";
 import PredictOverlayCyberDecor from "@/app/component/predict/PredictOverlayCyberDecor";
 import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
-import { PREDICT_OVERLAY_CYBER_GRID_CLASS } from "@/lib/ui/predictOverlayCyber";
+import {
+  PREDICT_OVERLAY_CYBER_GRID_CLASS,
+  PREDICT_OVERLAY_MENU_BTN_CLASS,
+} from "@/lib/ui/predictOverlayCyber";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
   MOBILE_LIST_CARD_OUTER_CLASS,
@@ -693,14 +696,19 @@ useEffect(() => {
 }, [showMergedPredictEdit]);
 
 useEffect(() => {
-  if (!isMobile || !mergedEditFabOpen) return;
+  if (!mergedEditFabOpen) return;
   const onDocPointer = (e: PointerEvent) => {
     const el = mergedEditFabRef.current;
     if (el && !el.contains(e.target as Node)) setMergedEditFabOpen(false);
   };
   document.addEventListener("pointerdown", onDocPointer, true);
   return () => document.removeEventListener("pointerdown", onDocPointer, true);
-}, [isMobile, mergedEditFabOpen]);
+}, [mergedEditFabOpen]);
+
+/** タップで開閉。カード hover でもペンを出す（FAB 内の group だとカード全体に届かないため group/card） */
+const mergedEditFlyoutPenClass = mergedEditFabOpen
+  ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
+  : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover/card:pointer-events-auto group-hover/card:visible group-hover/card:translate-x-0 group-hover/card:opacity-100";
 
 const overlayPredictScoreClass = isMobile
   ? mobileDense
@@ -1081,7 +1089,8 @@ setNavigating(true);
 
   // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
   const shellClassName = [
-    "group relative overflow-hidden text-white",
+    "group/card relative text-white",
+    mergedEditFabOpen ? "overflow-visible" : "overflow-hidden",
     inPredictOverlay && isMobile
       ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
       : mobileDense
@@ -1325,6 +1334,7 @@ return (
           <ResultOutcomeBadges
             badge={resultBadge}
             streakBadge={resultStreakBadge}
+            activeWinStreak={resultActiveWinStreak}
             isMobile={isMobile}
           />
         </div>
@@ -1333,7 +1343,7 @@ return (
         <div
           ref={mergedEditFabRef}
           className={[
-            "group pointer-events-auto absolute z-[50]",
+            "pointer-events-auto absolute z-[50]",
             isMobile
               ? "-m-3 p-3 right-0.5 top-0.5"
               : "-m-5 p-5 right-2 top-2 sm:right-2.5 sm:top-2.5",
@@ -1348,11 +1358,7 @@ return (
                 isMobile ? "size-7" : "size-8",
                 isMobile ? "z-[55]" : "z-30",
                 "hover:border-white/40 hover:bg-white/10 hover:text-white",
-                isMobile
-                  ? mergedEditFabOpen
-                    ? "pointer-events-auto visible translate-x-0 opacity-100"
-                    : "pointer-events-none invisible translate-x-2 opacity-0"
-                  : "pointer-events-none invisible translate-x-2 opacity-0 group-hover:pointer-events-auto group-hover:visible group-hover:translate-x-0 group-hover:opacity-100",
+                mergedEditFlyoutPenClass,
               ].join(" ")}
               aria-label={m.results.editPredictionAriaLabel}
               onClick={(e) => {
@@ -1371,17 +1377,17 @@ return (
             <button
               type="button"
               className={[
-                "relative flex items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
-                isMobile ? "z-[52] size-6 touch-manipulation" : "z-20 size-8",
-                "hover:border-white/40 hover:bg-white/10 hover:text-white",
+                PREDICT_OVERLAY_MENU_BTN_CLASS,
+                "relative flex touch-manipulation items-center justify-center transition-all duration-300 ease-out",
+                isMobile ? "z-[52] size-6" : "z-20 size-8",
               ].join(" ")}
-              aria-expanded={isMobile ? mergedEditFabOpen : undefined}
+              aria-expanded={mergedEditFabOpen}
               aria-haspopup="true"
               aria-label={m.results.openActions}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (isMobile) setMergedEditFabOpen((v) => !v);
+                setMergedEditFabOpen((v) => !v);
               }}
             >
               <Menu

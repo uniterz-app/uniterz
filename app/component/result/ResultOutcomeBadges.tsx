@@ -3,6 +3,9 @@
 import { Flame } from "lucide-react";
 import {
   resultHitBadgeClass,
+  resultMissBadgeClass,
+  resultStreakBadgeClass,
+  resultStreakBadgeIconClass,
   resultUpsetBadgeClass,
   type ResultCardBadge,
 } from "@/lib/result/resultGlass";
@@ -11,10 +14,12 @@ import type { WinStreakBadgeStyle } from "@/lib/ui/winStreakBadge";
 type Props = {
   badge: ResultCardBadge;
   streakBadge: WinStreakBadgeStyle | null;
+  /** 連勝数（streakBadge が無いときのフォールバック用） */
+  activeWinStreak?: unknown;
   isMobile: boolean;
   /** LIVE マーク等をバッジ横に並べる */
   trailing?: React.ReactNode;
-  /** リザルト一覧・詳細向け：HIT バッジをやや小さく */
+  /** リザルト一覧・詳細向け：バッジをやや小さく */
   hitBadgeSubtle?: boolean;
   className?: string;
 };
@@ -23,17 +28,23 @@ type Props = {
 export default function ResultOutcomeBadges({
   badge,
   streakBadge,
+  activeWinStreak = 0,
   isMobile,
   trailing = null,
   hitBadgeSubtle = false,
   className = "",
 }: Props) {
-  const mobileBadgeClass = isMobile
-    ? "text-[10px] px-1.5 py-0.5"
-    : "text-[11px] px-2 py-0.5";
-  const mobileStreakBadgeClass = isMobile
-    ? "text-[9px] px-1.5 py-0.5 gap-1"
-    : "text-[11px] px-2.5 py-0.5 gap-1.5";
+  const streakClass =
+    badge === "streak"
+      ? (streakBadge?.className ??
+        resultStreakBadgeClass(activeWinStreak, isMobile, {
+          subtle: hitBadgeSubtle,
+        }))
+      : null;
+  const streakLabel = streakBadge?.label;
+  const streakIconClass =
+    streakBadge?.iconClassName ??
+    `shrink-0 ${resultStreakBadgeIconClass(activeWinStreak)}`;
   const mobileStreakIconClass = isMobile ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
 
   if (!badge && !trailing) return null;
@@ -45,16 +56,13 @@ export default function ResultOutcomeBadges({
         className,
       ].join(" ")}
     >
-      {badge === "streak" && streakBadge ? (
-        <span
-          className={`pointer-events-auto inline-flex max-w-full min-w-0 items-center gap-0.5 rounded-md font-extrabold shadow-md ${mobileStreakBadgeClass} ${streakBadge.className}`}
-        >
+      {badge === "streak" && streakClass && streakLabel ? (
+        <span className={streakClass}>
           <Flame
-            className={`shrink-0 ${mobileStreakIconClass} ${streakBadge.iconClassName}`}
+            className={`${mobileStreakIconClass} ${streakIconClass}`}
+            aria-hidden
           />
-          <span className="min-w-0 truncate text-[9px] leading-tight sm:text-[11px]">
-            {streakBadge.label}
-          </span>
+          <span className="min-w-0 truncate leading-tight">{streakLabel}</span>
         </span>
       ) : null}
       {badge === "hit" ? (
@@ -71,7 +79,9 @@ export default function ResultOutcomeBadges({
       ) : null}
       {badge === "miss" ? (
         <span
-          className={`pointer-events-auto shrink-0 rounded-md bg-gray-500 font-extrabold text-white shadow-md ${mobileBadgeClass}`}
+          className={resultMissBadgeClass(isMobile, {
+            subtle: hitBadgeSubtle,
+          })}
         >
           MISS
         </span>

@@ -27,6 +27,7 @@ import { t } from "@/lib/i18n/t";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import {
   resultHitBadgeClass,
+  resultMissBadgeClass,
   resultUpsetBadgeClass,
 } from "@/lib/result/resultGlass";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
@@ -192,7 +193,9 @@ function ResultMatchHeader({
 
   const activeWinStreak =
     toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getWinStreakBadge(activeWinStreak, language);
+  const streakBadge = getWinStreakBadge(activeWinStreak, language, {
+    subtle: true,
+  });
 
   let badge: "hit" | "upset" | "miss" | "streak" | null = null;
   if ((post.stats as any)?.upsetHit) badge = "upset";
@@ -232,9 +235,7 @@ function ResultMatchHeader({
         >
           <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
             {badge === "streak" && streakBadge && (
-              <span
-                className={`inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-extrabold shadow-md sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-[11px] ${streakBadge.className}`}
-              >
+              <span className={streakBadge.className}>
                 <Flame
                   className={`h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 ${streakBadge.iconClassName}`}
                 />
@@ -250,7 +251,7 @@ function ResultMatchHeader({
               <span className={resultUpsetBadgeClass(false)}>UPSET</span>
             )}
             {badge === "miss" && (
-              <span className="shrink-0 rounded-md bg-gray-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-md sm:px-2.5 sm:py-1 sm:text-[11px]">
+              <span className={resultMissBadgeClass(false, { subtle: true })}>
                 MISS
               </span>
             )}
