@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { m, useInView, useReducedMotion } from "framer-motion";
-import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
-import { CYBER_GLASS_FILL, CYBER_GLASS_PANEL_XL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
+import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import { CYBER_GLASS_FILL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
 import { streakChartLayoutMaxAbs } from "@/lib/profile/streakTrackerChartLayout";
 import {
   useProfileStreakTracker,
@@ -246,22 +246,8 @@ export default function StreakTrackerCard({
   const statRecordLabel = msg.profile.last20TrackerSubtitle.replace("{n}", String(STREAK_TRACKER_LAST_N));
   const statRecordValue = `${stats.wins}-${stats.losses}`;
 
-  const shellCls = `${CYBER_GLASS_PANEL_XL} shadow-[0_10px_30px_rgba(0,0,0,0.45)]`;
-
   return (
-    <div className={[shellCls, S.outerPad].join(" ")}>
-      <m.div
-        className="pointer-events-none absolute inset-0"
-        style={PROFILE_SHELL_GRID_STYLE}
-        initial={false}
-        animate={
-          gateOpen && points.length > 0
-            ? { opacity: 0.38 }
-            : { opacity: 0.2 }
-        }
-        transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
-        aria-hidden
-      />
+    <ProfileKinetikPanelFrame className={S.outerPad}>
       <div className="relative z-1">
         <div className="relative z-20 mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -655,7 +641,7 @@ export default function StreakTrackerCard({
           </m.div>
         ) : null}
       </div>
-    </div>
+    </ProfileKinetikPanelFrame>
   );
 }
 

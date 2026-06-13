@@ -5,9 +5,8 @@ import { t } from "@/lib/i18n/t";
 import ResultCard from "@/app/component/result/ResultCard";
 import { useProfileSettledTodayResults } from "@/lib/profile/useProfileSettledTodayResults";
 import type { ProfileStatsStreakContext } from "@/lib/profile/profileStreakScope";
-import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { CYBER_GLASS_PANEL_XL } from "@/lib/ui/matchOverlayGlass";
+import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import { jp, nameRajdhani } from "@/lib/fonts";
 
 type Props = {
@@ -38,14 +37,8 @@ export default function ProfileSettledTodayResults({
   const title = msg.profile.settledTodayResults;
   const empty = msg.profile.settledTodayEmpty;
   return (
-    <section className={`${CYBER_GLASS_PANEL_XL} min-w-0 shadow-[0_10px_30px_rgba(0,0,0,0.45)]`}>
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.36]"
-        style={PROFILE_SHELL_GRID_STYLE}
-        aria-hidden
-      />
-      <div className="relative z-1 p-4 md:p-5">
-        <div>
+    <ProfileKinetikPanelFrame as="section" className="p-4 md:p-5">
+      <div>
           <h3
             className={[
               nameRajdhani.className,
@@ -93,7 +86,6 @@ export default function ProfileSettledTodayResults({
             ))}
           </div>
         )}
-      </div>
-    </section>
+    </ProfileKinetikPanelFrame>
   );
 }

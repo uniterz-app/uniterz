@@ -19,6 +19,20 @@ export function getProfileStatsTitle(
     : m.profile.statsTitlePlayoffs2026;
 }
 
+/** Kinetik カードのグリッチタイトル（スコープ連動・英語固定） */
+export function getProfileKinetikMetricsTitle(
+  ctx: ProfileStatsStreakContext
+): string {
+  if (ctx.rankingLeague === "nba") {
+    return "NBA // PLAYOFFS STATS";
+  }
+  const stage =
+    ctx.wcStage && isWcRankingStage(ctx.wcStage) ? ctx.wcStage : "overall";
+  if (stage === "qualifying") return "WORLD CUP // QUALIFYING STATS";
+  if (stage === "main") return "WORLD CUP // MAIN STAGE STATS";
+  return "WORLD CUP // GROUP STAGE STATS";
+}
+
 export function getProfileMaxStreakLabels(
   ctx: ProfileStatsStreakContext,
   language: Language

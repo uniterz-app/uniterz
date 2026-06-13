@@ -21,6 +21,8 @@ import {
   type RankingLeagueSource,
 } from "@/lib/rankings/rankingLeagueSource";
 import { fetchProfileSummaryRanks } from "@/lib/rankings/server/fetchProfileSummaryRanks";
+import { loadMyRankMetricValueDeltas } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
+import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 import { isWcRankingStage, type WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
@@ -53,6 +55,8 @@ type SummaryRanks = {
   totalPrecision: number | null;
   totalUpset: number | null;
   totalPoints: number | null;
+  totalPointsDenominator: number | null;
+  rankDeltaPlaces: number | null;
 };
 
 function safeInt(v: unknown): number {
@@ -292,9 +296,10 @@ export async function GET(req: Request) {
     const statsSnap = wantStats
       ? await adminDb.collection("user_stats_v2").doc(uid).get()
       : null;
-    const cumulativeSnap = wantPhase
-      ? await adminDb.collection("cumulative_stats").doc(uid).get()
-      : null;
+    const cumulativeSnap =
+      wantPhase || wantRanks
+        ? await adminDb.collection("cumulative_stats").doc(uid).get()
+        : null;
     const windowSnap = wantWindow
       ? await adminDb.collection("user_stats_v2_window_cache").doc(uid).get()
       : null;
@@ -360,6 +365,7 @@ export async function GET(req: Request) {
     }
 
     let summary: SummaryForCards | null = null;
+    let metricValueDeltas: MyRankMetricValueDeltas | null = null;
     if (wantPhase) {
       if (rankingLeague === "worldcup" && wcStage) {
         /** WC overview は cumulative 更新待ちを避け、日次スナップショットを直接集計する。 */
@@ -378,15 +384,36 @@ export async function GET(req: Request) {
           summary = await summaryFromDailyPhaseFallback(adminDb, uid, phase);
         }
       }
+
+      if (summary) {
+        const winRatePct =
+          summary.winRate <= 1 ? summary.winRate * 100 : summary.winRate;
+        metricValueDeltas = await loadMyRankMetricValueDeltas(
+          uid,
+          {
+            totalPoints: summary.pointsSumV3,
+            totalPrecision: summary.scorePrecisionSum,
+            totalUpset: summary.upsetPointsSum,
+            winRate: winRatePct,
+          },
+          {
+            phase,
+            round: "overall",
+            wcStage: rankingLeague === "worldcup" ? (wcStage ?? "overall") : null,
+            rankingLeague,
+          }
+        );
+      }
     }
-    // 連勝はリーグ／WC ステージ単位（クライアントで投稿から算出）。グローバル streak は混ぜない。
-    /** Overview の順位は Functions 取得のため `ranks` パートで分離（`phase` だけなら高速） */
+
+    /** ティアタグ用 — 日次スナップショット（Functions 不要）。phase 取得時も同梱可。 */
     let summaryRanks: SummaryRanks | null = null;
-    if (wantRanks) {
+    if (wantRanks || wantPhase) {
       summaryRanks = await fetchProfileSummaryRanks(
         uid,
         phase,
-        rankingLeague === "worldcup" ? wcStage : undefined
+        rankingLeague === "worldcup" ? wcStage : undefined,
+        cumulative as Record<string, unknown> | null | undefined
       );
     }
 
@@ -401,6 +428,7 @@ export async function GET(req: Request) {
 
     if (wantStats) body.stats = stats;
     if (summary) body.summary = summary;
+    if (metricValueDeltas) body.metricValueDeltas = metricValueDeltas;
     if (summaryRanks) body.summaryRanks = summaryRanks;
     if (parts.has("trend") && wantWindow) body.dailyTrend = dailyTrend;
 

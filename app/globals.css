@@ -2783,3 +2783,1218 @@ body::before {
     transform: scaleY(1);
   }
 }
+
+/* ── Profile edit Tron preview ── */
+@keyframes profile-edit-tron-orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.profile-edit-tron-orbit-spin {
+  animation: profile-edit-tron-orbit-spin 9s linear infinite;
+}
+
+.profile-edit-tron-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(34, 211, 238, 0.08) 2px,
+    rgba(34, 211, 238, 0.08) 3px
+  );
+}
+
+.profile-edit-tron-stat-cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 3px;
+  border-top: 1px solid rgba(34, 211, 238, 0.45);
+  border-left: 1px solid rgba(34, 211, 238, 0.45);
+  pointer-events: none;
+}
+
+.profile-edit-tron-avatar-core:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.65);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-edit-tron-orbit-spin {
+    animation: none;
+  }
+
+  .profile-edit-tron-orbit-dot {
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Profile Kinetik panel frame (hero + overview cards) ── */
+.profile-kinetik-panel,
+.profile-edit-kinetik-card {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+  --kinetik-frame: rgba(255, 255, 255, 0.22);
+  --kinetik-frame-strong: rgba(255, 255, 255, 0.88);
+  --kinetik-frame-dim: rgba(255, 255, 255, 0.28);
+  --kinetik-frame-corner: 18px;
+}
+
+.profile-kinetik-panel::before,
+.profile-edit-kinetik-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border: 1px solid var(--kinetik-frame);
+}
+
+.profile-kinetik-panel > :not(.profile-kinetik-frame-corner),
+.profile-edit-kinetik-card > :not(.profile-kinetik-frame-corner) {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-kinetik-frame-corner,
+.profile-edit-kinetik-frame-corner {
+  position: absolute;
+  box-sizing: border-box;
+  width: var(--kinetik-frame-corner);
+  height: var(--kinetik-frame-corner);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.profile-kinetik-frame-corner--tl,
+.profile-edit-kinetik-frame-corner--tl {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--kinetik-frame-strong);
+  border-left: 2px solid var(--kinetik-frame-strong);
+}
+
+.profile-kinetik-frame-corner--tr,
+.profile-edit-kinetik-frame-corner--tr {
+  top: -1px;
+  right: -1px;
+  border-top: 2px solid var(--kinetik-frame-strong);
+  border-right: 2px solid var(--kinetik-frame-strong);
+}
+
+.profile-kinetik-frame-corner--bl,
+.profile-edit-kinetik-frame-corner--bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 2px solid var(--kinetik-frame-strong);
+  border-left: 2px solid var(--kinetik-frame-strong);
+}
+
+.profile-kinetik-frame-corner--br,
+.profile-edit-kinetik-frame-corner--br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--kinetik-frame-strong);
+  border-right: 2px solid var(--kinetik-frame-strong);
+}
+
+/* Frame accent — corners + outer border (profile card; streak > rank/tier) */
+.profile-kinetik-panel--accent-rank-1,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-rank-1 {
+  --kinetik-frame-strong: rgba(255, 214, 90, 0.92);
+  --kinetik-frame: rgba(255, 214, 90, 0.3);
+  --kinetik-frame-dim: rgba(255, 214, 90, 0.22);
+}
+
+.profile-kinetik-panel--accent-rank-2,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-rank-2 {
+  --kinetik-frame-strong: rgba(184, 196, 216, 0.92);
+  --kinetik-frame: rgba(184, 196, 216, 0.3);
+  --kinetik-frame-dim: rgba(184, 196, 216, 0.22);
+}
+
+.profile-kinetik-panel--accent-rank-3,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-rank-3 {
+  --kinetik-frame-strong: rgba(205, 127, 50, 0.92);
+  --kinetik-frame: rgba(205, 127, 50, 0.3);
+  --kinetik-frame-dim: rgba(205, 127, 50, 0.22);
+}
+
+.profile-kinetik-panel--accent-legend,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-legend {
+  --kinetik-frame-strong: rgba(252, 211, 77, 0.92);
+  --kinetik-frame: rgba(252, 211, 77, 0.3);
+  --kinetik-frame-dim: rgba(252, 211, 77, 0.22);
+}
+
+.profile-kinetik-panel--accent-elite,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-elite {
+  --kinetik-frame-strong: rgba(192, 132, 252, 0.92);
+  --kinetik-frame: rgba(192, 132, 252, 0.3);
+  --kinetik-frame-dim: rgba(192, 132, 252, 0.22);
+}
+
+.profile-kinetik-panel--accent-pro,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-pro {
+  --kinetik-frame-strong: rgba(0, 245, 255, 0.92);
+  --kinetik-frame: rgba(0, 245, 255, 0.3);
+  --kinetik-frame-dim: rgba(0, 245, 255, 0.22);
+}
+
+.profile-kinetik-panel--accent-analyst,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-analyst {
+  --kinetik-frame-strong: rgba(168, 255, 42, 0.92);
+  --kinetik-frame: rgba(168, 255, 42, 0.3);
+  --kinetik-frame-dim: rgba(168, 255, 42, 0.22);
+}
+
+.profile-kinetik-panel--accent-rising,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-rising {
+  --kinetik-frame-strong: rgba(251, 146, 60, 0.92);
+  --kinetik-frame: rgba(251, 146, 60, 0.3);
+  --kinetik-frame-dim: rgba(251, 146, 60, 0.22);
+}
+
+.profile-kinetik-panel--accent-streak-1,
+.profile-kinetik-panel--accent-streak-2,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-streak-1,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-streak-2 {
+  --kinetik-frame-strong: rgba(204, 255, 0, 0.92);
+  --kinetik-frame: rgba(204, 255, 0, 0.3);
+  --kinetik-frame-dim: rgba(204, 255, 0, 0.22);
+}
+
+.profile-kinetik-panel--accent-streak-3,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-streak-3 {
+  --kinetik-frame-strong: rgba(34, 211, 238, 0.92);
+  --kinetik-frame: rgba(34, 211, 238, 0.3);
+  --kinetik-frame-dim: rgba(34, 211, 238, 0.22);
+}
+
+.profile-kinetik-panel--accent-streak-4,
+.profile-edit-kinetik-card.profile-kinetik-panel--accent-streak-4 {
+  --kinetik-frame-strong: rgba(248, 113, 113, 0.92);
+  --kinetik-frame: rgba(248, 113, 113, 0.3);
+  --kinetik-frame-dim: rgba(248, 113, 113, 0.22);
+}
+
+.profile-kinetik-panel--compact,
+.profile-edit-kinetik-card--compact {
+  --kinetik-frame-corner: 14px;
+}
+
+.profile-edit-kinetik-card--web {
+  --kav-size: 120px;
+  --kinetik-frame-corner: 22px;
+  --kinetik-tab-row-h: 34px;
+  --kav-edge-len: 48px;
+  --kav-glyph-size: 36px;
+  --kav-inner-inset: 8px;
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-footer-ref {
+  font-size: 10px;
+  padding: 8px 14px 10px 12px;
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-slant-tab__label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.profile-edit-kinetik-layout-web {
+  min-height: 460px;
+}
+
+.profile-edit-kinetik-layout-web__side {
+  min-height: 100%;
+}
+
+.profile-edit-kinetik-layout-web__main {
+  min-width: 0;
+}
+
+.profile-edit-kinetik-card--web .profile-edit-kinetik-avatar-column {
+  align-items: center;
+  margin-top: 0;
+}
+
+@media (min-width: 768px) {
+  .profile-edit-kinetik-card--web .profile-edit-kinetik-avatar-column {
+    align-items: flex-start;
+  }
+}
+
+/* ── Profile edit Kinetik preview ── */
+.profile-edit-kinetik-card {
+  --kinetik-tab-row-h: 30px;
+  --kav-size: 72px;
+  --kav-offset: 6px;
+  --kav-rib-len: 44px;
+  --kav-rib-thick: 5px;
+  --kav-pad-x: 6px;
+  --kav-pad-y: 6px;
+  --kav-inner-inset: 7px;
+  --kav-edge-len: 38px;
+  --kav-glyph-size: 28px;
+}
+
+.profile-edit-kinetik-card--compact {
+  --kinetik-tab-row-h: 26px;
+  --kav-size: 64px;
+  --kav-offset: 5px;
+  --kav-rib-len: 36px;
+  --kav-rib-thick: 4px;
+  --kav-pad-x: 5px;
+  --kav-pad-y: 5px;
+  --kav-inner-inset: 6px;
+  --kav-edge-len: 32px;
+  --kav-glyph-size: 24px;
+}
+
+.profile-edit-kinetik-header {
+  align-items: flex-start;
+  overflow: visible;
+}
+
+.profile-edit-kinetik-header__meta {
+  padding-top: 0;
+}
+
+.profile-edit-kinetik-avatar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  margin-top: -4px;
+  overflow: visible;
+}
+
+.profile-edit-kinetik-footer-ref {
+  position: relative;
+  display: inline-block;
+  padding: 7px 12px 9px 10px;
+  border-left: 1px solid var(--kinetik-frame-dim);
+  border-bottom: 1px solid var(--kinetik-frame-dim);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  line-height: 1;
+}
+
+.profile-edit-kinetik-footer {
+  border-top: 1px dashed var(--kinetik-frame-dim);
+}
+
+.profile-edit-kinetik-hatch {
+  background: repeating-linear-gradient(
+    -35deg,
+    transparent,
+    transparent 3px,
+    rgba(168, 255, 42, 0.06) 3px,
+    rgba(168, 255, 42, 0.06) 4px
+  );
+  mask-image: linear-gradient(135deg, black 30%, transparent 85%);
+}
+
+.profile-edit-kinetik-donut__svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  filter:
+    drop-shadow(0 0 8px rgba(18, 245, 255, 0.18))
+    drop-shadow(0 0 10px rgba(255, 25, 230, 0.16));
+}
+
+.profile-edit-kinetik-donut__segment--lit {
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+.profile-edit-kinetik-donut__core {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+/* Kinetik avatar — TL/BR ribbed glow + offset plate (matches reference art) */
+.profile-edit-kinetik-avatar {
+  --kav-green: #ccff00;
+  --kav-green-dim: rgba(204, 255, 0, 0.08);
+  --kav-green-mid: rgba(204, 255, 0, 0.36);
+  --kav-plate: #121416;
+  --kav-plate-inner: #0a0c0e;
+  position: relative;
+  width: var(--kav-size);
+  height: var(--kav-size);
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.profile-edit-kinetik-avatar__rib {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.profile-edit-kinetik-avatar__rib::before,
+.profile-edit-kinetik-avatar__rib::after {
+  content: "";
+  position: absolute;
+  background-image: repeating-linear-gradient(
+    180deg,
+    var(--kav-green-mid) 0px,
+    var(--kav-green-mid) 1px,
+    var(--kav-green-dim) 1px,
+    var(--kav-green-dim) 2.5px
+  );
+}
+
+.profile-edit-kinetik-avatar__rib--tl {
+  left: 0;
+  top: 0;
+  width: var(--kav-rib-len);
+  height: var(--kav-rib-len);
+}
+
+.profile-edit-kinetik-avatar__rib--tl::before {
+  left: 0;
+  top: 0;
+  width: var(--kav-rib-len);
+  height: var(--kav-rib-thick);
+  mask-image: linear-gradient(90deg, #000 0 34%, rgba(0, 0, 0, 0.55) 62%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0 34%, rgba(0, 0, 0, 0.55) 62%, transparent 100%);
+}
+
+.profile-edit-kinetik-avatar__rib--tl::after {
+  left: 0;
+  top: 0;
+  width: var(--kav-rib-thick);
+  height: var(--kav-rib-len);
+  mask-image: linear-gradient(180deg, #000 0 38%, rgba(0, 0, 0, 0.5) 66%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0 38%, rgba(0, 0, 0, 0.5) 66%, transparent 100%);
+}
+
+.profile-edit-kinetik-avatar__rib--br {
+  right: 0;
+  bottom: 0;
+  width: var(--kav-rib-len);
+  height: var(--kav-rib-len);
+}
+
+.profile-edit-kinetik-avatar__rib--br::before {
+  right: 0;
+  bottom: 0;
+  width: var(--kav-rib-len);
+  height: var(--kav-rib-thick);
+  mask-image: linear-gradient(270deg, #000 0 34%, rgba(0, 0, 0, 0.55) 62%, transparent 100%);
+  -webkit-mask-image: linear-gradient(270deg, #000 0 34%, rgba(0, 0, 0, 0.55) 62%, transparent 100%);
+}
+
+.profile-edit-kinetik-avatar__rib--br::after {
+  right: 0;
+  bottom: 0;
+  width: var(--kav-rib-thick);
+  height: var(--kav-rib-len);
+  mask-image: linear-gradient(0deg, #000 0 38%, rgba(0, 0, 0, 0.5) 66%, transparent 100%);
+  -webkit-mask-image: linear-gradient(0deg, #000 0 38%, rgba(0, 0, 0, 0.5) 66%, transparent 100%);
+}
+
+.profile-edit-kinetik-avatar__plate {
+  position: relative;
+  z-index: 1;
+  width: var(--kav-size);
+  height: var(--kav-size);
+  background: var(--kav-plate);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 6px 16px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.profile-edit-kinetik-avatar__edge {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.profile-edit-kinetik-avatar__edge--tl::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--kav-edge-len);
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--kav-green) 0%,
+    var(--kav-green-soft, rgba(204, 255, 0, 0.5)) 38%,
+    transparent 100%
+  );
+  box-shadow: none;
+}
+
+.profile-edit-kinetik-avatar__edge--tl::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: var(--kav-edge-len);
+  background: linear-gradient(
+    180deg,
+    var(--kav-green) 0%,
+    var(--kav-green-soft, rgba(204, 255, 0, 0.5)) 38%,
+    transparent 100%
+  );
+  box-shadow: none;
+}
+
+.profile-edit-kinetik-avatar__edge--br::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--kav-edge-len);
+  height: 2px;
+  background: linear-gradient(
+    270deg,
+    var(--kav-green) 0%,
+    var(--kav-green-soft, rgba(204, 255, 0, 0.5)) 38%,
+    transparent 100%
+  );
+  box-shadow: none;
+}
+
+.profile-edit-kinetik-avatar__edge--br::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+  height: var(--kav-edge-len);
+  background: linear-gradient(
+    0deg,
+    var(--kav-green) 0%,
+    var(--kav-green-soft, rgba(204, 255, 0, 0.5)) 38%,
+    transparent 100%
+  );
+  box-shadow: none;
+}
+
+.profile-edit-kinetik-avatar__inner {
+  position: absolute;
+  inset: var(--kav-inner-inset);
+  box-sizing: border-box;
+  border: 1px solid var(--kav-green);
+  background: var(--kav-plate-inner);
+  overflow: hidden;
+}
+
+.profile-edit-kinetik-avatar__inner img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.profile-edit-kinetik-avatar__glyph {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.profile-edit-kinetik-avatar__glyph svg {
+  width: var(--kav-glyph-size);
+  height: var(--kav-glyph-size);
+  filter: drop-shadow(0 0 4px var(--kav-green-mid, rgba(204, 255, 0, 0.45)));
+}
+
+.profile-edit-kinetik-avatar__glyph-shape {
+  fill: var(--kav-green-dim, rgba(204, 255, 0, 0.12));
+  stroke: var(--kav-green, #ccff00);
+}
+
+.profile-edit-kinetik-avatar__glyph-dot {
+  fill: var(--kav-green, #ccff00);
+}
+
+.profile-edit-kinetik-avatar__glyph-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.42) 2px,
+    rgba(0, 0, 0, 0.42) 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+}
+
+/* ── Kinetik avatar win-streak FX (preview + profile) ── */
+.profile-edit-kinetik-avatar-wrap {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: visible;
+  /* streak-march / stack overlays read --kav-size from card */
+  width: var(--kav-size);
+  height: var(--kav-size);
+}
+
+.profile-edit-kinetik-streak-label--tier-1,
+.profile-edit-kinetik-streak-label--tier-2 {
+  color: #ccff00;
+}
+
+.profile-edit-kinetik-streak-label--tier-3 {
+  color: #22d3ee;
+}
+
+.profile-edit-kinetik-streak-label--tier-4 {
+  color: #f87171;
+}
+
+/* Kinetik header tabs — slanted pair (left: tier fill / right: streak outline) */
+.profile-edit-kinetik-header-tabs {
+  max-width: 100%;
+}
+
+.profile-edit-kinetik-header-bar {
+  align-items: flex-start;
+  margin-top: -2px;
+}
+
+.profile-edit-kinetik-menu-btn {
+  height: var(--kinetik-tab-row-h);
+  width: var(--kinetik-tab-row-h);
+  min-height: var(--kinetik-tab-row-h);
+  max-height: var(--kinetik-tab-row-h);
+  flex-shrink: 0;
+  border: 1px solid var(--kinetik-menu-accent, rgba(255, 255, 255, 0.22));
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--kinetik-menu-accent, rgba(255, 255, 255, 0.9));
+  box-shadow: none;
+  border-radius: 4px;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.profile-edit-kinetik-menu-btn:hover {
+  background: color-mix(
+    in srgb,
+    var(--kinetik-menu-accent, #ffffff) 10%,
+    rgba(255, 255, 255, 0.06)
+  );
+}
+
+.profile-edit-kinetik-menu-btn--rank-1 {
+  --kinetik-menu-accent: #ffd65a;
+}
+
+.profile-edit-kinetik-menu-btn--rank-2 {
+  --kinetik-menu-accent: #b8c4d8;
+}
+
+.profile-edit-kinetik-menu-btn--rank-3 {
+  --kinetik-menu-accent: #cd7f32;
+}
+
+.profile-edit-kinetik-menu-btn--legend {
+  --kinetik-menu-accent: #fcd34d;
+}
+
+.profile-edit-kinetik-menu-btn--elite {
+  --kinetik-menu-accent: #c084fc;
+}
+
+.profile-edit-kinetik-menu-btn--pro {
+  --kinetik-menu-accent: #00f5ff;
+}
+
+.profile-edit-kinetik-menu-btn--analyst {
+  --kinetik-menu-accent: #a8ff2a;
+}
+
+.profile-edit-kinetik-menu-btn--rising {
+  --kinetik-menu-accent: #fb923c;
+}
+
+.profile-edit-kinetik-menu-btn--default {
+  --kinetik-menu-accent: rgba(255, 255, 255, 0.55);
+}
+
+.profile-edit-kinetik-slant-tab {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  flex-shrink: 0;
+  transform: skewX(-14deg);
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--kinetik-tab-row-h);
+  box-sizing: border-box;
+}
+
+.profile-edit-kinetik-slant-tab__label {
+  position: relative;
+  z-index: 1;
+  display: block;
+  transform: skewX(14deg);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-edit-kinetik-slant-tab__scan {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.14) 2px,
+    rgba(0, 0, 0, 0.14) 3px
+  );
+  pointer-events: none;
+}
+
+.profile-edit-kinetik-slant-tab--filled {
+  --kst-accent: #00f5ff;
+  --kst-glow: rgba(0, 245, 255, 0.42);
+  --kst-fill-text: #050508;
+  color: var(--kst-fill-text);
+  background: var(--kst-accent);
+  border: none;
+  box-shadow: 0 0 16px var(--kst-glow);
+}
+
+.profile-edit-kinetik-slant-tab--rank-legend {
+  --kst-accent: #fcd34d;
+  --kst-glow: rgba(252, 211, 77, 0.45);
+  --kst-fill-text: #1a1200;
+}
+
+.profile-edit-kinetik-slant-tab--rank-elite {
+  --kst-accent: #c084fc;
+  --kst-glow: rgba(192, 132, 252, 0.42);
+  --kst-fill-text: #120818;
+}
+
+.profile-edit-kinetik-slant-tab--rank-pro {
+  --kst-accent: #00f5ff;
+  --kst-glow: rgba(0, 245, 255, 0.42);
+  --kst-fill-text: #050508;
+}
+
+.profile-edit-kinetik-slant-tab--rank-analyst {
+  --kst-accent: #a8ff2a;
+  --kst-glow: rgba(168, 255, 42, 0.38);
+  --kst-fill-text: #0a1004;
+}
+
+.profile-edit-kinetik-slant-tab--rank-rising {
+  --kst-accent: #fb923c;
+  --kst-glow: rgba(251, 146, 60, 0.42);
+  --kst-fill-text: #140a02;
+}
+
+.profile-edit-kinetik-slant-tab--outline {
+  --kst-accent: #ccff00;
+  --kst-glow: rgba(204, 255, 0, 0.35);
+  color: var(--kst-accent);
+  background: transparent;
+  border: 1px solid var(--kst-accent);
+  box-shadow: 0 0 10px var(--kst-glow);
+}
+
+.profile-edit-kinetik-slant-tab--flag {
+  padding-inline: 8px;
+  padding-block: 0;
+  height: var(--kinetik-tab-row-h);
+  min-height: var(--kinetik-tab-row-h);
+  max-height: var(--kinetik-tab-row-h);
+}
+
+.profile-edit-kinetik-slant-tab--streak-1,
+.profile-edit-kinetik-slant-tab--streak-2 {
+  --kst-accent: #ccff00;
+  --kst-glow: rgba(204, 255, 0, 0.35);
+}
+
+.profile-edit-kinetik-slant-tab--streak-3 {
+  --kst-accent: #22d3ee;
+  --kst-glow: rgba(34, 211, 238, 0.38);
+}
+
+.profile-edit-kinetik-slant-tab--streak-4 {
+  --kst-accent: #f87171;
+  --kst-glow: rgba(248, 113, 113, 0.38);
+}
+
+/* Kinetik glitch section title (BEYOND // TIME ref) */
+.profile-edit-kinetik-glitch-title {
+  position: relative;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: transparent;
+}
+
+.profile-edit-kinetik-glitch-title--compact {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.profile-edit-kinetik-glitch-title__layer,
+.profile-edit-kinetik-glitch-title__main {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-edit-kinetik-glitch-title__layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.profile-edit-kinetik-glitch-title__layer--violet {
+  color: #6200ee;
+  transform: translate(-2px, 2px);
+  opacity: 0.92;
+}
+
+.profile-edit-kinetik-glitch-title__layer--cyan {
+  color: #00ffff;
+  transform: translate(1.5px, -1px);
+  opacity: 0.82;
+}
+
+.profile-edit-kinetik-glitch-title__main {
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.12);
+}
+
+.profile-edit-kinetik-glitch-title__main::after {
+  content: "";
+  position: absolute;
+  inset: -1px -2px;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.52) 2px,
+    rgba(0, 0, 0, 0.52) 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+}
+
+@keyframes kinetik-streak-rib-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes kinetik-streak-edge-soft {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes kinetik-streak-frame-breath {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+      0 6px 16px rgba(0, 0, 0, 0.28);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(204, 255, 0, 0.22),
+      inset 0 0 12px rgba(204, 255, 0, 0.08),
+      0 6px 16px rgba(0, 0, 0, 0.28);
+  }
+}
+
+@keyframes kinetik-streak-march-tl {
+  0% {
+    background-position: 0% 0%, 0% 0%;
+  }
+  100% {
+    background-position: 120% 0%, 0% 120%;
+  }
+}
+
+@keyframes kinetik-streak-march-br {
+  0% {
+    background-position: 100% 100%, 100% 100%;
+  }
+  100% {
+    background-position: -20% 100%, 100% -20%;
+  }
+}
+
+@keyframes kinetik-streak-stack-in {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scaleX(0.72);
+  }
+  40%,
+  60% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* A. Rib pulse */
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-1
+  .profile-edit-kinetik-avatar__rib::before,
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-1
+  .profile-edit-kinetik-avatar__rib::after {
+  opacity: 0.78;
+}
+
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-2
+  .profile-edit-kinetik-avatar__rib {
+  animation: kinetik-streak-rib-pulse 3.2s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar__rib {
+  animation: kinetik-streak-rib-pulse 2.4s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar__edge--tl::before,
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar__edge--tl::after,
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar__edge--br::before,
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar__edge--br::after {
+  animation: kinetik-streak-edge-soft 2.4s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-4
+  .profile-edit-kinetik-avatar__rib {
+  animation: kinetik-streak-rib-pulse 1.9s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--rib-pulse.profile-edit-kinetik-avatar-wrap--tier-4
+  .profile-edit-kinetik-avatar__inner {
+  box-shadow: inset 0 0 0 1px rgba(204, 255, 0, 0.35);
+}
+
+/* D. Frame breath */
+.profile-edit-kinetik-avatar-wrap--frame-breath.profile-edit-kinetik-avatar-wrap--tier-1
+  .profile-edit-kinetik-avatar__plate {
+  animation: kinetik-streak-frame-breath 4.5s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--frame-breath.profile-edit-kinetik-avatar-wrap--tier-2
+  .profile-edit-kinetik-avatar__plate {
+  animation: kinetik-streak-frame-breath 3.8s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--frame-breath.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar__plate {
+  animation: kinetik-streak-frame-breath 3.2s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--frame-breath.profile-edit-kinetik-avatar-wrap--tier-4
+  .profile-edit-kinetik-avatar__plate {
+  animation: kinetik-streak-frame-breath 2.6s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--frame-breath.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar__inner,
+.profile-edit-kinetik-avatar-wrap--frame-breath.profile-edit-kinetik-avatar-wrap--tier-4
+  .profile-edit-kinetik-avatar__inner {
+  animation: kinetik-streak-edge-soft 3.2s ease-in-out infinite;
+}
+
+/* B. Edge march — tier colors (march + avatar frame) */
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-1,
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-2 {
+  --kinetik-streak-march: rgba(204, 255, 0, 0.85);
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-1
+  .profile-edit-kinetik-avatar,
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-2
+  .profile-edit-kinetik-avatar {
+  --kav-green: #ccff00;
+  --kav-green-soft: rgba(204, 255, 0, 0.5);
+  --kav-green-mid: rgba(204, 255, 0, 0.36);
+  --kav-green-dim: rgba(204, 255, 0, 0.08);
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-3 {
+  --kinetik-streak-march: rgba(34, 211, 238, 0.88);
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-avatar {
+  --kav-green: #22d3ee;
+  --kav-green-soft: rgba(34, 211, 238, 0.52);
+  --kav-green-mid: rgba(34, 211, 238, 0.38);
+  --kav-green-dim: rgba(34, 211, 238, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-4 {
+  --kinetik-streak-march: rgba(248, 113, 113, 0.9);
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-4
+  .profile-edit-kinetik-avatar {
+  --kav-green: #f87171;
+  --kav-green-soft: rgba(248, 113, 113, 0.55);
+  --kav-green-mid: rgba(248, 113, 113, 0.4);
+  --kav-green-dim: rgba(248, 113, 113, 0.1);
+}
+
+/* Avatar accent — rank / tier (static frame; streak FX takes priority) */
+.profile-edit-kinetik-avatar-wrap--accent-rank-1 .profile-edit-kinetik-avatar {
+  --kav-green: #ffd65a;
+  --kav-green-soft: rgba(255, 214, 90, 0.52);
+  --kav-green-mid: rgba(255, 214, 90, 0.38);
+  --kav-green-dim: rgba(255, 214, 90, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-rank-2 .profile-edit-kinetik-avatar {
+  --kav-green: #b8c4d8;
+  --kav-green-soft: rgba(184, 196, 216, 0.52);
+  --kav-green-mid: rgba(184, 196, 216, 0.38);
+  --kav-green-dim: rgba(184, 196, 216, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-rank-3 .profile-edit-kinetik-avatar {
+  --kav-green: #cd7f32;
+  --kav-green-soft: rgba(205, 127, 50, 0.52);
+  --kav-green-mid: rgba(205, 127, 50, 0.38);
+  --kav-green-dim: rgba(205, 127, 50, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-legend .profile-edit-kinetik-avatar {
+  --kav-green: #fcd34d;
+  --kav-green-soft: rgba(252, 211, 77, 0.52);
+  --kav-green-mid: rgba(252, 211, 77, 0.38);
+  --kav-green-dim: rgba(252, 211, 77, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-elite .profile-edit-kinetik-avatar {
+  --kav-green: #c084fc;
+  --kav-green-soft: rgba(192, 132, 252, 0.52);
+  --kav-green-mid: rgba(192, 132, 252, 0.38);
+  --kav-green-dim: rgba(192, 132, 252, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-pro .profile-edit-kinetik-avatar {
+  --kav-green: #00f5ff;
+  --kav-green-soft: rgba(0, 245, 255, 0.52);
+  --kav-green-mid: rgba(0, 245, 255, 0.38);
+  --kav-green-dim: rgba(0, 245, 255, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-analyst .profile-edit-kinetik-avatar {
+  --kav-green: #a8ff2a;
+  --kav-green-soft: rgba(168, 255, 42, 0.52);
+  --kav-green-mid: rgba(168, 255, 42, 0.38);
+  --kav-green-dim: rgba(168, 255, 42, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-rising .profile-edit-kinetik-avatar {
+  --kav-green: #fb923c;
+  --kav-green-soft: rgba(251, 146, 60, 0.52);
+  --kav-green-mid: rgba(251, 146, 60, 0.38);
+  --kav-green-dim: rgba(251, 146, 60, 0.1);
+}
+
+.profile-edit-kinetik-avatar-wrap--accent-default .profile-edit-kinetik-avatar {
+  --kav-green: rgba(255, 255, 255, 0.72);
+  --kav-green-soft: rgba(255, 255, 255, 0.38);
+  --kav-green-mid: rgba(255, 255, 255, 0.24);
+  --kav-green-dim: rgba(255, 255, 255, 0.08);
+}
+
+.profile-edit-kinetik-streak-march {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  width: calc(var(--kav-size) * 0.81);
+  height: calc(var(--kav-size) * 0.81);
+  opacity: 0.85;
+}
+
+.profile-edit-kinetik-streak-march--tl {
+  left: 0;
+  top: 0;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--kinetik-streak-march, rgba(204, 255, 0, 0.85)) 45%,
+      transparent 90%
+    )
+      0 0 / 140% 2px no-repeat,
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--kinetik-streak-march, rgba(204, 255, 0, 0.85)) 45%,
+      transparent 90%
+    )
+      0 0 / 2px 140% no-repeat;
+  animation: kinetik-streak-march-tl 2.8s linear infinite;
+}
+
+.profile-edit-kinetik-streak-march--br {
+  right: 0;
+  bottom: 0;
+  background:
+    linear-gradient(
+      270deg,
+      transparent 0%,
+      var(--kinetik-streak-march, rgba(204, 255, 0, 0.85)) 45%,
+      transparent 90%
+    )
+      100% 100% / 140% 2px no-repeat,
+    linear-gradient(
+      0deg,
+      transparent 0%,
+      var(--kinetik-streak-march, rgba(204, 255, 0, 0.85)) 45%,
+      transparent 90%
+    )
+      100% 100% / 2px 140% no-repeat;
+  animation: kinetik-streak-march-br 2.8s linear infinite;
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-2
+  .profile-edit-kinetik-streak-march {
+  animation-duration: 2.4s;
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-streak-march {
+  animation-duration: 2s;
+}
+
+.profile-edit-kinetik-avatar-wrap--edge-march.profile-edit-kinetik-avatar-wrap--tier-4
+  .profile-edit-kinetik-streak-march {
+  animation-duration: 1.6s;
+}
+
+.profile-edit-kinetik-streak-march--ghost {
+  opacity: 0.35;
+  animation-duration: 3.4s !important;
+  filter: blur(0.4px);
+}
+
+/* C. Corner stack */
+.profile-edit-kinetik-streak-stack {
+  position: absolute;
+  pointer-events: none;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-edit-kinetik-streak-stack--tl {
+  left: 0;
+  top: 0;
+}
+
+.profile-edit-kinetik-streak-stack--br {
+  right: 0;
+  bottom: 0;
+  align-items: flex-end;
+}
+
+.profile-edit-kinetik-streak-stack__line {
+  display: block;
+  height: 2px;
+  background: rgba(204, 255, 0, 0.72);
+  transform-origin: left center;
+  animation: kinetik-streak-stack-in 2.4s ease-in-out infinite;
+}
+
+.profile-edit-kinetik-streak-stack--br .profile-edit-kinetik-streak-stack__line {
+  transform-origin: right center;
+}
+
+.profile-edit-kinetik-avatar-wrap--corner-stack.profile-edit-kinetik-avatar-wrap--tier-3
+  .profile-edit-kinetik-streak-stack__line,
+.profile-edit-kinetik-avatar-wrap--corner-stack.profile-edit-kinetik-avatar-wrap--tier-4
+  .profile-edit-kinetik-streak-stack__line {
+  animation-duration: 2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-edit-kinetik-avatar-wrap[class*="--tier-"] .profile-edit-kinetik-avatar__rib,
+  .profile-edit-kinetik-avatar-wrap[class*="--tier-"] .profile-edit-kinetik-avatar__plate,
+  .profile-edit-kinetik-avatar-wrap[class*="--tier-"] .profile-edit-kinetik-avatar__inner,
+  .profile-edit-kinetik-avatar-wrap[class*="--tier-"] .profile-edit-kinetik-avatar__edge--tl::before,
+  .profile-edit-kinetik-avatar-wrap[class*="--tier-"] .profile-edit-kinetik-avatar__edge--tl::after,
+  .profile-edit-kinetik-avatar-wrap[class*="--tier-"] .profile-edit-kinetik-avatar__edge--br::before,
+  .profile-edit-kinetik-avatar-wrap[class*="--tier-"] .profile-edit-kinetik-avatar__edge--br::after,
+  .profile-edit-kinetik-streak-march,
+  .profile-edit-kinetik-streak-stack__line {
+    animation: none !important;
+  }
+
+  .profile-edit-kinetik-avatar-wrap--rib-pulse[class*="--tier-"]
+    .profile-edit-kinetik-avatar__rib::before,
+  .profile-edit-kinetik-avatar-wrap--rib-pulse[class*="--tier-"]
+    .profile-edit-kinetik-avatar__rib::after {
+    opacity: 0.72;
+  }
+}

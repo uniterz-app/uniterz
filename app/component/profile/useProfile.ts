@@ -21,7 +21,7 @@ import {
   parseUserProfileFields,
   profileDisplayFromUser,
 } from "@/lib/profile/parseUserProfileFields";
-import type { RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
+import type { RankingRowWithCountry, MobileMetric } from "@/app/component/rankings/_data/mockRows";
 
 export type Profile = {
   displayName: string;
@@ -32,10 +32,8 @@ export type Profile = {
   currentStreak: number;
   maxStreak: number;
   plan: "free" | "pro";
-};
-
-type Counts = {
-  posts: number;
+  countryCode: string | null;
+  memberSinceMs: number | null;
 };
 
 type UserState = {
@@ -46,7 +44,38 @@ type UserState = {
   currentStreak?: number;
   maxStreak?: number;
   plan?: "free" | "pro";
+  countryCode?: string | null;
+  memberSinceMs?: number | null;
 } | null;
+
+type Counts = {
+  posts: number;
+};
+
+function parseMemberSinceMs(data: Record<string, unknown>): number | null {
+  const createdAt = data.createdAt;
+  if (createdAt && typeof createdAt === "object") {
+    const ts = createdAt as { toMillis?: () => number; seconds?: number };
+    if (typeof ts.toMillis === "function") {
+      const ms = ts.toMillis();
+      return Number.isFinite(ms) ? ms : null;
+    }
+    if (typeof ts.seconds === "number" && Number.isFinite(ts.seconds)) {
+      return ts.seconds * 1000;
+    }
+  }
+  if (typeof createdAt === "number" && Number.isFinite(createdAt)) {
+    return createdAt;
+  }
+  return null;
+}
+
+function parseCountryCode(data: Record<string, unknown>): string | null {
+  const raw = data.countryCode;
+  if (typeof raw !== "string") return null;
+  const code = raw.trim().toUpperCase();
+  return code.length >= 2 ? code : null;
+}
 
 const EMPTY_COUNTS: Counts = {
   posts: 0,
@@ -98,6 +127,11 @@ export function primeProfileCacheFromRankingRow(
   statsContext?: {
     rankingLeague: RankingLeagueSource;
     wcStage?: WcRankingStage;
+  },
+  rankHints?: {
+    metric: MobileMetric;
+    rank: number;
+    participantCount?: number | null;
   }
 ) {
   const uid = typeof row.uid === "string" ? row.uid.trim() : "";
@@ -123,7 +157,17 @@ export function primeProfileCacheFromRankingRow(
   });
 
   if (uid && statsContext) {
-    primeProfileStatsFromRankingRow(uid, row, statsContext);
+    primeProfileStatsFromRankingRow(
+      uid,
+      row,
+      statsContext,
+      rankHints?.metric === "totalScore"
+        ? {
+            totalPointsRank: rankHints.rank,
+            totalPointsDenominator: rankHints.participantCount ?? null,
+          }
+        : undefined
+    );
     prefetchProfileSettledTodayResults(uid, statsContext);
   }
 }
@@ -221,6 +265,8 @@ export function useProfile(handle: string) {
               typeof d.currentStreak === "number" ? d.currentStreak : 0,
             maxStreak: typeof d.maxStreak === "number" ? d.maxStreak : 0,
             plan,
+            countryCode: parseCountryCode(d),
+            memberSinceMs: parseMemberSinceMs(d),
           },
         };
         writeProfileCache([decodedHandle, docSnap.id, userHandle], nextState);
@@ -257,6 +303,8 @@ export function useProfile(handle: string) {
       currentStreak: u.currentStreak ?? 0,
       maxStreak: u.maxStreak ?? 0,
       plan: u.plan ?? "free",
+      countryCode: u.countryCode ?? null,
+      memberSinceMs: u.memberSinceMs ?? null,
     };
   }, [user, decodedHandle, counts, loading]);
 
