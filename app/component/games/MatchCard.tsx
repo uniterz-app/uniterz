@@ -19,9 +19,13 @@ import {
   RESULT_HAIRLINE,
   withResultHitCyberClip,
   resultBadgeAccent,
+  isResultWinFrameBadge,
+  isResultHitFrameBadge,
+  isResultPerfectFrameBadge,
 } from "@/lib/result/resultGlass";
 import { CYBER_GLASS_FILL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
+import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import WcGoalScorerResultRow, {
@@ -409,16 +413,16 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     ? resultBadgeAccent(resultBadge, resultActiveWinStreak)
     : null;
   const predictOverlayGlassBase =
-    showMergedResult && resultBadge === "hit"
+    showMergedResult && isResultWinFrameBadge(resultBadge)
       ? withResultHitCyberClip(PREDICT_OVERLAY_MATCH_CARD_GLASS)
       : PREDICT_OVERLAY_MATCH_CARD_GLASS;
   const mergedOverlayGlassClass =
     showMergedResult && mergedResultAccent?.frameBorder
       ? [
           predictOverlayGlassBase,
-          // HIT は ResultHitCyberFrame に任せ、シェル側は二重枠にしない
-          resultBadge === "hit" ? "" : mergedResultAccent.frameBorder,
-          resultBadge === "hit"
+          // HIT / PERFECT は ResultHitCyberFrame に任せ、シェル側は二重枠にしない
+          isResultWinFrameBadge(resultBadge) ? "" : mergedResultAccent.frameBorder,
+          isResultWinFrameBadge(resultBadge)
             ? CYBER_GLASS_SHADOW
             : mergedResultAccent.shadow || CYBER_GLASS_SHADOW,
         ].join(" ")
@@ -1225,8 +1229,11 @@ return (
         <div className={glassShellClassName} aria-hidden />
       ) : null}
 
-      {showMergedResult && resultBadge === "hit" ? (
+      {showMergedResult && isResultHitFrameBadge(resultBadge) ? (
         <ResultHitCyberFrame />
+      ) : null}
+      {showMergedResult && isResultPerfectFrameBadge(resultBadge) ? (
+        <ResultPerfectCyberFrame />
       ) : null}
 
       {attachOverlayMarketBar || inPredictOverlay ? (

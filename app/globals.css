@@ -1773,6 +1773,35 @@
   );
 }
 
+/* PERFECT：白い光が枠を走る（紫枠の上に視認性優先） */
+.result-card-streak-sweep--perfect.result-card-border-sweep {
+  padding: 4px;
+  z-index: 8;
+}
+
+.result-card-streak-sweep--perfect .result-card-streak-sweep__spin {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 242deg,
+    rgba(255, 255, 255, 0.28) 262deg,
+    rgba(255, 255, 255, 0.92) 282deg,
+    #ffffff 296deg,
+    #ffffff 306deg,
+    rgba(255, 255, 255, 0.92) 320deg,
+    rgba(255, 255, 255, 0.28) 338deg,
+    transparent 360deg
+  );
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 22px rgba(255, 255, 255, 0.82))
+    drop-shadow(0 0 36px rgba(255, 255, 255, 0.45));
+}
+
+.result-card-streak-sweep--perfect .result-card-border-sweep__spin {
+  animation-duration: 5s;
+}
+
 /* UPSET：赤枠を走る光 */
 .result-card-upset-sweep__spin {
   background: conic-gradient(

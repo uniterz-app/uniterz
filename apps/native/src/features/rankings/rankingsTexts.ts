@@ -14,7 +14,7 @@ export function metricLabel(metric: MobileMetric, language: RankingsLanguage): s
 export function rankingsTexts(language: RankingsLanguage) {
   const ja = language === "ja";
   return {
-    title: "RANKINGS",
+    title: "NBA PLAYOFF",
     scheduleInfoToggle: ja
       ? "更新スケジュールの説明を表示"
       : "Show ranking update schedule",

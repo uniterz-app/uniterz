@@ -35,7 +35,7 @@ import {
   type ResultDetailPost,
   type ResultPostDetailMarket,
 } from "./loadResultPostDetailNative";
-import { formatResultPostCardDateLabel } from "./nativeResultModel";
+import { resolveWinOutcomeBadge } from "../../../../../lib/result/resultBadge";
 import { RESULT_DETAIL_ENTRANCE, resultDetailSectionEnter } from "./resultDetailEntranceNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 
@@ -152,7 +152,7 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | 
   return { label: isEn ? `${v} Win Streak` : `${v}連勝`, tone: "gold" };
 }
 
-type ResultBadge = "hit" | "upset" | "miss" | "streak" | null;
+type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
 function streakToneStyle(tone: StreakBadge["tone"]) {
   if (tone === "red") return styles.streakRed;
@@ -665,14 +665,25 @@ export default function ResultDetailScreen({
       0;
     const streakBadge = getStreakBadge(activeWinStreak, isEn);
     let badge: ResultBadge = null;
-    if (Boolean(stats?.upsetHit)) badge = "upset";
+    const winBadge = resolveWinOutcomeBadge({
+      stats,
+      prediction: pred,
+      result,
+    });
+    if (winBadge) badge = winBadge;
+    else if (Boolean(stats?.upsetHit)) badge = "upset";
     else if (streakBadge) badge = "streak";
-    else if (stats?.isWin === true) badge = "hit";
     else if (stats && stats.isWin === false) badge = "miss";
 
     return (
       <ShellCard
-        frameStyle={badge === "hit" ? styles.shellCardHitGoldFrame : undefined}
+        frameStyle={
+          badge === "perfect"
+            ? styles.shellCardPerfectBlueFrame
+            : badge === "hit"
+              ? styles.shellCardHitGoldFrame
+              : undefined
+        }
       >
         <View style={styles.matchTop}>
           <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
@@ -688,6 +699,11 @@ export default function ResultDetailScreen({
             {badge === "hit" ? (
               <View style={[styles.miniBadge, styles.badgeHit]}>
                 <Text style={styles.badgeHitText}>HIT</Text>
+              </View>
+            ) : null}
+            {badge === "perfect" ? (
+              <View style={[styles.miniBadge, styles.badgePerfect]}>
+                <Text style={styles.badgePerfectText}>PERFECT</Text>
               </View>
             ) : null}
             {badge === "upset" ? (
@@ -914,6 +930,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 14,
   },
+  shellCardPerfectBlueFrame: {
+    borderColor: "rgba(167,139,250,0.8)",
+    shadowColor: "rgba(139,92,246,0.45)",
+    shadowOpacity: 0.44,
+    shadowRadius: 16,
+  },
   /** 一覧と同順：方眼 → グラデ積層 */
   shellGridUnderlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1023,6 +1045,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
     color: "#0a0a0a",
+  },
+  badgePerfect: {
+    backgroundColor: "rgba(124,58,237,0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(196,181,253,0.84)",
+  },
+  badgePerfectText: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#f5f3ff",
+    letterSpacing: 0.4,
   },
   badgeUpset: {
     backgroundColor: "rgba(127,29,29,0.55)",

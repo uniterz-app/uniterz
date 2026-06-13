@@ -35,7 +35,7 @@ import {
   dayPointsHeaderForNative,
   type NativeDayPointsHeader,
 } from "./nativeResultDaySummary";
-import { useNativeResultPosts } from "./useNativeResultPosts";
+import { resolveWinOutcomeBadge } from "../../../../../lib/result/resultBadge";
 import {
   deletePredictionPostApi,
   PredictionApiError,
@@ -253,7 +253,7 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | 
   };
 }
 
-type ResultBadge = "hit" | "upset" | "miss" | "streak" | null;
+type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
 function getMobileTeamName(
   league: "nba" | "bj" | "j1" | "pl",
@@ -507,9 +507,14 @@ function ResultPostCard({
     0;
   const streakBadge = getStreakBadge(activeWinStreak, isEn);
   let badge: ResultBadge = null;
-  if (Boolean(stats?.upsetHit)) badge = "upset";
+  const winBadge = resolveWinOutcomeBadge({
+    stats,
+    prediction: pred,
+    result,
+  });
+  if (winBadge) badge = winBadge;
+  else if (Boolean(stats?.upsetHit)) badge = "upset";
   else if (streakBadge) badge = "streak";
-  else if (stats?.isWin === true) badge = "hit";
   else if (stats && stats.isWin === false) badge = "miss";
 
   const statRows = useMemo(() => {
@@ -577,6 +582,8 @@ function ResultPostCard({
           ? styles.cardFrameStreakOrange
           : badge === "streak"
             ? styles.cardFrameStreakGold
+            : badge === "perfect"
+              ? styles.cardFramePerfect
             : badge === "hit"
               ? styles.cardFrameHit
               : badge === "miss"
@@ -763,6 +770,11 @@ function ResultPostCard({
                   {badge === "hit" ? (
                     <View style={[styles.miniBadge, styles.badgeHit]}>
                       <Text style={styles.badgeHitText}>HIT</Text>
+                    </View>
+                  ) : null}
+                  {badge === "perfect" ? (
+                    <View style={[styles.miniBadge, styles.badgePerfect]}>
+                      <Text style={styles.badgePerfectText}>PERFECT</Text>
                     </View>
                   ) : null}
                   {badge === "miss" ? (
@@ -1615,6 +1627,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 14,
   },
+  cardFramePerfect: {
+    borderColor: "rgba(167,139,250,0.8)",
+    shadowColor: "rgba(139,92,246,0.45)",
+    shadowOpacity: 0.44,
+    shadowRadius: 16,
+  },
   cardFrameMiss: {
     borderColor: "rgba(107,114,128,0.55)",
     shadowColor: "rgba(100,116,139,0.35)",
@@ -1710,6 +1728,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
     color: "#0a0a0a",
+  },
+  badgePerfect: {
+    backgroundColor: "rgba(124,58,237,0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(196,181,253,0.84)",
+  },
+  badgePerfectText: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#f5f3ff",
+    letterSpacing: 0.4,
   },
   badgeUpset: {
     backgroundColor: "rgba(239,68,68,0.95)",

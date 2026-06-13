@@ -6,7 +6,20 @@
 
 import { normalizeWinStreak } from "@/lib/ui/winStreakBadge";
 
-export type ResultCardBadge = "hit" | "upset" | "miss" | "streak" | null;
+export type ResultCardBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
+
+/** HIT / PERFECT 用の角切り枠を付けるバッジか */
+export function isResultWinFrameBadge(badge: ResultCardBadge): boolean {
+  return badge === "hit" || badge === "perfect";
+}
+
+export function isResultHitFrameBadge(badge: ResultCardBadge): boolean {
+  return badge === "hit";
+}
+
+export function isResultPerfectFrameBadge(badge: ResultCardBadge): boolean {
+  return badge === "perfect";
+}
 
 /** winStreakBadge と同じ3段階（3–4: シルバー / 5–6: プラチナ / 7+: ゴールド） */
 export type ResultStreakTier = "silver" | "platinum" | "gold";
@@ -119,10 +132,16 @@ export function resultBadgeAccent(
   }
   if (badge === "hit") {
     return {
-      // 枠は ResultHitCyberFrame の角切りオーバーレイで描画
       frameBorder: "",
       edge: "border-yellow-300/40",
       shadow: RESULT_HIT_FRAME_SHELL_SHADOW,
+    };
+  }
+  if (badge === "perfect") {
+    return {
+      frameBorder: "",
+      edge: "border-violet-300/45",
+      shadow: RESULT_PERFECT_FRAME_SHELL_SHADOW,
     };
   }
   if (badge === "miss") {
@@ -231,6 +250,25 @@ export const RESULT_HIT_TOP_LINE =
 export const RESULT_HIT_OVERLAY_GRADIENT =
   "bg-[linear-gradient(180deg,rgba(252,211,77,0.18)_0%,rgba(251,191,36,0.09)_42%,transparent_70%)]";
 
+/** PERFECT カード外枠（1px） */
+export const RESULT_PERFECT_FRAME_BORDER = "border border-violet-400/80";
+
+/** PERFECT 枠オーバーレイ */
+export const RESULT_PERFECT_FRAME_GLOW =
+  "shadow-[0_0_12px_rgba(167,139,250,0.42),0_0_24px_-8px_rgba(139,92,246,0.3),inset_0_0_0_1px_rgba(196,181,253,0.48),inset_0_1px_0_rgba(221,214,254,0.3)]";
+
+/** PERFECT シェル影 */
+export const RESULT_PERFECT_FRAME_SHELL_SHADOW =
+  "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),0_0_14px_rgba(167,139,250,0.34),0_0_28px_-10px_rgba(139,92,246,0.22),inset_0_0_0_1px_rgba(196,181,253,0.42),inset_0_1px_0_rgba(221,214,254,0.24)]";
+
+/** PERFECT カード上部のハイライトライン */
+export const RESULT_PERFECT_TOP_LINE =
+  "bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.95)_42%,rgba(216,180,254,0.88)_58%,transparent_100%)]";
+
+/** PERFECT カード内側のパープルティント */
+export const RESULT_PERFECT_OVERLAY_GRADIENT =
+  "bg-[linear-gradient(180deg,rgba(167,139,250,0.18)_0%,rgba(124,58,237,0.1)_42%,transparent_70%)]";
+
 /** HIT バッジ：ゴールド・サイバー角切り */
 export function resultHitBadgeClass(
   compact: boolean,
@@ -247,6 +285,33 @@ export function resultHitBadgeClass(
     subtle
       ? "shadow-[inset_3px_0_0_rgba(253,224,71,0.5),inset_0_1px_0_rgba(255,255,255,0.16),0_0_10px_rgba(251,191,36,0.24)]"
       : "shadow-[inset_3px_0_0_rgba(253,224,71,0.58),inset_0_1px_0_rgba(255,255,255,0.2),0_0_12px_rgba(251,191,36,0.3)]",
+  ].join(" ");
+}
+
+/** PERFECT バッジ：スコア完全一致 — バイオレット・サイバー角切り */
+export function resultPerfectBadgeClass(
+  compact: boolean,
+  opts?: { subtle?: boolean }
+): string {
+  const subtle = opts?.subtle === true;
+  const size = subtle
+    ? compact
+      ? "text-[7px] px-2 py-0.5 tracking-[0.06em]"
+      : "text-[8px] px-2.5 py-0.5 tracking-[0.08em]"
+    : compact
+      ? "text-[8px] px-2.5 py-[3px] tracking-[0.08em]"
+      : "text-[9px] px-3 py-[3px] tracking-[0.1em]";
+
+  return [
+    RESULT_CYBER_BADGE_BASE,
+    RESULT_HIT_CYBER_CLIP_SM,
+    size,
+    "border border-violet-400/78",
+    "bg-[linear-gradient(180deg,rgba(167,139,250,0.4)_0%,rgba(124,58,237,0.34)_44%,rgba(30,27,75,0.48)_100%)]",
+    "text-violet-50",
+    subtle
+      ? "shadow-[inset_3px_0_0_rgba(196,181,253,0.6),inset_0_1px_0_rgba(255,255,255,0.18),0_0_12px_rgba(167,139,250,0.32)]"
+      : "shadow-[inset_3px_0_0_rgba(216,180,254,0.68),inset_0_1px_0_rgba(255,255,255,0.22),0_0_14px_rgba(139,92,246,0.36)]",
   ].join(" ");
 }
 

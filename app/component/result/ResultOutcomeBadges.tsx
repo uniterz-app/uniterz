@@ -4,6 +4,7 @@ import { Flame } from "lucide-react";
 import {
   resultHitBadgeClass,
   resultMissBadgeClass,
+  resultPerfectBadgeClass,
   resultStreakBadgeClass,
   resultStreakBadgeIconClass,
   resultUpsetBadgeClass,
@@ -24,7 +25,7 @@ type Props = {
   className?: string;
 };
 
-/** HIT / UPSET / MISS / 連勝バッジの共通表示 */
+/** HIT / PERFECT / UPSET / MISS / 連勝バッジの共通表示 */
 export default function ResultOutcomeBadges({
   badge,
   streakBadge,
@@ -72,6 +73,15 @@ export default function ResultOutcomeBadges({
           })}
         >
           HIT
+        </span>
+      ) : null}
+      {badge === "perfect" ? (
+        <span
+          className={resultPerfectBadgeClass(isMobile, {
+            subtle: hitBadgeSubtle,
+          })}
+        >
+          PERFECT
         </span>
       ) : null}
       {badge === "upset" ? (

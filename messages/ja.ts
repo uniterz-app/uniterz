@@ -227,7 +227,7 @@ const ja = {
     entriesOf: "/ {n}人",
     categoryPlayoffs: "Playoffs",
     categoryBracket: "Bracket",
-    pageTitleRankings: "RANKINGS",
+    pageTitleRankings: "NBA PLAYOFF",
     pageTitleWorldCup: "WORLD CUP",
     roundTabsLabel: "プレーオフラウンド",
     stageTabsLabel: "ワールドカップステージ",

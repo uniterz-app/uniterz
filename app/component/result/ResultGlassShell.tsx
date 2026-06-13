@@ -11,9 +11,13 @@ import {
   resultBadgeAccent,
   RESULT_HIT_CYBER_CLIP,
   resultStreakShellAccent,
+  isResultWinFrameBadge,
+  isResultHitFrameBadge,
+  isResultPerfectFrameBadge,
   type ResultCardBadge,
 } from "@/lib/result/resultGlass";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
+import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
 
 type Props = {
   children: React.ReactNode;
@@ -52,12 +56,14 @@ export default function ResultGlassShell({
   const accent = resultBadgeAccent(badge, activeWinStreak);
   const streakShell =
     badge === "streak" ? resultStreakShellAccent(activeWinStreak) : null;
-  const shellClip = badge === "hit" ? RESULT_HIT_CYBER_CLIP : roundedClassName;
+  const shellClip = isResultWinFrameBadge(badge)
+    ? RESULT_HIT_CYBER_CLIP
+    : roundedClassName;
 
   const panelClass = [
     "relative overflow-hidden",
     shellClip,
-    badge === "hit"
+    isResultWinFrameBadge(badge)
       ? RESULT_GLASS_BORDER
       : (accent.frameBorder ?? RESULT_GLASS_BORDER),
     dense ? RESULT_GLASS_FILL_MOBILE : RESULT_GLASS_FILL,
@@ -71,9 +77,10 @@ export default function ResultGlassShell({
   return (
     <div className={className} onClick={onClick}>
       <div className={panelClass}>
-        {badge === "hit" ? (
+        {isResultHitFrameBadge(badge) ? (
           <ResultHitCyberFrame showSweep={showSweep} />
         ) : null}
+        {isResultPerfectFrameBadge(badge) ? <ResultPerfectCyberFrame /> : null}
 
         {/* UPSET：赤枠を走る光 */}
         {badge === "upset" && showSweep ? (
