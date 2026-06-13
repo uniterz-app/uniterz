@@ -1,6 +1,6 @@
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { ResultCardBadge } from "@/lib/result/resultGlass";
-import { getWinStreakBadge, type WinStreakBadgeStyle } from "@/lib/ui/winStreakBadge";
+import { getWinStreakBadge, normalizeWinStreak, type WinStreakBadgeStyle } from "@/lib/ui/winStreakBadge";
 import type { Language } from "@/lib/i18n/language";
 
 function toInt(v: unknown): number | null {
@@ -46,12 +46,22 @@ export function isPerfectScoreHit(post: PerfectScoreCheckInput): boolean {
   return false;
 }
 
-/** 勝利時の HIT / PERFECT（未勝利は null） */
-export function resolveWinOutcomeBadge(
-  post: PerfectScoreCheckInput
-): "hit" | "perfect" | null {
-  if (post.stats?.isWin !== true) return null;
-  return isPerfectScoreHit(post) ? "perfect" : "hit";
+export type ResolveResultOutcomeInput = PerfectScoreCheckInput & {
+  upsetHit?: boolean;
+  isWin?: boolean | null;
+  activeWinStreak?: unknown;
+};
+
+/** リザルト outcome バッジの優先順: PERFECT → UPSET → 連勝 → HIT → MISS */
+export function resolveResultOutcomeBadge(
+  input: ResolveResultOutcomeInput
+): ResultCardBadge {
+  if (isPerfectScoreHit(input)) return "perfect";
+  if (input.upsetHit) return "upset";
+  if (normalizeWinStreak(input.activeWinStreak) >= 3) return "streak";
+  if (input.isWin === true || input.stats?.isWin === true) return "hit";
+  if (input.isWin === false || input.stats?.isWin === false) return "miss";
+  return null;
 }
 
 export type ResolvedResultBadge = {
@@ -70,12 +80,14 @@ export function resolveResultCardBadge(
       ?.pointsV3Detail?.activeWinStreak) ?? 0;
   const streakBadge = getWinStreakBadge(activeWinStreak, language);
 
-  let badge: ResultCardBadge = null;
-  const winBadge = resolveWinOutcomeBadge(post);
-  if (winBadge) badge = winBadge;
-  else if (post.stats?.upsetHit) badge = "upset";
-  else if (streakBadge) badge = "streak";
-  else if (post.stats && post.stats.isWin === false) badge = "miss";
+  const badge = resolveResultOutcomeBadge({
+    stats: post.stats,
+    prediction: post.prediction,
+    result: post.result,
+    upsetHit: Boolean(post.stats?.upsetHit),
+    isWin: post.stats?.isWin,
+    activeWinStreak,
+  });
 
   return { badge, activeWinStreak, streakBadge };
 }

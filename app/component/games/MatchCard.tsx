@@ -12,7 +12,8 @@ import {
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Menu, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
+import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import {
@@ -22,10 +23,15 @@ import {
   isResultWinFrameBadge,
   isResultHitFrameBadge,
   isResultPerfectFrameBadge,
+  isResultStreakFrameBadge,
+  isResultUpsetFrameBadge,
+  isResultCyberClipFrameBadge,
 } from "@/lib/result/resultGlass";
 import { CYBER_GLASS_FILL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
 import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
+import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFrame";
+import ResultUpsetCyberFrame from "@/app/component/result/ResultUpsetCyberFrame";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import WcGoalScorerResultRow, {
@@ -72,7 +78,6 @@ import PredictOverlayCyberDecor from "@/app/component/predict/PredictOverlayCybe
 import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
   PREDICT_OVERLAY_CYBER_GRID_CLASS,
-  PREDICT_OVERLAY_MENU_BTN_CLASS,
 } from "@/lib/ui/predictOverlayCyber";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
@@ -413,16 +418,17 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     ? resultBadgeAccent(resultBadge, resultActiveWinStreak)
     : null;
   const predictOverlayGlassBase =
-    showMergedResult && isResultWinFrameBadge(resultBadge)
+    showMergedResult && isResultCyberClipFrameBadge(resultBadge)
       ? withResultHitCyberClip(PREDICT_OVERLAY_MATCH_CARD_GLASS)
       : PREDICT_OVERLAY_MATCH_CARD_GLASS;
   const mergedOverlayGlassClass =
     showMergedResult && mergedResultAccent?.frameBorder
       ? [
           predictOverlayGlassBase,
-          // HIT / PERFECT は ResultHitCyberFrame に任せ、シェル側は二重枠にしない
-          isResultWinFrameBadge(resultBadge) ? "" : mergedResultAccent.frameBorder,
-          isResultWinFrameBadge(resultBadge)
+          isResultCyberClipFrameBadge(resultBadge)
+            ? ""
+            : mergedResultAccent.frameBorder,
+          isResultCyberClipFrameBadge(resultBadge)
             ? CYBER_GLASS_SHADOW
             : mergedResultAccent.shadow || CYBER_GLASS_SHADOW,
         ].join(" ")
@@ -1235,6 +1241,12 @@ return (
       {showMergedResult && isResultPerfectFrameBadge(resultBadge) ? (
         <ResultPerfectCyberFrame />
       ) : null}
+      {showMergedResult && isResultStreakFrameBadge(resultBadge) ? (
+        <ResultStreakCyberFrame activeWinStreak={resultActiveWinStreak} />
+      ) : null}
+      {showMergedResult && isResultUpsetFrameBadge(resultBadge) ? (
+        <ResultUpsetCyberFrame />
+      ) : null}
 
       {attachOverlayMarketBar || inPredictOverlay ? (
         <>
@@ -1337,7 +1349,7 @@ return (
         transition={contentShellTransition}
       >
       {showMergedResult ? (
-        <div className="pointer-events-none absolute right-2 top-0.5 z-20 md:right-3 md:top-3">
+        <div className="pointer-events-none absolute right-2 -top-1 z-20 md:right-3 md:top-2">
           <ResultOutcomeBadges
             badge={resultBadge}
             streakBadge={resultStreakBadge}
@@ -1352,8 +1364,8 @@ return (
           className={[
             "pointer-events-auto absolute z-[50]",
             isMobile
-              ? "-m-3 p-3 right-0.5 top-0.5"
-              : "-m-5 p-5 right-2 top-2 sm:right-2.5 sm:top-2.5",
+              ? "-m-3 p-3 right-2 -top-1"
+              : "-m-5 p-5 right-2.5 top-1 sm:right-3 sm:top-1.5",
           ].join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
@@ -1381,12 +1393,11 @@ return (
                 aria-hidden
               />
             </button>
-            <button
-              type="button"
+            <CyberMenuButton
+              size="xs"
               className={[
-                PREDICT_OVERLAY_MENU_BTN_CLASS,
-                "relative flex touch-manipulation items-center justify-center transition-all duration-300 ease-out",
-                isMobile ? "z-[52] size-6" : "z-20 size-8",
+                "relative transition-all duration-300 ease-out",
+                isMobile ? "z-[52]" : "z-20",
               ].join(" ")}
               aria-expanded={mergedEditFabOpen}
               aria-haspopup="true"
@@ -1396,13 +1407,7 @@ return (
                 e.stopPropagation();
                 setMergedEditFabOpen((v) => !v);
               }}
-            >
-              <Menu
-                className={isMobile ? "h-2 w-2" : "h-3 w-3"}
-                strokeWidth={isMobile ? 2.2 : 2.1}
-                aria-hidden
-              />
-            </button>
+            />
           </div>
         </div>
       ) : null}

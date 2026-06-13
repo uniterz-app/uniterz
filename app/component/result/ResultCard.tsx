@@ -10,7 +10,8 @@ import React, {
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Menu, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -32,7 +33,6 @@ import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
-import { PREDICT_OVERLAY_MENU_BTN_CLASS } from "@/lib/ui/predictOverlayCyber";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
@@ -377,12 +377,11 @@ function ResultCardPresentationImpl({
               </button>
             ) : null}
             {/* メイン：ハンバーガー（サイバー角パネル） */}
-            <button
-              type="button"
+            <CyberMenuButton
+              size="xs"
               className={[
-                PREDICT_OVERLAY_MENU_BTN_CLASS,
-                "relative flex touch-manipulation items-center justify-center transition-all duration-300 ease-out",
-                isMobile ? "z-[52] size-6" : "z-20 size-8",
+                "relative transition-all duration-300 ease-out",
+                isMobile ? "z-[52]" : "z-20",
               ].join(" ")}
               aria-expanded={cornerFabOpen}
               aria-haspopup="true"
@@ -392,13 +391,7 @@ function ResultCardPresentationImpl({
                 e.stopPropagation();
                 setCornerFabOpen((v) => !v);
               }}
-            >
-              <Menu
-                className={isMobile ? "h-2 w-2" : "h-3 w-3"}
-                strokeWidth={isMobile ? 2.2 : 2.1}
-                aria-hidden
-              />
-            </button>
+            />
           </div>
         </div>
       ) : null}
@@ -425,7 +418,7 @@ function ResultCardPresentationImpl({
         <>
           <div
             className={[
-              "pointer-events-none absolute top-0.5 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
+              "pointer-events-none absolute top-1.5 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
               hasCornerActions ? "right-11" : "right-2",
             ].join(" ")}
           >

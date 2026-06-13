@@ -5,6 +5,10 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import cn from "clsx";
+import {
+  CYBER_FILTER_PANEL_CLASS,
+  cyberFilterBarClasses,
+} from "@/lib/ui/cyberFilterBar";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
@@ -187,10 +191,13 @@ export default function GamesTeamFilterPanel({
           aria-modal="true"
           aria-labelledby="games-team-filter-title"
           className={cn(
-            "fixed flex flex-col overflow-hidden border border-cyan-400/20 bg-[#070d14]/96 text-white shadow-[0_0_48px_rgba(34,211,238,0.12)] backdrop-blur-xl",
+            "fixed flex flex-col overflow-hidden text-white",
             layoutMobile
-              ? "inset-x-0 bottom-0 max-h-[min(85dvh,640px)] min-h-[min(40dvh,320px)] w-full rounded-t-[1.35rem] border-b-0"
-              : "left-1/2 top-1/2 max-h-[min(80vh,620px)] w-[min(420px,calc(100vw-1.5rem))] rounded-2xl",
+              ? "inset-x-0 bottom-0 max-h-[min(85dvh,640px)] min-h-[min(40dvh,320px)] w-full rounded-t-[1.35rem] border border-cyan-400/20 border-b-0 bg-[#070d14]/96 shadow-[0_0_48px_rgba(34,211,238,0.12)] backdrop-blur-xl"
+              : cn(
+                  CYBER_FILTER_PANEL_CLASS,
+                  "left-1/2 top-1/2 max-h-[min(80vh,620px)] w-[min(420px,calc(100vw-1.5rem))]",
+                ),
           )}
           style={{ zIndex: OVERLAY_Z + 1 }}
           initial={
@@ -486,16 +493,16 @@ export default function GamesTeamFilterPanel({
         type="button"
         onClick={() => setOpen(true)}
         style={tabFont}
-        className={cn(
-          "inline-flex shrink-0 items-center border font-bold uppercase tracking-wide transition",
-          activeCount > 0 || marginFilterActive
-            ? "border-cyan-400/45 bg-cyan-500/15 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.12)] hover:bg-cyan-500/22"
-            : "border-white/12 bg-white/[0.04] text-white/85 hover:border-white/18 hover:bg-white/[0.07]",
-          compactHeader
-            ? "min-h-7 gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] leading-none"
-            : dense
-              ? "gap-2 rounded-xl px-2.5 py-1.5 text-xs"
-              : "gap-2 rounded-xl px-3 py-2 text-xs md:text-sm",
+        className={cyberFilterBarClasses(
+          activeCount > 0 || marginFilterActive,
+          cn(
+            "inline-flex shrink-0 items-center font-bold uppercase tracking-wide",
+            compactHeader
+              ? "inline-flex h-9 items-center gap-1.5 px-2.5 text-[10px] leading-none"
+              : dense
+                ? "inline-flex h-10 items-center gap-2 px-2.5 text-xs"
+                : "inline-flex h-10 items-center gap-2 px-3 text-xs md:text-sm",
+          )
         )}
       >
         <SlidersHorizontal

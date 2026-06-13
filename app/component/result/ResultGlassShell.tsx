@@ -10,14 +10,18 @@ import {
   RESULT_GLASS_SHADOW_HOVER,
   resultBadgeAccent,
   RESULT_HIT_CYBER_CLIP,
-  resultStreakShellAccent,
+  isResultCyberClipFrameBadge,
   isResultWinFrameBadge,
   isResultHitFrameBadge,
   isResultPerfectFrameBadge,
+  isResultStreakFrameBadge,
+  isResultUpsetFrameBadge,
   type ResultCardBadge,
 } from "@/lib/result/resultGlass";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
 import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
+import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFrame";
+import ResultUpsetCyberFrame from "@/app/component/result/ResultUpsetCyberFrame";
 
 type Props = {
   children: React.ReactNode;
@@ -54,16 +58,14 @@ export default function ResultGlassShell({
   onClick,
 }: Props) {
   const accent = resultBadgeAccent(badge, activeWinStreak);
-  const streakShell =
-    badge === "streak" ? resultStreakShellAccent(activeWinStreak) : null;
-  const shellClip = isResultWinFrameBadge(badge)
+  const shellClip = isResultCyberClipFrameBadge(badge)
     ? RESULT_HIT_CYBER_CLIP
     : roundedClassName;
 
   const panelClass = [
     "relative overflow-hidden",
     shellClip,
-    isResultWinFrameBadge(badge)
+    isResultCyberClipFrameBadge(badge)
       ? RESULT_GLASS_BORDER
       : (accent.frameBorder ?? RESULT_GLASS_BORDER),
     dense ? RESULT_GLASS_FILL_MOBILE : RESULT_GLASS_FILL,
@@ -81,35 +83,10 @@ export default function ResultGlassShell({
           <ResultHitCyberFrame showSweep={showSweep} />
         ) : null}
         {isResultPerfectFrameBadge(badge) ? <ResultPerfectCyberFrame /> : null}
-
-        {/* UPSET：赤枠を走る光 */}
-        {badge === "upset" && showSweep ? (
-          <div
-            className={[
-              "pointer-events-none absolute inset-0 z-[2] overflow-hidden",
-              roundedClassName,
-              "result-card-border-sweep result-card-upset-sweep",
-            ].join(" ")}
-            aria-hidden
-          >
-            <div className="result-card-border-sweep__spin result-card-upset-sweep__spin" />
-          </div>
+        {isResultStreakFrameBadge(badge) ? (
+          <ResultStreakCyberFrame activeWinStreak={activeWinStreak} />
         ) : null}
-
-        {/* 連勝：ティア色の枠を走る光 */}
-        {badge === "streak" && streakShell && showSweep ? (
-          <div
-            className={[
-              "pointer-events-none absolute inset-0 z-[2] overflow-hidden",
-              roundedClassName,
-              "result-card-border-sweep result-card-streak-sweep",
-              streakShell.sweepClass,
-            ].join(" ")}
-            aria-hidden
-          >
-            <div className="result-card-border-sweep__spin result-card-streak-sweep__spin" />
-          </div>
-        ) : null}
+        {isResultUpsetFrameBadge(badge) ? <ResultUpsetCyberFrame /> : null}
 
         {children}
       </div>

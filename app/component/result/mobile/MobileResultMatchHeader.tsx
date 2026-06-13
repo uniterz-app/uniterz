@@ -204,7 +204,7 @@ export default function MobileResultMatchHeader({
         />
         <div
           className={[
-            "flex min-w-0 flex-1 flex-col items-end gap-1",
+            "mt-1.5 flex min-w-0 flex-1 flex-col items-end gap-1",
             predictEditHref ? "pr-10" : "",
           ].join(" ")}
         >

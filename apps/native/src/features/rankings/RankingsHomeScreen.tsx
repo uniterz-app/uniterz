@@ -25,6 +25,7 @@ import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import RankingsCyberBackgroundNative from "./RankingsCyberBackgroundNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
+import CyberMenuButton from "../../ui/CyberMenuButton";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
@@ -129,9 +130,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       >
         <UniterzBrandShelfNative horizontalBleed={12} />
         <View style={styles.titleRow}>
-          <Pressable
-            style={styles.menuBtn}
-            accessibilityRole="button"
+          <CyberMenuButton
+            size="sm"
             accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
             onPress={() =>
               Alert.alert(
@@ -139,13 +139,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 language === "ja" ? "メニューは準備中です。" : "Menu is not available yet.",
               )
             }
-          >
-            <MaterialCommunityIcons
-              name="menu"
-              size={18}
-              color="rgba(255,255,255,0.85)"
-            />
-          </Pressable>
+          />
           <Text style={styles.headerTitle} maxFontSizeMultiplier={1.2}>
             {t.title}
           </Text>
@@ -290,16 +284,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
     gap: 8,
-  },
-  menuBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   infoBtn: {
     width: 40,

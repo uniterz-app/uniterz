@@ -17,5 +17,5 @@ export const PREDICT_OVERLAY_SCORE_INPUT_CLASS = "predict-overlay-score-input";
 export const PREDICT_OVERLAY_SUBMIT_BTN_CLASS = "predict-overlay-submit-btn";
 export const PREDICT_OVERLAY_SUBMIT_BTN_DISABLED_CLASS =
   "predict-overlay-submit-btn predict-overlay-submit-btn--disabled";
-/** カード右上ハンバーガー専用（見た目のみ。開閉・ホバー挙動は既存のまま） */
-export const PREDICT_OVERLAY_MENU_BTN_CLASS = "predict-overlay-menu-btn";
+/** カード右上ハンバーガー専用（`CYBER_MENU_BTN_CLASS` のエイリアス） */
+export const PREDICT_OVERLAY_MENU_BTN_CLASS = "cyber-menu-btn";

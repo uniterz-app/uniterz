@@ -85,7 +85,13 @@ export default function ResultOutcomeBadges({
         </span>
       ) : null}
       {badge === "upset" ? (
-        <span className={resultUpsetBadgeClass(isMobile)}>UPSET</span>
+        <span
+          className={resultUpsetBadgeClass(isMobile, {
+            subtle: hitBadgeSubtle,
+          })}
+        >
+          UPSET
+        </span>
       ) : null}
       {badge === "miss" ? (
         <span

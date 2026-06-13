@@ -11,7 +11,7 @@ import React, {
 import { motion, useReducedMotion } from "framer-motion";
 import GamesDrawerMenu from "./GamesDrawerMenu";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
-import { Menu } from "lucide-react";
+import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { nameBebas } from "@/lib/fonts";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
@@ -858,10 +858,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           style={bracketMarketTeamTypography(isMobile)}
           className={[
             compactHeader
-              ? "inline-flex min-h-7 items-center justify-center rounded-lg px-2.5 py-1.5 text-[10px] leading-none"
+              ? "inline-flex h-9 items-center justify-center px-2.5 text-[10px] leading-none"
               : dense
-                ? "rounded-lg px-3 py-1.5 text-sm"
-                : "rounded-xl px-4 py-2 text-base",
+                ? "inline-flex h-10 items-center justify-center rounded-lg px-3 text-sm"
+                : "inline-flex h-10 items-center justify-center rounded-xl px-4 text-base",
             "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
           ].join(" ")}
         >
@@ -881,23 +881,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       style={{ touchAction: "pan-y" }}
     >
       <div className="relative mb-2 mt-2 flex items-center gap-3 pl-2 pr-1 sm:pl-3">
-        <motion.button
-          type="button"
-          onClick={() => setGamesDrawerOpen(true)}
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
-          aria-label={m.games.openMenu}
-          {...topBarEntry(0, -10)}
-        >
-          <Menu className="h-5 w-5" strokeWidth={2.25} />
-          {showWcTabBadge ? (
-            <span
-              className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-              aria-hidden
-            >
-              !
-            </span>
-          ) : null}
-        </motion.button>
+        <motion.div {...topBarEntry(0, -10)}>
+          <CyberMenuButton
+            size={isMobile ? "md" : "lg"}
+            onClick={() => setGamesDrawerOpen(true)}
+            aria-label={m.games.openMenu}
+            badge={
+              showWcTabBadge ? (
+                <span
+                  className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+                  aria-hidden
+                >
+                  !
+                </span>
+              ) : null
+            }
+          />
+        </motion.div>
         {/* リーグ名：広がった字間が収束しながらロックオンする */}
         <motion.span
           className={[
@@ -935,20 +935,17 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         >
           {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
         </motion.span>
-        <div className="w-10 shrink-0" aria-hidden />
         {isMobile ? (
-          <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center gap-1.5">
-            <div className="pointer-events-auto flex items-center gap-1.5">
-              {renderFilterControl(true)}
-              {renderBracketControl(true)}
-            </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {renderFilterControl(true)}
+            {renderBracketControl(true)}
           </div>
-        ) : null}
+        ) : (
+          <div className="w-10 shrink-0" aria-hidden />
+        )}
       </div>
 
-      {isMobile ? (
-        <div className="mb-2 mt-1 min-h-7" aria-hidden />
-      ) : (
+      {!isMobile && (
         <div className="mb-2 mt-1 flex items-center justify-end gap-3 pr-1 sm:pr-3">
           <div className="flex shrink-0 items-center gap-2">
             {renderFilterControl(false)}

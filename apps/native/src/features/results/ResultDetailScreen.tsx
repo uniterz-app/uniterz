@@ -35,7 +35,7 @@ import {
   type ResultDetailPost,
   type ResultPostDetailMarket,
 } from "./loadResultPostDetailNative";
-import { resolveWinOutcomeBadge } from "../../../../../lib/result/resultBadge";
+import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge";
 import { RESULT_DETAIL_ENTRANCE, resultDetailSectionEnter } from "./resultDetailEntranceNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 
@@ -139,7 +139,7 @@ function toInt(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
 }
 
-type StreakBadge = { label: string; tone: "gold" | "orange" | "red" };
+type StreakBadge = { label: string; tone: "silver" | "platinum" | "gold" };
 
 function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | null {
   const v =
@@ -147,17 +147,23 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | 
       ? Math.floor(activeWinStreak)
       : 0;
   if (v < 3) return null;
-  if (v >= 7) return { label: isEn ? `${v} Win Streak` : `${v}連勝`, tone: "red" };
-  if (v >= 5) return { label: isEn ? `${v} Win Streak` : `${v}連勝`, tone: "orange" };
-  return { label: isEn ? `${v} Win Streak` : `${v}連勝`, tone: "gold" };
+  if (v >= 7) return { label: isEn ? `${v} Win Streak` : `${v}連勝`, tone: "gold" };
+  if (v >= 5) return { label: isEn ? `${v} Win Streak` : `${v}連勝`, tone: "platinum" };
+  return { label: isEn ? `${v} Win Streak` : `${v}連勝`, tone: "silver" };
 }
 
 type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
 function streakToneStyle(tone: StreakBadge["tone"]) {
-  if (tone === "red") return styles.streakRed;
-  if (tone === "orange") return styles.streakOrange;
-  return styles.streakGold;
+  if (tone === "gold") return styles.streakGold;
+  if (tone === "platinum") return styles.streakPlatinum;
+  return styles.streakSilver;
+}
+
+function streakFlameColor(tone: StreakBadge["tone"]) {
+  if (tone === "gold") return "#fef08a";
+  if (tone === "platinum") return "#cffafe";
+  return "#f8fafc";
 }
 
 /**
@@ -664,34 +670,45 @@ export default function ResultDetailScreen({
       toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
       0;
     const streakBadge = getStreakBadge(activeWinStreak, isEn);
-    let badge: ResultBadge = null;
-    const winBadge = resolveWinOutcomeBadge({
+    const badge: ResultBadge = resolveResultOutcomeBadge({
       stats,
       prediction: pred,
       result,
+      upsetHit: Boolean(stats?.upsetHit),
+      isWin:
+        stats?.isWin === true ? true : stats?.isWin === false ? false : undefined,
+      activeWinStreak,
     });
-    if (winBadge) badge = winBadge;
-    else if (Boolean(stats?.upsetHit)) badge = "upset";
-    else if (streakBadge) badge = "streak";
-    else if (stats && stats.isWin === false) badge = "miss";
 
     return (
       <ShellCard
         frameStyle={
-          badge === "perfect"
-            ? styles.shellCardPerfectBlueFrame
-            : badge === "hit"
-              ? styles.shellCardHitGoldFrame
-              : undefined
+          badge === "streak" && activeWinStreak >= 7
+            ? styles.shellCardStreakGoldFrame
+            : badge === "streak" && activeWinStreak >= 5
+              ? styles.shellCardStreakPlatinumFrame
+              : badge === "streak"
+                ? styles.shellCardStreakSilverFrame
+                : badge === "upset"
+                  ? styles.shellCardUpsetRedFrame
+                  : badge === "perfect"
+                    ? styles.shellCardPerfectBlueFrame
+                    : badge === "hit"
+                      ? styles.shellCardHitGoldFrame
+                      : undefined
         }
       >
         <View style={styles.matchTop}>
           <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
           <View style={styles.badgeRow}>
             {badge === "streak" && streakBadge ? (
-              <View style={[styles.miniBadge, streakToneStyle(streakBadge.tone)]}>
-                <MaterialCommunityIcons name="fire" size={11} color="#fef08a" />
-                <Text style={styles.miniBadgeText} numberOfLines={1}>
+              <View style={[styles.streakMiniBadge, streakToneStyle(streakBadge.tone)]}>
+                <MaterialCommunityIcons
+                  name="fire"
+                  size={12}
+                  color={streakFlameColor(streakBadge.tone)}
+                />
+                <Text style={styles.streakMiniBadgeText} numberOfLines={1}>
                   {streakBadge.label}
                 </Text>
               </View>
@@ -930,6 +947,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 14,
   },
+  shellCardStreakSilverFrame: {
+    borderColor: "rgba(226,232,240,0.82)",
+    shadowColor: "rgba(255,255,255,0.55)",
+    shadowOpacity: 0.48,
+    shadowRadius: 18,
+  },
+  shellCardStreakPlatinumFrame: {
+    borderColor: "rgba(34,211,238,0.82)",
+    shadowColor: "rgba(0,245,255,0.5)",
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+  },
+  shellCardStreakGoldFrame: {
+    borderColor: "rgba(251,191,36,0.88)",
+    shadowColor: "rgba(249,115,22,0.5)",
+    shadowOpacity: 0.52,
+    shadowRadius: 22,
+  },
+  shellCardUpsetRedFrame: {
+    borderColor: "rgba(248,113,113,0.84)",
+    shadowColor: "rgba(239,68,68,0.5)",
+    shadowOpacity: 0.48,
+    shadowRadius: 18,
+  },
   shellCardPerfectBlueFrame: {
     borderColor: "rgba(167,139,250,0.8)",
     shadowColor: "rgba(139,92,246,0.45)",
@@ -1012,6 +1053,7 @@ const styles = StyleSheet.create({
     gap: 6,
     maxWidth: "72%",
     justifyContent: "flex-end",
+    marginTop: 4,
   },
   /** 一覧 `ResultHomeScreen` の miniBadge と同寸・同形状 */
   miniBadge: {
@@ -1024,17 +1066,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   miniBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800", maxWidth: 120 },
-  streakRed: {
-    backgroundColor: "rgba(127,29,29,0.55)",
-    borderColor: "rgba(252,165,165,0.5)",
+  streakSilver: {
+    backgroundColor: "rgba(100,116,139,0.94)",
+    borderColor: "rgba(248,250,252,0.72)",
   },
-  streakOrange: {
-    backgroundColor: "rgba(154,52,18,0.5)",
-    borderColor: "rgba(253,186,116,0.55)",
+  streakPlatinum: {
+    backgroundColor: "rgba(8,145,178,0.94)",
+    borderColor: "rgba(186,250,255,0.82)",
   },
   streakGold: {
-    backgroundColor: "rgba(113,63,18,0.5)",
-    borderColor: "rgba(253,224,71,0.55)",
+    backgroundColor: "rgba(234,88,12,0.95)",
+    borderColor: "rgba(254,249,195,0.78)",
+  },
+  streakMiniBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  streakMiniBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "900",
+    maxWidth: 120,
   },
   /** 一覧カードの HIT と同一（ソリッドゴールド・黒字・枠線なし） */
   badgeHit: {
@@ -1058,10 +1115,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   badgeUpset: {
-    backgroundColor: "rgba(127,29,29,0.55)",
-    borderColor: "rgba(248,113,113,0.55)",
+    backgroundColor: "rgba(220,38,38,0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(252,165,165,0.82)",
   },
-  badgeUpsetText: { color: "#fecaca", fontSize: 10, fontWeight: "900" },
+  badgeUpsetText: {
+    color: "#fef2f2",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
   badgeMiss: {
     backgroundColor: "rgba(51,65,85,0.55)",
     borderColor: "rgba(148,163,184,0.45)",

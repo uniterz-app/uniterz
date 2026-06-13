@@ -731,7 +731,8 @@
   box-shadow: 0 0 14px rgba(0, 245, 255, 0.12);
 }
 
-/* 予想オーバーレイ — ハンバーガーメニューボタン（見た目のみ） */
+/* 角切りシアン枠 — ハンバーガーメニューボタン（全画面共通） */
+.cyber-menu-btn,
 .predict-overlay-menu-btn {
   position: relative;
   overflow: hidden;
@@ -757,6 +758,7 @@
     color 0.2s ease;
 }
 
+.cyber-menu-btn:hover,
 .predict-overlay-menu-btn:hover {
   border-color: rgba(0, 245, 255, 0.52);
   background: rgba(6, 14, 24, 0.92);
@@ -766,6 +768,7 @@
     inset 0 1px 0 rgba(0, 245, 255, 0.18);
 }
 
+.cyber-menu-btn::before,
 .predict-overlay-menu-btn::before {
   content: "";
   position: absolute;
@@ -777,6 +780,120 @@
     90deg,
     transparent 0%,
     rgba(0, 245, 255, 0.45) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* 角切りシアン枠 — 絞り込みバー・パネル（試合・リザルト共通） */
+.cyber-filter-bar {
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% calc(100% - 8px),
+    0% 8px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.2);
+  background: linear-gradient(
+    168deg,
+    rgba(9, 13, 20, 0.95) 0%,
+    rgba(6, 9, 15, 0.93) 52%,
+    rgba(4, 7, 12, 0.91) 100%
+  );
+  color: rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 0 16px rgba(0, 245, 255, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(0, 245, 255, 0.1);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.cyber-filter-bar::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 245, 255, 0.38) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.cyber-filter-bar:hover {
+  border-color: rgba(0, 245, 255, 0.38);
+  box-shadow:
+    0 0 20px rgba(0, 245, 255, 0.1),
+    0 8px 28px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(0, 245, 255, 0.14);
+}
+
+.cyber-filter-bar--active {
+  border-color: rgba(0, 245, 255, 0.42);
+  background: linear-gradient(
+    168deg,
+    rgba(8, 18, 28, 0.96) 0%,
+    rgba(6, 14, 22, 0.94) 52%,
+    rgba(4, 10, 18, 0.92) 100%
+  );
+  box-shadow:
+    0 0 22px rgba(0, 245, 255, 0.14),
+    0 8px 28px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(0, 245, 255, 0.16);
+}
+
+.cyber-filter-panel {
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(
+    12px 0%,
+    calc(100% - 12px) 0%,
+    100% 12px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    12px 100%,
+    0% calc(100% - 12px),
+    0% 12px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.22);
+  background: linear-gradient(
+    172deg,
+    rgba(9, 13, 20, 0.97) 0%,
+    rgba(6, 9, 15, 0.95) 48%,
+    rgba(4, 7, 12, 0.93) 100%
+  );
+  box-shadow:
+    0 0 24px rgba(0, 245, 255, 0.08),
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(0, 245, 255, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.cyber-filter-panel::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 245, 255, 0.42) 50%,
     transparent 100%
   );
   pointer-events: none;
@@ -1736,41 +1853,70 @@
   }
 }
 
-/* 連勝ティア別スイープ色（winStreakBadge と整合） */
+/* 連勝ティア別スイープ（白い光 + ティア色） */
+.result-card-streak-sweep--silver.result-card-border-sweep,
+.result-card-streak-sweep--platinum.result-card-border-sweep,
+.result-card-streak-sweep--gold.result-card-border-sweep {
+  padding: 4px;
+  z-index: 8;
+}
+
+.result-card-streak-sweep--silver .result-card-border-sweep__spin,
+.result-card-streak-sweep--platinum .result-card-border-sweep__spin,
+.result-card-streak-sweep--gold .result-card-border-sweep__spin {
+  animation-duration: 5s;
+}
+
 .result-card-streak-sweep--silver .result-card-streak-sweep__spin {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    transparent 250deg,
-    rgba(226, 232, 240, 0.18) 292deg,
-    rgba(248, 250, 252, 0.88) 314deg,
-    rgba(226, 232, 240, 0.18) 336deg,
+    transparent 244deg,
+    rgba(226, 232, 240, 0.34) 264deg,
+    rgba(255, 255, 255, 0.92) 284deg,
+    #ffffff 298deg,
+    rgba(255, 255, 255, 0.92) 312deg,
+    rgba(203, 213, 225, 0.34) 330deg,
     transparent 360deg
   );
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 20px rgba(226, 232, 240, 0.65));
 }
 
 .result-card-streak-sweep--platinum .result-card-streak-sweep__spin {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    transparent 248deg,
-    rgba(34, 211, 238, 0.22) 290deg,
-    rgba(140, 240, 255, 0.9) 314deg,
-    rgba(34, 211, 238, 0.22) 336deg,
+    transparent 242deg,
+    rgba(34, 211, 238, 0.34) 262deg,
+    rgba(255, 255, 255, 0.94) 282deg,
+    #ffffff 296deg,
+    rgba(255, 255, 255, 0.94) 310deg,
+    rgba(34, 211, 238, 0.36) 328deg,
     transparent 360deg
   );
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 22px rgba(34, 211, 238, 0.72));
 }
 
 .result-card-streak-sweep--gold .result-card-streak-sweep__spin {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    transparent 246deg,
-    rgba(251, 191, 36, 0.28) 288deg,
-    rgba(253, 224, 71, 0.95) 314deg,
-    rgba(251, 191, 36, 0.28) 336deg,
+    transparent 240deg,
+    rgba(251, 191, 36, 0.38) 260deg,
+    rgba(255, 255, 255, 0.96) 280deg,
+    #ffffff 294deg,
+    rgba(255, 255, 255, 0.96) 308deg,
+    rgba(249, 115, 22, 0.4) 326deg,
     transparent 360deg
   );
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 24px rgba(251, 191, 36, 0.78))
+    drop-shadow(0 0 36px rgba(249, 115, 22, 0.42));
 }
 
 /* PERFECT：白い光が枠を走る（紫枠の上に視認性優先） */
@@ -1802,19 +1948,32 @@
   animation-duration: 5s;
 }
 
-/* UPSET：赤枠を走る光 */
-.result-card-upset-sweep__spin {
+/* UPSET：白い光 + 赤ティントが枠を走る */
+.result-card-streak-sweep--upset.result-card-border-sweep {
+  padding: 4px;
+  z-index: 8;
+}
+
+.result-card-streak-sweep--upset .result-card-border-sweep__spin {
+  animation-duration: 5s;
+}
+
+.result-card-streak-sweep--upset .result-card-streak-sweep__spin {
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    transparent 248deg,
-    rgba(248, 113, 113, 0.35) 286deg,
-    rgba(254, 226, 226, 0.92) 308deg,
-    rgba(239, 68, 68, 0.95) 318deg,
-    rgba(254, 226, 226, 0.92) 328deg,
-    rgba(248, 113, 113, 0.35) 348deg,
+    transparent 242deg,
+    rgba(248, 113, 113, 0.28) 262deg,
+    rgba(255, 255, 255, 0.92) 282deg,
+    #ffffff 296deg,
+    #ffffff 306deg,
+    rgba(255, 255, 255, 0.92) 320deg,
+    rgba(248, 113, 113, 0.28) 338deg,
     transparent 360deg
   );
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 1))
+    drop-shadow(0 0 22px rgba(248, 113, 113, 0.72));
 }
 
 /* HIT：角切りのサイバー枠（丸角なし） */
@@ -4058,27 +4217,56 @@ body::before {
 }
 
 .profile-edit-kinetik-menu-btn {
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(
+    5px 0%,
+    100% 0%,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    0% 100%,
+    0% 5px
+  );
   height: var(--kinetik-tab-row-h);
   width: var(--kinetik-tab-row-h);
   min-height: var(--kinetik-tab-row-h);
   max-height: var(--kinetik-tab-row-h);
   flex-shrink: 0;
-  border: 1px solid var(--kinetik-menu-accent, rgba(255, 255, 255, 0.22));
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--kinetik-menu-accent, rgba(255, 255, 255, 0.9));
-  box-shadow: none;
-  border-radius: 4px;
+  border: 1px solid var(--kinetik-menu-accent, rgba(0, 245, 255, 0.34));
+  background: rgba(4, 10, 18, 0.84);
+  color: var(--kinetik-menu-accent, rgba(224, 252, 255, 0.92));
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--kinetik-menu-accent, #00f5ff) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--kinetik-menu-accent, #00f5ff) 14%, transparent);
+  border-radius: 0;
+  backdrop-filter: blur(6px);
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease;
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.profile-edit-kinetik-menu-btn::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--kinetik-menu-accent, #00f5ff) 45%, transparent) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 .profile-edit-kinetik-menu-btn:hover {
-  background: color-mix(
-    in srgb,
-    var(--kinetik-menu-accent, #ffffff) 10%,
-    rgba(255, 255, 255, 0.06)
-  );
+  background: rgba(6, 14, 24, 0.92);
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--kinetik-menu-accent, #00f5ff) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--kinetik-menu-accent, #00f5ff) 18%, transparent);
 }
 
 .profile-edit-kinetik-menu-btn--rank-1 {
