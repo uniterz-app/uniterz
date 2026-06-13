@@ -640,6 +640,144 @@
   box-shadow: 0 0 14px rgba(0, 245, 255, 0.12);
 }
 
+/* 試合一覧 MatchCard */
+.match-list-cyber-card {
+  clip-path: polygon(
+    10px 0%,
+    calc(100% - 10px) 0%,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0% calc(100% - 10px),
+    0% 10px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.16);
+  background: linear-gradient(
+    168deg,
+    rgba(9, 13, 20, 0.95) 0%,
+    rgba(6, 9, 15, 0.93) 52%,
+    rgba(4, 7, 12, 0.91) 100%
+  );
+  box-shadow:
+    0 0 22px rgba(0, 245, 255, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0 rgba(0, 245, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.match-list-cyber-card--web {
+  clip-path: polygon(
+    12px 0%,
+    calc(100% - 12px) 0%,
+    100% 12px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    12px 100%,
+    0% calc(100% - 12px),
+    0% 12px
+  );
+}
+
+.match-list-cyber-card--predicted {
+  border-color: rgba(148, 163, 184, 0.32);
+  box-shadow:
+    0 0 14px rgba(148, 163, 184, 0.06),
+    0 12px 32px rgba(0, 0, 0, 0.44),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.match-list-cyber-grid {
+  background-image:
+    linear-gradient(rgba(0, 245, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, transparent 96%);
+}
+
+.match-list-cyber-divider {
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.45),
+    0 0 5px rgba(94, 234, 212, 0.35);
+}
+
+.match-list-cyber-cta {
+  clip-path: polygon(
+    6px 0%,
+    calc(100% - 6px) 0%,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0% calc(100% - 6px),
+    0% 6px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.38);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.22) 0%,
+    rgba(0, 160, 200, 0.32) 48%,
+    rgba(0, 80, 120, 0.42) 100%
+  );
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  text-shadow: 0 0 12px rgba(0, 245, 255, 0.35);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease;
+}
+
+.match-list-cyber-cta:hover:not(:disabled) {
+  border-color: rgba(0, 245, 255, 0.55);
+  box-shadow:
+    0 0 24px rgba(0, 245, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.match-list-cyber-cta--predicted {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0.18) 0%,
+    rgba(71, 85, 105, 0.32) 55%,
+    rgba(51, 65, 85, 0.4) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(148, 163, 184, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-shadow: none;
+}
+
+.match-list-cyber-cta--live {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: linear-gradient(
+    180deg,
+    rgba(34, 197, 94, 0.22) 0%,
+    rgba(22, 163, 74, 0.34) 55%,
+    rgba(21, 128, 61, 0.42) 100%
+  );
+  box-shadow:
+    0 0 18px rgba(34, 197, 94, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
+}
+
+.match-list-cyber-cta--final {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: linear-gradient(
+    180deg,
+    rgba(251, 191, 36, 0.16) 0%,
+    rgba(180, 130, 20, 0.28) 55%,
+    rgba(120, 90, 15, 0.36) 100%
+  );
+  box-shadow:
+    0 0 14px rgba(251, 191, 36, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
 /* 1位ランキング行 — 枠 EDGE SCAN（案D） */
 .rank-first-flow-dim {
   box-shadow: inset 0 0 0 1px rgba(184, 255, 60, 0.32);

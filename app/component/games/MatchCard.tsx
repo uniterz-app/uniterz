@@ -63,22 +63,23 @@ import {
   resultStatsMetricNumClass,
 } from "@/lib/fonts";
 import MatchCardOverlayMarketBar from "@/app/component/games/MatchCardOverlayMarketBar";
+import MatchListCyberDecor from "@/app/component/games/MatchListCyberDecor";
 import PredictOverlayCyberDecor from "@/app/component/predict/PredictOverlayCyberDecor";
+import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
 import { PREDICT_OVERLAY_CYBER_GRID_CLASS } from "@/lib/ui/predictOverlayCyber";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import {
-  LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
   MOBILE_LIST_CARD_OUTER_CLASS,
   MOBILE_LIST_CARD_PANEL_DENSE,
   MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS,
   WEB_LIST_CARD_PANEL,
   listCardPanelClass,
 } from "@/lib/games/mobileListCardLayout";
+import { MATCH_LIST_CYBER_GRID_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
   PREDICT_OVERLAY_BLUR_GLASS,
   PREDICT_OVERLAY_MATCH_CARD_GLASS,
 } from "@/lib/ui/matchOverlayGlass";
-import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
 import {
   isPlayoffStyleGameCard,
@@ -384,8 +385,11 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   /** オーバーレイでは未開始試合の中央をキックオフ時刻ではなく VS にする */
   const overlayCenterMode = inPredictOverlay || attachOverlayMarketBar;
   const showMergedResult = Boolean(overlayCenterMode && resultPost);
-  const showMergedPreKickoffMeta = Boolean(
-    showMergedResult && status === "scheduled"
+  /** 予想オーバーレイ：未開始試合のキックオフ・放送局（予想有無に関わらず） */
+  const showOverlayScheduleMeta = Boolean(
+    overlayCenterMode &&
+      status === "scheduled" &&
+      (startAtJst || showWcBroadcastRow)
   );
   const {
     badge: resultBadge,
@@ -1061,31 +1065,19 @@ setNavigating(true);
   };
 
 
-const predictedStyle: React.CSSProperties = {
-  background: `
-    radial-gradient(95% 220% at 50% 50%,
-      rgba(148,163,184,0.22) 0%,
-      rgba(100,116,139,0.14) 42%,
-      rgba(71,85,105,0.06) 66%,
-      rgba(71,85,105,0.00) 100%
-    )
-  `,
-  boxShadow: "none",
-};
+  const predictCtaClass = (() => {
+    if (status === "final") return `${MATCH_LIST_CYBER_CTA_CLASS} match-list-cyber-cta--final`;
+    if (isGameStarted) return `${MATCH_LIST_CYBER_CTA_CLASS} match-list-cyber-cta--live`;
+    if (isPredicted) return `${MATCH_LIST_CYBER_CTA_CLASS} match-list-cyber-cta--predicted`;
+    return MATCH_LIST_CYBER_CTA_CLASS;
+  })();
 
-const normalStyle: React.CSSProperties = {
-  background: `
-    radial-gradient(92% 230% at 50% 50%,
-      rgba(59,130,246,0.92) 0%,
-      rgba(37,99,235,0.88) 36%,
-      rgba(29,78,216,0.58) 58%,
-      rgba(29,78,216,0.20) 74%,
-      rgba(29,78,216,0.05) 84%,
-      rgba(29,78,216,0.00) 100%
-    )
-  `,
-  boxShadow: "none",
-};
+  const predictCtaBaseClass = [
+    "grid w-full place-items-center font-bold text-white",
+    "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
+    predictCtaClass,
+    isMobile ? "" : "transition-all duration-200",
+  ].join(" ");
 
   // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
   const shellClassName = [
@@ -1102,7 +1094,7 @@ const normalStyle: React.CSSProperties = {
       ? mergedOverlayGlassClass
       : "",
     !useSplitGlassShell && !inPredictOverlay && !attachOverlayMarketBar && isPredicted
-      ? "!border-zinc-500/50"
+      ? "match-list-cyber-card--predicted"
       : "",
     disableCardMotion
       ? ""
@@ -1131,7 +1123,7 @@ const normalStyle: React.CSSProperties = {
         ? [
             "pointer-events-none absolute inset-0 z-0",
             listPanelClass,
-            isPredicted ? "!border-zinc-500/50" : "",
+            isPredicted ? "match-list-cyber-card--predicted" : "",
           ].join(" ")
         : null;
 
@@ -1192,7 +1184,7 @@ return (
             tabIndex={0}
             aria-label={m.games.openPrediction}
             className={[
-              "absolute inset-0 z-[12] cursor-pointer touch-manipulation rounded-2xl",
+              "absolute inset-0 z-[12] cursor-pointer touch-manipulation",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
               "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
             ].join(" ")}
@@ -1210,7 +1202,7 @@ return (
             href={effectiveFullCardLinkHref!}
             aria-label={m.games.openMatchPrediction}
             className={[
-              "absolute inset-0 z-[12] cursor-pointer touch-manipulation rounded-2xl",
+              "absolute inset-0 z-[12] cursor-pointer touch-manipulation",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
               "focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(5,8,20,0.92)]",
             ].join(" ")}
@@ -1249,14 +1241,16 @@ return (
           <PredictOverlayCyberDecor />
         </>
       ) : (
-        <div
-          className={[
-            "pointer-events-none absolute inset-0 z-[1] rounded-2xl",
-            LIST_CARD_GRID_OVERLAY_OPACITY_CLASS,
-          ].join(" ")}
-          style={PROFILE_SHELL_GRID_STYLE}
-          aria-hidden
-        />
+        <>
+          <div
+            className={[
+              "pointer-events-none absolute inset-0 z-[1] opacity-80",
+              MATCH_LIST_CYBER_GRID_CLASS,
+            ].join(" ")}
+            aria-hidden
+          />
+          <MatchListCyberDecor />
+        </>
       )}
 
 {/* 試合終了後は市場バイアスの色帯・境界線を出さない。オーバーレイは下部の市場棒グラフと重複するため非表示 */}
@@ -1265,7 +1259,7 @@ return (
   status !== "final" &&
   !inPredictOverlay &&
   !attachOverlayMarketBar && (
-  <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden rounded-2xl">
+  <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
     {/* HOME 側バー */}
     <div
       className="absolute left-0 top-0 h-full"
@@ -1449,6 +1443,9 @@ return (
           <div
             className={[
               "mc-round text-center font-bold",
+              !inPredictOverlay && !attachOverlayMarketBar
+                ? `${nameOxanium.className} uppercase tracking-[0.18em]`
+                : "",
               mobileDense
                 ? "mt-3 mb-0 text-xl leading-snug md:text-2xl"
                 : inPredictOverlay
@@ -1917,7 +1914,7 @@ return (
 
       </div>
 
-      {showMergedPreKickoffMeta ? (
+      {showOverlayScheduleMeta ? (
         <motion.div
           className={[
             "flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 text-center",
@@ -1995,9 +1992,7 @@ return (
         </motion.div>
       ) : null}
 
-      {showWcBroadcastRow &&
-        (showDividerLine || inPredictOverlay) &&
-        !showMergedPreKickoffMeta && (
+      {showWcBroadcastRow && !overlayCenterMode && showDividerLine ? (
         <motion.div
           className={[
             "flex w-full items-center justify-center gap-2 px-3 text-center",
@@ -2055,14 +2050,14 @@ return (
             })}
           </span>
         </motion.div>
-      )}
+      ) : null}
 
       {showOverlayMarketBar ? (
         <motion.div
           className={[
             "w-full px-3 md:px-4",
-            (showWcBroadcastRow && (showDividerLine || inPredictOverlay)) ||
-              showMergedPreKickoffMeta
+            (showWcBroadcastRow && showDividerLine) ||
+              showOverlayScheduleMeta
               ? "pb-1.5 pt-0.5"
               : "pb-1.5 pt-1",
           ].join(" ")}
@@ -2134,7 +2129,7 @@ return (
 {showDividerLine && (
   <motion.div
     className={[
-      "relative overflow-hidden",
+      "relative overflow-hidden match-list-cyber-divider",
       dense
         ? mobileDense
           ? "h-[2px] w-full mt-1.5 md:mt-2"
@@ -2144,9 +2139,6 @@ return (
     style={{
       backgroundColor: leagueLineColor[league],
       transformOrigin: "50% 50%",
-      // グローは静的に持たせ、入場は opacity / scaleX のみ（boxShadow の tween は毎フレーム再描画になる）
-      boxShadow:
-        "0 0 16px rgba(34,211,238,0.5), 0 0 5px rgba(94,234,212,0.35)",
     }}
     aria-hidden={true}
     initial={entryTransition ? { opacity: 0, scaleX: 0.06 } : false}
@@ -2193,15 +2185,11 @@ return (
             <div
               aria-hidden
               className={[
-                "grid w-full place-items-center font-bold text-white",
-                "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
-                "rounded-md",
-                isMobile ? "" : "transition-all duration-200",
+                predictCtaBaseClass,
                 isPredicted && !onOpenPredict ? "cursor-default" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={isPredicted ? predictedStyle : normalStyle}
             >
               {status === "final"
                 ? m.games.finalLabel
@@ -2217,12 +2205,7 @@ return (
               onClick={handleOpenPredict}
               disabled={Boolean(isPredicted && !onOpenPredict)}
               className={[
-                "grid w-full place-items-center font-bold text-white",
-                "h-8 text-[13px] px-2 md:h-12 md:text-[15px]",
-                "rounded-md",
-                isMobile
-                  ? ""
-                  : "transition-all duration-200",
+                predictCtaBaseClass,
                 isPredicted && !onOpenPredict
                   ? "cursor-default"
                   : isMobile
@@ -2231,7 +2214,6 @@ return (
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={isPredicted ? predictedStyle : normalStyle}
             >
               {status === "final"
                 ? m.games.finalLabel
