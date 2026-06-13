@@ -18,6 +18,8 @@ import {
   LEADERBOARDS_GROUPS_INTRO_SEEN_CHANGED_EVENT,
   shouldShowLeaderboardsGroupsIntroBadge,
 } from "@/lib/communities/leaderboardsGroupsIntroSeen";
+import { useNavTabNotificationBadges } from "@/lib/hooks/useNavTabNotificationBadges";
+import NavBarNotificationDot from "@/app/component/NavBarNotificationDot";
 
 type Item = {
   href: string;
@@ -305,6 +307,11 @@ export default function NavBar() {
   const showLeaderboardsIntroBadge =
     mounted &&
     shouldShowLeaderboardsGroupsIntroBadge(pathname, prefix);
+  const { showRankingBadge, showResultBadge } = useNavTabNotificationBadges({
+    enabled: mounted && !shouldHide,
+    pathname,
+    prefix,
+  });
   // introSeenRev: 既読イベントで localStorage を再読み込み
   void introSeenRev;
 
@@ -643,6 +650,12 @@ export default function NavBar() {
                     >
                       !
                     </span>
+                  ) : null}
+                  {item.key === "ranking" && showRankingBadge ? (
+                    <NavBarNotificationDot />
+                  ) : null}
+                  {item.key === "home" && showResultBadge ? (
+                    <NavBarNotificationDot />
                   ) : null}
                 </span>
               </Link>
