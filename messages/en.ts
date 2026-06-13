@@ -714,6 +714,18 @@ const en: Messages = {
     predictedLineup: "Predicted Lineup",
   },
 
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "Event",
+      title: "World Cup/Uniform Challenge",
+      description:
+        "Eligible: FIFA World Cup group stage\n\nThe #1 user by total points in the group stage wins a jersey of the World Cup champion nation.\n\nWe will contact the #1 user by email.",
+      period: "2026 FIFA World Cup — Group Stage",
+      target: "FIFA World Cup group stage",
+      reward: "World Cup champion nation jersey",
+    },
+  },
+
   countries: {
     US: "United States",
     JP: "Japan",

@@ -703,6 +703,18 @@ const pt: Messages = {
     predictedLineup: "Escalação prevista",
   },
 
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "Evento",
+      title: "Copa do Mundo/Desafio de Camisa",
+      description:
+        "Escopo: fase de grupos da Copa do Mundo FIFA\n\nO 1º colocado em pontos totais na fase de grupos ganha a camisa do país campeão da Copa.\n\nEntraremos em contato com o 1º colocado por e-mail.",
+      period: "Copa do Mundo FIFA 2026 — Fase de grupos",
+      target: "Fase de grupos da Copa do Mundo FIFA",
+      reward: "Camisa do país campeão da Copa",
+    },
+  },
+
   countries: {
     US: "Estados Unidos",
     JP: "Japão",

@@ -4,9 +4,6 @@
 import { useEffect, useRef, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import EventModal from "@/app/component/modals/EventModal";
-import { EVENT_MODAL_QUEUE } from "@/lib/events/syntheticEventNotices";
-import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 import {
   collection,
   doc,
@@ -14,8 +11,11 @@ import {
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
+import EventModal from "@/app/component/modals/EventModal";
+import { EVENT_MODAL_QUEUE } from "@/lib/events/syntheticEventNotices";
+import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 import { usePathname } from "next/navigation";
-import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
+import { isAuthEntryRoute } from "@/lib/profileSetupRoute";
 import { normalizeLanguage } from "@/lib/i18n/language";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 
@@ -35,7 +35,7 @@ export default function EventGate() {
   const pendingReadIdsRef = useRef<Set<string>>(new Set());
   const pathname = usePathname();
   const isPublicLp = pathname === "/lp" || pathname === "/mobile/lp";
-  const { language } = useUserLanguage(uid);
+  const { language, loading: languageLoading } = useUserLanguage(uid);
 
   useEffect(() => {
     if (isPublicLp) return;
@@ -123,7 +123,8 @@ export default function EventGate() {
     if (isPublicLp) return;
     if (!uid) return;
     if (!onboardingComplete) return;
-    if (isProfileSetupRoute(pathname)) return;
+    if (isAuthEntryRoute(pathname)) return;
+    if (languageLoading) return;
     if (!readsReady || !migrationDone) return;
     if (open) return;
 
@@ -139,6 +140,7 @@ export default function EventGate() {
     uid,
     onboardingComplete,
     pathname,
+    languageLoading,
     readsReady,
     migrationDone,
     readIds,
@@ -175,7 +177,11 @@ export default function EventGate() {
 
   if (isPublicLp) return null;
 
-  if (!open || !displayEvent) return null;
+  if (!open || !displayEvent || languageLoading || !uid || !onboardingComplete) {
+    return null;
+  }
+
+  if (isAuthEntryRoute(pathname)) return null;
 
   return (
     <EventModal event={displayEvent} onClose={close} language={language} />

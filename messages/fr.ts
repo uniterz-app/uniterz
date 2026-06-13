@@ -708,6 +708,18 @@ const fr: Messages = {
     predictedLineup: "Composition prévue",
   },
 
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "Événement",
+      title: "Coupe du Monde/Défi Maillot",
+      description:
+        "Cible : phase de groupes de la Coupe du Monde FIFA\n\nLe n°1 au score total de la phase de groupes remporte le maillot du pays champion du Mondial.\n\nNous contacterons le n°1 par e-mail.",
+      period: "Coupe du Monde FIFA 2026 — Phase de groupes",
+      target: "Phase de groupes de la Coupe du Monde FIFA",
+      reward: "Maillot du pays champion du Mondial",
+    },
+  },
+
   countries: {
     US: "États-Unis",
     JP: "Japon",

@@ -690,6 +690,18 @@ const zh: Messages = {
     captainNotConfirmed: "尚未官方确认",
     predictedLineup: "预测首发",
   },
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "活动",
+      title: "世界杯/球衣挑战",
+      description:
+        "对象：世界杯小组赛\n\n小组赛综合得分第1名的用户将获得世界杯冠军国家的球衣。\n\n第1名用户我们将通过邮件联系。",
+      period: "2026 FIFA世界杯 — 小组赛",
+      target: "世界杯小组赛",
+      reward: "世界杯冠军国家的球衣",
+    },
+  },
+
   countries: {
     US: "美国",
     JP: "日本",

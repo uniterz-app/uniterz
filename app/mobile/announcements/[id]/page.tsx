@@ -185,7 +185,7 @@ export default function MobileAnnouncementDetailPage() {
               <EventNoticeBody
                 event={syntheticContent}
                 heroHeight={192}
-                isEn={isEn}
+                language={language}
               />
             </div>
           </>

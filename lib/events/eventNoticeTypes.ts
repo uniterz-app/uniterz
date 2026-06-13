@@ -1,6 +1,8 @@
 /** アプリ内イベントお知らせ（モーダル・一覧・詳細で共有） */
 export type EventNoticeContent = {
   id: string;
+  /** messages.eventNotices のキー（全言語 UI） */
+  i18nKey?: "wcUniformChallenge";
   tag?: string;
   /** 英語 UI 用（未指定時は tag をそのまま表示） */
   tagEn?: string;

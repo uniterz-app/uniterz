@@ -10,7 +10,7 @@ export const PLAYOFF_COMPETITION_EVENT: EventNoticeContent = {
   target: "参加条件：ブラケットの提出と毎試合の予想",
   reward: "今年のFMVPのユニフォーム",
   listInAnnouncements: true,
-  showModal: true,
+  showModal: false,
   pinned: true,
   postedAtMs: Date.UTC(2026, 2, 23, 0, 0, 0),
   heroImageURL: "/event/eventheader.png",
