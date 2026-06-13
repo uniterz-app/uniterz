@@ -1,22 +1,16 @@
 "use client";
 
-import { forwardRef, type ElementType, type ReactNode } from "react";
+import { forwardRef, type ReactNode, type Ref } from "react";
 
 type Props = {
   children: ReactNode;
   className?: string;
-  as?: ElementType;
+  as?: "div" | "section";
 };
 
-const ProfileKinetikPanelFrame = forwardRef<HTMLElement, Props>(function ProfileKinetikPanelFrame(
-  { children, className = "", as: Tag = "div" },
-  ref
-) {
+function FrameCorners() {
   return (
-    <Tag
-      ref={ref}
-      className={["profile-kinetik-panel min-w-0", className].filter(Boolean).join(" ")}
-    >
+    <>
       <span
         className="profile-kinetik-frame-corner profile-kinetik-frame-corner--tl"
         aria-hidden
@@ -33,9 +27,35 @@ const ProfileKinetikPanelFrame = forwardRef<HTMLElement, Props>(function Profile
         className="profile-kinetik-frame-corner profile-kinetik-frame-corner--br"
         aria-hidden
       />
-      {children}
-    </Tag>
+    </>
   );
-});
+}
+
+const ProfileKinetikPanelFrame = forwardRef<HTMLElement, Props>(
+  function ProfileKinetikPanelFrame(
+    { children, className = "", as: frameTag = "div" },
+    ref
+  ) {
+    const frameClass = ["profile-kinetik-panel min-w-0", className]
+      .filter(Boolean)
+      .join(" ");
+
+    if (frameTag === "section") {
+      return (
+        <section ref={ref} className={frameClass}>
+          <FrameCorners />
+          {children}
+        </section>
+      );
+    }
+
+    return (
+      <div ref={ref as Ref<HTMLDivElement>} className={frameClass}>
+        <FrameCorners />
+        {children}
+      </div>
+    );
+  }
+);
 
 export default ProfileKinetikPanelFrame;
