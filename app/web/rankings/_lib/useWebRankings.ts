@@ -138,6 +138,7 @@ export function useWebRankings(
 
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
+  const metricReady = bundle != null;
   const myRank = bundle?.myRank ?? null;
   const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRow = (bundle?.myRow ?? null) as RankingRow | null;
@@ -148,6 +149,7 @@ export function useWebRankings(
 
   return {
     listReady,
+    metricReady,
     personalPending,
     metric,
     setMetric,

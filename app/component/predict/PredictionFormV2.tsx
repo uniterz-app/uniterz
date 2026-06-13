@@ -45,9 +45,11 @@ import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "@/lib/predict/nextGameModalPrefs";
-import { matchScoreClass } from "@/lib/fonts";
+import { matchScoreClass, nameOxanium } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
+import { PREDICT_OVERLAY_CYBER_DECK_CLASS } from "@/lib/ui/predictOverlayCyber";
+import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
@@ -725,7 +727,7 @@ export default function PredictionFormV2({
       : glassCard;
 
   const toolButtonInactiveClass = overlayEmbedded
-    ? "border-white/10 bg-white/[0.08] text-white/88 hover:bg-white/12"
+    ? predictHudTabButtonClass(false)
     : "border-white/10 bg-white/[0.04] text-white/88 hover:bg-white/6";
 
   const fadeUpMotionProps = overlayEmbedded
@@ -735,6 +737,21 @@ export default function PredictionFormV2({
   const toolButtonBase = isMobile
     ? "flex h-9 w-full items-center justify-center rounded-xl border px-1.5 text-xs font-semibold transition-all duration-200"
     : "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
+
+  const overlayToolDeckClass = [
+    PREDICT_OVERLAY_CYBER_DECK_CLASS,
+    "grid overflow-hidden",
+    hideMarketTab ? "grid-cols-2" : "grid-cols-3",
+    isMobile ? "h-10" : "h-11",
+  ].join(" ");
+
+  const overlayToolButtonClass = (active: boolean, disabled = false) =>
+    [
+      predictHudTabButtonClass(active, disabled),
+      nameOxanium.className,
+      "h-full uppercase tracking-[0.14em]",
+      isMobile ? "text-[10px]" : "text-[11px] md:text-xs",
+    ].join(" ");
 
   /** Match tab label font size (text-xs / text-sm). */
   const handleSubmit = async () => {
@@ -1071,11 +1088,15 @@ export default function PredictionFormV2({
 
         <motion.div
           {...fadeUpMotionProps}
-          className={[
-            "grid",
-            hideMarketTab ? "grid-cols-2" : "grid-cols-3",
-            isMobile ? "gap-2" : "gap-2.5",
-          ].join(" ")}
+          className={
+            overlayEmbedded
+              ? overlayToolDeckClass
+              : [
+                  "grid",
+                  hideMarketTab ? "grid-cols-2" : "grid-cols-3",
+                  isMobile ? "gap-2" : "gap-2.5",
+                ].join(" ")
+          }
         >
           <button
             type="button"
@@ -1085,12 +1106,18 @@ export default function PredictionFormV2({
                 return t === "stats" ? null : "stats";
               })
             }
-            className={[
-              toolButtonBase,
-              (isNbaPostseasonTools ? toolsTab === "h2h" : toolsTab === "stats")
-                ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                : toolButtonInactiveClass,
-            ].join(" ")}
+            className={
+              overlayEmbedded
+                ? overlayToolButtonClass(
+                    isNbaPostseasonTools ? toolsTab === "h2h" : toolsTab === "stats"
+                  )
+                : [
+                    toolButtonBase,
+                    (isNbaPostseasonTools ? toolsTab === "h2h" : toolsTab === "stats")
+                      ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                      : toolButtonInactiveClass,
+                  ].join(" ")
+            }
           >
             <span
               className={[
@@ -1114,12 +1141,16 @@ export default function PredictionFormV2({
               onClick={() =>
                 setToolsTab((t) => (t === "market" ? null : "market"))
               }
-              className={[
-                toolButtonBase,
-                toolsTab === "market"
-                  ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                  : toolButtonInactiveClass,
-              ].join(" ")}
+              className={
+                overlayEmbedded
+                  ? overlayToolButtonClass(toolsTab === "market")
+                  : [
+                      toolButtonBase,
+                      toolsTab === "market"
+                        ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                        : toolButtonInactiveClass,
+                    ].join(" ")
+              }
             >
               <span
                 className={[
@@ -1145,14 +1176,21 @@ export default function PredictionFormV2({
               setToolsTab((t) => (t === "standings" ? null : "standings"));
             }}
             disabled={!isNbaPostseasonTools && !showStandings}
-            className={[
-              toolButtonBase,
-              (isNbaPostseasonTools ? toolsTab === "stats" : toolsTab === "standings")
-                ? "border-cyan-300/35 bg-cyan-300/12 text-white"
-                : isNbaPostseasonTools || showStandings
-                  ? toolButtonInactiveClass
-                  : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
-            ].join(" ")}
+            className={
+              overlayEmbedded
+                ? overlayToolButtonClass(
+                    isNbaPostseasonTools ? toolsTab === "stats" : toolsTab === "standings",
+                    !isNbaPostseasonTools && !showStandings
+                  )
+                : [
+                    toolButtonBase,
+                    (isNbaPostseasonTools ? toolsTab === "stats" : toolsTab === "standings")
+                      ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                      : isNbaPostseasonTools || showStandings
+                        ? toolButtonInactiveClass
+                        : "cursor-not-allowed border-white/10 bg-white/2 text-white/35",
+                  ].join(" ")
+            }
           >
             <span className={isMobile ? "truncate" : ""}>
               {isNbaPostseasonTools

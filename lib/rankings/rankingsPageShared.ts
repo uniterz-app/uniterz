@@ -51,15 +51,26 @@ export function buildRankingsPageKey(input: {
   return `${phase}-${effectiveRound}-${metric}`;
 }
 
+export function computeRankingListContentReady(input: {
+  listReady: boolean;
+  /** 現在タブの指標バンドルが取得済みか */
+  metricReady: boolean;
+}): boolean {
+  return input.listReady && input.metricReady;
+}
+
 export function computeRankingHasNoEntries(input: {
   listReady: boolean;
+  metricReady: boolean;
   rowsLength: number;
   rankingLeague: RankingLeagueSource;
   rankingListCount: number;
 }): boolean {
-  const { listReady, rowsLength, rankingLeague, rankingListCount } = input;
+  const { listReady, metricReady, rowsLength, rankingLeague, rankingListCount } =
+    input;
   return (
     listReady &&
+    metricReady &&
     (rowsLength === 0 ||
       (rankingLeague === "worldcup" && rankingListCount === 0))
   );

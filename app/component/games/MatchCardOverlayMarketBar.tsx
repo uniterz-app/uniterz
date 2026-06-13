@@ -8,6 +8,11 @@ import { nameOxanium, resultStatsMetricNumClass } from "@/lib/fonts";
 import type { League } from "@/lib/leagues";
 import type { MarketBiasFallback } from "@/lib/predict/gameMarketDistribution";
 import type { Status } from "@/app/component/games/MatchCard";
+import {
+  PREDICT_OVERLAY_MARKET_FRAME_CLASS,
+  PREDICT_OVERLAY_STAT_BOX_CLASS,
+} from "@/lib/ui/predictOverlayCyber";
+import { CYBER_TAB_CYAN } from "@/app/component/rankings/CyberSlantedTab";
 type Props = {
   gameId: string;
   league: League;
@@ -236,15 +241,19 @@ function SegmentedMarketBar({
   return (
     <div
       className={[
-        "flex w-full rounded-md bg-white/[0.06] p-[3px]",
+        "flex w-full border border-cyan-400/10 bg-black/25 p-[3px]",
         compact ? "gap-[2px]" : "gap-[3px]",
       ].join(" ")}
+      style={{
+        clipPath:
+          "polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px)",
+      }}
       role="img"
     >
       {kinds.map((key, i) => (
         <div
           key={`${key}-${i}`}
-          className="min-w-0 flex-1 origin-bottom -skew-x-[14deg] rounded-[2px] transition-shadow duration-300"
+          className="cyber-slanted-seg min-w-0 flex-1 origin-bottom -skew-x-[14deg] transition-shadow duration-300"
           style={{
             height: segH,
             ...segmentStyle(key),
@@ -323,6 +332,7 @@ function StatBox({
   return (
     <div
       className={[
+        PREDICT_OVERLAY_STAT_BOX_CLASS,
         "min-w-0 text-center transition-shadow duration-300",
         compact ? "px-1.5 py-1" : "px-2 py-2 md:px-2.5 md:py-2.5",
       ].join(" ")}
@@ -416,7 +426,7 @@ export default function MatchCardOverlayMarketBar({
     <div className="w-full">
       <div
         className={[
-          "rounded-md border border-white/[0.08] bg-white/[0.04]",
+          PREDICT_OVERLAY_MARKET_FRAME_CLASS,
           compact ? "px-1.5 py-1" : "px-2 py-1.5 md:px-2.5",
         ].join(" ")}
         aria-label={`${m.predict.marketBias} ${homeLabel} ${formatPct(homePct)} ${awayLabel} ${formatPct(awayPct)}`}
@@ -428,13 +438,24 @@ export default function MatchCardOverlayMarketBar({
             compact ? "mb-0.5" : "mb-1",
           ].join(" ")}
         >
-          <span
-            className={[
-              "font-bold uppercase tracking-[0.18em] text-white/45",
-              compact ? "text-[8px] leading-none" : "text-[9px] leading-none md:text-[10px]",
-            ].join(" ")}
-          >
-            {m.predict.marketBias}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span
+              aria-hidden
+              className="h-px w-2 shrink-0"
+              style={{
+                background: CYBER_TAB_CYAN,
+                boxShadow: `0 0 6px ${CYBER_TAB_CYAN}88`,
+              }}
+            />
+            <span
+              className={[
+                "font-bold uppercase tracking-[0.2em]",
+                compact ? "text-[8px] leading-none" : "text-[9px] leading-none md:text-[10px]",
+              ].join(" ")}
+              style={{ color: "rgba(0,245,255,0.55)" }}
+            >
+              {m.predict.marketBias}
+            </span>
           </span>
           {total > 0 && !fromFallback ? (
             <span

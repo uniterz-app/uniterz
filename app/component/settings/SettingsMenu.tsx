@@ -31,6 +31,7 @@ import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import LogoutConfirmModal from "../modals/LogoutConfirmModal";
 import ProfileEditSheet from "@/app/component/profile/ProfileEditSheet";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
+import { CyberSideMenuSectionTitle } from "@/app/component/common/CyberSideMenuSectionTitle";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import SideMenuItemButton from "@/app/component/settings/SideMenuItemButton";
 import {
@@ -140,14 +141,9 @@ export default function SettingsMenu({
 
   // ===== styles =====
   const containerClasses = cn(
-    "relative text-white flex flex-col",
-    isMobile ? "w-full p-4" : "w-full p-6",
+    "relative flex flex-col text-white",
+    isMobile ? "w-full p-4" : "w-full p-5",
     className
-  );
-
-  const groupTitleClasses = cn(
-    "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300/55 mt-4 mb-2",
-    isMobile ? "pl-7" : "pl-5"
   );
   /** 試合カードの HOME/AWAY ラベルと同系統 */
   const menuLabelFont = bracketMarketTeamTypography(isMobile);
@@ -155,7 +151,9 @@ export default function SettingsMenu({
   return (
     <>
       <nav className={cn(containerClasses, "overflow-x-hidden")}>
-        <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionMain}</span></p>
+        <CyberSideMenuSectionTitle first>
+          <span className={cn(isEn && "uppercase")}>{m.settings.sectionMain}</span>
+        </CyberSideMenuSectionTitle>
 
         <div className="flex flex-col gap-2">
           <SideMenuItemButton
@@ -190,7 +188,9 @@ export default function SettingsMenu({
           </SideMenuItemButton>
         </div>
 
-        <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionSubscription}</span></p>
+        <CyberSideMenuSectionTitle>
+          <span className={cn(isEn && "uppercase")}>{m.settings.sectionSubscription}</span>
+        </CyberSideMenuSectionTitle>
 
         <div className="flex flex-col gap-2">
           <SideMenuItemButton
@@ -212,7 +212,9 @@ export default function SettingsMenu({
           </SideMenuItemButton>
         </div>
 
-        <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionSupport}</span></p>
+        <CyberSideMenuSectionTitle>
+          <span className={cn(isEn && "uppercase")}>{m.settings.sectionSupport}</span>
+        </CyberSideMenuSectionTitle>
 
         <div className="flex flex-col gap-2">
           <SideMenuItemButton
@@ -258,7 +260,9 @@ export default function SettingsMenu({
 
         {isAdmin && (
           <>
-            <p className={groupTitleClasses}><span className={cn(isEn && "uppercase")}>{m.settings.sectionAdmin}</span></p>
+            <CyberSideMenuSectionTitle>
+              <span className={cn(isEn && "uppercase")}>{m.settings.sectionAdmin}</span>
+            </CyberSideMenuSectionTitle>
 
             <div className="flex flex-col gap-2">
               <SideMenuItemButton
@@ -312,7 +316,11 @@ export default function SettingsMenu({
           </>
         )}
 
-        <div className="mt-5 border-t border-white/10 pt-4 pb-1">
+        <div className="relative mt-5 pt-4 pb-1">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-cyan-400/25 to-transparent"
+          />
           <SideMenuItemButton
             icon={LogOut}
             tone="danger"

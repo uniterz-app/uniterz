@@ -30,10 +30,10 @@ export function predictHudTabButtonClass(
     return "flex h-full w-full items-center justify-center px-1.5 text-xs font-semibold text-white/28 cursor-not-allowed sm:text-sm";
   }
   return [
-    "flex h-full w-full items-center justify-center px-1.5 text-xs font-semibold transition-colors duration-200 sm:text-sm",
+    "flex h-full w-full items-center justify-center px-1.5 font-bold transition-[color,background,box-shadow] duration-200",
     active
-      ? "bg-cyan-400/14 text-cyan-50 shadow-[inset_0_0_18px_rgba(34,211,238,0.12)]"
-      : "text-white/82 hover:bg-cyan-400/6 hover:text-white",
+      ? "bg-[rgba(0,245,255,0.12)] text-cyan-50 shadow-[inset_0_0_20px_rgba(0,245,255,0.14),0_0_12px_rgba(0,245,255,0.08)]"
+      : "text-white/78 hover:bg-[rgba(0,245,255,0.06)] hover:text-white",
   ].join(" ");
 }
 

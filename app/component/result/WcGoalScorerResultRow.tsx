@@ -80,12 +80,15 @@ type RowProps = {
   label: string;
   info: WcGoalScorerResultInfo;
   compact?: boolean;
+  /** 予想オーバーレイ：選手名を角切り HUD 箱で表示 */
+  cyberValue?: boolean;
 };
 
 export default function WcGoalScorerResultRow({
   label,
   info,
   compact = false,
+  cyberValue = false,
 }: RowProps) {
   return (
     <div
@@ -108,6 +111,7 @@ export default function WcGoalScorerResultRow({
       <div
         className={[
           "flex min-w-0 items-center gap-1 font-medium text-white/85",
+          cyberValue ? "predict-overlay-goal-box px-2 py-1" : "",
           compact
             ? "text-[10px] leading-none"
             : "text-[12px] sm:text-[13px]",
@@ -122,7 +126,9 @@ export default function WcGoalScorerResultRow({
             compact ? "h-3 w-[1.05rem]" : "h-3.5 w-[1.2rem]",
           ].join(" ")}
         />
-        <span className="min-w-0 truncate">{info.playerName}</span>
+        <span className="min-w-0 truncate font-semibold text-white/92">
+          {info.playerName}
+        </span>
       </div>
 
       <div className="flex min-w-0 justify-end">
