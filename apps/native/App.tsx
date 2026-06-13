@@ -28,6 +28,7 @@ import ProfileHomeScreen from "./src/features/profile/ProfileHomeScreen";
 import ResultHomeScreen from "./src/features/results/ResultHomeScreen";
 import RankingsHomeScreen from "./src/features/rankings/RankingsHomeScreen";
 import { prefetchRankingsLogoGlb } from "./src/features/rankings/rankingsLogoGlbCache";
+import { useNativeNavTabNotificationBadges } from "./src/navigation/useNativeNavTabNotificationBadges";
 import { useEffect, useState } from "react";
 
 type MainTab = "games" | "insight" | "trophy" | "stats" | "profile";
@@ -76,6 +77,11 @@ function AppContent() {
   const bottomContentReserveY = pillBottomFromScreenBottom + 8 + 42 + 8 + 14;
 
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
+
+  const { showRankingBadge, showResultBadge } = useNativeNavTabNotificationBadges({
+    rankingTabActive: tab === "trophy",
+    resultTabActive: tab === "insight",
+  });
 
   useEffect(() => {
     if (!isAuthed) return;
@@ -186,6 +192,12 @@ function AppContent() {
                                 : { transform: [{ scale: 0.92 }], opacity: 0.9 }
                             }
                           />
+                          {item.id === "trophy" && showRankingBadge ? (
+                            <View style={styles.tabNotificationDot} />
+                          ) : null}
+                          {item.id === "insight" && showResultBadge ? (
+                            <View style={styles.tabNotificationDot} />
+                          ) : null}
                         </View>
                       </Pressable>
                     );
@@ -328,5 +340,16 @@ const styles = StyleSheet.create({
     height: 34,
     alignItems: "center",
     justifyContent: "center",
+  },
+  tabNotificationDot: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#22d3ee",
+    borderWidth: 2,
+    borderColor: "rgba(10,14,24,0.85)",
   },
 });

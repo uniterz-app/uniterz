@@ -48,7 +48,12 @@ import {
 import { matchScoreClass, nameOxanium } from "@/lib/fonts";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { PREDICT_OVERLAY_FORM_PANEL } from "@/lib/ui/matchOverlayGlass";
-import { PREDICT_OVERLAY_CYBER_DECK_CLASS } from "@/lib/ui/predictOverlayCyber";
+import {
+  PREDICT_OVERLAY_CYBER_DECK_CLASS,
+  PREDICT_OVERLAY_SCORE_INPUT_CLASS,
+  PREDICT_OVERLAY_SUBMIT_BTN_CLASS,
+  PREDICT_OVERLAY_SUBMIT_BTN_DISABLED_CLASS,
+} from "@/lib/ui/predictOverlayCyber";
 import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
@@ -704,14 +709,20 @@ export default function PredictionFormV2({
     };
   };
 
+  const overlayEmbedded = embedded && inOverlay;
+
   const scoreInputClass = [
-    "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
+    overlayEmbedded
+      ? `${PREDICT_OVERLAY_SCORE_INPUT_CLASS} w-full text-left font-black outline-none`
+      : "w-full rounded-xl border border-white/15 bg-white/[0.10] text-left text-white placeholder-white/35 outline-none transition focus:border-cyan-300/40 focus:bg-white/[0.12]",
     matchScoreClass,
     // iOS Safari: 16px 未満だとフォーカス時に自動ズームする
     isMobile ? "px-3.5 py-2.5 text-base" : "px-4 py-3 text-base",
-  ].join(" ");
+    overlayEmbedded ? "" : "w-full",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  const overlayEmbedded = embedded && inOverlay;
   /** 単体ページ：方眼オーバーレイなし・半透明面のみ（blur によるチラつきを避ける） */
   const standaloneGlassFill =
     "border border-white/10 bg-[linear-gradient(172deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.025)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]";
@@ -1462,39 +1473,25 @@ export default function PredictionFormV2({
                 disabled={!canSubmit}
                 onClick={handleSubmit}
                 className={[
-                  "flex h-12 w-full items-center justify-center rounded-2xl text-sm font-bold text-white",
-                  "border backdrop-blur-md transition-all duration-200",
-                  "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]",
                   canSubmit
-                    ? [
-                        "border-blue-500/40",
-                        "active:scale-[0.98]",
-                      ].join(" ")
-                    : "cursor-not-allowed border-white/15 bg-white/6 text-white/40",
+                    ? PREDICT_OVERLAY_SUBMIT_BTN_CLASS
+                    : PREDICT_OVERLAY_SUBMIT_BTN_DISABLED_CLASS,
+                  "flex h-12 w-full items-center justify-center text-sm font-bold tracking-[0.06em]",
                 ].join(" ")}
-                style={
-                  canSubmit
-                    ? {
-                        background: `
-                      radial-gradient(92% 230% at 50% 50%,
-                        rgba(59,130,246,0.92) 0%,
-                        rgba(37,99,235,0.88) 36%,
-                        rgba(29,78,216,0.58) 58%,
-                        rgba(29,78,216,0.20) 74%,
-                        rgba(29,78,216,0.05) 84%,
-                        rgba(29,78,216,0.00) 100%
-                      )
-                    `,
-                        boxShadow: "none",
-                      }
-                    : undefined
-                }
               >
-                {submitting
-                  ? m.common.submitting
-                  : effectivePostId && showScoreEdit
-                    ? m.predict.predictionUpdated
-                    : m.predict.submitPrediction}
+                {canSubmit ? (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-8 top-0 z-[1] h-px bg-linear-to-r from-transparent via-cyan-300/50 to-transparent"
+                  />
+                ) : null}
+                <span className="relative z-[2]">
+                  {submitting
+                    ? m.common.submitting
+                    : effectivePostId && showScoreEdit
+                      ? m.predict.predictionUpdated
+                      : m.predict.submitPrediction}
+                </span>
               </button>
             </motion.div>
           </>

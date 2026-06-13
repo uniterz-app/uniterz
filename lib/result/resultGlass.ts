@@ -183,6 +183,23 @@ export const RESULT_HIT_CYBER_CLIP = "result-hit-cyber-clip";
 /** HIT バッジ：小さめ角切り */
 export const RESULT_HIT_CYBER_CLIP_SM = "result-hit-cyber-clip-sm";
 
+const RESULT_CYBER_BADGE_BASE =
+  "pointer-events-auto shrink-0 rounded-none font-bold uppercase backdrop-blur-md";
+
+function resultCyberBadgeSize(
+  compact: boolean,
+  subtle?: boolean
+): string {
+  if (subtle) {
+    return compact
+      ? "text-[8px] px-2 py-0.5 tracking-[0.12em]"
+      : "text-[9px] px-2.5 py-0.5 tracking-[0.12em]";
+  }
+  return compact
+    ? "text-[9px] px-2.5 py-[3px] tracking-[0.14em]"
+    : "text-[10px] px-3 py-[3px] tracking-[0.14em]";
+}
+
 /** HIT カード外枠（1px） */
 export const RESULT_HIT_FRAME_BORDER = "border border-yellow-400/76";
 
@@ -214,31 +231,99 @@ export const RESULT_HIT_TOP_LINE =
 export const RESULT_HIT_OVERLAY_GRADIENT =
   "bg-[linear-gradient(180deg,rgba(252,211,77,0.18)_0%,rgba(251,191,36,0.09)_42%,transparent_70%)]";
 
-/** HIT バッジ：ゴールドチップ */
+/** HIT バッジ：ゴールド・サイバー角切り */
 export function resultHitBadgeClass(
   compact: boolean,
   opts?: { subtle?: boolean }
 ): string {
   const subtle = opts?.subtle === true;
   return [
-    "pointer-events-auto shrink-0 rounded-none font-semibold uppercase",
+    RESULT_CYBER_BADGE_BASE,
     RESULT_HIT_CYBER_CLIP_SM,
-    subtle ? "tracking-[0.12em]" : "tracking-[0.14em]",
-    "border border-yellow-300/70",
-    "bg-[linear-gradient(180deg,rgba(253,224,71,0.42)_0%,rgba(251,191,36,0.20)_48%,rgba(0,0,0,0.38)_100%)]",
-    "text-yellow-50",
-    "backdrop-blur-md",
+    resultCyberBadgeSize(compact, subtle),
+    "border border-amber-400/62",
+    "bg-[linear-gradient(180deg,rgba(251,191,36,0.3)_0%,rgba(120,53,15,0.16)_40%,rgba(0,0,0,0.42)_100%)]",
+    "text-amber-50",
     subtle
-      ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_0_8px_rgba(251,191,36,0.22),0_1px_4px_rgba(0,0,0,0.24)]"
-      : "shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_0_10px_rgba(251,191,36,0.28),0_2px_6px_rgba(0,0,0,0.28)]",
-    subtle
-      ? compact
-        ? "text-[8px] px-2 py-0.5"
-        : "text-[9px] px-2.5 py-0.5"
-      : compact
-        ? "text-[9px] px-2.5 py-[3px]"
-        : "text-[10px] px-3 py-[3px]",
+      ? "shadow-[inset_3px_0_0_rgba(253,224,71,0.5),inset_0_1px_0_rgba(255,255,255,0.16),0_0_10px_rgba(251,191,36,0.24)]"
+      : "shadow-[inset_3px_0_0_rgba(253,224,71,0.58),inset_0_1px_0_rgba(255,255,255,0.2),0_0_12px_rgba(251,191,36,0.3)]",
   ].join(" ");
+}
+
+/** MISS バッジ：スレート・サイバー角切り */
+export function resultMissBadgeClass(
+  compact: boolean,
+  opts?: { subtle?: boolean }
+): string {
+  const subtle = opts?.subtle === true;
+  return [
+    RESULT_CYBER_BADGE_BASE,
+    RESULT_HIT_CYBER_CLIP_SM,
+    resultCyberBadgeSize(compact, subtle),
+    "border border-slate-400/50",
+    "bg-[linear-gradient(180deg,rgba(148,163,184,0.26)_0%,rgba(71,85,105,0.16)_42%,rgba(0,0,0,0.44)_100%)]",
+    "text-slate-100",
+    subtle
+      ? "shadow-[inset_3px_0_0_rgba(148,163,184,0.42),inset_0_1px_0_rgba(255,255,255,0.12),0_0_8px_rgba(100,116,139,0.2)]"
+      : "shadow-[inset_3px_0_0_rgba(148,163,184,0.5),inset_0_1px_0_rgba(255,255,255,0.14),0_0_10px_rgba(100,116,139,0.24)]",
+  ].join(" ");
+}
+
+/** 連勝バッジ：ティア別サイバー角切り */
+export function resultStreakBadgeClass(
+  activeWinStreak: unknown,
+  compact: boolean,
+  opts?: { subtle?: boolean }
+): string | null {
+  const tier = resultStreakTier(activeWinStreak);
+  if (!tier) return null;
+
+  const subtle = opts?.subtle === true;
+  const size = resultCyberBadgeSize(compact, subtle);
+  const shell = [
+    RESULT_CYBER_BADGE_BASE,
+    RESULT_HIT_CYBER_CLIP_SM,
+    "inline-flex max-w-full min-w-0 items-center",
+    compact ? "gap-1" : "gap-1.5",
+    size,
+  ];
+
+  if (tier === "gold") {
+    return [
+      ...shell,
+      "border border-amber-400/62",
+      "bg-[linear-gradient(180deg,rgba(251,191,36,0.28)_0%,rgba(120,53,15,0.2)_42%,rgba(0,0,0,0.42)_100%)]",
+      "text-amber-50",
+      "shadow-[inset_3px_0_0_rgba(253,224,71,0.52),inset_0_1px_0_rgba(255,255,255,0.18),0_0_12px_rgba(251,191,36,0.28)]",
+    ].join(" ");
+  }
+
+  if (tier === "platinum") {
+    return [
+      ...shell,
+      "border border-cyan-300/54",
+      "bg-[linear-gradient(180deg,rgba(0,245,255,0.2)_0%,rgba(30,58,90,0.24)_45%,rgba(0,0,0,0.42)_100%)]",
+      "text-cyan-50",
+      "shadow-[inset_3px_0_0_rgba(0,245,255,0.48),inset_0_1px_0_rgba(255,255,255,0.16),0_0_12px_rgba(0,245,255,0.22)]",
+    ].join(" ");
+  }
+
+  return [
+    ...shell,
+    "border border-cyan-400/40",
+    "bg-[linear-gradient(180deg,rgba(0,245,255,0.12)_0%,rgba(8,14,24,0.84)_48%,rgba(2,6,12,0.92)_100%)]",
+    "text-[#00F5FF]",
+    "shadow-[inset_3px_0_0_rgba(0,245,255,0.42),inset_0_1px_0_rgba(255,255,255,0.12),0_0_10px_rgba(0,245,255,0.16)]",
+  ].join(" ");
+}
+
+export function resultStreakBadgeIconClass(
+  activeWinStreak: unknown
+): string {
+  const tier = resultStreakTier(activeWinStreak);
+  if (tier === "gold") return "text-amber-300";
+  if (tier === "platinum") return "text-cyan-200";
+  return "text-orange-400";
 }
 
 /** 日付帯用ガラス */

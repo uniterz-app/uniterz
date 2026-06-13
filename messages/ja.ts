@@ -709,6 +709,18 @@ const ja = {
     predictedLineup: "予想スタメン",
   },
 
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "イベント",
+      title: "ワールドカップ/ユニフォームチャレンジ",
+      description:
+        "対象：ワールドカップ グループステージ\n\nグループステージの総合得点1位のユーザーにワールドカップ優勝国のジャージをプレゼント\n\n1位のユーザーにはこちらからメールを送ります",
+      period: "2026 FIFA World Cup グループステージ",
+      target: "ワールドカップ グループステージ",
+      reward: "ワールドカップ優勝国のジャージ",
+    },
+  },
+
   countries: {
     US: "アメリカ合衆国",
     JP: "日本",

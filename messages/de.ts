@@ -705,6 +705,18 @@ const de: Messages = {
     predictedLineup: "Voraussichtliche Aufstellung",
   },
 
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "Event",
+      title: "WM/Trikot-Challenge",
+      description:
+        "Teilnahme: FIFA-Weltmeisterschaft Gruppenphase\n\nPlatz 1 in der Gesamtpunktzahl der Gruppenphase erhält das Trikot des WM-Siegelandes.\n\nWir kontaktieren Platz 1 per E-Mail.",
+      period: "FIFA-Weltmeisterschaft 2026 — Gruppenphase",
+      target: "FIFA-Weltmeisterschaft Gruppenphase",
+      reward: "Trikot des WM-Siegelandes",
+    },
+  },
+
   countries: {
     US: "Vereinigte Staaten",
     JP: "Japan",

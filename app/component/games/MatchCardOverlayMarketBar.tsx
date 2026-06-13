@@ -9,7 +9,6 @@ import type { League } from "@/lib/leagues";
 import type { MarketBiasFallback } from "@/lib/predict/gameMarketDistribution";
 import type { Status } from "@/app/component/games/MatchCard";
 import {
-  PREDICT_OVERLAY_MARKET_FRAME_CLASS,
   PREDICT_OVERLAY_STAT_BOX_CLASS,
 } from "@/lib/ui/predictOverlayCyber";
 import { CYBER_TAB_CYAN } from "@/app/component/rankings/CyberSlantedTab";
@@ -35,9 +34,16 @@ function formatPct(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
-const winningMarketBorder = (accent: string) => `${accent}88`;
+const winningMarketBorder = (accent: string) => `${accent}aa`;
 const winningMarketGlow = (accent: string) =>
-  `inset 0 0 8px ${accent}1a, 0 0 4px ${accent}22`;
+  `inset 0 0 10px ${accent}30, 0 0 6px ${accent}55, 0 0 14px ${accent}32`;
+const segmentMarketGlow = (accent: string) =>
+  `inset 0 0 7px ${accent}28, 0 0 5px ${accent}66, 0 0 11px ${accent}38, inset 0 1px 0 rgba(255,255,255,0.18)`;
+
+/** 文字周りににじまないタイトな光彩（大きい blur は使わない） */
+const statTextNeon = (accent: string): React.CSSProperties => ({
+  textShadow: `0 0 1px ${accent}dd, 0 0 4px ${accent}55`,
+});
 
 const MARKET_BAR_SEGMENTS = 20;
 
@@ -208,7 +214,7 @@ function SegmentedMarketBar({
         background: `linear-gradient(180deg, ${homeColor} 0%, ${homeColor}cc 100%)`,
         boxShadow: highlighted
           ? winningMarketGlow(homeColor)
-          : `0 0 8px ${homeColor}44, inset 0 1px 0 rgba(255,255,255,0.18)`,
+          : segmentMarketGlow(homeColor),
         border: highlighted
           ? `1px solid ${winningMarketBorder(homeColor)}`
           : `1px solid ${homeColor}88`,
@@ -221,7 +227,7 @@ function SegmentedMarketBar({
           "linear-gradient(180deg, rgba(156,163,175,0.92) 0%, rgba(107,114,128,0.88) 100%)",
         boxShadow: highlighted
           ? winningMarketGlow(drawAccent)
-          : "inset 0 1px 0 rgba(255,255,255,0.12)",
+          : segmentMarketGlow(drawAccent),
         border: highlighted
           ? `1px solid ${winningMarketBorder(drawAccent)}`
           : "1px solid rgba(156,163,175,0.45)",
@@ -231,7 +237,7 @@ function SegmentedMarketBar({
       background: `linear-gradient(180deg, ${awayColor} 0%, ${awayColor}cc 100%)`,
       boxShadow: highlighted
         ? winningMarketGlow(awayColor)
-        : `0 0 8px ${awayColor}40, inset 0 1px 0 rgba(255,255,255,0.16)`,
+        : segmentMarketGlow(awayColor),
       border: highlighted
         ? `1px solid ${winningMarketBorder(awayColor)}`
         : `1px solid ${awayColor}88`,
@@ -276,32 +282,33 @@ function statBoxSurface(
         ? homeColor
         : variant === "away"
           ? awayColor
-          : "#9ca3af";
+          : "#c8d0dc";
     return {
-      background: `linear-gradient(180deg, ${accent}28 0%, rgba(0,0,0,0.38) 72%)`,
+      background: `linear-gradient(180deg, ${accent}48 0%, rgba(0,0,0,0.28) 72%)`,
       border: `1px solid ${winningMarketBorder(accent)}`,
       boxShadow: winningMarketGlow(accent),
     };
   }
   if (variant === "home") {
     return {
-      background: `linear-gradient(180deg, ${homeColor}28 0%, rgba(0,0,0,0.38) 72%)`,
-      border: `1px solid ${homeColor}70`,
-      boxShadow: `inset 0 0 18px ${homeColor}16, 0 0 12px ${homeColor}14`,
+      background: `linear-gradient(180deg, ${homeColor}44 0%, rgba(0,0,0,0.3) 72%)`,
+      border: `1px solid ${homeColor}99`,
+      boxShadow: segmentMarketGlow(homeColor),
     };
   }
   if (variant === "draw") {
+    const drawAccent = "#c8d0dc";
     return {
       background:
-        "linear-gradient(180deg, rgba(156,163,175,0.22) 0%, rgba(0,0,0,0.38) 72%)",
-      border: "1px solid rgba(156,163,175,0.48)",
-      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+        "linear-gradient(180deg, rgba(186,195,210,0.34) 0%, rgba(0,0,0,0.3) 72%)",
+      border: "1px solid rgba(200,210,225,0.62)",
+      boxShadow: segmentMarketGlow(drawAccent),
     };
   }
   return {
-    background: `linear-gradient(180deg, ${awayColor}28 0%, rgba(0,0,0,0.38) 72%)`,
-    border: `1px solid ${awayColor}70`,
-    boxShadow: `inset 0 0 18px ${awayColor}16, 0 0 12px ${awayColor}14`,
+    background: `linear-gradient(180deg, ${awayColor}44 0%, rgba(0,0,0,0.3) 72%)`,
+    border: `1px solid ${awayColor}99`,
+    boxShadow: segmentMarketGlow(awayColor),
   };
 }
 
@@ -322,12 +329,12 @@ function StatBox({
   compact?: boolean;
   isHighlighted?: boolean;
 }) {
-  const labelTint =
+  const labelAccent =
     variant === "home"
       ? homeColor
       : variant === "away"
         ? awayColor
-        : "#d1d5db";
+        : "#c8d0dc";
 
   return (
     <div
@@ -343,25 +350,21 @@ function StatBox({
           nameOxanium.className,
           "truncate font-bold uppercase tracking-[0.14em]",
           compact ? "text-[8px]" : "text-[9px] md:text-[10px]",
+          variant === "draw" ? "text-white/82" : "text-white/92",
         ].join(" ")}
-        style={{ color: `${labelTint}cc` }}
+        style={statTextNeon(labelAccent)}
       >
         {label}
       </div>
       <div
         className={[
           resultStatsMetricNumClass,
-          "mt-0.5 font-black tabular-nums",
-          "text-white",
+          "mt-0.5 font-black tabular-nums text-white",
           compact ? "text-sm" : "text-lg md:text-xl",
         ].join(" ")}
-        style={
-          isHighlighted
-            ? undefined
-            : {
-                textShadow: `0 0 14px ${labelTint}44`,
-              }
-        }
+        style={{
+          textShadow: "0 0 1px rgba(255,255,255,0.9), 0 0 4px rgba(255,255,255,0.22)",
+        }}
       >
         {formatPct(pct)}
       </div>
@@ -425,10 +428,7 @@ export default function MatchCardOverlayMarketBar({
   return (
     <div className="w-full">
       <div
-        className={[
-          PREDICT_OVERLAY_MARKET_FRAME_CLASS,
-          compact ? "px-1.5 py-1" : "px-2 py-1.5 md:px-2.5",
-        ].join(" ")}
+        className="w-full"
         aria-label={`${m.predict.marketBias} ${homeLabel} ${formatPct(homePct)} ${awayLabel} ${formatPct(awayPct)}`}
       >
         <div

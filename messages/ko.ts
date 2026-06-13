@@ -690,6 +690,18 @@ const ko: Messages = {
     captainNotConfirmed: "공식 미확정",
     predictedLineup: "예상 스타팅",
   },
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "이벤트",
+      title: "월드컵/유니폼 챌린지",
+      description:
+        "대상: FIFA 월드컵 조별리그\n\n조별리그 종합 득점 1위 사용자에게 월드컵 우승국의 유니폼을 증정합니다.\n\n1위 사용자에게는 이메일로 연락드립니다.",
+      period: "2026 FIFA 월드컵 — 조별리그",
+      target: "FIFA 월드컵 조별리그",
+      reward: "월드컵 우승국 유니폼",
+    },
+  },
+
   countries: {
     US: "미국", JP: "일본", CN: "중국", KR: "대한민국", TW: "대만", HK: "홍콩",
     SG: "싱가포르", TH: "태국", VN: "베트남", ID: "인도네시아", PH: "필리핀",

@@ -1,10 +1,13 @@
 "use client";
 
 import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
+import type { Language } from "@/lib/i18n/language";
+import { resolveEventNoticeCopy } from "@/lib/events/resolveEventNoticeCopy";
 
 type Props = {
   event: Pick<
     EventNoticeContent,
+    | "i18nKey"
     | "tag"
     | "tagEn"
     | "title"
@@ -22,29 +25,14 @@ type Props = {
   heroHeight?: number;
   /** true のとき角丸は親（モーダル）に合わせ、本文上に区切り線のみ */
   embedInModal?: boolean;
-  /** true のとき titleEn 等があれば英語を優先 */
+  /** 表示言語 */
+  language?: Language;
+  /** @deprecated language を使用 */
   isEn?: boolean;
 };
 
-function pickLocalized(
-  event: Props["event"],
-  isEn: boolean
-): Pick<
-  EventNoticeContent,
-  "tag" | "title" | "description" | "period" | "target" | "reward"
-> & { heroImageURL?: string } {
-  return {
-    heroImageURL: event.heroImageURL,
-    tag: isEn && event.tagEn ? event.tagEn : event.tag,
-    title: isEn && event.titleEn ? event.titleEn : event.title,
-    description:
-      isEn && event.descriptionEn ? event.descriptionEn : event.description,
-    period: isEn && event.periodEn ? event.periodEn : event.period,
-    target:
-      isEn && event.targetEn !== undefined ? event.targetEn : event.target,
-    reward:
-      isEn && event.rewardEn !== undefined ? event.rewardEn : event.reward,
-  };
+function pickLocalized(event: Props["event"], language: Language) {
+  return resolveEventNoticeCopy(event as EventNoticeContent, language);
 }
 
 /**
@@ -56,10 +44,12 @@ export default function EventNoticeBody({
   event,
   heroHeight = 160,
   embedInModal = false,
+  language = "ja",
   isEn = false,
 }: Props) {
-  const loc = pickLocalized(event, isEn);
-  const heroSrc = loc.heroImageURL ?? DEFAULT_HERO;
+  const resolvedLanguage = language ?? (isEn ? "en" : "ja");
+  const loc = pickLocalized(event, resolvedLanguage);
+  const heroSrc = event.heroImageURL ?? DEFAULT_HERO;
   const bodyClass = embedInModal
     ? "p-4 space-y-4 border-t border-white/10"
     : "p-4 space-y-4";

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { PREDICT_OVERLAY_TAB_IDLE_CLASS } from "@/lib/ui/predictOverlayCyber";
 
 /** 予想オーバーレイ用 HUD トークン（参照デザインのシアン枠・角ブラケット・フラットパネル） */
 export const PREDICT_HUD_HAIRLINE = "rgba(34,211,238,0.22)";
@@ -32,8 +33,8 @@ export function predictHudTabButtonClass(
   return [
     "flex h-full w-full items-center justify-center px-1.5 font-bold transition-[color,background,box-shadow] duration-200",
     active
-      ? "bg-[rgba(0,245,255,0.12)] text-cyan-50 shadow-[inset_0_0_20px_rgba(0,245,255,0.14),0_0_12px_rgba(0,245,255,0.08)]"
-      : "text-white/78 hover:bg-[rgba(0,245,255,0.06)] hover:text-white",
+      ? "bg-[#00F5FF] text-[#050508] shadow-[0_0_16px_rgba(0,245,255,0.38),inset_0_1px_0_rgba(255,255,255,0.35)]"
+      : PREDICT_OVERLAY_TAB_IDLE_CLASS,
   ].join(" ");
 }
 

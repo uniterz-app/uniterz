@@ -612,6 +612,26 @@
   border-left: 1px solid rgba(0, 245, 255, 0.14);
 }
 
+/* 予想オーバーレイ — 非選択タブ（蛍光ネオン・文字にじみ抑制） */
+.predict-overlay-tab-btn--idle {
+  color: #00f5ff;
+  text-shadow:
+    0 0 1px #00f5ff,
+    0 0 6px rgba(0, 245, 255, 0.42);
+  transition:
+    color 200ms ease,
+    background 200ms ease,
+    text-shadow 200ms ease;
+}
+
+.predict-overlay-tab-btn--idle:hover {
+  background: rgba(0, 245, 255, 0.1);
+  color: #b8ffff;
+  text-shadow:
+    0 0 1px #b8ffff,
+    0 0 8px rgba(0, 245, 255, 0.5);
+}
+
 .predict-overlay-goal-box {
   clip-path: polygon(
     5px 0%,
@@ -628,6 +648,77 @@
   box-shadow: inset 0 0 12px rgba(0, 245, 255, 0.04);
 }
 
+/* 予想オーバーレイ — スコア入力（角切り + シアン発光） */
+.predict-overlay-score-input {
+  clip-path: polygon(
+    6px 0%,
+    calc(100% - 6px) 0%,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0% calc(100% - 6px),
+    0% 6px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.24);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.07) 0%,
+    rgba(5, 10, 18, 0.9) 40%,
+    rgba(2, 5, 10, 0.94) 100%
+  );
+  color: #e8fdff;
+  caret-color: #00f5ff;
+  box-shadow:
+    inset 3px 0 0 rgba(0, 245, 255, 0.32),
+    inset 0 1px 0 rgba(0, 245, 255, 0.14),
+    inset 0 0 18px rgba(0, 245, 255, 0.05),
+    0 0 12px rgba(0, 245, 255, 0.05);
+  transition:
+    border-color 200ms ease,
+    background 200ms ease,
+    box-shadow 200ms ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.predict-overlay-score-input::placeholder {
+  color: rgba(0, 245, 255, 0.36);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.predict-overlay-score-input:hover:not(:focus) {
+  border-color: rgba(0, 245, 255, 0.34);
+  box-shadow:
+    inset 3px 0 0 rgba(0, 245, 255, 0.4),
+    inset 0 1px 0 rgba(0, 245, 255, 0.18),
+    inset 0 0 20px rgba(0, 245, 255, 0.07),
+    0 0 14px rgba(0, 245, 255, 0.08);
+}
+
+.predict-overlay-score-input:focus {
+  border-color: rgba(0, 245, 255, 0.52);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.12) 0%,
+    rgba(6, 12, 22, 0.92) 44%,
+    rgba(3, 7, 14, 0.96) 100%
+  );
+  box-shadow:
+    inset 3px 0 0 rgba(0, 245, 255, 0.55),
+    inset 0 1px 0 rgba(0, 245, 255, 0.26),
+    inset 0 0 26px rgba(0, 245, 255, 0.1),
+    0 0 20px rgba(0, 245, 255, 0.14);
+  outline: none;
+}
+
+.predict-overlay-score-input::-webkit-outer-spin-button,
+.predict-overlay-score-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .predict-overlay-close-btn {
   clip-path: polygon(
     5px 0%,
@@ -638,6 +729,120 @@
     0% 5px
   );
   box-shadow: 0 0 14px rgba(0, 245, 255, 0.12);
+}
+
+/* 予想オーバーレイ — ハンバーガーメニューボタン（見た目のみ） */
+.predict-overlay-menu-btn {
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(
+    5px 0%,
+    100% 0%,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    0% 100%,
+    0% 5px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.34);
+  background: rgba(4, 10, 18, 0.84);
+  color: rgba(224, 252, 255, 0.92);
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.12),
+    inset 0 1px 0 rgba(0, 245, 255, 0.14);
+  backdrop-filter: blur(6px);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.predict-overlay-menu-btn:hover {
+  border-color: rgba(0, 245, 255, 0.52);
+  background: rgba(6, 14, 24, 0.92);
+  color: #f0fdff;
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.2),
+    inset 0 1px 0 rgba(0, 245, 255, 0.18);
+}
+
+.predict-overlay-menu-btn::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 245, 255, 0.45) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* 予想オーバーレイ — 送信 CTA（角切り・シアングロー） */
+.predict-overlay-submit-btn {
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% calc(100% - 8px),
+    0% 8px
+  );
+  border: 1px solid rgba(0, 245, 255, 0.42);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.26) 0%,
+    rgba(0, 190, 230, 0.36) 42%,
+    rgba(0, 110, 150, 0.46) 100%
+  );
+  box-shadow:
+    0 0 22px rgba(0, 245, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 70, 100, 0.38);
+  color: #f0fdff;
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.42);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease,
+    transform 0.15s ease;
+}
+
+.predict-overlay-submit-btn:hover:not(:disabled) {
+  border-color: rgba(0, 245, 255, 0.58);
+  box-shadow:
+    0 0 28px rgba(0, 245, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(0, 70, 100, 0.38);
+}
+
+.predict-overlay-submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  filter: brightness(1.05);
+}
+
+.predict-overlay-submit-btn--disabled {
+  cursor: not-allowed;
+  border-color: rgba(148, 163, 184, 0.2);
+  background: linear-gradient(
+    180deg,
+    rgba(148, 163, 184, 0.07) 0%,
+    rgba(71, 85, 105, 0.13) 52%,
+    rgba(51, 65, 85, 0.17) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 8px rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.36);
+  text-shadow: none;
 }
 
 /* 試合一覧 MatchCard */

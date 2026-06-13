@@ -709,6 +709,18 @@ const es: Messages = {
     predictedLineup: "Alineación prevista",
   },
 
+  eventNotices: {
+    wcUniformChallenge: {
+      tag: "Evento",
+      title: "Copa del Mundo/Desafío de Camiseta",
+      description:
+        "Ámbito: fase de grupos de la Copa Mundial FIFA\n\nAl usuario n.º 1 en puntos totales de la fase de grupos se le regala la camiseta del campeón del Mundial.\n\nContactaremos al n.º 1 por correo electrónico.",
+      period: "Copa Mundial FIFA 2026 — Fase de grupos",
+      target: "Fase de grupos de la Copa Mundial FIFA",
+      reward: "Camiseta del campeón del Mundial",
+    },
+  },
+
   countries: {
     US: "Estados Unidos",
     JP: "Japón",

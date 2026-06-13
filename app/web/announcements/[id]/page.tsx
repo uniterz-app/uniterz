@@ -191,7 +191,7 @@ export default function WebAnnouncementDetailPage() {
               <EventNoticeBody
                 event={syntheticContent}
                 heroHeight={320}
-                isEn={language === "en"}
+                language={language}
               />
             </div>
           </>

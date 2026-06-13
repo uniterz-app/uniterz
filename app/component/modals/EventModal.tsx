@@ -9,19 +9,16 @@ import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
+import { resolveEventNoticeCopy } from "@/lib/events/resolveEventNoticeCopy";
+
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-function pickLocalized(event: EventNoticeContent, isEn: boolean) {
-  return {
-    tag: isEn && event.tagEn ? event.tagEn : event.tag,
-    title: isEn && event.titleEn ? event.titleEn : event.title,
-    description:
-      isEn && event.descriptionEn ? event.descriptionEn : event.description,
-  };
+function pickLocalized(event: EventNoticeContent, language: Language) {
+  return resolveEventNoticeCopy(event, language);
 }
 
 export default function EventModal({
@@ -33,9 +30,8 @@ export default function EventModal({
   onClose: () => void;
   language?: Language;
 }) {
-  const isEn = language === "en";
   const [mounted, setMounted] = useState(false);
-  const loc = useMemo(() => pickLocalized(event, isEn), [event, isEn]);
+  const loc = useMemo(() => pickLocalized(event, language), [event, language]);
   const m = t(language);
 
   useEffect(() => {
@@ -51,6 +47,8 @@ export default function EventModal({
   }, []);
 
   if (!mounted) return null;
+
+  const heroSrc = event.heroImageURL?.trim().replace(/\s+/g, "%20");
 
   return createPortal(
     <div
@@ -76,11 +74,21 @@ export default function EventModal({
             tagLabel={loc.tag}
             title={loc.title}
             body={
-              <p id="cyber-event-modal-title" className="whitespace-pre-wrap">
-                {loc.description}
-              </p>
+              <>
+                <p id="cyber-event-modal-title" className="whitespace-pre-wrap">
+                  {loc.description}
+                </p>
+                {heroSrc ? (
+                  <img
+                    src={heroSrc}
+                    alt=""
+                    className="mt-4 w-full border border-cyan-400/30 object-cover"
+                    style={{ aspectRatio: "16 / 9" }}
+                  />
+                ) : null}
+              </>
             }
-            confirmLabel="OK"
+            confirmLabel={m.common.ok}
             closeAriaLabel={m.common.close}
             onClose={onClose}
           />

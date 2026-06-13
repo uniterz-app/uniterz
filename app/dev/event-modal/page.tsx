@@ -4,16 +4,20 @@
 import { useState } from "react";
 import EventModal from "@/app/component/modals/EventModal";
 import { LEADERBOARDS_GROUPS_INTRO_EVENT } from "@/lib/events/leaderboardsGroupsIntro";
-import { PLAYOFF_COMPETITION_EVENT } from "@/lib/events/playoffCompetition";
+import { WC_UNIFORM_CHALLENGE_NOTICE } from "@/lib/events/wcUniformChallengeNotice";
+
+type Variant = "wc" | "groups";
+
+const EVENTS: Record<Variant, typeof WC_UNIFORM_CHALLENGE_NOTICE> = {
+  wc: WC_UNIFORM_CHALLENGE_NOTICE,
+  groups: LEADERBOARDS_GROUPS_INTRO_EVENT,
+};
 
 export default function DevEventModalPage() {
   const [open, setOpen] = useState(true);
-  const [variant, setVariant] = useState<"groups" | "playoff">("groups");
+  const [variant, setVariant] = useState<Variant>("wc");
 
-  const event =
-    variant === "groups"
-      ? LEADERBOARDS_GROUPS_INTRO_EVENT
-      : PLAYOFF_COMPETITION_EVENT;
+  const event = EVENTS[variant];
 
   return (
     <div
@@ -29,20 +33,23 @@ export default function DevEventModalPage() {
         </p>
         <h1 className="mt-2 text-lg font-semibold">インフォメーションモーダル案</h1>
         <p className="mt-2 text-sm text-white/50">
-          背面は透明。リーダーボード等の実ページ上でも同じ見た目になります。
+          背面は透明。リロードまたは「モーダルを開く」で何度でも確認できます。
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           {(
             [
+              ["wc", "WCユニフォーム"],
               ["groups", "グループ告知"],
-              ["playoff", "Playoffイベント"],
             ] as const
           ).map(([key, label]) => (
             <button
               key={key}
               type="button"
-              onClick={() => setVariant(key)}
+              onClick={() => {
+                setVariant(key);
+                setOpen(true);
+              }}
               className={[
                 "border px-3 py-1.5 text-xs tracking-wider transition-colors",
                 variant === key

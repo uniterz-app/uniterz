@@ -411,10 +411,7 @@ export default function ProfileHeroCard({
         </motion.h1>
         {winStreakBadge ? (
           <motion.span
-            className={[
-              "inline-flex max-w-[min(100%,9.5rem)] shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold shadow-md sm:max-w-none sm:text-[11px]",
-              winStreakBadge.className,
-            ].join(" ")}
+            className={winStreakBadge.className}
             initial={nameMotion.initial}
             animate={nameMotion.animate}
             transition={nameMotion.transition}
@@ -422,7 +419,7 @@ export default function ProfileHeroCard({
           >
             <Flame
               className={[
-                "h-3 w-3 shrink-0",
+                "h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5",
                 winStreakBadge.iconClassName,
               ].join(" ")}
               aria-hidden
