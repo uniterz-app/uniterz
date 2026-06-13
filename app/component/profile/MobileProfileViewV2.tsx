@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation } from "framer-motion";
-import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { useProfileOverviewStage } from "@/lib/profile/useProfileOverviewStage";
@@ -85,17 +85,9 @@ const ProfilePlayoffRankTrendChartLazy = dynamic(
 );
 
 import Tabs from "./ui/Tabs";
-import SummaryCardsV2 from "./ui/SummaryCardsV2";
-import SummaryCardReveal from "./ui/SummaryCardReveal";
-import ProfileHeroCard from "./ui/ProfileHeroCard";
+import ProfileKinetikHero from "./ui/ProfileKinetikHero";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import BadgeDetailModal from "@/app/mobile/badges/BadgeDetailModal";
-
-import AnalysisWinCard from "./ui/summary/AnalysisWinCard";
-import TotalScoreCard from "./ui/summary/TotalScoreCard";
-import ScorePrecisionCard from "./ui/summary/ScorePrecisionCard";
-import UpsetCard from "./ui/summary/UpsetCard";
-import MaxStreakCard from "./ui/summary/MaxStreakCard";
 
 import { useProfilePlan } from "@/lib/profile/useProfilePlan";
 import {
@@ -112,10 +104,6 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { useAnnouncementsUnread } from "@/lib/hooks/useAnnouncementsUnread";
 import {
-  getProfileMaxStreakLabels,
-  getProfileStatsTitle,
-} from "@/lib/profile/profileStatsDisplay";
-import {
   clearSideMenuOrigin,
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
@@ -127,7 +115,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     history.scrollRestoration = "manual";
   }, []);
 
-  const { profile, tab, setTab, summary, summaryRanks, targetUid, statsLoading } =
+  const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
   const rankingLeague = props.profileStatsContext.rankingLeague;
   const onToggleStatsLeague = props.onToggleStatsLeague;
@@ -191,44 +179,16 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     }
   }, [isMe]);
 
-  const canOpenSettings = isMe;
-
   const { unreadCount: menuUnreadCount } = useAnnouncementsUnread({
     enabled: isMe,
   });
 
-  const posts = summary?.posts ?? 0;
-  const wins = (summary as any)?.wins ?? 0;
-  const totalPoints = summary?.pointsSumV3 ?? 0;
-
-  const upsetBonusSum = summary?.upsetBonusSum ?? 0;
-  const streakBonusSum = summary?.streakBonusSum ?? 0;
-  const basePointsSum =
-    summary?.basePointsSum ??
-    Math.max(0, totalPoints - upsetBonusSum - streakBonusSum);
-
-  const upsetPointsSum = summary?.upsetPointsSum ?? 0;
-  const upsetChanceCount = (summary as any)?.upsetChanceCount ?? 0;
-  const upsetHitCount = (summary as any)?.upsetHitCount ?? 0;
-
   const m = t(language);
-  const periodLabel =
-    rankingLeague === "worldcup" ? "World Cup" : m.profile.playoffs;
-  const statsTitle = useMemo(
-    () => getProfileStatsTitle(props.profileStatsContext, language),
-    [language, props.profileStatsContext]
+  const currentStreak = Math.max(
+    0,
+    (profile as { currentStreak?: number }).currentStreak ?? 0
   );
-  const maxStreakLabels = useMemo(
-    () => getProfileMaxStreakLabels(props.profileStatsContext, language),
-    [language, props.profileStatsContext]
-  );
-  const maxStreak = profile.maxStreak ?? 0;
-  const currentStreak = Math.max(0, (profile as { currentStreak?: number }).currentStreak ?? 0);
 
-  const proSummaryTotal = 5;
-  const summaryMountKey = `profile-summary-${resolvedUid ?? "x"}`;
-  /** ランキング行プライム or API 取得後は即サマリー表示。未取得時のみスケルトン */
-  const summaryReady = !resolvedUid || !!summary || !statsLoading;
   const chartsReady = !resolvedUid || !statsLoading;
   const overviewStage = useProfileOverviewStage(chartsReady);
 
@@ -241,17 +201,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
     const id = window.requestAnimationFrame(() => setBracketReveal(true));
     return () => window.cancelAnimationFrame(id);
   }, [tab, playoffDisplayData?.season]);
-
-  const heroUidKey = resolvedUid ?? "x";
-  const prevHeroUidRef = useRef(heroUidKey);
-  const [heroEntranceLocked, setHeroEntranceLocked] = useState(false);
-  useEffect(() => {
-    if (prevHeroUidRef.current !== heroUidKey) {
-      setHeroEntranceLocked(false);
-      prevHeroUidRef.current = heroUidKey;
-    }
-  }, [heroUidKey]);
-  const playHeroEntrance = !heroEntranceLocked;
 
   if (isMe && loadingPlan) {
     return (
@@ -267,53 +216,27 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       <Suspense fallback={null}>
         <RankingsReturnNavLink language={language} />
       </Suspense>
-      <ProfileHeroCard
-        key={heroUidKey}
+      <ProfileKinetikHero
+        key={resolvedUid ?? profile.handle}
         layout="mobile"
-        playEntrance={playHeroEntrance}
-        onEntranceComplete={() => setHeroEntranceLocked(true)}
         language={language}
-        displayProfile={{
-          displayName: profile.displayName,
-          handle: profile.handle,
-          bio: profile.bio,
-          avatarUrl: profile.avatarUrl,
-        }}
-        showProBadge={isProView}
-        currentStreak={currentStreak}
-        canOpenSettings={canOpenSettings}
-        onOpenSettings={() => setDrawerOpen(true)}
+        profile={profile}
+        summary={summary}
+        summaryRanks={summaryRanks}
+        metricValueDeltas={metricValueDeltas}
+        profileStatsContext={props.profileStatsContext}
+        winStreak={currentStreak}
+        statsLoading={statsLoading}
+        isMe={isMe}
+        onOpenMenu={() => setDrawerOpen(true)}
+        onToggleMetricsScope={onToggleStatsLeague}
         menuUnreadCount={isMe ? menuUnreadCount : 0}
-      >
-        {resolvedBadges.length > 0 ? (
-          <div className="flex flex-wrap content-start gap-1.5 sm:gap-2">
-            {resolvedBadges.slice(0, 10).map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                title={b.title}
-                className="inline-flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl sm:h-16 sm:w-16"
-                onClick={() => {
-                  setSelectedBadge(b);
-                  setBadgeModalOpen(true);
-                }}
-              >
-                {b.icon ? (
-                  <img
-                    src={b.icon}
-                    alt={b.title}
-                    className="h-full w-full object-contain p-0.5"
-                  />
-                ) : (
-                  <span className="truncate px-0.5 text-center text-[9px] leading-tight text-white/55">
-                    {b.title}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </ProfileHeroCard>
+        badges={resolvedBadges}
+        onBadgeClick={(badge) => {
+          setSelectedBadge(badge);
+          setBadgeModalOpen(true);
+        }}
+      />
 
       <div className="mt-4 flex items-center justify-between">
         <Tabs value={tab} onChange={setTab} />
@@ -322,153 +245,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
       <div className="mt-1">
         {tab === "overview" ? (
           <>
-            <div className="mt-4 mb-0.5 flex items-center justify-center gap-2.5">
-              <button
-                type="button"
-                aria-label="Switch stats league"
-                onClick={onToggleStatsLeague}
-                className="text-cyan-200/85 transition active:scale-[0.98]"
-              >
-                ◀
-              </button>
-              <button
-                type="button"
-                aria-label="Switch stats league"
-                onClick={onToggleStatsLeague}
-                className={[
-                  nameBebas.className,
-                  "text-center text-[clamp(1.25rem,5.9vw,1.7rem)] leading-none tracking-[0.12em] text-cyan-200/90 transition active:scale-[0.98]",
-                ].join(" ")}
-              >
-                {statsTitle}
-              </button>
-              <button
-                type="button"
-                aria-label="Switch stats league"
-                onClick={onToggleStatsLeague}
-                className="text-cyan-200/85 transition active:scale-[0.98]"
-              >
-                ▶
-              </button>
-            </div>
-            {summaryReady ? (
-              <>
-              <div key={summaryMountKey} className="min-h-[100px]">
-              {currentIsProView ? (
-                <>
-                  <div className="grid grid-cols-5 items-stretch gap-3">
-                    <SummaryCardReveal
-                      index={0}
-                      total={proSummaryTotal}
-                      enabled={false}
-                      enterVariant="fade"
-                      className="col-span-3 h-full min-w-0"
-                    >
-                      <AnalysisWinCard
-                        posts={posts}
-                        wins={wins}
-                        language={language}
-                      />
-                    </SummaryCardReveal>
-
-                    <SummaryCardReveal
-                      index={1}
-                      total={proSummaryTotal}
-                      enabled={false}
-                      enterVariant="fade"
-                      className="col-span-2 h-full min-w-0"
-                    >
-                      <MaxStreakCard
-                        compact
-                        maxStreak={maxStreak}
-                        language={language}
-                        streakLabels={maxStreakLabels}
-                      />
-                    </SummaryCardReveal>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 items-stretch gap-3">
-                    <SummaryCardReveal
-                      index={2}
-                      total={proSummaryTotal}
-                      enabled={false}
-                      enterVariant="fade"
-                      className="h-full min-w-0"
-                    >
-                      <ScorePrecisionCard
-                        compact
-                        scorePrecisionSum={summary?.scorePrecisionSum ?? 0}
-                        analyses={posts}
-                        language={language}
-                        totalPrecisionRank={summaryRanks?.totalPrecision ?? null}
-                      />
-                    </SummaryCardReveal>
-
-                    <SummaryCardReveal
-                      index={3}
-                      total={proSummaryTotal}
-                      enabled={false}
-                      enterVariant="fade"
-                      className="h-full min-w-0"
-                    >
-                      <UpsetCard
-                        compact
-                        upsetPointsSum={upsetPointsSum}
-                        analyses={posts}
-                        upsetChanceCount={upsetChanceCount}
-                        upsetHitCount={upsetHitCount}
-                        language={language}
-                        totalUpsetRank={summaryRanks?.totalUpset ?? null}
-                      />
-                    </SummaryCardReveal>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-5 items-stretch gap-3">
-                    <SummaryCardReveal
-                      index={4}
-                      total={proSummaryTotal}
-                      enabled={false}
-                      enterVariant="fade"
-                      className="col-span-5 h-full min-w-0"
-                    >
-                      <TotalScoreCard
-                        compact
-                        periodLabel={periodLabel}
-                        totalPoints={totalPoints}
-                        analyses={posts}
-                        basePoints={basePointsSum}
-                        upsetBonusPoints={upsetBonusSum}
-                        streakBonusPoints={streakBonusSum}
-                        language={language}
-                        totalPointsRank={summaryRanks?.totalPoints ?? null}
-                      />
-                    </SummaryCardReveal>
-                  </div>
-                </>
-              ) : (
-                <SummaryCardsV2
-                  compact
-                  period="30d"
-                  summaryRanks={summaryRanks}
-                  language={language}
-                  reveal={false}
-                  maxStreakLabel={maxStreakLabels.title}
-                  maxStreakTooltip={maxStreakLabels.tooltip}
-                  data={{
-                    fullPosts: summary?.fullPosts ?? 0,
-                    recent3Posts: summary?.recent3Posts ?? 0,
-                    posts: summary?.posts ?? 0,
-                    wins: (summary as any)?.wins ?? 0,
-                    winRate: summary?.winRate ?? 0,
-                    scorePrecisionSum: summary?.scorePrecisionSum ?? 0,
-                    upsetPointsSum: summary?.upsetPointsSum ?? 0,
-                    maxStreak,
-                    pointsSumV3: summary?.pointsSumV3 ?? 0,
-                  }}
-                />
-              )}
-              </div>
-
             {resolvedUid ? (
               <div className="mt-6 min-w-0 overflow-hidden">
                 <ProfileSettledTodayResultsLazy
@@ -518,13 +294,6 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             </div>
             ) : (
               <div className="mt-6 space-y-4">
-                <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
-              </div>
-            )}
-              </>
-            ) : (
-              <div className="mt-6 space-y-4">
-                <div className="h-28 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
                 <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
               </div>
             )}

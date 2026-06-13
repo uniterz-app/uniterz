@@ -382,6 +382,7 @@ export default function WebRankingsShell() {
                   playoffRound={effectiveRound}
                   rankingLeague={rankingLeague}
                   wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
+                  participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
                   language={language}
                 />
@@ -409,6 +410,7 @@ export default function WebRankingsShell() {
                         playoffRound={effectiveRound}
                         rankingLeague={rankingLeague}
                         wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
+                        participantCount={rankingListCount || null}
                         language={language}
                         animateValue={i < 6}
                       />

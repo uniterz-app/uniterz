@@ -3,6 +3,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RankingRowWithCountry } from "@/app/component/rankings/_data/mockRows";
+import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
@@ -42,13 +43,15 @@ export type SummaryRanksV2 = {
   totalPrecision: number | null;
   totalUpset: number | null;
   totalPoints: number | null;
+  totalPointsDenominator: number | null;
+  rankDeltaPlaces: number | null;
 };
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-/** カード数値のみ（Firestore cumulative 1 read） */
+/** カード数値 + ティアタグ用スナップショット（Firestore、Functions 不要） */
 const PARTS_SUMMARY = "phase";
-/** 順位は Functions — 数値表示をブロックしない */
+/** ranks のみ再取得（通常は phase レスポンスに同梱） */
 const PARTS_RANKS = "ranks";
 /** チャートは後追い */
 const PARTS_TREND = "trend";
@@ -57,6 +60,7 @@ type CacheEntry = {
   at: number;
   summary: SummaryForCardsV2 | null;
   summaryRanks: SummaryRanksV2 | null;
+  metricValueDeltas: MyRankMetricValueDeltas | null;
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[] | null;
 };
@@ -70,11 +74,15 @@ type UseUserStatsContext = {
   prefetchOtherLeague?: boolean;
 };
 
-/** ランキング行から成績サマリーを先読み（プロフィール初回の即時描画用） */
+/** ランキング行から成績サマリー + ティア用順位を先読み（プロフィール初回の即時描画用） */
 export function primeProfileStatsFromRankingRow(
   uid: string,
   row: RankingRowWithCountry,
-  context: { rankingLeague: RankingLeagueSource; wcStage?: WcRankingStage }
+  context: { rankingLeague: RankingLeagueSource; wcStage?: WcRankingStage },
+  rankHints?: {
+    totalPointsRank?: number | null;
+    totalPointsDenominator?: number | null;
+  }
 ) {
   const safeUid = uid.trim();
   if (!safeUid) return;
@@ -111,6 +119,18 @@ export function primeProfileStatsFromRankingRow(
 
   mergeCacheEntry(statsCacheKey(safeUid, context.rankingLeague, context.wcStage), {
     summary,
+    ...(rankHints?.totalPointsRank != null
+      ? {
+          summaryRanks: {
+            totalPoints: rankHints.totalPointsRank,
+            totalPointsDenominator: rankHints.totalPointsDenominator ?? null,
+            rankDeltaPlaces:
+              typeof row.rankDeltaPlaces === "number" ? row.rankDeltaPlaces : null,
+            totalPrecision: null,
+            totalUpset: null,
+          } satisfies SummaryRanksV2,
+        }
+      : {}),
   });
 }
 
@@ -138,6 +158,7 @@ function mergeCacheEntry(key: string, patch: Partial<CacheEntry>) {
     at: Date.now(),
     summary: patch.summary ?? prev?.summary ?? null,
     summaryRanks: patch.summaryRanks ?? prev?.summaryRanks ?? null,
+    metricValueDeltas: patch.metricValueDeltas ?? prev?.metricValueDeltas ?? null,
     stats: patch.stats ?? prev?.stats ?? null,
     dailyTrend: patch.dailyTrend ?? prev?.dailyTrend ?? null,
   });
@@ -149,6 +170,7 @@ function applyCacheEntry(
     setStats: (v: Record<string, unknown> | null) => void;
     setSummary: (v: SummaryForCardsV2 | null) => void;
     setSummaryRanks: (v: SummaryRanksV2 | null) => void;
+    setMetricValueDeltas: (v: MyRankMetricValueDeltas | null) => void;
     setDailyTrend: (v: ProfileDailyTrendRow[] | null) => void;
     setLoading: (v: boolean) => void;
   }
@@ -156,6 +178,7 @@ function applyCacheEntry(
   setters.setStats(cached.stats);
   setters.setSummary(cached.summary);
   setters.setSummaryRanks(cached.summaryRanks ?? null);
+  setters.setMetricValueDeltas(cached.metricValueDeltas ?? null);
   setters.setDailyTrend(cached.dailyTrend ?? null);
   setters.setLoading(false);
 }
@@ -182,7 +205,11 @@ async function fetchProfilePhase(
   uid: string,
   rankingLeague: RankingLeagueSource,
   wcStage?: WcRankingStage
-): Promise<SummaryForCardsV2 | null> {
+): Promise<{
+  summary: SummaryForCardsV2 | null;
+  summaryRanks: SummaryRanksV2 | null;
+  metricValueDeltas: MyRankMetricValueDeltas | null;
+}> {
   const qs = buildStatsQuery(uid, PARTS_SUMMARY, rankingLeague, wcStage);
   const res = await fetch(`/api/profile/user-stats?${qs.toString()}`, {
     method: "GET",
@@ -191,7 +218,12 @@ async function fetchProfilePhase(
   if (!res.ok || !json?.ok) {
     throw new Error(json?.error ?? "failed to fetch profile stats");
   }
-  return (json?.summary as SummaryForCardsV2) ?? null;
+  const summary = (json?.summary as SummaryForCardsV2) ?? null;
+  const summaryRanks = (json?.summaryRanks as SummaryRanksV2 | null | undefined) ?? null;
+  const metricValueDeltas =
+    (json?.metricValueDeltas as MyRankMetricValueDeltas | null | undefined) ??
+    null;
+  return { summary, summaryRanks, metricValueDeltas };
 }
 
 async function fetchProfileRanks(
@@ -239,12 +271,13 @@ function prefetchLeagueStats(uid: string, rankingLeague: RankingLeagueSource) {
 
   void (async () => {
     try {
-      const [summary, summaryRanks] = await Promise.all([
-        fetchProfilePhase(uid, rankingLeague, wcStage),
-        fetchProfileRanks(uid, rankingLeague, wcStage),
-      ]);
-      if (!summary) return;
-      mergeCacheEntry(key, { summary, summaryRanks });
+      const phaseResult = await fetchProfilePhase(uid, rankingLeague, wcStage);
+      if (!phaseResult.summary) return;
+      mergeCacheEntry(key, {
+        summary: phaseResult.summary,
+        metricValueDeltas: phaseResult.metricValueDeltas,
+        summaryRanks: phaseResult.summaryRanks,
+      });
       const cached = statsCache.get(key);
       if (cached?.dailyTrend == null) {
         void fetchTrendIntoCache(uid, key, rankingLeague, wcStage);
@@ -273,6 +306,14 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
     if (!uid) return null;
     return readValidCache(statsCacheKey(uid, rankingLeague, wcStage))?.summaryRanks ?? null;
   });
+  const [metricValueDeltas, setMetricValueDeltas] =
+    useState<MyRankMetricValueDeltas | null>(() => {
+      if (!uid) return null;
+      return (
+        readValidCache(statsCacheKey(uid, rankingLeague, wcStage))
+          ?.metricValueDeltas ?? null
+      );
+    });
   const [stats, setStats] = useState<Record<string, unknown> | null>(() => {
     if (!uid) return null;
     return readValidCache(statsCacheKey(uid, rankingLeague, wcStage))?.stats ?? null;
@@ -289,6 +330,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
     if (!uid || !cacheKey) {
       setSummary(null);
       setSummaryRanks(null);
+      setMetricValueDeltas(null);
       setStats(null);
       setDailyTrend(null);
       setLoading(false);
@@ -301,6 +343,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
         setStats,
         setSummary,
         setSummaryRanks,
+        setMetricValueDeltas,
         setDailyTrend,
         setLoading,
       });
@@ -329,7 +372,14 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
     }
 
     const safeUid = uid;
-    const setters = { setStats, setSummary, setSummaryRanks, setDailyTrend, setLoading };
+    const setters = {
+      setStats,
+      setSummary,
+      setSummaryRanks,
+      setMetricValueDeltas,
+      setDailyTrend,
+      setLoading,
+    };
 
     async function ensureTrend(safeUid: string) {
       const cached = statsCache.get(cacheKey);
@@ -350,6 +400,8 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
           totalPrecision: null,
           totalUpset: null,
           totalPoints: null,
+          totalPointsDenominator: null,
+          rankDeltaPlaces: null,
         },
       });
       setSummaryRanks(statsCache.get(cacheKey)?.summaryRanks ?? null);
@@ -368,32 +420,35 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
       if (activeFetchKeyRef.current === cacheKey) return;
       activeFetchKeyRef.current = cacheKey;
 
-      const ranksPromise = fetchProfileRanks(safeUid, rankingLeague, wcStage);
-
       try {
-        const nextSummary = await fetchProfilePhase(
+        const phaseResult = await fetchProfilePhase(
           safeUid,
           rankingLeague,
           wcStage
         );
         if (cancelled) return;
 
-        mergeCacheEntry(cacheKey, { summary: nextSummary });
-        setSummary(nextSummary);
+        const ranksFromPhase = phaseResult.summaryRanks;
+        mergeCacheEntry(cacheKey, {
+          summary: phaseResult.summary,
+          metricValueDeltas: phaseResult.metricValueDeltas,
+          ...(ranksFromPhase != null
+            ? {
+                summaryRanks: ranksFromPhase,
+              }
+            : {}),
+        });
+        setSummary(phaseResult.summary);
+        setMetricValueDeltas(phaseResult.metricValueDeltas);
+        if (ranksFromPhase != null) {
+          setSummaryRanks(ranksFromPhase);
+        }
         setLoading(false);
 
         void ensureTrend(safeUid);
-
-        const ranks = await ranksPromise;
-        if (cancelled) return;
-        mergeCacheEntry(cacheKey, {
-          summaryRanks: ranks ?? {
-            totalPrecision: null,
-            totalUpset: null,
-            totalPoints: null,
-          },
-        });
-        setSummaryRanks(statsCache.get(cacheKey)?.summaryRanks ?? null);
+        if (ranksFromPhase == null) {
+          void ensureRanks(safeUid);
+        }
       } catch {
         if (!cancelled) setLoading(false);
       } finally {
@@ -417,6 +472,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
     extending: false,
     summary,
     summaryRanks,
+    metricValueDeltas,
     stats,
     dailyTrend,
     statsLoading,

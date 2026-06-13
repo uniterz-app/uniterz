@@ -37,6 +37,7 @@ export default function RankingCard({
   playoffRound,
   rankingLeague,
   wcStage,
+  participantCount,
   onCountDone,
   language = "ja",
   size = "default",
@@ -50,6 +51,8 @@ export default function RankingCard({
   playoffRound?: PlayoffRoundKey;
   rankingLeague?: RankingLeagueSource;
   wcStage?: WcRankingStage;
+  /** 総合スコア順位の母数（ティアタグ seed 用） */
+  participantCount?: number | null;
   onCountDone?: () => void;
   language?: Language;
   size?: RankingCardSize;
@@ -80,9 +83,13 @@ export default function RankingCard({
   });
 
   const warmProfileRoute = useCallback(() => {
-    primeProfileCacheFromRankingRow(profileKey, r, statsContext);
+    primeProfileCacheFromRankingRow(profileKey, r, statsContext, {
+      metric,
+      rank,
+      participantCount,
+    });
     router.prefetch(profileHref);
-  }, [profileHref, profileKey, r, router, statsContext]);
+  }, [profileHref, profileKey, participantCount, r, router, statsContext, metric, rank]);
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(

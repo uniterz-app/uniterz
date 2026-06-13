@@ -36,6 +36,7 @@ export default function TopPodium({
   playoffRound,
   rankingLeague,
   wcStage,
+  participantCount,
   onTopCountDone,
   language = "ja",
   compact = false,
@@ -47,6 +48,7 @@ export default function TopPodium({
   playoffRound?: PlayoffRoundKey;
   rankingLeague?: RankingLeagueSource;
   wcStage?: WcRankingStage;
+  participantCount?: number | null;
   onTopCountDone?: () => void;
   language?: Language;
   /** コミュニティ等 — コンパクト行 */
@@ -120,11 +122,15 @@ export default function TopPodium({
   };
 
   const warmProfileRoute = useCallback(
-    (profileKey: string, row: RankingRowWithCountry, href: string) => {
-      primeProfileCacheFromRankingRow(profileKey, row, statsContext);
+    (profileKey: string, row: RankingRowWithCountry, href: string, rank: number) => {
+      primeProfileCacheFromRankingRow(profileKey, row, statsContext, {
+        metric,
+        rank,
+        participantCount,
+      });
       router.prefetch(href);
     },
-    [router, statsContext]
+    [metric, participantCount, router, statsContext]
   );
 
   return (
@@ -158,13 +164,13 @@ export default function TopPodium({
                 className="relative block"
                 prefetch
                 onPointerEnter={() =>
-                  warmProfileRoute(profileKey, row, profileHref)
+                  warmProfileRoute(profileKey, row, profileHref, rank)
                 }
-                onFocus={() => warmProfileRoute(profileKey, row, profileHref)}
+                onFocus={() => warmProfileRoute(profileKey, row, profileHref, rank)}
                 onTouchStart={() =>
-                  warmProfileRoute(profileKey, row, profileHref)
+                  warmProfileRoute(profileKey, row, profileHref, rank)
                 }
-                onClick={() => warmProfileRoute(profileKey, row, profileHref)}
+                onClick={() => warmProfileRoute(profileKey, row, profileHref, rank)}
               >
                 <CyberRankingListRow
                   rank={rank}

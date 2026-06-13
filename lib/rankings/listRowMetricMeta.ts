@@ -1,7 +1,7 @@
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 
-/** ランキング行 — 指標の前日比（黄色 p+6.7）。0 / 0.0 は null */
+/** ランキング行 — 指標の前日比（例: +18 / +6.7）。0 / 0.0 は null */
 export function formatListMetricDayDelta(
   metric: MobileMetric,
   delta: number | null | undefined
@@ -13,10 +13,10 @@ export function formatListMetricDayDelta(
   const sign = delta > 0 ? "+" : "-";
   const abs = Math.abs(delta);
 
-  if (metric === "winRate") {
+  if (metric === "winRate" || metric === "totalScore") {
     const n = Math.round(abs);
     if (n === 0) return null;
-    return `p${sign}${n}`;
+    return `${sign}${n}`;
   }
 
   if (metric === "streak" || metric === "goalScorerHits") {
@@ -25,7 +25,7 @@ export function formatListMetricDayDelta(
 
   const formatted = abs.toFixed(1);
   if (formatted === "0.0") return null;
-  return `p${sign}${formatted}`;
+  return `${sign}${formatted}`;
 }
 
 export function listRowAvgText(

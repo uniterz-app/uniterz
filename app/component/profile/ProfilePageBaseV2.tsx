@@ -11,6 +11,7 @@ import WebProfileViewV2 from "./WebProfileViewV2";
 
 import { useUserStatsV2 } from "./useUserStatsV2";
 import type { SummaryForCardsV2, SummaryRanksV2 } from "./useUserStatsV2";
+import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import { useProfileScopedStreak } from "@/lib/profile/useProfileScopedStreak";
 import {
@@ -62,7 +63,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     };
   }, [sp]);
 
-  const { stats, summary, summaryRanks, statsLoading, dailyTrend } =
+  const { stats, summary, summaryRanks, metricValueDeltas, statsLoading, dailyTrend } =
     useUserStatsV2(targetUid, {
       ...profileStatsContext,
       prefetchOtherLeague: false,
@@ -145,6 +146,7 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     setTab,
     summary: summaryV2,
     summaryRanks: summaryRanks ?? undefined,
+    metricValueDeltas: metricValueDeltas ?? undefined,
     statsLoading,
     targetUid,
     profileDailyTrendSeed: dailyTrend,
@@ -167,6 +169,7 @@ export type ProfileViewPropsV2 = {
 
   summary?: SummaryForCardsV2;
   summaryRanks?: SummaryRanksV2;
+  metricValueDeltas?: MyRankMetricValueDeltas;
   statsLoading: boolean;
 
   targetUid: string | null;

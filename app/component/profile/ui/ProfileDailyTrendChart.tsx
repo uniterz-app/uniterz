@@ -24,8 +24,8 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
-import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
-import { CYBER_GLASS_PANEL, CYBER_GLASS_PANEL_XL } from "@/lib/ui/matchOverlayGlass";
+import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
+import { CYBER_GLASS_PANEL } from "@/lib/ui/matchOverlayGlass";
 import { formatMetricDecimals } from "@/lib/format/metricDecimals";
 import { m, useReducedMotion } from "framer-motion";
 import { Info } from "lucide-react";
@@ -810,19 +810,10 @@ export default function ProfileDailyTrendChart({
   }, [isEmpty, isLocked, limitedData, detailDate, entrancePhase]);
 
   return (
-    <div
+    <ProfileKinetikPanelFrame
       ref={ref}
-      className={[
-        `${CYBER_GLASS_PANEL_XL} overflow-x-clip p-3`,
-        "backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_10px_30px_rgba(0,0,0,0.42)]",
-        "ring-1 ring-inset ring-white/[0.05]",
-      ].join(" ")}
+      className="overflow-x-clip p-3"
     >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.38]"
-        style={PROFILE_SHELL_GRID_STYLE}
-        aria-hidden
-      />
       <div className="relative z-1">
       <div className="relative z-20 px-1 pt-0.5">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -1234,7 +1225,7 @@ export default function ProfileDailyTrendChart({
       </div>
 
       </div>
-    </div>
+    </ProfileKinetikPanelFrame>
   );
 }
 

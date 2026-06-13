@@ -272,7 +272,7 @@ export function CyberRankingListRow({
   const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
   const dayDeltaFontSize = rankingFontSizePx(
     isWebScore ? 11 : compact ? 9 : 10,
-    dayDeltaText ?? "p+0.0"
+    dayDeltaText ?? "+0.0"
   );
 
   const tagEl = (
