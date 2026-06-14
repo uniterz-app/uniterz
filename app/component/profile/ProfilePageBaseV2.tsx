@@ -67,9 +67,39 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     useUserStatsV2(targetUid, {
       ...profileStatsContext,
       prefetchOtherLeague: false,
+      /** uid 未解決でも handle でサマリーを先行取得し、解決待ちの直列を短縮 */
+      routeKey: handle,
     });
 
   const scopedStreak = useProfileScopedStreak(targetUid, profileStatsContext);
+
+  /**
+   * WC 全体（overall）の連勝は updateUserStreak が試合確定時に保存するライブ値を
+   * サーバー API（summary）経由で採用する。投稿スキャンの待ち時間なしで即時表示でき、
+   * 「試合が終わったらインクリメントされた連勝」をそのまま読む。
+   * NBA / WC ステージ別（qualifying・main）は従来どおりスコープ集計を使う。
+   */
+  const useLiveOverallStreak =
+    profileStatsContext.rankingLeague === "worldcup" &&
+    (profileStatsContext.wcStage ?? "overall") === "overall";
+
+  const effectiveStreak = useMemo(() => {
+    if (useLiveOverallStreak && summary) {
+      return {
+        currentStreak: Math.max(0, Math.floor(summary.activeWinStreak ?? 0)),
+        maxWinStreak: Math.max(0, Math.floor(summary.maxWinStreak ?? 0)),
+      };
+    }
+    return {
+      currentStreak: Math.max(0, Math.floor(scopedStreak.currentStreak)),
+      maxWinStreak: Math.max(0, Math.floor(scopedStreak.maxWinStreak)),
+    };
+  }, [
+    useLiveOverallStreak,
+    summary,
+    scopedStreak.currentStreak,
+    scopedStreak.maxWinStreak,
+  ]);
 
   const onToggleStatsLeague = useCallback(() => {
     const current = profileStatsContext.rankingLeague;
@@ -100,27 +130,25 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
 
   const mergedProfile = useMemo<Profile | null>(() => {
     if (!normalizedProfile) return null;
-    const currentStreak = Math.max(0, Math.floor(scopedStreak.currentStreak));
-    const maxStreak = Math.max(0, Math.floor(scopedStreak.maxWinStreak));
 
     return {
       ...normalizedProfile,
-      currentStreak,
-      maxStreak,
+      currentStreak: effectiveStreak.currentStreak,
+      maxStreak: effectiveStreak.maxWinStreak,
     };
   }, [
     normalizedProfile,
-    scopedStreak.currentStreak,
-    scopedStreak.maxWinStreak,
+    effectiveStreak.currentStreak,
+    effectiveStreak.maxWinStreak,
   ]);
 
   const summaryV2: SummaryForCardsV2 | undefined = useMemo(() => {
     if (!summary) return undefined;
     return {
       ...summary,
-      activeWinStreak: Math.max(0, Math.floor(scopedStreak.currentStreak)),
+      activeWinStreak: effectiveStreak.currentStreak,
     };
-  }, [summary, scopedStreak.currentStreak]);
+  }, [summary, effectiveStreak.currentStreak]);
 
   if (loading && !targetUid) {
     return (

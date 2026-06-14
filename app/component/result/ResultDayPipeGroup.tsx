@@ -12,6 +12,7 @@ import {
   RESULT_DAY_METRICS_DELAY_SEC,
   RESULT_LIST_LEAD_IN_SEC,
   RESULT_PAGE_SLOT_GAP_SEC,
+  RESULT_PAGE_SLOT_MAX_DELAY_SEC,
   RESULT_SLOT_DURATION_SEC,
   resultCardsCyberOrch,
   resultDayCyberGroup,
@@ -235,20 +236,21 @@ export function ResultDayPipeGroup({
     headerEntrySlot != null && !reducedMotion;
   const useCyberStagger =
     listCyberStagger && !reducedMotion && !useFlatEntry;
+  // スロット入場開始は上限付き（一覧の slotDelay と揃える）。後段でも遅くなりすぎない。
+  const flatSlotStartSec =
+    headerEntrySlot != null
+      ? Math.min(
+          RESULT_LIST_LEAD_IN_SEC + headerEntrySlot * RESULT_PAGE_SLOT_GAP_SEC,
+          RESULT_PAGE_SLOT_MAX_DELAY_SEC,
+        )
+      : 0;
   const metricsDelayMs = useFlatEntry
-    ? Math.round(
-        (RESULT_LIST_LEAD_IN_SEC +
-          headerEntrySlot * RESULT_PAGE_SLOT_GAP_SEC +
-          RESULT_SLOT_DURATION_SEC * 0.55) *
-          1000,
-      )
+    ? Math.round((flatSlotStartSec + RESULT_SLOT_DURATION_SEC * 0.55) * 1000)
     : useCyberStagger
       ? Math.round(RESULT_DAY_METRICS_DELAY_SEC * 1000)
       : 0;
   const headerScanDelaySec = useFlatEntry
-    ? RESULT_LIST_LEAD_IN_SEC +
-      headerEntrySlot * RESULT_PAGE_SLOT_GAP_SEC +
-      0.06
+    ? flatSlotStartSec + 0.06
     : 0.1;
 
   const BracketShell = useCyberStagger || useFlatEntry ? m.span : "span";

@@ -19,10 +19,7 @@ import MonthHeader from "./MonthHeader";
 import DayStrip from "./DayStrip";
 import ScheduleList from "./ScheduleList";
 import usePageSwipe from "./usePageSwipe";
-import {
-  gameRowStartDateKeyInTimeZone,
-  useGamesByDate,
-} from "./useGamesByDate";
+import { gameRowStartDateKeyInTimeZone } from "./useGamesByDate";
 import { useGameDays, monthRowsToSortedGameDays } from "./useGameDays";
 import { auth } from "@/lib/firebase";
 import type { League } from "@/lib/leagues";
@@ -117,6 +114,12 @@ function findInitialGameDay(params: {
 
 export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const reduceMotion = useReducedMotion();
+  /** 入場アニメが万一途中で止まっても、一定時間後は強制的に表示する保険 */
+  const [entryAnimationsExpired, setEntryAnimationsExpired] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setEntryAnimationsExpired(true), 1400);
+    return () => window.clearTimeout(id);
+  }, []);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -179,12 +182,23 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [dayTimeZone]
   );
 
-  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → 今日（初期位置を今日基準に固定） */
+  /** 初回マウント時の URL ?date= を初期選択日の種に使う（以後はユーザー操作が優先） */
+  const initialDateParamRef = useRef(dateParam);
+  const initialDateParamDay = useMemo(
+    () =>
+      initialDateParamRef.current
+        ? parseDateKeyInTimeZone(initialDateParamRef.current, dayTimeZone)
+        : null,
+    [dayTimeZone]
+  );
+
+  /** 日付ストリップ・暦月の試合一括取得の基準日：選択中 → URL date → 今日 */
   const anchorForGameDays = useMemo(() => {
     const stored = selectedByLeague[league];
     if (stored) return stored;
+    if (initialDateParamDay) return initialDateParamDay;
     return parseDateKeyInTimeZone(todayKey, dayTimeZone) ?? new Date();
-  }, [dayTimeZone, league, selectedByLeague, todayKey]);
+  }, [dayTimeZone, league, selectedByLeague, todayKey, initialDateParamDay]);
 
   /* =========================
      Game days（アンカー日の暦日±10日を取得しストリップ用）
@@ -338,7 +352,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     }
     return findInitialGameDay({
       gameDays: gameDaysForStrip,
-      stateSelected: stored,
+      stateSelected: stored ?? initialDateParamDay,
       todayKey,
       timeZone: dayTimeZone,
     });
@@ -348,6 +362,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     league,
     todayKey,
     dayTimeZone,
+    initialDateParamDay,
   ]);
 
   /* =========================
@@ -489,18 +504,27 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   });
 
   /* =========================
-     Games（選択日の1日分を取得）
+     Games（選択日の1日分は取得済みウィンドウから導出）
+     useGameDays が取得済みの monthRows を選択日でフィルタするだけにして、
+     1日分の追加クエリ（旧 useGamesByDate）による初回表示の二重待ちを解消する。
   ========================= */
-  const { games, loading: loadingDayQuery } = useGamesByDate(
-    league,
-    selected,
-    dayTimeZone,
-    !!selected,
+  const selectedDayKey = useMemo(
+    () => (selected ? toDateKeyInTimeZone(selected, dayTimeZone) : ""),
+    [selected, dayTimeZone]
   );
 
-  const loading =
-    loadingDays ||
-    (!!selected && loadingDayQuery);
+  const games = useMemo(() => {
+    if (!selectedDayKey) return [];
+    return monthRows.filter((row) => {
+      const dk = gameRowStartDateKeyInTimeZone(
+        row as { startAtJst?: unknown },
+        dayTimeZone
+      );
+      return dk === selectedDayKey;
+    });
+  }, [monthRows, selectedDayKey, dayTimeZone]);
+
+  const loading = loadingDays;
 
   const gamesAfterTeamFilter = useMemo(() => {
     const raw = games ?? [];
@@ -525,27 +549,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     );
   }, [gamesAfterTeamFilter, marginMin, marginMax]);
 
-  const selectedDayKey = useMemo(
-    () => (selected ? toDateKeyInTimeZone(selected, dayTimeZone) : ""),
-    [selected, dayTimeZone]
-  );
-
   /**
-   * Firestore 取得が1フレーム遅れると selected だけ翌日に進み games が前日のまま残る。
-   * その間は一覧をローディング扱いにして当日カードのフラッシュを出さない。
+   * games は selectedDayKey で絞り込んだ取得済みウィンドウなので、
+   * 表示遅延はウィンドウ取得（loadingDays）のみで判定すれば足りる。
    */
-  const gamesMatchSelectedDay = useMemo(() => {
-    if (!selectedDayKey) return true;
-    const g = games ?? [];
-    if (g.length === 0) return true;
-    return g.every((row: Record<string, unknown>) => {
-      const dk = gameRowStartDateKeyInTimeZone(row, dayTimeZone);
-      if (dk == null) return true;
-      return dk === selectedDayKey;
-    });
-  }, [games, selectedDayKey, dayTimeZone]);
-
-  const listLoading = loading || !gamesMatchSelectedDay;
+  const listLoading = loading;
   const didResolveEmptyDayRef = useRef<Partial<Record<League, string>>>({});
 
   const hasAnyListFilter =
@@ -651,7 +659,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
    * 次の試合日へ、無ければ直近の過去試合日へ自動ジャンプする。
    */
   useEffect(() => {
-    if (loadingDays || loadingDayQuery) return;
+    if (loadingDays) return;
     if (!selected) return;
     if ((games?.length ?? 0) > 0) return;
     if (gameDaysForStrip.length > 0) return;
@@ -691,7 +699,6 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     };
   }, [
     loadingDays,
-    loadingDayQuery,
     selected,
     games,
     gameDaysForStrip.length,
@@ -706,8 +713,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   const isMobile = Boolean(
     pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
   );
-  /** 試合一覧・ヘッダの入場（`/mobile` 含む。`prefers-reduced-motion` のみオフ） */
-  const webGamesMotion = !reduceMotion;
+  /** 試合一覧・ヘッダの入場（`prefers-reduced-motion` か、保険タイマー満了でオフ） */
+  const webGamesMotion = !reduceMotion && !entryAnimationsExpired;
 
   /* =========================
      UI
@@ -772,19 +779,19 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     [league, selectedDayKey, teamFilterKey],
   );
 
-  const playRichIntroRef = useRef(playRichScheduleIntro);
-  playRichIntroRef.current = playRichScheduleIntro;
-  const reduceMotionRef = useRef(reduceMotion);
-  reduceMotionRef.current = reduceMotion;
-
+  /**
+   * listShellIntro はレンダー中に同期的に確定する。
+   * state + useLayoutEffect だと 1 レンダー遅れるため、scheduleBlockKey が変わった
+   * フレームでは新しい ScheduleList が「古いモード」でマウントされ、直後に切り替わって
+   * カード本体（MatchCard の opacity アニメ）が打ち切られ opacity:0 で固着する。
+   * ref で前回キーを覚え、キーが変わったレンダーでそのまま新モードを返す。
+   */
   const prevScheduleBlockKeyRef = useRef<string | null>(null);
+  const lockedIntroRef = useRef<"page" | "daySwitch">(
+    reduceMotion ? "daySwitch" : "page",
+  );
 
-  const [listShellIntroLocked, setListShellIntroLocked] = useState<
-    "page" | "daySwitch"
-  >(() => (reduceMotion ? "daySwitch" : "page"));
-
-  useLayoutEffect(() => {
-    if (prevScheduleBlockKeyRef.current === scheduleBlockKey) return;
+  if (prevScheduleBlockKeyRef.current !== scheduleBlockKey) {
     const prev = prevScheduleBlockKeyRef.current;
     prevScheduleBlockKeyRef.current = scheduleBlockKey;
 
@@ -796,20 +803,18 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
     const nextDay = nextParts[1] ?? "";
 
     if (prev !== null && prevLeague !== nextLeague) {
-      setListShellIntroLocked(reduceMotionRef.current ? "daySwitch" : "page");
-      return;
+      lockedIntroRef.current = reduceMotion ? "daySwitch" : "page";
+    } else if (prev !== null && prevDay !== "" && prevDay !== nextDay) {
+      // 実日付→別の実日付は「日付切替」。
+      // 初回の selectedDayKey 未確定（""）→ 初日確定は除外（初回入場の page を維持）。
+      lockedIntroRef.current = "daySwitch";
+    } else {
+      lockedIntroRef.current =
+        playRichScheduleIntro && !reduceMotion ? "page" : "daySwitch";
     }
-    if (prev !== null && prevDay !== nextDay) {
-      setListShellIntroLocked("daySwitch");
-      return;
-    }
+  }
 
-    setListShellIntroLocked(
-      playRichIntroRef.current && !reduceMotionRef.current
-        ? "page"
-        : "daySwitch",
-    );
-  }, [scheduleBlockKey]);
+  const listShellIntroLocked = lockedIntroRef.current;
 
   /** 上部バー共通：スライド＋着地時に一瞬明滅する「ロックオン」入場 */
   const topBarEntry = (delay: number, dx: number) =>
@@ -964,10 +969,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         transition={
           webGamesMotion
             ? {
-                y: { duration: 0.34, delay: 0.38, ease: GAMES_CYBER_EASE },
+                y: { duration: 0.34, delay: 0.16, ease: GAMES_CYBER_EASE },
                 opacity: {
                   duration: 0.44,
-                  delay: 0.38,
+                  delay: 0.16,
                   times: [0, 0.5, 0.66, 1],
                   ease: "linear",
                 },
@@ -1039,10 +1044,10 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       transition={
         webGamesMotion
           ? {
-              x: { duration: 0.3, delay: 0.5, ease: GAMES_CYBER_EASE },
+              x: { duration: 0.3, delay: 0.24, ease: GAMES_CYBER_EASE },
               opacity: {
                 duration: 0.4,
-                delay: 0.5,
+                delay: 0.24,
                 times: [0, 0.5, 0.66, 1],
                 ease: "linear",
               },

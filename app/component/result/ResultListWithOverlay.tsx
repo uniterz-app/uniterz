@@ -1538,8 +1538,18 @@ export default function ResultListWithOverlay({
           const headerSlot = prefersReducedMotion ? undefined : takeEntrySlot();
 
           return (
-            <ResultDayPipeGroup
+            <div
               key={day.dateLabel}
+              // 画面外の日グループは描画/レイアウトをスキップして初期描画と
+              // スクロールのコストを下げる（最後の描画高さを記憶して再利用）
+              style={
+                {
+                  contentVisibility: "auto",
+                  containIntrinsicSize: "auto 600px",
+                } as CSSProperties
+              }
+            >
+            <ResultDayPipeGroup
               dateLabel={day.dateLabel}
               isMobile={isMobile}
               reducedMotion={Boolean(prefersReducedMotion)}
@@ -1597,6 +1607,7 @@ export default function ResultListWithOverlay({
                 );
               })}
             </ResultDayPipeGroup>
+            </div>
           );
         })}
         </div>

@@ -25,16 +25,20 @@ export default function MaintenanceOverlay() {
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="bg-white/10 border border-white/20 rounded-2xl p-8 max-w-md w-full">
-        <h1 className="text-xl font-bold mb-4">アップデートのお知らせ</h1>
+        <h1 className="text-xl font-bold mb-4">メンテナンス中</h1>
 
         <p className="text-sm opacity-90 leading-relaxed">
-          プレーオフに向けたアップデートを行っています。
+          ランキング機能に不具合が発生しているため、現在メンテナンス中です。
           <br />
-          約1ヶ月ほどお時間をいただきます。
+          復旧までしばらくお待ちください。
           <br />
-          再開の際はXやYouTubeで告知いたします。
+          ご不便をおかけして申し訳ありません。
+        </p>
+
+        <p className="mt-5 text-xs opacity-60 leading-relaxed">
+          Rankings are temporarily unavailable due to maintenance.
           <br />
-          ご協力よろしくお願いいたします。
+          Please check back later.
         </p>
       </div>
     </div>

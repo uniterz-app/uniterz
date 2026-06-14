@@ -49,6 +49,8 @@ type SummaryForCards = {
   streakBonusSum: number;
   basePointsSum: number;
   activeWinStreak?: number;
+  /** WC overall（=football）のライブ最大連勝 */
+  maxWinStreak?: number;
 };
 
 type SummaryRanks = {
@@ -191,11 +193,15 @@ async function summaryFromDailyPhaseFallback(
 async function fetchLast30DailySnapshots(adminDb: ReturnType<typeof getAdminDb>, uid: string) {
   /** JST の連続する暦日キー（サーバーの TZ に依存しない） */
   const keys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 30);
-  return Promise.all(
-    keys.map((dateKey) =>
-      adminDb.doc(`user_stats_v2_daily/${uid}_${dateKey}`).get()
-    )
+  if (keys.length === 0) return [];
+  const refs = keys.map((dateKey) =>
+    adminDb.doc(`user_stats_v2_daily/${uid}_${dateKey}`)
   );
+  /** 30 件の個別 get を 1 回のバッチ read に集約（往復削減） */
+  const snaps = await adminDb.getAll(...refs);
+  /** getAll の戻り順に依存せず keys 順（snaps[0]=今日）を保証する */
+  const byId = new Map(snaps.map((s) => [s.id, s]));
+  return keys.map((dateKey) => byId.get(`${uid}_${dateKey}`)!);
 }
 
 function windowCacheHasProfileRollup(w: Record<string, unknown> | null | undefined): boolean {
@@ -377,6 +383,35 @@ export async function GET(req: Request) {
           phase,
           wcStage
         );
+        /**
+         * WC（football）の現在連勝・最大連勝は updateUserStreak が試合確定時に
+         * user_stats_v2 へライブ保存している。WC は football 唯一なので
+         * 「WC 全体（overall）の連勝」= football の連勝として確定値を採用する。
+         * （クライアントは Firestore ルールで他人の user_stats_v2 を読めないため API で渡す）
+         */
+        if (wcStage === "overall" && summary) {
+          try {
+            const usSnap = await adminDb
+              .collection("user_stats_v2")
+              .doc(uid)
+              .get();
+            const us = usSnap.exists
+              ? (usSnap.data() as Record<string, unknown>)
+              : {};
+            const curFootball = safeNum(us.streakFootball);
+            const maxBySport = (us.maxWinStreakBySport ?? {}) as Record<
+              string,
+              unknown
+            >;
+            summary.activeWinStreak =
+              curFootball > 0 ? Math.floor(curFootball) : 0;
+            summary.maxWinStreak = safeInt(
+              maxBySport.football ?? us.maxWinStreakFootball
+            );
+          } catch {
+            /* ライブ連勝が取れなくてもサマリー自体は返す */
+          }
+        }
       } else {
         summary = summaryFromPhaseRanking(
           cumulative as Record<string, unknown> | null,

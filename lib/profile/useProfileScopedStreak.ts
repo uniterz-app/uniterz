@@ -40,18 +40,25 @@ export function useProfileScopedStreak(
 ) {
   const scopeKey = resolveProfileStreakScopeKey(ctx);
 
+  /**
+   * WC 全体（overall）の連勝は ProfilePageBaseV2 がサーバー API のライブ値を採用するため、
+   * ここでは確定投稿スキャン（最大 400 件）を行わない。初回プロフィール描画の
+   * クリティカルパスから重い読み込みを外し、必要な Last20 トラッカー描画時まで遅延させる。
+   */
+  const skipPostScan = scopeKey === "wc:overall";
+
   const [metrics, setMetrics] = useState<StreakMetrics>(() => {
-    if (!uid) return EMPTY;
+    if (!uid || skipPostScan) return EMPTY;
     const cached = readMetricsCache(uid);
     return cached?.byScope[scopeKey] ?? EMPTY;
   });
   const [loading, setLoading] = useState(() => {
-    if (!uid) return false;
+    if (!uid || skipPostScan) return false;
     return readMetricsCache(uid) == null;
   });
 
   useLayoutEffect(() => {
-    if (!uid) {
+    if (!uid || skipPostScan) {
       setMetrics(EMPTY);
       setLoading(false);
       return;
@@ -63,10 +70,10 @@ export function useProfileScopedStreak(
       return;
     }
     setLoading(true);
-  }, [scopeKey, uid]);
+  }, [scopeKey, uid, skipPostScan]);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid || skipPostScan) return;
 
     let alive = true;
     const safeUid = uid;
@@ -99,7 +106,7 @@ export function useProfileScopedStreak(
     return () => {
       alive = false;
     };
-  }, [scopeKey, uid]);
+  }, [scopeKey, uid, skipPostScan]);
 
   return useMemo(
     () => ({

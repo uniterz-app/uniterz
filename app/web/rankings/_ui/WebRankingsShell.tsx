@@ -250,13 +250,13 @@ export default function WebRankingsShell() {
       </div>
 
       <div className="mx-auto max-w-[920px] space-y-3 px-3 pt-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
           <CyberMenuButton
             size="sm"
             onClick={() => setRankingsDrawerOpen(true)}
             aria-label={m.games.openMenu}
           />
-          <div className="flex min-w-0 flex-1 justify-center">
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
             <RankingsPageTitleCyber
               variant="horizon-chrome"
               title={
@@ -266,13 +266,9 @@ export default function WebRankingsShell() {
               }
               size="sm"
             />
+            <RankingsScheduleNotice language={language} />
           </div>
-          <RankingsScheduleNotice
-            phase={phase}
-            language={language}
-            countryCode={countryCode}
-            compact
-          />
+          <div className="h-10 w-10 shrink-0" aria-hidden />
         </div>
         <div className="space-y-0.5">
           {rankingLeague === "nba" ? (
