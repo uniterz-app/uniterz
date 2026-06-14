@@ -13,7 +13,6 @@ import GamesDrawerMenu from "./GamesDrawerMenu";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import {
-  gamesHeaderActionsSlotClass,
   gamesHeaderControlButtonClass,
   gamesHeaderControlHeightClass,
   gamesHeaderControlWrapClass,
@@ -22,11 +21,12 @@ import {
   gamesHeaderMobileShellClass,
   gamesHeaderMobileSideLeftClass,
   gamesHeaderMobileSideRightClass,
-  gamesHeaderMobileTitleClass,
   gamesHeaderMobileTitleRowClass,
-  gamesHeaderMenuSlotClass,
+  gamesHeaderDesktopSideLeftClass,
+  gamesHeaderDesktopSideRightClass,
   gamesHeaderRowClass,
   gamesHeaderShellClass,
+  gamesHeaderTitleCenterClass,
 } from "@/lib/ui/gamesHeaderBar";
 import { nameBebas } from "@/lib/fonts";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
@@ -944,8 +944,8 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         nameBebas.className,
         "min-w-0 truncate text-center leading-none tracking-[0.28em] text-white/90",
         isMobile
-          ? "block text-[20px] -me-[0.28em]"
-          : "flex-1 text-[22px] sm:text-[24px]",
+          ? "block text-[20px] ps-[0.14em]"
+          : "block text-[22px] sm:text-[24px] ps-[0.14em]",
       ].join(" ")}
       initial={
         webGamesMotion ? { opacity: 0, letterSpacing: "0.5em" } : false
@@ -1028,7 +1028,7 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
               <div className={gamesHeaderMobileSideLeftClass()}>
                 {renderMenuButton()}
               </div>
-              <div className={gamesHeaderMobileTitleClass()}>
+              <div className={gamesHeaderTitleCenterClass(true)}>
                 {renderLeagueTitle()}
               </div>
               <div className={gamesHeaderMobileSideRightClass()}>
@@ -1043,11 +1043,13 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         ) : (
           <>
             <div className={gamesHeaderRowClass(false)}>
-              <div className={gamesHeaderMenuSlotClass(false)}>
+              <div className={gamesHeaderDesktopSideLeftClass()}>
                 {renderMenuButton()}
               </div>
-              {renderLeagueTitle()}
-              <div className={gamesHeaderActionsSlotClass(false)}>
+              <div className={gamesHeaderTitleCenterClass(false)}>
+                {renderLeagueTitle()}
+              </div>
+              <div className={gamesHeaderDesktopSideRightClass()}>
                 {renderFilterControl(false)}
                 {renderBracketControl(false)}
               </div>

@@ -61,15 +61,14 @@ export function gamesHeaderMobileTitleRowClass(): string {
   return `relative w-full ${GAMES_HEADER_CONTROL_H}`;
 }
 
-/** モバイルヘッダー：タイトルだけ右へ微調整 */
-export const GAMES_HEADER_MOBILE_TITLE_NUDGE_X = "translate-x-1.5";
-
-/** モバイル：タイトル（画面水平中央＋微調整） */
-export function gamesHeaderMobileTitleClass(): string {
+/** リーグ名：画面水平中央 */
+export function gamesHeaderTitleCenterClass(isMobile: boolean): string {
   return [
     "pointer-events-none absolute left-1/2 top-1/2 z-10",
-    "w-max max-w-[calc(100vw-5rem)] -translate-x-1/2 -translate-y-1/2",
-    GAMES_HEADER_MOBILE_TITLE_NUDGE_X,
+    isMobile
+      ? "w-max max-w-[calc(100vw-11rem)]"
+      : "w-max max-w-[calc(100%-11rem)]",
+    "-translate-x-1/2 -translate-y-1/2",
     "text-center leading-none",
   ].join(" ");
 }
@@ -103,12 +102,26 @@ export function gamesHeaderCornerRightClass(): string {
   return "absolute right-1 top-0 z-20 flex items-start justify-end gap-1.5";
 }
 
-/** ヘッダー行（デスクトップ：1行レイアウト） */
+/** ヘッダー行（デスクトップ：左右 absolute ＋中央タイトル） */
 export function gamesHeaderRowClass(isMobile: boolean): string {
   if (isMobile) {
     return "";
   }
-  return `relative flex ${GAMES_HEADER_CONTROL_H_LG} items-center gap-3`;
+  return `relative w-full ${GAMES_HEADER_CONTROL_H_LG}`;
+}
+
+export function gamesHeaderDesktopSideLeftClass(): string {
+  return [
+    "absolute left-2 top-0 z-20 flex items-start",
+    GAMES_HEADER_CONTROL_H_LG,
+  ].join(" ");
+}
+
+export function gamesHeaderDesktopSideRightClass(): string {
+  return [
+    "absolute right-2 top-0 z-20 flex items-start justify-end gap-1.5",
+    GAMES_HEADER_CONTROL_H_LG,
+  ].join(" ");
 }
 
 /** 左：バーガー用スロット */
