@@ -14,7 +14,10 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { Scale } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { resultDetailPanelClass } from "@/lib/result/resultGlass";
+import {
+  RESULT_HIT_CYBER_CLIP,
+  resultDetailPanelClass,
+} from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 function formatResultMarketTeamLabel(
@@ -135,7 +138,7 @@ function ResultMarketCard({
 
   return (
     <div className={shell}>
-      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
       <div className="relative z-1">
       <div className="mb-4 flex items-center gap-2 text-base font-semibold text-white">
         <Scale className="h-5 w-5 shrink-0 text-orange-400" aria-hidden />

@@ -856,6 +856,110 @@
     inset 0 1px 0 rgba(0, 245, 255, 0.16);
 }
 
+/* 試合一覧ヘッダー：バーガー・絞り込みの共通高さ（Tailwind より優先） */
+.games-header-control-h {
+  box-sizing: border-box !important;
+  height: 2.25rem !important;
+  min-height: 2.25rem !important;
+  max-height: 2.25rem !important;
+}
+
+.games-header-control-h--lg {
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  max-height: 2.5rem !important;
+}
+
+.cyber-menu-btn.games-header-control-h {
+  width: 2.25rem !important;
+  min-width: 2.25rem !important;
+  max-width: 2.25rem !important;
+  padding: 0 !important;
+}
+
+.cyber-menu-btn.games-header-control-h.games-header-control-h--lg {
+  width: 2.5rem !important;
+  min-width: 2.5rem !important;
+  max-width: 2.5rem !important;
+}
+
+/* 試合ヘッダー絞り込み：バーガー（.cyber-menu-btn）と同じ clip / 影 / 高さ */
+.cyber-filter-bar.games-header-control-h,
+.cyber-filter-bar.cyber-filter-bar--header.games-header-control-h {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1 !important;
+  clip-path: polygon(
+    5px 0%,
+    100% 0%,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    0% 100%,
+    0% 5px
+  );
+  border-color: rgba(0, 245, 255, 0.34);
+  background: rgba(4, 10, 18, 0.84);
+  backdrop-filter: blur(6px);
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.12),
+    inset 0 1px 0 rgba(0, 245, 255, 0.14) !important;
+}
+
+.cyber-filter-bar.games-header-control-h::before,
+.cyber-filter-bar.cyber-filter-bar--header.games-header-control-h::before {
+  left: 4px;
+  right: 4px;
+}
+
+.cyber-filter-bar.games-header-control-h:hover,
+.cyber-filter-bar.cyber-filter-bar--header.games-header-control-h:hover {
+  border-color: rgba(0, 245, 255, 0.52);
+  background: rgba(6, 14, 24, 0.92);
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.2),
+    inset 0 1px 0 rgba(0, 245, 255, 0.18) !important;
+}
+
+.cyber-filter-bar.games-header-control-h.cyber-filter-bar--active,
+.cyber-filter-bar.cyber-filter-bar--header.games-header-control-h.cyber-filter-bar--active {
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.16),
+    inset 0 1px 0 rgba(0, 245, 255, 0.16) !important;
+}
+
+/* 試合一覧ヘッダー：バーガー（.cyber-menu-btn）と同じ角切り・影（後方互換） */
+.cyber-filter-bar.cyber-filter-bar--header {
+  box-sizing: border-box !important;
+  clip-path: polygon(
+    5px 0%,
+    100% 0%,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    0% 100%,
+    0% 5px
+  );
+  box-shadow:
+    0 0 14px rgba(0, 245, 255, 0.12),
+    inset 0 1px 0 rgba(0, 245, 255, 0.14) !important;
+}
+
+.cyber-filter-bar.cyber-filter-bar--header::before {
+  left: 4px;
+  right: 4px;
+}
+
+.cyber-filter-bar.cyber-filter-bar--header:hover {
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.2),
+    inset 0 1px 0 rgba(0, 245, 255, 0.18) !important;
+}
+
+.cyber-filter-bar.cyber-filter-bar--header.cyber-filter-bar--active {
+  box-shadow:
+    0 0 18px rgba(0, 245, 255, 0.16),
+    inset 0 1px 0 rgba(0, 245, 255, 0.16) !important;
+}
+
 .cyber-filter-panel {
   position: relative;
   overflow: hidden;
@@ -1034,17 +1138,19 @@
     0% calc(100% - 6px),
     0% 6px
   );
-  border: 1px solid rgba(0, 245, 255, 0.38);
+  border: 1px solid rgba(0, 245, 255, 0.52);
   background: linear-gradient(
     180deg,
-    rgba(0, 245, 255, 0.22) 0%,
-    rgba(0, 160, 200, 0.32) 48%,
-    rgba(0, 80, 120, 0.42) 100%
+    rgba(0, 245, 255, 0.34) 0%,
+    rgba(0, 190, 230, 0.44) 46%,
+    rgba(0, 110, 155, 0.54) 100%
   );
   box-shadow:
-    0 0 18px rgba(0, 245, 255, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  text-shadow: 0 0 12px rgba(0, 245, 255, 0.35);
+    0 0 22px rgba(0, 245, 255, 0.28),
+    0 0 8px rgba(34, 211, 238, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  color: rgba(224, 255, 255, 0.98);
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.45);
   transition:
     box-shadow 0.2s ease,
     border-color 0.2s ease,
@@ -1052,10 +1158,17 @@
 }
 
 .match-list-cyber-cta:hover:not(:disabled) {
-  border-color: rgba(0, 245, 255, 0.55);
+  border-color: rgba(0, 245, 255, 0.68);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 245, 255, 0.4) 0%,
+    rgba(0, 200, 235, 0.5) 46%,
+    rgba(0, 120, 165, 0.58) 100%
+  );
   box-shadow:
-    0 0 24px rgba(0, 245, 255, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    0 0 28px rgba(0, 245, 255, 0.36),
+    0 0 10px rgba(34, 211, 238, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .match-list-cyber-cta--predicted {
@@ -1999,20 +2112,25 @@
   );
 }
 
-/* LIVE バッジ：控えめな不透明度の点滅（色・形はそのまま） */
-@keyframes live-match-mark-blink {
+/* LIVE バッジ：ライブ中は赤く発光（HIT/MISS 同系 + グロー点滅） */
+@keyframes live-match-mark-glow {
   0%,
   100% {
-    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.42))
+      drop-shadow(0 0 10px rgba(248, 113, 113, 0.28));
+    text-shadow: 0 0 6px rgba(254, 202, 202, 0.35);
   }
 
   50% {
-    opacity: 0.76;
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.78))
+      drop-shadow(0 0 22px rgba(248, 113, 113, 0.52))
+      drop-shadow(0 0 34px rgba(239, 68, 68, 0.28));
+    text-shadow: 0 0 14px rgba(254, 202, 202, 0.82);
   }
 }
 
 .live-match-mark--pulse {
-  animation: live-match-mark-blink 2.75s ease-in-out infinite;
+  animation: live-match-mark-glow 1.85s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -13,7 +13,10 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { Scale } from "lucide-react";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
-import { resultDetailPanelClass } from "@/lib/result/resultGlass";
+import {
+  RESULT_HIT_CYBER_CLIP,
+  resultDetailPanelClass,
+} from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 function getMobileTeamName(
@@ -131,7 +134,7 @@ function MobileResultMarketCard({
 
   return (
     <div className={shell}>
-      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
       <div className="relative z-1">
       {/* Header */}
       <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-white">

@@ -1,6 +1,9 @@
 /** 角切り・シアン枠のハンバーガーボタン（globals.css `.cyber-menu-btn`） */
 export const CYBER_MENU_BTN_CLASS = "cyber-menu-btn";
 
+/** 試合ヘッダー共通高さ（globals.css `.games-header-control-h`） */
+export const GAMES_HEADER_CONTROL_H_CLASS = "games-header-control-h";
+
 export type CyberMenuButtonSize = "xs" | "sm" | "md" | "lg";
 
 export const CYBER_MENU_BTN_SIZE_CLASS: Record<CyberMenuButtonSize, string> = {
@@ -24,10 +27,11 @@ export function cyberMenuButtonClasses(
   size: CyberMenuButtonSize = "sm",
   extra = ""
 ): string {
+  const headerSized = extra.includes(GAMES_HEADER_CONTROL_H_CLASS);
   return [
     CYBER_MENU_BTN_CLASS,
-    "relative flex shrink-0 touch-manipulation items-center justify-center transition-all duration-200 ease-out",
-    CYBER_MENU_BTN_SIZE_CLASS[size],
+    "relative box-border flex shrink-0 touch-manipulation items-center justify-center transition-all duration-200 ease-out",
+    headerSized ? "" : CYBER_MENU_BTN_SIZE_CLASS[size],
     extra,
   ]
     .filter(Boolean)

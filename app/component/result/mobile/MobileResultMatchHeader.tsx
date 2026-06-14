@@ -26,7 +26,10 @@ import { t } from "@/lib/i18n/t";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import { isResultWinFrameBadge } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
+import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
+import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
+import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
@@ -38,6 +41,7 @@ type Props = {
   inOverlay?: boolean;
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
+  cardClockMs?: number;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -113,7 +117,9 @@ export default function MobileResultMatchHeader({
   inOverlay: _inOverlay = false,
   viewerUid = null,
   gamesRoutePrefix = "/mobile",
+  cardClockMs,
 }: Props) {
+  const clock = useResultCardClockMs(cardClockMs);
   const teamNameFont = bracketMarketTeamTypography(true);
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
@@ -182,8 +188,15 @@ export default function MobileResultMatchHeader({
     const finalized =
       post.status === "final" || post.game?.status === "final";
     if (finalized) return null;
+    /** キックオフ以降（LIVE 含む）は一覧 ResultCard と同様に修正を出さない */
+    if (isResultPostMatchStarted(post, clock)) return null;
     return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
-  }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, gamesRoutePrefix]);
+  }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, post.startAtMillis, gamesRoutePrefix, clock]);
+
+  const isLiveGame = isResultPostLiveGame(post, clock);
+  const liveMarkNode = isLiveGame ? (
+    <ResultLiveMark isMobile language={language} />
+  ) : null;
 
   return (
     <ResultGlassShell
@@ -214,6 +227,7 @@ export default function MobileResultMatchHeader({
             activeWinStreak={activeWinStreak}
             isMobile
             hitBadgeSubtle
+            trailing={liveMarkNode}
           />
         </div>
       </div>

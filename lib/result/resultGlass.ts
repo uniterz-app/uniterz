@@ -82,7 +82,8 @@ export function resultDetailPanelClass(opts?: {
 }): string {
   const fill = opts?.mobile ? RESULT_GLASS_FILL_MOBILE : RESULT_GLASS_FILL;
   return [
-    "relative overflow-hidden rounded-2xl",
+    "relative overflow-hidden",
+    RESULT_HIT_CYBER_CLIP,
     RESULT_GLASS_BORDER,
     fill,
     RESULT_GLASS_SHADOW,
@@ -424,6 +425,25 @@ export function resultUpsetBadgeClass(
     subtle
       ? "shadow-[inset_3px_0_0_rgba(252,165,165,0.58),inset_0_1px_0_rgba(255,255,255,0.16),0_0_12px_rgba(239,68,68,0.28)]"
       : "shadow-[inset_3px_0_0_rgba(254,202,202,0.65),inset_0_1px_0_rgba(255,255,255,0.2),0_0_14px_rgba(239,68,68,0.36)]",
+  ].join(" ");
+}
+
+/** LIVE バッジ：レッド・サイバー角切り（HIT / MISS / UPSET と同系） */
+export function resultLiveBadgeClass(
+  compact: boolean,
+  opts?: { subtle?: boolean }
+): string {
+  const subtle = opts?.subtle === true;
+  return [
+    RESULT_CYBER_BADGE_BASE,
+    RESULT_HIT_CYBER_CLIP_SM,
+    resultCyberBadgeSize(compact, subtle),
+    "border border-red-500/78",
+    "bg-[linear-gradient(180deg,rgba(239,68,68,0.4)_0%,rgba(185,28,28,0.36)_44%,rgba(69,10,10,0.5)_100%)]",
+    "text-red-50",
+    subtle
+      ? "shadow-[inset_3px_0_0_rgba(252,165,165,0.55),inset_0_1px_0_rgba(255,255,255,0.14),0_0_8px_rgba(239,68,68,0.22)]"
+      : "shadow-[inset_3px_0_0_rgba(254,202,202,0.62),inset_0_1px_0_rgba(255,255,255,0.18),0_0_10px_rgba(239,68,68,0.28)]",
   ].join(" ");
 }
 

@@ -13,7 +13,10 @@ import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { resultDetailPanelClass } from "@/lib/result/resultGlass";
+import {
+  RESULT_HIT_CYBER_CLIP,
+  resultDetailPanelClass,
+} from "@/lib/result/resultGlass";
 import { resultShowsScorePrecision } from "@/lib/result/wcResultUi";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
@@ -149,7 +152,7 @@ function MobileResultStatsCard({
 
   return (
     <div className={[shell, minHeightClassName ?? "min-h-[280px]"].join(" ")}>
-      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
       <div className="relative z-1">
       <div className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-white">
         <LineChart className="h-5 w-5 shrink-0 text-orange-400" aria-hidden />

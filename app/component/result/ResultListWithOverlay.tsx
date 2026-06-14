@@ -2008,6 +2008,7 @@ export default function ResultListWithOverlay({
                           inOverlay
                           viewerUid={viewerUid}
                           gamesRoutePrefix={gamesRoutePrefix}
+                          cardClockMs={listNowTick}
                         />
                       ) : (
                         <ResultDetail
@@ -2019,6 +2020,7 @@ export default function ResultListWithOverlay({
                           inOverlay
                           viewerUid={viewerUid}
                           gamesRoutePrefix={gamesRoutePrefix}
+                          cardClockMs={listNowTick}
                         />
                       )}
                     </div>

@@ -33,6 +33,12 @@ import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
 import { canDismissResultListPostNow, formatResultPostCardDateLabel } from "./nativeResultModel";
 import CyberMenuButton from "../../ui/CyberMenuButton";
 import {
+  resultLiveBadgeCompact,
+  resultLiveBadgeCompactText,
+} from "../../ui/resultLiveBadgeStyles";
+import { LiveMarkPill } from "../games/LiveMarkPill";
+import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
+import {
   dayPointsHeaderForNative,
   type NativeDayPointsHeader,
 } from "./nativeResultDaySummary";
@@ -398,12 +404,10 @@ function ResultPostCard({
       ? post.startAtMillis
       : null;
   /** Web `ResultCard` の `isMatchStarted` と同じ */
-  const isMatchStarted =
-    postStatus === "live" ||
-    postStatus === "final" ||
-    (postStatus === "scheduled" &&
-      startAtMs != null &&
-      nowMs >= startAtMs);
+  const isMatchStarted = isResultPostMatchStarted(
+    { status: postStatus, startAtMillis: startAtMs },
+    nowMs
+  );
 
   const authorUid =
     typeof post.authorUid === "string" && post.authorUid.length > 0 ? post.authorUid : null;
@@ -449,12 +453,10 @@ function ResultPostCard({
   }));
 
   /** Web ResultCard の isLiveGame と同じ：開始〜確定まで LIVE */
-  const showLiveMark =
-    postStatus !== "final" &&
-    (postStatus === "live" ||
-      (postStatus === "scheduled" &&
-        startAtMs != null &&
-        nowMs >= startAtMs));
+  const showLiveMark = isResultPostLiveGame(
+    { status: postStatus, startAtMillis: startAtMs },
+    nowMs
+  );
 
   const requestDeletePost = useCallback(() => {
     if (!canDismissResultListPostNow(post, Date.now())) return;
@@ -754,12 +756,10 @@ function ResultPostCard({
                     </View>
                   ) : null}
                   {showLiveMark ? (
-                    <View
-                      style={[styles.miniBadge, styles.badgeLive]}
-                      accessibilityLabel={isEn ? "Live" : "ライブ中"}
-                    >
-                      <Text style={styles.badgeLiveText}>LIVE</Text>
-                    </View>
+                    <LiveMarkPill
+                      pillStyle={styles.badgeLive}
+                      textStyle={styles.badgeLiveText}
+                    />
                   ) : null}
                 </Animated.View>
                 <Animated.View style={[styles.badgeHitMissCluster, entrance.hitMissBadgeStyle]}>
@@ -1493,9 +1493,8 @@ const styles = StyleSheet.create({
   /** Web `ResultCard` の右上アクション簇（ハンバーガー＋フライアウト） */
   cornerFabCluster: {
     position: "absolute",
-    top: 8,
-    /** 右端から離してハンバーガーをやや左へ */
-    right: 13,
+    top: 5,
+    right: 9,
     zIndex: 50,
     minWidth: 22,
     minHeight: 22,
@@ -1751,18 +1750,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#fff",
   },
-  /** Web LiveMatchMark（resultMobile）に寄せた LIVE ピル */
-  badgeLive: {
-    backgroundColor: "rgba(220,38,38,0.95)",
-    borderWidth: 1,
-    borderColor: "rgba(254,202,202,0.5)",
-  },
-  badgeLiveText: {
-    fontSize: 8,
-    fontWeight: "900",
-    color: "#fff",
-    letterSpacing: 0.6,
-  },
+  /** Web LiveMatchMark（resultMobile）に寄せた LIVE バッジ */
+  badgeLive: resultLiveBadgeCompact,
+  badgeLiveText: resultLiveBadgeCompactText,
   matchGrid: {
     flexDirection: "row",
     alignItems: "center",

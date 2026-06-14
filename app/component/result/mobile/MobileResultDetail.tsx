@@ -27,6 +27,7 @@ type Props = {
   inOverlay?: boolean;
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
+  cardClockMs?: number;
 };
 
 export default function MobileResultDetail({
@@ -38,6 +39,7 @@ export default function MobileResultDetail({
   inOverlay = false,
   viewerUid = null,
   gamesRoutePrefix = "/mobile",
+  cardClockMs,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const E = RESULT_DETAIL_ENTRANCE;
@@ -72,6 +74,7 @@ export default function MobileResultDetail({
               inOverlay={inOverlay}
               viewerUid={viewerUid}
               gamesRoutePrefix={gamesRoutePrefix}
+              cardClockMs={cardClockMs}
             />
           </m.div>
 

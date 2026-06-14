@@ -8,7 +8,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { resultDetailPanelClass } from "@/lib/result/resultGlass";
+import { RESULT_HIT_CYBER_CLIP, resultDetailPanelClass } from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
 import {
@@ -264,7 +264,7 @@ function ResultPointsDistributionCard({
 
   return (
     <div className={shell}>
-      <ShellGridOverlay roundedClassName="rounded-2xl" />
+      <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
       <div className="relative z-1">
       <div className={compact ? "mb-3" : "mb-4"}>
         <div className="flex items-start gap-2">
