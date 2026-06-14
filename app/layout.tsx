@@ -13,6 +13,7 @@ import ToastHost from "@/app/component/ui/ToastHost";
 import WebOrMobileSplash from "@/app/WebOrMobileSplash";
 import EventGate from "@/app/component/common/EventGate";
 import MaintenanceOverlay from "@/app/component/common/maintenance";
+import { APP_MAINTENANCE_MODE } from "@/lib/app/maintenanceMode";
 import AppChrome from "@/app/component/AppChrome";
 import AppContentShell from "@/app/component/AppContentShell";
 import AppPageBackground from "@/app/component/AppPageBackground";
@@ -40,7 +41,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const maintenance = false;
+  const maintenance = APP_MAINTENANCE_MODE;
 
   return (
     <html lang="ja">

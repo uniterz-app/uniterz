@@ -29,19 +29,20 @@ export const GAMES_CYBER_LEAD_IN_SEC = 0.042;
 
 /**
  * 試合一覧（page モード）でカード内部の入場が始まるまでのリード（秒）。
- * 上部バー → 月ヘッダー → 日付ストリップ → 一覧ラッパーの後に来るよう揃える
+ * 上部バー → 月ヘッダー → 日付ストリップ → 一覧ラッパーの後に来るよう揃える。
+ * 初回表示を速くするため短め（データが見えるまでの体感待ちを抑える）。
  */
-export const GAMES_LIST_CARDS_LEAD_IN_SEC = 0.62;
+export const GAMES_LIST_CARDS_LEAD_IN_SEC = 0.22;
 
 /** GamesPage: 日付ストリップの後に一覧ラッパーのモーションが始まるまで（秒） */
-export const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.54;
+export const GAMES_LIST_AFTER_DAY_STRIP_SEC = 0.18;
 
 /** GamesPage: 一覧ラッパー（rich / opacity+y）の尺（秒） */
 export const GAMES_SCHEDULE_SHELL_DURATION_SEC = 0.28;
 
 /** page モードで 4 枚目以降が出始める時刻（先頭3枚のロックオンが概ね終わった後） */
 export const GAMES_LIST_REST_CARDS_DELAY_SEC =
-  GAMES_LIST_CARDS_LEAD_IN_SEC + 0.42;
+  GAMES_LIST_CARDS_LEAD_IN_SEC + 0.3;
 
 /** カード入場 1 要素の尺（ミリ秒）— jersey ドット遅延計算と同期 */
 export const GAMES_CYBER_ENTRY_DURATION_MS = Math.round(

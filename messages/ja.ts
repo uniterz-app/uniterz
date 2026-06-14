@@ -201,7 +201,7 @@ const ja = {
     loadingRankings: "ランキング読み込み中...",
     nbaPlayoffs: "NBA プレーオフ",
     worldCup: "ワールドカップ",
-    updatedDaily: "ランキングは毎日 {time} に更新",
+    updatedDaily: "ランキングは日本時間16:00に更新",
     scoresCumulative: "スコアは累積",
     scheduleInfoToggle: "更新スケジュールの説明を表示",
     loadingRankStats: "順位とスコアを読み込み中",

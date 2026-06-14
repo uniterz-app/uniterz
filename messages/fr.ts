@@ -203,7 +203,7 @@ const fr: Messages = {
     loadingRankings: "Chargement du classement...",
     nbaPlayoffs: "Playoffs NBA",
     worldCup: "Coupe du Monde",
-    updatedDaily: "Le classement est mis à jour quotidiennement à {time}",
+    updatedDaily: "Classement mis à jour à 16:00 JST",
     scoresCumulative: "Les scores sont cumulatifs",
     scheduleInfoToggle: "Afficher le calendrier de mise à jour",
     loadingRankStats: "Chargement de votre rang et de vos statistiques",

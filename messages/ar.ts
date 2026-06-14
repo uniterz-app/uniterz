@@ -203,7 +203,7 @@ const ar: Messages = {
     loadingRankings: "جارٍ تحميل التصنيفات...",
     nbaPlayoffs: "تصفيات NBA",
     worldCup: "كأس العالم",
-    updatedDaily: "يتم تحديث التصنيفات يوميًا في {time}",
+    updatedDaily: "يتم تحديث التصنيفات الساعة 16:00 بتوقيت اليابان",
     scoresCumulative: "النقاط تراكمية",
     scheduleInfoToggle: "عرض جدول التحديث",
     loadingRankStats: "جارٍ تحميل ترتيبك وإحصائياتك",

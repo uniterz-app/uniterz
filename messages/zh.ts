@@ -200,7 +200,7 @@ const zh: Messages = {
     loadingRankings: "加载排名中...",
     nbaPlayoffs: "NBA 季后赛",
     worldCup: "世界杯",
-    updatedDaily: "排名每天 {time} 更新",
+    updatedDaily: "排名于日本时间16:00更新",
     scoresCumulative: "分数为累积制",
     scheduleInfoToggle: "显示更新说明",
     loadingRankStats: "正在加载你的排名和数据",

@@ -4,8 +4,15 @@ import { GAMES_CYBER_EASE, GAMES_CYBER_EASE_SNAP } from "@/app/component/games/c
 /** 一覧先頭のリード（秒） */
 export const RESULT_LIST_LEAD_IN_SEC = 0.04;
 
-/** 上から順に並べる各スロットの間隔（秒） */
-export const RESULT_PAGE_SLOT_GAP_SEC = 0.07;
+/** 上から順に並べる各スロットの間隔（秒）。初回表示を速くするため短め */
+export const RESULT_PAGE_SLOT_GAP_SEC = 0.05;
+
+/**
+ * スロット入場開始の上限（秒）。
+ * 件数が多いと slot*gap が積み上がって後段カードの表示が遅くなるため、
+ * これ以降は同時に出して初回表示の総待ち時間を抑える。
+ */
+export const RESULT_PAGE_SLOT_MAX_DELAY_SEC = 0.5;
 
 /** スロット1件の入場尺（秒） */
 export const RESULT_SLOT_DURATION_SEC = 0.26;
@@ -32,7 +39,10 @@ export const RESULT_DAY_BRACKET_GAP_SEC = 0.035;
 export const RESULT_DAY_METRICS_DELAY_SEC = 0.22;
 
 function slotDelay(slot: number): number {
-  return RESULT_LIST_LEAD_IN_SEC + slot * RESULT_PAGE_SLOT_GAP_SEC;
+  return Math.min(
+    RESULT_LIST_LEAD_IN_SEC + slot * RESULT_PAGE_SLOT_GAP_SEC,
+    RESULT_PAGE_SLOT_MAX_DELAY_SEC,
+  );
 }
 
 /** ページ全体を上から順に（custom = スロット番号）— タブ・フィルタ等 */

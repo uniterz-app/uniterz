@@ -7,6 +7,7 @@ import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDe
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { looksLikeFirestoreUid } from "@/lib/profile/profilePathKey";
 
 export type SummaryForCardsV2 = {
   posts: number;
@@ -37,6 +38,8 @@ export type SummaryForCardsV2 = {
   upsetHitCount: number;
   /** リーグ切替時の現在連勝表示用（NBA: activeWinStreak / WC: streakFootball） */
   activeWinStreak?: number;
+  /** WC overall のライブ最大連勝（サーバーが user_stats_v2 から付与） */
+  maxWinStreak?: number;
 };
 
 export type SummaryRanksV2 = {
@@ -72,6 +75,11 @@ type UseUserStatsContext = {
   wcStage?: WcRankingStage;
   /** false のとき表示中リーグのみ取得（プロフィール初回表示用） */
   prefetchOtherLeague?: boolean;
+  /**
+   * URL の handle/uid。uid が未解決でも handle でサマリーを先行取得し、
+   * useProfile の handle→uid 解決と並行させてウォーターフォールを短縮する。
+   */
+  routeKey?: string | null;
 };
 
 /** ランキング行から成績サマリー + ティア用順位を先読み（プロフィール初回の即時描画用） */
@@ -226,6 +234,59 @@ async function fetchProfilePhase(
   return { summary, summaryRanks, metricValueDeltas };
 }
 
+/** handle/uid のいずれでも phase を取得し、resolvedUid 起点でキャッシュへ投入する先行取得 */
+const bootstrapInflight = new Map<string, Promise<string | null>>();
+
+async function bootstrapStatsByRouteKey(
+  routeKey: string,
+  rankingLeague: RankingLeagueSource,
+  wcStage?: WcRankingStage
+): Promise<string | null> {
+  const safeKey = routeKey.trim();
+  if (!safeKey) return null;
+  const safeWcStage =
+    rankingLeague === "worldcup" ? (wcStage ?? "overall") : undefined;
+  const dedupeKey = `${safeKey}:${rankingLeague}:${safeWcStage ?? "-"}`;
+  const existing = bootstrapInflight.get(dedupeKey);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const qs = new URLSearchParams({ parts: PARTS_SUMMARY, phase: "playoffs" });
+    /** uid 形式ならそのまま uid 解決、それ以外は handle 解決（サーバーで resolveUidByHandleCached） */
+    if (looksLikeFirestoreUid(safeKey)) qs.set("uid", safeKey);
+    else qs.set("handle", safeKey);
+    if (rankingLeague) qs.set("league", rankingLeague);
+    if (safeWcStage) qs.set("wcStage", safeWcStage);
+
+    const res = await fetch(`/api/profile/user-stats?${qs.toString()}`);
+    const json = await res.json();
+    if (!res.ok || !json?.ok) return null;
+    const resolvedUid =
+      typeof json.resolvedUid === "string" ? json.resolvedUid : null;
+    const summary = (json.summary as SummaryForCardsV2) ?? null;
+    if (!resolvedUid || !summary) return resolvedUid;
+
+    mergeCacheEntry(statsCacheKey(resolvedUid, rankingLeague, wcStage), {
+      summary,
+      metricValueDeltas:
+        (json.metricValueDeltas as MyRankMetricValueDeltas | null | undefined) ??
+        null,
+      summaryRanks:
+        (json.summaryRanks as SummaryRanksV2 | null | undefined) ?? null,
+    });
+    return resolvedUid;
+  })();
+
+  bootstrapInflight.set(dedupeKey, promise);
+  try {
+    return await promise;
+  } catch {
+    return null;
+  } finally {
+    bootstrapInflight.delete(dedupeKey);
+  }
+}
+
 async function fetchProfileRanks(
   uid: string,
   rankingLeague: RankingLeagueSource,
@@ -292,6 +353,7 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
   const rankingLeague: RankingLeagueSource = context?.rankingLeague ?? "nba";
   const wcStage = context?.wcStage;
   const prefetchOtherLeague = context?.prefetchOtherLeague !== false;
+  const routeKey = context?.routeKey ?? null;
   const cacheKey = uid ? statsCacheKey(uid, rankingLeague, wcStage) : "";
 
   const [loading, setLoading] = useState(() => {
@@ -352,6 +414,16 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
     setLoading(true);
   }, [cacheKey, uid]);
 
+  /**
+   * uid 未解決でも handle/uid（routeKey）でサマリーを先行取得し、resolvedUid 起点で
+   * キャッシュを温める。useProfile の handle→uid 解決と並行するため、
+   * 「uid 解決 → その後 stats 取得」の直列ウォーターフォールを短縮できる。
+   */
+  useEffect(() => {
+    if (uid || !routeKey) return;
+    void bootstrapStatsByRouteKey(routeKey, rankingLeague, wcStage);
+  }, [uid, routeKey, rankingLeague, wcStage]);
+
   useEffect(() => {
     if (!uid) return;
     prefetchLeagueStats(uid, rankingLeague);
@@ -407,13 +479,35 @@ export function useUserStatsV2(uid?: string | null, context?: UseUserStatsContex
       setSummaryRanks(statsCache.get(cacheKey)?.summaryRanks ?? null);
     }
 
+    /**
+     * ランキング行由来の先読みサマリー（概算・前日比なし・最大連勝なし）は
+     * metricValueDeltas を持たない。背景で本取得して正値・前日比・最大連勝を補完する。
+     */
+    async function refreshPrimedPhase(safeUid: string) {
+      const phaseResult = await fetchProfilePhase(safeUid, rankingLeague, wcStage);
+      if (cancelled || !phaseResult.summary) return;
+      mergeCacheEntry(cacheKey, {
+        summary: phaseResult.summary,
+        metricValueDeltas: phaseResult.metricValueDeltas,
+        ...(phaseResult.summaryRanks != null
+          ? { summaryRanks: phaseResult.summaryRanks }
+          : {}),
+      });
+      setSummary(phaseResult.summary);
+      setMetricValueDeltas(phaseResult.metricValueDeltas);
+      if (phaseResult.summaryRanks != null) {
+        setSummaryRanks(phaseResult.summaryRanks);
+      }
+    }
+
     async function run() {
       const cached = readValidCache(cacheKey);
       if (cached) {
         if (cancelled) return;
         applyCacheEntry(cached, setters);
         if (cached.dailyTrend == null) void ensureTrend(safeUid);
-        void ensureRanks(safeUid);
+        if (cached.metricValueDeltas == null) void refreshPrimedPhase(safeUid);
+        else void ensureRanks(safeUid);
         return;
       }
 

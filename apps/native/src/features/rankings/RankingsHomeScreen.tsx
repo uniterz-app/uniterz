@@ -51,12 +51,9 @@ const VISIBLE_METRICS: MobileMetric[] = [
   "streak",
 ];
 
-function scheduleNoticeForUser(
-  language: RankingsLanguage,
-  countryCode: string | null,
-): string {
+function scheduleNoticeForUser(language: RankingsLanguage): string {
   const lang = (language === "en" ? "en" : "ja") as Language;
-  return getRankingsScheduleNoticeText(lang, countryCode);
+  return getRankingsScheduleNoticeText(lang);
 }
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
@@ -162,7 +159,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         {scheduleNoticeOpen ? (
           <View style={styles.noticeGlass}>
             <Text style={styles.notice} maxFontSizeMultiplier={1.15}>
-              {scheduleNoticeForUser(language, user.countryCode)}
+              {scheduleNoticeForUser(language)}
             </Text>
           </View>
         ) : null}

@@ -200,7 +200,7 @@ const ko: Messages = {
     loadingRankings: "랭킹 로딩 중...",
     nbaPlayoffs: "NBA 플레이오프",
     worldCup: "월드컵",
-    updatedDaily: "랭킹은 매일 {time}에 업데이트됩니다",
+    updatedDaily: "랭킹은 일본 시간 16:00에 업데이트됩니다",
     scoresCumulative: "점수는 누적 방식입니다",
     scheduleInfoToggle: "업데이트 일정 안내 표시",
     loadingRankStats: "순위와 통계를 불러오는 중",
