@@ -328,8 +328,8 @@ const WC_TEAM_PROFILES: Record<string, WcTeamProfile> = {
     nickname: { en: "Samurai Blue", ja: "サムライブルー" },
     confederation: "AFC",
     description: {
-      en: "They stunned the world in 2022 by beating Germany and Spain to top their group, but lost to Croatia on penalties in the round of 16 and again fell short of a first quarterfinal. Captain Wataru Endo anchors a Europe-based core of Zion Suzuki, Takefusa Kubo, Daichi Kamada, Ritsu Doan and Ayase Ueda. Without Kaoru Mitoma, Keito Nakamura, Kubo and Doan are the main attacking options. They can break teams down with the ball as well as on the counter; the goal is a first-ever quarterfinal run.",
-      ja: "前回の2022年大会ではドイツとスペインを倒してグループ首位通過を果たし、世界に大きな衝撃を与えた。一方で、決勝トーナメント1回戦ではクロアチアにPK戦で敗れ、またしてもベスト8の壁を越えられなかった。キャプテンの遠藤航を軸に、鈴木彩艶、久保建英、鎌田大地、堂安律、上田綺世ら欧州組が中心。三笘薫不在なら、中村敬斗、久保、堂安が攻撃の主役候補になる。速攻だけでなく、ボールを持って崩す力も上がっており、目標は日本サッカー初のベスト8以上。",
+      en: "They stunned the world in 2022 by beating Germany and Spain to top their group, but lost to Croatia on penalties in the round of 16 and again fell short of a first quarterfinal. Captain Ko Itakura now leads a Europe-based core of Zion Suzuki, Takefusa Kubo, Daichi Kamada, Ritsu Doan and Ayase Ueda after Wataru Endo's injury withdrawal, with Shuto Machino called up as his replacement. Without Kaoru Mitoma, Keito Nakamura, Kubo and Doan are the main attacking options. They can break teams down with the ball as well as on the counter; the goal is a first-ever quarterfinal run.",
+      ja: "前回の2022年大会ではドイツとスペインを倒してグループ首位通過を果たし、世界に大きな衝撃を与えた。一方で、決勝トーナメント1回戦ではクロアチアにPK戦で敗れ、またしてもベスト8の壁を越えられなかった。遠藤航の離脱後、主将の板倉滉を軸に、鈴木彩艶、久保建英、鎌田大地、堂安律、上田綺世ら欧州組が中心。代わりに町野修斗が追加招集された。三笘薫不在なら、中村敬斗、久保、堂安が攻撃の主役候補になる。速攻だけでなく、ボールを持って崩す力も上がっており、目標は日本サッカー初のベスト8以上。",
     },
     fifaRank: 18,
     wcAppearances: 7,

@@ -12,7 +12,7 @@ export const FOUR_FOUR_TWO_LINEUPS: RawSourceLineup[] = [
   {
     iso3: "jpn",
     formation: "3-4-2-1",
-    players: ["Suzuki", "Tomiyasu", "Itakura", "Ito", "Sugawara", "Doan", "Endo", "Tanaka", "Nakamura", "Kubo", "Ueda"],
+    players: ["Suzuki", "Tomiyasu", "Itakura", "Ito", "Sugawara", "Doan", "Sano", "Tanaka", "Nakamura", "Kubo", "Ueda"],
   },
   {
     iso3: "deu",

@@ -763,7 +763,7 @@ exports.WC_SQUAD_NAME_INDEX = {
         { id: "jpn-taniguchi", name: "Shōgo Taniguchi" },
         { id: "jpn-itakura", name: "Kō Itakura" },
         { id: "jpn-nagatomo", name: "Yūto Nagatomo" },
-        { id: "jpn-endo", name: "Wataru Endo" },
+        { id: "jpn-machino", name: "Shuto Machino" },
         { id: "jpn-tanaka", name: "Ao Tanaka" },
         { id: "jpn-kubo", name: "Takefusa Kubo" },
         { id: "jpn-goto", name: "Keisuke Gotō" },
