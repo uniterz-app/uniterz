@@ -99,7 +99,10 @@ export function useUserStatsDailyTrend(
         const wins = Number(bucket.wins ?? 0);
         const pointsV3 = Number(bucket.pointsSumV3 ?? 0);
         const upsetPoints = Number(bucket.upsetPointsSum ?? 0);
-        const scorePrecisionSum = Number(bucket.scorePrecisionSum ?? 0);
+        const scorePrecisionSum =
+          trendCtx.rankingLeague === "worldcup"
+            ? Number(bucket.exactHitCount ?? 0)
+            : Number(bucket.scorePrecisionSum ?? 0);
 
         return {
           date: typeof d.date === "string" ? d.date : String(d.date ?? ""),

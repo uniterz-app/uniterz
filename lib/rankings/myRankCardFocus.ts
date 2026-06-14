@@ -72,6 +72,7 @@ export const MY_RANK_METRIC_HUD_LABEL: Record<MobileMetric, string> = {
   totalScore: "TOTAL PTS",
   winRate: "WIN%",
   marginPrecision: "PREC",
+  exactHits: "EXACT",
   upsetScore: "UPSET",
   streak: "STREAK",
   goalScorerHits: "SCORER",

@@ -3,6 +3,11 @@
 
 import React from "react";
 import { Menu } from "lucide-react";
+import {
+  CYBER_MENU_ICON_CLASS,
+  CYBER_MENU_ICON_STROKE,
+  cyberMenuButtonClasses,
+} from "@/lib/ui/cyberMenuButton";
 
 type HeaderProfile = {
   displayName?: string;
@@ -106,9 +111,13 @@ export default function MobileProfileHeaderV2({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5"
+                className={cyberMenuButtonClasses("md", "absolute right-3 top-3 z-20")}
               >
-                <Menu className="h-5 w-5" />
+                <Menu
+                  className={CYBER_MENU_ICON_CLASS.md}
+                  strokeWidth={CYBER_MENU_ICON_STROKE}
+                  aria-hidden
+                />
                 {menuUnreadCount > 0 && (
                   <span
                     className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"

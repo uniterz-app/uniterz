@@ -41,11 +41,19 @@ const BULK_METRICS = [
 ] as const satisfies readonly BulkRankingMetric[];
 
 const WC_BULK_METRICS = [
-  ...BULK_METRICS,
+  "totalPoints",
+  "totalExactHits",
+  "totalUpset",
+  "activeWinStreak",
+  "winRate",
   "totalGoalScorerHits",
 ] as const satisfies readonly BulkRankingMetric[];
 
-const METRIC_SET = new Set<string>([...BULK_METRICS, "totalGoalScorerHits"]);
+const METRIC_SET = new Set<string>([
+  ...BULK_METRICS,
+  "totalGoalScorerHits",
+  "totalExactHits",
+]);
 
 function dateKeyJST(now: Date = new Date()): string {
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);

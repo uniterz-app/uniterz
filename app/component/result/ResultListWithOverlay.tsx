@@ -81,7 +81,8 @@ import {
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
 import type { League } from "@/lib/leagues";
-import { LEAGUE_DISPLAY } from "@/lib/leagues";
+import { LEAGUE_DISPLAY, LEAGUES } from "@/lib/leagues";
+import { isWcResultLeague } from "@/lib/result/wcResultUi";
 import {
   resultCardPageSlot,
   resultPageSlotItem,
@@ -90,6 +91,10 @@ import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard"
 import { toMatchCardProps } from "@/lib/games/transform";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
+import {
+  CYBER_FILTER_PANEL_CLASS,
+  cyberFilterBarClasses,
+} from "@/lib/ui/cyberFilterBar";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
 
 const PredictionFormV2 = dynamic(
@@ -147,11 +152,16 @@ function isDefaultResultFilters(f: ResultListFilters): boolean {
 }
 
 /** 詳細パネル内の条件のみ（試合日は外側ブロックのため点に含めない） */
-function hasDetailFilters(f: ResultListFilters): boolean {
+function hasDetailFilters(
+  f: ResultListFilters,
+  leagueTab?: ResultListLeagueTab
+): boolean {
+  const scorePrecisionActive =
+    leagueTab !== LEAGUES.WC && f.scorePrecisionTier !== "all";
   return (
     f.settlement !== "all" ||
     f.specialty !== "none" ||
-    f.scorePrecisionTier !== "all" ||
+    scorePrecisionActive ||
     f.pointsTier !== "all"
   );
 }
@@ -305,6 +315,7 @@ function postMatchesScorePrecisionTier(
   tier: ResultListFilters["scorePrecisionTier"]
 ): boolean {
   if (tier === "all") return true;
+  if (isWcResultLeague(post.league)) return true;
   if (!isFinalResultPost(post)) return false;
   const v = scorePrecisionOf(post);
   if (v === null) return false;
@@ -1001,6 +1012,7 @@ export default function ResultListWithOverlay({
                   ...s,
                   dateFrom: null,
                   dateTo: null,
+                  scorePrecisionTier: "all",
                 }));
               }}
               items={RESULT_LIST_LEAGUE_TABS}
@@ -1037,7 +1049,10 @@ export default function ResultListWithOverlay({
                 ? fc.filterFoldCollapse
                 : fc.filterFoldCollapsedLabel
             }
-            className="flex w-full items-center justify-between gap-2 rounded-xl border border-white/15 bg-black/20 px-3 py-2.5 text-left shadow-[0_4px_24px_rgba(0,0,0,0.25)] backdrop-blur-md backdrop-saturate-150 transition hover:border-cyan-400/35 hover:bg-black/30"
+            className={cyberFilterBarClasses(
+              !isDefaultResultFilters(filters),
+              "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
+            )}
             onClick={() => setFilterPanelOpen((o) => !o)}
           >
             <span className="flex items-center gap-2 text-[11px] font-semibold text-white sm:text-xs">
@@ -1063,7 +1078,8 @@ export default function ResultListWithOverlay({
           {filterPanelOpen ? (
         <motion.div
           className={[
-            "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain rounded-2xl border border-white/18 bg-black/30 px-3 py-3 shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-xl backdrop-saturate-150 sm:px-4 sm:py-3.5",
+            CYBER_FILTER_PANEL_CLASS,
+            "absolute left-0 right-0 top-full z-40 mt-2 max-h-[min(72vh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3 sm:px-4 sm:py-3.5",
             isMobile ? "pb-2" : "pb-3",
           ].join(" ")}
           role="group"
@@ -1288,7 +1304,7 @@ export default function ResultListWithOverlay({
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-[11px] font-semibold text-white sm:text-xs">
                   {fc.detailToggle}
-                  {hasDetailFilters(filters) ? (
+                  {hasDetailFilters(filters, leagueTab) ? (
                     <span
                       className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 align-middle shadow-[0_0_8px_rgba(34,211,238,0.7)]"
                       aria-hidden
@@ -1378,6 +1394,7 @@ export default function ResultListWithOverlay({
             </div>
           </div>
 
+          {leagueTab !== LEAGUES.WC ? (
           <div className="mb-3">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.scorePrecision}
@@ -1412,6 +1429,7 @@ export default function ResultListWithOverlay({
               ))}
             </div>
           </div>
+          ) : null}
 
           <div className="mb-0">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
@@ -2047,13 +2065,18 @@ export default function ResultListWithOverlay({
                         <button
                           type="button"
                           aria-label={m.common.close}
-                          className="absolute right-2 top-2 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90 transition hover:bg-black/75 sm:right-3 sm:top-3"
+                          className={[
+                            "absolute z-30 flex items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90",
+                            isMobile
+                              ? "right-2 top-2 h-8 w-8"
+                              : "right-2 top-2 h-10 w-10 transition hover:bg-black/75 sm:right-3 sm:top-3",
+                          ].join(" ")}
                           onClick={(e) => {
                             e.stopPropagation();
                             closePredictOverlay();
                           }}
                         >
-                          <X size={18} strokeWidth={2.4} />
+                          <X size={isMobile ? 14 : 18} strokeWidth={isMobile ? 2.25 : 2.4} />
                         </button>
                         <CandleChartLoader label={m.results.loadingMatch} />
                       </div>
@@ -2079,13 +2102,18 @@ export default function ResultListWithOverlay({
                         <button
                           type="button"
                           aria-label={m.common.close}
-                          className="absolute right-2 top-2 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90 transition hover:bg-black/75 sm:right-3 sm:top-3"
+                          className={[
+                            "absolute z-30 flex items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90",
+                            isMobile
+                              ? "right-2 top-2 h-8 w-8"
+                              : "right-2 top-2 h-10 w-10 transition hover:bg-black/75 sm:right-3 sm:top-3",
+                          ].join(" ")}
                           onClick={(e) => {
                             e.stopPropagation();
                             closePredictOverlay();
                           }}
                         >
-                          <X size={18} strokeWidth={2.4} />
+                          <X size={isMobile ? 14 : 18} strokeWidth={isMobile ? 2.25 : 2.4} />
                         </button>
                         <MatchCard
                           {...predictOverlay.game}

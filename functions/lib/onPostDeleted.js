@@ -29,7 +29,7 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     document: "posts/{postId}",
     region: "asia-northeast1",
 }, async (event) => {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const snap = event.data;
     if (!snap)
         return;
@@ -77,6 +77,10 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
     const upsetHit = stats.upsetHit === true;
     const upsetPoints = (_e = stats.upsetPoints) !== null && _e !== void 0 ? _e : 0;
     const pointsV3 = (_f = stats.pointsV3) !== null && _f !== void 0 ? _f : 0;
+    const leagueKey = (_g = before.league) !== null && _g !== void 0 ? _g : null;
+    const isWc = String(leagueKey !== null && leagueKey !== void 0 ? leagueKey : "").toLowerCase() === "wc";
+    const exactMatch = stats.exactMatch === true;
+    const goalScorerHit = ((_h = stats.goalScorerBonus) !== null && _h !== void 0 ? _h : 0) > 0;
     await db.runTransaction(async (tx) => {
         var _a, _b, _c, _d, _e;
         const dailySnap = await tx.get(dailyRef);
@@ -92,7 +96,9 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
             upsetHitCount: firestore_2.FieldValue.increment(upsetHit ? -1 : 0),
             upsetPickCount: firestore_2.FieldValue.increment(hadUpsetGame ? -1 : 0),
             upsetPointsSum: firestore_2.FieldValue.increment(-upsetPoints),
-            scorePrecisionSum: firestore_2.FieldValue.increment(-scorePrecision),
+            scorePrecisionSum: firestore_2.FieldValue.increment(isWc ? 0 : -scorePrecision),
+            exactHitCount: firestore_2.FieldValue.increment(isWc && exactMatch ? -1 : 0),
+            goalScorerHitCount: firestore_2.FieldValue.increment(goalScorerHit ? -1 : 0),
             pointsSumV3: firestore_2.FieldValue.increment(-pointsV3),
             updatedAt: firestore_2.FieldValue.serverTimestamp(),
         };
@@ -100,9 +106,9 @@ exports.onPostDeletedV2 = (0, firestore_1.onDocumentDeleted)({
         if (countRank) {
             tx.set(dailyRef, { ranking: dec }, { merge: true });
         }
-        const leagueKey = (_a = before.league) !== null && _a !== void 0 ? _a : null;
-        if (leagueKey) {
-            tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
+        const leagueKeyInner = (_a = before.league) !== null && _a !== void 0 ? _a : null;
+        if (leagueKeyInner) {
+            tx.set(dailyRef, { leagues: { [leagueKeyInner]: dec } }, { merge: true });
         }
         const gameTeamIds = uniqueGameTeamIds((_c = (_b = marker === null || marker === void 0 ? void 0 : marker.homeTeamId) !== null && _b !== void 0 ? _b : teamIdFromSide(before.home)) !== null && _c !== void 0 ? _c : null, (_e = (_d = marker === null || marker === void 0 ? void 0 : marker.awayTeamId) !== null && _d !== void 0 ? _d : teamIdFromSide(before.away)) !== null && _e !== void 0 ? _e : null);
         const countTeams = (marker === null || marker === void 0 ? void 0 : marker.countedForRanking) !== false && countRank;

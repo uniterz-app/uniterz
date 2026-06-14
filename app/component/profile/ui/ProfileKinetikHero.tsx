@@ -17,6 +17,7 @@ import type { ResolvedBadge } from "@/lib/profile/useProfileBadges";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 
 type Props = {
   layout: "web" | "mobile";
@@ -101,6 +102,7 @@ export default function ProfileKinetikHero({
           isPro={profile.plan === "pro"}
           shareHandle={profile.handle}
           metricValueDeltas={metricValueDeltas}
+          rankingLeague={profileStatsContext.rankingLeague}
         />
       )}
     </div>

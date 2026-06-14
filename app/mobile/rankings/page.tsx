@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import {
-  METRICS,
   type MobileMetric,
   type RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
@@ -56,7 +55,7 @@ import {
 } from "@/lib/navigation/rankingsProfileFrom";
 import BracketLeaderboardSection from "@/app/component/leaderboards/BracketLeaderboardSection";
 import { getCurrentPlayoffSeason } from "@/lib/playoff-bracket-config";
-import { Menu } from "lucide-react";
+import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import { isRankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { isWcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
@@ -70,7 +69,7 @@ import {
 } from "@/lib/rankings/rankingsPageShared";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import { useProgressiveRenderCount } from "@/lib/hooks/useProgressiveRenderCount";
-import { visibleMetricsForLeague } from "@/lib/rankings/wcVisibleMetrics";
+import { visibleMetricsForLeague, buildRankingTabMetrics } from "@/lib/rankings/wcVisibleMetrics";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
@@ -122,8 +121,8 @@ export default function MobileRankingsPage() {
   }, [metric, visibleMetrics]);
 
   const metricItems = useMemo(
-    () => METRICS.filter((m) => visibleMetrics.includes(m.key)),
-    [visibleMetrics]
+    () => buildRankingTabMetrics(rankingLeague),
+    [rankingLeague]
   );
 
   const { listReady, personalPending, myUid, byMetric, myMetricValueDeltas, ensureMetric } =
@@ -172,27 +171,33 @@ export default function MobileRankingsPage() {
     [metric, myRawRow]
   );
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
+  const precApiKey =
+    rankingLeague === "worldcup" ? "totalExactHits" : "totalPrecision";
   const myMiniMetrics = useMemo(
     () =>
       buildMyRankMiniMetrics(
         myStatsRow,
         {
           ptsRows: byMetric?.totalPoints?.rows as RankingRow[] | undefined,
-          precRows: byMetric?.totalPrecision?.rows as RankingRow[] | undefined,
+          precRows: byMetric?.[precApiKey]?.rows as RankingRow[] | undefined,
           upsetRows: byMetric?.totalUpset?.rows as RankingRow[] | undefined,
         },
-        myMetricValueDeltas
+        myMetricValueDeltas,
+        rankingLeague
       ),
     [
       myStatsRow,
       myMetricValueDeltas,
       byMetric?.totalPoints?.rows,
+      byMetric?.totalExactHits?.rows,
       byMetric?.totalPrecision?.rows,
       byMetric?.totalUpset?.rows,
+      rankingLeague,
+      precApiKey,
     ]
   );
 
-  const cardBarsReady = isMyRankMiniMetricsReady(byMetric);
+  const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeague);
 
   const winRateMinPosts = computeWinRateMinPosts(
     rankingLeague,
@@ -241,14 +246,11 @@ export default function MobileRankingsPage() {
 
       <div className="max-w-full space-y-3 overflow-x-clip px-3 pt-2">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <CyberMenuButton
+              size="sm"
               onClick={() => setRankingsDrawerOpen(true)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/85 transition-colors hover:border-cyan-300/35 hover:bg-white/10 hover:text-white"
               aria-label={m.games.openMenu}
-            >
-              <Menu className="h-4 w-4" strokeWidth={2.25} />
-            </button>
+            />
             <div className="flex min-w-0 flex-1 justify-center">
               <RankingsPageTitleCyber
                 variant="horizon-chrome"

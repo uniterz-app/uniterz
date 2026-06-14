@@ -35,6 +35,14 @@ export const RANKING_METRIC_ACCENT: Record<string, RankingMetricAccent> = {
     bg: "rgba(167,139,250,0.1)",
     bar: { hi: "#ddd6fe", lo: "#7c3aed", glow: "rgba(139,92,246,0.5)" },
   },
+  exactHits: {
+    label: "#c4b5fd",
+    labelDim: "rgba(196,181,253,0.42)",
+    border: "rgba(167,139,250,0.92)",
+    value: "#f5f3ff",
+    bg: "rgba(167,139,250,0.1)",
+    bar: { hi: "#ddd6fe", lo: "#7c3aed", glow: "rgba(139,92,246,0.5)" },
+  },
   upsetScore: {
     label: "#fb923c",
     labelDim: "rgba(251,146,60,0.42)",

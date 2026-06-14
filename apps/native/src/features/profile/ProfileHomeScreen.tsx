@@ -46,6 +46,7 @@ import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
 import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
 import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
+import CyberMenuButton from "../../ui/CyberMenuButton";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
 import ProfileMobileStackModal from "./mobileScreens/ProfileMobileStackModal";
 import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
@@ -697,20 +698,21 @@ export default function ProfileHomeScreen({
             ) : null}
           </View>
 
-          <Pressable
-            style={({ pressed }) => [styles.menuSquare, pressed && styles.menuSquarePressed]}
+          <CyberMenuButton
+            size="md"
+            style={styles.menuSquareOffset}
             onPress={() => setMenuOpen(true)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <MaterialCommunityIcons name="menu" size={15} color="rgba(248,250,252,0.92)" />
-            {menuUnreadCount > 0 ? (
-              <View style={styles.menuBadge}>
-                <Text style={styles.menuBadgeText}>
-                  {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
+            accessibilityLabel={isJa ? "メニュー" : "Menu"}
+            badge={
+              menuUnreadCount > 0 ? (
+                <View style={styles.menuBadge}>
+                  <Text style={styles.menuBadgeText}>
+                    {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
         </View>
 
         {resolvedBadges.length > 0 ? (
@@ -1168,20 +1170,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.sm,
   },
-  menuSquare: {
-    position: "relative",
+  menuSquareOffset: {
     marginTop: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(15,21,38,0.92)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuSquarePressed: {
-    backgroundColor: "rgba(25,35,55,0.96)",
   },
   menuBadge: {
     position: "absolute",

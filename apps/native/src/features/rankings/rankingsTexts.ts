@@ -7,6 +7,8 @@ export function metricLabel(metric: MobileMetric, language: RankingsLanguage): s
   if (metric === "totalScore") return ja ? "総合スコア" : "Total Score";
   if (metric === "winRate") return ja ? "勝率" : "Win Rate";
   if (metric === "marginPrecision") return ja ? "スコア精度" : "Precision";
+  if (metric === "exactHits") return ja ? "完全的中" : "Exact Hits";
+  if (metric === "goalScorerHits") return ja ? "得点者的中" : "Goal Scorers";
   if (metric === "upsetScore") return ja ? "アップセット" : "Upset";
   return ja ? "連勝" : "Streak";
 }
@@ -14,7 +16,7 @@ export function metricLabel(metric: MobileMetric, language: RankingsLanguage): s
 export function rankingsTexts(language: RankingsLanguage) {
   const ja = language === "ja";
   return {
-    title: "RANKINGS",
+    title: "NBA PLAYOFF",
     scheduleInfoToggle: ja
       ? "更新スケジュールの説明を表示"
       : "Show ranking update schedule",

@@ -23,6 +23,12 @@ export function formatListMetricDayDelta(
     return null;
   }
 
+  if (metric === "exactHits") {
+    const n = Math.round(abs);
+    if (n === 0) return null;
+    return `${sign}${n}`;
+  }
+
   const formatted = abs.toFixed(1);
   if (formatted === "0.0") return null;
   return `${sign}${formatted}`;
@@ -41,6 +47,10 @@ export function listRowAvgText(
   }
   if (metric === "marginPrecision") {
     return `AVG ${formatMetricDecimals(row.avgMarginPrecision ?? 0, 1)}`;
+  }
+  if (metric === "exactHits") {
+    const avg = row.avgMarginPrecision ?? 0;
+    return avg > 0 ? `AVG ${Math.round(avg)}` : null;
   }
   if (metric === "upsetScore") {
     return `AVG ${formatMetricDecimals(row.avgUpsetScore ?? 0, 1)}`;

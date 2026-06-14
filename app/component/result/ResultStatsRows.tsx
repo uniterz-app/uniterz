@@ -6,6 +6,7 @@ import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import ResultStatRatingBar from "@/app/component/result/ResultStatRatingBar";
+import { resultShowsScorePrecision } from "@/lib/result/wcResultUi";
 import {
   RESULT_STAT_ROW_GRID_COMPACT,
   RESULT_STAT_ROW_GRID_DEFAULT,
@@ -67,6 +68,8 @@ export default function ResultStatsRows({
       ? "text-red-400"
       : "text-white";
 
+  const showScorePrecision = resultShowsScorePrecision(post.league);
+
   const statRows = useMemo(() => {
     const scorePrecision = toNumber(post.stats?.scorePrecision, 0);
     const upsetPoints = toNumber(
@@ -75,14 +78,18 @@ export default function ResultStatsRows({
     );
     const pointsV3 = toNumber((post.stats as { pointsV3?: unknown })?.pointsV3, 0);
 
-    return [
-      {
-        key: "scorePrecision" as const,
-        label: m.results.scorePrecisionLabel,
-        value: scorePrecision,
-        barMax: 10,
-        format: (v: number) => v.toFixed(1),
-      },
+    const rows = [
+      ...(showScorePrecision
+        ? [
+            {
+              key: "scorePrecision" as const,
+              label: m.results.scorePrecisionLabel,
+              value: scorePrecision,
+              barMax: 10,
+              format: (v: number) => v.toFixed(1),
+            },
+          ]
+        : []),
       {
         key: "upsetPoints" as const,
         label: m.results.upsetPointsLabel,
@@ -99,7 +106,9 @@ export default function ResultStatsRows({
         format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
       },
     ];
-  }, [post.stats, m, hadUpsetGame]);
+
+    return rows;
+  }, [post.stats, post.league, m, hadUpsetGame, showScorePrecision]);
 
   const barAnimateMs = isMobile ? 480 : 520;
   const barStaggerMs = isMobile ? 80 : 90;

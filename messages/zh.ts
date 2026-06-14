@@ -171,6 +171,8 @@ const zh: Messages = {
     allTimeMaxStreakNote: "这是你的全时段最高连胜记录。不受7天/30天筛选的影响。",
     scorePrecisionTooltip:
       "预测分数与实际分数的接近程度（0–10），期间内的累计。衡量比分预测的精度。",
+    exactHitTooltip:
+      "预测比分与最终结果完全一致的场次（期间内累计）。",
     upsetTooltip:
       "仅在发生冷门且你以少数派预测命中时加分。期间内的累计。",
     maxStreakTooltip:
@@ -185,6 +187,7 @@ const zh: Messages = {
     totalScore: "总分",
     winRate: "胜率",
     scorePrecision: "比分精度",
+    exactHits: "完全猜中",
     upsetScore: "冷门得分",
     goalScorerHits: "Goal Scorers",
     winStreak: "连胜",
@@ -226,7 +229,7 @@ const zh: Messages = {
     entriesOf: "/ {n}",
     categoryPlayoffs: "Playoffs",
     categoryBracket: "Bracket",
-    pageTitleRankings: "RANKINGS",
+    pageTitleRankings: "NBA PLAYOFF",
     pageTitleWorldCup: "WORLD CUP",
     roundTabsLabel: "Playoff rounds",
     stageTabsLabel: "World Cup stages",

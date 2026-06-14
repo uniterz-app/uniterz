@@ -269,6 +269,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                     range="30d"
                     allowAll={currentIsProView}
                     language={language}
+                    rankingLeague={rankingLeague}
                   />
                 )}
               </div>

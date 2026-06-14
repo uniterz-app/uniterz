@@ -19,6 +19,13 @@ export function metricNum(r: RankingRowWithCountry, metric: MobileMetric) {
     };
   }
 
+  if (metric === "exactHits") {
+    return {
+      n: Math.round(r.exactHits ?? r.marginPrecisionScore ?? 0),
+      d: 0,
+    };
+  }
+
   if (metric === "upsetScore") {
     return {
       n: roundMetricDecimals(r.upsetScore ?? 0, 1),
@@ -57,6 +64,10 @@ export function getMetricSubText(
 
   if (metric === "marginPrecision") {
     return `avg ${formatMetricDecimals(r.avgMarginPrecision ?? 0, 1)}`;
+  }
+
+  if (metric === "exactHits") {
+    return lang === "en" ? `Posts ${r.posts ?? 0}` : `投稿 ${r.posts ?? 0}`;
   }
 
   if (metric === "upsetScore") {

@@ -173,6 +173,8 @@ const ar: Messages = {
     allTimeMaxStreakNote: "هذا هو أفضل سجل انتصارات لك على الإطلاق. لا يتغير بفلاتر 7 أيام / 30 يومًا.",
     scorePrecisionTooltip:
       "يقيس مدى قرب نتيجتك المتوقعة من النتيجة الفعلية (0–10)، مجموعة للفترة.",
+    exactHitTooltip:
+      "عدد المباريات التي تطابقت فيها نتيجتك المتوقعة مع النتيجة النهائية تمامًا.",
     upsetTooltip:
       "يُمنح فقط عند حدوث مفاجأة وتوقعت بشكل صحيح كأقلية. تراكمي للفترة.",
     maxStreakTooltip:
@@ -188,6 +190,7 @@ const ar: Messages = {
     totalScore: "النقاط الإجمالية",
     winRate: "نسبة الفوز",
     scorePrecision: "دقة النتيجة",
+    exactHits: "توقعات دقيقة",
     upsetScore: "نقاط المفاجآت",
     goalScorerHits: "Goal Scorers",
     winStreak: "سلسلة الانتصارات",
@@ -229,7 +232,7 @@ const ar: Messages = {
     entriesOf: "/ {n}",
     categoryPlayoffs: "Playoffs",
     categoryBracket: "Bracket",
-    pageTitleRankings: "RANKINGS",
+    pageTitleRankings: "NBA PLAYOFF",
     pageTitleWorldCup: "WORLD CUP",
     roundTabsLabel: "Playoff rounds",
     stageTabsLabel: "World Cup stages",

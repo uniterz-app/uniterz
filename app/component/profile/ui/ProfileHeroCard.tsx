@@ -3,6 +3,11 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Flame, Menu } from "lucide-react";
 import {
+  CYBER_MENU_ICON_CLASS,
+  CYBER_MENU_ICON_STROKE,
+  cyberMenuButtonClasses,
+} from "@/lib/ui/cyberMenuButton";
+import {
   useCallback,
   useEffect,
   useRef,
@@ -477,7 +482,7 @@ export default function ProfileHeroCard({
   const settingsMenuButton = canOpenSettings ? (
     <motion.button
       type="button"
-      className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5"
+      className={cyberMenuButtonClasses("md")}
       onClick={onOpenSettings}
       initial={
         playEntrance && !reduceMotion
@@ -498,7 +503,7 @@ export default function ProfileHeroCard({
       }}
       aria-label="Menu"
     >
-      <Menu className="h-4 w-4" />
+      <Menu className={CYBER_MENU_ICON_CLASS.md} strokeWidth={CYBER_MENU_ICON_STROKE} aria-hidden />
       {menuUnreadCount > 0 && (
         <span
           className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"

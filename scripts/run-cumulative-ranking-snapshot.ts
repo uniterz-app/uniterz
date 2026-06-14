@@ -40,9 +40,10 @@ const WC_STAGES = ["overall", "qualifying", "main"] as const;
 const WC_METRICS = [
   "winRate",
   "totalPoints",
-  "totalPrecision",
+  "totalExactHits",
   "totalUpset",
   "activeWinStreak",
+  "totalGoalScorerHits",
 ] as const;
 
 (async () => {

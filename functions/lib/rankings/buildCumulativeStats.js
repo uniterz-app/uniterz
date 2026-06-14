@@ -21,14 +21,17 @@ function getTodayJST() {
     return toDateKeyJST(new Date());
 }
 function addRankingTotals(base, inc) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
+    const precisionInc = inc.precisionFromExactHits
+        ? (_a = inc.exactHitCount) !== null && _a !== void 0 ? _a : 0
+        : (_b = inc.scorePrecisionSum) !== null && _b !== void 0 ? _b : 0;
     return {
-        totalPosts: base.totalPosts + ((_a = inc.posts) !== null && _a !== void 0 ? _a : 0),
-        totalWins: base.totalWins + ((_b = inc.wins) !== null && _b !== void 0 ? _b : 0),
-        totalPoints: base.totalPoints + ((_c = inc.pointsSumV3) !== null && _c !== void 0 ? _c : 0),
-        totalUpset: base.totalUpset + ((_d = inc.upsetPointsSum) !== null && _d !== void 0 ? _d : 0),
-        totalPrecision: base.totalPrecision + ((_e = inc.scorePrecisionSum) !== null && _e !== void 0 ? _e : 0),
-        totalGoalScorerHits: base.totalGoalScorerHits + ((_f = inc.goalScorerHitCount) !== null && _f !== void 0 ? _f : 0),
+        totalPosts: base.totalPosts + ((_c = inc.posts) !== null && _c !== void 0 ? _c : 0),
+        totalWins: base.totalWins + ((_d = inc.wins) !== null && _d !== void 0 ? _d : 0),
+        totalPoints: base.totalPoints + ((_e = inc.pointsSumV3) !== null && _e !== void 0 ? _e : 0),
+        totalUpset: base.totalUpset + ((_f = inc.upsetPointsSum) !== null && _f !== void 0 ? _f : 0),
+        totalPrecision: base.totalPrecision + precisionInc,
+        totalGoalScorerHits: base.totalGoalScorerHits + ((_g = inc.goalScorerHitCount) !== null && _g !== void 0 ? _g : 0),
     };
 }
 /* =========================================================
@@ -206,8 +209,9 @@ async function buildCumulativeStats() {
                     wins: num(src === null || src === void 0 ? void 0 : src.wins),
                     pointsSumV3: num(src === null || src === void 0 ? void 0 : src.pointsSumV3),
                     upsetPointsSum: num(src === null || src === void 0 ? void 0 : src.upsetPointsSum),
-                    scorePrecisionSum: num(src === null || src === void 0 ? void 0 : src.scorePrecisionSum),
+                    exactHitCount: num(src === null || src === void 0 ? void 0 : src.exactHitCount),
                     goalScorerHitCount: num(src === null || src === void 0 ? void 0 : src.goalScorerHitCount),
+                    precisionFromExactHits: true,
                 });
                 nextByWc[wk] = Object.assign(Object.assign({}, nextWRaw), { winRate: nextWRaw.totalPosts > 0
                         ? nextWRaw.totalWins / nextWRaw.totalPosts

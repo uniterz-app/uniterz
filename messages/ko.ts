@@ -171,6 +171,8 @@ const ko: Messages = {
     allTimeMaxStreakNote: "전체 기간(All-time) 최고 연승 기록입니다. 7일/30일 필터와 연동되지 않습니다.",
     scorePrecisionTooltip:
       "예측 점수와 실제 점수의 근접도를 0–10으로 평가하여 기간 내 합계를 산출합니다.",
+    exactHitTooltip:
+      "예측 점수가 결과와 완전히 일치한 경기 수(기간 내 누적).",
     upsetTooltip:
       "이변이 발생한 경기에서 소수파 예측으로 적중했을 때만 가점됩니다. 기간 내 누적입니다.",
     maxStreakTooltip:
@@ -185,6 +187,7 @@ const ko: Messages = {
     totalScore: "총점",
     winRate: "승률",
     scorePrecision: "점수 정확도",
+    exactHits: "완전 적중",
     upsetScore: "이변 점수",
     goalScorerHits: "Goal Scorers",
     winStreak: "연승",
@@ -226,7 +229,7 @@ const ko: Messages = {
     entriesOf: "/ {n}",
     categoryPlayoffs: "Playoffs",
     categoryBracket: "Bracket",
-    pageTitleRankings: "RANKINGS",
+    pageTitleRankings: "NBA PLAYOFF",
     pageTitleWorldCup: "WORLD CUP",
     roundTabsLabel: "Playoff rounds",
     stageTabsLabel: "World Cup stages",

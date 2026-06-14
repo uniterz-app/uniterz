@@ -23,10 +23,14 @@ type BulkFetchResult = {
 const REFETCH_ALL_METRICS_NBA =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
 const REFETCH_ALL_METRICS_WC =
-  "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
+  "totalPoints,totalExactHits,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
 const INITIAL_RANKING_METRICS = "totalPoints";
-const DEFERRED_RANKING_METRICS = [
+const DEFERRED_RANKING_METRICS_NBA = [
   "totalPrecision",
+  "totalUpset",
+] as const;
+const DEFERRED_RANKING_METRICS_WC = [
+  "totalExactHits",
   "totalUpset",
 ] as const;
 
@@ -531,7 +535,10 @@ export function useCumulativeRankingsBulk(
     let cancelled = false;
     const loadDeferred = () => {
       if (cancelled) return;
-      for (const metric of DEFERRED_RANKING_METRICS) {
+      const deferred = wcStage
+        ? DEFERRED_RANKING_METRICS_WC
+        : DEFERRED_RANKING_METRICS_NBA;
+      for (const metric of deferred) {
         void ensureMetric(metric);
       }
     };

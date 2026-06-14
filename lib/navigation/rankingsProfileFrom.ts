@@ -31,6 +31,7 @@ const METRIC_SET: ReadonlySet<MobileMetric> = new Set([
   "totalScore",
   "winRate",
   "marginPrecision",
+  "exactHits",
   "upsetScore",
   "streak",
   "goalScorerHits",

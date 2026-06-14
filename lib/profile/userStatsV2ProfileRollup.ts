@@ -67,6 +67,7 @@ type Bucket = {
   upsetOpportunityCount: number;
   upsetPointsSum: number;
   scorePrecisionSum: number;
+  exactHitCount: number;
   pointsSumV3: number;
   upsetBonusSum: number;
   streakBonusSum: number;
@@ -96,6 +97,7 @@ const empty = (): Bucket => ({
   upsetOpportunityCount: 0,
   upsetPointsSum: 0,
   scorePrecisionSum: 0,
+  exactHitCount: 0,
   pointsSumV3: 0,
   upsetBonusSum: 0,
   streakBonusSum: 0,
@@ -115,13 +117,27 @@ function mergeBucket(base: Bucket, v?: Partial<Bucket> | null): Bucket {
   base.upsetOpportunityCount += safeInt(v.upsetOpportunityCount);
   base.upsetPointsSum += safeNum(v.upsetPointsSum);
   base.scorePrecisionSum += safeNum(v.scorePrecisionSum);
+  base.exactHitCount += safeInt(v.exactHitCount);
   base.pointsSumV3 += safeNum(v.pointsSumV3);
   base.upsetBonusSum += safeNum(v.upsetBonusSum);
   base.streakBonusSum += safeNum(v.streakBonusSum);
   return base;
 }
 
-function computeForCards(b: Bucket): Omit<SummaryForCardsRollup, "fullPosts"> {
+function precisionSumFromBucket(
+  bucket: Partial<Bucket>,
+  ctx: ProfileDailyTrendContext
+): number {
+  if (ctx.rankingLeague === "worldcup") {
+    return safeInt(bucket.exactHitCount);
+  }
+  return safeNum(bucket.scorePrecisionSum);
+}
+
+function computeForCards(
+  b: Bucket,
+  ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
+): Omit<SummaryForCardsRollup, "fullPosts"> {
   const posts = safeInt(b.posts);
   const wins = safeInt(b.wins);
   const pointsSumV3 = safeNum(b.pointsSumV3);
@@ -136,7 +152,7 @@ function computeForCards(b: Bucket): Omit<SummaryForCardsRollup, "fullPosts"> {
     recent3Posts: 0,
     wins,
     winRate: posts ? wins / posts : 0,
-    scorePrecisionSum: safeNum(b.scorePrecisionSum),
+    scorePrecisionSum: precisionSumFromBucket(b, ctx),
     upsetPointsSum: safeNum(b.upsetPointsSum),
     pointsSumV3,
     upsetChanceCount: safeInt(b.upsetOpportunityCount),
@@ -150,7 +166,8 @@ function computeForCards(b: Bucket): Omit<SummaryForCardsRollup, "fullPosts"> {
 function windowFromSnaps(
   snaps: DocumentSnapshot[],
   from: number,
-  toExclusive: number
+  toExclusive: number,
+  ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
 ): SummaryForCardsRollup {
   const bucket = empty();
   for (let i = from; i < toExclusive && i < snaps.length; i++) {
@@ -160,22 +177,23 @@ function windowFromSnaps(
       : undefined;
     mergeBucket(bucket, raw ?? null);
   }
-  const computed = computeForCards(bucket);
+  const computed = computeForCards(bucket, ctx);
   return { fullPosts: computed.posts, ...computed };
 }
 
 /** snaps[0]=今日 … snaps[29]=29日前（APIルートと同じ並び） */
 export function aggregateRecentWindowsFromDailySnaps(
-  snaps: DocumentSnapshot[]
+  snaps: DocumentSnapshot[],
+  ctx: ProfileDailyTrendContext = { rankingLeague: "nba" }
 ): {
   recent3: SummaryForCardsRollup;
   seven: SummaryForCardsRollup;
   thirty: SummaryForCardsRollup;
 } {
   return {
-    recent3: windowFromSnaps(snaps, 0, 3),
-    seven: windowFromSnaps(snaps, 0, 7),
-    thirty: windowFromSnaps(snaps, 0, 30),
+    recent3: windowFromSnaps(snaps, 0, 3, ctx),
+    seven: windowFromSnaps(snaps, 0, 7, ctx),
+    thirty: windowFromSnaps(snaps, 0, 30, ctx),
   };
 }
 
@@ -223,7 +241,7 @@ export function dailyTrendRowFromDailySnap(
   const wins = safeInt(bucket.wins);
   const pointsV3 = safeNum(bucket.pointsSumV3);
   const upsetPoints = safeNum(bucket.upsetPointsSum);
-  const scorePrecisionSum = safeNum(bucket.scorePrecisionSum);
+  const scorePrecisionSum = precisionSumFromBucket(bucket, ctx);
 
   return {
     date,

@@ -63,7 +63,13 @@ const HIT_FRAME_FLASH_DELAY_AFTER_UI_MS = 200;
 const HIT_FRAME_FLASH_IN_MS = 120;
 const HIT_FRAME_FLASH_OUT_MS = 200;
 
-export type ResultPostEntranceBadge = "hit" | "miss" | "upset" | "streak" | null;
+export type ResultPostEntranceBadge =
+  | "hit"
+  | "perfect"
+  | "miss"
+  | "upset"
+  | "streak"
+  | null;
 
 export type ResultStatRowEntranceMeta = {
   /** true のときバーは伸ばさず数値のみフェード */
@@ -203,7 +209,7 @@ export function useResultPostCardEntrance({
   statRowMeta: readonly [ResultStatRowEntranceMeta, ResultStatRowEntranceMeta, ResultStatRowEntranceMeta];
 }) {
   const skip = !entranceEnabled || reduceMotion;
-  const isHit = badge === "hit";
+  const isHit = badge === "hit" || badge === "perfect";
   const isMiss = badge === "miss";
   const d = rowIndex * RESULT_CARD_STAGGER_MS;
 

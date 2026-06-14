@@ -173,6 +173,8 @@ const de: Messages = {
     allTimeMaxStreakNote: "Dies ist deine beste Siegesserie aller Zeiten. Sie ändert sich nicht mit dem 7/30-Tage-Filter.",
     scorePrecisionTooltip:
       "Misst, wie nah dein vorhergesagtes Ergebnis am tatsächlichen lag (0–10), summiert für den Zeitraum.",
+    exactHitTooltip:
+      "Anzahl der Spiele, bei denen dein vorhergesagtes Ergebnis exakt dem Endergebnis entsprach.",
     upsetTooltip:
       "Wird nur vergeben, wenn eine Überraschung eintritt und du mit einer Minderheitsvorhersage richtig lagst. Kumulativ für den Zeitraum.",
     maxStreakTooltip:
@@ -188,6 +190,7 @@ const de: Messages = {
     totalScore: "Gesamtpunktzahl",
     winRate: "Trefferquote",
     scorePrecision: "Ergebnisgenauigkeit",
+    exactHits: "Exakte Treffer",
     upsetScore: "Überraschungspunktzahl",
     goalScorerHits: "Goal Scorers",
     winStreak: "Siegesserie",
@@ -229,7 +232,7 @@ const de: Messages = {
     entriesOf: "/ {n}",
     categoryPlayoffs: "Playoffs",
     categoryBracket: "Bracket",
-    pageTitleRankings: "RANKINGS",
+    pageTitleRankings: "NBA PLAYOFF",
     pageTitleWorldCup: "WORLD CUP",
     roundTabsLabel: "Playoff rounds",
     stageTabsLabel: "World Cup stages",

@@ -2,6 +2,10 @@
 
 import { useCallback, useState } from "react";
 import { Menu } from "lucide-react";
+import {
+  CYBER_MENU_ICON_CLASS,
+  CYBER_MENU_ICON_STROKE,
+} from "@/lib/ui/cyberMenuButton";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   KINETIK_GREEN,
@@ -32,6 +36,7 @@ import {
   profileMetricDeltaTone,
 } from "@/lib/profile/formatProfileMetricDelta";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -396,6 +401,7 @@ function getKinetikMetricCopy(isJa: boolean) {
   return {
     dayDeltaTitle: isJa ? "前日比" : "Day-over-day",
     ptsUnit: "pts",
+    matchUnit: isJa ? "試合" : "matches",
     winRateUnitHint: "%",
     cumulativeUnitHint: isJa ? "累計" : "CUM",
     winRateTooltip: isJa
@@ -407,6 +413,9 @@ function getKinetikMetricCopy(isJa: boolean) {
     scorePrecisionTooltip: isJa
       ? "予想スコアと実際スコアの近さを0〜10で評価し、期間内の合計を算出。"
       : "Sum of 0–10 score-accuracy ratings per settled pick in the period.",
+    exactHitTooltip: isJa
+      ? "予想スコアが結果と完全一致した試合数（期間内の累計）。"
+      : "Number of matches where your predicted score exactly matched the final score.",
     upsetTooltip: isJa
       ? "アップセットが起きた試合で少数派を当てたときだけ加点。期間内の累計。"
       : "Bonus points when you picked the minority side on an upset. Period total.",
@@ -445,6 +454,8 @@ type Props = {
   isPro?: boolean;
   shareHandle?: string;
   metricValueDeltas?: MyRankMetricValueDeltas | null;
+  /** WC プロフィールでは完全的中（整数）を表示 */
+  rankingLeague?: RankingLeagueSource;
 };
 
 export default function ProfileEditKinetikPanel({
@@ -470,8 +481,10 @@ export default function ProfileEditKinetikPanel({
   isPro = false,
   shareHandle,
   metricValueDeltas = null,
+  rankingLeague = "nba",
 }: Props) {
   const isJa = language === "ja";
+  const isWcProfile = rankingLeague === "worldcup";
   const reduceMotion = useReducedMotion() === true;
   const metricCopy = getKinetikMetricCopy(isJa);
   const [shareCopied, setShareCopied] = useState(false);
@@ -550,7 +563,8 @@ export default function ProfileEditKinetikPanel({
   );
   const precisionDelta = formatProfileMetricDayDelta(
     "scorePrecision",
-    metricValueDeltas?.totalPrecision
+    metricValueDeltas?.totalPrecision,
+    { integer: isWcProfile }
   );
   const upsetDelta = formatProfileMetricDayDelta(
     "upset",
@@ -602,18 +616,38 @@ export default function ProfileEditKinetikPanel({
         )}
       />
       <MetricCard
-        label={isJa ? "スコア精度" : "PRECISION"}
-        value={formatMetricDecimals(stats.scorePrecision, 1)}
+        label={
+          isWcProfile
+            ? isJa
+              ? "完全的中"
+              : "EXACT HITS"
+            : isJa
+              ? "スコア精度"
+              : "PRECISION"
+        }
+        value={
+          isWcProfile
+            ? String(Math.max(0, Math.round(stats.scorePrecision)))
+            : formatMetricDecimals(stats.scorePrecision, 1)
+        }
         accent="cyan"
         filledSegs={0}
         layout={layout}
         delay={0.12}
         showSegBar={false}
-        unit={metricCopy.ptsUnit}
+        unit={isWcProfile ? metricCopy.matchUnit : metricCopy.ptsUnit}
         unitHint={metricCopy.cumulativeUnitHint}
-        tooltip={metricCopy.scorePrecisionTooltip}
+        tooltip={
+          isWcProfile
+            ? metricCopy.exactHitTooltip
+            : metricCopy.scorePrecisionTooltip
+        }
         dayDelta={
-          precisionDelta ? `${precisionDelta} ${metricCopy.ptsUnit}` : null
+          precisionDelta
+            ? isWcProfile
+              ? `${precisionDelta} ${metricCopy.matchUnit}`
+              : `${precisionDelta} ${metricCopy.ptsUnit}`
+            : null
         }
         dayDeltaTitle={dayDeltaTitle}
         dayDeltaTone={profileMetricDeltaTone(
@@ -652,7 +686,11 @@ export default function ProfileEditKinetikPanel({
         onClick={() => onOpenMenu?.()}
         aria-label={isJa ? "メニュー" : "Menu"}
       >
-        <Menu className="h-4 w-4" strokeWidth={2.25} />
+        <Menu
+          className={CYBER_MENU_ICON_CLASS.sm}
+          strokeWidth={CYBER_MENU_ICON_STROKE}
+          aria-hidden
+        />
         {menuUnreadCount > 0 ? (
           <span
             className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"

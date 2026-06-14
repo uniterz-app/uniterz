@@ -172,6 +172,8 @@ const pt: Messages = {
     allTimeMaxStreakNote: "Esta é a sua melhor sequência de vitórias de todos os tempos. Não muda com os filtros de 7/30 dias.",
     scorePrecisionTooltip:
       "Mede a proximidade do seu placar previsto com o resultado real (0–10), acumulado no período.",
+    exactHitTooltip:
+      "Número de jogos em que seu placar previsto coincidiu exatamente com o resultado final.",
     upsetTooltip:
       "Concedido apenas quando ocorre uma surpresa e você acertou com um palpite minoritário. Acumulativo no período.",
     maxStreakTooltip:
@@ -187,6 +189,7 @@ const pt: Messages = {
     totalScore: "Pontuação total",
     winRate: "Taxa de acerto",
     scorePrecision: "Precisão do placar",
+    exactHits: "Placares exatos",
     upsetScore: "Pontuação de surpresas",
     goalScorerHits: "Goal Scorers",
     winStreak: "Sequência de vitórias",
@@ -228,7 +231,7 @@ const pt: Messages = {
     entriesOf: "/ {n}",
     categoryPlayoffs: "Playoffs",
     categoryBracket: "Bracket",
-    pageTitleRankings: "RANKINGS",
+    pageTitleRankings: "NBA PLAYOFF",
     pageTitleWorldCup: "WORLD CUP",
     roundTabsLabel: "Playoff rounds",
     stageTabsLabel: "World Cup stages",

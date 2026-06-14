@@ -21,6 +21,7 @@ import {
 } from "recharts";
 import type { BarShapeProps, XAxisTickContentProps } from "recharts";
 import type { Language } from "@/lib/i18n/language";
+import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { t } from "@/lib/i18n/t";
 import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
@@ -59,6 +60,7 @@ type Props = {
    * entranceSync 時のみ有効。false の間は棒・線のアニメを止め、true で再生（親のカード入場後に渡す）。
    */
   rechartsAfterEntrance?: boolean;
+  rankingLeague?: RankingLeagueSource;
 };
 
 /** Daily Combo：棒入場 → 折れ線パス → 静止 の1本道 */
@@ -599,8 +601,10 @@ export default function ProfileDailyTrendChart({
   language = "ja",
   entranceSync = false,
   rechartsAfterEntrance = false,
+  rankingLeague = "nba",
 }: Props) {
   const msg = t(language);
+  const isWcTrend = rankingLeague === "worldcup";
 
   const lockedMsg = msg.profile.proMonthlyTrend;
 
@@ -608,9 +612,17 @@ export default function ProfileDailyTrendChart({
   const hitsLabel = msg.profile.correctPicks;
   const hitsPostsLabel = msg.profile.hitsSlashPosts;
   const totalLabel = msg.profile.totalPoints;
-  const scorePrecisionLabel = msg.profile.scorePrecision;
   const unitCount = msg.profile.items;
   const unitPts = msg.profile.ptsUnit;
+  const scorePrecisionLabel = isWcTrend
+    ? msg.rankings.exactHits
+    : msg.profile.scorePrecision;
+  const scorePrecisionUnit = isWcTrend
+    ? language === "ja"
+      ? "試合"
+      : "matches"
+    : unitPts;
+  const scorePrecisionDecimals = isWcTrend ? 0 : 1;
   const title = msg.profile.dailyComboChart;
   const subtitle = msg.profile.dailyComboChartDesc;
 
@@ -1148,7 +1160,7 @@ export default function ProfileDailyTrendChart({
                     >
                       <DetailCountUpNumber
                         end={clampNum(detailRow.scorePrecision)}
-                        decimals={1}
+                        decimals={scorePrecisionDecimals}
                         token={`${detailDate}-sp`}
                         reduceMotion={!!reduceMotion}
                         delayMs={140}
@@ -1158,7 +1170,7 @@ export default function ProfileDailyTrendChart({
                         style={cyberMetricValueStyle(COLORS.score, "soft")}
                       >
                         {" "}
-                        {unitPts}
+                        {scorePrecisionUnit}
                       </span>
                     </p>
                   </m.div>
