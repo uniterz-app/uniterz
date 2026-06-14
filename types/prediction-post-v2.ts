@@ -107,6 +107,8 @@ export type PredictionPostV2 = {
 
     scoreError?: number | null;
     scorePrecision?: number | null;
+    /** WC: 予想スコアが採点ラインと完全一致（finalizePost） */
+    exactMatch?: boolean | null;
     scorePrecisionDetail?: {
       homePt: number;
       awayPt: number;
@@ -132,6 +134,8 @@ export type PredictionPostV2 = {
       goalScorerBonus?: number;
       diffError: number | null;
       totalError: number | null;
+      /** WC: 予想スコアが採点ラインと完全一致 */
+      exactMatch?: boolean;
       /** 当時点の連勝数（finalizePost / UI バッジと同期） */
       activeWinStreak?: number;
     } | null;
