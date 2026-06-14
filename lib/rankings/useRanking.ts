@@ -26,6 +26,8 @@ export type RankingRow = {
 
   totalPoints: number;
   totalPrecision: number;
+  /** WC 完全的中（API totalExactHits） */
+  totalExactHits?: number;
   totalUpset: number;
   totalGoalScorerHits?: number;
   currentStreak: number;

@@ -98,7 +98,7 @@ function settlementGameFromDoc(
   return {
     homeScore,
     awayScore,
-    league: game.league,
+    league: typeof game.league === "string" ? game.league : null,
     homeTeamId:
       typeof game.homeTeamId === "string" ? game.homeTeamId : null,
     awayTeamId:
