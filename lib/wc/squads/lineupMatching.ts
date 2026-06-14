@@ -54,7 +54,7 @@ export const DIRECT_PLAYER_IDS: Record<string, Record<string, string>> = {
     "Lee Kang-In": "kor-kang-in",
     "Lee Han-Beom": "kor-han-beom",
   },
-  jpn: { Sano: "jpn-sano" },
+  jpn: { Sano: "jpn-sano", Machino: "jpn-machino" },
   ecu: { Yeboah: "ecu-yeboah", Angulo: "ecu-angulo", Plata: "ecu-plata" },
   egy: {
     Abdelmaguif: "egy-abdelmonem",

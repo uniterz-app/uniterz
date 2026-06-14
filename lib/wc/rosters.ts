@@ -276,13 +276,13 @@ const WC_KEY_PLAYERS: Record<string, WcKeyPlayer[]> = {
     { name: "Bart Verbruggen", pos: "GK", club: "Brighton & Hove Albion" },
   ],
   jpn: [
-    { name: "Wataru Endo", pos: "MF", club: "Liverpool", captain: true },
+    { name: "Ko Itakura", pos: "DF", club: "Ajax", captain: true },
     { name: "Takefusa Kubo", pos: "MF", club: "Real Sociedad" },
     { name: "Daichi Kamada", pos: "MF", club: "Crystal Palace" },
     { name: "Zion Suzuki", pos: "GK", club: "Parma" },
     { name: "Ritsu Doan", pos: "MF", club: "Eintracht Frankfurt" },
+    { name: "Shuto Machino", pos: "FW", club: "Borussia Mönchengladbach" },
     { name: "Kaishu Sano", pos: "MF", club: "Mainz 05" },
-    { name: "Hiroki Ito", pos: "DF", club: "Bayern Munich" },
     { name: "Ayase Ueda", pos: "FW", club: "Feyenoord" },
   ],
   swe: [

@@ -444,7 +444,7 @@ export const WC_PREDICTED_LINEUPS: Record<string, WcPredictedLineup> = {
       { playerId: "jpn-itakura", x: 50, y: 78 },
       { playerId: "jpn-ito-2", x: 78, y: 76 },
       { playerId: "jpn-doan", x: 12, y: 52 },
-      { playerId: "jpn-endo", x: 36, y: 55 },
+      { playerId: "jpn-sano", x: 36, y: 55 },
       { playerId: "jpn-tanaka", x: 64, y: 55 },
       { playerId: "jpn-nakamura", x: 88, y: 52 },
       { playerId: "jpn-kubo", x: 35, y: 40 },

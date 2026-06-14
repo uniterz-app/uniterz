@@ -30,7 +30,7 @@ export const GOAL_LINEUPS: RawSourceLineup[] = [
   { iso3: "fra", formation: "4-2-3-1", players: ["Maignan", "Koundé", "Saliba", "Upamecano", "Hernandez", "Rabiot", "Tchouameni", "Dembelé", "Olise", "Doué", "Mbappé"] },
   { iso3: "deu", formation: "4-2-3-1", players: ["Neuer", "Kimmich", "Tah", "Schlotterbeck", "Raum", "Pavlovic", "Goreztka", "Sané", "Musiala", "Wirtz", "Havertz"] },
   { iso3: "gha", formation: "3-4-3", players: ["Asare", "Adjetei", "Seidu", "Oppong", "Yirenkyi", "Sibo", "Partey", "Mensah", "Sulemana", "Semenyo", "Ayew"] },
-  { iso3: "jpn", formation: "3-4-2-1", players: ["Suzuki", "Tomiyasu", "Taniguchi", "Itakura", "Doan", "Endo", "Tanaka", "Nakamura", "Kubo", "Ito", "Ueda"] },
+  { iso3: "jpn", formation: "3-4-2-1", players: ["Suzuki", "Tomiyasu", "Taniguchi", "Itakura", "Doan", "Sano", "Tanaka", "Nakamura", "Kubo", "Ito", "Ueda"] },
   { iso3: "jor", formation: "3-4-3", players: ["Abulaila", "Abu Dahab", "Nasib", "Al-Arab", "Haddad", "Al-Rawahbdeh", "Al-Rashdan", "Abu Taha", "Tamari", "Olwan", "Al-Mardi"] },
   { iso3: "hti", formation: "4-3-3", players: ["Placide", "Arcus", "Adé", "Duverne", "Expérience", "Deedson", "Bellegarde", "Pierre", "Isidor", "Nazon", "Providence"] },
   { iso3: "eng", formation: "4-2-3-1", players: ["Pickford", "James", "Guehi", "Konsa", "O'Reilly", "Anderson", "Rice", "Saka", "Bellingham", "Eze", "Kane"] },
