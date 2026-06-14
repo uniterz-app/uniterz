@@ -31,11 +31,12 @@ import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
 import { canDismissResultListPostNow, formatResultPostCardDateLabel } from "./nativeResultModel";
+import CyberMenuButton from "../../ui/CyberMenuButton";
 import {
   dayPointsHeaderForNative,
   type NativeDayPointsHeader,
 } from "./nativeResultDaySummary";
-import { useNativeResultPosts } from "./useNativeResultPosts";
+import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge";
 import {
   deletePredictionPostApi,
   PredictionApiError,
@@ -206,7 +207,7 @@ function isRedUpset(v: unknown): boolean {
   return Number.isFinite(n) && n > 0;
 }
 
-type StreakBadge = { label: string; tone: "gold" | "orange" | "red" };
+type StreakBadge = { label: string; tone: "silver" | "platinum" | "gold" };
 
 /** `GameCardList` の `CardBlurLayer` と同一 */
 function ResultCardBlurLayer() {
@@ -238,22 +239,22 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | 
   if (v >= 7) {
     return {
       label: isEn ? `${v} Win Streak` : `${v}連勝`,
-      tone: "red",
+      tone: "gold",
     };
   }
   if (v >= 5) {
     return {
       label: isEn ? `${v} Win Streak` : `${v}連勝`,
-      tone: "orange",
+      tone: "platinum",
     };
   }
   return {
     label: isEn ? `${v} Win Streak` : `${v}連勝`,
-    tone: "gold",
+    tone: "silver",
   };
 }
 
-type ResultBadge = "hit" | "upset" | "miss" | "streak" | null;
+type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
 function getMobileTeamName(
   league: "nba" | "bj" | "j1" | "pl",
@@ -506,11 +507,15 @@ function ResultPostCard({
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
     0;
   const streakBadge = getStreakBadge(activeWinStreak, isEn);
-  let badge: ResultBadge = null;
-  if (Boolean(stats?.upsetHit)) badge = "upset";
-  else if (streakBadge) badge = "streak";
-  else if (stats?.isWin === true) badge = "hit";
-  else if (stats && stats.isWin === false) badge = "miss";
+  const badge: ResultBadge = resolveResultOutcomeBadge({
+    stats,
+    prediction: pred,
+    result,
+    upsetHit: Boolean(stats?.upsetHit),
+    isWin:
+      stats?.isWin === true ? true : stats?.isWin === false ? false : undefined,
+    activeWinStreak,
+  });
 
   const statRows = useMemo(() => {
     const scorePrecision = toNumber(stats?.scorePrecision, 0);
@@ -583,11 +588,13 @@ function ResultPostCard({
     badge === "upset"
       ? styles.cardFrameUpset
       : badge === "streak" && activeWinStreak >= 7
-        ? styles.cardFrameStreakRed
+        ? styles.cardFrameStreakGold
         : badge === "streak" && activeWinStreak >= 5
-          ? styles.cardFrameStreakOrange
+          ? styles.cardFrameStreakPlatinum
           : badge === "streak"
-            ? styles.cardFrameStreakGold
+            ? styles.cardFrameStreakSilver
+            : badge === "perfect"
+              ? styles.cardFramePerfect
             : badge === "hit"
               ? styles.cardFrameHit
               : badge === "miss"
@@ -712,31 +719,12 @@ function ResultPostCard({
                   </Pressable>
                 </Animated.View>
               ) : null}
-              <Pressable
-                style={({ pressed }) => [
-                  styles.cornerMenuBtn,
-                  pressed && styles.cornerMenuBtnPressed,
-                ]}
+              <CyberMenuButton
+                size="xs"
                 onPress={() => setCornerFabOpen((v) => !v)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: cornerFabOpen }}
                 accessibilityLabel={isEn ? "Open actions" : "操作メニュー"}
-              >
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={["rgba(39,39,42,0.96)", "rgba(0,0,0,0.92)"]}
-                  locations={[0, 1]}
-                  style={styles.cornerMenuBtnGradient}
-                />
-                <View style={styles.cornerMenuIconWrap}>
-                  <MaterialCommunityIcons
-                    name="menu"
-                    size={10}
-                    color="rgba(224,250,254,0.72)"
-                  />
-                </View>
-              </Pressable>
+                accessibilityState={{ expanded: cornerFabOpen }}
+              />
             </View>
           ) : null}
 
@@ -749,9 +737,13 @@ function ResultPostCard({
               <View style={styles.badgeRow}>
                 <Animated.View style={[styles.badgeSubCluster, entrance.subBadgesStyle]}>
                   {badge === "streak" && streakBadge ? (
-                    <View style={[styles.miniBadge, streakToneStyle(streakBadge.tone)]}>
-                      <MaterialCommunityIcons name="fire" size={11} color="#fef08a" />
-                      <Text style={styles.miniBadgeText} numberOfLines={1}>
+                    <View style={[styles.streakMiniBadge, streakToneStyle(streakBadge.tone)]}>
+                      <MaterialCommunityIcons
+                        name="fire"
+                        size={12}
+                        color={streakFlameColor(streakBadge.tone)}
+                      />
+                      <Text style={styles.streakMiniBadgeText} numberOfLines={1}>
                         {streakBadge.label}
                       </Text>
                     </View>
@@ -774,6 +766,11 @@ function ResultPostCard({
                   {badge === "hit" ? (
                     <View style={[styles.miniBadge, styles.badgeHit]}>
                       <Text style={styles.badgeHitText}>HIT</Text>
+                    </View>
+                  ) : null}
+                  {badge === "perfect" ? (
+                    <View style={[styles.miniBadge, styles.badgePerfect]}>
+                      <Text style={styles.badgePerfectText}>PERFECT</Text>
                     </View>
                   ) : null}
                   {badge === "miss" ? (
@@ -888,9 +885,15 @@ function ResultPostCard({
 }
 
 function streakToneStyle(tone: StreakBadge["tone"]) {
-  if (tone === "red") return styles.streakRed;
-  if (tone === "orange") return styles.streakOrange;
-  return styles.streakGold;
+  if (tone === "gold") return styles.streakGold;
+  if (tone === "platinum") return styles.streakPlatinum;
+  return styles.streakSilver;
+}
+
+function streakFlameColor(tone: StreakBadge["tone"]) {
+  if (tone === "gold") return "#fef08a";
+  if (tone === "platinum") return "#cffafe";
+  return "#f8fafc";
 }
 
 type SectionT = {
@@ -1197,19 +1200,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    /** 高さが低いので 16 だとカプセル感が強い → 控えめな角丸 */
-    borderRadius: 8,
+    borderRadius: 5,
     borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.22)",
-    backgroundColor: "rgba(8,11,20,0.72)",
+    borderColor: "rgba(34,211,238,0.34)",
+    backgroundColor: "rgba(8,11,18,0.84)",
+    shadowColor: "#22d3ee",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
   },
   filterBarPressed: {
     opacity: 0.88,
   },
   filterBarText: {
-    color: "rgba(226,232,240,0.88)",
+    color: "rgba(224,250,254,0.88)",
     fontSize: 13,
     fontWeight: "600",
   },
@@ -1494,35 +1501,6 @@ const styles = StyleSheet.create({
     minHeight: 22,
     alignItems: "flex-end",
   },
-  cornerMenuBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    overflow: "hidden",
-    borderWidth: 1,
-    /** Web `border-cyan-400/50` に寄せたメインボタン枠 */
-    borderColor: "rgba(34,211,238,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  /** Web `from-zinc-800/95 to-black/92` の縦グラデーション */
-  cornerMenuBtnGradient: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 4,
-  },
-  /** 線が詰まって見えるので横だけやや潰して細めに（グラデの上に載せる） */
-  cornerMenuIconWrap: {
-    zIndex: 1,
-    transform: [{ scaleX: 0.82 }],
-  },
-  cornerMenuBtnPressed: {
-    opacity: 0.9,
-  },
   /** Web `absolute top-full left-1/2 mt-2` に相当するスロット */
   cornerFlyoutTrashSlot: {
     position: "absolute",
@@ -1597,34 +1575,40 @@ const styles = StyleSheet.create({
     borderColor: "rgba(250,204,21,0)",
   },
   cardFrameUpset: {
-    borderColor: "rgba(185,28,28,0.85)",
-    shadowColor: "rgba(220,38,38,0.75)",
-    shadowOpacity: 0.55,
-    shadowRadius: 24,
-  },
-  cardFrameStreakRed: {
-    borderColor: "rgba(248,113,113,0.75)",
-    shadowColor: "rgba(239,68,68,0.45)",
-    shadowOpacity: 0.5,
+    borderColor: "rgba(248,113,113,0.84)",
+    shadowColor: "rgba(239,68,68,0.5)",
+    shadowOpacity: 0.48,
     shadowRadius: 18,
   },
-  cardFrameStreakOrange: {
-    borderColor: "rgba(253,186,116,0.75)",
-    shadowColor: "rgba(249,115,22,0.4)",
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
+  cardFrameStreakSilver: {
+    borderColor: "rgba(226,232,240,0.82)",
+    shadowColor: "rgba(255,255,255,0.55)",
+    shadowOpacity: 0.48,
+    shadowRadius: 18,
+  },
+  cardFrameStreakPlatinum: {
+    borderColor: "rgba(34,211,238,0.82)",
+    shadowColor: "rgba(0,245,255,0.5)",
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
   },
   cardFrameStreakGold: {
-    borderColor: "rgba(253,224,71,0.75)",
-    shadowColor: "rgba(250,204,21,0.35)",
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
+    borderColor: "rgba(251,191,36,0.88)",
+    shadowColor: "rgba(249,115,22,0.5)",
+    shadowOpacity: 0.52,
+    shadowRadius: 22,
   },
   cardFrameHit: {
     borderColor: "rgba(250,204,21,0.72)",
     shadowColor: "rgba(250,204,21,0.45)",
     shadowOpacity: 0.4,
     shadowRadius: 14,
+  },
+  cardFramePerfect: {
+    borderColor: "rgba(167,139,250,0.8)",
+    shadowColor: "rgba(139,92,246,0.45)",
+    shadowOpacity: 0.44,
+    shadowRadius: 16,
   },
   cardFrameMiss: {
     borderColor: "rgba(107,114,128,0.55)",
@@ -1670,6 +1654,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 6,
     maxWidth: "72%",
+    marginTop: 4,
   },
   /** ストリーク / UPSET / LIVE（HIT・MISS より先にフェード） */
   badgeSubCluster: {
@@ -1699,20 +1684,34 @@ const styles = StyleSheet.create({
     color: "#fff",
     maxWidth: 120,
   },
-  streakRed: {
-    backgroundColor: "rgba(185,28,28,0.95)",
+  streakSilver: {
+    backgroundColor: "rgba(100,116,139,0.94)",
     borderWidth: 1,
-    borderColor: "rgba(254,202,202,0.5)",
+    borderColor: "rgba(248,250,252,0.72)",
   },
-  streakOrange: {
-    backgroundColor: "rgba(234,88,12,0.95)",
+  streakPlatinum: {
+    backgroundColor: "rgba(8,145,178,0.94)",
     borderWidth: 1,
-    borderColor: "rgba(254,215,170,0.55)",
+    borderColor: "rgba(186,250,255,0.82)",
   },
   streakGold: {
-    backgroundColor: "rgba(234,179,8,0.95)",
+    backgroundColor: "rgba(234,88,12,0.95)",
     borderWidth: 1,
-    borderColor: "rgba(254,249,195,0.7)",
+    borderColor: "rgba(254,249,195,0.78)",
+  },
+  streakMiniBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  streakMiniBadgeText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#fff",
+    maxWidth: 120,
   },
   badgeHit: {
     backgroundColor: "rgba(250,204,21,0.95)",
@@ -1722,13 +1721,27 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#0a0a0a",
   },
+  badgePerfect: {
+    backgroundColor: "rgba(124,58,237,0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(196,181,253,0.84)",
+  },
+  badgePerfectText: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#f5f3ff",
+    letterSpacing: 0.4,
+  },
   badgeUpset: {
-    backgroundColor: "rgba(239,68,68,0.95)",
+    backgroundColor: "rgba(220,38,38,0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(252,165,165,0.82)",
   },
   badgeUpsetText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
-    color: "#fff",
+    color: "#fef2f2",
+    letterSpacing: 0.4,
   },
   badgeMiss: {
     backgroundColor: "rgba(100,116,139,0.95)",

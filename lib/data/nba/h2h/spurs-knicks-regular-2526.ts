@@ -9,7 +9,7 @@ export const SPURS_KNICKS_TEAM_IDS = ["nba-spurs", "nba-knicks"] as const;
 const H2H_LEFT = "Knicks";
 const H2H_RIGHT = "Spurs";
 
-/** 2025-26 Knicks vs Spurs（NBA Cup含むRS 3試合 + ファイナル Game 1） */
+/** 2025-26 Knicks vs Spurs（NBA Cup含むRS 3試合 + ファイナル Game 1–4） */
 export const spursKnicksH2HGames: NbaH2HGameCard[] = [
   {
     id: "h2h-spurs-knicks-2025-12-16-nba-cup-final",
@@ -81,6 +81,66 @@ export const spursKnicksH2HGames: NbaH2HGameCard[] = [
         "The fourth quarter belonged to Jalen Brunson. His efficiency was not great, but he scored in bursts late, and the Knicks closed the game on an 11-0 run to complete the comeback. New York takes Game 1 and leads the series 1-0.",
     },
   },
+  {
+    id: "h2h-spurs-knicks-2026-06-05-po-g2",
+    dateEt: "2026-06-05",
+    dateJst: "2026-06-06",
+    seriesGameLabel: "Game 2",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 105,
+    scoreRight: 104,
+    /** San Antonio（Spurs）ホーム — Frost Bank Center */
+    homeTeamSide: "right",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Game 2は、Knicksが1点差の接戦を制してシリーズを2勝0敗とした試合。Spursは第4Qに入ってから流れをつかみ、一時は逆転が見えるところまで追い上げたが、最後の勝負どころで決め切れなかった。Wembanyamaは得点とリバウンドの両面で存在感を見せ、Spursの反撃の中心になった。一方でKnicksは、Brunsonが終盤のクラッチタイムで落ち着いて試合をまとめ、リードを守り切った。Spursにとっては内容自体は悪くなかったが、終盤のターンオーバーと最後の1本を仕留められなかったことが響いた。Knicksは接戦をものにし、シリーズの主導権を大きく握った。",
+      en:
+        "Game 2 was a one-point Knicks win that pushed New York to a 2-0 series lead. San Antonio seized momentum after the third quarter and climbed back to the brink of a comeback, but could not finish in the biggest moments. Victor Wembanyama was the center of the Spurs' push on both ends, scoring and rebounding with authority. On the other side, Jalen Brunson stayed composed in crunch time and closed out the game to protect the lead. San Antonio played well enough to win, but late turnovers and one final stop they could not get made the difference. New York took the tight game and tightened its grip on the series.",
+    },
+  },
+  {
+    id: "h2h-spurs-knicks-2026-06-08-po-g3",
+    dateEt: "2026-06-08",
+    dateJst: "2026-06-09",
+    seriesGameLabel: "Game 3",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 111,
+    scoreRight: 115,
+    /** New York（Knicks）ホーム — Madison Square Garden */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Game 3は、Spursが敵地で取り返してシリーズを2勝1敗に戻した試合。Wembanyamaが32得点を挙げ、攻守両面で存在感を発揮した。さらにCastleも重要な得点源として機能し、Spursはオフェンスの選択肢を増やすことに成功した。前半はKnicksもBrunsonを中心に粘ったが、Spursは後半に入ってから攻撃の精度を高め、第3Qで流れを引き寄せた。その後もサイズと勢いを活かして主導権を維持し、終盤のKnicksの反撃を振り切った。Knicksにとってはホームで落とした痛い1敗だったが、Spursにとってはシリーズを終わらせない大きな勝利となった。",
+      en:
+        "Game 3 was San Antonio's road win that cut the series deficit to 2-1. Victor Wembanyama scored 32 and made his presence felt on both ends. Stephon Castle also emerged as a key scoring option, giving the Spurs more ways to attack. New York hung in through the first half behind Jalen Brunson, but San Antonio sharpened its offense after the break and swung the game in the third quarter. The Spurs then used their size and momentum to stay in control and hold off New York's late push. A painful home loss for the Knicks, but a critical win for San Antonio to keep the series alive.",
+    },
+  },
+  {
+    id: "h2h-spurs-knicks-2026-06-10-po-g4",
+    dateEt: "2026-06-10",
+    dateJst: "2026-06-11",
+    seriesGameLabel: "Game 4",
+    leftTeamDisplay: H2H_LEFT,
+    rightTeamDisplay: H2H_RIGHT,
+    scoreLeft: 107,
+    scoreRight: 106,
+    /** New York（Knicks）ホーム — Madison Square Garden */
+    homeTeamSide: "left",
+    injuriesLeft: [],
+    injuriesRight: [],
+    inactiveFooterSummary: {
+      ja:
+        "Game 4は、Knicksが29点差をひっくり返す歴史的な逆転勝利を収め、シリーズを3勝1敗とした試合。Spursは前半だけで14本の3ポイントを沈め、76-49で折り返す完璧に近い内容だった。しかし後半に入ると流れが一変し、Knicksが守備の強度を上げながら少しずつ点差を詰めていった。Brunsonが得点面でチームを引っ張り、OG Anunobyも攻守で大きな存在感を見せた。Spursは前半の勢いを維持できず、終盤は1ポゼッションごとの勝負に持ち込まれた。最後はOGのチップインでKnicksが逆転し、勝てたはずの試合をSpursが落とす形になった。シリーズ全体の流れを大きく変える、Knicksにとって非常に大きな勝利だった。",
+      en:
+        "Game 4 was a historic Knicks comeback from a 29-point deficit that put New York up 3-1 in the series. San Antonio hit 14 threes in the first half alone and took a 76-49 lead into the break in near-perfect fashion. But the game flipped after halftime as New York raised its defensive intensity and chipped away at the margin. Jalen Brunson led the scoring charge, and OG Anunoby made a major two-way impact. The Spurs could not sustain their first-half surge, and the fourth quarter became a possession-by-possession fight. OG's putback gave the Knicks the lead for good, and San Antonio let a winnable game slip away. A massive victory for New York that shifted the entire feel of the series.",
+    },
+  },
 ];
 
 /** 左=NYK・右=SAS のスコアから H2H の PPG / PAPG（小数1桁）を算出 */
@@ -119,7 +179,7 @@ function spursKnicksH2HStatsFromGames(games: NbaH2HGameCard[]): {
   };
 }
 
-/** 上記4試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
+/** 上記7試合からの H2H 平均（小数1桁）。パネル左=ホーム、右=アウェイ。 */
 export function spursKnicksH2HAveragesForSides({
   homeTeamId,
   awayTeamId,

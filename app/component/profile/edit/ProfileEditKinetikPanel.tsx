@@ -2,6 +2,10 @@
 
 import { useCallback, useState } from "react";
 import { Menu } from "lucide-react";
+import {
+  CYBER_MENU_ICON_CLASS,
+  CYBER_MENU_ICON_STROKE,
+} from "@/lib/ui/cyberMenuButton";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   KINETIK_GREEN,
@@ -682,7 +686,11 @@ export default function ProfileEditKinetikPanel({
         onClick={() => onOpenMenu?.()}
         aria-label={isJa ? "メニュー" : "Menu"}
       >
-        <Menu className="h-4 w-4" strokeWidth={2.25} />
+        <Menu
+          className={CYBER_MENU_ICON_CLASS.sm}
+          strokeWidth={CYBER_MENU_ICON_STROKE}
+          aria-hidden
+        />
         {menuUnreadCount > 0 ? (
           <span
             className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"

@@ -699,9 +699,9 @@ export default function ScheduleList({
                   type="button"
                   aria-label={m.common.close}
                   className={[
-                    "predict-overlay-close-btn absolute left-1.5 top-1.5 z-30 flex h-8 w-8 items-center justify-center",
+                    "predict-overlay-close-btn absolute left-1.5 top-1.5 z-30 flex items-center justify-center",
                     "border border-cyan-400/35 bg-[rgba(4,10,18,0.82)] text-cyan-50/90 backdrop-blur-sm",
-                    isMobile ? "" : "transition hover:border-cyan-300/55 hover:bg-[rgba(6,14,24,0.9)]",
+                    isMobile ? "h-7 w-7" : "h-8 w-8 transition hover:border-cyan-300/55 hover:bg-[rgba(6,14,24,0.9)]",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -710,7 +710,7 @@ export default function ScheduleList({
                     close();
                   }}
                 >
-                  <X size={14} strokeWidth={2.25} />
+                  <X size={isMobile ? 12 : 14} strokeWidth={2.25} />
                 </button>
 
                 <MatchCard

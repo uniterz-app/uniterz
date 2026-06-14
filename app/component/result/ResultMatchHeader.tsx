@@ -4,7 +4,7 @@
 import React, { memo, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -25,15 +25,12 @@ import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
-import {
-  resultHitBadgeClass,
-  resultMissBadgeClass,
-  resultUpsetBadgeClass,
-} from "@/lib/result/resultGlass";
+import { isResultWinFrameBadge } from "@/lib/result/resultGlass";
+import { resolveResultCardBadge } from "@/lib/result/resultBadge";
+import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { getWinStreakBadge } from "@/lib/ui/winStreakBadge";
 import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 
 type Props = {
@@ -71,10 +68,6 @@ function fmtRecordWithRank(
   const record = `(${r.wins}-${r.losses})`;
   if (!r.rank) return record;
   return `${record} :${r.rank}${ordinal(r.rank)}`;
-}
-
-function toInt(v: unknown): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
 }
 
 /** teams/{teamId} から wins/losses/rank を取る */
@@ -191,17 +184,10 @@ function ResultMatchHeader({
   const homeRecord = useTeamRecord(post.home?.teamId);
   const awayRecord = useTeamRecord(post.away?.teamId);
 
-  const activeWinStreak =
-    toInt((post.stats as any)?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getWinStreakBadge(activeWinStreak, language, {
-    subtle: true,
-  });
-
-  let badge: "hit" | "upset" | "miss" | "streak" | null = null;
-  if ((post.stats as any)?.upsetHit) badge = "upset";
-  else if (streakBadge) badge = "streak";
-  else if (post.stats?.isWin) badge = "hit";
-  else if (post.stats && post.stats.isWin === false) badge = "miss";
+  const { badge, activeWinStreak, streakBadge } = resolveResultCardBadge(
+    post,
+    language
+  );
 
   const predictEditHref = useMemo(() => {
     if (!viewerUid || !post.gameId) return null;
@@ -217,7 +203,9 @@ function ResultMatchHeader({
     <ResultGlassShell
       badge={badge}
       activeWinStreak={activeWinStreak}
-      showSweep={badge === "streak" || badge === "upset" || badge === "hit"}
+      showSweep={
+        badge === "streak" || badge === "upset" || isResultWinFrameBadge(badge)
+      }
       lift={false}
       extraPanelClassName="text-white"
       className="relative"
@@ -233,29 +221,13 @@ function ResultMatchHeader({
             predictEditHref ? "pr-11 sm:pr-12" : "",
           ].join(" ")}
         >
-          <div className="flex max-w-full flex-row flex-wrap items-start justify-end gap-1">
-            {badge === "streak" && streakBadge && (
-              <span className={streakBadge.className}>
-                <Flame
-                  className={`h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 ${streakBadge.iconClassName}`}
-                />
-                <span className="min-w-0 truncate">{streakBadge.label}</span>
-              </span>
-            )}
-            {badge === "hit" && (
-              <span className={resultHitBadgeClass(false, { subtle: true })}>
-                HIT
-              </span>
-            )}
-            {badge === "upset" && (
-              <span className={resultUpsetBadgeClass(false)}>UPSET</span>
-            )}
-            {badge === "miss" && (
-              <span className={resultMissBadgeClass(false, { subtle: true })}>
-                MISS
-              </span>
-            )}
-          </div>
+          <ResultOutcomeBadges
+            badge={badge}
+            streakBadge={streakBadge}
+            activeWinStreak={activeWinStreak}
+            isMobile={false}
+            hitBadgeSubtle
+          />
         </div>
       </div>
       {predictEditHref ? (
