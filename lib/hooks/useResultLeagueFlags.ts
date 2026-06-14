@@ -28,7 +28,7 @@ export function useResultLeagueFlags(uid: string | null): {
   useEffect(() => {
     if (!uid) {
       setFlags(EMPTY_FLAGS);
-      setFlagsReady(true);
+      setFlagsReady(false);
       return;
     }
 

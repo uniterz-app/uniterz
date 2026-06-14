@@ -1,17 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ResultListWithOverlay from "@/app/component/result/ResultListWithOverlay";
 import { useResultPagePosts } from "@/lib/hooks/useResultPagePosts";
 import { LEAGUES } from "@/lib/leagues";
 import type { ResultListLeagueTab } from "@/lib/result/result-page-data";
-import {
-  readLastResultLeagueTab,
-  writeLastResultLeagueTab,
-} from "@/lib/result/resultLastLeagueTab";
 
 export default function ResultPage() {
-  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab | null>(null);
+  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab>(LEAGUES.WC);
+  const leagueDefaultAppliedRef = useRef(false);
 
   const {
     authReady,
@@ -27,31 +24,22 @@ export default function ResultPage() {
     flagsReady,
     showResultLeagueTabs,
     defaultLeagueTab,
-  } = useResultPagePosts(leagueTab ?? LEAGUES.NBA, {
-    // フラグ取得（users/{uid}）を待たず、タブ確定後すぐ投稿取得を開始する
+  } = useResultPagePosts(leagueTab, {
     waitForLeagueFlags: false,
-    enabled: leagueTab !== null,
   });
 
-  // 直近に選んだタブを即時採用 → フラグ取得と並行で初回投稿を取得（ウォーターフォール短縮）
+  // フラグ確定後に 1 回だけ補正（NBA のみのユーザーだけ NBA へ）
   useEffect(() => {
-    if (leagueTab !== null) return;
-    const saved = readLastResultLeagueTab();
-    if (saved) setLeagueTab(saved);
-  }, [leagueTab]);
-
-  // 保存タブが無い初回ユーザーは、フラグ確定後のデフォルトを使う
-  useEffect(() => {
-    if (!flagsReady) return;
-    setLeagueTab((prev) => prev ?? defaultLeagueTab);
-  }, [flagsReady, defaultLeagueTab]);
+    if (!flagsReady || !uid || leagueDefaultAppliedRef.current) return;
+    leagueDefaultAppliedRef.current = true;
+    setLeagueTab(defaultLeagueTab);
+  }, [flagsReady, uid, defaultLeagueTab]);
 
   const handleLeagueTabChange = useCallback((tab: ResultListLeagueTab) => {
     setLeagueTab(tab);
-    writeLastResultLeagueTab(tab);
   }, []);
 
-  if (!authReady || leagueTab === null) {
+  if (!authReady) {
     return (
       <div className="px-[18px] py-4 pb-bottom-nav">
         <ResultPageSkeleton />

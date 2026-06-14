@@ -23,12 +23,13 @@ export function shouldShowResultLeagueTabs(
   return flags.hasNbaPost && flags.hasWcPost;
 }
 
-/** タブなし時に一覧で使うリーグ */
+/** タブなし時に一覧で使うリーグ（WC 投稿があれば WC、不明時も WC を優先） */
 export function defaultResultListLeagueTab(
   flags: UserResultLeagueFlags
 ): ResultListLeagueTab {
-  if (flags.hasWcPost && !flags.hasNbaPost) return LEAGUES.WC;
-  return LEAGUES.NBA;
+  if (flags.hasWcPost) return LEAGUES.WC;
+  if (flags.hasNbaPost) return LEAGUES.NBA;
+  return LEAGUES.WC;
 }
 
 /** 新規予想保存時に users/{uid} へ書くフィールド（NBA / WC のみ） */

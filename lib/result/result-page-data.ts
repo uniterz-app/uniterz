@@ -2,8 +2,8 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
 import { LEAGUES, type League } from "@/lib/leagues";
 
-/** リザルト一覧のリーグタブ（NBA / ワールドカップ） */
-export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.NBA, LEAGUES.WC] as const;
+/** リザルト一覧のリーグタブ（ワールドカップ / NBA） */
+export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.WC, LEAGUES.NBA] as const;
 export type ResultListLeagueTab = (typeof RESULT_LIST_LEAGUE_TABS)[number];
 
 export type PostWithMillis = PredictionPostV2 & {
