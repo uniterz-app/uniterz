@@ -11,6 +11,8 @@ type PerfectScoreCheckInput = {
   stats?: {
     isWin?: boolean | null;
     scoreError?: number | null;
+    exactMatch?: boolean | null;
+    pointsV3Detail?: { exactMatch?: boolean | null } | null;
   } | null;
   prediction?: {
     score?: { home?: number; away?: number };
@@ -21,8 +23,18 @@ type PerfectScoreCheckInput = {
   } | null;
 };
 
-/** 予想スコアと結果スコアが完全一致（scoreError === 0） */
+function hasStoredExactMatch(
+  stats: PerfectScoreCheckInput["stats"]
+): boolean {
+  if (stats?.exactMatch === true) return true;
+  if (stats?.pointsV3Detail?.exactMatch === true) return true;
+  return false;
+}
+
+/** 予想スコアと結果スコアが完全一致（WC: stats.exactMatch / NBA: scoreError === 0） */
 export function isPerfectScoreHit(post: PerfectScoreCheckInput): boolean {
+  if (hasStoredExactMatch(post.stats)) return true;
+
   if (post.stats?.isWin !== true) return false;
 
   const scoreError = post.stats?.scoreError;
