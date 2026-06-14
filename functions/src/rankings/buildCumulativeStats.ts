@@ -43,15 +43,21 @@ function addRankingTotals(
     pointsSumV3?: number;
     upsetPointsSum?: number;
     scorePrecisionSum?: number;
+    exactHitCount?: number;
     goalScorerHitCount?: number;
+    /** WC 累積: totalPrecision に exactHitCount を載せる */
+    precisionFromExactHits?: boolean;
   }
 ): Omit<RankingTotals, "winRate"> {
+  const precisionInc = inc.precisionFromExactHits
+    ? inc.exactHitCount ?? 0
+    : inc.scorePrecisionSum ?? 0;
   return {
     totalPosts: base.totalPosts + (inc.posts ?? 0),
     totalWins: base.totalWins + (inc.wins ?? 0),
     totalPoints: base.totalPoints + (inc.pointsSumV3 ?? 0),
     totalUpset: base.totalUpset + (inc.upsetPointsSum ?? 0),
-    totalPrecision: base.totalPrecision + (inc.scorePrecisionSum ?? 0),
+    totalPrecision: base.totalPrecision + precisionInc,
     totalGoalScorerHits:
       base.totalGoalScorerHits + (inc.goalScorerHitCount ?? 0),
   };
@@ -281,8 +287,9 @@ export async function buildCumulativeStats() {
           wins: num(src?.wins),
           pointsSumV3: num(src?.pointsSumV3),
           upsetPointsSum: num(src?.upsetPointsSum),
-          scorePrecisionSum: num(src?.scorePrecisionSum),
+          exactHitCount: num(src?.exactHitCount),
           goalScorerHitCount: num(src?.goalScorerHitCount),
+          precisionFromExactHits: true,
         });
         nextByWc[wk] = {
           ...nextWRaw,

@@ -81,7 +81,8 @@ import {
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
 import type { League } from "@/lib/leagues";
-import { LEAGUE_DISPLAY } from "@/lib/leagues";
+import { LEAGUE_DISPLAY, LEAGUES } from "@/lib/leagues";
+import { isWcResultLeague } from "@/lib/result/wcResultUi";
 import {
   resultCardPageSlot,
   resultPageSlotItem,
@@ -147,11 +148,16 @@ function isDefaultResultFilters(f: ResultListFilters): boolean {
 }
 
 /** 詳細パネル内の条件のみ（試合日は外側ブロックのため点に含めない） */
-function hasDetailFilters(f: ResultListFilters): boolean {
+function hasDetailFilters(
+  f: ResultListFilters,
+  leagueTab?: ResultListLeagueTab
+): boolean {
+  const scorePrecisionActive =
+    leagueTab !== LEAGUES.WC && f.scorePrecisionTier !== "all";
   return (
     f.settlement !== "all" ||
     f.specialty !== "none" ||
-    f.scorePrecisionTier !== "all" ||
+    scorePrecisionActive ||
     f.pointsTier !== "all"
   );
 }
@@ -305,6 +311,7 @@ function postMatchesScorePrecisionTier(
   tier: ResultListFilters["scorePrecisionTier"]
 ): boolean {
   if (tier === "all") return true;
+  if (isWcResultLeague(post.league)) return true;
   if (!isFinalResultPost(post)) return false;
   const v = scorePrecisionOf(post);
   if (v === null) return false;
@@ -1001,6 +1008,7 @@ export default function ResultListWithOverlay({
                   ...s,
                   dateFrom: null,
                   dateTo: null,
+                  scorePrecisionTier: "all",
                 }));
               }}
               items={RESULT_LIST_LEAGUE_TABS}
@@ -1288,7 +1296,7 @@ export default function ResultListWithOverlay({
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-[11px] font-semibold text-white sm:text-xs">
                   {fc.detailToggle}
-                  {hasDetailFilters(filters) ? (
+                  {hasDetailFilters(filters, leagueTab) ? (
                     <span
                       className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 align-middle shadow-[0_0_8px_rgba(34,211,238,0.7)]"
                       aria-hidden
@@ -1378,6 +1386,7 @@ export default function ResultListWithOverlay({
             </div>
           </div>
 
+          {leagueTab !== LEAGUES.WC ? (
           <div className="mb-3">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">
               {fc.scorePrecision}
@@ -1412,6 +1421,7 @@ export default function ResultListWithOverlay({
               ))}
             </div>
           </div>
+          ) : null}
 
           <div className="mb-0">
             <div className="mb-1.5 text-[10px] font-medium text-white/40 sm:text-[11px]">

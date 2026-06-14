@@ -6,10 +6,10 @@ import type {
   RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
 import {
-  METRICS,
   NBA_RANKING_METRICS,
   WC_RANKING_METRICS,
 } from "@/app/component/rankings/_data/mockRows";
+import { buildRankingTabMetrics } from "@/lib/rankings/wcVisibleMetrics";
 import {
   API_METRIC_BY_MOBILE,
   type RankingApiRow,
@@ -63,6 +63,12 @@ function sortWebRankingRows(
           (b.marginPrecisionScore ?? 0) - (a.marginPrecisionScore ?? 0)
       );
       break;
+    case "exactHits":
+      copy.sort(
+        (a, b) =>
+          (b.marginPrecisionScore ?? 0) - (a.marginPrecisionScore ?? 0)
+      );
+      break;
     case "upsetScore":
       copy.sort((a, b) => (b.upsetScore ?? 0) - (a.upsetScore ?? 0));
       break;
@@ -82,6 +88,7 @@ const EMPTY_MAP: Record<MobileMetric, WebRankingRow[]> = {
   totalScore: [],
   winRate: [],
   marginPrecision: [],
+  exactHits: [],
   upsetScore: [],
   streak: [],
   goalScorerHits: [],
@@ -95,8 +102,8 @@ export function useWebRankings(
   const availableMetrics = wcStage ? WC_RANKING_METRICS : NBA_RANKING_METRICS;
 
   const visibleMetrics = useMemo(
-    () => METRICS.filter((m) => availableMetrics.includes(m.key)),
-    [availableMetrics]
+    () => buildRankingTabMetrics(wcStage ? "worldcup" : "nba"),
+    [wcStage]
   );
 
   const [metric, setMetric] = useState<MobileMetric>("totalScore");

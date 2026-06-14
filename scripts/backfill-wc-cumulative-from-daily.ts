@@ -42,6 +42,7 @@ type Bucket = {
   upsetHitCount: number;
   upsetPickCount: number;
   scorePrecisionSum: number;
+  exactHitCount: number;
   pointsSumV3: number;
   upsetPointsSum: number;
   upsetBonusSum: number;
@@ -69,6 +70,7 @@ function emptyBucket(): Bucket {
     upsetHitCount: 0,
     upsetPickCount: 0,
     scorePrecisionSum: 0,
+    exactHitCount: 0,
     pointsSumV3: 0,
     upsetPointsSum: 0,
     upsetBonusSum: 0,
@@ -93,6 +95,7 @@ function addBucket(base: Bucket, inc: Bucket): Bucket {
     upsetHitCount: base.upsetHitCount + inc.upsetHitCount,
     upsetPickCount: base.upsetPickCount + inc.upsetPickCount,
     scorePrecisionSum: base.scorePrecisionSum + inc.scorePrecisionSum,
+    exactHitCount: base.exactHitCount + inc.exactHitCount,
     pointsSumV3: base.pointsSumV3 + inc.pointsSumV3,
     upsetPointsSum: base.upsetPointsSum + inc.upsetPointsSum,
     upsetBonusSum: base.upsetBonusSum + inc.upsetBonusSum,
@@ -111,7 +114,8 @@ function bucketFromPostStats(stats: Record<string, unknown>): Bucket {
     upsetOpportunityCount: stats.hadUpsetGame === true ? 1 : 0,
     upsetHitCount: stats.upsetHit === true ? 1 : 0,
     upsetPickCount: stats.hadUpsetGame === true ? 1 : 0,
-    scorePrecisionSum: safeNum(stats.scorePrecision),
+    scorePrecisionSum: 0,
+    exactHitCount: stats.exactMatch === true ? 1 : 0,
     pointsSumV3: safeNum(stats.pointsV3),
     upsetPointsSum: safeNum(stats.upsetPoints),
     upsetBonusSum: safeNum(stats.upsetBonus),
@@ -127,7 +131,7 @@ function bucketToRankingTotals(bucket: Bucket): RankingTotals {
     totalWins: bucket.wins,
     totalPoints: bucket.pointsSumV3,
     totalUpset: bucket.upsetPointsSum,
-    totalPrecision: bucket.scorePrecisionSum,
+    totalPrecision: bucket.exactHitCount,
     totalGoalScorerHits: bucket.goalScorerHitCount,
     winRate: bucket.posts > 0 ? bucket.wins / bucket.posts : 0,
   };

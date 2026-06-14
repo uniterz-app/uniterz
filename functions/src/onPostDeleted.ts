@@ -93,6 +93,10 @@ export const onPostDeletedV2 = onDocumentDeleted(
     const upsetHit = stats.upsetHit === true;
     const upsetPoints = stats.upsetPoints ?? 0;
     const pointsV3 = stats.pointsV3 ?? 0;
+    const leagueKey = before.league ?? null;
+    const isWc = String(leagueKey ?? "").toLowerCase() === "wc";
+    const exactMatch = stats.exactMatch === true;
+    const goalScorerHit = (stats.goalScorerBonus ?? 0) > 0;
 
     await db.runTransaction(async (tx) => {
       const dailySnap = await tx.get(dailyRef);
@@ -115,7 +119,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
         upsetHitCount: FieldValue.increment(upsetHit ? -1 : 0),
         upsetPickCount: FieldValue.increment(hadUpsetGame ? -1 : 0),
         upsetPointsSum: FieldValue.increment(-upsetPoints),
-        scorePrecisionSum: FieldValue.increment(-scorePrecision),
+        scorePrecisionSum: FieldValue.increment(isWc ? 0 : -scorePrecision),
+        exactHitCount: FieldValue.increment(isWc && exactMatch ? -1 : 0),
+        goalScorerHitCount: FieldValue.increment(goalScorerHit ? -1 : 0),
         pointsSumV3: FieldValue.increment(-pointsV3),
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -125,9 +131,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
         tx.set(dailyRef, { ranking: dec }, { merge: true });
       }
 
-      const leagueKey = before.league ?? null;
-      if (leagueKey) {
-        tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
+      const leagueKeyInner = before.league ?? null;
+      if (leagueKeyInner) {
+        tx.set(dailyRef, { leagues: { [leagueKeyInner]: dec } }, { merge: true });
       }
 
       const gameTeamIds = uniqueGameTeamIds(

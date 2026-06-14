@@ -516,14 +516,19 @@ function ResultPostCard({
     const scorePrecision = toNumber(stats?.scorePrecision, 0);
     const upsetPoints = toNumber(stats?.upsetPoints, 0);
     const pointsV3 = toNumber(stats?.pointsV3, 0);
+    const showScorePrecision = leagueKey !== "wc";
     return [
-      {
-        key: "scorePrecision" as const,
-        label: isEn ? "Score Precision" : "スコア精度",
-        value: scorePrecision,
-        barMax: 10,
-        format: (v: number) => v.toFixed(1),
-      },
+      ...(showScorePrecision
+        ? [
+            {
+              key: "scorePrecision" as const,
+              label: isEn ? "Score Precision" : "スコア精度",
+              value: scorePrecision,
+              barMax: 10,
+              format: (v: number) => v.toFixed(1),
+            },
+          ]
+        : []),
       {
         key: "upsetPoints" as const,
         label: isEn ? "Upset Score" : "Upsetスコア",
@@ -540,14 +545,14 @@ function ResultPostCard({
         format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
       },
     ];
-  }, [stats, isEn, hadUpsetGame]);
+  }, [stats, isEn, hadUpsetGame, leagueKey]);
 
   const statRowEntranceMeta = useMemo((): [
     ResultStatRowEntranceMeta,
     ResultStatRowEntranceMeta,
     ResultStatRowEntranceMeta,
   ] => {
-    return statRows.map((row) => {
+    const metas = statRows.map((row) => {
       const cap = row.barMax;
       const ratio =
         row.key === "upsetPoints" && !hadUpsetGame
@@ -556,7 +561,13 @@ function ResultPostCard({
             ? clamp01(row.value / cap)
             : 0;
       return { skipBarGrow: ratio === 0 };
-    }) as [ResultStatRowEntranceMeta, ResultStatRowEntranceMeta, ResultStatRowEntranceMeta];
+    });
+    while (metas.length < 3) metas.push({ skipBarGrow: true });
+    return metas.slice(0, 3) as [
+      ResultStatRowEntranceMeta,
+      ResultStatRowEntranceMeta,
+      ResultStatRowEntranceMeta,
+    ];
   }, [statRows, hadUpsetGame]);
 
   const entrance = useResultPostCardEntrance({

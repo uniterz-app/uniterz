@@ -69,6 +69,7 @@ function emptyBucket() {
         streakBonusSum: 0,
         goalScorerHitCount: 0,
         goalScorerBonusSum: 0,
+        exactHitCount: 0,
         winRate: 0,
         avgScoreError: 0,
         upsetHitRate: 0,
@@ -88,12 +89,13 @@ function recomputeCache(b) {
  * 投稿1件 → user_stats_v2_daily に即反映
  * =======================================================*/
 async function applyPostToUserStatsV2(opts) {
-    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, countsForRanking, seasonPhase, seasonRound, wcStage, homeTeamId, awayTeamId, } = opts;
+    const { uid, postId, startAt, league, isWin, scoreError, scorePrecision, hadUpsetGame, points, upsetHit, upsetPoints, upsetBonus, streakBonus, goalScorerBonus = 0, goalScorerHit = false, exactHit = false, countsForRanking, seasonPhase, seasonRound, wcStage, homeTeamId, awayTeamId, } = opts;
     const forRanking = shouldCountForRanking(countsForRanking);
     const phaseKey = normalizeSeasonPhase(seasonPhase);
     const roundKey = normalizeSeasonRound(seasonRound);
     const dateKey = toDateKeyJST(startAt);
     const leagueKey = normalizeLeague(league);
+    const isWc = leagueKey === "wc";
     const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(postId);
     const userStatsRef = db().doc(`user_stats_v2/${uid}`);
@@ -109,7 +111,8 @@ async function applyPostToUserStatsV2(opts) {
             upsetOpportunityCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
             upsetHitCount: firestore_1.FieldValue.increment(upsetHit ? 1 : 0),
             upsetPickCount: firestore_1.FieldValue.increment(hadUpsetGame ? 1 : 0),
-            scorePrecisionSum: firestore_1.FieldValue.increment(scorePrecision),
+            scorePrecisionSum: firestore_1.FieldValue.increment(isWc ? 0 : scorePrecision),
+            exactHitCount: firestore_1.FieldValue.increment(isWc && exactHit ? 1 : 0),
             pointsSumV3: firestore_1.FieldValue.increment(points),
             upsetPointsSum: firestore_1.FieldValue.increment(upsetPoints),
             upsetBonusSum: firestore_1.FieldValue.increment(upsetBonus),
@@ -146,7 +149,8 @@ async function applyPostToUserStatsV2(opts) {
             posts: 1,
             wins: isWin ? 1 : 0,
             scoreErrorSum: scoreError,
-            scorePrecisionSum: scorePrecision,
+            scorePrecisionSum: isWc ? 0 : scorePrecision,
+            exactHitCount: isWc && exactHit ? 1 : 0,
             pointsSumV3: points,
             upsetPointsSum: upsetPoints,
             upsetHitCount: upsetHit ? 1 : 0,
@@ -186,6 +190,7 @@ async function getStatsForDateRangeV2(uid, start, end, league) {
         b.streakBonusSum += src.streakBonusSum || 0;
         b.goalScorerHitCount += src.goalScorerHitCount || 0;
         b.goalScorerBonusSum += src.goalScorerBonusSum || 0;
+        b.exactHitCount += src.exactHitCount || 0;
     }
     return recomputeCache(b);
 }

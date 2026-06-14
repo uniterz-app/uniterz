@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import {
-  METRICS,
   type MobileMetric,
   type RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
@@ -70,7 +69,7 @@ import {
 } from "@/lib/rankings/rankingsPageShared";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import { useProgressiveRenderCount } from "@/lib/hooks/useProgressiveRenderCount";
-import { visibleMetricsForLeague } from "@/lib/rankings/wcVisibleMetrics";
+import { visibleMetricsForLeague, buildRankingTabMetrics } from "@/lib/rankings/wcVisibleMetrics";
 
 export default function MobileRankingsPage() {
   const searchParams = useSearchParams();
@@ -122,8 +121,8 @@ export default function MobileRankingsPage() {
   }, [metric, visibleMetrics]);
 
   const metricItems = useMemo(
-    () => METRICS.filter((m) => visibleMetrics.includes(m.key)),
-    [visibleMetrics]
+    () => buildRankingTabMetrics(rankingLeague),
+    [rankingLeague]
   );
 
   const { listReady, personalPending, myUid, byMetric, myMetricValueDeltas, ensureMetric } =
@@ -172,27 +171,33 @@ export default function MobileRankingsPage() {
     [metric, myRawRow]
   );
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
+  const precApiKey =
+    rankingLeague === "worldcup" ? "totalExactHits" : "totalPrecision";
   const myMiniMetrics = useMemo(
     () =>
       buildMyRankMiniMetrics(
         myStatsRow,
         {
           ptsRows: byMetric?.totalPoints?.rows as RankingRow[] | undefined,
-          precRows: byMetric?.totalPrecision?.rows as RankingRow[] | undefined,
+          precRows: byMetric?.[precApiKey]?.rows as RankingRow[] | undefined,
           upsetRows: byMetric?.totalUpset?.rows as RankingRow[] | undefined,
         },
-        myMetricValueDeltas
+        myMetricValueDeltas,
+        rankingLeague
       ),
     [
       myStatsRow,
       myMetricValueDeltas,
       byMetric?.totalPoints?.rows,
+      byMetric?.totalExactHits?.rows,
       byMetric?.totalPrecision?.rows,
       byMetric?.totalUpset?.rows,
+      rankingLeague,
+      precApiKey,
     ]
   );
 
-  const cardBarsReady = isMyRankMiniMetricsReady(byMetric);
+  const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeague);
 
   const winRateMinPosts = computeWinRateMinPosts(
     rankingLeague,

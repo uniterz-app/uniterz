@@ -4,6 +4,7 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
 import {
+  dateKeyJST,
   getYesterdayDateKeyJST,
   RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
   subtractOneDayFromDateKeyJST,
@@ -11,6 +12,7 @@ import {
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { RANK_SNAPSHOT_HISTORY_SUBCOL } from "@/lib/rankings/rankingPhase";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { readDailyWcStageBucket } from "@/lib/rankings/dailyWcStageBuckets";
 
 type SnapshotMetricValues = {
   totalPoints?: number;
@@ -72,6 +74,41 @@ function deltaOrNull(current: number, prior: number | undefined): number | null 
   return d;
 }
 
+function safeInt(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
+function wcDailyBucketFromDoc(
+  data: Record<string, unknown>,
+  wcStage: WcRankingStage
+): Record<string, unknown> {
+  const stageBucket = readDailyWcStageBucket(data, wcStage);
+  if (Number(stageBucket.posts ?? 0) > 0) {
+    return stageBucket as Record<string, unknown>;
+  }
+  const leagues = (data.leagues ?? {}) as Record<string, unknown>;
+  return ((wcStage === "overall" ? leagues.wc : null) ??
+    {}) as Record<string, unknown>;
+}
+
+/** WC 完全的中の前日比 — 当日 daily の exactHitCount（history の旧スコア精度を使わない） */
+async function wcExactHitDayDeltaFromDaily(
+  uid: string,
+  wcStage: WcRankingStage
+): Promise<number | null> {
+  const adminDb = getAdminDb();
+  const todayKey = dateKeyJST();
+  const snap = await adminDb
+    .doc(`user_stats_v2_daily/${uid}_${todayKey}`)
+    .get();
+  if (!snap.exists) return null;
+  const data = snap.data() as Record<string, unknown>;
+  const inc = safeInt(wcDailyBucketFromDoc(data, wcStage).exactHitCount);
+  if (inc === 0) return null;
+  return inc;
+}
+
 async function loadPriorHistoryDoc(uid: string) {
   const adminDb = getAdminDb();
   let key = getYesterdayDateKeyJST();
@@ -119,9 +156,14 @@ export async function loadMyRankMetricValueDeltas(
   const winPct = winRateAsPct(current.winRate);
   const priorWinPct = winRateAsPct(prior.winRate);
 
+  const totalPrecisionDelta =
+    opts.rankingLeague === "worldcup"
+      ? await wcExactHitDayDeltaFromDaily(uid, opts.wcStage ?? "overall")
+      : deltaOrNull(prec, prior.totalPrecision);
+
   const deltas: MyRankMetricValueDeltas = {
     totalPoints: deltaOrNull(pts, prior.totalPoints),
-    totalPrecision: deltaOrNull(prec, prior.totalPrecision),
+    totalPrecision: totalPrecisionDelta,
     totalUpset: deltaOrNull(upset, prior.totalUpset),
     winRate: deltaOrNull(winPct, priorWinPct),
   };

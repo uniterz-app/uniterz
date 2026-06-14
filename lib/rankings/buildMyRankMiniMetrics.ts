@@ -7,6 +7,7 @@ import {
 type StatsRow = {
   totalPoints?: number;
   totalPrecision?: number;
+  totalExactHits?: number;
   totalUpset?: number;
   winRate?: number;
 };
@@ -30,18 +31,29 @@ export function buildMyRankMiniMetrics(
     precRows?: StatsRow[];
     upsetRows?: StatsRow[];
   },
-  valueDeltas?: MyRankMetricValueDeltas | null
+  valueDeltas?: MyRankMetricValueDeltas | null,
+  rankingLeague: "nba" | "worldcup" = "nba"
 ): MyRankMiniMetric[] | undefined {
   if (!myRow) return undefined;
+
+  const isWc = rankingLeague === "worldcup";
+  const precMetricKey = isWc ? "exactHits" : "marginPrecision";
 
   const pts = myRow.totalPoints ?? 0;
   const winRaw = myRow.winRate ?? 0;
   const winPct = winRaw <= 1 ? Math.round(winRaw * 100) : Math.round(winRaw);
-  const prec = myRow.totalPrecision ?? 0;
+  const prec =
+    myRow.totalExactHits ??
+    myRow.totalPrecision ??
+    0;
   const upset = myRow.totalUpset ?? 0;
 
   const maxPts = maxFromRows(leaders.ptsRows, (r) => r.totalPoints);
-  const maxPrec = maxFromRows(leaders.precRows, (r) => r.totalPrecision);
+  const maxPrec = maxFromRows(leaders.precRows, (r) =>
+    rankingLeague === "worldcup"
+      ? r.totalExactHits ?? r.totalPrecision
+      : r.totalPrecision
+  );
   const maxUpset = maxFromRows(leaders.upsetRows, (r) => r.totalUpset);
 
   const ratio = (v: number, max: number) =>
@@ -63,11 +75,11 @@ export function buildMyRankMiniMetrics(
       dayDelta: dayDeltaLabelForMetric("winRate", valueDeltas),
     },
     {
-      key: "marginPrecision",
-      label: "PREC",
-      value: prec.toFixed(1),
+      key: precMetricKey,
+      label: isWc ? "EXACT" : "PREC",
+      value: isWc ? String(Math.round(prec)) : prec.toFixed(1),
       pct: ratio(prec, maxPrec),
-      dayDelta: dayDeltaLabelForMetric("marginPrecision", valueDeltas),
+      dayDelta: dayDeltaLabelForMetric(precMetricKey, valueDeltas),
     },
     {
       key: "upsetScore",
@@ -81,11 +93,14 @@ export function buildMyRankMiniMetrics(
 
 /** 4 指標バーのリーダー行がすべて揃ったか（PTS / PREC / UPSET の max 計算用） */
 export function isMyRankMiniMetricsReady(
-  byMetric?: Record<string, { rows?: unknown[] } | undefined> | null
+  byMetric?: Record<string, { rows?: unknown[] } | undefined> | null,
+  rankingLeague: "nba" | "worldcup" = "nba"
 ): boolean {
+  const precKey =
+    rankingLeague === "worldcup" ? "totalExactHits" : "totalPrecision";
   return (
     Array.isArray(byMetric?.totalPoints?.rows) &&
-    Array.isArray(byMetric?.totalPrecision?.rows) &&
+    Array.isArray(byMetric?.[precKey]?.rows) &&
     Array.isArray(byMetric?.totalUpset?.rows)
   );
 }

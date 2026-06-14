@@ -11,15 +11,20 @@ export type MyRankMetricDeltaKey =
   | "totalScore"
   | "winRate"
   | "marginPrecision"
+  | "exactHits"
   | "upsetScore";
 
 export function formatMetricDayDeltaLabel(
   metricKey: MyRankMetricDeltaKey,
-  delta: number
+  delta: number,
+  opts?: { integer?: boolean }
 ): string {
   const sign = delta > 0 ? "+" : "-";
   const abs = Math.abs(delta);
   if (metricKey === "totalScore" || metricKey === "winRate") {
+    return delta === 0 ? "0" : `${sign}${Math.round(abs)}`;
+  }
+  if (metricKey === "exactHits" || opts?.integer) {
     return delta === 0 ? "0" : `${sign}${Math.round(abs)}`;
   }
   return delta === 0 ? "0.0" : `${sign}${abs.toFixed(1)}`;
@@ -33,12 +38,14 @@ export function dayDeltaLabelForMetric(
   const field =
     metricKey === "totalScore"
       ? "totalPoints"
-      : metricKey === "marginPrecision"
+      : metricKey === "marginPrecision" || metricKey === "exactHits"
         ? "totalPrecision"
         : metricKey === "upsetScore"
           ? "totalUpset"
           : "winRate";
   const raw = deltas[field];
   if (raw == null || !Number.isFinite(raw) || raw === 0) return null;
-  return formatMetricDayDeltaLabel(metricKey, raw);
+  return formatMetricDayDeltaLabel(metricKey, raw, {
+    integer: metricKey === "exactHits",
+  });
 }

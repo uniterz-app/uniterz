@@ -173,6 +173,8 @@ const en: Messages = {
     allTimeMaxStreakNote: "This is your all-time best win streak. It doesn't change with 7d / 30d filters.",
     scorePrecisionTooltip:
       "Score precision measures how close your predicted score is to the actual score (0–10), totaled for the period.",
+    exactHitTooltip:
+      "Number of matches where your predicted score exactly matched the final score.",
     upsetTooltip:
       "Awarded only when an upset occurs and you correctly predicted the minority. Cumulative for the period.",
     maxStreakTooltip:
@@ -188,6 +190,7 @@ const en: Messages = {
     totalScore: "Total Score",
     winRate: "Win Rate",
     scorePrecision: "Score Precision",
+    exactHits: "Exact Score Hits",
     upsetScore: "Upset Score",
     winStreak: "Win Streak",
     goalScorerHits: "Goal Scorers",

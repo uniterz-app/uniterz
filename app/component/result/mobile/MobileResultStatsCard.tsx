@@ -14,6 +14,7 @@ import WcGoalScorerResultRow, {
 } from "@/app/component/result/WcGoalScorerResultRow";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { resultDetailPanelClass } from "@/lib/result/resultGlass";
+import { resultShowsScorePrecision } from "@/lib/result/wcResultUi";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 
 type Props = {
@@ -90,6 +91,8 @@ function MobileResultStatsCard({
       0
     );
 
+    const showScorePrecision = resultShowsScorePrecision(post.league);
+
     return {
       basePoints,
       upsetBonus,
@@ -97,39 +100,43 @@ function MobileResultStatsCard({
       goalScorerBonus,
       totalPoints: pointsV3,
       rows: [
+        ...(showScorePrecision
+          ? [
+              {
+                key: "scorePrecision" as const,
+                label: m.results.scorePrecisionLabel,
+                desc: m.results.scorePrecisionDesc,
+                value: scorePrecision,
+                max: 10,
+                barMax: 10,
+                format: (v: number) => v.toFixed(1),
+              },
+            ]
+          : []),
         {
-          key: "scorePrecision",
-          label: m.results.scorePrecisionLabel,
-          desc: m.results.scorePrecisionDesc,
-          value: scorePrecision,
-          max: 10,
-          barMax: 10,
-          format: (v) => v.toFixed(1),
-        },
-        {
-          key: "upsetPoints",
+          key: "upsetPoints" as const,
           label: m.results.upsetPointsLabel,
           desc: m.results.upsetPointsDesc,
           value: upsetPoints,
           max: 10,
           barMax: 10,
-          format: (v) =>
+          format: (v: number) =>
             hadUpsetGame
               ? `${(Math.round(v * 10) / 10).toFixed(1)}`
               : "--",
         },
         {
-          key: "pointsV3",
+          key: "pointsV3" as const,
           label: m.results.totalPointsLabel,
           desc: m.results.totalPointsDesc,
           value: pointsV3,
           /** バーは10点満点表示（ボーナス込みで実数値は10超えうる → バーは満タンで頭打ち） */
           barMax: 10,
-          format: (v) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
+          format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
         },
       ],
     };
-  }, [post.stats, m]);
+  }, [post.stats, post.league, m]);
 
   const barAnimateMs = 480;
   const barStaggerMs = 80;

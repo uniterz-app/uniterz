@@ -224,6 +224,10 @@ export function podiumScoreSubText(
   if (metric === "marginPrecision") {
     return `avg ${formatMetricDecimals(row.avgMarginPrecision ?? 0, 1)}  ${t.posts}:${row.posts ?? 0}`;
   }
+  if (metric === "exactHits") {
+    const n = Math.round(row.marginPrecisionScore ?? 0);
+    return n > 0 ? `${n}  ${t.posts}:${row.posts ?? 0}` : `${t.posts}:${row.posts ?? 0}`;
+  }
   if (metric === "upsetScore") {
     return "";
   }

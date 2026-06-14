@@ -173,6 +173,8 @@ const es: Messages = {
     allTimeMaxStreakNote: "Esta es tu mejor racha de victorias de todos los tiempos. No cambia con los filtros de 7/30 días.",
     scorePrecisionTooltip:
       "Mide la cercanía de tu predicción al resultado real (0–10), acumulada en el periodo.",
+    exactHitTooltip:
+      "Número de partidos en los que tu predicción coincidió exactamente con el resultado final.",
     upsetTooltip:
       "Se otorga solo cuando ocurre una sorpresa y acertaste con una predicción minoritaria. Acumulativo para el periodo.",
     maxStreakTooltip:
@@ -188,6 +190,7 @@ const es: Messages = {
     totalScore: "Puntuación total",
     winRate: "Tasa de acierto",
     scorePrecision: "Precisión de puntuación",
+    exactHits: "Aciertos exactos",
     upsetScore: "Puntuación de sorpresas",
     goalScorerHits: "Goal Scorers",
     winStreak: "Racha de victorias",

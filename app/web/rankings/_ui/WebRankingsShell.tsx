@@ -180,27 +180,33 @@ export default function WebRankingsShell() {
   );
 
   /** プレイヤーカード 2×2 セル — 現在タブの rows には依存しない */
+  const precApiKey =
+    rankingLeague === "worldcup" ? "totalExactHits" : "totalPrecision";
   const myMiniMetrics = useMemo(
     () =>
       buildMyRankMiniMetrics(
         myStatsRow,
         {
           ptsRows: byMetric?.totalPoints?.rows as RankingRow[] | undefined,
-          precRows: byMetric?.totalPrecision?.rows as RankingRow[] | undefined,
+          precRows: byMetric?.[precApiKey]?.rows as RankingRow[] | undefined,
           upsetRows: byMetric?.totalUpset?.rows as RankingRow[] | undefined,
         },
-        myMetricValueDeltas
+        myMetricValueDeltas,
+        rankingLeague
       ),
     [
       myStatsRow,
       myMetricValueDeltas,
       byMetric?.totalPoints?.rows,
+      byMetric?.totalExactHits?.rows,
       byMetric?.totalPrecision?.rows,
       byMetric?.totalUpset?.rows,
+      rankingLeague,
+      precApiKey,
     ]
   );
 
-  const cardBarsReady = isMyRankMiniMetricsReady(byMetric);
+  const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeague);
 
   const winRateMinPosts = computeWinRateMinPosts(
     rankingLeague,

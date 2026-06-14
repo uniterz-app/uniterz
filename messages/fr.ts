@@ -173,6 +173,8 @@ const fr: Messages = {
     allTimeMaxStreakNote: "Il s'agit de votre meilleure série de victoires de tous les temps. Elle ne change pas avec les filtres 7j / 30j.",
     scorePrecisionTooltip:
       "Mesure la proximité de votre score prédit avec le score réel (0–10), cumulée sur la période.",
+    exactHitTooltip:
+      "Nombre de matchs où votre score prédit correspond exactement au résultat final.",
     upsetTooltip:
       "Accordé uniquement quand une surprise se produit et que vous avez correctement prédit en minorité. Cumulatif sur la période.",
     maxStreakTooltip:
@@ -188,6 +190,7 @@ const fr: Messages = {
     totalScore: "Score total",
     winRate: "Taux de réussite",
     scorePrecision: "Précision du score",
+    exactHits: "Scores exacts",
     upsetScore: "Score de surprises",
     goalScorerHits: "Goal Scorers",
     winStreak: "Série de victoires",

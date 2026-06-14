@@ -97,6 +97,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     if (!myRawRow) return 0;
     if (metric === "totalScore") return myRawRow.totalPoints ?? 0;
     if (metric === "marginPrecision") return myRawRow.totalPrecision ?? 0;
+    if (metric === "exactHits")
+      return myRawRow.totalExactHits ?? myRawRow.totalPrecision ?? 0;
     if (metric === "upsetScore") return myRawRow.totalUpset ?? 0;
     if (metric === "winRate") {
       const raw = myRawRow.winRate ?? 0;

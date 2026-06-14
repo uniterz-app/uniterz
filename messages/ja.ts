@@ -171,6 +171,8 @@ const ja = {
     allTimeMaxStreakNote: "全期間（All-time）の最高連勝数です。期間切替（7日/30日）とは連動しません。",
     scorePrecisionTooltip:
       "予想スコアと実際スコアの近さを0〜10で評価し、期間内の合計を算出。スコアまで当てる精度を測ります。",
+    exactHitTooltip:
+      "予想スコアが結果と完全一致した試合数（期間内の累計）。",
     upsetTooltip:
       "アップセットが起きた試合で少数派を当てたときだけ加点。期間内の累計です。",
     maxStreakTooltip:
@@ -186,6 +188,7 @@ const ja = {
     totalScore: "総合スコア",
     winRate: "勝率",
     scorePrecision: "スコア精度",
+    exactHits: "完全的中",
     upsetScore: "アップセットスコア",
     winStreak: "連勝",
     goalScorerHits: "得点者的中",

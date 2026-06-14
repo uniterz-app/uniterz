@@ -14,6 +14,7 @@ type Metric =
   | "winRate"
   | "totalPoints"
   | "totalPrecision"
+  | "totalExactHits"
   | "totalUpset"
   | "activeWinStreak"
   | "totalGoalScorerHits";
@@ -38,8 +39,15 @@ const METRICS: Metric[] = [
   "activeWinStreak",
 ];
 
-/** World Cup 専用（得点者的中数） */
-const WC_METRICS: Metric[] = [...METRICS, "totalGoalScorerHits"];
+/** World Cup 専用（完全的中は totalExactHits、得点者的中は totalGoalScorerHits） */
+const WC_METRICS: Metric[] = [
+  "totalPoints",
+  "winRate",
+  "totalExactHits",
+  "totalUpset",
+  "activeWinStreak",
+  "totalGoalScorerHits",
+];
 
 type RankingPhase = "play_in" | "playoffs";
 type PlayoffRoundKey = "r1" | "r2" | "cf" | "finals";
@@ -198,10 +206,15 @@ type BaseRow = {
   activeWinStreak: number;
 };
 
+function wcExactHitsFromRow(row: BaseRow): number {
+  return row.totalPrecision ?? 0;
+}
+
 function getRowMetricValue(row: BaseRow, metric: Metric): number {
   if (metric === "activeWinStreak") return row.activeWinStreak ?? 0;
   if (metric === "winRate") return row.winRate ?? 0;
   if (metric === "totalPoints") return row.totalPoints ?? 0;
+  if (metric === "totalExactHits") return wcExactHitsFromRow(row);
   if (metric === "totalPrecision") return row.totalPrecision ?? 0;
   if (metric === "totalGoalScorerHits") return row.totalGoalScorerHits ?? 0;
   return row.totalUpset ?? 0;
@@ -368,6 +381,7 @@ function metricValueFromRow(row: BaseRow, metric: Metric): number | null {
   if (metric === "totalGoalScorerHits") return row.totalGoalScorerHits ?? 0;
   if (metric === "winRate") return row.winRate ?? 0;
   if (metric === "totalPoints") return row.totalPoints ?? 0;
+  if (metric === "totalExactHits") return wcExactHitsFromRow(row);
   if (metric === "totalPrecision") return row.totalPrecision ?? 0;
   return row.totalUpset ?? 0;
 }
@@ -381,7 +395,9 @@ function metricValueFromSnapshot(
   }
   if (metric === "winRate") return values.winRate ?? 0;
   if (metric === "totalPoints") return values.totalPoints ?? 0;
-  if (metric === "totalPrecision") return values.totalPrecision ?? 0;
+  if (metric === "totalExactHits" || metric === "totalPrecision") {
+    return values.totalPrecision ?? 0;
+  }
   return values.totalUpset ?? 0;
 }
 

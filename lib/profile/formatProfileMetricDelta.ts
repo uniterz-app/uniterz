@@ -16,10 +16,14 @@ const DELTA_KEY_MAP: Record<ProfileMetricDeltaKey, MyRankMetricDeltaKey> = {
 
 export function formatProfileMetricDayDelta(
   key: ProfileMetricDeltaKey,
-  delta: number | null | undefined
+  delta: number | null | undefined,
+  opts?: { integer?: boolean }
 ): string | null {
   if (delta == null || !Number.isFinite(delta) || delta === 0) return null;
-  const label = formatMetricDayDeltaLabel(DELTA_KEY_MAP[key], delta);
+  const metricKey = DELTA_KEY_MAP[key];
+  const label = formatMetricDayDeltaLabel(metricKey, delta, {
+    integer: opts?.integer && key === "scorePrecision",
+  });
   if (!label || label === "0" || label === "0.0") return null;
 
   if (key === "winRate") {

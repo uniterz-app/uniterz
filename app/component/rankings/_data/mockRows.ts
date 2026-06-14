@@ -4,6 +4,7 @@ export type MobileMetric =
   | "totalScore"
   | "winRate"
   | "marginPrecision"
+  | "exactHits"
   | "upsetScore"
   | "streak"
   | "goalScorerHits";
@@ -12,6 +13,7 @@ export const METRICS: { key: MobileMetric; label: string }[] = [
   { key: "totalScore", label: "総合スコア" },
   { key: "winRate", label: "勝率" },
   { key: "marginPrecision", label: "スコア精度" },
+  { key: "exactHits", label: "完全的中" },
   { key: "upsetScore", label: "アップセットスコア" },
   { key: "streak", label: "連勝" },
   { key: "goalScorerHits", label: "得点者的中" },
@@ -27,7 +29,11 @@ export const NBA_RANKING_METRICS: MobileMetric[] = [
 ];
 
 export const WC_RANKING_METRICS: MobileMetric[] = [
-  ...NBA_RANKING_METRICS,
+  "totalScore",
+  "winRate",
+  "exactHits",
+  "upsetScore",
+  "streak",
   "goalScorerHits",
 ];
 
@@ -43,6 +49,7 @@ export type RankingRowWithCountry = RankingRow & {
   totalScore?: number;
   avgTotalScore?: number;
   marginPrecisionScore?: number;
+  exactHits?: number;
   avgMarginPrecision?: number;
   upsetScore?: number;
   avgUpsetScore?: number;

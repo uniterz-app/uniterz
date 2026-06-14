@@ -23,6 +23,7 @@ type Metric =
   | "winRate"
   | "totalPoints"
   | "totalPrecision"
+  | "totalExactHits"
   | "totalUpset"
   | "activeWinStreak"
   | "totalGoalScorerHits";
@@ -53,6 +54,7 @@ type RankingRow = {
 
   totalPoints: number;
   totalPrecision: number;
+  totalExactHits?: number;
   totalUpset: number;
   totalGoalScorerHits: number;
   activeWinStreak: number;
@@ -67,6 +69,7 @@ function isMetric(v: unknown): v is Metric {
     v === "winRate" ||
     v === "totalPoints" ||
     v === "totalPrecision" ||
+    v === "totalExactHits" ||
     v === "totalUpset" ||
     v === "activeWinStreak" ||
     v === "totalGoalScorerHits"
@@ -352,6 +355,13 @@ async function rankingPayloadForMetric(
     rows = await filterRankingRowsToWcStage(rows, wcStage);
   }
 
+  if (metric === "totalExactHits") {
+    rows = rows.map((r) => ({
+      ...r,
+      totalExactHits: r.totalPrecision ?? 0,
+    }));
+  }
+
   const missingPlanUids = rows
     .filter((r) => r?.uid && r.plan !== "pro" && r.plan !== "free")
     .map((r) => r.uid as string);
@@ -464,7 +474,9 @@ async function rankingPayloadForMetric(
           ? activeFootballStreak(me)
           : metric === "winRate"
             ? rk.winRate ?? 0
-            : (rk as Record<string, number>)[metric] ?? 0;
+            : metric === "totalExactHits"
+              ? rk.totalPrecision ?? 0
+              : (rk as Record<string, number>)[metric] ?? 0;
 
       const hasRankingObj =
         me.rankingByWcStage?.[wcStage] &&
@@ -475,13 +487,15 @@ async function rankingPayloadForMetric(
       const rankField =
         metric === "activeWinStreak"
           ? activeFootballStreakRankField()
-          : hasRankingObj
-            ? metric === "winRate"
-              ? new FieldPath("rankingByWcStage", wcStage, "winRate")
-              : new FieldPath("rankingByWcStage", wcStage, metric)
-            : metric === "winRate"
-              ? "winRate"
-              : metric;
+          : metric === "totalExactHits"
+            ? new FieldPath("rankingByWcStage", wcStage, "totalPrecision")
+            : hasRankingObj
+              ? metric === "winRate"
+                ? new FieldPath("rankingByWcStage", wcStage, "winRate")
+                : new FieldPath("rankingByWcStage", wcStage, metric)
+              : metric === "winRate"
+                ? "winRate"
+                : metric;
 
       const higherQuery = db()
         .collection("cumulative_stats")
@@ -526,6 +540,8 @@ async function rankingPayloadForMetric(
 
         totalPoints: rk.totalPoints,
         totalPrecision: rk.totalPrecision,
+        totalExactHits:
+          metric === "totalExactHits" ? rk.totalPrecision ?? 0 : undefined,
         totalUpset: rk.totalUpset,
         totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
         activeWinStreak: activeFootballStreak(me),

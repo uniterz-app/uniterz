@@ -14,6 +14,7 @@ export function getMyMetricValue(
 
   if (metric === "totalScore") return row.totalPoints ?? 0;
   if (metric === "marginPrecision") return row.totalPrecision ?? 0;
+  if (metric === "exactHits") return row.totalExactHits ?? row.totalPrecision ?? 0;
   if (metric === "upsetScore") return row.totalUpset ?? 0;
 
   if (metric === "winRate") {

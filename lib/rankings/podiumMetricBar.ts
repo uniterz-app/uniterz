@@ -25,6 +25,11 @@ export function podiumMetricBarSpec(
         ratio: clamp01((row.avgMarginPrecision ?? 0) / 10),
         label: formatMetricDecimals(row.avgMarginPrecision ?? 0, 1),
       };
+    case "exactHits":
+      return {
+        ratio: clamp01((row.marginPrecisionScore ?? 0) / 20),
+        label: `${Math.max(0, Math.round(row.marginPrecisionScore ?? 0))}`,
+      };
     case "upsetScore":
       return {
         ratio: clamp01((row.avgUpsetScore ?? 0) / 10),

@@ -28,8 +28,15 @@ const METRICS = [
     "totalUpset",
     "activeWinStreak",
 ];
-/** World Cup 専用（得点者的中数） */
-const WC_METRICS = [...METRICS, "totalGoalScorerHits"];
+/** World Cup 専用（完全的中は totalExactHits、得点者的中は totalGoalScorerHits） */
+const WC_METRICS = [
+    "totalPoints",
+    "winRate",
+    "totalExactHits",
+    "totalUpset",
+    "activeWinStreak",
+    "totalGoalScorerHits",
+];
 const PLAYOFF_ROUND_KEYS = ["r1", "r2", "cf", "finals"];
 const WC_RANKING_STAGES = [
     "overall",
@@ -156,6 +163,10 @@ function activeFootballStreak(d) {
     const signed = (_d = (_c = (_a = d.activeWinStreakFootball) !== null && _a !== void 0 ? _a : (_b = d.streakBySport) === null || _b === void 0 ? void 0 : _b.football) !== null && _c !== void 0 ? _c : d.streakFootball) !== null && _d !== void 0 ? _d : 0;
     return typeof signed === "number" && signed > 0 ? signed : 0;
 }
+function wcExactHitsFromRow(row) {
+    var _a;
+    return (_a = row.totalPrecision) !== null && _a !== void 0 ? _a : 0;
+}
 function getRowMetricValue(row, metric) {
     var _a, _b, _c, _d, _e, _f;
     if (metric === "activeWinStreak")
@@ -164,6 +175,8 @@ function getRowMetricValue(row, metric) {
         return (_b = row.winRate) !== null && _b !== void 0 ? _b : 0;
     if (metric === "totalPoints")
         return (_c = row.totalPoints) !== null && _c !== void 0 ? _c : 0;
+    if (metric === "totalExactHits")
+        return wcExactHitsFromRow(row);
     if (metric === "totalPrecision")
         return (_d = row.totalPrecision) !== null && _d !== void 0 ? _d : 0;
     if (metric === "totalGoalScorerHits")
@@ -260,6 +273,8 @@ function metricValueFromRow(row, metric) {
         return (_c = row.winRate) !== null && _c !== void 0 ? _c : 0;
     if (metric === "totalPoints")
         return (_d = row.totalPoints) !== null && _d !== void 0 ? _d : 0;
+    if (metric === "totalExactHits")
+        return wcExactHitsFromRow(row);
     if (metric === "totalPrecision")
         return (_e = row.totalPrecision) !== null && _e !== void 0 ? _e : 0;
     return (_f = row.totalUpset) !== null && _f !== void 0 ? _f : 0;
@@ -273,8 +288,9 @@ function metricValueFromSnapshot(values, metric) {
         return (_a = values.winRate) !== null && _a !== void 0 ? _a : 0;
     if (metric === "totalPoints")
         return (_b = values.totalPoints) !== null && _b !== void 0 ? _b : 0;
-    if (metric === "totalPrecision")
+    if (metric === "totalExactHits" || metric === "totalPrecision") {
         return (_c = values.totalPrecision) !== null && _c !== void 0 ? _c : 0;
+    }
     return (_d = values.totalUpset) !== null && _d !== void 0 ? _d : 0;
 }
 function computeMetricValueDelta(row, metric, prior) {

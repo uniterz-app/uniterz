@@ -25,6 +25,8 @@ export type StatsV2Bucket = {
   streakBonusSum: number;
   goalScorerHitCount: number;
   goalScorerBonusSum: number;
+  /** WC: 予想スコア完全一致の試合数 */
+  exactHitCount: number;
 
   winRate: number;
   avgScoreError: number;
@@ -62,6 +64,8 @@ type ApplyOptsV2 = {
   streakBonus: number;
   goalScorerBonus?: number;
   goalScorerHit?: boolean;
+  /** WC: 予想スコア完全一致 */
+  exactHit?: boolean;
 
   /** false のとき（例: プレーイン）はランキング用日次・累積に含めない。未設定は従来どおり true */
   countsForRanking?: boolean;
@@ -153,6 +157,7 @@ function emptyBucket(): StatsV2Bucket {
     streakBonusSum: 0,
     goalScorerHitCount: 0,
     goalScorerBonusSum: 0,
+    exactHitCount: 0,
 
     winRate: 0,
     avgScoreError: 0,
@@ -202,6 +207,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
     streakBonus,
     goalScorerBonus = 0,
     goalScorerHit = false,
+    exactHit = false,
     countsForRanking,
     seasonPhase,
     seasonRound,
@@ -216,6 +222,7 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
   const dateKey = toDateKeyJST(startAt);
   const leagueKey = normalizeLeague(league);
+  const isWc = leagueKey === "wc";
 
   const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
   const markerRef = dailyRef.collection("applied_posts").doc(postId);
@@ -235,7 +242,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetHitCount: FieldValue.increment(upsetHit ? 1 : 0),
       upsetPickCount: FieldValue.increment(hadUpsetGame ? 1 : 0),
 
-      scorePrecisionSum: FieldValue.increment(scorePrecision),
+      scorePrecisionSum: FieldValue.increment(isWc ? 0 : scorePrecision),
+      exactHitCount: FieldValue.increment(isWc && exactHit ? 1 : 0),
 
       pointsSumV3: FieldValue.increment(points),
       upsetPointsSum: FieldValue.increment(upsetPoints),
@@ -303,7 +311,8 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       posts: 1,
       wins: isWin ? 1 : 0,
       scoreErrorSum: scoreError,
-      scorePrecisionSum: scorePrecision,
+      scorePrecisionSum: isWc ? 0 : scorePrecision,
+      exactHitCount: isWc && exactHit ? 1 : 0,
       pointsSumV3: points,
       upsetPointsSum: upsetPoints,
       upsetHitCount: upsetHit ? 1 : 0,
@@ -354,6 +363,7 @@ export async function getStatsForDateRangeV2(
     b.streakBonusSum += src.streakBonusSum || 0;
     b.goalScorerHitCount += src.goalScorerHitCount || 0;
     b.goalScorerBonusSum += src.goalScorerBonusSum || 0;
+    b.exactHitCount += src.exactHitCount || 0;
   }
 
   return recomputeCache(b);

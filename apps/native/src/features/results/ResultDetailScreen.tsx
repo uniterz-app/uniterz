@@ -457,6 +457,7 @@ function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; 
   const isEn = language === "en";
   const stats = post.stats as Record<string, unknown> | undefined;
   const hadUpsetGame = Boolean(stats?.hadUpsetGame);
+  const showScorePrecision = String(post.league ?? "").trim().toLowerCase() !== "wc";
   const scorePrecision = toNumber(stats?.scorePrecision, 0);
   const upsetPoints = toNumber(stats?.upsetPoints, 0);
   const pointsV3 = toNumber(stats?.pointsV3, 0);
@@ -473,16 +474,20 @@ function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; 
 
   const rows = useMemo(
     () => [
-      {
-        key: "scorePrecision" as const,
-        label: isEn ? "Score Precision" : "スコア精度",
-        desc: isEn
-          ? "How close your predicted score is to the actual score (0–10 per match)."
-          : "予想スコアが実スコアにどれだけ近いか（1試合 0〜10）。",
-        value: scorePrecision,
-        barMax: 10,
-        format: (v: number) => v.toFixed(1),
-      },
+      ...(showScorePrecision
+        ? [
+            {
+              key: "scorePrecision" as const,
+              label: isEn ? "Score Precision" : "スコア精度",
+              desc: isEn
+                ? "How close your predicted score is to the actual score (0–10 per match)."
+                : "予想スコアが実スコアにどれだけ近いか（1試合 0〜10）。",
+              value: scorePrecision,
+              barMax: 10,
+              format: (v: number) => v.toFixed(1),
+            },
+          ]
+        : []),
       {
         key: "upsetPoints" as const,
         label: isEn ? "Upset Points" : "アップセット",
@@ -504,7 +509,7 @@ function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; 
         format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
       },
     ],
-    [hadUpsetGame, isEn, scorePrecision, upsetPoints, pointsV3]
+    [hadUpsetGame, isEn, scorePrecision, showScorePrecision, upsetPoints, pointsV3]
   );
 
   return (

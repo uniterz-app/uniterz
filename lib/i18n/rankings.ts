@@ -7,6 +7,7 @@ export function metricLabel(metric: MobileMetric, lang: Language): string {
   if (metric === "totalScore") return m.totalScore;
   if (metric === "winRate") return m.winRate;
   if (metric === "marginPrecision") return m.scorePrecision;
+  if (metric === "exactHits") return m.exactHits;
   if (metric === "upsetScore") return m.upsetScore;
   if (metric === "streak") return m.winStreak;
   if (metric === "goalScorerHits") return m.goalScorerHits;

@@ -102,6 +102,8 @@ export async function finalizePost({
       streakBonus,
       goalScorerBonus,
 
+      exactMatch: Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
+
       countedForRanking: countsForRanking,
 
       pointsV3: totalPoints,
@@ -117,6 +119,7 @@ export async function finalizePost({
         activeWinStreak,
         diffError: baseScore.diffError,
         totalError: baseScore.totalError,
+        exactMatch: Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
       },
     },
 
@@ -140,7 +143,7 @@ export async function finalizePost({
 
       isWin: result.isWin,
       scoreError: result.scoreError,
-      scorePrecision: result.scorePrecision,
+      scorePrecision: isWc ? 0 : result.scorePrecision,
       hadUpsetGame,
 
       upsetHit: result.upsetHit,
@@ -149,6 +152,7 @@ export async function finalizePost({
       streakBonus,
       goalScorerBonus,
       goalScorerHit: goalScorerBonus > 0,
+      exactHit: isWc && Boolean((baseScore as { exactMatch?: boolean }).exactMatch),
 
       points: totalPoints,
       countsForRanking,

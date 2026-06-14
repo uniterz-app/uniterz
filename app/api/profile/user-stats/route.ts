@@ -159,7 +159,9 @@ async function summaryFromDailyPhaseFallback(
       : ((byPhase[phase] ?? {}) as Record<string, unknown>);
     posts += safeInt(row.posts);
     wins += safeInt(row.wins);
-    scorePrecisionSum += safeNum(row.scorePrecisionSum);
+    scorePrecisionSum += wcStage
+      ? safeInt(row.exactHitCount)
+      : safeNum(row.scorePrecisionSum);
     upsetPointsSum += safeNum(row.upsetPointsSum);
     pointsSumV3 += safeNum(row.pointsSumV3);
     upsetChanceCount += safeInt(row.upsetOpportunityCount);
