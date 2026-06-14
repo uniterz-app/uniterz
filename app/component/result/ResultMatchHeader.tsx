@@ -27,7 +27,10 @@ import { t } from "@/lib/i18n/t";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import { isResultWinFrameBadge } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
+import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
+import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
+import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
@@ -39,6 +42,7 @@ type Props = {
   inOverlay?: boolean;
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
+  cardClockMs?: number;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -118,7 +122,9 @@ function ResultMatchHeader({
   inOverlay: _inOverlay = false,
   viewerUid = null,
   gamesRoutePrefix = "/web",
+  cardClockMs,
 }: Props) {
+  const clock = useResultCardClockMs(cardClockMs);
   const pathname = usePathname();
   const isMobileRoute = pathname?.startsWith("/mobile") ?? false;
   /** モバイルルートではユニ（Canvas）だけ一段大きく */
@@ -196,8 +202,14 @@ function ResultMatchHeader({
     const finalized =
       post.status === "final" || post.game?.status === "final";
     if (finalized) return null;
+    if (isResultPostMatchStarted(post, clock)) return null;
     return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
-  }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, gamesRoutePrefix]);
+  }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, post.startAtMillis, gamesRoutePrefix, clock]);
+
+  const isLiveGame = isResultPostLiveGame(post, clock);
+  const liveMarkNode = isLiveGame ? (
+    <ResultLiveMark isMobile={isMobileRoute} language={language} />
+  ) : null;
 
   return (
     <ResultGlassShell
@@ -227,6 +239,7 @@ function ResultMatchHeader({
             activeWinStreak={activeWinStreak}
             isMobile={false}
             hitBadgeSubtle
+            trailing={liveMarkNode}
           />
         </div>
       </div>

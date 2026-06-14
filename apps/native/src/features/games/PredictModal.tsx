@@ -21,6 +21,10 @@ import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
 import { LiveMarkPill } from "./LiveMarkPill";
+import {
+  liveMarkPillCyberBase,
+  liveMarkTextCyberBase,
+} from "../../ui/liveMarkCyberStyles";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import {
   MODAL_PREVIEW_GRID_LAYER_OPACITY,
@@ -1364,22 +1368,8 @@ const s = StyleSheet.create({
     textShadowRadius: 4,
   },
   /** Web `LiveMatchMark` 相当（プレビュー中央・一覧よりひとまわり小さめ） */
-  matchPreviewLivePill: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.55)",
-    backgroundColor: "rgba(220,38,38,0.96)",
-  },
-  matchPreviewLivePillText: {
-    color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.85,
-    textTransform: "uppercase",
-    includeFontPadding: false,
-  },
+  matchPreviewLivePill: liveMarkPillCyberBase,
+  matchPreviewLivePillText: liveMarkTextCyberBase,
   /** `PlayoffSeriesScoreInline` を包む（旧シリーズ行 Text 相当） */
   matchPreviewSeriesRow: {
     alignItems: "center",

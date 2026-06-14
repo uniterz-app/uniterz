@@ -76,6 +76,10 @@ import { getGamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
+import {
+  liveMarkPillCyberBase,
+  liveMarkTextCyberBase,
+} from "../../ui/liveMarkCyberStyles";
 
 function formatKickoffTime(
   startAt: Date | null,
@@ -2114,27 +2118,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     gap: 4,
   },
-  liveMarkPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.5)",
-    backgroundColor: "rgba(220,38,38,0.96)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  liveMarkText: {
-    color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.72,
-    textTransform: "uppercase",
-    includeFontPadding: false,
-  },
+  liveMarkPill: liveMarkPillCyberBase,
+  liveMarkText: liveMarkTextCyberBase,
   cardCountdownText: {
     color: "#8ecbff",
     fontSize: 9,

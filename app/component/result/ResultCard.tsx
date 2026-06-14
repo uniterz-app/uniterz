@@ -36,7 +36,9 @@ import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
-import { LiveMatchMark } from "@/app/component/games/LiveMatchMark";
+import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
+import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
+import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
@@ -101,10 +103,7 @@ function ResultCardPresentationImpl({
   cardClockMs,
   embedded = false,
 }: ResultCardPresentationProps) {
-  const clock =
-    typeof cardClockMs === "number" && Number.isFinite(cardClockMs)
-      ? cardClockMs
-      : Date.now();
+  const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
   const teamNameFont = bracketMarketTeamTypography(isMobile);
   const m = t(language);
@@ -207,21 +206,10 @@ function ResultCardPresentationImpl({
     return listDateLabel ? "px-2 pb-2 pt-11" : "px-2 pb-2 pt-9";
   })();
 
-  /** 試合開始〜確定まで：LIVE 表示（一覧の MatchCard と同趣旨） */
-  const isLiveGame =
-    post.status !== "final" &&
-    (post.status === "live" ||
-      (post.status === "scheduled" &&
-        typeof post.startAtMillis === "number" &&
-        Number.isFinite(post.startAtMillis) &&
-        clock >= post.startAtMillis));
+  const isLiveGame = isResultPostLiveGame(post, clock);
 
   const liveMarkNode = isLiveGame ? (
-    <LiveMatchMark
-      density={isMobile ? "resultMobile" : "resultDesktop"}
-      language={language}
-      className="pointer-events-auto"
-    />
+    <ResultLiveMark isMobile={isMobile} language={language} />
   ) : null;
 
   const isOwnerPredict = Boolean(
@@ -241,14 +229,7 @@ function ResultCardPresentationImpl({
   const hasCornerEdit = Boolean(
     isOwnerPredict && (onRequestPredictEdit || (predictEditHref && onNavigate))
   );
-  /** 試合開始時点以降は右上メニュー（ハンバーガー）を出さない */
-  const isMatchStarted =
-    post.status === "live" ||
-    post.status === "final" ||
-    (post.status === "scheduled" &&
-      typeof post.startAtMillis === "number" &&
-      Number.isFinite(post.startAtMillis) &&
-      clock >= post.startAtMillis);
+  const isMatchStarted = isResultPostMatchStarted(post, clock);
 
   const hasCornerActions =
     !isMatchStarted && (hasCornerEdit || hasCornerTrash);
@@ -308,7 +289,7 @@ function ResultCardPresentationImpl({
           className={[
             /* ホバーでペンへ移る途中でも閉じにくいようホットエリアを広げる（見た目位置は維持） */
             "pointer-events-auto absolute",
-            isMobile ? "-m-3 p-3 right-1.5 top-1.5 z-[50]" : "-m-5 p-5 right-3 top-3 z-40 sm:right-4 sm:top-4",
+            isMobile ? "-m-3 p-3 right-0.5 top-0.5 z-[50]" : "-m-5 p-5 right-2 top-2 z-40 sm:right-2.5 sm:top-2.5",
           ].join(" ")}
           onClick={(e) => e.stopPropagation()}
         >

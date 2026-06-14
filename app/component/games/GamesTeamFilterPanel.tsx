@@ -7,8 +7,8 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import cn from "clsx";
 import {
   CYBER_FILTER_PANEL_CLASS,
-  cyberFilterBarClasses,
 } from "@/lib/ui/cyberFilterBar";
+import { gamesHeaderFilterButtonClasses } from "@/lib/ui/gamesHeaderBar";
 import type { ScheduleTeamOption } from "@/lib/games/useScheduleTeams";
 import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import type { TeamFilterMatchMode } from "@/lib/games/gameTeamFilter";
@@ -492,17 +492,11 @@ export default function GamesTeamFilterPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        style={tabFont}
-        className={cyberFilterBarClasses(
+        style={compactHeader ? undefined : tabFont}
+        className={gamesHeaderFilterButtonClasses(
           activeCount > 0 || marginFilterActive,
-          cn(
-            "inline-flex shrink-0 items-center font-bold uppercase tracking-wide",
-            compactHeader
-              ? "inline-flex h-9 items-center gap-1.5 px-2.5 text-[10px] leading-none"
-              : dense
-                ? "inline-flex h-10 items-center gap-2 px-2.5 text-xs"
-                : "inline-flex h-10 items-center gap-2 px-3 text-xs md:text-sm",
-          )
+          compactHeader,
+          !compactHeader && dense ? "gap-2 px-2.5" : !compactHeader ? "gap-2 px-3" : "",
         )}
       >
         <SlidersHorizontal

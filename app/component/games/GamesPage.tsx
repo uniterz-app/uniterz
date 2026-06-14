@@ -12,6 +12,22 @@ import { motion, useReducedMotion } from "framer-motion";
 import GamesDrawerMenu from "./GamesDrawerMenu";
 import SideMenuDrawer from "@/app/component/common/SideMenuDrawer";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
+import {
+  gamesHeaderControlButtonClass,
+  gamesHeaderControlHeightClass,
+  gamesHeaderControlWrapClass,
+  gamesHeaderFilterWrapClass,
+  gamesHeaderMenuButtonSize,
+  gamesHeaderMobileShellClass,
+  gamesHeaderMobileSideLeftClass,
+  gamesHeaderMobileSideRightClass,
+  gamesHeaderMobileTitleRowClass,
+  gamesHeaderDesktopSideLeftClass,
+  gamesHeaderDesktopSideRightClass,
+  gamesHeaderRowClass,
+  gamesHeaderShellClass,
+  gamesHeaderTitleCenterClass,
+} from "@/lib/ui/gamesHeaderBar";
 import { nameBebas } from "@/lib/fonts";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
@@ -834,8 +850,11 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         }
       : { initial: false as const, animate: { opacity: 1, x: 0 } };
 
-  const renderFilterControl = (compactHeader: boolean) => (
-    <motion.div {...topBarEntry(0.18, 14)}>
+  const renderFilterControl = (headerMobile: boolean) => (
+    <motion.div
+      className={gamesHeaderFilterWrapClass(headerMobile)}
+      {...topBarEntry(0.18, 14)}
+    >
       <GamesTeamFilterPanel
         teams={teams}
         selectedIds={teamFilterIds}
@@ -847,33 +866,150 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
         onMarginMinMaxChange={setMarginMinMax}
         onClearAllFilters={clearAllTeamAndMarginFilters}
         dense={dense || isMobile}
-        compactHeader={compactHeader}
+        compactHeader={headerMobile}
         language={language}
         layoutMobile={isMobile}
       />
     </motion.div>
   );
 
-  const renderBracketControl = (compactHeader: boolean) =>
+  const renderBracketControl = (headerMobile: boolean) =>
     league === "nba" ? (
-      <motion.div {...topBarEntry(0.27, 18)}>
+      <motion.div
+        className={gamesHeaderControlWrapClass(headerMobile)}
+        {...topBarEntry(0.27, 18)}
+      >
         <button
           type="button"
           onClick={handleBracketClick}
           style={bracketMarketTeamTypography(isMobile)}
           className={[
-            compactHeader
-              ? "inline-flex h-9 items-center justify-center px-2.5 text-[10px] leading-none"
+            gamesHeaderControlButtonClass(headerMobile),
+            "border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
+            headerMobile
+              ? "px-2.5 text-[10px] leading-none"
               : dense
-                ? "inline-flex h-10 items-center justify-center rounded-lg px-3 text-sm"
-                : "inline-flex h-10 items-center justify-center rounded-xl px-4 text-base",
-            "shrink-0 border border-[#1f6feb]/35 bg-[#1f6feb]/12 font-bold uppercase tracking-normal text-[#6ea8ff] transition hover:bg-[#1f6feb]/18",
+                ? "rounded-lg px-3 text-sm"
+                : "rounded-xl px-4 text-base",
           ].join(" ")}
         >
           Bracket
         </button>
       </motion.div>
     ) : null;
+
+  const monthHeaderMotion = webGamesMotion
+    ? {
+        initial: { opacity: 0, y: -10 } as const,
+        animate: { opacity: [0, 1, 0.5, 1], y: 0 },
+        transition: {
+          y: { duration: 0.34, delay: 0.38, ease: GAMES_CYBER_EASE },
+          opacity: {
+            duration: 0.44,
+            delay: 0.38,
+            times: [0, 0.5, 0.66, 1] as number[],
+            ease: "linear" as const,
+          },
+        },
+      }
+    : { initial: false as const, animate: { opacity: 1, y: 0 } };
+
+  const renderMenuButton = () => (
+    <motion.div
+      className="flex items-center justify-center"
+      {...topBarEntry(0, -10)}
+    >
+      <CyberMenuButton
+        size={gamesHeaderMenuButtonSize(isMobile)}
+        className={gamesHeaderControlHeightClass(isMobile)}
+        onClick={() => setGamesDrawerOpen(true)}
+        aria-label={m.games.openMenu}
+        badge={
+          showWcTabBadge ? (
+            <span
+              className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+              aria-hidden
+            >
+              !
+            </span>
+          ) : null
+        }
+      />
+    </motion.div>
+  );
+
+  const renderLeagueTitle = () => (
+    <motion.span
+      className={[
+        nameBebas.className,
+        "min-w-0 truncate text-center leading-none tracking-[0.28em] text-white/90",
+        isMobile
+          ? "block text-[20px] ps-[0.14em]"
+          : "block text-[22px] sm:text-[24px] ps-[0.14em]",
+      ].join(" ")}
+      initial={
+        webGamesMotion ? { opacity: 0, letterSpacing: "0.5em" } : false
+      }
+      animate={
+        webGamesMotion
+          ? { opacity: [0, 1, 0.55, 1], letterSpacing: "0.28em" }
+          : { opacity: 1 }
+      }
+      transition={
+        webGamesMotion
+          ? {
+              letterSpacing: {
+                duration: 0.42,
+                delay: 0.09,
+                ease: GAMES_CYBER_EASE,
+              },
+              opacity: {
+                duration: 0.46,
+                delay: 0.09,
+                times: [0, 0.5, 0.66, 1],
+                ease: "linear",
+              },
+            }
+          : { duration: 0 }
+      }
+    >
+      {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
+    </motion.span>
+  );
+
+  const renderMonthHeader = () => (
+    <MonthHeader
+      month={monthValue}
+      onPrev={() => {
+        if (!selected) return;
+        if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.prev) {
+          return;
+        }
+        setSelectedAndSync(
+          shiftCalendarMonthStart(selected, -1, dayTimeZone),
+        );
+      }}
+      onNext={() => {
+        if (!selected) return;
+        if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.next) {
+          return;
+        }
+        setSelectedAndSync(
+          shiftCalendarMonthStart(selected, 1, dayTimeZone),
+        );
+      }}
+      onCenterDoubleClick={moveToToday}
+      canPrev={adjacentMonthHasGames.prev}
+      canNext={adjacentMonthHasGames.next}
+      navBusy={adjacentMonthHasGames.loading}
+      centerDisabled={!gameDaysForStrip.length}
+      timeZone={dayTimeZone}
+      language={language}
+      gamesHeaderAlign={isMobile}
+      gamesHeaderStack={false}
+      className="mb-0 w-full"
+    />
+  );
 
   return (
     <div
@@ -885,134 +1021,47 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
       ].join(" ")}
       style={{ touchAction: "pan-y" }}
     >
-      <div className="relative mb-2 mt-2 flex items-center gap-3 pl-2 pr-1 sm:pl-3">
-        <motion.div {...topBarEntry(0, -10)}>
-          <CyberMenuButton
-            size={isMobile ? "md" : "lg"}
-            onClick={() => setGamesDrawerOpen(true)}
-            aria-label={m.games.openMenu}
-            badge={
-              showWcTabBadge ? (
-                <span
-                  className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                  aria-hidden
-                >
-                  !
-                </span>
-              ) : null
-            }
-          />
-        </motion.div>
-        {/* リーグ名：広がった字間が収束しながらロックオンする */}
-        <motion.span
-          className={[
-            nameBebas.className,
-            "min-w-0 flex-1 truncate text-center tracking-[0.28em] text-white/90",
-            isMobile ? "text-[20px]" : "text-[22px] sm:text-[24px]",
-          ].join(" ")}
-          initial={
-            webGamesMotion
-              ? { opacity: 0, letterSpacing: "0.5em" }
-              : false
-          }
-          animate={
-            webGamesMotion
-              ? { opacity: [0, 1, 0.55, 1], letterSpacing: "0.28em" }
-              : { opacity: 1 }
-          }
-          transition={
-            webGamesMotion
-              ? {
-                  letterSpacing: {
-                    duration: 0.42,
-                    delay: 0.09,
-                    ease: GAMES_CYBER_EASE,
-                  },
-                  opacity: {
-                    duration: 0.46,
-                    delay: 0.09,
-                    times: [0, 0.5, 0.66, 1],
-                    ease: "linear",
-                  },
-                }
-              : { duration: 0 }
-          }
-        >
-          {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
-        </motion.span>
+      <div className={gamesHeaderShellClass(isMobile)}>
         {isMobile ? (
-          <div className="flex shrink-0 items-center gap-1.5">
-            {renderFilterControl(true)}
-            {renderBracketControl(true)}
+          <div className={gamesHeaderMobileShellClass()}>
+            <div className={gamesHeaderMobileTitleRowClass()}>
+              <div className={gamesHeaderMobileSideLeftClass()}>
+                {renderMenuButton()}
+              </div>
+              <div className={gamesHeaderTitleCenterClass(true)}>
+                {renderLeagueTitle()}
+              </div>
+              <div className={gamesHeaderMobileSideRightClass()}>
+                {renderFilterControl(true)}
+                {renderBracketControl(true)}
+              </div>
+            </div>
+            <motion.div className="w-full" {...monthHeaderMotion}>
+              {renderMonthHeader()}
+            </motion.div>
           </div>
         ) : (
-          <div className="w-10 shrink-0" aria-hidden />
+          <>
+            <div className={gamesHeaderRowClass(false)}>
+              <div className={gamesHeaderDesktopSideLeftClass()}>
+                {renderMenuButton()}
+              </div>
+              <div className={gamesHeaderTitleCenterClass(false)}>
+                {renderLeagueTitle()}
+              </div>
+              <div className={gamesHeaderDesktopSideRightClass()}>
+                {renderFilterControl(false)}
+                {renderBracketControl(false)}
+              </div>
+            </div>
+            <motion.div className="w-full" {...monthHeaderMotion}>
+              {renderMonthHeader()}
+            </motion.div>
+          </>
         )}
       </div>
 
-      {!isMobile && (
-        <div className="mb-2 mt-1 flex items-center justify-end gap-3 pr-1 sm:pr-3">
-          <div className="flex shrink-0 items-center gap-2">
-            {renderFilterControl(false)}
-            {renderBracketControl(false)}
-          </div>
-        </div>
-      )}
-
-      <motion.div
-        initial={webGamesMotion ? { opacity: 0, y: -10 } : false}
-        animate={
-          webGamesMotion
-            ? { opacity: [0, 1, 0.5, 1], y: 0 }
-            : { opacity: 1, y: 0 }
-        }
-        transition={
-          webGamesMotion
-            ? {
-                y: { duration: 0.34, delay: 0.16, ease: GAMES_CYBER_EASE },
-                opacity: {
-                  duration: 0.44,
-                  delay: 0.16,
-                  times: [0, 0.5, 0.66, 1],
-                  ease: "linear",
-                },
-              }
-              : { duration: 0 }
-        }
-        className="mb-0"
-      >
-      <MonthHeader
-        month={monthValue}
-        onPrev={() => {
-          if (!selected) return;
-          if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.prev) {
-            return;
-          }
-          setSelectedAndSync(
-            shiftCalendarMonthStart(selected, -1, dayTimeZone)
-          );
-        }}
-        onNext={() => {
-          if (!selected) return;
-          if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.next) {
-            return;
-          }
-          setSelectedAndSync(
-            shiftCalendarMonthStart(selected, 1, dayTimeZone)
-          );
-        }}
-        onCenterDoubleClick={moveToToday}
-        canPrev={adjacentMonthHasGames.prev}
-        canNext={adjacentMonthHasGames.next}
-        navBusy={adjacentMonthHasGames.loading}
-        centerDisabled={!gameDaysForStrip.length}
-        timeZone={dayTimeZone}
-        language={language}
-        className="mb-0"
-      />
-      </motion.div>
-
-{isInitialLoading ? (
+      {isInitialLoading ? (
   <>
     <div className="mb-2">
       <div className="h-14 rounded-2xl border border-white/10 bg-white/5 skeleton-scan" />

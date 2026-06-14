@@ -3,6 +3,7 @@
 
 import React, { useCallback, useRef } from "react";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
+import { GAMES_HEADER_CONTROL_H } from "@/lib/ui/gamesHeaderBar";
 import type { Language } from "@/lib/i18n/language";
 
 type Props = {
@@ -21,6 +22,10 @@ type Props = {
   /** 中央クリック不可（試合日が無い等） */
   centerDisabled?: boolean;
   className?: string;
+  /** 試合ヘッダー：タイトル行と同じ3列グリッドで日付を中央揃え */
+  gamesHeaderAlign?: boolean;
+  /** 試合ヘッダー：タイトル直下に日付をインライン表示 */
+  gamesHeaderStack?: boolean;
   timeZone: string;
   language: Language;
 };
@@ -36,15 +41,52 @@ export default function MonthHeader({
   navBusy = false,
   centerDisabled = false,
   className,
+  gamesHeaderAlign = false,
+  gamesHeaderStack = false,
   timeZone,
   language,
 }: Props) {
   if (!month) {
+    const emptyRootClass = gamesHeaderStack
+      ? `flex items-center justify-center gap-1 ${className ?? ""}`
+      : gamesHeaderAlign
+        ? `relative w-full ${GAMES_HEADER_CONTROL_H} ${className ?? ""}`
+        : `flex items-center justify-between ${className ?? ""}`;
     return (
-      <div className={`flex items-center justify-between ${className ?? ""}`}>
-        <div className="rounded-md px-3 py-2 opacity-40">←</div>
-        <div className="text-lg font-bold text-white/40">…</div>
-        <div className="rounded-md px-3 py-2 opacity-40">→</div>
+      <div className={emptyRootClass}>
+        <div
+          className={
+            gamesHeaderStack
+              ? "rounded-md px-1 py-1 opacity-40"
+              : gamesHeaderAlign
+                ? "absolute left-2 top-1/2 -translate-y-1/2 rounded-md px-1 py-2 opacity-40"
+                : "rounded-md px-3 py-2 opacity-40"
+          }
+        >
+          ←
+        </div>
+        <div
+          className={
+            gamesHeaderStack
+              ? "text-lg font-bold text-white/40"
+              : gamesHeaderAlign
+                ? "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold text-white/40"
+                : "text-lg font-bold text-white/40"
+          }
+        >
+          …
+        </div>
+        <div
+          className={
+            gamesHeaderStack
+              ? "rounded-md px-1 py-1 opacity-40"
+              : gamesHeaderAlign
+                ? "absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-1 py-2 opacity-40"
+                : "rounded-md px-3 py-2 opacity-40"
+          }
+        >
+          →
+        </div>
       </div>
     );
   }
@@ -92,15 +134,39 @@ export default function MonthHeader({
   const centerDisabledCombined =
     centerDisabled || (!onCenterClick && !onCenterDoubleClick);
 
+  const rootClass = gamesHeaderStack
+    ? `flex items-center justify-center gap-2 ${className ?? ""}`
+    : gamesHeaderAlign
+      ? `relative w-full ${GAMES_HEADER_CONTROL_H} ${className ?? ""}`
+      : `flex items-center justify-between ${className ?? ""}`;
+
+  const prevClass = gamesHeaderStack
+    ? "shrink-0 rounded-md px-1 py-0.5 transition"
+    : gamesHeaderAlign
+      ? "absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-md px-1 py-1 transition"
+      : "rounded-md px-3 py-1 transition";
+
+  const nextClass = gamesHeaderStack
+    ? "shrink-0 rounded-md px-1 py-0.5 transition"
+    : gamesHeaderAlign
+      ? "absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-md px-1 py-1 transition"
+      : "rounded-md px-3 py-1 transition";
+
+  const centerClass = gamesHeaderStack
+    ? "shrink-0 text-center text-lg leading-none transition select-none touch-manipulation"
+    : gamesHeaderAlign
+      ? "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 text-center text-lg transition select-none touch-manipulation"
+      : "text-lg transition select-none touch-manipulation";
+
   return (
-    <div className={`flex items-center justify-between ${className ?? ""}`}>
+    <div className={rootClass}>
       <button
         type="button"
         onClick={onPrev}
         disabled={prevDisabled}
         aria-disabled={prevDisabled}
         className={[
-          "rounded-md px-3 py-1 transition",
+          prevClass,
           prevDisabled
             ? "cursor-not-allowed text-white/25"
             : "text-white/70 hover:text-white",
@@ -124,7 +190,7 @@ export default function MonthHeader({
             : undefined
         }
         className={[
-          "text-lg transition select-none touch-manipulation",
+          centerClass,
           centerDisabledCombined
             ? "cursor-default text-white/35"
             : "text-white hover:text-white/85",
@@ -146,7 +212,7 @@ export default function MonthHeader({
         disabled={nextDisabled}
         aria-disabled={nextDisabled}
         className={[
-          "rounded-md px-3 py-1 transition",
+          nextClass,
           nextDisabled
             ? "cursor-not-allowed text-white/25"
             : "text-white/70 hover:text-white",

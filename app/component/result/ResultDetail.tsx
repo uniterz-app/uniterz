@@ -29,6 +29,7 @@ type Props = {
   /** 閲覧者 UID（自分の投稿時のみヘッダーに予想修正ボタン） */
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
+  cardClockMs?: number;
 };
 
 export default function ResultDetail({
@@ -40,6 +41,7 @@ export default function ResultDetail({
   inOverlay = false,
   viewerUid = null,
   gamesRoutePrefix = "/web",
+  cardClockMs,
 }: Props) {
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
@@ -80,6 +82,7 @@ export default function ResultDetail({
               inOverlay={inOverlay}
               viewerUid={viewerUid}
               gamesRoutePrefix={gamesRoutePrefix}
+              cardClockMs={cardClockMs}
             />
           </m.div>
 

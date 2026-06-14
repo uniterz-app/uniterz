@@ -1,11 +1,12 @@
 /**
- * 試合ライブ中の「LIVE」ピル。軽いスケールパルスで視認性を上げる（アクセシビリティの reduce-motion 時は静止）。
+ * 試合ライブ中の「LIVE」ピル。赤く発光するパルス（reduce-motion 時は静止）。
  */
 import { useEffect } from "react";
 import { Text, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import Animated, {
   cancelAnimation,
   Easing,
+  interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -21,34 +22,43 @@ type LiveMarkPillProps = {
 
 export function LiveMarkPill({ pillStyle, textStyle }: LiveMarkPillProps) {
   const reduceMotion = useReducedMotion() ?? false;
-  const scale = useSharedValue(1);
+  const glow = useSharedValue(0);
 
   useEffect(() => {
     if (reduceMotion) {
-      cancelAnimation(scale);
-      scale.value = 1;
+      cancelAnimation(glow);
+      glow.value = 0;
       return;
     }
-    cancelAnimation(scale);
-    scale.value = 1;
-    scale.value = withRepeat(
+    cancelAnimation(glow);
+    glow.value = 0;
+    glow.value = withRepeat(
       withSequence(
-        withTiming(1.045, { duration: 720, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 720, easing: Easing.inOut(Easing.ease) })
+        withTiming(1, { duration: 920, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 920, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       false
     );
-    return () => cancelAnimation(scale);
-  }, [reduceMotion, scale]);
+    return () => cancelAnimation(glow);
+  }, [reduceMotion, glow]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+  const animatedStyle = useAnimatedStyle(() => {
+    const t = glow.value;
+    return {
+      transform: [{ scale: 1 + t * 0.035 }],
+      shadowOpacity: interpolate(t, [0, 1], [0.32, 0.78]),
+      shadowRadius: interpolate(t, [0, 1], [8, 22]),
+    };
+  });
+
+  const animatedTextStyle = useAnimatedStyle(() => ({
+    textShadowRadius: interpolate(glow.value, [0, 1], [4, 14]),
   }));
 
   return (
     <Animated.View style={[pillStyle, animatedStyle]}>
-      <Text style={textStyle}>LIVE</Text>
+      <Animated.Text style={[textStyle, animatedTextStyle]}>LIVE</Animated.Text>
     </Animated.View>
   );
 }

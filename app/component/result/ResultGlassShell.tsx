@@ -11,7 +11,6 @@ import {
   resultBadgeAccent,
   RESULT_HIT_CYBER_CLIP,
   isResultCyberClipFrameBadge,
-  isResultWinFrameBadge,
   isResultHitFrameBadge,
   isResultPerfectFrameBadge,
   isResultStreakFrameBadge,
@@ -54,17 +53,14 @@ export default function ResultGlassShell({
   showSweep = true,
   dense = false,
   lift = true,
-  roundedClassName = "rounded-2xl",
+  roundedClassName = RESULT_HIT_CYBER_CLIP,
   onClick,
 }: Props) {
   const accent = resultBadgeAccent(badge, activeWinStreak);
-  const shellClip = isResultCyberClipFrameBadge(badge)
-    ? RESULT_HIT_CYBER_CLIP
-    : roundedClassName;
 
   const panelClass = [
     "relative overflow-hidden",
-    shellClip,
+    roundedClassName,
     isResultCyberClipFrameBadge(badge)
       ? RESULT_GLASS_BORDER
       : (accent.frameBorder ?? RESULT_GLASS_BORDER),
