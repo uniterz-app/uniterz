@@ -45,8 +45,8 @@ type GameCardListProps = {
   resolveSeriesPair: (
     game: Record<string, unknown>
   ) => { home: number; away: number } | null;
-  /** チーム名下の (W-L) 行。モバイル Web の homeRecord/awayRecord 相当 */
-  getTeamRecordLabel?: (side: unknown) => string | null;
+  /** チーム名下の (W-L) / (W-D-L) 行。モバイル Web の homeRecord/awayRecord 相当 */
+  getTeamRecordLabel?: (side: unknown, leagueRaw?: unknown) => string | null;
   resolveTeamJerseyPalette: (
     leagueRaw: unknown,
     side: unknown,
@@ -104,8 +104,8 @@ function GameCardListRow(props: GameCardListRowProps) {
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
   const seriesLabel = resolveSeriesLabel(game);
   const seriesPair = resolveSeriesPair(game);
-  const homeRecordLabel = getTeamRecordLabel(game.home);
-  const awayRecordLabel = getTeamRecordLabel(game.away);
+  const homeRecordLabel = getTeamRecordLabel(game.home, game.league);
+  const awayRecordLabel = getTeamRecordLabel(game.away, game.league);
   const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
   const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
   const ctaLabel =

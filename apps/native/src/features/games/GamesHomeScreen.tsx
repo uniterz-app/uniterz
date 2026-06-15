@@ -156,7 +156,7 @@ function renderCenterText(
 
 function isSoccerLeague(leagueRaw: unknown): boolean {
   const league = String(leagueRaw ?? "").toLowerCase();
-  return league === "pl" || league === "j1";
+  return league === "pl" || league === "j1" || league === "wc";
 }
 
 function renderStatusLabel(
@@ -398,8 +398,9 @@ export default function GamesHomeScreen({
   } = useTodayGames();
   const teamRecordById = useTeamRecordMap(games, selectedLeague);
   const formatSideRecord = useCallback(
-    (side: unknown) => formatTeamRecordForCard(side, teamRecordById),
-    [teamRecordById]
+    (side: unknown, leagueRaw?: unknown) =>
+      formatTeamRecordForCard(side, teamRecordById, leagueRaw ?? selectedLeague),
+    [teamRecordById, selectedLeague]
   );
   const resolveSeriesLabelForList = useCallback(
     (game: Record<string, unknown>) =>
@@ -419,8 +420,8 @@ export default function GamesHomeScreen({
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const homeCompact = toCompactTeamName(g.league, homeName);
     const awayCompact = toCompactTeamName(g.league, awayName);
-    const homeRecord = formatSideRecord(g.home);
-    const awayRecord = formatSideRecord(g.away);
+    const homeRecord = formatSideRecord(g.home, g.league);
+    const awayRecord = formatSideRecord(g.away, g.league);
     const centerBlock = getGameCardCenterBlock(g, language);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGamesForSeries);
     const seriesPair = resolveNativeSeriesPair(g, peerGamesForSeries);
@@ -560,8 +561,8 @@ export default function GamesHomeScreen({
       kickoff: formatKickoffTime(resolveGameStartAt(g), language),
       homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
       awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
-      homeRecordLine: formatSideRecord(g.home),
-      awayRecordLine: formatSideRecord(g.away),
+      homeRecordLine: formatSideRecord(g.home, g.league),
+      awayRecordLine: formatSideRecord(g.away, g.league),
       showSeriesRow,
       seriesHomeWins: showSeriesRow && seriesStanding ? seriesStanding.homeWins : null,
       seriesAwayWins: showSeriesRow && seriesStanding ? seriesStanding.awayWins : null,
