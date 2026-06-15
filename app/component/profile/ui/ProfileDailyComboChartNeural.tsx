@@ -4,7 +4,7 @@
  * Daily Combo Chart — Neural / HUD（本番チャート本体）
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Info } from "lucide-react";
 import { nameOxanium, nameRajdhani } from "@/lib/fonts";
 import { t } from "@/lib/i18n/t";
@@ -97,44 +97,43 @@ function segmentFill(t: number): string {
 type SegBarProps = {
   x: number;
   barW: number;
-  chartBottom: number;
+  plotBottom: number;
+  plotMaxH: number;
   value: number;
   maxValue: number;
   segmentCount?: number;
 };
 
-function barHeightPx(
-  value: number,
-  maxValue: number,
-  chartBottom: number
-): number {
-  const maxH = chartBottom - 28;
-  const ratio = maxValue > 0 ? Math.min(1, value / maxValue) : 0;
-  return Math.max(0, ratio * maxH);
+function barHeightPx(value: number, maxValue: number, plotMaxH: number): number {
+  if (value <= 0 || maxValue <= 0 || plotMaxH <= 0) return 0;
+  return (value / maxValue) * plotMaxH;
 }
+
+const BAR_LABEL_GAP = 5;
 
 function SegmentedBar({
   x,
   barW,
-  chartBottom,
+  plotBottom,
+  plotMaxH,
   value,
   maxValue,
   segmentCount = 14,
 }: SegBarProps) {
-  const barH = barHeightPx(value, maxValue, chartBottom);
-  if (barH < 2 || value <= 0) return null;
+  const barH = barHeightPx(value, maxValue, plotMaxH);
+  if (barH < 1) return null;
 
-  const gap = 2;
-  const segH = (barH - gap * (segmentCount - 1)) / segmentCount;
+  const ratio = value / maxValue;
+  const litCount = Math.max(1, Math.round(ratio * segmentCount));
+  const gap = litCount > 1 ? 2 : 0;
+  const segH = (barH - gap * (litCount - 1)) / litCount;
   if (segH <= 0) return null;
 
-  const ratio = maxValue > 0 ? Math.min(1, value / maxValue) : 0;
-  const litCount = Math.max(1, Math.ceil(ratio * segmentCount));
   const segs = [];
 
   for (let i = 0; i < litCount; i++) {
-    const segY = chartBottom - (i + 1) * segH - i * gap;
-    const t = i / Math.max(1, segmentCount - 1);
+    const segY = plotBottom - (i + 1) * segH - i * gap;
+    const t = litCount > 1 ? i / (litCount - 1) : 1;
     segs.push(
       <rect
         key={i}
@@ -156,18 +155,19 @@ function SegmentedBar({
 function BarValueLabel({
   x,
   barW,
-  chartBottom,
+  plotBottom,
+  plotMaxH,
   value,
   maxValue,
 }: SegBarProps) {
-  const barH = barHeightPx(value, maxValue, chartBottom);
-  if (barH < 2 || value <= 0) return null;
-  const topY = chartBottom - barH;
+  const barH = barHeightPx(value, maxValue, plotMaxH);
+  if (barH < 1 || value <= 0) return null;
+  const barTopY = plotBottom - barH;
 
   return (
     <text
       x={x + barW / 2}
-      y={topY - 5}
+      y={barTopY - BAR_LABEL_GAP}
       textAnchor="middle"
       className={["dcc-neural__bar-label", nameRajdhani.className].join(" ")}
     >
@@ -188,17 +188,33 @@ function buildLinePath(points: { x: number; y: number }[]): string {
   return d;
 }
 
+function useNarrowViewport(fallback: boolean) {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const mq = window.matchMedia("(max-width: 767px)");
+      mq.addEventListener("change", onStoreChange);
+      return () => mq.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(max-width: 767px)").matches,
+    () => fallback
+  );
+}
+
 export type ProfileDailyComboChartNeuralProps = {
   data: ProfileDailyComboChartPoint[];
   language?: Language;
   rankingLeague?: RankingLeagueSource;
+  layout?: "web" | "mobile";
 };
 
 export default function ProfileDailyComboChartNeural({
   data,
   language = "ja",
   rankingLeague = "nba",
+  layout = "web",
 }: ProfileDailyComboChartNeuralProps) {
+  const narrowViewport = useNarrowViewport(layout === "mobile");
+  const isCompactChart = layout === "mobile" || narrowViewport;
   const msg = t(language);
   const isWcTrend = rankingLeague === "worldcup";
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
@@ -216,11 +232,11 @@ export default function ProfileDailyComboChartNeural({
   const selectedRow = chartRows[selectedIdx] ?? chartRows[chartRows.length - 1];
 
   const maxBar = useMemo(() => {
-    let m = 1;
+    let m = 0;
     for (const r of chartRows) {
       m = Math.max(m, clampNum(r.posts), clampNum(r.wins));
     }
-    return Math.ceil(m * 1.08);
+    return Math.max(1, m);
   }, [chartRows]);
 
   const maxLine = useMemo(() => {
@@ -265,15 +281,16 @@ export default function ProfileDailyComboChartNeural({
   };
 
   const W = 640;
-  const H = 220;
+  const H = isCompactChart ? 300 : 220;
   const padL = 36;
   const padR = 46;
-  const padT = 8;
+  const padT = 4;
+  const barLabelLane = isCompactChart ? 20 : 16;
   const padB = 28;
   const chartW = W - padL - padR;
-  const chartBottom = H - padB;
-  const chartTop = padT;
-  const chartH = chartBottom - chartTop;
+  const plotBottom = H - padB;
+  const plotTop = padT + barLabelLane;
+  const plotH = plotBottom - plotTop;
   const colCount = chartRows.length;
   const groupW = colCount > 0 ? chartW / colCount : chartW;
   const barGap = 3;
@@ -285,7 +302,7 @@ export default function ProfileDailyComboChartNeural({
   const linePoints = chartRows.map((row, i) => {
     const cx = padL + groupW * i + groupW / 2;
     const ratio = maxLine > 0 ? clampNum(row.pointsCum) / maxLine : 0;
-    const cy = chartBottom - ratio * chartH;
+    const cy = plotBottom - ratio * plotH;
     return { x: cx, y: cy, row, i };
   });
 
@@ -319,16 +336,22 @@ export default function ProfileDailyComboChartNeural({
         <p className="mt-0.5 text-[11px] text-white/60 sm:text-xs">{subtitle}</p>
       </div>
 
-      <div className="dcc-neural__panel overflow-hidden rounded-sm">
-        <div className="dcc-neural__chart-zone px-1 py-2 sm:px-2">
+      <div className="dcc-neural__panel">
+        <div
+          className={[
+            "dcc-neural__chart-zone",
+            isCompactChart ? "px-0 py-0.5" : "px-1 py-2 sm:px-2",
+          ].join(" ")}
+        >
           <svg
             viewBox={`0 0 ${W} ${H}`}
-            className="h-auto w-full"
+            className="dcc-neural__chart-svg h-auto w-full"
+            overflow="visible"
             role="img"
             aria-label={title}
           >
             {yPctTicks.map((pct) => {
-              const y = chartBottom - (pct / 100) * chartH;
+              const y = plotBottom - (pct / 100) * plotH;
               return (
                 <g key={`grid-${pct}`}>
                   <line
@@ -353,7 +376,7 @@ export default function ProfileDailyComboChartNeural({
 
             {lineAxisTicks.map((tick) => {
               const ratio = maxLine > 0 ? tick / maxLine : 0;
-              const y = chartBottom - ratio * chartH;
+              const y = plotBottom - ratio * plotH;
               return (
                 <text
                   key={`r-${tick}`}
@@ -394,14 +417,16 @@ export default function ProfileDailyComboChartNeural({
                   <SegmentedBar
                     x={gx}
                     barW={barW}
-                    chartBottom={chartBottom}
+                    plotBottom={plotBottom}
+                    plotMaxH={plotH}
                     value={clampNum(row.posts)}
                     maxValue={maxBar}
                   />
                   <SegmentedBar
                     x={gx + barW + barGap}
                     barW={barW}
-                    chartBottom={chartBottom}
+                    plotBottom={plotBottom}
+                    plotMaxH={plotH}
                     value={clampNum(row.wins)}
                     maxValue={maxBar}
                   />
@@ -433,32 +458,31 @@ export default function ProfileDailyComboChartNeural({
               </>
             ) : null}
 
-            {chartRows.map((row, i) => {
-              const gx = padL + groupW * i + (groupW - pairW) / 2;
-              const selected = i === selectedIdx;
-              return (
-                <g
-                  key={`lbl-${row.date}`}
-                  className={selected ? "dcc-neural__bar-col--selected" : undefined}
-                  aria-hidden
-                >
-                  <BarValueLabel
-                    x={gx}
-                    barW={barW}
-                    chartBottom={chartBottom}
-                    value={clampNum(row.posts)}
-                    maxValue={maxBar}
-                  />
-                  <BarValueLabel
-                    x={gx + barW + barGap}
-                    barW={barW}
-                    chartBottom={chartBottom}
-                    value={clampNum(row.wins)}
-                    maxValue={maxBar}
-                  />
-                </g>
-              );
-            })}
+            <g className="dcc-neural__bar-labels" aria-hidden>
+              {chartRows.map((row, i) => {
+                const gx = padL + groupW * i + (groupW - pairW) / 2;
+                return (
+                  <g key={`lbl-${row.date}`}>
+                    <BarValueLabel
+                      x={gx}
+                      barW={barW}
+                      plotBottom={plotBottom}
+                      plotMaxH={plotH}
+                      value={clampNum(row.posts)}
+                      maxValue={maxBar}
+                    />
+                    <BarValueLabel
+                      x={gx + barW + barGap}
+                      barW={barW}
+                      plotBottom={plotBottom}
+                      plotMaxH={plotH}
+                      value={clampNum(row.wins)}
+                      maxValue={maxBar}
+                    />
+                  </g>
+                );
+              })}
+            </g>
 
             {linePoints.map((pt) => {
               const show =
@@ -504,7 +528,12 @@ export default function ProfileDailyComboChartNeural({
         </div>
 
         {selectedRow ? (
-          <div className="border-t border-white/10 px-3 py-2.5 sm:px-4">
+          <div
+            className={[
+              "dcc-neural__stats-wrap",
+              isCompactChart ? "px-0 pt-2" : "border-t border-white/10 px-3 py-2.5 sm:px-4",
+            ].join(" ")}
+          >
             <p
               className={[
                 nameRajdhani.className,
