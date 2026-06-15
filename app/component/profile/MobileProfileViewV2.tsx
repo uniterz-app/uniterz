@@ -260,7 +260,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
             {chartsReady ? (
             <div className="mt-6 space-y-4">
               {overviewStage >= 1 ? (
-              <div className="min-w-0 overflow-hidden">
+              <div className="min-w-0 overflow-x-clip overflow-y-visible">
                 {dailyTrendLoading ? (
                   <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
                 ) : (
@@ -270,6 +270,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                     allowAll={currentIsProView}
                     language={language}
                     rankingLeague={rankingLeague}
+                    layout="mobile"
                   />
                 )}
               </div>

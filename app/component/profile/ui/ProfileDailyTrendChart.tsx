@@ -5,6 +5,7 @@ import type { Language } from "@/lib/i18n/language";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
 import { nameBebas } from "@/lib/fonts";
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
+import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import ProfileDailyComboChartNeural from "@/app/component/profile/ui/ProfileDailyComboChartNeural";
 
@@ -25,6 +26,7 @@ type Props = {
   entranceSync?: boolean;
   rechartsAfterEntrance?: boolean;
   rankingLeague?: RankingLeagueSource;
+  layout?: "web" | "mobile";
 };
 
 export default function ProfileDailyTrendChart({
@@ -32,6 +34,7 @@ export default function ProfileDailyTrendChart({
   range = "7d",
   language = "ja",
   rankingLeague = "nba",
+  layout = "web",
 }: Props) {
   const limitedData = useMemo(() => {
     const rows = Array.isArray(data) ? data : [];
@@ -42,7 +45,13 @@ export default function ProfileDailyTrendChart({
   const isEmpty = limitedData.length === 0;
 
   return (
-    <ProfileKinetikPanelFrame className="overflow-x-clip p-3 sm:p-4">
+    <ProfileKinetikPanelFrame className="relative overflow-x-clip p-3 sm:p-4">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.36]"
+        style={PROFILE_SHELL_GRID_STYLE}
+        aria-hidden
+      />
+      <div className="relative z-1 min-w-0">
       {isEmpty ? (
         <div role="status" className="grid min-h-44 place-items-center px-3">
           <p
@@ -60,8 +69,10 @@ export default function ProfileDailyTrendChart({
           data={limitedData}
           language={language}
           rankingLeague={rankingLeague}
+          layout={layout}
         />
       )}
+      </div>
     </ProfileKinetikPanelFrame>
   );
 }

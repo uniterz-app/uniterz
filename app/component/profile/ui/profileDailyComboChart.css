@@ -1,25 +1,30 @@
 /* Daily Combo Chart — Neural / HUD */
 
 .dcc-neural {
-  --dcc-bg: #030508;
   --dcc-grid: rgba(255, 255, 255, 0.06);
   --dcc-label: rgba(148, 163, 184, 0.72);
   --dcc-ink: rgba(248, 250, 252, 0.96);
   --dcc-lime: #b8ff3c;
   --dcc-cyan: #22d3ee;
-  --dcc-purple: #c026d3;
   --dcc-line: #ccff00;
   --dcc-border: rgba(255, 255, 255, 0.14);
+  --dcc-frame: rgba(255, 255, 255, 0.22);
 }
 
-.dcc-neural__panel {
-  background: var(--dcc-bg);
-  border: 1px solid var(--dcc-border);
+/* 親の profile-kinetik-panel がカード枠。内側の黒パネルは使わない */
+.profile-kinetik-panel .dcc-neural__panel {
+  background: transparent;
+  border: none;
 }
 
 .dcc-neural__chart-zone {
   position: relative;
   isolation: isolate;
+  overflow: visible;
+}
+
+.dcc-neural__chart-svg {
+  display: block;
 }
 
 .dcc-neural__bar-col {
@@ -39,6 +44,10 @@
   transition: filter 160ms ease-out;
 }
 
+.dcc-neural__bar-labels {
+  pointer-events: none;
+}
+
 .dcc-neural__bar-label {
   fill: rgba(248, 250, 252, 0.94);
   font-size: 9px;
@@ -46,8 +55,9 @@
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   paint-order: stroke fill;
-  stroke: rgba(3, 5, 8, 0.85);
+  stroke: rgba(8, 12, 24, 0.82);
   stroke-width: 2.5px;
+  dominant-baseline: alphabetic;
 }
 
 .dcc-neural__bar-col--selected .dcc-neural__bar-label {
@@ -85,16 +95,16 @@
   filter: drop-shadow(0 0 4px rgba(204, 255, 0, 0.9));
 }
 
-.dcc-neural__stats-grid {
+.profile-kinetik-panel .dcc-neural__stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  border: 1px solid var(--dcc-border);
-  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--dcc-frame);
+  background: transparent;
 }
 
 .dcc-neural__stat-cell {
   padding: 0.65rem 0.55rem 0.7rem;
-  border-right: 1px solid var(--dcc-border);
+  border-right: 1px solid var(--dcc-frame);
   min-width: 0;
 }
 
@@ -134,8 +144,27 @@
   letter-spacing: 0.08em;
 }
 
+@media (max-width: 767px) {
+  .dcc-neural__stats-wrap {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .dcc-neural__stat-value {
+    font-size: clamp(1.2rem, 4.8vw, 1.55rem);
+  }
+
+  .dcc-neural__stat-unit {
+    font-size: 10px;
+  }
+
+  .dcc-neural__bar-label {
+    font-size: 10px;
+  }
+}
+
 @media (max-width: 520px) {
-  .dcc-neural__stats-grid {
+  .profile-kinetik-panel .dcc-neural__stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -145,7 +174,7 @@
 
   .dcc-neural__stat-cell:nth-child(1),
   .dcc-neural__stat-cell:nth-child(2) {
-    border-bottom: 1px solid var(--dcc-border);
+    border-bottom: 1px solid var(--dcc-frame);
   }
 }
 
