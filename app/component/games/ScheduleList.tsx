@@ -484,17 +484,26 @@ export default function ScheduleList({
               const d = docSnap.data() as any;
               const teamId = docSnap.id;
               const isNbaTeam = String(d.league ?? "") === "nba";
-              const wl = isNbaTeam
-                ? nbaRegularSeasonWinsLosses(d)
-                : footballWinsLossesDraws(d);
+              let value: TeamRecord;
 
-              const value: TeamRecord = {
-                wins: wl.wins,
-                losses: wl.losses,
-                ...(!isNbaTeam ? { draws: wl.draws } : {}),
-                rank: typeof d.rank === "number" ? d.rank : undefined,
-                lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
-              };
+              if (isNbaTeam) {
+                const wl = nbaRegularSeasonWinsLosses(d);
+                value = {
+                  wins: wl.wins,
+                  losses: wl.losses,
+                  rank: typeof d.rank === "number" ? d.rank : undefined,
+                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+                };
+              } else {
+                const wl = footballWinsLossesDraws(d);
+                value = {
+                  wins: wl.wins,
+                  losses: wl.losses,
+                  draws: wl.draws,
+                  rank: typeof d.rank === "number" ? d.rank : undefined,
+                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+                };
+              }
 
               memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
               nextSessionCache[teamId] = value;

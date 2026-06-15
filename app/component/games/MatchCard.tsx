@@ -89,6 +89,7 @@ import {
 } from "@/lib/games/mobileListCardLayout";
 import { MATCH_LIST_CYBER_GRID_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
+  CYBER_GLASS_SHADOW,
   PREDICT_OVERLAY_BLUR_GLASS,
   PREDICT_OVERLAY_MATCH_CARD_GLASS,
 } from "@/lib/ui/matchOverlayGlass";

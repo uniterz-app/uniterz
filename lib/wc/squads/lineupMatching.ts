@@ -169,7 +169,6 @@ export const DIRECT_PLAYER_IDS: Record<string, Record<string, string>> = {
     Kamada: "jpn-kamada",
     Maeda: "jpn-maeda",
     Ueda: "jpn-ueda",
-    Ueda: "jpn-ueda",
     Kubo: "jpn-kubo",
     Ogawa: "jpn-ogawa",
     "Kōki Ogawa": "jpn-ogawa",
