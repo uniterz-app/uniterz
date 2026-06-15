@@ -68,7 +68,7 @@ export const ESPN_LINEUPS: RawSourceLineup[] = [
   {
     iso3: "esp",
     formation: "4-3-3",
-    players: ["Simon", "Porro", "Le Normand", "Laporte", "Cucurella", "Rodri", "Pedri", "Fabian Ruiz", "Yamal", "Oyarzabal", "N. Williams"],
+    players: ["Simon", "Porro", "Le Normand", "Laporte", "Cucurella", "Rodri", "Pedri", "Fabian Ruiz", "N. Williams", "Oyarzabal", "Yamal"],
   },
   {
     iso3: "usa",
