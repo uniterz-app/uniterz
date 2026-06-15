@@ -27,10 +27,14 @@ import {
   mapDocToPostWithMillis,
   RESULT_POSTS_MAX_CACHED,
   RESULT_TAB_PAGE_SIZE,
+  trimPostsToMaxDayGroups,
+  RESULT_LIST_INITIAL_MAX_DAY_GROUPS,
   type PostWithMillis,
   type ResultDayGroup,
   type ResultListLeagueTab,
 } from "@/lib/result/result-page-data";
+import { normalizeLeague, resolvePostListLeague } from "@/lib/leagues";
+import { fetchInitialResultPostsByDayWindow } from "@/lib/result/resultListInitialLoad";
 
 export function useResultPagePosts(
   league: ResultListLeagueTab,
@@ -78,6 +82,47 @@ export function useResultPagePosts(
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  /** Firestore の league 誤保存でタブ別クエリから漏れた投稿を補完する */
+  const fetchLeagueOrphanPosts = useCallback(
+    async (authorUid: string, tab: ResultListLeagueTab): Promise<PostWithMillis[]> => {
+      const snap = await getDocs(
+        query(
+          collection(db, "posts"),
+          where("authorUid", "==", authorUid),
+          where("schemaVersion", "==", 2),
+          orderBy("createdAt", "desc"),
+          limit(40)
+        )
+      );
+      return snap.docs
+        .map((d) => mapDocToPostWithMillis(d.id, d.data()))
+        .filter((p) => {
+          const resolved = resolvePostListLeague(p);
+          if (resolved !== tab) return false;
+          return normalizeLeague(p.league) !== tab;
+        });
+    },
+    []
+  );
+
+  const mergePostsById = useCallback(
+    (primary: PostWithMillis[], extra: PostWithMillis[]) => {
+      if (extra.length === 0) return primary;
+      const seen = new Set(primary.map((p) => p.id));
+      const merged = [...primary];
+      for (const p of extra) {
+        if (seen.has(p.id)) continue;
+        seen.add(p.id);
+        merged.push(p);
+      }
+      merged.sort(
+        (a, b) => (b.createdAtMillis ?? 0) - (a.createdAtMillis ?? 0)
+      );
+      return merged;
+    },
+    []
+  );
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUid(u?.uid ?? null);
@@ -105,7 +150,6 @@ export function useResultPagePosts(
 
       setLoading(true);
       try {
-        if (!reset && !lastDoc) return;
         const pageLimit = RESULT_TAB_PAGE_SIZE;
         const base = [
           where("authorUid", "==", uid),
@@ -114,11 +158,53 @@ export function useResultPagePosts(
           limit(pageLimit),
         ] as const;
 
-        const q = reset
-          ? query(collection(db, "posts"), ...base)
-          : lastDoc
-            ? query(collection(db, "posts"), ...base, startAfter(lastDoc))
-            : query(collection(db, "posts"), ...base);
+        if (reset) {
+          const fetchPage = async (cursor: DocumentSnapshot | null) => {
+            const q = cursor
+              ? query(collection(db, "posts"), ...base, startAfter(cursor))
+              : query(collection(db, "posts"), ...base);
+            const snap = await getDocs(q);
+            const list = snap.docs.map((d) =>
+              mapDocToPostWithMillis(d.id, d.data())
+            );
+            return {
+              posts: list,
+              lastDoc: snap.docs.length ? snap.docs[snap.docs.length - 1] : null,
+              fullPage: snap.docs.length === pageLimit,
+            };
+          };
+
+          const initial = await fetchInitialResultPostsByDayWindow({
+            language,
+            fetchPage,
+            mergePosts: mergePostsById,
+          });
+
+          const orphans = await fetchLeagueOrphanPosts(uid, league);
+          let merged = mergePostsById(initial.posts, orphans);
+          const { posts: windowed, trimmed } = trimPostsToMaxDayGroups(
+            merged,
+            language,
+            RESULT_LIST_INITIAL_MAX_DAY_GROUPS
+          );
+          merged = windowed;
+
+          const next =
+            merged.length > RESULT_POSTS_MAX_CACHED
+              ? merged.slice(0, RESULT_POSTS_MAX_CACHED)
+              : merged;
+
+          setPosts(next);
+          setLastDoc(initial.lastDoc);
+          setHasMore(
+            (initial.hasMore || trimmed) && next.length < RESULT_POSTS_MAX_CACHED
+          );
+          return;
+        }
+
+        if (!lastDoc) return;
+
+        const q = query(collection(db, "posts"), ...base, startAfter(lastDoc));
 
         const snap = await getDocs(q);
 
@@ -130,14 +216,6 @@ export function useResultPagePosts(
 
         let nextPostsLength = 0;
         setPosts((prev) => {
-          if (reset) {
-            const next =
-              list.length > RESULT_POSTS_MAX_CACHED
-                ? list.slice(0, RESULT_POSTS_MAX_CACHED)
-                : list;
-            nextPostsLength = next.length;
-            return next;
-          }
           const seen = new Set(prev.map((p) => p.id));
           const filtered = list.filter((p) => !seen.has(p.id));
           const merged = [...prev, ...filtered];
@@ -157,7 +235,17 @@ export function useResultPagePosts(
         setLoading(false);
       }
     },
-    [uid, loading, hasMore, lastDoc, posts.length, league]
+    [
+      uid,
+      loading,
+      hasMore,
+      lastDoc,
+      posts.length,
+      league,
+      language,
+      fetchLeagueOrphanPosts,
+      mergePostsById,
+    ]
   );
 
   useEffect(() => {

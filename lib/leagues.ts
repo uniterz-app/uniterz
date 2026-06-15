@@ -56,3 +56,14 @@ export function normalizeLeague(raw: any): League {
   return "bj";
 }
 
+/** 投稿一覧のリーグ判定（gameId プレフィックスで欠落・誤変換を補正） */
+export function resolvePostListLeague(post: {
+  league?: unknown;
+  gameId?: unknown;
+}): League {
+  const gameId = String(post.gameId ?? "");
+  if (gameId.startsWith("wc-")) return LEAGUES.WC;
+  if (gameId.startsWith("nba-")) return LEAGUES.NBA;
+  return normalizeLeague(post.league);
+}
+

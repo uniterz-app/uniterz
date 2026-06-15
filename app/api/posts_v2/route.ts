@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebaseAdmin";
 import { resultLeagueFlagPatchForPost } from "@/lib/result/userResultLeagueFlags";
 import { resolveWcStageFromGame } from "@/lib/wc/resolveWcStage";
+import { normalizeLeague, type League } from "@/lib/leagues";
 import {
   normalizeWcGoalScorerPick,
   validateWcGoalScorerPickForGame,
@@ -12,7 +13,6 @@ import {
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 /* ========= 型 ========= */
-type League = "bj" | "j1" | "nba" | "pl" | "wc";
 type Status = "scheduled" | "live" | "final";
 
 type PredictionPayloadV2 = {
@@ -69,16 +69,12 @@ function sanitizeBodyV2(body: any): ParsedOkV2 | ParsedNg {
 }
 
 /* ========= 補助 ========= */
-function normalizeLeague(v: any): League {
-  const s = String(v ?? "").toLowerCase();
-
-  if (s === "bj" || s === "b1") return "bj";
-  if (s === "j1" || s === "j") return "j1";
-  if (s === "nba") return "nba";
-  if (s === "pl" || s.includes("premier")) return "pl";
-  if (s === "wc" || s === "worldcup" || s.includes("world cup") || s === "fifa") return "wc";
-
-  return "bj";
+function resolvePostLeagueFromGame(g: Record<string, unknown>, gameId: string): League {
+  const rawLeague = g?.league;
+  if (String(rawLeague ?? "").trim()) return normalizeLeague(rawLeague);
+  if (gameId.startsWith("wc-")) return "wc";
+  if (gameId.startsWith("nba-")) return "nba";
+  return normalizeLeague(rawLeague);
 }
 
 function toAdminTimestamp(v: any): Timestamp | null {
@@ -178,8 +174,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const g = gameSnap.data() as any;
-    const league: League = normalizeLeague(g?.league);
+    const g = gameSnap.data() as Record<string, unknown>;
+    const league: League = resolvePostLeagueFromGame(g, parsed.gameId);
 
     const startAtTs =
       toAdminTimestamp(g?.startAtJst) ??
@@ -203,8 +199,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const homeTeamId = g?.home?.teamId ?? g?.homeTeamId ?? null;
-    const awayTeamId = g?.away?.teamId ?? g?.awayTeamId ?? null;
+    const homeTeamId =
+      (g.home as { teamId?: string } | undefined)?.teamId ??
+      (g.homeTeamId as string | undefined) ??
+      null;
+    const awayTeamId =
+      (g.away as { teamId?: string } | undefined)?.teamId ??
+      (g.awayTeamId as string | undefined) ??
+      null;
     const goalScorerPick = normalizeWcGoalScorerPick(parsed.rawGoalScorer);
     if (league === "wc" && parsed.rawGoalScorer != null && !goalScorerPick) {
       return NextResponse.json(

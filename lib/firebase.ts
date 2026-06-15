@@ -50,14 +50,25 @@ export const auth: Auth = getAuth(app);
  * 永続化の適用と初期セッション復元が終わるまで待つ Promise。
  * これより前に guest と判定すると、ログイン済みでも一瞬 LP へ飛ぶことがある（特にモバイル）。
  */
-export const authInitialization: Promise<void> =
-  typeof window !== "undefined"
-    ? setPersistence(auth, browserLocalPersistence)
-        .catch((e) => {
-          console.error("Auth persistence set error:", e);
-        })
-        .then(() => auth.authStateReady())
-    : Promise.resolve();
+function canUseBrowserLocalPersistence(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      typeof window.localStorage !== "undefined" &&
+      typeof window.localStorage.getItem === "function"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const authInitialization: Promise<void> = canUseBrowserLocalPersistence()
+  ? setPersistence(auth, browserLocalPersistence)
+      .catch((e) => {
+        console.error("Auth persistence set error:", e);
+      })
+      .then(() => auth.authStateReady())
+  : auth.authStateReady().then(() => {});
 
 export const storage: FirebaseStorage = getStorage(app);
 export const db: Firestore = getFirestore(app);

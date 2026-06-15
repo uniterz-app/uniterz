@@ -1,6 +1,11 @@
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
-import { LEAGUES, type League } from "@/lib/leagues";
+import { LEAGUES, resolvePostListLeague, type League } from "@/lib/leagues";
+import {
+  TIMEZONE_ET,
+  TIMEZONE_JST,
+  getZonedYMD,
+} from "@/lib/time/zonedTime";
 
 /** リザルト一覧のリーグタブ（ワールドカップ / NBA） */
 export const RESULT_LIST_LEAGUE_TABS = [LEAGUES.WC, LEAGUES.NBA] as const;
@@ -86,13 +91,31 @@ export function pruneDismissedResultListPostIds(
   return next;
 }
 
+/** リザルト一覧の日付見出し用 TZ（試合一覧の dayTimeZone と揃える） */
+export function resultListTimeZoneForLanguage(lang: Language): string {
+  return lang === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+}
+
 export function formatResultDateLabel(
   ms: number | null | undefined,
-  lang: Language
+  lang: Language,
+  timeZone?: string
 ): string {
   if (!ms) return lang === "en" ? "Unknown" : "不明";
-  const d = new Date(ms);
-  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+  const tz = timeZone ?? resultListTimeZoneForLanguage(lang);
+  const { year, month, day } = getZonedYMD(new Date(ms), tz);
+  return `${year}.${month}.${day}`;
+}
+
+/** 日付フィルター用 YYYY-MM-DD（formatResultDateLabel と同じ TZ） */
+export function resultListLocalDayKeyFromMs(
+  ms: number,
+  lang: Language,
+  timeZone?: string
+): string {
+  const tz = timeZone ?? resultListTimeZoneForLanguage(lang);
+  const { year, month, day } = getZonedYMD(new Date(ms), tz);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 /** 日付見出し・日別グループの基準。試合キックオフ日（startAt）。未取得のときだけ投稿日にフォールバック。 */
@@ -181,16 +204,45 @@ export function filterResultDayGroupsByLeague(
   return groups
     .map((day) => ({
       ...day,
-      pending: day.pending.filter((p) => p.league === league),
-      final: day.final.filter((p) => p.league === league),
+      pending: day.pending.filter((p) => resolvePostListLeague(p) === league),
+      final: day.final.filter((p) => resolvePostListLeague(p) === league),
     }))
     .filter((day) => day.pending.length + day.final.length > 0);
 }
 
 /**
+ * リザルト一覧の初回読み込みで載せる試合日グループ数（古い日は無限スクロールで追加）。
+ */
+export const RESULT_LIST_INITIAL_MAX_DAY_GROUPS = 5;
+
+/**
  * 3D 表示（テーブル・ヘリックス共通）に含める「試合日」の最大数（一覧は新しい日が上のため、直近の日は先頭からこの件数）。
  */
-export const RESULT_CSS3D_MAX_DAY_GROUPS = 5;
+export const RESULT_CSS3D_MAX_DAY_GROUPS = RESULT_LIST_INITIAL_MAX_DAY_GROUPS;
+
+/** 投稿群に含まれる試合日グループ数（キックオフ日基準） */
+export function countResultDayGroups(
+  posts: readonly PostWithMillis[],
+  language: Language
+): number {
+  return groupPostsByResultDay([...posts], language).length;
+}
+
+/** 直近 maxDayGroups 試合日分の投稿だけ残す（新しい日が上） */
+export function trimPostsToMaxDayGroups(
+  posts: readonly PostWithMillis[],
+  language: Language,
+  maxDayGroups: number
+): { posts: PostWithMillis[]; trimmed: boolean } {
+  const groups = groupPostsByResultDay([...posts], language);
+  if (groups.length <= maxDayGroups) {
+    return { posts: [...posts], trimmed: false };
+  }
+  return {
+    posts: flattenResultDayGroups(groups.slice(0, maxDayGroups)),
+    trimmed: true,
+  };
+}
 
 /**
  * リスト・3D 共通: 「1 試合日」あたりに載せるカードの上限（pending→final の順で数える）。

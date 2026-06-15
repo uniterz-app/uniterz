@@ -10,7 +10,7 @@ import {
   Timestamp,
   where,
 } from "firebase/firestore";
-import { db } from "../../../../lib/firebase";
+import { db } from "../lib/firebase";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import {
   markNavRankingSeenNative,

@@ -18,6 +18,20 @@ import {
   RESULT_POSTS_MAX_CACHED,
   type PostWithMillis,
 } from "./nativeResultModel";
+import { fetchInitialResultPostsByDayWindow } from "../../../../../lib/result/resultListInitialLoad";
+
+function mergePostsById(primary: PostWithMillis[], extra: PostWithMillis[]) {
+  if (extra.length === 0) return primary;
+  const seen = new Set(primary.map((p) => p.id));
+  const merged = [...primary];
+  for (const p of extra) {
+    if (seen.has(p.id)) continue;
+    seen.add(p.id);
+    merged.push(p);
+  }
+  merged.sort((a, b) => (b.createdAtMillis ?? 0) - (a.createdAtMillis ?? 0));
+  return merged;
+}
 
 export function useNativeResultPosts(uid: string | null | undefined, language: "ja" | "en") {
   const [posts, setPosts] = useState<PostWithMillis[]>([]);
@@ -37,7 +51,6 @@ export function useNativeResultPosts(uid: string | null | undefined, language: "
 
       setLoading(true);
       try {
-        if (!reset && !lastDoc) return;
         const pageLimit = reset ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE;
         const base = [
           where("authorUid", "==", uid),
@@ -45,12 +58,44 @@ export function useNativeResultPosts(uid: string | null | undefined, language: "
           limit(pageLimit),
         ] as const;
 
-        const q = reset
-          ? query(collection(db, "posts"), ...base)
-          : lastDoc
-            ? query(collection(db, "posts"), ...base, startAfter(lastDoc))
-            : query(collection(db, "posts"), ...base);
+        if (reset) {
+          const fetchPage = async (cursor: DocumentSnapshot | null) => {
+            const q = cursor
+              ? query(collection(db, "posts"), ...base, startAfter(cursor))
+              : query(collection(db, "posts"), ...base);
+            const snap = await getDocs(q);
+            const list = snap.docs.map((d) =>
+              mapDocToPostWithMillis(d.id, d.data())
+            );
+            return {
+              posts: list,
+              lastDoc: snap.docs.length ? snap.docs[snap.docs.length - 1] : null,
+              fullPage: snap.docs.length === pageLimit,
+            };
+          };
 
+          const initial = await fetchInitialResultPostsByDayWindow({
+            language,
+            fetchPage,
+            mergePosts: mergePostsById,
+          });
+
+          const next =
+            initial.posts.length > RESULT_POSTS_MAX_CACHED
+              ? initial.posts.slice(0, RESULT_POSTS_MAX_CACHED)
+              : initial.posts;
+
+          setPosts(next);
+          setLastDoc(initial.lastDoc);
+          setHasMore(
+            initial.hasMore && next.length < RESULT_POSTS_MAX_CACHED
+          );
+          return;
+        }
+
+        if (!lastDoc) return;
+
+        const q = query(collection(db, "posts"), ...base, startAfter(lastDoc));
         const snap = await getDocs(q);
 
         const list = snap.docs.map((d) => mapDocToPostWithMillis(d.id, d.data()));
@@ -59,14 +104,6 @@ export function useNativeResultPosts(uid: string | null | undefined, language: "
 
         let nextPostsLength = 0;
         setPosts((prev) => {
-          if (reset) {
-            const next =
-              list.length > RESULT_POSTS_MAX_CACHED
-                ? list.slice(0, RESULT_POSTS_MAX_CACHED)
-                : list;
-            nextPostsLength = next.length;
-            return next;
-          }
           const seen = new Set(prev.map((p) => p.id));
           const filtered = list.filter((p) => !seen.has(p.id));
           const merged = [...prev, ...filtered];
@@ -80,14 +117,13 @@ export function useNativeResultPosts(uid: string | null | undefined, language: "
 
         setLastDoc(newLast);
         const cappedAfterLoad = nextPostsLength >= RESULT_POSTS_MAX_CACHED;
-        const fullPage =
-          snap.docs.length === (reset ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE);
+        const fullPage = snap.docs.length === pageLimit;
         setHasMore(!cappedAfterLoad && fullPage);
       } finally {
         setLoading(false);
       }
     },
-    [uid, loading, hasMore, lastDoc, posts.length]
+    [uid, loading, hasMore, lastDoc, posts.length, language]
   );
 
   useEffect(() => {
@@ -99,7 +135,7 @@ export function useNativeResultPosts(uid: string | null | undefined, language: "
     }
     void loadPage({ reset: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid]);
+  }, [uid, language]);
 
   const grouped = useMemo(
     () => groupPostsByResultDay(posts, language),

@@ -1,6 +1,11 @@
 /**
  * Web `lib/result/result-page-data.ts` と同一ロジック（ネイティブは `@/` 解決を避けて自己完結）
  */
+import {
+  TIMEZONE_ET,
+  TIMEZONE_JST,
+  getZonedYMD,
+} from "../../../../../lib/time/zonedTime";
 export type PostWithMillis = Record<string, unknown> & {
   id: string;
   createdAtMillis?: number | null;
@@ -53,10 +58,15 @@ function toStartAtMillis(p: unknown): number | null {
   return null;
 }
 
+function resultListTimeZoneForLanguage(lang: "ja" | "en"): string {
+  return lang === "en" ? TIMEZONE_ET : TIMEZONE_JST;
+}
+
 function formatResultDateLabel(ms: number | null | undefined, lang: "ja" | "en"): string {
   if (!ms) return lang === "en" ? "Unknown" : "不明";
-  const d = new Date(ms);
-  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+  const tz = resultListTimeZoneForLanguage(lang);
+  const { year, month, day } = getZonedYMD(new Date(ms), tz);
+  return `${year}.${month}.${day}`;
 }
 
 /** カード中央ラベル用：開催日を優先し、無ければ投稿作成日 */
