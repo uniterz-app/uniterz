@@ -66,6 +66,7 @@ import {
   RESULT_POSTS_MAX_CACHED,
   hasPointsV3Recorded,
   sumDayPointsV3,
+  resultListLocalDayKeyFromMs,
   type PostWithMillis,
   type ResultDayGroup,
   type ResultListLeagueTab,
@@ -81,7 +82,7 @@ import {
   type GamePointsDistributionV1,
 } from "@/lib/results/gamePointsDistribution";
 import type { League } from "@/lib/leagues";
-import { LEAGUE_DISPLAY, LEAGUES } from "@/lib/leagues";
+import { LEAGUE_DISPLAY, LEAGUES, resolvePostListLeague } from "@/lib/leagues";
 import { isWcResultLeague } from "@/lib/result/wcResultUi";
 import {
   resultCardPageSlot,
@@ -172,18 +173,14 @@ function pointsV3Of(post: PostWithMillis): number | null {
   return v;
 }
 
-/** ローカル暦の YYYY-MM-DD（日付見出しの `dateMs` と同じ基準） */
-function localDayKeyFromMs(ms: number): string {
-  const d = new Date(ms);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/** ローカル暦の YYYY-MM-DD（日付見出しの `dateMs` と同じ基準・試合一覧 TZ） */
+function localDayKeyFromMs(ms: number, language: Language): string {
+  return resultListLocalDayKeyFromMs(ms, language);
 }
 
-function dayMatchesDateRange(day: ResultDayGroup, f: ResultListFilters): boolean {
+function dayMatchesDateRange(day: ResultDayGroup, f: ResultListFilters, language: Language): boolean {
   if (f.dateFrom == null && f.dateTo == null) return true;
-  const key = localDayKeyFromMs(day.dateMs);
+  const key = localDayKeyFromMs(day.dateMs, language);
   if (f.dateFrom != null && key < f.dateFrom) return false;
   if (f.dateTo != null && key > f.dateTo) return false;
   return true;
@@ -339,7 +336,7 @@ function postMatchesSpecialty(
 function postMatchesFilters(post: PostWithMillis, f: ResultListFilters): boolean {
   if (f.settlement === "pending" && isFinalResultPost(post)) return false;
   if (f.settlement === "final" && !isFinalResultPost(post)) return false;
-  if (f.league !== "all" && post.league !== f.league) return false;
+  if (f.league !== "all" && resolvePostListLeague(post) !== f.league) return false;
   if (!postMatchesOutcome(post, f.outcome)) return false;
   if (!postMatchesPointsTier(post, f.pointsTier)) return false;
   if (!postMatchesScorePrecisionTier(post, f.scorePrecisionTier)) return false;
@@ -373,9 +370,10 @@ function detailFullscreenPanelStyle(
 /** 一覧に出ている試合日キーに対応する表示ラベル */
 function dateLabelForDayKey(
   grouped: readonly ResultDayGroup[],
-  key: string
+  key: string,
+  language: Language
 ): string {
-  const g = grouped.find((d) => localDayKeyFromMs(d.dateMs) === key);
+  const g = grouped.find((d) => localDayKeyFromMs(d.dateMs, language) === key);
   return g?.dateLabel ?? key;
 }
 
@@ -626,10 +624,10 @@ export default function ResultListWithOverlay({
   const availableDayKeysAsc = useMemo(() => {
     const set = new Set<string>();
     for (const d of grouped) {
-      set.add(localDayKeyFromMs(d.dateMs));
+      set.add(localDayKeyFromMs(d.dateMs, language));
     }
     return Array.from(set).sort();
-  }, [grouped]);
+  }, [grouped, language]);
 
   const dateFromOptions = useMemo(
     () =>
@@ -694,14 +692,14 @@ export default function ResultListWithOverlay({
 
   const filteredGrouped = useMemo(() => {
     return grouped
-      .filter((day) => dayMatchesDateRange(day, filters))
+      .filter((day) => dayMatchesDateRange(day, filters, language))
       .map((day) => ({
         ...day,
         pending: day.pending.filter((p) => postMatchesFilters(p, filters)),
         final: day.final.filter((p) => postMatchesFilters(p, filters)),
       }))
       .filter((day) => day.pending.length + day.final.length > 0);
-  }, [grouped, filters]);
+  }, [grouped, filters, language]);
 
   const visibleGrouped = useMemo(
     () =>
@@ -1211,7 +1209,7 @@ export default function ResultListWithOverlay({
                       }
                     >
                       {filters.dateFrom
-                        ? dateLabelForDayKey(grouped, filters.dateFrom)
+                        ? dateLabelForDayKey(grouped, filters.dateFrom, language)
                         : fc.datePlaceholder}
                     </span>
                     <ChevronDown
@@ -1265,7 +1263,7 @@ export default function ResultListWithOverlay({
                       }
                     >
                       {filters.dateTo
-                        ? dateLabelForDayKey(grouped, filters.dateTo)
+                        ? dateLabelForDayKey(grouped, filters.dateTo, language)
                         : fc.datePlaceholder}
                     </span>
                     <ChevronDown
@@ -1731,7 +1729,7 @@ export default function ResultListWithOverlay({
                           }}
                         >
                           <span className="min-w-0 flex-1">
-                            {dateLabelForDayKey(grouped, k)}
+                            {dateLabelForDayKey(grouped, k, language)}
                           </span>
                           {sel ? (
                             <Check
@@ -1788,7 +1786,7 @@ export default function ResultListWithOverlay({
                           }}
                         >
                           <span className="min-w-0 flex-1">
-                            {dateLabelForDayKey(grouped, k)}
+                            {dateLabelForDayKey(grouped, k, language)}
                           </span>
                           {sel ? (
                             <Check

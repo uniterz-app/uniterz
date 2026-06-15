@@ -53,6 +53,7 @@ import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultPredictEditModal from "./ResultPredictEditModal";
 import { MatchCardListGridOverlay } from "../games/MatchCardListGridOverlay";
+import { useNativeResultPosts } from "./useNativeResultPosts";
 import {
   useResultDayHeaderEntrance,
   useResultEntranceArmed,
