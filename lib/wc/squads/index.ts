@@ -1,6 +1,6 @@
 // lib/wc/squads/index.ts
 //
-// FIFA 最終名簿（Wikipedia 2026-06-02）＋ 自社編集の予想スタメン（複数メディア参考）
+// FIFA 最終名簿（Wikipedia 2026-06-02）＋ 予想スタメン（試合済みは確定XI、未試合はメディア合成）
 
 import { WC_GENERATED_SQUADS } from "./_generatedSquads";
 import { WC_PREDICTED_LINEUPS } from "./_generatedLineups";

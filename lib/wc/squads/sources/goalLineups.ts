@@ -49,7 +49,7 @@ export const GOAL_LINEUPS: RawSourceLineup[] = [
   { iso3: "cod", formation: "4-2-3-1", players: ["Mpasi", "Wan-Bissaka", "Mbemba", "Tuanzebe", "Masuaku", "Pickel", "Moutoussamy", "Bongonda", "Kakuta", "Wissa", "Bakambu"] },
   { iso3: "sct", formation: "4-1-4-1", players: ["Gordon", "Hickey", "Hanley", "McKenna", "Robertson", "Ferguson", "Gannon-Doak", "Christie", "McTominay", "McGinn", "Adams"] },
   { iso3: "sen", formation: "4-2-3-1", players: ["Mendy", "Diatta", "Koulibaly", "Niakhaté", "Jakobs", "Idrissa Gueye", "Pape Gueye", "Ismaila Sarr", "Iliman Ndiaye", "Mané", "Jackson"] },
-  { iso3: "esp", formation: "4-3-3", players: ["Simon", "Llorente", "Cubarsì", "Laporte", "Cucurella", "Pedri", "Rodri", "Fabian Ruiz", "Yamal", "Oyarzabal", "N. Williams"] },
+  { iso3: "esp", formation: "4-3-3", players: ["Simon", "Llorente", "Cubarsì", "Laporte", "Cucurella", "Pedri", "Rodri", "Fabian Ruiz", "N. Williams", "Oyarzabal", "Yamal"] },
   { iso3: "usa", formation: "4-3-3", players: ["Freese", "Freeman", "Richards", "Trusty", "Antonee Robinson", "McKennie", "Berhalter", "Adams", "Weah", "Balogun", "Pulisic"] },
   { iso3: "zaf", formation: "4-2-3-1", players: ["Williams", "Mudau", "Sibisi", "Ndamane", "Modiba", "Sithole", "Mokoena", "Apollis", "Zwane", "Mofokeng", "Foster"] },
   { iso3: "swe", formation: "3-4-2-1", players: ["Nordfeldt", "Starfelt", "Lagerbielke", "Lindelof", "Svensson", "Karlstrom", "Ayari", "Gudmundsson", "Nygren", "Elanga", "Gyokeres"] },
