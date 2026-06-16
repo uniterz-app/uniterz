@@ -1,25 +1,10 @@
 /**
- * Web プロフィール「ブラケット」タブ相当（Firestore の提出ブラケット + 公式結果）。
+ * Web プロフィール「ブラケット」タブ相当（フルブラケット表示 + 的中マーク）。
  */
-import { useEffect, useState } from "react";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import { getCurrentPlayoffSeason } from "../../../../../lib/playoff-bracket-config";
-import { PLAYOFF_SERIES, type SeriesId } from "../../../../../lib/playoff-bracket";
-import type { Bracket } from "../../../../../lib/score-playoff-bracket";
-import { TEAM_NAME_BY_ID } from "../../../../../lib/team-name-by-id";
-
-type BracketDoc = {
-  season?: string;
-  bracket?: Partial<Record<SeriesId, { winner?: string; games?: number }>>;
-  totalScore?: number;
-};
-
-function docId(uid: string, season: string) {
-  return `${season}_${uid}`;
-}
+import PlayoffFullBracketNative from "../games/playoffBracket/PlayoffFullBracketNative";
+import { useNativePlayoffBracketView } from "../games/playoffBracket/useNativePlayoffBracketView";
 
 type Props = {
   uid: string | undefined;
@@ -28,53 +13,8 @@ type Props = {
 
 export default function ProfileBracketTabNative({ uid, language }: Props) {
   const isJa = language === "ja";
-  const [loading, setLoading] = useState(true);
-  const [bracketDoc, setBracketDoc] = useState<BracketDoc | null>(null);
-  const [results, setResults] = useState<Bracket | null>(null);
-  const season = getCurrentPlayoffSeason();
-
-  useEffect(() => {
-    if (!season) {
-      setResults(null);
-      return;
-    }
-    const ref = doc(db, "playoffResults", season);
-    const unsub = onSnapshot(ref, (snap) => {
-      if (!snap.exists()) {
-        setResults(null);
-        return;
-      }
-      const data = snap.data() as { results?: Bracket };
-      setResults(data.results ?? {});
-    });
-    return () => unsub();
-  }, [season]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function run() {
-      if (!uid) {
-        setBracketDoc(null);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      try {
-        const ref = doc(db, "playoffBrackets", docId(uid, season));
-        const snap = await getDoc(ref);
-        if (cancelled) return;
-        setBracketDoc(snap.exists() ? (snap.data() as BracketDoc) : null);
-      } catch {
-        if (!cancelled) setBracketDoc(null);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [uid, season]);
+  const { loading, display, savedBracket, score, season, officialResults, hasSubmitted } =
+    useNativePlayoffBracketView(uid);
 
   if (!uid) {
     return <Text style={styles.muted}>{isJa ? "ログインが必要です" : "Sign in required"}</Text>;
@@ -88,7 +28,7 @@ export default function ProfileBracketTabNative({ uid, language }: Props) {
     );
   }
 
-  if (!bracketDoc?.bracket) {
+  if (!hasSubmitted || !display) {
     return (
       <View style={styles.noDataBox}>
         <Text style={styles.noDataBebas}>NO DATA</Text>
@@ -99,47 +39,32 @@ export default function ProfileBracketTabNative({ uid, language }: Props) {
     );
   }
 
-  const b = bracketDoc.bracket;
-  const score = bracketDoc.totalScore ?? 0;
-
   return (
-    <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-      <Text style={styles.header}>
-        {isJa ? "シーズン" : "Season"}: {bracketDoc.season ?? season}
-      </Text>
-      <Text style={styles.header}>
-        {isJa ? "スコア" : "Score"}: {String(score)}
-      </Text>
-      <View style={styles.divider} />
-      {PLAYOFF_SERIES.map((sid) => {
-        const pick = b[sid];
-        const res = results?.[sid];
-        const w = pick?.winner ?? "";
-        const g = pick?.games;
-        const label = TEAM_NAME_BY_ID[w.toLowerCase()] ?? w;
-        return (
-          <View key={sid} style={styles.row}>
-            <Text style={styles.seriesId}>{sid}</Text>
-            <Text style={styles.pick}>
-              {w
-                ? `${label} (${g ?? "—"}${isJa ? "試合" : " games"})`
-                : "—"}
-            </Text>
-            {res?.winner ? (
-              <Text style={styles.official}>
-                {isJa ? "公式: " : "Official: "}
-                {TEAM_NAME_BY_ID[String(res.winner).toLowerCase()] ?? res.winner} ({res.games})
-              </Text>
-            ) : null}
-          </View>
-        );
-      })}
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <PlayoffFullBracketNative
+        league="nba"
+        season={season}
+        score={score}
+        leftRound1={display.leftRound1}
+        leftRound2={display.leftRound2}
+        leftRound3={display.leftRound3}
+        leftRound4={display.leftRound4}
+        rightRound1={display.rightRound1}
+        rightRound2={display.rightRound2}
+        rightRound3={display.rightRound3}
+        rightRound4={display.rightRound4}
+        champion={display.champion}
+        bracket={savedBracket ?? undefined}
+        results={officialResults ?? undefined}
+        hitLegend={{ language }}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { maxHeight: 520 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 16 },
   loadingBlock: {
     alignItems: "center",
     paddingVertical: 16,
@@ -149,6 +74,7 @@ const styles = StyleSheet.create({
     color: "rgba(148,163,184,0.9)",
     fontSize: 14,
     paddingVertical: 16,
+    textAlign: "center",
   },
   noDataBox: {
     padding: 24,
@@ -163,34 +89,6 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     color: "rgba(103,232,249,0.55)",
     marginBottom: 8,
-    fontFamily: Platform.select({
-      ios: "BebasNeue_400Regular",
-      android: "BebasNeue_400Regular",
-      default: "sans-serif",
-    }),
-  },
-  header: {
-    color: "rgba(248,250,252,0.92)",
-    fontSize: 14,
     fontWeight: "700",
-    marginBottom: 6,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginVertical: 12,
-  },
-  row: {
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.08)",
-  },
-  seriesId: {
-    color: "rgba(103,232,249,0.85)",
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  pick: { color: "rgba(248,250,252,0.92)", fontSize: 14 },
-  official: { color: "rgba(163,230,53,0.85)", fontSize: 12, marginTop: 4 },
 });

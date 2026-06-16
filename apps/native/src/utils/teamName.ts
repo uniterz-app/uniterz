@@ -19,7 +19,7 @@ export function getTeamAlias(name: string): string | null {
 }
 
 export function splitTeamNameByLeague(
-  _league: "bj" | "j1" | "nba" | "pl",
+  _league: "bj" | "j1" | "nba" | "pl" | "wc",
   rawName: string
 ): [string, string] {
   const name = rawName.replace(/\s+/g, " ").trim();

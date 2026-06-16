@@ -27,12 +27,14 @@ function RankingRowCard({
   metric,
   language,
   podium = false,
+  onPress,
 }: {
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
   language: RankingsLanguage;
   podium?: boolean;
+  onPress?: () => void;
 }) {
   const t = rankingsTexts(language);
   const isTop3 = podium;
@@ -103,7 +105,7 @@ function RankingRowCard({
   const androidPodiumElev =
     isTop3 && Platform.OS === "android" ? { elevation: rank === 1 ? 10 : 8 } : {};
 
-  return (
+  const cardBody = (
     <View style={isTop3 ? styles.podiumCardRoot : {}}>
       {isTop3 && rank === 1 ? (
         <View style={styles.podiumCrownWrap} pointerEvents="none">
@@ -303,16 +305,27 @@ function RankingRowCard({
       </LinearGradient>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} accessibilityRole="button">
+        {cardBody}
+      </Pressable>
+    );
+  }
+  return cardBody;
 }
 
 export function RankingsTopPodiumNative({
   rows,
   metric,
   language,
+  onPressProfile,
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
   language: RankingsLanguage;
+  onPressProfile?: (row: RankingRowWithCountry) => void;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -325,6 +338,7 @@ export function RankingsTopPodiumNative({
           metric={metric}
           language={language}
           podium
+          onPress={onPressProfile ? () => onPressProfile(row) : undefined}
         />
       ))}
     </View>
@@ -336,11 +350,21 @@ export function RankingListCardNative({
   rank,
   metric,
   language,
+  onPress,
 }: {
   row: RankingRowWithCountry;
   rank: number;
   metric: MobileMetric;
   language: RankingsLanguage;
+  onPress?: () => void;
 }) {
-  return <RankingRowCard row={row} rank={rank} metric={metric} language={language} />;
+  return (
+    <RankingRowCard
+      row={row}
+      rank={rank}
+      metric={metric}
+      language={language}
+      onPress={onPress}
+    />
+  );
 }

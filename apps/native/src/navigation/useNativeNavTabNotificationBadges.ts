@@ -51,14 +51,23 @@ async function ensureResultSeenBaseline(uid: string): Promise<number> {
   }
 }
 
+import {
+  readLeaderboardsIntroSeenNative,
+} from "./navLeaderboardsIntroSeenNative";
+
 type Options = {
   rankingTabActive?: boolean;
   resultTabActive?: boolean;
+  leaderboardsTabActive?: boolean;
 };
 
 /** Native 下部タブの未読ドット（Web `useNavTabNotificationBadges` と同趣旨） */
 export function useNativeNavTabNotificationBadges(options: Options = {}) {
-  const { rankingTabActive = false, resultTabActive = false } = options;
+  const {
+    rankingTabActive = false,
+    resultTabActive = false,
+    leaderboardsTabActive = false,
+  } = options;
   const { fUser, status } = useFirebaseUser();
   const uid = fUser?.uid ?? null;
   const authReady = status === "ready";
@@ -70,8 +79,21 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
   const [resultSeenMs, setResultSeenMs] = useState<number | null>(null);
   const [hasNewSettledPost, setHasNewSettledPost] = useState(false);
   const [resultBaselineReady, setResultBaselineReady] = useState(false);
+  const [leaderboardsIntroSeen, setLeaderboardsIntroSeen] = useState(true);
 
   const active = authReady && !!uid;
+
+  useEffect(() => {
+    void readLeaderboardsIntroSeenNative().then(setLeaderboardsIntroSeen);
+  }, []);
+
+  useEffect(() => {
+    if (leaderboardsTabActive) {
+      void readLeaderboardsIntroSeenNative().then((seen) => {
+        setLeaderboardsIntroSeen(seen);
+      });
+    }
+  }, [leaderboardsTabActive]);
 
   useEffect(() => {
     if (!active || !uid) {
@@ -170,5 +192,8 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
   const showResultBadge =
     active && !resultTabActive && resultBaselineReady && hasNewSettledPost;
 
-  return { showRankingBadge, showResultBadge };
+  const showLeaderboardsBadge =
+    active && !leaderboardsTabActive && !leaderboardsIntroSeen;
+
+  return { showRankingBadge, showResultBadge, showLeaderboardsBadge };
 }

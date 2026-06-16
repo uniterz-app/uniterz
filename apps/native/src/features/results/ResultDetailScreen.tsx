@@ -38,6 +38,7 @@ import {
 import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge";
 import { RESULT_DETAIL_ENTRANCE, resultDetailSectionEnter } from "./resultDetailEntranceNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { formatResultPostCardDateLabel } from "./nativeResultModel";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&

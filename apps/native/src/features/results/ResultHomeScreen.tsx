@@ -11,6 +11,7 @@ import {
   View,
   type LayoutChangeEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -28,15 +29,38 @@ import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
+import { MATCH_CARD_DISPLAY_FONT } from "../games/matchCardTypography";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
-import { canDismissResultListPostNow, formatResultPostCardDateLabel } from "./nativeResultModel";
-import CyberMenuButton from "../../ui/CyberMenuButton";
+import { canDismissResultListPostNow } from "./nativeResultModel";
+import ResultListFiltersNative, {
+  type ResultFilterState,
+} from "./ResultListFiltersNative";
 import {
-  resultLiveBadgeCompact,
-  resultLiveBadgeCompactText,
-} from "../../ui/resultLiveBadgeStyles";
-import { LiveMarkPill } from "../games/LiveMarkPill";
+  DEFAULT_RESULT_LIST_FILTERS,
+  isDefaultResultListFilters,
+  postMatchesResultListFilters,
+} from "../../../../../lib/result/resultListFilterMatch";
+import UnderlineTabsNative from "../../ui/UnderlineTabsNative";
+import CyberMenuButton from "../../ui/CyberMenuButton";
+import { useResultLeagueFlagsNative, type ResultListLeagueTab } from "./useResultLeagueFlagsNative";
+import ResultOutcomeBadgesNative from "./ResultOutcomeBadgesNative";
+import {
+  DISPLAY_FONT,
+  MOBILE_RESULT_CARD_GAP,
+  MOBILE_RESULT_CARD_MAX_W,
+  MOBILE_RESULT_JERSEY_SIZE,
+  MOBILE_RESULT_PAGE_PAD_X,
+  MOBILE_RESULT_PAGE_PAD_Y,
+  MOBILE_RESULT_SECTION_GAP,
+  MOBILE_RESULT_STAT_LABEL_W,
+  MOBILE_RESULT_STAT_ROW_GAP,
+  MOBILE_RESULT_STAT_VALUE_W,
+  NUMERIC_FONT,
+  resultCardShellNative,
+  resultDayStripPanelNative,
+  resultFilterBarNative,
+} from "./resultMobileUiNative";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
 import {
   dayPointsHeaderForNative,
@@ -50,9 +74,13 @@ import {
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import ResultDetailScreen from "./ResultDetailScreen";
 import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
+import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
+import ResultMatchScoreLineNative from "./ResultMatchScoreLineNative";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultPredictEditModal from "./ResultPredictEditModal";
 import { MatchCardListGridOverlay } from "../games/MatchCardListGridOverlay";
+import GamesPageBackgroundNative from "../games/GamesPageBackgroundNative";
+import { GAMES_PAGE_BG_TOP } from "../games/gamesPageBackgroundTokens";
 import { useNativeResultPosts } from "./useNativeResultPosts";
 import {
   useResultDayHeaderEntrance,
@@ -69,9 +97,7 @@ const hasNativeBlurView =
       UIManager.getViewManagerConfig?.("ViewManagerAdapter_ExpoBlur_ExpoBlurView")
   );
 
-const JERSEY_SIZE_RESULT = 52;
-/** 上段／下段 50% 分割のカード高さ */
-const RESULT_CARD_SPLIT_HEIGHT = 214;
+const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
 /** Web `ResultCard` の `transition-all duration-300 ease-out`（モバイルフライアウトの translate 含む） */
 const CORNER_FAB_TRANSITION_MS = 300;
@@ -101,22 +127,25 @@ const dayHeaderGridStyles = StyleSheet.create({
   },
 });
 
-function ResultDayHeaderGridOverlay() {
+function ResultDayHeaderGridOverlay({ mobileStrip = false }: { mobileStrip?: boolean }) {
+  const step = mobileStrip ? 14 : DAY_HEADER_GRID_STEP;
+  const lineColor = mobileStrip ? "rgba(34,211,238,0.45)" : DAY_HEADER_GRID_LINE;
+  const opacity = mobileStrip ? 1 : DAY_HEADER_GRID_OPACITY;
   const [size, setSize] = useState({ w: 0, h: 0 });
   const verticalLefts = useMemo(() => {
     const out: number[] = [];
-    for (let x = DAY_HEADER_GRID_STEP; x < size.w; x += DAY_HEADER_GRID_STEP) {
+    for (let x = step; x < size.w; x += step) {
       out.push(x);
     }
     return out;
-  }, [size.w]);
+  }, [size.w, step]);
   const horizontalTops = useMemo(() => {
     const out: number[] = [];
-    for (let y = DAY_HEADER_GRID_STEP; y < size.h; y += DAY_HEADER_GRID_STEP) {
+    for (let y = step; y < size.h; y += step) {
       out.push(y);
     }
     return out;
-  }, [size.h]);
+  }, [size.h, step]);
 
   function onGridLayout(e: LayoutChangeEvent) {
     const { width, height } = e.nativeEvent.layout;
@@ -128,18 +157,18 @@ function ResultDayHeaderGridOverlay() {
     <View pointerEvents="none" style={dayHeaderGridStyles.overlay} onLayout={onGridLayout}>
       <View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { opacity: DAY_HEADER_GRID_OPACITY }]}
+        style={[StyleSheet.absoluteFillObject, { opacity }]}
       >
         {verticalLefts.map((left) => (
           <View
             key={`dhgv-${left}`}
-            style={[dayHeaderGridStyles.gridLineV, { left, backgroundColor: DAY_HEADER_GRID_LINE }]}
+            style={[dayHeaderGridStyles.gridLineV, { left, backgroundColor: lineColor }]}
           />
         ))}
         {horizontalTops.map((top) => (
           <View
             key={`dhgh-${top}`}
-            style={[dayHeaderGridStyles.gridLineH, { top, backgroundColor: DAY_HEADER_GRID_LINE }]}
+            style={[dayHeaderGridStyles.gridLineH, { top, backgroundColor: lineColor }]}
           />
         ))}
       </View>
@@ -163,20 +192,23 @@ const LEAGUE_LABEL: Record<string, string> = {
   bj: "B1",
   pl: "PL",
   j1: "J1",
+  wc: "WC",
 };
 
-const NUMERIC_FONT_FAMILY = Platform.select({
-  ios: "Oxanium_700Bold",
-  android: "Oxanium_700Bold",
-  default: "Oxanium_700Bold",
-});
-const DISPLAY_FONT_FAMILY = Platform.select({
-  ios: "BebasNeue_400Regular",
-  android: "BebasNeue_400Regular",
-  default: "BebasNeue_400Regular",
-});
-function normalizeLeague(raw: unknown): "nba" | "bj" | "j1" | "pl" {
+/** Web `ResultLeagueBadge` の pill 背景 */
+const LEAGUE_PILL_BG: Record<string, string> = {
+  nba: "#1D428A",
+  bj: "#C8102E",
+  pl: "#3A0CA3",
+  j1: "#E10600",
+  wc: "#56042C",
+};
+
+const NUMERIC_FONT_FAMILY = NUMERIC_FONT;
+const DISPLAY_FONT_FAMILY = DISPLAY_FONT;
+function normalizeLeague(raw: unknown): "nba" | "bj" | "j1" | "pl" | "wc" {
   const v = String(raw ?? "").trim().toLowerCase();
+  if (v === "wc" || v.includes("world cup")) return "wc";
   if (v === "bj" || v === "b1" || v.includes("b.league")) return "bj";
   if (v === "j1" || v === "j") return "j1";
   if (v === "pl" || v.includes("premier") || v.includes("epl")) return "pl";
@@ -264,7 +296,7 @@ function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | 
 type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
 function getMobileTeamName(
-  league: "nba" | "bj" | "j1" | "pl",
+  league: "nba" | "bj" | "j1" | "pl" | "wc",
   rawName: string,
   l1: string,
   l2?: string
@@ -278,31 +310,55 @@ function ResultListHeaderBlock({
   cacheCapped,
   hintText,
   filterLabel,
+  filterCollapseLabel,
   entranceArmed,
   onFilterPress,
+  filterPanelOpen,
+  filterActive,
+  filterPanel,
+  leagueTabs,
 }: {
   cacheCapped: boolean;
   hintText: string;
   filterLabel: string;
+  filterCollapseLabel: string;
   entranceArmed: boolean;
   onFilterPress: () => void;
+  filterPanelOpen: boolean;
+  filterActive: boolean;
+  filterPanel?: React.ReactNode;
+  leagueTabs?: React.ReactNode;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   const filterMotion = useResultFilterBarEntrance(entranceArmed, reduceMotion);
   return (
     <View style={styles.headerBlock}>
+      {leagueTabs}
       {cacheCapped ? <Text style={styles.hint}>{hintText}</Text> : null}
       <View style={styles.listRowOuter}>
         <Animated.View style={filterMotion}>
           <Pressable
-            style={({ pressed }) => [styles.filterBar, pressed && styles.filterBarPressed]}
+            style={({ pressed }) => [
+              resultFilterBarNative.bar,
+              styles.filterBarRow,
+              pressed && resultFilterBarNative.barPressed,
+            ]}
             onPress={onFilterPress}
           >
-            <Text style={styles.filterBarText}>{filterLabel}</Text>
-            <MaterialCommunityIcons name="chevron-down" size={18} color="rgba(226,232,240,0.75)" />
+            <MaterialCommunityIcons
+              name="chevron-down"
+              size={16}
+              color="rgba(255,255,255,0.6)"
+              style={filterPanelOpen ? styles.filterChevronOpen : undefined}
+            />
+            <Text style={resultFilterBarNative.text}>
+              {filterPanelOpen ? filterCollapseLabel : filterLabel}
+            </Text>
+            {filterActive ? <View style={styles.filterActiveDot} /> : null}
           </Pressable>
         </Animated.View>
       </View>
+      {filterPanelOpen ? filterPanel : null}
     </View>
   );
 }
@@ -315,7 +371,6 @@ function ResultDayHeader({
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
-  /** 初回ロード時のみ true（スクロール後の新規セクションは false） */
   entranceActive: boolean;
   sectionStaggerIndex: number;
 }) {
@@ -327,43 +382,42 @@ function ResultDayHeader({
   );
   return (
     <View style={[styles.listRowOuter, styles.dayHeaderSpacing]}>
-      <Animated.View style={[styles.dayHeaderClip, clipStyle]}>
-        <ResultDayHeaderGridOverlay />
-        <View style={styles.cornerTl} />
-        <View style={styles.cornerBr} />
-        <View style={styles.cornerTr} />
-        <View style={styles.cornerBl} />
-        <View style={styles.dayHeaderRow}>
-          <Animated.View style={[styles.dayHeaderDateSlot, dateClusterStyle]}>
-            <Text style={styles.dayHeaderDate}>{dateLabel}</Text>
-          </Animated.View>
-          <Animated.View style={[styles.dayHeaderRightCluster, rightClusterStyle]}>
-            {dayPoints?.variant === "total" &&
-            typeof dayPoints.hitTotal === "number" &&
-            dayPoints.hitTotal > 0 ? (
-              <View style={styles.dayHitWrap}>
-                <Text style={styles.dayHitLabel}>hit</Text>
-                <Text style={styles.dayHitNums}>
-                  {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
-                </Text>
-              </View>
-            ) : null}
-            {dayPoints?.variant === "total" ? (
-              <View style={styles.dayTotalWrap}>
-                <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
-                <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
-                <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
-              </View>
-            ) : dayPoints?.variant === "pending" ? (
-              <View style={styles.pendingRow}>
-                <View style={styles.pendingPill}>
-                  <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
+      <View style={resultDayStripPanelNative.outer}>
+        <Animated.View style={[resultDayStripPanelNative.panel, clipStyle]}>
+          <View style={resultDayStripPanelNative.leftAccent} pointerEvents="none" />
+          <ResultDayHeaderGridOverlay mobileStrip />
+          <View style={resultDayStripPanelNative.row}>
+            <Animated.View style={dateClusterStyle}>
+              <Text style={resultDayStripPanelNative.date}>{dateLabel}</Text>
+            </Animated.View>
+            <Animated.View style={[styles.dayHeaderRightCluster, rightClusterStyle]}>
+              {dayPoints?.variant === "total" &&
+              typeof dayPoints.hitTotal === "number" &&
+              dayPoints.hitTotal > 0 ? (
+                <View style={styles.dayHitWrap}>
+                  <Text style={styles.dayHitLabel}>hit</Text>
+                  <Text style={styles.dayHitNums}>
+                    {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
+                  </Text>
                 </View>
-              </View>
-            ) : null}
-          </Animated.View>
-        </View>
-      </Animated.View>
+              ) : null}
+              {dayPoints?.variant === "total" ? (
+                <View style={styles.dayTotalWrap}>
+                  <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
+                  <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
+                  <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
+                </View>
+              ) : dayPoints?.variant === "pending" ? (
+                <View style={styles.pendingRow}>
+                  <View style={styles.pendingPill}>
+                    <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
+                  </View>
+                </View>
+              ) : null}
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -497,14 +551,11 @@ function ResultPostCard({
 
   const ph = pred?.score?.home;
   const pa = pred?.score?.away;
-  const predictedScore =
-    typeof ph === "number" && typeof pa === "number" ? `${ph} - ${pa}` : "— - —";
-  const cardDateLabel = formatResultPostCardDateLabel(post, isEn ? "en" : "ja");
+  const hasPredictedScore = typeof ph === "number" && typeof pa === "number";
 
   const rh = result?.home;
   const ra = result?.away;
   const hasFinal = typeof rh === "number" && typeof ra === "number";
-  const finalScore = hasFinal ? `${rh} - ${ra}` : null;
 
   const activeWinStreak =
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
@@ -624,14 +675,44 @@ function ResultPostCard({
           onOpenDetail(post.id);
         }}
       >
-      <View style={[styles.cardShell, frameStyle, shellOverflowStyle]} collapsable={false}>
+      <View style={[styles.cardShell, resultCardShellNative.shell, frameStyle, shellOverflowStyle]} collapsable={false}>
         <Animated.View
           pointerEvents="none"
           style={[styles.cardGridUnderlay, entrance.gridUnderlayStyle]}
         >
           <MatchCardListGridOverlay styles={styles} tone="resultList" />
         </Animated.View>
-        <Animated.View style={[styles.cardPressableBody, entrance.cardBodyGateStyle]}>
+        <View style={styles.cardBadgeOverlay} pointerEvents="none">
+          <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
+            {leagueKey === "nba" || leagueKey === "wc" ? (
+              <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
+            ) : (
+              <View
+                style={[
+                  styles.leaguePill,
+                  { backgroundColor: LEAGUE_PILL_BG[leagueKey] ?? "#334155" },
+                ]}
+              >
+                <Text style={styles.leaguePillText}>{pillText}</Text>
+              </View>
+            )}
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.cardBadgeOutcome,
+              hasCornerActions && styles.cardBadgeOutcomeWithFab,
+              entrance.hitMissBadgeStyle,
+            ]}
+          >
+            <ResultOutcomeBadgesNative
+              badge={badge}
+              streakBadge={streakBadge}
+              activeWinStreak={activeWinStreak}
+              showLiveMark={showLiveMark}
+            />
+          </Animated.View>
+        </View>
+        <Animated.View style={[resultCardShellNative.body, entrance.cardBodyGateStyle]}>
           <LinearGradient
             pointerEvents="none"
             colors={[
@@ -732,59 +813,9 @@ function ResultPostCard({
           ) : null}
 
           <View style={styles.cardContent}>
-          <View style={styles.cardUpperPane}>
-            <View
-              style={[styles.cardTopRow, hasCornerActions && styles.cardTopRowWithCornerFab]}
-            >
-              <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
-              <View style={styles.badgeRow}>
-                <Animated.View style={[styles.badgeSubCluster, entrance.subBadgesStyle]}>
-                  {badge === "streak" && streakBadge ? (
-                    <View style={[styles.streakMiniBadge, streakToneStyle(streakBadge.tone)]}>
-                      <MaterialCommunityIcons
-                        name="fire"
-                        size={12}
-                        color={streakFlameColor(streakBadge.tone)}
-                      />
-                      <Text style={styles.streakMiniBadgeText} numberOfLines={1}>
-                        {streakBadge.label}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {badge === "upset" ? (
-                    <View style={[styles.miniBadge, styles.badgeUpset]}>
-                      <Text style={styles.badgeUpsetText}>UPSET</Text>
-                    </View>
-                  ) : null}
-                  {showLiveMark ? (
-                    <LiveMarkPill
-                      pillStyle={styles.badgeLive}
-                      textStyle={styles.badgeLiveText}
-                    />
-                  ) : null}
-                </Animated.View>
-                <Animated.View style={[styles.badgeHitMissCluster, entrance.hitMissBadgeStyle]}>
-                  {badge === "hit" ? (
-                    <View style={[styles.miniBadge, styles.badgeHit]}>
-                      <Text style={styles.badgeHitText}>HIT</Text>
-                    </View>
-                  ) : null}
-                  {badge === "perfect" ? (
-                    <View style={[styles.miniBadge, styles.badgePerfect]}>
-                      <Text style={styles.badgePerfectText}>PERFECT</Text>
-                    </View>
-                  ) : null}
-                  {badge === "miss" ? (
-                    <View style={[styles.miniBadge, styles.badgeMiss]}>
-                      <Text style={styles.badgeMissText}>MISS</Text>
-                    </View>
-                  ) : null}
-                </Animated.View>
-              </View>
-            </View>
-
+          <View style={styles.matchArea}>
             <View style={styles.matchGrid}>
-              <View style={styles.sideCol}>
+              <View style={[styles.sideCol, styles.sideColHome]}>
                 <Animated.View style={entrance.homeJerseyMarkStyle}>
                   <JerseyMarkAdaptive
                     accent={homeJersey.primary}
@@ -794,24 +825,11 @@ function ResultPostCard({
                 </Animated.View>
                 <Animated.View style={entrance.homeTeamLabelStyle}>
                   <Text style={styles.teamName} numberOfLines={1}>
-                    {homeName.toUpperCase()}
+                    {homeName}
                   </Text>
                 </Animated.View>
               </View>
-              <View style={styles.centerCol}>
-                <Animated.View style={entrance.scoreDateStyle}>
-                  <Text style={styles.scoreDateLabel}>{cardDateLabel}</Text>
-                </Animated.View>
-                <Animated.View style={entrance.predictedScoreStyle}>
-                  <Text style={styles.predictedScore}>{predictedScore}</Text>
-                </Animated.View>
-                {finalScore ? (
-                  <Animated.View style={entrance.finalScoreStyle}>
-                    <Text style={styles.finalScore}>{finalScore}</Text>
-                  </Animated.View>
-                ) : null}
-              </View>
-              <View style={styles.sideCol}>
+              <View style={[styles.sideCol, styles.sideColAway]}>
                 <Animated.View style={entrance.awayJerseyMarkStyle}>
                   <JerseyMarkAdaptive
                     accent={awayJersey.primary}
@@ -821,16 +839,29 @@ function ResultPostCard({
                 </Animated.View>
                 <Animated.View style={entrance.awayTeamLabelStyle}>
                   <Text style={styles.teamName} numberOfLines={1}>
-                    {awayName.toUpperCase()}
+                    {awayName}
                   </Text>
                 </Animated.View>
               </View>
             </View>
+            <View style={styles.centerScoreOverlay} pointerEvents="none">
+              <Animated.View style={entrance.predictedScoreStyle}>
+                {hasPredictedScore ? (
+                  <ResultMatchScoreLineNative home={ph} away={pa} variant="predicted" />
+                ) : (
+                  <Text style={styles.predictedScoreFallback}>— – —</Text>
+                )}
+              </Animated.View>
+              {hasFinal ? (
+                <Animated.View style={[entrance.finalScoreStyle, styles.finalScoreWrap]}>
+                  <ResultMatchScoreLineNative home={rh} away={ra} variant="final" />
+                </Animated.View>
+              ) : null}
+            </View>
           </View>
 
-          <View style={styles.cardLowerPane}>
-            <View style={styles.divider} />
-            <View style={styles.statBlock}>
+          <View style={styles.divider} />
+          <View style={styles.statBlock}>
             {statRows.map((row, rowIndex) => {
               const cap = row.barMax;
               const ratio =
@@ -861,7 +892,7 @@ function ResultPostCard({
                   <Animated.View
                     style={[styles.statBarRevealSlot, entrance.statBarSlotStyles[ri]]}
                   >
-                    <ResultStatRatingBarNative ratio={ratio} size="sm" />
+                    <ResultStatRatingBarNative ratio={ratio} size="sm" metricKey={row.key} />
                   </Animated.View>
                   <Animated.View style={entrance.statValueStyles[ri]}>
                     <Text style={[styles.statValue, valueStyle]}>{display}</Text>
@@ -869,32 +900,14 @@ function ResultPostCard({
                 </View>
               );
             })}
-            </View>
           </View>
           </View>
         </Animated.View>
-        {entrance.showHitFrameFlash ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.hitFrameFlashRing, entrance.hitFrameFlashStyle]}
-          />
-        ) : null}
+        {badge === "hit" ? <ResultHitCyberFrameNative /> : null}
       </View>
       </AnimatedResultCardPressable>
     </Animated.View>
   );
-}
-
-function streakToneStyle(tone: StreakBadge["tone"]) {
-  if (tone === "gold") return styles.streakGold;
-  if (tone === "platinum") return styles.streakPlatinum;
-  return styles.streakSilver;
-}
-
-function streakFlameColor(tone: StreakBadge["tone"]) {
-  if (tone === "gold") return "#fef08a";
-  if (tone === "platinum") return "#cffafe";
-  return "#f8fafc";
 }
 
 type SectionT = {
@@ -913,6 +926,8 @@ export default function ResultHomeScreen({
   bottomReserveY?: number;
 }) {
   const { fUser } = useFirebaseUser();
+  const insets = useSafeAreaInsets();
+  const listTopPad = insets.top + MOBILE_RESULT_PAGE_PAD_Y;
   const [language, setLanguage] = useState<"ja" | "en">("ja");
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
@@ -945,14 +960,14 @@ export default function ResultHomeScreen({
             cacheHint: "古い投稿の一部は表示を省略しています。",
             pull: "引っ張って更新",
             filterFold: "絞り込み条件を指定",
-            filterSoon: "フィルターは次フェーズで接続します。",
+            filterClose: "閉じる",
           }
         : {
             empty: "No predictions yet.",
             cacheHint: "Older posts may be omitted from this list.",
             pull: "Pull to refresh",
             filterFold: "Specify filters",
-            filterSoon: "Filters will be available in a later release.",
+            filterClose: "Close",
           },
     [language]
   );
@@ -973,9 +988,39 @@ export default function ResultHomeScreen({
   const { grouped, loading, postsCacheCapped, refreshPosts, loadMore, removePostById } =
     useNativeResultPosts(uid, language);
 
+  const { showResultLeagueTabs, defaultLeagueTab } = useResultLeagueFlagsNative(uid ?? null);
+  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab>("nba");
+  useEffect(() => {
+    setLeagueTab(defaultLeagueTab);
+  }, [defaultLeagueTab]);
+
+  const [resultFilters, setResultFilters] = useState<ResultFilterState>({
+    ...DEFAULT_RESULT_LIST_FILTERS,
+    detailOpen: false,
+  });
+
+  const filteredGrouped = useMemo(() => {
+    return grouped
+      .map((g) => {
+        const filterPost = (p: PostWithMillis) => {
+          if (!postMatchesResultListFilters(p, resultFilters)) return false;
+          if (showResultLeagueTabs && leagueTab !== "all") {
+            const league = (p.leagueId ?? p.league) as string | undefined;
+            if (leagueTab === "nba" && league === "wc") return false;
+            if (leagueTab === "wc" && league !== "wc") return false;
+          }
+          return true;
+        };
+        const pending = g.pending.filter(filterPost);
+        const final = g.final.filter(filterPost);
+        return { ...g, pending, final };
+      })
+      .filter((g) => g.pending.length > 0 || g.final.length > 0);
+  }, [grouped, resultFilters, leagueTab, showResultLeagueTabs]);
+
   const sections: SectionT[] = useMemo(() => {
     let baseFlatIndex = 0;
-    return grouped.map((g: ResultDayGroup) => {
+    return filteredGrouped.map((g: ResultDayGroup) => {
       const data = [...g.pending, ...g.final];
       const section: SectionT = {
         title: g.dateLabel,
@@ -988,7 +1033,7 @@ export default function ResultHomeScreen({
       baseFlatIndex += data.length;
       return section;
     });
-  }, [grouped]);
+  }, [filteredGrouped]);
 
   /** 初回マウント時のみ一覧入場を有効化（スクロールで遅延マウントされた日付帯は除外） */
   const entranceArmed = useResultEntranceArmed();
@@ -999,8 +1044,42 @@ export default function ResultHomeScreen({
   }, [sections, initialSectionIdSet]);
 
   const onFilterPress = useCallback(() => {
-    Alert.alert(language === "en" ? "Coming soon" : "準備中", t.filterSoon);
-  }, [language, t.filterSoon]);
+    setResultFilters((f) => ({ ...f, detailOpen: !f.detailOpen }));
+  }, []);
+
+  const listHeader = (
+    <ResultListHeaderBlock
+      cacheCapped={postsCacheCapped}
+      hintText={t.cacheHint}
+      filterLabel={t.filterFold}
+      filterCollapseLabel={t.filterClose}
+      entranceArmed={entranceArmed}
+      onFilterPress={onFilterPress}
+      filterPanelOpen={resultFilters.detailOpen}
+      filterActive={!isDefaultResultListFilters(resultFilters)}
+      leagueTabs={
+        showResultLeagueTabs ? (
+          <UnderlineTabsNative
+            split
+            items={[
+              { id: "nba" as ResultListLeagueTab, label: "NBA" },
+              { id: "wc" as ResultListLeagueTab, label: "WC" },
+            ]}
+            activeId={leagueTab}
+            onChange={setLeagueTab}
+          />
+        ) : null
+      }
+      filterPanel={
+        <ResultListFiltersNative
+          language={language}
+          filters={resultFilters}
+          onChange={setResultFilters}
+          hideScorePrecision={leagueTab === "wc"}
+        />
+      }
+    />
+  );
 
   const onRefresh = useCallback(async () => {
     setManualRefreshing(true);
@@ -1038,20 +1117,10 @@ export default function ResultHomeScreen({
     }
   }, [deleteConfirmPost, language, removePostById]);
 
-  const listHeader = (
-    <ResultListHeaderBlock
-      cacheCapped={postsCacheCapped}
-      hintText={t.cacheHint}
-      filterLabel={t.filterFold}
-      entranceArmed={entranceArmed}
-      onFilterPress={onFilterPress}
-    />
-  );
-
   const listEmpty =
-    !loading && grouped.length === 0 ? (
-      <View style={styles.emptyWrap}>
-        <Text style={styles.emptyText}>{t.empty}</Text>
+    !loading && filteredGrouped.length === 0 ? (
+      <View style={styles.emptyNoDataWrap}>
+        <Text style={styles.emptyNoDataText}>NO DATA</Text>
       </View>
     ) : null;
 
@@ -1059,19 +1128,20 @@ export default function ResultHomeScreen({
 
   /** 下端はスクロール内容側のパディングのみ（親に付けるとナビ下が塗りつぶされリストが届かない） */
   const listContentWithBottomPad = useMemo(
-    () => [styles.listContent, { paddingBottom: bottomReserveY }],
-    [bottomReserveY]
+    () => [styles.listContent, { paddingTop: listTopPad, paddingBottom: bottomReserveY }],
+    [bottomReserveY, listTopPad]
   );
 
   return (
     <View style={styles.resultScreenWrap}>
+      <GamesPageBackgroundNative />
     <View style={styles.root}>
       {showInitialSpinner ? (
-        <View style={[styles.centered, { paddingBottom: bottomReserveY }]}>
+        <View style={[styles.centered, { paddingTop: listTopPad, paddingBottom: bottomReserveY }]}>
           <BlocksPulseLoader />
         </View>
       ) : sections.length === 0 ? (
-        <View style={[styles.listContent, { paddingBottom: bottomReserveY }]}>
+        <View style={[styles.listContent, { paddingTop: listTopPad, paddingBottom: bottomReserveY }]}>
           {listHeader}
           {listEmpty}
         </View>
@@ -1165,27 +1235,46 @@ const styles = StyleSheet.create({
     minHeight: 0,
     width: "100%",
     position: "relative",
+    backgroundColor: GAMES_PAGE_BG_TOP,
   },
   root: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
+    backgroundColor: "transparent",
     minHeight: 0,
   },
   /** フローティングナビの背後までスクロール背景を伸ばす */
   listScroll: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
+    backgroundColor: "transparent",
   },
   listContent: {
-    /** `mainArea` の 8px に加えて少し狭く見せる */
-    paddingHorizontal: spacing.sm,
-    paddingTop: 2,
+    /** Web `/mobile/result` の px-[18px]（親 mainArea xs=8 を差し引く） */
+    paddingHorizontal: Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs),
     flexGrow: 1,
-    /** 絞り込み・日付帯・カードの縦間隔をやや詰める */
-    gap: 2,
+    gap: MOBILE_RESULT_SECTION_GAP,
   },
   headerBlock: {
-    marginBottom: 4,
+    marginBottom: MOBILE_RESULT_SECTION_GAP,
+  },
+  filterBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 8,
+  },
+  filterChevronOpen: {
+    transform: [{ rotate: "180deg" }],
+  },
+  filterActiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(34,211,238,0.95)",
+    shadowColor: "#22d3ee",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 8,
+    marginLeft: "auto",
   },
   hint: {
     marginBottom: 6,
@@ -1227,19 +1316,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.sm,
   },
-  emptyWrap: {
-    paddingVertical: spacing.xl * 2,
+  emptyNoDataWrap: {
+    minHeight: 420,
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.xl * 2,
   },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
+  emptyNoDataText: {
+    fontFamily: DISPLAY_FONT_FAMILY,
+    fontSize: 36,
+    letterSpacing: 3.5,
+    color: "rgba(255,255,255,0.92)",
+    textShadowColor: "rgba(34,211,238,0.35)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 16,
   },
   sectionGap: {
-    height: 2,
+    height: MOBILE_RESULT_SECTION_GAP,
   },
   dayHeaderSpacing: {
-    marginBottom: 3,
+    marginBottom: MOBILE_RESULT_CARD_GAP,
   },
   dayHeaderClip: {
     position: "relative",
@@ -1424,13 +1520,12 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   cardOuter: {
-    marginBottom: 2,
+    marginBottom: MOBILE_RESULT_CARD_GAP,
+    maxWidth: MOBILE_RESULT_CARD_MAX_W,
+    alignSelf: "center",
+    width: "100%",
   },
-  /** SectionList セル計測ぶれ防止：行全体を一覧カード高さに固定 */
   resultCardPressable: {
-    height: RESULT_CARD_SPLIT_HEIGHT,
-    minHeight: RESULT_CARD_SPLIT_HEIGHT,
-    maxHeight: RESULT_CARD_SPLIT_HEIGHT,
     flexShrink: 0,
   },
   cardPressed: {
@@ -1440,20 +1535,7 @@ const styles = StyleSheet.create({
   cardShell: {
     position: "relative",
     overflow: "hidden",
-    borderRadius: 20,
-    /** HIT だけ太枠にしない（全バッジ共通 2px で外寸を揃える） */
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(8,11,18,0.84)",
     flexShrink: 0,
-    height: RESULT_CARD_SPLIT_HEIGHT,
-    minHeight: RESULT_CARD_SPLIT_HEIGHT,
-    maxHeight: RESULT_CARD_SPLIT_HEIGHT,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
-    elevation: 7,
   },
   cardGridUnderlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1475,17 +1557,37 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1,
   },
-  /** シェルと同寸の全面レイヤー（上下 50% 分割の高さ基準にする） */
+  /** Web モバイル `ResultCard` の contentPad（px-2 pb-2 pt-9） */
   cardPressableBody: {
-    ...StyleSheet.absoluteFillObject,
+    position: "relative",
     zIndex: 1,
-    paddingHorizontal: spacing.sm,
-    paddingTop: 3,
-    paddingBottom: 3,
+    paddingHorizontal: 8,
+    paddingTop: 36,
+    paddingBottom: 8,
   },
-  /** Web の `right-11` 相当：コンパクト FAB とバッジ列の干渉を避ける */
-  cardTopRowWithCornerFab: {
-    paddingRight: 28,
+  /** Web モバイル：左上リーグ / 右上 outcome を absolute 配置 */
+  cardBadgeOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 6,
+    zIndex: 22,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingHorizontal: 8,
+  },
+  cardBadgeLeague: {
+    maxWidth: "44%",
+  },
+  cardBadgeOutcome: {
+    flex: 1,
+    alignItems: "flex-end",
+    maxWidth: "72%",
+    paddingRight: 8,
+  },
+  cardBadgeOutcomeWithFab: {
+    paddingRight: 44,
   },
   /** メニュー展開でフライアウトがはみ出すときのクリップ解除（Web と同様） */
   cardShellOverflowVisible: {
@@ -1566,14 +1668,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "transparent",
   },
-  /** HIT 確定時のみ一瞬の黄枠強調（中身は透明・枠線のみ） */
-  hitFrameFlashRing: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 28,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: "rgba(250,204,21,0)",
-  },
   cardFrameUpset: {
     borderColor: "rgba(248,113,113,0.84)",
     shadowColor: "rgba(239,68,68,0.5)",
@@ -1599,10 +1693,10 @@ const styles = StyleSheet.create({
     shadowRadius: 22,
   },
   cardFrameHit: {
-    borderColor: "rgba(250,204,21,0.72)",
-    shadowColor: "rgba(250,204,21,0.45)",
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
+    borderColor: "rgba(250,204,21,0.76)",
+    shadowColor: "rgba(251,191,36,0.30)",
+    shadowOpacity: 0.55,
+    shadowRadius: 12,
   },
   cardFramePerfect: {
     borderColor: "rgba(167,139,250,0.8)",
@@ -1617,147 +1711,37 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   cardContent: {
-    flex: 1,
-    minHeight: 0,
-    flexDirection: "column",
     position: "relative",
     zIndex: 2,
+    paddingTop: 0,
   },
-  /** 上半：リーグ行の直下にユニ・スコアを置く（`space-between` だとブロックが下に寄りすぎる） */
-  cardUpperPane: {
-    flex: 1,
-    minHeight: 0,
-    justifyContent: "flex-start",
-    gap: 6,
-  },
-  /** 下半：区切り＋スタッツ（可用高さの 50%） */
-  cardLowerPane: {
-    flex: 1,
-    minHeight: 0,
-    justifyContent: "center",
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 0,
-    backgroundColor: "transparent",
-  },
-  /** リーグ略称スロット（Skia ラベル：位置の微調整） */
+  /** リーグ略称スロット（Web `ResultLeagueBadge` compact） */
   leagueLabelSlot: {
-    marginTop: 4,
-    marginLeft: 4,
+    marginTop: 0,
+    marginLeft: 0,
   },
-  badgeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    gap: 6,
-    maxWidth: "72%",
-    marginTop: 4,
-  },
-  /** ストリーク / UPSET / LIVE（HIT・MISS より先にフェード） */
-  badgeSubCluster: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 6,
-  },
-  /** HIT / MISS は最後のバウンス用クラスタ */
-  badgeHitMissCluster: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 6,
-  },
-  miniBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  miniBadgeText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: "#fff",
-    maxWidth: 120,
-  },
-  streakSilver: {
-    backgroundColor: "rgba(100,116,139,0.94)",
-    borderWidth: 1,
-    borderColor: "rgba(248,250,252,0.72)",
-  },
-  streakPlatinum: {
-    backgroundColor: "rgba(8,145,178,0.94)",
-    borderWidth: 1,
-    borderColor: "rgba(186,250,255,0.82)",
-  },
-  streakGold: {
-    backgroundColor: "rgba(234,88,12,0.95)",
-    borderWidth: 1,
-    borderColor: "rgba(254,249,195,0.78)",
-  },
-  streakMiniBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+  leaguePill: {
+    marginTop: 0,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    alignSelf: "flex-start",
   },
-  streakMiniBadgeText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#fff",
-    maxWidth: 120,
-  },
-  badgeHit: {
-    backgroundColor: "rgba(250,204,21,0.95)",
-  },
-  badgeHitText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#0a0a0a",
-  },
-  badgePerfect: {
-    backgroundColor: "rgba(124,58,237,0.94)",
-    borderWidth: 1,
-    borderColor: "rgba(196,181,253,0.84)",
-  },
-  badgePerfectText: {
-    fontSize: 8,
-    fontWeight: "900",
-    color: "#f5f3ff",
-    letterSpacing: 0.4,
-  },
-  badgeUpset: {
-    backgroundColor: "rgba(220,38,38,0.94)",
-    borderWidth: 1,
-    borderColor: "rgba(252,165,165,0.82)",
-  },
-  badgeUpsetText: {
+  leaguePillText: {
     fontSize: 9,
-    fontWeight: "900",
-    color: "#fef2f2",
-    letterSpacing: 0.4,
-  },
-  badgeMiss: {
-    backgroundColor: "rgba(100,116,139,0.95)",
-  },
-  badgeMissText: {
-    fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
     color: "#fff",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
   },
-  /** Web LiveMatchMark（resultMobile）に寄せた LIVE バッジ */
-  badgeLive: resultLiveBadgeCompact,
-  badgeLiveText: resultLiveBadgeCompactText,
+  matchArea: {
+    position: "relative",
+    marginTop: 0,
+  },
   matchGrid: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: 4,
   },
   sideCol: {
@@ -1765,58 +1749,60 @@ const styles = StyleSheet.create({
     minWidth: 0,
     alignItems: "center",
   },
-  centerCol: {
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 80,
+  sideColHome: {
+    paddingTop: 0,
+    paddingRight: 24,
   },
-  scoreDateLabel: {
-    color: "rgba(248,250,252,0.45)",
-    fontSize: 10,
-    fontWeight: "600",
-    marginBottom: 2,
+  sideColAway: {
+    paddingTop: 0,
+    paddingLeft: 24,
+  },
+  centerScoreOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 16,
+    alignItems: "center",
+    zIndex: 10,
+    maxWidth: "100%",
+    paddingHorizontal: 4,
   },
   teamName: {
-    marginTop: 7,
+    marginTop: 4,
     fontSize: 15,
-    fontWeight: "800",
-    color: "rgba(248,250,252,0.95)",
-    letterSpacing: 0.65,
-    fontFamily: DISPLAY_FONT_FAMILY,
-  },
-  predictedScore: {
-    fontSize: 19,
-    fontWeight: "800",
-    color: "rgba(255,255,255,0.88)",
-    fontFamily: NUMERIC_FONT_FAMILY,
-    fontVariant: ["tabular-nums"],
-  },
-  finalScore: {
-    marginTop: 3,
-    fontSize: 13,
     fontWeight: "700",
-    color: "rgba(253,224,71,0.95)",
-    fontFamily: NUMERIC_FONT_FAMILY,
-    fontVariant: ["tabular-nums"],
+    color: "rgba(248,250,252,0.95)",
+    letterSpacing: 1.04,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    textAlign: "center",
+    width: "100%",
+  },
+  predictedScoreFallback: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    textAlign: "center",
+  },
+  finalScoreWrap: {
+    marginTop: 4,
   },
   divider: {
-    marginTop: 0,
-    marginBottom: 3,
+    marginTop: 6,
+    marginBottom: 0,
     borderTopWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(255,255,255,0.14)",
   },
   statBlock: {
-    flex: 1,
-    minHeight: 0,
-    justifyContent: "center",
-    gap: 9,
+    marginTop: 4,
+    gap: 6,
   },
   statRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 1,
+    gap: MOBILE_RESULT_STAT_ROW_GAP,
+    paddingVertical: 2,
   },
   /** Skia バーを左基点で scaleX 表示（親の overflow でクリップ） */
   statBarRevealSlot: {
@@ -1825,19 +1811,19 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   statLabel: {
-    width: 96,
+    width: MOBILE_RESULT_STAT_LABEL_W,
     flexShrink: 0,
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 10,
+    lineHeight: 14,
     fontWeight: "600",
     color: "rgba(255,255,255,0.92)",
   },
   statValue: {
-    width: 40,
+    width: MOBILE_RESULT_STAT_VALUE_W,
     flexShrink: 0,
     textAlign: "right",
-    fontSize: 11,
-    lineHeight: 17,
+    fontSize: 10,
+    lineHeight: 14,
     fontWeight: "700",
     fontFamily: NUMERIC_FONT_FAMILY,
     fontVariant: ["tabular-nums"],

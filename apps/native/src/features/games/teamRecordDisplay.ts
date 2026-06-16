@@ -34,7 +34,7 @@ export function formatTeamRecordForCard(
         rank?: unknown;
       }
     | undefined;
-  if (!row) return null;
+  if (!row) return "(0-0)";
 
   const id = row.teamId != null ? String(row.teamId).trim() : "";
   const fromTeamDoc = id && teamRecordById[id] ? teamRecordById[id] : null;
@@ -49,7 +49,7 @@ export function formatTeamRecordForCard(
   const wins = Number(row.wins);
   const losses = Number(row.losses);
   const rank = Number(row.rank);
-  if (!Number.isFinite(wins) || !Number.isFinite(losses)) return null;
+  if (!Number.isFinite(wins) || !Number.isFinite(losses)) return "(0-0)";
   const r =
     Number.isFinite(rank) && rank > 0 ? Math.trunc(rank) : undefined;
   return formatWinsLossesRank(wins, losses, r);

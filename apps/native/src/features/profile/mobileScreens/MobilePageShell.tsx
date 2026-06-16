@@ -13,6 +13,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import { nativeBlurViewExtraProps } from "../../../ui/nativeBlurProps";
 
 type Props = {
   title: string;
@@ -34,9 +35,7 @@ export default function MobilePageShell({ title, onClose, onBack, children }: Pr
           <BlurView
             intensity={Platform.OS === "ios" ? 24 : 18}
             tint="dark"
-            {...(Platform.OS === "android"
-              ? { blurMethod: "dimezisBlurViewSdk31Plus" as const, blurReductionFactor: 4 }
-              : {})}
+            {...nativeBlurViewExtraProps()}
             style={StyleSheet.absoluteFillObject}
           />
         )}

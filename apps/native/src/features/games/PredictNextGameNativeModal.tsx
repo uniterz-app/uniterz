@@ -3,7 +3,8 @@ import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { spacing } from "../../theme/tokens";
-import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import { MatchCardFineInnerPlate } from "./MatchCardFineInterior";
 
 /** 一覧 `GameCardList` のチーム名と同系（Bebas・大文字） */
@@ -36,6 +37,9 @@ type PredictNextGameNativeModalProps = {
   kickoff: string;
   homePalette: Palette;
   awayPalette: Palette;
+  leagueRaw: unknown;
+  homeSide: unknown;
+  awaySide: unknown;
   homeRecordLine: string | null;
   awayRecordLine: string | null;
   showSeriesRow: boolean;
@@ -59,6 +63,9 @@ export default function PredictNextGameNativeModal({
   kickoff,
   homePalette,
   awayPalette,
+  leagueRaw,
+  homeSide,
+  awaySide,
   homeRecordLine,
   awayRecordLine,
   showSeriesRow,
@@ -99,12 +106,7 @@ export default function PredictNextGameNativeModal({
           <BlurView
             intensity={Platform.OS === "ios" ? 18 : 14}
             tint="dark"
-            {...(Platform.OS === "android"
-              ? {
-                  blurMethod: "dimezisBlurViewSdk31Plus" as const,
-                  blurReductionFactor: 4,
-                }
-              : {})}
+            {...nativeBlurViewExtraProps()}
             style={StyleSheet.absoluteFillObject}
           />
         )}
@@ -143,10 +145,12 @@ export default function PredictNextGameNativeModal({
                       <View style={s.broadCol}>
                         <Text style={s.colTag}>HOME</Text>
                         <View style={s.jerseyWrap}>
-                          <JerseyMarkAdaptive
-                            accent={homePalette.primary}
-                            accentEnd={homePalette.secondary}
-                            size={JERSEY_SIZE_NEXT_MODAL}
+                          <MatchTeamMarkNative
+                            leagueRaw={leagueRaw}
+                            side={homeSide}
+                            palette={homePalette}
+                            jerseySize={JERSEY_SIZE_NEXT_MODAL}
+                            flagVariant="nextModal"
                           />
                         </View>
                         {/* 一覧 `teamBottomGroup` と同様：中央寄せ＋幅上限のみ。adjustsFontSizeToFit は先頭クリップの原因になり得る */}
@@ -176,10 +180,12 @@ export default function PredictNextGameNativeModal({
                       <View style={s.broadCol}>
                         <Text style={s.colTag}>AWAY</Text>
                         <View style={s.jerseyWrap}>
-                          <JerseyMarkAdaptive
-                            accent={awayPalette.primary}
-                            accentEnd={awayPalette.secondary}
-                            size={JERSEY_SIZE_NEXT_MODAL}
+                          <MatchTeamMarkNative
+                            leagueRaw={leagueRaw}
+                            side={awaySide}
+                            palette={awayPalette}
+                            jerseySize={JERSEY_SIZE_NEXT_MODAL}
+                            flagVariant="nextModal"
                           />
                         </View>
                         <View style={s.teamTextBlock}>

@@ -15,7 +15,7 @@ import {
   predictModalSheetEnter,
 } from "./predictMotion";
 
-type ScreenStyles = Record<string, ViewStyle & TextStyle & ImageStyle>;
+type ScreenStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
 type GameDetailModalProps = {
   visible: boolean;
@@ -62,6 +62,7 @@ type GameDetailModalProps = {
   language: "ja" | "en";
   t: GamesTexts;
   openPredictModal: () => void | Promise<void>;
+  onOpenCommunityPredictions?: () => void;
   onClose: () => void;
   styles: ScreenStyles;
 };
@@ -87,6 +88,7 @@ export default function GameDetailModal(props: GameDetailModalProps) {
     language,
     t,
     openPredictModal,
+    onOpenCommunityPredictions,
     onClose,
     styles,
   } = props;
@@ -227,16 +229,26 @@ export default function GameDetailModal(props: GameDetailModalProps) {
                     ? t.editPrediction
                     : t.makePrediction;
                 return (
-                  <Pressable
-                    style={[
-                      styles.predictButton,
-                      started && !hasMyPost && styles.primaryButtonDisabled,
-                    ]}
-                    onPress={openPredictModal}
-                    disabled={started && !hasMyPost}
-                  >
-                    <Text style={styles.predictButtonText}>{actionLabel}</Text>
-                  </Pressable>
+                  <>
+                    <Pressable
+                      style={[
+                        styles.predictButton,
+                        started && !hasMyPost && styles.primaryButtonDisabled,
+                      ]}
+                      onPress={openPredictModal}
+                      disabled={started && !hasMyPost}
+                    >
+                      <Text style={styles.predictButtonText}>{actionLabel}</Text>
+                    </Pressable>
+                    {onOpenCommunityPredictions ? (
+                      <Pressable
+                        style={localStyles.communityButton}
+                        onPress={onOpenCommunityPredictions}
+                      >
+                        <Text style={localStyles.communityButtonText}>{t.communityPredictions}</Text>
+                      </Pressable>
+                    ) : null}
+                  </>
                 );
               })()}
             </>
@@ -247,3 +259,19 @@ export default function GameDetailModal(props: GameDetailModalProps) {
     </Modal>
   );
 }
+
+const localStyles = StyleSheet.create({
+  communityButton: {
+    marginTop: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(103,232,249,0.35)",
+    alignItems: "center",
+  },
+  communityButtonText: {
+    color: "rgba(103,232,249,0.95)",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+});

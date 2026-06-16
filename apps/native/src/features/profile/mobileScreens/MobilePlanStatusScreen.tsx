@@ -16,9 +16,9 @@ type Props = {
   onClose: () => void;
   /** Free のとき Pro 申込画面へ */
   onUpgrade: () => void;
-  /** Web のプラン変更・解約（ブラウザ） */
+  /** Web のプラン変更・解約（ネイティブ画面へ） */
   apiBase: string | null;
-  onOpenWebPath: (path: string) => void;
+  onNavigate?: (screen: "PlanChange" | "CancelPlan") => void;
 };
 
 export default function MobilePlanStatusScreen({
@@ -26,8 +26,7 @@ export default function MobilePlanStatusScreen({
   uid,
   onClose,
   onUpgrade,
-  apiBase,
-  onOpenWebPath,
+  onNavigate,
 }: Props) {
   const isJa = language === "ja";
   const [plan, setPlan] = useState<"free" | "pro">("free");
@@ -137,9 +136,7 @@ export default function MobilePlanStatusScreen({
           ) : (
             <View style={styles.row2}>
               <Pressable
-                onPress={() => {
-                  if (apiBase) onOpenWebPath("/mobile/plan-change");
-                }}
+                onPress={() => onNavigate?.("PlanChange")}
                 style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.9 : 1 }]}
               >
                 <LinearGradient
@@ -150,9 +147,7 @@ export default function MobilePlanStatusScreen({
                 </LinearGradient>
               </Pressable>
               <Pressable
-                onPress={() => {
-                  if (apiBase) onOpenWebPath("/mobile/cancel-plan");
-                }}
+                onPress={() => onNavigate?.("CancelPlan")}
                 style={({ pressed }) => [styles.cancelBtn, { opacity: pressed ? 0.9 : 1 }]}
               >
                 <Text style={styles.cancelText}>{isJa ? "解約" : "Cancel"}</Text>

@@ -5,6 +5,7 @@ import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { nativeBlurViewExtraProps } from "../ui/nativeBlurProps";
 
 type Props = {
   visible: boolean;
@@ -37,8 +38,7 @@ export default function CyberGlassToastModal({
             style={StyleSheet.absoluteFillObject}
             tint="dark"
             intensity={Platform.OS === "ios" ? 32 : 26}
-            blurMethod={Platform.OS === "android" ? "dimezisBlurViewSdk31Plus" : undefined}
-            blurReductionFactor={Platform.OS === "android" ? 4 : undefined}
+            {...nativeBlurViewExtraProps()}
           />
         )}
         <View style={styles.scrim} pointerEvents="none" />
@@ -50,8 +50,7 @@ export default function CyberGlassToastModal({
                 style={styles.cardBlur}
                 tint="dark"
                 intensity={Platform.OS === "ios" ? 38 : 30}
-                blurMethod={Platform.OS === "android" ? "dimezisBlurViewSdk31Plus" : undefined}
-                blurReductionFactor={Platform.OS === "android" ? 4 : undefined}
+                {...nativeBlurViewExtraProps()}
               />
             )}
             <View style={styles.cardTintSolid} pointerEvents="none" />

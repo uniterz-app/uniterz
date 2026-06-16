@@ -1,42 +1,41 @@
 import { useEffect } from "react";
 import {
-  Easing,
   cancelAnimation,
+  Easing,
   interpolate,
-  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withSpring,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
+import {
+  GAMES_CARD_LIST_STAGGER_CAP_MS,
+  GAMES_CARD_LIST_STAGGER_MS,
+  GAMES_CYBER_ENTRY_DURATION_MS,
+  GAMES_CYBER_GROUP_GAP_MS,
+  GAMES_DAY_SWITCH_ROW_FROM_Y,
+  GAMES_DAY_SWITCH_ROW_OPACITY_MS,
+  GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS,
+  GAMES_DAY_SWITCH_ROW_STAGGER_MS,
+  GAMES_DAY_SWITCH_ROW_TRANSLATE_MS,
+  GAMES_LIST_CARDS_LEAD_IN_MS,
+  GAMES_LIST_REST_CARDS_DELAY_MS,
+  GAMES_PAGE_REST_CARD_DURATION_MS,
+  GAMES_PAGE_REST_CARD_FROM_Y,
+  PAGE_REST_CARD_STAGGER_MS,
+} from "./gamesCyberMotion";
+import {
+  gamesCyberEaseBezier,
+  gamesCyberEaseSnapBezier,
+  gamesDaySwitchEaseBezier,
+  runLockOnOpacity,
+} from "./gamesPageMotion";
 
-/** 複数カードの縦スタッガー（ms）— 枚ごとにも間を空ける（初回・リーグ切替のフル入場） */
-export const GAME_CARD_ROW_STAGGER_MS = 100;
-/** 日付変更のみの軽い入場：枚間隔 */
-const LIGHT_ROW_STAGGER_MS = 40;
-/** 日付変更のみの軽い入場：フェード＋わずかな bottom-up */
-const LIGHT_ENTRANCE_MS = 200;
-
-const CARD_DURATION_MS = 520;
-/** 背景グリッドをカード本体より先に出す（リードをやや長めに） */
-const GRID_LEAD_MS = 72;
-const GRID_DURATION_MS = 280;
-/** 枠線はカード transform と同時だと詰まるので少しずらす */
-const BORDER_DELAY_MS = 36;
-const BORDER_DURATION_MS = 480;
-/** カード本体の動きが始まってから HOME ジャージ */
-const JERSEY_HOME_DELAY_MS = 175;
-/** HOME のあと AWAY（左右で順番に） */
-const JERSEY_AWAY_AFTER_HOME_MS = 70;
-const JERSEY_DURATION_MS = 400;
-const CENTER_DELAY_MS = 330;
-const DIVIDER_DELAY_MS = 430;
-const DIVIDER_DURATION_MS = 380;
-const FOOTER_DELAY_MS = 540;
-const FOOTER_DURATION_MS = 420;
-
-const easeOut = Easing.out(Easing.cubic);
+const ENTRY_GROUP_SHELL = 0;
+const ENTRY_GROUP_HEADER = 1;
+const ENTRY_GROUP_TEAMS = 2;
+const ENTRY_GROUP_FOOTER = 3;
 
 export type GameCardEntranceVariant = "full" | "light";
 
@@ -44,17 +43,41 @@ export type GameCardListRowEntranceParams = {
   rowIndex: number;
   enteringAnimationEnabled: boolean;
   reduceMotion: boolean;
-  /** `light` = 日付変更など：全体の短いフェード＋軽い上昇のみ */
+  /** `light` = daySwitch、`full` = page */
   entranceVariant?: GameCardEntranceVariant;
-  /** 枠線の最終色（一覧の predicted 枠） */
   isPredicted: boolean;
-  /** 「予想をする」系の青 CTA か（控えめ glow 用） */
   showPredictPrimaryGlow: boolean;
 };
 
+function groupDelayMs(rowIndex: number, group: number) {
+  const listStagger = Math.min(
+    rowIndex * GAMES_CARD_LIST_STAGGER_MS,
+    GAMES_CARD_LIST_STAGGER_CAP_MS
+  );
+  return listStagger + GAMES_LIST_CARDS_LEAD_IN_MS + group * GAMES_CYBER_GROUP_GAP_MS;
+}
+
+function runGroupEnter(
+  opacity: { value: number },
+  translateY: { value: number },
+  delayMs: number,
+  dy: number
+) {
+  const yDur = GAMES_CYBER_ENTRY_DURATION_MS;
+  const opDur = Math.round(GAMES_CYBER_ENTRY_DURATION_MS * 1.25);
+  opacity.value = 0;
+  translateY.value = dy;
+  opacity.value = runLockOnOpacity(delayMs, opDur);
+  translateY.value = withDelay(
+    delayMs,
+    withTiming(0, { duration: yDur, easing: gamesCyberEaseBezier })
+  );
+}
+
 /**
- * 試合一覧カードの cyber 風 bottom-up / depth reveal 入場。
- * 外枠は transform＋枠線のみ、フェードは内側ラッパーで子の opacity と乗算しすぎないようにする。
+ * Web `MatchCard` entryGroupProps + `ScheduleList.scheduleItem` に合わせた試合カード入場。
+ * - page: 先頭3枚は4グループのロックオン、4枚目以降は遅延フェード
+ * - daySwitch: 上から順にフェード＋わずかな下降
  */
 export function useGameCardListRowEntrance({
   rowIndex,
@@ -64,44 +87,56 @@ export function useGameCardListRowEntrance({
   isPredicted,
   showPredictPrimaryGlow,
 }: GameCardListRowEntranceParams) {
-  const isLight = entranceVariant === "light";
-  const base = rowIndex * (isLight ? LIGHT_ROW_STAGGER_MS : GAME_CARD_ROW_STAGGER_MS);
+  const isDaySwitch = entranceVariant === "light";
+  const isPageRich = entranceVariant === "full" && rowIndex < 3;
+  const isPageRest = entranceVariant === "full" && rowIndex >= 3;
   const skip = !enteringAnimationEnabled || reduceMotion;
-  const startLight = !skip && isLight;
 
-  const cardOpacity = useSharedValue(skip ? 1 : startLight ? 0.88 : 0);
-  const cardTranslateY = useSharedValue(skip ? 0 : startLight ? 10 : 28);
-  const cardScale = useSharedValue(skip ? 1 : startLight ? 1 : 0.96);
+  const shellOpacity = useSharedValue(1);
+  const shellTranslateY = useSharedValue(0);
 
-  const gridOpacity = useSharedValue(skip || startLight ? 1 : 0);
-  const borderReveal = useSharedValue(skip || startLight ? 1 : 0);
+  const gridOpacity = useSharedValue(1);
+  const borderReveal = useSharedValue(1);
 
-  const homeJerseyTx = useSharedValue(skip || startLight ? 0 : -16);
-  const homeJerseyOpacity = useSharedValue(skip || startLight ? 1 : 0);
-  const homeJerseyScale = useSharedValue(skip || startLight ? 1 : 0.94);
+  const headerOpacity = useSharedValue(1);
+  const headerTranslateY = useSharedValue(0);
 
-  const awayJerseyTx = useSharedValue(skip || startLight ? 0 : 16);
-  const awayJerseyOpacity = useSharedValue(skip || startLight ? 1 : 0);
-  const awayJerseyScale = useSharedValue(skip || startLight ? 1 : 0.94);
+  const teamsOpacity = useSharedValue(1);
+  const teamsTranslateY = useSharedValue(0);
 
-  const centerOpacity = useSharedValue(skip || startLight ? 1 : 0);
-  const centerScale = useSharedValue(skip || startLight ? 1 : 0.85);
+  const homeJerseyTx = useSharedValue(0);
+  const homeJerseyOpacity = useSharedValue(1);
+  const homeJerseyScale = useSharedValue(1);
 
-  const dividerScaleX = useSharedValue(skip || startLight ? 1 : 0);
+  const awayJerseyTx = useSharedValue(0);
+  const awayJerseyOpacity = useSharedValue(1);
+  const awayJerseyScale = useSharedValue(1);
 
-  const footerOpacity = useSharedValue(skip || startLight ? 1 : 0);
-  const footerTranslateY = useSharedValue(skip || startLight ? 0 : 12);
-  const footerGlow = useSharedValue(skip ? 1 : 0);
+  const centerOpacity = useSharedValue(1);
+  const centerScale = useSharedValue(1);
+
+  const dividerScaleX = useSharedValue(1);
+
+  const footerOpacity = useSharedValue(1);
+  const footerTranslateY = useSharedValue(0);
+  const footerGlow = useSharedValue(showPredictPrimaryGlow ? 1 : 0);
+
+  /** Web `MatchCard` 入場スキャン光（上→下） */
+  const scanTranslateY = useSharedValue(0);
+  const scanOpacity = useSharedValue(0);
 
   const pressed = useSharedValue(0);
 
   useEffect(() => {
-    if (skip) {
-      cardOpacity.value = 1;
-      cardTranslateY.value = 0;
-      cardScale.value = 1;
+    const resetAll = () => {
+      shellOpacity.value = 1;
+      shellTranslateY.value = 0;
       gridOpacity.value = 1;
       borderReveal.value = 1;
+      headerOpacity.value = 1;
+      headerTranslateY.value = 0;
+      teamsOpacity.value = 1;
+      teamsTranslateY.value = 0;
       homeJerseyTx.value = 0;
       homeJerseyOpacity.value = 1;
       homeJerseyScale.value = 1;
@@ -114,31 +149,223 @@ export function useGameCardListRowEntrance({
       footerOpacity.value = 1;
       footerTranslateY.value = 0;
       footerGlow.value = showPredictPrimaryGlow ? 1 : 0;
+      scanTranslateY.value = 0;
+      scanOpacity.value = 0;
+    };
+
+    if (skip) {
+      resetAll();
       return;
     }
 
-    /** 日付変更：内訳アニメは付けず、軽いフェード＋短い上昇のみ */
-    if (isLight) {
-      cardOpacity.value = withDelay(
-        base,
-        withTiming(1, { duration: LIGHT_ENTRANCE_MS, easing: easeOut })
+    if (isDaySwitch) {
+      scanOpacity.value = 0;
+      scanTranslateY.value = 0;
+      const delayMs = Math.min(
+        rowIndex * GAMES_DAY_SWITCH_ROW_STAGGER_MS,
+        GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS
       );
-      cardTranslateY.value = withDelay(
-        base,
-        withTiming(0, { duration: LIGHT_ENTRANCE_MS + 24, easing: easeOut })
+      shellOpacity.value = 0;
+      shellTranslateY.value = GAMES_DAY_SWITCH_ROW_FROM_Y;
+      shellOpacity.value = withDelay(
+        delayMs,
+        withTiming(1, {
+          duration: GAMES_DAY_SWITCH_ROW_OPACITY_MS,
+          easing: gamesDaySwitchEaseBezier,
+        })
+      );
+      shellTranslateY.value = withDelay(
+        delayMs,
+        withTiming(0, {
+          duration: GAMES_DAY_SWITCH_ROW_TRANSLATE_MS,
+          easing: gamesDaySwitchEaseBezier,
+        })
       );
       if (showPredictPrimaryGlow) {
         footerGlow.value = withDelay(
-          base + 48,
-          withTiming(1, { duration: 200, easing: easeOut })
+          delayMs + 80,
+          withTiming(1, { duration: 200, easing: gamesDaySwitchEaseBezier })
         );
       }
       return () => {
-        cancelAnimation(cardOpacity);
-        cancelAnimation(cardTranslateY);
-        cancelAnimation(cardScale);
+        cancelAnimation(shellOpacity);
+        cancelAnimation(shellTranslateY);
+        cancelAnimation(footerGlow);
+      };
+    }
+
+    if (isPageRest) {
+      scanOpacity.value = 0;
+      scanTranslateY.value = 0;
+      const delayMs =
+        GAMES_LIST_REST_CARDS_DELAY_MS +
+        (rowIndex - 3) * PAGE_REST_CARD_STAGGER_MS;
+      shellOpacity.value = 0;
+      shellTranslateY.value = GAMES_PAGE_REST_CARD_FROM_Y;
+      shellOpacity.value = withDelay(
+        delayMs,
+        withTiming(1, {
+          duration: GAMES_PAGE_REST_CARD_DURATION_MS,
+          easing: gamesCyberEaseSnapBezier,
+        })
+      );
+      shellTranslateY.value = withDelay(
+        delayMs,
+        withTiming(0, {
+          duration: GAMES_PAGE_REST_CARD_DURATION_MS,
+          easing: gamesCyberEaseSnapBezier,
+        })
+      );
+      return () => {
+        cancelAnimation(shellOpacity);
+        cancelAnimation(shellTranslateY);
+      };
+    }
+
+    if (isPageRich) {
+      runGroupEnter(shellOpacity, shellTranslateY, groupDelayMs(rowIndex, ENTRY_GROUP_SHELL), 10);
+      runGroupEnter(
+        headerOpacity,
+        headerTranslateY,
+        groupDelayMs(rowIndex, ENTRY_GROUP_HEADER),
+        8
+      );
+      runGroupEnter(
+        teamsOpacity,
+        teamsTranslateY,
+        groupDelayMs(rowIndex, ENTRY_GROUP_TEAMS),
+        12
+      );
+      runGroupEnter(
+        footerOpacity,
+        footerTranslateY,
+        groupDelayMs(rowIndex, ENTRY_GROUP_FOOTER),
+        10
+      );
+
+      const teamsDelay = groupDelayMs(rowIndex, ENTRY_GROUP_TEAMS);
+      const jerseyDelay =
+        teamsDelay +
+        Math.round(GAMES_CYBER_ENTRY_DURATION_MS * 0.32) +
+        28;
+      const jerseyDur = GAMES_CYBER_ENTRY_DURATION_MS;
+
+      homeJerseyTx.value = -12;
+      homeJerseyOpacity.value = 0;
+      homeJerseyScale.value = 0.92;
+      awayJerseyTx.value = 12;
+      awayJerseyOpacity.value = 0;
+      awayJerseyScale.value = 0.92;
+
+      homeJerseyTx.value = withDelay(
+        jerseyDelay,
+        withTiming(0, { duration: jerseyDur, easing: gamesCyberEaseBezier })
+      );
+      homeJerseyOpacity.value = withDelay(
+        jerseyDelay,
+        withTiming(1, {
+          duration: Math.round(jerseyDur * 0.72),
+          easing: gamesCyberEaseBezier,
+        })
+      );
+      homeJerseyScale.value = withDelay(
+        jerseyDelay,
+        withTiming(1, { duration: jerseyDur, easing: gamesCyberEaseBezier })
+      );
+      awayJerseyTx.value = withDelay(
+        jerseyDelay,
+        withTiming(0, { duration: jerseyDur, easing: gamesCyberEaseBezier })
+      );
+      awayJerseyOpacity.value = withDelay(
+        jerseyDelay,
+        withTiming(1, {
+          duration: Math.round(jerseyDur * 0.72),
+          easing: gamesCyberEaseBezier,
+        })
+      );
+      awayJerseyScale.value = withDelay(
+        jerseyDelay,
+        withTiming(1, { duration: jerseyDur, easing: gamesCyberEaseBezier })
+      );
+
+      centerOpacity.value = 0;
+      centerScale.value = 0.9;
+      centerOpacity.value = withDelay(
+        teamsDelay,
+        withTiming(1, {
+          duration: GAMES_CYBER_ENTRY_DURATION_MS,
+          easing: gamesCyberEaseBezier,
+        })
+      );
+      centerScale.value = withDelay(
+        teamsDelay,
+        withTiming(1, {
+          duration: GAMES_CYBER_ENTRY_DURATION_MS,
+          easing: gamesCyberEaseBezier,
+        })
+      );
+
+      gridOpacity.value = 0;
+      borderReveal.value = 0;
+      gridOpacity.value = withDelay(
+        groupDelayMs(rowIndex, ENTRY_GROUP_SHELL),
+        withTiming(1, {
+          duration: Math.round(GAMES_CYBER_ENTRY_DURATION_MS * 0.85),
+          easing: gamesCyberEaseBezier,
+        })
+      );
+      borderReveal.value = withDelay(
+        groupDelayMs(rowIndex, ENTRY_GROUP_SHELL) + 40,
+        withTiming(1, {
+          duration: GAMES_CYBER_ENTRY_DURATION_MS,
+          easing: gamesCyberEaseBezier,
+        })
+      );
+
+      dividerScaleX.value = 0;
+      dividerScaleX.value = withDelay(
+        groupDelayMs(rowIndex, ENTRY_GROUP_FOOTER),
+        withTiming(1, {
+          duration: GAMES_CYBER_ENTRY_DURATION_MS,
+          easing: gamesCyberEaseBezier,
+        })
+      );
+
+      if (showPredictPrimaryGlow) {
+        footerGlow.value = withDelay(
+          groupDelayMs(rowIndex, ENTRY_GROUP_FOOTER),
+          withTiming(1, { duration: 480, easing: gamesCyberEaseBezier })
+        );
+      }
+
+      const scanDelay = groupDelayMs(rowIndex, ENTRY_GROUP_SHELL) + 50;
+      scanTranslateY.value = -88;
+      scanOpacity.value = 0;
+      scanTranslateY.value = withDelay(
+        scanDelay,
+        withTiming(300, {
+          duration: 620,
+          easing: Easing.bezier(0.3, 0, 0.55, 1),
+        })
+      );
+      scanOpacity.value = withDelay(
+        scanDelay,
+        withSequence(
+          withTiming(1, { duration: 80, easing: Easing.linear }),
+          withTiming(1, { duration: 460, easing: Easing.linear }),
+          withTiming(0, { duration: 80, easing: Easing.linear })
+        )
+      );
+
+      return () => {
+        cancelAnimation(shellOpacity);
+        cancelAnimation(shellTranslateY);
         cancelAnimation(gridOpacity);
         cancelAnimation(borderReveal);
+        cancelAnimation(headerOpacity);
+        cancelAnimation(headerTranslateY);
+        cancelAnimation(teamsOpacity);
+        cancelAnimation(teamsTranslateY);
         cancelAnimation(homeJerseyTx);
         cancelAnimation(homeJerseyOpacity);
         cancelAnimation(homeJerseyScale);
@@ -151,127 +378,54 @@ export function useGameCardListRowEntrance({
         cancelAnimation(footerOpacity);
         cancelAnimation(footerTranslateY);
         cancelAnimation(footerGlow);
+        cancelAnimation(scanTranslateY);
+        cancelAnimation(scanOpacity);
       };
     }
 
-    const gridStart = Math.max(0, base - GRID_LEAD_MS);
-    gridOpacity.value = withDelay(
-      gridStart,
-      withTiming(1, { duration: GRID_DURATION_MS, easing: easeOut })
-    );
-
-    cardOpacity.value = withDelay(
-      base,
-      withTiming(1, { duration: CARD_DURATION_MS, easing: easeOut })
-    );
-    cardTranslateY.value = withDelay(
-      base,
-      withTiming(0, { duration: CARD_DURATION_MS, easing: easeOut })
-    );
-    cardScale.value = withDelay(
-      base,
-      withTiming(1, { duration: CARD_DURATION_MS, easing: easeOut })
-    );
-
-    borderReveal.value = withDelay(
-      base + BORDER_DELAY_MS,
-      withTiming(1, { duration: BORDER_DURATION_MS, easing: easeOut })
-    );
-
-    const jHome = base + JERSEY_HOME_DELAY_MS;
-    homeJerseyTx.value = withDelay(
-      jHome,
-      withTiming(0, { duration: JERSEY_DURATION_MS, easing: easeOut })
-    );
-    homeJerseyOpacity.value = withDelay(
-      jHome,
-      withTiming(1, { duration: JERSEY_DURATION_MS * 0.72, easing: easeOut })
-    );
-    homeJerseyScale.value = withDelay(
-      jHome,
-      withTiming(1, { duration: JERSEY_DURATION_MS, easing: easeOut })
-    );
-
-    const jAway = jHome + JERSEY_AWAY_AFTER_HOME_MS;
-    awayJerseyTx.value = withDelay(
-      jAway,
-      withTiming(0, { duration: JERSEY_DURATION_MS, easing: easeOut })
-    );
-    awayJerseyOpacity.value = withDelay(
-      jAway,
-      withTiming(1, { duration: JERSEY_DURATION_MS * 0.72, easing: easeOut })
-    );
-    awayJerseyScale.value = withDelay(
-      jAway,
-      withTiming(1, { duration: JERSEY_DURATION_MS, easing: easeOut })
-    );
-
-    const c0 = base + CENTER_DELAY_MS;
-    centerOpacity.value = withDelay(c0, withTiming(1, { duration: 300, easing: easeOut }));
-    centerScale.value = withDelay(
-      c0,
-      withSpring(1, { damping: 15, stiffness: 210, mass: 0.85 })
-    );
-
-    dividerScaleX.value = withDelay(
-      base + DIVIDER_DELAY_MS,
-      withTiming(1, { duration: DIVIDER_DURATION_MS, easing: easeOut })
-    );
-
-    const f0 = base + FOOTER_DELAY_MS;
-    footerOpacity.value = withDelay(f0, withTiming(1, { duration: FOOTER_DURATION_MS, easing: easeOut }));
-    footerTranslateY.value = withDelay(f0, withTiming(0, { duration: FOOTER_DURATION_MS, easing: easeOut }));
-    if (showPredictPrimaryGlow) {
-      footerGlow.value = withDelay(f0, withTiming(1, { duration: 580, easing: easeOut }));
-    } else {
-      footerGlow.value = 0;
-    }
-
-    return () => {
-      cancelAnimation(cardOpacity);
-      cancelAnimation(cardTranslateY);
-      cancelAnimation(cardScale);
-      cancelAnimation(gridOpacity);
-      cancelAnimation(borderReveal);
-      cancelAnimation(homeJerseyTx);
-      cancelAnimation(homeJerseyOpacity);
-      cancelAnimation(homeJerseyScale);
-      cancelAnimation(awayJerseyTx);
-      cancelAnimation(awayJerseyOpacity);
-      cancelAnimation(awayJerseyScale);
-      cancelAnimation(centerOpacity);
-      cancelAnimation(centerScale);
-      cancelAnimation(dividerScaleX);
-      cancelAnimation(footerOpacity);
-      cancelAnimation(footerTranslateY);
-      cancelAnimation(footerGlow);
-    };
-  }, [skip, base, isLight, showPredictPrimaryGlow]);
+    resetAll();
+    return undefined;
+  }, [
+    skip,
+    isDaySwitch,
+    isPageRich,
+    isPageRest,
+    rowIndex,
+    showPredictPrimaryGlow,
+  ]);
 
   const shellTransformStyle = useAnimatedStyle(() => {
-    const pressS = interpolate(pressed.value, [0, 1], [1, 0.988]);
+    const pressS = interpolate(pressed.value, [0, 1], [1, 0.985]);
     return {
-      transform: [
-        { translateY: cardTranslateY.value },
-        { scale: cardScale.value * pressS },
-      ],
+      transform: [{ translateY: shellTranslateY.value }, { scale: pressS }],
     };
   });
 
   const shellOpacityStyle = useAnimatedStyle(() => ({
-    opacity: cardOpacity.value,
+    opacity: shellOpacity.value,
   }));
 
-  const borderStyle = useAnimatedStyle(() => {
-    const t = borderReveal.value;
-    const borderColor = isPredicted
-      ? interpolateColor(t, [0, 1], ["rgba(148,163,184,0)", "rgba(148,163,184,0.46)"])
-      : interpolateColor(t, [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.12)"]);
-    return { borderColor };
-  });
+  const borderStrokeStyle = useAnimatedStyle(() => ({
+    opacity: borderReveal.value,
+  }));
+
+  const scanLineStyle = useAnimatedStyle(() => ({
+    opacity: scanOpacity.value,
+    transform: [{ translateY: scanTranslateY.value }],
+  }));
 
   const gridLayerStyle = useAnimatedStyle(() => ({
     opacity: gridOpacity.value,
+  }));
+
+  const headerGroupStyle = useAnimatedStyle(() => ({
+    opacity: headerOpacity.value,
+    transform: [{ translateY: headerTranslateY.value }],
+  }));
+
+  const teamsGroupStyle = useAnimatedStyle(() => ({
+    opacity: teamsOpacity.value,
+    transform: [{ translateY: teamsTranslateY.value }],
   }));
 
   const homeJerseyStyle = useAnimatedStyle(() => ({
@@ -297,7 +451,6 @@ export function useGameCardListRowEntrance({
 
   const dividerStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: dividerScaleX.value }],
-    /** Reanimated / Android は [x, y, z] の 3 要素必須（z は数値） */
     transformOrigin: ["0%", "50%", 0],
   }));
 
@@ -322,8 +475,11 @@ export function useGameCardListRowEntrance({
     pressed,
     shellTransformStyle,
     shellOpacityStyle,
-    borderStyle,
+    borderStrokeStyle,
+    scanLineStyle,
     gridLayerStyle,
+    headerGroupStyle,
+    teamsGroupStyle,
     homeJerseyStyle,
     awayJerseyStyle,
     centerBlockStyle,

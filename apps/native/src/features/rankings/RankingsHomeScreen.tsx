@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -8,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   METRICS,
@@ -21,12 +23,20 @@ import {
 } from "../../../../../lib/rankings/rankingTransform";
 import type { RankingRow } from "../../../../../lib/rankings/useRanking";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
+import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
+import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
+import type { MainTabParamList } from "../../navigation/types";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
 import RankingsCyberBackgroundNative from "./RankingsCyberBackgroundNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
+import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
+import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
+import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
+import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { spacing } from "../../theme/tokens";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
@@ -57,13 +67,22 @@ function scheduleNoticeForUser(language: RankingsLanguage): string {
 }
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const insets = useSafeAreaInsets();
+  const scrollTopPad = insets.top + spacing.sm;
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [scheduleNoticeOpen, setScheduleNoticeOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("nba");
+  const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
+
+  const wcStageForHook: WcRankingStage | null =
+    category === "playoffs" && rankingsLeague === "wc" ? wcStage : null;
 
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useNativeCumulativeRankingsBulk("playoffs", round, null);
+    useNativeCumulativeRankingsBulk("playoffs", round, wcStageForHook);
   const { user } = useNativeMyRankingUser(myUid);
   const language = user.language;
   const t = rankingsTexts(language);
@@ -117,6 +136,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
 
+  const openProfile = (row: RankingRowWithCountry) => {
+    const key = profilePathKeyFromRow(row);
+    if (!key) return;
+    navigation.navigate("ProfileTab", {
+      screen: "ProfileHome",
+      params: { handle: key },
+    });
+  };
+
   return (
     <View style={styles.root}>
       <View style={styles.bgLayer} collapsable={false}>
@@ -124,7 +152,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       </View>
       <ScrollView
         style={styles.scrollLayer}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomReserveY + 16 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: scrollTopPad, paddingBottom: bottomReserveY + 16 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <UniterzBrandShelfNative horizontalBleed={12} />
@@ -132,12 +163,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           <CyberMenuButton
             size="sm"
             accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
-            onPress={() =>
-              Alert.alert(
-                "",
-                language === "ja" ? "メニューは準備中です。" : "Menu is not available yet.",
-              )
-            }
+            onPress={() => setMenuOpen(true)}
           />
           <Text style={styles.headerTitle} maxFontSizeMultiplier={1.2}>
             {t.title}
@@ -171,14 +197,23 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             language={language}
           />
           {category === "playoffs" ? (
-            <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
+            <>
+              {rankingsLeague === "nba" ? (
+                <PlayoffRoundTabsNative round={round} onChange={setRound} language={language} />
+              ) : null}
+              {rankingsLeague === "wc" ? (
+                <WcRankingStageTabsNative
+                  stage={wcStage}
+                  onChange={setWcStage}
+                  language={language}
+                />
+              ) : null}
+            </>
           ) : null}
         </View>
 
         {category === "bracket" ? (
-          <View style={styles.bracketPlaceholder}>
-            <Text style={styles.bracketPlaceholderText}>{t.bracketSoon}</Text>
-          </View>
+          <BracketLeaderboardSectionNative language={language} />
         ) : null}
 
         {category === "playoffs" ? (
@@ -222,7 +257,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               </View>
             ) : (
               <View style={styles.listSection}>
-                <RankingsTopPodiumNative rows={top3} metric={metric} language={language} />
+                <RankingsTopPodiumNative
+                  rows={top3}
+                  metric={metric}
+                  language={language}
+                  onPressProfile={openProfile}
+                />
                 <View style={styles.restList}>
                   {restRows.map((row, index) => (
                     <RankingListCardNative
@@ -231,6 +271,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                       rank={index + 4}
                       metric={metric}
                       language={language}
+                      onPress={() => openProfile(row)}
                     />
                   ))}
                 </View>
@@ -239,6 +280,17 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
           </>
         ) : null}
       </ScrollView>
+      <SideMenuDrawerNative open={menuOpen} onClose={() => setMenuOpen(false)}>
+        <RankingsDrawerMenuNative
+          league={rankingsLeague}
+          onChange={(l) => {
+            setRankingsLeague(l);
+            if (l === "wc") setCategory("playoffs");
+            setMenuOpen(false);
+          }}
+          language={language}
+        />
+      </SideMenuDrawerNative>
     </View>
   );
 }
@@ -264,7 +316,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 12,
-    paddingTop: 4,
   },
   headerTitle: {
     flex: 1,
