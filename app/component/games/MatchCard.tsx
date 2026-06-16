@@ -27,7 +27,7 @@ import {
   isResultUpsetFrameBadge,
   isResultCyberClipFrameBadge,
 } from "@/lib/result/resultGlass";
-import { CYBER_GLASS_FILL, CYBER_GLASS_SHADOW } from "@/lib/ui/matchOverlayGlass";
+import { formatTeamRecordWithRank } from "@/lib/teamRecordDisplay";
 import ResultHitCyberFrame from "@/app/component/result/ResultHitCyberFrame";
 import ResultPerfectCyberFrame from "@/app/component/result/ResultPerfectCyberFrame";
 import ResultStreakCyberFrame from "@/app/component/result/ResultStreakCyberFrame";
@@ -89,6 +89,7 @@ import {
 } from "@/lib/games/mobileListCardLayout";
 import { MATCH_LIST_CYBER_GRID_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
+  CYBER_GLASS_SHADOW,
   PREDICT_OVERLAY_BLUR_GLASS,
   PREDICT_OVERLAY_MATCH_CARD_GLASS,
 } from "@/lib/ui/matchOverlayGlass";
@@ -171,12 +172,14 @@ myPostId?: string | null;
 homeRecord?: {
   wins: number;
   losses: number;
+  draws?: number;
   rank?: number;
   lastGames?: { at?: any; isWin?: boolean }[];
 } | null;
   awayRecord?: {
   wins: number;
   losses: number;
+  draws?: number;
   rank?: number;
   lastGames?: { at?: any; isWin?: boolean }[];
 } | null;
@@ -267,24 +270,26 @@ function bracketMarketTeamNameStyle(isMobile: boolean): React.CSSProperties {
 /** ResultStatsCard「総合得点」等と同じ数値フォント（Oxanium） */
 function RecordWithRank({
   r,
+  league,
 }: {
-  r: { wins: number; losses: number; rank?: number } | null;
+  r: { wins: number; losses: number; draws?: number; rank?: number } | null;
+  league: string;
 }) {
-  if (!r) {
+  const line = formatTeamRecordWithRank(r, league);
+  const hasRank = r?.rank != null && Number.isFinite(r.rank) && r.rank > 0;
+
+  if (!hasRank) {
     return (
       <span className={[resultStatsMetricNumClass, "opacity-70"].join(" ")}>
-        (0-0)
+        {line}
       </span>
     );
   }
-  const record = `(${r.wins}-${r.losses})`;
-  if (!r.rank) {
-    return (
-      <span className={[resultStatsMetricNumClass, "opacity-70"].join(" ")}>
-        {record}
-      </span>
-    );
-  }
+
+  const rankSep = line.lastIndexOf(":");
+  const record = rankSep >= 0 ? line.slice(0, rankSep) : line;
+  const rankPart = rankSep >= 0 ? line.slice(rankSep + 1) : "";
+
   return (
     <span
       className={[
@@ -293,7 +298,9 @@ function RecordWithRank({
       ].join(" ")}
     >
       <span className="tabular-nums">{record}</span>
-      <span className="tabular-nums whitespace-nowrap">{`:${r.rank}${ordinal(r.rank)}`}</span>
+      {rankPart ? (
+        <span className="tabular-nums whitespace-nowrap">{`:${rankPart}`}</span>
+      ) : null}
     </span>
   );
 }
@@ -1641,7 +1648,7 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={homeRecord} />
+  <RecordWithRank r={homeRecord} league={league} />
 </div>
   </div>
 
@@ -1888,7 +1895,7 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={awayRecord} />
+  <RecordWithRank r={awayRecord} league={league} />
 </div>
   </div>
 

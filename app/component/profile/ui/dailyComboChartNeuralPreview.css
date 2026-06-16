@@ -1,0 +1,173 @@
+/* Daily Combo Chart — Neural / HUD preview (dev only) */
+
+.dcc-neural {
+  --dcc-bg: #030508;
+  --dcc-grid: rgba(255, 255, 255, 0.06);
+  --dcc-label: rgba(148, 163, 184, 0.72);
+  --dcc-ink: rgba(248, 250, 252, 0.96);
+  --dcc-lime: #b8ff3c;
+  --dcc-cyan: #22d3ee;
+  --dcc-purple: #c026d3;
+  --dcc-line: #ccff00;
+  --dcc-border: rgba(255, 255, 255, 0.14);
+}
+
+.dcc-neural__panel {
+  background: var(--dcc-bg);
+  border: 1px solid var(--dcc-border);
+}
+
+.dcc-neural__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--dcc-cyan);
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.85);
+}
+
+.dcc-neural__chart-zone {
+  position: relative;
+  isolation: isolate;
+}
+
+.dcc-neural__bar-col {
+  cursor: pointer;
+  transition: opacity 160ms ease-out;
+}
+
+.dcc-neural__bar-col:hover {
+  opacity: 0.92;
+}
+
+.dcc-neural__bar-col--selected .dcc-neural__seg-lit {
+  filter: brightness(1.12) saturate(1.08);
+}
+
+.dcc-neural__seg-lit {
+  transition: filter 160ms ease-out;
+}
+
+.dcc-neural__bar-label {
+  fill: rgba(248, 250, 252, 0.94);
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  paint-order: stroke fill;
+  stroke: rgba(3, 5, 8, 0.85);
+  stroke-width: 2.5px;
+}
+
+.dcc-neural__bar-col--selected .dcc-neural__bar-label {
+  fill: #a5f3fc;
+}
+
+.dcc-neural__x-label {
+  fill: var(--dcc-label);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.dcc-neural__x-label--selected {
+  fill: var(--dcc-cyan);
+  font-weight: 700;
+}
+
+.dcc-neural__y-label {
+  fill: var(--dcc-label);
+  font-size: 8px;
+}
+
+.dcc-neural__y-label--right {
+  fill: rgba(204, 255, 0, 0.72);
+  font-size: 7.5px;
+  font-weight: 600;
+}
+
+.dcc-neural__line-glow {
+  filter: drop-shadow(0 0 3px rgba(204, 255, 0, 0.75))
+    drop-shadow(0 0 10px rgba(204, 255, 0, 0.35));
+}
+
+.dcc-neural__line-dot {
+  filter: drop-shadow(0 0 4px rgba(204, 255, 0, 0.9));
+}
+
+.dcc-neural__stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--dcc-border);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.dcc-neural__stat-cell {
+  padding: 0.65rem 0.55rem 0.7rem;
+  border-right: 1px solid var(--dcc-border);
+  min-width: 0;
+}
+
+.dcc-neural__stat-cell:last-child {
+  border-right: none;
+}
+
+.dcc-neural__stat-label {
+  color: rgba(148, 163, 184, 0.78);
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.dcc-neural__stat-value-row {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.35rem;
+  line-height: 1;
+}
+
+.dcc-neural__stat-value {
+  color: var(--dcc-ink);
+  font-size: clamp(1rem, 3.2vw, 1.35rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.dcc-neural__stat-unit {
+  color: var(--dcc-lime);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.dcc-neural__footer-id {
+  margin-top: 0.55rem;
+  text-align: right;
+  color: rgba(148, 163, 184, 0.55);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 520px) {
+  .dcc-neural__stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dcc-neural__stat-cell:nth-child(2) {
+    border-right: none;
+  }
+
+  .dcc-neural__stat-cell:nth-child(1),
+  .dcc-neural__stat-cell:nth-child(2) {
+    border-bottom: 1px solid var(--dcc-border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dcc-neural__bar-col,
+  .dcc-neural__seg-lit {
+    transition: none;
+  }
+}

@@ -41,6 +41,7 @@ import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
+import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
 import {
   SCHEDULE_MY_POST_DELETED_EVENT,
   type ScheduleMyPostDeletedDetail,
@@ -58,15 +59,16 @@ export type GameItemRaw = any;
 type TeamRecord = {
   wins: number;
   losses: number;
+  draws?: number;
   rank?: number;
   lastGames?: { at?: any; isWin?: boolean }[];
 };
 
 /** パースロジック変更時に上げてセッションキャッシュを無効化 */
-const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v4";
+const TEAM_RECORD_CACHE_KEY = "schedule_team_record_cache_v5";
 const TEAM_RECORD_CACHE_TTL_MS = 1000 * 60 * 30;
 /** in-memory は teamId 単体だと古い勝敗が残るためバージョン付きキー */
-const TEAM_RECORD_MEM_VER = 3;
+const TEAM_RECORD_MEM_VER = 4;
 function teamRecordMemKey(teamId: string) {
   return `${teamId}:v${TEAM_RECORD_MEM_VER}`;
 }
@@ -482,19 +484,26 @@ export default function ScheduleList({
               const d = docSnap.data() as any;
               const teamId = docSnap.id;
               const isNbaTeam = String(d.league ?? "") === "nba";
-              const wl = isNbaTeam
-                ? nbaRegularSeasonWinsLosses(d)
-                : {
-                    wins: Number(d.wins ?? 0),
-                    losses: Number(d.losses ?? 0),
-                  };
+              let value: TeamRecord;
 
-              const value: TeamRecord = {
-                wins: wl.wins,
-                losses: wl.losses,
-                rank: typeof d.rank === "number" ? d.rank : undefined,
-                lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
-              };
+              if (isNbaTeam) {
+                const wl = nbaRegularSeasonWinsLosses(d);
+                value = {
+                  wins: wl.wins,
+                  losses: wl.losses,
+                  rank: typeof d.rank === "number" ? d.rank : undefined,
+                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+                };
+              } else {
+                const wl = footballWinsLossesDraws(d);
+                value = {
+                  wins: wl.wins,
+                  losses: wl.losses,
+                  draws: wl.draws,
+                  rank: typeof d.rank === "number" ? d.rank : undefined,
+                  lastGames: Array.isArray(d.lastGames) ? d.lastGames : [],
+                };
+              }
 
               memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
               nextSessionCache[teamId] = value;

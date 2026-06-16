@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { nbaRegularSeasonWinsLosses } from "../../../../../lib/nbaRegularSeasonRecord";
+import { footballWinsLossesDraws } from "../../../../../lib/teamRecordDisplay";
 import { db } from "../../lib/firebase";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
@@ -47,14 +48,12 @@ export function useTeamRecordMap(
             const isNbaTeam = String(d.league ?? "") === "nba";
             const wl = isNbaTeam
               ? nbaRegularSeasonWinsLosses(d as Parameters<typeof nbaRegularSeasonWinsLosses>[0])
-              : {
-                  wins: Number(d.wins ?? 0),
-                  losses: Number(d.losses ?? 0),
-                };
+              : footballWinsLossesDraws(d);
             const rank = typeof d.rank === "number" ? d.rank : undefined;
             merged[docSnap.id] = {
               wins: wl.wins,
               losses: wl.losses,
+              ...(!isNbaTeam ? { draws: wl.draws } : {}),
               rank,
             };
           });
