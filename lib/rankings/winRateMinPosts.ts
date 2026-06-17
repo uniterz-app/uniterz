@@ -3,6 +3,9 @@ import type { RankingPhase } from "./rankingPhase";
 import type { PlayoffRoundKey } from "./playoffRound";
 import type { WcRankingStage } from "./wcRankingStage";
 
+/** WC All（overall）勝率ランキングの最低投稿数 */
+export const WC_OVERALL_WIN_RATE_MIN_POSTS = 12;
+
 /** WC グループステージ（qualifying）勝率ランキングの最低投稿数 */
 export const WC_GROUP_STAGE_WIN_RATE_MIN_POSTS = 10;
 
@@ -16,6 +19,7 @@ export function minPostsForWinRate(input: {
 
   if (rankingLeague === "worldcup" || wcStage != null) {
     if (wcStage === "qualifying") return WC_GROUP_STAGE_WIN_RATE_MIN_POSTS;
+    if (wcStage === "overall") return WC_OVERALL_WIN_RATE_MIN_POSTS;
     return 1;
   }
 

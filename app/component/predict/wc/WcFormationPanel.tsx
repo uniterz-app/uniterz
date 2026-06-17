@@ -3,7 +3,6 @@
 import {
   getWcResolvedLineup,
   getWcPredictedLineup,
-  hasWcConfirmedMatchLineup,
   hasWcSquadData,
 } from "@/lib/wc/squads";
 import type { WcSquadPlayer } from "@/lib/wc/squadTypes";
@@ -134,7 +133,6 @@ export default function WcFormationPanel({
 
   const lineup = getWcResolvedLineup(teamId);
   const predicted = getWcPredictedLineup(teamId);
-  const confirmed = hasWcConfirmedMatchLineup(teamId);
   if (!lineup?.length || !predicted) return null;
 
   const m = t(language);
@@ -163,7 +161,7 @@ export default function WcFormationPanel({
             web ? "text-sm leading-none" : "text-xs",
           ].join(" ")}
         >
-          {confirmed ? m.wc.confirmedLineup : m.wc.predictedLineup}
+          {m.wc.predictedLineup}
         </div>
         <div
           className={[
