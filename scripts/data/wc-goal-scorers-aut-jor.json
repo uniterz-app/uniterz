@@ -1,0 +1,10 @@
+{
+  "homeScore": 3,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "aut-schmid", "teamId": "wc-aut", "minute": 21 },
+    { "playerId": "jor-olwan", "teamId": "wc-jor", "minute": 50 },
+    { "playerId": "jor-al-arab", "teamId": "wc-jor", "minute": 76, "ownGoal": true },
+    { "playerId": "aut-arnautovic", "teamId": "wc-aut", "minute": 102 }
+  ]
+}

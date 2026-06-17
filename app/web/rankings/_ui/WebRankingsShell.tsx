@@ -211,7 +211,8 @@ export default function WebRankingsShell() {
   const winRateMinPosts = computeWinRateMinPosts(
     rankingLeague,
     phase,
-    effectiveRound
+    effectiveRound,
+    wcStage
   );
 
   const listContentReady = computeRankingListContentReady({

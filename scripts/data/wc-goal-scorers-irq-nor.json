@@ -1,0 +1,11 @@
+{
+  "homeScore": 1,
+  "awayScore": 4,
+  "scorers": [
+    { "playerId": "nor-haaland", "teamId": "wc-nor", "minute": 29 },
+    { "playerId": "irq-hussein", "teamId": "wc-irq", "minute": 39 },
+    { "playerId": "nor-haaland", "teamId": "wc-nor", "minute": 43 },
+    { "playerId": "nor-ostigard", "teamId": "wc-nor", "minute": 76 },
+    { "playerId": "nor-thorstvedt", "teamId": "wc-nor", "minute": 97 }
+  ]
+}

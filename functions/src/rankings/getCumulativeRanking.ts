@@ -13,7 +13,7 @@ import {
   SNAPSHOT_BUILD_PHASES,
 } from "./buildCumulativeRankingSnapshot";
 import type { WcRankingStage } from "./wcRankingStage";
-import { isWcRankingStage } from "./wcRankingStage";
+import { isWcRankingStage, minPostsForWcWinRate } from "./wcRankingStage";
 
 function db() {
   return getFirestore();
@@ -455,7 +455,7 @@ async function rankingPayloadForMetric(
     const minPosts =
       metric === "winRate"
         ? wcStage
-          ? 1
+          ? minPostsForWcWinRate(wcStage)
           : minPostsForWinRate(phase, round)
         : 1;
     if ((rk.totalPosts ?? 0) < minPosts) {

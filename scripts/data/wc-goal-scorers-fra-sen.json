@@ -1,0 +1,10 @@
+{
+  "homeScore": 3,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "fra-mbappe", "teamId": "wc-fra", "minute": 66 },
+    { "playerId": "fra-barcola", "teamId": "wc-fra", "minute": 82 },
+    { "playerId": "sen-mbaye", "teamId": "wc-sen", "minute": 95 },
+    { "playerId": "fra-mbappe", "teamId": "wc-fra", "minute": 96 }
+  ]
+}

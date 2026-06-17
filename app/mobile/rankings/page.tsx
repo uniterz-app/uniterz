@@ -202,7 +202,8 @@ export default function MobileRankingsPage() {
   const winRateMinPosts = computeWinRateMinPosts(
     rankingLeague,
     phase,
-    effectiveRound
+    effectiveRound,
+    wcStage
   );
 
   const metricReady = bundle != null;

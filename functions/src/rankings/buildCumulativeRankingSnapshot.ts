@@ -1,7 +1,7 @@
 // functions/src/rankings/buildCumulativeRankingSnapshot.ts
 
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import type { WcRankingStage } from "./wcRankingStage";
+import { minPostsForWcWinRate, type WcRankingStage } from "./wcRankingStage";
 
 /* =========================================================
  * Firestore
@@ -624,7 +624,9 @@ export async function loadWcStageTop20RowsLive(
 
   const eligibleRows =
     metric === "winRate"
-      ? baseRows.filter((row) => (row.totalPosts ?? 0) >= 1)
+      ? baseRows.filter(
+          (row) => (row.totalPosts ?? 0) >= minPostsForWcWinRate(stage)
+        )
       : baseRows;
   const sortedFull = [...eligibleRows].sort((a, b) =>
     cmpSortRows(a, b, metric)
@@ -848,7 +850,9 @@ export async function buildCumulativeRankingSnapshot() {
     for (const metric of WC_METRICS) {
       const eligibleRows =
         metric === "winRate"
-          ? baseRows.filter((row) => (row.totalPosts ?? 0) >= 1)
+          ? baseRows.filter(
+              (row) => (row.totalPosts ?? 0) >= minPostsForWcWinRate(stage)
+            )
           : baseRows;
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
