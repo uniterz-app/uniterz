@@ -1,24 +1,6 @@
 "use client";
 
-function KinetikAvatarGlyph() {
-  return (
-    <div className="profile-edit-kinetik-avatar__glyph">
-      <svg viewBox="0 0 40 40" aria-hidden>
-        <polygon
-          className="profile-edit-kinetik-avatar__glyph-shape"
-          points="20,9 31.5,29 8.5,29"
-          strokeWidth="1.35"
-        />
-        <circle
-          className="profile-edit-kinetik-avatar__glyph-dot"
-          cx="20"
-          cy="21.5"
-          r="2.8"
-        />
-      </svg>
-    </div>
-  );
-}
+import { KinetikAvatarGlyph } from "@/app/component/common/KinetikAvatarGlyph";
 
 export default function ProfileEditKinetikAvatar({
   photoURL,
@@ -48,7 +30,7 @@ export default function ProfileEditKinetikAvatar({
             <img src={photoURL} alt="" />
           ) : (
             <>
-              <KinetikAvatarGlyph />
+              <KinetikAvatarGlyph variant="kinetik" />
               <span className="sr-only">{initial}</span>
             </>
           )}

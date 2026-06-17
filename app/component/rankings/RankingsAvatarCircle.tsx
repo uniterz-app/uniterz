@@ -1,16 +1,7 @@
 "use client";
 
-import { alfa } from "@/lib/fonts";
+import { KinetikAvatarGlyph } from "@/app/component/common/KinetikAvatarGlyph";
 import { useEffect, useRef, useState } from "react";
-
-/** 「You」などフォールバック名ではイニシャルを出さない（Y 表示を防ぐ） */
-function shouldUseInitialLetter(displayName: string): boolean {
-  const t = displayName.trim();
-  if (!t) return false;
-  const lower = t.toLowerCase();
-  if (lower === "you") return false;
-  return true;
-}
 
 type Props = {
   photoURL?: string | null;
@@ -25,20 +16,17 @@ type Props = {
 };
 
 /**
- * My rank と同じく #0f2d35 + ring-2。写真は decode 後に表示、未取得時はイニシャル。
+ * My rank と同じく #0f2d35 + ring-2。写真は decode 後に表示、未取得時は Kinetik 三角グリフ。
  */
 export function RankingsAvatarCircle({
   photoURL,
   displayName,
   boxClassName,
-  initialTextClassName = "text-[18px]",
   gateReady = true,
   onDisplayReadyChange,
   shape = "circle",
   imageLoading = "eager",
 }: Props) {
-  const useLetter = shouldUseInitialLetter(displayName);
-  const initial = (displayName?.slice(0, 1) ?? "?").toUpperCase();
   const [imgLoaded, setImgLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
@@ -53,12 +41,9 @@ export function RankingsAvatarCircle({
   }, [photoURL]);
 
   const showPhoto = Boolean(photoURL && imgLoaded);
-  const showInitial = gateReady && !photoURL && useLetter;
-  const showSolidShell = showPhoto || showInitial;
-  const showPulse =
-    gateReady &&
-    !showSolidShell &&
-    (Boolean(photoURL) ? !imgLoaded : !useLetter);
+  const showGlyph = gateReady && !photoURL;
+  const showSolidShell = showPhoto || showGlyph;
+  const showPulse = gateReady && Boolean(photoURL) && !imgLoaded;
 
   const ok = gateReady && (!photoURL || imgLoaded);
 
@@ -103,16 +88,11 @@ export function RankingsAvatarCircle({
           decoding="async"
           onLoad={() => setImgLoaded(true)}
         />
-      ) : showInitial ? (
-        <div
-          className={[
-            "grid h-full w-full place-items-center font-black text-white/90",
-            alfa.className,
-            initialTextClassName,
-          ].join(" ")}
-        >
-          {initial}
-        </div>
+      ) : showGlyph ? (
+        <>
+          <KinetikAvatarGlyph size="62%" />
+          <span className="sr-only">{displayName}</span>
+        </>
       ) : null}
     </div>
   );
