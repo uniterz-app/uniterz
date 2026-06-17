@@ -704,6 +704,7 @@ const pt: Messages = {
     captainLabel: "Capitão",
     captainNotConfirmed: "Não confirmado oficialmente",
     predictedLineup: "Escalação prevista",
+    confirmedLineup: "Escalação confirmada",
   },
 
   eventNotices: {

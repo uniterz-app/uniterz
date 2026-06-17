@@ -715,6 +715,7 @@ const en: Messages = {
     captainLabel: "Captain",
     captainNotConfirmed: "Not officially confirmed",
     predictedLineup: "Predicted Lineup",
+    confirmedLineup: "Confirmed Lineup",
   },
 
   eventNotices: {
