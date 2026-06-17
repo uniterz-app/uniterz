@@ -5,6 +5,40 @@ import type { RawSourceLineup } from "./goalLineups";
 
 /** 試合終了チームの実際のスタメン（予想ではなく確定 XI） */
 export const MATCH_LINEUPS: RawSourceLineup[] = [
+  // Group A — Mexico 2–0 South Africa (Jun 11)
+  {
+    iso3: "mex",
+    formation: "4-3-3",
+    players: [
+      "Rangel", "Reyes", "Montes", "Vásquez", "Gallardo",
+      "Lira", "Fidalgo", "Gutiérrez", "Alvarado", "Jiménez", "Quiñones",
+    ],
+  },
+  {
+    iso3: "zaf",
+    formation: "3-5-2",
+    players: [
+      "Williams", "Okon", "Sibisi", "Mbokazi", "Mudau",
+      "Modiba", "Adams", "Sithole", "Mokoena", "Foster", "Rayners",
+    ],
+  },
+  // Group A — South Korea 2–1 Czech Republic (Jun 11)
+  {
+    iso3: "kor",
+    formation: "3-4-2-1",
+    players: [
+      "Kim Seung-gyu", "Lee Han-beom", "Kim Min-jae", "Lee Gi-hyuk", "Seol Young-woo",
+      "Hwang In-beom", "Paik Seung-ho", "Lee Tae-seok", "Lee Kang-in", "Son Heung-min", "Lee Jae-sung",
+    ],
+  },
+  {
+    iso3: "cze",
+    formation: "3-4-2-1",
+    players: [
+      "Kovář", "Chaloupek", "Hranáč", "Krejčí", "Coufal",
+      "Zelený", "Souček", "Provod", "Sojka", "Schick", "Šulc",
+    ],
+  },
   // Group B — Canada 1–1 Bosnia (Jun 12)
   {
     iso3: "can",
@@ -176,4 +210,144 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Khedira", "Skhiri", "Mejbri", "Saad", "Ben Slimane",
     ],
   },
+  // Group G — Belgium 1–1 Egypt (Jun 15)
+  {
+    iso3: "bel",
+    formation: "4-2-3-1",
+    players: [
+      "Courtois", "Meunier", "Ngoy", "Mechele", "Castagne",
+      "Onana", "Tielemans", "Trossard", "De Bruyne", "Doku", "De Ketelaere",
+    ],
+  },
+  {
+    iso3: "egy",
+    formation: "4-2-3-1",
+    players: [
+      "Shobeir", "Hany", "Ibrahim", "Fathy", "Fatouh",
+      "Attia", "Lasheen", "Ziko", "Salah", "Ashour", "Marmoush",
+    ],
+  },
+  // Group G — Iran 2–2 New Zealand (Jun 15)
+  {
+    iso3: "irn",
+    formation: "4-3-3",
+    players: [
+      "Beiranvand", "Rezaeian", "Khalilzadeh", "Nemati", "Mohammadi",
+      "Ghoddos", "Ezatolahi", "Taremi", "Mohebi", "Moghanlou", "Yousefi",
+    ],
+  },
+  {
+    iso3: "nzl",
+    formation: "4-4-2",
+    players: [
+      "Crocombe", "Payne", "Surman", "Boxall", "Cacace",
+      "Singh", "Bell", "Stamenić", "Just", "Wood", "McCowatt",
+    ],
+  },
+  // Group H — Spain 0–0 Cape Verde (Jun 15)
+  {
+    iso3: "esp",
+    formation: "4-3-3",
+    players: [
+      "Simón", "Llorente", "Cubarsí", "Laporte", "Cucurella",
+      "Rodri", "Pedri", "Ruiz", "Torres", "Oyarzabal", "Gavi",
+    ],
+  },
+  {
+    iso3: "cpv",
+    formation: "4-3-3",
+    players: [
+      "Vozinha", "Moreira", "Lopes", "Diney", "Lopes Cabral",
+      "Pina", "Laros Duarte", "Monteiro", "Mendes", "Livramento", "Jovane Cabral",
+    ],
+  },
+  // Group H — Saudi Arabia 1–1 Uruguay (Jun 15)
+  {
+    iso3: "sau",
+    formation: "4-4-2",
+    players: [
+      "Al-Owais", "Abdulhamid", "Al-Tambakti", "Al-Amri", "Al-Harbi",
+      "Abu Al-Shamat", "Kanno", "Al-Khaibari", "Al-Dawsari", "Al-Buraikan", "Al-Juwayr",
+    ],
+  },
+  {
+    iso3: "ury",
+    formation: "4-4-2",
+    players: [
+      "Muslera", "Varela", "Cáceres", "Olivera", "Viña",
+      "Valverde", "Ugarte", "Bentancur", "M. Araújo", "Viñas", "Núñez",
+    ],
+  },
+  // Group I — France 3–1 Senegal (Jun 16)
+  {
+    iso3: "fra",
+    formation: "4-2-3-1",
+    players: [
+      "Maignan", "Koundé", "Upamecano", "Saliba", "Théo Hernandez",
+      "Tchouaméni", "Rabiot", "Olise", "Dembélé", "Doué", "Mbappé",
+    ],
+  },
+  {
+    iso3: "sen",
+    formation: "4-3-3",
+    players: [
+      "Mendy", "Diatta", "Koulibaly", "Niakhaté", "El Hadji Malick Diouf",
+      "Lamine Camara", "Idrissa Gueye", "Pape Gueye", "Ismaïla Sarr", "Nicolas Jackson", "Sadio Mané",
+    ],
+  },
+  // Group I — Iraq 1–4 Norway (Jun 16)
+  {
+    iso3: "irq",
+    formation: "4-4-2",
+    players: [
+      "Hassan", "Hussein Ali", "Tahseen", "Hashim", "Doski",
+      "Bayesh", "Ismail", "Al-Ammari", "Jasim", "Hussein", "Al-Hamadi",
+    ],
+  },
+  {
+    iso3: "nor",
+    formation: "4-3-3",
+    players: [
+      "Nyland", "Ryerson", "Ajer", "Heggem", "Wolfe",
+      "Berge", "Ødegaard", "Aursnes", "Sørloth", "Haaland", "Nusa",
+    ],
+  },
+  // Group J — Argentina 3–0 Algeria (Jun 16)
+  {
+    iso3: "arg",
+    formation: "4-3-3",
+    players: [
+      "Emiliano Martínez", "Montiel", "Romero", "Lisandro Martínez", "Medina",
+      "De Paul", "Mac Allister", "Fernández", "Almada", "Messi", "Lautaro Martínez",
+    ],
+  },
+  {
+    iso3: "dza",
+    formation: "4-3-3",
+    players: [
+      "Zidane", "Belghali", "Mandi", "Bensebaini", "Ait-Nouri",
+      "Boudaoui", "Maza", "Bentaleb", "Moussa", "Gouiri", "Chaibi",
+    ],
+  },
+  // Group J — Austria vs Jordan (Jun 16)
+  {
+    iso3: "aut",
+    formation: "4-2-3-1",
+    players: [
+      "Schlager", "Posch", "Lienhart", "Alaba", "Mwene",
+      "Laimer", "Seiwald", "Schmid", "X. Schlager", "Sabitzer", "Kalajdžić",
+    ],
+  },
+  {
+    iso3: "jor",
+    formation: "5-4-1",
+    players: [
+      "Abulaila", "Haddad", "Nasib", "Abualnadi", "Al-Arab",
+      "Abu Taha", "Al-Rashdan", "Al-Rawabdeh", "Al-Taamari", "Olwan", "Al-Fakhouri",
+    ],
+  },
 ];
+
+export const CONFIRMED_MATCH_LINEUP_ISO3 = new Set(
+  MATCH_LINEUPS.map((l) => l.iso3),
+);

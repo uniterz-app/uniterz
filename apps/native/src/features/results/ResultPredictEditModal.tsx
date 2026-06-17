@@ -388,6 +388,9 @@ export default function ResultPredictEditModal({
       seriesPair,
       homePalette,
       awayPalette,
+      leagueRaw: g.league,
+      homeSide: g.home,
+      awaySide: g.away,
     };
   }, [game, language, peerGames]);
 
@@ -579,6 +582,7 @@ export default function ResultPredictEditModal({
         predictionEditLockedAfterKickoff={!predictionEditable}
         expandScoreFormWhenEditing={predictionEditable}
         predictData={predictModalData}
+        language={language}
       />
     </>
   );

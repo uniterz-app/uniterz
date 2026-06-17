@@ -710,6 +710,7 @@ const ar: Messages = {
     captainLabel: "Captain",
     captainNotConfirmed: "Not officially confirmed",
     predictedLineup: "التشكيلة المتوقعة",
+    confirmedLineup: "التشكيلة المؤكدة",
   },
 
   eventNotices: {

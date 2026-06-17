@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { GestureDetector } from "react-native-gesture-handler";
 import {
   Alert,
   Platform,
@@ -10,6 +13,7 @@ import {
   View,
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   collection,
   doc,
@@ -23,6 +27,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { TIMEZONE_JST, toDateKeyInTimeZone } from "../../utils/date";
 import {
+  parseDateKeyInTimeZone,
+  shiftCalendarMonthStart,
+} from "../../../../../lib/time/zonedTime";
+import { fetchMonthHasGames } from "../../../../../lib/games/fetchMonthHasGames";
+import {
+  resolveGameLiveMeta,
   resolveGameScore,
   resolveGameStartAt,
   resolveGameStatus,
@@ -34,8 +44,15 @@ import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import {
   type NativeGameRow,
   type SupportedLeague,
+  sortedUniqueDateKeysFromRows,
   useTodayGames,
 } from "./useTodayGames";
+import GamesTeamFilterPanelNative from "./GamesTeamFilterPanelNative";
+import {
+  applyNativeGamesFilter,
+  gamesFilterIsActive,
+  type GamesFilterState,
+} from "./applyNativeGamesFilter";
 import {
   resolveTeamJerseyPalette,
   resolveTeamPrimaryColor,
@@ -66,20 +83,51 @@ import {
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
 import GameCardList from "./GameCardList";
-import { gamesDayStripChipEnter } from "./predictMotion";
 import {
   resolveNativeSeriesLabel,
   resolveNativeSeriesPair,
 } from "./resolveNativeSeriesStanding";
-import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import { getGamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
+import GamesDrawerMenuNative from "./GamesDrawerMenuNative";
+import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
+import CyberMenuButton from "../../ui/CyberMenuButton";
+import GamesHeaderFilterButtonNative from "./GamesHeaderFilterButtonNative";
+import {
+  GAMES_HEADER_CONTROL_HEIGHT,
+  LEAGUE_HEADER_LABEL,
+  MOBILE_GAMES_CARD_MAX_WIDTH,
+} from "./gamesMobileLayout";
+import {
+  markWcGamesTabAnnouncementSeenNative,
+  readWcGamesTabAnnouncementSeenNative,
+} from "./wcTabAnnouncementSeenNative";
 import {
   liveMarkPillCyberBase,
   liveMarkTextCyberBase,
 } from "../../ui/liveMarkCyberStyles";
+import type { GamesStackParamList } from "../../navigation/types";
+import { useScheduleTeamsNative } from "./useScheduleTeamsNative";
+import { useGamesPageSwipe } from "./useGamesPageSwipe";
+import GamesDateNavigatorNative from "./GamesDateNavigatorNative";
+import {
+  gamesLeagueTitleEntering,
+  gamesScheduleShellDaySwitchEntering,
+  gamesScheduleShellPageEntering,
+  gamesTopBarBracketEntering,
+  gamesTopBarFilterEntering,
+  gamesTopBarMenuEntering,
+  useGamesListShellIntro,
+} from "./gamesPageMotion";
+import {
+  MATCH_CARD_DISPLAY_FONT,
+  MATCH_CARD_METRIC_FONT,
+  MATCH_CARD_SCORE_FONT,
+} from "./matchCardTypography";
+import GamesPageBackgroundNative from "./GamesPageBackgroundNative";
+import { GAMES_PAGE_BG_TOP } from "./gamesPageBackgroundTokens";
 
 function formatKickoffTime(
   startAt: Date | null,
@@ -113,7 +161,7 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
 }
 
 /**
- * 試合カード中央：終了はスコア、ライブは LIVE のみ（スコア非表示）、それ以外はキックオフ
+ * 試合カード中央：終了はスコア、ライブは LIVE＋スコア、それ以外はキックオフ
  */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
@@ -130,7 +178,19 @@ function getGameCardCenterBlock(
     }`;
     return { variant: "score", home: score.home, away: score.away, subLine: sub };
   }
-  /** ライブ中はスコアを出さず LIVE のみ（一覧・モーダル共通） */
+  if (liveUi && score) {
+    const meta = resolveGameLiveMeta(game);
+    const subLine =
+      meta?.period || meta?.runningTime
+        ? `${meta?.period ?? ""}${meta?.runningTime ? ` ${meta.runningTime}` : ""}`.trim()
+        : null;
+    return {
+      variant: "liveScore",
+      home: score.home,
+      away: score.away,
+      subLine: subLine || null,
+    };
+  }
   if (liveUi) {
     return { variant: "liveMark" };
   }
@@ -145,7 +205,7 @@ function renderCenterText(
   language: "ja" | "en"
 ): string {
   const b = getGameCardCenterBlock(game, language);
-  if (b.variant === "score") {
+  if (b.variant === "score" || b.variant === "liveScore") {
     return `${b.home} – ${b.away}`;
   }
   if (b.variant === "liveMark") {
@@ -239,13 +299,12 @@ function formatCountdownLabel(startAt: Date, nowMs: number): string {
 }
 
 const LEAGUE_OPTIONS: Array<{ id: SupportedLeague; label: string }> = [
+  { id: "wc", label: "WC" },
   { id: "nba", label: "NBA" },
-  { id: "bj", label: "B1" },
-  { id: "j1", label: "J1" },
-  { id: "pl", label: "PL" },
 ];
 const LEAGUE_LINE_COLOR: Record<SupportedLeague, string> = {
   nba: "#60a5fa",
+  wc: "#f59e0b",
   bj: "#eab308",
   j1: "#22c55e",
   pl: "#a855f7",
@@ -338,7 +397,18 @@ export default function GamesHomeScreen({
   /** フローティング下部ナビと被らないよう確保する余白（App.tsx から注入） */
   bottomReserveY?: number;
 }) {
+  const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { fUser } = useFirebaseUser();
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showWcTabBadge, setShowWcTabBadge] = useState(false);
+  const [gamesFilter, setGamesFilter] = useState<GamesFilterState>({
+    selectedTeamIds: [],
+    matchMode: "any",
+    marginMin: "",
+    marginMax: "",
+  });
   const mainScrollRef = useRef<ScrollView | null>(null);
   const skipAutoAdvanceRef = useRef(false);
   const suppressAutoAdvanceForTodayRef = useRef(false);
@@ -381,8 +451,6 @@ export default function GamesHomeScreen({
   const [language, setLanguage] = useState<"ja" | "en">("ja");
   /** ロード完了直後の日付チップのみ入場アニメ（窓移動での再マウント連打を防ぐ） */
   const [dayStripEntranceEnabled, setDayStripEntranceEnabled] = useState(true);
-  /** 試合カード：`full` = 初回・リーグ切替の詳細入場、`light` = 日付変更のみ軽量 */
-  const [cardListEntranceVariant, setCardListEntranceVariant] = useState<"full" | "light">("full");
   const {
     loading,
     error,
@@ -396,6 +464,46 @@ export default function GamesHomeScreen({
     goPrevDay,
     goNextDay,
   } = useTodayGames();
+  const reduceMotion = useReducedMotion() ?? false;
+  const { teams: scheduleTeams, nameById: teamNameById } =
+    useScheduleTeamsNative(selectedLeague);
+  const filteredGames = useMemo(
+    () => applyNativeGamesFilter(games, gamesFilter, teamNameById),
+    [games, gamesFilter, teamNameById]
+  );
+  const filterActive = useMemo(
+    () => gamesFilterIsActive(gamesFilter),
+    [gamesFilter]
+  );
+  const dateKeysForDayStrip = useMemo(() => {
+    if (!filterActive) return dateKeysWithGames;
+    return sortedUniqueDateKeysFromRows(
+      applyNativeGamesFilter(peerGamesForSeries, gamesFilter, teamNameById)
+    );
+  }, [
+    filterActive,
+    dateKeysWithGames,
+    peerGamesForSeries,
+    gamesFilter,
+    teamNameById,
+  ]);
+  const leagueHeaderLabel = useMemo(() => {
+    const key = selectedLeague === "wc" ? "wc" : "nba";
+    return LEAGUE_HEADER_LABEL[key];
+  }, [selectedLeague]);
+
+  useEffect(() => {
+    void readWcGamesTabAnnouncementSeenNative().then((seen) => {
+      if (!seen) setShowWcTabBadge(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (selectedLeague === "wc" && showWcTabBadge) {
+      void markWcGamesTabAnnouncementSeenNative();
+      setShowWcTabBadge(false);
+    }
+  }, [selectedLeague, showWcTabBadge]);
   const teamRecordById = useTeamRecordMap(games, selectedLeague);
   const formatSideRecord = useCallback(
     (side: unknown, leagueRaw?: unknown) =>
@@ -443,6 +551,9 @@ export default function GamesHomeScreen({
       seriesPair,
       homePalette,
       awayPalette,
+      leagueRaw: g.league,
+      homeSide: g.home,
+      awaySide: g.away,
     };
   }, [selectedGame, language, formatSideRecord, peerGamesForSeries]);
   const formatGameDateMs = useCallback(
@@ -473,31 +584,62 @@ export default function GamesHomeScreen({
     () => [styles.mainScrollContent, { paddingBottom: spacing.sm + bottomReserveY }],
     [bottomReserveY]
   );
-  const dayStripDates = useMemo(() => {
-    const center = startOfLocalDay(selectedDate);
-    const days: Date[] = [];
-    for (let i = -3; i <= 2; i += 1) {
-      days.push(addDays(center, i));
-    }
-    const keys = new Set(dateKeysWithGames);
-    const filtered = days.filter((day) => keys.has(toDateKeyInTimeZone(day, TIMEZONE_JST)));
-    // 取得直後などに空表示にならないよう、最低1件は選択日を表示する
-    return filtered.length > 0 ? filtered : [center];
-  }, [selectedDate, dateKeysWithGames]);
-  const monthLabel = useMemo(
-    () => {
-      if (language === "ja") {
-        const y = selectedDate.getFullYear();
-        const m = selectedDate.getMonth() + 1;
-        return `${y}年 ${m}月`;
-      }
-      return selectedDate.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-      });
-    },
-    [selectedDate, language]
+  const screenShellStyle = useMemo(
+    () => [styles.card, { paddingTop: insets.top + spacing.sm, flex: 1 }],
+    [insets.top]
   );
+  /** Web `gameDaysForStrip` 相当 */
+  const dayStripDates = useMemo(() => {
+    const parsed = dateKeysForDayStrip
+      .map((key) => parseDateKeyInTimeZone(key, TIMEZONE_JST))
+      .filter((d): d is Date => d != null);
+    if (parsed.length === 0) {
+      return [startOfLocalDay(selectedDate)];
+    }
+    return parsed;
+  }, [dateKeysForDayStrip, selectedDate]);
+
+  const [adjacentMonthHasGames, setAdjacentMonthHasGames] = useState({
+    prev: true,
+    next: true,
+    loading: true,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    setAdjacentMonthHasGames((s) => ({ ...s, loading: true }));
+    const prevAnchor = shiftCalendarMonthStart(selectedDate, -1, TIMEZONE_JST);
+    const nextAnchor = shiftCalendarMonthStart(selectedDate, 1, TIMEZONE_JST);
+    void Promise.all([
+      fetchMonthHasGames({
+        league: selectedLeague,
+        monthAnchor: prevAnchor,
+        timeZone: TIMEZONE_JST,
+      }),
+      fetchMonthHasGames({
+        league: selectedLeague,
+        monthAnchor: nextAnchor,
+        timeZone: TIMEZONE_JST,
+      }),
+    ])
+      .then(([hasPrev, hasNext]) => {
+        if (!cancelled) {
+          setAdjacentMonthHasGames({
+            prev: hasPrev,
+            next: hasNext,
+            loading: false,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAdjacentMonthHasGames({ prev: true, next: true, loading: false });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, selectedLeague]);
   const selectedLeagueOption = useMemo(
     () => LEAGUE_OPTIONS.find((option) => option.id === selectedLeague) ?? LEAGUE_OPTIONS[0],
     [selectedLeague]
@@ -734,11 +876,29 @@ export default function GamesHomeScreen({
   }, [fUser?.uid, fUser?.displayName, myPredictionsReloadNonce]);
 
   const t = useMemo(() => getGamesTexts(language), [language]);
-  const reduceMotion = useReducedMotion() ?? false;
-  const dayStripChipEnter = (chipIndex: number) =>
-    reduceMotion || !dayStripEntranceEnabled
-      ? undefined
-      : gamesDayStripChipEnter(chipIndex);
+
+  const gamesFilterKey = useMemo(
+    () =>
+      JSON.stringify([
+        [...gamesFilter.selectedTeamIds].sort(),
+        gamesFilter.matchMode,
+        gamesFilter.marginMin,
+        gamesFilter.marginMax,
+      ]),
+    [gamesFilter]
+  );
+  const selectedDayKey = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+  const { scheduleBlockKey, listShellIntro, richScheduleMotion } =
+    useGamesListShellIntro({
+      reduceMotion,
+      league: selectedLeague,
+      selectedDayKey,
+      filterKey: gamesFilterKey,
+      isLoading: loading,
+    });
+  const cardListEntranceVariant = listShellIntro === "page" ? "full" : "light";
+  const webGamesMotion = !reduceMotion;
+  const gamesMotionKey = `${selectedLeague}|${gamesFilterKey}`;
 
   /** フェッチでスケルトン→本表示になった直後だけチップ入場を付け、その後は日付窓がずれても再アニメしない */
   useEffect(() => {
@@ -775,30 +935,106 @@ export default function GamesHomeScreen({
       (game) => resolveGameStatus(game as Record<string, unknown>) === "final"
     );
     if (!allFinished) return;
-    setCardListEntranceVariant("light");
     setSelectedDate((prev) => addDays(prev, 1));
   }, [loading, games, selectedDate, setSelectedDate, today]);
 
   function selectDateManually(nextDate: Date) {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
-    setCardListEntranceVariant("light");
     setSelectedDate(nextDate);
   }
 
-  function goPrevDayManually() {
+  function moveToTodayGameDay() {
+    if (dayStripDates.length === 0) return;
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
-    setCardListEntranceVariant("light");
+    const sorted = [...dayStripDates].sort((a, b) => a.getTime() - b.getTime());
+    const todayKey = toDateKeyInTimeZone(today, TIMEZONE_JST);
+    const pick =
+      sorted.find((d) => toDateKeyInTimeZone(d, TIMEZONE_JST) >= todayKey) ??
+      sorted[sorted.length - 1];
+    if (pick) setSelectedDate(pick);
+  }
+
+  function goPrevMonth() {
+    skipAutoAdvanceRef.current = true;
+    suppressAutoAdvanceForTodayRef.current = true;
+    if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.prev) return;
+    setSelectedDate(shiftCalendarMonthStart(selectedDate, -1, TIMEZONE_JST));
+  }
+
+  function goNextMonth() {
+    skipAutoAdvanceRef.current = true;
+    suppressAutoAdvanceForTodayRef.current = true;
+    if (adjacentMonthHasGames.loading || !adjacentMonthHasGames.next) return;
+    setSelectedDate(shiftCalendarMonthStart(selectedDate, 1, TIMEZONE_JST));
+  }
+
+  function goPrevGameDay() {
+    skipAutoAdvanceRef.current = true;
+    suppressAutoAdvanceForTodayRef.current = true;
+    const keys = dateKeysForDayStrip;
+    if (keys.length > 0) {
+      const current = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+      const idx = keys.indexOf(current);
+      if (idx > 0) {
+        setSelectedDate(parseDateKeyInTimeZone(keys[idx - 1]!, TIMEZONE_JST)!);
+        return;
+      }
+      return;
+    }
     goPrevDay();
   }
 
-  function goNextDayManually() {
+  function goNextGameDay() {
     skipAutoAdvanceRef.current = true;
     suppressAutoAdvanceForTodayRef.current = true;
-    setCardListEntranceVariant("light");
+    const keys = dateKeysForDayStrip;
+    if (keys.length > 0) {
+      const current = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
+      const idx = keys.indexOf(current);
+      if (idx >= 0 && idx < keys.length - 1) {
+        setSelectedDate(parseDateKeyInTimeZone(keys[idx + 1]!, TIMEZONE_JST)!);
+        return;
+      }
+      return;
+    }
     goNextDay();
   }
+
+  const pageSwipeGesture = useGamesPageSwipe({
+    onSwipeLeft: goNextGameDay,
+    onSwipeRight: goPrevGameDay,
+    enabled: !loading,
+  });
+
+  const predictOverlayMarketBar = useMemo(() => {
+    if (!selectedGame?.id) return null;
+    const g = selectedGame;
+    const gameId = String(g.id);
+    const homeName = resolveGameTeamName(g.home, g.homeTeamName, "HOME");
+    const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
+    const existingWinner = myPredictionByGameId[gameId]?.winner ?? null;
+    const homePalette = resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a");
+    const awayPalette = resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff");
+    const marketBias = g.marketBias as { homePct?: number; awayPct?: number } | undefined;
+    return {
+      gameId,
+      league: selectedLeague,
+      status: resolveGameStatus(g),
+      score: resolveGameScore(g),
+      fallbackMarketBias:
+        marketBias?.homePct != null && marketBias?.awayPct != null
+          ? { homePct: marketBias.homePct, awayPct: marketBias.awayPct }
+          : null,
+      homeColor: homePalette.primary,
+      awayColor: awayPalette.primary,
+      homeLabel: toCompactTeamName(g.league, homeName),
+      awayLabel: toCompactTeamName(g.league, awayName),
+      compact: selectedLeague === "wc",
+      userPredictionWinner: winner ?? existingWinner,
+    };
+  }, [selectedGame, selectedLeague, winner, myPredictionByGameId]);
 
   async function openPredictModal(targetGame?: Record<string, unknown>) {
     const sourceGame = targetGame ?? selectedGame;
@@ -1017,7 +1253,9 @@ export default function GamesHomeScreen({
   }
 
   return (
-    <View style={styles.card}>
+    <View style={styles.screenRoot}>
+      <GamesPageBackgroundNative />
+      <View style={screenShellStyle}>
       <ScrollView
         ref={mainScrollRef}
         style={styles.mainScroll}
@@ -1025,50 +1263,63 @@ export default function GamesHomeScreen({
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
       >
-      <UniterzBrandShelfNative />
-      <View style={styles.topControlRow}>
-        <View style={styles.leagueRow}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.leagueChip,
-              pressed && styles.leagueChipPressed,
-            ]}
-            onPress={() => {
-              const currentIdx = LEAGUE_OPTIONS.findIndex(
-                (option) => option.id === selectedLeague
-              );
-              const nextIdx =
-                currentIdx < 0 ? 0 : (currentIdx + 1) % LEAGUE_OPTIONS.length;
-              setCardListEntranceVariant("full");
-              setSelectedLeague(LEAGUE_OPTIONS[nextIdx].id);
-            }}
-          >
-            <Text style={styles.leagueChipText}>
-              {selectedLeagueOption.label}
-            </Text>
-          </Pressable>
-        </View>
-        <View style={styles.topActionsRow}>
-          <Pressable style={styles.filterButton}>
-            <Text style={styles.filterButtonText}>{t.filter}</Text>
-          </Pressable>
-          {selectedLeague === "nba" ? (
-            <Pressable
-              style={styles.bracketButton}
-              onPress={() =>
-                Alert.alert(
-                  language === "en" ? "Coming soon" : "準備中",
-                  language === "en"
-                    ? "Bracket screen will be connected in native flow."
-                    : "Bracket画面のネイティブ導線は次フェーズで接続します。"
-                )
-              }
+      <View style={styles.gamesHeaderShell}>
+        <View style={styles.gamesHeaderTitleRow}>
+          <View style={styles.gamesHeaderSideLeft}>
+            <Animated.View
+              key={`menu-${gamesMotionKey}`}
+              entering={webGamesMotion ? gamesTopBarMenuEntering : undefined}
             >
-              <Text style={styles.bracketButtonText}>{t.bracket}</Text>
-            </Pressable>
-          ) : null}
+              <CyberMenuButton
+                size="md"
+                accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
+                onPress={() => setMenuOpen(true)}
+                badge={
+                  showWcTabBadge ? (
+                    <View style={styles.menuWcBadge}>
+                      <Text style={styles.menuWcBadgeText}>!</Text>
+                    </View>
+                  ) : null
+                }
+              />
+            </Animated.View>
+          </View>
+          <View style={styles.gamesHeaderTitleCenter} pointerEvents="none">
+            <Animated.Text
+              key={`league-title-${gamesMotionKey}`}
+              entering={webGamesMotion ? gamesLeagueTitleEntering : undefined}
+              style={styles.gamesHeaderLeagueTitle}
+              numberOfLines={1}
+            >
+              {leagueHeaderLabel}
+            </Animated.Text>
+          </View>
+          <View style={styles.gamesHeaderSideRight}>
+            <Animated.View
+              key={`filter-${gamesMotionKey}`}
+              entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
+            >
+              <GamesHeaderFilterButtonNative
+                active={filterActive}
+                onPress={() => setFilterOpen(true)}
+                accessibilityLabel={t.filter}
+              />
+            </Animated.View>
+            {selectedLeague === "nba" ? (
+              <Animated.View
+                key={`bracket-${gamesMotionKey}`}
+                entering={webGamesMotion ? gamesTopBarBracketEntering : undefined}
+              >
+                <Pressable
+                  style={styles.bracketButton}
+                  onPress={() => navigation.navigate("PlayoffBracketView")}
+                >
+                  <Text style={styles.bracketButtonText}>{t.bracket}</Text>
+                </Pressable>
+              </Animated.View>
+            ) : null}
+          </View>
         </View>
-      </View>
       {loading ? (
         <View style={styles.dayStripSkeletonBlock}>
           <View style={styles.monthHeaderRow}>
@@ -1085,74 +1336,27 @@ export default function GamesHomeScreen({
           </View>
         </View>
       ) : (
-        <>
-          <View style={styles.monthHeaderRow}>
-            <Pressable style={styles.dayButton} onPress={goPrevDayManually}>
-              <Text style={styles.dayButtonText}>←</Text>
-            </Pressable>
-            <View style={styles.monthHeaderCenter}>
-              <Text style={styles.monthHeaderText}>{monthLabel}</Text>
-            </View>
-            <Pressable style={styles.dayButton} onPress={goNextDayManually}>
-              <Text style={styles.dayButtonText}>→</Text>
-            </Pressable>
-          </View>
-          <View style={styles.dayStripContent}>
-            {dayStripDates.map((day, chipIdx) => {
-              const selected = isSameLocalDay(day, selectedDate);
-              const isTodayChip = isSameLocalDay(day, today);
-              const dayNum = day.getDate();
-              return (
-                <Animated.View
-                  key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
-                  entering={dayStripChipEnter(chipIdx)}
-                  style={styles.dayStripChipAnimWrap}
-                >
-                  <Pressable
-                    style={[
-                      styles.dayChip,
-                      selected && styles.dayChipActive,
-                      isTodayChip && !selected && styles.dayChipToday,
-                      selected && styles.dayChipSelectedTransform,
-                    ]}
-                    onPress={() => selectDateManually(day)}
-                  >
-                    <LinearGradient
-                      colors={
-                        selected
-                          ? ["rgba(34,211,238,0.42)", "rgba(8,145,178,0.36)"]
-                          : ["rgba(255,255,255,0.08)", "rgba(255,255,255,0.03)"]
-                      }
-                      start={{ x: 0.5, y: 0 }}
-                      end={{ x: 0.5, y: 1 }}
-                      style={StyleSheet.absoluteFillObject}
-                    />
-                    <LinearGradient
-                      colors={[
-                        selected
-                          ? "rgba(255,255,255,0.12)"
-                          : "rgba(255,255,255,0.07)",
-                        "rgba(255,255,255,0)",
-                      ]}
-                      locations={selected ? [0, 0.55] : [0, 0.6]}
-                      start={{ x: 0.5, y: 0 }}
-                      end={{ x: 0.5, y: 1 }}
-                      pointerEvents="none"
-                      style={StyleSheet.absoluteFillObject}
-                    />
-                    <Text
-                      style={[styles.dayChipDate, selected && styles.dayChipDateActive]}
-                    >
-                      {dayNum}
-                    </Text>
-                  </Pressable>
-                </Animated.View>
-              );
-            })}
-          </View>
-        </>
+        <GamesDateNavigatorNative
+          dates={dayStripDates}
+          selectedDate={selectedDate}
+          timeZone={TIMEZONE_JST}
+          language={language}
+          onSelectDate={selectDateManually}
+          onPrevMonth={goPrevMonth}
+          onNextMonth={goNextMonth}
+          onMoveToToday={moveToTodayGameDay}
+          canPrevMonth={adjacentMonthHasGames.prev}
+          canNextMonth={adjacentMonthHasGames.next}
+          monthNavBusy={adjacentMonthHasGames.loading}
+          entranceEnabled={dayStripEntranceEnabled}
+          reduceMotion={reduceMotion}
+          motionKey={gamesMotionKey}
+        />
       )}
+      </View>
 
+      <GestureDetector gesture={pageSwipeGesture}>
+      <View>
       {loading ? (
         <View style={styles.skeletonList}>
           {SKELETON_ROWS.map((row) => (
@@ -1176,9 +1380,18 @@ export default function GamesHomeScreen({
       ) : null}
 
       {!loading && !error ? (
-        <View>
+        <Animated.View
+          key={`sched-${scheduleBlockKey}`}
+          entering={
+            webGamesMotion
+              ? richScheduleMotion
+                ? gamesScheduleShellPageEntering()
+                : gamesScheduleShellDaySwitchEntering()
+              : undefined
+          }
+        >
           <GameCardList
-            games={games}
+            games={filteredGames}
             entranceVariant={cardListEntranceVariant}
             predictedGameIds={predictedGameIds}
             language={language}
@@ -1197,8 +1410,10 @@ export default function GamesHomeScreen({
             getTeamRecordLabel={formatSideRecord}
             resolveTeamJerseyPalette={resolveTeamJerseyPalette}
           />
-        </View>
+        </Animated.View>
       ) : null}
+      </View>
+      </GestureDetector>
       </ScrollView>
 
       <GameDetailModal
@@ -1221,6 +1436,12 @@ export default function GamesHomeScreen({
         language={language}
         t={t}
         openPredictModal={() => void openPredictModal()}
+        onOpenCommunityPredictions={() => {
+          const id = String(selectedGame?.id ?? "");
+          if (!id) return;
+          setSelectedGame(null);
+          navigation.navigate("GamePredictions", { gameId: id });
+        }}
         onClose={() => {
           setSelectedGame(null);
         }}
@@ -1254,6 +1475,8 @@ export default function GamesHomeScreen({
           selectedGame != null && isGameStarted(selectedGame)
         }
         predictData={predictModalData}
+        overlayMarketBar={predictOverlayMarketBar}
+        language={language}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal
@@ -1269,6 +1492,9 @@ export default function GamesHomeScreen({
           kickoff={nextGameAfterPostDisplay.kickoff}
           homePalette={nextGameAfterPostDisplay.homePalette}
           awayPalette={nextGameAfterPostDisplay.awayPalette}
+          leagueRaw={nextGameAfterPost.league}
+          homeSide={nextGameAfterPost.home}
+          awaySide={nextGameAfterPost.away}
           homeRecordLine={nextGameAfterPostDisplay.homeRecordLine}
           awayRecordLine={nextGameAfterPostDisplay.awayRecordLine}
           showSeriesRow={nextGameAfterPostDisplay.showSeriesRow}
@@ -1278,19 +1504,114 @@ export default function GamesHomeScreen({
           onNo={(d) => void handleNextGameModalNo(d)}
         />
       ) : null}
+      <GamesTeamFilterPanelNative
+        visible={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        language={language}
+        teams={scheduleTeams}
+        initial={gamesFilter}
+        onApply={setGamesFilter}
+      />
+      <SideMenuDrawerNative open={menuOpen} onClose={() => setMenuOpen(false)}>
+        <GamesDrawerMenuNative
+          league={selectedLeague === "wc" ? "wc" : "nba"}
+          language={language}
+          onSelectNba={() => {
+            setSelectedLeague("nba");
+            setMenuOpen(false);
+          }}
+          onSelectWorldCup={() => {
+            setSelectedLeague("wc");
+            setMenuOpen(false);
+          }}
+        />
+      </SideMenuDrawerNative>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+    backgroundColor: GAMES_PAGE_BG_TOP,
+  },
   card: {
     width: "100%",
     flex: 1,
     backgroundColor: "transparent",
-    paddingHorizontal: spacing.xs,
-    paddingTop: 2,
+    paddingHorizontal: 0,
     paddingBottom: spacing.xs,
     gap: 6,
+  },
+  gamesHeaderShell: {
+    marginBottom: 8,
+    marginTop: 0,
+    width: "100%",
+    gap: 4,
+  },
+  gamesHeaderTitleRow: {
+    position: "relative",
+    width: "100%",
+    height: GAMES_HEADER_CONTROL_HEIGHT,
+  },
+  gamesHeaderSideLeft: {
+    position: "absolute",
+    left: 8,
+    top: 0,
+    height: GAMES_HEADER_CONTROL_HEIGHT,
+    justifyContent: "center",
+    zIndex: 20,
+  },
+  gamesHeaderSideRight: {
+    position: "absolute",
+    right: 8,
+    top: 0,
+    height: GAMES_HEADER_CONTROL_HEIGHT,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6,
+    zIndex: 20,
+  },
+  gamesHeaderTitleCenter: {
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: [{ translateX: -72 }, { translateY: -10 }],
+    width: 144,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  gamesHeaderLeagueTitle: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 20,
+    lineHeight: 22,
+    fontFamily: DISPLAY_FONT_FAMILY,
+    letterSpacing: 7,
+    textTransform: "uppercase",
+    textAlign: "center",
+  },
+  menuWcBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#fbbf24",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#fbbf24",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  menuWcBadgeText: {
+    color: "#451a03",
+    fontSize: 10,
+    fontWeight: "900",
+    lineHeight: 11,
   },
   /** DayStrip チップ単位の进入ラッパー（Web motion.div 相当） */
   dayStripChipAnimWrap: {
@@ -1299,6 +1620,7 @@ const styles = StyleSheet.create({
   },
   mainScroll: {
     flex: 1,
+    backgroundColor: "transparent",
   },
   mainScrollContent: {
     paddingBottom: 0,
@@ -1378,7 +1700,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   bracketButton: {
-    minHeight: 28,
+    minHeight: GAMES_HEADER_CONTROL_HEIGHT,
     borderRadius: 9,
     borderWidth: 1,
     borderColor: "rgba(31,111,235,0.45)",
@@ -1466,8 +1788,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
   },
   dayStripSkeletonChip: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
     borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.06)",
   },
@@ -1495,14 +1817,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 18,
+    gap: 12,
     paddingVertical: 2,
     paddingBottom: 3,
   },
-  // Web app/component/games/DayStrip と同じ円＋枠＋縦グラデ
+  /** 試合日が多いとき横スクロール（Web DayStrip 相当） */
+  dayStripScrollContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 2,
+    paddingBottom: 3,
+    paddingHorizontal: spacing.sm,
+  },
   dayChip: {
-    width: 42,
-    height: 42,
+    width: 48,
+    height: 48,
     borderRadius: 999,
     borderWidth: 2,
     borderColor: "rgba(255,255,255,0.16)",
@@ -1626,58 +1956,37 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
   },
   listArea: {
-    marginTop: 8,
+    marginTop: 4,
   },
   listContent: {
-    gap: 6,
+    gap: 10,
     paddingBottom: spacing.xl,
     paddingTop: 0,
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
   },
-  /** パディングは `cardPressableBody`。方眼・ベースは `cardFineShellBackdrop` でシェル全面 */
-  gameCardShell: {
+  gameCardOuter: {
     position: "relative",
-    /** 3D pop の rotateX 時に角がクリップされないよう visible（角丸クリップは backdrop 側） */
     overflow: "visible",
-    width: "92%",
+    width: "100%",
+    maxWidth: MOBILE_GAMES_CARD_MAX_WIDTH,
     alignSelf: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    borderRadius: 20,
-    /** 中継カード外周（内側 #080c12 と馴染む） */
-    backgroundColor: "rgba(6,9,14,0.98)",
-    minHeight: 148,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
-    elevation: 7,
   },
-  /** 角丸内いっぱいに方眼（CTA 帯まで含むシェル全面） */
   cardFineShellBackdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
-    borderRadius: 20,
     overflow: "hidden",
   },
-  /** 角丸内いっぱいに方眼（パディングの外側まで） */
-  cardGridUnderlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
-  /** 試合テキスト・CTA の余白（中継カード内側パディングは `cardFineInteriorContent`） */
   cardPressableBody: {
     flex: 1,
     zIndex: 1,
     backgroundColor: "transparent",
-    paddingHorizontal: spacing.sm,
-    paddingTop: 4,
-    paddingBottom: 3,
-    gap: 4,
+    paddingHorizontal: 8,
+    paddingTop: 0,
+    paddingBottom: 0,
+    gap: 2,
   },
-  /** 一覧：方眼下のラウンド行〜リーグ線までの余白（シェル全面は `MatchCardFineBackdrop`） */
   cardFineInteriorContent: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
     paddingTop: 4,
     paddingBottom: 2,
     gap: 2,
@@ -1731,22 +2040,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 4,
-    marginBottom: 3,
+    marginTop: 12,
+    marginBottom: 0,
     gap: spacing.xs,
   },
-  /** MatchCard mc-round（一覧：やや大きめ・上余白でやや下げる） */
+  /** Web mobile dense `mt-3 text-xl` */
   roundLabelText: {
     flex: 1,
     color: "rgba(241,245,255,0.95)",
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: "800",
-    lineHeight: 24,
-    letterSpacing: 1,
+    lineHeight: 22,
+    letterSpacing: 1.6,
     textAlign: "center",
     includeFontPadding: false,
     textTransform: "uppercase",
-    fontFamily: DISPLAY_FONT_FAMILY,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
   },
   matchupGrid: {
     flexDirection: "row",
@@ -1784,18 +2093,26 @@ const styles = StyleSheet.create({
     fontFamily: DISPLAY_FONT_FAMILY,
   },
   teamMark: {
-    width: 48,
-    height: 48,
+    width: 62,
+    height: 62,
     borderRadius: 0,
     borderWidth: 0,
     backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
   },
+  /** WC 国旗: Web dense `w-[4.5rem] h-[3rem] mb-2` */
+  teamMarkFlag: {
+    width: 72,
+    height: 48,
+    marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   /** MobileMatchCard NBA 等（一覧・プレビューと揃えてややコンパクト） */
   teamNameMain: {
     color: colors.textPrimary,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "800",
     textAlign: "center",
     letterSpacing: 0.5,
@@ -1804,19 +2121,22 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     includeFontPadding: false,
     textTransform: "uppercase",
-    fontFamily: DISPLAY_FONT_FAMILY,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
     maxWidth: "100%",
+  },
+  teamNameMainWc: {
+    paddingRight: 0.5,
   },
   /** モバイル MatchCard: mc-record、Oxanium（チーム名に合わせて一段小さく） */
   teamRecordText: {
-    color: "rgba(226,232,240,0.82)",
-    fontSize: 10,
+    color: "rgba(226,232,240,0.7)",
+    fontSize: 12,
     fontWeight: "700",
-    lineHeight: 11,
-    marginTop: -1,
+    lineHeight: 12,
+    marginTop: 2,
     letterSpacing: 0.2,
     includeFontPadding: false,
-    fontFamily: NUMERIC_FONT_FAMILY,
+    fontFamily: MATCH_CARD_METRIC_FONT,
   },
   centerColumn: {
     flex: 1.05,
@@ -2074,36 +2394,54 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  /** スコア行：MatchCard モバイルの text-xl 相当（チーム名 15px との釣り合い重視） */
+  /** スコア行：MatchCard モバイル dense `text-lg` 相当 */
   centerTextScore: {
     textAlign: "center",
   },
+  centerTextScoreWc: {
+    marginTop: 2,
+  },
   centerTextScoreNum: {
     color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "800",
-    lineHeight: 22,
+    fontSize: 18,
+    fontWeight: "900",
+    fontStyle: "italic",
+    lineHeight: 20,
     includeFontPadding: false,
     fontVariant: ["tabular-nums"],
-    fontFamily: NUMERIC_FONT_FAMILY,
+    fontFamily: MATCH_CARD_SCORE_FONT,
     textShadowColor: "rgba(0,0,0,0.4)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  centerScoreDash: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 20,
-    fontWeight: "600",
-    lineHeight: 22,
-    fontFamily: NUMERIC_FONT_FAMILY,
+  centerTextScoreNumWc: {
+    fontSize: 22,
+    lineHeight: 24,
   },
-  /** Qtr + 残り、または Final+OT */
+  centerScoreDash: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 18,
+    fontWeight: "900",
+    fontStyle: "italic",
+    lineHeight: 20,
+    fontFamily: MATCH_CARD_SCORE_FONT,
+  },
+  centerScoreDashWc: {
+    fontSize: 22,
+    lineHeight: 24,
+  },
+  /** Qtr + 残り、または Final+OT（Web `text-xs opacity-80`） */
   centerSubline: {
-    color: "rgba(255,255,255,0.78)",
+    color: "rgba(255,255,255,0.8)",
     fontSize: 12,
     lineHeight: 14,
     textAlign: "center",
     includeFontPadding: false,
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+  },
+  centerSublineWc: {
+    fontSize: 11,
+    opacity: 0.8,
   },
   liveMetaText: {
     color: "#a8dbff",
@@ -2119,6 +2457,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     gap: 4,
   },
+  liveScoreStack: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    minHeight: 44,
+  },
   liveMarkPill: liveMarkPillCyberBase,
   liveMarkText: liveMarkTextCyberBase,
   cardCountdownText: {
@@ -2133,13 +2477,12 @@ const styles = StyleSheet.create({
   leagueDivider: {
     height: 2,
     width: "100%",
-    borderRadius: 999,
     marginTop: "auto",
-    shadowColor: "rgb(34, 211, 238)",
+    shadowColor: "rgb(0, 245, 255)",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    elevation: 3,
   },
   /** MatchCard: h-8 ≈ 32, rounded-md = 6, 枠は style ではなくグラデ（Web に合わせ枠なし） */
   cardAction: {

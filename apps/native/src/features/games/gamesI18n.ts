@@ -53,6 +53,7 @@ export function getGamesTexts(language: GamesLanguage) {
       /** 予想済み要約からスコア入力へ */
       editScoresCta: "Edit",
       makePrediction: "Predict",
+      communityPredictions: "Community picks",
       close: "Close",
       predictInput: "Prediction Input",
       updatedAt: "Updated",
@@ -146,6 +147,7 @@ export function getGamesTexts(language: GamesLanguage) {
     /** 予想済み要約からスコア入力へ */
     editScoresCta: "修正",
     makePrediction: "予想する",
+    communityPredictions: "コミュニティ予想",
     close: "閉じる",
     predictInput: "予想入力",
     updatedAt: "最終更新",

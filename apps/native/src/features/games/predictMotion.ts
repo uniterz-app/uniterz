@@ -5,6 +5,13 @@ import {
   FadeOut,
   FadeOutDown,
 } from "react-native-reanimated";
+import {
+  GAMES_DAY_SWITCH_ROW_FROM_Y,
+  GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS,
+  GAMES_DAY_SWITCH_ROW_STAGGER_MS,
+  GAMES_DAY_SWITCH_ROW_TRANSLATE_MS,
+} from "./gamesCyberMotion";
+import { gamesDaySwitchEaseBezier } from "./gamesPageMotion";
 
 /**
  * モバイル Web `PredictionFormV2` の framer 設定に合わせる
@@ -143,24 +150,19 @@ export function gamesDayStripChipEnter(index: number) {
     });
 }
 
-/** 試合一覧カード：上から index 順にスタッガー（ms） */
-const SCHEDULE_CARD_STAGGER_MS = 44;
-const SCHEDULE_CARD_STAGGER_CAP_MS = 320;
-const SCHEDULE_CARD_ENTER_MS = 420;
-
-const scheduleCardEmergingEase = Easing.out(Easing.cubic);
-
 /**
- * 試合一覧の入場：手前に「浮き出す」（奥寄り・小さめから不透明度とスケールで復帰）。
- * `GamesHomeScreen` / `ResultHomeScreen` のカード行で共通利用。
+ * 試合一覧の daySwitch 入場（Web `ScheduleList.scheduleItem` daySwitch 相当）
  */
 export function gamesScheduleCardDaySwitchEnter(index: number) {
-  const delayMs = Math.min(index * SCHEDULE_CARD_STAGGER_MS, SCHEDULE_CARD_STAGGER_CAP_MS);
-  return FadeIn.duration(SCHEDULE_CARD_ENTER_MS)
+  const delayMs = Math.min(
+    index * GAMES_DAY_SWITCH_ROW_STAGGER_MS,
+    GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS
+  );
+  return FadeInDown.duration(GAMES_DAY_SWITCH_ROW_TRANSLATE_MS)
     .delay(delayMs)
-    .easing(scheduleCardEmergingEase)
+    .easing(gamesDaySwitchEaseBezier)
     .withInitialValues({
       opacity: 0,
-      transform: [{ translateY: 26 }, { scale: 0.86 }],
+      transform: [{ translateY: GAMES_DAY_SWITCH_ROW_FROM_Y }],
     });
 }

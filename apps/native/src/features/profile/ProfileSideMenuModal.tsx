@@ -28,6 +28,7 @@ import {
   profileShellGridPathD,
 } from "./profileShellGridNative";
 import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 
 type Lang = "ja" | "en";
 
@@ -43,8 +44,20 @@ type Props = {
   uid: string | null | undefined;
   /** Firestore users.plan と同期した表示用 */
   plan: "free" | "pro";
-  /** ユーザー向け `/mobile/*` はネイティブ画面で開く（Web と同 UI 相当） */
-  onOpenInApp: (page: ProfileMobileOverlayKind) => void;
+  /** in-app 画面を開く */
+  onOpenInApp: (page:
+    | "badges"
+    | "announcements"
+    | "plan"
+    | "subscribe"
+    | "guidelines"
+    | "help"
+    | "terms"
+    | "contact"
+    | "privacy"
+    | "password"
+    | "featureRequest"
+    | "electronicNotice") => void;
 };
 
 const PANEL_W = Math.min(300, Math.round(Dimensions.get("window").width * 0.86));
@@ -119,6 +132,10 @@ export default function ProfileSideMenuModal({
         guidelines: "ガイドライン",
         terms: "利用規約",
         contact: "お問い合わせ",
+        privacy: "プライバシーポリシー",
+        password: "パスワード変更",
+        featureRequest: "機能リクエスト",
+        electronicNotice: "電子公告",
         logout: "ログアウト",
         needBase: "Web の URL（EXPO_PUBLIC_UNITERZ_API_BASE_URL）が未設定です。",
         adminDash: "管理ダッシュボード",
@@ -141,6 +158,10 @@ export default function ProfileSideMenuModal({
         guidelines: "Community Guidelines",
         terms: "Terms of Service",
         contact: "Contact",
+        privacy: "Privacy Policy",
+        password: "Change Password",
+        featureRequest: "Feature Request",
+        electronicNotice: "Electronic Notice",
         logout: "Log out",
         needBase: "Set EXPO_PUBLIC_UNITERZ_API_BASE_URL to open web pages.",
         adminDash: "Admin Dashboard",
@@ -160,7 +181,21 @@ export default function ProfileSideMenuModal({
     openUrl(`${apiBase}${path}`);
   }
 
-  function openUserPage(page: ProfileMobileOverlayKind) {
+  function openUserPage(
+    page:
+      | "badges"
+      | "announcements"
+      | "plan"
+      | "subscribe"
+      | "guidelines"
+      | "help"
+      | "terms"
+      | "contact"
+      | "privacy"
+      | "password"
+      | "featureRequest"
+      | "electronicNotice"
+  ) {
     onClose();
     onOpenInApp(page);
   }
@@ -185,9 +220,7 @@ export default function ProfileSideMenuModal({
             <BlurView
               intensity={Platform.OS === "ios" ? 18 : 14}
               tint="dark"
-              {...(Platform.OS === "android"
-                ? { blurMethod: "dimezisBlurViewSdk31Plus" as const, blurReductionFactor: 4 }
-                : {})}
+              {...nativeBlurViewExtraProps()}
               style={StyleSheet.absoluteFillObject}
             />
           )}
@@ -210,9 +243,7 @@ export default function ProfileSideMenuModal({
               <BlurView
                 intensity={Platform.OS === "ios" ? 28 : 22}
                 tint="dark"
-                {...(Platform.OS === "android"
-                  ? { blurMethod: "dimezisBlurViewSdk31Plus" as const, blurReductionFactor: 4 }
-                  : {})}
+                {...nativeBlurViewExtraProps()}
                 style={StyleSheet.absoluteFillObject}
               />
               <LinearGradient
@@ -295,7 +326,7 @@ export default function ProfileSideMenuModal({
                   icon="help-circle-outline"
                   label={labels.help}
                   dense
-                  onPress={() => openUserPage({ webview: "/mobile/help" })}
+                  onPress={() => openUserPage("help")}
                 />
                 <SideMenuRow
                   icon="account-group-outline"
@@ -307,13 +338,37 @@ export default function ProfileSideMenuModal({
                   icon="file-document-outline"
                   label={labels.terms}
                   dense
-                  onPress={() => openUserPage({ webview: "/mobile/terms" })}
+                  onPress={() => openUserPage("terms")}
+                />
+                <SideMenuRow
+                  icon="shield-lock-outline"
+                  label={labels.privacy}
+                  dense
+                  onPress={() => openUserPage("privacy")}
+                />
+                <SideMenuRow
+                  icon="key-outline"
+                  label={labels.password}
+                  dense
+                  onPress={() => openUserPage("password")}
+                />
+                <SideMenuRow
+                  icon="lightbulb-on-outline"
+                  label={labels.featureRequest}
+                  dense
+                  onPress={() => openUserPage("featureRequest")}
                 />
                 <SideMenuRow
                   icon="email-outline"
                   label={labels.contact}
                   dense
-                  onPress={() => openUserPage({ webview: "/mobile/contact" })}
+                  onPress={() => openUserPage("contact")}
+                />
+                <SideMenuRow
+                  icon="newspaper-variant-multiple-outline"
+                  label={labels.electronicNotice}
+                  dense
+                  onPress={() => openUserPage("electronicNotice")}
                 />
 
                 {isAdmin ? (

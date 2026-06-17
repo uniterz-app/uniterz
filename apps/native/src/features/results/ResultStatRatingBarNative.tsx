@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { Canvas, Group, RoundedRect } from "@shopify/react-native-skia";
+import { rankingMetricAccent } from "../../../../../lib/rankings/rankingMetricAccent";
 
-const SEGMENTS = 5;
+const SEGMENTS = 10;
 
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
@@ -13,32 +14,29 @@ function segmentFill(overallRatio: number, index: number, segmentCount: number) 
   return clamp01(pos - index);
 }
 
+/** Web `ResultStatRatingBar` の metricKey → ランキング指標キー */
+function resultMetricToRankingKey(
+  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3"
+): string {
+  switch (metricKey) {
+    case "scorePrecision":
+      return "marginPrecision";
+    case "upsetPoints":
+      return "upsetScore";
+    case "pointsV3":
+      return "totalScore";
+    default:
+      return "totalScore";
+  }
+}
+
 type BarPalette = { core: string; edge: string };
 
-/** Web `ResultStatRatingBar` の paletteForRatio に相当 */
-function paletteForRatio(r: number): BarPalette {
-  const x = clamp01(r);
-  if (x < 0.2) {
-    return {
-      core: "rgba(34,211,238,0.22)",
-      edge: "rgba(15,118,110,0.55)",
-    };
-  }
-  if (x < 0.45) {
-    return {
-      core: "rgba(34,211,238,0.88)",
-      edge: "rgba(8,145,178,0.92)",
-    };
-  }
-  if (x < 0.7) {
-    return {
-      core: "rgba(129,140,248,0.9)",
-      edge: "rgba(59,130,246,0.95)",
-    };
-  }
+function paletteForMetric(metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3"): BarPalette {
+  const accent = rankingMetricAccent(resultMetricToRankingKey(metricKey));
   return {
-    core: "rgba(232,121,249,0.92)",
-    edge: "rgba(168,85,247,0.95)",
+    core: accent.bar.hi,
+    edge: accent.bar.lo,
   };
 }
 
@@ -48,15 +46,20 @@ type Props = {
   animateMs?: number;
   delayMs?: number;
   size?: "sm" | "md";
+  metricKey?: "scorePrecision" | "upsetPoints" | "pointsV3";
 };
 
 /**
- * Web `ResultStatRatingBar` のネイティブ版（Skia でセグメント＋縦グラデ、外枠は従来どおりスキュー）
+ * Web `ResultStatRatingBar` / `CyberSlantedSegBar` のネイティブ版
  */
-export default function ResultStatRatingBarNative({ ratio, size = "md" }: Props) {
+export default function ResultStatRatingBarNative({
+  ratio,
+  size = "md",
+  metricKey,
+}: Props) {
   const r = clamp01(ratio);
-  const pal = paletteForRatio(r);
-  const h = size === "sm" ? 7 : 9;
+  const pal = paletteForMetric(metricKey);
+  const h = size === "sm" ? 9 : 11;
   const [rowW, setRowW] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -66,7 +69,7 @@ export default function ResultStatRatingBarNative({ ratio, size = "md" }: Props)
 
   const layout = useMemo(() => {
     if (rowW <= 0) return null;
-    const gap = 1;
+    const gap = 4;
     const inner = rowW - gap * (SEGMENTS - 1);
     const segW = inner / SEGMENTS;
     return { segW, gap, h };
@@ -91,7 +94,6 @@ export default function ResultStatRatingBarNative({ ratio, size = "md" }: Props)
                     r={2}
                     color="rgba(255,255,255,0.06)"
                   />
-                  {/* Skia 2.x では子 LinearGradient が確実に効かない環境があるため、縦グラデは edge→core の2枚で近似 */}
                   {fillW > 0.5 ? (
                     <Group>
                       <RoundedRect
@@ -126,7 +128,7 @@ const styles = StyleSheet.create({
   skewWrap: {
     flex: 1,
     minWidth: 0,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   rowInner: {
     flexDirection: "row",

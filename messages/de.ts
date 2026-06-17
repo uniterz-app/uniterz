@@ -706,6 +706,7 @@ const de: Messages = {
     captainLabel: "Captain",
     captainNotConfirmed: "Not officially confirmed",
     predictedLineup: "Voraussichtliche Aufstellung",
+    confirmedLineup: "Bestätigte Aufstellung",
   },
 
   eventNotices: {

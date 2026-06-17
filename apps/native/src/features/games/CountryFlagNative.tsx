@@ -1,0 +1,67 @@
+import { Image, StyleSheet, View } from "react-native";
+import { teamIdToCountryName } from "../../../../../lib/wc/wcCountry";
+import { wcFlagImageUri } from "./wcFlagImageUri";
+
+export type CountryFlagVariant = "card" | "preview" | "nextModal";
+
+/** Web `MatchCard` / `PredictNextGameModal` の国旗枠サイズに合わせた 4:3 系 */
+const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }> =
+  {
+    card: { width: 72, height: 48 },
+    preview: { width: 88, height: 59 },
+    nextModal: { width: 53, height: 36 },
+  };
+
+type CountryFlagNativeProps = {
+  teamId?: string | null;
+  variant?: CountryFlagVariant;
+};
+
+/** WC 試合カード・予想モーダル用の国旗（Web `CountryFlag` 相当） */
+export default function CountryFlagNative({
+  teamId,
+  variant = "card",
+}: CountryFlagNativeProps) {
+  const { width, height } = VARIANT_SIZE[variant];
+  const uri = wcFlagImageUri(teamId);
+  const countryName = teamIdToCountryName(teamId, "en") ?? "Country flag";
+
+  if (!uri) {
+    return (
+      <View
+        style={[styles.placeholder, { width, height }]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
+    );
+  }
+
+  return (
+    <View style={[styles.outer, { width, height }]}>
+      <Image
+        source={{ uri }}
+        style={{ width, height }}
+        resizeMode="cover"
+        accessibilityLabel={countryName}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  outer: {
+    overflow: "hidden",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.42,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  placeholder: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 6,
+  },
+});

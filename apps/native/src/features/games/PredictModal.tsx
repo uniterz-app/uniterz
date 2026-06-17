@@ -15,11 +15,13 @@ import Animated, { useReducedMotion } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, spacing } from "../../theme/tokens";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import MatchCardOverlayMarketBarNative from "./MatchCardOverlayMarketBarNative";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import { PredictToolTabContent } from "./PredictToolTabContent";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
-import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
+import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import { LiveMarkPill } from "./LiveMarkPill";
 import {
   liveMarkPillCyberBase,
@@ -123,6 +125,23 @@ export type PredictModalMatchPreview = {
   seriesPair: { home: number; away: number } | null;
   homePalette: { primary: string; secondary: string };
   awayPalette: { primary: string; secondary: string };
+  leagueRaw: unknown;
+  homeSide: unknown;
+  awaySide: unknown;
+};
+
+export type PredictOverlayMarketBarProps = {
+  gameId: string;
+  league: string;
+  status: "scheduled" | "live" | "final";
+  score: { home: number; away: number } | null;
+  fallbackMarketBias?: { homePct: number; awayPct: number } | null;
+  homeColor: string;
+  awayColor: string;
+  homeLabel: string;
+  awayLabel: string;
+  compact?: boolean;
+  userPredictionWinner?: "home" | "away" | "draw" | null;
 };
 
 /** 一覧カードと同じ: 中央基準の 24px 方眼 */
@@ -179,10 +198,16 @@ function PredictMatchPreview({
   data,
   onClose,
   closeLabel,
+  overlayMarketBar,
+  language,
+  t,
 }: {
   data: PredictModalMatchPreview;
   onClose: () => void;
   closeLabel: string;
+  overlayMarketBar?: PredictOverlayMarketBarProps | null;
+  language: GamesLanguage;
+  t: GamesTexts;
 }) {
   const { centerBlock, seriesPair } = data;
   const homeC = data.homePalette.primary;
@@ -271,10 +296,12 @@ function PredictMatchPreview({
           <View style={s.matchPreviewCol}>
             <Text style={s.matchPreviewSideTag}>HOME</Text>
             <View style={s.matchPreviewJersey}>
-              <JerseyMarkAdaptive
-                accent={data.homePalette.primary}
-                accentEnd={data.homePalette.secondary}
-                size={48}
+              <MatchTeamMarkNative
+                leagueRaw={data.leagueRaw}
+                side={data.homeSide}
+                palette={data.homePalette}
+                jerseySize={48}
+                flagVariant="preview"
               />
             </View>
             <Text style={s.matchPreviewTeamName} numberOfLines={2}>
@@ -285,8 +312,14 @@ function PredictMatchPreview({
             ) : null}
           </View>
           <View style={s.matchPreviewCenter}>
-            {centerBlock.variant === "score" ? (
-              <>
+            {centerBlock.variant === "score" || centerBlock.variant === "liveScore" ? (
+              <View style={s.matchPreviewVsBlock}>
+                {centerBlock.variant === "liveScore" ? (
+                  <LiveMarkPill
+                    pillStyle={s.matchPreviewLivePill}
+                    textStyle={s.matchPreviewLivePillText}
+                  />
+                ) : null}
                 <Text style={s.matchPreviewScoreRow} numberOfLines={1}>
                   <Text style={s.matchPreviewScoreNum}>{centerBlock.home}</Text>
                   <Text style={s.matchPreviewScoreDash}> – </Text>
@@ -297,7 +330,18 @@ function PredictMatchPreview({
                     {centerBlock.subLine}
                   </Text>
                 ) : null}
-              </>
+                {seriesPair != null ? (
+                  <View style={s.matchPreviewSeriesRow}>
+                    <PlayoffSeriesScoreInline
+                      homeWins={seriesPair.home}
+                      awayWins={seriesPair.away}
+                      variant="preview"
+                    />
+                  </View>
+                ) : data.seriesLabel ? (
+                  <Text style={s.matchPreviewSeries}>{data.seriesLabel}</Text>
+                ) : null}
+              </View>
             ) : centerBlock.variant === "liveMark" ? (
               <View style={s.matchPreviewVsBlock}>
                 <LiveMarkPill
@@ -338,10 +382,12 @@ function PredictMatchPreview({
           <View style={s.matchPreviewCol}>
             <Text style={s.matchPreviewSideTag}>AWAY</Text>
             <View style={s.matchPreviewJersey}>
-              <JerseyMarkAdaptive
-                accent={data.awayPalette.primary}
-                accentEnd={data.awayPalette.secondary}
-                size={48}
+              <MatchTeamMarkNative
+                leagueRaw={data.leagueRaw}
+                side={data.awaySide}
+                palette={data.awayPalette}
+                jerseySize={48}
+                flagVariant="preview"
               />
             </View>
             <Text style={s.matchPreviewTeamName} numberOfLines={2}>
@@ -352,6 +398,15 @@ function PredictMatchPreview({
             ) : null}
           </View>
         </View>
+        {overlayMarketBar ? (
+          <View style={s.matchPreviewMarketBarWrap}>
+            <MatchCardOverlayMarketBarNative
+              {...overlayMarketBar}
+              language={language}
+              t={t}
+            />
+          </View>
+        ) : null}
       </View>
       <Pressable
         onPress={onClose}
@@ -407,6 +462,8 @@ type PredictModalProps = {
     formatGameDateMs: (ms: number) => string;
     isSoccerLeague: boolean;
   } | null;
+  overlayMarketBar?: PredictOverlayMarketBarProps | null;
+  language: GamesLanguage;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -431,9 +488,7 @@ function GlassPanel({
         <BlurView
           intensity={Platform.OS === "ios" ? 24 : 20}
           tint="dark"
-          {...(Platform.OS === "android"
-            ? { blurMethod: "dimezisBlurViewSdk31Plus" as const, blurReductionFactor: 4 }
-            : {})}
+          {...nativeBlurViewExtraProps()}
           style={StyleSheet.absoluteFillObject}
         />
       )}
@@ -476,6 +531,8 @@ export default function PredictModal({
   predictionEditLockedAfterKickoff = false,
   expandScoreFormWhenEditing = false,
   predictData = null,
+  overlayMarketBar = null,
+  language,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
 
@@ -604,9 +661,7 @@ export default function PredictModal({
               <BlurView
                 intensity={Platform.OS === "ios" ? 28 : 22}
                 tint="dark"
-                {...(Platform.OS === "android"
-                  ? { blurMethod: "dimezisBlurViewSdk31Plus" as const, blurReductionFactor: 4 }
-                  : {})}
+                {...nativeBlurViewExtraProps()}
                 style={StyleSheet.absoluteFillObject}
               />
             )}
@@ -642,6 +697,9 @@ export default function PredictModal({
                         data={matchPreview}
                         onClose={scheduleCloseAfterExitAnimation}
                         closeLabel={t.close}
+                        overlayMarketBar={overlayMarketBar}
+                        language={language}
+                        t={t}
                       />
                     </Animated.View>
                   ) : null}
@@ -1274,6 +1332,10 @@ const s = StyleSheet.create({
     width: "100%",
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  matchPreviewMarketBarWrap: {
+    marginTop: 8,
+    paddingBottom: 4,
   },
   matchPreviewBiasLeft: {
     position: "absolute",

@@ -710,6 +710,7 @@ const ja = {
     captainLabel: "キャプテン",
     captainNotConfirmed: "公式未確定",
     predictedLineup: "予想スタメン",
+    confirmedLineup: "確定スタメン",
   },
 
   eventNotices: {

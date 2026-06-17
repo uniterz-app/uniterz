@@ -710,6 +710,7 @@ const es: Messages = {
     captainLabel: "Capitán",
     captainNotConfirmed: "No confirmado oficialmente",
     predictedLineup: "Alineación prevista",
+    confirmedLineup: "Alineación confirmada",
   },
 
   eventNotices: {

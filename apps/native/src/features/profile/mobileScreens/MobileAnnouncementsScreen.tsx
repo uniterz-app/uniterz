@@ -183,7 +183,7 @@ export default function MobileAnnouncementsScreen({
           {detailLoading ? (
             <ActivityIndicator color="#67e8f9" style={{ marginTop: 24 }} />
           ) : detailSynthetic ? (
-            <SyntheticEventBody isJa={isJa} />
+            <SyntheticEventBody isJa={isJa} announcementId={detailId} />
           ) : detailRow ? (
             <RegularAnnouncementBody row={detailRow} isJa={isJa} apiBase={apiBase} />
           ) : (

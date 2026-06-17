@@ -76,7 +76,7 @@ export default function ProfileMobileStackModal({
             onClose={onClose}
             onUpgrade={() => onNavigate("subscribe")}
             apiBase={apiBase}
-            onOpenWebPath={openWebPath}
+            onNavigate={() => {}}
           />
         ) : kind === "subscribe" ? (
           <MobileProSubscribeScreen language={language} onClose={onClose} />

@@ -1,22 +1,22 @@
 import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
-import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
+import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
-import {
-  getMatchCardBlueCtaLinearGradient,
-  getMatchCardPredictedCtaLinearGradient,
-  MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY,
-} from "./matchCardCtaGradients";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { LiveMarkPill } from "./LiveMarkPill";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
-import { MatchCardFineBackdrop } from "./MatchCardFineInterior";
+import MatchListCyberClipNative from "./MatchListCyberClipNative";
+import MatchListCyberDecorNative from "./MatchListCyberDecorNative";
+import MatchListCyberGridNative from "./MatchListCyberGridNative";
+import MatchCardListCtaNative, {
+  type MatchCardListCtaVariant,
+} from "./MatchCardListCtaNative";
+import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
 import {
   useGameCardListRowEntrance,
   type GameCardEntranceVariant,
 } from "./useGameCardListRowEntrance";
-type ScreenStyles = Record<string, ViewStyle & TextStyle & ImageStyle>;
+type ScreenStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
 type GameCardListProps = {
   games: Array<Record<string, unknown>>;
@@ -99,6 +99,9 @@ function GameCardListRow(props: GameCardListRowProps) {
   const status = resolveGameStatus(game);
   const started = isGameStarted(game);
   const leagueColor = resolveLeagueColor(game.league);
+  const leagueKey = String(game.league ?? "").toLowerCase();
+  const showSideLabels = leagueKey !== "wc";
+  const isWcCard = leagueKey === "wc";
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
@@ -116,10 +119,18 @@ function GameCardListRow(props: GameCardListRowProps) {
       : isPredicted
       ? t.predicted
       : t.predict;
-  /** MatchCard / MatchCardWeb: final も isPredicted ? predicted : normal（青 radial） */
-  const actionFillGradient = isPredicted
-    ? getMatchCardPredictedCtaLinearGradient()
-    : getMatchCardBlueCtaLinearGradient();
+  const ctaVariant: MatchCardListCtaVariant =
+    status === "final"
+      ? "final"
+      : started
+      ? "live"
+      : isPredicted
+      ? "predicted"
+      : "normal";
+  const ctaDisplayLabel =
+    soccer && !started && !isPredicted
+      ? `${ctaLabel} / ${t.drawAvailable}`
+      : ctaLabel;
 
   const showPredictPrimaryGlow =
     status !== "final" && !started && !isPredicted;
@@ -146,51 +157,58 @@ function GameCardListRow(props: GameCardListRowProps) {
         if (reduceMotion) return;
         ent.pressed.value = withTiming(0, { duration: 160 });
       }}
-      style={[
-        styles.gameCardShell,
-        isPredicted && styles.gameCardShellPredicted,
-        ent.shellTransformStyle,
-        ent.borderStyle,
-      ]}
+      style={[styles.gameCardOuter, ent.shellTransformStyle]}
     >
-      <Animated.View
-        pointerEvents="box-none"
-        style={[ent.shellOpacityStyle, { flex: 1, minHeight: 0, position: "relative" }]}
+      <MatchListCyberClipNative
+        predicted={isPredicted}
+        strokeOpacityStyle={ent.borderStrokeStyle}
       >
-        <Animated.View pointerEvents="none" style={[styles.cardFineShellBackdrop, ent.gridLayerStyle]}>
-          <MatchCardFineBackdrop />
-        </Animated.View>
-        <View style={styles.cardPressableBody}>
+        <Animated.View
+          pointerEvents="box-none"
+          style={[ent.shellOpacityStyle, { flex: 1, minHeight: 0, position: "relative" }]}
+        >
+          <MatchCardEntryScanNative style={ent.scanLineStyle} />
+          <Animated.View pointerEvents="none" style={[styles.cardFineShellBackdrop, ent.gridLayerStyle]}>
+            <MatchListCyberGridNative />
+          </Animated.View>
+          <MatchListCyberDecorNative />
+          <View style={styles.cardPressableBody}>
           <View style={{ flex: 1, minHeight: 0 }}>
             <View style={styles.cardFineInteriorContent}>
-              <View style={styles.cardTopRow}>
-                {roundLabel ? (
-                  <Text style={styles.roundLabelText} numberOfLines={1}>
-                    {roundLabel}
-                  </Text>
-                ) : null}
-              </View>
+              <Animated.View style={ent.headerGroupStyle}>
+                <View style={styles.cardTopRow}>
+                  {roundLabel ? (
+                    <Text style={styles.roundLabelText} numberOfLines={1}>
+                      {roundLabel}
+                    </Text>
+                  ) : null}
+                </View>
+              </Animated.View>
+              <Animated.View style={ent.teamsGroupStyle}>
               <View style={styles.matchupGrid}>
                 <View style={styles.teamColumn}>
                   <View style={styles.teamTopGroup}>
-                    <Text style={styles.sideLabel}>HOME</Text>
+                    {showSideLabels ? <Text style={styles.sideLabel}>HOME</Text> : null}
                     <Animated.View style={ent.homeJerseyStyle}>
-                      <View style={styles.teamMark}>
-                        <JerseyMarkAdaptive
-                          accent={homePalette.primary}
-                          accentEnd={homePalette.secondary}
-                          size={48}
+                      <View style={isWcCard ? styles.teamMarkFlag : styles.teamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.home}
+                          palette={homePalette}
+                          jerseySize={62}
+                          flagVariant="card"
                         />
                       </View>
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                    <Text
+                      style={[styles.teamNameMain, isWcCard && styles.teamNameMainWc]}
+                      numberOfLines={1}
+                    >
                       {homeCompact}
                     </Text>
-                    {homeRecordLabel ? (
-                      <Text style={styles.teamRecordText}>{homeRecordLabel}</Text>
-                    ) : null}
+                    <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0)"}</Text>
                   </View>
                 </View>
 
@@ -204,11 +222,88 @@ function GameCardListRow(props: GameCardListRowProps) {
                             textStyle={styles.liveMarkText}
                           />
                         </View>
+                      ) : centerBlock.variant === "liveScore" ? (
+                        <View style={styles.liveScoreStack}>
+                          <LiveMarkPill
+                            pillStyle={styles.liveMarkPill}
+                            textStyle={styles.liveMarkText}
+                          />
+                          <Text
+                            style={[
+                              styles.centerTextScore,
+                              isWcCard && styles.centerTextScoreWc,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            <Text
+                              style={[
+                                styles.centerTextScoreNum,
+                                isWcCard && styles.centerTextScoreNumWc,
+                              ]}
+                            >
+                              {centerBlock.home}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.centerScoreDash,
+                                isWcCard && styles.centerScoreDashWc,
+                              ]}
+                            >
+                              –
+                            </Text>
+                            <Text
+                              style={[
+                                styles.centerTextScoreNum,
+                                isWcCard && styles.centerTextScoreNumWc,
+                              ]}
+                            >
+                              {centerBlock.away}
+                            </Text>
+                          </Text>
+                          {centerBlock.subLine ? (
+                            <Text
+                              style={[
+                                styles.centerSubline,
+                                isWcCard && styles.centerSublineWc,
+                              ]}
+                              numberOfLines={2}
+                            >
+                              {centerBlock.subLine}
+                            </Text>
+                          ) : null}
+                        </View>
                       ) : centerBlock.variant === "score" ? (
-                        <Text style={styles.centerTextScore} numberOfLines={1}>
-                          <Text style={styles.centerTextScoreNum}>{centerBlock.home}</Text>
-                          <Text style={styles.centerScoreDash}> – </Text>
-                          <Text style={styles.centerTextScoreNum}>{centerBlock.away}</Text>
+                        <Text
+                          style={[
+                            styles.centerTextScore,
+                            isWcCard && styles.centerTextScoreWc,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          <Text
+                            style={[
+                              styles.centerTextScoreNum,
+                              isWcCard && styles.centerTextScoreNumWc,
+                            ]}
+                          >
+                            {centerBlock.home}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.centerScoreDash,
+                              isWcCard && styles.centerScoreDashWc,
+                            ]}
+                          >
+                            –
+                          </Text>
+                          <Text
+                            style={[
+                              styles.centerTextScoreNum,
+                              isWcCard && styles.centerTextScoreNumWc,
+                            ]}
+                          >
+                            {centerBlock.away}
+                          </Text>
                         </Text>
                       ) : (
                         <Text style={styles.centerText} numberOfLines={1} ellipsizeMode="clip">
@@ -216,7 +311,13 @@ function GameCardListRow(props: GameCardListRowProps) {
                         </Text>
                       )}
                       {centerBlock.variant === "score" && centerBlock.subLine ? (
-                        <Text style={styles.centerSubline} numberOfLines={2}>
+                        <Text
+                          style={[
+                            styles.centerSubline,
+                            isWcCard && styles.centerSublineWc,
+                          ]}
+                          numberOfLines={2}
+                        >
                           {centerBlock.subLine}
                         </Text>
                       ) : null}
@@ -235,27 +336,31 @@ function GameCardListRow(props: GameCardListRowProps) {
 
                 <View style={styles.teamColumn}>
                   <View style={styles.teamTopGroup}>
-                    <Text style={styles.sideLabel}>AWAY</Text>
+                    {showSideLabels ? <Text style={styles.sideLabel}>AWAY</Text> : null}
                     <Animated.View style={ent.awayJerseyStyle}>
-                      <View style={styles.teamMark}>
-                        <JerseyMarkAdaptive
-                          accent={awayPalette.primary}
-                          accentEnd={awayPalette.secondary}
-                          size={48}
+                      <View style={isWcCard ? styles.teamMarkFlag : styles.teamMark}>
+                        <MatchTeamMarkNative
+                          leagueRaw={game.league}
+                          side={game.away}
+                          palette={awayPalette}
+                          jerseySize={62}
+                          flagVariant="card"
                         />
                       </View>
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
-                    <Text style={styles.teamNameMain} numberOfLines={1}>
+                    <Text
+                      style={[styles.teamNameMain, isWcCard && styles.teamNameMainWc]}
+                      numberOfLines={1}
+                    >
                       {awayCompact}
                     </Text>
-                    {awayRecordLabel ? (
-                      <Text style={styles.teamRecordText}>{awayRecordLabel}</Text>
-                    ) : null}
+                    <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0)"}</Text>
                   </View>
                 </View>
               </View>
+              </Animated.View>
               <View style={{ width: "100%", marginTop: "auto" }}>
                 <Animated.View
                   style={[styles.leagueDivider, { backgroundColor: leagueColor }, ent.dividerStyle]}
@@ -263,57 +368,12 @@ function GameCardListRow(props: GameCardListRowProps) {
               </View>
             </View>
           </View>
-          <Animated.View
-            style={[
-              styles.cardAction,
-              status === "final" && styles.cardActionFinal,
-              isPredicted && styles.cardActionPredicted,
-              started && status !== "final" && !isPredicted && styles.cardActionLive,
-              status !== "final" && !started && !isPredicted && styles.cardActionPredictPrimary,
-              ent.footerStyle,
-            ]}
-          >
-            <LinearGradient
-              pointerEvents="none"
-              colors={actionFillGradient.colors}
-              locations={actionFillGradient.locations}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.cardActionFill}
-            />
-            {!isPredicted ? (
-              <LinearGradient
-                pointerEvents="none"
-                colors={[...MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY.blue.colors]}
-                locations={[...MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY.blue.locations]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={[styles.cardActionFill, styles.cardActionMcVerticalLayer]}
-              />
-            ) : null}
-            {isPredicted ? (
-              <LinearGradient
-                pointerEvents="none"
-                colors={[...MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY.gray.colors]}
-                locations={[...MATCH_CARD_CTA_VERTICAL_DIM_OVERLAY.gray.locations]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={[styles.cardActionFill, styles.cardActionMcVerticalLayerGray]}
-              />
-            ) : null}
-            <View pointerEvents="none" style={styles.cardActionHairlineTop} />
-            <View pointerEvents="none" style={styles.cardActionHairlineBottom} />
-            <Text
-              style={[
-                styles.cardActionText,
-                status === "final" && styles.cardActionTextFinal,
-              ]}
-            >
-              {soccer && !started && !isPredicted ? `${ctaLabel} / ${t.drawAvailable}` : ctaLabel}
-            </Text>
+          <Animated.View style={ent.footerStyle}>
+            <MatchCardListCtaNative label={ctaDisplayLabel} variant={ctaVariant} />
           </Animated.View>
         </View>
-      </Animated.View>
+        </Animated.View>
+      </MatchListCyberClipNative>
     </AnimatedPressable>
   );
 }

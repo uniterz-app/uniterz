@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Timestamp,
   collection,
@@ -15,18 +15,22 @@ import {
   TIMEZONE_JST,
   getDayRangeInTimeZone,
   getPlusMinusDaysRangeInTimeZone,
+  parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "../../../../../lib/time/zonedTime";
+import { getWcGamesPageQueryRange } from "../../../../../lib/wc/wcGamesPageScheduleWindow";
 
-export type SupportedLeague = "nba" | "bj" | "j1" | "pl";
+export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
+
+const WC_GAMES_PAGE_WINDOW_LIMIT = 500;
 
 export type NativeGameRow = {
   id: string;
   [key: string]: unknown;
 };
 
-/** 選択日の JST 暦日から前後この日数をまとめて取得し、日付変更では再クエリしない */
-const GAME_DAYS_PLUS_MINUS = 20;
+/** 選択日の JST 暦日から前後この日数をまとめて取得（Web `useGameDays` と同じ ±10） */
+const GAME_DAYS_PLUS_MINUS = 10;
 const GAME_DAYS_WINDOW_QUERY_LIMIT = 500;
 
 function filterGamesForDay(rows: NativeGameRow[], day: Date): NativeGameRow[] {
@@ -79,7 +83,61 @@ function pickLandingDateAfterFetch(selectedBefore: Date, rows: NativeGameRow[]):
   return addDaysLocal(selectedBefore, 1);
 }
 
-function sortedUniqueDateKeysFromRows(rows: NativeGameRow[]): string[] {
+/** Web `GamesPage.findInitialGameDay` 相当 */
+function findInitialGameDay(params: {
+  gameDays: Date[];
+  stateSelected: Date | null;
+  todayKey: string;
+  timeZone: string;
+}): Date | null {
+  const { gameDays, stateSelected, todayKey, timeZone } = params;
+  if (!gameDays.length) return null;
+
+  if (stateSelected) {
+    const wantedKey = toDateKeyInTimeZone(stateSelected, timeZone);
+    const hit = gameDays.find(
+      (d) => toDateKeyInTimeZone(d, timeZone) === wantedKey
+    );
+    if (hit) return hit;
+    const monthPrefix = wantedKey.slice(0, 7);
+    const inMonth = gameDays
+      .filter((d) => toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix))
+      .sort((a, b) => a.getTime() - b.getTime());
+    if (inMonth.length) return inMonth[0] ?? null;
+  }
+
+  const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
+  return (
+    sorted.find((d) => toDateKeyInTimeZone(d, timeZone) >= todayKey) ??
+    sorted[sorted.length - 1] ??
+    null
+  );
+}
+
+function gameDaysFromRows(rows: NativeGameRow[]): Date[] {
+  return sortedUniqueDateKeysFromRows(rows)
+    .map((key) => parseDateKeyInTimeZone(key, TIMEZONE_JST))
+    .filter((d): d is Date => d != null);
+}
+
+function resolveLandingDate(
+  rows: NativeGameRow[],
+  preferred: Date | null
+): Date | null {
+  const gameDays = gameDaysFromRows(rows);
+  if (!gameDays.length) return null;
+  const todayKey = toDateKeyInTimeZone(new Date(), TIMEZONE_JST);
+  const initial =
+    findInitialGameDay({
+      gameDays,
+      stateSelected: preferred,
+      todayKey,
+      timeZone: TIMEZONE_JST,
+    }) ?? gameDays[0]!;
+  return pickLandingDateAfterFetch(initial, rows);
+}
+
+export function sortedUniqueDateKeysFromRows(rows: NativeGameRow[]): string[] {
   const keys = new Set<string>();
   for (const g of rows) {
     const raw = g.startAtJst as Timestamp | undefined;
@@ -95,13 +153,36 @@ export function useTodayGames() {
   const [error, setError] = useState<string | null>(null);
   /** 現在の窓に含まれる全試合（その日の一覧・シリーズ推定・日付チップはこれから派生） */
   const [windowRows, setWindowRows] = useState<NativeGameRow[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
-  const [selectedLeague, setSelectedLeague] = useState<SupportedLeague>("nba");
+  const [selectedDate, setSelectedDateState] = useState<Date>(() => new Date());
+  const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("nba");
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   const windowBoundsRef = useRef<{ min: string; max: string } | null>(null);
+  const wcWindowLoadedRef = useRef(false);
   const prevLeagueRef = useRef(selectedLeague);
   const lastSuccessfulRefreshNonceRef = useRef<number | null>(null);
+  /** Web `selectedByLeague`：リーグごとに最後に選んだ試合日を保持 */
+  const selectedByLeagueRef = useRef<Partial<Record<SupportedLeague, Date>>>({});
+
+  const setSelectedDate = useCallback(
+    (value: Date | ((prev: Date) => Date)) => {
+      setSelectedDateState((prev) => {
+        const next = typeof value === "function" ? value(prev) : value;
+        selectedByLeagueRef.current[selectedLeague] = next;
+        return next;
+      });
+    },
+    [selectedLeague]
+  );
+
+  const setSelectedLeague = useCallback(
+    (next: SupportedLeague) => {
+      if (next === selectedLeague) return;
+      selectedByLeagueRef.current[selectedLeague] = selectedDate;
+      setSelectedLeagueState(next);
+    },
+    [selectedDate, selectedLeague]
+  );
 
   const dateKey = useMemo(
     () => toDateKeyInTimeZone(selectedDate, TIMEZONE_JST),
@@ -137,9 +218,11 @@ export function useTodayGames() {
     let alive = true;
 
     const leagueChanged = prevLeagueRef.current !== selectedLeague;
+    const isWc = selectedLeague === "wc";
     if (leagueChanged) {
       prevLeagueRef.current = selectedLeague;
       windowBoundsRef.current = null;
+      wcWindowLoadedRef.current = false;
       lastSuccessfulRefreshNonceRef.current = null;
       setWindowRows([]);
     }
@@ -151,8 +234,12 @@ export function useTodayGames() {
       dayKey >= b.min &&
       dayKey <= b.max &&
       lastSuccessfulRefreshNonceRef.current === refreshNonce;
+    const wcCached =
+      isWc &&
+      wcWindowLoadedRef.current &&
+      lastSuccessfulRefreshNonceRef.current === refreshNonce;
 
-    if (!leagueChanged && insideWindow) {
+    if (!leagueChanged && (isWc ? wcCached : insideWindow)) {
       setLoading(false);
       setError(null);
       return;
@@ -163,11 +250,13 @@ export function useTodayGames() {
 
     void (async () => {
       try {
-        const { start, end } = getPlusMinusDaysRangeInTimeZone(
-          selectedDate,
-          TIMEZONE_JST,
-          GAME_DAYS_PLUS_MINUS
-        );
+        const { start, end } = isWc
+          ? getWcGamesPageQueryRange(TIMEZONE_JST)
+          : getPlusMinusDaysRangeInTimeZone(
+              selectedDate,
+              TIMEZONE_JST,
+              GAME_DAYS_PLUS_MINUS
+            );
 
         const q = query(
           collection(db, "games"),
@@ -176,7 +265,7 @@ export function useTodayGames() {
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(GAME_DAYS_WINDOW_QUERY_LIMIT)
+          limit(isWc ? WC_GAMES_PAGE_WINDOW_LIMIT : GAME_DAYS_WINDOW_QUERY_LIMIT)
         );
         const snap = await getDocs(q);
         if (!alive) return;
@@ -190,9 +279,19 @@ export function useTodayGames() {
         const maxKey = toDateKeyInTimeZone(new Date(end.getTime() - 1), TIMEZONE_JST);
 
         windowBoundsRef.current = { min: minKey, max: maxKey };
+        if (isWc) wcWindowLoadedRef.current = true;
         lastSuccessfulRefreshNonceRef.current = refreshNonce;
         setWindowRows(rows);
-        setSelectedDate((prev) => pickLandingDateAfterFetch(prev, rows));
+
+        const preferred =
+          leagueChanged
+            ? (selectedByLeagueRef.current[selectedLeague] ?? null)
+            : selectedDate;
+        const landing = resolveLandingDate(rows, preferred);
+        if (landing) {
+          setSelectedDateState(landing);
+          selectedByLeagueRef.current[selectedLeague] = landing;
+        }
       } catch (e: unknown) {
         if (!alive) return;
         setError(e instanceof Error ? e.message : "unknown error");
@@ -208,6 +307,20 @@ export function useTodayGames() {
       alive = false;
     };
   }, [selectedDate, selectedLeague, refreshNonce]);
+
+  /** 月送りなどで試合のない暦日に寄ったとき、ストリップ上の試合日へ補正 */
+  useEffect(() => {
+    if (loading) return;
+    if (dateKeysWithGames.length === 0) return;
+    if (dateKeysWithGames.includes(dateKey)) return;
+
+    const landing = resolveLandingDate(windowRows, selectedDate);
+    if (!landing) return;
+    const landingKey = toDateKeyInTimeZone(landing, TIMEZONE_JST);
+    if (landingKey === dateKey) return;
+    setSelectedDateState(landing);
+    selectedByLeagueRef.current[selectedLeague] = landing;
+  }, [loading, dateKeysWithGames, dateKey, windowRows, selectedDate, selectedLeague]);
 
   return {
     loading,

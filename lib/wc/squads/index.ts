@@ -4,6 +4,7 @@
 
 import { WC_GENERATED_SQUADS } from "./_generatedSquads";
 import { WC_PREDICTED_LINEUPS } from "./_generatedLineups";
+import { CONFIRMED_MATCH_LINEUP_ISO3 } from "./sources/matchLineups";
 import {
   findSquadPlayer,
   resolveLineupPlayers,
@@ -35,6 +36,11 @@ export function getWcPredictedLineup(teamId: string): WcPredictedLineup | null {
   const iso3 = getWcSquadIso3(teamId);
   if (!iso3) return null;
   return WC_PREDICTED_LINEUPS[iso3] ?? null;
+}
+
+export function hasWcConfirmedMatchLineup(teamId: string): boolean {
+  const iso3 = getWcSquadIso3(teamId);
+  return iso3 ? CONFIRMED_MATCH_LINEUP_ISO3.has(iso3) : false;
 }
 
 export function getWcTeamSquad(teamId: string): WcTeamSquad | null {

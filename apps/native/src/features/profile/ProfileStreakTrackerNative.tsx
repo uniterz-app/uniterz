@@ -22,6 +22,7 @@ import {
 } from "./profileShellGridNative";
 import { streakChartLayoutMaxAbs } from "../../../../../lib/profile/streakTrackerChartLayout";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 
 type Props = {
   points: StreakTrackerPointNative[];
@@ -437,8 +438,7 @@ function ChartGlassShell({ children }: { children: ReactNode }) {
           style={StyleSheet.absoluteFillObject}
           tint="dark"
           intensity={Platform.OS === "ios" ? 34 : 26}
-          blurMethod={Platform.OS === "android" ? "dimezisBlurViewSdk31Plus" : undefined}
-          blurReductionFactor={Platform.OS === "android" ? 4 : undefined}
+          {...nativeBlurViewExtraProps()}
         />
       )}
       <View style={styles.chartShellFilm} pointerEvents="none" />

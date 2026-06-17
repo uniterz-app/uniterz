@@ -692,6 +692,7 @@ const ko: Messages = {
     captainLabel: "주장",
     captainNotConfirmed: "공식 미확정",
     predictedLineup: "예상 스타팅",
+    confirmedLineup: "확정 스타팅",
   },
   eventNotices: {
     wcUniformChallenge: {

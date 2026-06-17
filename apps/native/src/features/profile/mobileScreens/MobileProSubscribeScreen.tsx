@@ -2,13 +2,25 @@
  * Web `app/mobile/pro/subscribe/page.tsx` に相当。
  */
 import { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "./MobilePageShell";
+import { useNativeIap } from "../../billing/useNativeIap";
+import { IAP_PRODUCT_IDS } from "../../billing/iapProductIds";
 
 type Plan = "monthly" | "annual";
 
-const PAYMENT_ENABLED = false;
+function subscriptionPriceLabel(products: unknown[], productId: string, fallback: string): string {
+  const item = products.find(
+    (p) => typeof p === "object" && p != null && (p as { productId?: string }).productId === productId
+  ) as Record<string, unknown> | undefined;
+  if (!item) return fallback;
+  const price =
+    (typeof item.localizedPrice === "string" && item.localizedPrice) ||
+    (typeof item.price === "string" && item.price) ||
+    null;
+  return price ?? fallback;
+}
 
 const FEATURES_JA = [
   "データを基にしたレーダーチャート",
@@ -41,12 +53,25 @@ const FEATURES_EN = [
 type Props = {
   language: "ja" | "en";
   onClose: () => void;
+  onSuccess?: () => void;
 };
 
-export default function MobileProSubscribeScreen({ language, onClose }: Props) {
+export default function MobileProSubscribeScreen({ language, onClose, onSuccess }: Props) {
   const isJa = language === "ja";
   const [plan, setPlan] = useState<Plan>("monthly");
   const features = isJa ? FEATURES_JA : FEATURES_EN;
+  const { ready, products, purchasing, purchase, restore } = useNativeIap();
+
+  const monthlyPrice = subscriptionPriceLabel(products, IAP_PRODUCT_IDS.monthly, "¥600");
+  const annualPrice = subscriptionPriceLabel(products, IAP_PRODUCT_IDS.annual, "¥4800");
+
+  async function handlePurchase() {
+    const ok = await purchase(plan);
+    if (ok) {
+      Alert.alert(isJa ? "完了" : "Success", isJa ? "Pro プランが有効になりました。" : "Pro plan activated.");
+      onSuccess?.();
+    }
+  }
 
   return (
     <MobilePageShell title={isJa ? "Pro プラン" : "Get Pro"} onClose={onClose}>
@@ -81,7 +106,7 @@ export default function MobileProSubscribeScreen({ language, onClose }: Props) {
                 </View>
               ) : null}
             </View>
-            <Text style={[styles.priceAmt, plan === "monthly" && styles.priceAmtOn]}>¥600</Text>
+            <Text style={[styles.priceAmt, plan === "monthly" && styles.priceAmtOn]}>{monthlyPrice}</Text>
             <Text style={[styles.tax, plan === "monthly" && styles.taxOn]}>{isJa ? "税込み" : "tax incl."}</Text>
           </Pressable>
 
@@ -105,7 +130,7 @@ export default function MobileProSubscribeScreen({ language, onClose }: Props) {
                 </View>
               ) : null}
             </View>
-            <Text style={[styles.priceAmt, plan === "annual" && styles.priceAmtOn]}>¥4800</Text>
+            <Text style={[styles.priceAmt, plan === "annual" && styles.priceAmtOn]}>{annualPrice}</Text>
             <Text style={[styles.tax, plan === "annual" && styles.taxOn]}>{isJa ? "税込み" : "tax incl."}</Text>
             <View style={styles.badgeSave}>
               <Text style={styles.badgeSaveTxt}>{isJa ? "4ヶ月お得" : "Save ~4 mo."}</Text>
@@ -119,27 +144,31 @@ export default function MobileProSubscribeScreen({ language, onClose }: Props) {
             : "Annual: no refund if you cancel early; Pro stays active until period end."}
         </Text>
 
-        <Pressable disabled={!PAYMENT_ENABLED} onPress={() => {}} style={{ opacity: PAYMENT_ENABLED ? 1 : 0.85 }}>
+        <Pressable disabled={!ready || purchasing} onPress={handlePurchase} style={{ opacity: ready ? 1 : 0.85 }}>
           <LinearGradient
-            colors={PAYMENT_ENABLED ? ["#22d3ee", "#2563eb"] : ["rgba(255,255,255,0.12)", "rgba(255,255,255,0.08)"]}
+            colors={ready ? ["#22d3ee", "#2563eb"] : ["rgba(255,255,255,0.12)", "rgba(255,255,255,0.08)"]}
             style={styles.cta}
           >
             <Text style={styles.ctaTxt}>
-              {PAYMENT_ENABLED
+              {purchasing
                 ? isJa
-                  ? "Pro Planにアップグレード"
-                  : "Upgrade to Pro"
+                  ? "処理中..."
+                  : "Processing..."
                 : isJa
-                  ? "現在準備中"
-                  : "Coming soon"}
+                  ? "Pro Planにアップグレード"
+                  : "Upgrade to Pro"}
             </Text>
           </LinearGradient>
         </Pressable>
 
+        <Pressable onPress={() => void restore()} style={styles.restoreBtn}>
+          <Text style={styles.restoreTxt}>{isJa ? "購入を復元" : "Restore Purchases"}</Text>
+        </Pressable>
+
         <Text style={styles.disclaimer}>
           {isJa
-            ? "※ 現在決済機能準備中のため、まもなく利用可能になります"
-            : "Payments are not available yet; coming soon."}
+            ? "※ App Store / Google Play 経由のサブスクリプションです"
+            : "Subscription via App Store / Google Play."}
         </Text>
 
         <Text style={styles.micro}>
@@ -241,6 +270,8 @@ const styles = StyleSheet.create({
   },
   cta: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginBottom: 10 },
   ctaTxt: { fontSize: 16, fontWeight: "800", color: "#fff" },
+  restoreBtn: { alignItems: "center", paddingVertical: 8, marginBottom: 8 },
+  restoreTxt: { fontSize: 13, color: "rgba(34,211,238,0.85)", fontWeight: "600" },
   disclaimer: { fontSize: 11, color: "rgba(248,250,252,0.5)", textAlign: "center", marginBottom: 8 },
   micro: { fontSize: 10, color: "rgba(248,250,252,0.4)", textAlign: "center", marginBottom: 8 },
   featRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },

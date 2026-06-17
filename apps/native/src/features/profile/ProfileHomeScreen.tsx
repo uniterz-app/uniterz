@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +29,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut, updateProfile } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -48,10 +51,10 @@ import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import CyberMenuButton from "../../ui/CyberMenuButton";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
-import ProfileMobileStackModal from "./mobileScreens/ProfileMobileStackModal";
-import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
+import type { ProfileStackParamList } from "../../navigation/types";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
+import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import {
@@ -138,18 +141,29 @@ function profileCountryRowLabel(code: string, appLang: "ja" | "en"): string {
 export default function ProfileHomeScreen({
   bottomReserveY = 0,
   onSaved,
+  routeHandle,
 }: {
   bottomReserveY?: number;
   onSaved?: () => void;
+  /** 他人プロフィール閲覧用（handle または uid） */
+  routeHandle?: string;
 }) {
   const { fUser, status } = useFirebaseUser();
-  const uid = fUser?.uid;
+  const myUid = fUser?.uid;
+  const publicRouteKey = routeHandle?.trim() ?? "";
+  const isPublicProfileView = publicRouteKey.length > 0;
+  const profileByHandle = useNativeProfileByHandle(
+    isPublicProfileView ? publicRouteKey : null
+  );
+  const targetUid = isPublicProfileView ? profileByHandle.targetUid ?? undefined : myUid;
   const apiBase = getUniterzApiBaseUrl();
 
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [mobileOverlay, setMobileOverlay] = useState<ProfileMobileOverlayKind>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const insets = useSafeAreaInsets();
+  const scrollTopPad = insets.top + spacing.sm;
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
 
@@ -203,17 +217,18 @@ export default function ProfileHomeScreen({
   }, [settingsOpen, reduceMotion]);
 
   const profilePlanHook = useNativeProfilePlan({
-    targetUid: uid ?? null,
+    targetUid: targetUid ?? null,
     profilePlan: plan,
   });
+  const isMe = profilePlanHook.isMe;
   const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
-    useNativeAnnouncementsUnread(uid, status === "ready" && !!uid, {
-      enabled: profilePlanHook.isMe,
+    useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
+      enabled: isMe,
     });
-  const { resolvedBadges } = useNativeProfileBadges(uid);
+  const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
-  const statsBundle = useNativeProfileStats(uid, tab === "overview");
-  const streakBundle = useNativeStreakTracker(uid, tab === "overview");
+  const statsBundle = useNativeProfileStats(targetUid, tab === "overview" && !!targetUid);
+  const streakBundle = useNativeStreakTracker(targetUid, tab === "overview" && !!targetUid);
 
   const currentIsProView = profilePlanHook.isProView;
   /** 概要6枚の並び: Web Pro は連勝→精度の順（`profileSummaryGridKeysProOverview`）。plan と hook のどちらかが Pro なら Pro 並びにする */
@@ -232,13 +247,16 @@ export default function ProfileHomeScreen({
   }, [statsBundle.stats]);
 
   const currentStreak = useMemo(() => {
+    if (isPublicProfileView && profileByHandle.currentStreak > 0) {
+      return profileByHandle.currentStreak;
+    }
     const st = statsBundle.stats as Record<string, unknown> | null;
     if (st != null) {
       const v = Number(st.currentStreak);
       if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
     }
     return 0;
-  }, [statsBundle.stats]);
+  }, [isPublicProfileView, profileByHandle.currentStreak, statsBundle.stats]);
 
   const showStreakBadge = currentStreak >= 3;
 
@@ -324,15 +342,16 @@ export default function ProfileHomeScreen({
   );
 
   useEffect(() => {
+    if (isPublicProfileView) return;
     let alive = true;
     async function load() {
-      if (!uid) {
+      if (!myUid) {
         setProfileLoading(false);
         return;
       }
       setProfileLoading(true);
       try {
-        const snap = await getDoc(doc(db, "users", uid));
+        const snap = await getDoc(doc(db, "users", myUid));
         if (!alive) return;
         const data = snap.data() as
           | {
@@ -373,7 +392,27 @@ export default function ProfileHomeScreen({
     return () => {
       alive = false;
     };
-  }, [uid]);
+  }, [myUid, isPublicProfileView]);
+
+  useEffect(() => {
+    if (!isPublicProfileView) return;
+    if (profileByHandle.loading) {
+      setProfileLoading(true);
+      return;
+    }
+    if (profileByHandle.notFound) {
+      setProfileLoading(false);
+      return;
+    }
+    setDisplayName(profileByHandle.displayName);
+    setBio(profileByHandle.bio);
+    setHandle(profileByHandle.handle);
+    setAvatarUrl(profileByHandle.avatarUrl);
+    setLanguage(profileByHandle.language);
+    setCountryCode(profileByHandle.countryCode);
+    setPlan(profileByHandle.plan);
+    setProfileLoading(false);
+  }, [isPublicProfileView, profileByHandle]);
 
   /** expo-image-picker の base64 をバイナリに変換（uploadString より uploadBytes の方がルール検証と相性がよいことがある） */
   function base64ToUint8Array(b64: string): Uint8Array {
@@ -393,7 +432,7 @@ export default function ProfileHomeScreen({
 
   /** Web プロフィール編集と同様：ライブラリから選び Storage に置いて URL を state に反映 */
   async function pickAvatar() {
-    if (!uid || uploadingAvatar || saving) return;
+    if (!myUid || uploadingAvatar || saving) return;
     let ImagePicker: typeof import("expo-image-picker");
     try {
       ImagePicker = await import("expo-image-picker");
@@ -423,7 +462,7 @@ export default function ProfileHomeScreen({
       const asset = picked.assets[0];
       const uri = asset.uri;
       setUploadingAvatar(true);
-      const fileRef = ref(storage, `avatars/${uid}/${Date.now()}_profile.jpg`);
+      const fileRef = ref(storage, `avatars/${myUid}/${Date.now()}_profile.jpg`);
       const contentType =
         asset.mimeType && asset.mimeType.startsWith("image/") ? asset.mimeType : "image/jpeg";
 
@@ -452,7 +491,7 @@ export default function ProfileHomeScreen({
   }
 
   async function handleSaveProfile() {
-    if (!uid || saving || uploadingAvatar) return;
+    if (!myUid || saving || uploadingAvatar) return;
     const safeName = displayName.trim();
     const safeBio = bio.trim();
     const safePhoto = avatarUrl.trim();
@@ -469,14 +508,14 @@ export default function ProfileHomeScreen({
     }
     setSaving(true);
     try {
-      if (auth.currentUser && auth.currentUser.uid === uid) {
+      if (auth.currentUser && auth.currentUser.uid === myUid) {
         await updateProfile(auth.currentUser, {
           displayName: safeName || null,
           photoURL: safePhoto || null,
         });
       }
       await setDoc(
-        doc(db, "users", uid),
+        doc(db, "users", myUid),
         {
           displayName: safeName,
           bio: safeBio,
@@ -563,7 +602,7 @@ export default function ProfileHomeScreen({
       );
     }
 
-    const entranceKey = `${uid ?? ""}-${statsBundle.summary.posts}-${proSummaryGridLayout ? "p" : "f"}`;
+    const entranceKey = `${targetUid ?? ""}-${statsBundle.summary.posts}-${proSummaryGridLayout ? "p" : "f"}`;
 
     return (
       <View style={styles.overviewBlock}>
@@ -587,7 +626,7 @@ export default function ProfileHomeScreen({
         <View style={styles.chartGap} />
         <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
           <ProfileDailyTrendChartNative
-            key={`dailyTrend:${uid ?? ""}:${statsBundle.dailyTrend.map((r) => r.date).join(",")}`}
+            key={`dailyTrend:${targetUid ?? ""}:${statsBundle.dailyTrend.map((r) => r.date).join(",")}`}
             data={statsBundle.dailyTrend}
             language={language}
             allowAll={currentIsProView}
@@ -613,13 +652,29 @@ export default function ProfileHomeScreen({
     );
   }
 
-  if (uid && profilePlanHook.isMe && profilePlanHook.loadingPlan) {
+  if (isPublicProfileView && !profileByHandle.loading && profileByHandle.notFound) {
     return (
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: spacing.lg + bottomReserveY },
+          { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
+        ]}
+      >
+        <Text style={styles.errorText}>
+          {isJa ? "ユーザーが見つかりません" : "User not found"}
+        </Text>
+      </ScrollView>
+    );
+  }
+
+  if (targetUid && isMe && profilePlanHook.loadingPlan) {
+    return (
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
         ]}
       >
         <View style={styles.inlineLoading}>
@@ -635,7 +690,7 @@ export default function ProfileHomeScreen({
       style={styles.scroll}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingBottom: spacing.lg + bottomReserveY },
+        { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
       ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
@@ -698,21 +753,25 @@ export default function ProfileHomeScreen({
             ) : null}
           </View>
 
-          <CyberMenuButton
-            size="md"
-            style={styles.menuSquareOffset}
-            onPress={() => setMenuOpen(true)}
-            accessibilityLabel={isJa ? "メニュー" : "Menu"}
-            badge={
-              menuUnreadCount > 0 ? (
-                <View style={styles.menuBadge}>
-                  <Text style={styles.menuBadgeText}>
-                    {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
-                  </Text>
-                </View>
-              ) : null
-            }
-          />
+          {isMe ? (
+            <CyberMenuButton
+              size="md"
+              style={styles.menuSquareOffset}
+              onPress={() => setMenuOpen(true)}
+              accessibilityLabel={isJa ? "メニュー" : "Menu"}
+              badge={
+                menuUnreadCount > 0 ? (
+                  <View style={styles.menuBadge}>
+                    <Text style={styles.menuBadgeText}>
+                      {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
+                    </Text>
+                  </View>
+                ) : null
+              }
+            />
+          ) : (
+            <View style={styles.menuSquareOffset} />
+          )}
         </View>
 
         {resolvedBadges.length > 0 ? (
@@ -744,18 +803,16 @@ export default function ProfileHomeScreen({
       {tab === "overview" ? (
         renderOverview()
       ) : tab === "bracket" ? (
-        <ProfileBracketTabNative uid={uid} language={language} />
+        <ProfileBracketTabNative uid={targetUid} language={language} />
       ) : (
         <ProfileStatsTabNative
-          uid={uid}
+          uid={targetUid}
           language={language}
           isProView={currentIsProView}
           myPlan={profilePlanHook.myPlan}
-          isMe={profilePlanHook.isMe}
+          isMe={isMe}
           isMyPro={profilePlanHook.isMyPro}
           isTargetPro={profilePlanHook.isTargetPro}
-          apiBase={apiBase}
-          handle={handle}
         />
       )}
     </ScrollView>
@@ -1034,7 +1091,7 @@ export default function ProfileHomeScreen({
     </Modal>
 
     <ProfileSideMenuModal
-      visible={menuOpen}
+      visible={menuOpen && isMe}
       onClose={() => setMenuOpen(false)}
       language={language}
       apiBase={apiBase}
@@ -1043,23 +1100,23 @@ export default function ProfileHomeScreen({
       plan={plan}
       onOpenProfileSettings={() => {
         setMenuOpen(false);
-        setSettingsOpen(true);
+        navigation.navigate("ProfileSettings");
       }}
       onOpenInApp={(page) => {
         setMenuOpen(false);
-        setMobileOverlay(page);
+        if (page === "badges") navigation.navigate("Badges");
+        else if (page === "announcements") navigation.navigate("Announcements");
+        else if (page === "plan") navigation.navigate("PlanStatus");
+        else if (page === "subscribe") navigation.navigate("ProSubscribe");
+        else if (page === "guidelines") navigation.navigate("CommunityGuidelines");
+        else if (page === "help") navigation.navigate("Help");
+        else if (page === "terms") navigation.navigate("Terms");
+        else if (page === "contact") navigation.navigate("Contact");
+        else if (page === "privacy") navigation.navigate("Privacy");
+        else if (page === "password") navigation.navigate("ProfilePassword");
+        else if (page === "featureRequest") navigation.navigate("FeatureRequest");
+        else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
       }}
-    />
-    <ProfileMobileStackModal
-      kind={mobileOverlay}
-      onClose={() => setMobileOverlay(null)}
-      onNavigate={(next) => setMobileOverlay(next)}
-      language={language}
-      uid={uid}
-      authReady={status === "ready"}
-      plan={plan}
-      apiBase={apiBase}
-      readIds={announcementReadIds}
     />
     <ProfileBadgeDetailModal
       visible={badgeModalOpen}
@@ -1087,7 +1144,6 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   scrollContent: {
-    paddingTop: spacing.sm,
     paddingHorizontal: spacing.sm,
     flexGrow: 1,
   },

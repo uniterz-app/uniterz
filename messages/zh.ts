@@ -692,6 +692,7 @@ const zh: Messages = {
     captainLabel: "队长",
     captainNotConfirmed: "尚未官方确认",
     predictedLineup: "预测首发",
+    confirmedLineup: "确认首发",
   },
   eventNotices: {
     wcUniformChallenge: {
