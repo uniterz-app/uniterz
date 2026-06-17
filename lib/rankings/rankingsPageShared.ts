@@ -4,6 +4,7 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { RankingRow } from "@/lib/rankings/useRanking";
+import { minPostsForWinRate } from "@/lib/rankings/winRateMinPosts";
 
 /** 自分の指標値（MyRankCard 用） */
 export function getMyMetricValue(
@@ -31,11 +32,10 @@ export function getMyMetricValue(
 export function computeWinRateMinPosts(
   rankingLeague: RankingLeagueSource,
   phase: RankingPhase,
-  round: PlayoffRoundKey
+  round: PlayoffRoundKey,
+  wcStage?: WcRankingStage | null
 ): number {
-  if (rankingLeague === "worldcup") return 1;
-  if (phase === "playoffs" && (round === "overall" || round === "r1")) return 20;
-  return 1;
+  return minPostsForWinRate({ rankingLeague, phase, round, wcStage });
 }
 
 export function buildRankingsPageKey(input: {

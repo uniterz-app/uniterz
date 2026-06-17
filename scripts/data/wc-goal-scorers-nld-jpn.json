@@ -1,0 +1,10 @@
+{
+  "homeScore": 2,
+  "awayScore": 2,
+  "scorers": [
+    { "playerId": "nld-dijk", "teamId": "wc-nld", "minute": 51 },
+    { "playerId": "jpn-nakamura", "teamId": "wc-jpn", "minute": 57 },
+    { "playerId": "nld-summerville", "teamId": "wc-nld", "minute": 64 },
+    { "playerId": "jpn-kamada", "teamId": "wc-jpn", "minute": 89 }
+  ]
+}

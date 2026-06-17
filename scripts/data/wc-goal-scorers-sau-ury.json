@@ -1,0 +1,8 @@
+{
+  "homeScore": 1,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "sau-al-amri", "teamId": "wc-sau", "minute": 41 },
+    { "playerId": "ury-araujo-2", "teamId": "wc-ury", "minute": 80 }
+  ]
+}

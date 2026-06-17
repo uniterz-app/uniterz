@@ -1,0 +1,14 @@
+{
+  "homeScore": 7,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "deu-nmecha", "teamId": "wc-deu", "minute": 6 },
+    { "playerId": "cuw-comenencia", "teamId": "wc-cuw", "minute": 21 },
+    { "playerId": "deu-schlotterbeck", "teamId": "wc-deu", "minute": 38 },
+    { "playerId": "deu-musiala", "teamId": "wc-deu", "minute": 47 },
+    { "playerId": "deu-havertz", "teamId": "wc-deu", "minute": "45+5" },
+    { "playerId": "deu-brown", "teamId": "wc-deu", "minute": 68 },
+    { "playerId": "deu-undav", "teamId": "wc-deu", "minute": 78 },
+    { "playerId": "deu-havertz", "teamId": "wc-deu", "minute": 88 }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "homeScore": 2,
+  "awayScore": 2,
+  "scorers": [
+    { "playerId": "nzl-just", "teamId": "wc-nzl", "minute": 7 },
+    { "playerId": "irn-rezaeian", "teamId": "wc-irn", "minute": 32 },
+    { "playerId": "nzl-just", "teamId": "wc-nzl", "minute": 55 },
+    { "playerId": "irn-mohebi", "teamId": "wc-irn", "minute": 64 }
+  ]
+}
