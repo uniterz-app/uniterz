@@ -295,6 +295,23 @@ function resolveParticipantCount(
   return totalCount;
 }
 
+function rankDeltaPlacesFromHist(
+  histSnap: DocumentSnapshot | null,
+  myRank: number | null,
+  prevRankRaw: unknown
+): number | null {
+  if (!histSnap?.exists || myRank == null) return null;
+  const prevRank =
+    typeof prevRankRaw === "number" &&
+    Number.isFinite(prevRankRaw) &&
+    prevRankRaw >= 1
+      ? Math.floor(prevRankRaw)
+      : null;
+  if (prevRank == null) return null;
+  const d = prevRank - myRank;
+  return d !== 0 ? d : null;
+}
+
 async function rankingPayloadForMetric(
   metric: Metric,
   phase: RankingPhase,
@@ -517,7 +534,18 @@ async function rankingPayloadForMetric(
           : await higherQuery.count().get();
 
       myRank = (higherSnap.data().count ?? 0) + 1;
-      myRankDeltaPlaces = null;
+
+      const histData = snaps.histSnap?.exists
+        ? (snaps.histSnap.data() as Record<string, unknown>)
+        : undefined;
+      const wcBlock = histData?.wc as
+        | Partial<Record<WcRankingStage, Partial<Record<Metric, number>>>>
+        | undefined;
+      myRankDeltaPlaces = rankDeltaPlacesFromHist(
+        snaps.histSnap,
+        myRank,
+        wcBlock?.[wcStage]?.[metric]
+      );
 
       const myPlanResolvedWc: "free" | "pro" =
         me.plan === "pro" ? "pro" : "free";
@@ -668,19 +696,11 @@ async function rankingPayloadForMetric(
               | Partial<Record<PlayoffRoundKey, Partial<Record<Metric, number>>>>
               | undefined)?.[round]
           : (hd?.[phase] as Partial<Record<Metric, number>> | undefined);
-      const prevRaw = phaseBlock?.[metric];
-      const prevRank =
-        typeof prevRaw === "number" &&
-        Number.isFinite(prevRaw) &&
-        prevRaw >= 1
-          ? Math.floor(prevRaw)
-          : null;
-      if (prevRank != null) {
-        const d = prevRank - myRank;
-        if (d !== 0) {
-          myRankDeltaPlaces = d;
-        }
-      }
+      myRankDeltaPlaces = rankDeltaPlacesFromHist(
+        histSnap,
+        myRank,
+        phaseBlock?.[metric]
+      );
     }
 
     const myPlanResolved: "free" | "pro" =

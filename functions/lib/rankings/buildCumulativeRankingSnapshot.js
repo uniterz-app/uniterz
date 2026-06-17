@@ -8,6 +8,7 @@ exports.loadPlayoffRoundTop20RowsLive = loadPlayoffRoundTop20RowsLive;
 exports.loadWcStageTop20RowsLive = loadWcStageTop20RowsLive;
 exports.buildCumulativeRankingSnapshot = buildCumulativeRankingSnapshot;
 const firestore_1 = require("firebase-admin/firestore");
+const wcRankingStage_1 = require("./wcRankingStage");
 /* =========================================================
  * Firestore
  * =======================================================*/
@@ -468,7 +469,7 @@ async function loadWcStageTop20RowsLive(stage, metric) {
     })
         .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
     const eligibleRows = metric === "winRate"
-        ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= 1; })
+        ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= (0, wcRankingStage_1.minPostsForWcWinRate)(stage); })
         : baseRows;
     const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
     const ranks = assignCompetitionRanks(sortedFull, metric);
@@ -640,7 +641,7 @@ async function buildCumulativeRankingSnapshot() {
             .filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) > 0; });
         for (const metric of WC_METRICS) {
             const eligibleRows = metric === "winRate"
-                ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= 1; })
+                ? baseRows.filter((row) => { var _a; return ((_a = row.totalPosts) !== null && _a !== void 0 ? _a : 0) >= (0, wcRankingStage_1.minPostsForWcWinRate)(stage); })
                 : baseRows;
             const sortedFull = [...eligibleRows].sort((a, b) => cmpSortRows(a, b, metric));
             const ranks = assignCompetitionRanks(sortedFull, metric);
