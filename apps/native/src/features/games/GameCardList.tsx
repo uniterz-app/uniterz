@@ -1,5 +1,7 @@
 import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
+import { useMemo } from "react";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
+import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
@@ -7,7 +9,6 @@ import { LiveMarkPill } from "./LiveMarkPill";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import MatchListCyberClipNative from "./MatchListCyberClipNative";
 import MatchListCyberDecorNative from "./MatchListCyberDecorNative";
-import MatchListCyberGridNative from "./MatchListCyberGridNative";
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
@@ -75,7 +76,6 @@ function GameCardListRow(props: GameCardListRowProps) {
     openPredictModal,
     resolveGameTeamName,
     toCompactTeamName,
-    isSoccerLeague,
     resolveGameStatus,
     isGameStarted,
     resolveLeagueColor,
@@ -86,6 +86,7 @@ function GameCardListRow(props: GameCardListRowProps) {
     resolveTeamJerseyPalette,
     enteringAnimationEnabled,
     entranceVariant,
+    language,
   } = props;
 
   const reduceMotion = useReducedMotion() ?? false;
@@ -95,7 +96,6 @@ function GameCardListRow(props: GameCardListRowProps) {
   const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
   const awayCompact = toCompactTeamName(game.league, awayName);
   const homeCompact = toCompactTeamName(game.league, homeName);
-  const soccer = isSoccerLeague(game.league);
   const status = resolveGameStatus(game);
   const started = isGameStarted(game);
   const leagueColor = resolveLeagueColor(game.league);
@@ -127,10 +127,14 @@ function GameCardListRow(props: GameCardListRowProps) {
       : isPredicted
       ? "predicted"
       : "normal";
-  const ctaDisplayLabel =
-    soccer && !started && !isPredicted
-      ? `${ctaLabel} / ${t.drawAvailable}`
-      : ctaLabel;
+  const ctaDisplayLabel = ctaLabel;
+
+  const broadcastLabels = useMemo(() => {
+    if (leagueKey !== "wc" || status === "final") return [];
+    return resolveWcBroadcastLabels(gameId, game);
+  }, [game, gameId, leagueKey, status]);
+  const showWcBroadcastRow = broadcastLabels.length > 0;
+  const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
   const showPredictPrimaryGlow =
     status !== "final" && !started && !isPredicted;
@@ -162,15 +166,13 @@ function GameCardListRow(props: GameCardListRowProps) {
       <MatchListCyberClipNative
         predicted={isPredicted}
         strokeOpacityStyle={ent.borderStrokeStyle}
+        gridOpacityStyle={ent.gridLayerStyle}
       >
         <Animated.View
           pointerEvents="box-none"
           style={[ent.shellOpacityStyle, { flex: 1, minHeight: 0, position: "relative" }]}
         >
           <MatchCardEntryScanNative style={ent.scanLineStyle} />
-          <Animated.View pointerEvents="none" style={[styles.cardFineShellBackdrop, ent.gridLayerStyle]}>
-            <MatchListCyberGridNative />
-          </Animated.View>
           <MatchListCyberDecorNative />
           <View style={styles.cardPressableBody}>
           <View style={{ flex: 1, minHeight: 0 }}>
@@ -361,6 +363,14 @@ function GameCardListRow(props: GameCardListRowProps) {
                 </View>
               </View>
               </Animated.View>
+              {showWcBroadcastRow ? (
+                <View style={styles.wcBroadcastRow}>
+                  <Text style={styles.wcBroadcastLabel}>{t.broadcasters}</Text>
+                  <Text style={styles.wcBroadcastNames}>
+                    {broadcastLabels.join(wcBroadcastSep)}
+                  </Text>
+                </View>
+              ) : null}
               <View style={{ width: "100%", marginTop: "auto" }}>
                 <Animated.View
                   style={[styles.leagueDivider, { backgroundColor: leagueColor }, ent.dividerStyle]}
@@ -368,7 +378,7 @@ function GameCardListRow(props: GameCardListRowProps) {
               </View>
             </View>
           </View>
-          <Animated.View style={ent.footerStyle}>
+          <Animated.View style={[styles.cardFooterShell, ent.footerStyle]}>
             <MatchCardListCtaNative label={ctaDisplayLabel} variant={ctaVariant} />
           </Animated.View>
         </View>

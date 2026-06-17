@@ -453,8 +453,8 @@ function resultStreakBadgeSize(
 ): string {
   if (subtle) {
     return compact
-      ? "text-[9px] px-2.5 py-0.5 tracking-[0.1em]"
-      : "text-[10px] px-3 py-0.5 tracking-[0.11em]";
+      ? "text-[8px] px-2 py-0.5 tracking-[0.1em]"
+      : "text-[9px] px-2.5 py-0.5 tracking-[0.11em]";
   }
   return compact
     ? "text-[10px] px-3 py-1 tracking-[0.11em]"

@@ -121,6 +121,7 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
 
   return (
     <View style={[styles.root, { paddingTop: screenTopPad, paddingBottom: bottomReserveY }]}>
+      <View style={styles.foreground}>
       <Text style={styles.header}>LEADERBOARDS</Text>
       <Text style={styles.sub}>コミュニティグループ</Text>
 
@@ -155,6 +156,8 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
           )}
         </ScrollView>
       )}
+
+      </View>
 
       <IntroModal visible={introOpen} onClose={() => setIntroOpen(false)} />
       <SimpleModal visible={createOpen} title="グループ作成" onClose={() => setCreateOpen(false)}>
@@ -231,7 +234,8 @@ function SimpleModal({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bgPrimary, paddingHorizontal: spacing.sm },
+  root: { flex: 1, backgroundColor: "transparent", paddingHorizontal: spacing.sm, position: "relative" },
+  foreground: { flex: 1, zIndex: 1 },
   header: {
     fontFamily: fonts.brand,
     fontSize: 28,

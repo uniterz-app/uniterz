@@ -1,19 +1,8 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
-import { LiveMarkPill } from "../games/LiveMarkPill";
-import {
-  resultHitBadgeStyleNative,
-  resultMissBadgeStyleNative,
-  resultOutcomeBadgeTextNative,
-  resultPerfectBadgeStyleNative,
-  resultStreakBadgeStyleNative,
-  resultStreakBadgeTextNative,
-  resultUpsetBadgeStyleNative,
-} from "./resultMobileUiNative";
-import {
-  resultLiveBadgeCompact,
-  resultLiveBadgeCompactText,
-} from "../../ui/resultLiveBadgeStyles";
+import { View } from "react-native";
+import { resultStreakTier } from "../../../../../lib/result/resultGlass";
+import ResultCyberBadgeNative from "./ResultCyberBadgeNative";
+import type { ResultCyberBadgeKind } from "./resultCyberBadgeThemes";
 
 type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
@@ -24,6 +13,10 @@ type Props = {
   streakBadge: StreakBadge | null;
   activeWinStreak: number;
   showLiveMark?: boolean;
+  /** Web `isMobile` */
+  compact?: boolean;
+  /** Web `hitBadgeSubtle`（リザルト一覧向け） */
+  hitBadgeSubtle?: boolean;
 };
 
 function streakFlameColor(tone: StreakBadge["tone"]) {
@@ -32,54 +25,91 @@ function streakFlameColor(tone: StreakBadge["tone"]) {
   return "#f8fafc";
 }
 
-/** Web `ResultOutcomeBadges`（モバイル / hitBadgeSubtle） */
+function streakBadgeKind(activeWinStreak: unknown): ResultCyberBadgeKind | null {
+  const tier = resultStreakTier(activeWinStreak);
+  if (tier === "gold") return "streakGold";
+  if (tier === "platinum") return "streakPlatinum";
+  if (tier === "silver") return "streakSilver";
+  return null;
+}
+
+/** Web `ResultOutcomeBadges` */
 export default function ResultOutcomeBadgesNative({
   badge,
   streakBadge,
   activeWinStreak,
   showLiveMark = false,
+  compact = true,
+  hitBadgeSubtle = false,
 }: Props) {
   if (!badge && !showLiveMark) return null;
 
-  const streakStyle =
-    badge === "streak" ? resultStreakBadgeStyleNative(activeWinStreak) : null;
+  const streakKind = badge === "streak" ? streakBadgeKind(activeWinStreak) : null;
 
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 4 }}>
-      {badge === "streak" && streakStyle && streakBadge ? (
-        <View style={streakStyle}>
-          <MaterialCommunityIcons
-            name="fire"
-            size={10}
-            color={streakFlameColor(streakBadge.tone)}
-          />
-          <Text style={resultStreakBadgeTextNative()} numberOfLines={1}>
-            {streakBadge.label}
-          </Text>
-        </View>
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "flex-end",
+        gap: 4,
+      }}
+    >
+      {badge === "streak" && streakKind && streakBadge ? (
+        <ResultCyberBadgeNative
+          kind={streakKind}
+          label={streakBadge.label}
+          compact={compact}
+          subtle={hitBadgeSubtle}
+          maxLabelWidth={120}
+          leading={
+            <MaterialCommunityIcons
+              name="fire"
+              size={compact ? 10 : 12}
+              color={streakFlameColor(streakBadge.tone)}
+            />
+          }
+        />
       ) : null}
       {badge === "hit" ? (
-        <View style={resultHitBadgeStyleNative()}>
-          <Text style={resultOutcomeBadgeTextNative.hit}>HIT</Text>
-        </View>
+        <ResultCyberBadgeNative
+          kind="hit"
+          label="HIT"
+          compact={compact}
+          subtle={hitBadgeSubtle}
+        />
       ) : null}
       {badge === "perfect" ? (
-        <View style={resultPerfectBadgeStyleNative()}>
-          <Text style={resultOutcomeBadgeTextNative.perfect}>PERFECT</Text>
-        </View>
+        <ResultCyberBadgeNative
+          kind="perfect"
+          label="PERFECT"
+          compact={compact}
+          subtle={hitBadgeSubtle}
+        />
       ) : null}
       {badge === "upset" ? (
-        <View style={resultUpsetBadgeStyleNative()}>
-          <Text style={resultOutcomeBadgeTextNative.upset}>UPSET</Text>
-        </View>
+        <ResultCyberBadgeNative
+          kind="upset"
+          label="UPSET"
+          compact={compact}
+          subtle={hitBadgeSubtle}
+        />
       ) : null}
       {badge === "miss" ? (
-        <View style={resultMissBadgeStyleNative()}>
-          <Text style={resultOutcomeBadgeTextNative.miss}>MISS</Text>
-        </View>
+        <ResultCyberBadgeNative
+          kind="miss"
+          label="MISS"
+          compact={compact}
+          subtle={hitBadgeSubtle}
+        />
       ) : null}
       {showLiveMark ? (
-        <LiveMarkPill pillStyle={resultLiveBadgeCompact} textStyle={resultLiveBadgeCompactText} />
+        <ResultCyberBadgeNative
+          kind="live"
+          label="LIVE"
+          compact={compact}
+          subtle={hitBadgeSubtle}
+        />
       ) : null}
     </View>
   );

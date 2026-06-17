@@ -24,9 +24,11 @@ import type { GamePointsDistributionV1 } from "../../../../../lib/results/gamePo
 import { SCORE_CHART_MAX } from "../../../../../lib/results/resultPointsDistributionChartModel";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
+import CountryFlagNative from "../games/CountryFlagNative";
+import { resolvePostListLeague } from "../../../../../lib/leagues";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
-import { MatchCardListGridOverlay } from "../games/MatchCardListGridOverlay";
+import ResultGlassShellNative from "./ResultGlassShellNative";
 import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultPointsDistributionChartSkia from "./ResultPointsDistributionChartSkia";
 import ResultMarketDonutSvg, { type DonutSegment } from "./ResultMarketDonutSvg";
@@ -39,6 +41,10 @@ import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge
 import { RESULT_DETAIL_ENTRANCE, resultDetailSectionEnter } from "./resultDetailEntranceNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { formatResultPostCardDateLabel } from "./nativeResultModel";
+import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
+import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
+import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
+import { readPostMatchGoalScorers } from "../../../../../lib/wc/matchGoalScorers";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -88,20 +94,18 @@ function ResultDetailOverlayBackdrop() {
 
 const LEAGUE_LABEL: Record<string, string> = {
   nba: "NBA",
+  wc: "WC",
   bj: "B1",
   pl: "PL",
   j1: "J1",
 };
 
-function normalizeLeague(raw: unknown): "nba" | "bj" | "j1" | "pl" {
-  const v = String(raw ?? "").trim().toLowerCase();
-  if (v === "bj" || v === "b1" || v.includes("b.league")) return "bj";
-  if (v === "j1" || v === "j") return "j1";
-  if (v === "pl" || v.includes("premier") || v.includes("epl")) return "pl";
-  return "nba";
+function leagueFromResultPost(post: ResultDetailPost) {
+  return resolvePostListLeague({
+    league: post.league,
+    gameId: post.gameId,
+  });
 }
-
-/** Web `MobileResultMarketCard` のチーム名（Bebas・大文字）に揃える */
 const DISPLAY_FONT_TEAM = Platform.select({
   ios: "BebasNeue_400Regular",
   android: "BebasNeue_400Regular",
@@ -109,13 +113,14 @@ const DISPLAY_FONT_TEAM = Platform.select({
 });
 
 function getMobileTeamName(
-  league: "nba" | "bj" | "j1" | "pl",
+  league: "nba" | "bj" | "j1" | "pl" | "wc",
   rawName: string,
   l1: string,
   l2?: string
 ): string {
   if (league === "nba") return l2 || rawName;
   if (league === "pl") return getTeamAlias(rawName) ?? rawName;
+  if (league === "wc") return rawName;
   return [l1, l2].filter(Boolean).join(" ");
 }
 
@@ -168,8 +173,7 @@ function streakFlameColor(tone: StreakBadge["tone"]) {
 }
 
 /**
- * リザルト一覧 `ResultPostCard` の `cardShell` と同色・同方眼（`tone="resultList"`）。
- * ブラーは入れず、ベースグラデ＋薄い白シーンのみ（一覧と同じ値）。
+ * リザルト一覧 `ResultPostCard` と同色のガラスシェル（方眼なし）。
  */
 function ShellCard({
   children,
@@ -179,56 +183,23 @@ function ShellCard({
   /** HIT 時など一覧 `cardFrameHit` に合わせた外枠 */
   frameStyle?: StyleProp<ViewStyle>;
 }) {
+  const borderColor =
+    typeof (frameStyle as ViewStyle | undefined)?.borderColor === "string"
+      ? ((frameStyle as ViewStyle).borderColor as string)
+      : "rgba(255,255,255,0.10)";
+  const shadowStyle: ViewStyle | undefined = frameStyle
+    ? {
+        shadowColor: (frameStyle as ViewStyle).shadowColor,
+        shadowOpacity: (frameStyle as ViewStyle).shadowOpacity,
+        shadowRadius: (frameStyle as ViewStyle).shadowRadius,
+        elevation: (frameStyle as ViewStyle).elevation,
+      }
+    : undefined;
+
   return (
-    <View style={[styles.shellCard, frameStyle]}>
-      <View pointerEvents="none" style={styles.shellGridUnderlay}>
-        <MatchCardListGridOverlay styles={styles} tone="resultList" />
-      </View>
-      <View pointerEvents="none" style={styles.shellFillStack}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={[
-            "rgba(14,18,28,0.92)",
-            "rgba(10,13,22,0.86)",
-            "rgba(7,10,17,0.92)",
-          ]}
-          locations={[0, 0.52, 1]}
-          style={styles.shellLayerBase}
-        />
-        <LinearGradient
-          pointerEvents="none"
-          colors={[
-            "rgba(255,255,255,0.018)",
-            "rgba(255,255,255,0.004)",
-            "rgba(255,255,255,0)",
-          ]}
-          locations={[0, 0.24, 1]}
-          style={styles.shellLayerTopGlow}
-        />
-        <LinearGradient
-          pointerEvents="none"
-          colors={[
-            "rgba(255,255,255,0.018)",
-            "rgba(255,255,255,0.008)",
-            "rgba(255,255,255,0)",
-          ]}
-          locations={[0, 0.6, 1]}
-          style={styles.shellLayerGlassFog}
-        />
-        <LinearGradient
-          pointerEvents="none"
-          colors={[
-            "rgba(255,255,255,0.012)",
-            "rgba(255,255,255,0.003)",
-            "rgba(255,255,255,0)",
-          ]}
-          locations={[0, 0.2, 1]}
-          style={styles.shellLayerShine}
-        />
-        <View pointerEvents="none" style={styles.shellGlowOverlay} />
-      </View>
+    <ResultGlassShellNative borderColor={borderColor} shellStyle={shadowStyle}>
       <View style={styles.shellInner}>{children}</View>
-    </View>
+    </ResultGlassShellNative>
   );
 }
 
@@ -244,7 +215,7 @@ function ResultDetailMarketSection({
   const reduceMotion = useReducedMotion() ?? false;
   const donutDrawDelayMs = reduceMotion ? 0 : RESULT_DETAIL_ENTRANCE.donutDrawDelayMs;
   const isEn = language === "en";
-  const leagueKey = normalizeLeague(post.league);
+  const leagueKey = leagueFromResultPost(post);
   const isSoccer = leagueKey === "j1" || leagueKey === "pl";
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
@@ -462,9 +433,10 @@ function ResultDetailDistributionSection({
 
 function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; language: "ja" | "en" }) {
   const isEn = language === "en";
+  const wcGoalScorer = useWcGoalScorerResultNative(post as WcGoalScorerPostLike);
   const stats = post.stats as Record<string, unknown> | undefined;
   const hadUpsetGame = Boolean(stats?.hadUpsetGame);
-  const showScorePrecision = String(post.league ?? "").trim().toLowerCase() !== "wc";
+  const showScorePrecision = leagueFromResultPost(post) !== "wc";
   const scorePrecision = toNumber(stats?.scorePrecision, 0);
   const upsetPoints = toNumber(stats?.upsetPoints, 0);
   const pointsV3 = toNumber(stats?.pointsV3, 0);
@@ -526,6 +498,12 @@ function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; 
         <Text style={styles.sectionTitle}>{isEn ? "Performance" : "パフォーマンス"}</Text>
       </View>
       <View style={styles.statsRows}>
+        {wcGoalScorer ? (
+          <WcGoalScorerResultRowNative
+            label={isEn ? "Goal scorer" : "ゴールする選手"}
+            info={wcGoalScorer}
+          />
+        ) : null}
         {rows.map((r, index) => {
           const cap = r.barMax;
           const ratio =
@@ -644,7 +622,8 @@ export default function ResultDetailScreen({
 
   const headerBody = useMemo(() => {
     if (!post) return null;
-    const leagueKey = normalizeLeague(post.league);
+    const leagueKey = leagueFromResultPost(post);
+    const isWcCard = leagueKey === "wc";
     const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
     const home = post.home as { name?: string; teamId?: string } | undefined;
     const away = post.away as { name?: string; teamId?: string } | undefined;
@@ -661,8 +640,12 @@ export default function ResultDetailScreen({
     const awayJersey = resolveTeamJerseyPalette(post.league, away, awayColor);
     const [homeL1, homeL2] = splitTeamNameByLeague(leagueKey, home?.name ?? "");
     const [awayL1, awayL2] = splitTeamNameByLeague(leagueKey, away?.name ?? "");
-    const homeName = getMobileTeamName(leagueKey, home?.name ?? "", homeL1, homeL2);
-    const awayName = getMobileTeamName(leagueKey, away?.name ?? "", awayL1, awayL2);
+    const homeName = isWcCard
+      ? (home?.name ?? "").trim().toUpperCase()
+      : getMobileTeamName(leagueKey, home?.name ?? "", homeL1, homeL2);
+    const awayName = isWcCard
+      ? (away?.name ?? "").trim().toUpperCase()
+      : getMobileTeamName(leagueKey, away?.name ?? "", awayL1, awayL2);
     const ph = pred?.score?.home;
     const pa = pred?.score?.away;
     const predictedScore =
@@ -670,6 +653,12 @@ export default function ResultDetailScreen({
     const rh = result?.home;
     const ra = result?.away;
     const hasFinal = typeof rh === "number" && typeof ra === "number";
+    const wcMatchGoalScorers =
+      isWcCard && hasFinal
+        ? readPostMatchGoalScorers(
+            (post as { matchGoalScorers?: unknown }).matchGoalScorers
+          )
+        : [];
     const finalScore = hasFinal ? `${rh} - ${ra}` : null;
     const cardDateLabel = formatResultPostCardDateLabel(post, isEn ? "en" : "ja");
     const activeWinStreak =
@@ -743,14 +732,21 @@ export default function ResultDetailScreen({
         </View>
         <View style={styles.matchGrid}>
           <View style={styles.sideCol}>
-            <JerseyMarkAdaptive
-              accent={homeJersey.primary}
-              accentEnd={homeJersey.secondary}
-              size={56}
-            />
+            {isWcCard ? (
+              <CountryFlagNative teamId={home?.teamId} variant="result" />
+            ) : (
+              <JerseyMarkAdaptive
+                accent={homeJersey.primary}
+                accentEnd={homeJersey.secondary}
+                size={56}
+              />
+            )}
             <Text style={styles.teamName} numberOfLines={2}>
-              {homeName.toUpperCase()}
+              {homeName}
             </Text>
+            {wcMatchGoalScorers.length > 0 ? (
+              <WcMatchGoalScorersColumnNative scorers={wcMatchGoalScorers} side="home" />
+            ) : null}
           </View>
           <View style={styles.centerCol}>
             <Text style={styles.predLabel}>{cardDateLabel}</Text>
@@ -763,14 +759,21 @@ export default function ResultDetailScreen({
             ) : null}
           </View>
           <View style={styles.sideCol}>
-            <JerseyMarkAdaptive
-              accent={awayJersey.primary}
-              accentEnd={awayJersey.secondary}
-              size={56}
-            />
+            {isWcCard ? (
+              <CountryFlagNative teamId={away?.teamId} variant="result" />
+            ) : (
+              <JerseyMarkAdaptive
+                accent={awayJersey.primary}
+                accentEnd={awayJersey.secondary}
+                size={56}
+              />
+            )}
             <Text style={styles.teamName} numberOfLines={2}>
-              {awayName.toUpperCase()}
+              {awayName}
             </Text>
+            {wcMatchGoalScorers.length > 0 ? (
+              <WcMatchGoalScorersColumnNative scorers={wcMatchGoalScorers} side="away" />
+            ) : null}
           </View>
         </View>
       </ShellCard>
@@ -932,21 +935,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(34,211,238,0.45)",
   },
   primaryBtnText: { color: "#ecfeff", fontWeight: "700" },
-  /** `ResultHomeScreen` の `cardShell` と同一 */
-  shellCard: {
-    position: "relative",
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.12)",
-    overflow: "hidden",
-    backgroundColor: "rgba(8,11,18,0.84)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
-    elevation: 7,
-  },
-  /** 一覧 `cardFrameHit` と同一のゴールド枠（詳細ヘッダーカードのみ・太さは shellCard と共通） */
+  /** 一覧 `cardFrameHit` と同一のゴールド枠（詳細ヘッダーカードのみ） */
   shellCardHitGoldFrame: {
     borderColor: "rgba(250,204,21,0.72)",
     shadowColor: "rgba(250,204,21,0.45)",
@@ -982,47 +971,6 @@ const styles = StyleSheet.create({
     shadowColor: "rgba(139,92,246,0.45)",
     shadowOpacity: 0.44,
     shadowRadius: 16,
-  },
-  /** 一覧と同順：方眼 → グラデ積層 */
-  shellGridUnderlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
-  shellFillStack: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
-  },
-  shellLayerBase: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  shellLayerTopGlow: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  shellLayerGlassFog: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  shellLayerShine: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  shellGlowOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "transparent",
-  },
-  /** `MatchCardListGridOverlay` 用（`GamesHomeScreen` の cardGrid* と同一） */
-  cardGridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardGridLineVertical: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 1,
-  },
-  cardGridLineHorizontal: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
   },
   shellInner: {
     padding: 16,

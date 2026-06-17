@@ -90,18 +90,22 @@ export default function WcGoalScorerResultRow({
   compact = false,
   cyberValue = false,
 }: RowProps) {
+  const flagClass = compact ? "h-3 w-[1.05rem]" : "h-3.5 w-[1.2rem]";
+  const nameLeadingClass = compact ? "leading-[12px]" : "leading-[14px]";
+
   return (
     <div
-      className={
-        compact ? RESULT_STAT_ROW_GRID_COMPACT : RESULT_STAT_ROW_GRID_DEFAULT
-      }
+      className={[
+        compact ? RESULT_STAT_ROW_GRID_COMPACT : RESULT_STAT_ROW_GRID_DEFAULT,
+        compact ? "py-1" : "py-1.5",
+      ].join(" ")}
     >
       <div className="min-w-0">
         <span
           className={
             compact
-              ? "block truncate whitespace-nowrap text-[10px] font-semibold leading-none text-white"
-              : "truncate text-[12px] font-semibold text-white sm:text-[13px]"
+              ? "block truncate whitespace-nowrap text-[10px] font-semibold leading-snug text-white"
+              : "truncate text-[12px] font-semibold leading-snug text-white sm:text-[13px]"
           }
         >
           {label}
@@ -112,9 +116,7 @@ export default function WcGoalScorerResultRow({
         className={[
           "flex min-w-0 items-center gap-1 font-medium text-white/85",
           cyberValue ? "predict-overlay-goal-box px-2 py-1" : "",
-          compact
-            ? "text-[10px] leading-none"
-            : "text-[12px] sm:text-[13px]",
+          compact ? "text-[10px]" : "text-[12px] sm:text-[13px]",
         ].join(" ")}
       >
         <CountryFlag
@@ -122,11 +124,16 @@ export default function WcGoalScorerResultRow({
           variant="inline"
           decorative
           className={[
-            "aspect-[4/3] shrink-0",
-            compact ? "h-3 w-[1.05rem]" : "h-3.5 w-[1.2rem]",
+            "block aspect-[4/3] shrink-0 self-center",
+            flagClass,
           ].join(" ")}
         />
-        <span className="min-w-0 truncate font-semibold text-white/92">
+        <span
+          className={[
+            "min-w-0 truncate font-semibold text-white/92",
+            nameLeadingClass,
+          ].join(" ")}
+        >
           {info.playerName}
         </span>
       </div>

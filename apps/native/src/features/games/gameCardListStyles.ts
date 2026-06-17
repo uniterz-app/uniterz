@@ -6,6 +6,7 @@ import {
 } from "../../ui/liveMarkCyberStyles";
 import { MOBILE_GAMES_CARD_MAX_WIDTH } from "./gamesMobileLayout";
 import { DISPLAY_FONT_FAMILY, NUMERIC_FONT_FAMILY } from "./gameCardDisplayUtils";
+import { MATCH_CARD_SCORE_FONT } from "./matchCardTypography";
 
 /** 試合一覧カード（GameCardList / 予想一覧）共通スタイル */
 export const gameCardListStyles = StyleSheet.create({
@@ -34,8 +35,6 @@ export const gameCardListStyles = StyleSheet.create({
   cardFineShellBackdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
-    borderRadius: 10,
-    overflow: "hidden",
   },
   cardPressableBody: {
     flex: 1,
@@ -187,11 +186,12 @@ export const gameCardListStyles = StyleSheet.create({
   centerTextScoreNum: {
     color: "#ffffff",
     fontSize: 20,
-    fontWeight: "800",
+    fontWeight: "900",
     lineHeight: 22,
     includeFontPadding: false,
     fontVariant: ["tabular-nums"],
-    fontFamily: NUMERIC_FONT_FAMILY,
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    letterSpacing: -0.4,
     textShadowColor: "rgba(0,0,0,0.4)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -199,9 +199,9 @@ export const gameCardListStyles = StyleSheet.create({
   centerScoreDash: {
     color: "rgba(255,255,255,0.5)",
     fontSize: 20,
-    fontWeight: "600",
+    fontWeight: "900",
     lineHeight: 22,
-    fontFamily: NUMERIC_FONT_FAMILY,
+    fontFamily: MATCH_CARD_SCORE_FONT,
   },
   centerSubline: {
     color: "rgba(255,255,255,0.78)",
@@ -234,6 +234,38 @@ export const gameCardListStyles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 14,
     elevation: 3,
+  },
+  wcBroadcastRow: {
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    marginTop: 4,
+    paddingVertical: 4,
+  },
+  wcBroadcastLabel: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 12,
+    fontWeight: "600",
+    includeFontPadding: false,
+    fontFamily: DISPLAY_FONT_FAMILY,
+  },
+  wcBroadcastNames: {
+    color: "rgba(207,250,254,0.9)",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    textAlign: "center",
+    includeFontPadding: false,
+    fontFamily: DISPLAY_FONT_FAMILY,
+  },
+  cardFooterShell: {
+    width: "100%",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   cardAction: {
     width: "100%",

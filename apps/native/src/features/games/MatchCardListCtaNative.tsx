@@ -7,10 +7,17 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-import { Canvas, Path, Skia } from "@shopify/react-native-skia";
+import {
+  Canvas,
+  Group,
+  LinearGradient as SkiaLinearGradient,
+  Path,
+  Rect,
+  Skia,
+  vec,
+} from "@shopify/react-native-skia";
 import { LinearGradient } from "expo-linear-gradient";
 import { chamferedRectPathD } from "./matchListCyberClipPath";
-import { GAMES_PAGE_BG_MASK } from "./gamesPageBackgroundTokens";
 
 /** Web `.match-list-cyber-cta` の角切り（6px） */
 const CTA_CUT = 6;
@@ -116,25 +123,13 @@ const VARIANT_TEXT_SHADOW: Record<MatchCardListCtaVariant, TextStyle> = {
   },
 };
 
-/** カード内 CTA の角切りマスク（ページ背景と同色） */
-const CTA_CORNER_MASK = GAMES_PAGE_BG_MASK;
-
-function CornerCut({ style }: { style: ViewStyle }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={[styles.cornerCut, { backgroundColor: CTA_CORNER_MASK }, style]}
-    />
-  );
-}
-
 function makeSkiaPath(width: number, height: number, cut: number) {
   const d = chamferedRectPathD(width, height, cut);
   if (!d) return null;
   return Skia.Path.MakeFromSVGString(d);
 }
 
-/** Web `.match-list-cyber-cta` 相当の下部 CTA */
+/** Web `.match-list-cyber-cta` 相当 */
 export default function MatchCardListCtaNative({
   label,
   variant,
@@ -157,6 +152,8 @@ export default function MatchCardListCtaNative({
     setSize({ w: width, h: height });
   }
 
+  const hasSize = size.w > 0 && size.h > 0;
+
   return (
     <View
       style={[
@@ -167,32 +164,37 @@ export default function MatchCardListCtaNative({
       ]}
       onLayout={onLayout}
     >
-      <View style={styles.shell}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={fill.colors}
-          locations={fill.locations}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
+      <View style={[styles.frame, hasSize ? { width: size.w, height: size.h } : null]}>
+        {hasSize && skiaPath ? (
+          <Canvas
+            style={{ position: "absolute", left: 0, top: 0, width: size.w, height: size.h }}
+            pointerEvents="none"
+          >
+            <Group clip={skiaPath}>
+              <Rect x={0} y={0} width={size.w} height={size.h}>
+                <SkiaLinearGradient
+                  start={vec(size.w * 0.5, 0)}
+                  end={vec(size.w * 0.5, size.h)}
+                  colors={fill.colors}
+                  positions={fill.locations}
+                />
+              </Rect>
+            </Group>
+            <Path path={skiaPath} style="stroke" strokeWidth={1} color={borderColor} />
+          </Canvas>
+        ) : (
+          <LinearGradient
+            pointerEvents="none"
+            colors={fill.colors}
+            locations={fill.locations}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        )}
         <View pointerEvents="none" style={styles.insetTop} />
         <Text style={[styles.label, textShadow]}>{label}</Text>
-        <CornerCut style={{ top: -1, left: -1 }} />
-        <CornerCut style={{ top: -1, right: -1 }} />
-        <CornerCut style={{ bottom: -1, left: -1 }} />
-        <CornerCut style={{ bottom: -1, right: -1 }} />
       </View>
-      {skiaPath ? (
-        <Canvas style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          <Path
-            path={skiaPath}
-            style="stroke"
-            strokeWidth={1}
-            color={borderColor}
-          />
-        </Canvas>
-      ) : null}
     </View>
   );
 }
@@ -204,13 +206,13 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 2,
   },
-  shell: {
+  frame: {
     minHeight: 32,
-    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 8,
     elevation: 2,
+    position: "relative",
   },
   insetTop: {
     position: "absolute",
@@ -219,6 +221,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1,
     backgroundColor: "rgba(255,255,255,0.22)",
+    zIndex: 2,
   },
   label: {
     color: "rgba(224,255,255,0.98)",
@@ -228,12 +231,5 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     includeFontPadding: false,
     zIndex: 1,
-  },
-  cornerCut: {
-    position: "absolute",
-    width: CTA_CUT * 1.45,
-    height: CTA_CUT * 1.45,
-    transform: [{ rotate: "45deg" }],
-    zIndex: 3,
   },
 });

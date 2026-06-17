@@ -46,7 +46,11 @@ export default function CommunityDetailScreenNative() {
   }, [fUser, groupId]);
 
   return (
-    <MobilePageShell title={name || "Group"} onClose={() => navigation.goBack()}>
+    <MobilePageShell
+      title={name || "Group"}
+      appBackground
+      onClose={() => navigation.goBack()}
+    >
       {loading ? (
         <ActivityIndicator color={colors.accentCyan} style={{ marginTop: 40 }} />
       ) : (

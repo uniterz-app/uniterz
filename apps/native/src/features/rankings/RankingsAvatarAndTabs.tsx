@@ -1,25 +1,39 @@
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Text, View, type ImageStyle, type ViewStyle } from "react-native";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "./CyberSlantedTabNative";
 
 export function RankingsAvatarNative({
   photoURL,
   label,
   size = 40,
+  square = false,
 }: {
   photoURL?: string | null;
   label: string;
   size?: number;
+  square?: boolean;
 }) {
   const initial = (label.trim().charAt(0) || "?").toUpperCase();
+  const radius = square ? 4 : size / 2;
+  const boxStyle: ViewStyle = {
+    width: size,
+    height: size,
+    borderRadius: radius,
+  };
+  const imageStyle: ImageStyle = {
+    width: size,
+    height: size,
+    borderRadius: radius,
+  };
   return (
-    <View style={[styles.avatarWrap, { width: size, height: size, borderRadius: size / 2 }]}>
+    <View style={[styles.avatarWrap, boxStyle, square && styles.avatarSquare]}>
       {photoURL ? (
-        <Image
-          source={{ uri: photoURL }}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
-        />
+        <Image source={{ uri: photoURL }} style={imageStyle} />
       ) : (
         <Text style={[styles.avatarInitial, { fontSize: size * 0.38 }]}>{initial}</Text>
       )}
@@ -42,20 +56,20 @@ export function RankingsCategoryTabsNative({
     { key: "bracket" as const, label: t.bracket },
   ];
   return (
-    <View style={styles.tabGrid2}>
+    <CyberSlantedTabBarNative fill>
       {items.map((item) => {
         const active = category === item.key;
         return (
-          <Pressable
+          <CyberSlantedTabNative
             key={item.key}
-            style={[styles.tabChip, active && styles.tabChipActive]}
+            label={item.label}
+            active={active}
+            fill
             onPress={() => onChange(item.key)}
-          >
-            <Text style={[styles.tabChipText, active && styles.tabChipTextActive]}>{item.label}</Text>
-          </Pressable>
+          />
         );
       })}
-    </View>
+    </CyberSlantedTabBarNative>
   );
 }
 
@@ -77,19 +91,20 @@ export function PlayoffRoundTabsNative({
     { key: "finals", label: t.roundFinals },
   ];
   return (
-    <View style={styles.tabGrid5}>
+    <CyberSlantedTabBarNative fill>
       {items.map((item) => {
         const active = round === item.key;
         return (
-          <Pressable
+          <CyberSlantedTabNative
             key={item.key}
-            style={[styles.roundChip, active && styles.tabChipActive]}
+            label={item.label}
+            active={active}
+            fill
+            compact
             onPress={() => onChange(item.key)}
-          >
-            <Text style={[styles.roundChipText, active && styles.tabChipTextActive]}>{item.label}</Text>
-          </Pressable>
+          />
         );
       })}
-    </View>
+    </CyberSlantedTabBarNative>
   );
 }

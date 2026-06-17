@@ -17,6 +17,7 @@ export function rankingsTexts(language: RankingsLanguage) {
   const ja = language === "ja";
   return {
     title: "NBA PLAYOFF",
+    titleWorldCup: "WORLD CUP",
     scheduleInfoToggle: ja
       ? "更新スケジュールの説明を表示"
       : "Show ranking update schedule",
@@ -42,5 +43,8 @@ export function rankingsTexts(language: RankingsLanguage) {
     roundCF: "CF",
     roundFinals: "FINALS",
     posts: ja ? "投稿" : "Posts",
+    stageAll: ja ? "総合" : "Overall",
+    stageGroup: ja ? "予選" : "Qualifying",
+    stageKnockout: ja ? "本戦" : "Main",
   };
 }

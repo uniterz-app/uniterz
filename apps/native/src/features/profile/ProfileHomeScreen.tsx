@@ -685,7 +685,7 @@ export default function ProfileHomeScreen({
   }
 
   return (
-    <>
+    <View style={styles.screenRoot}>
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[
@@ -1133,11 +1133,16 @@ export default function ProfileHomeScreen({
       message={saveSuccessToast?.body ?? ""}
       onDismiss={() => setSaveSuccessToast(null)}
     />
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+    position: "relative",
+    backgroundColor: "transparent",
+  },
   scroll: {
     flex: 1,
     width: "100%",

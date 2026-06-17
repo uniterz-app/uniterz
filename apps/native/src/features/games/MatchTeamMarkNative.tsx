@@ -1,3 +1,4 @@
+import { normalizeLeague } from "../../../../../lib/leagues";
 import CountryFlagNative, { type CountryFlagVariant } from "./CountryFlagNative";
 import JerseyMarkAdaptive from "./JerseyMarkAdaptive";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
@@ -21,8 +22,7 @@ export default function MatchTeamMarkNative({
   jerseySize = 62,
   flagVariant = "card",
 }: MatchTeamMarkNativeProps) {
-  const league = String(leagueRaw ?? "").toLowerCase();
-  if (league === "wc") {
+  if (normalizeLeague(leagueRaw) === "wc") {
     const teamId = rawTeamIdFromGameSide(side);
     return <CountryFlagNative teamId={teamId} variant={flagVariant} />;
   }

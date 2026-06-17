@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import {
   cancelAnimation,
   Easing,
@@ -49,6 +49,32 @@ export type GameCardListRowEntranceParams = {
   showPredictPrimaryGlow: boolean;
 };
 
+type EntranceBaseline = {
+  shellOpacity: number;
+  shellTranslateY: number;
+  gridOpacity: number;
+  borderReveal: number;
+  headerOpacity: number;
+  headerTranslateY: number;
+  teamsOpacity: number;
+  teamsTranslateY: number;
+  homeJerseyTx: number;
+  homeJerseyOpacity: number;
+  homeJerseyScale: number;
+  awayJerseyTx: number;
+  awayJerseyOpacity: number;
+  awayJerseyScale: number;
+  centerOpacity: number;
+  centerScale: number;
+  dividerScaleX: number;
+  dividerOpacity: number;
+  footerOpacity: number;
+  footerTranslateY: number;
+  footerGlow: number;
+  scanTranslateY: number;
+  scanOpacity: number;
+};
+
 function groupDelayMs(rowIndex: number, group: number) {
   const listStagger = Math.min(
     rowIndex * GAMES_CARD_LIST_STAGGER_MS,
@@ -74,60 +100,144 @@ function runGroupEnter(
   );
 }
 
+function computeEntranceBaseline({
+  rowIndex,
+  enteringAnimationEnabled,
+  reduceMotion,
+  entranceVariant = "full",
+  showPredictPrimaryGlow,
+}: GameCardListRowEntranceParams): EntranceBaseline {
+  const skip = !enteringAnimationEnabled || reduceMotion;
+  const visible: EntranceBaseline = {
+    shellOpacity: 1,
+    shellTranslateY: 0,
+    gridOpacity: 1,
+    borderReveal: 1,
+    headerOpacity: 1,
+    headerTranslateY: 0,
+    teamsOpacity: 1,
+    teamsTranslateY: 0,
+    homeJerseyTx: 0,
+    homeJerseyOpacity: 1,
+    homeJerseyScale: 1,
+    awayJerseyTx: 0,
+    awayJerseyOpacity: 1,
+    awayJerseyScale: 1,
+    centerOpacity: 1,
+    centerScale: 1,
+    dividerScaleX: 1,
+    dividerOpacity: 1,
+    footerOpacity: 1,
+    footerTranslateY: 0,
+    footerGlow: showPredictPrimaryGlow ? 1 : 0,
+    scanTranslateY: 0,
+    scanOpacity: 0,
+  };
+
+  if (skip) return visible;
+
+  if (entranceVariant === "light") {
+    return {
+      ...visible,
+      shellOpacity: 0,
+      shellTranslateY: GAMES_DAY_SWITCH_ROW_FROM_Y,
+      footerGlow: showPredictPrimaryGlow ? 0 : 0,
+    };
+  }
+
+  if (rowIndex >= 3) {
+    return {
+      ...visible,
+      shellOpacity: 0,
+      shellTranslateY: GAMES_PAGE_REST_CARD_FROM_Y,
+    };
+  }
+
+  return {
+    shellOpacity: 0,
+    shellTranslateY: 0,
+    gridOpacity: 0,
+    borderReveal: 0,
+    headerOpacity: 0,
+    headerTranslateY: 8,
+    teamsOpacity: 0,
+    teamsTranslateY: 12,
+    homeJerseyTx: -12,
+    homeJerseyOpacity: 0,
+    homeJerseyScale: 0.92,
+    awayJerseyTx: 12,
+    awayJerseyOpacity: 0,
+    awayJerseyScale: 0.92,
+    centerOpacity: 0,
+    centerScale: 0.9,
+    dividerScaleX: 0.06,
+    dividerOpacity: 0,
+    footerOpacity: 0,
+    footerTranslateY: 10,
+    footerGlow: 0,
+    scanTranslateY: -88,
+    scanOpacity: 0,
+  };
+}
+
 /**
  * Web `MatchCard` entryGroupProps + `ScheduleList.scheduleItem` に合わせた試合カード入場。
  * - page: 先頭3枚は4グループのロックオン、4枚目以降は遅延フェード
  * - daySwitch: 上から順にフェード＋わずかな下降
  */
-export function useGameCardListRowEntrance({
-  rowIndex,
-  enteringAnimationEnabled,
-  reduceMotion,
-  entranceVariant = "full",
-  isPredicted,
-  showPredictPrimaryGlow,
-}: GameCardListRowEntranceParams) {
+export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams) {
+  const {
+    rowIndex,
+    enteringAnimationEnabled,
+    reduceMotion,
+    entranceVariant = "full",
+    showPredictPrimaryGlow,
+  } = params;
+
   const isDaySwitch = entranceVariant === "light";
   const isPageRich = entranceVariant === "full" && rowIndex < 3;
   const isPageRest = entranceVariant === "full" && rowIndex >= 3;
   const skip = !enteringAnimationEnabled || reduceMotion;
 
-  const shellOpacity = useSharedValue(1);
-  const shellTranslateY = useSharedValue(0);
+  const baseline = computeEntranceBaseline(params);
 
-  const gridOpacity = useSharedValue(1);
-  const borderReveal = useSharedValue(1);
+  const shellOpacity = useSharedValue(baseline.shellOpacity);
+  const shellTranslateY = useSharedValue(baseline.shellTranslateY);
 
-  const headerOpacity = useSharedValue(1);
-  const headerTranslateY = useSharedValue(0);
+  const gridOpacity = useSharedValue(baseline.gridOpacity);
+  const borderReveal = useSharedValue(baseline.borderReveal);
 
-  const teamsOpacity = useSharedValue(1);
-  const teamsTranslateY = useSharedValue(0);
+  const headerOpacity = useSharedValue(baseline.headerOpacity);
+  const headerTranslateY = useSharedValue(baseline.headerTranslateY);
 
-  const homeJerseyTx = useSharedValue(0);
-  const homeJerseyOpacity = useSharedValue(1);
-  const homeJerseyScale = useSharedValue(1);
+  const teamsOpacity = useSharedValue(baseline.teamsOpacity);
+  const teamsTranslateY = useSharedValue(baseline.teamsTranslateY);
 
-  const awayJerseyTx = useSharedValue(0);
-  const awayJerseyOpacity = useSharedValue(1);
-  const awayJerseyScale = useSharedValue(1);
+  const homeJerseyTx = useSharedValue(baseline.homeJerseyTx);
+  const homeJerseyOpacity = useSharedValue(baseline.homeJerseyOpacity);
+  const homeJerseyScale = useSharedValue(baseline.homeJerseyScale);
 
-  const centerOpacity = useSharedValue(1);
-  const centerScale = useSharedValue(1);
+  const awayJerseyTx = useSharedValue(baseline.awayJerseyTx);
+  const awayJerseyOpacity = useSharedValue(baseline.awayJerseyOpacity);
+  const awayJerseyScale = useSharedValue(baseline.awayJerseyScale);
 
-  const dividerScaleX = useSharedValue(1);
+  const centerOpacity = useSharedValue(baseline.centerOpacity);
+  const centerScale = useSharedValue(baseline.centerScale);
 
-  const footerOpacity = useSharedValue(1);
-  const footerTranslateY = useSharedValue(0);
-  const footerGlow = useSharedValue(showPredictPrimaryGlow ? 1 : 0);
+  const dividerScaleX = useSharedValue(baseline.dividerScaleX);
+  const dividerOpacity = useSharedValue(baseline.dividerOpacity);
+
+  const footerOpacity = useSharedValue(baseline.footerOpacity);
+  const footerTranslateY = useSharedValue(baseline.footerTranslateY);
+  const footerGlow = useSharedValue(baseline.footerGlow);
 
   /** Web `MatchCard` 入場スキャン光（上→下） */
-  const scanTranslateY = useSharedValue(0);
-  const scanOpacity = useSharedValue(0);
+  const scanTranslateY = useSharedValue(baseline.scanTranslateY);
+  const scanOpacity = useSharedValue(baseline.scanOpacity);
 
   const pressed = useSharedValue(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const resetAll = () => {
       shellOpacity.value = 1;
       shellTranslateY.value = 0;
@@ -146,6 +256,7 @@ export function useGameCardListRowEntrance({
       centerOpacity.value = 1;
       centerScale.value = 1;
       dividerScaleX.value = 1;
+      dividerOpacity.value = 1;
       footerOpacity.value = 1;
       footerTranslateY.value = 0;
       footerGlow.value = showPredictPrimaryGlow ? 1 : 0;
@@ -223,7 +334,17 @@ export function useGameCardListRowEntrance({
     }
 
     if (isPageRich) {
-      runGroupEnter(shellOpacity, shellTranslateY, groupDelayMs(rowIndex, ENTRY_GROUP_SHELL), 10);
+      const shellDelay = groupDelayMs(rowIndex, ENTRY_GROUP_SHELL);
+      shellOpacity.value = 0;
+      shellTranslateY.value = 0;
+      shellOpacity.value = withDelay(
+        shellDelay,
+        withTiming(1, {
+          duration: Math.round(GAMES_CYBER_ENTRY_DURATION_MS * 0.55),
+          easing: gamesCyberEaseBezier,
+        })
+      );
+
       runGroupEnter(
         headerOpacity,
         headerTranslateY,
@@ -308,23 +429,32 @@ export function useGameCardListRowEntrance({
       gridOpacity.value = 0;
       borderReveal.value = 0;
       gridOpacity.value = withDelay(
-        groupDelayMs(rowIndex, ENTRY_GROUP_SHELL),
+        shellDelay,
         withTiming(1, {
           duration: Math.round(GAMES_CYBER_ENTRY_DURATION_MS * 0.85),
           easing: gamesCyberEaseBezier,
         })
       );
       borderReveal.value = withDelay(
-        groupDelayMs(rowIndex, ENTRY_GROUP_SHELL) + 40,
+        shellDelay + 40,
         withTiming(1, {
           duration: GAMES_CYBER_ENTRY_DURATION_MS,
           easing: gamesCyberEaseBezier,
         })
       );
 
-      dividerScaleX.value = 0;
+      const footerDelay = groupDelayMs(rowIndex, ENTRY_GROUP_FOOTER);
+      dividerScaleX.value = 0.06;
+      dividerOpacity.value = 0;
       dividerScaleX.value = withDelay(
-        groupDelayMs(rowIndex, ENTRY_GROUP_FOOTER),
+        footerDelay,
+        withTiming(1, {
+          duration: GAMES_CYBER_ENTRY_DURATION_MS,
+          easing: gamesCyberEaseBezier,
+        })
+      );
+      dividerOpacity.value = withDelay(
+        footerDelay,
         withTiming(1, {
           duration: GAMES_CYBER_ENTRY_DURATION_MS,
           easing: gamesCyberEaseBezier,
@@ -333,12 +463,12 @@ export function useGameCardListRowEntrance({
 
       if (showPredictPrimaryGlow) {
         footerGlow.value = withDelay(
-          groupDelayMs(rowIndex, ENTRY_GROUP_FOOTER),
+          footerDelay,
           withTiming(1, { duration: 480, easing: gamesCyberEaseBezier })
         );
       }
 
-      const scanDelay = groupDelayMs(rowIndex, ENTRY_GROUP_SHELL) + 50;
+      const scanDelay = shellDelay + 50;
       scanTranslateY.value = -88;
       scanOpacity.value = 0;
       scanTranslateY.value = withDelay(
@@ -375,6 +505,7 @@ export function useGameCardListRowEntrance({
         cancelAnimation(centerOpacity);
         cancelAnimation(centerScale);
         cancelAnimation(dividerScaleX);
+        cancelAnimation(dividerOpacity);
         cancelAnimation(footerOpacity);
         cancelAnimation(footerTranslateY);
         cancelAnimation(footerGlow);
@@ -450,6 +581,7 @@ export function useGameCardListRowEntrance({
   }));
 
   const dividerStyle = useAnimatedStyle(() => ({
+    opacity: dividerOpacity.value,
     transform: [{ scaleX: dividerScaleX.value }],
     transformOrigin: ["0%", "50%", 0],
   }));

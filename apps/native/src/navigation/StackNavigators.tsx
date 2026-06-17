@@ -45,6 +45,7 @@ import {
 } from "../features/profile/screens/ProfileStackWrappers";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
+import NativeStackBackdrop from "../components/NativeStackBackdrop";
 
 const GamesStack = createNativeStackNavigator<GamesStackParamList>();
 const ResultStack = createNativeStackNavigator<ResultStackParamList>();
@@ -54,8 +55,10 @@ const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 const screenOptions = {
   headerShown: false,
-  animation: "slide_from_right" as const,
-  contentStyle: { backgroundColor: "#090c15" },
+  animation: "fade" as const,
+  contentStyle: { backgroundColor: "transparent" },
+  detachInactiveScreens: false,
+  freezeOnBlur: false,
 };
 
 function GuidelinesScreenWrapper() {
@@ -66,58 +69,61 @@ function GuidelinesScreenWrapper() {
 function GamesStackScreen() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   return (
-    <GamesStack.Navigator
-      screenOptions={{
-        ...screenOptions,
-        contentStyle: { backgroundColor: "transparent" },
-      }}
-    >
-      <GamesStack.Screen name="GamesHome">
-        {() => <GamesHomeScreen bottomReserveY={bottomContentReserveY} />}
-      </GamesStack.Screen>
-      <GamesStack.Screen name="GamePredict" component={GamePredictScreenNative} />
-      <GamesStack.Screen name="GamePredictions" component={GamePredictionsScreenNative} />
-      <GamesStack.Screen name="Standings" component={StandingsScreenNative} />
-      <GamesStack.Screen name="TeamDetail" component={TeamDetailScreenNative} />
-      <GamesStack.Screen name="PlayoffBracket" component={PlayoffBracketPredictNative} />
-      <GamesStack.Screen name="PlayoffBracketView" component={PlayoffBracketViewNative} />
-      <GamesStack.Screen name="BracketMarket" component={BracketMarketScreenNative} />
-    </GamesStack.Navigator>
+    <NativeStackBackdrop>
+      <GamesStack.Navigator screenOptions={screenOptions}>
+        <GamesStack.Screen name="GamesHome">
+          {() => <GamesHomeScreen bottomReserveY={bottomContentReserveY} />}
+        </GamesStack.Screen>
+        <GamesStack.Screen name="GamePredict" component={GamePredictScreenNative} />
+        <GamesStack.Screen name="GamePredictions" component={GamePredictionsScreenNative} />
+        <GamesStack.Screen name="Standings" component={StandingsScreenNative} />
+        <GamesStack.Screen name="TeamDetail" component={TeamDetailScreenNative} />
+        <GamesStack.Screen name="PlayoffBracket" component={PlayoffBracketPredictNative} />
+        <GamesStack.Screen name="PlayoffBracketView" component={PlayoffBracketViewNative} />
+        <GamesStack.Screen name="BracketMarket" component={BracketMarketScreenNative} />
+      </GamesStack.Navigator>
+    </NativeStackBackdrop>
   );
 }
 
 function ResultStackScreen() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   return (
-    <ResultStack.Navigator screenOptions={screenOptions}>
-      <ResultStack.Screen name="ResultHome">
-        {() => <ResultHomeScreen bottomReserveY={bottomContentReserveY} />}
-      </ResultStack.Screen>
-      <ResultStack.Screen name="ResultDetail" component={ResultDetailStackScreen} />
-    </ResultStack.Navigator>
+    <NativeStackBackdrop>
+      <ResultStack.Navigator screenOptions={screenOptions}>
+        <ResultStack.Screen name="ResultHome">
+          {() => <ResultHomeScreen bottomReserveY={bottomContentReserveY} />}
+        </ResultStack.Screen>
+        <ResultStack.Screen name="ResultDetail" component={ResultDetailStackScreen} />
+      </ResultStack.Navigator>
+    </NativeStackBackdrop>
   );
 }
 
 function RankingsStackScreen() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   return (
-    <RankingsStack.Navigator screenOptions={screenOptions}>
-      <RankingsStack.Screen name="RankingsHome">
-        {() => <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />}
-      </RankingsStack.Screen>
-    </RankingsStack.Navigator>
+    <NativeStackBackdrop>
+      <RankingsStack.Navigator screenOptions={screenOptions}>
+        <RankingsStack.Screen name="RankingsHome">
+          {() => <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />}
+        </RankingsStack.Screen>
+      </RankingsStack.Navigator>
+    </NativeStackBackdrop>
   );
 }
 
 function LeaderboardsStackScreen() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   return (
-    <LeaderboardsStack.Navigator screenOptions={screenOptions}>
-      <LeaderboardsStack.Screen name="LeaderboardsHome">
-        {() => <LeaderboardsHomeScreen bottomReserveY={bottomContentReserveY} />}
-      </LeaderboardsStack.Screen>
-      <LeaderboardsStack.Screen name="CommunityDetail" component={CommunityDetailScreenNative} />
-    </LeaderboardsStack.Navigator>
+    <NativeStackBackdrop>
+      <LeaderboardsStack.Navigator screenOptions={screenOptions}>
+        <LeaderboardsStack.Screen name="LeaderboardsHome">
+          {() => <LeaderboardsHomeScreen bottomReserveY={bottomContentReserveY} />}
+        </LeaderboardsStack.Screen>
+        <LeaderboardsStack.Screen name="CommunityDetail" component={CommunityDetailScreenNative} />
+      </LeaderboardsStack.Navigator>
+    </NativeStackBackdrop>
   );
 }
 
@@ -134,7 +140,8 @@ function ProfileHomeRoute() {
 
 function ProfileStackScreen() {
   return (
-    <ProfileStack.Navigator screenOptions={screenOptions}>
+    <NativeStackBackdrop>
+      <ProfileStack.Navigator screenOptions={screenOptions}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileHomeRoute} />
       <ProfileStack.Screen name="ProfileSettings" component={ProfileSettingsScreenNative} />
       <ProfileStack.Screen name="ProfilePassword" component={ProfilePasswordScreenNative} />
@@ -156,7 +163,8 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="FeatureRequest" component={FeatureRequestScreenNative} />
       <ProfileStack.Screen name="CommunityGuidelines" component={GuidelinesScreenWrapper} />
       <ProfileStack.Screen name="Landing" component={LandingScreenNative} />
-    </ProfileStack.Navigator>
+      </ProfileStack.Navigator>
+    </NativeStackBackdrop>
   );
 }
 

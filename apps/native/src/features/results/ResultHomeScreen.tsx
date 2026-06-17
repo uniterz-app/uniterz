@@ -7,13 +7,11 @@ import {
   SectionList,
   StyleSheet,
   Text,
-  UIManager,
   View,
   type LayoutChangeEvent,
+  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   Easing,
@@ -29,7 +27,9 @@ import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
-import { MATCH_CARD_DISPLAY_FONT } from "../games/matchCardTypography";
+import CountryFlagNative from "../games/CountryFlagNative";
+import { resolvePostListLeague } from "../../../../../lib/leagues";
+import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
 import { canDismissResultListPostNow } from "./nativeResultModel";
@@ -78,9 +78,7 @@ import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
 import ResultMatchScoreLineNative from "./ResultMatchScoreLineNative";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultPredictEditModal from "./ResultPredictEditModal";
-import { MatchCardListGridOverlay } from "../games/MatchCardListGridOverlay";
-import GamesPageBackgroundNative from "../games/GamesPageBackgroundNative";
-import { GAMES_PAGE_BG_TOP } from "../games/gamesPageBackgroundTokens";
+import ResultGlassShellNative from "./ResultGlassShellNative";
 import { useNativeResultPosts } from "./useNativeResultPosts";
 import {
   useResultDayHeaderEntrance,
@@ -89,13 +87,10 @@ import {
   useResultPostCardEntrance,
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
-
-const hasNativeBlurView =
-  Platform.OS !== "web" &&
-  Boolean(
-    UIManager.getViewManagerConfig?.("ExpoBlurView") ??
-      UIManager.getViewManagerConfig?.("ViewManagerAdapter_ExpoBlur_ExpoBlurView")
-  );
+import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
+import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
+import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
+import { readPostMatchGoalScorers } from "../../../../../lib/wc/matchGoalScorers";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
@@ -176,17 +171,6 @@ function ResultDayHeaderGridOverlay({ mobileStrip = false }: { mobileStrip?: boo
   );
 }
 
-/** 試合カード（GameCardList）と同じブラー用スタイル */
-const gridStyles = StyleSheet.create({
-  cardBlurLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardBlurLayerFallback: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(24,28,38,0.12)",
-  },
-});
-
 const LEAGUE_LABEL: Record<string, string> = {
   nba: "NBA",
   bj: "B1",
@@ -206,15 +190,6 @@ const LEAGUE_PILL_BG: Record<string, string> = {
 
 const NUMERIC_FONT_FAMILY = NUMERIC_FONT;
 const DISPLAY_FONT_FAMILY = DISPLAY_FONT;
-function normalizeLeague(raw: unknown): "nba" | "bj" | "j1" | "pl" | "wc" {
-  const v = String(raw ?? "").trim().toLowerCase();
-  if (v === "wc" || v.includes("world cup")) return "wc";
-  if (v === "bj" || v === "b1" || v.includes("b.league")) return "bj";
-  if (v === "j1" || v === "j") return "j1";
-  if (v === "pl" || v.includes("premier") || v.includes("epl")) return "pl";
-  return "nba";
-}
-
 /** Firestore は数値フィールドが文字列で返ることがあるため Number に寄せる */
 function toNumber(v: unknown, fallback = 0) {
   if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -247,27 +222,6 @@ function isRedUpset(v: unknown): boolean {
 }
 
 type StreakBadge = { label: string; tone: "silver" | "platinum" | "gold" };
-
-/** `GameCardList` の `CardBlurLayer` と同一 */
-function ResultCardBlurLayer() {
-  if (!hasNativeBlurView) {
-    return <View style={gridStyles.cardBlurLayerFallback} />;
-  }
-  if (Platform.OS === "ios") {
-    return <BlurView intensity={30} tint="default" style={gridStyles.cardBlurLayer} />;
-  }
-  if (Platform.OS === "android") {
-    return (
-      <BlurView
-        intensity={28}
-        tint="default"
-        experimentalBlurMethod="dimezisBlurView"
-        style={gridStyles.cardBlurLayer}
-      />
-    );
-  }
-  return <View style={gridStyles.cardBlurLayerFallback} />;
-}
 
 function getStreakBadge(activeWinStreak: unknown, isEn: boolean): StreakBadge | null {
   const v =
@@ -303,6 +257,7 @@ function getMobileTeamName(
 ): string {
   if (league === "nba") return l2 || rawName;
   if (league === "pl") return getTeamAlias(rawName) ?? rawName;
+  if (league === "wc") return rawName.trim().toUpperCase();
   return [l1, l2].filter(Boolean).join(" ");
 }
 
@@ -525,7 +480,11 @@ function ResultPostCard({
     onRequestPredictEdit(post);
   }, [gameId, onRequestPredictEdit, post]);
 
-  const leagueKey = normalizeLeague(post.league);
+  const leagueKey = resolvePostListLeague({
+    league: post.league,
+    gameId: post.gameId,
+  });
+  const isWcCard = leagueKey === "wc";
   const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
 
   const home = post.home as { name?: string; teamId?: string } | undefined;
@@ -556,6 +515,15 @@ function ResultPostCard({
   const rh = result?.home;
   const ra = result?.away;
   const hasFinal = typeof rh === "number" && typeof ra === "number";
+
+  const wcMatchGoalScorers = useMemo(() => {
+    if (!isWcCard || !hasFinal) return [];
+    return readPostMatchGoalScorers(
+      (post as { matchGoalScorers?: unknown }).matchGoalScorers
+    );
+  }, [isWcCard, hasFinal, post]);
+
+  const wcGoalScorer = useWcGoalScorerResultNative(post as WcGoalScorerPostLike);
 
   const activeWinStreak =
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
@@ -590,7 +558,7 @@ function ResultPostCard({
         : []),
       {
         key: "upsetPoints" as const,
-        label: isEn ? "Upset Score" : "Upsetスコア",
+        label: isEn ? "Upset Score" : "アップセット",
         value: upsetPoints,
         barMax: 10,
         format: (v: number) =>
@@ -598,7 +566,7 @@ function ResultPostCard({
       },
       {
         key: "pointsV3" as const,
-        label: isEn ? "Total Score" : "総合スコア",
+        label: isEn ? "Total Score" : "総合得点",
         value: pointsV3,
         barMax: 10,
         format: (v: number) => `${(Math.round(v * 10) / 10).toFixed(1)}`,
@@ -658,6 +626,19 @@ function ResultPostCard({
   const shellOverflowStyle =
     cornerFabOpen && hasCornerActions ? styles.cardShellOverflowVisible : null;
 
+  const shellBorderColor =
+    typeof (frameStyle as ViewStyle | null)?.borderColor === "string"
+      ? ((frameStyle as ViewStyle).borderColor as string)
+      : "rgba(255,255,255,0.10)";
+  const shellShadowStyle: ViewStyle | null = frameStyle
+    ? {
+        shadowColor: (frameStyle as ViewStyle).shadowColor,
+        shadowOpacity: (frameStyle as ViewStyle).shadowOpacity,
+        shadowRadius: (frameStyle as ViewStyle).shadowRadius,
+        elevation: (frameStyle as ViewStyle).elevation,
+      }
+    : null;
+
   return (
     <Animated.View
       collapsable={false}
@@ -675,13 +656,11 @@ function ResultPostCard({
           onOpenDetail(post.id);
         }}
       >
-      <View style={[styles.cardShell, resultCardShellNative.shell, frameStyle, shellOverflowStyle]} collapsable={false}>
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.cardGridUnderlay, entrance.gridUnderlayStyle]}
-        >
-          <MatchCardListGridOverlay styles={styles} tone="resultList" />
-        </Animated.View>
+      <ResultGlassShellNative
+        borderColor={shellBorderColor}
+        shellStyle={[styles.cardShell, shellShadowStyle]}
+        overflowVisible={Boolean(shellOverflowStyle)}
+      >
         <View style={styles.cardBadgeOverlay} pointerEvents="none">
           <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
             {leagueKey === "nba" || leagueKey === "wc" ? (
@@ -709,52 +688,11 @@ function ResultPostCard({
               streakBadge={streakBadge}
               activeWinStreak={activeWinStreak}
               showLiveMark={showLiveMark}
+              hitBadgeSubtle
             />
           </Animated.View>
         </View>
         <Animated.View style={[resultCardShellNative.body, entrance.cardBodyGateStyle]}>
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(14,18,28,0.92)",
-              "rgba(10,13,22,0.86)",
-              "rgba(7,10,17,0.92)",
-            ]}
-            locations={[0, 0.52, 1]}
-            style={styles.cardLayerBase}
-          />
-          <ResultCardBlurLayer />
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(255,255,255,0.018)",
-              "rgba(255,255,255,0.004)",
-              "rgba(255,255,255,0)",
-            ]}
-            locations={[0, 0.24, 1]}
-            style={styles.cardLayerTopGlow}
-          />
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(255,255,255,0.018)",
-              "rgba(255,255,255,0.008)",
-              "rgba(255,255,255,0)",
-            ]}
-            locations={[0, 0.6, 1]}
-            style={styles.cardLayerGlassFog}
-          />
-          <LinearGradient
-            pointerEvents="none"
-            colors={[
-              "rgba(255,255,255,0.012)",
-              "rgba(255,255,255,0.003)",
-              "rgba(255,255,255,0)",
-            ]}
-            locations={[0, 0.2, 1]}
-            style={styles.cardLayerShine}
-          />
-          <View style={styles.cardGlowOverlay} />
           {hasCornerActions ? (
             <View style={styles.cornerFabCluster} pointerEvents="box-none">
               {hasCornerEdit ? (
@@ -817,44 +755,80 @@ function ResultPostCard({
             <View style={styles.matchGrid}>
               <View style={[styles.sideCol, styles.sideColHome]}>
                 <Animated.View style={entrance.homeJerseyMarkStyle}>
-                  <JerseyMarkAdaptive
-                    accent={homeJersey.primary}
-                    accentEnd={homeJersey.secondary}
-                    size={JERSEY_SIZE_RESULT}
-                  />
+                  {isWcCard ? (
+                    <CountryFlagNative teamId={home?.teamId} variant="result" />
+                  ) : (
+                    <JerseyMarkAdaptive
+                      accent={homeJersey.primary}
+                      accentEnd={homeJersey.secondary}
+                      size={JERSEY_SIZE_RESULT}
+                    />
+                  )}
                 </Animated.View>
                 <Animated.View style={entrance.homeTeamLabelStyle}>
-                  <Text style={styles.teamName} numberOfLines={1}>
+                  <Text
+                    style={[styles.teamName, isWcCard && styles.teamNameWc]}
+                    numberOfLines={1}
+                  >
                     {homeName}
                   </Text>
                 </Animated.View>
+                {wcMatchGoalScorers.length > 0 ? (
+                  <WcMatchGoalScorersColumnNative
+                    scorers={wcMatchGoalScorers}
+                    side="home"
+                  />
+                ) : null}
               </View>
               <View style={[styles.sideCol, styles.sideColAway]}>
                 <Animated.View style={entrance.awayJerseyMarkStyle}>
-                  <JerseyMarkAdaptive
-                    accent={awayJersey.primary}
-                    accentEnd={awayJersey.secondary}
-                    size={JERSEY_SIZE_RESULT}
-                  />
+                  {isWcCard ? (
+                    <CountryFlagNative teamId={away?.teamId} variant="result" />
+                  ) : (
+                    <JerseyMarkAdaptive
+                      accent={awayJersey.primary}
+                      accentEnd={awayJersey.secondary}
+                      size={JERSEY_SIZE_RESULT}
+                    />
+                  )}
                 </Animated.View>
                 <Animated.View style={entrance.awayTeamLabelStyle}>
-                  <Text style={styles.teamName} numberOfLines={1}>
+                  <Text
+                    style={[styles.teamName, isWcCard && styles.teamNameWc]}
+                    numberOfLines={1}
+                  >
                     {awayName}
                   </Text>
                 </Animated.View>
+                {wcMatchGoalScorers.length > 0 ? (
+                  <WcMatchGoalScorersColumnNative
+                    scorers={wcMatchGoalScorers}
+                    side="away"
+                  />
+                ) : null}
               </View>
             </View>
             <View style={styles.centerScoreOverlay} pointerEvents="none">
               <Animated.View style={entrance.predictedScoreStyle}>
                 {hasPredictedScore ? (
-                  <ResultMatchScoreLineNative home={ph} away={pa} variant="predicted" />
+                  <ResultMatchScoreLineNative
+                    home={ph}
+                    away={pa}
+                    variant="predicted"
+                    density="list"
+                  />
                 ) : (
                   <Text style={styles.predictedScoreFallback}>— – —</Text>
                 )}
               </Animated.View>
               {hasFinal ? (
                 <Animated.View style={[entrance.finalScoreStyle, styles.finalScoreWrap]}>
-                  <ResultMatchScoreLineNative home={rh} away={ra} variant="final" />
+                  <ResultMatchScoreLineNative
+                    home={rh}
+                    away={ra}
+                    variant="final"
+                    density="list"
+                  />
                 </Animated.View>
               ) : null}
             </View>
@@ -862,6 +836,12 @@ function ResultPostCard({
 
           <View style={styles.divider} />
           <View style={styles.statBlock}>
+            {wcGoalScorer ? (
+              <WcGoalScorerResultRowNative
+                label={isEn ? "Goal scorer" : "ゴールする選手"}
+                info={wcGoalScorer}
+              />
+            ) : null}
             {statRows.map((row, rowIndex) => {
               const cap = row.barMax;
               const ratio =
@@ -904,7 +884,7 @@ function ResultPostCard({
           </View>
         </Animated.View>
         {badge === "hit" ? <ResultHitCyberFrameNative /> : null}
-      </View>
+      </ResultGlassShellNative>
       </AnimatedResultCardPressable>
     </Animated.View>
   );
@@ -1134,7 +1114,6 @@ export default function ResultHomeScreen({
 
   return (
     <View style={styles.resultScreenWrap}>
-      <GamesPageBackgroundNative />
     <View style={styles.root}>
       {showInitialSpinner ? (
         <View style={[styles.centered, { paddingTop: listTopPad, paddingBottom: bottomReserveY }]}>
@@ -1235,12 +1214,13 @@ const styles = StyleSheet.create({
     minHeight: 0,
     width: "100%",
     position: "relative",
-    backgroundColor: GAMES_PAGE_BG_TOP,
+    backgroundColor: "transparent",
   },
   root: {
     flex: 1,
     backgroundColor: "transparent",
     minHeight: 0,
+    zIndex: 1,
   },
   /** フローティングナビの背後までスクロール背景を伸ばす */
   listScroll: {
@@ -1537,26 +1517,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     flexShrink: 0,
   },
-  cardGridUnderlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
-  /** `MatchCardListGridOverlay` の線スタイル（濃さは `tone="resultList"` 側の定数） */
-  cardGridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardGridLineVertical: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 1,
-  },
-  cardGridLineHorizontal: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-  },
   /** Web モバイル `ResultCard` の contentPad（px-2 pb-2 pt-9） */
   cardPressableBody: {
     position: "relative",
@@ -1652,22 +1612,6 @@ const styles = StyleSheet.create({
   cornerFlyoutPressed: {
     opacity: 0.85,
   },
-  cardLayerBase: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardLayerTopGlow: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardLayerGlassFog: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardLayerShine: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardGlowOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "transparent",
-  },
   cardFrameUpset: {
     borderColor: "rgba(248,113,113,0.84)",
     shadowColor: "rgba(239,68,68,0.5)",
@@ -1738,6 +1682,7 @@ const styles = StyleSheet.create({
   matchArea: {
     position: "relative",
     marginTop: 0,
+    minHeight: 88,
   },
   matchGrid: {
     flexDirection: "row",
@@ -1751,17 +1696,17 @@ const styles = StyleSheet.create({
   },
   sideColHome: {
     paddingTop: 0,
-    paddingRight: 24,
+    paddingRight: 26,
   },
   sideColAway: {
     paddingTop: 0,
-    paddingLeft: 24,
+    paddingLeft: 26,
   },
   centerScoreOverlay: {
     position: "absolute",
     left: 0,
     right: 0,
-    top: 16,
+    top: 14,
     alignItems: "center",
     zIndex: 10,
     maxWidth: "100%",
@@ -1777,15 +1722,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
     width: "100%",
   },
+  teamNameWc: {
+    fontSize: 15,
+    letterSpacing: 1.04,
+  },
   predictedScoreFallback: {
-    fontSize: 16,
+    fontSize: 30,
+    lineHeight: 32,
     fontWeight: "900",
     color: "rgba(255,255,255,0.85)",
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontFamily: MATCH_CARD_SCORE_FONT,
     textAlign: "center",
   },
   finalScoreWrap: {
-    marginTop: 4,
+    marginTop: 3,
   },
   divider: {
     marginTop: 6,
