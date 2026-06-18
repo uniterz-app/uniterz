@@ -4,10 +4,12 @@ import React from "react";
 import {
   RESULT_GLASS_BORDER,
   RESULT_GLASS_FILL,
+  RESULT_GLASS_FILL_LITE,
   RESULT_GLASS_FILL_MOBILE,
   RESULT_GLASS_LIFT,
   RESULT_GLASS_SHADOW,
   RESULT_GLASS_SHADOW_HOVER,
+  RESULT_GLASS_SHADOW_LITE,
   resultBadgeAccent,
   RESULT_HIT_CYBER_CLIP,
   isResultCyberClipFrameBadge,
@@ -36,6 +38,8 @@ type Props = {
   dense?: boolean;
   /** Web ホバーリフト */
   lift?: boolean;
+  /** 他人プロフィール向け：blur・重い影・ホバーリフトを抑える */
+  lite?: boolean;
   roundedClassName?: string;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
 };
@@ -53,10 +57,22 @@ export default function ResultGlassShell({
   showSweep = true,
   dense = false,
   lift = true,
+  lite = false,
   roundedClassName = RESULT_HIT_CYBER_CLIP,
   onClick,
 }: Props) {
   const accent = resultBadgeAccent(badge, activeWinStreak);
+
+  const glassFill = lite
+    ? RESULT_GLASS_FILL_LITE
+    : dense
+      ? RESULT_GLASS_FILL_MOBILE
+      : RESULT_GLASS_FILL;
+  const glassShadow = lite
+    ? RESULT_GLASS_SHADOW_LITE
+    : accent.shadow || RESULT_GLASS_SHADOW;
+  const glassLift = lite ? false : lift;
+  const frameSweep = !lite && showSweep;
 
   const panelClass = [
     "relative overflow-hidden",
@@ -64,9 +80,9 @@ export default function ResultGlassShell({
     isResultCyberClipFrameBadge(badge)
       ? RESULT_GLASS_BORDER
       : (accent.frameBorder ?? RESULT_GLASS_BORDER),
-    dense ? RESULT_GLASS_FILL_MOBILE : RESULT_GLASS_FILL,
-    accent.shadow || RESULT_GLASS_SHADOW,
-    lift ? `${RESULT_GLASS_LIFT} ${RESULT_GLASS_SHADOW_HOVER}` : "",
+    glassFill,
+    glassShadow,
+    glassLift ? `${RESULT_GLASS_LIFT} ${RESULT_GLASS_SHADOW_HOVER}` : "",
     extraPanelClassName,
   ]
     .filter(Boolean)
@@ -76,13 +92,20 @@ export default function ResultGlassShell({
     <div className={className} onClick={onClick}>
       <div className={panelClass}>
         {isResultHitFrameBadge(badge) ? (
-          <ResultHitCyberFrame showSweep={showSweep} />
+          <ResultHitCyberFrame showSweep={frameSweep} />
         ) : null}
-        {isResultPerfectFrameBadge(badge) ? <ResultPerfectCyberFrame /> : null}
+        {isResultPerfectFrameBadge(badge) ? (
+          <ResultPerfectCyberFrame showSweep={frameSweep} />
+        ) : null}
         {isResultStreakFrameBadge(badge) ? (
-          <ResultStreakCyberFrame activeWinStreak={activeWinStreak} />
+          <ResultStreakCyberFrame
+            activeWinStreak={activeWinStreak}
+            showSweep={frameSweep}
+          />
         ) : null}
-        {isResultUpsetFrameBadge(badge) ? <ResultUpsetCyberFrame /> : null}
+        {isResultUpsetFrameBadge(badge) ? (
+          <ResultUpsetCyberFrame showSweep={frameSweep} />
+        ) : null}
 
         {children}
       </div>

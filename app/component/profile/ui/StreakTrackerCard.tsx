@@ -19,6 +19,9 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { BarChart3, Info, TrendingDown, TrendingUp } from "lucide-react";
 import styles from "./profileChartInfoFaq.module.css";
+import {
+  isProfileChartAnimationOff,
+} from "@/lib/profile/profileVisualEffects";
 
 type Layout = "mobile" | "web";
 
@@ -127,6 +130,8 @@ export default function StreakTrackerCard({
 }: Props) {
   const msg = t(language);
   const reduceMotion = useReducedMotion();
+  const chartAnimationsOff = isProfileChartAnimationOff();
+  const staticChart = reduceMotion || chartAnimationsOff;
   const S = streakSizes(layout);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   /** チャート枠が十分見えたらアニメ開始（1回のみ） */
@@ -145,7 +150,11 @@ export default function StreakTrackerCard({
   const gateOpen = entranceReady !== false;
   /** スクロールでチャートが見えてから 2 段階アニメ（軸・格子→ブロック） */
   const wantsScrollAnim =
-    gateOpen && !reduceMotion && !loading && points.length > 0;
+    !chartAnimationsOff &&
+    gateOpen &&
+    !reduceMotion &&
+    !loading &&
+    points.length > 0;
   const canAnimate = wantsScrollAnim && chartInView;
 
   const animMountKey = canAnimate
@@ -156,7 +165,7 @@ export default function StreakTrackerCard({
   const [blocksReady, setBlocksReady] = useState(false);
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (staticChart) {
       setAxesReady(true);
       setBlocksReady(true);
       return;
@@ -188,7 +197,7 @@ export default function StreakTrackerCard({
       clearTimeout(tB);
     };
   }, [
-    reduceMotion,
+    staticChart,
     gateOpen,
     loading,
     points.length,
@@ -208,11 +217,14 @@ export default function StreakTrackerCard({
           : 1;
   const showDash = points.length === 0;
   const headerMetricReveal =
-    reduceMotion ||
+    staticChart ||
     !wantsScrollAnim ||
     (chartInView && blocksReady);
   const countEnabled =
-    points.length > 0 && !loading && headerMetricReveal;
+    points.length > 0 &&
+    !loading &&
+    headerMetricReveal &&
+    !chartAnimationsOff;
   const countUp = useCountUp(displayTarget, 780, countEnabled, 1);
 
   const winStreakCaption = msg.profile.winStreak;
@@ -441,7 +453,7 @@ export default function StreakTrackerCard({
                         aria-hidden
                       />
 
-                      {reduceMotion ? (
+                      {staticChart ? (
                         <div
                           className={`relative z-3 flex h-full items-stretch justify-start ${S.colGap}`}
                         >

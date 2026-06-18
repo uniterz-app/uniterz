@@ -11,13 +11,15 @@ import adminPkg from "firebase-admin";
 import fs from "fs";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { resolveWcStageFromGame } from "../lib/wc/resolveWcStage";
-
-function calcStreakBonus(activeWinStreak: number): number {
-  if (!Number.isFinite(activeWinStreak) || activeWinStreak < 3) return 0;
-  if (activeWinStreak >= 7) return 3;
-  if (activeWinStreak >= 5) return 2;
-  return 1;
-}
+import {
+  buildKickoffTimeline,
+  calcStreakBonus,
+  loadGamesById,
+  loadWcPostRowsForUid,
+  replayFootballStreak,
+  replayStreakAfterGame,
+  toTimestamp,
+} from "./lib/wcStreakReplay";
 
 const admin = adminPkg as typeof import("firebase-admin");
 
@@ -36,21 +38,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-
-type StreakEvent = { gameId: string; atMs: number; isWin: boolean };
-
-function toTimestamp(v: unknown): Timestamp | null {
-  if (v instanceof Timestamp) return v;
-  if (v && typeof (v as { toDate?: unknown }).toDate === "function") {
-    return v as Timestamp;
-  }
-  return null;
-}
-
-function toMs(v: unknown): number {
-  const ts = toTimestamp(v);
-  return ts ? ts.toDate().getTime() : 0;
-}
 
 function toDateKeyJST(ts: Timestamp): string {
   const d = ts.toDate();
@@ -72,71 +59,6 @@ function resolveStatsStartAt(
     toTimestamp(post.startAt) ??
     toTimestamp(post.createdAt)
   );
-}
-
-function replayStreakAfterGame(
-  events: StreakEvent[],
-  targetGameId: string
-): number {
-  let curF = 0;
-  for (const ev of events) {
-    if (ev.isWin) curF = curF > 0 ? curF + 1 : 1;
-    else curF = curF < 0 ? curF - 1 : -1;
-    if (ev.gameId === targetGameId) return curF > 0 ? curF : 0;
-  }
-  throw new Error(`game ${targetGameId} not in WC streak timeline`);
-}
-
-function replayFootballStreak(events: StreakEvent[]) {
-  let curF = 0;
-  let maxF = 0;
-  for (const ev of events) {
-    if (ev.isWin) {
-      curF = curF > 0 ? curF + 1 : 1;
-      if (curF > maxF) maxF = curF;
-    } else {
-      curF = curF < 0 ? curF - 1 : -1;
-    }
-  }
-  return {
-    football: curF,
-    maxFootball: maxF,
-    activeWinStreakFootball: curF > 0 ? curF : 0,
-  };
-}
-
-async function loadWcEventsForUid(uid: string): Promise<StreakEvent[]> {
-  const snap = await db
-    .collection("posts")
-    .where("league", "==", "wc")
-    .where("status", "==", "final")
-    .where("authorUid", "==", uid)
-    .get();
-
-  const perGame = new Map<string, StreakEvent>();
-  for (const doc of snap.docs) {
-    const p = doc.data() as Record<string, unknown>;
-    if (p.schemaVersion !== 2) continue;
-    const stats = p.stats as Record<string, unknown> | undefined;
-    if (!stats || stats.countedForRanking === false) continue;
-    if (typeof stats.isWin !== "boolean") continue;
-
-    const gameId = String(p.gameId ?? "").trim();
-    if (!gameId) continue;
-
-    const atMs =
-      toMs(p.settledAt) ||
-      toMs(p.updatedAt) ||
-      toMs(p.startAtJst) ||
-      toMs(p.startAt) ||
-      toMs(p.createdAt);
-
-    const ev: StreakEvent = { gameId, atMs, isWin: stats.isWin === true };
-    const prev = perGame.get(gameId);
-    if (!prev || ev.atMs >= prev.atMs) perGame.set(gameId, ev);
-  }
-
-  return [...perGame.values()].sort((a, b) => a.atMs - b.atMs);
 }
 
 function incFields(delta: Record<string, number>): Record<string, unknown> {
@@ -201,7 +123,12 @@ function readBasketballState(data: Record<string, unknown> | undefined) {
   }
   const game = gameSnap.data() as Record<string, unknown>;
 
-  const events = await loadWcEventsForUid(UID);
+  const rows = await loadWcPostRowsForUid(db, UID);
+  const gameById = await loadGamesById(
+    db,
+    rows.map((r) => r.gameId)
+  );
+  const events = buildKickoffTimeline(rows, gameById);
   const correctActiveWinStreak = replayStreakAfterGame(events, GAME_ID);
   const correctStreakBonus = calcStreakBonus(correctActiveWinStreak);
 

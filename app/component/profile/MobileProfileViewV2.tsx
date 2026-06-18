@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { LazyMotion, domAnimation } from "framer-motion";
-import React, { Suspense, useEffect, useState } from "react";
+import { LazyMotion, domAnimation, useInView } from "framer-motion";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { useProfileOverviewStage } from "@/lib/profile/useProfileOverviewStage";
@@ -108,6 +108,10 @@ import {
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
+import {
+  profileVisualEffectsForViewer,
+  isProfileVisualLite,
+} from "@/lib/profile/profileVisualEffects";
 import { nameBebas } from "@/lib/fonts";
 export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   useEffect(() => {
@@ -137,6 +141,8 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
 
   const forceProView = false;
   const currentIsProView = forceProView || isProView;
+  const visualEffects = profileVisualEffectsForViewer(isMe);
+  const visualEffectsLite = isProfileVisualLite(visualEffects);
 
   const fetchOverviewExtras = tab === "overview";
   const fetchBracketData = tab === "bracket";
@@ -190,17 +196,30 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
   );
 
   const chartsReady = !resolvedUid || !statsLoading;
-  const overviewStage = useProfileOverviewStage(chartsReady);
+  const chartsSectionRef = useRef<HTMLDivElement>(null);
+  const chartsNearView = useInView(chartsSectionRef, {
+    once: true,
+    margin: "120px 0px",
+  });
+  const chartsInView = chartsNearView || visualEffectsLite;
+  const overviewStage = useProfileOverviewStage(
+    chartsReady && chartsInView,
+    { mobile: true, instant: visualEffectsLite }
+  );
 
   useEffect(() => {
     if (tab !== "bracket") {
       setBracketReveal(false);
       return;
     }
+    if (visualEffectsLite) {
+      setBracketReveal(true);
+      return;
+    }
     setBracketReveal(false);
     const id = window.requestAnimationFrame(() => setBracketReveal(true));
     return () => window.cancelAnimationFrame(id);
-  }, [tab, playoffDisplayData?.season]);
+  }, [tab, playoffDisplayData?.season, visualEffectsLite]);
 
   if (isMe && loadingPlan) {
     return (
@@ -236,6 +255,7 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           setSelectedBadge(badge);
           setBadgeModalOpen(true);
         }}
+        visualEffects={visualEffects}
       />
 
       <div className="mt-4 flex items-center justify-between">
@@ -254,12 +274,19 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                   profileStatsContext={props.profileStatsContext}
                   viewerUid={isMe ? targetUid : null}
                   gamesRoutePrefix="/mobile"
+                  visualEffects={visualEffects}
                 />
               </div>
             ) : null}
             {chartsReady ? (
-            <div className="mt-6 space-y-4">
-              {overviewStage >= 1 ? (
+            <div ref={chartsSectionRef} className="mt-6 space-y-4">
+              {!chartsInView ? (
+                <div
+                  className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6"
+                  aria-hidden
+                />
+              ) : null}
+              {chartsInView && overviewStage >= 1 ? (
               <div className="min-w-0 overflow-x-clip overflow-y-visible">
                 {dailyTrendLoading ? (
                   <div className="h-44 skeleton-scan rounded-2xl border border-white/10 bg-white/6" />
@@ -271,20 +298,22 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
                     language={language}
                     rankingLeague={rankingLeague}
                     layout="mobile"
+                    visualEffects={visualEffects}
                   />
                 )}
               </div>
               ) : null}
-              {overviewStage >= 2 ? (
+              {chartsInView && overviewStage >= 2 ? (
               <div className="min-w-0 overflow-hidden pt-0">
                 <ProfilePlayoffRankTrendChartLazy
                   data={rankPlayoffTrendRows}
                   loading={rankTrendLoading}
                   language={language}
+                  visualEffectsLite={visualEffectsLite}
                 />
               </div>
               ) : null}
-              {overviewStage >= 3 ? (
+              {chartsInView && overviewStage >= 3 ? (
               <div className="min-w-0 overflow-hidden">
                 <StreakTrackerCardLazy
                   uid={resolvedUid}
@@ -320,13 +349,17 @@ export default function MobileProfileViewV2(props: ProfileViewPropsV2) {
           ) : (
             <div
               className="relative mt-4 overflow-visible transition-all duration-500 ease-out"
-              style={{
-                opacity: bracketReveal ? 1 : 0,
-                transform: bracketReveal
-                  ? "translateY(0px)"
-                  : "translateY(14px)",
-                filter: bracketReveal ? "blur(0px)" : "blur(10px)",
-              }}
+              style={
+                visualEffectsLite
+                  ? undefined
+                  : {
+                      opacity: bracketReveal ? 1 : 0,
+                      transform: bracketReveal
+                        ? "translateY(0px)"
+                        : "translateY(14px)",
+                      filter: bracketReveal ? "blur(0px)" : "blur(10px)",
+                    }
+              }
             >
               <PlayoffFullBracketMobileLazy
                 league="nba"

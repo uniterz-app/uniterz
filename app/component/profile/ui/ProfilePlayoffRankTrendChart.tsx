@@ -17,6 +17,7 @@ import { nameBebas, nameRajdhani, resultStatsMetricNumClass } from "@/lib/fonts"
 import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import styles from "./profileChartInfoFaq.module.css";
+import { isProfileChartAnimationOff } from "@/lib/profile/profileVisualEffects";
 
 export type ProfilePlayoffRankTrendRow = {
   dateKey: string;
@@ -33,6 +34,7 @@ type Props = {
   entranceSync?: boolean;
   rechartsAfterEntrance?: boolean;
   loading?: boolean;
+  visualEffectsLite?: boolean;
 };
 
 const LINE = "#22d3ee";
@@ -157,8 +159,10 @@ export default function ProfilePlayoffRankTrendChart({
   entranceSync = false,
   rechartsAfterEntrance = false,
   loading = false,
+  visualEffectsLite = false,
 }: Props) {
   const msg = t(language);
+  const chartAnimationsOff = isProfileChartAnimationOff(visualEffectsLite);
   const title = msg.profile.rankingProgress;
   const subtitle = msg.profile.rankingProgressDesc;
   /** Info 用（サブタイトルと同じ文言のみ。他 UI は従来のまま） */
@@ -195,8 +199,10 @@ export default function ProfilePlayoffRankTrendChart({
   }, []);
 
   /** ページ内にこのカードが入ってきたタイミングで開始 */
-  const chartVisible = entranceSync || ioVisible;
-  const rechartsAnimActive = !entranceSync || rechartsAfterEntrance;
+  const chartVisible = entranceSync || ioVisible || chartAnimationsOff;
+  const rechartsAnimActive = chartAnimationsOff
+    ? false
+    : !entranceSync || rechartsAfterEntrance;
   const [showDotsLayer, setShowDotsLayer] = useState(false);
   const [dotRevealActive, setDotRevealActive] = useState(false);
   const [showLineLayer, setShowLineLayer] = useState(false);

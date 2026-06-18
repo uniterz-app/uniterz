@@ -109,6 +109,10 @@ import {
   consumeOpenProfileSideMenu,
 } from "@/lib/navigation/sideMenuReturnNav";
 import RankingsReturnNavLink from "@/app/component/profile/ui/RankingsReturnNavLink";
+import {
+  profileVisualEffectsForViewer,
+  isProfileVisualLite,
+} from "@/lib/profile/profileVisualEffects";
 export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   const { profile, tab, setTab, summary, summaryRanks, metricValueDeltas, targetUid, statsLoading } =
     props;
@@ -132,6 +136,8 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
 
   const forceProView = false;
   const currentIsProView = forceProView || isProView;
+  const visualEffects = profileVisualEffectsForViewer(isMe);
+  const visualEffectsLite = isProfileVisualLite(visualEffects);
 
   const fetchOverviewExtras = tab === "overview";
   const fetchBracketData = tab === "bracket";
@@ -187,17 +193,23 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
   );
 
   const chartsReady = !resolvedUid || !statsLoading;
-  const overviewStage = useProfileOverviewStage(chartsReady);
+  const overviewStage = useProfileOverviewStage(chartsReady, {
+    instant: visualEffectsLite,
+  });
 
   useEffect(() => {
     if (tab !== "bracket") {
       setBracketReveal(false);
       return;
     }
+    if (visualEffectsLite) {
+      setBracketReveal(true);
+      return;
+    }
     setBracketReveal(false);
     const id = window.requestAnimationFrame(() => setBracketReveal(true));
     return () => window.cancelAnimationFrame(id);
-  }, [tab, playoffDisplayData?.season]);
+  }, [tab, playoffDisplayData?.season, visualEffectsLite]);
 
   if (isMe && loadingPlan) {
     return (
@@ -233,6 +245,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           setSelectedBadge(badge);
           setBadgeModalOpen(true);
         }}
+        visualEffects={visualEffects}
       />
 
       <div className="mt-6 flex items-center justify-between">
@@ -251,6 +264,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   profileStatsContext={props.profileStatsContext}
                   viewerUid={isMe ? targetUid : null}
                   gamesRoutePrefix="/web"
+                  visualEffects={visualEffects}
                 />
               </div>
             ) : null}
@@ -267,6 +281,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                     allowAll={currentIsProView}
                     language={language}
                     rankingLeague={rankingLeague}
+                    visualEffects={visualEffects}
                   />
                 )}
               </div>
@@ -277,6 +292,7 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
                   data={rankPlayoffTrendRows}
                   loading={rankTrendLoading}
                   language={language}
+                  visualEffectsLite={visualEffectsLite}
                 />
               </div>
               ) : null}
@@ -317,13 +333,17 @@ export default function WebProfileViewV2(props: ProfileViewPropsV2) {
           ) : (
             <div
               className="mt-2 overflow-visible transition-all duration-500 ease-out sm:mt-0"
-              style={{
-                opacity: bracketReveal ? 1 : 0,
-                transform: bracketReveal
-                  ? "translateY(0px)"
-                  : "translateY(14px)",
-                filter: bracketReveal ? "blur(0px)" : "blur(10px)",
-              }}
+              style={
+                visualEffectsLite
+                  ? undefined
+                  : {
+                      opacity: bracketReveal ? 1 : 0,
+                      transform: bracketReveal
+                        ? "translateY(0px)"
+                        : "translateY(14px)",
+                      filter: bracketReveal ? "blur(0px)" : "blur(10px)",
+                    }
+              }
             >
               <PlayoffFullBracketWebLazy
                 league="nba"

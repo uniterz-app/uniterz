@@ -60,11 +60,19 @@ export const RESULT_GLASS_FILL =
 export const RESULT_GLASS_FILL_MOBILE =
   "bg-[linear-gradient(172deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.035)_45%,rgba(255,255,255,0.015)_100%)] backdrop-blur-xl";
 
+/** 他人プロフィール向け：backdrop-blur なしの軽量ガラス */
+export const RESULT_GLASS_FILL_LITE =
+  "bg-[linear-gradient(172deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.03)_45%,rgba(255,255,255,0.012)_100%)]";
+
 export const RESULT_GLASS_BORDER = "border border-white/10";
 
 /** 浮遊感：接地影 + 深いアンビエント + 上辺ハイライトのみ。色は混ぜない */
 export const RESULT_GLASS_SHADOW =
   "shadow-[0_2px_10px_rgba(0,0,0,0.28),0_28px_64px_-16px_rgba(0,0,0,0.60),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(255,255,255,0.03)]";
+
+/** 他人プロフィール向け：浅い影のみ */
+export const RESULT_GLASS_SHADOW_LITE =
+  "shadow-[0_2px_8px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.08)]";
 
 /** Web ホバー時のリフト影 */
 export const RESULT_GLASS_SHADOW_HOVER =
