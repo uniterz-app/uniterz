@@ -1,61 +1,41 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
-import { colors } from "../../theme/tokens";
+import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
+import {
+  CyberSlantedTabBarNative,
+  CyberSlantedTabNative,
+} from "./CyberSlantedTabNative";
 
-const STAGES: Array<{ id: WcRankingStage; ja: string; en: string }> = [
-  { id: "overall", ja: "総合", en: "Overall" },
-  { id: "qualifying", ja: "予選", en: "Qualifying" },
-  { id: "main", ja: "本戦", en: "Main" },
+const STAGES: Array<{ id: WcRankingStage; labelKey: "stageAll" | "stageGroup" | "stageKnockout" }> = [
+  { id: "overall", labelKey: "stageAll" },
+  { id: "qualifying", labelKey: "stageGroup" },
+  { id: "main", labelKey: "stageKnockout" },
 ];
 
 type Props = {
   stage: WcRankingStage;
   onChange: (stage: WcRankingStage) => void;
-  language: "ja" | "en";
+  language: RankingsLanguage;
 };
 
 /** Web `WcRankingStageTabs` のネイティブ版 */
 export default function WcRankingStageTabsNative({ stage, onChange, language }: Props) {
-  const isJa = language === "ja";
+  const t = rankingsTexts(language);
 
   return (
-    <View style={styles.row}>
+    <CyberSlantedTabBarNative fill>
       {STAGES.map((s) => {
         const active = stage === s.id;
         return (
-          <Pressable
+          <CyberSlantedTabNative
             key={s.id}
-            style={[styles.chip, active && styles.chipActive]}
+            label={t[s.labelKey]}
+            active={active}
+            fill
+            compact
             onPress={() => onChange(s.id)}
-          >
-            <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>
-              {isJa ? s.ja : s.en}
-            </Text>
-          </Pressable>
+          />
         );
       })}
-    </View>
+    </CyberSlantedTabBarNative>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 10,
-  },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  chipActive: {
-    borderColor: "rgba(103,232,249,0.45)",
-    backgroundColor: "rgba(103,232,249,0.12)",
-  },
-  chipLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
-  chipLabelActive: { color: colors.textPrimary },
-});

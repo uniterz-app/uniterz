@@ -1,0 +1,10 @@
+{
+  "homeScore": 1,
+  "awayScore": 3,
+  "scorers": [
+    { "playerId": "col-munoz", "teamId": "wc-col", "minute": 40 },
+    { "playerId": "uzb-fayzullaev", "teamId": "wc-uzb", "minute": 60 },
+    { "playerId": "col-diaz", "teamId": "wc-col", "minute": 65 },
+    { "playerId": "col-campaz", "teamId": "wc-col", "minute": 99 }
+  ]
+}

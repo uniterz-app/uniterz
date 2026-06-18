@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
 import Animated, {
   Easing,
+  interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
   withRepeat,
   withTiming,
-  interpolate,
 } from "react-native-reanimated";
 import {
   LITE_MOTE_COUNT_NATIVE,
@@ -72,9 +72,7 @@ function RisingMote({ mote, travelY }: { mote: RisingMoteSpec; travelY: number }
 }
 
 /** Web `RisingMotesLayer` 相当 */
-export default function RisingMotesLayerNative({
-  lite = true,
-}: RisingMotesLayerNativeProps) {
+export default function RisingMotesLayerNative({ lite = false }: RisingMotesLayerNativeProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const { height } = useWindowDimensions();
   const travelY = height * 0.56;

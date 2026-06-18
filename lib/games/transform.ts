@@ -333,6 +333,8 @@ export type GameDoc = {
   broadcastLabels?: string[] | null;
   /** @deprecated broadcastLabels を使用 */
   broadcastLabel?: string | null;
+  /** WC：試合の実得点者（リザルト未投稿の一覧カード表示にも使用） */
+  goalScorers?: unknown;
 };
 
 /** MatchCardProps へ整形 */
@@ -466,5 +468,6 @@ export function toMatchCardProps(
     makePredictionHref: buildMake(id),
 
     dense: Boolean(opts?.dense),
+    goalScorers: raw?.goalScorers,
   };
 }

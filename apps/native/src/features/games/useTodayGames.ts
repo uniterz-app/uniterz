@@ -13,12 +13,13 @@ import { resolveGameStatus } from "../../shared/gameRow";
 import { GAME_SCHEDULE_SEASON } from "../../shared/gameSchedule";
 import {
   TIMEZONE_JST,
+  getCalendarMonthRangeInTimeZone,
   getDayRangeInTimeZone,
-  getPlusMinusDaysRangeInTimeZone,
   parseDateKeyInTimeZone,
   toDateKeyInTimeZone,
 } from "../../../../../lib/time/zonedTime";
 import { getWcGamesPageQueryRange } from "../../../../../lib/wc/wcGamesPageScheduleWindow";
+import { mergePlayoffSeriesPeersForWindowGames } from "../../../../../lib/games/fetchPlayoffSeriesPeerGames";
 
 export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
 
@@ -29,9 +30,8 @@ export type NativeGameRow = {
   [key: string]: unknown;
 };
 
-/** 選択日の JST 暦日から前後この日数をまとめて取得（Web `useGameDays` と同じ ±10） */
-const GAME_DAYS_PLUS_MINUS = 10;
-const GAME_DAYS_WINDOW_QUERY_LIMIT = 500;
+/** 非 WC: 選択月の暦月全体を取得（月送りで月初に寄っても全試合日がストリップに出る） */
+const CALENDAR_MONTH_QUERY_LIMIT = 500;
 
 function filterGamesForDay(rows: NativeGameRow[], day: Date): NativeGameRow[] {
   const { start, end } = getDayRangeInTimeZone(day, TIMEZONE_JST);
@@ -104,6 +104,8 @@ function findInitialGameDay(params: {
       .filter((d) => toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix))
       .sort((a, b) => a.getTime() - b.getTime());
     if (inMonth.length) return inMonth[0] ?? null;
+    // 月送り直後は旧 window が残る — 今日以降の日付へ飛ばさない
+    return null;
   }
 
   const sorted = [...gameDays].sort((a, b) => a.getTime() - b.getTime());
@@ -125,15 +127,15 @@ function resolveLandingDate(
   preferred: Date | null
 ): Date | null {
   const gameDays = gameDaysFromRows(rows);
-  if (!gameDays.length) return null;
+  if (!gameDays.length) return preferred;
   const todayKey = toDateKeyInTimeZone(new Date(), TIMEZONE_JST);
-  const initial =
-    findInitialGameDay({
-      gameDays,
-      stateSelected: preferred,
-      todayKey,
-      timeZone: TIMEZONE_JST,
-    }) ?? gameDays[0]!;
+  const initial = findInitialGameDay({
+    gameDays,
+    stateSelected: preferred,
+    todayKey,
+    timeZone: TIMEZONE_JST,
+  });
+  if (!initial) return preferred;
   return pickLandingDateAfterFetch(initial, rows);
 }
 
@@ -153,11 +155,12 @@ export function useTodayGames() {
   const [error, setError] = useState<string | null>(null);
   /** 現在の窓に含まれる全試合（その日の一覧・シリーズ推定・日付チップはこれから派生） */
   const [windowRows, setWindowRows] = useState<NativeGameRow[]>([]);
+  const [peerRowsForSeries, setPeerRowsForSeries] = useState<NativeGameRow[]>([]);
   const [selectedDate, setSelectedDateState] = useState<Date>(() => new Date());
   const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("nba");
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  const windowBoundsRef = useRef<{ min: string; max: string } | null>(null);
+  const windowBoundsRef = useRef<{ monthKey: string } | null>(null);
   const wcWindowLoadedRef = useRef(false);
   const prevLeagueRef = useRef(selectedLeague);
   const lastSuccessfulRefreshNonceRef = useRef<number | null>(null);
@@ -189,6 +192,8 @@ export function useTodayGames() {
     [selectedDate]
   );
 
+  const monthKey = useMemo(() => dateKey.slice(0, 7), [dateKey]);
+
   const games = useMemo(
     () => filterGamesForDay(windowRows, selectedDate),
     [windowRows, selectedDate]
@@ -199,8 +204,8 @@ export function useTodayGames() {
     [windowRows]
   );
 
-  /** シリーズ推定用（窓内の全行＝従来の peer と同じデータ源） */
-  const peerGamesForSeries = windowRows;
+  /** シリーズ推定用（暦月窓＋プレーオフ兄弟試合） */
+  const peerGamesForSeries = peerRowsForSeries;
 
   function moveDay(offset: number) {
     setSelectedDate((prev) => {
@@ -225,14 +230,13 @@ export function useTodayGames() {
       wcWindowLoadedRef.current = false;
       lastSuccessfulRefreshNonceRef.current = null;
       setWindowRows([]);
+      setPeerRowsForSeries([]);
     }
 
-    const dayKey = toDateKeyInTimeZone(selectedDate, TIMEZONE_JST);
     const b = windowBoundsRef.current;
     const insideWindow =
       b != null &&
-      dayKey >= b.min &&
-      dayKey <= b.max &&
+      b.monthKey === monthKey &&
       lastSuccessfulRefreshNonceRef.current === refreshNonce;
     const wcCached =
       isWc &&
@@ -252,11 +256,7 @@ export function useTodayGames() {
       try {
         const { start, end } = isWc
           ? getWcGamesPageQueryRange(TIMEZONE_JST)
-          : getPlusMinusDaysRangeInTimeZone(
-              selectedDate,
-              TIMEZONE_JST,
-              GAME_DAYS_PLUS_MINUS
-            );
+          : getCalendarMonthRangeInTimeZone(selectedDate, TIMEZONE_JST);
 
         const q = query(
           collection(db, "games"),
@@ -265,7 +265,7 @@ export function useTodayGames() {
           where("startAtJst", ">=", Timestamp.fromDate(start)),
           where("startAtJst", "<", Timestamp.fromDate(end)),
           orderBy("startAtJst", "asc"),
-          limit(isWc ? WC_GAMES_PAGE_WINDOW_LIMIT : GAME_DAYS_WINDOW_QUERY_LIMIT)
+          limit(isWc ? WC_GAMES_PAGE_WINDOW_LIMIT : CALENDAR_MONTH_QUERY_LIMIT)
         );
         const snap = await getDocs(q);
         if (!alive) return;
@@ -275,13 +275,15 @@ export function useTodayGames() {
           ...(row.data() as Omit<NativeGameRow, "id">),
         }));
 
-        const minKey = toDateKeyInTimeZone(start, TIMEZONE_JST);
-        const maxKey = toDateKeyInTimeZone(new Date(end.getTime() - 1), TIMEZONE_JST);
+        const peerRows = (await mergePlayoffSeriesPeersForWindowGames(
+          rows
+        )) as NativeGameRow[];
 
-        windowBoundsRef.current = { min: minKey, max: maxKey };
+        windowBoundsRef.current = { monthKey };
         if (isWc) wcWindowLoadedRef.current = true;
         lastSuccessfulRefreshNonceRef.current = refreshNonce;
         setWindowRows(rows);
+        setPeerRowsForSeries(peerRows.length ? peerRows : rows);
 
         const preferred =
           leagueChanged
@@ -298,6 +300,7 @@ export function useTodayGames() {
         windowBoundsRef.current = null;
         lastSuccessfulRefreshNonceRef.current = null;
         setWindowRows([]);
+        setPeerRowsForSeries([]);
       } finally {
         if (alive) setLoading(false);
       }
@@ -306,11 +309,17 @@ export function useTodayGames() {
     return () => {
       alive = false;
     };
-  }, [selectedDate, selectedLeague, refreshNonce]);
+  }, [monthKey, selectedDate, selectedLeague, refreshNonce]);
 
   /** 月送りなどで試合のない暦日に寄ったとき、ストリップ上の試合日へ補正 */
   useEffect(() => {
     if (loading) return;
+    const selectedMonthKey = dateKey.slice(0, 7);
+    const windowHasSelectedMonth = dateKeysWithGames.some((key) =>
+      key.startsWith(selectedMonthKey)
+    );
+    // 旧月の window が残っている間は補正しない（6月→5月で即座に6月へ戻るのを防ぐ）
+    if (dateKeysWithGames.length > 0 && !windowHasSelectedMonth) return;
     if (dateKeysWithGames.length === 0) return;
     if (dateKeysWithGames.includes(dateKey)) return;
 

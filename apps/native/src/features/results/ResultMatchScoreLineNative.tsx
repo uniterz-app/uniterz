@@ -5,6 +5,8 @@ type Props = {
   home: number;
   away: number;
   variant?: "predicted" | "final";
+  /** 一覧カードは Web `ResultCard` mobileScheduleDense の大きめスコア */
+  density?: "list" | "compact";
   style?: TextStyle;
 };
 
@@ -13,14 +15,18 @@ export default function ResultMatchScoreLineNative({
   home,
   away,
   variant = "predicted",
+  density = "compact",
   style,
 }: Props) {
-  const base =
-    variant === "final" ? styles.final : styles.predicted;
+  const predictedStyle =
+    density === "list" ? styles.predictedList : styles.predictedCompact;
+  const finalStyle = density === "list" ? styles.finalList : styles.finalCompact;
+  const base = variant === "final" ? finalStyle : predictedStyle;
+  const dashStyle = variant === "final" ? styles.dashFinal : styles.dashPredicted;
   return (
     <View style={styles.row}>
       <Text style={[base, style]}>{home}</Text>
-      <Text style={[base, styles.dash, style]}>–</Text>
+      <Text style={[base, dashStyle, style]}>–</Text>
       <Text style={[base, style]}>{away}</Text>
     </View>
   );
@@ -35,18 +41,32 @@ const styles = StyleSheet.create({
     gap: 4,
     maxWidth: "100%",
   },
-  predicted: {
+  /** Web 一覧 mobileScheduleDense: `text-base`（コンパクト） */
+  predictedCompact: {
     flexShrink: 0,
     fontSize: 16,
+    lineHeight: 18,
     fontWeight: "900",
     color: "rgba(255,255,255,0.85)",
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.4,
   },
-  final: {
+  /** Web 一覧: `font-black text-white/85` + Montserrat、ネイティブは視認性のためやや大きめ */
+  predictedList: {
+    flexShrink: 0,
+    fontSize: 30,
+    lineHeight: 32,
+    fontWeight: "900",
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.6,
+  },
+  finalCompact: {
     flexShrink: 0,
     fontSize: 10,
+    lineHeight: 12,
     fontWeight: "700",
     color: "rgba(253,224,71,0.95)",
     fontFamily: MATCH_CARD_SCORE_FONT,
@@ -55,7 +75,23 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
   },
-  dash: {
+  /** Web 一覧確定スコア: `text-[10px] font-bold text-amber-200` */
+  finalList: {
+    flexShrink: 0,
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: "700",
+    color: "rgba(253,224,71,0.95)",
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    fontVariant: ["tabular-nums"],
+    textShadowColor: "rgba(251,191,36,0.32)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
+  },
+  dashPredicted: {
     opacity: 0.7,
+  },
+  dashFinal: {
+    opacity: 0.75,
   },
 });

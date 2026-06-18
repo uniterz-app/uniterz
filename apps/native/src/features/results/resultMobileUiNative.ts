@@ -5,7 +5,7 @@ import { resultStreakTier } from "../../../../../lib/result/resultGlass";
 export const MOBILE_RESULT_PAGE_PAD_X = 18;
 export const MOBILE_RESULT_PAGE_PAD_Y = 16;
 export const MOBILE_RESULT_SECTION_GAP = 12;
-export const MOBILE_RESULT_CARD_GAP = 12;
+export const MOBILE_RESULT_CARD_GAP = 8;
 export const MOBILE_RESULT_CARD_MAX_W = 344;
 export const MOBILE_RESULT_DAY_STRIP_MAX_W = 380;
 
@@ -238,20 +238,11 @@ export const resultFilterBarNative = StyleSheet.create({
   },
 });
 
-/** Web `ResultGlassShell` dense + `RESULT_GLASS_FILL_MOBILE` */
+/** Web `ResultGlassShell` dense — 塗りと角切りは `ResultGlassShellNative` 側 */
 export const resultCardShellNative = StyleSheet.create({
   shell: {
     position: "relative",
     overflow: "hidden",
-    borderRadius: 0,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(8,11,18,0.84)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
-    elevation: 7,
   },
   body: {
     position: "relative",

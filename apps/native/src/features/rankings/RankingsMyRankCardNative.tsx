@@ -1,12 +1,62 @@
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
+import {
+  computeMyRankTopPercent,
+  deriveMyRankListAvgRow,
+  MY_RANK_METRIC_HUD_LABEL,
+  myRankCardAccent,
+  type MyRankStatsSource,
+} from "../../../../../lib/rankings/myRankCardFocus";
+import { rankingMetricAccent } from "../../../../../lib/rankings/rankingMetricAccent";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
-import { RankingsShellGridOverlay } from "./rankingsUiDecorations";
+import { CyberRankNumberNative } from "./CyberRankNumberNative";
+import { CyberSlantedSegBarNative } from "./CyberSlantedSegBarNative";
+import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrameNative";
 import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
+import { rankingNameFont } from "./rankingsUiTheme";
+
+function RankMetaStripNative({
+  topPercentLabel,
+  posts,
+  metric,
+  avgRow,
+}: {
+  topPercentLabel?: string | null;
+  posts: number;
+  metric: MobileMetric;
+  avgRow?: ReturnType<typeof deriveMyRankListAvgRow>;
+}) {
+  const avgText = avgRow
+    ? metric === "totalScore"
+      ? `AVG ${formatMetricDecimals(avgRow.avgTotalScore ?? 0, 1)}`
+      : metric === "marginPrecision" || metric === "exactHits"
+        ? avgRow.avgMarginPrecision && avgRow.avgMarginPrecision > 0
+          ? `AVG ${formatMetricDecimals(avgRow.avgMarginPrecision, 1)}`
+          : null
+        : metric === "upsetScore"
+          ? `AVG ${formatMetricDecimals(avgRow.avgUpsetScore ?? 0, 1)}`
+          : null
+    : null;
+
+  if (!topPercentLabel && posts === 0 && !avgText) return null;
+
+  return (
+    <View style={styles.myRankMetaStrip}>
+      {topPercentLabel ? (
+        <View style={styles.myRankTopPercentBadge}>
+          <Text style={styles.myRankTopPercentText}>{topPercentLabel}</Text>
+        </View>
+      ) : null}
+      <Text style={styles.myRankMetaVol}>VOL:{posts}</Text>
+      {avgText ? <Text style={styles.myRankMetaAvg} numberOfLines={1}>{avgText}</Text> : null}
+    </View>
+  );
+}
 
 export function MyRankCardNative({
   rank,
@@ -15,73 +65,133 @@ export function MyRankCardNative({
   displayName,
   photoURL,
   totalPosts,
+  totalEntries,
   loading,
   statsScramble,
   isPro,
   rankDeltaPlaces,
   language,
+  miniMetrics,
+  statsSource,
+  barsReady = true,
 }: {
   rank: number | null;
   metric: MobileMetric;
   value: number;
   displayName: string;
   photoURL?: string | null;
-  /** Web `MyRankCard` と同様、勝率時の投稿数表示用 */
   totalPosts?: number;
+  totalEntries?: number | null;
   loading?: boolean;
   statsScramble?: boolean;
   isPro?: boolean;
   rankDeltaPlaces?: number | null;
   language: RankingsLanguage;
+  miniMetrics?: MyRankMiniMetric[];
+  statsSource?: MyRankStatsSource | null;
+  barsReady?: boolean;
 }) {
   const t = rankingsTexts(language);
-  const rankStyleColor =
-    loading || statsScramble || rank == null
-      ? "rgba(255,255,255,0.9)"
-      : rank <= 10
-        ? "#FFD65A"
-        : rank <= 20
-          ? "#F4E47A"
-          : "rgba(248,250,252,0.95)";
+  const frameTone = resolveMyRankFrameTone(rankDeltaPlaces);
+  const accent = myRankCardAccent(frameTone);
+  const metricAccent = rankingMetricAccent(metric);
+  const statsPending = !!statsScramble;
+  const rankVisualMuted = loading || statsPending || rank == null;
 
-  const rankDisplay = (() => {
-    if (loading) return "--";
-    if (rank == null) return "--";
-    if (statsScramble) return "···";
-    return `#${rank}`;
-  })();
+  const selectedMini =
+    miniMetrics?.find((m) => m.key === metric) ?? miniMetrics?.[0] ?? null;
+  const segPct = selectedMini?.pct ?? 0;
+  const segAccent = {
+    border: metricAccent.bar.hi,
+    glow: metricAccent.bar.glow,
+    bg: metricAccent.bar.lo,
+  };
 
-  const valueMain = (() => {
-    if (loading) return "--";
-    if (statsScramble) return "···";
+  const entriesDisplay =
+    !loading &&
+    !statsPending &&
+    typeof totalEntries === "number" &&
+    totalEntries > 0
+      ? totalEntries.toLocaleString(language === "ja" ? "ja-JP" : "en-US")
+      : null;
+
+  const topPercent =
+    !loading && rank != null && typeof totalEntries === "number" && totalEntries > 0
+      ? computeMyRankTopPercent(rank, totalEntries)
+      : null;
+  const topPercentLabel =
+    topPercent != null
+      ? (language === "ja" ? `上位 ${topPercent}%` : `TOP ${topPercent}%`)
+      : null;
+
+  const posts =
+    typeof totalPosts === "number" ? totalPosts : (statsSource?.totalPosts ?? 0);
+  const avgRow = deriveMyRankListAvgRow(statsSource);
+
+  const metricValueDisplay = (() => {
+    if (loading || statsPending) return "···";
+    if (selectedMini?.value) return selectedMini.value;
     if (metric === "winRate") return `${Math.round(value)}%`;
-    if (metric === "streak") return `${Math.round(value)}`;
-    return `${formatMetricDecimals(value, 1)} ${t.pts}`;
+    if (metric === "streak" || metric === "goalScorerHits") return `${Math.round(value)}`;
+    if (metric === "totalScore") return Math.round(value).toLocaleString("en-US");
+    return formatMetricDecimals(value, 1);
   })();
 
   return (
     <View style={styles.myRankOuter}>
-      <LinearGradient
-        colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.myRankCard}
-      >
-        <View style={[StyleSheet.absoluteFillObject, { borderRadius: 18, overflow: "hidden" }]}>
-          <RankingsShellGridOverlay borderRadius={18} />
-        </View>
-        <View style={styles.myRankForeground}>
-          <View style={styles.myRankRow}>
-            <View style={styles.myRankLeft}>
-              <RankingsAvatarNative
-                photoURL={photoURL}
-                label={displayName.trim() || "?"}
-                size={44}
+      <MyRankCardFrameNative tone={frameTone}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)", "transparent"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[StyleSheet.absoluteFillObject, { zIndex: 1 }]}
+        />
+        <View style={styles.myRankTowerGrid}>
+          <View style={[styles.myRankTowerLeft, { borderRightColor: accent.hairline, backgroundColor: "rgba(0,0,0,0.15)" }]}>
+            <Text style={styles.myRankYourRankLabel}>{t.yourRank}</Text>
+            <View style={styles.myRankTowerRankBlock}>
+              <CyberRankNumberNative
+                rank={rankVisualMuted ? 4 : rank ?? 4}
+                variant="tower"
+                compact
+                muted={rankVisualMuted}
+                displayValue={
+                  rankVisualMuted
+                    ? loading
+                      ? "--"
+                      : statsPending
+                        ? "···"
+                        : "--"
+                    : undefined
+                }
               />
+              {entriesDisplay ? (
+                <Text style={styles.myRankEntries}>/ {entriesDisplay}</Text>
+              ) : null}
+              {!loading && !statsPending && rank != null ? (
+                <RankDeltaBadgeNative delta={rankDeltaPlaces} size="md" />
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.myRankTowerRight}>
+            <View style={styles.myRankHeaderRow}>
+              <View style={[styles.myRankAvatarSquare, { borderColor: accent.hairline, backgroundColor: accent.avatarBg }]}>
+                <RankingsAvatarNative
+                  photoURL={photoURL}
+                  label={displayName.trim() || "?"}
+                  size={36}
+                  square
+                />
+              </View>
               <View style={styles.myRankNameCol}>
                 <View style={styles.myRankNameRow}>
                   {displayName.trim().length > 0 ? (
-                    <Text style={styles.myRankNameWeb} numberOfLines={1}>
+                    <Text
+                      style={[styles.myRankNameWeb, { fontFamily: rankingNameFont(displayName.trim()) }]}
+                      numberOfLines={1}
+                    >
                       {displayName.trim()}
                     </Text>
                   ) : null}
@@ -92,48 +202,52 @@ export function MyRankCardNative({
                   ) : null}
                 </View>
               </View>
-            </View>
-
-            <View style={styles.myRankCenter}>
-              <Text style={styles.myRankYourRankLabel} maxFontSizeMultiplier={1.15}>
-                {t.yourRank}
-              </Text>
-              <View style={styles.myRankCenterNums}>
-                <Text
-                  style={[styles.myRankHash, { color: rankStyleColor }]}
-                  numberOfLines={1}
-                  maxFontSizeMultiplier={1.2}
-                >
-                  {rankDisplay}
+              <View style={styles.myRankHudCol}>
+                <Text style={[styles.myRankHudLabel, { color: metricAccent.labelDim }]}>
+                  {MY_RANK_METRIC_HUD_LABEL[metric]}
                 </Text>
-                <RankDeltaBadgeNative delta={rankDeltaPlaces} size="md" />
+                <Text
+                  style={[
+                    styles.myRankHudValue,
+                    { color: loading || statsPending ? "rgba(255,255,255,0.92)" : metricAccent.value },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {metricValueDisplay}
+                </Text>
+                {selectedMini?.dayDelta ? (
+                  <Text style={[styles.myRankHudDelta, { color: metricAccent.primary }]}>
+                    {selectedMini.dayDelta}
+                  </Text>
+                ) : null}
               </View>
             </View>
 
-            <View style={styles.myRankRightCol}>
-              {metric === "streak" && !loading && !statsScramble ? (
-                <View style={styles.myRankStreakRow}>
-                  <Text style={styles.myRankMetricValueLarge} maxFontSizeMultiplier={1.2}>
-                    {Math.round(value)}
-                  </Text>
-                  <Text style={styles.myRankStreakSuffix} maxFontSizeMultiplier={1.15}>
-                    {t.streakShort}
-                  </Text>
-                </View>
-              ) : (
-                <Text style={styles.myRankMetricValueLarge} numberOfLines={1} maxFontSizeMultiplier={1.2}>
-                  {valueMain}
-                </Text>
-              )}
-              {!loading && !statsScramble && metric === "winRate" && totalPosts !== undefined ? (
-                <Text style={styles.myRankWinPosts} numberOfLines={1}>
-                  {t.posts} {totalPosts}
-                </Text>
-              ) : null}
+            <RankMetaStripNative
+              topPercentLabel={topPercentLabel}
+              posts={posts}
+              metric={metric}
+              avgRow={avgRow}
+            />
+
+            <View style={styles.myRankSegWrap}>
+              <CyberSlantedSegBarNative
+                pct={segPct}
+                segments={12}
+                compact
+                accent={segAccent}
+                enter={barsReady && !statsPending}
+              />
             </View>
           </View>
         </View>
-      </LinearGradient>
+
+        <View style={styles.myRankFooter}>
+          <Text style={styles.myRankFooterText} numberOfLines={1}>
+            UNITERZ · {MY_RANK_METRIC_HUD_LABEL[metric]}
+          </Text>
+        </View>
+      </MyRankCardFrameNative>
     </View>
   );
 }

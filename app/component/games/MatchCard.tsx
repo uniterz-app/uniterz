@@ -3,7 +3,6 @@
 
 
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
-import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
 import {
   joinTeamNameLines,
@@ -37,8 +36,6 @@ import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
-import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
-import { readPostMatchGoalScorers } from "@/lib/wc/matchGoalScorers";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion, useReducedMotion } from "framer-motion";
@@ -50,7 +47,11 @@ import {
   GAMES_CYBER_LEAD_IN_SEC,
   GAMES_LIST_CARDS_LEAD_IN_SEC,
 } from "./cyberMotion";
+import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
+import { useWcGroupStandingRanks } from "@/lib/wc/useWcGroupStandingRanks";
+import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
+import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
@@ -368,6 +369,12 @@ function MatchCardView({
 
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
+  const wcGroupRanks = useWcGroupStandingRanks(
+    db,
+    league === "wc" ? home.teamId : null,
+    league === "wc" ? away.teamId : null
+  );
+
   const [navigating, setNavigating] = useState(false);
   // Full-area tap: scale the whole card shell (transparent overlay alone shows no motion).
   const [fullCardPressed, setFullCardPressed] = useState(false);
@@ -444,10 +451,6 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
     resultPost ?? ({ league: "nba", prediction: {} } as PredictionPostV2)
   );
   const wcGoalScorerResult = resultPost ? wcGoalScorerResultRaw : null;
-  const wcMatchGoalScorers = useMemo(() => {
-    if (!resultPost || league !== "wc" || status !== "final") return [];
-    return readPostMatchGoalScorers(resultPost.matchGoalScorers);
-  }, [resultPost, league, status]);
   const predictedScore =
     resultPost?.prediction?.score != null
       ? resultPost.prediction.score
@@ -1559,7 +1562,11 @@ return (
     ].join(" ")}
   >
   {league === "wc" ? (
-    <CountryFlag teamId={home.teamId} className={teamMarkSizeFlag} />
+    <WcTeamFlagWithMeta
+      teamId={home.teamId}
+      compact={mobileDense || isMobile}
+      flagClassName={teamMarkSizeFlag}
+    />
   ) : Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={homeJerseyColor}
@@ -1633,14 +1640,6 @@ return (
   )}
 </div>
 
-  {wcMatchGoalScorers.length > 0 ? (
-    <WcMatchGoalScorersColumn
-      scorers={wcMatchGoalScorers}
-      side="home"
-      compact={mobileDense || isMobile}
-    />
-  ) : null}
-
   {/* 戦績・順位：総合得点などと同じ Oxanium（下のリーグ線用の下パディングのみ） */}
 <div
   className={[
@@ -1648,7 +1647,15 @@ return (
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={homeRecord} league={league} />
+  {league === "wc" ? (
+    <WcGroupStandingRecordLine
+      standing={wcGroupRanks.homeStanding}
+      language={language}
+      compact={mobileDense || isMobile}
+    />
+  ) : (
+    <RecordWithRank r={homeRecord} league={league} />
+  )}
 </div>
   </div>
 
@@ -1807,7 +1814,11 @@ return (
   >
   {/* アイコン：mobile大きく / webそのまま */}
   {league === "wc" ? (
-    <CountryFlag teamId={away.teamId} className={teamMarkSizeFlag} />
+    <WcTeamFlagWithMeta
+      teamId={away.teamId}
+      compact={mobileDense || isMobile}
+      flagClassName={teamMarkSizeFlag}
+    />
   ) : Icon === Jersey ? (
     <HalftoneJerseyMark
       accent={awayJerseyColor}
@@ -1881,21 +1892,21 @@ return (
   )}
 </div>
 
-  {wcMatchGoalScorers.length > 0 ? (
-    <WcMatchGoalScorersColumn
-      scorers={wcMatchGoalScorers}
-      side="away"
-      compact={mobileDense || isMobile}
-    />
-  ) : null}
-
 <div
   className={[
     "mc-record text-center text-[11px] leading-none md:text-[15px]",
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  <RecordWithRank r={awayRecord} league={league} />
+  {league === "wc" ? (
+    <WcGroupStandingRecordLine
+      standing={wcGroupRanks.awayStanding}
+      language={language}
+      compact={mobileDense || isMobile}
+    />
+  ) : (
+    <RecordWithRank r={awayRecord} league={league} />
+  )}
 </div>
   </div>
 

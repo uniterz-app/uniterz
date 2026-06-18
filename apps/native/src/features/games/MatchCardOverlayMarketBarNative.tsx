@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useGameMarketDistributionNative } from "./useGameMarketDistributionNative";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import type { MarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
+import { MATCH_CARD_METRIC_FONT } from "./matchCardTypography";
 
 type MarketKey = "home" | "away" | "draw";
 type Status = "scheduled" | "live" | "final";
@@ -377,6 +378,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   headerTitle: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
     color: "rgba(0,245,255,0.55)",
     fontSize: 10,
     fontWeight: "700",
@@ -384,9 +386,17 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   headerTitleCompact: { fontSize: 8 },
-  totalText: { color: "rgba(255,255,255,0.7)", fontSize: 11 },
+  totalText: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 11,
+  },
   totalTextCompact: { fontSize: 10 },
-  totalNum: { color: "rgba(255,255,255,0.88)", fontWeight: "800" },
+  totalNum: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    color: "rgba(255,255,255,0.88)",
+    fontWeight: "800",
+  },
   markerRow: {
     position: "relative",
     height: 12,
@@ -401,9 +411,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   markerYou: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.6,
+    textTransform: "uppercase",
   },
   markerYouCompact: { fontSize: 7 },
   markerTriangle: {
@@ -446,6 +458,7 @@ const styles = StyleSheet.create({
   },
   statBoxCompact: { paddingHorizontal: 6, paddingVertical: 6 },
   statLabel: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
     color: "rgba(255,255,255,0.92)",
     fontSize: 9,
     fontWeight: "700",
@@ -456,6 +469,7 @@ const styles = StyleSheet.create({
   statLabelDraw: { color: "rgba(255,255,255,0.82)" },
   statPct: {
     marginTop: 2,
+    fontFamily: MATCH_CARD_METRIC_FONT,
     color: "#fff",
     fontSize: 18,
     fontWeight: "900",

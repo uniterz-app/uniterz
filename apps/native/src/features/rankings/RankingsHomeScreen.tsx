@@ -12,10 +12,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
-  METRICS,
   type MobileMetric,
 } from "../../../../../app/component/rankings/_data/mockRows";
 import type { RankingRowWithCountry } from "../../../../../app/component/rankings/_data/mockRows";
+import {
+  buildMyRankMiniMetrics,
+  isMyRankMiniMetricsReady,
+} from "../../../../../lib/rankings/buildMyRankMiniMetrics";
+import {
+  visibleMetricsForLeague,
+} from "../../../../../lib/rankings/wcVisibleMetrics";
 import {
   API_METRIC_BY_MOBILE,
   type RankingApiRow,
@@ -28,7 +34,6 @@ import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey
 import type { MainTabParamList } from "../../navigation/types";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
-import RankingsCyberBackgroundNative from "./RankingsCyberBackgroundNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
@@ -40,6 +45,7 @@ import { spacing } from "../../theme/tokens";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
+import { RankingsPageTitleCyberNative } from "./RankingsPageTitleCyberNative";
 import {
   MyRankCardNative,
   PlayoffRoundTabsNative,
@@ -52,14 +58,6 @@ import {
 type Props = {
   bottomReserveY: number;
 };
-
-const VISIBLE_METRICS: MobileMetric[] = [
-  "totalScore",
-  "winRate",
-  "marginPrecision",
-  "upsetScore",
-  "streak",
-];
 
 function scheduleNoticeForUser(language: RankingsLanguage): string {
   const lang = (language === "en" ? "en" : "ja") as Language;
@@ -82,7 +80,11 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     category === "playoffs" && rankingsLeague === "wc" ? wcStage : null;
 
   const { listReady, personalPending, myUid, byMetric, ensureMetric } =
-    useNativeCumulativeRankingsBulk("playoffs", round, wcStageForHook);
+    useNativeCumulativeRankingsBulk(
+      "playoffs",
+      rankingsLeague === "wc" ? "overall" : round,
+      wcStageForHook
+    );
   const { user } = useNativeMyRankingUser(myUid);
   const language = user.language;
   const t = rankingsTexts(language);
@@ -93,6 +95,26 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   useEffect(() => {
     void ensureMetric(apiKey);
   }, [apiKey, ensureMetric]);
+
+  const rankingLeagueSource = rankingsLeague === "wc" ? "worldcup" : "nba";
+  const precApiKey = rankingsLeague === "wc" ? "totalExactHits" : "totalPrecision";
+
+  useEffect(() => {
+    if (!listReady) return;
+    void ensureMetric(precApiKey);
+    void ensureMetric("totalUpset");
+  }, [listReady, ensureMetric, precApiKey]);
+
+  const visibleMetrics = useMemo(
+    () => visibleMetricsForLeague(rankingLeagueSource),
+    [rankingLeagueSource]
+  );
+
+  useEffect(() => {
+    if (!visibleMetrics.includes(metric)) {
+      setMetric(visibleMetrics[0]);
+    }
+  }, [metric, visibleMetrics]);
 
   const rawRows = useMemo(
     () => (Array.isArray(bundle?.rows) ? (bundle.rows as RankingApiRow[]) : []),
@@ -107,6 +129,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const myRank = bundle?.myRank ?? null;
   const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
+  const myStatsRow =
+    (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ?? myRawRow;
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count) ? bundle.count : 0;
 
@@ -128,10 +152,32 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const rankingHasNoEntries =
     listReady && (rows.length === 0 || rankingListCount === 0);
 
-  const metricItems = useMemo(
-    () => METRICS.filter((m) => VISIBLE_METRICS.includes(m.key)).map((m) => m.key),
-    [],
+  const metricItems = visibleMetrics;
+
+  const myMiniMetrics = useMemo(
+    () =>
+      buildMyRankMiniMetrics(
+        myStatsRow,
+        {
+          ptsRows: byMetric?.totalPoints?.rows as RankingRow[] | undefined,
+          precRows: byMetric?.[precApiKey]?.rows as RankingRow[] | undefined,
+          upsetRows: byMetric?.totalUpset?.rows as RankingRow[] | undefined,
+        },
+        null,
+        rankingLeagueSource
+      ),
+    [
+      myStatsRow,
+      byMetric?.totalPoints?.rows,
+      byMetric?.[precApiKey]?.rows,
+      byMetric?.totalUpset?.rows,
+      rankingLeagueSource,
+      precApiKey,
+    ]
   );
+
+  const cardBarsReady = isMyRankMiniMetricsReady(byMetric, rankingLeagueSource);
+  const pageTitle = rankingsLeague === "wc" ? t.titleWorldCup : t.title;
 
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
@@ -141,15 +187,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     if (!key) return;
     navigation.navigate("ProfileTab", {
       screen: "ProfileHome",
-      params: { handle: key },
+      params: { handle: key, fromRankings: true },
     });
   };
 
   return (
     <View style={styles.root}>
-      <View style={styles.bgLayer} collapsable={false}>
-        <RankingsCyberBackgroundNative />
-      </View>
       <ScrollView
         style={styles.scrollLayer}
         contentContainerStyle={[
@@ -165,9 +208,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
             onPress={() => setMenuOpen(true)}
           />
-          <Text style={styles.headerTitle} maxFontSizeMultiplier={1.2}>
-            {t.title}
-          </Text>
+          <RankingsPageTitleCyberNative title={pageTitle} />
           <Pressable
             style={styles.infoBtn}
             accessibilityRole="button"
@@ -231,15 +272,26 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               statsScramble={listReady && personalPending}
               isPro={user.plan === "pro"}
               rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
+              totalEntries={rankingHasNoEntries ? null : rankingListCount}
+              miniMetrics={myMiniMetrics}
+              statsSource={{
+                totalPosts: myStatsRow?.totalPosts,
+                totalPoints: myStatsRow?.totalPoints,
+                totalPrecision: myStatsRow?.totalPrecision,
+                totalUpset: myStatsRow?.totalUpset,
+              }}
+              barsReady={cardBarsReady}
               language={language}
             />
 
+            <View style={styles.metricRowWrap}>
             <RankingsMetricRowNative
               metrics={metricItems}
               metric={metric}
               onChange={setMetric}
               language={language}
             />
+            </View>
 
             {metric === "winRate" ? (
               <Text style={styles.winRateHint}>
@@ -298,12 +350,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#020409",
-  },
-  /** 3D を背面に固定し、前面 ScrollView は透明にしてロゴが透けて見えるようにする */
-  bgLayer: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
+    backgroundColor: "transparent",
+    position: "relative",
   },
   scrollLayer: {
     flex: 1,
@@ -315,24 +363,12 @@ const styles = StyleSheet.create({
     }),
   },
   scrollContent: {
-    paddingHorizontal: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    color: "rgba(248,250,252,0.9)",
-    fontSize: 14,
-    letterSpacing: 4.2,
-    fontFamily: Platform.select({
-      ios: "BebasNeue_400Regular",
-      android: "BebasNeue_400Regular",
-      default: "BebasNeue_400Regular",
-    }),
+    paddingHorizontal: 10,
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 4,
     gap: 8,
   },
   infoBtn: {
@@ -342,24 +378,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   noticeGlass: {
-    marginBottom: 10,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.2)",
-    backgroundColor: "rgba(255,255,255,0.07)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    marginBottom: 8,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: "rgba(34,211,238,0.35)",
+    backgroundColor: "rgba(2,6,16,0.86)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     overflow: "hidden",
   },
   notice: {
     textAlign: "center",
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 11,
-    lineHeight: 16,
+    color: "rgba(200,244,255,0.72)",
+    fontSize: 10,
+    lineHeight: 14,
   },
   section: {
-    gap: 4,
+    gap: 6,
     marginBottom: 8,
+  },
+  metricRowWrap: {
+    marginTop: 10,
+    marginBottom: 2,
   },
   bracketPlaceholder: {
     minHeight: 180,
@@ -375,8 +415,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   winRateHint: {
-    marginTop: 6,
-    marginBottom: 4,
+    marginTop: 8,
+    marginBottom: 2,
     paddingHorizontal: 4,
     color: "rgba(255,255,255,0.6)",
     fontSize: 11,
@@ -404,11 +444,11 @@ const styles = StyleSheet.create({
     }),
   },
   listSection: {
-    marginTop: 8,
-    gap: 10,
+    marginTop: 6,
+    gap: 0,
   },
   restList: {
-    gap: 8,
-    paddingTop: 4,
+    gap: 0,
+    paddingTop: 0,
   },
 });

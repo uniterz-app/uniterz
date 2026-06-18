@@ -2,7 +2,12 @@ import { Image, StyleSheet, View } from "react-native";
 import { teamIdToCountryName } from "../../../../../lib/wc/wcCountry";
 import { wcFlagImageUri } from "./wcFlagImageUri";
 
-export type CountryFlagVariant = "card" | "preview" | "nextModal";
+export type CountryFlagVariant =
+  | "card"
+  | "preview"
+  | "nextModal"
+  | "inline"
+  | "result";
 
 /** Web `MatchCard` / `PredictNextGameModal` の国旗枠サイズに合わせた 4:3 系 */
 const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }> =
@@ -10,6 +15,10 @@ const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }
     card: { width: 72, height: 48 },
     preview: { width: 88, height: 59 },
     nextModal: { width: 53, height: 36 },
+    /** リザルト得点者予想行（Web `CountryFlag variant=inline`） */
+    inline: { width: 17, height: 12 },
+    /** リザルト一覧（Web `ResultCard` mobileScheduleDense `h-[2.8rem] w-[3.8rem]`） */
+    result: { width: 61, height: 45 },
   };
 
 type CountryFlagNativeProps = {

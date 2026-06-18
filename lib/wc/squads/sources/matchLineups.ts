@@ -346,6 +346,74 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Abu Taha", "Al-Rashdan", "Al-Rawabdeh", "Al-Taamari", "Olwan", "Al-Fakhouri",
     ],
   },
+  // Group K — Portugal 1–1 DR Congo (Jun 17)
+  {
+    iso3: "prt",
+    formation: "4-2-3-1",
+    players: [
+      "Costa", "Cancelo", "Araújo", "Veiga", "Mendes",
+      "Neves", "Vitinha", "Bernardo Silva", "Bruno Fernandes", "Neto", "Ronaldo",
+    ],
+  },
+  {
+    iso3: "cod",
+    formation: "5-3-2",
+    players: [
+      "Mpasi", "Wan-Bissaka", "Kapuadi", "Tuanzebe", "Mbemba", "Masuaku",
+      "Mukau", "Moutoussamy", "Kayembe", "Wissa", "Bakambu",
+    ],
+  },
+  // Group K — England 4–2 Croatia (Jun 17)
+  {
+    iso3: "eng",
+    formation: "4-2-3-1",
+    players: [
+      "Pickford", "James", "Konsa", "Stones", "O'Reilly",
+      "Anderson", "Rice", "Madueke", "Bellingham", "Gordon", "Kane",
+    ],
+  },
+  {
+    iso3: "hrv",
+    formation: "4-2-3-1",
+    players: [
+      "Livakovic", "Sutalo", "Vuskovic", "Gvardiol", "Stanisic",
+      "Modric", "Pasalic", "Perisic", "Sucic", "Baturina", "Musa",
+    ],
+  },
+  // Group L — Uzbekistan 1–3 Colombia (Jun 17)
+  {
+    iso3: "uzb",
+    formation: "3-4-2-1",
+    players: [
+      "Yusupov", "Abdullaev", "Khusanov", "Ashurmatov", "Karimov",
+      "Mozgovoy", "Shukurov", "Nasrullaev", "Urunov", "Fayzullaev", "Shomurodov",
+    ],
+  },
+  {
+    iso3: "col",
+    formation: "4-2-3-1",
+    players: [
+      "Vargas", "Munoz", "Sanchez", "Lucumi", "Mojica",
+      "Lerma", "Puerta", "Arias", "Rodriguez", "Diaz", "Suarez",
+    ],
+  },
+  // Group L — Ghana 1–1 Panama (Jun 17)
+  {
+    iso3: "gha",
+    formation: "4-4-2",
+    players: [
+      "Ati-Zigi", "Senaya", "Adjetey", "Opoku", "Mensah",
+      "Semenyo", "Owusu", "Yirenkyi", "Nuamah", "Sulemana", "Ayew",
+    ],
+  },
+  {
+    iso3: "pan",
+    formation: "5-3-2",
+    players: [
+      "Mosquera", "Blackman", "Ramos", "Cordoba", "Andrade", "Murillo",
+      "Harvey", "Martinez", "Rodriguez", "Barcenas", "Waterman",
+    ],
+  },
 ];
 
 export const CONFIRMED_MATCH_LINEUP_ISO3 = new Set(

@@ -1,7 +1,12 @@
 import "react-native-gesture-handler";
-import { registerRootComponent } from 'expo';
+import "react-native-reanimated";
+import { enableScreens, enableFreeze } from "react-native-screens";
+import { registerRootComponent } from "expo";
 
-import App from './App';
+import App from "./App";
+
+enableScreens(true);
+enableFreeze(false);
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
 // It also ensures that whether you load the app in Expo Go or in a native build,

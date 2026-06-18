@@ -31,7 +31,7 @@ import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/res
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultLiveMark from "@/app/component/result/ResultLiveMark";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
@@ -134,6 +134,9 @@ function ResultMatchHeader({
   const teamNameFont = bracketMarketTeamTypography(isMobileRoute);
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
+  const displayTeamNameFont = isWc
+    ? wcBracketMarketTeamTypography(isMobileRoute)
+    : teamNameFont;
   const m = t(language);
 
   const Icon =
@@ -275,14 +278,14 @@ function ResultMatchHeader({
           {!isMobileRoute ? (
             <div
               className="mt-1.5 text-center text-base font-bold leading-tight sm:mt-2 md:text-xl lg:text-2xl"
-              style={teamNameFont}
+              style={displayTeamNameFont}
             >
               {homeL1} {homeL2}
             </div>
           ) : (
             <div
               className="mt-1.5 text-center text-[13px] font-bold leading-tight sm:mt-2 md:text-[17px]"
-              style={teamNameFont}
+              style={displayTeamNameFont}
             >
               {getMobileTeamName(
                 post.league,
@@ -350,14 +353,14 @@ function ResultMatchHeader({
           {!isMobileRoute ? (
             <div
               className="mt-1.5 text-center text-base font-bold leading-tight sm:mt-2 md:text-xl lg:text-2xl"
-              style={teamNameFont}
+              style={displayTeamNameFont}
             >
               {awayL1} {awayL2}
             </div>
           ) : (
             <div
               className="mt-1.5 text-center text-[13px] font-bold leading-tight sm:mt-2 md:text-[17px]"
-              style={teamNameFont}
+              style={displayTeamNameFont}
             >
               {getMobileTeamName(
                 post.league,

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import { db } from "../lib/firebase";
+import NativeStackBackdrop from "../components/NativeStackBackdrop";
 import type { AuthStackParamList, RootStackParamList } from "./types";
 import MainTabNavigator from "./MainTabNavigator";
 import LoginScreenNative from "../features/auth/LoginScreenNative";
@@ -15,15 +16,25 @@ import { prefetchRankingsLogoGlb } from "../features/rankings/rankingsLogoGlbCac
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 
+const transparentStack = {
+  headerShown: false,
+  contentStyle: { backgroundColor: "transparent" as const },
+  animation: "fade" as const,
+  detachInactiveScreens: false,
+  freezeOnBlur: false,
+};
+
 function AuthNavigator() {
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false, animation: "fade" }}>
-      <AuthStack.Screen name="Landing" component={LandingScreenNative} />
-      <AuthStack.Screen name="Login" component={LoginScreenNative} />
-      <AuthStack.Screen name="Signup" component={SignupScreenNative} />
-      <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreenNative} />
-      <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
-    </AuthStack.Navigator>
+    <NativeStackBackdrop>
+      <AuthStack.Navigator screenOptions={{ ...transparentStack, animation: "fade" }}>
+        <AuthStack.Screen name="Landing" component={LandingScreenNative} />
+        <AuthStack.Screen name="Login" component={LoginScreenNative} />
+        <AuthStack.Screen name="Signup" component={SignupScreenNative} />
+        <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreenNative} />
+        <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
+      </AuthStack.Navigator>
+    </NativeStackBackdrop>
   );
 }
 
@@ -59,15 +70,17 @@ export default function RootNavigator() {
   }
 
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Navigator screenOptions={transparentStack}>
       {!isAuthed ? (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
       ) : needsOnboarding ? (
         <RootStack.Screen name="Auth">
           {() => (
-            <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-              <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
-            </AuthStack.Navigator>
+            <NativeStackBackdrop>
+              <AuthStack.Navigator screenOptions={{ ...transparentStack, animation: "fade" }}>
+                <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
+              </AuthStack.Navigator>
+            </NativeStackBackdrop>
           )}
         </RootStack.Screen>
       ) : (

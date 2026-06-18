@@ -3,6 +3,16 @@
 import { useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import RisingMotesLayer from "@/app/component/games/RisingMotesLayer";
+import {
+  GAMES_AURORA_CYCLE_LITE_MS,
+  GAMES_AURORA_CYCLE_MS,
+  GAMES_PAGE_BG_GRADIENT,
+  GAMES_PAGE_FIELD,
+  gamesAuroraPhaseCss,
+  gamesAuroraPhaseStops,
+  gamesPageBgTintCss,
+  gamesTopHighlightCss,
+} from "@/lib/games/gamesPageBackgroundSpec";
 
 type GamesPageBackgroundProps = {
   lite?: boolean;
@@ -49,7 +59,9 @@ export default function GamesPageBackground({
     [hydrated],
   );
 
-  const auroraCycleSec = lite ? 42 : 28;
+  const auroraCycleSec = lite
+    ? GAMES_AURORA_CYCLE_LITE_MS / 1000
+    : GAMES_AURORA_CYCLE_MS / 1000;
   const auroraAnim = (name: string): React.CSSProperties =>
     reduceMotion
       ? {}
@@ -58,7 +70,13 @@ export default function GamesPageBackground({
           animationDelay: phase.aurora,
         };
 
-  const auroraA = lite ? 0.2 : 0.27;
+  const auroraStops = gamesAuroraPhaseStops(lite);
+  const dotOpacity = lite ? GAMES_PAGE_FIELD.dotOpacityLite : GAMES_PAGE_FIELD.dotOpacity;
+  const gridOpacity = lite ? GAMES_PAGE_FIELD.gridOpacityLite : GAMES_PAGE_FIELD.gridOpacity;
+  const depthOpacity = lite ? GAMES_PAGE_FIELD.depthOpacityLite : GAMES_PAGE_FIELD.depthOpacity;
+  const fieldDriftSec = lite
+    ? GAMES_PAGE_FIELD.driftMsLite / 1000
+    : GAMES_PAGE_FIELD.driftMs / 1000;
 
   return (
     <div
@@ -69,8 +87,7 @@ export default function GamesPageBackground({
       <div
         className="absolute inset-0"
         style={{
-          background:
-            "linear-gradient(180deg, #021208 0%, #020e09 52%, #010805 100%)",
+          background: `linear-gradient(180deg, ${GAMES_PAGE_BG_GRADIENT.top} 0%, ${GAMES_PAGE_BG_GRADIENT.mid} 52%, ${GAMES_PAGE_BG_GRADIENT.bottom} 100%)`,
         }}
       />
 
@@ -81,8 +98,7 @@ export default function GamesPageBackground({
             className="absolute inset-0"
             style={{
               willChange: "opacity",
-              background:
-                "linear-gradient(180deg, #031810 0%, #02140c 48%, #020a07 100%)",
+              background: gamesPageBgTintCss("green"),
               ...auroraAnim("gamesBaseTintGreen"),
             }}
           />
@@ -91,8 +107,7 @@ export default function GamesPageBackground({
             style={{
               willChange: "opacity",
               opacity: 0.12,
-              background:
-                "linear-gradient(180deg, #021018 0%, #031228 52%, #020814 100%)",
+              background: gamesPageBgTintCss("blue"),
               ...auroraAnim("gamesBaseTintBlue"),
             }}
           />
@@ -101,8 +116,7 @@ export default function GamesPageBackground({
             style={{
               willChange: "opacity",
               opacity: 0.1,
-              background:
-                "linear-gradient(180deg, #08051a 0%, #0c0818 52%, #060410 100%)",
+              background: gamesPageBgTintCss("violet"),
               ...auroraAnim("gamesBaseTintViolet"),
             }}
           />
@@ -115,7 +129,7 @@ export default function GamesPageBackground({
       <div
         className="absolute inset-0"
         style={{
-          opacity: lite ? 0.42 : 0.55,
+          opacity: dotOpacity,
           backgroundImage: `
             radial-gradient(circle, rgba(134,210,180,0.18) 0.55px, transparent 0.65px)
           `,
@@ -125,7 +139,7 @@ export default function GamesPageBackground({
       <div
         className="absolute inset-[-12%]"
         style={{
-          opacity: lite ? 0.16 : 0.22,
+          opacity: gridOpacity,
           backgroundImage: `
             linear-gradient(rgba(100,150,130,0.11) 1px, transparent 1px),
             linear-gradient(90deg, rgba(100,150,130,0.08) 1px, transparent 1px)
@@ -135,7 +149,7 @@ export default function GamesPageBackground({
             ? {}
             : {
                 willChange: "transform",
-                animation: `gamesFieldDrift ${lite ? 28 : 20}s linear infinite`,
+                animation: `gamesFieldDrift ${fieldDriftSec}s linear infinite`,
                 animationDelay: phase.field,
               }),
         }}
@@ -144,7 +158,7 @@ export default function GamesPageBackground({
       <div
         className="absolute inset-0"
         style={{
-          opacity: lite ? 0.24 : 0.32,
+          opacity: depthOpacity,
           background: `
             repeating-linear-gradient(
               180deg,
@@ -168,11 +182,7 @@ export default function GamesPageBackground({
         className="absolute inset-0"
         style={{
           willChange: "opacity",
-          background: `
-            radial-gradient(ellipse 68% 50% at 14% 4%, rgba(52,211,153,${auroraA}) 0%, transparent 66%),
-            radial-gradient(ellipse 58% 46% at 88% 18%, rgba(132,204,22,${lite ? 0.12 : 0.17}) 0%, transparent 68%),
-            radial-gradient(ellipse 80% 44% at 50% 108%, rgba(45,212,191,${lite ? 0.15 : 0.2}) 0%, transparent 70%)
-          `,
+          background: gamesAuroraPhaseCss(auroraStops.green),
           ...auroraAnim("gamesAuroraGreen"),
         }}
       />
@@ -182,11 +192,7 @@ export default function GamesPageBackground({
             className="absolute inset-0"
             style={{
               willChange: "opacity",
-              background: `
-                radial-gradient(ellipse 68% 50% at 14% 4%, rgba(34,211,238,${auroraA}) 0%, transparent 66%),
-                radial-gradient(ellipse 58% 46% at 88% 18%, rgba(59,130,246,${lite ? 0.11 : 0.15}) 0%, transparent 68%),
-                radial-gradient(ellipse 80% 44% at 50% 108%, rgba(14,165,233,${lite ? 0.13 : 0.17}) 0%, transparent 70%)
-              `,
+              background: gamesAuroraPhaseCss(auroraStops.blue),
               ...auroraAnim("gamesAuroraBlue"),
             }}
           />
@@ -194,11 +200,7 @@ export default function GamesPageBackground({
             className="absolute inset-0"
             style={{
               willChange: "opacity",
-              background: `
-                radial-gradient(ellipse 68% 50% at 14% 4%, rgba(168,85,247,${lite ? 0.16 : 0.21}) 0%, transparent 66%),
-                radial-gradient(ellipse 58% 46% at 88% 18%, rgba(217,70,239,${lite ? 0.1 : 0.13}) 0%, transparent 68%),
-                radial-gradient(ellipse 80% 44% at 50% 108%, rgba(139,92,246,${lite ? 0.12 : 0.15}) 0%, transparent 70%)
-              `,
+              background: gamesAuroraPhaseCss(auroraStops.violet),
               ...auroraAnim("gamesAuroraViolet"),
             }}
           />
@@ -206,11 +208,7 @@ export default function GamesPageBackground({
             className="absolute inset-0"
             style={{
               willChange: "opacity",
-              background: `
-                radial-gradient(ellipse 68% 50% at 14% 4%, rgba(251,191,36,${lite ? 0.13 : 0.16}) 0%, transparent 66%),
-                radial-gradient(ellipse 58% 46% at 88% 18%, rgba(245,158,11,${lite ? 0.09 : 0.11}) 0%, transparent 68%),
-                radial-gradient(ellipse 80% 44% at 50% 108%, rgba(251,146,60,${lite ? 0.11 : 0.14}) 0%, transparent 70%)
-              `,
+              background: gamesAuroraPhaseCss(auroraStops.amber),
               ...auroraAnim("gamesAuroraAmber"),
             }}
           />
@@ -221,8 +219,7 @@ export default function GamesPageBackground({
       <div
         className="absolute inset-0"
         style={{
-          background:
-            "radial-gradient(ellipse 90% 55% at 50% -8%, rgba(187,247,208,0.06) 0%, transparent 70%)",
+          background: gamesTopHighlightCss(),
         }}
       />
 

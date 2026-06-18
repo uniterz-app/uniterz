@@ -46,7 +46,7 @@ export default function ResultOutcomeBadges({
   const streakIconClass =
     streakBadge?.iconClassName ??
     `shrink-0 ${resultStreakBadgeIconClass(activeWinStreak)}`;
-  const mobileStreakIconClass = isMobile ? "h-2.5 w-2.5" : "h-3.5 w-3.5";
+  const mobileStreakIconClass = isMobile ? "h-2 w-2" : "h-3.5 w-3.5";
 
   if (!badge && !trailing) return null;
 

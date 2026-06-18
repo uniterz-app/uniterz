@@ -1,0 +1,8 @@
+{
+  "homeScore": 1,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "prt-neves", "teamId": "wc-prt", "minute": 6 },
+    { "playerId": "cod-wissa", "teamId": "wc-cod", "minute": 50 }
+  ]
+}

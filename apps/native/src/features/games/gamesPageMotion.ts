@@ -38,7 +38,7 @@ export function runLockOnOpacity(delayMs: number, durationMs = 400) {
     delayMs,
     withSequence(
       withTiming(1, { duration: durationMs * 0.5, easing: Easing.linear }),
-      withTiming(0.5, { duration: durationMs * 0.16, easing: Easing.linear }),
+      withTiming(0.45, { duration: durationMs * 0.16, easing: Easing.linear }),
       withTiming(1, { duration: durationMs * 0.34, easing: Easing.linear })
     )
   );
@@ -152,6 +152,7 @@ export function useGamesListShellIntro({
   isLoading,
 }: UseGamesListShellIntroParams) {
   const [playRichScheduleIntro, setPlayRichScheduleIntro] = useState(true);
+  const lastScheduleDayKeyRef = useRef<string | null>(null);
 
   const scheduleBlockKey = `${league}|${selectedDayKey}|${filterKey}`;
   const prevScheduleBlockKeyRef = useRef<string | null>(null);
@@ -183,10 +184,24 @@ export function useGamesListShellIntro({
   const richScheduleMotion = playRichScheduleIntro && !reduceMotion;
 
   useEffect(() => {
+    setPlayRichScheduleIntro(true);
+    lastScheduleDayKeyRef.current = null;
+  }, [league]);
+
+  useEffect(() => {
     if (isLoading) {
       setPlayRichScheduleIntro(true);
     }
   }, [league, filterKey, isLoading]);
+
+  useEffect(() => {
+    if (!selectedDayKey || isLoading) return;
+    const prev = lastScheduleDayKeyRef.current;
+    lastScheduleDayKeyRef.current = selectedDayKey;
+    if (prev !== null && prev !== selectedDayKey) {
+      setPlayRichScheduleIntro(false);
+    }
+  }, [selectedDayKey, isLoading]);
 
   useEffect(() => {
     if (isLoading || !selectedDayKey || !playRichScheduleIntro) return;

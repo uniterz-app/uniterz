@@ -13,7 +13,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
-import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { splitTeamNameByLeague } from "@/lib/team-name-split";
@@ -31,7 +30,7 @@ import type { ResultPlatform } from "@/lib/result/result-platform";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultStatsRows from "@/app/component/result/ResultStatsRows";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
 import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
@@ -44,7 +43,12 @@ import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
-import { readPostMatchGoalScorers } from "@/lib/wc/matchGoalScorers";
+import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
+import { db } from "@/lib/firebase";
+import { useWcGroupStandingRanks } from "@/lib/wc/useWcGroupStandingRanks";
+import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
+import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
+import { resolveWcGroupStageLine } from "@/lib/wc/wcGroupStandingRank";
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
 type Props = {
@@ -112,6 +116,9 @@ function ResultCardPresentationImpl({
 
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
+  const displayTeamNameFont = isWc
+    ? wcBracketMarketTeamTypography(isMobile)
+    : teamNameFont;
 
   const Icon =
     normalizedLeague === "nba" || normalizedLeague === "bj" ? Jersey : Soccer;
@@ -172,8 +179,31 @@ function ResultCardPresentationImpl({
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWc || !hasFinal) return [];
-    return readPostMatchGoalScorers(post.matchGoalScorers);
-  }, [isWc, hasFinal, post.matchGoalScorers]);
+    return resolveWcMatchGoalScorersForDisplay({
+      league: normalizedLeague,
+      isFinal: hasFinal,
+      matchGoalScorersRaw: post.matchGoalScorers,
+      homeTeamId: post.home?.teamId,
+      awayTeamId: post.away?.teamId,
+    });
+  }, [isWc, hasFinal, post.matchGoalScorers, post.home?.teamId, post.away?.teamId]);
+
+  const wcGroupRanks = useWcGroupStandingRanks(
+    db,
+    post.home?.teamId,
+    post.away?.teamId
+  );
+  const wcGroupStageLine = useMemo(
+    () =>
+      isWc
+        ? resolveWcGroupStageLine(
+            post.home?.teamId,
+            post.away?.teamId,
+            language
+          )
+        : null,
+    [isWc, post.home?.teamId, post.away?.teamId, language]
+  );
 
   const handle = (e: React.MouseEvent<HTMLDivElement>) => {
     if (onOpen) {
@@ -191,7 +221,7 @@ function ResultCardPresentationImpl({
   const nameMt = mobileScheduleDense
     ? "mt-0.5"
     : isMobile
-      ? "mt-1"
+      ? "mt-2"
       : "mt-1.5";
   const hideStatsSection = embedded && post.status !== "final";
 
@@ -201,9 +231,9 @@ function ResultCardPresentationImpl({
       return "px-8 pb-5 pt-9";
     }
     if (mobileScheduleDense) {
-      return listDateLabel ? "px-2 pb-1.5 pt-10" : "px-2 pb-1.5 pt-7";
+      return listDateLabel ? "px-2 pb-2.5 pt-10" : "px-2 pb-2.5 pt-8";
     }
-    return listDateLabel ? "px-2 pb-2 pt-11" : "px-2 pb-2 pt-9";
+    return listDateLabel ? "px-2 pb-4.5 pt-12" : "px-2 pb-4.5 pt-11";
   })();
 
   const isLiveGame = isResultPostLiveGame(post, clock);
@@ -469,17 +499,18 @@ function ResultCardPresentationImpl({
             isMobile
               ? mobileScheduleDense
                 ? "flex min-w-0 flex-col items-center pt-0 pr-6 sm:pr-8"
-                : "flex min-w-0 flex-col items-center pt-1.5 pr-7 sm:pr-9"
+                : "flex min-w-0 flex-col items-center pt-2.5 pr-7 sm:pr-9"
               : "flex min-w-0 flex-col items-center pt-2.5 pr-10 sm:pt-3.5 sm:pr-12"
           }
         >
           {isMobile ? (
             <>
-              <div className="relative flex w-full min-w-0 items-center justify-center">
+              <div className="relative flex w-full min-w-0 flex-col items-center justify-center">
                 {isWc ? (
-                  <CountryFlag
+                  <WcTeamFlagWithMeta
                     teamId={post.home?.teamId}
-                    className={
+                    compact={mobileScheduleDense}
+                    flagClassName={
                       mobileScheduleDense
                         ? "h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
                         : "h-[3.2rem] w-[4.4rem] shrink-0"
@@ -508,20 +539,31 @@ function ResultCardPresentationImpl({
                 )}
               </div>
               <div
-                className={`${nameMt} w-full max-w-full truncate text-center font-bold leading-tight ${
-                  mobileScheduleDense
-                    ? "text-[15px] md:text-[18px]"
-                    : "text-[13px] md:text-[17px]"
-                }`}
-                style={teamNameFont}
+                className={`${nameMt} flex w-full justify-center`}
               >
-                {getMobileTeamName(
-                  post.league,
-                  post.home?.name ?? "",
-                  homeL1,
-                  homeL2
-                )}
+                <span
+                  className={`max-w-full truncate text-center font-bold leading-tight ${
+                    mobileScheduleDense
+                      ? "text-[15px] md:text-[18px]"
+                      : "text-[13px] md:text-[17px]"
+                  }`}
+                  style={displayTeamNameFont}
+                >
+                  {getMobileTeamName(
+                    post.league,
+                    post.home?.name ?? "",
+                    homeL1,
+                    homeL2
+                  )}
+                </span>
               </div>
+              {isWc ? (
+                <WcGroupStandingRecordLine
+                  standing={wcGroupRanks.homeStanding}
+                  language={language}
+                  compact={mobileScheduleDense}
+                />
+              ) : null}
               {wcMatchGoalScorers.length > 0 ? (
                 <WcMatchGoalScorersColumn
                   scorers={wcMatchGoalScorers}
@@ -533,9 +575,9 @@ function ResultCardPresentationImpl({
           ) : (
             <>
               {isWc ? (
-                <CountryFlag
+                <WcTeamFlagWithMeta
                   teamId={post.home?.teamId}
-                  className="h-[3.5rem] w-[4.8rem]"
+                  flagClassName="h-[3.5rem] w-[4.8rem]"
                 />
               ) : Icon === Jersey ? (
                 <HalftoneJerseyMark
@@ -548,12 +590,18 @@ function ResultCardPresentationImpl({
               )}
               <div
                 className={`${nameMt} flex h-[2.65rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.1rem] md:text-xl lg:text-2xl`}
-                style={teamNameFont}
+                style={displayTeamNameFont}
               >
                 <span className="line-clamp-2 break-words">
                   {homeL1} {homeL2}
                 </span>
               </div>
+              {isWc ? (
+                <WcGroupStandingRecordLine
+                  standing={wcGroupRanks.homeStanding}
+                  language={language}
+                />
+              ) : null}
               {wcMatchGoalScorers.length > 0 ? (
                 <WcMatchGoalScorersColumn
                   scorers={wcMatchGoalScorers}
@@ -570,17 +618,18 @@ function ResultCardPresentationImpl({
             isMobile
               ? mobileScheduleDense
                 ? "flex min-w-0 flex-col items-center pt-0 pl-6 sm:pl-8"
-                : "flex min-w-0 flex-col items-center pt-1.5 pl-7 sm:pl-9"
+                : "flex min-w-0 flex-col items-center pt-2.5 pl-7 sm:pl-9"
               : "flex min-w-0 flex-col items-center pt-2.5 pl-10 sm:pt-3.5 sm:pl-12"
           }
         >
           {isMobile ? (
             <>
-              <div className="relative flex w-full min-w-0 items-center justify-center">
+              <div className="relative flex w-full min-w-0 flex-col items-center justify-center">
                 {isWc ? (
-                  <CountryFlag
+                  <WcTeamFlagWithMeta
                     teamId={post.away?.teamId}
-                    className={
+                    compact={mobileScheduleDense}
+                    flagClassName={
                       mobileScheduleDense
                         ? "h-[2.8rem] w-[3.8rem] shrink-0 md:h-[3.5rem] md:w-[4.8rem]"
                         : "h-[3.2rem] w-[4.4rem] shrink-0"
@@ -609,20 +658,31 @@ function ResultCardPresentationImpl({
                 )}
               </div>
               <div
-                className={`${nameMt} w-full max-w-full truncate text-center font-bold leading-tight ${
-                  mobileScheduleDense
-                    ? "text-[15px] md:text-[18px]"
-                    : "text-[13px] md:text-[17px]"
-                }`}
-                style={teamNameFont}
+                className={`${nameMt} flex w-full justify-center`}
               >
-                {getMobileTeamName(
-                  post.league,
-                  post.away?.name ?? "",
-                  awayL1,
-                  awayL2
-                )}
+                <span
+                  className={`max-w-full truncate text-center font-bold leading-tight ${
+                    mobileScheduleDense
+                      ? "text-[15px] md:text-[18px]"
+                      : "text-[13px] md:text-[17px]"
+                  }`}
+                  style={displayTeamNameFont}
+                >
+                  {getMobileTeamName(
+                    post.league,
+                    post.away?.name ?? "",
+                    awayL1,
+                    awayL2
+                  )}
+                </span>
               </div>
+              {isWc ? (
+                <WcGroupStandingRecordLine
+                  standing={wcGroupRanks.awayStanding}
+                  language={language}
+                  compact={mobileScheduleDense}
+                />
+              ) : null}
               {wcMatchGoalScorers.length > 0 ? (
                 <WcMatchGoalScorersColumn
                   scorers={wcMatchGoalScorers}
@@ -634,9 +694,9 @@ function ResultCardPresentationImpl({
           ) : (
             <>
               {isWc ? (
-                <CountryFlag
+                <WcTeamFlagWithMeta
                   teamId={post.away?.teamId}
-                  className="h-[3.5rem] w-[4.8rem]"
+                  flagClassName="h-[3.5rem] w-[4.8rem]"
                 />
               ) : Icon === Jersey ? (
                 <HalftoneJerseyMark
@@ -649,12 +709,18 @@ function ResultCardPresentationImpl({
               )}
               <div
                 className={`${nameMt} flex h-[2.65rem] items-center justify-center text-center text-base font-bold leading-tight md:h-[3.1rem] md:text-xl lg:text-2xl`}
-                style={teamNameFont}
+                style={displayTeamNameFont}
               >
                 <span className="line-clamp-2 break-words">
                   {awayL1} {awayL2}
                 </span>
               </div>
+              {isWc ? (
+                <WcGroupStandingRecordLine
+                  standing={wcGroupRanks.awayStanding}
+                  language={language}
+                />
+              ) : null}
               {wcMatchGoalScorers.length > 0 ? (
                 <WcMatchGoalScorersColumn
                   scorers={wcMatchGoalScorers}
@@ -702,12 +768,23 @@ function ResultCardPresentationImpl({
               ].join(" ")}
             />
           ) : null}
+
+          {wcGroupStageLine ? (
+            <div
+              className={[
+                "mt-1 max-w-full truncate text-center font-medium text-white/50",
+                isMobile ? "text-[9px] leading-tight" : "text-[11px] leading-tight",
+              ].join(" ")}
+            >
+              {wcGroupStageLine}
+            </div>
+          ) : null}
         </div>
       </div>
 
       {hideStatsSection && !wcGoalScorer ? null : (
         <div
-          className={mobileScheduleDense ? "mt-1.5" : "mt-3"}
+          className={mobileScheduleDense ? "mt-2.5" : isMobile ? "mt-5" : "mt-3"}
           aria-hidden
         >
           <div className={RESULT_HAIRLINE} />
@@ -716,11 +793,11 @@ function ResultCardPresentationImpl({
 
       <div
         className={[
-          mobileScheduleDense ? "mt-1" : "mt-2",
+          mobileScheduleDense ? "mt-2" : isMobile ? "mt-3.5" : "mt-2",
           isMobile
             ? mobileScheduleDense
-              ? "space-y-1.5"
-              : "space-y-2.5"
+              ? "space-y-2.5"
+              : "space-y-3.5"
             : "space-y-1",
         ].join(" ")}
       >

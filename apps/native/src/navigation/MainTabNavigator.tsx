@@ -14,19 +14,21 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 export default function MainTabNavigator() {
   return (
     <Tab.Navigator
-      tabBar={(props) => <AppTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: { display: "none" },
-      }}
-      initialRouteName="GamesTab"
-    >
-      <Tab.Screen name="GamesTab" component={GamesStackScreen} />
-      <Tab.Screen name="ResultTab" component={ResultStackScreen} />
-      <Tab.Screen name="RankingsTab" component={RankingsStackScreen} />
-      <Tab.Screen name="LeaderboardsTab" component={LeaderboardsStackScreen} />
-      <Tab.Screen name="ProfileTab" component={ProfileStackScreen} />
-    </Tab.Navigator>
+        style={{ flex: 1, backgroundColor: "transparent" }}
+        tabBar={(props) => <AppTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarStyle: { display: "none" },
+          sceneStyle: { backgroundColor: "transparent" },
+        }}
+        initialRouteName="GamesTab"
+      >
+        <Tab.Screen name="GamesTab" component={GamesStackScreen} />
+        <Tab.Screen name="ResultTab" component={ResultStackScreen} />
+        <Tab.Screen name="RankingsTab" component={RankingsStackScreen} />
+        <Tab.Screen name="LeaderboardsTab" component={LeaderboardsStackScreen} />
+        <Tab.Screen name="ProfileTab" component={ProfileStackScreen} />
+      </Tab.Navigator>
   );
 }

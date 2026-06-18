@@ -29,6 +29,14 @@ export function formatWcPlayerShortName(fullName: string): string {
   return `${initial}.${last}`;
 }
 
+/** 90+5 などアディショナルタイム表記（保存値は 95 = 90+5） */
+export function formatWcGoalMinuteDisplay(minute: number | null | undefined): string {
+  if (minute == null || !Number.isFinite(Number(minute))) return "";
+  const m = Math.floor(Number(minute));
+  if (m > 90) return `90+${m - 90}'`;
+  return `${m}'`;
+}
+
 export function formatWcMatchGoalScorerLabel(
   fullName: string,
   minute?: number | null,
@@ -36,7 +44,9 @@ export function formatWcMatchGoalScorerLabel(
 ): string {
   const short = formatWcPlayerShortName(fullName);
   const withMin =
-    minute != null && Number.isFinite(minute) ? `${short} ${minute}'` : short;
+    minute != null && Number.isFinite(minute)
+      ? `${short} ${formatWcGoalMinuteDisplay(minute)}`.trim()
+      : short;
   return ownGoal ? `${withMin} OG` : withMin;
 }
 
@@ -94,6 +104,25 @@ export function buildPostMatchGoalScorersFromRaw(
   const resolved = resolveWcGameGoalScorers(raw, { homeTeamId, awayTeamId });
   const list = resolved.ok ? resolved.scorers : normalizeWcGameGoalScorers(raw);
   return buildPostMatchGoalScorers(list, homeTeamId, awayTeamId);
+}
+
+/** 試合カード／リザルト：投稿の matchGoalScorers 優先、なければ games.goalScorers から組み立て */
+export function resolveWcMatchGoalScorersForDisplay(opts: {
+  league: string;
+  isFinal: boolean;
+  matchGoalScorersRaw?: unknown;
+  goalScorersRaw?: unknown;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
+}): PostMatchGoalScorer[] {
+  if (opts.league !== "wc" || !opts.isFinal) return [];
+  const fromPost = readPostMatchGoalScorers(opts.matchGoalScorersRaw);
+  if (fromPost.length > 0) return fromPost;
+  return buildPostMatchGoalScorersFromRaw(
+    opts.goalScorersRaw,
+    opts.homeTeamId,
+    opts.awayTeamId
+  );
 }
 
 export function readPostMatchGoalScorers(

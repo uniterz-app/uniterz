@@ -127,7 +127,7 @@ export default function ResultStatsRows({
         isMobile
           ? comfortable
             ? "space-y-2.5"
-            : "space-y-1.5"
+            : "space-y-2.5"
           : comfortable
             ? "space-y-2"
             : "space-y-1",
@@ -160,7 +160,7 @@ export default function ResultStatsRows({
               isMobile
                 ? comfortable
                   ? "py-1.5"
-                  : "py-0.5"
+                  : "py-1"
                 : comfortable
                   ? "py-1"
                   : "",

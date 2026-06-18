@@ -20,15 +20,23 @@ type Props = {
   onClose: () => void;
   /** 詳細などで左上に戻るだけのとき */
   onBack?: () => void;
+  /** Web ルート `AppPageBackground` を背面に見せる */
+  appBackground?: boolean;
   children: ReactNode;
 };
 
-export default function MobilePageShell({ title, onClose, onBack, children }: Props) {
+export default function MobilePageShell({
+  title,
+  onClose,
+  onBack,
+  appBackground = false,
+  children,
+}: Props) {
   const { width } = useWindowDimensions();
   return (
-    <View style={[styles.root, { width }]}>
-      <View style={styles.bg} />
-      <View style={styles.radial} pointerEvents="none" />
+    <View style={[styles.root, appBackground && styles.rootAppBackground, { width }]}>
+      {!appBackground ? <View style={styles.bg} /> : null}
+      {!appBackground ? <View style={styles.radial} pointerEvents="none" /> : null}
 
       <View style={styles.header}>
         {(Platform.OS === "ios" || Platform.OS === "android") && (
@@ -77,6 +85,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#0A1118",
+  },
+  rootAppBackground: {
+    backgroundColor: "transparent",
   },
   bg: {
     ...StyleSheet.absoluteFillObject,

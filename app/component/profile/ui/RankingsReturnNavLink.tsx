@@ -52,27 +52,17 @@ export default function RankingsReturnNavLink({ language }: Props) {
     <Link
       href={href}
       aria-label={label}
-      title={label}
       className={[
-        "fixed right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full",
-        "border border-cyan-200/25 bg-white/5.5 text-cyan-50/95",
-        "shadow-[0_10px_30px_rgba(0,0,0,0.38),0_0_22px_rgba(34,211,238,0.16)]",
-        "backdrop-blur-xl backdrop-saturate-150 transition",
-        "hover:-translate-y-0.5 hover:border-cyan-200/45 hover:bg-white/8.5 hover:shadow-[0_14px_36px_rgba(0,0,0,0.42),0_0_28px_rgba(34,211,238,0.24)]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#061116]",
-        "bottom-[calc(var(--bottom-nav-clearance,0px)+14px)] md:bottom-6 md:right-6",
+        "mb-4 inline-flex items-center gap-2 rounded-lg border border-cyan-200/20",
+        "bg-white/5 px-3 py-2 text-sm font-medium text-cyan-50/95",
+        "shadow-[0_4px_16px_rgba(0,0,0,0.22)] backdrop-blur-md transition",
+        "hover:border-cyan-200/35 hover:bg-white/8",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/70",
+        "focus-visible:ring-offset-2 focus-visible:ring-offset-[#061116]",
       ].join(" ")}
     >
-      <span
-        aria-hidden
-        className="absolute inset-[3px] rounded-full border border-white/10 bg-black/10"
-      />
-      <ArrowLeft
-        className="relative h-6 w-6 drop-shadow-[0_0_8px_rgba(103,232,249,0.5)]"
-        strokeWidth={2.4}
-        aria-hidden
-      />
-      <span className="sr-only">{label}</span>
+      <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={2.4} aria-hidden />
+      <span>{label}</span>
     </Link>
   );
 }

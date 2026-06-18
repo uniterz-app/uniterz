@@ -90,7 +90,9 @@ export function resolveResultCardBadge(
   const activeWinStreak =
     toInt((post.stats as { pointsV3Detail?: { activeWinStreak?: unknown } })
       ?.pointsV3Detail?.activeWinStreak) ?? 0;
-  const streakBadge = getWinStreakBadge(activeWinStreak, language);
+  const streakBadge = getWinStreakBadge(activeWinStreak, language, {
+    subtle: true,
+  });
 
   const badge = resolveResultOutcomeBadge({
     stats: post.stats,

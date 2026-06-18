@@ -30,7 +30,7 @@ import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/res
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultOutcomeBadges from "@/app/component/result/ResultOutcomeBadges";
 import ResultLiveMark from "@/app/component/result/ResultLiveMark";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
@@ -123,6 +123,9 @@ export default function MobileResultMatchHeader({
   const teamNameFont = bracketMarketTeamTypography(true);
   const normalizedLeague = normalizeLeague(post.league);
   const isWc = normalizedLeague === "wc";
+  const displayTeamNameFont = isWc
+    ? wcBracketMarketTeamTypography(true)
+    : teamNameFont;
   const m = t(language);
   const Icon =
     normalizedLeague === "nba" || normalizedLeague === "bj" ? Jersey : Soccer;
@@ -243,8 +246,8 @@ export default function MobileResultMatchHeader({
         </div>
       ) : null}
 
-      <div className="relative z-10 px-4 pb-5 pt-11">
-      <div className="grid grid-cols-3 items-center pt-1">
+      <div className="relative z-10 px-4 pb-6 pt-12">
+      <div className="grid grid-cols-3 items-center gap-y-1 pt-1.5">
         <div className="flex flex-col items-center">
           {isWc ? (
             <CountryFlag
@@ -261,8 +264,8 @@ export default function MobileResultMatchHeader({
             <Icon className="h-16 w-16" fill={homeColor} stroke="#fff" />
           )}
           <div
-            className="mt-1 text-center text-[13px] font-bold leading-tight md:text-[17px]"
-            style={teamNameFont}
+            className="mt-1.5 text-center text-[13px] font-bold leading-tight md:text-[17px]"
+            style={displayTeamNameFont}
           >
             {getMobileTeamName(
               post.league,
@@ -327,8 +330,8 @@ export default function MobileResultMatchHeader({
             <Icon className="h-16 w-16" fill={awayColor} stroke="#fff" />
           )}
           <div
-            className="mt-0.5 text-center text-[13px] font-bold leading-tight md:text-[17px]"
-            style={teamNameFont}
+            className="mt-1.5 text-center text-[13px] font-bold leading-tight md:text-[17px]"
+            style={displayTeamNameFont}
           >
             {getMobileTeamName(
               post.league,
