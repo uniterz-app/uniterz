@@ -1,0 +1,12 @@
+{
+  "homeScore": 4,
+  "awayScore": 2,
+  "scorers": [
+    { "playerId": "eng-kane", "teamId": "wc-eng", "minute": 12 },
+    { "playerId": "hrv-baturina", "teamId": "wc-hrv", "minute": 36 },
+    { "playerId": "eng-kane", "teamId": "wc-eng", "minute": 42 },
+    { "playerId": "eng-bellingham", "teamId": "wc-eng", "minute": 47 },
+    { "playerId": "hrv-musa", "teamId": "wc-hrv", "minute": 50 },
+    { "playerId": "eng-rashford", "teamId": "wc-eng", "minute": 85 }
+  ]
+}

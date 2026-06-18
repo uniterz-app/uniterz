@@ -303,7 +303,7 @@ export const WC_GENERATED_SQUADS: Record<string, WcTeamSquad["squad"]> = {
     { id: "col-ditta", name: "Willer Ditta", pos: "DF", club: "Cruz Azul" },
     { id: "col-hernandez", name: "Cucho Hernández", pos: "FW", club: "Real Betis" },
     { id: "col-quintero", name: "Juan Fernando Quintero", pos: "MF", club: "River Plate" },
-    { id: "col-campaz", name: "Jaminton Campaz", pos: "FW", club: "Rosario Central" },
+    { id: "col-campaz", name: "Leandro Campaz", pos: "FW", club: "Rosario Central" },
     { id: "col-machado", name: "Deiver Machado", pos: "DF", club: "Nantes" },
     { id: "col-sanchez", name: "Davinson Sánchez", pos: "DF", club: "Galatasaray" },
     { id: "col-montero", name: "Álvaro Montero", pos: "GK", club: "Vélez Sarsfield" },

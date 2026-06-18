@@ -29,6 +29,8 @@ import GamePredictionDistribution from "@/app/component/predict/GamePredictionDi
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
 import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
 import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
+import WcMatchPreviewPanel from "@/app/component/predict/wc/WcMatchPreviewPanel";
+import { hasWcMatchPreview } from "@/lib/wc/matchPreviews";
 import WcGoalScorerPicker from "@/app/component/predict/wc/WcGoalScorerPicker";
 import {
   isWcGoalScorerPickValidForPredictedScore,
@@ -253,7 +255,7 @@ export default function PredictionFormV2({
   );
   const [submitting, setSubmitting] = useState(false);
   const [toolsTab, setToolsTab] = useState<
-    null | "stats" | "market" | "standings" | "h2h"
+    null | "stats" | "market" | "standings" | "h2h" | "preview"
   >(null);
   const [marketChartKey, setMarketChartKey] = useState(0);
   /** Games オーバーレイ: 投稿後モーダル用の次試合 */
@@ -285,6 +287,7 @@ export default function PredictionFormV2({
   const formTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const isWc = game.league === "wc";
+  const showWcMatchPreview = isWc && hasWcMatchPreview(gameId);
   const isSoccer = game.league === "pl" || game.league === "j1" || isWc;
   // WC は Standings タブ（グループ順位 + FIFA ランク）を常に出す
   const showStandings = game.league === "nba" || isWc;
@@ -749,10 +752,17 @@ export default function PredictionFormV2({
     ? "flex h-9 w-full items-center justify-center rounded-xl border px-1.5 text-xs font-semibold transition-all duration-200"
     : "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
 
+  const toolGridCols = (() => {
+    if (isWc && showWcMatchPreview) {
+      return hideMarketTab ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4";
+    }
+    return hideMarketTab ? "grid-cols-2" : "grid-cols-3";
+  })();
+
   const overlayToolDeckClass = [
     PREDICT_OVERLAY_CYBER_DECK_CLASS,
     "grid overflow-hidden",
-    hideMarketTab ? "grid-cols-2" : "grid-cols-3",
+    toolGridCols,
     isMobile ? "h-10" : "h-11",
   ].join(" ");
 
@@ -1104,7 +1114,7 @@ export default function PredictionFormV2({
               ? overlayToolDeckClass
               : [
                   "grid",
-                  hideMarketTab ? "grid-cols-2" : "grid-cols-3",
+                  toolGridCols,
                   isMobile ? "gap-2" : "gap-2.5",
                 ].join(" ")
           }
@@ -1172,6 +1182,29 @@ export default function PredictionFormV2({
                 <span className={isMobile ? "truncate" : ""}>
                   {m.games.market}
                 </span>
+              </span>
+            </button>
+          ) : null}
+
+          {showWcMatchPreview ? (
+            <button
+              type="button"
+              onClick={() =>
+                setToolsTab((t) => (t === "preview" ? null : "preview"))
+              }
+              className={
+                overlayEmbedded
+                  ? overlayToolButtonClass(toolsTab === "preview")
+                  : [
+                      toolButtonBase,
+                      toolsTab === "preview"
+                        ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                        : toolButtonInactiveClass,
+                    ].join(" ")
+              }
+            >
+              <span className={isMobile ? "truncate" : ""}>
+                {m.predict.matchPreview}
               </span>
             </button>
           ) : null}
@@ -1373,6 +1406,41 @@ export default function PredictionFormV2({
                 </div>
               )}
             </div>
+            </div>
+          </motion.div>
+        )}
+
+        {toolsTab === "preview" && showWcMatchPreview && (
+          <motion.div
+            {...fadeUpMotionProps}
+            className={[
+              glassCardStatsPanel,
+              isMobile ? "!px-2" : "",
+            ].join(" ")}
+          >
+            <div className="relative z-1 min-w-0">
+              <div
+                className={
+                  isMobile
+                    ? "mb-2 text-sm font-semibold text-white/90"
+                    : "mb-3 text-base font-semibold text-white/90"
+                }
+              >
+                {m.predict.matchPreview}
+              </div>
+              <div
+                className={
+                  isMobile
+                    ? "min-w-0 border-t border-white/10 pt-2"
+                    : "border-t border-white/10 pt-4"
+                }
+              >
+                <WcMatchPreviewPanel
+                  gameId={gameId}
+                  language={language}
+                  isMobile={isMobile}
+                />
+              </div>
             </div>
           </motion.div>
         )}

@@ -302,7 +302,7 @@ export const WC_SQUAD_NAME_INDEX: Record<string, WcSquadNameEntry[]> = {
     { id: "col-ditta", name: "Willer Ditta" },
     { id: "col-hernandez", name: "Cucho Hernández" },
     { id: "col-quintero", name: "Juan Fernando Quintero" },
-    { id: "col-campaz", name: "Jaminton Campaz" },
+    { id: "col-campaz", name: "Leandro Campaz" },
     { id: "col-machado", name: "Deiver Machado" },
     { id: "col-sanchez", name: "Davinson Sánchez" },
     { id: "col-montero", name: "Álvaro Montero" },

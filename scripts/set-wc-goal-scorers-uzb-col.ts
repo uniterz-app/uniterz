@@ -14,6 +14,12 @@
  *   npx tsx scripts/set-wc-goal-scorers-uzb-col.ts --with-score
  *   npx tsx scripts/set-wc-goal-scorers-uzb-col.ts --with-score --resettle
  *   npx tsx scripts/set-wc-goal-scorers-uzb-col.ts --force
+ *
+ * オプション:
+ *   --dry-run     書き込まず内容を表示
+ *   --with-score  homeScore/awayScore/final/status も更新（1–3 確定）
+ *   --resettle    精算済み投稿のゴールスコアラーボーナスを再計算（試合が final のとき）
+ *   --force       既存 goalScorers があっても上書き
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -173,7 +179,7 @@ function payloadFromScorers(scorers: WcGameGoalScorer[]) {
   if (DRY_RUN) {
     console.log("\n本番反映:");
     console.log(
-      "  npx tsx scripts/set-wc-goal-scorers-uzb-col.ts --with-score --resettle"
+      "  npx tsx scripts/set-wc-goal-scorers-uzb-col.ts --with-score --resettle --force"
     );
   }
 
