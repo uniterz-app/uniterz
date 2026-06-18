@@ -88,6 +88,10 @@ import {
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
+import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
+import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
+import { resolveWcGroupStageLine } from "../../../../../lib/wc/wcGroupStandingRank";
+import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { readPostMatchGoalScorers } from "../../../../../lib/wc/matchGoalScorers";
@@ -489,6 +493,14 @@ function ResultPostCard({
 
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
+  const wcGroupRanks = useWcGroupStandingRanks(db, home?.teamId, away?.teamId);
+  const wcGroupStageLine = useMemo(
+    () =>
+      isWcCard
+        ? resolveWcGroupStageLine(home?.teamId, away?.teamId, language)
+        : null,
+    [isWcCard, home?.teamId, away?.teamId, language]
+  );
   const pred = post.prediction as
     | { score?: { home?: number; away?: number }; winner?: string }
     | undefined;
@@ -754,9 +766,11 @@ function ResultPostCard({
           <View style={styles.matchArea}>
             <View style={styles.matchGrid}>
               <View style={[styles.sideCol, styles.sideColHome]}>
-                <Animated.View style={entrance.homeJerseyMarkStyle}>
+                <Animated.View style={[entrance.homeJerseyMarkStyle, styles.flagStack]}>
                   {isWcCard ? (
-                    <CountryFlagNative teamId={home?.teamId} variant="result" />
+                    <WcTeamFlagWithMetaNative teamId={home?.teamId}>
+                      <CountryFlagNative teamId={home?.teamId} variant="result" />
+                    </WcTeamFlagWithMetaNative>
                   ) : (
                     <JerseyMarkAdaptive
                       accent={homeJersey.primary}
@@ -773,6 +787,12 @@ function ResultPostCard({
                     {homeName}
                   </Text>
                 </Animated.View>
+                {isWcCard ? (
+                  <WcGroupStandingRecordLineNative
+                    standing={wcGroupRanks.homeStanding}
+                    language={language}
+                  />
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
                     scorers={wcMatchGoalScorers}
@@ -781,9 +801,11 @@ function ResultPostCard({
                 ) : null}
               </View>
               <View style={[styles.sideCol, styles.sideColAway]}>
-                <Animated.View style={entrance.awayJerseyMarkStyle}>
+                <Animated.View style={[entrance.awayJerseyMarkStyle, styles.flagStack]}>
                   {isWcCard ? (
-                    <CountryFlagNative teamId={away?.teamId} variant="result" />
+                    <WcTeamFlagWithMetaNative teamId={away?.teamId}>
+                      <CountryFlagNative teamId={away?.teamId} variant="result" />
+                    </WcTeamFlagWithMetaNative>
                   ) : (
                     <JerseyMarkAdaptive
                       accent={awayJersey.primary}
@@ -800,6 +822,12 @@ function ResultPostCard({
                     {awayName}
                   </Text>
                 </Animated.View>
+                {isWcCard ? (
+                  <WcGroupStandingRecordLineNative
+                    standing={wcGroupRanks.awayStanding}
+                    language={language}
+                  />
+                ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
                     scorers={wcMatchGoalScorers}
@@ -830,6 +858,11 @@ function ResultPostCard({
                     density="list"
                   />
                 </Animated.View>
+              ) : null}
+              {wcGroupStageLine ? (
+                <Text style={styles.groupStageLine} numberOfLines={1}>
+                  {wcGroupStageLine}
+                </Text>
               ) : null}
             </View>
           </View>
@@ -1694,6 +1727,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     alignItems: "center",
   },
+  flagStack: {
+    alignItems: "center",
+  },
   sideColHome: {
     paddingTop: 0,
     paddingRight: 26,
@@ -1736,6 +1772,14 @@ const styles = StyleSheet.create({
   },
   finalScoreWrap: {
     marginTop: 3,
+  },
+  groupStageLine: {
+    marginTop: 4,
+    maxWidth: "100%",
+    fontSize: 9,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.5)",
+    textAlign: "center",
   },
   divider: {
     marginTop: 6,

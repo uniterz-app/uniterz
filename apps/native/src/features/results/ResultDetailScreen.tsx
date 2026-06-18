@@ -45,6 +45,11 @@ import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { readPostMatchGoalScorers } from "../../../../../lib/wc/matchGoalScorers";
+import { db } from "../../lib/firebase";
+import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
+import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
+import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
+import { resolveWcGroupStageLine } from "../../../../../lib/wc/wcGroupStandingRank";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -571,6 +576,9 @@ export default function ResultDetailScreen({
   const [market, setMarket] = useState<ResultPostDetailMarket | null>(null);
   const [distribution, setDistribution] = useState<GamePointsDistributionV1 | null>(null);
   const reduceMotion = useReducedMotion() ?? false;
+  const homeTeamId = (post?.home as { teamId?: string } | undefined)?.teamId;
+  const awayTeamId = (post?.away as { teamId?: string } | undefined)?.teamId;
+  const wcGroupRanks = useWcGroupStandingRanks(db, homeTeamId, awayTeamId);
 
   const reset = useCallback(() => {
     setPost(null);
@@ -653,7 +661,9 @@ export default function ResultDetailScreen({
     const rh = result?.home;
     const ra = result?.away;
     const hasFinal = typeof rh === "number" && typeof ra === "number";
-    const wcMatchGoalScorers =
+    const wcGroupStageLine = isWcCard
+      ? resolveWcGroupStageLine(home?.teamId, away?.teamId, language)
+      : null;
       isWcCard && hasFinal
         ? readPostMatchGoalScorers(
             (post as { matchGoalScorers?: unknown }).matchGoalScorers
@@ -733,7 +743,9 @@ export default function ResultDetailScreen({
         <View style={styles.matchGrid}>
           <View style={styles.sideCol}>
             {isWcCard ? (
-              <CountryFlagNative teamId={home?.teamId} variant="result" />
+              <WcTeamFlagWithMetaNative teamId={home?.teamId}>
+                <CountryFlagNative teamId={home?.teamId} variant="result" />
+              </WcTeamFlagWithMetaNative>
             ) : (
               <JerseyMarkAdaptive
                 accent={homeJersey.primary}
@@ -744,6 +756,12 @@ export default function ResultDetailScreen({
             <Text style={styles.teamName} numberOfLines={2}>
               {homeName}
             </Text>
+            {isWcCard ? (
+              <WcGroupStandingRecordLineNative
+                standing={wcGroupRanks.homeStanding}
+                language={language}
+              />
+            ) : null}
             {wcMatchGoalScorers.length > 0 ? (
               <WcMatchGoalScorersColumnNative scorers={wcMatchGoalScorers} side="home" />
             ) : null}
@@ -757,10 +775,17 @@ export default function ResultDetailScreen({
                 <Text style={styles.finalScore}>{finalScore}</Text>
               </>
             ) : null}
+            {wcGroupStageLine ? (
+              <Text style={styles.groupStageLine} numberOfLines={1}>
+                {wcGroupStageLine}
+              </Text>
+            ) : null}
           </View>
           <View style={styles.sideCol}>
             {isWcCard ? (
-              <CountryFlagNative teamId={away?.teamId} variant="result" />
+              <WcTeamFlagWithMetaNative teamId={away?.teamId}>
+                <CountryFlagNative teamId={away?.teamId} variant="result" />
+              </WcTeamFlagWithMetaNative>
             ) : (
               <JerseyMarkAdaptive
                 accent={awayJersey.primary}
@@ -771,6 +796,12 @@ export default function ResultDetailScreen({
             <Text style={styles.teamName} numberOfLines={2}>
               {awayName}
             </Text>
+            {isWcCard ? (
+              <WcGroupStandingRecordLineNative
+                standing={wcGroupRanks.awayStanding}
+                language={language}
+              />
+            ) : null}
             {wcMatchGoalScorers.length > 0 ? (
               <WcMatchGoalScorersColumnNative scorers={wcMatchGoalScorers} side="away" />
             ) : null}
@@ -778,7 +809,7 @@ export default function ResultDetailScreen({
         </View>
       </ShellCard>
     );
-  }, [post, isEn]);
+  }, [post, isEn, wcGroupRanks, language]);
 
   if (!visible) return null;
 
@@ -1091,6 +1122,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sideCol: { flex: 1, alignItems: "center", minWidth: 0 },
+  flagStack: { alignItems: "center" },
   centerCol: { alignItems: "center", paddingHorizontal: 4, minWidth: 100 },
   teamName: {
     marginTop: 10,
@@ -1127,6 +1159,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontFamily: NUMERIC_FONT,
     fontVariant: ["tabular-nums"],
+  },
+  groupStageLine: {
+    marginTop: 6,
+    maxWidth: "100%",
+    fontSize: 10,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.5)",
+    textAlign: "center",
   },
   /** Web `MobileResultMarketCard`：`mb-3 flex … gap-2 text-[13px] font-semibold` */
   marketHeaderRow: {

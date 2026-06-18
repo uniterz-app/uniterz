@@ -2,7 +2,11 @@ import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type 
 import { useMemo } from "react";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
-import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
+import { db } from "../../lib/firebase";
+import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
+import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
+import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
+import CountryFlagNative from "./CountryFlagNative";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
@@ -14,7 +18,6 @@ import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
-import WcMatchGoalScorersColumnNative from "../results/WcMatchGoalScorersColumnNative";
 import {
   useGameCardListRowEntrance,
   type GameCardEntranceVariant,
@@ -104,6 +107,19 @@ function GameCardListRow(props: GameCardListRowProps) {
   const leagueKey = String(game.league ?? "").toLowerCase();
   const showSideLabels = leagueKey !== "wc";
   const isWcCard = leagueKey === "wc";
+  const homeTeamId =
+    (game.home as { teamId?: string } | undefined)?.teamId ??
+    (game.homeTeamId as string | undefined) ??
+    null;
+  const awayTeamId =
+    (game.away as { teamId?: string } | undefined)?.teamId ??
+    (game.awayTeamId as string | undefined) ??
+    null;
+  const wcGroupRanks = useWcGroupStandingRanks(
+    db,
+    isWcCard ? homeTeamId : null,
+    isWcCard ? awayTeamId : null
+  );
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
@@ -136,24 +152,6 @@ function GameCardListRow(props: GameCardListRowProps) {
     return resolveWcBroadcastLabels(gameId, game);
   }, [game, gameId, leagueKey, status]);
   const showWcBroadcastRow = broadcastLabels.length > 0;
-  const wcMatchGoalScorers = useMemo(() => {
-    if (!isWcCard || status !== "final") return [];
-    const homeTeamId =
-      (game.home as { teamId?: string } | undefined)?.teamId ??
-      (game.homeTeamId as string | undefined) ??
-      null;
-    const awayTeamId =
-      (game.away as { teamId?: string } | undefined)?.teamId ??
-      (game.awayTeamId as string | undefined) ??
-      null;
-    return resolveWcMatchGoalScorersForDisplay({
-      league: "wc",
-      isFinal: true,
-      goalScorersRaw: game.goalScorers,
-      homeTeamId,
-      awayTeamId,
-    });
-  }, [game, isWcCard, status]);
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
   const showPredictPrimaryGlow =
@@ -212,15 +210,23 @@ function GameCardListRow(props: GameCardListRowProps) {
                   <View style={styles.teamTopGroup}>
                     {showSideLabels ? <Text style={styles.sideLabel}>HOME</Text> : null}
                     <Animated.View style={ent.homeJerseyStyle}>
-                      <View style={isWcCard ? styles.teamMarkFlag : styles.teamMark}>
-                        <MatchTeamMarkNative
-                          leagueRaw={game.league}
-                          side={game.home}
-                          palette={homePalette}
-                          jerseySize={62}
-                          flagVariant="card"
-                        />
-                      </View>
+                      {isWcCard ? (
+                        <WcTeamFlagWithMetaNative teamId={homeTeamId}>
+                          <View style={styles.teamMarkFlag}>
+                            <CountryFlagNative teamId={homeTeamId} variant="card" />
+                          </View>
+                        </WcTeamFlagWithMetaNative>
+                      ) : (
+                        <View style={styles.teamMark}>
+                          <MatchTeamMarkNative
+                            leagueRaw={game.league}
+                            side={game.home}
+                            palette={homePalette}
+                            jerseySize={62}
+                            flagVariant="card"
+                          />
+                        </View>
+                      )}
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
@@ -230,13 +236,14 @@ function GameCardListRow(props: GameCardListRowProps) {
                     >
                       {homeCompact}
                     </Text>
-                    <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0)"}</Text>
-                    {wcMatchGoalScorers.length > 0 ? (
-                      <WcMatchGoalScorersColumnNative
-                        scorers={wcMatchGoalScorers}
-                        side="home"
+                    {isWcCard ? (
+                      <WcGroupStandingRecordLineNative
+                        standing={wcGroupRanks.homeStanding}
+                        language={language}
                       />
-                    ) : null}
+                    ) : (
+                      <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0)"}</Text>
+                    )}
                   </View>
                 </View>
 
@@ -366,15 +373,23 @@ function GameCardListRow(props: GameCardListRowProps) {
                   <View style={styles.teamTopGroup}>
                     {showSideLabels ? <Text style={styles.sideLabel}>AWAY</Text> : null}
                     <Animated.View style={ent.awayJerseyStyle}>
-                      <View style={isWcCard ? styles.teamMarkFlag : styles.teamMark}>
-                        <MatchTeamMarkNative
-                          leagueRaw={game.league}
-                          side={game.away}
-                          palette={awayPalette}
-                          jerseySize={62}
-                          flagVariant="card"
-                        />
-                      </View>
+                      {isWcCard ? (
+                        <WcTeamFlagWithMetaNative teamId={awayTeamId}>
+                          <View style={styles.teamMarkFlag}>
+                            <CountryFlagNative teamId={awayTeamId} variant="card" />
+                          </View>
+                        </WcTeamFlagWithMetaNative>
+                      ) : (
+                        <View style={styles.teamMark}>
+                          <MatchTeamMarkNative
+                            leagueRaw={game.league}
+                            side={game.away}
+                            palette={awayPalette}
+                            jerseySize={62}
+                            flagVariant="card"
+                          />
+                        </View>
+                      )}
                     </Animated.View>
                   </View>
                   <View style={styles.teamBottomGroup}>
@@ -384,13 +399,14 @@ function GameCardListRow(props: GameCardListRowProps) {
                     >
                       {awayCompact}
                     </Text>
-                    <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0)"}</Text>
-                    {wcMatchGoalScorers.length > 0 ? (
-                      <WcMatchGoalScorersColumnNative
-                        scorers={wcMatchGoalScorers}
-                        side="away"
+                    {isWcCard ? (
+                      <WcGroupStandingRecordLineNative
+                        standing={wcGroupRanks.awayStanding}
+                        language={language}
                       />
-                    ) : null}
+                    ) : (
+                      <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0)"}</Text>
+                    )}
                   </View>
                 </View>
               </View>
