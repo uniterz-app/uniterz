@@ -56,6 +56,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
 import { t } from "@/lib/i18n/t";
+import type { WcGameGoalScorer } from "@/lib/wc/goalScorer";
 
 import type { League } from "@/lib/leagues";
 import {
@@ -202,6 +203,8 @@ homeRecord?: {
   onRequestPredictEdit?: (post: PredictionPostV2) => void;
   /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
   language?: Language;
+  /** WC：試合の実得点者（一覧カード表示用） */
+  goalScorers?: WcGameGoalScorer[] | null;
 };
 
 
