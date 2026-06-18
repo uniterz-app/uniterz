@@ -39,6 +39,8 @@ type Props = {
   /** MatchCard 統合表示向け：ラベル・バー・数値をやや大きく */
   comfortable?: boolean;
   className?: string;
+  /** 評価バーの点灯アニメを抑える */
+  animationsOff?: boolean;
 };
 
 /** スコア精度・アップセット・総合得点の3行バー */
@@ -50,6 +52,7 @@ export default function ResultStatsRows({
   rowIndexOffset = 0,
   comfortable = false,
   className = "",
+  animationsOff = false,
 }: Props) {
   const m = t(language);
   const hadUpsetGame = Boolean((post.stats as { hadUpsetGame?: boolean })?.hadUpsetGame);
@@ -186,9 +189,10 @@ export default function ResultStatsRows({
               ratio={ratio}
               metricKey={r.key}
               animateMs={barAnimateMs}
-              delayMs={rowIndex * barStaggerMs}
+              delayMs={animationsOff ? 0 : rowIndex * barStaggerMs}
               size={barSize}
-              animationActive={ratingBarsImmediate ? true : undefined}
+              animationActive={animationsOff || ratingBarsImmediate ? true : undefined}
+              animationsOff={animationsOff}
             />
 
             <div

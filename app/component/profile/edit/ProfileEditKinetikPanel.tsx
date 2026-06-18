@@ -37,6 +37,7 @@ import {
 } from "@/lib/profile/formatProfileMetricDelta";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
 
 type Accent = "green" | "magenta" | "cyan" | "red";
 
@@ -139,6 +140,7 @@ function MetricCard({
   dayDeltaTitle,
   dayDeltaTone,
   rankBelowSegBar = false,
+  reduceUiMotion = false,
 }: {
   label: string;
   value: string;
@@ -161,8 +163,9 @@ function MetricCard({
   dayDeltaTone?: "up" | "down" | null;
   /** 順位バッジをセグバーの下に置く（総合得点など） */
   rankBelowSegBar?: boolean;
+  reduceUiMotion?: boolean;
 }) {
-  const reduceMotion = useReducedMotion() === true;
+  const reduceMotion = reduceUiMotion || useReducedMotion() === true;
   const colors = ACCENT[accent];
   const valueHasUnit = value.includes("%");
   const showRankInline = rankLabel && segmentsReady && !rankBelowSegBar;
@@ -456,6 +459,8 @@ type Props = {
   metricValueDeltas?: MyRankMetricValueDeltas | null;
   /** WC プロフィールでは完全的中（整数）を表示 */
   rankingLeague?: RankingLeagueSource;
+  /** 他人プロフィールではメトリクスカードのモーションを抑える（連勝 FX は維持） */
+  visualEffects?: ProfileVisualEffects;
 };
 
 export default function ProfileEditKinetikPanel({
@@ -482,10 +487,12 @@ export default function ProfileEditKinetikPanel({
   shareHandle,
   metricValueDeltas = null,
   rankingLeague = "nba",
+  visualEffects = "full",
 }: Props) {
   const isJa = language === "ja";
   const isWcProfile = rankingLeague === "worldcup";
-  const reduceMotion = useReducedMotion() === true;
+  const reduceUiMotion =
+    useReducedMotion() === true || visualEffects === "lite";
   const metricCopy = getKinetikMetricCopy(isJa);
   const [shareCopied, setShareCopied] = useState(false);
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
@@ -591,6 +598,7 @@ export default function ProfileEditKinetikPanel({
         dayDelta={winRateDelta}
         dayDeltaTitle={dayDeltaTitle}
         dayDeltaTone={profileMetricDeltaTone(metricValueDeltas?.winRate ?? null)}
+        reduceUiMotion={reduceUiMotion}
       />
       <MetricCard
         label={isJa ? "総合得点" : "TOTAL PTS"}
@@ -614,6 +622,7 @@ export default function ProfileEditKinetikPanel({
         dayDeltaTone={profileMetricDeltaTone(
           metricValueDeltas?.totalPoints ?? null
         )}
+        reduceUiMotion={reduceUiMotion}
       />
       <MetricCard
         label={
@@ -653,6 +662,7 @@ export default function ProfileEditKinetikPanel({
         dayDeltaTone={profileMetricDeltaTone(
           metricValueDeltas?.totalPrecision ?? null
         )}
+        reduceUiMotion={reduceUiMotion}
       />
       <MetricCard
         label={isJa ? "アップセット" : "UPSET"}
@@ -670,6 +680,7 @@ export default function ProfileEditKinetikPanel({
         dayDeltaTone={profileMetricDeltaTone(
           metricValueDeltas?.totalUpset ?? null
         )}
+        reduceUiMotion={reduceUiMotion}
       />
     </div>
   );

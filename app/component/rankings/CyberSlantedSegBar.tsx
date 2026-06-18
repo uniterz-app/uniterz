@@ -25,6 +25,7 @@ export function CyberSlantedSegBar({
   accent,
   maxWidthClass,
   enter,
+  forceStatic = false,
 }: {
   pct: number;
   segments?: number;
@@ -37,13 +38,17 @@ export function CyberSlantedSegBar({
   maxWidthClass?: string;
   /** 省略時は mount 後 enterDelay で点灯 */
   enter?: boolean;
+  /** reduced-motion 相当で即時表示（プロフィール閲覧 lite 向け） */
+  forceStatic?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
-  const [internalEnter, setInternalEnter] = useState(reduceMotion === true);
+  const [internalEnter, setInternalEnter] = useState(
+    reduceMotion === true || forceStatic === true
+  );
   const controlledEnter = enter;
   const enterActive = controlledEnter ?? internalEnter;
   const filled = enterActive ? filledSegCount(pct, segments) : 0;
-  const motionOff = reduceMotion === true;
+  const motionOff = reduceMotion === true || forceStatic === true;
   const segH = compact ? 9 : tall ? 13 : 11;
   const widthClass =
     maxWidthClass ??
@@ -58,7 +63,7 @@ export function CyberSlantedSegBar({
     setInternalEnter(false);
     const id = window.setTimeout(() => setInternalEnter(true), enterDelay * 1000);
     return () => window.clearTimeout(id);
-  }, [pct, segments, enterDelay, motionOff, controlledEnter]);
+  }, [pct, segments, enterDelay, motionOff, controlledEnter, forceStatic]);
 
   return (
     <div
@@ -108,7 +113,7 @@ export function CyberSlantedSegBar({
               boxShadow: lit ? `0 0 8px ${accent.glow}` : "none",
             }}
           >
-            {lit ? (
+            {lit && !motionOff ? (
               <span aria-hidden className="cyber-slanted-seg__scan pointer-events-none" />
             ) : null}
           </motion.div>

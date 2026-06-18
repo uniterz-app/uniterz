@@ -18,6 +18,7 @@ import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
+import type { ProfileVisualEffects } from "@/lib/profile/profileVisualEffects";
 
 type Props = {
   layout: "web" | "mobile";
@@ -35,6 +36,7 @@ type Props = {
   menuUnreadCount?: number;
   badges?: ResolvedBadge[];
   onBadgeClick?: (badge: ResolvedBadge) => void;
+  visualEffects?: ProfileVisualEffects;
 };
 
 export default function ProfileKinetikHero({
@@ -53,6 +55,7 @@ export default function ProfileKinetikHero({
   menuUnreadCount = 0,
   badges = [],
   onBadgeClick,
+  visualEffects = "full",
 }: Props) {
   const mapped = useMemo(
     () =>
@@ -103,6 +106,7 @@ export default function ProfileKinetikHero({
           shareHandle={profile.handle}
           metricValueDeltas={metricValueDeltas}
           rankingLeague={profileStatsContext.rankingLeague}
+          visualEffects={visualEffects}
         />
       )}
     </div>

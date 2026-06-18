@@ -8,6 +8,10 @@ import { cyberNoDataLabelStyle } from "@/lib/ui/cyberNoDataLabelStyle";
 import { PROFILE_SHELL_GRID_STYLE } from "@/lib/profile/profileShellGrid";
 import ProfileKinetikPanelFrame from "@/app/component/profile/ui/ProfileKinetikPanelFrame";
 import ProfileDailyComboChartNeural from "@/app/component/profile/ui/ProfileDailyComboChartNeural";
+import {
+  type ProfileVisualEffects,
+  isProfileVisualLite,
+} from "@/lib/profile/profileVisualEffects";
 
 export type ProfileDailyTrendPoint = {
   date: string;
@@ -27,6 +31,7 @@ type Props = {
   rechartsAfterEntrance?: boolean;
   rankingLeague?: RankingLeagueSource;
   layout?: "web" | "mobile";
+  visualEffects?: ProfileVisualEffects;
 };
 
 export default function ProfileDailyTrendChart({
@@ -35,6 +40,7 @@ export default function ProfileDailyTrendChart({
   language = "ja",
   rankingLeague = "nba",
   layout = "web",
+  visualEffects = "full",
 }: Props) {
   const limitedData = useMemo(() => {
     const rows = Array.isArray(data) ? data : [];
@@ -70,6 +76,7 @@ export default function ProfileDailyTrendChart({
           language={language}
           rankingLeague={rankingLeague}
           layout={layout}
+          visualEffectsLite={isProfileVisualLite(visualEffects)}
         />
       )}
       </div>

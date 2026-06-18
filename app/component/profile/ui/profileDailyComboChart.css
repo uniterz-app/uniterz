@@ -95,6 +95,33 @@
   filter: drop-shadow(0 0 4px rgba(204, 255, 0, 0.9));
 }
 
+.dcc-neural__line-stroke {
+  /* モバイル: グロー用 filter を使わない */
+}
+
+.dcc-neural__chart-svg--compact .dcc-neural__line-dot {
+  filter: none;
+}
+
+.dcc-neural__chart-svg--compact .dcc-neural__bar-col--selected .dcc-neural__seg-lit {
+  filter: none;
+}
+
+@media (max-width: 767px) {
+  .dcc-neural__line-glow,
+  .dcc-neural__line-dot {
+    filter: none;
+  }
+
+  .dcc-neural__bar-col--selected .dcc-neural__seg-lit {
+    filter: none;
+  }
+
+  .dcc-neural__chart-zone {
+    overflow: hidden;
+  }
+}
+
 .profile-kinetik-panel .dcc-neural__stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

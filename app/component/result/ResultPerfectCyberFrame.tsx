@@ -10,12 +10,16 @@ import {
 
 type Props = {
   className?: string;
+  showSweep?: boolean;
 };
 
 const CORNER = "pointer-events-none absolute z-[5] border-violet-300/90";
 
-/** PERFECT 用サイバー角切り枠（紫 + 枠走査光は常時） */
-export default function ResultPerfectCyberFrame({ className = "" }: Props) {
+/** PERFECT 用サイバー角切り枠（紫 + 枠走査光） */
+export default function ResultPerfectCyberFrame({
+  className = "",
+  showSweep = true,
+}: Props) {
   return (
     <>
       <div
@@ -29,16 +33,18 @@ export default function ResultPerfectCyberFrame({ className = "" }: Props) {
         aria-hidden
       />
 
-      <div
-        className={[
-          "pointer-events-none absolute inset-0 z-[8] overflow-hidden",
-          RESULT_HIT_CYBER_CLIP,
-          "result-card-border-sweep result-card-streak-sweep result-card-streak-sweep--perfect",
-        ].join(" ")}
-        aria-hidden
-      >
-        <div className="result-card-border-sweep__spin result-card-streak-sweep__spin" />
-      </div>
+      {showSweep ? (
+        <div
+          className={[
+            "pointer-events-none absolute inset-0 z-[8] overflow-hidden",
+            RESULT_HIT_CYBER_CLIP,
+            "result-card-border-sweep result-card-streak-sweep result-card-streak-sweep--perfect",
+          ].join(" ")}
+          aria-hidden
+        >
+          <div className="result-card-border-sweep__spin result-card-streak-sweep__spin" />
+        </div>
+      ) : null}
 
       <div
         className={`${CORNER} left-0 top-0 z-[9] h-2.5 w-2.5 border-l-2 border-t-2`}

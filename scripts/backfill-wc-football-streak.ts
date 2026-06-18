@@ -1,5 +1,6 @@
 /**
  * WC 投稿ユーザーだけを対象に、確定済み WC 投稿から football 連勝を再計算する。
+ * タイムラインはキックオフ順（games.startAtJst）。
  * user_stats_v2 全件は走査しない。NBA（basketball）の連勝は既存値を維持する。
  *
  * 対象: league=wc かつ status=final の投稿がある authorUid
@@ -12,7 +13,12 @@
 
 import adminPkg from "firebase-admin";
 import fs from "fs";
-import { Timestamp } from "firebase-admin/firestore";
+import {
+  buildKickoffTimeline,
+  loadGamesById,
+  loadWcPostRowsForUid,
+  replayFootballStreak,
+} from "./lib/wcStreakReplay";
 
 const admin = adminPkg as typeof import("firebase-admin");
 
@@ -29,31 +35,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-
-type StreakEvent = {
-  gameId: string;
-  atMs: number;
-  isWin: boolean;
-};
-
-function toTimestamp(v: unknown): Timestamp | null {
-  if (v instanceof Timestamp) return v;
-  if (v && typeof (v as { toDate?: unknown }).toDate === "function") {
-    return v as Timestamp;
-  }
-  return null;
-}
-
-function toMs(v: unknown): number {
-  const ts = toTimestamp(v);
-  return ts ? ts.toDate().getTime() : 0;
-}
-
-function normalizeLeague(raw: unknown): string | null {
-  const v = String(raw ?? "").trim().toLowerCase();
-  if (v === "wc" || v === "fifa") return "wc";
-  return null;
-}
 
 function readBasketballState(data: Record<string, unknown> | undefined) {
   const sb = data?.streakBySport as
@@ -79,43 +60,24 @@ function readBasketballState(data: Record<string, unknown> | undefined) {
   return { basketball, maxBasketball };
 }
 
-function replayFootballStreak(events: StreakEvent[]): {
-  football: number;
-  maxFootball: number;
-  activeWinStreakFootball: number;
-} {
-  let curF = 0;
-  let maxF = 0;
-
-  for (const ev of events) {
-    if (ev.isWin) {
-      curF = curF > 0 ? curF + 1 : 1;
-      if (curF > maxF) maxF = curF;
-    } else {
-      curF = curF < 0 ? curF - 1 : -1;
-    }
-  }
-
-  return {
-    football: curF,
-    maxFootball: maxF,
-    activeWinStreakFootball: curF > 0 ? curF : 0,
-  };
-}
-
-async function loadWcStreakEvents(): Promise<Map<string, StreakEvent[]>> {
+async function loadWcStreakEventsByUid(): Promise<
+  Map<string, ReturnType<typeof buildKickoffTimeline>>
+> {
   const snap = await db
     .collection("posts")
     .where("league", "==", "wc")
     .where("status", "==", "final")
+    .where("schemaVersion", "==", 2)
     .get();
 
-  const byUid = new Map<string, Map<string, StreakEvent>>();
+  const rowsByUid = new Map<
+    string,
+    Awaited<ReturnType<typeof loadWcPostRowsForUid>>
+  >();
+  const allGameIds = new Set<string>();
 
   for (const doc of snap.docs) {
     const p = doc.data() as Record<string, unknown>;
-    if (p.schemaVersion !== 2) continue;
-
     const uid = String(p.authorUid ?? "").trim();
     if (!uid || (targetUid && uid !== targetUid)) continue;
 
@@ -126,42 +88,36 @@ async function loadWcStreakEvents(): Promise<Map<string, StreakEvent[]>> {
     const gameId = String(p.gameId ?? "").trim();
     if (!gameId) continue;
 
-    const atMs =
-      toMs(p.settledAt) ||
-      toMs(p.updatedAt) ||
-      toMs(p.startAtJst) ||
-      toMs(p.startAt) ||
-      toMs(p.createdAt);
-
-    const ev: StreakEvent = {
+    allGameIds.add(gameId);
+    const row = {
+      postId: doc.id,
+      uid,
       gameId,
-      atMs,
-      isWin: stats.isWin === true,
+      stats,
+      detail: (stats.pointsV3Detail as Record<string, unknown>) ?? {},
+      startAtJst: p.startAtJst,
+      startAt: p.startAt,
+      createdAt: p.createdAt,
     };
-
-    if (!byUid.has(uid)) byUid.set(uid, new Map());
-    const perGame = byUid.get(uid)!;
-    const prev = perGame.get(gameId);
-    if (!prev || ev.atMs >= prev.atMs) {
-      perGame.set(gameId, ev);
-    }
+    if (!rowsByUid.has(uid)) rowsByUid.set(uid, []);
+    rowsByUid.get(uid)!.push(row);
   }
 
-  const out = new Map<string, StreakEvent[]>();
-  for (const [uid, perGame] of byUid) {
-    const events = [...perGame.values()].sort((a, b) => a.atMs - b.atMs);
-    out.set(uid, events);
+  const gameById = await loadGamesById(db, allGameIds);
+  const out = new Map<string, ReturnType<typeof buildKickoffTimeline>>();
+  for (const [uid, rows] of rowsByUid) {
+    out.set(uid, buildKickoffTimeline(rows, gameById));
   }
   return out;
 }
 
 (async () => {
   console.log(
-    "=== backfill WC football streak (WC posters only, NBA untouched) ==="
+    "=== backfill WC football streak (kickoff-order, WC posters only) ==="
   );
   if (DRY_RUN) console.log(">>> DRY RUN\n");
 
-  const eventsByUid = await loadWcStreakEvents();
+  const eventsByUid = await loadWcStreakEventsByUid();
   console.log(
     `targets: ${eventsByUid.size} user(s) with finalized WC posts (league=wc)\n`
   );
@@ -214,7 +170,8 @@ async function loadWcStreakEvents(): Promise<Map<string, StreakEvent[]>> {
         maxWinStreakFootball: replay.maxFootball,
         currentStreak: basketball,
         maxWinStreak: maxBasketball,
-        wcFootballStreakBackfilledAt: admin.firestore.FieldValue.serverTimestamp(),
+        wcFootballStreakBackfilledAt:
+          admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }
@@ -240,7 +197,8 @@ async function loadWcStreakEvents(): Promise<Map<string, StreakEvent[]>> {
         currentStreak: basketball,
         activeWinStreakFootball: replay.activeWinStreakFootball,
         activeWinStreakBasketball: basketball > 0 ? basketball : 0,
-        wcFootballStreakBackfilledAt: admin.firestore.FieldValue.serverTimestamp(),
+        wcFootballStreakBackfilledAt:
+          admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }

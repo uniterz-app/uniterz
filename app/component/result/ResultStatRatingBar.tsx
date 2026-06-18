@@ -83,6 +83,8 @@ export type ResultStatRatingBarProps = {
    * 指定時は内部の IntersectionObserver を使わず、true になったタイミングで点灯開始
    */
   animationActive?: boolean;
+  /** アニメーションなしで即時表示 */
+  animationsOff?: boolean;
 };
 
 export default function ResultStatRatingBar({
@@ -94,13 +96,18 @@ export default function ResultStatRatingBar({
   metricKey,
   segmentCount = 10,
   animationActive,
+  animationsOff = false,
 }: ResultStatRatingBarProps) {
   const r = clamp01(ratio);
   const pct = r * 100;
   const rootRef = useRef<HTMLDivElement>(null);
-  const [ioInView, setIoInView] = useState(false);
-  const controlled = animationActive !== undefined;
-  const inView = controlled ? animationActive : ioInView;
+  const [ioInView, setIoInView] = useState(animationsOff);
+  const controlled = animationActive !== undefined || animationsOff;
+  const inView = animationsOff
+    ? true
+    : controlled
+      ? animationActive === true
+      : ioInView;
 
   const accent: CyberSegAccent = teamBaseHex
     ? teamAccent(teamBaseHex)
@@ -109,7 +116,7 @@ export default function ResultStatRatingBar({
       : toCyberAccent(resultMetricToRankingKey(metricKey));
 
   useEffect(() => {
-    if (controlled) return;
+    if (controlled || animationsOff) return;
     const el = rootRef.current;
     if (!el) return;
 
@@ -126,7 +133,7 @@ export default function ResultStatRatingBar({
 
     obs.observe(el);
     return () => obs.disconnect();
-  }, [controlled]);
+  }, [controlled, animationsOff]);
 
   return (
     <div ref={rootRef} className="flex min-w-0 flex-1 items-center" aria-hidden>
@@ -136,7 +143,8 @@ export default function ResultStatRatingBar({
         compact={size === "sm"}
         tall={size === "lg"}
         enter={inView}
-        enterDelay={delayMs / 1000}
+        enterDelay={animationsOff ? 0 : delayMs / 1000}
+        forceStatic={animationsOff}
         accent={accent}
         maxWidthClass="max-w-full"
       />

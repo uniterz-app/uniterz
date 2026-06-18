@@ -120,15 +120,15 @@ export function formatWcGroupStageRecordLabel(
   return `${core} ${formatWcGroupStandingRankLabel(entry.rank, language)}`;
 }
 
-/** スコア下 — グループステージ表記（例: グループステージ · グループ K） */
+/** スコア下 — グループ表記（例: グループ K） */
 export function formatWcGroupStageLine(
   groupCode: WcGroupCode,
   language: Language
 ): string {
   if (language === "en") {
-    return `Group Stage · Group ${groupCode}`;
+    return `Group ${groupCode}`;
   }
-  return `グループステージ · グループ ${groupCode}`;
+  return `グループ ${groupCode}`;
 }
 
 export function resolveWcGroupStageLine(

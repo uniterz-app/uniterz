@@ -8,12 +8,15 @@ import {
 type Props = {
   activeWinStreak: unknown;
   className?: string;
+  /** 枠を走る走査光（lite 閲覧ではオフ） */
+  showSweep?: boolean;
 };
 
-/** 連勝用サイバー角切り枠（ティア色 + 白い走査光は常時） */
+/** 連勝用サイバー角切り枠（ティア色 + 白い走査光） */
 export default function ResultStreakCyberFrame({
   activeWinStreak,
   className = "",
+  showSweep = true,
 }: Props) {
   const tokens = resultStreakFrameTokens(activeWinStreak);
   if (!tokens) return null;
@@ -33,17 +36,19 @@ export default function ResultStreakCyberFrame({
         aria-hidden
       />
 
-      <div
-        className={[
-          "pointer-events-none absolute inset-0 z-[8] overflow-hidden",
-          RESULT_HIT_CYBER_CLIP,
-          "result-card-border-sweep result-card-streak-sweep",
-          tokens.sweepClass,
-        ].join(" ")}
-        aria-hidden
-      >
-        <div className="result-card-border-sweep__spin result-card-streak-sweep__spin" />
-      </div>
+      {showSweep ? (
+        <div
+          className={[
+            "pointer-events-none absolute inset-0 z-[8] overflow-hidden",
+            RESULT_HIT_CYBER_CLIP,
+            "result-card-border-sweep result-card-streak-sweep",
+            tokens.sweepClass,
+          ].join(" ")}
+          aria-hidden
+        >
+          <div className="result-card-border-sweep__spin result-card-streak-sweep__spin" />
+        </div>
+      ) : null}
 
       <div className={`${corner} left-0 top-0 h-2.5 w-2.5 border-l-2 border-t-2`} aria-hidden />
       <div className={`${corner} right-0 top-0 h-2.5 w-2.5 border-r-2 border-t-2`} aria-hidden />

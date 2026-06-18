@@ -205,6 +205,7 @@ export type ProfileDailyComboChartNeuralProps = {
   language?: Language;
   rankingLeague?: RankingLeagueSource;
   layout?: "web" | "mobile";
+  visualEffectsLite?: boolean;
 };
 
 export default function ProfileDailyComboChartNeural({
@@ -212,9 +213,10 @@ export default function ProfileDailyComboChartNeural({
   language = "ja",
   rankingLeague = "nba",
   layout = "web",
+  visualEffectsLite = false,
 }: ProfileDailyComboChartNeuralProps) {
   const narrowViewport = useNarrowViewport(layout === "mobile");
-  const isCompactChart = layout === "mobile" || narrowViewport;
+  const isCompactChart = layout === "mobile" || narrowViewport || visualEffectsLite;
   const msg = t(language);
   const isWcTrend = rankingLeague === "worldcup";
   const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
@@ -345,8 +347,11 @@ export default function ProfileDailyComboChartNeural({
         >
           <svg
             viewBox={`0 0 ${W} ${H}`}
-            className="dcc-neural__chart-svg h-auto w-full"
-            overflow="visible"
+            className={[
+              "dcc-neural__chart-svg h-auto w-full",
+              isCompactChart ? "dcc-neural__chart-svg--compact" : "",
+            ].join(" ")}
+            overflow={isCompactChart ? "hidden" : "visible"}
             role="img"
             aria-label={title}
           >
@@ -396,6 +401,7 @@ export default function ProfileDailyComboChartNeural({
             {chartRows.map((row, i) => {
               const gx = padL + groupW * i + (groupW - pairW) / 2;
               const selected = i === selectedIdx;
+              const segCount = isCompactChart ? 8 : 14;
               return (
                 <g
                   key={row.date}
@@ -421,6 +427,7 @@ export default function ProfileDailyComboChartNeural({
                     plotMaxH={plotH}
                     value={clampNum(row.posts)}
                     maxValue={maxBar}
+                    segmentCount={segCount}
                   />
                   <SegmentedBar
                     x={gx + barW + barGap}
@@ -429,33 +436,26 @@ export default function ProfileDailyComboChartNeural({
                     plotMaxH={plotH}
                     value={clampNum(row.wins)}
                     maxValue={maxBar}
+                    segmentCount={segCount}
                   />
                 </g>
               );
             })}
 
             {linePath ? (
-              <>
-                <path
-                  d={linePath}
-                  fill="none"
-                  stroke="#ccff00"
-                  strokeWidth={4}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="dcc-neural__line-glow"
-                  opacity={0.35}
-                />
-                <path
-                  d={linePath}
-                  fill="none"
-                  stroke="#ccff00"
-                  strokeWidth={1.75}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="dcc-neural__line-glow"
-                />
-              </>
+              <path
+                d={linePath}
+                fill="none"
+                stroke="#ccff00"
+                strokeWidth={isCompactChart ? 1.75 : 1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={
+                  isCompactChart
+                    ? "dcc-neural__line-stroke"
+                    : "dcc-neural__line-glow"
+                }
+              />
             ) : null}
 
             <g className="dcc-neural__bar-labels" aria-hidden>
@@ -487,7 +487,8 @@ export default function ProfileDailyComboChartNeural({
             {linePoints.map((pt) => {
               const show =
                 pt.i === selectedIdx ||
-                (pt.i > 0 &&
+                (!isCompactChart &&
+                  pt.i > 0 &&
                   pt.i < linePoints.length - 1 &&
                   pt.y < linePoints[pt.i - 1]!.y &&
                   pt.y < linePoints[pt.i + 1]!.y);

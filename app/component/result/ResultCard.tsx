@@ -79,6 +79,8 @@ type Props = {
   cardClockMs?: number;
   /** 予想オーバーレイ等：一覧遷移なしの埋め込み（リフト・クリック無効） */
   embedded?: boolean;
+  /** 他人プロフィール向け：ガラス blur 等の重い演出を抑える */
+  visualEffectsLite?: boolean;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -106,6 +108,7 @@ function ResultCardPresentationImpl({
   onRequestPredictEdit,
   cardClockMs,
   embedded = false,
+  visualEffectsLite = false,
 }: ResultCardPresentationProps) {
   const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
@@ -299,6 +302,7 @@ function ResultCardPresentationImpl({
       showSweep={false}
       dense={mobileScheduleDense}
       lift={!embedded}
+      lite={visualEffectsLite}
       className={[
         "group/card relative text-white",
         cornerFabOpen ? "overflow-visible" : "",
@@ -486,7 +490,10 @@ function ResultCardPresentationImpl({
 
       {/* active:scale は本文のみ（角の除外ボタン押下でカード全体が沈まないよう） */}
       <div
-        className={`relative z-10 transition-transform active:scale-[0.98] ${contentPad}`}
+        className={[
+          `relative z-10 ${contentPad}`,
+          visualEffectsLite ? "" : "transition-transform active:scale-[0.98]",
+        ].join(" ")}
       >
       <div className="relative">
         <div
@@ -816,6 +823,7 @@ function ResultCardPresentationImpl({
             isMobile={isMobile}
             ratingBarsImmediate={ratingBarsImmediate}
             rowIndexOffset={wcGoalScorer ? 1 : 0}
+            animationsOff={visualEffectsLite}
           />
         )}
       </div>

@@ -183,7 +183,7 @@ export function groupPostsByResultDay(
   const days = Array.from(dayMap.values()).sort((a, b) => b.dateMs - a.dateMs);
 
   days.forEach((day) => {
-    // リザルトは「結果を入力した順」に揃える（settledAtMillis 基準）。
+    // リザルトは「結果を入力した順」に揃える（settledAtMillis 基準・新しい確定が上）。
     const byResultInputOrder = (a: PostWithMillis, b: PostWithMillis): number => {
       const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
       const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;

@@ -1,8 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useParams } from "next/navigation";
 import ProfilePageBase from "@/app/component/profile/ProfilePageBaseV2";
+import CandleChartLoader from "@/app/component/common/CandleChartLoader";
+
+function ProfilePageSkeleton() {
+  return (
+    <div className="flex justify-center px-4 py-8">
+      <CandleChartLoader />
+    </div>
+  );
+}
 
 export default function Page() {
   const params = useParams<{ handle: string }>();
@@ -16,5 +25,9 @@ export default function Page() {
     return decodeURIComponent(raw);
   }, [params]);
 
-  return <ProfilePageBase handle={handle} variant="web" />;
+  return (
+    <Suspense fallback={<ProfilePageSkeleton />}>
+      <ProfilePageBase handle={handle} variant="web" />
+    </Suspense>
+  );
 }
