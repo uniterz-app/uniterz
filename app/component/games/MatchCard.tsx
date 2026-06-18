@@ -38,7 +38,7 @@ import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
-import { readPostMatchGoalScorers } from "@/lib/wc/matchGoalScorers";
+import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
 import React from "react";
 import Soccer from "@/app/component/games/icons/Soccer";
 import { motion, useReducedMotion } from "framer-motion";
@@ -201,6 +201,8 @@ homeRecord?: {
   onRequestPredictEdit?: (post: PredictionPostV2) => void;
   /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
   language?: Language;
+  /** WC：試合の実得点者（games.goalScorers） */
+  goalScorers?: unknown;
 };
 
 
@@ -359,6 +361,7 @@ function MatchCardView({
   userPredictionWinner = null,
   onRequestPredictEdit,
   language,
+  goalScorers,
 }: MatchCardProps & { language: Language }) {
   const router = useRouter();
 
@@ -445,9 +448,23 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   );
   const wcGoalScorerResult = resultPost ? wcGoalScorerResultRaw : null;
   const wcMatchGoalScorers = useMemo(() => {
-    if (!resultPost || league !== "wc" || status !== "final") return [];
-    return readPostMatchGoalScorers(resultPost.matchGoalScorers);
-  }, [resultPost, league, status]);
+    if (league !== "wc" || status !== "final") return [];
+    return resolveWcMatchGoalScorersForDisplay({
+      league,
+      isFinal: true,
+      matchGoalScorersRaw: resultPost?.matchGoalScorers,
+      goalScorersRaw: goalScorers,
+      homeTeamId: home.teamId,
+      awayTeamId: away.teamId,
+    });
+  }, [
+    resultPost?.matchGoalScorers,
+    goalScorers,
+    league,
+    status,
+    home.teamId,
+    away.teamId,
+  ]);
   const predictedScore =
     resultPost?.prediction?.score != null
       ? resultPost.prediction.score

@@ -44,7 +44,7 @@ import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
 import WcMatchGoalScorersColumn from "@/app/component/result/WcMatchGoalScorersUnderScore";
-import { readPostMatchGoalScorers } from "@/lib/wc/matchGoalScorers";
+import { resolveWcMatchGoalScorersForDisplay } from "@/lib/wc/matchGoalScorers";
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
 type Props = {
@@ -175,8 +175,14 @@ function ResultCardPresentationImpl({
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWc || !hasFinal) return [];
-    return readPostMatchGoalScorers(post.matchGoalScorers);
-  }, [isWc, hasFinal, post.matchGoalScorers]);
+    return resolveWcMatchGoalScorersForDisplay({
+      league: normalizedLeague,
+      isFinal: hasFinal,
+      matchGoalScorersRaw: post.matchGoalScorers,
+      homeTeamId: post.home?.teamId,
+      awayTeamId: post.away?.teamId,
+    });
+  }, [isWc, hasFinal, post.matchGoalScorers, post.home?.teamId, post.away?.teamId]);
 
   const handle = (e: React.MouseEvent<HTMLDivElement>) => {
     if (onOpen) {

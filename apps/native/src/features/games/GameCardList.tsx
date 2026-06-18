@@ -2,6 +2,7 @@ import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type 
 import { useMemo } from "react";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
+import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
@@ -13,6 +14,7 @@ import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
+import WcMatchGoalScorersColumnNative from "../results/WcMatchGoalScorersColumnNative";
 import {
   useGameCardListRowEntrance,
   type GameCardEntranceVariant,
@@ -134,6 +136,24 @@ function GameCardListRow(props: GameCardListRowProps) {
     return resolveWcBroadcastLabels(gameId, game);
   }, [game, gameId, leagueKey, status]);
   const showWcBroadcastRow = broadcastLabels.length > 0;
+  const wcMatchGoalScorers = useMemo(() => {
+    if (!isWcCard || status !== "final") return [];
+    const homeTeamId =
+      (game.home as { teamId?: string } | undefined)?.teamId ??
+      (game.homeTeamId as string | undefined) ??
+      null;
+    const awayTeamId =
+      (game.away as { teamId?: string } | undefined)?.teamId ??
+      (game.awayTeamId as string | undefined) ??
+      null;
+    return resolveWcMatchGoalScorersForDisplay({
+      league: "wc",
+      isFinal: true,
+      goalScorersRaw: game.goalScorers,
+      homeTeamId,
+      awayTeamId,
+    });
+  }, [game, isWcCard, status]);
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
   const showPredictPrimaryGlow =
@@ -211,6 +231,12 @@ function GameCardListRow(props: GameCardListRowProps) {
                       {homeCompact}
                     </Text>
                     <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0)"}</Text>
+                    {wcMatchGoalScorers.length > 0 ? (
+                      <WcMatchGoalScorersColumnNative
+                        scorers={wcMatchGoalScorers}
+                        side="home"
+                      />
+                    ) : null}
                   </View>
                 </View>
 
@@ -359,6 +385,12 @@ function GameCardListRow(props: GameCardListRowProps) {
                       {awayCompact}
                     </Text>
                     <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0)"}</Text>
+                    {wcMatchGoalScorers.length > 0 ? (
+                      <WcMatchGoalScorersColumnNative
+                        scorers={wcMatchGoalScorers}
+                        side="away"
+                      />
+                    ) : null}
                   </View>
                 </View>
               </View>
