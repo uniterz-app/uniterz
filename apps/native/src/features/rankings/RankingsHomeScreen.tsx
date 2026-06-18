@@ -187,7 +187,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     if (!key) return;
     navigation.navigate("ProfileTab", {
       screen: "ProfileHome",
-      params: { handle: key },
+      params: { handle: key, fromRankings: true },
     });
   };
 

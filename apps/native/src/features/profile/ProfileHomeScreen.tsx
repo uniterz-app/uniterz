@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   ActivityIndicator,
@@ -51,7 +52,8 @@ import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import CyberMenuButton from "../../ui/CyberMenuButton";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
-import type { ProfileStackParamList } from "../../navigation/types";
+import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
+import FloatingCloseButtonNative from "../../ui/FloatingCloseButtonNative";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
@@ -142,11 +144,14 @@ export default function ProfileHomeScreen({
   bottomReserveY = 0,
   onSaved,
   routeHandle,
+  fromRankings = false,
 }: {
   bottomReserveY?: number;
   onSaved?: () => void;
   /** 他人プロフィール閲覧用（handle または uid） */
   routeHandle?: string;
+  /** ランキングから遷移してきた他人プロフィール */
+  fromRankings?: boolean;
 }) {
   const { fUser, status } = useFirebaseUser();
   const myUid = fUser?.uid;
@@ -162,8 +167,14 @@ export default function ProfileHomeScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const insets = useSafeAreaInsets();
   const scrollTopPad = insets.top + spacing.sm;
+  const showRankingsBack = fromRankings && isPublicProfileView;
+  const returnToRankings = useCallback(() => {
+    navigation.setParams({ handle: undefined, fromRankings: undefined });
+    tabNavigation.navigate("RankingsTab");
+  }, [navigation, tabNavigation]);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
 
@@ -654,17 +665,27 @@ export default function ProfileHomeScreen({
 
   if (isPublicProfileView && !profileByHandle.loading && profileByHandle.notFound) {
     return (
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
-        ]}
-      >
-        <Text style={styles.errorText}>
-          {isJa ? "ユーザーが見つかりません" : "User not found"}
-        </Text>
-      </ScrollView>
+      <View style={styles.screenRoot}>
+        {showRankingsBack ? (
+          <FloatingCloseButtonNative
+            variant="back"
+            left={spacing.sm}
+            top={insets.top + 4}
+            onPress={returnToRankings}
+          />
+        ) : null}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
+          ]}
+        >
+          <Text style={styles.errorText}>
+            {isJa ? "ユーザーが見つかりません" : "User not found"}
+          </Text>
+        </ScrollView>
+      </View>
     );
   }
 
@@ -686,6 +707,14 @@ export default function ProfileHomeScreen({
 
   return (
     <View style={styles.screenRoot}>
+    {showRankingsBack ? (
+      <FloatingCloseButtonNative
+        variant="back"
+        left={spacing.sm}
+        top={insets.top + 4}
+        onPress={returnToRankings}
+      />
+    ) : null}
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[

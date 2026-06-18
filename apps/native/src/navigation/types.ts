@@ -35,7 +35,13 @@ export type LeaderboardsStackParamList = {
 };
 
 export type ProfileStackParamList = {
-  ProfileHome: { handle?: string } | undefined;
+  ProfileHome:
+    | {
+        handle?: string;
+        /** ランキング一覧から他人プロフィールを開いたとき */
+        fromRankings?: boolean;
+      }
+    | undefined;
   ProfileSettings: undefined;
   ProfilePassword: undefined;
   Badges: undefined;

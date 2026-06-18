@@ -134,6 +134,7 @@ function ProfileHomeRoute() {
     <ProfileHomeScreen
       bottomReserveY={bottomContentReserveY}
       routeHandle={route.params?.handle}
+      fromRankings={route.params?.fromRankings === true}
     />
   );
 }
