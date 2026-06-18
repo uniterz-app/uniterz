@@ -14,6 +14,7 @@ import {
   type SeriesStanding,
 } from "@/lib/games/playoffSeriesUi";
 import { resolveWcBroadcastLabels } from "@/lib/wc/wcBroadcastLabels";
+import { normalizeWcGameGoalScorers } from "@/lib/wc/goalScorer";
 
 /** プレーオフ：Firestore に seriesStanding が無いときの既定（0-0） */
 const PLAYOFF_SERIES_STANDING_FALLBACK = { homeWins: 0, awayWins: 0 } as const;
@@ -468,6 +469,12 @@ export function toMatchCardProps(
     makePredictionHref: buildMake(id),
 
     dense: Boolean(opts?.dense),
-    goalScorers: raw?.goalScorers,
+    goalScorers:
+      league === "wc"
+        ? normalizeWcGameGoalScorers(raw?.goalScorers, {
+            homeTeamId: home.teamId,
+            awayTeamId: away.teamId,
+          })
+        : undefined,
   };
 }
