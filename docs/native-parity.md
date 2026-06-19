@@ -55,7 +55,7 @@
 | standings | `app/mobile/standings/page.tsx` | `StandingsScreenNative.tsx` | done | done |
 | playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | done |
 | playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | done |
-| bracket-market | `app/mobile/bracket-market/page.tsx` | `BracketMarketScreenNative.tsx` | done | partial |
+| bracket-market | `app/mobile/bracket-market/page.tsx` | `BracketMarketScreenNative.tsx` | done | done |
 | team-detail | `app/mobile/teams/[teamId]/page.tsx` | `TeamDetailScreenNative.tsx` | done | done |
 | wc-formation | `WcFormationPanel.tsx` | `WcFormationPanelNative.tsx` | done | done |
 | wc-team-profile | `WcTeamProfilePanel.tsx` | `WcTeamProfilePanelNative.tsx` | done | done |
