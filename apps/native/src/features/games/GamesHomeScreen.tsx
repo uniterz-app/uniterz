@@ -1727,8 +1727,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   gamesHeaderShell: {
-    marginBottom: 8,
-    marginTop: 0,
+    marginBottom: 10,
+    marginTop: 8,
     width: "100%",
     gap: 4,
   },
@@ -2129,13 +2129,13 @@ const styles = StyleSheet.create({
     fontSize: typography.caption,
   },
   listArea: {
-    marginTop: 4,
+    marginTop: 0,
   },
   listContent: {
     gap: 10,
     paddingBottom: spacing.xl,
     paddingTop: 0,
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
   },
   gameCardOuter: {
     position: "relative",

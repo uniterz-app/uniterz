@@ -2,7 +2,13 @@
  * 試合ライブ中の「LIVE」ピル。赤く発光するパルス（reduce-motion 時は静止）。
  */
 import { useEffect } from "react";
-import { Text, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  View,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -58,7 +64,29 @@ export function LiveMarkPill({ pillStyle, textStyle }: LiveMarkPillProps) {
 
   return (
     <Animated.View style={[pillStyle, animatedStyle]}>
+      {/* Web の LIVE バッジにある左エッジと上辺ハイライトを RN レイヤーで近似 */}
+      <View pointerEvents="none" style={s.leftEdge} />
+      <View pointerEvents="none" style={s.topHighlight} />
       <Animated.Text style={[textStyle, animatedTextStyle]}>LIVE</Animated.Text>
     </Animated.View>
   );
 }
+
+const s = StyleSheet.create({
+  leftEdge: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: "rgba(254,202,202,0.62)",
+  },
+  topHighlight: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+});
