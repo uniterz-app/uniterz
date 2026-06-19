@@ -52,7 +52,7 @@
 | plan-change-complete | `app/mobile/plan-change-complete/page.tsx` | `PlanChangeCompleteScreenNative.tsx` | done | done |
 | cancel-plan | `app/mobile/cancel-plan/page.tsx` | `CancelPlanScreenNative.tsx` | done | done |
 | cancel-complete | `app/mobile/cancel-complete/page.tsx` | `CancelCompleteScreenNative.tsx` | done | done |
-| standings | `app/mobile/standings/page.tsx` | `StandingsScreenNative.tsx` | done | partial |
+| standings | `app/mobile/standings/page.tsx` | `StandingsScreenNative.tsx` | done | done |
 | playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | done |
 | playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | done |
 | bracket-market | `app/mobile/bracket-market/page.tsx` | `BracketMarketScreenNative.tsx` | done | partial |

@@ -56,7 +56,7 @@
 - [x] `ui-plan-change` | `PlanChangeScreenNative` 系 vs Web — partial → done
 - [x] `ui-plan-change-complete` | `PlanChangeCompleteScreenNative` vs Web — partial → done
 - [x] `ui-cancel-plan` | `CancelPlanScreenNative` vs Web — partial → done
-- [ ] `ui-standings` | `StandingsScreenNative` vs Web — partial → done
+- [x] `ui-standings` | `StandingsScreenNative` vs Web — partial → done
 - [ ] `ui-bracket-market` | `BracketMarketScreenNative` vs Web — partial → done
 
 ---

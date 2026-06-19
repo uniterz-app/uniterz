@@ -10,6 +10,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import { db } from "../../../lib/firebase";
 import { colors } from "../../../theme/tokens";
@@ -70,9 +71,10 @@ export default function StandingsScreenNative() {
     const confTeams = teams.filter((t) => normalizeConference(t.conference) === tab);
     return [...confTeams].sort((a, b) => compareNbaStandingsSortRows(a, b));
   }, [teams, tab]);
+  const leaderRecord = filtered[0] ? nbaRegularSeasonWinsLosses(filtered[0]) : null;
 
   return (
-    <MobilePageShell title="Standings" onClose={() => navigation.goBack()}>
+    <MobilePageShell title="スタンディング" appBackground onClose={() => navigation.goBack()}>
       <View style={styles.tabs}>
         {(["east", "west"] as const).map((c) => (
           <Pressable
@@ -93,26 +95,55 @@ export default function StandingsScreenNative() {
           {filtered.map((team, index) => {
             const rank = team.rank ?? index + 1;
             const record = nbaRegularSeasonWinsLosses(team);
+            const games = record.wins + record.losses;
+            const pct = games > 0 ? (record.wins / games) * 100 : 0;
+            const gb =
+              index === 0 || !leaderRecord
+                ? "—"
+                : (((leaderRecord.wins - record.wins) + (record.losses - leaderRecord.losses)) / 2).toFixed(1);
             return (
-              <Pressable
-                key={team.id}
-                style={styles.row}
-                onPress={() => navigation.navigate("TeamDetail", { teamId: team.id })}
-              >
-                <Text style={[styles.rank, rankNumberStyle(rank)]}>{rank}</Text>
-                <Text style={styles.teamName} numberOfLines={1}>
-                  {team.name}
-                </Text>
-                <Text style={styles.record}>
-                  {record.wins}-{record.losses}
-                </Text>
-              </Pressable>
+              <View key={team.id}>
+                <Pressable onPress={() => navigation.navigate("TeamDetail", { teamId: team.id })}>
+                  <LinearGradient
+                    colors={rowGradient(rank, tab)}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.row}
+                  >
+                    <Text style={[styles.rank, rankNumberStyle(rank)]}>{rank}</Text>
+                    <Text style={styles.teamName} numberOfLines={1}>
+                      {team.name}
+                    </Text>
+                    <View style={styles.recordBlock}>
+                      <Text style={styles.record}>{record.wins}-{record.losses}</Text>
+                      <Text style={styles.gb}>{gb}</Text>
+                      <Text style={styles.pct}>{pct.toFixed(1)}%</Text>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+                {index + 1 === 6 || index + 1 === 10 ? (
+                  <View style={[styles.separator, index + 1 === 6 ? styles.sepPlayoff : styles.sepPlayIn]} />
+                ) : null}
+              </View>
             );
           })}
         </ScrollView>
       )}
     </MobilePageShell>
   );
+}
+
+function rowGradient(rank: number, conference: "east" | "west"): [string, string, string, string] {
+  const base = conference === "east" ? "220,38,38" : "37,99,235";
+  const strong = rank <= 6 ? 0.65 : rank <= 10 ? 0.55 : 0.45;
+  const mid = rank <= 6 ? 0.45 : rank <= 10 ? 0.35 : 0.25;
+  const soft = rank <= 6 ? 0.18 : rank <= 10 ? 0.15 : 0.12;
+  return [
+    `rgba(${base},${strong})`,
+    `rgba(${base},${mid})`,
+    `rgba(${base},${soft})`,
+    `rgba(${base},0.04)`,
+  ];
 }
 
 const styles = StyleSheet.create({
@@ -130,7 +161,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
   tabLabelActive: { color: colors.textPrimary },
-  content: { padding: 16, gap: 8 },
+  content: { padding: 16, gap: 8, paddingBottom: 32 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -140,12 +171,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(5,8,20,0.45)",
+    overflow: "hidden",
   },
   rank: { width: 28, fontWeight: "800", fontSize: 14, textAlign: "center" },
   rankPlayoff: { color: "#6ee7b7" },
   rankPlayIn: { color: "#fcd34d" },
   rankOut: { color: "#fca5a5" },
   teamName: { flex: 1, color: colors.textPrimary, fontSize: 14, fontWeight: "600" },
-  record: { color: colors.textSecondary, fontSize: 13, fontVariant: ["tabular-nums"] },
+  recordBlock: { flexDirection: "row", alignItems: "center", gap: 12 },
+  record: { color: "rgba(255,255,255,0.72)", fontSize: 12, fontVariant: ["tabular-nums"] },
+  gb: { color: "rgba(255,255,255,0.45)", fontSize: 11, width: 34, textAlign: "right", fontVariant: ["tabular-nums"] },
+  pct: { color: "rgba(255,255,255,0.75)", fontSize: 11, width: 44, textAlign: "right", fontVariant: ["tabular-nums"] },
+  separator: { height: StyleSheet.hairlineWidth, marginVertical: 8 },
+  sepPlayoff: { backgroundColor: "rgba(52,211,153,0.6)" },
+  sepPlayIn: { backgroundColor: "rgba(251,191,36,0.6)" },
 });
