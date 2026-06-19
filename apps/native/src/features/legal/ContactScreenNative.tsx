@@ -11,7 +11,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import { colors, spacing } from "../../theme/tokens";
+import { colors } from "../../theme/tokens";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -57,7 +57,7 @@ export default function ContactScreenNative({ initialType = "bug" }: Props) {
 
   return (
     <MobilePageShell title="お問い合わせ" onClose={() => navigation.goBack()}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.notice}>
           <Text style={styles.noticeText}>
             メールでのお問い合わせは{" "}
@@ -116,18 +116,18 @@ export function FeatureRequestScreenNative() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md, gap: spacing.md },
+  content: { paddingHorizontal: 20, paddingTop: 32, paddingBottom: 64, gap: 16 },
   notice: {
-    gap: 6,
+    gap: 8,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: 12,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 14,
     backgroundColor: "rgba(255,255,255,0.035)",
-    padding: 12,
+    padding: 14,
   },
-  noticeText: { color: colors.textSecondary, fontSize: 13, lineHeight: 20 },
-  noticeEmail: { color: colors.accentCyan, fontWeight: "700" },
-  updated: { color: colors.textMuted, fontSize: 11 },
+  noticeText: { color: "rgba(226,232,240,0.8)", fontSize: 12, lineHeight: 20 },
+  noticeEmail: { color: "rgb(125,211,252)", fontWeight: "700" },
+  updated: { color: "rgba(255,255,255,0.4)", fontSize: 11 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 12,
@@ -140,20 +140,23 @@ const styles = StyleSheet.create({
   chipLabel: { color: colors.textSecondary, fontSize: 13 },
   chipLabelActive: { color: colors.accentCyan },
   input: {
+    minHeight: 52,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: "rgba(255,255,255,0.1)",
     borderRadius: 10,
-    padding: 12,
+    backgroundColor: "#010201",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     color: colors.textPrimary,
-    fontSize: 15,
+    fontSize: 16,
   },
   textarea: { minHeight: 120, textAlignVertical: "top" },
   cta: {
-    backgroundColor: "rgba(34,211,238,0.18)",
+    backgroundColor: "rgba(14,165,233,0.24)",
     borderWidth: 1,
-    borderColor: colors.accentCyan,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderColor: "rgba(125,211,252,0.45)",
+    borderRadius: 14,
+    paddingVertical: 12,
     alignItems: "center",
   },
   ctaLabel: { color: colors.textPrimary, fontWeight: "700", fontSize: 16 },
