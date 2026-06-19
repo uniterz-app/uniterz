@@ -48,7 +48,7 @@
 - [x] `ui-result-detail` | `ResultDetailScreen` vs Web — partial → done
 - [x] `ui-leaderboards` | `LeaderboardsHomeScreen` vs Web — partial → done
 - [x] `ui-profile-password` | `ProfilePasswordScreenNative` vs Web — partial → done
-- [ ] `ui-badges` | `MobileBadgesScreen` vs Web — partial → done
+- [x] `ui-badges` | `MobileBadgesScreen` vs Web — partial → done
 - [ ] `ui-announcements` | `MobileAnnouncementsScreen` vs Web — partial → done
 - [ ] `ui-announcement-detail` | `AnnouncementDetailScreenNative` vs Web — partial → done
 - [ ] `ui-pro-subscribe` | `MobileProSubscribeScreen` vs Web — partial → done

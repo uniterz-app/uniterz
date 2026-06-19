@@ -42,7 +42,7 @@
 | profile-settings | `app/mobile/settings/profile/page.tsx` | `ProfileHomeScreen.tsx` | done | done |
 | profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | done |
 | profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | done |
-| badges | `app/mobile/badges/page.tsx` | `MobileBadgesScreen.tsx` | done | partial |
+| badges | `app/mobile/badges/page.tsx` | `MobileBadgesScreen.tsx` | done | done |
 | announcements | `app/mobile/announcements/page.tsx` | `MobileAnnouncementsScreen.tsx` | done | partial |
 | announcement-detail | `app/mobile/announcements/[id]/page.tsx` | `AnnouncementDetailScreenNative.tsx` | done | partial |
 | pro-subscribe | `app/mobile/pro/subscribe/page.tsx` | `MobileProSubscribeScreen.tsx` | done | partial |

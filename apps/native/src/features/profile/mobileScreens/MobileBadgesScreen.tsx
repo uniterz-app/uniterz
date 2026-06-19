@@ -19,6 +19,7 @@ import {
   useNativeProfileBadges,
   type ResolvedBadgeNative,
 } from "../useNativeProfileBadges";
+import { colors, fonts } from "../../../theme/tokens";
 
 const COLS = 4;
 const GAP = 10;
@@ -64,10 +65,16 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
     return rows;
   }, [resolvedBadges]);
 
+  const totalSlots = useMemo(
+    () => computeTotalSlots(resolvedBadges.length, COLS, MIN_ROWS),
+    [resolvedBadges.length]
+  );
+
   if (loading) {
     return (
       <MobilePageShell
         title={isJa ? "バッジパレット" : "Badge Palette"}
+        appBackground
         onClose={onClose}
       >
         <View style={styles.center}>
@@ -79,7 +86,7 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
   }
 
   return (
-    <MobilePageShell title={isJa ? "バッジパレット" : "Badge Palette"} onClose={onClose}>
+    <MobilePageShell title={isJa ? "バッジパレット" : "Badge Palette"} appBackground onClose={onClose}>
       <FlatList
         data={slots}
         keyExtractor={(_, idx) => `row-${idx}`}
@@ -124,9 +131,19 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
           </View>
         )}
         ListHeaderComponent={
-          resolvedBadges.length === 0 ? (
-            <Text style={styles.empty}>{isJa ? "まだ獲得バッジがありません。" : "No badges yet."}</Text>
-          ) : null
+          <View style={styles.trayHeader}>
+            <View>
+              <Text style={styles.trayTitle}>獲得バッジ</Text>
+              {resolvedBadges.length === 0 ? (
+                <Text style={styles.empty}>{isJa ? "まだ獲得バッジがありません。" : "No badges yet."}</Text>
+              ) : null}
+            </View>
+            <Text style={styles.trayCount}>
+              {String(resolvedBadges.length).padStart(2, "0")}
+              <Text style={styles.trayCountSlash}> / </Text>
+              <Text style={styles.trayCountTotal}>{totalSlots}</Text>
+            </Text>
+          </View>
         }
       />
       <ProfileBadgeDetailModal
@@ -144,19 +161,21 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
     gap: 10,
+    backgroundColor: "#0A1118",
   },
   row: {
     flexDirection: "row",
   },
   slotVoid: {
-    backgroundColor: "rgba(255,255,255,0.03)",
+    backgroundColor: "rgba(31,16,22,0.34)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(201,160,144,0.16)",
   },
   slotFilled: {
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.22)",
+    borderColor: "rgba(251,191,36,0.34)",
+    backgroundColor: "rgba(25,15,24,0.72)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -164,10 +183,35 @@ const styles = StyleSheet.create({
   iconFallback: { color: "rgba(226,232,240,0.5)", fontSize: 22, fontWeight: "700" },
   empty: {
     textAlign: "center",
-    color: "rgba(248,250,252,0.55)",
+    color: "rgba(201,160,144,0.72)",
     fontSize: 14,
-    marginBottom: 12,
+    marginTop: 4,
   },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   muted: { color: "rgba(248,250,252,0.5)", fontSize: 14 },
+  trayHeader: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.22)",
+    backgroundColor: "rgba(20,12,20,0.78)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  trayTitle: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  trayCount: {
+    color: "rgba(255,240,234,0.95)",
+    fontFamily: fonts.metric,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  trayCountSlash: { color: "rgba(201,160,144,0.5)" },
+  trayCountTotal: { color: "rgba(201,160,144,0.65)" },
 });
