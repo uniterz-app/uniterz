@@ -93,6 +93,10 @@ import {
   resolveNativeSeriesPair,
 } from "./resolveNativeSeriesStanding";
 import { getGamesTexts } from "./gamesI18n";
+import {
+  parsePreferredLeague,
+  preferredLeagueToGamesLeague,
+} from "../../../../../lib/user/preferredLeague";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import {
   isWcGoalScorerPickValidForPredictedScore,
@@ -428,7 +432,7 @@ export default function GamesHomeScreen({
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const insets = useSafeAreaInsets();
-  const { fUser } = useFirebaseUser();
+  const { fUser, status: authStatus } = useFirebaseUser();
   const [filterOpen, setFilterOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showWcTabBadge, setShowWcTabBadge] = useState(false);
@@ -439,6 +443,7 @@ export default function GamesHomeScreen({
     marginMax: "",
   });
   const mainScrollRef = useRef<ScrollView | null>(null);
+  const didInitPreferredLeagueRef = useRef(false);
   const skipAutoAdvanceRef = useRef(false);
   const suppressAutoAdvanceForTodayRef = useRef(false);
   const [selectedGame, setSelectedGame] = useState<Record<string, unknown> | null>(
@@ -523,6 +528,40 @@ export default function GamesHomeScreen({
     const key = selectedLeague === "wc" ? "wc" : "nba";
     return LEAGUE_HEADER_LABEL[key];
   }, [selectedLeague]);
+
+  useEffect(() => {
+    if (didInitPreferredLeagueRef.current || authStatus === "loading") return;
+    const uid = fUser?.uid ?? null;
+    if (!uid) {
+      didInitPreferredLeagueRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await getDoc(doc(db, "users", uid));
+        if (cancelled) return;
+        const preferred = parsePreferredLeague(
+          snap.exists() ? snap.data()?.preferredLeague : null
+        );
+        if (preferred) {
+          const gamesLeague = preferredLeagueToGamesLeague(preferred);
+          if (gamesLeague === "nba" || gamesLeague === "wc") {
+            setSelectedLeague(gamesLeague);
+          }
+        }
+      } catch {
+        // Web と同じく、取得できない場合は画面既定のリーグを使う。
+      } finally {
+        if (!cancelled) didInitPreferredLeagueRef.current = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, fUser?.uid, setSelectedLeague]);
 
   useEffect(() => {
     void readWcGamesTabAnnouncementSeenNative().then((seen) => {

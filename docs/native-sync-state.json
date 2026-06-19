@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "functional",
-  "lastCompletedId": "wc-scoring-rules",
+  "lastCompletedId": "preferred-league-init",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 3,
+  "totalCompleted": 4,
   "uiPolishCompleted": 0,
   "blockedItems": [],
-  "notes": "wc-scoring-rules 完了。次は preferred-league-init。"
+  "notes": "preferred-league-init 完了。次は legal-refund-law。"
 }

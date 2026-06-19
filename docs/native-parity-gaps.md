@@ -11,7 +11,7 @@
 - [x] `wc-formation-panel` P0 | Web: `app/component/predict/wc/WcFormationPanel.tsx` → Native: 新規 `WcFormationPanelNative.tsx`、`PredictModal` に配線
 - [x] `wc-team-profile-rich` P0 | Web: `WcTeamProfilePanel.tsx` → Native: `WcTeamProfilePanelNative.tsx` 拡充（key players, formation, club meta, nickname）
 - [x] `wc-scoring-rules` P0 | Web: `predictionScoringRules.tsx` → Native: 新規、PredictModal に表示
-- [ ] `preferred-league-init` P1 | Web: `useUserPreferredLeague` → Native: `GamesHomeScreen` 初期リーグに反映
+- [x] `preferred-league-init` P1 | Web: `useUserPreferredLeague` → Native: `GamesHomeScreen` 初期リーグに反映
 - [ ] `legal-refund-law` P1 | Web: `app/mobile/refund/page.tsx`, `law/page.tsx` → Native: `LegalScrollScreenNative` 系で新規画面
 - [ ] `legal-contact` P1 | Web: `app/mobile/contact/page.tsx` → Native: 新規または WebView
 - [ ] `games-predictions-list` P1 | Web: `games/[id]/predictions/page.tsx` → Native: `GameDetailModal` 拡充
