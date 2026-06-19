@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "ui-polish",
-  "lastCompletedId": "ui-games-home",
+  "lastCompletedId": "ui-predict-modal",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
   "totalCompleted": 11,
-  "uiPolishCompleted": 1,
+  "uiPolishCompleted": 2,
   "blockedItems": [],
-  "notes": "ui-games-home 完了。次は ui-predict-modal。"
+  "notes": "ui-predict-modal 完了。次は ui-match-card。"
 }
