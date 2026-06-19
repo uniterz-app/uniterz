@@ -66,6 +66,7 @@ import {
 } from "../../../../../lib/profile/profileGamblingTerms";
 import CyberGlassToastModal from "../../components/CyberGlassToastModal";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
+import type { ProfileSummaryNative, ProfileSummaryRanksNative } from "./profileApi";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -138,6 +139,149 @@ function profileCountryRowLabel(code: string, appLang: "ja" | "en"): string {
   if (!trimmed) return appLang === "ja" ? "未設定" : "Not set";
   const row = COUNTRY_OPTIONS.find((c) => c.code === trimmed);
   return row ? (appLang === "ja" ? row.labelJa : row.labelEn) : trimmed;
+}
+
+function profileHeroMetricDecimal(v: number): string {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "0.0";
+  return (Math.round(n * 10) / 10).toFixed(1);
+}
+
+function profileHeroRankLabel(rank: number | null | undefined, language: "ja" | "en") {
+  if (rank == null || !Number.isFinite(rank) || rank <= 0) return null;
+  const safe = Math.floor(rank);
+  return language === "ja" ? `${safe}位` : `#${safe}`;
+}
+
+function profileHeroSegmentCount(
+  kind: "winrate" | "ranked" | "value",
+  value: number,
+  rank?: number | null
+): number {
+  if (kind === "winrate") {
+    return Math.max(0, Math.min(5, Math.round((Math.max(0, Math.min(100, value)) / 100) * 5)));
+  }
+  if (kind === "ranked" && rank != null && Number.isFinite(rank) && rank > 0) {
+    if (rank <= 10) return 5;
+    if (rank <= 50) return 4;
+    if (rank <= 100) return 3;
+    if (rank <= 300) return 2;
+    return 1;
+  }
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.max(1, Math.min(5, Math.ceil(Math.log10(value + 1))));
+}
+
+function ProfileHeroMetricDeckNative({
+  title,
+  summary,
+  ranks,
+  language,
+}: {
+  title: string;
+  summary: ProfileSummaryNative;
+  ranks: ProfileSummaryRanksNative | null;
+  language: "ja" | "en";
+}) {
+  const isJa = language === "ja";
+  const winPct = (summary.winRate ?? 0) * 100;
+  const metrics = [
+    {
+      key: "winrate",
+      label: isJa ? "勝率" : "WIN RATE",
+      unitHint: "%",
+      value: `${profileHeroMetricDecimal(winPct)}%`,
+      footnote: isJa
+        ? `投稿 ${summary.posts} · 的中 ${summary.wins}`
+        : `${summary.wins} hits · ${summary.posts} posts`,
+      accent: styles.heroMetricAccentGreen,
+      valueStyle: styles.heroMetricValueGreen,
+      segs: profileHeroSegmentCount("winrate", winPct),
+    },
+    {
+      key: "total",
+      label: isJa ? "総合得点" : "TOTAL PTS",
+      unitHint: isJa ? "累計" : "CUM",
+      value: profileHeroMetricDecimal(summary.pointsSumV3),
+      unit: "pts",
+      rank: profileHeroRankLabel(ranks?.totalPoints, language),
+      accent: styles.heroMetricAccentMagenta,
+      valueStyle: styles.heroMetricValueMagenta,
+      segs: profileHeroSegmentCount("ranked", summary.pointsSumV3, ranks?.totalPoints),
+    },
+    {
+      key: "precision",
+      label: isJa ? "スコア精度" : "PRECISION",
+      unitHint: isJa ? "累計" : "CUM",
+      value: profileHeroMetricDecimal(summary.scorePrecisionSum),
+      unit: "pts",
+      rank: profileHeroRankLabel(ranks?.totalPrecision, language),
+      accent: styles.heroMetricAccentCyan,
+      valueStyle: styles.heroMetricValueCyan,
+      segs: profileHeroSegmentCount("ranked", summary.scorePrecisionSum, ranks?.totalPrecision),
+    },
+    {
+      key: "upset",
+      label: isJa ? "アップセット" : "UPSET",
+      unitHint: isJa ? "累計" : "CUM",
+      value: profileHeroMetricDecimal(summary.upsetPointsSum),
+      unit: "pts",
+      rank: profileHeroRankLabel(ranks?.totalUpset, language),
+      accent: styles.heroMetricAccentRed,
+      valueStyle: styles.heroMetricValueRed,
+      segs: profileHeroSegmentCount("ranked", summary.upsetPointsSum, ranks?.totalUpset),
+    },
+  ] as const;
+
+  return (
+    <View style={styles.heroMetricsPanel}>
+      <View style={styles.heroMetricsTitleRow}>
+        <Text style={styles.heroMetricsArrow}>◀</Text>
+        <Text style={styles.heroMetricsTitle} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.heroMetricsArrow}>▶</Text>
+      </View>
+      <View style={styles.heroMetricsGrid}>
+        {metrics.map((metric) => (
+          <View key={metric.key} style={styles.heroMetricCard}>
+            <View style={[styles.heroMetricAccentLine, metric.accent]} />
+            <View style={styles.heroMetricLabelRow}>
+              <Text style={styles.heroMetricLabel}>{metric.label}</Text>
+              <Text style={styles.heroMetricUnitHint}>{metric.unitHint}</Text>
+            </View>
+            <View style={styles.heroMetricValueRow}>
+              <Text style={[styles.heroMetricValue, metric.valueStyle]} numberOfLines={1}>
+                {metric.value}
+              </Text>
+              {"unit" in metric ? (
+                <Text style={styles.heroMetricUnit}>{metric.unit}</Text>
+              ) : null}
+              {"rank" in metric && metric.rank ? (
+                <Text style={styles.heroMetricRank}>{metric.rank}</Text>
+              ) : null}
+            </View>
+            <View style={styles.heroMetricSegRow}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <View
+                  key={`${metric.key}-seg-${i}`}
+                  style={[
+                    styles.heroMetricSeg,
+                    i < metric.segs ? metric.accent : styles.heroMetricSegMuted,
+                  ]}
+                />
+              ))}
+            </View>
+            {"footnote" in metric ? (
+              <Text style={styles.heroMetricFootnote} numberOfLines={1}>
+                {metric.footnote}
+              </Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 export default function ProfileHomeScreen({
@@ -238,7 +382,7 @@ export default function ProfileHomeScreen({
     });
   const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
-  const statsBundle = useNativeProfileStats(targetUid, tab === "overview" && !!targetUid);
+  const statsBundle = useNativeProfileStats(targetUid, !!targetUid);
   const streakBundle = useNativeStreakTracker(targetUid, tab === "overview" && !!targetUid);
 
   const currentIsProView = profilePlanHook.isProView;
@@ -825,6 +969,19 @@ export default function ProfileHomeScreen({
             ))}
           </View>
         ) : null}
+
+        {apiConfigured && statsBundle.summary ? (
+          <ProfileHeroMetricDeckNative
+            title={t.playoffsTitle}
+            summary={statsBundle.summary}
+            ranks={statsBundle.summaryRanks}
+            language={language}
+          />
+        ) : apiConfigured && statsBundle.loading ? (
+          <View style={styles.heroMetricsLoading}>
+            <BlocksPulseLoader pixelScale={0.7} labelStyle={styles.heroLoadingLabel} />
+          </View>
+        ) : null}
       </ProfileGridBackdrop>
 
       {renderTabs()}
@@ -1303,6 +1460,182 @@ const styles = StyleSheet.create({
     fontSize: 9,
     textAlign: "center",
     paddingHorizontal: 4,
+  },
+  heroMetricsPanel: {
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(2,6,18,0.34)",
+    overflow: "hidden",
+  },
+  heroMetricsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  heroMetricsArrow: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  heroMetricsTitle: {
+    flex: 1,
+    color: "rgba(136,201,211,0.95)",
+    fontSize: 12,
+    letterSpacing: 1.25,
+    fontFamily: Platform.select({
+      ios: "BebasNeue_400Regular",
+      android: "BebasNeue_400Regular",
+      default: "sans-serif",
+    }),
+  },
+  heroMetricsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    padding: 8,
+  },
+  heroMetricCard: {
+    position: "relative",
+    width: "48.7%",
+    minHeight: 92,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(1,6,18,0.24)",
+    paddingVertical: 10,
+    paddingRight: 8,
+    paddingLeft: 12,
+    overflow: "hidden",
+  },
+  heroMetricAccentLine: {
+    position: "absolute",
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 2,
+  },
+  heroMetricAccentGreen: {
+    backgroundColor: "#a8ff2a",
+  },
+  heroMetricAccentMagenta: {
+    backgroundColor: "#ff2bd6",
+  },
+  heroMetricAccentCyan: {
+    backgroundColor: "#22d3ee",
+  },
+  heroMetricAccentRed: {
+    backgroundColor: "#ff4757",
+  },
+  heroMetricLabelRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 5,
+    paddingLeft: 2,
+  },
+  heroMetricLabel: {
+    color: "rgba(255,255,255,0.62)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.25,
+    textTransform: "uppercase",
+    fontFamily: Platform.select({
+      ios: "Oxanium_700Bold",
+      android: "Oxanium_700Bold",
+      default: "sans-serif",
+    }),
+  },
+  heroMetricUnitHint: {
+    color: "rgba(255,255,255,0.38)",
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.64,
+    textTransform: "uppercase",
+  },
+  heroMetricValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: 5,
+    marginTop: 6,
+    paddingLeft: 2,
+  },
+  heroMetricValue: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: -0.35,
+    fontVariant: ["tabular-nums"],
+    fontFamily: Platform.select({
+      ios: "Oxanium_700Bold",
+      android: "Oxanium_700Bold",
+      default: "sans-serif",
+    }),
+  },
+  heroMetricValueGreen: {
+    color: "rgba(236,253,203,0.96)",
+  },
+  heroMetricValueMagenta: {
+    color: "rgba(255,235,252,0.96)",
+  },
+  heroMetricValueCyan: {
+    color: "rgba(207,250,254,0.96)",
+  },
+  heroMetricValueRed: {
+    color: "rgba(255,228,230,0.96)",
+  },
+  heroMetricUnit: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.54,
+    textTransform: "uppercase",
+  },
+  heroMetricRank: {
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.72,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  heroMetricSegRow: {
+    flexDirection: "row",
+    gap: 3,
+    marginTop: 9,
+    paddingLeft: 2,
+  },
+  heroMetricSeg: {
+    flex: 1,
+    minWidth: 0,
+    height: 5,
+  },
+  heroMetricSegMuted: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  heroMetricFootnote: {
+    marginTop: 6,
+    paddingLeft: 2,
+    color: "rgba(255,255,255,0.62)",
+    fontSize: 10,
+    lineHeight: 13,
+    fontVariant: ["tabular-nums"],
+  },
+  heroMetricsLoading: {
+    marginTop: 12,
+    minHeight: 106,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(2,6,18,0.32)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarLetter: {
     color: colors.textPrimary,
