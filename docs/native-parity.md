@@ -40,7 +40,7 @@
 | leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | done |
 | leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `CommunityDetailScreenNative.tsx` | done | done |
 | profile-settings | `app/mobile/settings/profile/page.tsx` | `ProfileHomeScreen.tsx` | done | done |
-| profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | partial |
+| profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | done |
 | profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | done |
 | badges | `app/mobile/badges/page.tsx` | `MobileBadgesScreen.tsx` | done | partial |
 | announcements | `app/mobile/announcements/page.tsx` | `MobileAnnouncementsScreen.tsx` | done | partial |

@@ -47,7 +47,7 @@
 - [x] `ui-games-predictions` | `GamePredictionsScreenNative` + `GameDetailModal` vs Web — partial → done（照合チェックリスト 6項目中5以上）
 - [x] `ui-result-detail` | `ResultDetailScreen` vs Web — partial → done
 - [x] `ui-leaderboards` | `LeaderboardsHomeScreen` vs Web — partial → done
-- [ ] `ui-profile-password` | `ProfilePasswordScreenNative` vs Web — partial → done
+- [x] `ui-profile-password` | `ProfilePasswordScreenNative` vs Web — partial → done
 - [ ] `ui-badges` | `MobileBadgesScreen` vs Web — partial → done
 - [ ] `ui-announcements` | `MobileAnnouncementsScreen` vs Web — partial → done
 - [ ] `ui-announcement-detail` | `AnnouncementDetailScreenNative` vs Web — partial → done

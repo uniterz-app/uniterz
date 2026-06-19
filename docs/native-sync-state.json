@@ -1,12 +1,12 @@
 {
   "parityComplete": false,
   "phase": "phase-c",
-  "lastCompletedId": "ui-leaderboards",
+  "lastCompletedId": "ui-profile-password",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 24,
+  "totalCompleted": 25,
   "uiPolishCompleted": 11,
-  "phaseCCompleted": 7,
+  "phaseCCompleted": 8,
   "blockedItems": [],
-  "notes": "Phase C 継続。ui-leaderboards まで完了。次: ui-profile-password。"
+  "notes": "Phase C 継続。ui-profile-password 完了。次: ui-badges。"
 }
