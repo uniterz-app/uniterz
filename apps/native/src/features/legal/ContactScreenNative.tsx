@@ -58,6 +58,14 @@ export default function ContactScreenNative({ initialType = "bug" }: Props) {
   return (
     <MobilePageShell title="お問い合わせ" onClose={() => navigation.goBack()}>
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>
+            メールでのお問い合わせは{" "}
+            <Text style={styles.noticeEmail}>support@uniterz.app</Text>
+            までご連絡ください。
+          </Text>
+          <Text style={styles.updated}>最終更新: 2026-03-23</Text>
+        </View>
         <View style={styles.row}>
           {(
             [
@@ -109,6 +117,17 @@ export function FeatureRequestScreenNative() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.md, gap: spacing.md },
+  notice: {
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.035)",
+    padding: 12,
+  },
+  noticeText: { color: colors.textSecondary, fontSize: 13, lineHeight: 20 },
+  noticeEmail: { color: colors.accentCyan, fontWeight: "700" },
+  updated: { color: colors.textMuted, fontSize: 11 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 12,

@@ -70,7 +70,7 @@
 | legal-community | `app/mobile/community-guidelines/page.tsx` | Legal 系 | done | partial |
 | legal-refund | `app/mobile/refund/page.tsx` | `RefundPolicyScreenNative.tsx` | done | partial |
 | legal-law | `app/mobile/law/page.tsx` | `CommercialLawScreenNative.tsx` | done | partial |
-| legal-contact | `app/mobile/contact/page.tsx` | **なし** | gap | gap |
+| legal-contact | `app/mobile/contact/page.tsx` | `ContactScreenNative.tsx` | done | partial |
 | feature-request | `app/mobile/feature-request/page.tsx` | `FeatureRequestScreenNative.tsx` | done | partial |
 | lp | `app/mobile/lp/page.tsx` | skip | skip | skip |
 | lp-v2 | `app/mobile/lp-v2/page.tsx` | skip | skip | skip |
