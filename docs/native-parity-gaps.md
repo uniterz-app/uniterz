@@ -33,7 +33,7 @@
 - [x] `ui-wc-panels` | `Wc*Native` 全般 — 国旗サイズ、得点者ピッカー、順位表 typography
 - [x] `ui-playoff-bracket` | `PlayoffBracket*` — シリーズカード、スコアインライン
 - [x] `ui-glowing-rim` | `GlowingRimFrame` 相当 — Skia で発光近似
-- [ ] `ui-auth-screens` | Login/Signup/Onboarding — フォーム余白、ボタンスタイル
+- [x] `ui-auth-screens` | Login/Signup/Onboarding — フォーム余白、ボタンスタイル
 - [ ] `ui-legal-screens` | Legal 系 — スクロール、ヘッダー、リンクスタイル
 
 ---
