@@ -1,12 +1,12 @@
 {
   "parityComplete": false,
   "phase": "phase-c",
-  "lastCompletedId": "gap-cancel-complete",
+  "lastCompletedId": "ui-games-predictions",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 21,
+  "totalCompleted": 22,
   "uiPolishCompleted": 11,
-  "phaseCCompleted": 4,
+  "phaseCCompleted": 5,
   "blockedItems": [],
-  "notes": "Phase C 継続。gap-cancel-complete 完了。次: ui-games-predictions。"
+  "notes": "Phase C 継続。ui-games-predictions 完了。次: ui-result-detail。"
 }

@@ -44,7 +44,7 @@
 - [x] `gap-team-detail` P0 | Web: `app/mobile/teams/[teamId]/page.tsx` → Native: `TeamDetailScreenNative` 機能・UI 完成
 - [x] `gap-pro-success` P1 | Web: `app/mobile/pro/success/page.tsx` → Native: Pro 成功専用画面
 - [x] `gap-cancel-complete` P1 | Web: `app/mobile/cancel-complete/page.tsx` → Native: 解約完了専用画面
-- [ ] `ui-games-predictions` | `GamePredictionsScreenNative` + `GameDetailModal` vs Web — partial → done（照合チェックリスト 6項目中5以上）
+- [x] `ui-games-predictions` | `GamePredictionsScreenNative` + `GameDetailModal` vs Web — partial → done（照合チェックリスト 6項目中5以上）
 - [ ] `ui-result-detail` | `ResultDetailScreen` vs Web — partial → done
 - [ ] `ui-leaderboards` | `LeaderboardsHomeScreen` vs Web — partial → done
 - [ ] `ui-profile-password` | `ProfilePasswordScreenNative` vs Web — partial → done
