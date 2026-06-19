@@ -26,10 +26,10 @@
 
 | ID | Mobile Web | Native | status | uiStatus |
 |---|---|---|---|---|
-| auth-login | `app/mobile/login/page.tsx` | `LoginScreenNative.tsx` | done | partial |
-| auth-signup | `app/mobile/signup/page.tsx` | `SignupScreenNative.tsx` | done | partial |
-| auth-reset | `app/mobile/reset/page.tsx` | `ResetPasswordScreenNative.tsx` | done | partial |
-| auth-onboarding | `app/mobile/onboarding/page.tsx` | `OnboardingScreenNative.tsx` | done | partial |
+| auth-login | `app/mobile/login/page.tsx` | `LoginScreenNative.tsx` | done | done |
+| auth-signup | `app/mobile/signup/page.tsx` | `SignupScreenNative.tsx` | done | done |
+| auth-reset | `app/mobile/reset/page.tsx` | `ResetPasswordScreenNative.tsx` | done | done |
+| auth-onboarding | `app/mobile/onboarding/page.tsx` | `OnboardingScreenNative.tsx` | done | done |
 | games-home | `app/mobile/games/page.tsx` → `GamesPage.tsx` | `GamesHomeScreen.tsx` | done | done |
 | games-predict | `app/mobile/games/[id]/predict/page.tsx` | `PredictModal.tsx` | done | done |
 | match-card | `MatchCard*` | `GameCardList` + `MatchCardListCtaNative` | done | done |
