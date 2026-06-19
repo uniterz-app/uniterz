@@ -26,7 +26,7 @@
 
 - [x] `ui-games-home` | `GamesHomeScreen` vs `GamesPage` — 月ヘッダー、日付ストリップ、カード余白、LIVE ピル
 - [x] `ui-predict-modal` | `PredictModal` vs `PredictionFormV2` — HUD タブ、スコア入力、オーバーレイ、motion
-- [ ] `ui-match-card` | `MatchCard*` 系 vs Web — market bar、entry scan、cyber grid、CTA
+- [x] `ui-match-card` | `MatchCard*` 系 vs Web — market bar、entry scan、cyber grid、CTA
 - [ ] `ui-result-home` | `ResultHomeScreen` vs `ResultCard` — glass shell、バッジ、日付パイプ
 - [ ] `ui-rankings` | `RankingsHomeScreen` — cyber list、seg bar、WC ステージタブ
 - [ ] `ui-profile` | `ProfileHomeScreen` — summary cards、チャート、streak tracker
