@@ -1,12 +1,12 @@
 {
   "parityComplete": false,
   "phase": "phase-c",
-  "lastCompletedId": "ui-games-predictions",
+  "lastCompletedId": "ui-result-detail",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 22,
+  "totalCompleted": 23,
   "uiPolishCompleted": 11,
-  "phaseCCompleted": 5,
+  "phaseCCompleted": 6,
   "blockedItems": [],
-  "notes": "Phase C 継続。ui-games-predictions 完了。次: ui-result-detail。"
+  "notes": "Phase C 継続。ui-result-detail 完了。次: ui-leaderboards。"
 }

@@ -35,7 +35,7 @@
 | match-card | `MatchCard*` | `GameCardList` + `MatchCardListCtaNative` | done | done |
 | games-predictions | `app/mobile/games/[id]/predictions/page.tsx` | `GamePredictionsScreenNative.tsx` + `GameDetailModal` | done | done |
 | result-home | `app/mobile/result/page.tsx` | `ResultHomeScreen.tsx` | done | done |
-| result-detail | `app/mobile/result/[postId]/page.tsx` | `ResultDetailScreen.tsx` | done | partial |
+| result-detail | `app/mobile/result/[postId]/page.tsx` | `ResultDetailScreen.tsx` | done | done |
 | rankings | `app/mobile/rankings/page.tsx` | `RankingsHomeScreen.tsx` | done | done |
 | leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | partial |
 | leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `CommunityDetailScreenNative.tsx` | done | partial |

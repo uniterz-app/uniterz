@@ -955,7 +955,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingTop: 4,
+    paddingBottom: 28,
   },
   centerFill: {
     flex: 1,
@@ -1017,7 +1018,7 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 2,
   },
-  sectionGap: { height: 14 },
+  sectionGap: { height: 16 },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
