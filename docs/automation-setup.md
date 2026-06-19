@@ -6,6 +6,16 @@ Agents Window で Automation を作成・更新する。プロンプトは下記
 
 ---
 
+## チェーンが止まったとき（即対応）
+
+1. **Merge Chain のトリガー** — `develop` push、**パスフィルタを外す**（または `apps/native/**` を含める）
+2. **Daily / Web Sync / Merge Chain** — 3つとも Instructions を下記プロンプト全文に差し替え
+3. **Merge Chain を手動 Run** — 1回 push すれば以降は自動連鎖
+
+止まる典型原因: Run が docs だけ更新して **push しなかった**、または push が `apps/native/**` を含まず Merge Chain が反応しなかった。
+
+---
+
 ## 共通設定
 
 | 項目 | 値 |
@@ -16,14 +26,15 @@ Agents Window で Automation を作成・更新する。プロンプトは下記
 
 ---
 
-## 標準構成（2つ）
+## 標準構成（3つ）
 
 | # | 名前 | 役割 | 必須 |
 |---|---|---|---|
 | A | Native Parity Daily | 毎日キュー消化 | 推奨 |
-| C | Native Parity Push Chain | **前 Run 終了後に自動で次 Run を起動** | **推奨（自動続行）** |
+| B | Native Parity Web Sync | Web 変更追従 | 任意 |
+| C | Native Parity Merge Chain | **前 Run 終了後に自動で次 Run を起動** | **必須（自動続行）** |
 
-**B（Web Sync）** は Web 変更追従用。パリティの自動続行には **C** を使う。
+**C がないと Run 終了後に止まる。** Daily / Web Sync / Merge Chain は **同一プロンプト** を使う。
 
 ---
 
@@ -47,14 +58,14 @@ Agents Window で Automation を作成・更新する。プロンプトは下記
 | ツール | **git** |
 | 指示 | 下記プロンプト + 変更ファイルの `*Native` 差分移植 |
 
-## Automation C: 自動続行（前 Run 終了 → 次 Run）
+## Automation C: 自動続行（Merge Chain）
 
-**「5件で止まった」「続けて と送りたくない」場合はこれを追加する。**
+**Run 終了 → push → 即次 Run。** これがないと docs だけの commit 後などにチェーンが途切れる。
 
 | 項目 | 値 |
 |---|---|
-| 名前 | Native Parity Push Chain |
-| トリガー | **`develop` への push**（`apps/native/**`, `docs/native-*`, `.cursor/**`） |
+| 名前 | Native Parity Merge Chain |
+| トリガー | **`develop` への push**（**パスフィルタなし** 推奨。狭める場合は `apps/native/**` を必ず含める） |
 | ブランチ | **`develop`** |
 | ツール | **git** |
 | 指示 | 下記「Automation 用プロンプト全文」と**同一** |
@@ -63,13 +74,19 @@ Agents Window で Automation を作成・更新する。プロンプトは下記
 
 ```
 Run 1: キュー消化 → commit & push develop
-         ↓（Push Chain が push を検知）
+         ↓（Merge Chain が push を検知 → 数秒〜数分で次 Run）
 Run 2: parityComplete が false ならキュー先頭から再開
          ↓（繰り返し）
-Run N: parityComplete: true → 即終了
+Run N: parityComplete: true → push せず終了
 ```
 
-**既存の Daily / 手動 Run は作り直さない。** Instructions を最新プロンプトに差し替え、**C だけ新規追加**すればよい。
+### チェーン継続の鉄則（プロンプトに含まれる）
+
+1. **`parityComplete: false` なら Run 終了前に必ず push**（実装ゼロでも可）
+2. **`apps/native/**` に変更がない場合** → `apps/native/.parity-chain` の `lastPushAt` を更新して commit に含める
+3. **`parityComplete: true` のときだけ** push 不要
+
+**Daily / Web Sync / Merge Chain の Instructions をすべて最新プロンプトに差し替える。**
 
 ---
 
@@ -104,13 +121,20 @@ Run N: parityComplete: true → 即終了
 
 ## Git（セッション終了時・必須）
 - 作業ブランチは develop のみ（native-parity/* や cursor/* など別ブランチは作らない）
-- 変更がある場合: git add（.env / .env.* / 秘密鍵は add しない）→ git commit → git push origin develop
+- git add（.env / .env.* / 秘密鍵は add しない）→ git commit → git push origin develop
 - push 失敗時: git pull --rebase origin develop を1回試して再 push
 - PR は作らない。Open Pull Request ツールは使わない
 
+## チェーン継続（セッション終了時・必須）
+- **parityComplete: false → 必ず push してから終了**（変更が docs だけでも、実装ゼロでも push する）
+- `apps/native/**` に変更がない commit では、必ず `apps/native/.parity-chain` の `lastPushAt` を ISO8601 で更新して含める（Merge Chain 起動用）
+- `docs/native-sync-state.json` の `lastSessionAt` も同時に更新する
+- push 後に終了。Native Parity Merge Chain が次 Run を自動起動する
+- **parityComplete: true のときだけ** push 不要
+
 ## セッション終了
-- parityComplete: true → 完了報告して終了
-- キューが残っていてセッション上限で切れる場合 → push して終了（Native Parity Push Chain が次 Run を自動起動。ユーザーに「続けて」とは言わない）
+- parityComplete: true → 完了報告して終了（push 不要）
+- キューが残っている → 上記チェーン継続ルールで push して終了（ユーザーに「続けて」とは言わない）
 
 ## 鉄則
 - ユーザーに何も聞かない。計画の承認を求めない
@@ -130,7 +154,8 @@ Run N: parityComplete: true → 即終了
 2. **Tools** に **git** が入っているか確認
 3. 上記 **プロンプト全文** で Instructions を差し替え（**5件上限の記述を削除した最新版**）
 4. Save
-5. **自動続行したい場合:** 上記 **Automation C（Push Chain）** を1つ追加
+5. **Automation C（Merge Chain）** のトリガーを **`develop` push・パスフィルタなし** に設定（または `apps/native/**` 必須）
+6. Daily / Web Sync / Merge Chain すべての Instructions を上記プロンプト全文に差し替え
 
 ---
 
@@ -146,7 +171,7 @@ Automation が自律実行する:
 
 1. **Phase B（UI 7〜8割）** — キュー先頭から **parityComplete まで**
 2. **各 Run** — 実装 → typecheck → **commit & push develop**
-3. **Push Chain あり** — push のたび次 Run が起動し、ユーザー操作なしで完走
+3. **Merge Chain あり** — 毎 Run 終了時に push → 次 Run が自動起動し、ユーザー操作なしで完走
 4. **完了** — `parityComplete: true` で停止
 
 ユーザーはマージや PR 承認をしなくてよい（`develop` に直接積み上がる）。

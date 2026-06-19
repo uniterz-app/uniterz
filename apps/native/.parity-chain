@@ -1,0 +1,4 @@
+{
+  "lastPushAt": "2026-06-20T02:10:00+09:00",
+  "note": "parityComplete が false の Automation Run 終了時に lastPushAt を ISO8601 で更新して必ず commit & push する。Native Parity Merge Chain 起動用。"
+}

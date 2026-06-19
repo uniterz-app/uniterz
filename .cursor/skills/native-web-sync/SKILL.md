@@ -36,16 +36,19 @@ description: >-
 
 ## Git（セッション終了時・必須）
 
-**ユーザーに聞かず、毎セッション必ず `develop` にコミットして push する。** PR 作成は不要（push が主、PR はユーザーが明示したときだけ）。
+**`parityComplete: false` なら毎セッション必ず `develop` に push してから終了。** PR 作成は不要。
 
 1. `git status` / `git diff` で変更確認（`.env` / `.env.*` / 秘密鍵は **add しない**）
 2. 関連ファイルのみ `git add`
-3. 日本語コミットメッセージ（1〜2文、why 中心）。例:
-   - `native-parity: [ui-polish] ui-games-home 等3件、残り8件`
-4. `git push origin develop`
-5. push 失敗時: 1回 `git pull --rebase origin develop` → 再 push。それでもダメなら `blockedItems` に記録して終了
+3. 日本語コミットメッセージ（1〜2文、why 中心）
+4. **`apps/native/**` に変更がない場合** → `apps/native/.parity-chain` の `lastPushAt` を ISO8601 で更新して add
+5. `docs/native-sync-state.json` の `lastSessionAt` を更新
+6. `git push origin develop`
+7. push 失敗時: 1回 `git pull --rebase origin develop` → 再 push
 
-**作業ブランチ:** 常に `develop` を checkout してから実装（`native-parity/*` や `cursor/*` は作らない）。
+**作業ブランチ:** 常に `develop`（`native-parity/*` や `cursor/*` は作らない）。
+
+**`parityComplete: true` のときだけ** push 不要。
 
 ## PR（任意・通常は使わない）
 
@@ -58,11 +61,12 @@ description: >-
 - `parityComplete: true`
 - 設計判断が必要（`blockedItems` に記録してスキップ）
 - 同一項目で typecheck 3回失敗
-- セッション時間・トークン上限で続行不能（このときだけ push して終了。**Native Parity Push Chain** が次 Run を自動起動）
+- セッション時間・トークン上限で続行不能（**必ず push して終了**。Merge Chain が次 Run を自動起動）
 
-## 自動続行（Push Chain・任意）
+## 自動続行（Merge Chain）
 
-Run が上限で切れた場合、push をトリガーに **Native Parity Push Chain**（`docs/automation-setup.md`）が次 Run を起動する。ユーザーが「続けて」と送る必要はない。
+Run 終了時に **必ず push** する（`apps/native/**` 変更がなければ `.parity-chain` を更新）。  
+push をトリガーに **Native Parity Merge Chain**（`docs/automation-setup.md`）が次 Run を起動する。
 
 ## 参照
 

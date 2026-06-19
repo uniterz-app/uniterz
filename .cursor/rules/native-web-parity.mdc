@@ -19,6 +19,7 @@ alwaysApply: true
 2. `phase` に応じ `docs/native-parity-gaps.md` のキュー先頭を実行
 3. 確認・承認を求めない。完了後は次のキュー項目へ
 4. 新ギャップはキュー末尾に追記
+5. **終了時:** `parityComplete: false` なら必ず push（`apps/native/**` 変更なし → `apps/native/.parity-chain` 更新）。Merge Chain が次 Run を起動
 
 ## 共有ルール
 

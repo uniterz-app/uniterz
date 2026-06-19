@@ -12,3 +12,11 @@
 ## 更新ルール
 
 タスク完了時にエージェントがこの JSON を更新する。
+
+## チェーン継続
+
+`parityComplete: false` で Run を終えるとき:
+
+1. `lastSessionAt` を当日に更新
+2. `apps/native/**` に変更がなければ `apps/native/.parity-chain` の `lastPushAt` も更新
+3. **必ず** `git push origin develop`（Merge Chain が次 Run を起動）
