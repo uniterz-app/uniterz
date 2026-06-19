@@ -22,7 +22,7 @@
 
 ## 実行エンジン
 
-1. **Cursor Automation**（主）— 毎日・Web 変更時・PR マージ後
+1. **Cursor Automation**（主）— 毎日・Web 変更時・`develop` push 連鎖。**終了時は commit & push `develop`（PR 不要）**
 2. **作業キュー** — [`docs/native-parity-gaps.md`](docs/native-parity-gaps.md)
 3. **進捗状態** — [`docs/native-sync-state.json`](docs/native-sync-state.json)（人間向け説明: [`docs/native-sync-state.md`](docs/native-sync-state.md)）
 

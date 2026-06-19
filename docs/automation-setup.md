@@ -1,8 +1,18 @@
 # Cursor Automation 設定手順（一回だけ）
 
-Agents Window で以下 3 本を作成する。プロンプトには `.cursor/skills/native-web-sync/SKILL.md` の「実行ループ」全文を貼る。
+Agents Window で Automation を作成・更新する。プロンプトは下記 **「Automation 用プロンプト全文」** をそのまま貼る。
 
-**前提:** この `docs/` と `.cursor/` を main にコミット・push 済みであること。
+**前提:** この `docs/` と `.cursor/` がリポジトリに push 済みであること。
+
+---
+
+## 共通設定
+
+| 項目 | 値 |
+|---|---|
+| 作業ブランチ | **`develop`**（`main` ではない） |
+| ツール | **git** を必ず有効化（push まで） |
+| 終了時 | **コミット → `git push origin develop`**（PR は作らない） |
 
 ---
 
@@ -12,40 +22,76 @@ Agents Window で以下 3 本を作成する。プロンプトには `.cursor/sk
 |---|---|
 | 名前 | Native Parity Daily |
 | トリガー | cron `0 6 * * *`（毎日 6:00） |
-| ブランチ | `main` |
-| ツール | git, PR 作成 |
-| 指示 | SKILL.md の実行ループ + 「parityComplete なら即終了」 |
+| ブランチ | **`develop`** |
+| ツール | **git** |
+| 指示 | 下記「Automation 用プロンプト全文」 |
 
 ## Automation B: Web 変更追従
 
 | 項目 | 値 |
 |---|---|
 | 名前 | Native Parity Web Sync |
-| トリガー | `main` への push（`app/component/**`, `app/mobile/**`, `lib/**`） |
-| 指示 | 変更ファイルの `*Native` 対応を差分移植。対応なしは機能キュー末尾に追記して実装 |
+| トリガー | **`develop` への push**（`app/component/**`, `app/mobile/**`, `lib/**`, `apps/native/**`） |
+| ブランチ | **`develop`** |
+| ツール | **git** |
+| 指示 | 下記プロンプト + 変更ファイルの `*Native` 差分移植 |
 
-## Automation C: マージ連鎖
+## Automation C: push 連鎖（旧 Merge Chain の代替）
 
 | 項目 | 値 |
 |---|---|
-| 名前 | Native Parity Merge Chain |
-| トリガー | `native-parity/*` PR が `main` にマージ |
-| 指示 | Automation A と同じ SKILL プロンプトを再実行 |
+| 名前 | Native Parity Push Chain |
+| トリガー | **`develop` への push**（`apps/native/**`, `docs/native-*`, `.cursor/**`） |
+| ブランチ | **`develop`** |
+| ツール | **git** |
+| 指示 | Automation A と同じプロンプト（キューが空でなければ続行） |
 
 ---
 
-## GitHub 自動マージ（推奨）
+## Automation 用プロンプト全文（コピペ用）
 
-1. Settings → General → Allow auto-merge を有効化
-2. `native-parity/*` PR で auto-merge をオン
-3. 必須チェック: `Native Typecheck`（`.github/workflows/native-typecheck.yml`）
+```
+あなたは UNITERZ の Native をモバイル Web に自律同期するエージェントです。
+
+.cursor/skills/native-web-sync/SKILL.md の「起動時」「実行ループ」「Git（セッション終了時・必須）」に従う。
+
+鉄則:
+- parityComplete: true なら即終了
+- ユーザーに確認・承認を求めない
+- 作業ブランチは develop のみ（別ブランチを作らない）
+- 1セッション最大5件までキュー消化
+- npm run native:typecheck 通過後に docs を更新
+- セッション終了時は必ず git commit して git push origin develop（.env はコミットしない）
+- PR は作らない（push のみ）
+
+開始: docs/native-sync-state.json を読んで phase に従う。
+```
+
+---
+
+## 手動で Automation を更新する場合
+
+既存の「ネイティブパリティ同期」Automation で:
+
+1. **Branch** を `main` → **`develop`** に変更
+2. **Tools** に **git** が入っているか確認
+3. 上記 **プロンプト全文** で Instructions を差し替え
+4. Save
+
+---
+
+## CI
+
+- `develop` push 時も Native Typecheck が走るよう、必要なら `.github/workflows/native-typecheck.yml` の `push.branches` に `develop` を追加
 
 ---
 
 ## 完了後
 
-あなたは何も言わなくてよい。Automation が以下を自律実行する:
+Automation が自律実行する:
 
-1. **Phase A（機能）** — キュー先頭 `wc-formation-panel` から約 2 週間
-2. **Phase B（UI 7〜8割）** — 約 2 週間
+1. **Phase B（UI 7〜8割）** — キュー先頭 `ui-games-home` から
+2. **毎セッション** — 実装 → typecheck → **commit & push develop**
 3. **完了** — `parityComplete: true` で停止
+
+ユーザーはマージや PR 承認をしなくてよい（`develop` に直接積み上がる）。
