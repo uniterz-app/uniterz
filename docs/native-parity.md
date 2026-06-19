@@ -56,7 +56,7 @@
 | playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | partial |
 | bracket-market | `app/mobile/bracket-market/page.tsx` | `BracketMarketScreenNative.tsx` | done | partial |
 | team-detail | `app/mobile/teams/[teamId]/page.tsx` | `TeamDetailScreenNative` 系 | partial | gap |
-| wc-formation | `WcFormationPanel.tsx` | **なし** | gap | gap |
+| wc-formation | `WcFormationPanel.tsx` | `WcFormationPanelNative.tsx` | done | partial |
 | wc-team-profile | `WcTeamProfilePanel.tsx` | `WcTeamProfilePanelNative.tsx` | partial | gap |
 | wc-standing | `WcStandingPanel.tsx` | `WcStandingPanelNative.tsx` | done | partial |
 | wc-preview | `WcMatchPreviewPanel.tsx` | `WcMatchPreviewPanelNative.tsx` | done | partial |
@@ -81,7 +81,7 @@
 | コンポーネント | Web | Native | status | uiStatus |
 |---|---|---|---|---|
 | チームプロフィール | `WcTeamProfilePanel.tsx` | `WcTeamProfilePanelNative.tsx` | partial | gap |
-| フォーメーション | `WcFormationPanel.tsx` | なし | gap | gap |
+| フォーメーション | `WcFormationPanel.tsx` | `WcFormationPanelNative.tsx` | done | partial |
 | 順位表 | `WcStandingPanel.tsx` | `WcStandingPanelNative.tsx` | done | partial |
 | プレビュー | `WcMatchPreviewPanel.tsx` | `WcMatchPreviewPanelNative.tsx` | done | partial |
 | 得点者 | `WcGoalScorerPicker.tsx` | `WcGoalScorerPickerNative.tsx` | done | partial |

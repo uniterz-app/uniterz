@@ -97,6 +97,7 @@ import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabel
 import {
   isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
+  type WcGoalScorerPick,
 } from "../../../../../lib/wc/goalScorer";
 import { getWcSquadPlayer } from "../../../../../lib/wc/squads";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
@@ -455,10 +456,11 @@ export default function GamesHomeScreen({
   > | null>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
   const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats"
+    null | "h2h" | "market" | "stats" | "preview" | "standings"
   >(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
+  const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(null);
   const [predictSubmitting, setPredictSubmitting] = useState(false);
   const [predictedGameIds, setPredictedGameIds] = useState<Set<string>>(new Set());
   const [myPostIdByGameId, setMyPostIdByGameId] = useState<Record<string, string>>({});
@@ -686,7 +688,8 @@ export default function GamesHomeScreen({
   );
   const isSoccerPredict =
     String(selectedGame?.league ?? "").toLowerCase() === "pl" ||
-    String(selectedGame?.league ?? "").toLowerCase() === "j1";
+    String(selectedGame?.league ?? "").toLowerCase() === "j1" ||
+    String(selectedGame?.league ?? "").toLowerCase() === "wc";
 
   const predictModalHomeLabel = useMemo(() => {
     if (!selectedGame) return "";
@@ -1170,6 +1173,7 @@ export default function GamesHomeScreen({
     setWinner(null);
     setScoreHome("");
     setScoreAway("");
+    setGoalScorerPick(null);
     setPredictToolsTab(null);
     setSelectedGame(sourceGame);
     setIsPredictModalOpen(true);
@@ -1214,6 +1218,8 @@ export default function GamesHomeScreen({
         setWinner(existingPrediction.winner);
         setScoreHome(String(existingPrediction.score.home));
         setScoreAway(String(existingPrediction.score.away));
+        const pick = normalizeWcGoalScorerPick(existingPrediction.goalScorer);
+        setGoalScorerPick(pick);
       }
     })();
   }
@@ -1295,11 +1301,24 @@ export default function GamesHomeScreen({
     try {
       const existingPostId = myPostIdByGameId[gameId];
       const isEditing = Boolean(existingPostId);
+      const isWcGame = String(selectedGame.league ?? "").toLowerCase() === "wc";
+      const goalScorer =
+        isWcGame &&
+        goalScorerPick &&
+        isWcGoalScorerPickValidForPredictedScore(
+          goalScorerPick,
+          { home: homeNum, away: awayNum },
+          (selectedGame.home as { teamId?: string } | undefined)?.teamId,
+          (selectedGame.away as { teamId?: string } | undefined)?.teamId
+        )
+          ? goalScorerPick
+          : null;
       if (existingPostId) {
         await updatePredictionPostApi(existingPostId, {
           winner,
           scoreHome: homeNum,
           scoreAway: awayNum,
+          goalScorer: isWcGame ? goalScorer : undefined,
         });
       } else {
         try {
@@ -1308,6 +1327,7 @@ export default function GamesHomeScreen({
             winner,
             scoreHome: homeNum,
             scoreAway: awayNum,
+            goalScorer: isWcGame ? goalScorer : undefined,
           });
         } catch (err) {
           if (
@@ -1319,6 +1339,7 @@ export default function GamesHomeScreen({
               winner,
               scoreHome: homeNum,
               scoreAway: awayNum,
+              goalScorer: isWcGame ? goalScorer : undefined,
             });
           } else {
             throw err;
@@ -1338,6 +1359,7 @@ export default function GamesHomeScreen({
       setWinner(null);
       setScoreHome("");
       setScoreAway("");
+      setGoalScorerPick(null);
       setPredictToolsTab(null);
       setIsPredictModalOpen(false);
       setSelectedGame(null);
@@ -1594,6 +1616,8 @@ export default function GamesHomeScreen({
         language={language}
         predictScheduleMeta={predictScheduleMeta}
         wcGoalScorerPreview={wcGoalScorerPreview}
+        goalScorerPick={goalScorerPick}
+        setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (

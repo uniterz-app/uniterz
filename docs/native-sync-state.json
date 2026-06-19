@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "functional",
-  "lastCompletedId": null,
-  "lastSessionAt": null,
+  "lastCompletedId": "wc-formation-panel",
+  "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 0,
+  "totalCompleted": 1,
   "uiPolishCompleted": 0,
   "blockedItems": [],
-  "notes": "初期状態。機能キュー先頭 wc-formation-panel から開始。"
+  "notes": "wc-formation-panel 完了。次は wc-team-profile-rich。"
 }

@@ -270,8 +270,8 @@ export default function MatchCardOverlayMarketBarNative({
 
   if (!hasData) return null;
 
-  const marketBiasLabel = language === "ja" ? "市場バイアス" : "Market bias";
-  const totalLabel = language === "ja" ? "予想 " : "Picks ";
+  const marketBiasLabel = t.marketBias;
+  const totalLabel = t.totalPredictions;
   const markerCenter =
     userPredictionWinner != null
       ? markerCenterFromKinds(segmentKinds, userPredictionWinner)
