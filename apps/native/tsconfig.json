@@ -5,7 +5,9 @@
     "baseUrl": "../..",
     "paths": {
       "@/*": ["./*"],
-      "@/shared/*": ["./app/shared/*"]
+      "@/shared/*": ["./app/shared/*"],
+      "@uniterz/shared": ["packages/shared/src/index.ts"],
+      "@uniterz/shared/*": ["packages/shared/src/*"]
     }
   }
 }

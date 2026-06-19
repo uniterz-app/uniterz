@@ -186,7 +186,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     const key = profilePathKeyFromRow(row);
     if (!key) return;
     navigation.navigate("ProfileTab", {
-      screen: "ProfileHome",
+      screen: "PublicProfile",
       params: { handle: key, fromRankings: true },
     });
   };

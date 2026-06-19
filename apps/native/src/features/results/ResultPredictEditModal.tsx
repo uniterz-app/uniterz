@@ -13,7 +13,7 @@ import {
   resolveGameStartAt,
   resolveGameStatus,
   resolveGameTeamName,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import PredictModal, {
   type PredictModalMatchPreview,

@@ -32,15 +32,15 @@
 | auth-onboarding | `app/mobile/onboarding/page.tsx` | `OnboardingScreenNative.tsx` | done | partial |
 | games-home | `app/mobile/games/page.tsx` → `GamesPage.tsx` | `GamesHomeScreen.tsx` | done | partial |
 | games-predict | `app/mobile/games/[id]/predict/page.tsx` | `PredictModal.tsx` | done | partial |
-| games-predictions | `app/mobile/games/[id]/predictions/page.tsx` | `GameDetailModal.tsx` | partial | gap |
+| games-predictions | `app/mobile/games/[id]/predictions/page.tsx` | `GamePredictionsScreenNative.tsx` + `GameDetailModal` | done | partial |
 | result-home | `app/mobile/result/page.tsx` | `ResultHomeScreen.tsx` | done | partial |
 | result-detail | `app/mobile/result/[postId]/page.tsx` | `ResultDetailScreen.tsx` | done | partial |
 | rankings | `app/mobile/rankings/page.tsx` | `RankingsHomeScreen.tsx` | done | partial |
 | leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | partial |
 | leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `LeaderboardsHomeScreen`（詳細） | partial | gap |
 | profile-settings | `app/mobile/settings/profile/page.tsx` | `ProfileHomeScreen.tsx` | done | partial |
-| profile-password | `app/mobile/settings/password/page.tsx` | Profile 設定内 | partial | gap |
-| profile-public | `app/mobile/u/[handle]/page.tsx` | Profile タブ | partial | gap |
+| profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | partial |
+| profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | partial |
 | badges | `app/mobile/badges/page.tsx` | `MobileBadgesScreen.tsx` | done | partial |
 | announcements | `app/mobile/announcements/page.tsx` | `MobileAnnouncementsScreen.tsx` | done | partial |
 | announcement-detail | `app/mobile/announcements/[id]/page.tsx` | `AnnouncementDetailScreenNative.tsx` | done | partial |

@@ -44,6 +44,7 @@ export type ProfileStackParamList = {
     | undefined;
   ProfileSettings: undefined;
   ProfilePassword: undefined;
+  PublicProfile: { handle: string; fromRankings?: boolean };
   Badges: undefined;
   Announcements: undefined;
   AnnouncementDetail: { id: string };

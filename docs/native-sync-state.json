@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
-  "phase": "functional",
-  "lastCompletedId": "legal-contact",
+  "phase": "ui-polish",
+  "lastCompletedId": "i18n-provider",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 6,
+  "totalCompleted": 11,
   "uiPolishCompleted": 0,
   "blockedItems": [],
-  "notes": "legal-contact 完了。次は games-predictions-list。"
+  "notes": "機能キュー完了。次は ui-games-home。"
 }

@@ -1,5 +1,10 @@
 export type GamesLanguage = "ja" | "en";
 
+/** Web `Language` のうち Games 画面が対応する ja/en に寄せる */
+export function toNativeGamesLanguage(language: string): GamesLanguage {
+  return language === "en" ? "en" : "ja";
+}
+
 export function getGamesTexts(language: GamesLanguage) {
   if (language === "en") {
     return {

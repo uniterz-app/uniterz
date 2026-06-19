@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import type { GamesTexts } from "./gamesI18n";
+import GameMarketDistributionNative from "./GameMarketDistributionNative";
 import {
   predictModalBackdropEnter,
   predictModalSheetEnter,
@@ -96,6 +97,23 @@ export default function GameDetailModal(props: GameDetailModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const backdropEnter = reduceMotion ? undefined : predictModalBackdropEnter();
   const sheetEnter = reduceMotion ? undefined : predictModalSheetEnter();
+
+  const gameId = selectedGame ? String(selectedGame.id ?? "") : "";
+  const leagueRaw = selectedGame?.league;
+  const league = String(leagueRaw ?? "nba").toLowerCase();
+  const isSoccer = league === "pl" || league === "j1";
+  const homeName = selectedGame
+    ? resolveGameTeamName(selectedGame.home, selectedGame.homeTeamName, "HOME")
+    : "HOME";
+  const awayName = selectedGame
+    ? resolveGameTeamName(selectedGame.away, selectedGame.awayTeamName, "AWAY")
+    : "AWAY";
+  const homeColor = selectedGame
+    ? resolveTeamPrimaryColor(selectedGame.league, selectedGame.home, "#5aa4ff")
+    : "#5aa4ff";
+  const awayColor = selectedGame
+    ? resolveTeamPrimaryColor(selectedGame.league, selectedGame.away, "#ff6b8a")
+    : "#ff6b8a";
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -215,6 +233,20 @@ export default function GameDetailModal(props: GameDetailModalProps) {
                   </Text>
                 );
               })()}
+              {gameId ? (
+                <View style={localStyles.marketBlock}>
+                  <GameMarketDistributionNative
+                    gameId={gameId}
+                    homeName={toCompactTeamName(selectedGame.league, homeName)}
+                    awayName={toCompactTeamName(selectedGame.league, awayName)}
+                    homeColor={homeColor}
+                    awayColor={awayColor}
+                    isSoccer={isSoccer}
+                    language={language}
+                    t={t}
+                  />
+                </View>
+              ) : null}
               {(() => {
                 const gameId = String(selectedGame.id ?? "");
                 const hasMyPost = Boolean(myPostIdByGameId[gameId]);
@@ -261,6 +293,9 @@ export default function GameDetailModal(props: GameDetailModalProps) {
 }
 
 const localStyles = StyleSheet.create({
+  marketBlock: {
+    marginTop: 12,
+  },
   communityButton: {
     marginTop: 10,
     paddingVertical: 12,

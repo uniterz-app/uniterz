@@ -24,6 +24,7 @@ import CommunityDetailScreenNative from "../features/leaderboards/CommunityDetai
 import MobileCommunityGuidelinesScreen from "../features/profile/mobileScreens/MobileCommunityGuidelinesScreen";
 import ProfileSettingsScreenNative from "../features/profile/screens/ProfileSettingsScreenNative";
 import ProfilePasswordScreenNative from "../features/profile/screens/ProfilePasswordScreenNative";
+import PublicProfileScreenNative from "../features/profile/screens/PublicProfileScreenNative";
 import AnnouncementDetailScreenNative from "../features/profile/screens/AnnouncementDetailScreenNative";
 import ProSuccessScreenNative from "../features/profile/screens/ProSuccessScreenNative";
 import PlanChangeScreenNative from "../features/profile/screens/PlanChangeScreenNative";
@@ -148,6 +149,7 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="ProfileHome" component={ProfileHomeRoute} />
       <ProfileStack.Screen name="ProfileSettings" component={ProfileSettingsScreenNative} />
       <ProfileStack.Screen name="ProfilePassword" component={ProfilePasswordScreenNative} />
+      <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreenNative} />
       <ProfileStack.Screen name="Badges" component={BadgesScreenWrapper} />
       <ProfileStack.Screen name="Announcements" component={AnnouncementsScreenWrapper} />
       <ProfileStack.Screen name="AnnouncementDetail" component={AnnouncementDetailScreenNative} />

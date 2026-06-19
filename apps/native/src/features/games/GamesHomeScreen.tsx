@@ -37,7 +37,7 @@ import {
   resolveGameStartAt,
   resolveGameStatus,
   resolveGameTeamName,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import { auth, db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";

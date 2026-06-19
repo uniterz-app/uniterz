@@ -14,11 +14,11 @@
 - [x] `preferred-league-init` P1 | Web: `useUserPreferredLeague` → Native: `GamesHomeScreen` 初期リーグに反映
 - [x] `legal-refund-law` P1 | Web: `app/mobile/refund/page.tsx`, `law/page.tsx` → Native: `LegalScrollScreenNative` 系で新規画面
 - [x] `legal-contact` P1 | Web: `app/mobile/contact/page.tsx` → Native: 新規または WebView
-- [ ] `games-predictions-list` P1 | Web: `games/[id]/predictions/page.tsx` → Native: `GameDetailModal` 拡充
-- [ ] `profile-password-screen` P2 | Web: `settings/password/page.tsx` → Native: 専用画面
-- [ ] `profile-public-handle` P2 | Web: `u/[handle]/page.tsx` → Native: 公開プロフィール
-- [ ] `shared-package-migration` P2 | `apps/native/src/shared/` → `packages/shared` へ統合
-- [ ] `i18n-provider` P2 | Web: `lib/i18n` + `useUserLanguage` → Native: Provider 一元化
+- [x] `games-predictions-list` P1 | Web: `games/[id]/predictions/page.tsx` → Native: `GameDetailModal` 拡充
+- [x] `profile-password-screen` P2 | Web: `settings/password/page.tsx` → Native: 専用画面
+- [x] `profile-public-handle` P2 | Web: `u/[handle]/page.tsx` → Native: 公開プロフィール
+- [x] `shared-package-migration` P2 | `apps/native/src/shared/` → `packages/shared` へ統合
+- [x] `i18n-provider` P2 | Web: `lib/i18n` + `useUserLanguage` → Native: Provider 一元化
 
 ---
 

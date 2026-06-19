@@ -6,7 +6,7 @@ import {
   resolveGameScore,
   resolveGameStartAt,
   resolveGameStatus,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import type { SupportedLeague } from "./useTodayGames";
 
