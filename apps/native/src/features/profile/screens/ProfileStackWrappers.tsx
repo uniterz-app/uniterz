@@ -62,7 +62,7 @@ export function ProSubscribeScreenWrapper() {
     <MobileProSubscribeScreen
       language="ja"
       onClose={() => navigation.goBack()}
-      onSuccess={() => navigation.navigate("ProSuccess")}
+      onSuccess={(plan) => navigation.navigate("ProSuccess", { plan })}
     />
   );
 }

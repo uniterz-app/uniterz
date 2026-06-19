@@ -53,7 +53,7 @@ const FEATURES_EN = [
 type Props = {
   language: "ja" | "en";
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (plan: Plan) => void;
 };
 
 export default function MobileProSubscribeScreen({ language, onClose, onSuccess }: Props) {
@@ -69,7 +69,7 @@ export default function MobileProSubscribeScreen({ language, onClose, onSuccess 
     const ok = await purchase(plan);
     if (ok) {
       Alert.alert(isJa ? "完了" : "Success", isJa ? "Pro プランが有効になりました。" : "Pro plan activated.");
-      onSuccess?.();
+      onSuccess?.(plan);
     }
   }
 

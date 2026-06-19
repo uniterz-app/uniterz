@@ -50,7 +50,7 @@ export type ProfileStackParamList = {
   AnnouncementDetail: { id: string };
   PlanStatus: undefined;
   ProSubscribe: undefined;
-  ProSuccess: undefined;
+  ProSuccess: { plan?: "monthly" | "annual" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;
   CancelPlan: undefined;
