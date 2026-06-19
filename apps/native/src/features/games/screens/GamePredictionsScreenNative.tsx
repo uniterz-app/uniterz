@@ -4,12 +4,11 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { useReducedMotion } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import type { GamesStackParamList } from "../../../navigation/types";
-import { colors, radius } from "../../../theme/tokens";
+import { colors, fonts, radius, spacing } from "../../../theme/tokens";
 import { useNativeGameDocument } from "../useNativeGameDocument";
 import GameMarketDistributionNative from "../GameMarketDistributionNative";
 import { getGamesTexts, toNativeGamesLanguage } from "../gamesI18n";
@@ -25,7 +24,6 @@ import { resolveTeamJerseyPalette } from "../teamColors";
 import { MatchCardFineInnerPlate } from "../MatchCardFineInterior";
 import MatchTeamMarkNative from "../MatchTeamMarkNative";
 import { useNativeLanguage } from "../../../i18n/NativeLanguageProvider";
-import { predictBlockFadeUpEnter } from "../predictMotion";
 
 function isSoccerLeague(leagueRaw: unknown): boolean {
   const league = String(leagueRaw ?? "").toLowerCase();
@@ -36,8 +34,6 @@ function isSoccerLeague(leagueRaw: unknown): boolean {
 export default function GamePredictionsScreenNative() {
   const route = useRoute<RouteProp<GamesStackParamList, "GamePredictions">>();
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
-  const insets = useSafeAreaInsets();
-  const reduceMotion = useReducedMotion() ?? false;
   const { gameId } = route.params;
   const { fUser } = useFirebaseUser();
   const { language: appLanguage } = useNativeLanguage();
@@ -103,7 +99,7 @@ export default function GamePredictionsScreenNative() {
       : "vs";
 
   return (
-    <MobilePageShell title={title} appBackground onClose={() => navigation.goBack()}>
+    <MobilePageShell title={title} onClose={() => navigation.goBack()}>
       {loading ? (
         <View style={styles.loading}>
           <BlocksPulseLoader />
@@ -113,9 +109,27 @@ export default function GamePredictionsScreenNative() {
           {language === "ja" ? "試合が見つかりません" : "Game not found"}
         </Text>
       ) : (
-        <View style={styles.root}>
+        <View style={styles.body}>
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <Animated.View entering={reduceMotion ? undefined : predictBlockFadeUpEnter(0)}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              style={styles.inlineBack}
+              accessibilityRole="button"
+              accessibilityLabel={language === "ja" ? "戻る" : "Back"}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={27} color="rgba(148,163,184,0.92)" />
+            </Pressable>
+
+            <View style={styles.cardShell}>
+              <LinearGradient
+                pointerEvents="none"
+                colors={["rgba(34,211,238,0.14)", "rgba(255,255,255,0.025)", "rgba(244,63,94,0.1)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={[styles.corner, styles.cornerTl]} />
+              <View style={[styles.corner, styles.cornerBr]} />
               <MatchCardFineInnerPlate borderRadius={radius.card} contentStyle={styles.matchCard}>
                 <View style={styles.matchRow}>
                   <View style={styles.teamCol}>
@@ -131,9 +145,7 @@ export default function GamePredictionsScreenNative() {
                     </Text>
                   </View>
                   <View style={styles.centerCol}>
-                    <Text style={[styles.statusPill, status === "live" && styles.statusLive]}>
-                      {statusLabel}
-                    </Text>
+                    <Text style={[styles.statusPill, status === "live" && styles.statusLive]}>{statusLabel}</Text>
                     <Text style={styles.scoreText}>{centerScore}</Text>
                   </View>
                   <View style={styles.teamCol}>
@@ -150,30 +162,32 @@ export default function GamePredictionsScreenNative() {
                   </View>
                 </View>
               </MatchCardFineInnerPlate>
-            </Animated.View>
+            </View>
 
-            <Animated.View entering={reduceMotion ? undefined : predictBlockFadeUpEnter(1)}>
-              <GameMarketDistributionNative
-                gameId={gameId}
-                homeName={homeName}
-                awayName={awayName}
-                homeColor={homeColor}
-                awayColor={awayColor}
-                isSoccer={isSoccer}
-                language={language}
-                t={t}
-              />
-            </Animated.View>
+            <GameMarketDistributionNative
+              gameId={gameId}
+              homeName={homeName}
+              awayName={awayName}
+              homeColor={homeColor}
+              awayColor={awayColor}
+              isSoccer={isSoccer}
+              language={language}
+              t={t}
+            />
           </ScrollView>
 
-          {fUser?.uid && hasMyPost === false ? (
+          {fUser?.uid && hasMyPost != null ? (
             <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.predict}
-              style={[styles.predictFab, { bottom: insets.bottom + 24 }]}
+              style={[styles.fab, hasMyPost ? styles.fabEdit : null]}
               onPress={() => navigation.navigate("GamePredict", { gameId })}
+              accessibilityRole="button"
+              accessibilityLabel={hasMyPost ? t.editPrediction : t.predict}
             >
-              <MaterialCommunityIcons name="pencil" size={23} color="#fff" />
+              <MaterialCommunityIcons
+                name={hasMyPost ? "pencil" : "pencil-plus"}
+                size={22}
+                color={hasMyPost ? "rgba(207,250,254,0.98)" : "#fff"}
+              />
             </Pressable>
           ) : null}
         </View>
@@ -183,11 +197,33 @@ export default function GamePredictionsScreenNative() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   loading: { paddingVertical: 32, alignItems: "center" },
-  content: { paddingHorizontal: 12, paddingTop: 12, gap: 8, paddingBottom: 104 },
+  body: { flex: 1 },
+  content: { padding: spacing.md, gap: 14, paddingBottom: 104 },
   muted: { color: colors.textSecondary, textAlign: "center", marginTop: 32 },
-  matchCard: { paddingVertical: 4, paddingHorizontal: 6 },
+  inlineBack: {
+    alignSelf: "flex-start",
+    padding: 4,
+    marginBottom: -2,
+  },
+  cardShell: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: "rgba(34,211,238,0.2)",
+    backgroundColor: "rgba(2,6,23,0.45)",
+  },
+  corner: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    zIndex: 3,
+    borderColor: "rgba(34,211,238,0.48)",
+  },
+  cornerTl: { top: 8, left: 8, borderTopWidth: 1, borderLeftWidth: 1 },
+  cornerBr: { right: 8, bottom: 8, borderRightWidth: 1, borderBottomWidth: 1 },
+  matchCard: { paddingVertical: 6 },
   matchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -211,10 +247,14 @@ const styles = StyleSheet.create({
     color: "rgba(103,232,249,0.95)",
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 0.6,
+    letterSpacing: 1.4,
+    fontFamily: fonts.metric,
   },
   statusLive: {
-    color: "#ef4444",
+    color: "#facc15",
+    textShadowColor: "rgba(250,204,21,0.65)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   scoreText: {
     color: colors.textPrimary,
@@ -222,19 +262,26 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
   },
-  predictFab: {
+  fab: {
     position: "absolute",
     right: 24,
+    bottom: 28,
     width: 52,
     height: 52,
     borderRadius: 26,
     backgroundColor: "#facc15",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowColor: "#facc15",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.42,
     shadowRadius: 14,
     elevation: 8,
+  },
+  fabEdit: {
+    backgroundColor: "rgba(8,47,73,0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(103,232,249,0.45)",
+    shadowColor: "rgba(34,211,238,0.85)",
   },
 });

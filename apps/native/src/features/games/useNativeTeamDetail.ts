@@ -5,8 +5,10 @@ import { NBA_TEAM_NAME_BY_ID } from "../../../../../lib/nba-team-names";
 import { teamColorsNBA } from "../../../../../lib/teams-nba";
 import { TEAM_SHORT } from "../../../../../lib/team-short";
 import { lastGameAtMillis } from "../../../../../lib/teamLastGameAt";
-import { nbaRegularSeasonWinsLosses } from "../../../../../lib/nbaRegularSeasonRecord";
-import { compareNbaStandingsSortRows } from "../../../../../lib/nba/compareNbaStandingsSort";
+import {
+  nbaRegularSeasonWinsLosses,
+  type NbaTeamRecordFields,
+} from "../../../../../lib/nbaRegularSeasonRecord";
 
 const FALLBACK_COLORS = {
   primary: "#555555",
@@ -28,6 +30,7 @@ export type NativeTeamDetail = {
   name: string;
   conference: string;
   rank: number | null;
+  conferenceRank: number | null;
   wins: number;
   losses: number;
   winRate: number;
@@ -44,7 +47,6 @@ export type NativeTeamDetail = {
     vsEast: { wins: number; losses: number };
     vsWest: { wins: number; losses: number };
   };
-  conferenceRank: number | null;
   last10: { wins: number; losses: number; games: NativeTeamLastGame[] };
   colors: { primary: string; secondary: string; orange: string };
 };
@@ -120,7 +122,6 @@ export function useNativeTeamDetail(teamId: string | undefined) {
         const l10 = last10Games.filter((x) => x.result === "L").length;
         const homeWins = Number(d.homeWins ?? 0);
         const awayWins = Number(d.awayWins ?? 0);
-        const conference = String(d.conference ?? "");
         const rs = nbaRegularSeasonWinsLosses({
           wins: Number(d.wins ?? 0),
           losses: Number(d.losses ?? 0),
@@ -133,27 +134,48 @@ export function useNativeTeamDetail(teamId: string | undefined) {
         });
         const rsTotal = rs.wins + rs.losses;
         const rsWinRate = rsTotal > 0 ? (rs.wins / rsTotal) * 100 : 0;
+        const conference = String(d.conference ?? "");
         let conferenceRank: number | null = null;
-        try {
-          const confSnap = await getDocs(
-            query(collection(db, "teams"), where("league", "==", "nba"), where("conference", "==", conference))
-          );
-          const confTeams = confSnap.docs.map((docSnap) => ({
-            id: docSnap.id,
-            ...(docSnap.data() as Record<string, unknown>),
-          }));
-          const sorted = [...confTeams].sort((a, b) => compareNbaStandingsSortRows(a, b));
-          const idx = sorted.findIndex((x) => x.id === teamId);
-          conferenceRank = idx >= 0 ? idx + 1 : null;
-        } catch {
-          conferenceRank = null;
+
+        if (conference) {
+          try {
+            const teamsQuery = query(
+              collection(db, "teams"),
+              where("league", "==", "nba"),
+              where("conference", "==", conference)
+            );
+            const teamsSnap = await getDocs(teamsQuery);
+            const sorted = teamsSnap.docs
+              .map((teamDoc) => ({
+                id: teamDoc.id,
+                ...(teamDoc.data() as Record<string, unknown>),
+              }))
+              .sort((a, b) => {
+                const ar = nbaRegularSeasonWinsLosses(a as NbaTeamRecordFields);
+                const br = nbaRegularSeasonWinsLosses(b as NbaTeamRecordFields);
+                const ag = ar.wins + ar.losses;
+                const bg = br.wins + br.losses;
+                const arate = ag > 0 ? ar.wins / ag : 0;
+                const brate = bg > 0 ? br.wins / bg : 0;
+                if (brate !== arate) return brate - arate;
+                if (br.wins !== ar.wins) return br.wins - ar.wins;
+                return 0;
+              });
+            const index = sorted.findIndex((row) => row.id === teamId);
+            conferenceRank = index === -1 ? null : index + 1;
+          } catch {
+            conferenceRank = null;
+          }
         }
+
+        if (cancelled) return;
 
         setTeam({
           id: teamId,
           name: NBA_TEAM_NAME_BY_ID[teamId] ?? String(d.name ?? teamId),
           conference,
           rank: typeof d.rank === "number" ? d.rank : null,
+          conferenceRank,
           wins: rs.wins,
           losses: rs.losses,
           winRate: rsWinRate,
@@ -191,7 +213,6 @@ export function useNativeTeamDetail(teamId: string | undefined) {
               losses: Math.max(0, Number(d.vsWestGames ?? 0) - Number(d.vsWestWins ?? 0)),
             },
           },
-          conferenceRank,
           last10: { wins: w10, losses: l10, games: last10Games },
           colors: { ...FALLBACK_COLORS, ...(teamColorsNBA[teamId] ?? {}) },
         });

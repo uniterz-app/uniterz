@@ -1,13 +1,10 @@
-/**
- * Web `app/mobile/pro/success/page.tsx` 相当
- */
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { LinearGradient } from "expo-linear-gradient";
 import { doc, getDoc } from "firebase/firestore";
+import { LinearGradient } from "expo-linear-gradient";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
@@ -22,22 +19,18 @@ export default function ProSuccessScreenNative() {
   const plan = route.params?.plan ?? "monthly";
 
   useEffect(() => {
-    let alive = true;
-    if (!fUser) {
-      setHandle(null);
-      return;
-    }
+    if (!fUser?.uid) return;
+    let cancelled = false;
     void (async () => {
       const snap = await getDoc(doc(db, "users", fUser.uid));
-      if (!alive) return;
-      const data = snap.data() as { handle?: unknown } | undefined;
-      const raw = typeof data?.handle === "string" && data.handle.trim() ? data.handle.trim() : null;
-      setHandle(raw ?? fUser.uid);
+      if (cancelled) return;
+      const value = snap.exists() ? snap.data()?.handle : null;
+      setHandle(typeof value === "string" && value.trim() ? value.trim() : null);
     })();
     return () => {
-      alive = false;
+      cancelled = true;
     };
-  }, [fUser]);
+  }, [fUser?.uid]);
 
   const startedOn = useMemo(
     () =>
@@ -49,29 +42,30 @@ export default function ProSuccessScreenNative() {
     []
   );
 
-  const openProData = () => {
-    if (!handle) return;
-    navigation.navigate("PublicProfile", { handle });
-  };
-
   return (
     <MobilePageShell title="Pro" appBackground onClose={() => navigation.goBack()}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headingRow}>
           <View style={styles.checkCircle}>
             <Text style={styles.checkText}>✓</Text>
           </View>
-          <Text style={styles.heading}>Upgrade to Pro!</Text>
+          <Text style={styles.title}>Upgrade to Pro!</Text>
         </View>
 
         <View style={styles.card}>
-          <View style={styles.logoCard}>
-            <View style={styles.logoMark}>
-              <Text style={styles.logoMarkText}>U</Text>
-            </View>
-            <Text style={styles.logoText}>UNITERZ</Text>
+          <LinearGradient
+            colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.025)"]}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.logoPlate}>
+            <Image
+              source={require("../../../../assets/icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.brand}>UNITERZ</Text>
             <View style={styles.planRow}>
-              <View style={styles.dot} />
+              <View style={styles.planDot} />
               <Text style={styles.planText}>
                 {plan === "monthly" ? "Pro Monthly Plan" : "Pro Yearly Plan"}
               </Text>
@@ -80,7 +74,14 @@ export default function ProSuccessScreenNative() {
 
           <Text style={styles.started}>Started on {startedOn}</Text>
 
-          <Pressable disabled={!handle} onPress={openProData} style={{ opacity: handle ? 1 : 0.55 }}>
+          <Pressable
+            disabled={!handle}
+            onPress={() => {
+              if (handle) navigation.navigate("PublicProfile", { handle });
+            }}
+            accessibilityRole="button"
+            style={{ opacity: handle ? 1 : 0.55 }}
+          >
             <LinearGradient colors={["#3B82F6", "#22D3EE"]} style={styles.cta}>
               <Text style={styles.ctaLabel}>Pro データを見る</Text>
             </LinearGradient>
@@ -89,33 +90,34 @@ export default function ProSuccessScreenNative() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>プランに関する質問はサポートに問い合わせしてください。</Text>
-          <View style={styles.linkRow}>
-            <Pressable onPress={() => navigation.navigate("Terms")}>
-              <Text style={styles.link}>利用規約</Text>
+          <View style={styles.footerLinks}>
+            <Pressable onPress={() => navigation.navigate("Terms")} accessibilityRole="button">
+              <Text style={styles.footerLink}>利用規約</Text>
             </Pressable>
-            <Text style={styles.footerText}>|</Text>
-            <Pressable onPress={() => navigation.navigate("Contact")}>
-              <Text style={styles.link}>お問い合わせ</Text>
+            <Text style={styles.footerSep}>|</Text>
+            <Pressable onPress={() => navigation.navigate("Contact")} accessibilityRole="button">
+              <Text style={styles.footerLink}>お問い合わせ</Text>
             </Pressable>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </MobilePageShell>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
-    padding: spacing.lg,
-    justifyContent: "center",
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 42,
     alignItems: "center",
+    justifyContent: "center",
   },
   headingRow: {
+    marginBottom: 24,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 24,
+    gap: 10,
   },
   checkCircle: {
     width: 24,
@@ -125,16 +127,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  checkText: {
-    color: "#000",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  heading: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 20,
-    fontWeight: "900",
-  },
+  checkText: { color: "#000", fontSize: 14, fontWeight: "900" },
+  title: { color: "rgba(255,255,255,0.92)", fontSize: 20, fontWeight: "900" },
   card: {
     width: 320,
     minHeight: 320,
@@ -142,10 +136,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
     backgroundColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
     padding: 24,
     justifyContent: "space-between",
   },
-  logoCard: {
+  logoPlate: {
+    alignSelf: "center",
+    width: 220,
     height: 180,
     borderRadius: 28,
     borderWidth: 1,
@@ -155,50 +152,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
   },
-  logoMark: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    backgroundColor: "rgba(34,211,238,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoMarkText: {
-    color: colors.textPrimary,
-    fontFamily: fonts.brand,
-    fontSize: 36,
-    lineHeight: 40,
-  },
-  logoText: {
+  logo: { width: 60, height: 60 },
+  brand: {
     color: "rgba(255,255,255,0.9)",
-    fontFamily: fonts.metric,
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: 5.3,
+    fontFamily: fonts.brand,
+    fontSize: 28,
+    letterSpacing: 4,
   },
-  planRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-  },
-  planText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
-  },
+  planRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  planDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#fff" },
+  planText: { color: "rgba(255,255,255,0.82)", fontSize: 13 },
   started: {
+    marginTop: 12,
+    marginBottom: 10,
     color: "rgba(255,255,255,0.6)",
     fontSize: 12,
     textAlign: "center",
-    marginTop: 14,
-    marginBottom: 10,
   },
   cta: {
     width: "100%",
@@ -206,25 +175,10 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     alignItems: "center",
   },
-  ctaLabel: { color: colors.textPrimary, fontWeight: "700" },
-  footer: {
-    marginTop: 24,
-    alignItems: "center",
-    gap: 8,
-  },
-  footerText: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  link: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "800",
-  },
+  ctaLabel: { color: colors.textPrimary, fontWeight: "900" },
+  footer: { marginTop: 24, alignItems: "center", gap: 8 },
+  footerText: { color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center" },
+  footerLinks: { flexDirection: "row", alignItems: "center", gap: 8 },
+  footerLink: { color: "rgba(255,255,255,0.92)", fontSize: 14, fontWeight: "900" },
+  footerSep: { color: "rgba(255,255,255,0.55)", fontSize: 13 },
 });

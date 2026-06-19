@@ -1,29 +1,24 @@
-/**
- * Web `app/mobile/cancel-complete/page.tsx` 相当
- */
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { doc, getDoc } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
-import { doc, getDoc, Timestamp } from "firebase/firestore";
 import MobilePageShell from "../mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
 import type { ProfileStackParamList } from "../../../navigation/types";
 import { colors, fonts, spacing } from "../../../theme/tokens";
 
-function formatDate(raw: unknown): string {
-  const d =
-    raw instanceof Date
-      ? raw
-      : raw instanceof Timestamp
-        ? raw.toDate()
-        : raw && typeof raw === "object" && "toDate" in raw && typeof (raw as { toDate: () => Date }).toDate === "function"
-          ? (raw as { toDate: () => Date }).toDate()
-          : null;
-  if (!d || Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("ja-JP", {
+function formatDate(value: unknown) {
+  const date =
+    value instanceof Date
+      ? value
+      : value && typeof value === "object" && "toDate" in value && typeof (value as { toDate: () => Date }).toDate === "function"
+        ? (value as { toDate: () => Date }).toDate()
+        : null;
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("ja-JP", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -37,39 +32,33 @@ export default function CancelCompleteScreenNative() {
   const [proUntil, setProUntil] = useState("");
 
   useEffect(() => {
-    let alive = true;
-    if (!fUser) {
-      setHandle(null);
-      setProUntil("");
-      return;
-    }
+    if (!fUser?.uid) return;
+    let cancelled = false;
     void (async () => {
       const snap = await getDoc(doc(db, "users", fUser.uid));
-      if (!alive) return;
-      const data = snap.data() as { handle?: unknown; proUntil?: unknown } | undefined;
-      const rawHandle =
-        typeof data?.handle === "string" && data.handle.trim() ? data.handle.trim() : null;
-      setHandle(rawHandle ?? fUser.uid);
-      setProUntil(formatDate(data?.proUntil));
+      if (cancelled || !snap.exists()) return;
+      const data = snap.data();
+      const nextHandle = data.handle;
+      if (typeof nextHandle === "string" && nextHandle.trim()) {
+        setHandle(nextHandle.trim());
+      }
+      setProUntil(formatDate(data.proUntil));
     })();
     return () => {
-      alive = false;
+      cancelled = true;
     };
-  }, [fUser]);
-
-  const openProfile = () => {
-    if (!handle) return;
-    navigation.navigate("PublicProfile", { handle });
-  };
+  }, [fUser?.uid]);
 
   return (
     <MobilePageShell title="解約完了" appBackground onClose={() => navigation.goBack()}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.heading}>
-          <View style={styles.checkCircle}>
-            <Text style={styles.checkText}>✓</Text>
+          <View style={styles.headingRow}>
+            <View style={styles.checkCircle}>
+              <Text style={styles.checkText}>✓</Text>
+            </View>
+            <Text style={styles.title}>Your plan has been canceled!</Text>
           </View>
-          <Text style={styles.title}>Your plan has been canceled!</Text>
           <Text style={styles.desc}>
             Pro Planのご利用、ありがとうございました。{"\n"}
             皆さまのサポートが、Uniterzの改善につながっています。
@@ -77,19 +66,32 @@ export default function CancelCompleteScreenNative() {
         </View>
 
         <View style={styles.card}>
-          <View style={styles.logoCard}>
-            <View style={styles.logoMark}>
-              <Text style={styles.logoMarkText}>U</Text>
-            </View>
-            <Text style={styles.logoText}>UNITERZ</Text>
-            <Text style={styles.planText}>Free Plan</Text>
+          <LinearGradient
+            colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.025)"]}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.logoPlate}>
+            <Image
+              source={require("../../../../assets/icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.brand}>UNITERZ</Text>
+            <Text style={styles.freePlan}>Free Plan</Text>
           </View>
 
-          <Text style={styles.untilText}>
+          <Text style={styles.until}>
             プランは <Text style={styles.untilStrong}>{proUntil || "—"}</Text> まで利用できます
           </Text>
 
-          <Pressable disabled={!handle} onPress={openProfile} style={{ opacity: handle ? 1 : 0.55 }}>
+          <Pressable
+            disabled={!handle}
+            onPress={() => {
+              if (handle) navigation.navigate("PublicProfile", { handle });
+            }}
+            accessibilityRole="button"
+            style={{ opacity: handle ? 1 : 0.55 }}
+          >
             <LinearGradient colors={["#F59E0B", "#F97316"]} style={styles.cta}>
               <Text style={styles.ctaLabel}>Back to Profile</Text>
             </LinearGradient>
@@ -98,32 +100,31 @@ export default function CancelCompleteScreenNative() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>プランに関する質問はサポートに問い合わせしてください。</Text>
-          <View style={styles.linkRow}>
-            <Pressable onPress={() => navigation.navigate("Terms")}>
-              <Text style={styles.link}>利用規約</Text>
+          <View style={styles.footerLinks}>
+            <Pressable onPress={() => navigation.navigate("Terms")} accessibilityRole="button">
+              <Text style={styles.footerLink}>利用規約</Text>
             </Pressable>
-            <Text style={styles.footerText}>|</Text>
-            <Pressable onPress={() => navigation.navigate("Contact")}>
-              <Text style={styles.link}>お問い合わせ</Text>
+            <Text style={styles.footerSep}>|</Text>
+            <Pressable onPress={() => navigation.navigate("Contact")} accessibilityRole="button">
+              <Text style={styles.footerLink}>お問い合わせ</Text>
             </Pressable>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </MobilePageShell>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
-    padding: spacing.lg,
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 42,
     alignItems: "center",
     justifyContent: "center",
   },
-  heading: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
+  heading: { marginBottom: 24, alignItems: "center" },
+  headingRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   checkCircle: {
     width: 24,
     height: 24,
@@ -131,25 +132,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#ef4444",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
   },
-  checkText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  title: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 20,
-    fontWeight: "900",
-    textAlign: "center",
-  },
+  checkText: { color: "#fff", fontSize: 14, fontWeight: "900" },
+  title: { color: "rgba(255,255,255,0.92)", fontSize: 19, fontWeight: "900" },
   desc: {
-    color: "rgba(255,255,255,0.7)",
+    marginTop: 10,
+    color: "rgba(255,255,255,0.72)",
     lineHeight: 21,
     fontSize: 14,
     textAlign: "center",
-    marginTop: 8,
   },
   card: {
     width: 320,
@@ -158,10 +149,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
     backgroundColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
     padding: 24,
     justifyContent: "space-between",
   },
-  logoCard: {
+  logoPlate: {
+    alignSelf: "center",
+    width: 220,
     height: 180,
     borderRadius: 28,
     borderWidth: 1,
@@ -171,69 +165,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
   },
-  logoMark: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(249,115,22,0.35)",
-    backgroundColor: "rgba(249,115,22,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoMarkText: {
-    color: colors.textPrimary,
-    fontFamily: fonts.brand,
-    fontSize: 36,
-    lineHeight: 40,
-  },
-  logoText: {
+  logo: { width: 60, height: 60 },
+  brand: {
     color: "rgba(255,255,255,0.9)",
-    fontFamily: fonts.metric,
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: 5.3,
+    fontFamily: fonts.brand,
+    fontSize: 28,
+    letterSpacing: 4,
   },
-  planText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
-  },
-  untilText: {
-    color: "rgba(255,255,255,0.75)",
+  freePlan: { color: "rgba(255,255,255,0.82)", fontSize: 14 },
+  until: {
+    marginTop: 12,
+    marginBottom: 10,
+    color: "rgba(255,255,255,0.76)",
     fontSize: 12,
     textAlign: "center",
-    marginTop: 14,
-    marginBottom: 10,
   },
-  untilStrong: {
-    color: "rgba(255,255,255,0.92)",
-    fontWeight: "800",
-  },
+  untilStrong: { color: "rgba(255,255,255,0.92)", fontWeight: "900" },
   cta: {
     width: "100%",
     borderRadius: 16,
     paddingVertical: 13,
     alignItems: "center",
   },
-  ctaLabel: { color: colors.textPrimary, fontWeight: "700" },
-  footer: {
-    marginTop: 24,
-    alignItems: "center",
-    gap: 8,
-  },
-  footerText: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  link: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: "800",
-  },
+  ctaLabel: { color: colors.textPrimary, fontWeight: "900" },
+  footer: { marginTop: 24, alignItems: "center", gap: 8 },
+  footerText: { color: "rgba(255,255,255,0.6)", fontSize: 12, textAlign: "center" },
+  footerLinks: { flexDirection: "row", alignItems: "center", gap: 8 },
+  footerLink: { color: "rgba(255,255,255,0.92)", fontSize: 14, fontWeight: "900" },
+  footerSep: { color: "rgba(255,255,255,0.55)", fontSize: 13 },
 });

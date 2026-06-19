@@ -833,9 +833,21 @@ export default function ResultDetailScreen({
       <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
         <ResultDetailOverlayBackdrop />
         <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.overlayDim]} />
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(34,211,238,0.08)", "rgba(34,211,238,0)", "rgba(251,191,36,0.06)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.overlayScanGlow}
+        />
+        <View pointerEvents="none" style={styles.overlayScanLine} />
       </View>
       <SafeAreaView style={styles.overlaySafe} pointerEvents="box-none">
         <View style={styles.topBar}>
+          <View style={styles.topHud}>
+            <View style={styles.topHudRule} />
+            <Text style={styles.topHudText}>RESULT DETAIL</Text>
+          </View>
           <Pressable
             onPress={onClose}
             hitSlop={14}
@@ -936,16 +948,45 @@ const styles = StyleSheet.create({
   overlayDim: {
     backgroundColor: "rgba(5,8,14,0.42)",
   },
+  overlayScanGlow: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.95,
+  },
+  overlayScanLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "18%",
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(34,211,238,0.16)",
+  },
   overlaySafe: {
     flex: 1,
     backgroundColor: "transparent",
   },
   topBar: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 10,
     paddingBottom: 8,
+  },
+  topHud: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 8,
+  },
+  topHudRule: {
+    width: 24,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(34,211,238,0.38)",
+  },
+  topHudText: {
+    color: "rgba(186,230,253,0.78)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2.2,
   },
   closeIconBtn: {
     paddingVertical: 4,

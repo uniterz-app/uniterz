@@ -37,8 +37,8 @@
 | result-home | `app/mobile/result/page.tsx` | `ResultHomeScreen.tsx` | done | done |
 | result-detail | `app/mobile/result/[postId]/page.tsx` | `ResultDetailScreen.tsx` | done | done |
 | rankings | `app/mobile/rankings/page.tsx` | `RankingsHomeScreen.tsx` | done | done |
-| leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | partial |
-| leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `CommunityDetailScreenNative.tsx` | done | partial |
+| leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | done |
+| leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `CommunityDetailScreenNative.tsx` | done | done |
 | profile-settings | `app/mobile/settings/profile/page.tsx` | `ProfileHomeScreen.tsx` | done | done |
 | profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | partial |
 | profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | done |
@@ -56,7 +56,7 @@
 | playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | done |
 | playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | done |
 | bracket-market | `app/mobile/bracket-market/page.tsx` | `BracketMarketScreenNative.tsx` | done | partial |
-| team-detail | `app/mobile/teams/[teamId]/page.tsx` | `TeamDetailScreenNative.tsx` | done | partial |
+| team-detail | `app/mobile/teams/[teamId]/page.tsx` | `TeamDetailScreenNative.tsx` | done | done |
 | wc-formation | `WcFormationPanel.tsx` | `WcFormationPanelNative.tsx` | done | done |
 | wc-team-profile | `WcTeamProfilePanel.tsx` | `WcTeamProfilePanelNative.tsx` | done | done |
 | wc-standing | `WcStandingPanel.tsx` | `WcStandingPanelNative.tsx` | done | done |
