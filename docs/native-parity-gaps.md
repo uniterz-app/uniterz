@@ -24,7 +24,7 @@
 
 ## UI磨き込みキュー（Phase B — 機能キュー完了後）
 
-- [ ] `ui-games-home` | `GamesHomeScreen` vs `GamesPage` — 月ヘッダー、日付ストリップ、カード余白、LIVE ピル
+- [x] `ui-games-home` | `GamesHomeScreen` vs `GamesPage` — 月ヘッダー、日付ストリップ、カード余白、LIVE ピル
 - [ ] `ui-predict-modal` | `PredictModal` vs `PredictionFormV2` — HUD タブ、スコア入力、オーバーレイ、motion
 - [ ] `ui-match-card` | `MatchCard*` 系 vs Web — market bar、entry scan、cyber grid、CTA
 - [ ] `ui-result-home` | `ResultHomeScreen` vs `ResultCard` — glass shell、バッジ、日付パイプ
