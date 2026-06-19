@@ -94,6 +94,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.1)",
     backgroundColor: "#0d1015",
     paddingHorizontal: 10,
+    shadowColor: "rgba(255,255,255,0.18)",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 1,
+    elevation: 2,
   },
   grid: {
     flex: 1,

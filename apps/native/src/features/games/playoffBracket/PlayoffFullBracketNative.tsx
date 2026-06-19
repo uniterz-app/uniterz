@@ -323,6 +323,9 @@ const styles = StyleSheet.create({
     fontSize: 30,
     letterSpacing: 2.4,
     color: "#f8fbff",
+    textShadowColor: "rgba(95,124,255,0.45)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
     includeFontPadding: false,
   },
 });

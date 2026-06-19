@@ -124,7 +124,11 @@ export default function BracketCardNative({
         <Text
           style={[
             styles.wins,
-            { fontSize: 30 * SCALE, color: win4 ? "#ffd84d" : "#f8fbff" },
+            {
+              fontSize: 30 * SCALE,
+              color: win4 ? "#ffd84d" : "#f8fbff",
+              textShadowColor: win4 ? "rgba(255, 216, 77, 0.42)" : primary,
+            },
           ]}
         >
           {wins ?? ""}
@@ -139,6 +143,11 @@ const bebas = Platform.select({
   android: "BebasNeue_400Regular",
   default: "sans-serif",
 });
+const alfa = Platform.select({
+  ios: "AlfaSlabOne_400Regular",
+  android: "AlfaSlabOne_400Regular",
+  default: "AlfaSlabOne_400Regular",
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -146,6 +155,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 5,
   },
   inner: {
     flexDirection: "row",
@@ -165,8 +176,10 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   wins: {
-    fontFamily: bebas,
+    fontFamily: alfa,
     includeFontPadding: false,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
   hitCheck: {
     position: "absolute",
