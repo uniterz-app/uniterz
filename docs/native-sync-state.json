@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "functional",
-  "lastCompletedId": "wc-team-profile-rich",
+  "lastCompletedId": "wc-scoring-rules",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 2,
+  "totalCompleted": 3,
   "uiPolishCompleted": 0,
   "blockedItems": [],
-  "notes": "wc-team-profile-rich 完了。次は wc-scoring-rules。"
+  "notes": "wc-scoring-rules 完了。次は preferred-league-init。"
 }

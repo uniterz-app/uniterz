@@ -61,7 +61,7 @@
 | wc-standing | `WcStandingPanel.tsx` | `WcStandingPanelNative.tsx` | done | partial |
 | wc-preview | `WcMatchPreviewPanel.tsx` | `WcMatchPreviewPanelNative.tsx` | done | partial |
 | wc-goal-scorer | `WcGoalScorerPicker.tsx` | `WcGoalScorerPickerNative.tsx` | done | partial |
-| wc-scoring-rules | `predictionScoringRules.tsx` | **なし** | gap | gap |
+| wc-scoring-rules | `predictionScoringRules.tsx` | `WcScoringRulesNative.tsx` | done | partial |
 | legal-terms | `app/mobile/terms/page.tsx` | `LegalScrollScreenNative` | done | partial |
 | legal-privacy | `app/mobile/privacy/page.tsx` | 同上 | done | partial |
 | legal-electronic | `app/mobile/electronic-notice/page.tsx` | `ElectronicNoticeScreenNative.tsx` | done | partial |
@@ -85,4 +85,4 @@
 | 順位表 | `WcStandingPanel.tsx` | `WcStandingPanelNative.tsx` | done | partial |
 | プレビュー | `WcMatchPreviewPanel.tsx` | `WcMatchPreviewPanelNative.tsx` | done | partial |
 | 得点者 | `WcGoalScorerPicker.tsx` | `WcGoalScorerPickerNative.tsx` | done | partial |
-| 得点ルール | `predictionScoringRules.tsx` | なし | gap | gap |
+| 得点ルール | `predictionScoringRules.tsx` | `WcScoringRulesNative.tsx` | done | partial |

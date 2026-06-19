@@ -40,6 +40,7 @@ import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import WcGoalScorerPickerNative from "./wc/WcGoalScorerPickerNative";
 import WcMatchPreviewPanelNative from "./wc/WcMatchPreviewPanelNative";
+import WcScoringRulesNative from "./wc/WcScoringRulesNative";
 import WcStandingPanelNative from "./wc/WcStandingPanelNative";
 import WcTeamProfilePanelNative from "./wc/WcTeamProfilePanelNative";
 import type { WcGoalScorerPick } from "../../../../../lib/wc/goalScorer";
@@ -1324,6 +1325,9 @@ export default function PredictModal({
                               language={language}
                               t={t}
                             />
+                          ) : null}
+                          {isWcLeague ? (
+                            <WcScoringRulesNative language={language} />
                           ) : null}
                           {isSoccerPredict && !isWcLeague ? (
                             <Text style={s.soccerHint}>{t.drawAvailable}</Text>
