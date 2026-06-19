@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "ui-polish",
-  "lastCompletedId": "ui-playoff-bracket",
+  "lastCompletedId": "ui-glowing-rim",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 14,
-  "uiPolishCompleted": 8,
+  "totalCompleted": 15,
+  "uiPolishCompleted": 9,
   "blockedItems": [],
-  "notes": "ui-playoff-bracket 完了。次は ui-glowing-rim。"
+  "notes": "ui-glowing-rim 完了。次は ui-auth-screens。"
 }

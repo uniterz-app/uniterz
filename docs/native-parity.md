@@ -73,6 +73,7 @@
 | legal-law | `app/mobile/law/page.tsx` | `CommercialLawScreenNative.tsx` | done | partial |
 | legal-contact | `app/mobile/contact/page.tsx` | `ContactScreenNative.tsx` | done | partial |
 | feature-request | `app/mobile/feature-request/page.tsx` | `FeatureRequestScreenNative.tsx` | done | partial |
+| glowing-rim-frame | `GlowingRimFrame` 相当 | `GlowingRimFrame.tsx` | done | done |
 | lp | `app/mobile/lp/page.tsx` | skip | skip | skip |
 | lp-v2 | `app/mobile/lp-v2/page.tsx` | skip | skip | skip |
 | dev-preview | `app/mobile/bg-halftone-preview/page.tsx` | skip | skip | skip |
