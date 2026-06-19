@@ -22,26 +22,34 @@ function getPlayerName(teamId: string, playerId: string): string {
   return squad.find((p) => p.id === playerId)?.name ?? playerId;
 }
 
-function formatWcPlayerShortName(fullName: string): string {
-  const trimmed = fullName.trim();
-  if (!trimmed) return "";
-  const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0]!;
-  const last = parts[parts.length - 1]!;
-  const initial = parts[0]![0]?.toUpperCase() ?? "";
-  if (!initial) return last;
-  return `${initial}.${last}`;
+function formatWcGoalMinuteDisplay(minute: number | null | undefined): string {
+  if (minute == null || !Number.isFinite(Number(minute))) return "";
+  const m = Math.floor(Number(minute));
+  if (m > 90) return `90+${m - 90}'`;
+  return `${m}'`;
 }
 
-function formatLabel(
-  fullName: string,
-  minute?: number | null,
+function formatGroupedLine(
+  playerName: string,
+  minutes: readonly number[],
   ownGoal?: boolean
 ): string {
-  const short = formatWcPlayerShortName(fullName);
-  const withMin =
-    minute != null && Number.isFinite(minute) ? `${short} ${minute}'` : short;
-  return ownGoal ? `${withMin} OG` : withMin;
+  const mins = minutes
+    .map((m) => formatWcGoalMinuteDisplay(m))
+    .filter(Boolean)
+    .join(", ");
+  const core = mins ? `${playerName} ${mins}` : playerName.trim();
+  return ownGoal ? `${core} (OG)` : core;
+}
+
+function sideForTeamId(
+  teamId: string,
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined
+): "home" | "away" | null {
+  if (homeTeamId && teamId === homeTeamId) return "home";
+  if (awayTeamId && teamId === awayTeamId) return "away";
+  return null;
 }
 
 function sortRows(rows: PostMatchGoalScorer[]): PostMatchGoalScorer[] {
@@ -63,19 +71,44 @@ export function buildPostMatchGoalScorersFromGame(
     homeTeamId,
     awayTeamId,
   });
-  const rows: PostMatchGoalScorer[] = [];
+
+  type Acc = {
+    side: "home" | "away";
+    name: string;
+    minutes: number[];
+    ownGoal: boolean;
+  };
+  const map = new Map<string, Acc>();
 
   for (const g of list) {
-    let side: "home" | "away" | null = null;
-    if (homeTeamId && g.teamId === homeTeamId) side = "home";
-    else if (awayTeamId && g.teamId === awayTeamId) side = "away";
+    const side = sideForTeamId(g.teamId, homeTeamId, awayTeamId);
     if (!side) continue;
 
     const fullName = getPlayerName(g.teamId, g.playerId);
-    rows.push({
+    const key = `${side}\0${g.playerId}\0${g.ownGoal ? 1 : 0}`;
+    const prev = map.get(key);
+    if (prev) {
+      if (g.minute != null && Number.isFinite(g.minute)) {
+        prev.minutes.push(g.minute);
+      }
+      continue;
+    }
+    map.set(key, {
       side,
-      minute: g.minute ?? null,
-      label: formatLabel(fullName, g.minute, g.ownGoal),
+      name: fullName,
+      minutes:
+        g.minute != null && Number.isFinite(g.minute) ? [g.minute] : [],
+      ownGoal: Boolean(g.ownGoal),
+    });
+  }
+
+  const rows: PostMatchGoalScorer[] = [];
+  for (const g of map.values()) {
+    g.minutes.sort((a, b) => a - b);
+    rows.push({
+      side: g.side,
+      minute: g.minutes[0] ?? null,
+      label: formatGroupedLine(g.name, g.minutes, g.ownGoal),
       ...(g.ownGoal ? { ownGoal: true } : {}),
     });
   }

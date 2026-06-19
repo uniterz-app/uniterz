@@ -1,0 +1,35 @@
+name: Native Typecheck
+
+on:
+  pull_request:
+    paths:
+      - "apps/native/**"
+      - "packages/**"
+      - "lib/**"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "apps/native/**"
+      - "packages/**"
+      - "lib/**"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run native:install
+
+      - run: npm run native:typecheck

@@ -24,6 +24,7 @@ import CommunityDetailScreenNative from "../features/leaderboards/CommunityDetai
 import MobileCommunityGuidelinesScreen from "../features/profile/mobileScreens/MobileCommunityGuidelinesScreen";
 import ProfileSettingsScreenNative from "../features/profile/screens/ProfileSettingsScreenNative";
 import ProfilePasswordScreenNative from "../features/profile/screens/ProfilePasswordScreenNative";
+import PublicProfileScreenNative from "../features/profile/screens/PublicProfileScreenNative";
 import AnnouncementDetailScreenNative from "../features/profile/screens/AnnouncementDetailScreenNative";
 import ProSuccessScreenNative from "../features/profile/screens/ProSuccessScreenNative";
 import PlanChangeScreenNative from "../features/profile/screens/PlanChangeScreenNative";
@@ -33,6 +34,8 @@ import CancelCompleteScreenNative from "../features/profile/screens/CancelComple
 import HelpScreenNative from "../features/legal/HelpScreenNative";
 import PrivacyScreenNative from "../features/legal/PrivacyScreenNative";
 import TermsScreenNative from "../features/legal/TermsScreenNative";
+import RefundPolicyScreenNative from "../features/legal/RefundPolicyScreenNative";
+import CommercialLawScreenNative from "../features/legal/CommercialLawScreenNative";
 import ElectronicNoticeScreenNative from "../features/legal/ElectronicNoticeScreenNative";
 import ContactScreenNative from "../features/legal/ContactScreenNative";
 import FeatureRequestScreenNative from "../features/legal/FeatureRequestScreenNative";
@@ -146,6 +149,7 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="ProfileHome" component={ProfileHomeRoute} />
       <ProfileStack.Screen name="ProfileSettings" component={ProfileSettingsScreenNative} />
       <ProfileStack.Screen name="ProfilePassword" component={ProfilePasswordScreenNative} />
+      <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreenNative} />
       <ProfileStack.Screen name="Badges" component={BadgesScreenWrapper} />
       <ProfileStack.Screen name="Announcements" component={AnnouncementsScreenWrapper} />
       <ProfileStack.Screen name="AnnouncementDetail" component={AnnouncementDetailScreenNative} />
@@ -159,6 +163,8 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="Help" component={HelpScreenNative} />
       <ProfileStack.Screen name="Privacy" component={PrivacyScreenNative} />
       <ProfileStack.Screen name="Terms" component={TermsScreenNative} />
+      <ProfileStack.Screen name="RefundPolicy" component={RefundPolicyScreenNative} />
+      <ProfileStack.Screen name="CommercialLaw" component={CommercialLawScreenNative} />
       <ProfileStack.Screen name="ElectronicNotice" component={ElectronicNoticeScreenNative} />
       <ProfileStack.Screen name="Contact" component={ContactScreenNative} />
       <ProfileStack.Screen name="FeatureRequest" component={FeatureRequestScreenNative} />

@@ -1,0 +1,11 @@
+{
+  "parityComplete": false,
+  "phase": "ui-polish",
+  "lastCompletedId": "ui-rankings",
+  "lastSessionAt": "2026-06-19",
+  "inProgressId": null,
+  "totalCompleted": 16,
+  "uiPolishCompleted": 5,
+  "blockedItems": [],
+  "notes": "ui-rankings 完了。次は ui-profile。"
+}

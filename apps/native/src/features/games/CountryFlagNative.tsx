@@ -1,6 +1,6 @@
 import { Image, StyleSheet, View } from "react-native";
 import { teamIdToCountryName } from "../../../../../lib/wc/wcCountry";
-import { wcFlagImageUri } from "./wcFlagImageUri";
+import { flagImageUriFromIso2, wcFlagImageUri } from "./wcFlagImageUri";
 
 export type CountryFlagVariant =
   | "card"
@@ -23,17 +23,22 @@ const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }
 
 type CountryFlagNativeProps = {
   teamId?: string | null;
+  iso2?: string | null;
   variant?: CountryFlagVariant;
+  accessibilityLabel?: string;
 };
 
 /** WC 試合カード・予想モーダル用の国旗（Web `CountryFlag` 相当） */
 export default function CountryFlagNative({
   teamId,
+  iso2,
   variant = "card",
+  accessibilityLabel,
 }: CountryFlagNativeProps) {
   const { width, height } = VARIANT_SIZE[variant];
-  const uri = wcFlagImageUri(teamId);
-  const countryName = teamIdToCountryName(teamId, "en") ?? "Country flag";
+  const uri = iso2 ? flagImageUriFromIso2(iso2) : wcFlagImageUri(teamId);
+  const countryName =
+    accessibilityLabel ?? teamIdToCountryName(teamId, "en") ?? "Country flag";
 
   if (!uri) {
     return (

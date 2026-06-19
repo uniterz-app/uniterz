@@ -13,6 +13,13 @@ type Props = {
   variant?: CyberRankNumVariant;
 };
 
+type NativeRankTextStyle = {
+  fontSize: number;
+  color: string;
+  textShadowColor?: string;
+  textShadowRadius?: number;
+};
+
 /** Web `CyberRankNumber` のネイティブ版 */
 export function CyberRankNumberNative({
   rank,
@@ -22,7 +29,7 @@ export function CyberRankNumberNative({
   variant = "list",
 }: Props) {
   const label = displayValue ?? String(rank).padStart(2, "0");
-  const webStyle = muted
+  const webStyle: NativeRankTextStyle = muted
     ? {
         fontSize: variant === "tower" ? (compact ? 38 : 48) : compact ? 26 : 34,
         color: "rgba(255,255,255,0.42)",
@@ -54,7 +61,11 @@ export function CyberRankNumberNative({
   );
 }
 
-function nativeRankStyleFromWeb(rank: number, compact: boolean, variant: CyberRankNumVariant) {
+function nativeRankStyleFromWeb(
+  rank: number,
+  compact: boolean,
+  variant: CyberRankNumVariant
+): NativeRankTextStyle {
   const web = cyberRankNumStyle(rank, compact, variant);
   const fontSize = parseFloat(String(web.fontSize).replace("rem", "")) * 16;
   const glowMatch = String(web.filter ?? "").match(/rgba?\([^)]+\)/g);

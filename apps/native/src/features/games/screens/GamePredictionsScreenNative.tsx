@@ -9,26 +9,35 @@ import type { GamesStackParamList } from "../../../navigation/types";
 import { colors, radius, spacing } from "../../../theme/tokens";
 import { useNativeGameDocument } from "../useNativeGameDocument";
 import GameMarketDistributionNative from "../GameMarketDistributionNative";
-import { getGamesTexts } from "../gamesI18n";
+import { getGamesTexts, toNativeGamesLanguage } from "../gamesI18n";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
-import { resolveGameTeamName } from "../../../shared/gameRow";
+import {
+  resolveGameScore,
+  resolveGameStatus,
+  resolveGameTeamName,
+} from "@uniterz/shared";
 import { BlocksPulseLoader } from "../../../components/BlocksPulseLoader";
 import { resolveTeamJerseyPalette } from "../teamColors";
+import { MatchCardFineInnerPlate } from "../MatchCardFineInterior";
+import MatchTeamMarkNative from "../MatchTeamMarkNative";
+import { useNativeLanguage } from "../../../i18n/NativeLanguageProvider";
 
 function isSoccerLeague(leagueRaw: unknown): boolean {
   const league = String(leagueRaw ?? "").toLowerCase();
   return league === "pl" || league === "j1";
 }
 
+/** Web `app/mobile/games/[id]/predictions/page.tsx` 相当 */
 export default function GamePredictionsScreenNative() {
   const route = useRoute<RouteProp<GamesStackParamList, "GamePredictions">>();
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { gameId } = route.params;
   const { fUser } = useFirebaseUser();
-  const { game, loading, notFound } = useNativeGameDocument(gameId);
-  const [language] = useState<"ja" | "en">("ja");
+  const { language: appLanguage } = useNativeLanguage();
+  const language = toNativeGamesLanguage(appLanguage);
   const t = getGamesTexts(language);
+  const { game, loading, notFound } = useNativeGameDocument(gameId);
   const [hasMyPost, setHasMyPost] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -63,11 +72,29 @@ export default function GamePredictionsScreenNative() {
   const awayColor = game
     ? resolveTeamJerseyPalette(game.league, game.away, "#ff6b8a").primary
     : "#ff6b8a";
+  const score = game ? resolveGameScore(game) : null;
+  const status = game ? resolveGameStatus(game) : "scheduled";
 
   const title = useMemo(() => {
-    if (!game) return "Predictions";
-    return `${homeName} vs ${awayName}`;
-  }, [game, homeName, awayName]);
+    if (!game) return language === "ja" ? "コミュニティ予想" : "Community picks";
+    return `${awayName} vs ${homeName}`;
+  }, [game, homeName, awayName, language]);
+
+  const statusLabel =
+    status === "final"
+      ? language === "ja"
+        ? "終了"
+        : "Final"
+      : status === "live"
+      ? "LIVE"
+      : language === "ja"
+      ? "予定"
+      : "Scheduled";
+
+  const centerScore =
+    score && (score.home != null || score.away != null)
+      ? `${score.away ?? "-"} - ${score.home ?? "-"}`
+      : "vs";
 
   return (
     <MobilePageShell title={title} onClose={() => navigation.goBack()}>
@@ -76,14 +103,43 @@ export default function GamePredictionsScreenNative() {
           <BlocksPulseLoader />
         </View>
       ) : notFound || !game ? (
-        <Text style={styles.muted}>Game not found</Text>
+        <Text style={styles.muted}>
+          {language === "ja" ? "試合が見つかりません" : "Game not found"}
+        </Text>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.matchCard}>
-            <Text style={styles.matchHome}>{homeName}</Text>
-            <Text style={styles.matchVs}>vs</Text>
-            <Text style={styles.matchAway}>{awayName}</Text>
-          </View>
+          <MatchCardFineInnerPlate borderRadius={radius.card} contentStyle={styles.matchCard}>
+            <View style={styles.matchRow}>
+              <View style={styles.teamCol}>
+                <Text style={styles.sideLabel}>AWAY</Text>
+                <MatchTeamMarkNative
+                  leagueRaw={game.league}
+                  side={game.away}
+                  palette={resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff")}
+                  jerseySize={44}
+                />
+                <Text style={styles.teamName} numberOfLines={2}>
+                  {awayName}
+                </Text>
+              </View>
+              <View style={styles.centerCol}>
+                <Text style={styles.statusPill}>{statusLabel}</Text>
+                <Text style={styles.scoreText}>{centerScore}</Text>
+              </View>
+              <View style={styles.teamCol}>
+                <Text style={styles.sideLabel}>HOME</Text>
+                <MatchTeamMarkNative
+                  leagueRaw={game.league}
+                  side={game.home}
+                  palette={resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a")}
+                  jerseySize={44}
+                />
+                <Text style={styles.teamName} numberOfLines={2}>
+                  {homeName}
+                </Text>
+              </View>
+            </View>
+          </MatchCardFineInnerPlate>
 
           <GameMarketDistributionNative
             gameId={gameId}
@@ -109,9 +165,7 @@ export default function GamePredictionsScreenNative() {
               style={styles.predictBtnSecondary}
               onPress={() => navigation.navigate("GamePredict", { gameId })}
             >
-              <Text style={styles.predictBtnSecondaryText}>
-                {language === "ja" ? "予想を編集" : "Edit prediction"}
-              </Text>
+              <Text style={styles.predictBtnSecondaryText}>{t.editPrediction}</Text>
             </Pressable>
           ) : null}
         </ScrollView>
@@ -124,18 +178,38 @@ const styles = StyleSheet.create({
   loading: { paddingVertical: 32, alignItems: "center" },
   content: { padding: spacing.md, gap: 16, paddingBottom: 32 },
   muted: { color: colors.textSecondary, textAlign: "center", marginTop: 32 },
-  matchCard: {
-    padding: 16,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(5,8,20,0.45)",
+  matchCard: { paddingVertical: 4 },
+  matchRow: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 8,
   },
-  matchHome: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "center" },
-  matchVs: { color: colors.textMuted, fontSize: 12 },
-  matchAway: { color: colors.textPrimary, fontSize: 16, fontWeight: "700", textAlign: "center" },
+  teamCol: { flex: 1, alignItems: "center", gap: 6 },
+  centerCol: { width: 88, alignItems: "center", gap: 6 },
+  sideLabel: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  teamName: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  statusPill: {
+    color: "rgba(103,232,249,0.95)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  scoreText: {
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+  },
   predictBtn: {
     alignSelf: "center",
     backgroundColor: "#facc15",

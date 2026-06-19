@@ -46,16 +46,21 @@ export function useTeamRecordMap(
           snap.forEach((docSnap) => {
             const d = docSnap.data() as Record<string, unknown>;
             const isNbaTeam = String(d.league ?? "") === "nba";
-            const wl = isNbaTeam
-              ? nbaRegularSeasonWinsLosses(d as Parameters<typeof nbaRegularSeasonWinsLosses>[0])
-              : footballWinsLossesDraws(d);
             const rank = typeof d.rank === "number" ? d.rank : undefined;
-            merged[docSnap.id] = {
-              wins: wl.wins,
-              losses: wl.losses,
-              ...(!isNbaTeam ? { draws: wl.draws } : {}),
-              rank,
-            };
+            if (isNbaTeam) {
+              const wl = nbaRegularSeasonWinsLosses(
+                d as Parameters<typeof nbaRegularSeasonWinsLosses>[0]
+              );
+              merged[docSnap.id] = { wins: wl.wins, losses: wl.losses, rank };
+            } else {
+              const wl = footballWinsLossesDraws(d);
+              merged[docSnap.id] = {
+                wins: wl.wins,
+                losses: wl.losses,
+                draws: wl.draws,
+                rank,
+              };
+            }
           });
         }
         if (alive) setMap(merged);

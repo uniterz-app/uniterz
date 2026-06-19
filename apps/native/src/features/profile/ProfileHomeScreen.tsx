@@ -1140,6 +1140,8 @@ export default function ProfileHomeScreen({
         else if (page === "guidelines") navigation.navigate("CommunityGuidelines");
         else if (page === "help") navigation.navigate("Help");
         else if (page === "terms") navigation.navigate("Terms");
+        else if (page === "refundPolicy") navigation.navigate("RefundPolicy");
+        else if (page === "commercialLaw") navigation.navigate("CommercialLaw");
         else if (page === "contact") navigation.navigate("Contact");
         else if (page === "privacy") navigation.navigate("Privacy");
         else if (page === "password") navigation.navigate("ProfilePassword");

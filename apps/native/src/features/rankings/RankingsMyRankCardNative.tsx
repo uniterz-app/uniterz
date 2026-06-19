@@ -216,7 +216,7 @@ export function MyRankCardNative({
                   {metricValueDisplay}
                 </Text>
                 {selectedMini?.dayDelta ? (
-                  <Text style={[styles.myRankHudDelta, { color: metricAccent.primary }]}>
+                  <Text style={[styles.myRankHudDelta, { color: metricAccent.label }]}>
                     {selectedMini.dayDelta}
                   </Text>
                 ) : null}

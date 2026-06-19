@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors } from "./src/theme/tokens";
 import { FirebaseUserProvider } from "./src/auth/FirebaseUserProvider";
+import { NativeLanguageProvider } from "./src/i18n/NativeLanguageProvider";
 import RootNavigator from "./src/navigation/RootNavigator";
 import AppShellNative from "./src/components/AppShellNative";
 import { NATIVE_PAGE_SURFACE_COLOR } from "./src/features/background/nativeBackgroundPalette";
@@ -31,6 +32,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: NATIVE_PAGE_SURFACE_COLOR }}>
       <SafeAreaProvider style={{ flex: 1, backgroundColor: "transparent" }}>
         <FirebaseUserProvider>
+          <NativeLanguageProvider>
           <AppShellNative>
             <NavigationContainer
               theme={{
@@ -55,6 +57,7 @@ export default function App() {
               <StatusBar style="light" />
             </NavigationContainer>
           </AppShellNative>
+          </NativeLanguageProvider>
         </FirebaseUserProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

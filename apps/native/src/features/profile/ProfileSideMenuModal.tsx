@@ -53,6 +53,8 @@ type Props = {
     | "guidelines"
     | "help"
     | "terms"
+    | "refundPolicy"
+    | "commercialLaw"
     | "contact"
     | "privacy"
     | "password"
@@ -131,6 +133,8 @@ export default function ProfileSideMenuModal({
         help: "ヘルプ",
         guidelines: "ガイドライン",
         terms: "利用規約",
+        refundPolicy: "返金ポリシー",
+        commercialLaw: "特商法表記",
         contact: "お問い合わせ",
         privacy: "プライバシーポリシー",
         password: "パスワード変更",
@@ -157,6 +161,8 @@ export default function ProfileSideMenuModal({
         help: "Help",
         guidelines: "Community Guidelines",
         terms: "Terms of Service",
+        refundPolicy: "Refund Policy",
+        commercialLaw: "Legal Disclosure",
         contact: "Contact",
         privacy: "Privacy Policy",
         password: "Change Password",
@@ -190,6 +196,8 @@ export default function ProfileSideMenuModal({
       | "guidelines"
       | "help"
       | "terms"
+      | "refundPolicy"
+      | "commercialLaw"
       | "contact"
       | "privacy"
       | "password"
@@ -339,6 +347,18 @@ export default function ProfileSideMenuModal({
                   label={labels.terms}
                   dense
                   onPress={() => openUserPage("terms")}
+                />
+                <SideMenuRow
+                  icon="cash-refund"
+                  label={labels.refundPolicy}
+                  dense
+                  onPress={() => openUserPage("refundPolicy")}
+                />
+                <SideMenuRow
+                  icon="file-certificate-outline"
+                  label={labels.commercialLaw}
+                  dense
+                  onPress={() => openUserPage("commercialLaw")}
                 />
                 <SideMenuRow
                   icon="shield-lock-outline"

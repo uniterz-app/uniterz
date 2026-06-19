@@ -36,12 +36,15 @@ async function parseJsonResponse(res: Response): Promise<Record<string, unknown>
   }
 }
 
+import type { WcGoalScorerPick } from "../../../../../lib/wc/goalScorer";
+
 /** Web `POST /api/posts_v2` と同一ペイロード */
 export async function createPredictionPostApi(input: {
   gameId: string;
   winner: "home" | "away" | "draw";
   scoreHome: number;
   scoreAway: number;
+  goalScorer?: WcGoalScorerPick | null;
 }): Promise<string> {
   const base = getUniterzApiBaseUrl();
   if (!base) {
@@ -67,6 +70,7 @@ export async function createPredictionPostApi(input: {
       prediction: {
         winner: input.winner,
         score: { home: input.scoreHome, away: input.scoreAway },
+        ...(input.goalScorer ? { goalScorer: input.goalScorer } : {}),
       },
       comment: "",
     }),
@@ -101,6 +105,7 @@ export async function updatePredictionPostApi(
     winner: "home" | "away" | "draw";
     scoreHome: number;
     scoreAway: number;
+    goalScorer?: WcGoalScorerPick | null;
   }
 ): Promise<void> {
   const base = getUniterzApiBaseUrl();
@@ -126,6 +131,7 @@ export async function updatePredictionPostApi(
       prediction: {
         winner: input.winner,
         score: { home: input.scoreHome, away: input.scoreAway },
+        ...(input.goalScorer !== undefined ? { goalScorer: input.goalScorer } : {}),
       },
     }),
   });

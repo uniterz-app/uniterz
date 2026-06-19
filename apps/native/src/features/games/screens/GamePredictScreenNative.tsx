@@ -18,7 +18,7 @@ import { useNativeGameDocument } from "../useNativeGameDocument";
 import { getGamesTexts } from "../gamesI18n";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { db } from "../../../lib/firebase";
-import { resolveGameStatus, resolveGameTeamName } from "../../../shared/gameRow";
+import { resolveGameStatus, resolveGameTeamName } from "@uniterz/shared";
 import {
   createPredictionPostApi,
   PredictionApiError,

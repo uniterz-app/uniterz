@@ -36,6 +36,15 @@ import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import WcGoalScorerResultRowNative from "../results/WcGoalScorerResultRowNative";
 import ResultOutcomeBadgesNative from "../results/ResultOutcomeBadgesNative";
 import ResultStatRatingBarNative from "../results/ResultStatRatingBarNative";
+import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
+import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
+import WcGoalScorerPickerNative from "./wc/WcGoalScorerPickerNative";
+import WcMatchPreviewPanelNative from "./wc/WcMatchPreviewPanelNative";
+import WcScoringRulesNative from "./wc/WcScoringRulesNative";
+import WcStandingPanelNative from "./wc/WcStandingPanelNative";
+import WcTeamProfilePanelNative from "./wc/WcTeamProfilePanelNative";
+import type { WcGoalScorerPick } from "../../../../../lib/wc/goalScorer";
+import { hasWcMatchPreview } from "../../../../../lib/wc/matchPreviews";
 import type { PredictModalMergedFinalPreview } from "./buildPredictModalMergedFinal";
 import {
   MODAL_PREVIEW_GRID_LAYER_OPACITY,
@@ -220,6 +229,7 @@ function PredictMatchPreview({
   scheduleMeta,
   wcGoalScorer,
   isWcLeague = false,
+  overlayCenterMode = false,
   onEditPrediction,
   showEditButton = false,
 }: {
@@ -236,12 +246,22 @@ function PredictMatchPreview({
   scheduleMeta?: PredictModalScheduleMeta | null;
   wcGoalScorer?: PredictModalWcGoalScorer | null;
   isWcLeague?: boolean;
+  /** Web オーバーレイ：未開始試合の中央を VS にする */
+  overlayCenterMode?: boolean;
   onEditPrediction?: () => void;
   showEditButton?: boolean;
 }) {
   const { centerBlock, seriesPair } = data;
   const homeC = data.homePalette.primary;
   const awayC = data.awayPalette.primary;
+  const homeTeamId = rawTeamIdFromGameSide(data.homeSide);
+  const awayTeamId = rawTeamIdFromGameSide(data.awaySide);
+  const showOverlayVs =
+    overlayCenterMode &&
+    isWcLeague &&
+    !mergedFinal &&
+    !mergedPrediction &&
+    centerBlock.variant === "time";
   const goalScorerInfo =
     mergedFinal?.wcGoalScorer ??
     (wcGoalScorer ? { ...wcGoalScorer, hit: null as boolean | null } : null);
@@ -340,13 +360,15 @@ function PredictMatchPreview({
               <Text style={s.matchPreviewSideTag}>HOME</Text>
             ) : null}
             <View style={s.matchPreviewJersey}>
-              <MatchTeamMarkNative
-                leagueRaw={data.leagueRaw}
-                side={data.homeSide}
-                palette={data.homePalette}
-                jerseySize={48}
-                flagVariant="preview"
-              />
+              <WcTeamFlagWithMetaNative teamId={isWcLeague ? homeTeamId : null}>
+                <MatchTeamMarkNative
+                  leagueRaw={data.leagueRaw}
+                  side={data.homeSide}
+                  palette={data.homePalette}
+                  jerseySize={48}
+                  flagVariant="preview"
+                />
+              </WcTeamFlagWithMetaNative>
             </View>
             <Text style={s.matchPreviewTeamName} numberOfLines={2}>
               {data.homeCompact}
@@ -394,6 +416,10 @@ function PredictMatchPreview({
                     {mergedPrediction.away}
                   </Text>
                 </Text>
+              </View>
+            ) : showOverlayVs ? (
+              <View style={s.matchPreviewVsBlock}>
+                <Text style={s.matchPreviewVsLabel}>VS</Text>
               </View>
             ) : centerBlock.variant === "score" || centerBlock.variant === "liveScore" ? (
               <View style={s.matchPreviewVsBlock}>
@@ -467,13 +493,15 @@ function PredictMatchPreview({
               <Text style={s.matchPreviewSideTag}>AWAY</Text>
             ) : null}
             <View style={s.matchPreviewJersey}>
-              <MatchTeamMarkNative
-                leagueRaw={data.leagueRaw}
-                side={data.awaySide}
-                palette={data.awayPalette}
-                jerseySize={48}
-                flagVariant="preview"
-              />
+              <WcTeamFlagWithMetaNative teamId={isWcLeague ? awayTeamId : null}>
+                <MatchTeamMarkNative
+                  leagueRaw={data.leagueRaw}
+                  side={data.awaySide}
+                  palette={data.awayPalette}
+                  jerseySize={48}
+                  flagVariant="preview"
+                />
+              </WcTeamFlagWithMetaNative>
             </View>
             <Text style={s.matchPreviewTeamName} numberOfLines={2}>
               {data.awayCompact}
@@ -483,6 +511,33 @@ function PredictMatchPreview({
             ) : null}
           </View>
         </View>
+        {scheduleMeta && !mergedFinal ? (
+          <View style={s.matchPreviewScheduleMeta}>
+            <Text style={s.matchPreviewScheduleMetaLine} numberOfLines={2}>
+              {scheduleMeta.kickoffValue ? (
+                <>
+                  <Text style={s.matchPreviewScheduleMetaLabel}>{t.kickoffAt} </Text>
+                  <Text style={s.matchPreviewScheduleMetaValue}>
+                    {scheduleMeta.kickoffValue}
+                  </Text>
+                </>
+              ) : null}
+              {scheduleMeta.broadcastLabels.length > 0 ? (
+                <>
+                  {scheduleMeta.kickoffValue ? (
+                    <Text style={s.matchPreviewScheduleMetaLabel}> </Text>
+                  ) : null}
+                  <Text style={s.matchPreviewScheduleMetaLabel}>
+                    {t.broadcasters}{" "}
+                  </Text>
+                  <Text style={s.matchPreviewScheduleBroadcast}>
+                    {scheduleMeta.broadcastLabels.join(" : ")}
+                  </Text>
+                </>
+              ) : null}
+            </Text>
+          </View>
+        ) : null}
         {overlayMarketBar ? (
           <View style={s.matchPreviewMarketBarWrap}>
             <MatchCardOverlayMarketBarNative
@@ -490,26 +545,6 @@ function PredictMatchPreview({
               language={language}
               t={t}
             />
-          </View>
-        ) : null}
-        {scheduleMeta ? (
-          <View style={s.matchPreviewScheduleMeta}>
-            <Text style={s.matchPreviewScheduleMetaLine} numberOfLines={2}>
-              <Text style={s.matchPreviewScheduleMetaLabel}>{t.kickoffAt} </Text>
-              <Text style={s.matchPreviewScheduleMetaValue}>
-                {scheduleMeta.kickoffValue}
-              </Text>
-            </Text>
-            {scheduleMeta.broadcastLabels.length > 0 ? (
-              <Text style={s.matchPreviewScheduleMetaLine} numberOfLines={2}>
-                <Text style={s.matchPreviewScheduleMetaLabel}>
-                  {t.broadcasters}{" "}
-                </Text>
-                <Text style={s.matchPreviewScheduleBroadcast}>
-                  {scheduleMeta.broadcastLabels.join(" : ")}
-                </Text>
-              </Text>
-            ) : null}
           </View>
         ) : null}
         {goalScorerInfo ? (
@@ -586,8 +621,8 @@ type PredictModalProps = {
   t: GamesTexts;
   predictHomeTeamLabel: string;
   predictAwayTeamLabel: string;
-  predictToolsTab: null | "h2h" | "market" | "stats";
-  setPredictToolsTab: (value: null | "h2h" | "market" | "stats") => void;
+  predictToolsTab: null | "h2h" | "market" | "stats" | "preview" | "standings";
+  setPredictToolsTab: (value: null | "h2h" | "market" | "stats" | "preview" | "standings") => void;
   winner: "home" | "away" | "draw" | null;
   isSoccerPredict: boolean;
   scoreAway: string;
@@ -622,6 +657,8 @@ type PredictModalProps = {
   /** Web `showOverlayScheduleMeta` 相当（未開始試合のキックオフ・放送局） */
   predictScheduleMeta?: PredictModalScheduleMeta | null;
   wcGoalScorerPreview?: PredictModalWcGoalScorer | null;
+  goalScorerPick?: WcGoalScorerPick | null;
+  setGoalScorerPick?: (value: WcGoalScorerPick | null) => void;
   mergedFinalPreview?: PredictModalMergedFinalPreview | null;
 };
 
@@ -694,6 +731,8 @@ export default function PredictModal({
   language,
   predictScheduleMeta = null,
   wcGoalScorerPreview = null,
+  goalScorerPick = null,
+  setGoalScorerPick,
   mergedFinalPreview = null,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
@@ -715,7 +754,9 @@ export default function PredictModal({
   const previewEnter = reduceMotion ? undefined : predictModalPreviewEnter();
 
   /** 直接対決／市場／詳細スタッツ：タップでパネルを開閉 */
-  function handleToolTabPress(tab: "h2h" | "market" | "stats") {
+  function handleToolTabPress(
+    tab: "h2h" | "market" | "stats" | "preview" | "standings"
+  ) {
     if (predictToolsTab === tab) setPredictToolsTab(null);
     else setPredictToolsTab(tab);
   }
@@ -787,14 +828,41 @@ export default function PredictModal({
     return { home, away };
   }, [showMergedScheduledInPreview, scoreHome, scoreAway]);
   const isWcLeague = predictData?.league === "wc";
+  const showWcMatchPreview = Boolean(
+    isWcLeague && predictData?.gameId && hasWcMatchPreview(predictData.gameId)
+  );
   const hideMarketTab = Boolean(overlayMarketBar);
   const showWcOverlayTabs = isWcLeague && hideMarketTab;
+  const overlayCenterMode = hideMarketTab;
+  const showOverlayScheduleMeta =
+    overlayCenterMode &&
+    overlayMarketBar?.status === "scheduled" &&
+    predictScheduleMeta != null &&
+    !showMergedFinalInPreview;
+
+  const predictedScoreForGoalScorer = useMemo(() => {
+    const homeRaw = scoreHome.trim();
+    const awayRaw = scoreAway.trim();
+    if (homeRaw === "" || awayRaw === "") return null;
+    const home = Number(homeRaw);
+    const away = Number(awayRaw);
+    if (!Number.isInteger(home) || !Number.isInteger(away) || home < 0 || away < 0) {
+      return null;
+    }
+    return { home, away };
+  }, [scoreHome, scoreAway]);
 
   useEffect(() => {
     if (hideMarketTab && predictToolsTab === "market") {
       setPredictToolsTab(null);
     }
   }, [hideMarketTab, predictToolsTab, setPredictToolsTab]);
+
+  useEffect(() => {
+    if (!showWcMatchPreview && predictToolsTab === "preview") {
+      setPredictToolsTab(null);
+    }
+  }, [showWcMatchPreview, predictToolsTab, setPredictToolsTab]);
 
   const showScoreInputBlock =
     !spectatorStartedNoPost &&
@@ -809,10 +877,38 @@ export default function PredictModal({
 
   const modalChromeVisible = visible || exitingUi;
   const hasTool = Boolean(predictToolsTab);
+  const showCyberHudTabs = Boolean(overlayMarketBar);
   /** プレビュー有無でタブ行の stagger インデックスをずらす（Web と同趣旨の縦スタッガー） */
   const tabsStaggerIndex = matchPreview ? 1 : 0;
   const scoreStagger = hasTool ? 2 : 1;
   const submitStagger = hasTool ? 3 : 2;
+
+  function toolTabButtonStyle(
+    active: boolean,
+    last = false
+  ) {
+    if (showCyberHudTabs) {
+      return [
+        s.predictCyberTab,
+        last && s.predictCyberTabLast,
+        active && s.predictCyberTabActive,
+      ];
+    }
+    return [s.predictToolTab, active && s.predictToolTabActive];
+  }
+
+  function toolTabTextStyle(active: boolean) {
+    if (showCyberHudTabs) {
+      return [
+        s.predictCyberTabText,
+        active ? s.predictCyberTabTextActive : s.predictCyberTabTextIdle,
+      ];
+    }
+    return [
+      s.predictToolTabText,
+      !active && s.predictToolTabTextInactive,
+    ];
+  }
 
   /** ×・背景タップ・Android 戻る：閉じるアニメ後に親へ通知（親が即 visible=false にしないため exitingUi でモーダルを維持） */
   function scheduleCloseAfterExitAnimation() {
@@ -898,12 +994,13 @@ export default function PredictModal({
                           showMergedFinalInPreview ? mergedFinalPreview : null
                         }
                         scheduleMeta={
-                          showMergedScheduledInPreview ? predictScheduleMeta : null
+                          showOverlayScheduleMeta ? predictScheduleMeta : null
                         }
                         wcGoalScorer={
                           showMergedScheduledInPreview ? wcGoalScorerPreview : null
                         }
                         isWcLeague={isWcLeague}
+                        overlayCenterMode={overlayCenterMode}
                         showEditButton={
                           showMergedScheduledInPreview && !editingLockedAfterKickoff
                         }
@@ -912,82 +1009,113 @@ export default function PredictModal({
                     </Animated.View>
                   ) : null}
               <Animated.View
-                style={[
-                  s.predictToolsRow,
-                  hideMarketTab && s.predictToolsRowTwoCol,
-                ]}
+                style={
+                  showCyberHudTabs ? s.predictCyberDeck : s.predictToolsRow
+                }
                 entering={reduceMotion ? undefined : blockIn(tabsStaggerIndex)}
               >
-                {!showWcOverlayTabs ? (
-                  <Pressable
-                    style={[
-                      s.predictToolTab,
-                      predictToolsTab === "h2h" && s.predictToolTabActive,
-                    ]}
-                    onPress={() => handleToolTabPress("h2h")}
-                  >
-                    <Text
-                      style={[
-                        s.predictToolTabText,
-                        predictToolsTab !== "h2h" && s.predictToolTabTextInactive,
-                      ]}
-                    >
-                      {t.tabH2h}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                {!hideMarketTab ? (
-                  <Pressable
-                    style={[
-                      s.predictToolTab,
-                      predictToolsTab === "market" && s.predictToolTabActive,
-                    ]}
-                    onPress={() => handleToolTabPress("market")}
-                  >
-                    <Text
-                      style={[
-                        s.predictToolTabText,
-                        predictToolsTab !== "market" && s.predictToolTabTextInactive,
-                      ]}
-                    >
-                      {t.tabMarket}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  style={[
-                    s.predictToolTab,
-                    predictToolsTab === "stats" && s.predictToolTabActive,
-                  ]}
-                  onPress={() => handleToolTabPress("stats")}
-                >
-                  <Text
-                    style={[
-                      s.predictToolTabText,
-                      predictToolsTab !== "stats" && s.predictToolTabTextInactive,
-                    ]}
-                  >
-                    {showWcOverlayTabs ? t.teamProfile : t.tabStats}
-                  </Text>
-                </Pressable>
                 {showWcOverlayTabs ? (
-                  <Pressable
-                    style={[
-                      s.predictToolTab,
-                      predictToolsTab === "h2h" && s.predictToolTabActive,
-                    ]}
-                    onPress={() => handleToolTabPress("h2h")}
-                  >
-                    <Text
+                  <>
+                    <Pressable
                       style={[
-                        s.predictToolTabText,
-                        predictToolsTab !== "h2h" && s.predictToolTabTextInactive,
+                        s.predictCyberTab,
+                        predictToolsTab === "stats" && s.predictCyberTabActive,
                       ]}
+                      onPress={() => handleToolTabPress("stats")}
                     >
-                      {t.groupStandings}
-                    </Text>
-                  </Pressable>
-                ) : null}
+                      <Text
+                        style={[
+                          s.predictCyberTabText,
+                          predictToolsTab === "stats"
+                            ? s.predictCyberTabTextActive
+                            : s.predictCyberTabTextIdle,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t.teamProfile}
+                      </Text>
+                    </Pressable>
+                    {showWcMatchPreview ? (
+                      <Pressable
+                        style={[
+                          s.predictCyberTab,
+                          predictToolsTab === "preview" && s.predictCyberTabActive,
+                        ]}
+                        onPress={() => handleToolTabPress("preview")}
+                      >
+                        <Text
+                          style={[
+                            s.predictCyberTabText,
+                            predictToolsTab === "preview"
+                              ? s.predictCyberTabTextActive
+                              : s.predictCyberTabTextIdle,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {t.matchPreview}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      style={[
+                        s.predictCyberTab,
+                        s.predictCyberTabLast,
+                        predictToolsTab === "standings" && s.predictCyberTabActive,
+                      ]}
+                      onPress={() => handleToolTabPress("standings")}
+                    >
+                      <Text
+                        style={[
+                          s.predictCyberTabText,
+                          predictToolsTab === "standings"
+                            ? s.predictCyberTabTextActive
+                            : s.predictCyberTabTextIdle,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t.groupStandings}
+                      </Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <Pressable
+                      style={toolTabButtonStyle(
+                        predictToolsTab === "h2h",
+                        hideMarketTab && !showWcOverlayTabs
+                      )}
+                      onPress={() => handleToolTabPress("h2h")}
+                    >
+                      <Text
+                        style={toolTabTextStyle(predictToolsTab === "h2h")}
+                      >
+                        {t.tabH2h}
+                      </Text>
+                    </Pressable>
+                    {!hideMarketTab ? (
+                      <Pressable
+                        style={toolTabButtonStyle(predictToolsTab === "market")}
+                        onPress={() => handleToolTabPress("market")}
+                      >
+                        <Text
+                          style={toolTabTextStyle(predictToolsTab === "market")}
+                        >
+                          {t.tabMarket}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      style={toolTabButtonStyle(predictToolsTab === "stats", true)}
+                      onPress={() => handleToolTabPress("stats")}
+                    >
+                      <Text
+                        style={toolTabTextStyle(predictToolsTab === "stats")}
+                      >
+                        {t.tabStats}
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
               </Animated.View>
 
               {predictToolsTab ? (
@@ -1003,39 +1131,90 @@ export default function PredictModal({
                       predictToolsTab === "stats"
                     }
                   >
-                    {predictToolsTab === "stats" ? (
+                    {predictToolsTab === "stats" && showWcOverlayTabs ? (
                       <>
-                        <Text style={s.predictToolsPanelKicker}>
-                          {showWcOverlayTabs ? t.teamProfile : t.tabStats}
-                        </Text>
+                        <Text style={s.predictToolsPanelKicker}>{t.teamProfile}</Text>
                         <View style={s.predictToolsPanelDivider} />
+                        {predictData ? (
+                          <WcTeamProfilePanelNative
+                            homeTeamId={
+                              rawTeamIdFromGameSide(predictData.subjectGame.home) ?? ""
+                            }
+                            awayTeamId={
+                              rawTeamIdFromGameSide(predictData.subjectGame.away) ?? ""
+                            }
+                            homeName={predictHomeTeamLabel}
+                            awayName={predictAwayTeamLabel}
+                            language={language}
+                            t={t}
+                          />
+                        ) : (
+                          <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
+                        )}
                       </>
-                    ) : predictToolsTab === "h2h" && showWcOverlayTabs ? (
+                    ) : predictToolsTab === "preview" && showWcMatchPreview ? (
                       <>
-                        <Text style={s.predictToolsPanelKicker}>
-                          {t.groupStandings}
-                        </Text>
+                        <Text style={s.predictToolsPanelKicker}>{t.matchPreview}</Text>
                         <View style={s.predictToolsPanelDivider} />
+                        {predictData ? (
+                          <WcMatchPreviewPanelNative
+                            gameId={predictData.gameId}
+                            language={language}
+                            t={t}
+                          />
+                        ) : (
+                          <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
+                        )}
                       </>
-                    ) : null}
-                    {predictToolsTab === "h2h" && showWcOverlayTabs ? (
-                      <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
-                    ) : predictData && matchPreview ? (
-                      <PredictToolTabContent
-                        tab={predictToolsTab}
-                        language={predictData.language}
-                        t={t}
-                        gameId={predictData.gameId}
-                        league={predictData.league}
-                        subjectGame={predictData.subjectGame}
-                        peerGames={predictData.peerGames}
-                        formatGameDateMs={predictData.formatGameDateMs}
-                        homeColor={matchPreview.homePalette.primary}
-                        awayColor={matchPreview.awayPalette.primary}
-                        isSoccerLeague={predictData.isSoccerLeague}
-                      />
+                    ) : predictToolsTab === "standings" && showWcOverlayTabs ? (
+                      <>
+                        <Text style={s.predictToolsPanelKicker}>{t.groupStandings}</Text>
+                        <View style={s.predictToolsPanelDivider} />
+                        {predictData ? (
+                          <WcStandingPanelNative
+                            homeTeamId={
+                              rawTeamIdFromGameSide(predictData.subjectGame.home) ?? ""
+                            }
+                            awayTeamId={
+                              rawTeamIdFromGameSide(predictData.subjectGame.away) ?? ""
+                            }
+                            language={language}
+                            t={t}
+                          />
+                        ) : (
+                          <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
+                        )}
+                      </>
                     ) : (
-                      <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
+                      <>
+                        {predictToolsTab === "stats" ? (
+                          <>
+                            <Text style={s.predictToolsPanelKicker}>{t.tabStats}</Text>
+                            <View style={s.predictToolsPanelDivider} />
+                          </>
+                        ) : null}
+                        {predictData && matchPreview ? (
+                          <PredictToolTabContent
+                            tab={
+                              predictToolsTab === "preview" || predictToolsTab === "standings"
+                                ? "stats"
+                                : predictToolsTab
+                            }
+                            language={predictData.language}
+                            t={t}
+                            gameId={predictData.gameId}
+                            league={predictData.league}
+                            subjectGame={predictData.subjectGame}
+                            peerGames={predictData.peerGames}
+                            formatGameDateMs={predictData.formatGameDateMs}
+                            homeColor={matchPreview.homePalette.primary}
+                            awayColor={matchPreview.awayPalette.primary}
+                            isSoccerLeague={predictData.isSoccerLeague}
+                          />
+                        ) : (
+                          <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
+                        )}
+                      </>
                     )}
                   </GlassPanel>
                 </Animated.View>
@@ -1121,13 +1300,15 @@ export default function PredictModal({
                                 {predictHomeTeamLabel || "HOME"}
                               </Text>
                               <View style={s.scoreInputWrap}>
+                                <View pointerEvents="none" style={s.scoreInputLeftEdge} />
+                                <View pointerEvents="none" style={s.scoreInputTopHighlight} />
                                 <TextInput
                                   value={scoreHome}
                                   onChangeText={setScoreHome}
                                   keyboardType="number-pad"
-                                  style={s.scoreInput}
+                                  style={[s.scoreInput, s.scoreInputOverlay]}
                                   placeholder={t.scoreFieldPlaceholder}
-                                  placeholderTextColor="rgba(255,255,255,0.35)"
+                                  placeholderTextColor="rgba(0,245,255,0.36)"
                                 />
                               </View>
                             </View>
@@ -1136,18 +1317,36 @@ export default function PredictModal({
                                 {predictAwayTeamLabel || "AWAY"}
                               </Text>
                               <View style={s.scoreInputWrap}>
+                                <View pointerEvents="none" style={s.scoreInputLeftEdge} />
+                                <View pointerEvents="none" style={s.scoreInputTopHighlight} />
                                 <TextInput
                                   value={scoreAway}
                                   onChangeText={setScoreAway}
                                   keyboardType="number-pad"
-                                  style={s.scoreInput}
+                                  style={[s.scoreInput, s.scoreInputOverlay]}
                                   placeholder={t.scoreFieldPlaceholder}
-                                  placeholderTextColor="rgba(255,255,255,0.35)"
+                                  placeholderTextColor="rgba(0,245,255,0.36)"
                                 />
                               </View>
                             </View>
                           </View>
-                          {isSoccerPredict ? (
+                          {isWcLeague && setGoalScorerPick ? (
+                            <WcGoalScorerPickerNative
+                              homeTeamId={rawTeamIdFromGameSide(predictData?.subjectGame.home)}
+                              awayTeamId={rawTeamIdFromGameSide(predictData?.subjectGame.away)}
+                              homeLabel={predictHomeTeamLabel || "HOME"}
+                              awayLabel={predictAwayTeamLabel || "AWAY"}
+                              predictedScore={predictedScoreForGoalScorer}
+                              value={goalScorerPick}
+                              onChange={setGoalScorerPick}
+                              language={language}
+                              t={t}
+                            />
+                          ) : null}
+                          {isWcLeague ? (
+                            <WcScoringRulesNative language={language} />
+                          ) : null}
+                          {isSoccerPredict && !isWcLeague ? (
                             <Text style={s.soccerHint}>{t.drawAvailable}</Text>
                           ) : null}
                         </GlassPanel>
@@ -1159,24 +1358,24 @@ export default function PredictModal({
                           onPress={onSubmit}
                           style={({ pressed }) => [
                             s.submitOuter,
-                            !canSubmit && s.submitOuterDisabled,
+                            canSubmit ? s.submitOuterEnabled : s.submitOuterDisabled,
                             canSubmit && pressed && s.submitOuterPressed,
                           ]}
                         >
                           {canSubmit ? (
                             <LinearGradient
                               colors={[
-                                "rgba(59,130,246,0.92)",
-                                "rgba(37,99,235,0.88)",
-                                "rgba(29,78,216,0.58)",
-                                "rgba(29,78,216,0.22)",
-                                "rgba(29,78,216,0.06)",
+                                "rgba(0,245,255,0.26)",
+                                "rgba(0,190,230,0.36)",
+                                "rgba(0,110,150,0.46)",
                               ]}
-                              locations={[0, 0.36, 0.58, 0.8, 1]}
+                              locations={[0, 0.42, 1]}
                               start={{ x: 0.5, y: 0 }}
                               end={{ x: 0.5, y: 1 }}
                               style={s.submitGradient}
                             >
+                              <View pointerEvents="none" style={s.submitTopHighlight} />
+                              <View pointerEvents="none" style={s.submitBottomShade} />
                               <Text style={s.predictButtonText}>
                                 {predictSubmitting
                                   ? isEditingPrediction
@@ -1184,7 +1383,7 @@ export default function PredictModal({
                                     : t.posting
                                   : isEditingPrediction
                                     ? t.submitUpdate
-                                    : t.submitPost}
+                                    : t.submitPrediction}
                               </Text>
                             </LinearGradient>
                           ) : (
@@ -1192,7 +1391,7 @@ export default function PredictModal({
                               <Text style={s.predictButtonTextDisabled}>
                                 {isEditingPrediction
                                   ? t.submitUpdate
-                                  : t.submitPost}
+                                  : t.submitPrediction}
                               </Text>
                             </View>
                           )}
@@ -1253,8 +1452,50 @@ const s = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
   },
-  predictToolsRowTwoCol: {
-    gap: 8,
+  predictCyberDeck: {
+    flexDirection: "row",
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.28)",
+    backgroundColor: "rgba(4,8,14,0.9)",
+    overflow: "hidden",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2,
+  },
+  predictCyberTab: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRightWidth: 1,
+    borderRightColor: "rgba(0,245,255,0.14)",
+    paddingHorizontal: 4,
+  },
+  predictCyberTabLast: {
+    borderRightWidth: 0,
+  },
+  predictCyberTabActive: {
+    backgroundColor: "#00F5FF",
+  },
+  predictCyberTabText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+  predictCyberTabTextIdle: {
+    color: "#00f5ff",
+    textShadowColor: "rgba(0,245,255,0.42)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  predictCyberTabTextActive: {
+    color: "#050508",
   },
   /** モバイル: h-9, rounded-xl, text-xs, font-semibold, border + bg */
   predictToolTab: {
@@ -1463,8 +1704,28 @@ const s = StyleSheet.create({
     gap: 6,
   },
   scoreInputWrap: {
+    position: "relative",
     borderRadius: 10,
     overflow: "hidden",
+    backgroundColor: "rgba(3,7,14,0.96)",
+  },
+  scoreInputLeftEdge: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    zIndex: 2,
+    backgroundColor: "rgba(0,245,255,0.32)",
+  },
+  scoreInputTopHighlight: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 1,
+    zIndex: 2,
+    backgroundColor: "rgba(0,245,255,0.14)",
   },
   teamNameLabel: {
     color: "rgba(255,255,255,0.9)",
@@ -1493,6 +1754,15 @@ const s = StyleSheet.create({
     textAlign: "center",
     fontVariant: ["tabular-nums"],
   },
+  scoreInputOverlay: {
+    borderColor: "rgba(0,245,255,0.24)",
+    backgroundColor: "rgba(0,245,255,0.05)",
+    color: "#e8fdff",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+  },
   soccerHint: {
     marginTop: 8,
     fontSize: 11,
@@ -1503,36 +1773,66 @@ const s = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(59,130,246,0.4)",
+  },
+  submitOuterEnabled: {
+    borderColor: "rgba(0,245,255,0.42)",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 22,
+    elevation: 3,
   },
   submitOuterDisabled: {
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(148,163,184,0.2)",
   },
   submitOuterPressed: {
     transform: [{ scale: 0.99 }],
   },
   submitGradient: {
+    position: "relative",
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
+  },
+  submitTopHighlight: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  submitBottomShade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 1,
+    backgroundColor: "rgba(0,70,100,0.38)",
   },
   submitDisabledFill: {
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(71,85,105,0.13)",
   },
   predictButtonText: {
-    color: "#ffffff",
+    zIndex: 1,
+    color: "#f0fdff",
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "700",
+    letterSpacing: 0.8,
+    textShadowColor: "rgba(0,245,255,0.42)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
   },
   predictButtonTextDisabled: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "700",
+    letterSpacing: 0.8,
   },
   /** モーダル最上段の試合プレビュー（Web MatchCard の左右カラー帯・グリッドに寄せる） */
   matchPreviewShell: {
@@ -1847,6 +2147,19 @@ const s = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.45)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  matchPreviewVsLabel: {
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 28,
+    lineHeight: 30,
+    fontWeight: "800",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    color: "rgba(236,254,255,0.95)",
+    textAlign: "center",
+    textShadowColor: "rgba(34,211,238,0.42)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
   },
   /** Web `LiveMatchMark` 相当（プレビュー中央・一覧よりひとまわり小さめ） */
   matchPreviewLivePill: liveMarkPillCyberBase,

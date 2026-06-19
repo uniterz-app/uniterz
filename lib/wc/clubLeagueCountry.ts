@@ -3,7 +3,7 @@
 // キープレイヤーの所属クラブ → リーグ所在国（ISO 3166-1 alpha-2、小文字）。
 // `public/flags/4x3/<iso2>.svg` と CountryFlag の iso2 指定で表示する。
 
-import type { Language } from "@/lib/i18n/language";
+import type { Language } from "../i18n/language";
 
 /** rosters.ts の club 文字列と完全一致で引く */
 const CLUB_LEAGUE_ISO2: Record<string, string> = {

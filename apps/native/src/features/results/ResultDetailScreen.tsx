@@ -44,12 +44,12 @@ import { formatResultPostCardDateLabel } from "./nativeResultModel";
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
-import { readPostMatchGoalScorers } from "../../../../../lib/wc/matchGoalScorers";
+import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
 import { db } from "../../lib/firebase";
 import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
 import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageLine } from "../../../../../lib/wc/wcGroupStandingRank";
+import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -661,13 +661,19 @@ export default function ResultDetailScreen({
     const rh = result?.home;
     const ra = result?.away;
     const hasFinal = typeof rh === "number" && typeof ra === "number";
-    const wcGroupStageLine = isWcCard
-      ? resolveWcGroupStageLine(home?.teamId, away?.teamId, language)
+    const wcGroupCodeLabel = isWcCard
+      ? resolveWcGroupCodeLabel(home?.teamId, away?.teamId)
       : null;
+    const wcMatchGoalScorers =
       isWcCard && hasFinal
-        ? readPostMatchGoalScorers(
-            (post as { matchGoalScorers?: unknown }).matchGoalScorers
-          )
+        ? resolveWcMatchGoalScorersForDisplay({
+            league: "wc",
+            isFinal: true,
+            matchGoalScorersRaw: (post as { matchGoalScorers?: unknown })
+              .matchGoalScorers,
+            homeTeamId: home?.teamId,
+            awayTeamId: away?.teamId,
+          })
         : [];
     const finalScore = hasFinal ? `${rh} - ${ra}` : null;
     const cardDateLabel = formatResultPostCardDateLabel(post, isEn ? "en" : "ja");
@@ -768,17 +774,17 @@ export default function ResultDetailScreen({
           </View>
           <View style={styles.centerCol}>
             <Text style={styles.predLabel}>{cardDateLabel}</Text>
+            {wcGroupCodeLabel ? (
+              <Text style={styles.groupCodeLabel} numberOfLines={1}>
+                {wcGroupCodeLabel}
+              </Text>
+            ) : null}
             <Text style={styles.predictedScore}>{predictedScore}</Text>
             {finalScore ? (
               <>
                 <Text style={styles.finalLabel}>{isEn ? "Final" : "結果"}</Text>
                 <Text style={styles.finalScore}>{finalScore}</Text>
               </>
-            ) : null}
-            {wcGroupStageLine ? (
-              <Text style={styles.groupStageLine} numberOfLines={1}>
-                {wcGroupStageLine}
-              </Text>
             ) : null}
           </View>
           <View style={styles.sideCol}>
@@ -1160,13 +1166,17 @@ const styles = StyleSheet.create({
     fontFamily: NUMERIC_FONT,
     fontVariant: ["tabular-nums"],
   },
-  groupStageLine: {
-    marginTop: 6,
+  groupCodeLabel: {
+    marginTop: 2,
+    marginBottom: 6,
     maxWidth: "100%",
-    fontSize: 10,
-    fontWeight: "500",
-    color: "rgba(255,255,255,0.5)",
+    fontSize: 18,
+    lineHeight: 18,
+    fontFamily: DISPLAY_FONT,
+    letterSpacing: 5,
+    color: "#FFFFFF",
     textAlign: "center",
+    textTransform: "uppercase",
   },
   /** Web `MobileResultMarketCard`：`mb-3 flex … gap-2 text-[13px] font-semibold` */
   marketHeaderRow: {

@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "native:install": "npm --prefix apps/native install",
-    "native:typecheck": "npm --prefix apps/native exec tsc --noEmit",
+    "native:typecheck": "npm --prefix apps/native exec -- tsc --noEmit --project apps/native/tsconfig.json",
     "native:start": "npm --prefix apps/native run start",
     "native:start:dev": "npm --prefix apps/native run start:dev",
     "native:start:lan": "npm --prefix apps/native run start:lan",

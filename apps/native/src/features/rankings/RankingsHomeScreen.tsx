@@ -73,7 +73,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [scheduleNoticeOpen, setScheduleNoticeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("nba");
+  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
 
   const wcStageForHook: WcRankingStage | null =
@@ -186,7 +186,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     const key = profilePathKeyFromRow(row);
     if (!key) return;
     navigation.navigate("ProfileTab", {
-      screen: "ProfileHome",
+      screen: "PublicProfile",
       params: { handle: key, fromRankings: true },
     });
   };
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     }),
   },
   scrollContent: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   titleRow: {
     flexDirection: "row",

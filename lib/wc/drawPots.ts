@@ -68,3 +68,41 @@ export function getWcDrawPot(teamId: string | null | undefined): WcDrawPot | nul
 export function formatWcDrawPotLabel(pot: WcDrawPot): string {
   return `Pot ${pot}`;
 }
+
+export type WcDrawPotColor = {
+  webClassName: string;
+  nativeColor: string;
+  nativeTextShadowColor: string;
+};
+
+/** ポット番号ごとのラベル色（Web / Native 共通トークン） */
+export const WC_DRAW_POT_COLORS: Record<WcDrawPot, WcDrawPotColor> = {
+  1: {
+    webClassName:
+      "text-amber-200 drop-shadow-[0_0_10px_rgba(251,191,36,0.35)]",
+    nativeColor: "rgba(253,224,71,0.95)",
+    nativeTextShadowColor: "rgba(251,191,36,0.32)",
+  },
+  2: {
+    webClassName:
+      "text-cyan-200 drop-shadow-[0_0_10px_rgba(34,211,238,0.35)]",
+    nativeColor: "rgba(165,243,252,0.95)",
+    nativeTextShadowColor: "rgba(34,211,238,0.32)",
+  },
+  3: {
+    webClassName:
+      "text-violet-300 drop-shadow-[0_0_10px_rgba(196,181,253,0.35)]",
+    nativeColor: "rgba(196,181,253,0.95)",
+    nativeTextShadowColor: "rgba(167,139,250,0.32)",
+  },
+  4: {
+    webClassName:
+      "text-rose-300 drop-shadow-[0_0_10px_rgba(253,164,175,0.35)]",
+    nativeColor: "rgba(253,164,175,0.95)",
+    nativeTextShadowColor: "rgba(244,114,182,0.32)",
+  },
+};
+
+export function resolveWcDrawPotColor(pot: WcDrawPot): WcDrawPotColor {
+  return WC_DRAW_POT_COLORS[pot];
+}

@@ -18,7 +18,76 @@ import {
   RESULT_POSTS_MAX_CACHED,
   type PostWithMillis,
 } from "./nativeResultModel";
-import { fetchInitialResultPostsByDayWindow } from "../../../../../lib/result/resultListInitialLoad";
+
+const RESULT_LIST_INITIAL_MAX_DAY_GROUPS = 5;
+
+type NativeResultListPageFetchResult = {
+  posts: PostWithMillis[];
+  lastDoc: DocumentSnapshot | null;
+  fullPage: boolean;
+};
+
+function flattenNativeResultDayGroups(
+  groups: ReturnType<typeof groupPostsByResultDay>
+): PostWithMillis[] {
+  const out: PostWithMillis[] = [];
+  for (const day of groups) {
+    for (const p of day.pending) out.push(p);
+    for (const p of day.final) out.push(p);
+  }
+  return out;
+}
+
+function trimNativePostsToMaxDayGroups(
+  posts: readonly PostWithMillis[],
+  language: "ja" | "en",
+  maxDayGroups: number
+): { posts: PostWithMillis[]; trimmed: boolean } {
+  const groups = groupPostsByResultDay([...posts], language);
+  if (groups.length <= maxDayGroups) return { posts: [...posts], trimmed: false };
+  return {
+    posts: flattenNativeResultDayGroups(groups.slice(0, maxDayGroups)),
+    trimmed: true,
+  };
+}
+
+async function fetchInitialNativeResultPostsByDayWindow(opts: {
+  language: "ja" | "en";
+  fetchPage: (cursor: DocumentSnapshot | null) => Promise<NativeResultListPageFetchResult>;
+  mergePosts: (primary: PostWithMillis[], extra: PostWithMillis[]) => PostWithMillis[];
+  maxDayGroups?: number;
+}): Promise<{
+  posts: PostWithMillis[];
+  lastDoc: DocumentSnapshot | null;
+  hasMore: boolean;
+}> {
+  const maxDay = opts.maxDayGroups ?? RESULT_LIST_INITIAL_MAX_DAY_GROUPS;
+  let accumulated: PostWithMillis[] = [];
+  let lastDoc: DocumentSnapshot | null = null;
+  let lastFullPage = false;
+
+  while (true) {
+    const page = await opts.fetchPage(lastDoc);
+    lastDoc = page.lastDoc;
+    lastFullPage = page.fullPage;
+    accumulated = opts.mergePosts(accumulated, page.posts);
+
+    const dayCount = groupPostsByResultDay(accumulated, opts.language).length;
+    if (dayCount >= maxDay) break;
+    if (!page.fullPage) break;
+  }
+
+  const { posts, trimmed } = trimNativePostsToMaxDayGroups(
+    accumulated,
+    opts.language,
+    maxDay
+  );
+  return {
+    posts,
+    lastDoc,
+    hasMore: trimmed || lastFullPage,
+  };
+}
 
 function mergePostsById(primary: PostWithMillis[], extra: PostWithMillis[]) {
   if (extra.length === 0) return primary;
@@ -74,7 +143,7 @@ export function useNativeResultPosts(uid: string | null | undefined, language: "
             };
           };
 
-          const initial = await fetchInitialResultPostsByDayWindow({
+          const initial = await fetchInitialNativeResultPostsByDayWindow({
             language,
             fetchPage,
             mergePosts: mergePostsById,

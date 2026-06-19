@@ -4,7 +4,7 @@ import { getAuth, initializeAuth } from "firebase/auth";
 import { getReactNativePersistence } from "@firebase/auth/dist/rn/index.js";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { resolveFirebaseClientConfig } from "../shared/firebaseClientConfig";
+import { resolveFirebaseClientConfig } from "@uniterz/shared";
 
 const firebaseConfig = resolveFirebaseClientConfig({
   NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

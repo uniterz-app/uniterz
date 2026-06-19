@@ -184,7 +184,7 @@ export const resultDayStripPanelNative = StyleSheet.create({
     shadowColor: "#22d3ee",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.55,
-    shadowRadius: 6,
+    shadowRadius: 12,
   },
   gridOverlay: {
     ...StyleSheet.absoluteFillObject,

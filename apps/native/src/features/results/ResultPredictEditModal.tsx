@@ -13,7 +13,7 @@ import {
   resolveGameStartAt,
   resolveGameStatus,
   resolveGameTeamName,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import PredictModal, {
   type PredictModalMatchPreview,
@@ -150,7 +150,7 @@ export default function ResultPredictEditModal({
   const [game, setGame] = useState<Record<string, unknown> | null>(null);
 
   const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats"
+    null | "h2h" | "market" | "stats" | "preview" | "standings"
   >(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
   const [scoreHome, setScoreHome] = useState("");
