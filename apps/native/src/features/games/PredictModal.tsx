@@ -981,9 +981,7 @@ export default function PredictModal({
                     </Animated.View>
                   ) : null}
               <Animated.View
-                style={
-                  showWcOverlayTabs ? s.predictCyberDeck : s.predictToolsRow
-                }
+                style={s.predictCyberDeck}
                 entering={reduceMotion ? undefined : blockIn(tabsStaggerIndex)}
               >
                 {showWcOverlayTabs ? (
@@ -1053,16 +1051,19 @@ export default function PredictModal({
                   <>
                     <Pressable
                       style={[
-                        s.predictToolTab,
-                        predictToolsTab === "h2h" && s.predictToolTabActive,
+                        s.predictCyberTab,
+                        predictToolsTab === "h2h" && s.predictCyberTabActive,
                       ]}
                       onPress={() => handleToolTabPress("h2h")}
                     >
                       <Text
                         style={[
-                          s.predictToolTabText,
-                          predictToolsTab !== "h2h" && s.predictToolTabTextInactive,
+                          s.predictCyberTabText,
+                          predictToolsTab === "h2h"
+                            ? s.predictCyberTabTextActive
+                            : s.predictCyberTabTextIdle,
                         ]}
+                        numberOfLines={1}
                       >
                         {t.tabH2h}
                       </Text>
@@ -1070,16 +1071,19 @@ export default function PredictModal({
                     {!hideMarketTab ? (
                       <Pressable
                         style={[
-                          s.predictToolTab,
-                          predictToolsTab === "market" && s.predictToolTabActive,
+                          s.predictCyberTab,
+                          predictToolsTab === "market" && s.predictCyberTabActive,
                         ]}
                         onPress={() => handleToolTabPress("market")}
                       >
                         <Text
                           style={[
-                            s.predictToolTabText,
-                            predictToolsTab !== "market" && s.predictToolTabTextInactive,
+                            s.predictCyberTabText,
+                            predictToolsTab === "market"
+                              ? s.predictCyberTabTextActive
+                              : s.predictCyberTabTextIdle,
                           ]}
+                          numberOfLines={1}
                         >
                           {t.tabMarket}
                         </Text>
@@ -1087,16 +1091,20 @@ export default function PredictModal({
                     ) : null}
                     <Pressable
                       style={[
-                        s.predictToolTab,
-                        predictToolsTab === "stats" && s.predictToolTabActive,
+                        s.predictCyberTab,
+                        s.predictCyberTabLast,
+                        predictToolsTab === "stats" && s.predictCyberTabActive,
                       ]}
                       onPress={() => handleToolTabPress("stats")}
                     >
                       <Text
                         style={[
-                          s.predictToolTabText,
-                          predictToolsTab !== "stats" && s.predictToolTabTextInactive,
+                          s.predictCyberTabText,
+                          predictToolsTab === "stats"
+                            ? s.predictCyberTabTextActive
+                            : s.predictCyberTabTextIdle,
                         ]}
+                        numberOfLines={1}
                       >
                         {t.tabStats}
                       </Text>
@@ -1440,6 +1448,11 @@ const s = StyleSheet.create({
     borderColor: "rgba(0,245,255,0.28)",
     backgroundColor: "rgba(4,8,14,0.9)",
     overflow: "hidden",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
   },
   predictCyberTab: {
     flex: 1,
@@ -1455,6 +1468,11 @@ const s = StyleSheet.create({
   },
   predictCyberTabActive: {
     backgroundColor: "#00F5FF",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.38,
+    shadowRadius: 16,
+    elevation: 4,
   },
   predictCyberTabText: {
     fontSize: 10,
@@ -1694,24 +1712,26 @@ const s = StyleSheet.create({
   /** scoreInputClass: Oxanium + tabular-nums + font-bold + tracking-tight, text-base */
   scoreInput: {
     zIndex: 1,
-    minHeight: 38,
+    minHeight: 40,
     borderRadius: 10,
     borderWidth: 1,
+    borderLeftWidth: 3,
     borderColor: "rgba(255,255,255,0.15)",
     backgroundColor: "rgba(255,255,255,0.06)",
     color: "#ffffff",
     fontFamily: SCORE_INPUT_FONT,
-    fontSize: 15,
-    lineHeight: 19,
-    fontWeight: "700",
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "900",
     letterSpacing: -0.35,
     paddingHorizontal: 11,
     paddingVertical: 7,
-    textAlign: "center",
+    textAlign: "left",
     fontVariant: ["tabular-nums"],
   },
   scoreInputOverlay: {
     borderColor: "rgba(0,245,255,0.24)",
+    borderLeftColor: "rgba(0,245,255,0.32)",
     backgroundColor: "rgba(0,245,255,0.07)",
     color: "#e8fdff",
   },
