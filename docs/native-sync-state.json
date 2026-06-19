@@ -1,11 +1,12 @@
 {
-  "parityComplete": true,
-  "phase": "ui-polish",
+  "parityComplete": false,
+  "phase": "phase-c",
   "lastCompletedId": "ui-legal-screens",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
   "totalCompleted": 17,
   "uiPolishCompleted": 11,
+  "phaseCCompleted": 0,
   "blockedItems": [],
-  "notes": "全 UI キュー完了。parityComplete true。"
+  "notes": "Phase C 再開。partial/gap 18件。先頭: gap-leaderboards-detail。"
 }

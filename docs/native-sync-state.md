@@ -6,7 +6,8 @@
 
 1. `functional` — 機能キューを消化
 2. `ui-polish` — UI磨き込みキューを消化
-3. `parityComplete: true` — 完了、Automation 停止
+3. `phase-c` — partial / gap 画面の機能・UI 仕上げ
+4. `parityComplete: true` — 完了、Automation 停止
 
 ## 更新ルール
 

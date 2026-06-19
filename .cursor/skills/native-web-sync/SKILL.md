@@ -14,6 +14,7 @@ description: >-
 3. `phase` でキューセクションを決定:
    - `functional` → `docs/native-parity-gaps.md` の機能キュー
    - `ui-polish` → UI磨き込みキュー
+   - `phase-c` → Phase C キュー
 
 ## 実行ループ（キューが空になるまで連続）
 
@@ -30,7 +31,8 @@ description: >-
 ## フェーズ切替
 
 - 機能キューが空 → `phase: "ui-polish"`
-- UI キューも空 → `parityComplete: true`
+- UI キューも空 → Phase C が残っていれば `phase: "phase-c"`、なければ `parityComplete: true`
+- Phase C キューも空 → `parityComplete: true`
 
 ## Git（セッション終了時・必須）
 

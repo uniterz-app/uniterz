@@ -2,7 +2,7 @@
 
 エージェントは **上から順に** 実行する。ユーザーへの確認は不要。
 
-`phase: functional` の間は機能キューのみ。空になったら `phase: ui-polish` に切替。
+`phase: functional` の間は機能キューのみ。空になったら `phase: ui-polish` に切替。Phase B 完了後に `partial` / `gap` が残る場合は `phase: phase-c` で Phase C を消化。
 
 ---
 
@@ -35,6 +35,29 @@
 - [x] `ui-glowing-rim` | `GlowingRimFrame` 相当 — Skia で発光近似
 - [x] `ui-auth-screens` | Login/Signup/Onboarding — フォーム余白、ボタンスタイル
 - [x] `ui-legal-screens` | Legal 系 — スクロール、ヘッダー、リンクスタイル
+
+---
+
+## Phase C キュー（機能 gap + UI partial → done）
+
+- [ ] `gap-leaderboards-detail` P0 | Web: `app/mobile/communities/[groupId]/page.tsx` → Native: コミュニティ詳細画面（`LeaderboardsHomeScreen` 詳細モード or 専用画面）
+- [ ] `gap-team-detail` P0 | Web: `app/mobile/teams/[teamId]/page.tsx` → Native: `TeamDetailScreenNative` 機能・UI 完成
+- [ ] `gap-pro-success` P1 | Web: `app/mobile/pro/success/page.tsx` → Native: Pro 成功専用画面
+- [ ] `gap-cancel-complete` P1 | Web: `app/mobile/cancel-complete/page.tsx` → Native: 解約完了専用画面
+- [ ] `ui-games-predictions` | `GamePredictionsScreenNative` + `GameDetailModal` vs Web — partial → done（照合チェックリスト 6項目中5以上）
+- [ ] `ui-result-detail` | `ResultDetailScreen` vs Web — partial → done
+- [ ] `ui-leaderboards` | `LeaderboardsHomeScreen` vs Web — partial → done
+- [ ] `ui-profile-password` | `ProfilePasswordScreenNative` vs Web — partial → done
+- [ ] `ui-badges` | `MobileBadgesScreen` vs Web — partial → done
+- [ ] `ui-announcements` | `MobileAnnouncementsScreen` vs Web — partial → done
+- [ ] `ui-announcement-detail` | `AnnouncementDetailScreenNative` vs Web — partial → done
+- [ ] `ui-pro-subscribe` | `MobileProSubscribeScreen` vs Web — partial → done
+- [ ] `ui-plan-status` | `MobilePlanStatusScreen` vs Web — partial → done
+- [ ] `ui-plan-change` | `PlanChangeScreenNative` 系 vs Web — partial → done
+- [ ] `ui-plan-change-complete` | `PlanChangeCompleteScreenNative` vs Web — partial → done
+- [ ] `ui-cancel-plan` | `CancelPlanScreenNative` vs Web — partial → done
+- [ ] `ui-standings` | `StandingsScreenNative` vs Web — partial → done
+- [ ] `ui-bracket-market` | `BracketMarketScreenNative` vs Web — partial → done
 
 ---
 

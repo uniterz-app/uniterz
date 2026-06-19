@@ -84,6 +84,7 @@ Run N: parityComplete: true → 即終了
 3. phase に応じて docs/native-parity-gaps.md のキューを選ぶ:
    - functional → 機能キュー
    - ui-polish → UI磨き込みキュー
+   - phase-c → Phase C キュー
 
 ## 実行ループ（キューが空になるまで連続）
 1. キュー先頭の [ ] を取得（ユーザーに聞かない）
@@ -98,7 +99,8 @@ Run N: parityComplete: true → 即終了
 
 ## フェーズ切替
 - 機能キューが空 → phase を ui-polish に
-- UI キューも空 → parityComplete を true に
+- UI キューも空 → phase-c が残っていれば phase-c へ、なければ parityComplete を true に
+- Phase C キューも空 → parityComplete を true に
 
 ## Git（セッション終了時・必須）
 - 作業ブランチは develop のみ（native-parity/* や cursor/* など別ブランチは作らない）
