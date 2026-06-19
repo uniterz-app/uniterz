@@ -74,8 +74,9 @@ export default function MobileProSubscribeScreen({ language, onClose, onSuccess 
   }
 
   return (
-    <MobilePageShell title={isJa ? "Pro プラン" : "Get Pro"} onClose={onClose}>
+    <MobilePageShell title={isJa ? "Pro プラン" : "Get Pro"} appBackground onClose={onClose}>
       <ScrollView contentContainerStyle={styles.pad}>
+        <View style={styles.cardShell}>
         <View style={styles.heroIcon}>
           <Image
             source={require("../../../../assets/icon.png")}
@@ -201,13 +202,26 @@ export default function MobileProSubscribeScreen({ language, onClose, onSuccess 
             {isJa ? "安全な外部決済サービスを利用しています。" : "Checkout uses a secure external payment provider."}
           </Text>
         </View>
+        </View>
       </ScrollView>
     </MobilePageShell>
   );
 }
 
 const styles = StyleSheet.create({
-  pad: { padding: 20, paddingBottom: 48 },
+  pad: { padding: 16, paddingTop: 24, paddingBottom: 48 },
+  cardShell: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "#000",
+    paddingHorizontal: 20,
+    paddingVertical: 28,
+    shadowColor: "#000",
+    shadowOpacity: 0.6,
+    shadowRadius: 28,
+    elevation: 10,
+  },
   heroIcon: {
     alignSelf: "center",
     width: 64,

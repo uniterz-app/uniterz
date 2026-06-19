@@ -1,12 +1,12 @@
 {
   "parityComplete": false,
   "phase": "phase-c",
-  "lastCompletedId": "ui-announcement-detail",
+  "lastCompletedId": "ui-pro-subscribe",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 28,
+  "totalCompleted": 29,
   "uiPolishCompleted": 11,
-  "phaseCCompleted": 11,
+  "phaseCCompleted": 12,
   "blockedItems": [],
-  "notes": "Phase C 継続。ui-announcement-detail 完了。次: ui-pro-subscribe。"
+  "notes": "Phase C 継続。ui-pro-subscribe 完了。次: ui-plan-status。"
 }

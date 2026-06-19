@@ -45,7 +45,7 @@
 | badges | `app/mobile/badges/page.tsx` | `MobileBadgesScreen.tsx` | done | done |
 | announcements | `app/mobile/announcements/page.tsx` | `MobileAnnouncementsScreen.tsx` | done | done |
 | announcement-detail | `app/mobile/announcements/[id]/page.tsx` | `AnnouncementDetailScreenNative.tsx` | done | done |
-| pro-subscribe | `app/mobile/pro/subscribe/page.tsx` | `MobileProSubscribeScreen.tsx` | done | partial |
+| pro-subscribe | `app/mobile/pro/subscribe/page.tsx` | `MobileProSubscribeScreen.tsx` | done | done |
 | pro-success | `app/mobile/pro/success/page.tsx` | `ProSuccessScreenNative.tsx` | done | done |
 | plan-status | `app/mobile/plan-status/page.tsx` | `MobilePlanStatusScreen.tsx` | done | partial |
 | plan-change | `app/mobile/plan-change/page.tsx` | `PlanChangeScreenNative` 系 | done | partial |
