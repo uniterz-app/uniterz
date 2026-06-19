@@ -15,7 +15,7 @@ description: >-
    - `functional` → `docs/native-parity-gaps.md` の機能キュー
    - `ui-polish` → UI磨き込みキュー
 
-## 実行ループ（最大5件/セッション）
+## 実行ループ（キューが空になるまで連続）
 
 1. キュー先頭の `[ ]` を取得
 2. Web 参照ファイルを読む（`app/mobile/` → `app/component/`）
@@ -24,7 +24,8 @@ description: >-
    - UI: Tailwind 値抽出 → StyleSheet 修正 → motion 突合 → 照合チェックリスト
 4. `npm run native:typecheck`
 5. キュー `[x]`、`native-parity.md` の status/uiStatus 更新、state 更新
-6. 次の `[ ]` へ（ユーザーに聞かない）
+6. 次の `[ ]` へ（**ユーザーに聞かない。5件で止めない**）
+7. `[ ]` がなくなるか `parityComplete: true` になるまで 1〜6 を繰り返す
 
 ## フェーズ切替
 
@@ -55,6 +56,11 @@ description: >-
 - `parityComplete: true`
 - 設計判断が必要（`blockedItems` に記録してスキップ）
 - 同一項目で typecheck 3回失敗
+- セッション時間・トークン上限で続行不能（このときだけ push して終了。**Native Parity Push Chain** が次 Run を自動起動）
+
+## 自動続行（Push Chain・任意）
+
+Run が上限で切れた場合、push をトリガーに **Native Parity Push Chain**（`docs/automation-setup.md`）が次 Run を起動する。ユーザーが「続けて」と送る必要はない。
 
 ## 参照
 
