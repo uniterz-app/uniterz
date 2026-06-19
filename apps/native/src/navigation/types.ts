@@ -57,6 +57,8 @@ export type ProfileStackParamList = {
   Help: undefined;
   Privacy: undefined;
   Terms: undefined;
+  RefundPolicy: undefined;
+  CommercialLaw: undefined;
   ElectronicNotice: undefined;
   Contact: undefined;
   FeatureRequest: undefined;

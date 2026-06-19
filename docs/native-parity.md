@@ -68,8 +68,8 @@
 | legal-help | `app/mobile/help/page.tsx` | Legal 系 | done | partial |
 | legal-guidelines | `app/mobile/guidelines/page.tsx` | Legal 系 | done | partial |
 | legal-community | `app/mobile/community-guidelines/page.tsx` | Legal 系 | done | partial |
-| legal-refund | `app/mobile/refund/page.tsx` | **なし** | gap | gap |
-| legal-law | `app/mobile/law/page.tsx` | **なし** | gap | gap |
+| legal-refund | `app/mobile/refund/page.tsx` | `RefundPolicyScreenNative.tsx` | done | partial |
+| legal-law | `app/mobile/law/page.tsx` | `CommercialLawScreenNative.tsx` | done | partial |
 | legal-contact | `app/mobile/contact/page.tsx` | **なし** | gap | gap |
 | feature-request | `app/mobile/feature-request/page.tsx` | `FeatureRequestScreenNative.tsx` | done | partial |
 | lp | `app/mobile/lp/page.tsx` | skip | skip | skip |

@@ -33,6 +33,8 @@ import CancelCompleteScreenNative from "../features/profile/screens/CancelComple
 import HelpScreenNative from "../features/legal/HelpScreenNative";
 import PrivacyScreenNative from "../features/legal/PrivacyScreenNative";
 import TermsScreenNative from "../features/legal/TermsScreenNative";
+import RefundPolicyScreenNative from "../features/legal/RefundPolicyScreenNative";
+import CommercialLawScreenNative from "../features/legal/CommercialLawScreenNative";
 import ElectronicNoticeScreenNative from "../features/legal/ElectronicNoticeScreenNative";
 import ContactScreenNative from "../features/legal/ContactScreenNative";
 import FeatureRequestScreenNative from "../features/legal/FeatureRequestScreenNative";
@@ -159,6 +161,8 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="Help" component={HelpScreenNative} />
       <ProfileStack.Screen name="Privacy" component={PrivacyScreenNative} />
       <ProfileStack.Screen name="Terms" component={TermsScreenNative} />
+      <ProfileStack.Screen name="RefundPolicy" component={RefundPolicyScreenNative} />
+      <ProfileStack.Screen name="CommercialLaw" component={CommercialLawScreenNative} />
       <ProfileStack.Screen name="ElectronicNotice" component={ElectronicNoticeScreenNative} />
       <ProfileStack.Screen name="Contact" component={ContactScreenNative} />
       <ProfileStack.Screen name="FeatureRequest" component={FeatureRequestScreenNative} />

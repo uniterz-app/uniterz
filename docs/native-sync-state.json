@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "functional",
-  "lastCompletedId": "preferred-league-init",
+  "lastCompletedId": "legal-refund-law",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 4,
+  "totalCompleted": 5,
   "uiPolishCompleted": 0,
   "blockedItems": [],
-  "notes": "preferred-league-init 完了。次は legal-refund-law。"
+  "notes": "legal-refund-law 完了。次は legal-contact。"
 }
