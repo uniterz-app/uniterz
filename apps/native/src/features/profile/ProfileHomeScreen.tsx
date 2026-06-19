@@ -618,20 +618,32 @@ export default function ProfileHomeScreen({
     return (
       <View style={styles.overviewBlock}>
         <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
-          <Text
-            style={styles.playoffsHeading}
-            maxFontSizeMultiplier={1.2}
-          >
-            {t.playoffsTitle}
-          </Text>
-          <View style={styles.summaryGridWrap}>
-            <ProfileSummaryGridNative
-              summary={statsBundle.summary}
-              ranks={statsBundle.summaryRanks}
-              maxStreak={maxStreak}
-              language={language}
-              proOverviewLayout={proSummaryGridLayout}
-            />
+          <View style={styles.summaryPanel}>
+            <View pointerEvents="none" style={styles.summaryPanelTopSheen} />
+            <View pointerEvents="none" style={styles.overviewFrameCorners}>
+              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerTopLeft]} />
+              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerTopRight]} />
+              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerBottomLeft]} />
+              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerBottomRight]} />
+            </View>
+            <View style={styles.summaryTitleRow}>
+              <Text
+                style={styles.playoffsHeading}
+                maxFontSizeMultiplier={1.2}
+              >
+                {t.playoffsTitle}
+              </Text>
+              <View style={styles.summaryTitleRail} />
+            </View>
+            <View style={styles.summaryGridWrap}>
+              <ProfileSummaryGridNative
+                summary={statsBundle.summary}
+                ranks={statsBundle.summaryRanks}
+                maxStreak={maxStreak}
+                language={language}
+                proOverviewLayout={proSummaryGridLayout}
+              />
+            </View>
           </View>
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
@@ -1408,13 +1420,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#6EA8FE",
   },
   playoffsHeading: {
-    alignSelf: "stretch",
-    textAlign: "center",
+    flexShrink: 1,
     color: "rgba(136,201,211,0.95)",
-    fontSize: 22,
-    /** Web `tracking-[0.12em]`（22px 時おおよそ 2.6）に近づけつつ少し詰める */
-    letterSpacing: 2.5,
-    marginBottom: spacing.md,
+    fontSize: 18,
+    /** Web `ProfileEditKinetikGlitchTitle compact` の詰まった英字に寄せる */
+    letterSpacing: 1.9,
     fontFamily: Platform.select({
       ios: "BebasNeue_400Regular",
       android: "BebasNeue_400Regular",
@@ -1424,12 +1434,82 @@ const styles = StyleSheet.create({
   overviewBlock: {
     gap: 0,
   },
+  /** Web `ProfileKinetikPanelFrame` 相当のサマリー外枠 */
+  summaryPanel: {
+    position: "relative",
+    alignSelf: "stretch",
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(5,8,20,0.72)",
+    padding: 8,
+    overflow: "hidden",
+  },
+  summaryPanelTopSheen: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 42,
+    backgroundColor: "rgba(255,255,255,0.045)",
+  },
+  summaryTitleRow: {
+    position: "relative",
+    zIndex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 2,
+    paddingTop: 1,
+    paddingBottom: 7,
+  },
+  summaryTitleRail: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(110,168,254,0.34)",
+  },
+  overviewFrameCorners: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+  },
+  overviewFrameCorner: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    borderColor: "rgba(255,255,255,0.88)",
+  },
+  overviewFrameCornerTopLeft: {
+    left: -1,
+    top: -1,
+    borderLeftWidth: 2,
+    borderTopWidth: 2,
+  },
+  overviewFrameCornerTopRight: {
+    right: -1,
+    top: -1,
+    borderRightWidth: 2,
+    borderTopWidth: 2,
+  },
+  overviewFrameCornerBottomLeft: {
+    left: -1,
+    bottom: -1,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+  },
+  overviewFrameCornerBottomRight: {
+    right: -1,
+    bottom: -1,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+  },
   /** チャートカードと同じ利用幅（scroll の横パディング内で常に 100%） */
   summaryGridWrap: {
+    position: "relative",
+    zIndex: 1,
     alignSelf: "stretch",
     width: "100%",
   },
-  chartGap: { height: 12 },
+  chartGap: { height: 16 },
   muted: {
     color: colors.textSecondary,
     fontSize: typography.body,

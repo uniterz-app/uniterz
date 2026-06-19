@@ -252,7 +252,7 @@ export default function ProfileDailyTrendChartNative({
 
   const limitedRows = useMemo(() => {
     if (range === "7d") return sorted.slice(-7);
-    return sorted.slice(-allowAll && range === "30d" ? 30 : 10);
+    return sorted.slice(allowAll && range === "30d" ? -30 : -10);
   }, [sorted, range, allowAll]);
 
   const chartData = useMemo(() => buildCumulative(limitedRows), [limitedRows]);
@@ -390,6 +390,7 @@ export default function ProfileDailyTrendChartNative({
   if (rowW <= 0) {
     return (
       <View style={styles.card} onLayout={onLayout}>
+        <KinetikFrameCorners />
         <Svg
           width="100%"
           height="100%"
@@ -438,6 +439,7 @@ export default function ProfileDailyTrendChartNative({
   if (model.rows.length === 0) {
     return (
       <View style={styles.card} onLayout={onLayout}>
+        <KinetikFrameCorners />
         <Svg
           width="100%"
           height="100%"
@@ -480,6 +482,7 @@ export default function ProfileDailyTrendChartNative({
 
   return (
     <View style={styles.card} onLayout={onLayout}>
+      <KinetikFrameCorners />
       <Svg
         width="100%"
         height="100%"
@@ -748,14 +751,36 @@ function Chip({
   );
 }
 
+/** Web `ProfileKinetikPanelFrame` の四隅アクセント */
+function KinetikFrameCorners() {
+  return (
+    <View pointerEvents="none" style={styles.frameCorners}>
+      <View style={[styles.frameCorner, styles.frameCornerTopLeft]} />
+      <View style={[styles.frameCorner, styles.frameCornerTopRight]} />
+      <View style={[styles.frameCorner, styles.frameCornerBottomLeft]} />
+      <View style={[styles.frameCorner, styles.frameCornerBottomRight]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(5,8,20,0.55)",
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(5,8,20,0.72)",
     overflow: "hidden",
     padding: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(0,0,0,0.6)",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.32,
+        shadowRadius: 24,
+      },
+      android: { elevation: 8 },
+      default: {},
+    }),
   },
   cardForeground: {
     position: "relative",
@@ -1004,5 +1029,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingVertical: 24,
     textAlign: "center",
+  },
+  frameCorners: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+  },
+  frameCorner: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    borderColor: "rgba(255,255,255,0.88)",
+  },
+  frameCornerTopLeft: {
+    left: -1,
+    top: -1,
+    borderLeftWidth: 2,
+    borderTopWidth: 2,
+  },
+  frameCornerTopRight: {
+    right: -1,
+    top: -1,
+    borderRightWidth: 2,
+    borderTopWidth: 2,
+  },
+  frameCornerBottomLeft: {
+    left: -1,
+    bottom: -1,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+  },
+  frameCornerBottomRight: {
+    right: -1,
+    bottom: -1,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
   },
 });

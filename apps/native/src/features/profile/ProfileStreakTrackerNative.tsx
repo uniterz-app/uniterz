@@ -205,6 +205,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   if (loading) {
     return (
       <View style={styles.card}>
+        <KinetikFrameCorners />
         <ShellGridBackdrop patternId={`${gridPatternId}_shell`} />
         <View style={styles.foreground}>
           <View style={styles.headerRow}>
@@ -231,6 +232,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   if (points.length === 0) {
     return (
       <View style={styles.card}>
+        <KinetikFrameCorners />
         <ShellGridBackdrop patternId={`${gridPatternId}_shell`} />
         <View style={styles.foreground}>
           <HeaderRow title={title} onInfoPress={openInfo} />
@@ -248,6 +250,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
 
   return (
     <View style={styles.card}>
+      <KinetikFrameCorners />
       <ShellGridBackdrop patternId={`${gridPatternId}_shell`} />
       <View style={styles.foreground}>
         <View style={styles.headerRow}>
@@ -484,12 +487,24 @@ function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => v
   );
 }
 
+/** Web `ProfileKinetikPanelFrame` の四隅アクセント */
+function KinetikFrameCorners() {
+  return (
+    <View pointerEvents="none" style={styles.frameCorners}>
+      <View style={[styles.frameCorner, styles.frameCornerTopLeft]} />
+      <View style={[styles.frameCorner, styles.frameCornerTopRight]} />
+      <View style={[styles.frameCorner, styles.frameCornerBottomLeft]} />
+      <View style={[styles.frameCorner, styles.frameCornerBottomRight]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(5,8,20,0.8)",
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(5,8,20,0.72)",
     padding: 12,
     overflow: "hidden",
     position: "relative",
@@ -896,5 +911,39 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "rgba(248,250,252,0.42)",
     textAlign: "center",
+  },
+  frameCorners: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+  },
+  frameCorner: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    borderColor: "rgba(255,255,255,0.88)",
+  },
+  frameCornerTopLeft: {
+    left: -1,
+    top: -1,
+    borderLeftWidth: 2,
+    borderTopWidth: 2,
+  },
+  frameCornerTopRight: {
+    right: -1,
+    top: -1,
+    borderRightWidth: 2,
+    borderTopWidth: 2,
+  },
+  frameCornerBottomLeft: {
+    left: -1,
+    bottom: -1,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+  },
+  frameCornerBottomRight: {
+    right: -1,
+    bottom: -1,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
   },
 });

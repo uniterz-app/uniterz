@@ -393,6 +393,7 @@ export default function ProfileRankTrendChartNative({
   if (rowW <= 0) {
     return (
       <View style={styles.card}>
+        <KinetikFrameCorners />
         <View style={styles.measureInner} onLayout={onLayout}>
           <GridBackdrop patternId={gridPatternId} />
           <View style={styles.cardForeground}>
@@ -408,6 +409,7 @@ export default function ProfileRankTrendChartNative({
   if (loading) {
     return (
       <View style={styles.card}>
+        <KinetikFrameCorners />
         <View style={styles.measureInner} onLayout={onLayout}>
           <GridBackdrop patternId={gridPatternId} />
           <View style={styles.cardForeground}>
@@ -425,6 +427,7 @@ export default function ProfileRankTrendChartNative({
   if (chartRows.length === 0) {
     return (
       <View style={styles.card}>
+        <KinetikFrameCorners />
         <View style={styles.measureInner} onLayout={onLayout}>
           <GridBackdrop patternId={gridPatternId} />
           <View style={styles.cardForeground}>
@@ -442,6 +445,7 @@ export default function ProfileRankTrendChartNative({
 
   return (
     <View style={styles.card}>
+      <KinetikFrameCorners />
       <View style={styles.measureInner} onLayout={onLayout}>
         <GridBackdrop patternId={gridPatternId} />
 
@@ -734,14 +738,36 @@ function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => v
   );
 }
 
+/** Web `ProfileKinetikPanelFrame` の四隅アクセント */
+function KinetikFrameCorners() {
+  return (
+    <View pointerEvents="none" style={styles.frameCorners}>
+      <View style={[styles.frameCorner, styles.frameCornerTopLeft]} />
+      <View style={[styles.frameCorner, styles.frameCornerTopRight]} />
+      <View style={[styles.frameCorner, styles.frameCornerBottomLeft]} />
+      <View style={[styles.frameCorner, styles.frameCornerBottomRight]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(5,8,20,0.55)",
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(5,8,20,0.72)",
     overflow: "hidden",
     padding: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(0,0,0,0.6)",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.32,
+        shadowRadius: 24,
+      },
+      android: { elevation: 8 },
+      default: {},
+    }),
   },
   measureInner: {
     position: "relative",
@@ -943,5 +969,39 @@ const styles = StyleSheet.create({
     color: "rgba(103,232,249,0.28)",
     paddingTop: 14,
     fontSize: 12,
+  },
+  frameCorners: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+  },
+  frameCorner: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    borderColor: "rgba(255,255,255,0.88)",
+  },
+  frameCornerTopLeft: {
+    left: -1,
+    top: -1,
+    borderLeftWidth: 2,
+    borderTopWidth: 2,
+  },
+  frameCornerTopRight: {
+    right: -1,
+    top: -1,
+    borderRightWidth: 2,
+    borderTopWidth: 2,
+  },
+  frameCornerBottomLeft: {
+    left: -1,
+    bottom: -1,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+  },
+  frameCornerBottomRight: {
+    right: -1,
+    bottom: -1,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
   },
 });
