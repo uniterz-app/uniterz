@@ -38,7 +38,7 @@ function TeamPlayerColumn({
   return (
     <View style={styles.teamCol}>
       <View style={styles.teamColHeader}>
-        <CountryFlagNative teamId={teamId} variant="inline" />
+        <CountryFlagNative teamId={teamId} variant="wcTab" />
         <Text style={styles.teamColLabel} numberOfLines={1}>
           {label}
         </Text>
@@ -165,7 +165,7 @@ export default function WcGoalScorerPickerNative({
         <View style={styles.selectedBox}>
           <View style={styles.selectedMain}>
             {value.teamId ? (
-              <CountryFlagNative teamId={value.teamId} variant="inline" />
+              <CountryFlagNative teamId={value.teamId} variant="wcSelected" />
             ) : null}
             <View style={styles.selectedTextCol}>
               <Text style={styles.selectedName} numberOfLines={1}>
@@ -217,12 +217,12 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
   },
   bonusHint: {
     color: "rgba(165,243,252,0.72)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   hint: {
@@ -252,12 +252,12 @@ const styles = StyleSheet.create({
   selectedTextCol: { flex: 1, minWidth: 0 },
   selectedName: {
     color: "#ecfeff",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
   selectedTeam: {
     color: "rgba(255,255,255,0.5)",
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 1,
   },
   clearBtn: {
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   teamColLabel: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   playerScroll: { maxHeight: 176 },
@@ -306,6 +306,8 @@ const styles = StyleSheet.create({
   },
   playerBtn: {
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
@@ -316,7 +318,7 @@ const styles = StyleSheet.create({
   },
   playerName: {
     color: "rgba(255,255,255,0.9)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   playerPos: {

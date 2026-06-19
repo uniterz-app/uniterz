@@ -6,6 +6,11 @@ export type CountryFlagVariant =
   | "card"
   | "preview"
   | "nextModal"
+  | "wcProfile"
+  | "wcFifa"
+  | "wcSelected"
+  | "wcTab"
+  | "wcTable"
   | "inline"
   | "result";
 
@@ -15,6 +20,16 @@ const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }
     card: { width: 72, height: 48 },
     preview: { width: 88, height: 59 },
     nextModal: { width: 53, height: 36 },
+    /** WC チームプロフィール見出し（Web mobile `h-[2.4rem] w-[3.5rem]`） */
+    wcProfile: { width: 56, height: 38 },
+    /** WC FIFA ランクカード（Web mobile `h-[1.5rem] w-[2rem]`） */
+    wcFifa: { width: 32, height: 24 },
+    /** WC 得点者選択済み行（Web `h-[1.2rem] w-[1.65rem]`） */
+    wcSelected: { width: 26, height: 19 },
+    /** WC タブ/ピッカー見出し（Web mobile `h-4 w-[1.35rem]` 近似） */
+    wcTab: { width: 22, height: 16 },
+    /** WC 順位表の行内国旗。`inline` より一段大きくして国名との比率を Web に寄せる */
+    wcTable: { width: 24, height: 18 },
     /** リザルト得点者予想行（Web `CountryFlag variant=inline`） */
     inline: { width: 17, height: 12 },
     /** リザルト一覧（Web `ResultCard` mobileScheduleDense `h-[2.8rem] w-[3.8rem]`） */

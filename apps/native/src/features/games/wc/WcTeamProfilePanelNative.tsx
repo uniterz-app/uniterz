@@ -55,7 +55,7 @@ function TeamCardNative({
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <CountryFlagNative teamId={teamId} variant="nextModal" />
+        <CountryFlagNative teamId={teamId} variant="wcProfile" />
         <View style={styles.cardHeaderText}>
           <Text style={styles.cardTitle} numberOfLines={1}>
             {displayName}
@@ -325,7 +325,7 @@ export default function WcTeamProfilePanelNative({
               onPress={() => setSide(item.side)}
               style={[styles.sideTab, active && styles.sideTabActive]}
             >
-              <CountryFlagNative teamId={item.teamId} variant="inline" />
+              <CountryFlagNative teamId={item.teamId} variant="wcTab" />
               <Text
                 style={[styles.sideTabText, active && styles.sideTabTextActive]}
                 numberOfLines={1}
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
     color: "#fff",
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: "700",
   },
   captainBadge: {
