@@ -28,7 +28,7 @@
 - [x] `ui-predict-modal` | `PredictModal` vs `PredictionFormV2` — HUD タブ、スコア入力、オーバーレイ、motion
 - [x] `ui-match-card` | `MatchCard*` 系 vs Web — market bar、entry scan、cyber grid、CTA
 - [x] `ui-result-home` | `ResultHomeScreen` vs `ResultCard` — glass shell、バッジ、日付パイプ
-- [ ] `ui-rankings` | `RankingsHomeScreen` — cyber list、seg bar、WC ステージタブ
+- [x] `ui-rankings` | `RankingsHomeScreen` — cyber list、seg bar、WC ステージタブ
 - [ ] `ui-profile` | `ProfileHomeScreen` — summary cards、チャート、streak tracker
 - [ ] `ui-wc-panels` | `Wc*Native` 全般 — 国旗サイズ、得点者ピッカー、順位表 typography
 - [ ] `ui-playoff-bracket` | `PlayoffBracket*` — シリーズカード、スコアインライン
