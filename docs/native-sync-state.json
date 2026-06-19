@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "ui-polish",
-  "lastCompletedId": "ui-match-card",
+  "lastCompletedId": "ui-result-home",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
   "totalCompleted": 11,
-  "uiPolishCompleted": 3,
+  "uiPolishCompleted": 4,
   "blockedItems": [],
-  "notes": "ui-match-card 完了。次は ui-result-home。"
+  "notes": "ui-result-home 完了。次は ui-rankings。"
 }
