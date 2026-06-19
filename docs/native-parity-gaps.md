@@ -34,7 +34,7 @@
 - [x] `ui-playoff-bracket` | `PlayoffBracket*` — シリーズカード、スコアインライン
 - [x] `ui-glowing-rim` | `GlowingRimFrame` 相当 — Skia で発光近似
 - [x] `ui-auth-screens` | Login/Signup/Onboarding — フォーム余白、ボタンスタイル
-- [ ] `ui-legal-screens` | Legal 系 — スクロール、ヘッダー、リンクスタイル
+- [x] `ui-legal-screens` | Legal 系 — スクロール、ヘッダー、リンクスタイル
 
 ---
 

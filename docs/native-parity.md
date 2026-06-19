@@ -63,16 +63,16 @@
 | wc-preview | `WcMatchPreviewPanel.tsx` | `WcMatchPreviewPanelNative.tsx` | done | done |
 | wc-goal-scorer | `WcGoalScorerPicker.tsx` | `WcGoalScorerPickerNative.tsx` | done | done |
 | wc-scoring-rules | `predictionScoringRules.tsx` | `WcScoringRulesNative.tsx` | done | done |
-| legal-terms | `app/mobile/terms/page.tsx` | `LegalScrollScreenNative` | done | partial |
-| legal-privacy | `app/mobile/privacy/page.tsx` | 同上 | done | partial |
-| legal-electronic | `app/mobile/electronic-notice/page.tsx` | `ElectronicNoticeScreenNative.tsx` | done | partial |
-| legal-help | `app/mobile/help/page.tsx` | Legal 系 | done | partial |
-| legal-guidelines | `app/mobile/guidelines/page.tsx` | Legal 系 | done | partial |
-| legal-community | `app/mobile/community-guidelines/page.tsx` | Legal 系 | done | partial |
-| legal-refund | `app/mobile/refund/page.tsx` | `RefundPolicyScreenNative.tsx` | done | partial |
-| legal-law | `app/mobile/law/page.tsx` | `CommercialLawScreenNative.tsx` | done | partial |
-| legal-contact | `app/mobile/contact/page.tsx` | `ContactScreenNative.tsx` | done | partial |
-| feature-request | `app/mobile/feature-request/page.tsx` | `FeatureRequestScreenNative.tsx` | done | partial |
+| legal-terms | `app/mobile/terms/page.tsx` | `LegalScrollScreenNative` | done | done |
+| legal-privacy | `app/mobile/privacy/page.tsx` | 同上 | done | done |
+| legal-electronic | `app/mobile/electronic-notice/page.tsx` | `ElectronicNoticeScreenNative.tsx` | done | done |
+| legal-help | `app/mobile/help/page.tsx` | Legal 系 | done | done |
+| legal-guidelines | `app/mobile/guidelines/page.tsx` | Legal 系 | done | done |
+| legal-community | `app/mobile/community-guidelines/page.tsx` | Legal 系 | done | done |
+| legal-refund | `app/mobile/refund/page.tsx` | `RefundPolicyScreenNative.tsx` | done | done |
+| legal-law | `app/mobile/law/page.tsx` | `CommercialLawScreenNative.tsx` | done | done |
+| legal-contact | `app/mobile/contact/page.tsx` | `ContactScreenNative.tsx` | done | done |
+| feature-request | `app/mobile/feature-request/page.tsx` | `FeatureRequestScreenNative.tsx` | done | done |
 | lp | `app/mobile/lp/page.tsx` | skip | skip | skip |
 | lp-v2 | `app/mobile/lp-v2/page.tsx` | skip | skip | skip |
 | dev-preview | `app/mobile/bg-halftone-preview/page.tsx` | skip | skip | skip |

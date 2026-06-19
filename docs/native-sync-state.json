@@ -1,11 +1,11 @@
 {
-  "parityComplete": false,
+  "parityComplete": true,
   "phase": "ui-polish",
-  "lastCompletedId": "ui-auth-screens",
+  "lastCompletedId": "ui-legal-screens",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 16,
-  "uiPolishCompleted": 10,
+  "totalCompleted": 17,
+  "uiPolishCompleted": 11,
   "blockedItems": [],
-  "notes": "ui-auth-screens 完了。次は ui-legal-screens。"
+  "notes": "ui-legal-screens 完了。UI キューが空になったため parityComplete=true。"
 }
