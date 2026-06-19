@@ -50,7 +50,7 @@
 | plan-status | `app/mobile/plan-status/page.tsx` | `MobilePlanStatusScreen.tsx` | done | done |
 | plan-change | `app/mobile/plan-change/page.tsx` | `PlanChangeScreenNative` 系 | done | done |
 | plan-change-complete | `app/mobile/plan-change-complete/page.tsx` | `PlanChangeCompleteScreenNative.tsx` | done | done |
-| cancel-plan | `app/mobile/cancel-plan/page.tsx` | `CancelPlanScreenNative.tsx` | done | partial |
+| cancel-plan | `app/mobile/cancel-plan/page.tsx` | `CancelPlanScreenNative.tsx` | done | done |
 | cancel-complete | `app/mobile/cancel-complete/page.tsx` | `CancelCompleteScreenNative.tsx` | done | done |
 | standings | `app/mobile/standings/page.tsx` | `StandingsScreenNative.tsx` | done | partial |
 | playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | done |

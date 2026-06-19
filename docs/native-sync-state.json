@@ -1,12 +1,12 @@
 {
   "parityComplete": false,
   "phase": "phase-c",
-  "lastCompletedId": "ui-plan-change-complete",
+  "lastCompletedId": "ui-cancel-plan",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 32,
+  "totalCompleted": 33,
   "uiPolishCompleted": 11,
-  "phaseCCompleted": 15,
+  "phaseCCompleted": 16,
   "blockedItems": [],
-  "notes": "Phase C 継続。ui-plan-change-complete 完了。次: ui-cancel-plan。"
+  "notes": "Phase C 継続。ui-cancel-plan 完了。次: ui-standings。"
 }
