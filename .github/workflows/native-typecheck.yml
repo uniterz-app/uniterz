@@ -29,4 +29,6 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run native:install
+
       - run: npm run native:typecheck
