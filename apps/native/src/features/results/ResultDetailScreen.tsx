@@ -773,19 +773,22 @@ export default function ResultDetailScreen({
             ) : null}
           </View>
           <View style={styles.centerCol}>
-            <Text style={styles.predLabel}>{cardDateLabel}</Text>
             {wcGroupCodeLabel ? (
               <Text style={styles.groupCodeLabel} numberOfLines={1}>
                 {wcGroupCodeLabel}
               </Text>
-            ) : null}
-            <Text style={styles.predictedScore}>{predictedScore}</Text>
+            ) : (
+              <Text style={styles.predLabel}>{cardDateLabel}</Text>
+            )}
             {finalScore ? (
               <>
-                <Text style={styles.finalLabel}>{isEn ? "Final" : "結果"}</Text>
-                <Text style={styles.finalScore}>{finalScore}</Text>
+                <Text style={styles.finalScoreMain}>{finalScore}</Text>
+                <Text style={styles.finalLabel}>{isEn ? "Final" : "試合終了"}</Text>
+                <Text style={styles.predictedScoreOverlay}>{predictedScore}</Text>
               </>
-            ) : null}
+            ) : (
+              <Text style={styles.predictedScore}>{predictedScore}</Text>
+            )}
           </View>
           <View style={styles.sideCol}>
             {isWcCard ? (
@@ -1147,33 +1150,51 @@ const styles = StyleSheet.create({
   },
   predictedScore: {
     color: "#f8fafc",
-    fontSize: 26,
+    fontSize: 20,
+    lineHeight: 22,
     fontWeight: "800",
     fontFamily: NUMERIC_FONT,
     fontVariant: ["tabular-nums"],
+  },
+  /** Web overlay 確定スコア（大・白） */
+  finalScoreMain: {
+    color: "#fff",
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: "900",
+    fontFamily: NUMERIC_FONT,
+    fontVariant: ["tabular-nums"],
+    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   finalLabel: {
-    color: "rgba(248,250,252,0.45)",
+    color: "rgba(248,250,252,0.75)",
     fontSize: 10,
     fontWeight: "600",
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 2,
   },
-  finalScore: {
-    color: "rgba(34,211,238,0.95)",
-    fontSize: 20,
-    fontWeight: "800",
+  /** Web overlay 予想スコア（小・amber） */
+  predictedScoreOverlay: {
+    color: "rgba(253,224,71,0.95)",
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: "700",
     fontFamily: NUMERIC_FONT,
     fontVariant: ["tabular-nums"],
+    textShadowColor: "rgba(251,191,36,0.28)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   groupCodeLabel: {
     marginTop: 2,
-    marginBottom: 6,
+    marginBottom: 4,
     maxWidth: "100%",
-    fontSize: 18,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 16,
     fontFamily: DISPLAY_FONT,
-    letterSpacing: 5,
+    letterSpacing: 3.5,
     color: "#FFFFFF",
     textAlign: "center",
     textTransform: "uppercase",

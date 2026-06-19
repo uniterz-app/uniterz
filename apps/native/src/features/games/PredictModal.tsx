@@ -266,6 +266,7 @@ function PredictMatchPreview({
     mergedFinal?.wcGoalScorer ??
     (wcGoalScorer ? { ...wcGoalScorer, hit: null as boolean | null } : null);
   return (
+    <View style={s.matchPreviewWrap}>
     <View style={s.matchPreviewShell}>
       {/** 一覧 `cardGridUnderlay` と同型: 方眼は最下層。 */}
       <View pointerEvents="none" style={s.matchPreviewGridUnderlay}>
@@ -339,15 +340,6 @@ function PredictMatchPreview({
         />
         <View pointerEvents="none" style={s.matchPreviewGlowOverlay} />
       </View>
-      {mergedFinal?.badge || mergedFinal?.streakBadge ? (
-        <View pointerEvents="none" style={s.matchPreviewOutcomeBadge}>
-          <ResultOutcomeBadgesNative
-            badge={mergedFinal.badge}
-            streakBadge={mergedFinal.streakBadge}
-            activeWinStreak={mergedFinal.activeWinStreak}
-          />
-        </View>
-      ) : null}
       <View pointerEvents="box-none" style={s.matchPreviewPaddedContent}>
         {data.roundLabel ? (
           <Text style={s.matchPreviewRoundPadded} numberOfLines={1}>
@@ -366,18 +358,23 @@ function PredictMatchPreview({
                   side={data.homeSide}
                   palette={data.homePalette}
                   jerseySize={48}
-                  flagVariant="preview"
+                  flagVariant={
+                    isWcLeague ? (mergedFinal ? "overlay" : "preview") : "card"
+                  }
                 />
               </WcTeamFlagWithMetaNative>
             </View>
-            <Text style={s.matchPreviewTeamName} numberOfLines={2}>
+            <Text
+              style={[s.matchPreviewTeamName, isWcLeague && s.matchPreviewTeamNameWc]}
+              numberOfLines={2}
+            >
               {data.homeCompact}
             </Text>
             {data.homeRecord ? (
               <Text style={s.matchPreviewRecord}>{data.homeRecord}</Text>
             ) : null}
           </View>
-          <View style={s.matchPreviewCenter}>
+          <View style={[s.matchPreviewCenter, mergedFinal && s.matchPreviewCenterFinal]}>
             {mergedFinal ? (
               <View style={s.matchPreviewFinalBlock}>
                 <Text style={s.matchPreviewScoreRow} numberOfLines={1}>
@@ -499,11 +496,16 @@ function PredictMatchPreview({
                   side={data.awaySide}
                   palette={data.awayPalette}
                   jerseySize={48}
-                  flagVariant="preview"
+                  flagVariant={
+                    isWcLeague ? (mergedFinal ? "overlay" : "preview") : "card"
+                  }
                 />
               </WcTeamFlagWithMetaNative>
             </View>
-            <Text style={s.matchPreviewTeamName} numberOfLines={2}>
+            <Text
+              style={[s.matchPreviewTeamName, isWcLeague && s.matchPreviewTeamNameWc]}
+              numberOfLines={2}
+            >
               {data.awayCompact}
             </Text>
             {data.awayRecord ? (
@@ -584,6 +586,22 @@ function PredictMatchPreview({
           </View>
         ) : null}
       </View>
+    </View>
+      {mergedFinal?.badge || mergedFinal?.streakBadge ? (
+        <View
+          pointerEvents="none"
+          style={[
+            s.matchPreviewOutcomeBadge,
+            showEditButton && s.matchPreviewOutcomeBadgeWithEdit,
+          ]}
+        >
+          <ResultOutcomeBadgesNative
+            badge={mergedFinal.badge}
+            streakBadge={mergedFinal.streakBadge}
+            activeWinStreak={mergedFinal.activeWinStreak}
+          />
+        </View>
+      ) : null}
       {showEditButton && onEditPrediction ? (
         <Pressable
           onPress={onEditPrediction}
@@ -1780,6 +1798,13 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.8,
   },
+  /** バッジ・閉じるボタンは overflow:visible。内側 shell だけ clip */
+  matchPreviewWrap: {
+    position: "relative",
+    width: "100%",
+    overflow: "visible",
+    marginTop: 4,
+  },
   /** モーダル最上段の試合プレビュー（Web MatchCard の左右カラー帯・グリッドに寄せる） */
   matchPreviewShell: {
     position: "relative",
@@ -1862,8 +1887,8 @@ const s = StyleSheet.create({
   matchPreviewCloseBtn: {
     position: "absolute",
     left: 6,
-    top: 6,
-    zIndex: 4,
+    top: 0,
+    zIndex: 7,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -1876,8 +1901,8 @@ const s = StyleSheet.create({
   matchPreviewEditBtn: {
     position: "absolute",
     right: 6,
-    top: 6,
-    zIndex: 4,
+    top: 0,
+    zIndex: 7,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -1905,15 +1930,15 @@ const s = StyleSheet.create({
   matchPreviewRoundPadded: {
     fontFamily: MATCH_CARD_DISPLAY_FONT,
     color: "rgba(241,245,255,0.95)",
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: "800",
-    lineHeight: 22,
-    letterSpacing: 0.85,
+    lineHeight: 18,
+    letterSpacing: 0.65,
     textAlign: "center",
     includeFontPadding: false,
     textTransform: "uppercase",
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 2,
+    marginBottom: 2,
     paddingHorizontal: 40,
   },
   matchPreviewGrid: {
@@ -2007,16 +2032,21 @@ const s = StyleSheet.create({
   matchPreviewOutcomeBadge: {
     position: "absolute",
     right: 8,
-    top: -4,
-    zIndex: 5,
-    maxWidth: "46%",
+    top: 0,
+    zIndex: 6,
+    maxWidth: "52%",
+  },
+  /** 編集ボタン（右上）と重ならないよう左へ */
+  matchPreviewOutcomeBadgeWithEdit: {
+    right: 40,
+    maxWidth: "44%",
   },
   matchPreviewFinalBlock: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 64,
+    minHeight: 40,
     gap: 2,
-    paddingTop: 4,
+    paddingTop: 0,
   },
   matchPreviewOverlayPredictRow: {
     marginTop: 2,
@@ -2145,6 +2175,11 @@ const s = StyleSheet.create({
     textTransform: "uppercase",
     textAlign: "center",
   },
+  /** Web WC mobile overlay `text-[15px]` */
+  matchPreviewTeamNameWc: {
+    fontSize: 15,
+    lineHeight: 16,
+  },
   matchPreviewRecord: {
     fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 8,
@@ -2159,11 +2194,15 @@ const s = StyleSheet.create({
     alignItems: "center",
     paddingTop: 22,
   },
+  /** Web overlay 試合終了: `min-h-[40px]` 相当 — 国旗列とのバランス用に上余白を削る */
+  matchPreviewCenterFinal: {
+    paddingTop: 6,
+  },
   matchPreviewScoreRow: { textAlign: "center" },
   matchPreviewScoreNum: {
     fontFamily: MATCH_CARD_SCORE_FONT,
-    fontSize: 22,
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 22,
     fontWeight: "900",
     letterSpacing: -0.4,
     fontVariant: ["tabular-nums"],

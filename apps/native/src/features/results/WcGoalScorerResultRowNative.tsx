@@ -21,7 +21,7 @@ export default function WcGoalScorerResultRowNative({ label, info }: Props) {
         {label}
       </Text>
       <View style={styles.valueSlot}>
-        <CountryFlagNative teamId={info.teamId} variant="inline" />
+        <CountryFlagNative teamId={info.teamId} variant="clubInline" />
         <Text style={styles.playerName} numberOfLines={1}>
           {info.playerName}
         </Text>

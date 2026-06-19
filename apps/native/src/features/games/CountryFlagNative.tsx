@@ -9,6 +9,7 @@ export type CountryFlagVariant =
   | "inline"
   | "clubInline"
   | "fifaInline"
+  | "overlay"
   | "result";
 
 /** Web `MatchCard` / `PredictNextGameModal` の国旗枠サイズに合わせた 4:3 系 */
@@ -17,14 +18,16 @@ const VARIANT_SIZE: Record<CountryFlagVariant, { width: number; height: number }
     card: { width: 72, height: 48 },
     preview: { width: 88, height: 59 },
     nextModal: { width: 53, height: 36 },
+    /** Web `inPredictOverlay` WC 試合終了（`w-[4.5rem] h-[3rem]` dense 寄り） */
+    overlay: { width: 72, height: 48 },
     /** Web `CountryFlag variant=inline` 既定（h-[1.125rem] w-[1.5rem]） */
     inline: { width: 24, height: 18 },
     /** Web WC キープレイヤーのクラブ国旗（w-[0.9rem]） */
     clubInline: { width: 14, height: 11 },
     /** Web WC FIFA ランクカードの国旗（h-[1.5rem] w-[2rem]） */
     fifaInline: { width: 32, height: 24 },
-    /** リザルト一覧（Web `ResultCard` mobileScheduleDense `h-[2.8rem] w-[3.8rem]`） */
-    result: { width: 61, height: 45 },
+    /** リザルト詳細（Web `MobileResultMatchHeader` `h-[3rem] w-[4.2rem]`） */
+    result: { width: 67, height: 48 },
   };
 
 type CountryFlagNativeProps = {
