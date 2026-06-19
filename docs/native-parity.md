@@ -56,7 +56,7 @@
 | playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | done |
 | playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | done |
 | bracket-market | `app/mobile/bracket-market/page.tsx` | `BracketMarketScreenNative.tsx` | done | partial |
-| team-detail | `app/mobile/teams/[teamId]/page.tsx` | `TeamDetailScreenNative` 系 | partial | gap |
+| team-detail | `app/mobile/teams/[teamId]/page.tsx` | `TeamDetailScreenNative.tsx` | done | partial |
 | wc-formation | `WcFormationPanel.tsx` | `WcFormationPanelNative.tsx` | done | done |
 | wc-team-profile | `WcTeamProfilePanel.tsx` | `WcTeamProfilePanelNative.tsx` | done | done |
 | wc-standing | `WcStandingPanel.tsx` | `WcStandingPanelNative.tsx` | done | done |

@@ -41,7 +41,7 @@
 ## Phase C キュー（機能 gap + UI partial → done）
 
 - [x] `gap-leaderboards-detail` P0 | Web: `app/mobile/communities/[groupId]/page.tsx` → Native: コミュニティ詳細画面（`LeaderboardsHomeScreen` 詳細モード or 専用画面）
-- [ ] `gap-team-detail` P0 | Web: `app/mobile/teams/[teamId]/page.tsx` → Native: `TeamDetailScreenNative` 機能・UI 完成
+- [x] `gap-team-detail` P0 | Web: `app/mobile/teams/[teamId]/page.tsx` → Native: `TeamDetailScreenNative` 機能・UI 完成
 - [ ] `gap-pro-success` P1 | Web: `app/mobile/pro/success/page.tsx` → Native: Pro 成功専用画面
 - [ ] `gap-cancel-complete` P1 | Web: `app/mobile/cancel-complete/page.tsx` → Native: 解約完了専用画面
 - [ ] `ui-games-predictions` | `GamePredictionsScreenNative` + `GameDetailModal` vs Web — partial → done（照合チェックリスト 6項目中5以上）

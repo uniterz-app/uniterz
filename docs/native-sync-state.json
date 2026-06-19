@@ -1,12 +1,12 @@
 {
   "parityComplete": false,
   "phase": "phase-c",
-  "lastCompletedId": "gap-leaderboards-detail",
+  "lastCompletedId": "gap-team-detail",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 18,
+  "totalCompleted": 19,
   "uiPolishCompleted": 11,
-  "phaseCCompleted": 1,
+  "phaseCCompleted": 2,
   "blockedItems": [],
-  "notes": "Phase C 継続。gap-leaderboards-detail 完了。次: gap-team-detail。"
+  "notes": "Phase C 継続。gap-team-detail 完了。次: gap-pro-success。"
 }
