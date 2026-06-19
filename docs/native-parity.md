@@ -38,7 +38,7 @@
 | result-detail | `app/mobile/result/[postId]/page.tsx` | `ResultDetailScreen.tsx` | done | partial |
 | rankings | `app/mobile/rankings/page.tsx` | `RankingsHomeScreen.tsx` | done | done |
 | leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | partial |
-| leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `LeaderboardsHomeScreen`（詳細） | partial | gap |
+| leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `CommunityDetailScreenNative.tsx` | done | partial |
 | profile-settings | `app/mobile/settings/profile/page.tsx` | `ProfileHomeScreen.tsx` | done | done |
 | profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | partial |
 | profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | done |
