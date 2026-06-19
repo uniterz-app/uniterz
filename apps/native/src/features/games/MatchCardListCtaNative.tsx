@@ -82,7 +82,7 @@ const VARIANT_SHELL_SHADOW: Record<
   normal: {
     shadowColor: "#00f5ff",
     shadowOpacity: 0.28,
-    shadowRadius: 11,
+    shadowRadius: 22,
   },
   predicted: {
     shadowColor: "rgba(148,163,184,0.35)",
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     color: "rgba(224,255,255,0.98)",
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 0.1,
+    letterSpacing: 0.78,
     lineHeight: 15,
     includeFontPadding: false,
     zIndex: 1,
