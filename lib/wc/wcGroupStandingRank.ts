@@ -120,7 +120,23 @@ export function formatWcGroupStageRecordLabel(
   return `${core} ${formatWcGroupStandingRankLabel(entry.rank, language)}`;
 }
 
-/** スコア下 — グループ表記（例: グループ K） */
+/** スコア上 — グループ名（例: GROUP K） */
+export function formatWcGroupCodeLabel(groupCode: WcGroupCode): string {
+  return `GROUP ${groupCode}`;
+}
+
+export function resolveWcGroupCodeLabel(
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined
+): string | null {
+  const group =
+    (homeTeamId?.trim() ? getWcGroupForTeam(homeTeamId.trim()) : null) ??
+    (awayTeamId?.trim() ? getWcGroupForTeam(awayTeamId.trim()) : null);
+  if (!group) return null;
+  return formatWcGroupCodeLabel(group.code);
+}
+
+/** @deprecated resolveWcGroupCodeLabel を使用 */
 export function formatWcGroupStageLine(
   groupCode: WcGroupCode,
   language: Language

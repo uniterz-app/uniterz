@@ -90,11 +90,11 @@ import {
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
 import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageLine } from "../../../../../lib/wc/wcGroupStandingRank";
+import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
 import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
-import { readPostMatchGoalScorers } from "../../../../../lib/wc/matchGoalScorers";
+import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
@@ -494,12 +494,12 @@ function ResultPostCard({
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
   const wcGroupRanks = useWcGroupStandingRanks(db, home?.teamId, away?.teamId);
-  const wcGroupStageLine = useMemo(
+  const wcGroupCodeLabel = useMemo(
     () =>
       isWcCard
-        ? resolveWcGroupStageLine(home?.teamId, away?.teamId, language)
+        ? resolveWcGroupCodeLabel(home?.teamId, away?.teamId)
         : null,
-    [isWcCard, home?.teamId, away?.teamId, language]
+    [isWcCard, home?.teamId, away?.teamId]
   );
   const pred = post.prediction as
     | { score?: { home?: number; away?: number }; winner?: string }
@@ -530,10 +530,14 @@ function ResultPostCard({
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWcCard || !hasFinal) return [];
-    return readPostMatchGoalScorers(
-      (post as { matchGoalScorers?: unknown }).matchGoalScorers
-    );
-  }, [isWcCard, hasFinal, post]);
+    return resolveWcMatchGoalScorersForDisplay({
+      league: "wc",
+      isFinal: true,
+      matchGoalScorersRaw: (post as { matchGoalScorers?: unknown }).matchGoalScorers,
+      homeTeamId: home?.teamId,
+      awayTeamId: away?.teamId,
+    });
+  }, [isWcCard, hasFinal, post, home?.teamId, away?.teamId]);
 
   const wcGoalScorer = useWcGoalScorerResultNative(post as WcGoalScorerPostLike);
 
@@ -837,6 +841,11 @@ function ResultPostCard({
               </View>
             </View>
             <View style={styles.centerScoreOverlay} pointerEvents="none">
+              {wcGroupCodeLabel ? (
+                <Text style={styles.groupCodeLabel} numberOfLines={1}>
+                  {wcGroupCodeLabel}
+                </Text>
+              ) : null}
               <Animated.View style={entrance.predictedScoreStyle}>
                 {hasPredictedScore ? (
                   <ResultMatchScoreLineNative
@@ -858,11 +867,6 @@ function ResultPostCard({
                     density="list"
                   />
                 </Animated.View>
-              ) : null}
-              {wcGroupStageLine ? (
-                <Text style={styles.groupStageLine} numberOfLines={1}>
-                  {wcGroupStageLine}
-                </Text>
               ) : null}
             </View>
           </View>
@@ -1773,13 +1777,16 @@ const styles = StyleSheet.create({
   finalScoreWrap: {
     marginTop: 3,
   },
-  groupStageLine: {
-    marginTop: 4,
+  groupCodeLabel: {
+    marginBottom: 6,
     maxWidth: "100%",
-    fontSize: 9,
-    fontWeight: "500",
-    color: "rgba(255,255,255,0.5)",
+    fontSize: 18,
+    lineHeight: 18,
+    fontFamily: DISPLAY_FONT_FAMILY,
+    letterSpacing: 5,
+    color: "#FFFFFF",
     textAlign: "center",
+    textTransform: "uppercase",
   },
   divider: {
     marginTop: 6,

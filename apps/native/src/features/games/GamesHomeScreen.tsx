@@ -123,6 +123,7 @@ import type { GamesStackParamList } from "../../navigation/types";
 import { useScheduleTeamsNative } from "./useScheduleTeamsNative";
 import { useGamesPageSwipe } from "./useGamesPageSwipe";
 import GamesDateNavigatorNative from "./GamesDateNavigatorNative";
+import { RankingsPageTitleCyberNative } from "../rankings/RankingsPageTitleCyberNative";
 import {
   gamesLeagueTitleEntering,
   gamesScheduleShellDaySwitchEntering,
@@ -1400,14 +1401,12 @@ export default function GamesHomeScreen({
             </Animated.View>
           </View>
           <View style={styles.gamesHeaderTitleCenter} pointerEvents="none">
-            <Animated.Text
+            <Animated.View
               key={`league-title-${gamesMotionKey}`}
               entering={webGamesMotion ? gamesLeagueTitleEntering : undefined}
-              style={styles.gamesHeaderLeagueTitle}
-              numberOfLines={1}
             >
-              {leagueHeaderLabel}
-            </Animated.Text>
+              <RankingsPageTitleCyberNative title={leagueHeaderLabel} />
+            </Animated.View>
           </View>
           <View style={styles.gamesHeaderSideRight}>
             <Animated.View
@@ -1698,19 +1697,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: [{ translateX: -72 }, { translateY: -10 }],
-    width: 144,
+    transform: [{ translateX: -80 }, { translateY: -12 }],
+    width: 160,
     alignItems: "center",
     zIndex: 10,
-  },
-  gamesHeaderLeagueTitle: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 20,
-    lineHeight: 22,
-    fontFamily: DISPLAY_FONT_FAMILY,
-    letterSpacing: 7,
-    textTransform: "uppercase",
-    textAlign: "center",
   },
   menuWcBadge: {
     position: "absolute",

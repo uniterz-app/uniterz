@@ -28,7 +28,7 @@ import {
   gamesHeaderShellClass,
   gamesHeaderTitleCenterClass,
 } from "@/lib/ui/gamesHeaderBar";
-import { nameBebas } from "@/lib/fonts";
+import { RankingsPageTitleCyber } from "@/app/component/rankings/RankingsPageTitleCyber";
 import { LEAGUE_DISPLAY } from "@/lib/leagues";
 import GamesTeamFilterPanel from "./GamesTeamFilterPanel";
 import MonthHeader from "./MonthHeader";
@@ -939,30 +939,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
   );
 
   const renderLeagueTitle = () => (
-    <motion.span
-      className={[
-        nameBebas.className,
-        "min-w-0 truncate text-center leading-none tracking-[0.28em] text-white/90",
-        isMobile
-          ? "block text-[20px] ps-[0.14em]"
-          : "block text-[22px] sm:text-[24px] ps-[0.14em]",
-      ].join(" ")}
-      initial={
-        webGamesMotion ? { opacity: 0, letterSpacing: "0.5em" } : false
-      }
+    <motion.div
+      className="flex min-w-0 justify-center"
+      initial={webGamesMotion ? { opacity: 0 } : false}
       animate={
-        webGamesMotion
-          ? { opacity: [0, 1, 0.55, 1], letterSpacing: "0.28em" }
-          : { opacity: 1 }
+        webGamesMotion ? { opacity: [0, 1, 0.55, 1] } : { opacity: 1 }
       }
       transition={
         webGamesMotion
           ? {
-              letterSpacing: {
-                duration: 0.42,
-                delay: 0.09,
-                ease: GAMES_CYBER_EASE,
-              },
               opacity: {
                 duration: 0.46,
                 delay: 0.09,
@@ -973,8 +958,12 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
           : { duration: 0 }
       }
     >
-      {(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
-    </motion.span>
+      <RankingsPageTitleCyber
+        variant="horizon-chrome"
+        title={(LEAGUE_DISPLAY[league] ?? "GAMES").toUpperCase()}
+        size="sm"
+      />
+    </motion.div>
   );
 
   const renderMonthHeader = () => (
