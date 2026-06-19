@@ -6,7 +6,7 @@ import type { ResultCyberBadgeKind } from "./resultCyberBadgeThemes";
 
 type ResultBadge = "hit" | "perfect" | "upset" | "miss" | "streak" | null;
 
-type StreakBadge = { label: string; tone: "silver" | "platinum" | "gold" };
+type StreakBadge = { label: string; tone?: "silver" | "platinum" | "gold" };
 
 type Props = {
   badge: ResultBadge;
@@ -20,6 +20,7 @@ type Props = {
 };
 
 function streakFlameColor(tone: StreakBadge["tone"]) {
+  if (!tone) return "#f8fafc";
   if (tone === "gold") return "#fef08a";
   if (tone === "platinum") return "#cffafe";
   return "#f8fafc";

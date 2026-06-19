@@ -1020,8 +1020,15 @@ export default function ResultHomeScreen({
     return grouped
       .map((g) => {
         const filterPost = (p: PostWithMillis) => {
-          if (!postMatchesResultListFilters(p, resultFilters)) return false;
-          if (showResultLeagueTabs && leagueTab !== "all") {
+          if (
+            !postMatchesResultListFilters(
+              p as Parameters<typeof postMatchesResultListFilters>[0],
+              resultFilters
+            )
+          ) {
+            return false;
+          }
+          if (showResultLeagueTabs) {
             const league = (p.leagueId ?? p.league) as string | undefined;
             if (leagueTab === "nba" && league === "wc") return false;
             if (leagueTab === "wc" && league !== "wc") return false;

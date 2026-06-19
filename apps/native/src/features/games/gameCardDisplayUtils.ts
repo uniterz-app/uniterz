@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { getTeamAlias } from "../../../../../lib/team-aliases";
+import { getTeamAlias } from "../../../../../lib/team-alias";
 import { splitTeamNameByLeague } from "../../../../../lib/team-name-split";
 import {
   resolveGameLiveMeta,

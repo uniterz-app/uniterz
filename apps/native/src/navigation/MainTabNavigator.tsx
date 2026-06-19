@@ -14,7 +14,6 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 export default function MainTabNavigator() {
   return (
     <Tab.Navigator
-        style={{ flex: 1, backgroundColor: "transparent" }}
         tabBar={(props) => <AppTabBar {...props} />}
         screenOptions={{
           headerShown: false,
