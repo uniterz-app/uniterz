@@ -6,6 +6,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { nativeBlurViewExtraProps } from "../ui/nativeBlurProps";
+import { GlowingRimFrame } from "./GlowingRimFrame";
 
 type Props = {
   visible: boolean;
@@ -43,7 +44,7 @@ export default function CyberGlassToastModal({
         )}
         <View style={styles.scrim} pointerEvents="none" />
         <Pressable style={styles.cardWrap} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.card}>
+          <GlowingRimFrame style={styles.card} radius={14}>
             {(Platform.OS === "ios" || Platform.OS === "android") && (
               <BlurView
                 pointerEvents="none"
@@ -80,7 +81,7 @@ export default function CyberGlassToastModal({
                 <Text style={styles.okText}>{actionLabel}</Text>
               </Pressable>
             </View>
-          </View>
+          </GlowingRimFrame>
         </Pressable>
       </Pressable>
     </Modal>
