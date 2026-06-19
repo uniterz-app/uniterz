@@ -73,7 +73,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [scheduleNoticeOpen, setScheduleNoticeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("nba");
+  const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
 
   const wcStageForHook: WcRankingStage | null =
@@ -446,6 +446,10 @@ const styles = StyleSheet.create({
   listSection: {
     marginTop: 6,
     gap: 0,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(0,0,0,0.18)",
   },
   restList: {
     gap: 0,
