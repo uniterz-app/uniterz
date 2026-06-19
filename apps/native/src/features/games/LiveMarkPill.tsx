@@ -20,6 +20,8 @@ type LiveMarkPillProps = {
   textStyle: StyleProp<TextStyle>;
 };
 
+const LIVE_MATCH_MARK_GLOW_HALF_MS = 925;
+
 export function LiveMarkPill({ pillStyle, textStyle }: LiveMarkPillProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const glow = useSharedValue(0);
@@ -34,8 +36,14 @@ export function LiveMarkPill({ pillStyle, textStyle }: LiveMarkPillProps) {
     glow.value = 0;
     glow.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 920, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 920, easing: Easing.inOut(Easing.ease) })
+        withTiming(1, {
+          duration: LIVE_MATCH_MARK_GLOW_HALF_MS,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        withTiming(0, {
+          duration: LIVE_MATCH_MARK_GLOW_HALF_MS,
+          easing: Easing.inOut(Easing.ease),
+        })
       ),
       -1,
       false
@@ -47,13 +55,13 @@ export function LiveMarkPill({ pillStyle, textStyle }: LiveMarkPillProps) {
     const t = glow.value;
     return {
       transform: [{ scale: 1 + t * 0.035 }],
-      shadowOpacity: interpolate(t, [0, 1], [0.32, 0.78]),
-      shadowRadius: interpolate(t, [0, 1], [8, 22]),
+      shadowOpacity: interpolate(t, [0, 1], [0.42, 0.78]),
+      shadowRadius: interpolate(t, [0, 1], [10, 22]),
     };
   });
 
   const animatedTextStyle = useAnimatedStyle(() => ({
-    textShadowRadius: interpolate(glow.value, [0, 1], [4, 14]),
+    textShadowRadius: interpolate(glow.value, [0, 1], [6, 14]),
   }));
 
   return (
