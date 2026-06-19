@@ -102,6 +102,7 @@ export default function BracketCardNative({
   const primary = getTeamPrimaryColor(league, teamId);
   const border = lighten(primary, 0.08);
   const win4 = isFourWins(wins);
+  const winsGlow = win4 ? "rgba(255, 216, 77, 0.55)" : primary;
 
   return (
     <View
@@ -124,7 +125,11 @@ export default function BracketCardNative({
         <Text
           style={[
             styles.wins,
-            { fontSize: 30 * SCALE, color: win4 ? "#ffd84d" : "#f8fbff" },
+            {
+              fontSize: 30 * SCALE,
+              color: win4 ? "#ffd84d" : "#f8fbff",
+              textShadowColor: winsGlow,
+            },
           ]}
         >
           {wins ?? ""}
@@ -146,6 +151,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
+    ...Platform.select({
+      android: { elevation: 3 },
+      default: {},
+    }),
   },
   inner: {
     flexDirection: "row",
@@ -167,6 +176,8 @@ const styles = StyleSheet.create({
   wins: {
     fontFamily: bebas,
     includeFontPadding: false,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 3,
   },
   hitCheck: {
     position: "absolute",
