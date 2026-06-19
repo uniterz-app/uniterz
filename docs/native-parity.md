@@ -47,7 +47,7 @@
 | announcement-detail | `app/mobile/announcements/[id]/page.tsx` | `AnnouncementDetailScreenNative.tsx` | done | done |
 | pro-subscribe | `app/mobile/pro/subscribe/page.tsx` | `MobileProSubscribeScreen.tsx` | done | done |
 | pro-success | `app/mobile/pro/success/page.tsx` | `ProSuccessScreenNative.tsx` | done | done |
-| plan-status | `app/mobile/plan-status/page.tsx` | `MobilePlanStatusScreen.tsx` | done | partial |
+| plan-status | `app/mobile/plan-status/page.tsx` | `MobilePlanStatusScreen.tsx` | done | done |
 | plan-change | `app/mobile/plan-change/page.tsx` | `PlanChangeScreenNative` 系 | done | partial |
 | plan-change-complete | `app/mobile/plan-change-complete/page.tsx` | `PlanChangeCompleteScreenNative.tsx` | done | partial |
 | cancel-plan | `app/mobile/cancel-plan/page.tsx` | `CancelPlanScreenNative.tsx` | done | partial |

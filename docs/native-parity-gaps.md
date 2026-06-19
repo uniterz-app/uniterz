@@ -52,7 +52,7 @@
 - [x] `ui-announcements` | `MobileAnnouncementsScreen` vs Web — partial → done
 - [x] `ui-announcement-detail` | `AnnouncementDetailScreenNative` vs Web — partial → done
 - [x] `ui-pro-subscribe` | `MobileProSubscribeScreen` vs Web — partial → done
-- [ ] `ui-plan-status` | `MobilePlanStatusScreen` vs Web — partial → done
+- [x] `ui-plan-status` | `MobilePlanStatusScreen` vs Web — partial → done
 - [ ] `ui-plan-change` | `PlanChangeScreenNative` 系 vs Web — partial → done
 - [ ] `ui-plan-change-complete` | `PlanChangeCompleteScreenNative` vs Web — partial → done
 - [ ] `ui-cancel-plan` | `CancelPlanScreenNative` vs Web — partial → done
