@@ -51,7 +51,7 @@
 | plan-change | `app/mobile/plan-change/page.tsx` | `PlanChangeScreenNative` 系 | done | partial |
 | plan-change-complete | `app/mobile/plan-change-complete/page.tsx` | `PlanChangeCompleteScreenNative.tsx` | done | partial |
 | cancel-plan | `app/mobile/cancel-plan/page.tsx` | `CancelPlanScreenNative.tsx` | done | partial |
-| cancel-complete | `app/mobile/cancel-complete/page.tsx` | キャンセル完了 | partial | gap |
+| cancel-complete | `app/mobile/cancel-complete/page.tsx` | `CancelCompleteScreenNative.tsx` | done | done |
 | standings | `app/mobile/standings/page.tsx` | `StandingsScreenNative.tsx` | done | partial |
 | playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | done |
 | playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | done |
