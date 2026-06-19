@@ -9,7 +9,7 @@
 ## 機能キュー（Phase A）
 
 - [x] `wc-formation-panel` P0 | Web: `app/component/predict/wc/WcFormationPanel.tsx` → Native: 新規 `WcFormationPanelNative.tsx`、`PredictModal` に配線
-- [ ] `wc-team-profile-rich` P0 | Web: `WcTeamProfilePanel.tsx` → Native: `WcTeamProfilePanelNative.tsx` 拡充（key players, formation, club meta, nickname）
+- [x] `wc-team-profile-rich` P0 | Web: `WcTeamProfilePanel.tsx` → Native: `WcTeamProfilePanelNative.tsx` 拡充（key players, formation, club meta, nickname）
 - [ ] `wc-scoring-rules` P0 | Web: `predictionScoringRules.tsx` → Native: 新規、PredictModal に表示
 - [ ] `preferred-league-init` P1 | Web: `useUserPreferredLeague` → Native: `GamesHomeScreen` 初期リーグに反映
 - [ ] `legal-refund-law` P1 | Web: `app/mobile/refund/page.tsx`, `law/page.tsx` → Native: `LegalScrollScreenNative` 系で新規画面
