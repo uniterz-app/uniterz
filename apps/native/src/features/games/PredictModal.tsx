@@ -877,10 +877,38 @@ export default function PredictModal({
 
   const modalChromeVisible = visible || exitingUi;
   const hasTool = Boolean(predictToolsTab);
+  const showCyberHudTabs = Boolean(overlayMarketBar);
   /** プレビュー有無でタブ行の stagger インデックスをずらす（Web と同趣旨の縦スタッガー） */
   const tabsStaggerIndex = matchPreview ? 1 : 0;
   const scoreStagger = hasTool ? 2 : 1;
   const submitStagger = hasTool ? 3 : 2;
+
+  function toolTabButtonStyle(
+    active: boolean,
+    last = false
+  ) {
+    if (showCyberHudTabs) {
+      return [
+        s.predictCyberTab,
+        last && s.predictCyberTabLast,
+        active && s.predictCyberTabActive,
+      ];
+    }
+    return [s.predictToolTab, active && s.predictToolTabActive];
+  }
+
+  function toolTabTextStyle(active: boolean) {
+    if (showCyberHudTabs) {
+      return [
+        s.predictCyberTabText,
+        active ? s.predictCyberTabTextActive : s.predictCyberTabTextIdle,
+      ];
+    }
+    return [
+      s.predictToolTabText,
+      !active && s.predictToolTabTextInactive,
+    ];
+  }
 
   /** ×・背景タップ・Android 戻る：閉じるアニメ後に親へ通知（親が即 visible=false にしないため exitingUi でモーダルを維持） */
   function scheduleCloseAfterExitAnimation() {
@@ -982,7 +1010,7 @@ export default function PredictModal({
                   ) : null}
               <Animated.View
                 style={
-                  showWcOverlayTabs ? s.predictCyberDeck : s.predictToolsRow
+                  showCyberHudTabs ? s.predictCyberDeck : s.predictToolsRow
                 }
                 entering={reduceMotion ? undefined : blockIn(tabsStaggerIndex)}
               >
@@ -1052,51 +1080,36 @@ export default function PredictModal({
                 ) : (
                   <>
                     <Pressable
-                      style={[
-                        s.predictToolTab,
-                        predictToolsTab === "h2h" && s.predictToolTabActive,
-                      ]}
+                      style={toolTabButtonStyle(
+                        predictToolsTab === "h2h",
+                        hideMarketTab && !showWcOverlayTabs
+                      )}
                       onPress={() => handleToolTabPress("h2h")}
                     >
                       <Text
-                        style={[
-                          s.predictToolTabText,
-                          predictToolsTab !== "h2h" && s.predictToolTabTextInactive,
-                        ]}
+                        style={toolTabTextStyle(predictToolsTab === "h2h")}
                       >
                         {t.tabH2h}
                       </Text>
                     </Pressable>
                     {!hideMarketTab ? (
                       <Pressable
-                        style={[
-                          s.predictToolTab,
-                          predictToolsTab === "market" && s.predictToolTabActive,
-                        ]}
+                        style={toolTabButtonStyle(predictToolsTab === "market")}
                         onPress={() => handleToolTabPress("market")}
                       >
                         <Text
-                          style={[
-                            s.predictToolTabText,
-                            predictToolsTab !== "market" && s.predictToolTabTextInactive,
-                          ]}
+                          style={toolTabTextStyle(predictToolsTab === "market")}
                         >
                           {t.tabMarket}
                         </Text>
                       </Pressable>
                     ) : null}
                     <Pressable
-                      style={[
-                        s.predictToolTab,
-                        predictToolsTab === "stats" && s.predictToolTabActive,
-                      ]}
+                      style={toolTabButtonStyle(predictToolsTab === "stats", true)}
                       onPress={() => handleToolTabPress("stats")}
                     >
                       <Text
-                        style={[
-                          s.predictToolTabText,
-                          predictToolsTab !== "stats" && s.predictToolTabTextInactive,
-                        ]}
+                        style={toolTabTextStyle(predictToolsTab === "stats")}
                       >
                         {t.tabStats}
                       </Text>
@@ -1287,6 +1300,8 @@ export default function PredictModal({
                                 {predictHomeTeamLabel || "HOME"}
                               </Text>
                               <View style={s.scoreInputWrap}>
+                                <View pointerEvents="none" style={s.scoreInputLeftEdge} />
+                                <View pointerEvents="none" style={s.scoreInputTopHighlight} />
                                 <TextInput
                                   value={scoreHome}
                                   onChangeText={setScoreHome}
@@ -1302,6 +1317,8 @@ export default function PredictModal({
                                 {predictAwayTeamLabel || "AWAY"}
                               </Text>
                               <View style={s.scoreInputWrap}>
+                                <View pointerEvents="none" style={s.scoreInputLeftEdge} />
+                                <View pointerEvents="none" style={s.scoreInputTopHighlight} />
                                 <TextInput
                                   value={scoreAway}
                                   onChangeText={setScoreAway}
@@ -1357,6 +1374,8 @@ export default function PredictModal({
                               end={{ x: 0.5, y: 1 }}
                               style={s.submitGradient}
                             >
+                              <View pointerEvents="none" style={s.submitTopHighlight} />
+                              <View pointerEvents="none" style={s.submitBottomShade} />
                               <Text style={s.predictButtonText}>
                                 {predictSubmitting
                                   ? isEditingPrediction
@@ -1440,6 +1459,11 @@ const s = StyleSheet.create({
     borderColor: "rgba(0,245,255,0.28)",
     backgroundColor: "rgba(4,8,14,0.9)",
     overflow: "hidden",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2,
   },
   predictCyberTab: {
     flex: 1,
@@ -1680,8 +1704,28 @@ const s = StyleSheet.create({
     gap: 6,
   },
   scoreInputWrap: {
+    position: "relative",
     borderRadius: 10,
     overflow: "hidden",
+    backgroundColor: "rgba(3,7,14,0.96)",
+  },
+  scoreInputLeftEdge: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    zIndex: 2,
+    backgroundColor: "rgba(0,245,255,0.32)",
+  },
+  scoreInputTopHighlight: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 1,
+    zIndex: 2,
+    backgroundColor: "rgba(0,245,255,0.14)",
   },
   teamNameLabel: {
     color: "rgba(255,255,255,0.9)",
@@ -1712,8 +1756,12 @@ const s = StyleSheet.create({
   },
   scoreInputOverlay: {
     borderColor: "rgba(0,245,255,0.24)",
-    backgroundColor: "rgba(0,245,255,0.07)",
+    backgroundColor: "rgba(0,245,255,0.05)",
     color: "#e8fdff",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
   },
   soccerHint: {
     marginTop: 8,
@@ -1728,6 +1776,11 @@ const s = StyleSheet.create({
   },
   submitOuterEnabled: {
     borderColor: "rgba(0,245,255,0.42)",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 22,
+    elevation: 3,
   },
   submitOuterDisabled: {
     borderColor: "rgba(148,163,184,0.2)",
@@ -1736,9 +1789,26 @@ const s = StyleSheet.create({
     transform: [{ scale: 0.99 }],
   },
   submitGradient: {
+    position: "relative",
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
+  },
+  submitTopHighlight: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  submitBottomShade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 1,
+    backgroundColor: "rgba(0,70,100,0.38)",
   },
   submitDisabledFill: {
     minHeight: 48,
@@ -1747,11 +1817,15 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(71,85,105,0.13)",
   },
   predictButtonText: {
+    zIndex: 1,
     color: "#f0fdff",
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "700",
     letterSpacing: 0.8,
+    textShadowColor: "rgba(0,245,255,0.42)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
   },
   predictButtonTextDisabled: {
     color: "rgba(255,255,255,0.4)",
