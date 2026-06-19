@@ -33,7 +33,7 @@
 | games-home | `app/mobile/games/page.tsx` → `GamesPage.tsx` | `GamesHomeScreen.tsx` | done | done |
 | games-predict | `app/mobile/games/[id]/predict/page.tsx` | `PredictModal.tsx` | done | done |
 | games-predictions | `app/mobile/games/[id]/predictions/page.tsx` | `GamePredictionsScreenNative.tsx` + `GameDetailModal` | done | partial |
-| result-home | `app/mobile/result/page.tsx` | `ResultHomeScreen.tsx` | done | partial |
+| result-home | `app/mobile/result/page.tsx` | `ResultHomeScreen.tsx` | done | done |
 | result-detail | `app/mobile/result/[postId]/page.tsx` | `ResultDetailScreen.tsx` | done | partial |
 | rankings | `app/mobile/rankings/page.tsx` | `RankingsHomeScreen.tsx` | done | partial |
 | leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | partial |
