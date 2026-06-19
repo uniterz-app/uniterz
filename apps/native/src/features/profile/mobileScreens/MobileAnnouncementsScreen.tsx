@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   collection,
   doc,
@@ -178,7 +179,7 @@ export default function MobileAnnouncementsScreen({
 
   if (detailId) {
     return (
-      <MobilePageShell title={detailTitle} onClose={onClose} onBack={() => setDetailId(null)}>
+      <MobilePageShell title={detailTitle} appBackground onClose={onClose} onBack={() => setDetailId(null)}>
         <ScrollView contentContainerStyle={styles.detailPad}>
           {detailLoading ? (
             <ActivityIndicator color="#67e8f9" style={{ marginTop: 24 }} />
@@ -197,7 +198,7 @@ export default function MobileAnnouncementsScreen({
   }
 
   return (
-    <MobilePageShell title={listTitle} onClose={onClose}>
+    <MobilePageShell title={listTitle} appBackground onClose={onClose}>
       <ScrollView contentContainerStyle={styles.listPad}>
         {loading ? (
           <View style={styles.skelWrap}>
@@ -234,14 +235,9 @@ export default function MobileAnnouncementsScreen({
                 )}
                 <View style={styles.cardInner}>
                   <View style={styles.typeRow}>
-                    <View
-                      style={[
-                        styles.typePill,
-                        { backgroundColor: meta.colors[0] },
-                      ]}
-                    >
+                    <LinearGradient colors={meta.colors} style={styles.typePill}>
                       <Text style={styles.typePillText}>{typeLabel}</Text>
-                    </View>
+                    </LinearGradient>
                     <Text style={styles.date}>{formatDate(a.postedAt, isJa)}</Text>
                   </View>
                   <Text style={styles.cardTitle}>{a.title}</Text>
@@ -274,9 +270,9 @@ function RegularAnnouncementBody({
         <Image source={{ uri: src }} style={styles.detailHero} resizeMode="cover" />
       ) : null}
       <View style={styles.typeRow}>
-        <View style={[styles.typePill, { backgroundColor: meta.colors[0] }]}>
+        <LinearGradient colors={meta.colors} style={styles.typePill}>
           <Text style={styles.typePillText}>{typeLabel}</Text>
-        </View>
+        </LinearGradient>
         <Text style={styles.date}>{formatDate(row.postedAt, isJa)}</Text>
       </View>
       <Text style={styles.detailH2}>{row.title}</Text>
@@ -311,9 +307,9 @@ function SyntheticEventBody({
   return (
     <>
       <View style={styles.typeRow}>
-        <View style={[styles.typePill, { backgroundColor: meta.colors[0] }]}>
+        <LinearGradient colors={meta.colors} style={styles.typePill}>
           <Text style={styles.typePillText}>{typeLabel}</Text>
-        </View>
+        </LinearGradient>
         <Text style={styles.date}>{posted.toLocaleString(isJa ? "ja-JP" : "en-US")}</Text>
       </View>
       <Text style={styles.detailH2}>{title}</Text>

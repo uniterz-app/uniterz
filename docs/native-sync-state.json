@@ -1,12 +1,12 @@
 {
   "parityComplete": false,
   "phase": "phase-c",
-  "lastCompletedId": "ui-badges",
+  "lastCompletedId": "ui-announcements",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 26,
+  "totalCompleted": 27,
   "uiPolishCompleted": 11,
-  "phaseCCompleted": 9,
+  "phaseCCompleted": 10,
   "blockedItems": [],
-  "notes": "Phase C 継続。ui-badges 完了。次: ui-announcements。"
+  "notes": "Phase C 継続。ui-announcements 完了。次: ui-announcement-detail。"
 }

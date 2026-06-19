@@ -43,7 +43,7 @@
 | profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | done |
 | profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | done |
 | badges | `app/mobile/badges/page.tsx` | `MobileBadgesScreen.tsx` | done | done |
-| announcements | `app/mobile/announcements/page.tsx` | `MobileAnnouncementsScreen.tsx` | done | partial |
+| announcements | `app/mobile/announcements/page.tsx` | `MobileAnnouncementsScreen.tsx` | done | done |
 | announcement-detail | `app/mobile/announcements/[id]/page.tsx` | `AnnouncementDetailScreenNative.tsx` | done | partial |
 | pro-subscribe | `app/mobile/pro/subscribe/page.tsx` | `MobileProSubscribeScreen.tsx` | done | partial |
 | pro-success | `app/mobile/pro/success/page.tsx` | `ProSuccessScreenNative.tsx` | done | done |
