@@ -234,7 +234,7 @@ function KeyPlayerRowNative({
             {leagueIso2 ? (
               <CountryFlagNative
                 iso2={leagueIso2}
-                variant="inline"
+                variant="clubInline"
                 accessibilityLabel={leagueLabel ?? undefined}
               />
             ) : null}
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: "rgba(255,255,255,0.7)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   sideTabTextActive: {

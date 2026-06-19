@@ -122,7 +122,7 @@ function FifaRankCardNative({
   return (
     <View style={styles.fifaCard}>
       <View style={styles.fifaHeader}>
-        <CountryFlagNative teamId={teamId} variant="inline" />
+        <CountryFlagNative teamId={teamId} variant="fifaInline" />
         <Text style={styles.fifaName} numberOfLines={1}>
           {name}
         </Text>
@@ -184,57 +184,58 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(255,255,255,0.02)",
     paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   th: {
     color: "rgba(255,255,255,0.5)",
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  thRank: { width: 22, textAlign: "left" },
+  thRank: { width: 28, textAlign: "left" },
   thTeam: { flex: 1, textAlign: "left" },
-  thNum: { width: 22, textAlign: "center" },
-  thPts: { color: "rgba(255,255,255,0.9)" },
+  thNum: { width: 24, textAlign: "center" },
+  thPts: { width: 34, color: "rgba(255,255,255,0.9)" },
   tableRow: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.05)",
     paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   tableRowHighlight: {
     backgroundColor: "rgba(34,211,238,0.08)",
   },
   td: { minWidth: 0 },
   tdRank: {
-    width: 22,
+    width: 28,
     color: "rgba(255,255,255,0.55)",
-    fontSize: 11,
+    fontSize: 12,
     textAlign: "left",
   },
   tdTeam: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   teamName: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   tdNum: {
-    width: 22,
+    width: 24,
     color: "rgba(255,255,255,0.85)",
-    fontSize: 11,
+    fontSize: 12,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
   },
   tdPts: {
+    width: 34,
     color: "#fff",
     fontWeight: "800",
   },
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
   },
   fifaRank: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
   },

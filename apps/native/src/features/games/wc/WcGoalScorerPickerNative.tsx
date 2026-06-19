@@ -217,12 +217,12 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
   },
   bonusHint: {
     color: "rgba(165,243,252,0.72)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   hint: {
@@ -252,12 +252,12 @@ const styles = StyleSheet.create({
   selectedTextCol: { flex: 1, minWidth: 0 },
   selectedName: {
     color: "#ecfeff",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
   selectedTeam: {
     color: "rgba(255,255,255,0.5)",
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 1,
   },
   clearBtn: {
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   teamColLabel: {
     flex: 1,
     color: "rgba(255,255,255,0.88)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   playerScroll: { maxHeight: 176 },
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   playerName: {
     color: "rgba(255,255,255,0.9)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
   },
   playerPos: {
