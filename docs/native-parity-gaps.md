@@ -50,7 +50,7 @@
 - [x] `ui-profile-password` | `ProfilePasswordScreenNative` vs Web — partial → done
 - [x] `ui-badges` | `MobileBadgesScreen` vs Web — partial → done
 - [x] `ui-announcements` | `MobileAnnouncementsScreen` vs Web — partial → done
-- [ ] `ui-announcement-detail` | `AnnouncementDetailScreenNative` vs Web — partial → done
+- [x] `ui-announcement-detail` | `AnnouncementDetailScreenNative` vs Web — partial → done
 - [ ] `ui-pro-subscribe` | `MobileProSubscribeScreen` vs Web — partial → done
 - [ ] `ui-plan-status` | `MobilePlanStatusScreen` vs Web — partial → done
 - [ ] `ui-plan-change` | `PlanChangeScreenNative` 系 vs Web — partial → done
