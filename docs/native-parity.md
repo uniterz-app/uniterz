@@ -39,9 +39,9 @@
 | rankings | `app/mobile/rankings/page.tsx` | `RankingsHomeScreen.tsx` | done | done |
 | leaderboards | `app/mobile/leaderboards/page.tsx` | `LeaderboardsHomeScreen.tsx` | done | partial |
 | leaderboards-detail | `app/mobile/communities/[groupId]/page.tsx` | `LeaderboardsHomeScreen`（詳細） | partial | gap |
-| profile-settings | `app/mobile/settings/profile/page.tsx` | `ProfileHomeScreen.tsx` | done | partial |
+| profile-settings | `app/mobile/settings/profile/page.tsx` | `ProfileHomeScreen.tsx` | done | done |
 | profile-password | `app/mobile/settings/password/page.tsx` | `ProfilePasswordScreenNative.tsx` | done | partial |
-| profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | partial |
+| profile-public | `app/mobile/u/[handle]/page.tsx` | `PublicProfileScreenNative.tsx` | done | done |
 | badges | `app/mobile/badges/page.tsx` | `MobileBadgesScreen.tsx` | done | partial |
 | announcements | `app/mobile/announcements/page.tsx` | `MobileAnnouncementsScreen.tsx` | done | partial |
 | announcement-detail | `app/mobile/announcements/[id]/page.tsx` | `AnnouncementDetailScreenNative.tsx` | done | partial |
