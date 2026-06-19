@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -343,7 +344,13 @@ function ResultDayHeader({
     <View style={[styles.listRowOuter, styles.dayHeaderSpacing]}>
       <View style={resultDayStripPanelNative.outer}>
         <Animated.View style={[resultDayStripPanelNative.panel, clipStyle]}>
-          <View style={resultDayStripPanelNative.leftAccent} pointerEvents="none" />
+          <LinearGradient
+            pointerEvents="none"
+            colors={["rgba(34,211,238,0.95)", "rgba(34,211,238,0.2)"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={resultDayStripPanelNative.leftAccent}
+          />
           <ResultDayHeaderGridOverlay mobileStrip />
           <View style={resultDayStripPanelNative.row}>
             <Animated.View style={dateClusterStyle}>
