@@ -53,8 +53,8 @@
 | cancel-plan | `app/mobile/cancel-plan/page.tsx` | `CancelPlanScreenNative.tsx` | done | partial |
 | cancel-complete | `app/mobile/cancel-complete/page.tsx` | キャンセル完了 | partial | gap |
 | standings | `app/mobile/standings/page.tsx` | `StandingsScreenNative.tsx` | done | partial |
-| playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | partial |
-| playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | partial |
+| playoff | `app/mobile/playoff/page.tsx` | `PlayoffBracketPredictNative.tsx` | done | done |
+| playoff-view | `app/mobile/playoff-bracket/view/page.tsx` | `PlayoffBracketViewNative.tsx` | done | done |
 | bracket-market | `app/mobile/bracket-market/page.tsx` | `BracketMarketScreenNative.tsx` | done | partial |
 | team-detail | `app/mobile/teams/[teamId]/page.tsx` | `TeamDetailScreenNative` 系 | partial | gap |
 | wc-formation | `WcFormationPanel.tsx` | `WcFormationPanelNative.tsx` | done | done |
