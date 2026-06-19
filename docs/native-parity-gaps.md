@@ -30,7 +30,7 @@
 - [x] `ui-result-home` | `ResultHomeScreen` vs `ResultCard` — glass shell、バッジ、日付パイプ
 - [x] `ui-rankings` | `RankingsHomeScreen` — cyber list、seg bar、WC ステージタブ
 - [x] `ui-profile` | `ProfileHomeScreen` — summary cards、チャート、streak tracker
-- [ ] `ui-wc-panels` | `Wc*Native` 全般 — 国旗サイズ、得点者ピッカー、順位表 typography
+- [x] `ui-wc-panels` | `Wc*Native` 全般 — 国旗サイズ、得点者ピッカー、順位表 typography
 - [ ] `ui-playoff-bracket` | `PlayoffBracket*` — シリーズカード、スコアインライン
 - [ ] `ui-glowing-rim` | `GlowingRimFrame` 相当 — Skia で発光近似
 - [ ] `ui-auth-screens` | Login/Signup/Onboarding — フォーム余白、ボタンスタイル

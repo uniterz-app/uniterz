@@ -1,11 +1,11 @@
 {
   "parityComplete": false,
   "phase": "ui-polish",
-  "lastCompletedId": "ui-profile",
+  "lastCompletedId": "ui-wc-panels",
   "lastSessionAt": "2026-06-19",
   "inProgressId": null,
-  "totalCompleted": 12,
-  "uiPolishCompleted": 6,
+  "totalCompleted": 13,
+  "uiPolishCompleted": 7,
   "blockedItems": [],
-  "notes": "ui-profile 完了。次は ui-wc-panels。"
+  "notes": "ui-wc-panels 完了。次は ui-playoff-bracket。"
 }
