@@ -82,23 +82,30 @@ const VARIANT_SHELL_SHADOW: Record<
   normal: {
     shadowColor: "#00f5ff",
     shadowOpacity: 0.28,
-    shadowRadius: 11,
+    shadowRadius: 22,
   },
   predicted: {
     shadowColor: "rgba(148,163,184,0.35)",
     shadowOpacity: 0.12,
-    shadowRadius: 6,
+    shadowRadius: 12,
   },
   live: {
     shadowColor: "rgba(34,197,94,0.45)",
     shadowOpacity: 0.2,
-    shadowRadius: 9,
+    shadowRadius: 18,
   },
   final: {
     shadowColor: "rgba(251,191,36,0.4)",
     shadowOpacity: 0.14,
-    shadowRadius: 7,
+    shadowRadius: 14,
   },
+};
+
+const VARIANT_INSET_TOP: Record<MatchCardListCtaVariant, string> = {
+  normal: "rgba(255,255,255,0.22)",
+  predicted: "rgba(255,255,255,0.1)",
+  live: "rgba(255,255,255,0.14)",
+  final: "rgba(255,255,255,0.12)",
 };
 
 const VARIANT_TEXT_SHADOW: Record<MatchCardListCtaVariant, TextStyle> = {
@@ -139,6 +146,7 @@ export default function MatchCardListCtaNative({
   const fill = VARIANT_FILL[variant];
   const borderColor = VARIANT_BORDER[variant];
   const textShadow = VARIANT_TEXT_SHADOW[variant];
+  const insetTopColor = VARIANT_INSET_TOP[variant];
 
   const skiaPath = useMemo(
     () =>
@@ -192,7 +200,10 @@ export default function MatchCardListCtaNative({
             style={StyleSheet.absoluteFillObject}
           />
         )}
-        <View pointerEvents="none" style={styles.insetTop} />
+        <View
+          pointerEvents="none"
+          style={[styles.insetTop, { backgroundColor: insetTopColor }]}
+        />
         <Text style={[styles.label, textShadow]}>{label}</Text>
       </View>
     </View>
@@ -220,7 +231,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.22)",
     zIndex: 2,
   },
   label: {
