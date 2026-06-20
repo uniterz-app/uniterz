@@ -1,0 +1,8 @@
+{
+  "homeScore": 1,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "cze-sadilek", "teamId": "wc-cze", "minute": 6 },
+    { "playerId": "zaf-mokoena", "teamId": "wc-zaf", "minute": 83 }
+  ]
+}

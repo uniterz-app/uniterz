@@ -1,7 +1,7 @@
 /**
  * Web `ProfilePlayoffRankTrendChart`（Ranking Progress）に準拠。
  */
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   LayoutChangeEvent,
@@ -12,13 +12,22 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Svg, { Defs, Pattern, Rect, Path as SvgPath } from "react-native-svg";
 import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
 import type { RankPlayoffTrendPointNative } from "./profileApi";
+import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
 import {
-  PROFILE_SHELL_GRID_NATIVE,
-  profileShellGridPathD,
-} from "./profileShellGridNative";
+  profileOverviewChartEmptyHintStyle,
+  profileOverviewChartNoDataStyle,
+  profileOverviewChartStatLabelMutedStyle,
+  profileOverviewChartStatValueMutedStyle,
+  profileOverviewChartStatValueRowStyle,
+  profileOverviewChartStatsGridStyle,
+  profileOverviewChartStatCellBorderRStyle,
+  profileOverviewChartStatCellStyle,
+  profileOverviewChartStatsWrapStyle,
+  profileOverviewChartSubtitleStyle,
+  profileOverviewChartTitleStyle,
+} from "./profileOverviewChartShell";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 
 const LINE = "#22d3ee";
@@ -51,8 +60,8 @@ const TREND_THEME: Record<
   },
 };
 
-/** Web `ProfilePlayoffRankTrendChart` のモバイル相当（margin / axis padding） */
-const LEFT_AXIS_W = 42;
+/** 左 Y 軸ラベルなし（順位はドット内表示） */
+const LEFT_AXIS_W = 0;
 const PAD_R = 22;
 const PAD_T = 22;
 const PAD_B = 32;
@@ -230,9 +239,6 @@ export default function ProfileRankTrendChartNative({
 }: Props) {
   const [rowW, setRowW] = useState(0);
   const isJa = language === "ja";
-  const sid = useId().replace(/[^a-zA-Z0-9_]/g, "_");
-  const gridPatternId = `rank_trend_grid_${sid}`;
-
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
     if (w > 0 && Math.abs(w - rowW) > 0.5) setRowW(w);
@@ -392,117 +398,77 @@ export default function ProfileRankTrendChartNative({
 
   if (rowW <= 0) {
     return (
-      <View style={styles.card}>
-        <KinetikFrameCorners />
+      <ProfileOverviewChartCardNative>
         <View style={styles.measureInner} onLayout={onLayout}>
-          <GridBackdrop patternId={gridPatternId} />
           <View style={styles.cardForeground}>
-            <HeaderRow title={title} onInfoPress={openInfo} />
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <ChartHeader
+              title={title}
+              subtitle={subtitle}
+              onInfoPress={openInfo}
+              isJa={isJa}
+            />
             <View style={{ height: CHART_H + 80 }} />
           </View>
         </View>
-      </View>
+      </ProfileOverviewChartCardNative>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.card}>
-        <KinetikFrameCorners />
+      <ProfileOverviewChartCardNative>
         <View style={styles.measureInner} onLayout={onLayout}>
-          <GridBackdrop patternId={gridPatternId} />
           <View style={styles.cardForeground}>
-            <HeaderRow title={title} onInfoPress={openInfo} />
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <ChartHeader
+              title={title}
+              subtitle={subtitle}
+              onInfoPress={openInfo}
+              isJa={isJa}
+            />
             <View style={[styles.chartArea, { height: CHART_H }]}>
               <BlocksPulseLoader pixelScale={0.85} showLabel={false} />
             </View>
           </View>
         </View>
-      </View>
+      </ProfileOverviewChartCardNative>
     );
   }
 
   if (chartRows.length === 0) {
     return (
-      <View style={styles.card}>
-        <KinetikFrameCorners />
+      <ProfileOverviewChartCardNative>
         <View style={styles.measureInner} onLayout={onLayout}>
-          <GridBackdrop patternId={gridPatternId} />
           <View style={styles.cardForeground}>
-            <HeaderRow title={title} onInfoPress={openInfo} />
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <ChartHeader
+              title={title}
+              subtitle={subtitle}
+              onInfoPress={openInfo}
+              isJa={isJa}
+            />
             <View style={[styles.chartArea, { height: CHART_H }]}>
               <Text style={styles.noData}>NO DATA</Text>
               <Text style={styles.emptyHint}>{emptyHint}</Text>
             </View>
           </View>
         </View>
-      </View>
+      </ProfileOverviewChartCardNative>
     );
   }
 
   return (
-    <View style={styles.card}>
-      <KinetikFrameCorners />
+    <ProfileOverviewChartCardNative>
       <View style={styles.measureInner} onLayout={onLayout}>
-        <GridBackdrop patternId={gridPatternId} />
-
-        {trendSummary.currentRank != null ? (
-          <View style={styles.currentRankBadge} pointerEvents="none">
-            <Text
-              style={[
-                styles.currentRankLabel,
-                currentRankIsTop20 ? styles.currentRankLabelGold : undefined,
-              ]}
-            >
-              {isJa ? "現在の順位" : "Current rank"}
-            </Text>
-            <Text
-              style={[
-                styles.currentRankNum,
-                currentRankIsTop20 ? styles.currentRankNumGold : undefined,
-              ]}
-              numberOfLines={1}
-            >
-              {trendSummary.currentRank}
-            </Text>
-          </View>
-        ) : null}
-
         <View style={styles.cardForeground}>
-          <HeaderRow title={title} onInfoPress={openInfo} />
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <ChartHeader
+            title={title}
+            subtitle={subtitle}
+            onInfoPress={openInfo}
+            isJa={isJa}
+            currentRank={trendSummary.currentRank}
+            currentRankIsTop20={currentRankIsTop20}
+          />
 
           <View style={styles.chartRow}>
-            <View style={styles.yAxisColumn}>
-              <View style={styles.yAxisLabelWrap} pointerEvents="none">
-                <Text style={styles.yAxisLabelRotated}>{isJa ? "順位" : "Rank"}</Text>
-              </View>
-              <View style={[styles.yTicksColumn, { height: CHART_H }]}>
-                {model.yTicks
-                  .slice()
-                  .reverse()
-                  .map((t) => {
-                    const topPos =
-                      PAD_T +
-                      Y_AXIS_TOP_PAD +
-                      ((t - model.lo) / (model.hi - model.lo)) * (PLOT_H - Y_AXIS_TOP_PAD) -
-                      7;
-                    return (
-                      <Text
-                        key={`yt-${t}`}
-                        style={[styles.yTickText, { top: topPos }]}
-                        numberOfLines={1}
-                      >
-                        {t}
-                      </Text>
-                    );
-                  })}
-              </View>
-            </View>
-
             <View style={styles.plotColumn}>
               <View style={{ width: plotInnerW, height: CHART_H }}>
                 <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -592,12 +558,12 @@ export default function ProfileRankTrendChartNative({
             </View>
           </View>
 
-          <View style={styles.statsShell}>
-            <View style={styles.statsGrid}>
-              <View style={styles.statsCell}>
+          <View style={profileOverviewChartStatsWrapStyle}>
+            <View style={profileOverviewChartStatsGridStyle}>
+              <View style={[profileOverviewChartStatCellStyle, profileOverviewChartStatCellBorderRStyle]}>
                 <Text
                   style={[
-                    styles.statsLabel,
+                    profileOverviewChartStatLabelMutedStyle,
                     trendSummary.bestJump == null
                       ? styles.statsMuted
                       : trendSummary.bestJump > 0
@@ -609,26 +575,27 @@ export default function ProfileRankTrendChartNative({
                 >
                   {isJa ? "最高ジャンプアップ" : "Best jump up"}
                 </Text>
-                <Text
-                  style={[
-                    styles.statsValue,
-                    trendSummary.bestJump == null
-                      ? styles.statsValueMuted
-                      : trendSummary.bestJump > 0
-                        ? styles.statsGreen
-                        : trendSummary.bestJump < 0
-                          ? styles.statsRose
-                          : styles.statsCyan,
-                  ]}
-                >
-                  {trendSummary.bestJump != null ? `+${trendSummary.bestJump}` : "—"}
-                </Text>
+                <View style={profileOverviewChartStatValueRowStyle}>
+                  <Text
+                    style={[
+                      profileOverviewChartStatValueMutedStyle,
+                      trendSummary.bestJump == null
+                        ? styles.statsValueMuted
+                        : trendSummary.bestJump > 0
+                          ? styles.statsGreen
+                          : trendSummary.bestJump < 0
+                            ? styles.statsRose
+                            : styles.statsCyan,
+                    ]}
+                  >
+                    {trendSummary.bestJump != null ? `+${trendSummary.bestJump}` : "—"}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.statsDivider}>|</Text>
-              <View style={styles.statsCell}>
+              <View style={[profileOverviewChartStatCellStyle, profileOverviewChartStatCellBorderRStyle]}>
                 <Text
                   style={[
-                    styles.statsLabel,
+                    profileOverviewChartStatLabelMutedStyle,
                     trendSummary.worstDrop == null
                       ? styles.statsMuted
                       : trendSummary.worstDrop > 0
@@ -640,26 +607,27 @@ export default function ProfileRankTrendChartNative({
                 >
                   {isJa ? "最大ドロップ" : "Biggest drop"}
                 </Text>
-                <Text
-                  style={[
-                    styles.statsValue,
-                    trendSummary.worstDrop == null
-                      ? styles.statsValueMuted
-                      : trendSummary.worstDrop > 0
-                        ? styles.statsGreen
-                        : trendSummary.worstDrop < 0
-                          ? styles.statsRose
-                          : styles.statsCyan,
-                  ]}
-                >
-                  {trendSummary.worstDrop != null ? `${trendSummary.worstDrop}` : "—"}
-                </Text>
+                <View style={profileOverviewChartStatValueRowStyle}>
+                  <Text
+                    style={[
+                      profileOverviewChartStatValueMutedStyle,
+                      trendSummary.worstDrop == null
+                        ? styles.statsValueMuted
+                        : trendSummary.worstDrop > 0
+                          ? styles.statsGreen
+                          : trendSummary.worstDrop < 0
+                            ? styles.statsRose
+                            : styles.statsCyan,
+                    ]}
+                  >
+                    {trendSummary.worstDrop != null ? `${trendSummary.worstDrop}` : "—"}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.statsDivider}>|</Text>
-              <View style={styles.statsCell}>
+              <View style={profileOverviewChartStatCellStyle}>
                 <Text
                   style={[
-                    styles.statsLabel,
+                    profileOverviewChartStatLabelMutedStyle,
                     trendSummary.netDelta == null
                       ? styles.statsMuted
                       : trendSummary.netDelta > 0
@@ -671,104 +639,91 @@ export default function ProfileRankTrendChartNative({
                 >
                   {isJa ? "純増減" : "Net"}
                 </Text>
-                <Text
-                  style={[
-                    styles.statsValue,
-                    trendSummary.netDelta == null
-                      ? styles.statsValueMuted
+                <View style={profileOverviewChartStatValueRowStyle}>
+                  <Text
+                    style={[
+                      profileOverviewChartStatValueMutedStyle,
+                      trendSummary.netDelta == null
+                        ? styles.statsValueMuted
+                        : trendSummary.netDelta > 0
+                          ? styles.statsGreen
+                          : trendSummary.netDelta < 0
+                            ? styles.statsRose
+                            : styles.statsCyan,
+                    ]}
+                  >
+                    {trendSummary.netDelta == null
+                      ? "—"
                       : trendSummary.netDelta > 0
-                        ? styles.statsGreen
+                        ? `↑ +${trendSummary.netDelta}`
                         : trendSummary.netDelta < 0
-                          ? styles.statsRose
-                          : styles.statsCyan,
-                  ]}
-                >
-                  {trendSummary.netDelta == null
-                    ? "—"
-                    : trendSummary.netDelta > 0
-                      ? `↑ +${trendSummary.netDelta}`
-                      : trendSummary.netDelta < 0
-                        ? `↓ ${trendSummary.netDelta}`
-                        : "→ 0"}
-                </Text>
+                          ? `↓ ${trendSummary.netDelta}`
+                          : "→ 0"}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
         </View>
       </View>
-    </View>
+    </ProfileOverviewChartCardNative>
   );
 }
 
-function GridBackdrop({ patternId }: { patternId: string }) {
-  const c = PROFILE_SHELL_GRID_NATIVE.cellPx;
+function ChartHeader({
+  title,
+  subtitle,
+  onInfoPress,
+  isJa,
+  currentRank,
+  currentRankIsTop20,
+}: {
+  title: string;
+  subtitle: string;
+  onInfoPress: () => void;
+  isJa: boolean;
+  currentRank?: number | null;
+  currentRankIsTop20?: boolean;
+}) {
   return (
-    <Svg
-      width="100%"
-      height="100%"
-      style={[
-        StyleSheet.absoluteFillObject,
-        { opacity: PROFILE_SHELL_GRID_NATIVE.layerOpacity },
-      ]}
-      pointerEvents="none"
-    >
-      <Defs>
-        <Pattern id={patternId} width={c} height={c} patternUnits="userSpaceOnUse">
-          <SvgPath
-            d={profileShellGridPathD(c)}
-            fill="none"
-            stroke={PROFILE_SHELL_GRID_NATIVE.stroke}
-            strokeWidth={PROFILE_SHELL_GRID_NATIVE.strokeWidth}
-          />
-        </Pattern>
-      </Defs>
-      <Rect width="100%" height="100%" fill={`url(#${patternId})`} />
-    </Svg>
-  );
-}
-
-function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => void }) {
-  return (
-    <View style={styles.titleRow}>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Pressable onPress={onInfoPress} hitSlop={10} accessibilityRole="button">
-        <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
-      </Pressable>
-    </View>
-  );
-}
-
-/** Web `ProfileKinetikPanelFrame` の四隅アクセント */
-function KinetikFrameCorners() {
-  return (
-    <View pointerEvents="none" style={styles.frameCorners}>
-      <View style={[styles.frameCorner, styles.frameCornerTopLeft]} />
-      <View style={[styles.frameCorner, styles.frameCornerTopRight]} />
-      <View style={[styles.frameCorner, styles.frameCornerBottomLeft]} />
-      <View style={[styles.frameCorner, styles.frameCornerBottomRight]} />
-    </View>
+    <>
+      <View style={styles.headerRow}>
+        <View style={styles.headerMain}>
+          <View style={styles.titleRow}>
+            <Text style={styles.cardTitle}>{title}</Text>
+            <Pressable onPress={onInfoPress} hitSlop={10} accessibilityRole="button">
+              <MaterialCommunityIcons name="information-outline" size={18} color="rgba(248,250,252,0.55)" />
+            </Pressable>
+          </View>
+        </View>
+        {currentRank != null ? (
+          <View style={styles.currentRankBadge} pointerEvents="none">
+            <Text
+              style={[
+                styles.currentRankLabel,
+                currentRankIsTop20 ? styles.currentRankLabelGold : undefined,
+              ]}
+            >
+              {isJa ? "現在の順位" : "Current rank"}
+            </Text>
+            <Text
+              style={[
+                styles.currentRankNum,
+                currentRankIsTop20 ? styles.currentRankNumGold : undefined,
+              ]}
+              numberOfLines={1}
+            >
+              {currentRank}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    backgroundColor: "rgba(5,8,20,0.72)",
-    overflow: "hidden",
-    padding: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(0,0,0,0.6)",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.32,
-        shadowRadius: 24,
-      },
-      android: { elevation: 8 },
-      default: {},
-    }),
-  },
   measureInner: {
     position: "relative",
     width: "100%",
@@ -776,13 +731,12 @@ const styles = StyleSheet.create({
   cardForeground: {
     position: "relative",
     zIndex: 1,
+    minWidth: 0,
   },
   currentRankBadge: {
-    position: "absolute",
-    right: 4,
-    top: 4,
-    zIndex: 4,
-    alignItems: "center",
+    flexShrink: 0,
+    alignItems: "flex-end",
+    paddingTop: 2,
     maxWidth: 120,
   },
   currentRankLabel: {
@@ -808,68 +762,36 @@ const styles = StyleSheet.create({
   currentRankNumGold: {
     color: "rgba(252,211,77,0.98)",
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  headerMain: {
+    flex: 1,
+    minWidth: 0,
+  },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 2,
-    paddingRight: 88,
   },
-  cardTitle: {
-    color: "rgba(248,250,252,0.95)",
-    fontSize: 18,
-    fontWeight: "700",
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-  },
+  cardTitle: profileOverviewChartTitleStyle,
   subtitle: {
-    color: "rgba(148,163,184,0.85)",
-    fontSize: 11,
-    lineHeight: 15,
+    ...profileOverviewChartSubtitleStyle,
     marginTop: 6,
     marginBottom: 8,
     paddingHorizontal: 2,
     maxWidth: 520,
   },
   chartRow: {
-    flexDirection: "row",
     alignItems: "flex-start",
     marginTop: 4,
   },
-  yAxisColumn: {
-    width: LEFT_AXIS_W,
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
-  yAxisLabelWrap: {
-    width: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  yAxisLabelRotated: {
-    color: "rgba(148,163,184,0.55)",
-    fontSize: 9,
-    transform: [{ rotate: "-90deg" }],
-    width: 80,
-    textAlign: "center",
-  },
-  yTicksColumn: {
-    flex: 1,
-    position: "relative",
-  },
-  yTickText: {
-    position: "absolute",
-    right: 0,
-    fontSize: 8,
-    lineHeight: 10,
-    color: "rgba(148,163,184,0.85)",
-    fontVariant: ["tabular-nums"],
-  },
   plotColumn: {
-    flex: 1,
+    width: "100%",
     minWidth: 0,
     alignItems: "center",
   },
@@ -902,61 +824,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
   },
-  noData: {
-    fontSize: 22,
-    fontWeight: "700",
-    letterSpacing: 3,
-    color: "rgba(248,250,252,0.35)",
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-  },
+  noData: profileOverviewChartNoDataStyle,
   emptyHint: {
-    marginTop: 10,
-    fontSize: 10,
-    color: "rgba(248,250,252,0.42)",
-    textAlign: "center",
+    ...profileOverviewChartEmptyHintStyle,
     maxWidth: 260,
-    lineHeight: 14,
-  },
-  statsShell: {
-    marginTop: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(103,232,249,0.28)",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
-  statsCell: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 0,
-    paddingHorizontal: 2,
-  },
-  statsLabel: {
-    fontSize: 9,
-    fontWeight: "600",
-    textAlign: "center",
-    lineHeight: 12,
-  },
-  statsValue: {
-    marginTop: 6,
-    fontSize: 22,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
   },
   statsValueMuted: {
     color: "rgba(248,250,252,0.55)",
@@ -965,43 +836,4 @@ const styles = StyleSheet.create({
   statsGreen: { color: "rgba(110,231,183,0.95)" },
   statsRose: { color: "rgba(251,113,133,0.95)" },
   statsCyan: { color: "rgba(103,232,249,0.9)" },
-  statsDivider: {
-    color: "rgba(103,232,249,0.28)",
-    paddingTop: 14,
-    fontSize: 12,
-  },
-  frameCorners: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 3,
-  },
-  frameCorner: {
-    position: "absolute",
-    width: 18,
-    height: 18,
-    borderColor: "rgba(255,255,255,0.88)",
-  },
-  frameCornerTopLeft: {
-    left: -1,
-    top: -1,
-    borderLeftWidth: 2,
-    borderTopWidth: 2,
-  },
-  frameCornerTopRight: {
-    right: -1,
-    top: -1,
-    borderRightWidth: 2,
-    borderTopWidth: 2,
-  },
-  frameCornerBottomLeft: {
-    left: -1,
-    bottom: -1,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
-  },
-  frameCornerBottomRight: {
-    right: -1,
-    bottom: -1,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
-  },
 });

@@ -39,18 +39,17 @@ import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { useNativeProfileStats } from "./useNativeProfileStats";
+import { useNativeProfileDailyTrendChart } from "./useNativeProfileDailyTrendChart";
 import { useNativeStreakTracker } from "./useNativeStreakTracker";
 import { useNativeProfilePlan } from "./useNativeProfilePlan";
 import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
-import ProfileSummaryGridNative from "./ProfileSummaryGridNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
-import ProfileGridBackdrop from "./ProfileGridBackdrop";
+import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
 import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
 import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
 import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
-import CyberMenuButton from "../../ui/CyberMenuButton";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
 import FloatingCloseButtonNative from "../../ui/FloatingCloseButtonNative";
@@ -58,6 +57,7 @@ import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
 import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
+import { profileOverviewChartShellStyle } from "./profileOverviewChartShell";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import {
   assertProfileTextsFreeOfGamblingTerms,
@@ -66,6 +66,8 @@ import {
 } from "../../../../../lib/profile/profileGamblingTerms";
 import CyberGlassToastModal from "../../components/CyberGlassToastModal";
 import { COUNTRY_OPTIONS } from "../../../../../lib/rankings/country";
+import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
+import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -145,6 +147,7 @@ export default function ProfileHomeScreen({
   onSaved,
   routeHandle,
   fromRankings = false,
+  openSettingsOnMount = false,
 }: {
   bottomReserveY?: number;
   onSaved?: () => void;
@@ -152,6 +155,7 @@ export default function ProfileHomeScreen({
   routeHandle?: string;
   /** ランキングから遷移してきた他人プロフィール */
   fromRankings?: boolean;
+  openSettingsOnMount?: boolean;
 }) {
   const { fUser, status } = useFirebaseUser();
   const myUid = fUser?.uid;
@@ -232,44 +236,77 @@ export default function ProfileHomeScreen({
     profilePlan: plan,
   });
   const isMe = profilePlanHook.isMe;
+
+  useEffect(() => {
+    if (openSettingsOnMount && isMe) {
+      setSettingsOpen(true);
+    }
+  }, [openSettingsOnMount, isMe]);
+
   const { unreadCount: menuUnreadCount, readIds: announcementReadIds } =
     useNativeAnnouncementsUnread(myUid, status === "ready" && !!myUid, {
       enabled: isMe,
     });
   const { resolvedBadges } = useNativeProfileBadges(isMe ? myUid : targetUid);
 
-  const statsBundle = useNativeProfileStats(targetUid, tab === "overview" && !!targetUid);
-  const streakBundle = useNativeStreakTracker(targetUid, tab === "overview" && !!targetUid);
+  const [profileStatsContext, setProfileStatsContext] = useState<ProfileStatsStreakContext>({
+    rankingLeague: "worldcup",
+    wcStage: "overall",
+  });
+
+  const authReady = status === "ready";
+  const statsBundle = useNativeProfileStats(
+    targetUid,
+    !!targetUid,
+    profileStatsContext,
+    authReady
+  );
+  const dailyTrendChart = useNativeProfileDailyTrendChart(targetUid, {
+    enabled: tab === "overview" && !!targetUid && authReady,
+    seedRows:
+      statsBundle.dailyTrend.length > 0 ? statsBundle.dailyTrend : undefined,
+    rankingLeague: profileStatsContext.rankingLeague,
+    wcStage: profileStatsContext.wcStage,
+    authReady,
+  });
+  const streakBundle = useNativeStreakTracker(
+    targetUid,
+    tab === "overview" && !!targetUid && authReady,
+    profileStatsContext
+  );
 
   const currentIsProView = profilePlanHook.isProView;
-  /** 概要6枚の並び: Web Pro は連勝→精度の順（`profileSummaryGridKeysProOverview`）。plan と hook のどちらかが Pro なら Pro 並びにする */
-  const proSummaryGridLayout =
-    profilePlanHook.effectivePlan === "pro" || plan === "pro";
-
-  const maxStreak = useMemo(() => {
-    const st = statsBundle.stats as Record<string, unknown> | null;
-    if (st != null) {
-      const raw = st.maxWinStreak;
-      const legacy = st.maxStreak;
-      const v = Number(raw ?? legacy);
-      if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
-    }
-    return 0;
-  }, [statsBundle.stats]);
-
   const currentStreak = useMemo(() => {
     if (isPublicProfileView && profileByHandle.currentStreak > 0) {
       return profileByHandle.currentStreak;
     }
+    const fromSummary = statsBundle.summary?.activeWinStreak;
+    if (typeof fromSummary === "number" && Number.isFinite(fromSummary)) {
+      return Math.max(0, Math.floor(fromSummary));
+    }
     const st = statsBundle.stats as Record<string, unknown> | null;
     if (st != null) {
-      const v = Number(st.currentStreak);
+      const v = Number(st.currentStreak ?? st.activeWinStreak);
       if (Number.isFinite(v)) return Math.max(0, Math.floor(v));
     }
     return 0;
-  }, [isPublicProfileView, profileByHandle.currentStreak, statsBundle.stats]);
+  }, [
+    isPublicProfileView,
+    profileByHandle.currentStreak,
+    statsBundle.summary?.activeWinStreak,
+    statsBundle.stats,
+  ]);
 
-  const showStreakBadge = currentStreak >= 3;
+  const onToggleMetricsScope = useCallback(() => {
+    setProfileStatsContext((prev) => {
+      const nextLeague: RankingLeagueSource =
+        prev.rankingLeague === "worldcup" ? "nba" : "worldcup";
+      return {
+        rankingLeague: nextLeague,
+        wcStage: nextLeague === "worldcup" ? (prev.wcStage ?? "overall") : undefined,
+      };
+    });
+  }, []);
 
   /** Web ヒーロー2行目に近づける：ハンドル優先、無ければメール（UID の一部は誤解を招くので避ける） */
   const secondaryIdLine =
@@ -613,50 +650,28 @@ export default function ProfileHomeScreen({
       );
     }
 
-    const entranceKey = `${targetUid ?? ""}-${statsBundle.summary.posts}-${proSummaryGridLayout ? "p" : "f"}`;
+    const entranceKey = `${targetUid ?? ""}-${profileStatsContext.rankingLeague}-${profileStatsContext.wcStage ?? "overall"}-${statsBundle.summary?.posts ?? 0}-${dailyTrendChart.chartData.length}`;
 
     return (
       <View style={styles.overviewBlock}>
         <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
-          <View style={styles.summaryPanel}>
-            <View pointerEvents="none" style={styles.summaryPanelTopSheen} />
-            <View pointerEvents="none" style={styles.overviewFrameCorners}>
-              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerTopLeft]} />
-              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerTopRight]} />
-              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerBottomLeft]} />
-              <View style={[styles.overviewFrameCorner, styles.overviewFrameCornerBottomRight]} />
+          {dailyTrendChart.loading ? (
+            <View style={styles.chartSkeleton}>
+              <BlocksPulseLoader pixelScale={0.9} />
             </View>
-            <View style={styles.summaryTitleRow}>
-              <Text
-                style={styles.playoffsHeading}
-                maxFontSizeMultiplier={1.2}
-              >
-                {t.playoffsTitle}
-              </Text>
-              <View style={styles.summaryTitleRail} />
-            </View>
-            <View style={styles.summaryGridWrap}>
-              <ProfileSummaryGridNative
-                summary={statsBundle.summary}
-                ranks={statsBundle.summaryRanks}
-                maxStreak={maxStreak}
-                language={language}
-                proOverviewLayout={proSummaryGridLayout}
-              />
-            </View>
-          </View>
+          ) : (
+            <ProfileDailyTrendChartNative
+              key={`dailyTrend:${targetUid ?? ""}:${profileStatsContext.rankingLeague}:${dailyTrendChart.chartData.map((r) => r.date).join(",")}`}
+              data={dailyTrendChart.chartData}
+              language={language}
+              allowAll={currentIsProView}
+              rankingLeague={profileStatsContext.rankingLeague}
+              range="30d"
+            />
+          )}
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
         <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
-          <ProfileDailyTrendChartNative
-            key={`dailyTrend:${targetUid ?? ""}:${statsBundle.dailyTrend.map((r) => r.date).join(",")}`}
-            data={statsBundle.dailyTrend}
-            language={language}
-            allowAll={currentIsProView}
-          />
-        </ProfileOverviewEntranceBlock>
-        <View style={styles.chartGap} />
-        <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
           <ProfileRankTrendChartNative
             data={statsBundle.rankTrend}
             loading={false}
@@ -664,7 +679,7 @@ export default function ProfileHomeScreen({
           />
         </ProfileOverviewEntranceBlock>
         <View style={styles.chartGap} />
-        <ProfileOverviewEntranceBlock index={3} entranceKey={entranceKey}>
+        <ProfileOverviewEntranceBlock index={2} entranceKey={entranceKey}>
           <ProfileStreakTrackerNative
             points={streakBundle.points}
             loading={streakBundle.loading}
@@ -738,106 +753,30 @@ export default function ProfileHomeScreen({
     >
       <UniterzBrandShelfNative horizontalBleed={spacing.sm} />
 
-      <ProfileGridBackdrop style={styles.hero}>
-        <View style={styles.heroRow}>
-          <View style={styles.heroLeftCol}>
-            <View style={styles.avatarHalo}>
-              {avatarUrl.trim().length > 0 ? (
-                <Image source={{ uri: avatarUrl.trim() }} style={styles.avatarCircle} />
-              ) : (
-                <View style={[styles.avatarCircle, styles.avatarFallback]}>
-                  <Text style={styles.avatarLetter}>
-                    {(
-                      displayName.trim()[0] ??
-                      fUser?.displayName?.trim()?.[0] ??
-                      handle.trim()[0] ??
-                      "?"
-                    ).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.heroCenterCol}>
-            <View style={styles.nameRow}>
-              <Text style={styles.displayName} numberOfLines={1}>
-                {displayName.trim() || fUser?.displayName?.trim() || "—"}
-              </Text>
-              {currentIsProView ? (
-                <View style={styles.proPill}>
-                  <Text style={styles.proPillText}>{t.proBadge}</Text>
-                </View>
-              ) : null}
-              {showStreakBadge ? (
-                <View style={styles.streakPill}>
-                  <Text style={styles.streakPillText}>
-                    {t.streakLabel} {currentStreak}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            {secondaryIdLine.length > 0 ? (
-              <Text style={styles.heroIdLine} numberOfLines={1}>
-                {handle.trim().length > 0 ? `@${handle.trim()}` : secondaryIdLine}
-              </Text>
-            ) : null}
-            {bio.trim().length > 0 ? (
-              <Text style={styles.bioHero} numberOfLines={3}>
-                {bio.trim()}
-              </Text>
-            ) : null}
-            {profileLoading ? (
-              <View style={styles.heroLoadingRow}>
-                <BlocksPulseLoader pixelScale={0.65} labelStyle={styles.heroLoadingLabel} />
-              </View>
-            ) : null}
-          </View>
-
-          {isMe ? (
-            <CyberMenuButton
-              size="md"
-              style={styles.menuSquareOffset}
-              onPress={() => setMenuOpen(true)}
-              accessibilityLabel={isJa ? "メニュー" : "Menu"}
-              badge={
-                menuUnreadCount > 0 ? (
-                  <View style={styles.menuBadge}>
-                    <Text style={styles.menuBadgeText}>
-                      {menuUnreadCount > 99 ? "99+" : String(menuUnreadCount)}
-                    </Text>
-                  </View>
-                ) : null
-              }
-            />
-          ) : (
-            <View style={styles.menuSquareOffset} />
-          )}
-        </View>
-
-        {resolvedBadges.length > 0 ? (
-          <View style={styles.badgeRow}>
-            {resolvedBadges.slice(0, 10).map((b) => (
-              <Pressable
-                key={b.id}
-                style={styles.badgeThumb}
-                onPress={() => {
-                  setSelectedBadge(b);
-                  setBadgeModalOpen(true);
-                }}
-              >
-                {b.icon ? (
-                  <Image source={{ uri: b.icon }} style={styles.badgeImg} resizeMode="contain" />
-                ) : (
-                  <Text style={styles.badgeFallback} numberOfLines={2}>
-                    {b.title}
-                  </Text>
-                )}
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-      </ProfileGridBackdrop>
+      <ProfileKinetikHeroNative
+        displayName={displayName.trim() || fUser?.displayName?.trim() || "—"}
+        handle={handle.trim()}
+        avatarUrl={avatarUrl.trim() || fUser?.photoURL?.trim() || ""}
+        bio={bio}
+        countryCode={countryCode}
+        plan={currentIsProView ? "pro" : plan}
+        language={language}
+        summary={statsBundle.summary}
+        summaryRanks={statsBundle.summaryRanks}
+        profileStatsContext={profileStatsContext}
+        winStreak={currentStreak}
+        statsLoading={statsBundle.loading && !statsBundle.summary}
+        metricValueDeltas={statsBundle.metricValueDeltas}
+        isMe={isMe}
+        onOpenMenu={() => setMenuOpen(true)}
+        onToggleMetricsScope={onToggleMetricsScope}
+        menuUnreadCount={menuUnreadCount}
+        badges={resolvedBadges}
+        onBadgePress={(badge) => {
+          setSelectedBadge(badge);
+          setBadgeModalOpen(true);
+        }}
+      />
 
       {renderTabs()}
 
@@ -1141,7 +1080,7 @@ export default function ProfileHomeScreen({
       plan={plan}
       onOpenProfileSettings={() => {
         setMenuOpen(false);
-        navigation.navigate("ProfileSettings");
+        setSettingsOpen(true);
       }}
       onOpenInApp={(page) => {
         setMenuOpen(false);
@@ -1152,8 +1091,6 @@ export default function ProfileHomeScreen({
         else if (page === "guidelines") navigation.navigate("CommunityGuidelines");
         else if (page === "help") navigation.navigate("Help");
         else if (page === "terms") navigation.navigate("Terms");
-        else if (page === "refundPolicy") navigation.navigate("RefundPolicy");
-        else if (page === "commercialLaw") navigation.navigate("CommercialLaw");
         else if (page === "contact") navigation.navigate("Contact");
         else if (page === "privacy") navigation.navigate("Privacy");
         else if (page === "password") navigation.navigate("ProfilePassword");
@@ -1420,11 +1357,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#6EA8FE",
   },
   playoffsHeading: {
-    flexShrink: 1,
+    alignSelf: "stretch",
+    textAlign: "center",
     color: "rgba(136,201,211,0.95)",
-    fontSize: 18,
-    /** Web `ProfileEditKinetikGlitchTitle compact` の詰まった英字に寄せる */
-    letterSpacing: 1.9,
+    fontSize: 22,
+    /** Web `tracking-[0.12em]`（22px 時おおよそ 2.6）に近づけつつ少し詰める */
+    letterSpacing: 2.5,
+    marginBottom: spacing.md,
     fontFamily: Platform.select({
       ios: "BebasNeue_400Regular",
       android: "BebasNeue_400Regular",
@@ -1434,82 +1373,18 @@ const styles = StyleSheet.create({
   overviewBlock: {
     gap: 0,
   },
-  /** Web `ProfileKinetikPanelFrame` 相当のサマリー外枠 */
-  summaryPanel: {
-    position: "relative",
-    alignSelf: "stretch",
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    backgroundColor: "rgba(5,8,20,0.72)",
-    padding: 8,
-    overflow: "hidden",
-  },
-  summaryPanelTopSheen: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 42,
-    backgroundColor: "rgba(255,255,255,0.045)",
-  },
-  summaryTitleRow: {
-    position: "relative",
-    zIndex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 2,
-    paddingTop: 1,
-    paddingBottom: 7,
-  },
-  summaryTitleRail: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(110,168,254,0.34)",
-  },
-  overviewFrameCorners: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 2,
-  },
-  overviewFrameCorner: {
-    position: "absolute",
-    width: 18,
-    height: 18,
-    borderColor: "rgba(255,255,255,0.88)",
-  },
-  overviewFrameCornerTopLeft: {
-    left: -1,
-    top: -1,
-    borderLeftWidth: 2,
-    borderTopWidth: 2,
-  },
-  overviewFrameCornerTopRight: {
-    right: -1,
-    top: -1,
-    borderRightWidth: 2,
-    borderTopWidth: 2,
-  },
-  overviewFrameCornerBottomLeft: {
-    left: -1,
-    bottom: -1,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
-  },
-  overviewFrameCornerBottomRight: {
-    right: -1,
-    bottom: -1,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
-  },
   /** チャートカードと同じ利用幅（scroll の横パディング内で常に 100%） */
   summaryGridWrap: {
-    position: "relative",
-    zIndex: 1,
     alignSelf: "stretch",
     width: "100%",
   },
-  chartGap: { height: 16 },
+  chartGap: { height: 12 },
+  chartSkeleton: {
+    minHeight: 176,
+    alignItems: "center",
+    justifyContent: "center",
+    ...profileOverviewChartShellStyle,
+  },
   muted: {
     color: colors.textSecondary,
     fontSize: typography.body,

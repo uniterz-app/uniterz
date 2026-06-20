@@ -1,7 +1,7 @@
 /**
  * Web `StreakTrackerCard`（Last20 Tracker）に準拠したネイティブ版。
  */
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Alert,
   LayoutChangeEvent,
@@ -9,20 +9,26 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Svg, { Defs, Line, Pattern, Rect, Path as SvgPath } from "react-native-svg";
 import { STREAK_TRACKER_LAST_N, type StreakTrackerPointNative } from "./useNativeStreakTracker";
+import ProfileOverviewChartCardNative from "./ProfileOverviewChartCardNative";
 import {
-  PROFILE_SHELL_GRID_NATIVE,
-  profileShellGridPathD,
-} from "./profileShellGridNative";
+  profileOverviewChartEmptyHintStyle,
+  profileOverviewChartNoDataStyle,
+  profileOverviewChartStatLabelMutedStyle,
+  profileOverviewChartStatValueMutedStyle,
+  profileOverviewChartStatValueRowStyle,
+  profileOverviewChartStatsGridStyle,
+  profileOverviewChartStatCellBorderRStyle,
+  profileOverviewChartStatCellStyle,
+  profileOverviewChartStatsWrapStyle,
+  profileOverviewChartSubtitleStyle,
+  profileOverviewChartTitleStyle,
+} from "./profileOverviewChartShell";
 import { streakChartLayoutMaxAbs } from "../../../../../lib/profile/streakTrackerChartLayout";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
-import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 
 type Props = {
   points: StreakTrackerPointNative[];
@@ -38,23 +44,9 @@ const BLOCK_GAP_PX = 1;
 const LEFT_AXIS_W = 36;
 /** Web mobile `plotH` `h-[184px]` */
 const PLOT_H = 184;
-/** Web `sm:` 相当でフッターを 3 列に */
-const FOOTER_WIDE_BREAKPOINT = 640;
 
-/** Web `StreakTrackerCard` の `CHART_GRID_STYLE`（18px・線色）と同一 */
-const CHART_GRID_STEP = 18;
-const CHART_GRID_STROKE = "rgba(148,163,184,0.22)";
-/** Web 格子フェード終了時 opacity 0.5 */
-const CHART_GRID_OPACITY = 0.5;
 /** Y軸ラベル（fontSize 9）の縦方向の半分相当で数値位置と中央揃え */
 const Y_TICK_CENTER_OFFSET = 5;
-
-function chartGridLinePositions(max: number, step: number): number[] {
-  const out: number[] = [];
-  for (let v = 0; v <= max; v += step) out.push(v);
-  if (out.length === 0 || out[out.length - 1] < max) out.push(max);
-  return out;
-}
 
 function valueToPlotY(value: number, plotH: number, maxAbs: number): number {
   const half = plotH / 2;
@@ -101,12 +93,7 @@ function computeWindowStats(points: StreakTrackerPointNative[]) {
 
 export default function ProfileStreakTrackerNative({ points, loading, language }: Props) {
   const isJa = language === "ja";
-  const { width: windowW } = useWindowDimensions();
-  const footerWide = windowW >= FOOTER_WIDE_BREAKPOINT;
   const [plotInnerW, setPlotInnerW] = useState(0);
-  const sid = useId().replace(/[^a-zA-Z0-9_]/g, "_");
-  const gridPatternId = `streak_tracker_${sid}`;
-
   const onPlotLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
     if (w > 0 && Math.abs(w - plotInnerW) > 0.5) setPlotInnerW(w);
@@ -161,42 +148,6 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
   const plotChartW =
     plotInnerW > 0 ? plotInnerW : Math.max(1, chartTotalW, Math.max(1, n) * 12);
 
-  /** Web `CHART_GRID_STYLE` と同じ 18px 方眼（縦線・横線） */
-  const chartGridLines = useMemo((): ReactNode[] => {
-    const w = Math.max(1, plotChartW);
-    const h = PLOT_H;
-    const xs = chartGridLinePositions(w, CHART_GRID_STEP);
-    const ys = chartGridLinePositions(h, CHART_GRID_STEP);
-    const nodes: ReactNode[] = [];
-    for (const x of xs) {
-      nodes.push(
-        <Line
-          key={`gv-${x}`}
-          x1={x}
-          y1={0}
-          x2={x}
-          y2={h}
-          stroke={CHART_GRID_STROKE}
-          strokeWidth={1}
-        />
-      );
-    }
-    for (const y of ys) {
-      nodes.push(
-        <Line
-          key={`gh-${y}`}
-          x1={0}
-          y1={y}
-          x2={w}
-          y2={y}
-          stroke={CHART_GRID_STROKE}
-          strokeWidth={1}
-        />
-      );
-    }
-    return nodes;
-  }, [plotChartW]);
-
   const halfH = PLOT_H / 2;
   const blockH = Math.max(2, (halfH - (maxAbs - 1) * BLOCK_GAP_PX) / maxAbs);
 
@@ -204,9 +155,7 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
 
   if (loading) {
     return (
-      <View style={styles.card}>
-        <KinetikFrameCorners />
-        <ShellGridBackdrop patternId={`${gridPatternId}_shell`} />
+      <ProfileOverviewChartCardNative>
         <View style={styles.foreground}>
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
@@ -225,15 +174,13 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
             </View>
           </ChartGlassShell>
         </View>
-      </View>
+      </ProfileOverviewChartCardNative>
     );
   }
 
   if (points.length === 0) {
     return (
-      <View style={styles.card}>
-        <KinetikFrameCorners />
-        <ShellGridBackdrop patternId={`${gridPatternId}_shell`} />
+      <ProfileOverviewChartCardNative>
         <View style={styles.foreground}>
           <HeaderRow title={title} onInfoPress={openInfo} />
           <Text style={styles.subtitle}>{subtitle}</Text>
@@ -244,14 +191,12 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
             </Text>
           </View>
         </View>
-      </View>
+      </ProfileOverviewChartCardNative>
     );
   }
 
   return (
-    <View style={styles.card}>
-      <KinetikFrameCorners />
-      <ShellGridBackdrop patternId={`${gridPatternId}_shell`} />
+    <ProfileOverviewChartCardNative>
       <View style={styles.foreground}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
@@ -307,15 +252,6 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
               <View style={styles.plotNoScrollWrap}>
                 <View style={{ width: plotChartW, minHeight: PLOT_H + 18 }}>
                   <View style={[styles.plotScrollInner, { width: plotChartW, height: PLOT_H }]}>
-                    <Svg
-                      width={plotChartW}
-                      height={PLOT_H}
-                      style={[styles.plotSvgBg, { opacity: CHART_GRID_OPACITY }]}
-                      pointerEvents="none"
-                    >
-                      {chartGridLines}
-                    </Svg>
-                    {/* Web と同じ Y=0 をプロット幅全体に一本（列ごとの View では途切れる） */}
                     <View
                       pointerEvents="none"
                       style={[styles.plotZeroLine, { top: halfH - 0.5 }]}
@@ -363,117 +299,36 @@ export default function ProfileStreakTrackerNative({ points, loading, language }
           </View>
         </ChartGlassShell>
 
-        {footerWide ? (
-          <View style={styles.footerRowWide}>
-            <View style={[styles.statCard, styles.statWinCard, styles.footerThird]}>
-              <View style={styles.statLeft}>
-                <MaterialCommunityIcons name="trending-up" size={20} color="rgba(110,231,183,0.95)" />
-                <Text style={[styles.statLabelWin, !isJa && styles.statLabelEnUpper]}>
-                  {statWinLabel}
-                </Text>
+        <View style={profileOverviewChartStatsWrapStyle}>
+          <View style={profileOverviewChartStatsGridStyle}>
+            <View style={[profileOverviewChartStatCellStyle, profileOverviewChartStatCellBorderRStyle]}>
+              <Text style={profileOverviewChartStatLabelMutedStyle}>{statWinLabel}</Text>
+              <View style={profileOverviewChartStatValueRowStyle}>
+                <Text style={profileOverviewChartStatValueMutedStyle}>{stats.maxWinStreak}</Text>
               </View>
-              <Text style={styles.statValueWin}>{stats.maxWinStreak}</Text>
             </View>
-            <View style={[styles.statCard, styles.statLossCard, styles.footerThird]}>
-              <View style={styles.statLeft}>
-                <MaterialCommunityIcons name="trending-down" size={20} color="rgba(251,113,133,0.95)" />
-                <Text style={[styles.statLabelLoss, !isJa && styles.statLabelEnUpper]}>
-                  {statLossLabel}
-                </Text>
+            <View style={[profileOverviewChartStatCellStyle, profileOverviewChartStatCellBorderRStyle]}>
+              <Text style={profileOverviewChartStatLabelMutedStyle}>{statLossLabel}</Text>
+              <View style={profileOverviewChartStatValueRowStyle}>
+                <Text style={profileOverviewChartStatValueMutedStyle}>{stats.maxLossStreak}</Text>
               </View>
-              <Text style={styles.statValueLoss}>{stats.maxLossStreak}</Text>
             </View>
-            <View style={[styles.statCard, styles.statRecordCard, styles.footerThird]}>
-              <View style={styles.statLeft}>
-                <MaterialCommunityIcons name="chart-bar" size={20} color="rgba(125,211,252,0.95)" />
-                <Text style={[styles.statLabelRecord, !isJa && styles.statLabelEnUpper]}>
-                  {statRecordLabel}
-                </Text>
+            <View style={profileOverviewChartStatCellStyle}>
+              <Text style={profileOverviewChartStatLabelMutedStyle}>{statRecordLabel}</Text>
+              <View style={profileOverviewChartStatValueRowStyle}>
+                <Text style={profileOverviewChartStatValueMutedStyle}>{statRecordValue}</Text>
               </View>
-              <Text style={styles.statValueRecord}>{statRecordValue}</Text>
             </View>
           </View>
-        ) : (
-          <View style={styles.footerGrid}>
-            <View style={styles.footerTopRow}>
-              <View style={[styles.statCard, styles.statWinCard, styles.statHalf]}>
-                <View style={styles.statLeft}>
-                  <MaterialCommunityIcons name="trending-up" size={18} color="rgba(110,231,183,0.95)" />
-                  <Text style={[styles.statLabelWin, !isJa && styles.statLabelEnUpper]}>
-                    {statWinLabel}
-                  </Text>
-                </View>
-                <Text style={styles.statValueWin}>{stats.maxWinStreak}</Text>
-              </View>
-              <View style={[styles.statCard, styles.statLossCard, styles.statHalf]}>
-                <View style={styles.statLeft}>
-                  <MaterialCommunityIcons name="trending-down" size={18} color="rgba(251,113,133,0.95)" />
-                  <Text style={[styles.statLabelLoss, !isJa && styles.statLabelEnUpper]}>
-                    {statLossLabel}
-                  </Text>
-                </View>
-                <Text style={styles.statValueLoss}>{stats.maxLossStreak}</Text>
-              </View>
-            </View>
-            <View style={[styles.statCard, styles.statRecordCard]}>
-              <View style={styles.statLeft}>
-                <MaterialCommunityIcons name="chart-bar" size={18} color="rgba(125,211,252,0.95)" />
-                <Text style={[styles.statLabelRecord, !isJa && styles.statLabelEnUpper]}>
-                  {statRecordLabel}
-                </Text>
-              </View>
-              <Text style={styles.statValueRecord}>{statRecordValue}</Text>
-            </View>
-          </View>
-        )}
+        </View>
       </View>
-    </View>
+    </ProfileOverviewChartCardNative>
   );
 }
 
-/** チャート枠：背面のプロフィール格子と分離するガラス層 */
+/** チャート領域（背景透明・格子オーバーレイなし） */
 function ChartGlassShell({ children }: { children: ReactNode }) {
-  return (
-    <View style={styles.chartShellOuter}>
-      {(Platform.OS === "ios" || Platform.OS === "android") && (
-        <BlurView
-          pointerEvents="none"
-          style={StyleSheet.absoluteFillObject}
-          tint="dark"
-          intensity={Platform.OS === "ios" ? 34 : 26}
-          {...nativeBlurViewExtraProps()}
-        />
-      )}
-      <View style={styles.chartShellFilm} pointerEvents="none" />
-      <View style={styles.chartShellInner}>{children}</View>
-    </View>
-  );
-}
-
-/** カード全面の Shell 格子（チャート直下はガラスで隠すためやや弱める） */
-function ShellGridBackdrop({ patternId }: { patternId: string }) {
-  const c = PROFILE_SHELL_GRID_NATIVE.cellPx;
-  const opacity = PROFILE_SHELL_GRID_NATIVE.layerOpacity * 0.62;
-  return (
-    <Svg
-      width="100%"
-      height="100%"
-      style={[StyleSheet.absoluteFillObject, { opacity }]}
-      pointerEvents="none"
-    >
-      <Defs>
-        <Pattern id={patternId} width={c} height={c} patternUnits="userSpaceOnUse">
-          <SvgPath
-            d={profileShellGridPathD(c)}
-            fill="none"
-            stroke={PROFILE_SHELL_GRID_NATIVE.stroke}
-            strokeWidth={PROFILE_SHELL_GRID_NATIVE.strokeWidth}
-          />
-        </Pattern>
-      </Defs>
-      <Rect width="100%" height="100%" fill={`url(#${patternId})`} />
-    </Svg>
-  );
+  return <View style={styles.chartShellTransparent}>{children}</View>;
 }
 
 function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => void }) {
@@ -487,41 +342,11 @@ function HeaderRow({ title, onInfoPress }: { title: string; onInfoPress: () => v
   );
 }
 
-/** Web `ProfileKinetikPanelFrame` の四隅アクセント */
-function KinetikFrameCorners() {
-  return (
-    <View pointerEvents="none" style={styles.frameCorners}>
-      <View style={[styles.frameCorner, styles.frameCornerTopLeft]} />
-      <View style={[styles.frameCorner, styles.frameCornerTopRight]} />
-      <View style={[styles.frameCorner, styles.frameCornerBottomLeft]} />
-      <View style={[styles.frameCorner, styles.frameCornerBottomRight]} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
-    backgroundColor: "rgba(5,8,20,0.72)",
-    padding: 12,
-    overflow: "hidden",
-    position: "relative",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.45,
-        shadowRadius: 30,
-      },
-      android: { elevation: 10 },
-      default: {},
-    }),
-  },
   foreground: {
     position: "relative",
     zIndex: 1,
+    minWidth: 0,
   },
   headerRow: {
     flexDirection: "row",
@@ -541,21 +366,10 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
   },
-  title: {
-    color: "rgba(248,250,252,0.95)",
-    fontSize: 18,
-    fontWeight: "700",
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-  },
+  title: profileOverviewChartTitleStyle,
   subtitle: {
+    ...profileOverviewChartSubtitleStyle,
     marginTop: 6,
-    color: "rgba(148,163,184,0.85)",
-    fontSize: 11,
-    lineHeight: 15,
     maxWidth: 560,
   },
   badgeCol: {
@@ -605,33 +419,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 72,
   },
-  chartShellOuter: {
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(165,243,252,0.28)",
-    position: "relative",
-    ...Platform.select({
-      ios: {
-        shadowColor: "rgba(0,0,0,0.35)",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.35,
-        shadowRadius: 14,
-      },
-      android: { elevation: 3 },
-      default: {},
-    }),
-  },
-  chartShellFilm: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(8,12,22,0.82)",
-  },
-  chartShellInner: {
-    position: "relative",
-    zIndex: 1,
-    paddingTop: 6,
-    paddingBottom: 4,
-    paddingHorizontal: 4,
+  chartShellTransparent: {
+    backgroundColor: "transparent",
   },
   chartShellLoadingInner: {
     minHeight: 204,
@@ -673,11 +462,6 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderRadius: 8,
-  },
-  plotSvgBg: {
-    position: "absolute",
-    left: 0,
-    top: 0,
   },
   columnsOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -773,118 +557,6 @@ const styles = StyleSheet.create({
     color: "rgba(100,116,139,0.95)",
     fontVariant: ["tabular-nums"],
   },
-  footerGrid: {
-    marginTop: 10,
-    gap: 8,
-  },
-  footerRowWide: {
-    marginTop: 10,
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "stretch",
-  },
-  footerThird: {
-    flex: 1,
-    minWidth: 0,
-  },
-  footerTopRow: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "stretch",
-  },
-  statHalf: {
-    flex: 1,
-    minWidth: 0,
-  },
-  statCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  statWinCard: {
-    borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.25)",
-    backgroundColor: "rgba(16,185,129,0.07)",
-  },
-  statLossCard: {
-    borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.25)",
-    backgroundColor: "rgba(244,63,94,0.07)",
-  },
-  statRecordCard: {
-    borderWidth: 1,
-    borderColor: "rgba(56,189,248,0.2)",
-    backgroundColor: "rgba(14,165,233,0.06)",
-  },
-  statLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-    minWidth: 0,
-  },
-  statLabelWin: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(167,243,208,0.92)",
-  },
-  statLabelLoss: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(254,205,211,0.92)",
-  },
-  statLabelRecord: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(226,232,240,0.9)",
-  },
-  /** Web EN: `uppercase tracking-[0.14em]` */
-  statLabelEnUpper: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-  },
-  statValueWin: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "rgba(167,243,208,0.98)",
-    fontVariant: ["tabular-nums"],
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-  },
-  statValueLoss: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "rgba(254,205,211,0.98)",
-    fontVariant: ["tabular-nums"],
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-  },
-  statValueRecord: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "rgba(248,250,252,0.95)",
-    fontVariant: ["tabular-nums"],
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-  },
   muted: {
     color: "rgba(148,163,184,0.85)",
     fontSize: 13,
@@ -895,55 +567,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 24,
   },
-  noData: {
-    fontSize: 20,
-    fontWeight: "700",
-    letterSpacing: 3,
-    color: "rgba(248,250,252,0.35)",
-    fontFamily: Platform.select({
-      ios: "Oxanium_700Bold",
-      android: "Oxanium_700Bold",
-      default: "sans-serif",
-    }),
-  },
+  noData: profileOverviewChartNoDataStyle,
   noDataHint: {
-    marginTop: 10,
-    fontSize: 11,
-    color: "rgba(248,250,252,0.42)",
-    textAlign: "center",
-  },
-  frameCorners: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 3,
-  },
-  frameCorner: {
-    position: "absolute",
-    width: 18,
-    height: 18,
-    borderColor: "rgba(255,255,255,0.88)",
-  },
-  frameCornerTopLeft: {
-    left: -1,
-    top: -1,
-    borderLeftWidth: 2,
-    borderTopWidth: 2,
-  },
-  frameCornerTopRight: {
-    right: -1,
-    top: -1,
-    borderRightWidth: 2,
-    borderTopWidth: 2,
-  },
-  frameCornerBottomLeft: {
-    left: -1,
-    bottom: -1,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
-  },
-  frameCornerBottomRight: {
-    right: -1,
-    bottom: -1,
-    borderRightWidth: 2,
-    borderBottomWidth: 2,
+    ...profileOverviewChartEmptyHintStyle,
   },
 });

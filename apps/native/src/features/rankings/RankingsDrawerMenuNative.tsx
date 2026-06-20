@@ -1,5 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors } from "../../theme/tokens";
+import { StyleSheet, View } from "react-native";
+import CyberSideMenuSectionTitleNative from "../../ui/CyberSideMenuSectionTitleNative";
+import SideMenuItemButtonNative from "../../ui/SideMenuItemButtonNative";
+import { SIDE_MENU_LABEL_FONT } from "../../ui/cyberSideMenuNative";
 
 type League = "nba" | "wc";
 
@@ -9,50 +11,47 @@ type Props = {
   language: "ja" | "en";
 };
 
+/** Web `RankingsDrawerMenu` 相当 */
 export default function RankingsDrawerMenuNative({ league, onChange, language }: Props) {
   const isJa = language === "ja";
+  const isEn = language === "en";
+  const labelStyle = isEn
+    ? { ...SIDE_MENU_LABEL_FONT, textTransform: "uppercase" as const }
+    : SIDE_MENU_LABEL_FONT;
 
   return (
     <View style={styles.root}>
-      <Text style={styles.heading}>{isJa ? "リーグ" : "League"}</Text>
-      {(
-        [
-          ["nba", "NBA Playoffs"],
-          ["wc", "World Cup"],
-        ] as const
-      ).map(([id, label]) => (
-        <Pressable
-          key={id}
-          style={[styles.item, league === id && styles.itemActive]}
-          onPress={() => onChange(id)}
+      <CyberSideMenuSectionTitleNative first>
+        {isJa ? "ランキング" : "Rankings"}
+      </CyberSideMenuSectionTitleNative>
+      <View style={styles.itemGroup}>
+        <SideMenuItemButtonNative
+          icon="trophy-outline"
+          active={league === "nba"}
+          labelStyle={labelStyle}
+          onPress={() => onChange("nba")}
         >
-          <Text style={[styles.itemLabel, league === id && styles.itemLabelActive]}>{label}</Text>
-        </Pressable>
-      ))}
+          {isJa ? "NBA プレーオフ" : "NBA Playoffs"}
+        </SideMenuItemButtonNative>
+        <SideMenuItemButtonNative
+          icon="earth"
+          active={league === "wc"}
+          labelStyle={labelStyle}
+          onPress={() => onChange("wc")}
+        >
+          {isJa ? "ワールドカップ" : "World Cup"}
+        </SideMenuItemButtonNative>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { padding: 16, gap: 8 },
-  heading: {
-    color: colors.textMuted,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 4,
+  root: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  item: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "transparent",
+  itemGroup: {
+    gap: 8,
   },
-  itemActive: {
-    borderColor: colors.accentCyan,
-    backgroundColor: "rgba(34,211,238,0.1)",
-  },
-  itemLabel: { color: colors.textSecondary, fontSize: 15, fontWeight: "600" },
-  itemLabelActive: { color: colors.textPrimary },
 });

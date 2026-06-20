@@ -40,6 +40,8 @@ export type ProfileStackParamList = {
         handle?: string;
         /** ランキング一覧から他人プロフィールを開いたとき */
         fromRankings?: boolean;
+        /** プロフィール編集モーダルを開く */
+        openSettings?: boolean;
       }
     | undefined;
   ProfileSettings: undefined;

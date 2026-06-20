@@ -1,12 +1,54 @@
-import { doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  documentId,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
-import { db } from "../../lib/firebase";
+import { auth, db } from "../../lib/firebase";
 import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDailyTrendRow";
+import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
+import type { MyRankMetricValueDeltas } from "../../../../../lib/rankings/myRankMetricValueDeltas";
+import type { RankingLeagueSource } from "../../../../../lib/rankings/rankingLeagueSource";
+import { isWcRankingStage, type WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
+import {
+  buildDailyTrendFromDailySnaps,
+  dailyTrendRowFromDailySnap,
+  resolveProfileDailyTrendContext,
+} from "../../../../../lib/profile/userStatsV2ProfileRollup";
 import {
   getPastDateKeysInTimeZone,
   TIMEZONE_JST,
   toDateKeyInTimeZone,
 } from "../../../../../lib/time/zonedTime";
+
+const DAILY_TREND_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function safeInt(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+}
+
+function safeNum(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Firestore ルール（auth 必須）通過前にトークンを確実に付与する */
+async function ensureFirestoreAuthReady(): Promise<boolean> {
+  const user = auth.currentUser;
+  if (!user) return false;
+  try {
+    await user.getIdToken();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** API / Firestore 由来の日付を YYYY-MM-DD に正規化（Timestamp・JSON seconds 形も吸収） */
 export function normalizeDailyTrendDate(raw: unknown): string {
@@ -57,6 +99,44 @@ export function normalizeDailyTrendDate(raw: unknown): string {
   return "";
 }
 
+/** チャート描画に使える YYYY-MM-DD 行か */
+export function isChartRenderableDailyTrendRow(
+  row: Pick<ProfileDailyTrendRow, "date"> | null | undefined
+): boolean {
+  const date = normalizeDailyTrendDate(row?.date);
+  return DAILY_TREND_DATE_RE.test(date);
+}
+
+/** API / Firestore 由来の行をチャート用に正規化 */
+export function normalizeProfileDailyTrendRows(rows: unknown): ProfileDailyTrendRow[] {
+  if (!Array.isArray(rows)) return [];
+  const out: ProfileDailyTrendRow[] = [];
+  for (const raw of rows) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const date =
+      normalizeDailyTrendDate(r.date) ||
+      normalizeDailyTrendDate(r.dateKey) ||
+      normalizeDailyTrendDate(r.day) ||
+      normalizeDailyTrendDate(r.dayKey) ||
+      "";
+    if (!DAILY_TREND_DATE_RE.test(date)) continue;
+    const posts = safeInt(r.posts);
+    const wins = safeInt(r.wins ?? r.hits ?? r.winCount);
+    out.push({
+      date,
+      posts,
+      wins,
+      pointsV3: safeNum(r.pointsV3),
+      upsetPoints: safeNum(r.upsetPoints),
+      winRate: safeNum(r.winRate ?? (posts > 0 ? wins / posts : 0)),
+      scorePrecision: safeNum(r.scorePrecision),
+    });
+  }
+  out.sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
+
 /** Web `useUserStatsV2` の SummaryForCardsV2 と同等 */
 export type ProfileSummaryNative = {
   posts: number;
@@ -72,12 +152,16 @@ export type ProfileSummaryNative = {
   upsetBonusSum: number;
   streakBonusSum: number;
   basePointsSum: number;
+  activeWinStreak?: number;
+  maxWinStreak?: number;
 };
 
 export type ProfileSummaryRanksNative = {
   totalPrecision: number | null;
   totalUpset: number | null;
   totalPoints: number | null;
+  totalPointsDenominator?: number | null;
+  rankDeltaPlaces?: number | null;
 };
 
 export type RankPlayoffTrendPointNative = {
@@ -86,16 +170,6 @@ export type RankPlayoffTrendPointNative = {
   labelShort: string;
   date: string;
 };
-
-function safeInt(v: unknown): number {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-}
-
-function safeNum(v: unknown): number {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
 
 function parseSummary(raw: unknown): ProfileSummaryNative | null {
   if (!raw || typeof raw !== "object") return null;
@@ -116,6 +190,8 @@ function parseSummary(raw: unknown): ProfileSummaryNative | null {
     upsetBonusSum: safeNum(o.upsetBonusSum),
     streakBonusSum: safeNum(o.streakBonusSum),
     basePointsSum: safeNum(o.basePointsSum),
+    activeWinStreak: safeInt(o.activeWinStreak),
+    maxWinStreak: safeInt(o.maxWinStreak),
   };
 }
 
@@ -132,7 +208,50 @@ function parseSummaryRanks(raw: unknown): ProfileSummaryRanksNative | null {
     totalPrecision: rank(o.totalPrecision),
     totalUpset: rank(o.totalUpset),
     totalPoints: rank(o.totalPoints),
+    totalPointsDenominator: rank(o.totalPointsDenominator),
+    rankDeltaPlaces:
+      typeof o.rankDeltaPlaces === "number" && Number.isFinite(o.rankDeltaPlaces)
+        ? Math.trunc(o.rankDeltaPlaces)
+        : null,
   };
+}
+
+function parseMetricValueDeltas(raw: unknown): MyRankMetricValueDeltas | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const num = (v: unknown): number | null => {
+    if (v == null) return null;
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  return {
+    totalPoints: num(o.totalPoints),
+    totalPrecision: num(o.totalPrecision),
+    totalUpset: num(o.totalUpset),
+    winRate: num(o.winRate),
+  };
+}
+
+function buildProfileStatsQuery(
+  uid: string,
+  parts: string,
+  ctx?: ProfileStatsStreakContext
+): URLSearchParams {
+  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "worldcup";
+  const safeWcStage: WcRankingStage | undefined =
+    rankingLeague === "worldcup"
+      ? ctx?.wcStage && isWcRankingStage(ctx.wcStage)
+        ? ctx.wcStage
+        : "overall"
+      : undefined;
+  const qs = new URLSearchParams({
+    uid,
+    parts,
+    phase: "playoffs",
+  });
+  if (rankingLeague) qs.set("league", rankingLeague);
+  if (safeWcStage) qs.set("wcStage", safeWcStage);
+  return qs;
 }
 
 function parseUserStatsJson(json: Record<string, unknown>): {
@@ -140,6 +259,7 @@ function parseUserStatsJson(json: Record<string, unknown>): {
   summaryRanks: ProfileSummaryRanksNative | null;
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[];
+  metricValueDeltas: MyRankMetricValueDeltas | null;
 } {
   let dailyRaw: unknown = json.dailyTrend;
   if (typeof dailyRaw === "string" && dailyRaw.trim().startsWith("[")) {
@@ -149,28 +269,7 @@ function parseUserStatsJson(json: Record<string, unknown>): {
       dailyRaw = null;
     }
   }
-  const dailyTrend: ProfileDailyTrendRow[] = Array.isArray(dailyRaw)
-    ? dailyRaw.map((row) => {
-        const r = row as Record<string, unknown>;
-        const posts = safeInt(r.posts);
-        const wins = safeInt(r.wins ?? r.hits ?? r.winCount);
-        const date =
-          normalizeDailyTrendDate(r.date) ||
-          normalizeDailyTrendDate(r.dateKey) ||
-          normalizeDailyTrendDate(r.day) ||
-          normalizeDailyTrendDate(r.dayKey) ||
-          "";
-        return {
-          date,
-          posts,
-          wins,
-          pointsV3: safeNum(r.pointsV3),
-          upsetPoints: safeNum(r.upsetPoints),
-          winRate: safeNum(r.winRate ?? (posts > 0 ? wins / posts : 0)),
-          scorePrecision: safeNum(r.scorePrecision),
-        };
-      })
-    : [];
+  const dailyTrend = normalizeProfileDailyTrendRows(dailyRaw);
   return {
     summary: parseSummary(json.summary),
     summaryRanks: parseSummaryRanks(json.summaryRanks),
@@ -178,25 +277,26 @@ function parseUserStatsJson(json: Record<string, unknown>): {
       ? (json.stats as Record<string, unknown>)
       : null,
     dailyTrend,
+    metricValueDeltas: parseMetricValueDeltas(json.metricValueDeltas),
   };
 }
 
 /** Web `useUserStatsV2` の初回+trend と同等の `parts` を明示（window_cache の日付形もパースする） */
-export async function fetchProfileUserStatsAll(uid: string): Promise<{
+export async function fetchProfileUserStatsAll(
+  uid: string,
+  ctx?: ProfileStatsStreakContext
+): Promise<{
   summary: ProfileSummaryNative | null;
   summaryRanks: ProfileSummaryRanksNative | null;
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[];
+  metricValueDeltas: MyRankMetricValueDeltas | null;
 }> {
   const base = getUniterzApiBaseUrl();
   if (!base) {
     throw new Error("EXPO_PUBLIC_UNITERZ_API_BASE_URL が未設定です。");
   }
-  const qs = new URLSearchParams({
-    uid,
-    parts: "stats,phase,trend",
-    phase: "playoffs",
-  });
+  const qs = buildProfileStatsQuery(uid, "stats,phase,trend", ctx);
   const res = await fetch(`${base}/api/profile/user-stats?${qs.toString()}`, {
     method: "GET",
     cache: "no-store",
@@ -211,22 +311,20 @@ export async function fetchProfileUserStatsAll(uid: string): Promise<{
 /** Web `/api/profile/user-stats` と同一クエリ（parts 指定） */
 export async function fetchProfileUserStats(
   uid: string,
-  parts: "stats,phase" | "trend"
+  parts: "stats,phase" | "trend",
+  ctx?: ProfileStatsStreakContext
 ): Promise<{
   summary: ProfileSummaryNative | null;
   summaryRanks: ProfileSummaryRanksNative | null;
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[];
+  metricValueDeltas: MyRankMetricValueDeltas | null;
 }> {
   const base = getUniterzApiBaseUrl();
   if (!base) {
     throw new Error("EXPO_PUBLIC_UNITERZ_API_BASE_URL が未設定です。");
   }
-  const qs = new URLSearchParams({
-    uid,
-    parts,
-    phase: "playoffs",
-  });
+  const qs = buildProfileStatsQuery(uid, parts, ctx);
   const res = await fetch(`${base}/api/profile/user-stats?${qs.toString()}`, {
     method: "GET",
     cache: "no-store",
@@ -239,73 +337,105 @@ export async function fetchProfileUserStats(
 }
 
 /**
- * Web `useUserStatsDailyTrend` / API `fetchLast30DailySnapshots` と同じ暦30日分を docId で直読。
- * `documentId` 範囲クエリはインデックス・実装差で失敗しうるため、`getDoc` の並列取得に寄せる。
+ * Web `useUserStatsDailyTrend` と同じ JST 30 日レンジを Firestore から直読。
+ * API の `dailyTrend` が空のとき（WC 直近30日・キャッシュ不整合など）のフォールバック。
  */
 export async function fetchDailyTrendFirestoreFallback(
-  uid: string
+  uid: string,
+  ctx?: ProfileStatsStreakContext
 ): Promise<ProfileDailyTrendRow[]> {
+  const trendCtx = resolveProfileDailyTrendContext(
+    ctx?.rankingLeague ?? "worldcup",
+    ctx?.wcStage
+  );
+  const authed = await ensureFirestoreAuthReady();
+  if (!authed) return [];
+
+  try {
+    const now = new Date();
+    const end = toDateKeyInTimeZone(now, TIMEZONE_JST);
+    const startDt = new Date(now.getTime() - 29 * 86400000);
+    const start = toDateKeyInTimeZone(startDt, TIMEZONE_JST);
+
+    const q = query(
+      collection(db, "user_stats_v2_daily"),
+      where(documentId(), ">=", `${uid}_${start}`),
+      where(documentId(), "<=", `${uid}_${end}`),
+      orderBy(documentId())
+    );
+    const snap = await getDocs(q);
+    const rows: ProfileDailyTrendRow[] = [];
+    for (const docSnap of snap.docs) {
+      const row = dailyTrendRowFromDailySnap(docSnap, trendCtx);
+      if (row && isChartRenderableDailyTrendRow(row)) rows.push(row);
+    }
+    rows.sort((a, b) => a.date.localeCompare(b.date));
+    if (rows.length > 0) return rows;
+  } catch (e) {
+    if (__DEV__) {
+      console.warn("[fetchDailyTrendFirestoreFallback] range query failed", e);
+    }
+  }
+
   try {
     const keys = getPastDateKeysInTimeZone(new Date(), TIMEZONE_JST, 30);
     const snaps = await Promise.all(
       keys.map((dateKey) => getDoc(doc(db, "user_stats_v2_daily", `${uid}_${dateKey}`)))
     );
-    const rows: ProfileDailyTrendRow[] = [];
-
-    for (const snap of snaps) {
-      if (!snap.exists) continue;
-      const d = snap.data();
-      if (!d) continue;
-      const tail = snap.id.match(/_(\d{4}-\d{2}-\d{2})$/);
-      const date =
-        normalizeDailyTrendDate(d.date) ||
-        normalizeDailyTrendDate((d as { dateKey?: unknown }).dateKey) ||
-        (tail ? tail[1]! : "");
-      if (!date) continue;
-
-      const all = d.applied_posts?.all ?? d.applied_posts ?? d.all;
-      const bucketFromAll =
-        all != null && typeof all === "object" ? (all as Record<string, unknown>) : null;
-      /** `all` が無くルートにだけメトリクスがある古い／マージ済み doc も拾う */
-      const bucket =
-        bucketFromAll ??
-        (typeof (d as { posts?: unknown }).posts === "number" ||
-        typeof (d as { wins?: unknown }).wins === "number"
-          ? (d as Record<string, unknown>)
-          : null);
-      const posts = safeInt(bucket?.posts);
-      const wins = safeInt(bucket?.wins ?? bucket?.hits ?? bucket?.winCount);
-      const pointsV3 = safeNum(bucket?.pointsSumV3);
-      const upsetPoints = safeNum(bucket?.upsetPointsSum);
-      const scorePrecisionSum = safeNum(bucket?.scorePrecisionSum);
-
-      rows.push({
-        date,
-        posts,
-        wins,
-        pointsV3,
-        upsetPoints,
-        winRate: posts > 0 ? wins / posts : 0,
-        scorePrecision: scorePrecisionSum,
-      });
-    }
-    rows.sort((a, b) => a.date.localeCompare(b.date));
-    return rows;
+    return normalizeProfileDailyTrendRows(
+      buildDailyTrendFromDailySnaps(snaps, trendCtx)
+    );
   } catch (e) {
     if (__DEV__) {
-      console.warn("[fetchDailyTrendFirestoreFallback]", e);
+      console.warn("[fetchDailyTrendFirestoreFallback] getDoc fallback failed", e);
     }
     return [];
   }
 }
 
+/** Web `useUserStatsV2` の `ensureTrend` + `useUserStatsDailyTrend` に合わせ API / Firestore を並列取得 */
+export async function resolveProfileDailyTrend(
+  uid: string,
+  ctx: ProfileStatsStreakContext,
+  bundleTrend: ProfileDailyTrendRow[]
+): Promise<ProfileDailyTrendRow[]> {
+  const [trendOnlyResult, firestoreRows] = await Promise.all([
+    fetchProfileUserStats(uid, "trend", ctx)
+      .then((r) => normalizeProfileDailyTrendRows(r.dailyTrend))
+      .catch(() => [] as ProfileDailyTrendRow[]),
+    fetchDailyTrendFirestoreFallback(uid, ctx)
+      .then((rows) => normalizeProfileDailyTrendRows(rows))
+      .catch(() => [] as ProfileDailyTrendRow[]),
+  ]);
+
+  if (trendOnlyResult.length > 0) return trendOnlyResult;
+
+  const fromBundle = normalizeProfileDailyTrendRows(bundleTrend);
+  if (fromBundle.length > 0) return fromBundle;
+
+  return firestoreRows;
+}
+
 /** Web `useProfilePlayoffRankTrend` と同一エンドポイント */
 export async function fetchRankPlayoffTrend(
-  uid: string
+  uid: string,
+  ctx?: ProfileStatsStreakContext
 ): Promise<RankPlayoffTrendPointNative[]> {
   const base = getUniterzApiBaseUrl();
   if (!base) return [];
-  const url = `${base}/api/profile/rank-playoff-trend?uid=${encodeURIComponent(uid)}&phase=playoffs`;
+  const rankingLeague: RankingLeagueSource = ctx?.rankingLeague ?? "worldcup";
+  const wcStage: WcRankingStage =
+    rankingLeague === "worldcup"
+      ? ctx?.wcStage && isWcRankingStage(ctx.wcStage)
+        ? ctx.wcStage
+        : "overall"
+      : "overall";
+  const qs = new URLSearchParams({ uid, phase: "playoffs" });
+  if (rankingLeague === "worldcup") {
+    qs.set("league", "worldcup");
+    qs.set("wcStage", wcStage);
+  }
+  const url = `${base}/api/profile/rank-playoff-trend?${qs.toString()}`;
   try {
     const res = await fetch(url, { cache: "no-store" });
     const json = (await res.json()) as {

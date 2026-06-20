@@ -75,6 +75,14 @@ const TYPE_META: Record<string, { labelJa: string; labelEn: string; colors: [str
   info: { labelJa: "お知らせ", labelEn: "News", colors: ["#9CA3AF", "#6B7280"] },
 };
 
+function TypePill({ label, colors }: { label: string; colors: [string, string] }) {
+  return (
+    <LinearGradient colors={colors} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.typePill}>
+      <Text style={styles.typePillText}>{label}</Text>
+    </LinearGradient>
+  );
+}
+
 function formatDate(d?: Timestamp | Date | null, isJa?: boolean) {
   if (!d) return "";
   const date = d instanceof Timestamp ? d.toDate() : d;
@@ -179,7 +187,7 @@ export default function MobileAnnouncementsScreen({
 
   if (detailId) {
     return (
-      <MobilePageShell title={detailTitle} appBackground onClose={onClose} onBack={() => setDetailId(null)}>
+      <MobilePageShell title={detailTitle} onClose={onClose} onBack={() => setDetailId(null)}>
         <ScrollView contentContainerStyle={styles.detailPad}>
           {detailLoading ? (
             <ActivityIndicator color="#67e8f9" style={{ marginTop: 24 }} />
@@ -198,7 +206,7 @@ export default function MobileAnnouncementsScreen({
   }
 
   return (
-    <MobilePageShell title={listTitle} appBackground onClose={onClose}>
+    <MobilePageShell title={listTitle} onClose={onClose}>
       <ScrollView contentContainerStyle={styles.listPad}>
         {loading ? (
           <View style={styles.skelWrap}>
@@ -235,9 +243,7 @@ export default function MobileAnnouncementsScreen({
                 )}
                 <View style={styles.cardInner}>
                   <View style={styles.typeRow}>
-                    <LinearGradient colors={meta.colors} style={styles.typePill}>
-                      <Text style={styles.typePillText}>{typeLabel}</Text>
-                    </LinearGradient>
+                    <TypePill label={typeLabel} colors={meta.colors} />
                     <Text style={styles.date}>{formatDate(a.postedAt, isJa)}</Text>
                   </View>
                   <Text style={styles.cardTitle}>{a.title}</Text>
@@ -270,9 +276,7 @@ function RegularAnnouncementBody({
         <Image source={{ uri: src }} style={styles.detailHero} resizeMode="cover" />
       ) : null}
       <View style={styles.typeRow}>
-        <LinearGradient colors={meta.colors} style={styles.typePill}>
-          <Text style={styles.typePillText}>{typeLabel}</Text>
-        </LinearGradient>
+        <TypePill label={typeLabel} colors={meta.colors} />
         <Text style={styles.date}>{formatDate(row.postedAt, isJa)}</Text>
       </View>
       <Text style={styles.detailH2}>{row.title}</Text>
@@ -307,9 +311,7 @@ function SyntheticEventBody({
   return (
     <>
       <View style={styles.typeRow}>
-        <LinearGradient colors={meta.colors} style={styles.typePill}>
-          <Text style={styles.typePillText}>{typeLabel}</Text>
-        </LinearGradient>
+        <TypePill label={typeLabel} colors={meta.colors} />
         <Text style={styles.date}>{posted.toLocaleString(isJa ? "ja-JP" : "en-US")}</Text>
       </View>
       <Text style={styles.detailH2}>{title}</Text>

@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.footballWinnerCorrect = footballWinnerCorrect;
 exports.calcPointsFootball = calcPointsFootball;
 const judgeWin_1 = require("./judgeWin");
-const footballPaceCategory_1 = require("./footballPaceCategory");
 const settlementGame_1 = require("./settlementGame");
 /** ノックアウトは進出側／それ以外はラインスコアで勝敗 */
 function footballWinnerCorrect(pred, g) {
@@ -23,7 +22,12 @@ function footballWinnerCorrect(pred, g) {
 /**
  * サッカー総合得点（1試合あたり最大10）
  * 勝者ゲート: 外れなら 0
- * 的中時: 勝者4 + テンポ2 + 得失点差2 + 完全一致2
+ * 的中時: 勝者4 + HOME得点3 + AWAY得点3（完全一致のみ・ボーナスなし）
+ * 基本点: 0 / 4 / 7 / 10
+ *
+ * diffPoints / totalPoints は basketball 系 API との互換用:
+ * - diffPoints = HOME得点一致分 (0–3)
+ * - totalPoints = AWAY得点一致分 (0–3)
  */
 function calcPointsFootball(prediction, g) {
     const predHome = prediction.score.home;
@@ -37,8 +41,8 @@ function calcPointsFootball(prediction, g) {
             winPoints: 0,
             diffPoints: 0,
             totalPoints: 0,
-            paceMatch: false,
-            diffMatch: false,
+            homeMatch: false,
+            awayMatch: false,
             exactMatch: false,
             diffError: null,
             totalError: null,
@@ -48,17 +52,16 @@ function calcPointsFootball(prediction, g) {
     const lh = line.home;
     const la = line.away;
     const winPoints = 4;
-    const paceMatch = (0, footballPaceCategory_1.footballPaceCategory)(predHome + predAway) === (0, footballPaceCategory_1.footballPaceCategory)(lh + la);
-    const pacePoints = paceMatch ? 2 : 0;
+    const homeMatch = predHome === lh;
+    const awayMatch = predAway === la;
+    const homePoints = homeMatch ? 3 : 0;
+    const awayPoints = awayMatch ? 3 : 0;
+    const exactMatch = homeMatch && awayMatch;
+    const diffPoints = homePoints;
+    const totalPoints = awayPoints;
+    const basePoints = winPoints + homePoints + awayPoints;
     const predDiff = predHome - predAway;
     const lineDiff = lh - la;
-    const diffMatch = Math.abs(predDiff) === Math.abs(lineDiff);
-    const diffPairPoints = diffMatch ? 2 : 0;
-    const exactMatch = predHome === lh && predAway === la;
-    const exactPoints = exactMatch ? 2 : 0;
-    const diffPoints = pacePoints + diffPairPoints;
-    const totalPoints = exactPoints;
-    const basePoints = winPoints + diffPoints + totalPoints;
     const diffError = Math.abs(predDiff - lineDiff);
     const totalError = Math.abs(predHome - lh) + Math.abs(predAway - la);
     return {
@@ -68,8 +71,8 @@ function calcPointsFootball(prediction, g) {
         winPoints,
         diffPoints,
         totalPoints,
-        paceMatch,
-        diffMatch,
+        homeMatch,
+        awayMatch,
         exactMatch,
         diffError,
         totalError,

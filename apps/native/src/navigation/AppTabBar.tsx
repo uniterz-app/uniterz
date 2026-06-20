@@ -79,7 +79,17 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                     target: route.key,
                     canPreventDefault: true,
                   });
-                  if (!active && !event.defaultPrevented) {
+                  if (event.defaultPrevented) return;
+
+                  if (route.name === "ProfileTab") {
+                    navigation.navigate("ProfileTab", {
+                      screen: "ProfileHome",
+                      params: {},
+                    });
+                    return;
+                  }
+
+                  if (!active) {
                     navigation.navigate(route.name);
                   }
                 };

@@ -10,6 +10,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { resolveUniterzAssetUrl } from "../../lib/resolveUniterzAssetUrl";
 
 export type MasterBadgeNative = {
   id: string;
@@ -139,7 +140,11 @@ export function useNativeProfileBadges(targetUid: string | undefined) {
       .map((ub) => {
         const master = masterBadges.find((m) => m.id === ub.badgeId);
         if (!master) return null;
-        return { ...master, grantedAt: ub.grantedAt };
+        return {
+          ...master,
+          icon: resolveUniterzAssetUrl(master.icon),
+          grantedAt: ub.grantedAt,
+        };
       })
       .filter((b): b is ResolvedBadgeNative => b !== null);
   }, [userBadges, masterBadges]);

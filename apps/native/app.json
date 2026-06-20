@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.native",
+      "bundleIdentifier": "com.rikutokamiya.uniterz.dev",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
         "NSCameraUsageDescription": "プロフィール写真を撮影するためにカメラを使います。"

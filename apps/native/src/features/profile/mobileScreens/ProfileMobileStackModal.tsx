@@ -81,7 +81,7 @@ export default function ProfileMobileStackModal({
         ) : kind === "subscribe" ? (
           <MobileProSubscribeScreen language={language} onClose={onClose} />
         ) : kind === "guidelines" ? (
-          <MobileCommunityGuidelinesScreen language={language} onClose={onClose} />
+          <MobileCommunityGuidelinesScreen language={language} />
         ) : webviewPath && apiBase ? (
           <MobileLegalWebViewScreen
             apiBase={apiBase}

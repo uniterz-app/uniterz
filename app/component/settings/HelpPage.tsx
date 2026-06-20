@@ -83,24 +83,33 @@ function ScoringLogicAnswerJa() {
       title: "総合得点",
       content: (
         <div className="space-y-1">
+          <p className="font-semibold text-white/90">サッカー（WC など）</p>
           <p>
             <span className="font-semibold text-emerald-300">勝者的中</span>で
             <span className="font-semibold text-cyan-300"> +4点</span>。
           </p>
           <p>
+            <span className="font-semibold text-emerald-300">HOME得点一致</span>
+            <span className="font-semibold text-cyan-300"> +3点</span>、
+            <span className="font-semibold text-emerald-300">AWAY得点一致</span>
+            <span className="font-semibold text-cyan-300"> +3点</span>
+            （完全一致のみ）。
+          </p>
+          <p>
+            基本点は
+            <span className="font-semibold text-cyan-300">0 / 4 / 7 / 10点</span>
+            （勝者のみ4点、片方一致7点、完全一致10点）。
+          </p>
+          <p className="pt-1 font-semibold text-white/90">NBA</p>
+          <p>
+            <span className="font-semibold text-emerald-300">勝者的中</span>で
+            <span className="font-semibold text-cyan-300"> +4点</span>。
             <span className="font-semibold text-emerald-300">得失点差の近さ（Max4点）</span>
-            ：誤差0で4点、誤差1〜14で段階的に減点、誤差15以上は0点。
-          </p>
-          <p>
+            、
             <span className="font-semibold text-emerald-300">合計得点の近さ（Max2点）</span>
-            ：合計誤差0〜3で2点、4〜7で1点、8以上は0点。
+            で加点（すべて一致で基本点10点）。
           </p>
-          <p>
-            上記がすべて一致すると1試合の基本点は
-            <span className="font-semibold text-cyan-300">10点</span>
-            です。
-          </p>
-          <p>
+          <p className="pt-1">
             <span className="font-semibold text-emerald-300">連勝ボーナス</span>
             ：3〜4連勝 +1点、5〜6連勝 +2点、7連勝以上 +3点（2連勝以下は0点）。
           </p>
@@ -187,26 +196,32 @@ function ScoringLogicAnswerEn() {
       title: "Total Points",
       content: (
         <div className="space-y-1">
+          <p className="font-semibold text-white/90">Football (WC, etc.)</p>
           <p>
             <span className="font-semibold text-emerald-300">Correct winner</span>
             <span className="font-semibold text-cyan-300"> +4 points</span>.
           </p>
           <p>
-            <span className="font-semibold text-emerald-300">Margin closeness (max 4)</span>
-            : 4 points at 0 error, gradually reduced for
-            errors 1–14, and 0 at 15+.
+            <span className="font-semibold text-emerald-300">HOME goals match</span>
+            <span className="font-semibold text-cyan-300"> +3</span>,{" "}
+            <span className="font-semibold text-emerald-300">AWAY goals match</span>
+            <span className="font-semibold text-cyan-300"> +3</span>
+            (exact match only).
           </p>
           <p>
-            <span className="font-semibold text-emerald-300">Total-score closeness (max 2)</span>
-            : 2 points for total error 0–3, 1 point
-            for 4–7, and 0 for 8+.
+            Base points:
+            <span className="font-semibold text-cyan-300"> 0 / 4 / 7 / 10</span>
+            (winner only 4, one side 7, exact score 10).
           </p>
+          <p className="pt-1 font-semibold text-white/90">NBA</p>
           <p>
-            Perfect match on all parts gives
-            <span className="font-semibold text-cyan-300"> 10 base points</span>
-            per match.
+            <span className="font-semibold text-emerald-300">Correct winner</span>
+            <span className="font-semibold text-cyan-300"> +4 points</span>.{" "}
+            <span className="font-semibold text-emerald-300">Margin closeness (max 4)</span> and{" "}
+            <span className="font-semibold text-emerald-300">total-score closeness (max 2)</span>{" "}
+            add points (all match → 10 base points).
           </p>
-          <p>
+          <p className="pt-1">
             <span className="font-semibold text-emerald-300">Win-streak bonus</span>
             : +1 (3–4 streak), +2 (5–6), +3 (7+), else 0.
           </p>
