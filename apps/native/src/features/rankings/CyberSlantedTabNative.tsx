@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { LinearGradient } from "expo-linear-gradient";
 import { Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import {
   hasJaScript,
@@ -9,7 +8,9 @@ import { METRIC_FONT } from "./rankingsUiTheme";
 
 export const CYBER_TAB_CYAN = "#00F5FF";
 
-const SCAN_LINES = Array.from({ length: 18 }, (_, i) => i);
+/** Web `.cyber-slanted-tab__scan` — 2px 透明 + 1px 線の 3px 周期 */
+const SCAN_LINE_STEP = 3;
+const SCAN_LINE_COUNT = 18;
 
 type TabProps = {
   label: string;
@@ -20,6 +21,16 @@ type TabProps = {
   accessibilityRole?: "tab";
   accessibilityState?: { selected?: boolean };
 };
+
+function TabScanOverlay() {
+  return (
+    <View pointerEvents="none" style={styles.scanOverlay}>
+      {Array.from({ length: SCAN_LINE_COUNT }, (_, i) => (
+        <View key={i} style={[styles.scanLine, { top: 2 + i * SCAN_LINE_STEP }]} />
+      ))}
+    </View>
+  );
+}
 
 /** Web `CyberSlantedTab` のネイティブ版 */
 export function CyberSlantedTabNative({
@@ -40,42 +51,43 @@ export function CyberSlantedTabNative({
       accessibilityState={accessibilityState}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.tab,
-        fill ? styles.tabFill : null,
-        compact ? styles.tabCompact : null,
-        active ? styles.tabActive : styles.tabInactive,
+        fill ? styles.tabOuterFill : styles.tabOuter,
         pressed ? styles.tabPressed : null,
       ]}
     >
-      {active ? (
-        <View pointerEvents="none" style={styles.scanOverlay}>
-          {SCAN_LINES.map((line) => (
-            <View
-              key={line}
-              style={[
-                styles.scanLine,
-                { top: line * 3, opacity: line % 2 === 0 ? 0.14 : 0 },
-              ]}
-            />
-          ))}
-        </View>
-      ) : null}
-      <Text
-        numberOfLines={1}
-        maxFontSizeMultiplier={1.1}
+      <View
         style={[
-          styles.tabText,
-          active ? styles.tabTextActive : null,
-          {
-            fontSize,
-            letterSpacing: jaLabel ? 0.6 : 1.4,
-            transform: [{ skewX: "14deg" }],
-          },
-          !jaLabel ? styles.tabTextUpper : null,
+          styles.tabSkew,
+          fill ? styles.tabSkewFill : null,
+          compact
+            ? fill
+              ? styles.tabFillCompact
+              : styles.tabCompact
+            : fill
+              ? styles.tabFillDefault
+              : null,
+          active ? styles.tabActive : styles.tabInactive,
         ]}
       >
-        {label}
-      </Text>
+        {active ? <TabScanOverlay /> : null}
+        <Text
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.1}
+          style={[
+            styles.tabText,
+            active ? styles.tabTextActive : null,
+            {
+              fontSize,
+              lineHeight: Math.round(fontSize * 1.1),
+              letterSpacing: jaLabel ? 0.4 : 1.1,
+              transform: [{ skewX: "14deg" }],
+            },
+            !jaLabel ? styles.tabTextUpper : null,
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -119,45 +131,65 @@ const styles = StyleSheet.create({
     gap: 8,
     width: "100%",
     paddingBottom: 2,
+    alignItems: "center",
   },
   barScroll: {
     flexDirection: "row",
     gap: 8,
     paddingBottom: 2,
+    alignItems: "center",
   },
   barGrid3: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    columnGap: 8,
+    rowGap: 4,
     width: "100%",
     paddingBottom: 2,
+    alignItems: "flex-start",
   },
   gridItem3: {
     width: "31%",
-    flexGrow: 1,
+    flexGrow: 0,
+    flexShrink: 0,
+    alignSelf: "flex-start",
   },
   gridItemFill: {
     flex: 1,
     minWidth: 0,
   },
-  tab: {
+  tabOuter: {
+    alignSelf: "flex-start",
+  },
+  tabOuterFill: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    alignSelf: "stretch",
+  },
+  tabSkew: {
     position: "relative",
     overflow: "hidden",
-    minHeight: 36,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 20,
     paddingVertical: 8,
     transform: [{ skewX: "-14deg" }],
   },
-  tabFill: {
-    flex: 1,
-    minWidth: 0,
+  tabSkewFill: {
+    width: "100%",
+  },
+  tabFillDefault: {
     paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  tabFillCompact: {
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   tabCompact: {
-    minHeight: 34,
-    paddingHorizontal: 6,
+    paddingHorizontal: 14,
     paddingVertical: 6,
   },
   tabInactive: {
@@ -175,7 +207,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 1,
         shadowRadius: 18,
       },
-      android: { elevation: 6 },
+      android: { elevation: 4 },
       default: {},
     }),
   },
@@ -191,7 +223,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "#000",
+    backgroundColor: "rgba(0, 0, 0, 0.14)",
   },
   tabText: {
     position: "relative",

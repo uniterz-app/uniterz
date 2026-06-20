@@ -10,6 +10,7 @@ import { aggregateGamePointsDistributionFromPostsSnap } from "./aggregateGamePoi
 import { updateUserStreak } from "./updateUserStreak";
 import { updateTeamStats } from "./updateTeamStats";
 import { updateTeamSeasonRecord } from "./updateTeamSeasonRecord";
+import { notifyGameFinalPush } from "./notifications/notifyPushEvents";
 import {
   countsTowardPlayoffTeamStats,
   countsTowardRegularSeasonTeamStats,
@@ -255,6 +256,18 @@ export const onGameFinalV2 = onDocumentWritten(
         },
         { merge: true }
       );
+
+      try {
+        await notifyGameFinalPush({
+          gameId,
+          after: after as Record<string, unknown>,
+          postsSnap,
+          homeScore: game.homeScore,
+          awayScore: game.awayScore,
+        });
+      } catch (err) {
+        console.error("[onGameFinalV2] push notify failed", err);
+      }
     }
   }
 );

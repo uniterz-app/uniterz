@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -130,7 +130,9 @@ export default function TeamDetailScreenNative() {
   return (
     <MobilePageShell title={team?.name ?? "TEAM DETAIL"} onClose={() => navigation.goBack()}>
       {loading ? (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} />
+        <View style={{ marginTop: 32, alignItems: "center" }}>
+          <CandleChartLoaderNative />
+        </View>
       ) : notFound || !team ? (
         <Text style={styles.muted}>Team not found</Text>
       ) : (

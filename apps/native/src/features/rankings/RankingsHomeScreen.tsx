@@ -3,14 +3,12 @@ import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   type MobileMetric,
 } from "../../../../../app/component/rankings/_data/mockRows";
@@ -19,6 +17,7 @@ import {
   buildMyRankMiniMetrics,
   isMyRankMiniMetricsReady,
 } from "../../../../../lib/rankings/buildMyRankMiniMetrics";
+import { resolveMyRankForCard } from "../../../../../lib/rankings/rankingsPageShared";
 import {
   visibleMetricsForLeague,
 } from "../../../../../lib/rankings/wcVisibleMetrics";
@@ -40,7 +39,7 @@ import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
 import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
 import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
-import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
+import { CandleChartLoaderNative } from "../../components/CandleChartLoaderNative";
 import { spacing } from "../../theme/tokens";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
@@ -71,7 +70,6 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
-  const [scheduleNoticeOpen, setScheduleNoticeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
@@ -126,9 +124,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     return toMobileRows(metric, rawRows);
   }, [metric, rawRows]);
 
-  const myRank = bundle?.myRank ?? null;
-  const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
+  const { myRank, myRankDeltaPlaces } = useMemo(
+    () =>
+      resolveMyRankForCard({
+        myUid,
+        myRank: bundle?.myRank,
+        myRankDeltaPlaces: bundle?.myRankDeltaPlaces,
+        myRow: myRawRow,
+        listRows: rawRows,
+      }),
+    [
+      myUid,
+      bundle?.myRank,
+      bundle?.myRankDeltaPlaces,
+      myRawRow,
+      rawRows,
+    ]
+  );
   const myStatsRow =
     (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ?? myRawRow;
   const rankingListCount =
@@ -208,35 +221,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
             accessibilityLabel={language === "ja" ? "メニュー" : "Menu"}
             onPress={() => setMenuOpen(true)}
           />
-          <RankingsPageTitleCyberNative title={pageTitle} />
-          <Pressable
-            style={styles.infoBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t.scheduleInfoToggle}
-            accessibilityState={{ expanded: scheduleNoticeOpen }}
-            onPress={() => setScheduleNoticeOpen((open) => !open)}
-          >
-            <MaterialCommunityIcons
-              name="information-outline"
-              size={18}
-              color="rgba(255,255,255,0.7)"
-            />
-          </Pressable>
-        </View>
-        {scheduleNoticeOpen ? (
-          <View style={styles.noticeGlass}>
-            <Text style={styles.notice} maxFontSizeMultiplier={1.15}>
+          <View style={styles.titleCenterCol}>
+            <RankingsPageTitleCyberNative title={pageTitle} />
+            <Text style={styles.scheduleNoticeInline} maxFontSizeMultiplier={1.1}>
               {scheduleNoticeForUser(language)}
             </Text>
           </View>
-        ) : null}
+          <View style={styles.titleSpacer} />
+        </View>
 
         <View style={styles.section}>
-          <RankingsCategoryTabsNative
-            category={category}
-            onChange={setCategory}
-            language={language}
-          />
+          {rankingsLeague === "nba" ? (
+            <RankingsCategoryTabsNative
+              category={category}
+              onChange={setCategory}
+              language={language}
+            />
+          ) : null}
+
           {category === "playoffs" ? (
             <>
               {rankingsLeague === "nba" ? (
@@ -249,6 +251,33 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   language={language}
                 />
               ) : null}
+
+              <MyRankCardNative
+                rank={rankingHasNoEntries ? null : myRank}
+                metric={metric}
+                value={myValue}
+                displayName={user.displayName?.trim() ?? ""}
+                photoURL={user.photoURL || null}
+                totalPosts={
+                  typeof myRawRow?.totalPosts === "number" ? myRawRow.totalPosts : undefined
+                }
+                loading={!listReady}
+                statsScramble={listReady && personalPending}
+                isPro={user.plan === "pro"}
+                rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
+                totalEntries={rankingHasNoEntries ? null : rankingListCount}
+                miniMetrics={myMiniMetrics}
+                statsSource={{
+                  totalPosts: myStatsRow?.totalPosts,
+                  totalPoints: myStatsRow?.totalPoints,
+                  totalPrecision: myStatsRow?.totalPrecision,
+                  totalUpset: myStatsRow?.totalUpset,
+                }}
+                barsReady={cardBarsReady}
+                language={language}
+                mobileWide
+                leagueLabel={rankingsLeague === "wc" ? "WORLD CUP" : "NBA"}
+              />
             </>
           ) : null}
         </View>
@@ -259,38 +288,14 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
         {category === "playoffs" ? (
           <>
-            <MyRankCardNative
-              rank={rankingHasNoEntries ? null : myRank}
-              metric={metric}
-              value={myValue}
-              displayName={user.displayName?.trim() ?? ""}
-              photoURL={user.photoURL || null}
-              totalPosts={
-                typeof myRawRow?.totalPosts === "number" ? myRawRow.totalPosts : undefined
-              }
-              loading={!listReady}
-              statsScramble={listReady && personalPending}
-              isPro={user.plan === "pro"}
-              rankDeltaPlaces={rankingHasNoEntries ? null : myRankDeltaPlaces}
-              totalEntries={rankingHasNoEntries ? null : rankingListCount}
-              miniMetrics={myMiniMetrics}
-              statsSource={{
-                totalPosts: myStatsRow?.totalPosts,
-                totalPoints: myStatsRow?.totalPoints,
-                totalPrecision: myStatsRow?.totalPrecision,
-                totalUpset: myStatsRow?.totalUpset,
-              }}
-              barsReady={cardBarsReady}
-              language={language}
-            />
-
             <View style={styles.metricRowWrap}>
-            <RankingsMetricRowNative
-              metrics={metricItems}
-              metric={metric}
-              onChange={setMetric}
-              language={language}
-            />
+              <RankingsMetricRowNative
+                metrics={metricItems}
+                metric={metric}
+                onChange={setMetric}
+                language={language}
+                gridColumns={rankingsLeague === "wc" ? 3 : undefined}
+              />
             </View>
 
             {metric === "winRate" ? (
@@ -301,7 +306,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
             {!listReady ? (
               <View style={styles.loadingWrap}>
-                <BlocksPulseLoader pixelScale={0.85} label="loading" />
+                <CandleChartLoaderNative scale={0.85} label={t.loading} />
               </View>
             ) : rankingHasNoEntries ? (
               <View style={styles.noDataWrap}>
@@ -367,38 +372,33 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
+    alignItems: "flex-start",
+    marginBottom: 8,
     gap: 8,
   },
-  infoBtn: {
+  titleCenterCol: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    gap: 2,
+  },
+  titleSpacer: {
     width: 40,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
-  noticeGlass: {
-    marginBottom: 8,
-    borderRadius: 0,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.35)",
-    backgroundColor: "rgba(2,6,16,0.86)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    overflow: "hidden",
-  },
-  notice: {
+  scheduleNoticeInline: {
     textAlign: "center",
-    color: "rgba(200,244,255,0.72)",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 10,
     lineHeight: 14,
+    paddingHorizontal: 4,
   },
   section: {
-    gap: 6,
-    marginBottom: 8,
+    gap: 2,
+    marginBottom: 0,
   },
   metricRowWrap: {
-    marginTop: 10,
+    marginTop: 12,
     marginBottom: 2,
   },
   bracketPlaceholder: {
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     }),
   },
   listSection: {
-    marginTop: 6,
+    marginTop: 4,
     gap: 0,
     overflow: "hidden",
     borderWidth: 1,

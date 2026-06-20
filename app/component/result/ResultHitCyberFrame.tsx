@@ -15,7 +15,7 @@ type Props = {
 };
 
 const CORNER =
-  "pointer-events-none absolute z-[5] border-yellow-300/88";
+  "pointer-events-none absolute z-[12] border-yellow-300/88";
 
 /** HIT 用サイバー角切り枠（丸角なし） */
 export default function ResultHitCyberFrame({
@@ -55,7 +55,7 @@ export default function ResultHitCyberFrame({
       {showSweep ? (
         <div
           className={[
-            "pointer-events-none absolute inset-0 z-[3] overflow-hidden",
+            "pointer-events-none absolute inset-0 z-[11] overflow-hidden",
             RESULT_HIT_CYBER_CLIP,
             "result-card-border-sweep result-card-streak-sweep result-card-streak-sweep--gold",
           ].join(" ")}

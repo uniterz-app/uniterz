@@ -13,6 +13,7 @@ import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { LiveMarkPill } from "./LiveMarkPill";
 import { PlayoffSeriesScoreInline } from "./PlayoffSeriesScoreInline";
 import MatchListCyberClipNative from "./MatchListCyberClipNative";
+import { WcBroadcastNamesNative } from "./WcBroadcastNamesNative";
 import MatchListCyberDecorNative from "./MatchListCyberDecorNative";
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
@@ -251,50 +252,17 @@ function GameCardListRow(props: GameCardListRowProps) {
                   <Animated.View style={ent.centerBlockStyle}>
                     <View style={styles.centerScoreWrap}>
                       {centerBlock.variant === "liveMark" ? (
-                        <View style={styles.liveMarkWrap}>
+                        <View
+                          style={
+                            centerBlock.subLine
+                              ? styles.liveScoreStack
+                              : styles.liveMarkWrap
+                          }
+                        >
                           <LiveMarkPill
                             pillStyle={styles.liveMarkPill}
                             textStyle={styles.liveMarkText}
                           />
-                        </View>
-                      ) : centerBlock.variant === "liveScore" ? (
-                        <View style={styles.liveScoreStack}>
-                          <LiveMarkPill
-                            pillStyle={styles.liveMarkPill}
-                            textStyle={styles.liveMarkText}
-                          />
-                          <Text
-                            style={[
-                              styles.centerTextScore,
-                              isWcCard && styles.centerTextScoreWc,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            <Text
-                              style={[
-                                styles.centerTextScoreNum,
-                                isWcCard && styles.centerTextScoreNumWc,
-                              ]}
-                            >
-                              {centerBlock.home}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.centerScoreDash,
-                                isWcCard && styles.centerScoreDashWc,
-                              ]}
-                            >
-                              –
-                            </Text>
-                            <Text
-                              style={[
-                                styles.centerTextScoreNum,
-                                isWcCard && styles.centerTextScoreNumWc,
-                              ]}
-                            >
-                              {centerBlock.away}
-                            </Text>
-                          </Text>
                           {centerBlock.subLine ? (
                             <Text
                               style={[
@@ -414,9 +382,11 @@ function GameCardListRow(props: GameCardListRowProps) {
               {showWcBroadcastRow ? (
                 <View style={styles.wcBroadcastRow}>
                   <Text style={styles.wcBroadcastLabel}>{t.broadcasters}</Text>
-                  <Text style={styles.wcBroadcastNames}>
-                    {broadcastLabels.join(wcBroadcastSep)}
-                  </Text>
+                  <WcBroadcastNamesNative
+                    labels={broadcastLabels}
+                    separator={wcBroadcastSep}
+                    textAlign="center"
+                  />
                 </View>
               ) : null}
               <View style={{ width: "100%", marginTop: "auto" }}>

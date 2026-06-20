@@ -33,7 +33,7 @@ import ResultStatsRows from "@/app/component/result/ResultStatsRows";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import { MOBILE_RESULT_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
 import ResultGlassShell from "@/app/component/result/ResultGlassShell";
-import { RESULT_GLASS_CHIP, RESULT_HAIRLINE } from "@/lib/result/resultGlass";
+import { RESULT_GLASS_CHIP, RESULT_HAIRLINE, isResultWinFrameBadge } from "@/lib/result/resultGlass";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
@@ -296,7 +296,12 @@ function ResultCardPresentationImpl({
       onClick={embedded ? undefined : handle}
       badge={badge}
       activeWinStreak={activeWinStreak}
-      showSweep={false}
+      showSweep={
+        !visualEffectsLite &&
+        (badge === "streak" ||
+          badge === "upset" ||
+          isResultWinFrameBadge(badge))
+      }
       dense={mobileScheduleDense}
       lift={!embedded}
       lite={visualEffectsLite}

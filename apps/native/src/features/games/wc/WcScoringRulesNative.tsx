@@ -3,6 +3,8 @@ import type { GamesLanguage } from "../gamesI18n";
 
 type Props = {
   language: GamesLanguage;
+  /** モーダル内では上罫線を付けない */
+  variant?: "inline" | "modal";
 };
 
 type RuleSection = {
@@ -181,12 +183,15 @@ function RuleBlock({
 }
 
 /** Web `PredictionScoringFullRulesBody` の WC 向け Native 相当 */
-export default function WcScoringRulesNative({ language }: Props) {
+export default function WcScoringRulesNative({
+  language,
+  variant = "inline",
+}: Props) {
   const sections = RULES[language];
   const title = language === "en" ? "WC scoring rules" : "W杯 得点ルール";
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, variant === "modal" && styles.rootModal]}>
       <Text style={styles.kicker}>{title}</Text>
       {sections.map((section) => (
         <View key={section.title} style={styles.section}>
@@ -209,6 +214,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.08)",
     paddingTop: 14,
+  },
+  rootModal: {
+    borderTopWidth: 0,
+    paddingTop: 0,
   },
   kicker: {
     color: "rgba(165,243,252,0.95)",

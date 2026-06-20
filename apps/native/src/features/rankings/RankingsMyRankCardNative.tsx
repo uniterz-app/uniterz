@@ -10,6 +10,7 @@ import {
   myRankCardAccent,
   type MyRankStatsSource,
 } from "../../../../../lib/rankings/myRankCardFocus";
+import { dateKeyJST } from "../../../../../lib/rankings/rankSnapshotDate";
 import { rankingMetricAccent } from "../../../../../lib/rankings/rankingMetricAccent";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
@@ -74,6 +75,8 @@ export function MyRankCardNative({
   miniMetrics,
   statsSource,
   barsReady = true,
+  leagueLabel,
+  mobileWide = false,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -90,22 +93,29 @@ export function MyRankCardNative({
   miniMetrics?: MyRankMiniMetric[];
   statsSource?: MyRankStatsSource | null;
   barsReady?: boolean;
+  leagueLabel?: string | null;
+  /** Web `mobileWide` — 親 padding 内でカード幅をリストと揃える */
+  mobileWide?: boolean;
 }) {
   const t = rankingsTexts(language);
   const frameTone = resolveMyRankFrameTone(rankDeltaPlaces);
   const accent = myRankCardAccent(frameTone);
   const metricAccent = rankingMetricAccent(metric);
+  const segAccent = {
+    border: accent.primary,
+    glow: accent.glow,
+    bg: accent.dim,
+  };
   const statsPending = !!statsScramble;
   const rankVisualMuted = loading || statsPending || rank == null;
 
   const selectedMini =
     miniMetrics?.find((m) => m.key === metric) ?? miniMetrics?.[0] ?? null;
   const segPct = selectedMini?.pct ?? 0;
-  const segAccent = {
-    border: metricAccent.bar.hi,
-    glow: metricAccent.bar.glow,
-    bg: metricAccent.bar.lo,
-  };
+
+  const leagueDisplay =
+    leagueLabel && leagueLabel.toUpperCase() !== "NBA" ? leagueLabel : null;
+  const serialDateKey = dateKeyJST();
 
   const entriesDisplay =
     !loading &&
@@ -120,9 +130,7 @@ export function MyRankCardNative({
       ? computeMyRankTopPercent(rank, totalEntries)
       : null;
   const topPercentLabel =
-    topPercent != null
-      ? (language === "ja" ? `上位 ${topPercent}%` : `TOP ${topPercent}%`)
-      : null;
+    topPercent != null ? t.topPercent.replace("{n}", topPercent) : null;
 
   const posts =
     typeof totalPosts === "number" ? totalPosts : (statsSource?.totalPosts ?? 0);
@@ -138,7 +146,7 @@ export function MyRankCardNative({
   })();
 
   return (
-    <View style={styles.myRankOuter}>
+    <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
       <MyRankCardFrameNative tone={frameTone}>
         <LinearGradient
           pointerEvents="none"
@@ -244,7 +252,10 @@ export function MyRankCardNative({
 
         <View style={styles.myRankFooter}>
           <Text style={styles.myRankFooterText} numberOfLines={1}>
-            UNITERZ · {MY_RANK_METRIC_HUD_LABEL[metric]}
+            UNITERZ
+            {leagueDisplay ? ` · ${leagueDisplay}` : ""}
+            {` · ${MY_RANK_METRIC_HUD_LABEL[metric]}`}
+            {` // ${serialDateKey}`}
           </Text>
         </View>
       </MyRankCardFrameNative>

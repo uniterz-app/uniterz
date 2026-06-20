@@ -6,6 +6,76 @@ import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { RankingRow } from "@/lib/rankings/useRanking";
 import { minPostsForWinRate } from "@/lib/rankings/winRateMinPosts";
 
+function safeRank(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) && v >= 1
+    ? Math.floor(v)
+    : null;
+}
+
+function safeRankDelta(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) && v !== 0
+    ? Math.trunc(v)
+    : null;
+}
+
+type ListRankRow = { uid?: string; rank?: number; rankDeltaPlaces?: number | null };
+
+function rankFromListRows(
+  rows: unknown[] | undefined,
+  uid: string
+): ListRankRow | null {
+  if (!Array.isArray(rows)) return null;
+  for (const row of rows) {
+    const r = row as ListRankRow;
+    if (r?.uid !== uid) continue;
+    const rank = safeRank(r.rank);
+    if (rank == null) return null;
+    return { uid, rank, rankDeltaPlaces: r.rankDeltaPlaces };
+  }
+  return null;
+}
+
+/** MyRankCard 用 — API myRank → myRow.rank → 一覧行の順 */
+export function resolveMyRankForCard(input: {
+  myUid: string | null | undefined;
+  myRank?: number | null;
+  myRankDeltaPlaces?: number | null;
+  myRow?: { rank?: number; rankDeltaPlaces?: number | null } | null;
+  listRows?: unknown[];
+}): { myRank: number | null; myRankDeltaPlaces: number | null } {
+  const directRank = safeRank(input.myRank);
+  if (directRank != null) {
+    return {
+      myRank: directRank,
+      myRankDeltaPlaces: safeRankDelta(input.myRankDeltaPlaces),
+    };
+  }
+
+  const rowRank = safeRank(input.myRow?.rank);
+  if (rowRank != null) {
+    return {
+      myRank: rowRank,
+      myRankDeltaPlaces:
+        safeRankDelta(input.myRankDeltaPlaces) ??
+        safeRankDelta(input.myRow?.rankDeltaPlaces),
+    };
+  }
+
+  if (input.myUid) {
+    const fromList = rankFromListRows(input.listRows, input.myUid);
+    if (fromList?.rank != null) {
+      return {
+        myRank: fromList.rank,
+        myRankDeltaPlaces:
+          safeRankDelta(input.myRankDeltaPlaces) ??
+          safeRankDelta(fromList.rankDeltaPlaces),
+      };
+    }
+  }
+
+  return { myRank: null, myRankDeltaPlaces: null };
+}
+
 /** 自分の指標値（MyRankCard 用） */
 export function getMyMetricValue(
   metric: MobileMetric,
@@ -57,7 +127,8 @@ export function computeRankingListContentReady(input: {
   /** 現在タブの指標バンドルが取得済みか */
   metricReady: boolean;
 }): boolean {
-  return input.listReady && input.metricReady;
+  // 一覧本体（totalPoints）は metric タブより先に出す
+  return input.listReady;
 }
 
 export function computeRankingHasNoEntries(input: {

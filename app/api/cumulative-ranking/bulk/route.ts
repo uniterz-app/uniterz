@@ -5,10 +5,6 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import {
-  mergeUserPlansForUids,
-  mergeUserPlansIntoBulkByMetric,
-} from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
-import {
   isPlayoffRoundKey,
   type PlayoffRoundKey,
 } from "@/lib/rankings/playoffRound";
@@ -18,7 +14,7 @@ import {
   type BulkRankingMetric,
 } from "@/lib/rankings/server/fetchCumulativeRankingBulk";
 import { mergePersonalIntoBulkByMetric } from "@/lib/rankings/server/mergePersonalBulkOverlay";
-import { loadSnapshotTotalPointsRankAndDelta } from "@/lib/rankings/server/rankSnapshotHistoryTotalPoints";
+import { loadPersonalBulkOverlayFromFirestore } from "@/lib/rankings/server/loadPersonalBulkOverlay";
 import { loadMyRankMetricValueDeltas } from "@/lib/rankings/server/loadMyRankMetricValueDeltas";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
 import {
@@ -113,17 +109,9 @@ const getCachedBulk = unstable_cache(
           : null;
     // dayKey は unstable_cache のキー分離用（当日中は同一キーで再利用）
     void dayKey;
-    const fetched = await fetchBulkFromFunctions(
-      uid,
-      metrics,
-      phase,
-      round,
-      wcStage
-    );
-    await mergeUserPlansIntoBulkByMetric(fetched.byMetric);
-    return fetched;
+    return fetchBulkFromFunctions(uid, metrics, phase, round, wcStage);
   },
-  ["cumulative-ranking-bulk-v5"],
+  ["cumulative-ranking-bulk-v8"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -162,8 +150,8 @@ export async function GET(req: Request) {
     }
 
     /**
-     * 一覧は常に anon キャッシュ（plan マージ済み）。
-     * uid 付きは一覧を再利用し、Functions では myRank / myRow のみ上書き。
+     * 一覧は anon キャッシュ（スナップショットそのまま）。
+     * uid 付きは一覧を再利用し、Functions の myRank / myRow のみ上書き。
      */
     const listSource = await getCachedBulk(
       "__anon__",
@@ -180,7 +168,7 @@ export async function GET(req: Request) {
         : (JSON.parse(JSON.stringify(listSource)) as typeof listSource);
 
     if (uid) {
-      const personal = await fetchBulkFromFunctions(
+      const personal = await loadPersonalBulkOverlayFromFirestore(
         uid,
         metricsList,
         phase,
@@ -189,63 +177,35 @@ export async function GET(req: Request) {
       );
       mergePersonalIntoBulkByMetric(
         data.byMetric,
-        personal.byMetric,
-        metricsList
+        personal,
+        metricsList,
+        uid
       );
-      await mergeUserPlansForUids(data.byMetric, [uid]);
     }
 
     let myMetricValueDeltas: MyRankMetricValueDeltas | null = null;
 
-    const snapshotWork =
-      uid && data.byMetric?.totalPoints && !wcStage
-        ? loadSnapshotTotalPointsRankAndDelta(uid, phase, round)
-        : Promise.resolve(null);
-
-    const deltaWork =
-      uid && data.byMetric?.totalPoints?.myRow
-        ? loadMyRankMetricValueDeltas(
-            uid,
-            data.byMetric.totalPoints.myRow as {
-              totalPoints?: number;
-              totalPrecision?: number;
-              totalUpset?: number;
-              winRate?: number;
-            },
-            {
-              phase,
-              round,
-              wcStage,
-              rankingLeague: isRankingLeagueSource(searchParams.get("league"))
-                ? (searchParams.get("league") as RankingLeagueSource)
-                : wcStage
-                  ? "worldcup"
-                  : "nba",
-            }
-          )
-        : Promise.resolve(null);
-
-    const [snapshotResult, deltasResult] = await Promise.all([
-      snapshotWork.catch(() => null),
-      deltaWork.catch(() => null),
-    ]);
-
-    if (snapshotResult) {
-      const { latestRank, deltaPlaces } = snapshotResult;
-      if (latestRank != null) {
-        data.byMetric.totalPoints.myRank = latestRank;
-        data.byMetric.totalPoints.myRankDeltaPlaces = deltaPlaces;
-        const myRow = data.byMetric.totalPoints.myRow as
-          | Record<string, unknown>
-          | null
-          | undefined;
-        if (myRow && typeof myRow === "object") {
-          data.byMetric.totalPoints.myRow = { ...myRow, rank: latestRank };
+    if (uid && data.byMetric?.totalPoints?.myRow) {
+      myMetricValueDeltas = await loadMyRankMetricValueDeltas(
+        uid,
+        data.byMetric.totalPoints.myRow as {
+          totalPoints?: number;
+          totalPrecision?: number;
+          totalUpset?: number;
+          winRate?: number;
+        },
+        {
+          phase,
+          round,
+          wcStage,
+          rankingLeague: isRankingLeagueSource(searchParams.get("league"))
+            ? (searchParams.get("league") as RankingLeagueSource)
+            : wcStage
+              ? "worldcup"
+              : "nba",
         }
-      }
+      ).catch(() => null);
     }
-
-    myMetricValueDeltas = deltasResult;
 
     const cacheControl = uid
       ? `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`

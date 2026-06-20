@@ -156,7 +156,7 @@ export function useTodayGames() {
   const [windowRows, setWindowRows] = useState<NativeGameRow[]>([]);
   const [peerRowsForSeries, setPeerRowsForSeries] = useState<NativeGameRow[]>([]);
   const [selectedDate, setSelectedDateState] = useState<Date>(() => new Date());
-  const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("nba");
+  const [selectedLeague, setSelectedLeagueState] = useState<SupportedLeague>("wc");
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   const windowBoundsRef = useRef<{ monthKey: string } | null>(null);

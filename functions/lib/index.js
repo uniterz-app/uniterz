@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
+exports.onUserCreate = exports.runDailyAnalyticsHttp = exports.xmasNba20251226 = exports.listUserStatsIds = exports.backfillStreakApplyMarkersHttp = exports.fixUserStats = exports.runDailyAnalytics = exports.dailyAnalytics = exports.buildUserStatsWindowCacheCron = exports.buildMonthlyLeaderboardSnapshotCron = exports.notifyGameStartPushCron = exports.buildCumulativeRankingSnapshotCron = exports.buildCumulativeStatsCron = exports.updateTeamRankingsDaily = exports.onPostDeletedV2 = exports.onPostCreatedV2 = exports.rebuildUserMonthlyStatsMonthCronV2 = exports.rebuildUserMonthlyStatsV2 = exports.expireProUsers = exports.rebuildMonthlyLeaderboardsHttp = exports.rebuildMonthlyLeaderboardsCron = exports.getMonthlyLeaderboard = exports.backfillCumulativeStatsFromDailyHttp = exports.getCumulativeRanking = exports.rebuildPlayoffBracketMarket = exports.onPlayoffBracketRescoreTaskCreated = exports.onPlayoffResultsWrite = exports.rescorePlayoffBrackets = exports.onGameFinalV2 = void 0;
 const options_1 = require("firebase-functions/v2/options");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -45,6 +45,8 @@ const functions = __importStar(require("firebase-functions"));
 const buildCumulativeStats_1 = require("./rankings/buildCumulativeStats");
 const buildCumulativeRankingSnapshot_1 = require("./rankings/buildCumulativeRankingSnapshot");
 const hasRankingAggregationScheduledJstToday_1 = require("./schedule/hasRankingAggregationScheduledJstToday");
+const notifyGameStartCron_1 = require("./notifications/notifyGameStartCron");
+const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
 // ★追加
 const buildMonthlyLeaderboardSnapshot_1 = require("./leaderboards/buildMonthlyLeaderboardSnapshot");
 const jstLeaderboardMonth_1 = require("./leaderboards/jstLeaderboardMonth");
@@ -116,33 +118,51 @@ exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
  * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA / WC 試合がある日
  * ==========================================================================*/
 exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "55 15 * * *", timeZone: "Asia/Tokyo" }, async () => {
-    var _a;
+    var _a, _b;
     if (!(await (0, hasRankingAggregationScheduledJstToday_1.hasRankingAggregationScheduledJstToday)())) {
         console.log("[buildCumulativeRankingSnapshotCron] skip: no NBA/WC games scheduled this JST date");
         return;
     }
-    await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
+    const snapshotResult = await (0, buildCumulativeRankingSnapshot_1.buildCumulativeRankingSnapshot)();
     const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
     const token = process.env.INTERNAL_REVALIDATE_SECRET;
     if (!revalidateUrl || !token) {
         console.warn("[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)");
-        return;
+    }
+    else {
+        try {
+            const res = await fetch(revalidateUrl, {
+                method: "POST",
+                headers: { "x-revalidate-token": token },
+            });
+            if (!res.ok) {
+                const body = await res.text().catch(() => "");
+                console.error(`[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`);
+            }
+            else {
+                console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
+            }
+        }
+        catch (err) {
+            console.error(`[buildCumulativeRankingSnapshotCron] revalidate error: ${String((_a = err === null || err === void 0 ? void 0 : err.message) !== null && _a !== void 0 ? _a : err)}`);
+        }
     }
     try {
-        const res = await fetch(revalidateUrl, {
-            method: "POST",
-            headers: { "x-revalidate-token": token },
-        });
-        if (!res.ok) {
-            const body = await res.text().catch(() => "");
-            console.error(`[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`);
-        }
-        else {
-            console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
-        }
+        await (0, notifyPushEvents_1.notifyRankingUpdatedPush)((_b = snapshotResult.notifiedUids) !== null && _b !== void 0 ? _b : []);
     }
     catch (err) {
-        console.error(`[buildCumulativeRankingSnapshotCron] revalidate error: ${String((_a = err === null || err === void 0 ? void 0 : err.message) !== null && _a !== void 0 ? _a : err)}`);
+        console.error("[buildCumulativeRankingSnapshotCron] push notify failed", err);
+    }
+});
+/* ============================================================================
+ * Game start push (5 min) — 15 分以内に開始する試合の予想者へ
+ * ==========================================================================*/
+exports.notifyGameStartPushCron = (0, scheduler_1.onSchedule)({ schedule: "*/5 * * * *", timeZone: "Asia/Tokyo" }, async () => {
+    try {
+        await (0, notifyGameStartCron_1.runNotifyGameStartCron)();
+    }
+    catch (err) {
+        console.error("[notifyGameStartPushCron] failed", err);
     }
 });
 /* ============================================================================

@@ -12,6 +12,7 @@ const aggregateGamePointsDistribution_1 = require("./aggregateGamePointsDistribu
 const updateUserStreak_1 = require("./updateUserStreak");
 const updateTeamStats_1 = require("./updateTeamStats");
 const updateTeamSeasonRecord_1 = require("./updateTeamSeasonRecord");
+const notifyPushEvents_1 = require("./notifications/notifyPushEvents");
 const teamStandingsSeasonPhase_1 = require("./teamStandingsSeasonPhase");
 const settlementGame_1 = require("./settlementGame");
 const db = () => (0, firestore_2.getFirestore)();
@@ -197,6 +198,18 @@ exports.onGameFinalV2 = (0, firestore_1.onDocumentWritten)({
             requestedAt: firestore_2.FieldValue.serverTimestamp(),
             gameId,
         }, { merge: true });
+        try {
+            await (0, notifyPushEvents_1.notifyGameFinalPush)({
+                gameId,
+                after: after,
+                postsSnap,
+                homeScore: game.homeScore,
+                awayScore: game.awayScore,
+            });
+        }
+        catch (err) {
+            console.error("[onGameFinalV2] push notify failed", err);
+        }
     }
 });
 //# sourceMappingURL=onGameFinalV2.js.map

@@ -74,7 +74,8 @@ export async function fetchBulkFromFunctions(
   metrics: BulkRankingMetric[],
   phase: RankingPhase,
   round: PlayoffRoundKey,
-  wcStage: WcRankingStage | null
+  wcStage: WcRankingStage | null,
+  opts?: { personalOnly?: boolean }
 ): Promise<{ ok: true; byMetric: Record<string, BulkMetricPayload> }> {
   const baseUrl =
     process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
@@ -90,6 +91,7 @@ export async function fetchBulkFromFunctions(
   combinedUrl.searchParams.set("round", round);
   if (wcStage) combinedUrl.searchParams.set("wcStage", wcStage);
   if (uid) combinedUrl.searchParams.set("uid", uid);
+  if (opts?.personalOnly) combinedUrl.searchParams.set("personalOnly", "1");
 
   const combinedRes = await fetch(combinedUrl.toString(), {
     method: "GET",

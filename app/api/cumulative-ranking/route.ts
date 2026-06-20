@@ -6,7 +6,6 @@ import {
   isPlayoffRoundKey,
   type PlayoffRoundKey,
 } from "@/lib/rankings/playoffRound";
-import { mergeUserPlansIntoSingleRanking } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { isRankingPhase, type RankingPhase } from "@/lib/rankings/rankingPhase";
 import {
   getCachedCumulativeRanking,
@@ -69,10 +68,6 @@ export async function GET(req: Request) {
       typeof structuredClone === "function"
         ? structuredClone(payload)
         : (JSON.parse(JSON.stringify(payload)) as typeof payload);
-    await mergeUserPlansIntoSingleRanking({
-      rows: body.rows,
-      myRow: body.myRow,
-    });
 
     const maxAge = Math.min(120, CUMULATIVE_RANKING_REVALIDATE_SEC);
     const cacheControl = uid

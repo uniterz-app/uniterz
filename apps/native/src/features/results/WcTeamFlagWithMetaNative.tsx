@@ -16,19 +16,21 @@ export default function WcTeamFlagWithMetaNative({ teamId, children }: Props) {
 
   return (
     <View style={styles.stack}>
-      {potLabel && potColor ? (
-        <Text
-          style={[
-            styles.potText,
-            {
-              color: potColor.nativeColor,
-              textShadowColor: potColor.nativeTextShadowColor,
-            },
-          ]}
-        >
-          {potLabel}
-        </Text>
-      ) : null}
+      <View style={styles.potSlot}>
+        {potLabel && potColor ? (
+          <Text
+            style={[
+              styles.potText,
+              {
+                color: potColor.nativeColor,
+                textShadowColor: potColor.nativeTextShadowColor,
+              },
+            ]}
+          >
+            {potLabel}
+          </Text>
+        ) : null}
+      </View>
       {children}
     </View>
   );
@@ -38,8 +40,14 @@ const styles = {
   stack: {
     alignItems: "center",
   } satisfies ViewStyle,
-  potText: {
+  /** Pot ラベル有無で国旗の縦位置がズレないよう高さを確保 */
+  potSlot: {
+    minHeight: 15,
     marginBottom: 2,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  } satisfies ViewStyle,
+  potText: {
     fontSize: 11,
     fontWeight: "900",
     fontFamily: MATCH_CARD_SCORE_FONT,

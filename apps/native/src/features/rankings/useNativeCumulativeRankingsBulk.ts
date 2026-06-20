@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
@@ -53,6 +53,47 @@ function mergeMetricBundles(
     }
   }
   return out;
+}
+
+/** 匿名一覧で個人 myRank / myRow を消さない（Web useCumulativeRankingsBulk と同系） */
+function mergeAnonListBundles(
+  prev: Record<string, BulkMetricPayload> | null,
+  bundles: Record<string, BulkMetricPayload>
+): Record<string, BulkMetricPayload> {
+  const out: Record<string, BulkMetricPayload> = { ...bundles };
+  if (!prev) return out;
+  for (const key of Object.keys(out)) {
+    const incoming = out[key]!;
+    const kept = prev[key];
+    if (
+      kept &&
+      (kept.myRank != null ||
+        kept.myRow != null ||
+        kept.myRankDeltaPlaces != null)
+    ) {
+      out[key] = {
+        ...incoming,
+        myRank: kept.myRank ?? incoming.myRank,
+        myRow: (kept.myRow ?? incoming.myRow) as Record<string, unknown> | null,
+        myRankDeltaPlaces:
+          kept.myRankDeltaPlaces ?? incoming.myRankDeltaPlaces ?? null,
+      };
+    }
+  }
+  return out;
+}
+
+function applyAnonListToState(
+  setByMetric: Dispatch<
+    SetStateAction<Record<string, BulkMetricPayload> | null>
+  >,
+  setAppliedTotalPointsUid: Dispatch<SetStateAction<string | null>>,
+  bundles: Record<string, BulkMetricPayload>
+): void {
+  setByMetric((prev) => mergeAnonListBundles(prev, bundles));
+  setAppliedTotalPointsUid((prev) =>
+    prev && prev !== ANON_KEY ? prev : ANON_KEY
+  );
 }
 
 async function fetchBulkMetrics(
@@ -115,16 +156,17 @@ export function useNativeCumulativeRankingsBulk(
         const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round, wcStage);
         if (cancelled || g !== mountPrimaryGenRef.current) return;
         if (partial) {
-          setByMetric((prev) => mergeMetricBundles(prev, partial));
-          setAppliedTotalPointsUid(ANON_KEY);
+          applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial);
         } else {
-          setByMetric(mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }));
-          setAppliedTotalPointsUid(ANON_KEY);
+          applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
+            totalPoints: emptyBulkMetric(),
+          });
         }
       } catch {
         if (cancelled || g !== mountPrimaryGenRef.current) return;
-        setByMetric(mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }));
-        setAppliedTotalPointsUid(ANON_KEY);
+        applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
+          totalPoints: emptyBulkMetric(),
+        });
       } finally {
         if (!cancelled && g === mountPrimaryGenRef.current) {
           setLoading(false);
@@ -144,16 +186,17 @@ export function useNativeCumulativeRankingsBulk(
             const partial = await fetchBulkMetrics(PRIMARY_METRICS, null, phase, round, wcStage);
             if (cancelled || g !== mountPrimaryGenRef.current) return;
             if (partial) {
-              setByMetric((prev) => mergeMetricBundles(prev, partial));
-              setAppliedTotalPointsUid(ANON_KEY);
+              applyAnonListToState(setByMetric, setAppliedTotalPointsUid, partial);
             } else {
-              setByMetric(mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }));
-              setAppliedTotalPointsUid(ANON_KEY);
+              applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
+                totalPoints: emptyBulkMetric(),
+              });
             }
           } catch {
             if (cancelled || g !== mountPrimaryGenRef.current) return;
-            setByMetric(mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }));
-            setAppliedTotalPointsUid(ANON_KEY);
+            applyAnonListToState(setByMetric, setAppliedTotalPointsUid, {
+              totalPoints: emptyBulkMetric(),
+            });
           }
         })();
         return;

@@ -49,6 +49,8 @@ type Props = {
   overflowVisible?: boolean;
   /** 入場時の枠線フェード */
   strokeOpacityStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
+  /** 枠線幅 px（hit / 連勝 / upset / perfect は 3） */
+  strokeWidth?: number;
 };
 
 function makeSkiaPath(width: number, height: number) {
@@ -77,6 +79,7 @@ export default function ResultGlassShellNative({
   shellStyle,
   overflowVisible = false,
   strokeOpacityStyle,
+  strokeWidth = 1,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
@@ -160,33 +163,32 @@ export default function ResultGlassShellNative({
           <View pointerEvents="none" style={styles.insetTopHighlight} />
         )}
         <View pointerEvents="none" style={styles.insetBottomShade} />
+
+        {hasSize && skiaPath ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.borderStroke,
+              {
+                width: size.w,
+                height: size.h,
+              },
+              strokeOpacityStyle,
+            ]}
+          >
+            <Canvas style={{ width: size.w, height: size.h }} pointerEvents="none">
+              <Path
+                path={skiaPath}
+                style="stroke"
+                strokeWidth={strokeWidth}
+                color={borderColor}
+              />
+            </Canvas>
+          </Animated.View>
+        ) : null}
+
         <View style={styles.content}>{children}</View>
       </View>
-
-      {hasSize && skiaPath ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            {
-              position: "absolute",
-              left: 0,
-              top: 0,
-              width: size.w,
-              height: size.h,
-            },
-            strokeOpacityStyle,
-          ]}
-        >
-          <Canvas style={{ width: size.w, height: size.h }} pointerEvents="none">
-            <Path
-              path={skiaPath}
-              style="stroke"
-              strokeWidth={1}
-              color={borderColor}
-            />
-          </Canvas>
-        </Animated.View>
-      ) : null}
     </View>
   );
 }
@@ -218,7 +220,14 @@ const styles = StyleSheet.create({
   },
   content: {
     position: "relative",
-    zIndex: 1,
+    zIndex: 8,
+  },
+  /** Web `ResultStreakCyberFrame` 静的枠 z-[4] — 走査光 z-[11] より下 */
+  borderStroke: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    zIndex: 4,
   },
   insetTopHighlight: {
     position: "absolute",

@@ -27,22 +27,19 @@ import {
   mapDocToPostWithMillis,
   RESULT_POSTS_MAX_CACHED,
   RESULT_TAB_PAGE_SIZE,
-  trimPostsToMaxDayGroups,
-  RESULT_LIST_INITIAL_MAX_DAY_GROUPS,
   type PostWithMillis,
   type ResultDayGroup,
   type ResultListLeagueTab,
 } from "@/lib/result/result-page-data";
 import { normalizeLeague, resolvePostListLeague } from "@/lib/leagues";
-import { fetchInitialResultPostsByDayWindow } from "@/lib/result/resultListInitialLoad";
 
 export function useResultPagePosts(
   league: ResultListLeagueTab,
-  options?: {
+  options: {
     enabled?: boolean;
     /** true: users の hasNbaPost/hasWcPost 読み込み後に一覧取得を開始 */
     waitForLeagueFlags?: boolean;
-  }
+  } = {}
 ): {
   uid: string | null;
   authReady: boolean;
@@ -81,6 +78,8 @@ export function useResultPagePosts(
     (!options?.waitForLeagueFlags || flagsReady);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const resetGenRef = useRef(0);
+  const loadingRef = useRef(false);
 
   /** Firestore の league 誤保存でタブ別クエリから漏れた投稿を補完する */
   const fetchLeagueOrphanPosts = useCallback(
@@ -138,16 +137,24 @@ export function useResultPagePosts(
     setHasMore(true);
   }, [authReady, uid, league, fetchEnabled]);
 
+  const capPosts = useCallback((list: PostWithMillis[]) => {
+    return list.length > RESULT_POSTS_MAX_CACHED
+      ? list.slice(0, RESULT_POSTS_MAX_CACHED)
+      : list;
+  }, []);
+
   const loadPage = useCallback(
     async ({ reset = false }: { reset?: boolean } = {}) => {
       if (!uid) return;
-      if (loading) return;
+      if (!fetchEnabled) return;
+      if (loadingRef.current) return;
       if (!hasMore && !reset) return;
       if (posts.length >= RESULT_POSTS_MAX_CACHED && !reset) {
         setHasMore(false);
         return;
       }
 
+      loadingRef.current = true;
       setLoading(true);
       try {
         const pageLimit = RESULT_TAB_PAGE_SIZE;
@@ -159,46 +166,30 @@ export function useResultPagePosts(
         ] as const;
 
         if (reset) {
-          const fetchPage = async (cursor: DocumentSnapshot | null) => {
-            const q = cursor
-              ? query(collection(db, "posts"), ...base, startAfter(cursor))
-              : query(collection(db, "posts"), ...base);
-            const snap = await getDocs(q);
-            const list = snap.docs.map((d) =>
-              mapDocToPostWithMillis(d.id, d.data())
-            );
-            return {
-              posts: list,
-              lastDoc: snap.docs.length ? snap.docs[snap.docs.length - 1] : null,
-              fullPage: snap.docs.length === pageLimit,
-            };
-          };
+          const gen = ++resetGenRef.current;
+          const isStale = () => gen !== resetGenRef.current;
 
-          const initial = await fetchInitialResultPostsByDayWindow({
-            language,
-            fetchPage,
-            mergePosts: mergePostsById,
-          });
+          const snap = await getDocs(query(collection(db, "posts"), ...base));
+          if (isStale()) return;
 
-          const orphans = await fetchLeagueOrphanPosts(uid, league);
-          let merged = mergePostsById(initial.posts, orphans);
-          const { posts: windowed, trimmed } = trimPostsToMaxDayGroups(
-            merged,
-            language,
-            RESULT_LIST_INITIAL_MAX_DAY_GROUPS
+          const list = snap.docs.map((d) =>
+            mapDocToPostWithMillis(d.id, d.data())
           );
-          merged = windowed;
-
-          const next =
-            merged.length > RESULT_POSTS_MAX_CACHED
-              ? merged.slice(0, RESULT_POSTS_MAX_CACHED)
-              : merged;
+          const newLast = snap.docs.length
+            ? snap.docs[snap.docs.length - 1]
+            : null;
+          const fullPage = snap.docs.length === pageLimit;
+          const next = capPosts(list);
 
           setPosts(next);
-          setLastDoc(initial.lastDoc);
-          setHasMore(
-            (initial.hasMore || trimmed) && next.length < RESULT_POSTS_MAX_CACHED
-          );
+          setLastDoc(newLast);
+          setHasMore(fullPage && next.length < RESULT_POSTS_MAX_CACHED);
+
+          void fetchLeagueOrphanPosts(uid, league).then((orphans) => {
+            if (isStale() || orphans.length === 0) return;
+            setPosts((prev) => capPosts(mergePostsById(prev, orphans)));
+          });
+
           return;
         }
 
@@ -232,19 +223,20 @@ export function useResultPagePosts(
         const fullPage = snap.docs.length === pageLimit;
         setHasMore(!cappedAfterLoad && fullPage);
       } finally {
+        loadingRef.current = false;
         setLoading(false);
       }
     },
     [
       uid,
-      loading,
       hasMore,
       lastDoc,
       posts.length,
       league,
-      language,
+      fetchEnabled,
       fetchLeagueOrphanPosts,
       mergePostsById,
+      capPosts,
     ]
   );
 
@@ -264,7 +256,7 @@ export function useResultPagePosts(
       (entries) => {
         const e = entries[0];
         if (!e?.isIntersecting) return;
-        if (loading) return;
+        if (loadingRef.current) return;
         if (!hasMore) return;
         void loadPage();
       },

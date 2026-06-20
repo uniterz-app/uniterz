@@ -1971,7 +1971,7 @@
 .result-card-streak-sweep--platinum.result-card-border-sweep,
 .result-card-streak-sweep--gold.result-card-border-sweep {
   padding: 4px;
-  z-index: 8;
+  z-index: 11;
 }
 
 .result-card-streak-sweep--silver .result-card-border-sweep__spin,
@@ -2035,7 +2035,7 @@
 /* PERFECT：白い光が枠を走る（紫枠の上に視認性優先） */
 .result-card-streak-sweep--perfect.result-card-border-sweep {
   padding: 4px;
-  z-index: 8;
+  z-index: 11;
 }
 
 .result-card-streak-sweep--perfect .result-card-streak-sweep__spin {
@@ -2064,7 +2064,7 @@
 /* UPSET：白い光 + 赤ティントが枠を走る */
 .result-card-streak-sweep--upset.result-card-border-sweep {
   padding: 4px;
-  z-index: 8;
+  z-index: 11;
 }
 
 .result-card-streak-sweep--upset .result-card-border-sweep__spin {

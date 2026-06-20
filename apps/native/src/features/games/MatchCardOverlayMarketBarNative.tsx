@@ -1,10 +1,15 @@
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type TextStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useGameMarketDistributionNative } from "./useGameMarketDistributionNative";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 import type { MarketBiasFallback } from "../../../../../lib/predict/gameMarketDistribution";
 import { MATCH_CARD_METRIC_FONT } from "./matchCardTypography";
+import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
+import {
+  MATCH_LIST_CYBER_CUT_MARKET_BAR,
+  MATCH_LIST_CYBER_CUT_STAT_BOX,
+} from "./matchListCyberClipPath";
 
 type MarketKey = "home" | "away" | "draw";
 type Status = "scheduled" | "live" | "final";
@@ -27,9 +32,167 @@ type Props = {
 
 const CYBER_TAB_CYAN = "#22d3ee";
 const MARKET_BAR_SEGMENTS = 20;
+const DRAW_ACCENT = "#c8d0dc";
+const DRAW_SEG_ACCENT = "#9ca3af";
+
+function winningMarketBorder(accent: string): string {
+  return hexWithAlpha(accent, "aa");
+}
+
+/** Web `segmentMarketGlow` の外側光彩近似 */
+function segmentOuterShadow(accent: string, highlighted: boolean) {
+  return highlighted
+    ? {
+        shadowColor: accent,
+        shadowOpacity: 0.62,
+        shadowRadius: 7,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 5,
+      }
+    : {
+        shadowColor: accent,
+        shadowOpacity: 0.52,
+        shadowRadius: 5.5,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 4,
+      };
+}
+
+function segmentFillColors(
+  key: MarketKey,
+  homeColor: string,
+  awayColor: string
+): readonly [string, string] {
+  if (key === "home") return [homeColor, hexWithAlpha(homeColor, "cc")];
+  if (key === "draw") {
+    return ["rgba(156,163,175,0.92)", "rgba(107,114,128,0.88)"];
+  }
+  return [awayColor, hexWithAlpha(awayColor, "cc")];
+}
+
+function segmentBorderColor(
+  key: MarketKey,
+  homeColor: string,
+  awayColor: string,
+  highlighted: boolean
+): string {
+  if (key === "home") {
+    return highlighted ? winningMarketBorder(homeColor) : hexWithAlpha(homeColor, "88");
+  }
+  if (key === "draw") {
+    return highlighted ? "rgba(209,213,219,0.85)" : "rgba(156,163,175,0.45)";
+  }
+  return highlighted ? winningMarketBorder(awayColor) : hexWithAlpha(awayColor, "88");
+}
+
+function segmentAccent(
+  key: MarketKey,
+  homeColor: string,
+  awayColor: string
+): string {
+  if (key === "home") return homeColor;
+  if (key === "away") return awayColor;
+  return DRAW_SEG_ACCENT;
+}
+
+function MarketBarSegment({
+  marketKey,
+  homeColor,
+  awayColor,
+  highlighted,
+  height,
+}: {
+  marketKey: MarketKey;
+  homeColor: string;
+  awayColor: string;
+  highlighted: boolean;
+  height: number;
+}) {
+  const accent = segmentAccent(marketKey, homeColor, awayColor);
+  const colors = segmentFillColors(marketKey, homeColor, awayColor);
+  const borderColor = segmentBorderColor(marketKey, homeColor, awayColor, highlighted);
+
+  return (
+    <View style={styles.segSlot}>
+      <View style={[styles.segGlowWrap, segmentOuterShadow(accent, highlighted)]}>
+        <View style={styles.segSkew}>
+          <View style={[styles.segFace, { height, borderColor }]}>
+            <LinearGradient
+              colors={colors}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View
+              pointerEvents="none"
+              style={[
+                styles.segInsetGlow,
+                { backgroundColor: hexWithAlpha(accent, highlighted ? "30" : "28") },
+              ]}
+            />
+            <View pointerEvents="none" style={styles.segTopHighlight} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function formatPct(value: number): string {
   return `${value.toFixed(1)}%`;
+}
+
+function hexWithAlpha(hex: string, alphaHex: string): string {
+  const normalized = hex.startsWith("#") ? hex : `#${hex}`;
+  if (normalized.length === 9) return normalized;
+  return `${normalized}${alphaHex}`;
+}
+
+function statTextNeon(accent: string): TextStyle {
+  return {
+    textShadowColor: hexWithAlpha(accent, "55"),
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
+  };
+}
+
+function statBoxSurface(
+  variant: MarketKey,
+  homeColor: string,
+  awayColor: string,
+  isHighlighted: boolean
+): { colors: readonly string[]; locations: readonly number[]; borderColor: string; glowColor: string; glowOpacity: number; glowRadius: number } {
+  const accent =
+    variant === "home" ? homeColor : variant === "away" ? awayColor : DRAW_ACCENT;
+
+  if (isHighlighted) {
+    return {
+      colors: [hexWithAlpha(accent, "58"), "rgba(0,0,0,0.24)"],
+      locations: [0, 0.72],
+      borderColor: winningMarketBorder(accent),
+      glowColor: accent,
+      glowOpacity: 0.72,
+      glowRadius: 10,
+    };
+  }
+  if (variant === "draw") {
+    return {
+      colors: ["rgba(186,195,210,0.34)", "rgba(0,0,0,0.3)"],
+      locations: [0, 0.72],
+      borderColor: "rgba(200,210,225,0.62)",
+      glowColor: DRAW_ACCENT,
+      glowOpacity: 0.48,
+      glowRadius: 6,
+    };
+  }
+  return {
+    colors: [hexWithAlpha(accent, "44"), "rgba(0,0,0,0.3)"],
+    locations: [0, 0.72],
+    borderColor: hexWithAlpha(accent, "99"),
+    glowColor: accent,
+    glowOpacity: 0.48,
+    glowRadius: 6,
+  };
 }
 
 function allocateSegmentCounts(
@@ -138,50 +301,24 @@ function SegmentedMarketBar({
   const gap = compact ? 2 : 3;
 
   return (
-    <View style={[styles.barOuter, compact && styles.barOuterCompact]}>
-      <View style={[styles.barRow, { gap }]}>
-        {kinds.map((key, i) => {
-          const highlighted = highlightedKeys.has(key);
-          const colors =
-            key === "home"
-              ? ([homeColor, `${homeColor}cc`] as const)
-              : key === "draw"
-              ? (["rgba(156,163,175,0.92)", "rgba(107,114,128,0.88)"] as const)
-              : ([awayColor, `${awayColor}cc`] as const);
-          const borderColor =
-            key === "home"
-              ? highlighted
-                ? `${homeColor}aa`
-                : `${homeColor}88`
-              : key === "draw"
-              ? highlighted
-                ? "rgba(209,213,219,0.85)"
-                : "rgba(156,163,175,0.45)"
-              : highlighted
-              ? `${awayColor}aa`
-              : `${awayColor}88`;
-
-          return (
-            <View
-              key={`${key}-${i}`}
-              style={[
-                styles.segWrap,
-                {
-                  height: segH,
-                  borderColor,
-                  shadowColor: key === "home" ? homeColor : key === "away" ? awayColor : "#9ca3af",
-                  shadowOpacity: highlighted ? 0.55 : 0.38,
-                  shadowRadius: highlighted ? 6 : 4,
-                  elevation: highlighted ? 3 : 2,
-                },
-              ]}
-            >
-              <LinearGradient colors={colors} style={StyleSheet.absoluteFillObject} />
-            </View>
-          );
-        })}
-      </View>
-    </View>
+    <PredictOverlayChamferedFrameNative
+      cut={MATCH_LIST_CYBER_CUT_MARKET_BAR}
+      gradientColors={["rgba(0,0,0,0.25)", "rgba(0,0,0,0.25)"]}
+      borderColor="rgba(34,211,238,0.1)"
+      style={styles.barOuter}
+      contentStyle={[styles.barOuterInner, compact && styles.barOuterInnerCompact, { gap }]}
+    >
+      {kinds.map((key, i) => (
+        <MarketBarSegment
+          key={`${key}-${i}`}
+          marketKey={key}
+          homeColor={homeColor}
+          awayColor={awayColor}
+          highlighted={highlightedKeys.has(key)}
+          height={segH}
+        />
+      ))}
+    </PredictOverlayChamferedFrameNative>
   );
 }
 
@@ -202,34 +339,48 @@ function StatBox({
   compact?: boolean;
   isHighlighted?: boolean;
 }) {
-  const accent =
-    variant === "home" ? homeColor : variant === "away" ? awayColor : "#c8d0dc";
+  const labelAccent =
+    variant === "home" ? homeColor : variant === "away" ? awayColor : DRAW_ACCENT;
+  const surface = statBoxSurface(variant, homeColor, awayColor, isHighlighted);
 
   return (
-    <View
-      style={[
-        styles.statBox,
-        compact && styles.statBoxCompact,
-        {
-          borderColor: isHighlighted ? `${accent}aa` : `${accent}99`,
-          backgroundColor:
-            variant === "draw" ? "rgba(186,195,210,0.18)" : `${accent}22`,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.statLabel,
-          compact && styles.statLabelCompact,
-          variant === "draw" && styles.statLabelDraw,
+    <View style={styles.statBoxSlot}>
+      <PredictOverlayChamferedFrameNative
+        cut={MATCH_LIST_CYBER_CUT_STAT_BOX}
+        gradientColors={surface.colors}
+        gradientLocations={surface.locations}
+        borderColor={surface.borderColor}
+        borderWidth={isHighlighted ? 2 : 1}
+        shadowColor={surface.glowColor}
+        shadowOpacity={surface.glowOpacity}
+        shadowRadius={isHighlighted ? surface.glowRadius + 2 : surface.glowRadius}
+        style={styles.statBoxFrame}
+        contentStyle={[
+          styles.statBoxInner,
+          compact ? styles.statBoxInnerCompact : null,
         ]}
-        numberOfLines={1}
       >
-        {label}
-      </Text>
-      <Text style={[styles.statPct, compact && styles.statPctCompact]}>
-        {formatPct(pct)}
-      </Text>
+        <Text
+          style={[
+            styles.statLabel,
+            compact && styles.statLabelCompact,
+            variant === "draw" ? styles.statLabelDraw : { color: labelAccent },
+            statTextNeon(labelAccent),
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        <Text
+          style={[
+            styles.statPct,
+            compact && styles.statPctCompact,
+            styles.statPctGlow,
+          ]}
+        >
+          {formatPct(pct)}
+        </Text>
+      </PredictOverlayChamferedFrameNative>
     </View>
   );
 }
@@ -305,7 +456,12 @@ export default function MatchCardOverlayMarketBarNative({
               style={[
                 styles.markerYou,
                 compact && styles.markerYouCompact,
-                { color: markerAccent },
+                {
+                  color: markerAccent,
+                  textShadowColor: hexWithAlpha(markerAccent, "88"),
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
+                },
               ]}
             >
               YOU
@@ -335,7 +491,7 @@ export default function MatchCardOverlayMarketBarNative({
         />
         {isSoccer ? (
           <StatBox
-            label={t.predictToolDrawLabel}
+            label={t.draw}
             pct={drawPct}
             variant="draw"
             homeColor={homeColor}
@@ -359,15 +515,15 @@ export default function MatchCardOverlayMarketBarNative({
 }
 
 const styles = StyleSheet.create({
-  root: { width: "100%", paddingHorizontal: 4 },
+  root: { width: "100%" },
   headerRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    marginBottom: 4,
+    marginBottom: 0,
     gap: 8,
   },
-  headerRowCompact: { marginBottom: 2 },
+  headerRowCompact: { marginBottom: 0 },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
   headerLine: {
     width: 8,
@@ -399,11 +555,11 @@ const styles = StyleSheet.create({
   },
   markerRow: {
     position: "relative",
-    height: 12,
+    height: 10,
     width: "100%",
-    marginBottom: 2,
+    marginBottom: 0,
   },
-  markerRowCompact: { height: 10 },
+  markerRowCompact: { height: 8 },
   markerCol: {
     position: "absolute",
     bottom: 0,
@@ -413,13 +569,14 @@ const styles = StyleSheet.create({
   markerYou: {
     fontFamily: MATCH_CARD_METRIC_FONT,
     fontSize: 8,
+    lineHeight: 9,
     fontWeight: "800",
     letterSpacing: 1.6,
     textTransform: "uppercase",
   },
   markerYouCompact: { fontSize: 7 },
   markerTriangle: {
-    marginTop: 1,
+    marginTop: 0,
     width: 0,
     height: 0,
     borderLeftWidth: 3,
@@ -430,40 +587,82 @@ const styles = StyleSheet.create({
   },
   barOuter: {
     width: "100%",
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.1)",
-    backgroundColor: "rgba(0,0,0,0.25)",
-    padding: 3,
-    marginBottom: 6,
-    overflow: "hidden",
+    marginTop: -1,
+    marginBottom: 4,
   },
-  barOuterCompact: { padding: 2, marginBottom: 4 },
-  barRow: { flexDirection: "row", width: "100%" },
-  segWrap: {
+  barOuterInner: {
+    flexDirection: "row",
+    width: "100%",
+    padding: 3,
+  },
+  barOuterInnerCompact: {
+    padding: 2,
+    marginBottom: 0,
+  },
+  segSlot: {
     flex: 1,
     minWidth: 0,
-    borderWidth: 1,
-    overflow: "hidden",
+  },
+  /** 光彩は overflow:hidden の外側 — Web box-shadow 相当 */
+  segGlowWrap: {
+    width: "100%",
+  },
+  segSkew: {
     transform: [{ skewX: "-14deg" }],
   },
-  statsRow: { flexDirection: "row", gap: 6 },
-  statsRowCompact: { gap: 4 },
-  statBox: {
+  segFace: {
+    width: "100%",
+    borderWidth: 1,
+    overflow: "hidden",
+    position: "relative",
+  },
+  /** Web `inset 0 0 7px accent28` 近似 */
+  segInsetGlow: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.42,
+  },
+  /** Web `inset 0 1px 0 rgba(255,255,255,0.18)` */
+  segTopHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 8,
+    marginTop: 4,
+  },
+  statsRowCompact: { gap: 4, marginTop: 2 },
+  statBoxSlot: {
     flex: 1,
     minWidth: 0,
-    borderWidth: 1,
+  },
+  statBoxFrame: {
+    width: "100%",
+  },
+  statBoxInner: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 50,
     paddingHorizontal: 8,
     paddingVertical: 8,
-    alignItems: "center",
   },
-  statBoxCompact: { paddingHorizontal: 6, paddingVertical: 6 },
+  statBoxInnerCompact: {
+    minHeight: 42,
+    paddingHorizontal: 5,
+    paddingVertical: 6,
+  },
   statLabel: {
     fontFamily: MATCH_CARD_METRIC_FONT,
-    color: "rgba(255,255,255,0.92)",
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
+    textAlign: "center",
   },
   statLabelCompact: { fontSize: 8 },
   statLabelDraw: { color: "rgba(255,255,255,0.82)" },
@@ -474,6 +673,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "900",
     fontVariant: ["tabular-nums"],
+    textAlign: "center",
   },
-  statPctCompact: { fontSize: 14 },
+  statPctCompact: { fontSize: 13 },
+  statPctGlow: {
+    textShadowColor: "rgba(255,255,255,0.22)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
+  },
 });

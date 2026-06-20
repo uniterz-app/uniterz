@@ -21,7 +21,7 @@ export default function ResultStreakCyberFrame({
   const tokens = resultStreakFrameTokens(activeWinStreak);
   if (!tokens) return null;
 
-  const corner = `pointer-events-none absolute z-[9] ${tokens.cornerClass}`;
+  const corner = `pointer-events-none absolute z-[12] ${tokens.cornerClass}`;
 
   return (
     <>
@@ -39,7 +39,7 @@ export default function ResultStreakCyberFrame({
       {showSweep ? (
         <div
           className={[
-            "pointer-events-none absolute inset-0 z-[8] overflow-hidden",
+            "pointer-events-none absolute inset-0 z-[11] overflow-hidden",
             RESULT_HIT_CYBER_CLIP,
             "result-card-border-sweep result-card-streak-sweep",
             tokens.sweepClass,

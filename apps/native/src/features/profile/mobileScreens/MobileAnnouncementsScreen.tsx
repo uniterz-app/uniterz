@@ -3,7 +3,6 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -11,6 +10,8 @@ import {
   Text,
   View,
 } from "react-native";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
+import { SkeletonScanNative } from "../../../components/SkeletonScanNative";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   collection,
@@ -190,7 +191,9 @@ export default function MobileAnnouncementsScreen({
       <MobilePageShell title={detailTitle} onClose={onClose} onBack={() => setDetailId(null)}>
         <ScrollView contentContainerStyle={styles.detailPad}>
           {detailLoading ? (
-            <ActivityIndicator color="#67e8f9" style={{ marginTop: 24 }} />
+            <View style={styles.loaderWrap}>
+              <CandleChartLoaderNative label={isJa ? "読み込み中" : "Loading"} />
+            </View>
           ) : detailSynthetic ? (
             <SyntheticEventBody isJa={isJa} announcementId={detailId} />
           ) : detailRow ? (
@@ -211,11 +214,11 @@ export default function MobileAnnouncementsScreen({
         {loading ? (
           <View style={styles.skelWrap}>
             {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.skelCard}>
+              <SkeletonScanNative key={i} style={styles.skelCard}>
                 <View style={styles.skelImg} />
                 <View style={styles.skelLine} />
                 <View style={[styles.skelLine, { width: "70%" }]} />
-              </View>
+              </SkeletonScanNative>
             ))}
           </View>
         ) : items.length === 0 ? (
@@ -335,6 +338,7 @@ function SyntheticEventBody({
 
 const styles = StyleSheet.create({
   listPad: { padding: 16, paddingBottom: 48, gap: 20 },
+  loaderWrap: { paddingTop: 24, alignItems: "center" },
   skelWrap: { gap: 16 },
   skelCard: {
     borderRadius: 16,

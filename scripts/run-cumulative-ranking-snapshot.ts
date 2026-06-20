@@ -4,6 +4,9 @@
  *
  * 使い方（プロジェクトルート、service-account.json 必須）:
  *   npx tsx scripts/run-cumulative-ranking-snapshot.ts
+ *   npx tsx scripts/run-cumulative-ranking-snapshot.ts --wc   # World Cup のみ
+ *
+ * WC のみ: scripts/run-cumulative-ranking-snapshot-wc.ts も同じ
  */
 
 import fs from "fs";
@@ -29,7 +32,9 @@ admin.initializeApp({
 const { buildCumulativeRankingSnapshot } = require(
   "../functions/lib/rankings/buildCumulativeRankingSnapshot.js"
 ) as {
-  buildCumulativeRankingSnapshot: () => Promise<{
+  buildCumulativeRankingSnapshot: (opts?: {
+    scope?: "all" | "wc";
+  }) => Promise<{
     ok: boolean;
     ranksWritten: number;
     historyDateKey: string;
@@ -47,12 +52,23 @@ const WC_METRICS = [
 ] as const;
 
 (async () => {
-  console.log("=== run buildCumulativeRankingSnapshot ===\n");
-  const result = await buildCumulativeRankingSnapshot();
+  const wcOnly = process.argv.includes("--wc");
+  console.log(
+    wcOnly
+      ? "=== run buildCumulativeRankingSnapshot (WC only) ===\n"
+      : "=== run buildCumulativeRankingSnapshot ===\n"
+  );
+  const result = await buildCumulativeRankingSnapshot(
+    wcOnly ? { scope: "wc" } : undefined
+  );
   console.log("result:", result);
 
   const db = admin.firestore();
-  console.log("\n--- WC snapshots (top-level) ---");
+  if (wcOnly) {
+    console.log("\n--- WC snapshots ---");
+  } else {
+    console.log("\n--- WC snapshots (top-level) ---");
+  }
   for (const stage of WC_STAGES) {
     for (const metric of WC_METRICS) {
       const id = `wc_${stage}_${metric}`;
