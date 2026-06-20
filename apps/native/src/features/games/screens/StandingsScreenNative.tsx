@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -89,7 +89,9 @@ export default function StandingsScreenNative() {
         ))}
       </View>
       {loading ? (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
+        <View style={{ marginTop: 24, alignItems: "center" }}>
+          <CandleChartLoaderNative />
+        </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           {filtered.map((team, index) => {

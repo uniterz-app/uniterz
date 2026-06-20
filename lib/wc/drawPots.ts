@@ -57,6 +57,7 @@ const WC_DRAW_POT_BY_TEAM: Record<string, WcDrawPot> = {
   "wc-irq": 4,
   "wc-cod": 4,
   "wc-tur": 4,
+  "wc-swe": 4,
 };
 
 export function getWcDrawPot(teamId: string | null | undefined): WcDrawPot | null {

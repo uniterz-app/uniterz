@@ -8,12 +8,6 @@ export type GameCardCenterBlock =
       away: number;
       subLine: string | null;
     }
-  /** ライブ中：LIVE ＋ スコア（Web 一覧と同様） */
-  | {
-      variant: "liveScore";
-      home: number;
-      away: number;
-      subLine: string | null;
-    }
-  | { variant: "liveMark" }
+  /** ライブ中：LIVE のみ（Native — スコアは非表示） */
+  | { variant: "liveMark"; subLine?: string | null }
   | { variant: "time"; time: string };

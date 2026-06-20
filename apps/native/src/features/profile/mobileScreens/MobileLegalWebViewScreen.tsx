@@ -2,8 +2,9 @@
  * Web の公開モバイルページをそのまま表示（ヘルプ・規約・お問い合わせ）。
  */
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import MobilePageShell from "./MobilePageShell";
 
 type Props = {
@@ -28,7 +29,7 @@ export default function MobileLegalWebViewScreen({
       <View style={styles.flex}>
         {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#67e8f9" />
+            <CandleChartLoaderNative />
           </View>
         ) : null}
         <WebView

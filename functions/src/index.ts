@@ -11,6 +11,8 @@ import * as functions from "firebase-functions";
 import { buildCumulativeStats } from "./rankings/buildCumulativeStats";
 import { buildCumulativeRankingSnapshot } from "./rankings/buildCumulativeRankingSnapshot";
 import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAggregationScheduledJstToday";
+import { runNotifyGameStartCron } from "./notifications/notifyGameStartCron";
+import { notifyRankingUpdatedPush } from "./notifications/notifyPushEvents";
 
 // ★追加
 import { buildMonthlyLeaderboardSnapshot } from "./leaderboards/buildMonthlyLeaderboardSnapshot";
@@ -103,35 +105,55 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
       );
       return;
     }
-    await buildCumulativeRankingSnapshot();
+    const snapshotResult = await buildCumulativeRankingSnapshot();
     const revalidateUrl = process.env.NEXT_REVALIDATE_CUMULATIVE_RANKING_URL;
     const token = process.env.INTERNAL_REVALIDATE_SECRET;
     if (!revalidateUrl || !token) {
       console.warn(
         "[buildCumulativeRankingSnapshotCron] skip revalidate (missing NEXT_REVALIDATE_CUMULATIVE_RANKING_URL or INTERNAL_REVALIDATE_SECRET)"
       );
-      return;
+    } else {
+      try {
+        const res = await fetch(revalidateUrl, {
+          method: "POST",
+          headers: { "x-revalidate-token": token },
+        });
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          console.error(
+            `[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`
+          );
+        } else {
+          console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
+        }
+      } catch (err: any) {
+        console.error(
+          `[buildCumulativeRankingSnapshotCron] revalidate error: ${String(
+            err?.message ?? err
+          )}`
+        );
+      }
     }
 
     try {
-      const res = await fetch(revalidateUrl, {
-        method: "POST",
-        headers: { "x-revalidate-token": token },
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        console.error(
-          `[buildCumulativeRankingSnapshotCron] revalidate failed: ${res.status} ${body}`
-        );
-      } else {
-        console.log("[buildCumulativeRankingSnapshotCron] revalidate success");
-      }
-    } catch (err: any) {
-      console.error(
-        `[buildCumulativeRankingSnapshotCron] revalidate error: ${String(
-          err?.message ?? err
-        )}`
-      );
+      await notifyRankingUpdatedPush(snapshotResult.notifiedUids ?? []);
+    } catch (err) {
+      console.error("[buildCumulativeRankingSnapshotCron] push notify failed", err);
+    }
+  }
+);
+
+/* ============================================================================
+ * Game start push (5 min) — 15 分以内に開始する試合の予想者へ
+ * ==========================================================================*/
+
+export const notifyGameStartPushCron = onSchedule(
+  { schedule: "*/5 * * * *", timeZone: "Asia/Tokyo" },
+  async () => {
+    try {
+      await runNotifyGameStartCron();
+    } catch (err) {
+      console.error("[notifyGameStartPushCron] failed", err);
     }
   }
 );

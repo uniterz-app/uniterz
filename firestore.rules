@@ -95,6 +95,11 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // Native プッシュトークン — クライアント直接書き込み可（API 経由推奨）
+      match /pushTokens/{tokenId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
       // admin/badges から users/{uid}/badges/{id} へ付与
       match /badges/{badgeId} {
         allow read: if true;

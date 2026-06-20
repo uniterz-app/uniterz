@@ -2,7 +2,8 @@
  * Web `app/mobile/announcements/[id]/page.tsx` 相当
  */
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -109,7 +110,7 @@ export default function AnnouncementDetailScreenNative() {
       <ScrollView contentContainerStyle={styles.content}>
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color="#67e8f9" />
+            <CandleChartLoaderNative label="読み込み中" />
           </View>
         ) : missing || (!row && !syntheticEvent) ? (
           <Text style={styles.muted}>お知らせが見つかりません。</Text>

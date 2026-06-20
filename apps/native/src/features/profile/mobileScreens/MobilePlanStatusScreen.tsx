@@ -3,6 +3,7 @@
  */
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import { LinearGradient } from "expo-linear-gradient";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -70,7 +71,7 @@ export default function MobilePlanStatusScreen({
     return (
       <MobilePageShell title={title} appBackground onClose={onClose}>
         <View style={styles.center}>
-          <Text style={styles.muted}>{isJa ? "読み込み中…" : "Loading..."}</Text>
+          <CandleChartLoaderNative label={isJa ? "読み込み中" : "Loading"} />
         </View>
       </MobilePageShell>
     );

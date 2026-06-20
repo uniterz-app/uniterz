@@ -207,7 +207,7 @@ export default function WcGoalScorerPickerNative({
 }
 
 const styles = StyleSheet.create({
-  root: { gap: 10, marginTop: 10 },
+  root: { gap: 12 },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",

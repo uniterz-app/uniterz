@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.rikutokamiya.uniterz.dev",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
-        "NSCameraUsageDescription": "プロフィール写真を撮影するためにカメラを使います。"
+        "NSCameraUsageDescription": "プロフィール写真を撮影するためにカメラを使います。",
+        "NSUserNotificationsUsageDescription": "試合開始・結果確定・ランキング更新などのお知らせをお届けするために通知を使います。"
       }
     },
     "android": {
@@ -27,9 +28,20 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.xnative"
+      "package": "com.anonymous.xnative",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#22d3ee",
+          "sounds": []
+        }
+      ],
       "expo-dev-client",
       [
         "expo-image-picker",

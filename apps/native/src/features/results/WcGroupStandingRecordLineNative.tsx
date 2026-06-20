@@ -1,4 +1,4 @@
-import { Text, type TextStyle } from "react-native";
+import { Text, type StyleProp, type TextStyle } from "react-native";
 import type { Language } from "../../../../../lib/i18n/language";
 import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
 import {
@@ -9,16 +9,18 @@ import {
 type Props = {
   standing: WcGroupStandingEntry | null | undefined;
   language: Language;
+  textStyle?: StyleProp<TextStyle>;
 };
 
 /** 国旗下 — 勝敗分の横にグループ順位 */
 export default function WcGroupStandingRecordLineNative({
   standing,
   language,
+  textStyle,
 }: Props) {
   if (!standing) return null;
   return (
-    <Text style={styles.line} numberOfLines={1}>
+    <Text style={[styles.line, textStyle]} numberOfLines={1}>
       {formatWcGroupStageRecordLabel(standing, language)}
     </Text>
   );
@@ -26,11 +28,12 @@ export default function WcGroupStandingRecordLineNative({
 
 const styles = {
   line: {
-    fontSize: 10,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "700",
     fontFamily: MATCH_CARD_METRIC_FONT,
     color: "rgba(255,255,255,0.85)",
     fontVariant: ["tabular-nums"],
     textAlign: "center",
+    includeFontPadding: false,
   } satisfies TextStyle,
 };

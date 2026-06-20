@@ -3,12 +3,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
+import { cyberScoreGlowLayers } from "../../../../../lib/rankings/cyberGlyphGlowLayers";
 import {
   cyberMetricTag,
   cyberRankPalette,
   CYBER_LIST_CYAN,
   CYBER_LIST_MAGENTA,
 } from "../../../../../lib/rankings/cyberRankVisual";
+import { CyberGlyphGlowTextNative } from "./CyberGlyphGlowTextNative";
 import {
   formatListMetricDayDelta,
   listRowAvgText,
@@ -21,6 +23,7 @@ import type { RankingsLanguage } from "./rankingsTexts";
 import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
 import { CyberRankNumberNative } from "./CyberRankNumberNative";
 import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
+import { RankFirstBorderEdgeScanNative } from "./RankFirstBorderEdgeScanNative";
 import { rankingFlagImageUri } from "./rankingFlagUri";
 import { METRIC_FONT, RANKING_SCORE_FONT, rankingNameFont, rankingTagFont } from "./rankingsUiTheme";
 
@@ -32,11 +35,13 @@ function cyberScoreColor(rank: number): string {
   return `rgba(255, 43, 214, ${0.92 - t * 0.35})`;
 }
 
-function cyberScoreGlow(rank: number) {
-  if (rank === 1) return "rgba(255,214,90,0.55)";
-  if (rank <= 3) return "rgba(255,43,214,0.42)";
-  const t = Math.min(1, (rank - 4) / 14);
-  return `rgba(255,43,214,${0.38 - t * 0.22})`;
+function scoreFontSize(rank: number): number {
+  return rank <= 3 ? 23 : 19;
+}
+
+function scoreLineHeight(fontSize: number): number {
+  /** Alfa Slab One は ascender が大きい — lineHeight 不足で上が見切れる */
+  return Math.ceil(fontSize * 1.28);
 }
 
 function CyberRankingScoreNative({
@@ -49,28 +54,27 @@ function CyberRankingScoreNative({
   counted: number;
 }) {
   const color = cyberScoreColor(rank);
+  const fontSize = scoreFontSize(rank);
   const displayValue =
     metric === "winRate" || metric === "streak" || metric === "goalScorerHits"
       ? String(Math.round(counted))
       : formatMetricDecimals(counted, 1);
 
   return (
-    <Text
+    <CyberGlyphGlowTextNative
       style={[
         styles.scoreMain,
         {
           color,
-          fontSize: rank <= 3 ? 23 : 19,
+          fontSize,
+          lineHeight: scoreLineHeight(fontSize),
           fontFamily: RANKING_SCORE_FONT,
-          textShadowColor: cyberScoreGlow(rank),
-          textShadowOffset: { width: 0, height: 0 },
-          textShadowRadius: rank === 1 ? 10 : 8,
         },
       ]}
-      maxFontSizeMultiplier={1.1}
+      layers={cyberScoreGlowLayers(rank)}
     >
       {displayValue}
-    </Text>
+    </CyberGlyphGlowTextNative>
   );
 }
 
@@ -159,6 +163,7 @@ export function CyberRankingListRowNative({
         end={{ x: 1, y: 0.5 }}
         style={StyleSheet.absoluteFillObject}
       />
+      {firstFrame ? <RankFirstBorderEdgeScanNative /> : null}
       <View
         style={[
           styles.accentBar,
@@ -168,7 +173,7 @@ export function CyberRankingListRowNative({
           },
         ]}
       />
-      <View style={styles.rowInner}>
+      <View style={[styles.rowInner, firstFrame && styles.rowInnerFirst]}>
         <View style={styles.rankCol}>
           <CyberRankNumberNative rank={rank} />
         </View>
@@ -176,7 +181,7 @@ export function CyberRankingListRowNative({
         <View style={styles.avatarCol}>
           {rank === 1 ? (
             <View style={styles.crownRow}>
-              <MaterialCommunityIcons name="crown" size={14} color="#B8FF3C" />
+              <MaterialCommunityIcons name="crown" size={14} color="#F4C542" />
               <Text style={styles.plusLabel}>+++</Text>
             </View>
           ) : null}
@@ -199,8 +204,9 @@ export function CyberRankingListRowNative({
                 styles.name,
                 {
                   fontSize: nameFontSize,
-                  letterSpacing: nameJa ? 0.4 : 0.8,
+                  letterSpacing: nameJa ? 0.4 : 0.6,
                   fontFamily: rankingNameFont(displayName),
+                  textTransform: nameJa ? "none" : "uppercase",
                 },
               ]}
               numberOfLines={1}
@@ -267,10 +273,13 @@ const styles = StyleSheet.create({
   rowInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     zIndex: 1,
+  },
+  rowInnerFirst: {
+    zIndex: 10,
   },
   rankCol: {
     width: 52,
@@ -357,22 +366,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minWidth: 72,
     paddingLeft: 4,
+    paddingTop: 1,
+    overflow: "visible",
   },
   scoreMain: {
     fontWeight: "700",
-    lineHeight: 24,
+    includeFontPadding: false,
   },
   metricTag: {
     marginTop: 4,
     color: CYBER_LIST_MAGENTA,
     fontWeight: "700",
     letterSpacing: 2,
+    lineHeight: 14,
+    includeFontPadding: false,
     textTransform: "uppercase",
   },
   dayDelta: {
     marginTop: 2,
     color: "#FFD65A",
     fontWeight: "800",
+    lineHeight: 14,
+    includeFontPadding: false,
     fontFamily: METRIC_FONT,
     textShadowColor: "rgba(255,214,90,0.45)",
     textShadowOffset: { width: 0, height: 0 },

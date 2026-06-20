@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
+import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
 import {
   GamesStackScreen,
   ResultStackScreen,
@@ -13,7 +14,9 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export default function MainTabNavigator() {
   return (
-    <Tab.Navigator
+    <>
+      <NativePushNotificationsHost />
+      <Tab.Navigator
         tabBar={(props) => <AppTabBar {...props} />}
         screenOptions={{
           headerShown: false,
@@ -29,5 +32,6 @@ export default function MainTabNavigator() {
         <Tab.Screen name="LeaderboardsTab" component={LeaderboardsStackScreen} />
         <Tab.Screen name="ProfileTab" component={ProfileStackScreen} />
       </Tab.Navigator>
+    </>
   );
 }

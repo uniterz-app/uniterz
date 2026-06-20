@@ -3,13 +3,13 @@
  */
 import { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import MobilePageShell from "./MobilePageShell";
 import ProfileBadgeDetailModal from "../ProfileBadgeDetailModal";
 import BadgePaletteNative from "../BadgePaletteNative";
@@ -45,8 +45,7 @@ export default function MobileBadgesScreen({ language, uid, onClose }: Props) {
         onClose={onClose}
       >
         <View style={styles.center}>
-          <ActivityIndicator color="#67e8f9" />
-          <Text style={styles.muted}>{isJa ? "読み込み中…" : "Loading..."}</Text>
+          <CandleChartLoaderNative label={isJa ? "読み込み中" : "Loading"} />
         </View>
       </MobilePageShell>
     );

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { doc, getDoc } from "firebase/firestore";
@@ -217,7 +217,9 @@ export default function BracketMarketScreenNative() {
   return (
     <MobilePageShell title="Bracket Market" appBackground onClose={() => navigation.goBack()}>
       {loading ? (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} />
+        <View style={{ marginTop: 32, alignItems: "center" }}>
+          <CandleChartLoaderNative />
+        </View>
       ) : !market ? (
         <Text style={styles.empty}>NO DATA</Text>
       ) : (

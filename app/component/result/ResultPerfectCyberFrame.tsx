@@ -13,7 +13,7 @@ type Props = {
   showSweep?: boolean;
 };
 
-const CORNER = "pointer-events-none absolute z-[5] border-violet-300/90";
+const CORNER = "pointer-events-none absolute z-[12] border-violet-300/90";
 
 /** PERFECT 用サイバー角切り枠（紫 + 枠走査光） */
 export default function ResultPerfectCyberFrame({
@@ -36,7 +36,7 @@ export default function ResultPerfectCyberFrame({
       {showSweep ? (
         <div
           className={[
-            "pointer-events-none absolute inset-0 z-[8] overflow-hidden",
+            "pointer-events-none absolute inset-0 z-[11] overflow-hidden",
             RESULT_HIT_CYBER_CLIP,
             "result-card-border-sweep result-card-streak-sweep result-card-streak-sweep--perfect",
           ].join(" ")}
@@ -47,19 +47,19 @@ export default function ResultPerfectCyberFrame({
       ) : null}
 
       <div
-        className={`${CORNER} left-0 top-0 z-[9] h-2.5 w-2.5 border-l-2 border-t-2`}
+        className={`${CORNER} left-0 top-0 h-2.5 w-2.5 border-l-2 border-t-2`}
         aria-hidden
       />
       <div
-        className={`${CORNER} right-0 top-0 z-[9] h-2.5 w-2.5 border-r-2 border-t-2`}
+        className={`${CORNER} right-0 top-0 h-2.5 w-2.5 border-r-2 border-t-2`}
         aria-hidden
       />
       <div
-        className={`${CORNER} bottom-0 left-0 z-[9] h-2.5 w-2.5 border-b-2 border-l-2`}
+        className={`${CORNER} bottom-0 left-0 h-2.5 w-2.5 border-b-2 border-l-2`}
         aria-hidden
       />
       <div
-        className={`${CORNER} bottom-0 right-0 z-[9] h-2.5 w-2.5 border-b-2 border-r-2`}
+        className={`${CORNER} bottom-0 right-0 h-2.5 w-2.5 border-b-2 border-r-2`}
         aria-hidden
       />
 

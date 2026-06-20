@@ -12,6 +12,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -194,7 +195,7 @@ function isEffectiveLive(game: Record<string, unknown>): boolean {
 }
 
 /**
- * 試合カード中央：終了はスコア、ライブは LIVE＋スコア、それ以外はキックオフ
+ * 試合カード中央：終了はスコア、ライブは LIVE のみ、それ以外はキックオフ
  */
 function getGameCardCenterBlock(
   game: Record<string, unknown>,
@@ -211,21 +212,13 @@ function getGameCardCenterBlock(
     }`;
     return { variant: "score", home: score.home, away: score.away, subLine: sub };
   }
-  if (liveUi && score) {
+  if (liveUi) {
     const meta = resolveGameLiveMeta(game);
     const subLine =
       meta?.period || meta?.runningTime
         ? `${meta?.period ?? ""}${meta?.runningTime ? ` ${meta.runningTime}` : ""}`.trim()
         : null;
-    return {
-      variant: "liveScore",
-      home: score.home,
-      away: score.away,
-      subLine: subLine || null,
-    };
-  }
-  if (liveUi) {
-    return { variant: "liveMark" };
+    return { variant: "liveMark", subLine: subLine || null };
   }
   return {
     variant: "time",
@@ -238,7 +231,7 @@ function renderCenterText(
   language: "ja" | "en"
 ): string {
   const b = getGameCardCenterBlock(game, language);
-  if (b.variant === "score" || b.variant === "liveScore") {
+  if (b.variant === "score") {
     return `${b.home} – ${b.away}`;
   }
   if (b.variant === "liveMark") {
@@ -1498,15 +1491,15 @@ export default function GamesHomeScreen({
       {loading ? (
         <View style={styles.dayStripSkeletonBlock}>
           <View style={styles.monthHeaderRow}>
-            <View style={styles.dayStripSkeletonArrow} />
+            <SkeletonScanNative style={styles.dayStripSkeletonArrow} />
             <View style={styles.monthHeaderCenter}>
-              <View style={styles.dayStripSkeletonMonthBar} />
+              <SkeletonScanNative style={styles.dayStripSkeletonMonthBar} />
             </View>
-            <View style={styles.dayStripSkeletonArrow} />
+            <SkeletonScanNative style={styles.dayStripSkeletonArrow} />
           </View>
           <View style={styles.dayStripContent}>
             {[0, 1, 2, 3, 4].map((i) => (
-              <View key={i} style={styles.dayStripSkeletonChip} />
+              <SkeletonScanNative key={i} style={styles.dayStripSkeletonChip} />
             ))}
           </View>
         </View>
@@ -1535,7 +1528,7 @@ export default function GamesHomeScreen({
       {loading ? (
         <View style={styles.skeletonList}>
           {SKELETON_ROWS.map((row) => (
-            <View key={row} style={styles.skeletonCard}>
+            <SkeletonScanNative key={row} style={styles.skeletonCard}>
               <View style={styles.skeletonTeamRow}>
                 <View style={[styles.skeletonLine, styles.skeletonTeam]} />
                 <View style={[styles.skeletonLine, styles.skeletonVs]} />
@@ -1544,7 +1537,7 @@ export default function GamesHomeScreen({
               <View style={[styles.skeletonLine, styles.skeletonScore]} />
               <View style={[styles.skeletonLine, styles.skeletonMeta]} />
               <View style={[styles.skeletonLine, styles.skeletonMetaWide]} />
-            </View>
+            </SkeletonScanNative>
           ))}
         </View>
       ) : null}
@@ -2081,12 +2074,11 @@ const styles = StyleSheet.create({
   },
   skeletonCard: {
     borderWidth: 1,
-    borderColor: "#2d3550",
-    borderRadius: 14,
-    backgroundColor: "#0f1526",
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
     padding: spacing.md,
     gap: spacing.sm,
-    opacity: 0.75,
   },
   skeletonTeamRow: {
     flexDirection: "row",
@@ -2095,7 +2087,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   skeletonLine: {
-    backgroundColor: "#27314a",
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 8,
     minHeight: 12,
   },
@@ -2660,15 +2652,15 @@ const styles = StyleSheet.create({
   wcBroadcastRow: {
     width: "100%",
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "baseline",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
     paddingHorizontal: 12,
-    marginTop: 4,
+    marginTop: 6,
     paddingVertical: 4,
   },
   wcBroadcastLabel: {
+    flexShrink: 0,
     color: "rgba(255,255,255,0.45)",
     fontSize: 12,
     fontWeight: "600",

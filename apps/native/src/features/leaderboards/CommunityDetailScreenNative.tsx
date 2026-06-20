@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Pressable,
@@ -11,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { CandleChartLoaderNative } from "../../components/CandleChartLoaderNative";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -280,7 +280,9 @@ export default function CommunityDetailScreenNative() {
       onClose={() => navigation.goBack()}
     >
       {loadingDetail ? (
-        <ActivityIndicator color={colors.accentCyan} style={{ marginTop: 40 }} />
+        <View style={{ marginTop: 40, alignItems: "center" }}>
+          <CandleChartLoaderNative />
+        </View>
       ) : (
         <ScrollView
           contentContainerStyle={styles.content}
@@ -392,8 +394,8 @@ export default function CommunityDetailScreenNative() {
               </View>
 
               {loadingRows ? (
-                <View style={styles.panel}>
-                  <ActivityIndicator color={colors.accentCyan} />
+                <View style={[styles.panel, styles.loaderPanel]}>
+                  <CandleChartLoaderNative scale={0.85} />
                 </View>
               ) : rankingRows.length === 0 ? (
                 <Text style={styles.empty}>
@@ -463,6 +465,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     backgroundColor: "rgba(2,6,23,0.54)",
+  },
+  loaderPanel: {
+    alignItems: "center",
+    paddingVertical: 24,
   },
   kicker: {
     color: "rgba(103,232,249,0.76)",

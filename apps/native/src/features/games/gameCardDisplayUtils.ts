@@ -69,21 +69,13 @@ export function getGameCardCenterBlock(
     const sub = `${language === "en" ? "Final" : "試合終了"}${ot ? " (OT)" : ""}`;
     return { variant: "score", home: score.home, away: score.away, subLine: sub };
   }
-  if (liveUi && score) {
+  if (liveUi) {
     const meta = resolveGameLiveMeta(game);
     const subLine =
       meta?.period || meta?.runningTime
         ? `${meta?.period ?? ""}${meta?.runningTime ? ` ${meta.runningTime}` : ""}`.trim()
         : null;
-    return {
-      variant: "liveScore",
-      home: score.home,
-      away: score.away,
-      subLine: subLine || null,
-    };
-  }
-  if (liveUi) {
-    return { variant: "liveMark" };
+    return { variant: "liveMark", subLine: subLine || null };
   }
   return {
     variant: "time",

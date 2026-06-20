@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Line, Rect } from "react-native-svg";
 import {
   getWcPredictedLineup,
@@ -142,6 +143,45 @@ function formatPlayerLabel(full: string): string {
   return `${first.charAt(0).toUpperCase()}.${last}`;
 }
 
+function PitchSurfaceNative() {
+  return (
+    <>
+      <View style={styles.pitchBase} />
+      <View style={styles.pitchStripesWrap} pointerEvents="none">
+        {Array.from({ length: 8 }, (_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.pitchStripe,
+              {
+                left: `${i * 12.5}%`,
+                backgroundColor: i % 2 === 0 ? CYBER.stripeDark : CYBER.stripeLight,
+              },
+            ]}
+          />
+        ))}
+      </View>
+      <LinearGradient
+        pointerEvents="none"
+        colors={[
+          "rgba(48,220,255,0.05)",
+          "rgba(48,220,255,0)",
+          "rgba(48,220,255,0)",
+          "rgba(1,10,22,0.5)",
+        ]}
+        locations={[0, 0.35, 0.65, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(48,220,255,0.14)", "rgba(48,220,255,0)"]}
+        start={{ x: 0.5, y: 0.5 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.pitchRadialGlow}
+      />
+    </>
+  );
+}
 function PitchMarkingsSvg() {
   const stroke = CYBER.line;
   return (
@@ -289,8 +329,7 @@ export default function WcFormationPanelNative({ teamId, t }: Props) {
 
       <View style={styles.pitchFrame}>
         <View style={styles.pitch}>
-          <View style={styles.pitchBase} />
-          <View style={styles.pitchStripes} />
+          <PitchSurfaceNative />
           <PitchMarkingsSvg />
           {lineup.map((player) => (
             <PlayerMarkerNative
@@ -348,10 +387,19 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: CYBER.base,
   },
-  pitchStripes: {
+  pitchStripesWrap: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
-    backgroundColor: CYBER.stripeDark,
+    flexDirection: "row",
+  },
+  pitchStripe: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: "12.5%",
+  },
+  pitchRadialGlow: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.85,
   },
   marker: {
     position: "absolute",
@@ -377,7 +425,7 @@ const styles = StyleSheet.create({
   },
   dotGlow: {
     position: "absolute",
-    opacity: 0.65,
+    opacity: 0.4,
   },
   dot: {
     borderWidth: 1,

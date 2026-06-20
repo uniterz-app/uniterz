@@ -176,11 +176,15 @@ export const rankingsUiStyles = StyleSheet.create({
   podiumWrap: {
     marginTop: 0,
     gap: 0,
-    paddingTop: 4,
+    paddingTop: 12,
   },
   myRankOuter: {
-    marginBottom: 8,
+    marginBottom: 0,
     marginTop: 2,
+  },
+  myRankOuterWide: {
+    marginHorizontal: -4,
+    width: "100%",
   },
   myRankCard: {
     borderRadius: 0,

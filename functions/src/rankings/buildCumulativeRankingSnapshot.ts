@@ -1073,5 +1073,6 @@ export async function buildCumulativeRankingSnapshot() {
     ranksWritten: rankByUid.size,
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
+    notifiedUids: [...historyUids],
   };
 }

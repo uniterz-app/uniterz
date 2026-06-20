@@ -2,6 +2,7 @@ import { teamColorsB1 } from "../../../../../lib/teams-b1";
 import { teamColorsJ1 } from "../../../../../lib/teams-j1";
 import { teamColorsNBA } from "../../../../../lib/teams-nba";
 import { teamColorsPL } from "../../../../../lib/teams-pl";
+import { teamColorsWC } from "../../../../../lib/teams-wc";
 import type { SupportedLeague } from "./useTodayGames";
 
 type SideLike = {
@@ -57,6 +58,7 @@ function normalizeLeague(raw: unknown): SupportedLeague {
   if (v === "bj" || v === "b1" || v.includes("b.league")) return "bj";
   if (v === "j1" || v === "j") return "j1";
   if (v === "pl" || v.includes("premier") || v.includes("epl")) return "pl";
+  if (v === "wc") return "wc";
   return "nba";
 }
 
@@ -86,14 +88,18 @@ function getPrimaryByLeague(league: SupportedLeague, teamId: string): string | n
   if (league === "nba") return teamColorsNBA[teamId]?.primary ?? null;
   if (league === "bj") return teamColorsB1[teamId]?.primary ?? null;
   if (league === "j1") return teamColorsJ1[teamId]?.primary ?? null;
-  return teamColorsPL[teamId]?.primary ?? null;
+  if (league === "pl") return teamColorsPL[teamId]?.primary ?? null;
+  if (league === "wc") return teamColorsWC[teamId]?.primary ?? null;
+  return null;
 }
 
 function getSecondaryByLeague(league: SupportedLeague, teamId: string): string | null {
   if (league === "nba") return teamColorsNBA[teamId]?.secondary ?? null;
   if (league === "bj") return teamColorsB1[teamId]?.secondary ?? null;
   if (league === "j1") return teamColorsJ1[teamId]?.secondary ?? null;
-  return teamColorsPL[teamId]?.secondary ?? null;
+  if (league === "pl") return teamColorsPL[teamId]?.secondary ?? null;
+  if (league === "wc") return teamColorsWC[teamId]?.secondary ?? null;
+  return null;
 }
 
 function parseSide(side: unknown): { teamId: string | null; colorHex: string | null } {

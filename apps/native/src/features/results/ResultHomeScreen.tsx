@@ -75,10 +75,13 @@ import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import ResultDetailScreen from "./ResultDetailScreen";
 import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
+import ResultPerfectCyberFrameNative from "./ResultPerfectCyberFrameNative";
+import ResultStreakCyberFrameNative from "./ResultStreakCyberFrameNative";
 import ResultMatchScoreLineNative from "./ResultMatchScoreLineNative";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
 import ResultPredictEditModal from "./ResultPredictEditModal";
 import ResultGlassShellNative from "./ResultGlassShellNative";
+import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
 import { useNativeResultPosts } from "./useNativeResultPosts";
 import {
   useResultDayHeaderEntrance,
@@ -646,6 +649,13 @@ function ResultPostCard({
     typeof (frameStyle as ViewStyle | null)?.borderColor === "string"
       ? ((frameStyle as ViewStyle).borderColor as string)
       : "rgba(255,255,255,0.10)";
+  const shellStrokeWidth =
+    badge === "hit" ||
+    badge === "perfect" ||
+    badge === "upset" ||
+    badge === "streak"
+      ? RESULT_CYBER_FRAME_STROKE_WIDTH
+      : 1;
   const shellShadowStyle: ViewStyle | null = frameStyle
     ? {
         shadowColor: (frameStyle as ViewStyle).shadowColor,
@@ -674,6 +684,7 @@ function ResultPostCard({
       >
       <ResultGlassShellNative
         borderColor={shellBorderColor}
+        strokeWidth={shellStrokeWidth}
         shellStyle={[styles.cardShell, shellShadowStyle]}
         overflowVisible={Boolean(shellOverflowStyle)}
       >
@@ -921,6 +932,10 @@ function ResultPostCard({
           </View>
         </Animated.View>
         {badge === "hit" ? <ResultHitCyberFrameNative /> : null}
+        {badge === "perfect" ? <ResultPerfectCyberFrameNative /> : null}
+        {badge === "streak" ? (
+          <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
+        ) : null}
       </ResultGlassShellNative>
       </AnimatedResultCardPressable>
     </Animated.View>
@@ -1006,7 +1021,7 @@ export default function ResultHomeScreen({
     useNativeResultPosts(uid, language);
 
   const { showResultLeagueTabs, defaultLeagueTab } = useResultLeagueFlagsNative(uid ?? null);
-  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab>("nba");
+  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab>("wc");
   useEffect(() => {
     setLeagueTab(defaultLeagueTab);
   }, [defaultLeagueTab]);
@@ -1579,7 +1594,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    paddingHorizontal: 8,
+    paddingLeft: 8,
+    paddingRight: 2,
   },
   cardBadgeLeague: {
     maxWidth: "44%",
@@ -1588,7 +1604,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "flex-end",
     maxWidth: "72%",
-    paddingRight: 8,
+    paddingRight: 0,
   },
   cardBadgeOutcomeWithFab: {
     paddingRight: 44,
