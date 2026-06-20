@@ -1,0 +1,32 @@
+---
+description: Native とモバイル Web の自律パリティ同期（UI 7〜8割まで）
+alwaysApply: true
+---
+
+# Native Web パリティ
+
+## 参照の正
+
+`app/mobile/*` + `app/component/*`（dense レイアウト）。`app/web/*` は参考程度。
+
+## ゴール
+
+機能・構造・UI（見た目 7〜8割）まで自動で追従。ピクセル完璧は対象外。
+
+## 自律実行
+
+1. `docs/native-sync-state.json` を読む → `parityComplete: true` なら何もしない
+2. `phase` に応じ `docs/native-parity-gaps.md` のキュー先頭を実行
+3. 確認・承認を求めない。完了後は次のキュー項目へ
+4. 新ギャップはキュー末尾に追記
+5. **終了時:** `parityComplete: false` なら必ず push（`apps/native/**` 変更なし → `apps/native/.parity-chain` 更新）。Merge Chain が次 Run を起動
+
+## 共有ルール
+
+- ロジック → `lib/`、UI → `apps/native/`（`*Native` 命名）
+- トークン → `packages/design-tokens`
+- 型チェック → `npm run native:typecheck`
+
+## 除外
+
+admin、LP、Three.js、デスクトップ専用 UI

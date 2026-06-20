@@ -1,0 +1,12 @@
+{
+  "parityComplete": true,
+  "phase": "phase-c",
+  "lastCompletedId": "ui-bracket-market",
+  "lastSessionAt": "2026-06-20",
+  "inProgressId": null,
+  "totalCompleted": 35,
+  "uiPolishCompleted": 11,
+  "phaseCCompleted": 18,
+  "blockedItems": [],
+  "notes": "Phase C 完了。機能/UI/Phase C キューはすべて完了。"
+}

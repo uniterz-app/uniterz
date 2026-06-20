@@ -42,12 +42,175 @@ export function formatWcMatchGoalScorerLabel(
   minute?: number | null,
   ownGoal?: boolean
 ): string {
-  const short = formatWcPlayerShortName(fullName);
+  const name = fullName.trim();
   const withMin =
     minute != null && Number.isFinite(minute)
-      ? `${short} ${formatWcGoalMinuteDisplay(minute)}`.trim()
-      : short;
-  return ownGoal ? `${withMin} OG` : withMin;
+      ? `${name} ${formatWcGoalMinuteDisplay(minute)}`.trim()
+      : name;
+  return ownGoal ? `${withMin} (OG)` : withMin;
+}
+
+/** 得点者ブロック — 同一選手の複数ゴールをまとめた1行（例: Jonathan David 29', 45+3'） */
+export function formatWcMatchGoalScorerGroupedLine(
+  playerName: string,
+  minutes: readonly number[],
+  ownGoal?: boolean
+): string {
+  const mins = minutes
+    .map((m) => formatWcGoalMinuteDisplay(m))
+    .filter(Boolean)
+    .join(", ");
+  const core = mins ? `${playerName} ${mins}` : playerName.trim();
+  return ownGoal ? `${core} (OG)` : core;
+}
+
+export type WcMatchGoalScorerGroupedLine = {
+  side: "home" | "away";
+  text: string;
+  sortMinute: number;
+};
+
+function parseScorerNameFromLabel(label: string): string {
+  let s = label.trim();
+  if (s.endsWith(" (OG)")) s = s.slice(0, -5).trim();
+  if (s.endsWith(" OG")) s = s.slice(0, -3).trim();
+  const m = s.match(/^(.+?)\s+\d+(?:\+\d+)?'$/);
+  return m ? m[1]!.trim() : s;
+}
+
+/** 投稿済み matchGoalScorers（短縮ラベル）からグループ行を組み立て */
+export function groupPostMatchGoalScorersForDisplay(
+  rows: readonly PostMatchGoalScorer[]
+): WcMatchGoalScorerGroupedLine[] {
+  type Acc = {
+    side: "home" | "away";
+    name: string;
+    minutes: number[];
+    ownGoal: boolean;
+  };
+  const map = new Map<string, Acc>();
+
+  for (const row of rows) {
+    const name = parseScorerNameFromLabel(row.label);
+    const key = `${row.side}\0${name}\0${row.ownGoal ? 1 : 0}`;
+    const prev = map.get(key);
+    if (prev) {
+      if (row.minute != null && Number.isFinite(row.minute)) {
+        prev.minutes.push(row.minute);
+      }
+      continue;
+    }
+    map.set(key, {
+      side: row.side,
+      name,
+      minutes:
+        row.minute != null && Number.isFinite(row.minute) ? [row.minute] : [],
+      ownGoal: Boolean(row.ownGoal),
+    });
+  }
+
+  const lines: WcMatchGoalScorerGroupedLine[] = [];
+  for (const g of map.values()) {
+    g.minutes.sort((a, b) => a - b);
+    lines.push({
+      side: g.side,
+      text: formatWcMatchGoalScorerGroupedLine(g.name, g.minutes, g.ownGoal),
+      sortMinute: g.minutes[0] ?? 9999,
+    });
+  }
+
+  return lines.sort((a, b) => {
+    if (a.sortMinute !== b.sortMinute) return a.sortMinute - b.sortMinute;
+    if (a.side !== b.side) return a.side === "home" ? -1 : 1;
+    return a.text.localeCompare(b.text);
+  });
+}
+
+export function buildWcMatchGoalScorerGroupedLines(
+  goalScorers: WcGameGoalScorer[],
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined
+): WcMatchGoalScorerGroupedLine[] {
+  type Acc = {
+    side: "home" | "away";
+    name: string;
+    minutes: number[];
+    ownGoal: boolean;
+  };
+  const map = new Map<string, Acc>();
+
+  for (const g of goalScorers) {
+    const side = sideForTeamId(g.teamId, homeTeamId, awayTeamId);
+    if (!side) continue;
+    const fullName =
+      getWcSquadPlayer(g.teamId, g.playerId)?.name ?? g.playerId;
+    const key = `${side}\0${g.playerId}\0${g.ownGoal ? 1 : 0}`;
+    const prev = map.get(key);
+    if (prev) {
+      if (g.minute != null && Number.isFinite(g.minute)) {
+        prev.minutes.push(g.minute);
+      }
+      continue;
+    }
+    map.set(key, {
+      side,
+      name: fullName,
+      minutes:
+        g.minute != null && Number.isFinite(g.minute) ? [g.minute] : [],
+      ownGoal: Boolean(g.ownGoal),
+    });
+  }
+
+  const lines: WcMatchGoalScorerGroupedLine[] = [];
+  for (const g of map.values()) {
+    g.minutes.sort((a, b) => a - b);
+    lines.push({
+      side: g.side,
+      text: formatWcMatchGoalScorerGroupedLine(g.name, g.minutes, g.ownGoal),
+      sortMinute: g.minutes[0] ?? 9999,
+    });
+  }
+
+  return lines.sort((a, b) => {
+    if (a.sortMinute !== b.sortMinute) return a.sortMinute - b.sortMinute;
+    if (a.side !== b.side) return a.side === "home" ? -1 : 1;
+    return a.text.localeCompare(b.text);
+  });
+}
+
+export function buildWcMatchGoalScorerGroupedLinesFromRaw(
+  raw: unknown,
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined
+): WcMatchGoalScorerGroupedLine[] {
+  const resolved = resolveWcGameGoalScorers(raw, { homeTeamId, awayTeamId });
+  const list = resolved.ok ? resolved.scorers : normalizeWcGameGoalScorers(raw);
+  return buildWcMatchGoalScorerGroupedLines(list, homeTeamId, awayTeamId);
+}
+
+/** リザルトカード — 得点者ブロック（フルネーム・同一選手は分数をカンマ連結） */
+export function resolveWcMatchGoalScorerGroupedLines(opts: {
+  league: string;
+  isFinal: boolean;
+  matchGoalScorersRaw?: unknown;
+  goalScorersRaw?: unknown;
+  homeTeamId?: string | null;
+  awayTeamId?: string | null;
+}): WcMatchGoalScorerGroupedLine[] {
+  if (opts.league !== "wc" || !opts.isFinal) return [];
+
+  const fromPost = readPostMatchGoalScorers(opts.matchGoalScorersRaw);
+  if (fromPost.length > 0) return groupPostMatchGoalScorersForDisplay(fromPost);
+
+  if (opts.goalScorersRaw != null) {
+    return buildWcMatchGoalScorerGroupedLinesFromRaw(
+      opts.goalScorersRaw,
+      opts.homeTeamId,
+      opts.awayTeamId
+    );
+  }
+
+  return [];
 }
 
 function sideForTeamId(
@@ -106,7 +269,18 @@ export function buildPostMatchGoalScorersFromRaw(
   return buildPostMatchGoalScorers(list, homeTeamId, awayTeamId);
 }
 
-/** 試合カード／リザルト：投稿の matchGoalScorers 優先、なければ games.goalScorers から組み立て */
+function groupedLinesToPostMatchGoalScorers(
+  lines: WcMatchGoalScorerGroupedLine[]
+): PostMatchGoalScorer[] {
+  return lines.map((g) => ({
+    side: g.side,
+    minute: g.sortMinute,
+    label: g.text,
+    ownGoal: g.text.includes("(OG)"),
+  }));
+}
+
+/** 試合カード／リザルト：投稿の matchGoalScorers 優先、なければ games.goalScorers から組み立て（同一選手は分数をカンマ連結） */
 export function resolveWcMatchGoalScorersForDisplay(opts: {
   league: string;
   isFinal: boolean;
@@ -115,13 +289,8 @@ export function resolveWcMatchGoalScorersForDisplay(opts: {
   homeTeamId?: string | null;
   awayTeamId?: string | null;
 }): PostMatchGoalScorer[] {
-  if (opts.league !== "wc" || !opts.isFinal) return [];
-  const fromPost = readPostMatchGoalScorers(opts.matchGoalScorersRaw);
-  if (fromPost.length > 0) return fromPost;
-  return buildPostMatchGoalScorersFromRaw(
-    opts.goalScorersRaw,
-    opts.homeTeamId,
-    opts.awayTeamId
+  return groupedLinesToPostMatchGoalScorers(
+    resolveWcMatchGoalScorerGroupedLines(opts)
   );
 }
 

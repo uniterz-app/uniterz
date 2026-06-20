@@ -12,7 +12,7 @@ import {
   resolveGameScore,
   resolveGameStartAt,
   resolveGameStatus,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 
 const SERIES_WIN_CAP = 4;
 

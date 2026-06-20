@@ -7,23 +7,27 @@ import {
   Dimensions,
   Easing,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-import { colors, glassCard } from "../theme/tokens";
+import { nativeBlurViewExtraProps } from "./nativeBlurProps";
+import CyberSideMenuPanelNative from "./CyberSideMenuPanelNative";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
-  /** パネル幅（mobile デフォルト 300） */
+  /** パネル幅（mobile デフォルト 260–300） */
   panelWidth?: number;
 };
 
-const DEFAULT_PANEL_W = Math.min(300, Math.round(Dimensions.get("window").width * 0.86));
+const DEFAULT_PANEL_W = Math.min(
+  300,
+  Math.max(260, Math.round(Dimensions.get("window").width * 0.46))
+);
 
 export default function SideMenuDrawerNative({
   open,
@@ -39,12 +43,12 @@ export default function SideMenuDrawerNative({
       Animated.parallel([
         Animated.timing(backdrop, {
           toValue: 1,
-          duration: 220,
+          duration: 250,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.spring(slide, {
-          toValue: 0,
+          toValue: -16,
           friction: 9,
           tension: 68,
           useNativeDriver: true,
@@ -71,23 +75,23 @@ export default function SideMenuDrawerNative({
     <Modal visible={open} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.root}>
         <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
+          {(Platform.OS === "ios" || Platform.OS === "android") && (
+            <BlurView
+              intensity={Platform.OS === "ios" ? 12 : 8}
+              tint="dark"
+              {...nativeBlurViewExtraProps()}
+              style={StyleSheet.absoluteFillObject}
+            />
+          )}
+          <View style={styles.backdropDim} />
           <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         </Animated.View>
         <Animated.View
           style={[styles.panelWrap, { width: panelWidth, transform: [{ translateX: slide }] }]}
         >
-          <View style={styles.panel}>
-            <BlurView
-              intensity={glassCard.blurIntensityIos}
-              tint="dark"
-              style={StyleSheet.absoluteFillObject}
-            />
-            <LinearGradient
-              colors={["rgba(15,23,42,0.92)", "rgba(10,14,24,0.88)"]}
-              style={StyleSheet.absoluteFillObject}
-            />
+          <CyberSideMenuPanelNative style={styles.panel}>
             <View style={styles.panelInner}>{children}</View>
-          </View>
+          </CyberSideMenuPanelNative>
         </Animated.View>
       </View>
     </Modal>
@@ -97,6 +101,9 @@ export default function SideMenuDrawerNative({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backdropDim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.55)",
   },
@@ -111,10 +118,7 @@ const styles = StyleSheet.create({
   },
   panel: {
     flex: 1,
-    borderWidth: glassCard.borderWidth,
-    borderColor: glassCard.borderColor,
-    borderRadius: 0,
-    overflow: "hidden",
+    maxHeight: Dimensions.get("window").height * 0.92,
   },
   panelInner: {
     flex: 1,

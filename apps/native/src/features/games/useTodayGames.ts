@@ -9,8 +9,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { resolveGameStatus } from "../../shared/gameRow";
-import { GAME_SCHEDULE_SEASON } from "../../shared/gameSchedule";
+import { resolveGameStatus, GAME_SCHEDULE_SEASON } from "@uniterz/shared";
 import {
   TIMEZONE_JST,
   getCalendarMonthRangeInTimeZone,

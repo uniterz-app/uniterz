@@ -7,10 +7,17 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import { filterPostsForScope } from "../../../../../lib/profile/profileStreakPostsCompute";
+import {
+  resolveProfileStreakScopeKey,
+  type ProfileStatsStreakContext,
+} from "../../../../../lib/profile/profileStreakScope";
 import { db } from "../../lib/firebase";
 
 /** Web `useProfileStreakTracker` と同じ */
 export const STREAK_TRACKER_LAST_N = 20;
+
+const STREAK_FETCH_LIMIT = 120;
 
 export type StreakTrackerPointNative = {
   postId: string;
@@ -28,7 +35,15 @@ function settledAtToMs(v: unknown): number | null {
   return null;
 }
 
-export function useNativeStreakTracker(uid: string | undefined, enabled: boolean) {
+export function useNativeStreakTracker(
+  uid: string | undefined,
+  enabled: boolean,
+  profileStatsContext?: ProfileStatsStreakContext
+) {
+  const rankingLeague = profileStatsContext?.rankingLeague ?? "worldcup";
+  const wcStage = profileStatsContext?.wcStage ?? "overall";
+  const scopeKey = resolveProfileStreakScopeKey({ rankingLeague, wcStage });
+
   const [points, setPoints] = useState<StreakTrackerPointNative[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,12 +64,18 @@ export function useNativeStreakTracker(uid: string | undefined, enabled: boolean
           where("authorUid", "==", uid),
           where("schemaVersion", "==", 2),
           orderBy("settledAt", "desc"),
-          limit(STREAK_TRACKER_LAST_N)
+          limit(STREAK_FETCH_LIMIT)
         );
         const snap = await getDocs(q);
 
-        type Row = { postId: string; settledAtMs: number; isWin: boolean };
-        const rows: Row[] = [];
+        const rows: {
+          postId: string;
+          settledAtMs: number;
+          isWin: boolean;
+          league?: unknown;
+          seasonPhase?: unknown;
+          wcStage?: unknown;
+        }[] = [];
         for (const d of snap.docs) {
           const data = d.data() as Record<string, unknown>;
           const ms = settledAtToMs(data.settledAt);
@@ -62,14 +83,22 @@ export function useNativeStreakTracker(uid: string | undefined, enabled: boolean
           const stats = data.stats as Record<string, unknown> | undefined;
           const iw = stats?.isWin;
           if (typeof iw !== "boolean") continue;
-          rows.push({ postId: d.id, settledAtMs: ms, isWin: iw });
+          rows.push({
+            postId: d.id,
+            settledAtMs: ms,
+            isWin: iw,
+            league: data.league,
+            seasonPhase: data.seasonPhase,
+            wcStage: data.wcStage,
+          });
         }
 
-        rows.sort((a, b) => a.settledAtMs - b.settledAtMs);
+        const scoped = filterPostsForScope(rows, scopeKey, STREAK_TRACKER_LAST_N);
+        scoped.sort((a, b) => a.settledAtMs - b.settledAtMs);
 
         let streak = 0;
         const out: StreakTrackerPointNative[] = [];
-        for (const r of rows) {
+        for (const r of scoped) {
           if (r.isWin) {
             streak = streak > 0 ? streak + 1 : 1;
           } else {
@@ -95,7 +124,7 @@ export function useNativeStreakTracker(uid: string | undefined, enabled: boolean
     return () => {
       alive = false;
     };
-  }, [uid, enabled]);
+  }, [uid, enabled, scopeKey]);
 
   return { points, loading };
 }

@@ -48,7 +48,8 @@ import { db } from "@/lib/firebase";
 import { useWcGroupStandingRanks } from "@/lib/wc/useWcGroupStandingRanks";
 import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
 import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
-import { resolveWcGroupStageLine } from "@/lib/wc/wcGroupStandingRank";
+import { nameBebas } from "@/lib/fonts";
+import { resolveWcGroupCodeLabel } from "@/lib/wc/wcGroupStandingRank";
 export type ResultCardOpenAnchor = { clientX: number; clientY: number };
 
 type Props = {
@@ -196,16 +197,12 @@ function ResultCardPresentationImpl({
     post.home?.teamId,
     post.away?.teamId
   );
-  const wcGroupStageLine = useMemo(
+  const wcGroupCodeLabel = useMemo(
     () =>
       isWc
-        ? resolveWcGroupStageLine(
-            post.home?.teamId,
-            post.away?.teamId,
-            language
-          )
+        ? resolveWcGroupCodeLabel(post.home?.teamId, post.away?.teamId)
         : null,
-    [isWc, post.home?.teamId, post.away?.teamId, language]
+    [isWc, post.home?.teamId, post.away?.teamId]
   );
 
   const handle = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -750,6 +747,21 @@ function ResultCardPresentationImpl({
                 : "top-5 sm:top-6",
           ].join(" ")}
         >
+          {wcGroupCodeLabel ? (
+            <span
+              className={[
+                nameBebas.className,
+                "mb-1.5 max-w-full truncate text-center font-black uppercase tracking-[0.24em] text-white",
+                isMobile
+                  ? mobileScheduleDense
+                    ? "text-[17px] leading-none"
+                    : "text-[18px] leading-none"
+                  : "text-xl leading-none md:text-2xl",
+              ].join(" ")}
+            >
+              {wcGroupCodeLabel}
+            </span>
+          ) : null}
           <MatchScoreLine
             home={predictedHome}
             away={predictedAway}
@@ -774,17 +786,6 @@ function ResultCardPresentationImpl({
                   : "text-base font-bold md:text-lg",
               ].join(" ")}
             />
-          ) : null}
-
-          {wcGroupStageLine ? (
-            <div
-              className={[
-                "mt-1 max-w-full truncate text-center font-medium text-white/50",
-                isMobile ? "text-[9px] leading-tight" : "text-[11px] leading-tight",
-              ].join(" ")}
-            >
-              {wcGroupStageLine}
-            </div>
           ) : null}
         </div>
       </div>

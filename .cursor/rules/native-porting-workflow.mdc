@@ -1,0 +1,31 @@
+---
+description: Native ポート手順（機能 + UI 磨き込み）
+globs: apps/native/**
+alwaysApply: false
+---
+
+# Native ポート手順
+
+## A. 機能ポート
+
+1. Web 対応を `app/mobile/` → `app/component/` の順で特定
+2. 既存 `*Native` を `grep "Web \`"` で検索
+3. ロジックは `lib/` に抽出（なければ先に作成）
+4. RN で UI 実装
+5. 親コンポーネントへ配線
+6. i18n 同期（`gamesI18n.ts` 等）
+7. `npm run native:typecheck`
+
+## B. UI 磨き込み（機能完了後）
+
+1. Web の Tailwind クラスから色・余白・fontSize を抽出
+2. Native `StyleSheet` を ±2px 以内に修正
+3. `*Motion.ts` の duration/easing を突合
+4. Cyber 装飾（方眼・LIVE ピル・スラントタブ）の欠落を補う
+5. 照合チェックリスト 6 項目中 5 以上で `uiStatus: done`
+
+## 完了後
+
+- キューを `[x]` に更新
+- `docs/native-sync-state.json` を更新
+- 次のキュー項目へ進む（ユーザーに聞かない）

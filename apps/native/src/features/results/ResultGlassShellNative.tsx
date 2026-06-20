@@ -197,9 +197,9 @@ const styles = StyleSheet.create({
     width: "100%",
     overflow: "visible",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.58,
+    shadowRadius: 32,
     elevation: 7,
   },
   rootOverflowVisible: {

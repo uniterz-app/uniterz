@@ -44,12 +44,12 @@ import { formatResultPostCardDateLabel } from "./nativeResultModel";
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
-import { readPostMatchGoalScorers } from "../../../../../lib/wc/matchGoalScorers";
+import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
 import { db } from "../../lib/firebase";
 import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
 import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
-import { resolveWcGroupStageLine } from "../../../../../lib/wc/wcGroupStandingRank";
+import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -661,13 +661,19 @@ export default function ResultDetailScreen({
     const rh = result?.home;
     const ra = result?.away;
     const hasFinal = typeof rh === "number" && typeof ra === "number";
-    const wcGroupStageLine = isWcCard
-      ? resolveWcGroupStageLine(home?.teamId, away?.teamId, language)
+    const wcGroupCodeLabel = isWcCard
+      ? resolveWcGroupCodeLabel(home?.teamId, away?.teamId)
       : null;
+    const wcMatchGoalScorers =
       isWcCard && hasFinal
-        ? readPostMatchGoalScorers(
-            (post as { matchGoalScorers?: unknown }).matchGoalScorers
-          )
+        ? resolveWcMatchGoalScorersForDisplay({
+            league: "wc",
+            isFinal: true,
+            matchGoalScorersRaw: (post as { matchGoalScorers?: unknown })
+              .matchGoalScorers,
+            homeTeamId: home?.teamId,
+            awayTeamId: away?.teamId,
+          })
         : [];
     const finalScore = hasFinal ? `${rh} - ${ra}` : null;
     const cardDateLabel = formatResultPostCardDateLabel(post, isEn ? "en" : "ja");
@@ -767,19 +773,22 @@ export default function ResultDetailScreen({
             ) : null}
           </View>
           <View style={styles.centerCol}>
-            <Text style={styles.predLabel}>{cardDateLabel}</Text>
-            <Text style={styles.predictedScore}>{predictedScore}</Text>
+            {wcGroupCodeLabel ? (
+              <Text style={styles.groupCodeLabel} numberOfLines={1}>
+                {wcGroupCodeLabel}
+              </Text>
+            ) : (
+              <Text style={styles.predLabel}>{cardDateLabel}</Text>
+            )}
             {finalScore ? (
               <>
-                <Text style={styles.finalLabel}>{isEn ? "Final" : "結果"}</Text>
-                <Text style={styles.finalScore}>{finalScore}</Text>
+                <Text style={styles.finalScoreMain}>{finalScore}</Text>
+                <Text style={styles.finalLabel}>{isEn ? "Final" : "試合終了"}</Text>
+                <Text style={styles.predictedScoreOverlay}>{predictedScore}</Text>
               </>
-            ) : null}
-            {wcGroupStageLine ? (
-              <Text style={styles.groupStageLine} numberOfLines={1}>
-                {wcGroupStageLine}
-              </Text>
-            ) : null}
+            ) : (
+              <Text style={styles.predictedScore}>{predictedScore}</Text>
+            )}
           </View>
           <View style={styles.sideCol}>
             {isWcCard ? (
@@ -824,9 +833,21 @@ export default function ResultDetailScreen({
       <View style={StyleSheet.absoluteFillObject} pointerEvents="box-none">
         <ResultDetailOverlayBackdrop />
         <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.overlayDim]} />
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(34,211,238,0.08)", "rgba(34,211,238,0)", "rgba(251,191,36,0.06)"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.overlayScanGlow}
+        />
+        <View pointerEvents="none" style={styles.overlayScanLine} />
       </View>
       <SafeAreaView style={styles.overlaySafe} pointerEvents="box-none">
         <View style={styles.topBar}>
+          <View style={styles.topHud}>
+            <View style={styles.topHudRule} />
+            <Text style={styles.topHudText}>RESULT DETAIL</Text>
+          </View>
           <Pressable
             onPress={onClose}
             hitSlop={14}
@@ -927,16 +948,45 @@ const styles = StyleSheet.create({
   overlayDim: {
     backgroundColor: "rgba(5,8,14,0.42)",
   },
+  overlayScanGlow: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.95,
+  },
+  overlayScanLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "18%",
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(34,211,238,0.16)",
+  },
   overlaySafe: {
     flex: 1,
     backgroundColor: "transparent",
   },
   topBar: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 10,
     paddingBottom: 8,
+  },
+  topHud: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 8,
+  },
+  topHudRule: {
+    width: 24,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(34,211,238,0.38)",
+  },
+  topHudText: {
+    color: "rgba(186,230,253,0.78)",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2.2,
   },
   closeIconBtn: {
     paddingVertical: 4,
@@ -946,7 +996,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingTop: 4,
+    paddingBottom: 28,
   },
   centerFill: {
     flex: 1,
@@ -1008,7 +1059,7 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 2,
   },
-  sectionGap: { height: 14 },
+  sectionGap: { height: 16 },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1141,32 +1192,54 @@ const styles = StyleSheet.create({
   },
   predictedScore: {
     color: "#f8fafc",
-    fontSize: 26,
+    fontSize: 20,
+    lineHeight: 22,
     fontWeight: "800",
     fontFamily: NUMERIC_FONT,
     fontVariant: ["tabular-nums"],
+  },
+  /** Web overlay 確定スコア（大・白） */
+  finalScoreMain: {
+    color: "#fff",
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: "900",
+    fontFamily: NUMERIC_FONT,
+    fontVariant: ["tabular-nums"],
+    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   finalLabel: {
-    color: "rgba(248,250,252,0.45)",
+    color: "rgba(248,250,252,0.75)",
     fontSize: 10,
     fontWeight: "600",
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 2,
   },
-  finalScore: {
-    color: "rgba(34,211,238,0.95)",
-    fontSize: 20,
-    fontWeight: "800",
+  /** Web overlay 予想スコア（小・amber） */
+  predictedScoreOverlay: {
+    color: "rgba(253,224,71,0.95)",
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: "700",
     fontFamily: NUMERIC_FONT,
     fontVariant: ["tabular-nums"],
+    textShadowColor: "rgba(251,191,36,0.28)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
-  groupStageLine: {
-    marginTop: 6,
+  groupCodeLabel: {
+    marginTop: 2,
+    marginBottom: 4,
     maxWidth: "100%",
-    fontSize: 10,
-    fontWeight: "500",
-    color: "rgba(255,255,255,0.5)",
+    fontSize: 15,
+    lineHeight: 16,
+    fontFamily: DISPLAY_FONT,
+    letterSpacing: 3.5,
+    color: "#FFFFFF",
     textAlign: "center",
+    textTransform: "uppercase",
   },
   /** Web `MobileResultMarketCard`：`mb-3 flex … gap-2 text-[13px] font-semibold` */
   marketHeaderRow: {

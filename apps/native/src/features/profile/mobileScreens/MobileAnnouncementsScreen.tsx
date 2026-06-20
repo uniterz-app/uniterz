@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   collection,
   doc,
@@ -73,6 +74,14 @@ const TYPE_META: Record<string, { labelJa: string; labelEn: string; colors: [str
   maintenance: { labelJa: "メンテナンス", labelEn: "Maintenance", colors: ["#FFC400", "#FF7A00"] },
   info: { labelJa: "お知らせ", labelEn: "News", colors: ["#9CA3AF", "#6B7280"] },
 };
+
+function TypePill({ label, colors }: { label: string; colors: [string, string] }) {
+  return (
+    <LinearGradient colors={colors} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.typePill}>
+      <Text style={styles.typePillText}>{label}</Text>
+    </LinearGradient>
+  );
+}
 
 function formatDate(d?: Timestamp | Date | null, isJa?: boolean) {
   if (!d) return "";
@@ -234,14 +243,7 @@ export default function MobileAnnouncementsScreen({
                 )}
                 <View style={styles.cardInner}>
                   <View style={styles.typeRow}>
-                    <View
-                      style={[
-                        styles.typePill,
-                        { backgroundColor: meta.colors[0] },
-                      ]}
-                    >
-                      <Text style={styles.typePillText}>{typeLabel}</Text>
-                    </View>
+                    <TypePill label={typeLabel} colors={meta.colors} />
                     <Text style={styles.date}>{formatDate(a.postedAt, isJa)}</Text>
                   </View>
                   <Text style={styles.cardTitle}>{a.title}</Text>
@@ -274,9 +276,7 @@ function RegularAnnouncementBody({
         <Image source={{ uri: src }} style={styles.detailHero} resizeMode="cover" />
       ) : null}
       <View style={styles.typeRow}>
-        <View style={[styles.typePill, { backgroundColor: meta.colors[0] }]}>
-          <Text style={styles.typePillText}>{typeLabel}</Text>
-        </View>
+        <TypePill label={typeLabel} colors={meta.colors} />
         <Text style={styles.date}>{formatDate(row.postedAt, isJa)}</Text>
       </View>
       <Text style={styles.detailH2}>{row.title}</Text>
@@ -311,9 +311,7 @@ function SyntheticEventBody({
   return (
     <>
       <View style={styles.typeRow}>
-        <View style={[styles.typePill, { backgroundColor: meta.colors[0] }]}>
-          <Text style={styles.typePillText}>{typeLabel}</Text>
-        </View>
+        <TypePill label={typeLabel} colors={meta.colors} />
         <Text style={styles.date}>{posted.toLocaleString(isJa ? "ja-JP" : "en-US")}</Text>
       </View>
       <Text style={styles.detailH2}>{title}</Text>

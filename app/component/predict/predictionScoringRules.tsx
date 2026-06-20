@@ -288,28 +288,23 @@ function FootballTotalRulesJa({ showWcGoalScorer = false }: { showWcGoalScorer?:
             <Em>勝者</Em> … <Num>+4点</Num>
           </li>
           <li>
-            <Em>合計ゴール数</Em> … <Num>+2点</Num>
+            <Em>HOME得点</Em> … <Num>+3点</Num>
             <p className="mt-1 text-white/60">
-              ホームとアウェイのゴールを足した数が、予想と結果で同じくくりなら加点。
-              <Num>0〜2</Num>／<Num>3〜4</Num>／<Num>5以上</Num> の3つに分けます。
+              ホームの得点が予想と結果で<Em>完全一致</Em>したら加点します。
+            </p>
+          </li>
+          <li>
+            <Em>AWAY得点</Em> … <Num>+3点</Num>
+            <p className="mt-1 text-white/60">
+              アウェイの得点が予想と結果で<Em>完全一致</Em>したら加点します。
             </p>
             <p className="mt-1 text-white/55">
-              例）予想 <Num>2–1</Num>（合計3）・結果 <Num>1–2</Num>（合計3）→ <Num>+2点</Num>
+              例）予想 <Num>2–0</Num>・結果 <Num>2–1</Num> → HOME <Num>+3</Num> → 基本点 <Num>7点</Num>
               <br />
-              例）予想 <Num>1–0</Num>（合計1）・結果 <Num>2–1</Num>（合計3）→ くくりが違うので 0点
+              例）予想 <Num>2–0</Num>・結果 <Num>2–0</Num> → <Num>4+3+3=10点</Num>
+              <br />
+              例）予想 <Num>3–0</Num>・結果 <Num>2–1</Num> → 勝者のみ → 基本点 <Num>4点</Num>
             </p>
-          </li>
-          <li>
-            <Em>得失点差</Em> … <Num>+2点</Num>
-            <p className="mt-1 text-white/60">
-              得失点差が予想と結果で同じなら加点します。
-            </p>
-            <p className="mt-1 text-white/55">
-              例）予想 <Num>2–0</Num>（差2）・結果 <Num>3–1</Num>（差2）→ <Num>+2点</Num>
-            </p>
-          </li>
-          <li>
-            <Em>スコアの完全一致</Em> … <Num>+2点</Num>
           </li>
         </ol>
       </HighlightBlock>
@@ -343,29 +338,23 @@ function FootballTotalRulesEn({ showWcGoalScorer = false }: { showWcGoalScorer?:
             <Em>Winner</Em> … <Num>+4</Num>
           </li>
           <li>
-            <Em>Total goals</Em> … <Num>+2</Num>
+            <Em>HOME goals</Em> … <Num>+3</Num>
             <p className="mt-1 text-white/60">
-              Home + away goals fall in the same bucket in your pick and the result:{" "}
-              <Num>0–2</Num> / <Num>3–4</Num> / <Num>5+</Num>.
+              +3 if the home team&apos;s goals <Em>exactly</Em> match your pick and the result.
+            </p>
+          </li>
+          <li>
+            <Em>AWAY goals</Em> … <Num>+3</Num>
+            <p className="mt-1 text-white/60">
+              +3 if the away team&apos;s goals <Em>exactly</Em> match your pick and the result.
             </p>
             <p className="mt-1 text-white/55">
-              e.g. pick <Num>2–1</Num> (3 total), result <Num>1–2</Num> (3 total) → <Num>+2</Num>
+              e.g. pick <Num>2–0</Num>, result <Num>2–1</Num> → HOME <Num>+3</Num> → base <Num>7</Num>
               <br />
-              e.g. pick <Num>1–0</Num> (1 total), result <Num>2–1</Num> (3 total) → different
-              buckets, <Num>0</Num> for this item
+              e.g. pick <Num>2–0</Num>, result <Num>2–0</Num> → <Num>4+3+3=10</Num>
+              <br />
+              e.g. pick <Num>3–0</Num>, result <Num>2–1</Num> → winner only → base <Num>4</Num>
             </p>
-          </li>
-          <li>
-            <Em>Goal difference</Em> … <Num>+2</Num>
-            <p className="mt-1 text-white/60">
-              +2 if the goal difference matches your pick and the result.
-            </p>
-            <p className="mt-1 text-white/55">
-              e.g. pick <Num>2–0</Num> (diff 2), result <Num>3–1</Num> (diff 2) → <Num>+2</Num>
-            </p>
-          </li>
-          <li>
-            <Em>Exact score</Em> … <Num>+2</Num>
           </li>
         </ol>
       </HighlightBlock>

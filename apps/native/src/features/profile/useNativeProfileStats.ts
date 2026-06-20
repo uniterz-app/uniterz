@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProfileDailyTrendRow } from "../../../../../lib/profile/profileDailyTrendRow";
+import type { ProfileStatsStreakContext } from "../../../../../lib/profile/profileStreakScope";
+import type { MyRankMetricValueDeltas } from "../../../../../lib/rankings/myRankMetricValueDeltas";
 import {
   fetchDailyTrendFirestoreFallback,
-  fetchProfileUserStats,
   fetchProfileUserStatsAll,
   fetchRankPlayoffTrend,
+  normalizeProfileDailyTrendRows,
+  resolveProfileDailyTrend,
   type ProfileSummaryNative,
   type ProfileSummaryRanksNative,
   type RankPlayoffTrendPointNative,
@@ -18,6 +21,7 @@ export type NativeProfileStatsState = {
   stats: Record<string, unknown> | null;
   dailyTrend: ProfileDailyTrendRow[];
   rankTrend: RankPlayoffTrendPointNative[];
+  metricValueDeltas: MyRankMetricValueDeltas | null;
   error: string | null;
 };
 
@@ -28,6 +32,7 @@ const idleState: NativeProfileStatsState = {
   stats: null,
   dailyTrend: [],
   rankTrend: [],
+  metricValueDeltas: null,
   error: null,
 };
 
@@ -35,16 +40,34 @@ const idleState: NativeProfileStatsState = {
  * Web `ProfilePageBaseV2` + `useUserStatsV2` / `useProfilePlayoffRankTrend` に相当する取得。
  * サマリー・グラフは stats と日次トレンド・順位推移が揃うまで待つ（Web の overviewReady と同様）。
  */
-export function useNativeProfileStats(uid: string | undefined, enabled: boolean) {
+export function useNativeProfileStats(
+  uid: string | undefined,
+  enabled: boolean,
+  profileStatsContext?: ProfileStatsStreakContext,
+  /** Firestore 日次フォールバックに必要。自分プロフィール初回は `status === "ready"` を渡す */
+  authReady = true
+) {
   const [state, setState] = useState<NativeProfileStatsState>(idleState);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const rankingLeague = profileStatsContext?.rankingLeague ?? "worldcup";
+  const wcStage = profileStatsContext?.wcStage ?? "overall";
+  const statsEnabled = enabled && authReady;
+
+  const refetchDailyTrend = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
+
+  const backfillAttemptedRef = useRef<string>("");
 
   useEffect(() => {
-    if (!enabled || !uid) {
+    if (!statsEnabled || !uid) {
       setState(idleState);
+      backfillAttemptedRef.current = "";
       return;
     }
 
     const targetUid = uid;
+    const ctx: ProfileStatsStreakContext = { rankingLeague, wcStage };
     let cancelled = false;
 
     async function run() {
@@ -55,45 +78,25 @@ export function useNativeProfileStats(uid: string | undefined, enabled: boolean)
         stats: null,
         dailyTrend: [],
         rankTrend: [],
+        metricValueDeltas: null,
         error: null,
       });
 
       try {
         const [bundle, rankRows] = await Promise.all([
-          fetchProfileUserStatsAll(targetUid),
-          fetchRankPlayoffTrend(targetUid),
+          fetchProfileUserStatsAll(targetUid, ctx),
+          fetchRankPlayoffTrend(targetUid, ctx),
         ]);
         if (cancelled) return;
 
-        /** チャートが参照するのは `date` が埋まった行のみ（`ProfileDailyTrendChartNative` と整合） */
-        const hasChartUsableDates = (rows: typeof bundle.dailyTrend) =>
-          rows.some((r) => String(r.date ?? "").trim().length > 0);
-
-        /** 結合 `parts=stats,phase,trend` で `dailyTrend` だけ欠けるケースに備え `trend` 単独も試す */
-        const apiTrendEmpty =
-          bundle.dailyTrend.length === 0 || !hasChartUsableDates(bundle.dailyTrend);
-
-        let dailyTrend = apiTrendEmpty
-          ? await fetchDailyTrendFirestoreFallback(targetUid)
-          : bundle.dailyTrend;
-
-        if (!hasChartUsableDates(dailyTrend)) {
-          try {
-            const trendOnly = await fetchProfileUserStats(targetUid, "trend");
-            if (hasChartUsableDates(trendOnly.dailyTrend)) {
-              dailyTrend = trendOnly.dailyTrend;
-            }
-          } catch {
-            /* 後段の Firestore のみで続行 */
-          }
-        }
-
-        if (!hasChartUsableDates(dailyTrend)) {
-          const fb = await fetchDailyTrendFirestoreFallback(targetUid);
-          if (hasChartUsableDates(fb)) dailyTrend = fb;
-        }
-
+        const dailyTrend = await resolveProfileDailyTrend(
+          targetUid,
+          ctx,
+          bundle.dailyTrend
+        );
         if (cancelled) return;
+
+        backfillAttemptedRef.current = "";
 
         setState({
           loading: false,
@@ -102,6 +105,7 @@ export function useNativeProfileStats(uid: string | undefined, enabled: boolean)
           stats: bundle.stats,
           dailyTrend,
           rankTrend: rankRows,
+          metricValueDeltas: bundle.metricValueDeltas,
           error: null,
         });
       } catch (e) {
@@ -114,6 +118,7 @@ export function useNativeProfileStats(uid: string | undefined, enabled: boolean)
           stats: null,
           dailyTrend: [],
           rankTrend: [],
+          metricValueDeltas: null,
           error: msg,
         });
       }
@@ -123,9 +128,47 @@ export function useNativeProfileStats(uid: string | undefined, enabled: boolean)
     return () => {
       cancelled = true;
     };
-  }, [uid, enabled]);
+  }, [uid, statsEnabled, rankingLeague, wcStage, refreshKey]);
 
-  const overviewReady = !!uid && enabled && !state.loading && state.error == null;
+  /** サマリーはあるのに日次だけ空 → Firestore を再試行（初回 auth タイミング差の救済） */
+  useEffect(() => {
+    if (!statsEnabled || !uid || state.loading || state.error) return;
+    if (state.dailyTrend.length > 0) return;
+    if (!state.summary || state.summary.posts <= 0) return;
 
-  return { ...state, overviewReady };
+    const dedupeKey = `${uid}:${rankingLeague}:${wcStage ?? "overall"}:${refreshKey}`;
+    if (backfillAttemptedRef.current === dedupeKey) return;
+    backfillAttemptedRef.current = dedupeKey;
+
+    const ctx: ProfileStatsStreakContext = { rankingLeague, wcStage };
+    let cancelled = false;
+
+    void (async () => {
+      const rows = normalizeProfileDailyTrendRows(
+        await fetchDailyTrendFirestoreFallback(uid, ctx)
+      );
+      if (cancelled || rows.length === 0) return;
+      setState((prev) =>
+        prev.dailyTrend.length > 0 ? prev : { ...prev, dailyTrend: rows }
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    uid,
+    statsEnabled,
+    rankingLeague,
+    wcStage,
+    refreshKey,
+    state.loading,
+    state.error,
+    state.dailyTrend.length,
+    state.summary,
+  ]);
+
+  const overviewReady = !!uid && statsEnabled && !state.loading && state.error == null;
+
+  return { ...state, overviewReady, refetchDailyTrend };
 }

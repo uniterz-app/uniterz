@@ -24,6 +24,8 @@ import CommunityDetailScreenNative from "../features/leaderboards/CommunityDetai
 import MobileCommunityGuidelinesScreen from "../features/profile/mobileScreens/MobileCommunityGuidelinesScreen";
 import ProfileSettingsScreenNative from "../features/profile/screens/ProfileSettingsScreenNative";
 import ProfilePasswordScreenNative from "../features/profile/screens/ProfilePasswordScreenNative";
+import { useFirebaseUser } from "../auth/FirebaseUserProvider";
+import { useNativeUserLanguage } from "../hooks/useNativeUserLanguage";
 import AnnouncementDetailScreenNative from "../features/profile/screens/AnnouncementDetailScreenNative";
 import ProSuccessScreenNative from "../features/profile/screens/ProSuccessScreenNative";
 import PlanChangeScreenNative from "../features/profile/screens/PlanChangeScreenNative";
@@ -62,8 +64,9 @@ const screenOptions = {
 };
 
 function GuidelinesScreenWrapper() {
-  const navigation = useNavigation();
-  return <MobileCommunityGuidelinesScreen language="ja" onClose={() => navigation.goBack()} />;
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return <MobileCommunityGuidelinesScreen language={language} />;
 }
 
 function GamesStackScreen() {
@@ -135,6 +138,7 @@ function ProfileHomeRoute() {
       bottomReserveY={bottomContentReserveY}
       routeHandle={route.params?.handle}
       fromRankings={route.params?.fromRankings === true}
+      openSettingsOnMount={route.params?.openSettings === true}
     />
   );
 }

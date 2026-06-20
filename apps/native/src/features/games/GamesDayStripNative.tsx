@@ -13,6 +13,7 @@ import { toDateKeyInTimeZone } from "../../utils/date";
 import DayStripChipNative from "./DayStripChipNative";
 import {
   DAY_STRIP_GAP_PX,
+  DAY_STRIP_CHIP_SIZE,
   DAY_STRIP_H_PAD,
   DAY_STRIP_SUPPRESS_SNAP_INIT_MS,
   DAY_STRIP_SUPPRESS_SNAP_MS,
@@ -70,7 +71,8 @@ export default function GamesDayStripNative({
       } else {
         x = Math.max(
           0,
-          idx * (48 + DAY_STRIP_GAP_PX) - (windowWidth - 48) / 2
+          idx * (DAY_STRIP_CHIP_SIZE + DAY_STRIP_GAP_PX) -
+            (windowWidth - DAY_STRIP_CHIP_SIZE) / 2
         );
       }
       scrollingByCode.current = true;

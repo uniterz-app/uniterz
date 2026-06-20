@@ -2,9 +2,9 @@ import type { TextStyle, ViewStyle } from "react-native";
 
 /** Web `resultLiveBadgeClass` / Native `badgeUpset` に寄せた LIVE ピル */
 export const liveMarkPillCyberBase: ViewStyle = {
-  paddingHorizontal: 6,
+  paddingHorizontal: 10,
   paddingVertical: 3,
-  borderRadius: 6,
+  borderRadius: 4,
   borderWidth: 1,
   borderColor: "rgba(248,113,113,0.72)",
   backgroundColor: "rgba(220,38,38,0.94)",
@@ -19,7 +19,7 @@ export const liveMarkTextCyberBase: TextStyle = {
   color: "#fef2f2",
   fontSize: 9,
   fontWeight: "900",
-  letterSpacing: 0.4,
+  letterSpacing: 1.26,
   textTransform: "uppercase",
   includeFontPadding: false,
   textShadowColor: "rgba(254,202,202,0.75)",

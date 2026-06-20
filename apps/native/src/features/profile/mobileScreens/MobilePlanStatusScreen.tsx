@@ -68,7 +68,7 @@ export default function MobilePlanStatusScreen({
 
   if (loading) {
     return (
-      <MobilePageShell title={title} onClose={onClose}>
+      <MobilePageShell title={title} appBackground onClose={onClose}>
         <View style={styles.center}>
           <Text style={styles.muted}>{isJa ? "読み込み中…" : "Loading..."}</Text>
         </View>
@@ -77,7 +77,7 @@ export default function MobilePlanStatusScreen({
   }
 
   return (
-    <MobilePageShell title={title} onClose={onClose}>
+    <MobilePageShell title={title} appBackground onClose={onClose}>
       <View style={styles.wrap}>
         <View style={styles.card}>
           <View style={styles.logoRow}>
@@ -176,6 +176,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.8)",
     paddingHorizontal: 24,
     paddingVertical: 28,
+    shadowColor: "rgba(0,255,255,0.18)",
+    shadowOpacity: 0.5,
+    shadowRadius: 26,
+    elevation: 8,
   },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
   logo: { width: 40, height: 40, opacity: 0.95 },

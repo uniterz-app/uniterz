@@ -8,7 +8,7 @@ import {
 } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import type { AuthStatus } from "../shared/authState";
+import type { AuthStatus } from "@uniterz/shared";
 
 type FirebaseUserContextValue = {
   fUser: User | null;

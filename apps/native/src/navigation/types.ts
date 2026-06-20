@@ -40,16 +40,19 @@ export type ProfileStackParamList = {
         handle?: string;
         /** ランキング一覧から他人プロフィールを開いたとき */
         fromRankings?: boolean;
+        /** プロフィール編集モーダルを開く */
+        openSettings?: boolean;
       }
     | undefined;
   ProfileSettings: undefined;
   ProfilePassword: undefined;
+  PublicProfile: { handle: string; fromRankings?: boolean };
   Badges: undefined;
   Announcements: undefined;
   AnnouncementDetail: { id: string };
   PlanStatus: undefined;
   ProSubscribe: undefined;
-  ProSuccess: undefined;
+  ProSuccess: { plan?: "monthly" | "annual" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;
   CancelPlan: undefined;
@@ -57,6 +60,8 @@ export type ProfileStackParamList = {
   Help: undefined;
   Privacy: undefined;
   Terms: undefined;
+  RefundPolicy: undefined;
+  CommercialLaw: undefined;
   ElectronicNotice: undefined;
   Contact: undefined;
   FeatureRequest: undefined;

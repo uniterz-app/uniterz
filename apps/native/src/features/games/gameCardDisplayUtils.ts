@@ -1,12 +1,12 @@
 import { Platform } from "react-native";
-import { getTeamAlias } from "../../../../../lib/team-aliases";
+import { getTeamAlias } from "../../../../../lib/team-alias";
 import { splitTeamNameByLeague } from "../../../../../lib/team-name-split";
 import {
   resolveGameLiveMeta,
   resolveGameScore,
   resolveGameStartAt,
   resolveGameStatus,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import type { SupportedLeague } from "./useTodayGames";
 

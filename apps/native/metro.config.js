@@ -31,6 +31,7 @@ function resolvePackageDir(name) {
   return inProject;
 }
 config.resolver.extraNodeModules = {
+  "@uniterz/shared": path.resolve(workspaceRoot, "packages/shared/src"),
   "react-native-svg": path.resolve(projectRoot, "node_modules/react-native-svg"),
   idb: resolvePackageDir("idb"),
   // monorepo で JS だけルート側に寄るとネイティブとズレるのを防ぐ
@@ -61,6 +62,14 @@ function resolveSourceFile(basePathWithoutExt) {
 }
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (typeof moduleName === "string" && moduleName.startsWith("@uniterz/shared")) {
+    const sub = moduleName === "@uniterz/shared" ? "index" : moduleName.slice("@uniterz/shared/".length);
+    const absoluteBase = path.join(workspaceRoot, "packages/shared/src", sub);
+    const filePath = resolveSourceFile(absoluteBase);
+    if (filePath) {
+      return { type: "sourceFile", filePath };
+    }
+  }
   if (typeof moduleName === "string" && moduleName.startsWith("@/")) {
     const sub = moduleName.slice(2);
     const absoluteBase =

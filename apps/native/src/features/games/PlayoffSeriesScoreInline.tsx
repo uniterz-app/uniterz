@@ -21,8 +21,8 @@ export function PlayoffSeriesScoreInline({ homeWins, awayWins, variant }: Props)
   const homeAhead = homeWins > awayWins;
   const awayAhead = awayWins > homeWins;
   const isPreview = variant === "preview";
-  const numSize = isPreview ? 12 : 12;
-  const parenSize = isPreview ? 11 : 11;
+  const numSize = isPreview ? 12 : 14;
+  const parenSize = isPreview ? 11 : 14;
   return (
     <Text style={[s.row, isPreview ? s.rowPreview : s.rowCard]} numberOfLines={1}>
       <Text style={[s.paren, { fontSize: parenSize }]}>（</Text>
@@ -61,8 +61,8 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
   rowCard: {
-    letterSpacing: 0.2,
-    lineHeight: 13,
+    letterSpacing: 0.25,
+    lineHeight: 16,
   },
   rowPreview: {
     lineHeight: 16,

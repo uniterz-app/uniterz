@@ -1,0 +1,11 @@
+{
+  "homeScore": 4,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "che-manzambi", "teamId": "wc-che", "minute": 74 },
+    { "playerId": "che-vargas", "teamId": "wc-che", "minute": 84 },
+    { "playerId": "che-manzambi", "teamId": "wc-che", "minute": 90 },
+    { "playerId": "bih-mahmic", "teamId": "wc-bih", "minute": 93 },
+    { "playerId": "che-xhaka", "teamId": "wc-che", "minute": 97 }
+  ]
+}

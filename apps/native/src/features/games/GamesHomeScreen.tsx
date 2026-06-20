@@ -37,7 +37,7 @@ import {
   resolveGameStartAt,
   resolveGameStatus,
   resolveGameTeamName,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import { auth, db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
@@ -93,10 +93,15 @@ import {
   resolveNativeSeriesPair,
 } from "./resolveNativeSeriesStanding";
 import { getGamesTexts } from "./gamesI18n";
+import {
+  parsePreferredLeague,
+  preferredLeagueToGamesLeague,
+} from "../../../../../lib/user/preferredLeague";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import {
   isWcGoalScorerPickValidForPredictedScore,
   normalizeWcGoalScorerPick,
+  type WcGoalScorerPick,
 } from "../../../../../lib/wc/goalScorer";
 import { getWcSquadPlayer } from "../../../../../lib/wc/squads";
 import type { GameCardCenterBlock } from "./gameCardCenterTypes";
@@ -123,6 +128,7 @@ import type { GamesStackParamList } from "../../navigation/types";
 import { useScheduleTeamsNative } from "./useScheduleTeamsNative";
 import { useGamesPageSwipe } from "./useGamesPageSwipe";
 import GamesDateNavigatorNative from "./GamesDateNavigatorNative";
+import { RankingsPageTitleCyberNative } from "../rankings/RankingsPageTitleCyberNative";
 import {
   gamesLeagueTitleEntering,
   gamesScheduleShellDaySwitchEntering,
@@ -426,7 +432,7 @@ export default function GamesHomeScreen({
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const insets = useSafeAreaInsets();
-  const { fUser } = useFirebaseUser();
+  const { fUser, status: authStatus } = useFirebaseUser();
   const [filterOpen, setFilterOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showWcTabBadge, setShowWcTabBadge] = useState(false);
@@ -437,6 +443,7 @@ export default function GamesHomeScreen({
     marginMax: "",
   });
   const mainScrollRef = useRef<ScrollView | null>(null);
+  const didInitPreferredLeagueRef = useRef(false);
   const skipAutoAdvanceRef = useRef(false);
   const suppressAutoAdvanceForTodayRef = useRef(false);
   const [selectedGame, setSelectedGame] = useState<Record<string, unknown> | null>(
@@ -454,10 +461,11 @@ export default function GamesHomeScreen({
   > | null>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
   const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats"
+    null | "h2h" | "market" | "stats" | "preview" | "standings"
   >(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
+  const [goalScorerPick, setGoalScorerPick] = useState<WcGoalScorerPick | null>(null);
   const [predictSubmitting, setPredictSubmitting] = useState(false);
   const [predictedGameIds, setPredictedGameIds] = useState<Set<string>>(new Set());
   const [myPostIdByGameId, setMyPostIdByGameId] = useState<Record<string, string>>({});
@@ -520,6 +528,40 @@ export default function GamesHomeScreen({
     const key = selectedLeague === "wc" ? "wc" : "nba";
     return LEAGUE_HEADER_LABEL[key];
   }, [selectedLeague]);
+
+  useEffect(() => {
+    if (didInitPreferredLeagueRef.current || authStatus === "loading") return;
+    const uid = fUser?.uid ?? null;
+    if (!uid) {
+      didInitPreferredLeagueRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snap = await getDoc(doc(db, "users", uid));
+        if (cancelled) return;
+        const preferred = parsePreferredLeague(
+          snap.exists() ? snap.data()?.preferredLeague : null
+        );
+        if (preferred) {
+          const gamesLeague = preferredLeagueToGamesLeague(preferred);
+          if (gamesLeague === "nba" || gamesLeague === "wc") {
+            setSelectedLeague(gamesLeague);
+          }
+        }
+      } catch {
+        // Web と同じく、取得できない場合は画面既定のリーグを使う。
+      } finally {
+        if (!cancelled) didInitPreferredLeagueRef.current = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, fUser?.uid, setSelectedLeague]);
 
   useEffect(() => {
     void readWcGamesTabAnnouncementSeenNative().then((seen) => {
@@ -685,7 +727,8 @@ export default function GamesHomeScreen({
   );
   const isSoccerPredict =
     String(selectedGame?.league ?? "").toLowerCase() === "pl" ||
-    String(selectedGame?.league ?? "").toLowerCase() === "j1";
+    String(selectedGame?.league ?? "").toLowerCase() === "j1" ||
+    String(selectedGame?.league ?? "").toLowerCase() === "wc";
 
   const predictModalHomeLabel = useMemo(() => {
     if (!selectedGame) return "";
@@ -1169,6 +1212,7 @@ export default function GamesHomeScreen({
     setWinner(null);
     setScoreHome("");
     setScoreAway("");
+    setGoalScorerPick(null);
     setPredictToolsTab(null);
     setSelectedGame(sourceGame);
     setIsPredictModalOpen(true);
@@ -1213,6 +1257,8 @@ export default function GamesHomeScreen({
         setWinner(existingPrediction.winner);
         setScoreHome(String(existingPrediction.score.home));
         setScoreAway(String(existingPrediction.score.away));
+        const pick = normalizeWcGoalScorerPick(existingPrediction.goalScorer);
+        setGoalScorerPick(pick);
       }
     })();
   }
@@ -1294,11 +1340,24 @@ export default function GamesHomeScreen({
     try {
       const existingPostId = myPostIdByGameId[gameId];
       const isEditing = Boolean(existingPostId);
+      const isWcGame = String(selectedGame.league ?? "").toLowerCase() === "wc";
+      const goalScorer =
+        isWcGame &&
+        goalScorerPick &&
+        isWcGoalScorerPickValidForPredictedScore(
+          goalScorerPick,
+          { home: homeNum, away: awayNum },
+          (selectedGame.home as { teamId?: string } | undefined)?.teamId,
+          (selectedGame.away as { teamId?: string } | undefined)?.teamId
+        )
+          ? goalScorerPick
+          : null;
       if (existingPostId) {
         await updatePredictionPostApi(existingPostId, {
           winner,
           scoreHome: homeNum,
           scoreAway: awayNum,
+          goalScorer: isWcGame ? goalScorer : undefined,
         });
       } else {
         try {
@@ -1307,6 +1366,7 @@ export default function GamesHomeScreen({
             winner,
             scoreHome: homeNum,
             scoreAway: awayNum,
+            goalScorer: isWcGame ? goalScorer : undefined,
           });
         } catch (err) {
           if (
@@ -1318,6 +1378,7 @@ export default function GamesHomeScreen({
               winner,
               scoreHome: homeNum,
               scoreAway: awayNum,
+              goalScorer: isWcGame ? goalScorer : undefined,
             });
           } else {
             throw err;
@@ -1337,6 +1398,7 @@ export default function GamesHomeScreen({
       setWinner(null);
       setScoreHome("");
       setScoreAway("");
+      setGoalScorerPick(null);
       setPredictToolsTab(null);
       setIsPredictModalOpen(false);
       setSelectedGame(null);
@@ -1400,14 +1462,12 @@ export default function GamesHomeScreen({
             </Animated.View>
           </View>
           <View style={styles.gamesHeaderTitleCenter} pointerEvents="none">
-            <Animated.Text
+            <Animated.View
               key={`league-title-${gamesMotionKey}`}
               entering={webGamesMotion ? gamesLeagueTitleEntering : undefined}
-              style={styles.gamesHeaderLeagueTitle}
-              numberOfLines={1}
             >
-              {leagueHeaderLabel}
-            </Animated.Text>
+              <RankingsPageTitleCyberNative title={leagueHeaderLabel} />
+            </Animated.View>
           </View>
           <View style={styles.gamesHeaderSideRight}>
             <Animated.View
@@ -1595,6 +1655,8 @@ export default function GamesHomeScreen({
         language={language}
         predictScheduleMeta={predictScheduleMeta}
         wcGoalScorerPreview={wcGoalScorerPreview}
+        goalScorerPick={goalScorerPick}
+        setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
@@ -1698,19 +1760,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: [{ translateX: -72 }, { translateY: -10 }],
-    width: 144,
+    transform: [{ translateX: -80 }, { translateY: -12 }],
+    width: 160,
     alignItems: "center",
     zIndex: 10,
-  },
-  gamesHeaderLeagueTitle: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 20,
-    lineHeight: 22,
-    fontFamily: DISPLAY_FONT_FAMILY,
-    letterSpacing: 7,
-    textTransform: "uppercase",
-    textAlign: "center",
   },
   menuWcBadge: {
     position: "absolute",

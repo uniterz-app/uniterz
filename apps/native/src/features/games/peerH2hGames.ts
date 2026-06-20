@@ -3,7 +3,7 @@ import {
   resolveGameScore,
   resolveGameStartAt,
   resolveGameStatus,
-} from "../../shared/gameRow";
+} from "@uniterz/shared";
 
 export type PeerH2hLine = {
   id: string;

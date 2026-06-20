@@ -215,13 +215,18 @@ export default function BracketMarketScreenNative() {
   ];
 
   return (
-    <MobilePageShell title="Bracket Market" onClose={() => navigation.goBack()}>
+    <MobilePageShell title="Bracket Market" appBackground onClose={() => navigation.goBack()}>
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} />
       ) : !market ? (
         <Text style={styles.empty}>NO DATA</Text>
       ) : (
         <>
+          <View style={styles.headerCard}>
+            <Text style={styles.headerKicker}>PLAYOFF BRACKET MARKET</Text>
+            <Text style={styles.headerTitle}>{market.season}</Text>
+            <Text style={styles.headerMeta}>{market.totalEntries} entries</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -237,9 +242,6 @@ export default function BracketMarketScreenNative() {
               </Pressable>
             ))}
           </ScrollView>
-          <Text style={styles.meta}>
-            {market.season} · {market.totalEntries} entries
-          </Text>
           {tab === "late" ? (
             <View style={styles.subTabs}>
               {(["R2", "CF", "FINALS"] as const).map((round) => (
@@ -359,7 +361,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 10,
     paddingBottom: 4,
   },
   tabChip: {
@@ -395,7 +397,19 @@ const styles = StyleSheet.create({
   subTabLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "700" },
   subTabLabelActive: { color: colors.textPrimary },
   content: { padding: 16, gap: 8, paddingBottom: 32 },
-  meta: { color: colors.textSecondary, fontSize: 13, paddingHorizontal: 16, marginBottom: 4 },
+  headerCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: "rgba(34,211,238,0.18)",
+    backgroundColor: "rgba(5,8,20,0.55)",
+    alignItems: "center",
+  },
+  headerKicker: { color: "rgba(103,232,249,0.75)", fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
+  headerTitle: { color: colors.textPrimary, fontSize: 20, fontWeight: "900", marginTop: 4 },
+  headerMeta: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
   row: {
     flexDirection: "row",
     alignItems: "center",

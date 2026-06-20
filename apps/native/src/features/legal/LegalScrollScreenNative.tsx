@@ -1,8 +1,6 @@
 import { ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
-import { colors, spacing } from "../../theme/tokens";
+import { StyleSheet, Text, View } from "react-native";
+import LegalPageLayoutNative from "./LegalPageLayoutNative";
 
 type Section = { title: string; body: string };
 
@@ -12,6 +10,7 @@ type Props = {
   updatedAt?: string;
   sections: Section[];
   children?: ReactNode;
+  language?: "ja" | "en";
 };
 
 export default function LegalScrollScreenNative({
@@ -20,31 +19,30 @@ export default function LegalScrollScreenNative({
   updatedAt,
   sections,
   children,
+  language = "ja",
 }: Props) {
-  const navigation = useNavigation();
+  const lastUpdatedLabel = language === "en" ? "Last updated: " : "最終更新: ";
 
   return (
-    <MobilePageShell title={title} onClose={() => navigation.goBack()}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {description ? <Text style={styles.desc}>{description}</Text> : null}
-        {updatedAt ? <Text style={styles.updated}>最終更新: {updatedAt}</Text> : null}
-        {sections.map((s) => (
-          <View key={s.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{s.title}</Text>
-            <Text style={styles.sectionBody}>{s.body}</Text>
-          </View>
-        ))}
-        {children}
-      </ScrollView>
-    </MobilePageShell>
+    <LegalPageLayoutNative
+      title={title}
+      description={description}
+      updatedAt={updatedAt}
+      lastUpdatedLabel={lastUpdatedLabel}
+    >
+      {sections.map((s) => (
+        <View key={s.title} style={styles.section}>
+          <Text style={styles.sectionTitle}>{s.title}</Text>
+          <Text style={styles.sectionBody}>{s.body}</Text>
+        </View>
+      ))}
+      {children}
+    </LegalPageLayoutNative>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md, paddingBottom: 48, gap: spacing.md },
-  desc: { color: colors.textSecondary, fontSize: 14, lineHeight: 22 },
-  updated: { color: colors.textMuted, fontSize: 12 },
   section: { gap: 6 },
-  sectionTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "700" },
-  sectionBody: { color: colors.textSecondary, fontSize: 14, lineHeight: 22 },
+  sectionTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  sectionBody: { color: "rgba(255,255,255,0.8)", fontSize: 14, lineHeight: 22 },
 });

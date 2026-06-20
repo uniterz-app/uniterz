@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Text, View, type TextStyle, type ViewStyle } from "react-native";
 import { MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
-import { formatWcDrawPotLabel, getWcDrawPot } from "../../../../../lib/wc/drawPots";
+import { formatWcDrawPotLabel, getWcDrawPot, resolveWcDrawPotColor } from "../../../../../lib/wc/drawPots";
 
 type Props = {
   teamId: string | null | undefined;
@@ -12,11 +12,22 @@ type Props = {
 export default function WcTeamFlagWithMetaNative({ teamId, children }: Props) {
   const pot = getWcDrawPot(teamId);
   const potLabel = pot != null ? formatWcDrawPotLabel(pot) : null;
+  const potColor = pot != null ? resolveWcDrawPotColor(pot) : null;
 
   return (
     <View style={styles.stack}>
-      {potLabel ? (
-        <Text style={styles.potText}>{potLabel}</Text>
+      {potLabel && potColor ? (
+        <Text
+          style={[
+            styles.potText,
+            {
+              color: potColor.nativeColor,
+              textShadowColor: potColor.nativeTextShadowColor,
+            },
+          ]}
+        >
+          {potLabel}
+        </Text>
       ) : null}
       {children}
     </View>
@@ -32,7 +43,8 @@ const styles = {
     fontSize: 11,
     fontWeight: "900",
     fontFamily: MATCH_CARD_SCORE_FONT,
-    color: "rgba(255,255,255,0.85)",
     fontVariant: ["tabular-nums"],
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   } satisfies TextStyle,
 };
