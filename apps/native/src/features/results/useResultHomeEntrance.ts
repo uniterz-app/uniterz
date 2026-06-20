@@ -428,17 +428,15 @@ export function useResultPostCardEntrance({
     transform: [{ scale: hitMissSc.value }],
   }));
 
+  /** transformOrigin は端末によって不安定なため scaleX のみ（左起点は statBarRevealSlot の alignSelf で担保） */
   const statBarSlotStyle0 = useAnimatedStyle(() => ({
     transform: [{ scaleX: bar0.value }],
-    transformOrigin: ["0%", "50%", 0],
   }));
   const statBarSlotStyle1 = useAnimatedStyle(() => ({
     transform: [{ scaleX: bar1.value }],
-    transformOrigin: ["0%", "50%", 0],
   }));
   const statBarSlotStyle2 = useAnimatedStyle(() => ({
     transform: [{ scaleX: bar2.value }],
-    transformOrigin: ["0%", "50%", 0],
   }));
 
   const statValueStyle0 = useAnimatedStyle(() => ({ opacity: val0.value }));

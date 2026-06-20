@@ -19,6 +19,12 @@ type CacheEntry = {
 
 const cache = new Map<string, CacheEntry>();
 
+const EMPTY_WC_CACHE_READ = {
+  games: null,
+  loading: false,
+  error: null,
+} as const;
+
 function getEntry(season: string): CacheEntry {
   let entry = cache.get(season);
   if (!entry) {
@@ -135,7 +141,7 @@ export function readWcSeasonGamesCache(season: string | null | undefined): {
   error: string | null;
 } {
   if (!season) {
-    return { games: null, loading: false, error: null };
+    return EMPTY_WC_CACHE_READ;
   }
   const entry = getEntry(season);
   return {

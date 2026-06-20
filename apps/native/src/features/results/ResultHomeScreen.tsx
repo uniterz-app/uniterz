@@ -1195,6 +1195,10 @@ export default function ResultHomeScreen({
           sections={sections}
           keyExtractor={(item) => item.id}
           stickySectionHeadersEnabled={false}
+          initialNumToRender={4}
+          maxToRenderPerBatch={4}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === "android"}
           contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
@@ -1839,6 +1843,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     overflow: "hidden",
+    alignItems: "flex-start",
   },
   statLabel: {
     width: MOBILE_RESULT_STAT_LABEL_W,

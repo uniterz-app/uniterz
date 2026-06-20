@@ -20,7 +20,8 @@ type Props = {
 /** Web `ResultStreakCyberFrame` */
 export default function ResultStreakCyberFrameNative({
   activeWinStreak,
-  showSweep = true,
+  /** 一覧は GPU 負荷のため false（Predict オーバーレイ等のみ true） */
+  showSweep = false,
   shellContext = "default",
 }: Props) {
   const tier = resultStreakTier(activeWinStreak);

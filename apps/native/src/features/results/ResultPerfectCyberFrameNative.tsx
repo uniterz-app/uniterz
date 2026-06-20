@@ -23,7 +23,8 @@ const PERFECT_TOP_LINE = [
 
 /** Web `ResultPerfectCyberFrame` */
 export default function ResultPerfectCyberFrameNative({
-  showSweep = true,
+  /** 一覧は GPU 負荷のため false（Predict オーバーレイ等のみ true） */
+  showSweep = false,
   shellContext = "default",
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
