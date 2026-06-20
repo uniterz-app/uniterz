@@ -13,7 +13,7 @@ import {
 } from "@/app/component/rankings/_data/mockRows";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingCard from "@/app/component/rankings/RankingCard";
-import { restContainer } from "@/app/component/rankings/anim";
+import { restContainer, restItem } from "@/app/component/rankings/anim";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
@@ -68,6 +68,7 @@ import {
   getMyMetricValue,
   resolveMyRankForCard,
 } from "@/lib/rankings/rankingsPageShared";
+import { sortRankingRowsByMetric } from "@/lib/rankings/sortRankingRows";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import { visibleMetricsForLeague, buildRankingTabMetrics } from "@/lib/rankings/wcVisibleMetrics";
 
@@ -165,7 +166,7 @@ export default function MobileRankingsPage() {
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length === 0) return [];
-    return toMobileRows(metric, rawRows);
+    return sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows));
   }, [metric, rawRows]);
 
   const top3 = rows.slice(0, 3);
@@ -393,6 +394,7 @@ export default function MobileRankingsPage() {
                   participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
                   countUpEnabled={!skipCountUp}
+                  entranceEnabled={!prefersReducedMotion}
                   language={language}
                 />
               <motion.div
@@ -404,19 +406,24 @@ export default function MobileRankingsPage() {
               >
                 {restRows.length > 0 &&
                   restRows.map((r, i) => (
-                    <RankingCard
+                    <motion.div
                       key={`${metric}-${r.uid}`}
-                      row={r}
-                      rank={i + 4}
-                      metric={metric}
-                      rankPhase={phase}
-                      playoffRound={effectiveRound}
-                      rankingLeague={rankingLeague}
-                      wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
-                      participantCount={rankingListCount || null}
-                      language={language}
-                      animateValue={!skipCountUp && i < 6}
-                    />
+                      variants={restItem}
+                      custom={i}
+                    >
+                      <RankingCard
+                        row={r}
+                        rank={i + 4}
+                        metric={metric}
+                        rankPhase={phase}
+                        playoffRound={effectiveRound}
+                        rankingLeague={rankingLeague}
+                        wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
+                        participantCount={rankingListCount || null}
+                        language={language}
+                        animateValue={!skipCountUp && i < 6}
+                      />
+                    </motion.div>
                   ))}
               </motion.div>
                 </div>

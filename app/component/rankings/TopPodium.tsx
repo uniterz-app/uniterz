@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import { useCallback, useEffect, useMemo } from "react";
 import { Crown } from "lucide-react";
 import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
@@ -38,6 +40,7 @@ export default function TopPodium({
   participantCount,
   onTopCountDone,
   countUpEnabled = true,
+  entranceEnabled = true,
   language = "ja",
   compact = false,
   shellTone = "default",
@@ -52,12 +55,32 @@ export default function TopPodium({
   onTopCountDone?: () => void;
   /** false = スコアを即表示（プロフィールから戻ったとき等） */
   countUpEnabled?: boolean;
+  /** false = 入場モーションなし */
+  entranceEnabled?: boolean;
   language?: Language;
   /** コミュニティ等 — コンパクト行 */
   compact?: boolean;
   shellTone?: "default" | "subtle";
 }) {
+  const reduceMotion = useReducedMotion() === true;
+  const motionOn = entranceEnabled && !reduceMotion;
   const router = useRouter();
+
+  const cardVariants = useMemo<Variants>(
+    () => ({
+      hidden: { opacity: 0, y: -10 },
+      show: (step: number) => ({
+        opacity: 1,
+        y: 0,
+        transition: {
+          delay: 0.14 + step * 0.14,
+          duration: 0.58,
+          ease: [0.22, 1, 0.36, 1],
+        },
+      }),
+    }),
+    []
+  );
 
   const pathname = usePathname() ?? "";
   const base =
@@ -141,7 +164,13 @@ export default function TopPodium({
           );
 
           return (
-            <div key={row.uid}>
+            <motion.div
+              key={row.uid}
+              variants={cardVariants}
+              initial={motionOn ? "hidden" : "show"}
+              animate="show"
+              custom={rank - 1}
+            >
               <Link
                 href={profileHref}
                 className="relative block"
@@ -174,7 +203,24 @@ export default function TopPodium({
                   subtleShell={shellTone === "subtle"}
                   showCrownSlot={
                     rank === 1 ? (
-                      <div className="pointer-events-none leading-none">
+                      <motion.div
+                        className="pointer-events-none leading-none"
+                        initial={
+                          motionOn
+                            ? { opacity: 0, y: -4, scale: 0.92 }
+                            : { opacity: 1, y: 0, scale: 1 }
+                        }
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={
+                          motionOn
+                            ? {
+                                delay: 0.48,
+                                duration: 0.45,
+                                ease: [0.22, 1, 0.36, 1],
+                              }
+                            : { duration: 0 }
+                        }
+                      >
                         <Crown
                           className={
                             compact
@@ -186,7 +232,7 @@ export default function TopPodium({
                           strokeWidth={1.7}
                           aria-hidden
                         />
-                      </div>
+                      </motion.div>
                     ) : null
                   }
                   nameExtra={
@@ -215,7 +261,7 @@ export default function TopPodium({
                   }
                 />
               </Link>
-            </div>
+            </motion.div>
           );
         })}
       </div>

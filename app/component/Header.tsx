@@ -21,7 +21,7 @@ export default function Header() {
 
       {/* container */}
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col items-center gap-0.5 md:max-w-[900px] lg:max-w-[1200px]">
-        {/* UNITERZ：サイドアクセント + レター入場 + シマー */}
+        {/* UNITERZ：サイドアクセント + レター入場 */}
         <div className="flex w-full items-center justify-center gap-3 md:gap-4">
           {/* 左アクセント（線 + ダイヤ） */}
           <motion.div
@@ -34,29 +34,13 @@ export default function Header() {
           <motion.div
             className="hidden h-1.5 w-1.5 rotate-45 border border-cyan-200/55 sm:block"
             initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
-            animate={
-              reduceMotion
-                ? { opacity: 0.7 }
-                : { opacity: [0.4, 0.85, 0.4], scale: 1 }
-            }
-            transition={
-              reduceMotion
-                ? undefined
-                : {
-                    opacity: {
-                      delay: 0.9,
-                      duration: 3.2,
-                      ease: "easeInOut",
-                      repeat: Infinity,
-                    },
-                    scale: { delay: 0.55, duration: 0.4, ease: "easeOut" },
-                  }
-            }
+            animate={{ opacity: 0.7, scale: 1 }}
+            transition={{ delay: 0.55, duration: 0.4, ease: "easeOut" }}
             style={{ boxShadow: "0 0 6px rgba(103,232,249,0.45)" }}
             aria-hidden
           />
 
-          {/* ワードマーク（ベース文字 + シマーオーバーレイの二層） */}
+          {/* ワードマーク */}
           <div
             className="relative text-[22px] tracking-[0.35em] md:text-[28px]"
             style={{ fontFamily: "Bebas Neue" }}
@@ -71,7 +55,6 @@ export default function Header() {
                 <motion.span
                   key={`${ch}-${i}`}
                   className="inline-block"
-                  // blur フィルターのアニメは毎フレーム再描画になるため opacity / y のみで表現
                   initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -84,39 +67,14 @@ export default function Header() {
                 </motion.span>
               ))}
             </div>
-            {/* 時折ハイライトが走るシマー層 */}
-            {!reduceMotion && (
-              <div
-                className="header-wordmark-shimmer pointer-events-none absolute inset-0"
-                aria-hidden
-              >
-                UNITERZ
-              </div>
-            )}
           </div>
 
           {/* 右アクセント（ダイヤ + 線） */}
           <motion.div
             className="hidden h-1.5 w-1.5 rotate-45 border border-cyan-200/55 sm:block"
             initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
-            animate={
-              reduceMotion
-                ? { opacity: 0.7 }
-                : { opacity: [0.4, 0.85, 0.4], scale: 1 }
-            }
-            transition={
-              reduceMotion
-                ? undefined
-                : {
-                    opacity: {
-                      delay: 2.5,
-                      duration: 3.2,
-                      ease: "easeInOut",
-                      repeat: Infinity,
-                    },
-                    scale: { delay: 0.55, duration: 0.4, ease: "easeOut" },
-                  }
-            }
+            animate={{ opacity: 0.7, scale: 1 }}
+            transition={{ delay: 0.55, duration: 0.4, ease: "easeOut" }}
             style={{ boxShadow: "0 0 6px rgba(103,232,249,0.45)" }}
             aria-hidden
           />
@@ -129,7 +87,7 @@ export default function Header() {
           />
         </div>
 
-        {/* cyber line + light sweep */}
+        {/* cyber line + light sweep（常時ループはここだけ） */}
         <div className="relative w-full">
           <motion.div
             className="relative z-1 h-[2px] w-full overflow-hidden rounded-full"
@@ -138,27 +96,19 @@ export default function Header() {
             transition={{ delay: 0.25, duration: 0.8, ease: [0.22, 0.61, 0.36, 1] }}
           >
             <div className="absolute inset-0 bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-95" />
-            <div
-              className="animate-header-cyber-sweep pointer-events-none absolute inset-y-0 left-0 w-[42%] max-w-[220px] opacity-90 will-change-transform"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 35%, rgba(224,255,255,0.95) 50%, rgba(255,255,255,0.35) 65%, transparent 100%)",
-              }}
-              aria-hidden
-            />
+            {!reduceMotion ? (
+              <div
+                className="animate-header-cyber-sweep pointer-events-none absolute inset-y-0 left-0 w-[42%] max-w-[220px] opacity-90 will-change-transform"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 35%, rgba(224,255,255,0.95) 50%, rgba(255,255,255,0.35) 65%, transparent 100%)",
+                }}
+                aria-hidden
+              />
+            ) : null}
           </motion.div>
-          {/* グロー（ゆっくり脈動） */}
-          <motion.div
-            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[2px] bg-linear-to-r from-transparent via-cyan-300 to-transparent blur-sm"
-            initial={false}
-            animate={
-              reduceMotion ? { opacity: 0.7 } : { opacity: [0.45, 0.85, 0.45] }
-            }
-            transition={
-              reduceMotion
-                ? undefined
-                : { duration: 4.5, ease: "easeInOut", repeat: Infinity }
-            }
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[2px] bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-65 blur-sm"
             aria-hidden
           />
         </div>

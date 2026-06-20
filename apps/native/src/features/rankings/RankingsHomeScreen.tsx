@@ -17,7 +17,8 @@ import {
   buildMyRankMiniMetrics,
   isMyRankMiniMetricsReady,
 } from "../../../../../lib/rankings/buildMyRankMiniMetrics";
-import { resolveMyRankForCard } from "../../../../../lib/rankings/rankingsPageShared";
+import { resolveMyRankForCard, getMyMetricValue } from "../../../../../lib/rankings/rankingsPageShared";
+import { sortRankingRowsByMetric } from "../../../../../lib/rankings/sortRankingRows";
 import {
   visibleMetricsForLeague,
 } from "../../../../../lib/rankings/wcVisibleMetrics";
@@ -53,6 +54,7 @@ import {
   RankingsMetricRowNative,
   RankingsTopPodiumNative,
 } from "./RankingsUiParts";
+import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 
 type Props = {
   bottomReserveY: number;
@@ -121,7 +123,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   const rows: RankingRowWithCountry[] = useMemo(() => {
     if (rawRows.length === 0) return [];
-    return toMobileRows(metric, rawRows);
+    return sortRankingRowsByMetric(metric, toMobileRows(metric, rawRows));
   }, [metric, rawRows]);
 
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
@@ -147,19 +149,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count) ? bundle.count : 0;
 
-  const myValue = useMemo(() => {
-    if (!myRawRow) return 0;
-    if (metric === "totalScore") return myRawRow.totalPoints ?? 0;
-    if (metric === "marginPrecision") return myRawRow.totalPrecision ?? 0;
-    if (metric === "exactHits")
-      return myRawRow.totalExactHits ?? myRawRow.totalPrecision ?? 0;
-    if (metric === "upsetScore") return myRawRow.totalUpset ?? 0;
-    if (metric === "winRate") {
-      const raw = myRawRow.winRate ?? 0;
-      return raw <= 1 ? Math.round(raw * 100) : Math.round(raw);
-    }
-    return myRawRow.activeWinStreak ?? 0;
-  }, [metric, myRawRow]);
+  const myValue = useMemo(
+    () => getMyMetricValue(metric, myRawRow),
+    [metric, myRawRow]
+  );
 
   const winRateMinPosts = round === "overall" || round === "r1" ? 20 : 1;
   const rankingHasNoEntries =
@@ -194,6 +187,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
 
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
+  const listEntranceKey = `${rankingsLeague}-${category}-${metric}-${wcStage}-${round}`;
 
   const openProfile = (row: RankingRowWithCountry) => {
     const key = profilePathKeyFromRow(row);
@@ -319,17 +313,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                   metric={metric}
                   language={language}
                   onPressProfile={openProfile}
+                  entranceKey={listEntranceKey}
                 />
                 <View style={styles.restList}>
                   {restRows.map((row, index) => (
-                    <RankingListCardNative
+                    <RankingsListEntranceRowNative
                       key={`${metric}-${row.uid}`}
-                      row={row}
-                      rank={index + 4}
-                      metric={metric}
-                      language={language}
-                      onPress={() => openProfile(row)}
-                    />
+                      index={index + 3}
+                      entranceKey={listEntranceKey}
+                      staggerMs={58}
+                    >
+                      <RankingListCardNative
+                        row={row}
+                        rank={index + 4}
+                        metric={metric}
+                        language={language}
+                        onPress={() => openProfile(row)}
+                      />
+                    </RankingsListEntranceRowNative>
                   ))}
                 </View>
               </View>

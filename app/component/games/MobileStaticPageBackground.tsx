@@ -1,16 +1,15 @@
 "use client";
 
-import RisingMotesLayer from "@/app/component/games/RisingMotesLayer";
-
 /**
- * モバイル向けの軽量固定背景。
- * オーロラ等の多層アニメは使わず、静的グラデ＋上昇バーティクルのみ。
+ * モバイル向けの軽量固定背景（アニメーションなし）。
+ * オーロラ・グリッド drift・上昇モートは使わず、静止グラデ＋ドット＋ビネットのみ。
  */
 export default function MobileStaticPageBackground() {
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      className="pointer-events-none fixed inset-0 z-[1] overflow-hidden"
       aria-hidden
+      data-page-bg="static"
     >
       <div
         className="absolute inset-0"
@@ -43,12 +42,25 @@ export default function MobileStaticPageBackground() {
       <div
         className="absolute inset-0"
         style={{
+          background:
+            "radial-gradient(ellipse 90% 55% at 50% -8%, rgba(187,247,208,0.06) 0%, transparent 70%)",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
           background: `
             radial-gradient(ellipse 95% 88% at 50% 44%, transparent 0%, rgba(0,0,0,0.2) 68%, rgba(0,0,0,0.45) 100%)
           `,
         }}
       />
-      <RisingMotesLayer lite />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0.28) 0%, transparent 24%, transparent 72%, rgba(0,0,0,0.38) 100%)",
+        }}
+      />
     </div>
   );
 }

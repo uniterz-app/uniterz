@@ -21,6 +21,7 @@ import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import { resolveMyRankForCard } from "@/lib/rankings/rankingsPageShared";
+import { sortRankingRowsByMetric } from "@/lib/rankings/sortRankingRows";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
@@ -45,44 +46,12 @@ function mergeRowsWithMeta(
   }));
 }
 
-/** バルク取得後に指標ごとに UI 行を並べ替え */
+/** バルク取得後に指標ごとに UI 行を並べ替え（CF スナップショット順と揃える） */
 function sortWebRankingRows(
   metric: MobileMetric,
   rows: WebRankingRow[]
 ): WebRankingRow[] {
-  const copy = [...rows];
-  switch (metric) {
-    case "totalScore":
-      copy.sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0));
-      break;
-    case "winRate":
-      copy.sort((a, b) => (b.winRate ?? 0) - (a.winRate ?? 0));
-      break;
-    case "marginPrecision":
-      copy.sort(
-        (a, b) =>
-          (b.marginPrecisionScore ?? 0) - (a.marginPrecisionScore ?? 0)
-      );
-      break;
-    case "exactHits":
-      copy.sort(
-        (a, b) =>
-          (b.marginPrecisionScore ?? 0) - (a.marginPrecisionScore ?? 0)
-      );
-      break;
-    case "upsetScore":
-      copy.sort((a, b) => (b.upsetScore ?? 0) - (a.upsetScore ?? 0));
-      break;
-    case "streak":
-      copy.sort((a, b) => (b.streak ?? 0) - (a.streak ?? 0));
-      break;
-    case "goalScorerHits":
-      copy.sort((a, b) => (b.goalScorerHits ?? 0) - (a.goalScorerHits ?? 0));
-      break;
-    default:
-      break;
-  }
-  return copy;
+  return sortRankingRowsByMetric(metric, rows);
 }
 
 const EMPTY_MAP: Record<MobileMetric, WebRankingRow[]> = {

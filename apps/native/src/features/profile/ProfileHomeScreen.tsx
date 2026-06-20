@@ -642,7 +642,7 @@ export default function ProfileHomeScreen({
         </View>
       );
     }
-    if (!statsBundle.overviewReady || !statsBundle.summary) {
+    if (!statsBundle.summary) {
       return (
         <View style={styles.inlineLoading}>
           <BlocksPulseLoader pixelScale={0.9} />
@@ -655,7 +655,7 @@ export default function ProfileHomeScreen({
     return (
       <View style={styles.overviewBlock}>
         <ProfileOverviewEntranceBlock index={0} entranceKey={entranceKey}>
-          {dailyTrendChart.loading ? (
+          {dailyTrendChart.loading || statsBundle.chartsLoading ? (
             <View style={styles.chartSkeleton}>
               <BlocksPulseLoader pixelScale={0.9} />
             </View>
@@ -674,7 +674,7 @@ export default function ProfileHomeScreen({
         <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
           <ProfileRankTrendChartNative
             data={statsBundle.rankTrend}
-            loading={false}
+            loading={statsBundle.chartsLoading && statsBundle.rankTrend.length === 0}
             language={language}
           />
         </ProfileOverviewEntranceBlock>

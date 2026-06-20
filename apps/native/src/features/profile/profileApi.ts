@@ -311,7 +311,7 @@ export async function fetchProfileUserStatsAll(
 /** Web `/api/profile/user-stats` と同一クエリ（parts 指定） */
 export async function fetchProfileUserStats(
   uid: string,
-  parts: "stats,phase" | "trend",
+  parts: "stats,phase" | "phase" | "trend" | "stats",
   ctx?: ProfileStatsStreakContext
 ): Promise<{
   summary: ProfileSummaryNative | null;

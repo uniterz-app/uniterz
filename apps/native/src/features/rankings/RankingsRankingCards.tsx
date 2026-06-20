@@ -5,6 +5,7 @@ import { getCountryCode } from "../../../../../lib/rankings/country";
 import { metricNum } from "../../../../../lib/rankings/metric";
 import { type RankingsLanguage } from "./rankingsTexts";
 import { CyberRankingListRowNative } from "./CyberRankingListRowNative";
+import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
 
 function RankingRowCard({
@@ -51,24 +52,31 @@ export function RankingsTopPodiumNative({
   metric,
   language,
   onPressProfile,
+  entranceKey,
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
   language: RankingsLanguage;
   onPressProfile?: (row: RankingRowWithCountry) => void;
+  entranceKey: string | number;
 }) {
   if (rows.length === 0) return null;
   return (
     <View style={styles.podiumWrap}>
       {rows.slice(0, 3).map((row, index) => (
-        <RankingRowCard
+        <RankingsListEntranceRowNative
           key={row.uid}
-          row={row}
-          rank={index + 1}
-          metric={metric}
-          language={language}
-          onPress={onPressProfile ? () => onPressProfile(row) : undefined}
-        />
+          index={index}
+          entranceKey={entranceKey}
+        >
+          <RankingRowCard
+            row={row}
+            rank={index + 1}
+            metric={metric}
+            language={language}
+            onPress={onPressProfile ? () => onPressProfile(row) : undefined}
+          />
+        </RankingsListEntranceRowNative>
       ))}
     </View>
   );

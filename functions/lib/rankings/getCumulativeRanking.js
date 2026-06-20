@@ -178,6 +178,38 @@ function rankDeltaPlacesFromHist(histSnap, myRank, prevRankRaw) {
 function normalizePlan(plan) {
     return plan === "pro" ? "pro" : "free";
 }
+function rowMetricValue(row, metric) {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    if (metric === "activeWinStreak")
+        return (_a = row.activeWinStreak) !== null && _a !== void 0 ? _a : 0;
+    if (metric === "winRate")
+        return (_b = row.winRate) !== null && _b !== void 0 ? _b : 0;
+    if (metric === "totalPoints")
+        return (_c = row.totalPoints) !== null && _c !== void 0 ? _c : 0;
+    if (metric === "totalExactHits")
+        return (_e = (_d = row.totalExactHits) !== null && _d !== void 0 ? _d : row.totalPrecision) !== null && _e !== void 0 ? _e : 0;
+    if (metric === "totalPrecision")
+        return (_f = row.totalPrecision) !== null && _f !== void 0 ? _f : 0;
+    if (metric === "totalGoalScorerHits")
+        return (_g = row.totalGoalScorerHits) !== null && _g !== void 0 ? _g : 0;
+    return (_h = row.totalUpset) !== null && _h !== void 0 ? _h : 0;
+}
+/** Same ordering as buildCumulativeRankingSnapshot `cmpSortRows`. */
+function cmpRankingRows(a, b, metric) {
+    var _a, _b, _c, _d;
+    const diff = rowMetricValue(b, metric) - rowMetricValue(a, metric);
+    if (diff !== 0)
+        return diff;
+    if (metric === "winRate") {
+        const postsDiff = ((_a = b.totalPosts) !== null && _a !== void 0 ? _a : 0) - ((_b = a.totalPosts) !== null && _b !== void 0 ? _b : 0);
+        if (postsDiff !== 0)
+            return postsDiff;
+    }
+    return ((_c = b.totalPoints) !== null && _c !== void 0 ? _c : 0) - ((_d = a.totalPoints) !== null && _d !== void 0 ? _d : 0);
+}
+function sortSnapshotRows(rows, metric) {
+    return [...rows].sort((a, b) => cmpRankingRows(a, b, metric));
+}
 function normalizeSnapshotRows(rows, metric) {
     let out = rows.map((row) => (Object.assign(Object.assign({}, row), { plan: normalizePlan(row.plan) })));
     if (metric === "totalExactHits") {
@@ -186,7 +218,7 @@ function normalizeSnapshotRows(rows, metric) {
             return (Object.assign(Object.assign({}, r), { totalExactHits: (_b = (_a = r.totalExactHits) !== null && _a !== void 0 ? _a : r.totalPrecision) !== null && _b !== void 0 ? _b : 0 }));
         });
     }
-    return out;
+    return sortSnapshotRows(out, metric);
 }
 function readStoredRankFromUser(me, metric, phase, round, wcStage) {
     return (0, readSnapshotRanksFromCumulative_1.readStoredRankFromUser)(me, metric, phase, round, wcStage);

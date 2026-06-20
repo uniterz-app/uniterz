@@ -230,7 +230,7 @@ export default function ProfileStatsTabNative({
     );
   }
 
-  if (statsBundle.loading || !statsBundle.overviewReady || !statsBundle.summary) {
+  if ((statsBundle.loading && !statsBundle.summary) || !statsBundle.summary) {
     return (
       <View style={styles.inlineLoading}>
         <BlocksPulseLoader />

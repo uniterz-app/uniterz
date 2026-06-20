@@ -121,6 +121,47 @@ function hasPhaseBonusFields(
   );
 }
 
+/** WC ステージ別 — cumulative_stats.rankingByWcStage（1 doc read、日次全件スキャンより高速） */
+function summaryFromWcCumulativeStage(
+  cumulative: Record<string, unknown> | null,
+  wcStage: WcRankingStage
+): SummaryForCards | null {
+  const block = (
+    cumulative?.rankingByWcStage as
+      | Record<string, Record<string, unknown>>
+      | undefined
+  )?.[wcStage];
+  if (!block || typeof block !== "object") return null;
+
+  const posts = safeInt(block.totalPosts);
+  if (posts <= 0) return null;
+
+  const wins = safeInt(block.totalWins);
+  const pointsSumV3 = safeNum(block.totalPoints);
+  const upsetPointsSum = safeNum(block.totalUpset);
+  const scorePrecisionSum = safeNum(block.totalPrecision);
+  const upsetBonusSum = safeNum(block.upsetBonusSum);
+  const streakBonusSum = safeNum(block.streakBonusSum);
+  const winRateRaw = safeNum(block.winRate);
+
+  return {
+    posts,
+    fullPosts: posts,
+    recent3Posts: 0,
+    wins,
+    winRate: posts > 0 ? wins / posts : winRateRaw <= 1 ? winRateRaw : winRateRaw / 100,
+    scorePrecisionSum,
+    upsetPointsSum,
+    pointsSumV3,
+    upsetChanceCount: safeInt(block.upsetOpportunityCount),
+    upsetHitCount: safeInt(block.upsetHitCount),
+    upsetBonusSum,
+    streakBonusSum,
+    basePointsSum: Math.max(0, pointsSumV3 - upsetBonusSum - streakBonusSum),
+    activeWinStreak: safeInt(block.activeWinStreak),
+  };
+}
+
 async function summaryFromDailyPhaseFallback(
   adminDb: ReturnType<typeof getAdminDb>,
   uid: string,
@@ -376,13 +417,19 @@ export async function GET(req: Request) {
     let metricValueDeltas: MyRankMetricValueDeltas | null = null;
     if (wantPhase) {
       if (rankingLeague === "worldcup" && wcStage) {
-        /** WC overview は cumulative 更新待ちを避け、日次スナップショットを直接集計する。 */
-        summary = await summaryFromDailyPhaseFallback(
-          adminDb,
-          uid,
-          phase,
+        summary = summaryFromWcCumulativeStage(
+          cumulative as Record<string, unknown> | null,
           wcStage
         );
+        if (!summary) {
+          /** cumulative 未集計ユーザー向けフォールバック */
+          summary = await summaryFromDailyPhaseFallback(
+            adminDb,
+            uid,
+            phase,
+            wcStage
+          );
+        }
         /**
          * WC（football）の現在連勝・最大連勝は updateUserStreak が試合確定時に
          * user_stats_v2 へライブ保存している。WC は football 唯一なので
