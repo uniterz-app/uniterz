@@ -24,7 +24,7 @@ const REFETCH_ALL_METRICS_NBA =
   "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
 const REFETCH_ALL_METRICS_WC =
   "totalPoints,totalExactHits,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
-const INITIAL_RANKING_METRICS = "totalPoints";
+export const INITIAL_RANKING_METRICS = "totalPoints";
 const DEFERRED_RANKING_METRICS_NBA = [
   "totalPrecision",
   "totalUpset",
@@ -58,6 +58,7 @@ type BulkCacheEntry = {
 };
 
 const bulkCache = new Map<string, BulkCacheEntry>();
+const inflightListKeys = new Set<string>();
 
 function bulkCacheKey(
   phase: RankingPhase,
@@ -247,6 +248,40 @@ function applyCacheResult(
   return { ...cached, bundles };
 }
 
+function listInflightKey(
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): string {
+  return bulkCacheKey(phase, round, wcStage, ANON_KEY);
+}
+
+/** ランキングタブ遷移前に匿名 totalPoints を温める */
+export function prefetchCumulativeRankingsList(
+  phase: RankingPhase = "playoffs",
+  round: PlayoffRoundKey = "overall",
+  wcStage: WcRankingStage | null = "overall"
+): void {
+  if (readBulkCache(phase, round, wcStage, ANON_KEY)) return;
+  const inflightKey = listInflightKey(phase, round, wcStage);
+  if (inflightListKeys.has(inflightKey)) return;
+  inflightListKeys.add(inflightKey);
+
+  void fetchBulkMetrics(INITIAL_RANKING_METRICS, null, phase, round, wcStage)
+    .then((partial) => {
+      if (!partial) return;
+      const applied = applyBulkResult(partial, null);
+      writeBulkCache(phase, round, wcStage, {
+        bundles: applied.bundles,
+        deltas: applied.deltas,
+        appliedUid: ANON_KEY,
+      });
+    })
+    .finally(() => {
+      inflightListKeys.delete(inflightKey);
+    });
+}
+
 export function useCumulativeRankingsBulk(
   phase: RankingPhase = "playoffs",
   round: PlayoffRoundKey = "overall",
@@ -265,10 +300,12 @@ export function useCumulativeRankingsBulk(
     string | null
   >(null);
 
-  const fetchSeqRef = useRef(0);
+  const listFetchSeqRef = useRef(0);
+  const personalFetchSeqRef = useRef(0);
   const phaseRoundGenRef = useRef(0);
   const metricReqSeqRef = useRef(0);
   const invalidateSeqRef = useRef(0);
+  const lastPersonalUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     const onPatchMyCountry = (ev: Event) => {
@@ -331,25 +368,115 @@ export function useCumulativeRankingsBulk(
   useEffect(() => {
     phaseRoundGenRef.current += 1;
     metricReqSeqRef.current += 1;
+    lastPersonalUidRef.current = null;
     let cancelled = false;
-    let lastFetchUidKey: string | undefined;
 
-    const currentUidKey = myUid ?? ANON_KEY;
-    const visibleCache = readBulkCache(phase, round, wcStage, currentUidKey);
-    if (visibleCache) {
-      const applied = applyCacheResult(visibleCache, myUid);
-      setByMetric(applied.bundles);
-      setMyMetricValueDeltas(applied.deltas);
-      setAppliedTotalPointsUid(applied.appliedUid);
+    const applyAnonList = (bundles: Record<string, BulkMetricPayload>) => {
+      setByMetric((prev) => {
+        const out: Record<string, BulkMetricPayload> = { ...bundles };
+        if (prev) {
+          for (const key of Object.keys(out)) {
+            const incoming = out[key]!;
+            const kept = prev[key];
+            if (
+              kept &&
+              (kept.myRank != null ||
+                kept.myRow != null ||
+                kept.myRankDeltaPlaces != null)
+            ) {
+              out[key] = {
+                ...incoming,
+                myRank: kept.myRank ?? incoming.myRank,
+                myRow: (kept.myRow ?? incoming.myRow) as Record<
+                  string,
+                  unknown
+                > | null,
+                myRankDeltaPlaces:
+                  kept.myRankDeltaPlaces ?? incoming.myRankDeltaPlaces ?? null,
+              };
+            }
+          }
+        }
+        return out;
+      });
+      setAppliedTotalPointsUid((prev) =>
+        prev && prev !== ANON_KEY ? prev : ANON_KEY
+      );
       setLoading(false);
-    } else {
-      setByMetric(null);
-      setMyMetricValueDeltas(null);
-      setAppliedTotalPointsUid(null);
-      setLoading(true);
-    }
+    };
 
-    const runFetch = async (uid: string | null, seq: number) => {
+    const applyPersonalBundle = (
+      partial: BulkFetchResult,
+      uid: string
+    ) => {
+      setByMetric((prev) => {
+        const merged =
+          applySessionCountryOverride(
+            mergeMetricBundles(prev, partial.byMetric),
+            uid
+          ) ?? mergeMetricBundles(prev, partial.byMetric);
+        writeBulkCache(phase, round, wcStage, {
+          bundles: merged,
+          deltas: partial.myMetricValueDeltas ?? null,
+          appliedUid: uid,
+        });
+        return merged;
+      });
+      if (partial.myMetricValueDeltas) {
+        setMyMetricValueDeltas(partial.myMetricValueDeltas);
+      }
+      maybeClearSessionCountryAfterFetch(partial.byMetric, uid);
+      setAppliedTotalPointsUid(uid);
+      setLoading(false);
+    };
+
+    const runListFetch = async (seq: number) => {
+      const inflightKey = listInflightKey(phase, round, wcStage);
+      inflightListKeys.add(inflightKey);
+      try {
+        const partial = await fetchBulkMetrics(
+          INITIAL_RANKING_METRICS,
+          null,
+          phase,
+          round,
+          wcStage
+        );
+        if (cancelled || seq !== listFetchSeqRef.current) return;
+
+        if (partial) {
+          const applied = applyBulkResult(partial, null);
+          applyAnonList(applied.bundles);
+          writeBulkCache(phase, round, wcStage, {
+            bundles: applied.bundles,
+            deltas: null,
+            appliedUid: ANON_KEY,
+          });
+        } else {
+          const fallback = mergeMetricBundles(null, {
+            totalPoints: emptyBulkMetric(),
+          });
+          applyAnonList(fallback);
+          writeBulkCache(phase, round, wcStage, {
+            bundles: fallback,
+            deltas: null,
+            appliedUid: ANON_KEY,
+          });
+        }
+      } catch {
+        if (cancelled || seq !== listFetchSeqRef.current) return;
+        const fallback = mergeMetricBundles(null, {
+          totalPoints: emptyBulkMetric(),
+        });
+        applyAnonList(fallback);
+      } finally {
+        inflightListKeys.delete(inflightKey);
+        if (!cancelled && seq === listFetchSeqRef.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const runPersonalFetch = async (uid: string, seq: number) => {
       try {
         const partial = await fetchBulkMetrics(
           INITIAL_RANKING_METRICS,
@@ -358,69 +485,29 @@ export function useCumulativeRankingsBulk(
           round,
           wcStage
         );
-        if (cancelled || seq !== fetchSeqRef.current) return;
-
-        if (partial) {
-          const applied = applyBulkResult(partial, uid);
-          setByMetric(applied.bundles);
-          setMyMetricValueDeltas(applied.deltas);
-          setAppliedTotalPointsUid(applied.appliedUid);
-          writeBulkCache(phase, round, wcStage, {
-            bundles: applied.bundles,
-            deltas: applied.deltas,
-            appliedUid: applied.appliedUid,
-          });
-        } else {
-          const appliedUid = uid ?? ANON_KEY;
-          const fallback =
-            applySessionCountryOverride(
-              mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
-              uid
-            ) ?? mergeMetricBundles(null, { totalPoints: emptyBulkMetric() });
-          setByMetric(fallback);
-          setAppliedTotalPointsUid(appliedUid);
-          writeBulkCache(phase, round, wcStage, {
-            bundles: fallback,
-            deltas: null,
-            appliedUid,
-          });
+        if (cancelled || seq !== personalFetchSeqRef.current) return;
+        if (!partial) {
+          setAppliedTotalPointsUid(uid);
+          return;
         }
+        applyPersonalBundle(partial, uid);
       } catch {
-        if (cancelled || seq !== fetchSeqRef.current) return;
-        const appliedUid = uid ?? ANON_KEY;
-        const fallback =
-          applySessionCountryOverride(
-            mergeMetricBundles(null, { totalPoints: emptyBulkMetric() }),
-            uid
-          ) ?? mergeMetricBundles(null, { totalPoints: emptyBulkMetric() });
-        setByMetric(fallback);
-        setAppliedTotalPointsUid(appliedUid);
-        writeBulkCache(phase, round, wcStage, {
-          bundles: fallback,
-          deltas: null,
-          appliedUid,
-        });
-      } finally {
-        if (!cancelled && seq === fetchSeqRef.current) {
-          setLoading(false);
-        }
+        if (cancelled || seq !== personalFetchSeqRef.current) return;
+        setAppliedTotalPointsUid(uid);
       }
     };
 
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (cancelled) return;
+    const hydratePersonalIfNeeded = (uid: string | null) => {
+      if (!uid || cancelled) return;
+      if (lastPersonalUidRef.current === uid) return;
+      lastPersonalUidRef.current = uid;
 
-      const uid = user?.uid ?? null;
-      const uidKey = uid ?? ANON_KEY;
-      setMyUid(uid);
-      setAuthReady(true);
-
-      if (lastFetchUidKey === uidKey) return;
-      lastFetchUidKey = uidKey;
-
-      const cached = readBulkCache(phase, round, wcStage, uidKey);
-      if (cached) {
-        const applied = applyCacheResult(cached, uid);
+      const uidCache = readBulkCache(phase, round, wcStage, uid);
+      const cachedTp = uidCache?.bundles.totalPoints;
+      const uidCacheIncomplete =
+        !!cachedTp?.myRow && cachedTp.myRank == null;
+      if (uidCache && !uidCacheIncomplete) {
+        const applied = applyCacheResult(uidCache, uid);
         setByMetric(applied.bundles);
         setMyMetricValueDeltas(applied.deltas);
         setAppliedTotalPointsUid(applied.appliedUid);
@@ -428,8 +515,61 @@ export function useCumulativeRankingsBulk(
         return;
       }
 
-      const seq = ++fetchSeqRef.current;
-      void runFetch(uid, seq);
+      const seq = ++personalFetchSeqRef.current;
+      void runPersonalFetch(uid, seq);
+    };
+
+    const anonCache = readBulkCache(phase, round, wcStage, ANON_KEY);
+    const syncUid = auth.currentUser?.uid ?? null;
+
+    if (anonCache) {
+      const applied = applyCacheResult(anonCache, null);
+      setByMetric(applied.bundles);
+      setMyMetricValueDeltas(applied.deltas);
+      setAppliedTotalPointsUid(ANON_KEY);
+      setLoading(false);
+    } else {
+      setByMetric(null);
+      setMyMetricValueDeltas(null);
+      setAppliedTotalPointsUid(null);
+      setLoading(true);
+      const seq = ++listFetchSeqRef.current;
+      void runListFetch(seq);
+    }
+
+    if (syncUid) {
+      setMyUid(syncUid);
+      setAuthReady(true);
+      const uidCache = readBulkCache(phase, round, wcStage, syncUid);
+      const cachedTp = uidCache?.bundles.totalPoints;
+      const uidCacheIncomplete =
+        !!cachedTp?.myRow && cachedTp.myRank == null;
+      if (uidCache && !uidCacheIncomplete) {
+        const applied = applyCacheResult(uidCache, syncUid);
+        setByMetric(applied.bundles);
+        setMyMetricValueDeltas(applied.deltas);
+        setAppliedTotalPointsUid(applied.appliedUid);
+        setLoading(false);
+        lastPersonalUidRef.current = syncUid;
+      } else {
+        hydratePersonalIfNeeded(syncUid);
+      }
+    }
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (cancelled) return;
+
+      const uid = user?.uid ?? null;
+      setMyUid(uid);
+      setAuthReady(true);
+
+      if (!uid) {
+        lastPersonalUidRef.current = null;
+        setAppliedTotalPointsUid(ANON_KEY);
+        return;
+      }
+
+      hydratePersonalIfNeeded(uid);
     });
 
     return () => {
@@ -445,8 +585,15 @@ export function useCumulativeRankingsBulk(
       if (byMetric?.[metric]) return;
 
       const uidForMetric = myUid;
+      let fetchUid: string | null = null;
       if (uidForMetric) {
-        if (appliedTotalPointsUid !== uidForMetric) return;
+        if (appliedTotalPointsUid === uidForMetric) {
+          fetchUid = uidForMetric;
+        } else if (appliedTotalPointsUid === ANON_KEY) {
+          fetchUid = null;
+        } else {
+          return;
+        }
       } else if (appliedTotalPointsUid !== ANON_KEY) {
         return;
       }
@@ -456,7 +603,7 @@ export function useCumulativeRankingsBulk(
       try {
         const partial = await fetchBulkMetrics(
           metric,
-          uidForMetric,
+          fetchUid,
           phase,
           round,
           wcStage
@@ -468,32 +615,32 @@ export function useCumulativeRankingsBulk(
             const merged =
               applySessionCountryOverride(
                 mergeMetricBundles(p, partial.byMetric),
-                uidForMetric
+                fetchUid
               ) ?? mergeMetricBundles(p, partial.byMetric);
             writeBulkCache(phase, round, wcStage, {
               bundles: merged,
               deltas: partial.myMetricValueDeltas ?? myMetricValueDeltas,
-              appliedUid: uidForMetric ?? ANON_KEY,
+              appliedUid: fetchUid ?? ANON_KEY,
             });
             return merged;
           });
           if (partial.myMetricValueDeltas) {
             setMyMetricValueDeltas(partial.myMetricValueDeltas);
           }
-          if (uidForMetric) {
-            maybeClearSessionCountryAfterFetch(partial.byMetric, uidForMetric);
+          if (fetchUid) {
+            maybeClearSessionCountryAfterFetch(partial.byMetric, fetchUid);
           }
         } else {
           setByMetric((p) => {
             const merged =
               applySessionCountryOverride(
                 mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
-                uidForMetric
+                fetchUid
               ) ?? mergeMetricBundles(p, { [metric]: emptyBulkMetric() });
             writeBulkCache(phase, round, wcStage, {
               bundles: merged,
               deltas: myMetricValueDeltas,
-              appliedUid: uidForMetric ?? ANON_KEY,
+              appliedUid: fetchUid ?? ANON_KEY,
             });
             return merged;
           });
@@ -504,12 +651,12 @@ export function useCumulativeRankingsBulk(
           const merged =
             applySessionCountryOverride(
               mergeMetricBundles(p, { [metric]: emptyBulkMetric() }),
-              uidForMetric
+              fetchUid
             ) ?? mergeMetricBundles(p, { [metric]: emptyBulkMetric() });
           writeBulkCache(phase, round, wcStage, {
             bundles: merged,
             deltas: myMetricValueDeltas,
-            appliedUid: uidForMetric ?? ANON_KEY,
+            appliedUid: fetchUid ?? ANON_KEY,
           });
           return merged;
         });

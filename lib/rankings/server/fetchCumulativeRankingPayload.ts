@@ -2,7 +2,6 @@ import { unstable_cache } from "next/cache";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
-import { loadSnapshotTotalPointsRankAndDelta } from "@/lib/rankings/server/rankSnapshotHistoryTotalPoints";
 
 const ALLOWED_METRICS = [
   "totalPoints",
@@ -86,40 +85,11 @@ async function fetchSingleRanking(
   };
 }
 
-async function applyTotalPointsSnapshot(
-  uid: string,
-  phase: RankingPhase,
-  round: PlayoffRoundKey,
-  payload: OkPayload
-): Promise<OkPayload> {
-  const { latestRank, deltaPlaces } = await loadSnapshotTotalPointsRankAndDelta(
-    uid,
-    phase,
-    round
-  );
-  if (latestRank == null) return payload;
-
-  const myRow =
-    payload.myRow && typeof payload.myRow === "object"
-      ? {
-          ...(payload.myRow as Record<string, unknown>),
-          rank: latestRank,
-        }
-      : payload.myRow;
-
-  return {
-    ...payload,
-    myRank: latestRank,
-    myRow,
-    myRankDeltaPlaces: deltaPlaces,
-  };
-}
-
 const getCachedAnonRanking = unstable_cache(
   async (metric: CumulativeRankingApiMetric, phase: RankingPhase) => {
     return fetchSingleRanking(metric, null, phase, "overall");
   },
-  ["cumulative-ranking-single-v3"],
+  ["cumulative-ranking-single-v4"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -139,10 +109,5 @@ export async function getCachedCumulativeRanking(
     return fetchSingleRanking(metric, null, phase, round);
   }
 
-  const fresh = await fetchSingleRanking(metric, uidKey, phase, round);
-  if (!fresh.ok) return fresh;
-  if (metric === "totalPoints") {
-    return applyTotalPointsSnapshot(uidKey, phase, round, fresh);
-  }
-  return fresh;
+  return fetchSingleRanking(metric, uidKey, phase, round);
 }

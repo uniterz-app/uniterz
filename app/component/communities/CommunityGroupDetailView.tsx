@@ -346,7 +346,7 @@ export default function CommunityGroupDetailView({
     [groupId, metric, rows]
   );
 
-  const { topDone, handleTopCountDone } = useRankingsTopDone(rankListAnimKey);
+  const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(rankListAnimKey);
 
   return (
     <>
@@ -578,6 +578,7 @@ export default function CommunityGroupDetailView({
                   wcStage={profileStatsLeague.wcStage}
                   language={language}
                   onTopCountDone={handleTopCountDone}
+                  countUpEnabled={!skipCountUp}
                   compact
                   shellTone="subtle"
                 />

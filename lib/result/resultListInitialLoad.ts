@@ -14,6 +14,12 @@ export type ResultListPageFetchResult = {
   fullPage: boolean;
 };
 
+export type ResultListFirstPagePayload = {
+  posts: PostWithMillis[];
+  lastDoc: DocumentSnapshot | null;
+  hasMore: boolean;
+};
+
 /** 初回一覧: 直近 maxDayGroups 試合日分が揃うまでページ取得し、古い日は切り捨てる */
 export async function fetchInitialResultPostsByDayWindow(opts: {
   language: Language;
@@ -23,6 +29,10 @@ export async function fetchInitialResultPostsByDayWindow(opts: {
     extra: PostWithMillis[]
   ) => PostWithMillis[];
   maxDayGroups?: number;
+  /** 1ページ目取得直後（日付ウィンドウ完了前）に呼ぶ */
+  onFirstPage?: (payload: ResultListFirstPagePayload) => void;
+  /** true なら以降の処理・コールバックを中断（リーグ切替など） */
+  isStale?: () => boolean;
 }): Promise<{
   posts: PostWithMillis[];
   lastDoc: DocumentSnapshot | null;
@@ -32,12 +42,38 @@ export async function fetchInitialResultPostsByDayWindow(opts: {
   let accumulated: PostWithMillis[] = [];
   let lastDoc: DocumentSnapshot | null = null;
   let lastFullPage = false;
+  let firstPageDelivered = false;
 
   while (true) {
+    if (opts.isStale?.()) {
+      return {
+        posts: accumulated,
+        lastDoc,
+        hasMore: false,
+      };
+    }
+
     const page = await opts.fetchPage(lastDoc);
+    if (opts.isStale?.()) {
+      return {
+        posts: accumulated,
+        lastDoc: page.lastDoc ?? lastDoc,
+        hasMore: false,
+      };
+    }
+
     lastDoc = page.lastDoc;
     lastFullPage = page.fullPage;
     accumulated = opts.mergePosts(accumulated, page.posts);
+
+    if (!firstPageDelivered) {
+      firstPageDelivered = true;
+      opts.onFirstPage?.({
+        posts: [...accumulated],
+        lastDoc: page.lastDoc,
+        hasMore: page.fullPage,
+      });
+    }
 
     const dayCount = countResultDayGroups(accumulated, opts.language);
     if (dayCount >= maxDay) break;

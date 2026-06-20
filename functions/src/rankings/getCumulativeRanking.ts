@@ -1,8 +1,10 @@
 // functions/src/rankings/getCumulativeRanking.ts
+// ランキング一覧は cumulative_ranking_snapshots をそのまま返す。
+// 自分の順位は snapshotRanks / 一覧行の rank を参照（live count しない）。
 
 import { onRequest } from "firebase-functions/v2/https";
 import type { DocumentSnapshot } from "firebase-admin/firestore";
-import { getFirestore, FieldPath } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 import {
   getYesterdayDateKeyJST,
   loadPlayoffRoundTop20RowsLive,
@@ -10,9 +12,9 @@ import {
   RANK_SNAPSHOT_HISTORY_SUBCOL,
   RANK_DELTA_PRIOR_MAX_LOOKBACK_DAYS,
   subtractOneDayFromDateKeyJST,
-  SNAPSHOT_BUILD_PHASES,
 } from "./buildCumulativeRankingSnapshot";
 import type { WcRankingStage } from "./wcRankingStage";
+import { readStoredRankFromUser as readStoredRankFromCumulativeDoc } from "./readSnapshotRanksFromCumulative";
 import { isWcRankingStage, minPostsForWcWinRate } from "./wcRankingStage";
 
 function db() {
@@ -84,10 +86,6 @@ function isPlayoffRoundKey(v: unknown): v is PlayoffRoundKey {
   return (
     v === "overall" || v === "r1" || v === "r2" || v === "cf" || v === "finals"
   );
-}
-
-function isPhaseSnapshotBuiltDaily(phase: RankingPhase): boolean {
-  return SNAPSHOT_BUILD_PHASES.includes(phase);
 }
 
 function rankingSlice(
@@ -181,53 +179,12 @@ function activeFootballStreak(d: any): number {
   return typeof signed === "number" && signed > 0 ? signed : 0;
 }
 
-function activeBasketballStreakRankField(): FieldPath {
-  return new FieldPath("currentStreak");
-}
-
-function activeFootballStreakRankField(): FieldPath {
-  return new FieldPath("streakFootball");
-}
-
-/** スナップショット行が誤って NBA 側と混ざった場合のガード（実際に WC ステージ投稿がある行のみ残す） */
-async function filterRankingRowsToWcStage(
-  rows: RankingRow[],
-  wcStage: WcRankingStage
-): Promise<RankingRow[]> {
-  if (rows.length === 0) return rows;
-  const refs = rows.map((r) => db().collection("cumulative_stats").doc(r.uid));
-  const snaps = await db().getAll(...refs);
-  const kept: RankingRow[] = [];
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const s = snaps[i];
-    if (!s?.exists) continue;
-    const d = s.data() as any;
-    const rr = d?.rankingByWcStage?.[wcStage];
-    if ((rr?.totalPosts ?? 0) > 0) kept.push(row);
-  }
-  return kept;
-}
-
 type UserRankingSnaps = {
   mySnap: DocumentSnapshot | null;
-  latestHistSnap: DocumentSnapshot | null;
   histSnap: DocumentSnapshot | null;
 };
 
-async function loadLatestHistSnapForUidFromNewest(
-  uid: string
-): Promise<DocumentSnapshot | null> {
-  const firestore = db();
-  const snap = await firestore
-    .collection("cumulative_stats")
-    .doc(uid)
-    .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
-    .get();
-  if (snap.empty) return null;
-  const sorted = [...snap.docs].sort((a, b) => a.id.localeCompare(b.id));
-  return sorted[sorted.length - 1] ?? null;
-}
+const EMPTY_USER_SNAPS: UserRankingSnaps = { mySnap: null, histSnap: null };
 
 async function loadLatestHistSnapForUid(
   uid: string
@@ -247,15 +204,14 @@ async function loadLatestHistSnapForUid(
   return null;
 }
 
-async function loadUserRankingSnaps(uid: string | undefined): Promise<UserRankingSnaps> {
-  if (!uid) return { mySnap: null, latestHistSnap: null, histSnap: null };
+async function loadUserRankingSnaps(
+  uid: string | undefined
+): Promise<UserRankingSnaps> {
+  if (!uid) return EMPTY_USER_SNAPS;
   const mySnap = await db().collection("cumulative_stats").doc(uid).get();
-  if (!mySnap.exists) return { mySnap, latestHistSnap: null, histSnap: null };
-  const [latestHistSnap, histSnap] = await Promise.all([
-    loadLatestHistSnapForUidFromNewest(uid),
-    loadLatestHistSnapForUid(uid),
-  ]);
-  return { mySnap, latestHistSnap, histSnap };
+  if (!mySnap.exists) return { mySnap, histSnap: null };
+  const histSnap = await loadLatestHistSnapForUid(uid);
+  return { mySnap, histSnap };
 }
 
 function parseMetricsParam(raw: unknown): Metric[] | null {
@@ -312,14 +268,197 @@ function rankDeltaPlacesFromHist(
   return d !== 0 ? d : null;
 }
 
+function normalizePlan(plan: unknown): "free" | "pro" {
+  return plan === "pro" ? "pro" : "free";
+}
+
+function normalizeSnapshotRows(
+  rows: RankingRow[],
+  metric: Metric
+): RankingRow[] {
+  let out: RankingRow[] = rows.map((row) => ({
+    ...row,
+    plan: normalizePlan(row.plan),
+  }));
+  if (metric === "totalExactHits") {
+    out = out.map((r) => ({
+      ...r,
+      totalExactHits: r.totalExactHits ?? r.totalPrecision ?? 0,
+    }));
+  }
+  return out;
+}
+
+function readStoredRankFromUser(
+  me: Record<string, unknown>,
+  metric: Metric,
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): number | null {
+  return readStoredRankFromCumulativeDoc(me, metric, phase, round, wcStage);
+}
+
+function readPriorRankFromHist(
+  histSnap: DocumentSnapshot | null,
+  metric: Metric,
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  wcStage: WcRankingStage | null
+): unknown {
+  if (!histSnap?.exists) return undefined;
+  const hd = histSnap.data() as Record<string, unknown>;
+  if (wcStage) {
+    return (
+      hd.wc as
+        | Partial<Record<WcRankingStage, Partial<Record<Metric, number>>>>
+        | undefined
+    )?.[wcStage]?.[metric];
+  }
+  if (phase === "playoffs" && round !== "overall") {
+    return (
+      hd.playoffRounds as
+        | Partial<
+            Record<PlayoffRoundKey, Partial<Record<Metric, number>>>
+          >
+        | undefined
+    )?.[round]?.[metric];
+  }
+  return (hd[phase] as Partial<Record<Metric, number>> | undefined)?.[metric];
+}
+
+function buildMyRowFromStats(
+  uid: string,
+  me: Record<string, unknown>,
+  rk: ReturnType<typeof rankingSlice>,
+  opts: {
+    wcStage: WcRankingStage | null;
+    metric: Metric;
+    myRank: number | null;
+    myRankDeltaPlaces: number | null;
+  }
+): RankingRow {
+  const streak = opts.wcStage
+    ? activeFootballStreak(me)
+    : activeBasketballStreak(me);
+
+  return {
+    uid,
+    displayName: String(me.displayName ?? ""),
+    handle: (me.handle as string | null | undefined) ?? null,
+    photoURL: (me.photoURL as string | null | undefined) ?? null,
+    countryCode: (me.countryCode as string | null | undefined) ?? null,
+    plan: me.plan === "pro" ? "pro" : "free",
+
+    totalPosts: rk.totalPosts,
+    totalWins: rk.totalWins,
+    winRate: rk.winRate,
+
+    totalPoints: rk.totalPoints,
+    totalPrecision: rk.totalPrecision,
+    totalExactHits:
+      opts.metric === "totalExactHits" ? rk.totalPrecision ?? 0 : undefined,
+    totalUpset: rk.totalUpset,
+    totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
+    activeWinStreak: streak,
+
+    rank: opts.myRank ?? 0,
+    rankDeltaPlaces: opts.myRankDeltaPlaces,
+  };
+}
+
+async function personalRankingPayloadForMetric(
+  metric: Metric,
+  phase: RankingPhase,
+  round: PlayoffRoundKey,
+  uid: string,
+  snaps: UserRankingSnaps,
+  wcStage?: WcRankingStage | null
+): Promise<MetricPayload> {
+  if (!snaps.mySnap?.exists) {
+    return {
+      count: 0,
+      rows: [],
+      myRank: null,
+      myRow: null,
+      myRankDeltaPlaces: null,
+    };
+  }
+
+  const me = snaps.mySnap.data() as Record<string, unknown>;
+  const rk = wcStage
+    ? rankingSliceWc(me, wcStage)
+    : rankingSlice(me, phase, round);
+
+  const minPosts =
+    metric === "winRate"
+      ? wcStage
+        ? minPostsForWcWinRate(wcStage)
+        : minPostsForWinRate(phase, round)
+      : 1;
+  if ((rk.totalPosts ?? 0) < minPosts) {
+    return {
+      count: 0,
+      rows: [],
+      myRank: null,
+      myRow: null,
+      myRankDeltaPlaces: null,
+    };
+  }
+
+  const myRank = readStoredRankFromUser(
+    me,
+    metric,
+    phase,
+    round,
+    wcStage ?? null
+  );
+  const myRankDeltaPlaces = rankDeltaPlacesFromHist(
+    snaps.histSnap,
+    myRank,
+    readPriorRankFromHist(
+      snaps.histSnap,
+      metric,
+      phase,
+      round,
+      wcStage ?? null
+    )
+  );
+  const myRow = buildMyRowFromStats(uid, me, rk, {
+    wcStage: wcStage ?? null,
+    metric,
+    myRank,
+    myRankDeltaPlaces,
+  });
+
+  return {
+    count: 0,
+    rows: [],
+    myRank,
+    myRow,
+    myRankDeltaPlaces,
+  };
+}
+
 async function rankingPayloadForMetric(
   metric: Metric,
   phase: RankingPhase,
   round: PlayoffRoundKey,
   uid: string | undefined,
   snaps: UserRankingSnaps,
-  wcStage?: WcRankingStage | null
+  wcStage?: WcRankingStage | null,
+  personalOnly = false
 ): Promise<MetricPayload> {
+  if (personalOnly && uid) {
+    return personalRankingPayloadForMetric(
+      metric,
+      phase,
+      round,
+      uid,
+      snaps,
+      wcStage
+    );
+  }
   const snapshotDocId = wcStage
     ? `wc_${wcStage}_${metric}`
     : round === "overall"
@@ -338,18 +477,13 @@ async function rankingPayloadForMetric(
   const rawRows: RankingRow[] = snapDoc.exists
     ? (snapDoc.data()?.rows ?? [])
     : [];
-  let rows: RankingRow[] = rawRows.map((row) => ({
-    ...row,
-    plan: row.plan === "pro" ? "pro" : "free",
-  }));
+  let rows = normalizeSnapshotRows(rawRows, metric);
   let totalCount = readSnapshotTotalCount(snapData, rows.length);
 
+  /** スナップショット未生成時のみ live フォールバック */
   if (rows.length === 0 && wcStage) {
     const live = await loadWcStageTop20RowsLive(wcStage, metric);
-    rows = live.rows.map((row) => ({
-      ...row,
-      plan: row.plan === "pro" ? "pro" : "free",
-    }));
+    rows = normalizeSnapshotRows(live.rows as RankingRow[], metric);
     totalCount = live.totalCount;
   }
 
@@ -361,101 +495,8 @@ async function rankingPayloadForMetric(
     (round === "r1" || round === "r2" || round === "cf" || round === "finals")
   ) {
     const live = await loadPlayoffRoundTop20RowsLive(round, metric);
-    rows = live.rows.map((row) => ({
-      ...row,
-      plan: row.plan === "pro" ? "pro" : "free",
-    }));
+    rows = normalizeSnapshotRows(live.rows as RankingRow[], metric);
     totalCount = live.totalCount;
-  }
-
-  if (wcStage && rows.length > 0) {
-    rows = await filterRankingRowsToWcStage(rows, wcStage);
-  }
-
-  if (metric === "totalExactHits") {
-    rows = rows.map((r) => ({
-      ...r,
-      totalExactHits: r.totalPrecision ?? 0,
-    }));
-  }
-
-  const missingPlanUids = rows
-    .filter((r) => r?.uid && r.plan !== "pro" && r.plan !== "free")
-    .map((r) => r.uid as string);
-  const rowUids = [...new Set(missingPlanUids)];
-  const planByUid = new Map<string, "free" | "pro">();
-  if (rowUids.length > 0) {
-    const refs = rowUids.map((id) => db().collection("users").doc(id));
-    const userSnaps = await db().getAll(...refs);
-    userSnaps.forEach((s, i) => {
-      const id = rowUids[i];
-      if (!id) return;
-      if (!s.exists) {
-        planByUid.set(id, "free");
-        return;
-      }
-      const u = s.data() as { plan?: string };
-      planByUid.set(id, u?.plan === "pro" ? "pro" : "free");
-    });
-    rows = rows.map((r) => ({
-      ...r,
-      plan: planByUid.get(r.uid) ?? r.plan,
-    }));
-  }
-
-  // 住んでいる国は users が最新（プロフィール保存直後も国旗表示できるよう反映）
-  const rowUidsForCountry = [
-    ...new Set(rows.map((r) => r.uid).filter(Boolean)),
-  ] as string[];
-  if (uid && !rowUidsForCountry.includes(uid)) {
-    rowUidsForCountry.push(uid);
-  }
-  const countryByUid = new Map<string, string | null | undefined>();
-  if (rowUidsForCountry.length > 0) {
-    const userRefs = rowUidsForCountry.map((id) =>
-      db().collection("users").doc(id)
-    );
-    const countrySnaps = await db().getAll(...userRefs);
-    countrySnaps.forEach((s, i) => {
-      const id = rowUidsForCountry[i];
-      if (!id) return;
-      if (!s.exists) {
-        countryByUid.set(id, undefined);
-        return;
-      }
-      const u = s.data() as { countryCode?: unknown };
-      const raw = u?.countryCode;
-      const c =
-        typeof raw === "string" && raw.trim() !== ""
-          ? raw.trim().slice(0, 8)
-          : null;
-      countryByUid.set(id, c);
-    });
-    rows = rows.map((r) => {
-      const v = countryByUid.get(r.uid);
-      if (v === undefined) return r;
-      return { ...r, countryCode: v };
-    });
-  }
-
-  if (metric === "activeWinStreak" && rows.length > 0) {
-    const streakRefs = [...new Set(rows.map((r) => r.uid).filter(Boolean))].map(
-      (id) => db().collection("cumulative_stats").doc(id)
-    );
-    const streakSnaps = await db().getAll(...streakRefs);
-    const streakByUid = new Map<string, number>();
-    streakSnaps.forEach((s) => {
-      if (!s.exists) return;
-      const d = s.data() as any;
-      streakByUid.set(
-        s.id,
-        wcStage ? activeFootballStreak(d) : activeBasketballStreak(d)
-      );
-    });
-    rows = rows.map((r) => ({
-      ...r,
-      activeWinStreak: streakByUid.get(r.uid) ?? r.activeWinStreak,
-    }));
   }
 
   let myRank: number | null = null;
@@ -463,8 +504,7 @@ async function rankingPayloadForMetric(
   let myRankDeltaPlaces: number | null = null;
 
   if (uid && snaps.mySnap?.exists) {
-    const mySnap = snaps.mySnap;
-    const me = mySnap.data() as any;
+    const me = snaps.mySnap.data() as Record<string, unknown>;
     const rk = wcStage
       ? rankingSliceWc(me, wcStage)
       : rankingSlice(me, phase, round);
@@ -485,253 +525,31 @@ async function rankingPayloadForMetric(
       };
     }
 
-    if (wcStage) {
-      const myValue =
-        metric === "activeWinStreak"
-          ? activeFootballStreak(me)
-          : metric === "winRate"
-            ? rk.winRate ?? 0
-            : metric === "totalExactHits"
-              ? rk.totalPrecision ?? 0
-              : (rk as Record<string, number>)[metric] ?? 0;
-
-      const hasRankingObj =
-        me.rankingByWcStage?.[wcStage] &&
-        typeof me.rankingByWcStage[wcStage] === "object" &&
-        (me.rankingByWcStage[wcStage].totalPosts != null ||
-          me.rankingByWcStage[wcStage].totalPoints != null);
-
-      const rankField =
-        metric === "activeWinStreak"
-          ? activeFootballStreakRankField()
-          : metric === "totalExactHits"
-            ? new FieldPath("rankingByWcStage", wcStage, "totalPrecision")
-            : hasRankingObj
-              ? metric === "winRate"
-                ? new FieldPath("rankingByWcStage", wcStage, "winRate")
-                : new FieldPath("rankingByWcStage", wcStage, metric)
-              : metric === "winRate"
-                ? "winRate"
-                : metric;
-
-      const higherQuery = db()
-        .collection("cumulative_stats")
-        .where(rankField as any, ">", myValue);
-      const higherSnap =
-        metric === "winRate"
-          ? await higherQuery
-              .where(
-                new FieldPath(
-                  "rankingByWcStage",
-                  wcStage,
-                  "totalPosts"
-                ) as any,
-                ">=",
-                minPosts
-              )
-              .count()
-              .get()
-          : await higherQuery.count().get();
-
-      myRank = (higherSnap.data().count ?? 0) + 1;
-
-      const histData = snaps.histSnap?.exists
-        ? (snaps.histSnap.data() as Record<string, unknown>)
-        : undefined;
-      const wcBlock = histData?.wc as
-        | Partial<Record<WcRankingStage, Partial<Record<Metric, number>>>>
-        | undefined;
+    const listRow = rows.find((r) => r.uid === uid);
+    if (listRow) {
+      myRank = listRow.rank;
+      myRankDeltaPlaces = listRow.rankDeltaPlaces ?? null;
+    } else {
+      myRank = readStoredRankFromUser(me, metric, phase, round, wcStage ?? null);
       myRankDeltaPlaces = rankDeltaPlacesFromHist(
         snaps.histSnap,
         myRank,
-        wcBlock?.[wcStage]?.[metric]
-      );
-
-      const myPlanResolvedWc: "free" | "pro" =
-        me.plan === "pro" ? "pro" : "free";
-      const myCountryFreshWc = uid ? countryByUid.get(uid) : undefined;
-
-      myRow = {
-        uid,
-        displayName: me.displayName ?? "",
-        handle: me.handle ?? null,
-        photoURL: me.photoURL ?? null,
-        countryCode:
-          myCountryFreshWc !== undefined
-            ? myCountryFreshWc
-            : (me.countryCode ?? null),
-        plan: myPlanResolvedWc,
-
-        totalPosts: rk.totalPosts,
-        totalWins: rk.totalWins,
-        winRate: rk.winRate,
-
-        totalPoints: rk.totalPoints,
-        totalPrecision: rk.totalPrecision,
-        totalExactHits:
-          metric === "totalExactHits" ? rk.totalPrecision ?? 0 : undefined,
-        totalUpset: rk.totalUpset,
-        totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
-        activeWinStreak: activeFootballStreak(me),
-
-        rank: myRank,
-        rankDeltaPlaces: myRankDeltaPlaces,
-      };
-
-      return {
-        count: resolveParticipantCount(totalCount, myRank),
-        rows,
-        myRank,
-        myRow,
-        myRankDeltaPlaces,
-      };
-    }
-
-    const histLatestData = snaps.latestHistSnap?.exists
-      ? (snaps.latestHistSnap.data() as Record<string, unknown> | undefined)
-      : undefined;
-    const latestHistRaw =
-      phase === "playoffs" && round !== "overall"
-        ? (
-            histLatestData?.playoffRounds as
-              | Partial<
-                  Record<
-                    PlayoffRoundKey,
-                    Partial<Record<Metric, unknown>>
-                  >
-                >
-              | undefined
-          )?.[round]
-        : (histLatestData?.[phase] as
-            | Partial<Record<Metric, unknown>>
-            | undefined);
-    const latestHistRankRaw = latestHistRaw?.[metric];
-    const latestHistRank =
-      typeof latestHistRankRaw === "number" &&
-      Number.isFinite(latestHistRankRaw) &&
-      latestHistRankRaw >= 1
-        ? Math.floor(latestHistRankRaw)
-        : null;
-
-    const storedRankRaw =
-      phase === "playoffs" && round !== "overall"
-        ? me.snapshotRanks?.playoffRounds?.[round]?.[metric]
-        : round === "overall"
-          ? me.snapshotRanks?.[phase]?.[metric]
-          : undefined;
-    const storedRank =
-      typeof storedRankRaw === "number" &&
-      Number.isFinite(storedRankRaw) &&
-      storedRankRaw >= 1
-        ? Math.floor(storedRankRaw)
-        : null;
-
-    if (metric !== "activeWinStreak" && latestHistRank != null) {
-      myRank = latestHistRank;
-    } else if (metric !== "activeWinStreak" && storedRank != null) {
-      myRank = storedRank;
-    } else if (!isPhaseSnapshotBuiltDaily(phase)) {
-      /** プレーイン確定後はスナップショットに無いユーザーは live count しない（順位が動かない前提） */
-      myRank = null;
-    } else {
-      const myValue =
-        metric === "activeWinStreak"
-          ? activeBasketballStreak(me)
-          : metric === "winRate"
-            ? rk.winRate ?? 0
-            : rk[metric] ?? 0;
-
-      const hasRankingObj =
-        round === "overall"
-          ? me.rankingByPhase?.[phase] &&
-            typeof me.rankingByPhase[phase] === "object" &&
-            (me.rankingByPhase[phase].totalPosts != null ||
-              me.rankingByPhase[phase].totalPoints != null)
-          : me.rankingByPlayoffRound?.[round] &&
-            typeof me.rankingByPlayoffRound[round] === "object" &&
-            (me.rankingByPlayoffRound[round].totalPosts != null ||
-              me.rankingByPlayoffRound[round].totalPoints != null);
-
-      const rankField =
-        metric === "activeWinStreak"
-          ? activeBasketballStreakRankField()
-          : hasRankingObj
-            ? round === "overall"
-              ? metric === "winRate"
-                ? new FieldPath("rankingByPhase", phase, "winRate")
-                : new FieldPath("rankingByPhase", phase, metric)
-              : metric === "winRate"
-                ? new FieldPath("rankingByPlayoffRound", round, "winRate")
-                : new FieldPath("rankingByPlayoffRound", round, metric)
-            : metric === "winRate"
-              ? "winRate"
-              : metric;
-
-      const higherQuery = db()
-        .collection("cumulative_stats")
-        .where(rankField as any, ">", myValue);
-      const higherSnap =
-        metric === "winRate"
-          ? await higherQuery
-              .where(
-                (round === "overall"
-                  ? new FieldPath("rankingByPhase", phase, "totalPosts")
-                  : new FieldPath("rankingByPlayoffRound", round, "totalPosts")) as any,
-                ">=",
-                minPostsForWinRate(phase, round)
-              )
-              .count()
-              .get()
-          : await higherQuery.count().get();
-
-      myRank = (higherSnap.data().count ?? 0) + 1;
-    }
-
-    const histSnap = snaps.histSnap;
-    if (histSnap?.exists && myRank != null) {
-      const hd = histSnap.data() as Record<string, unknown> | undefined;
-      const phaseBlock =
-        phase === "playoffs" && round !== "overall"
-          ? (hd?.playoffRounds as
-              | Partial<Record<PlayoffRoundKey, Partial<Record<Metric, number>>>>
-              | undefined)?.[round]
-          : (hd?.[phase] as Partial<Record<Metric, number>> | undefined);
-      myRankDeltaPlaces = rankDeltaPlacesFromHist(
-        histSnap,
-        myRank,
-        phaseBlock?.[metric]
+        readPriorRankFromHist(
+          snaps.histSnap,
+          metric,
+          phase,
+          round,
+          wcStage ?? null
+        )
       );
     }
 
-    const myPlanResolved: "free" | "pro" =
-      me.plan === "pro" ? "pro" : "free";
-
-    const myCountryFresh = uid ? countryByUid.get(uid) : undefined;
-
-    myRow = {
-      uid,
-      displayName: me.displayName ?? "",
-      handle: me.handle ?? null,
-      photoURL: me.photoURL ?? null,
-      countryCode:
-        myCountryFresh !== undefined
-          ? myCountryFresh
-          : (me.countryCode ?? null),
-      plan: myPlanResolved,
-
-      totalPosts: rk.totalPosts,
-      totalWins: rk.totalWins,
-      winRate: rk.winRate,
-
-      totalPoints: rk.totalPoints,
-      totalPrecision: rk.totalPrecision,
-      totalUpset: rk.totalUpset,
-      totalGoalScorerHits: rk.totalGoalScorerHits ?? 0,
-      activeWinStreak: activeBasketballStreak(me),
-
-      rank: myRank,
-      rankDeltaPlaces: myRankDeltaPlaces,
-    };
+    myRow = buildMyRowFromStats(uid, me, rk, {
+      wcStage: wcStage ?? null,
+      metric,
+      myRank,
+      myRankDeltaPlaces,
+    });
   }
 
   return {
@@ -757,12 +575,22 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
     const wcStage = isWcRankingStage(rawWcStage) ? rawWcStage : null;
 
     const bulkMetrics = parseMetricsParam(req.query.metrics);
+    const personalOnly =
+      req.query.personalOnly === "1" || req.query.personalOnly === "true";
     if (bulkMetrics) {
-      const snaps = await loadUserRankingSnaps(uid);
+      const snaps = uid ? await loadUserRankingSnaps(uid) : EMPTY_USER_SNAPS;
       const byMetric: Record<string, MetricPayload> = {};
       const payloads = await Promise.all(
         bulkMetrics.map((m) =>
-          rankingPayloadForMetric(m, phase, round, uid, snaps, wcStage)
+          rankingPayloadForMetric(
+            m,
+            phase,
+            round,
+            uid,
+            snaps,
+            wcStage,
+            personalOnly
+          )
         )
       );
       bulkMetrics.forEach((m, i) => {
@@ -780,14 +608,15 @@ export const getCumulativeRanking = onRequest(async (req, res) => {
 
     const rawMetric = req.query.metric;
     const metric: Metric = isMetric(rawMetric) ? rawMetric : "totalPoints";
-    const snaps = await loadUserRankingSnaps(uid);
+    const snaps = uid ? await loadUserRankingSnaps(uid) : EMPTY_USER_SNAPS;
     const payload = await rankingPayloadForMetric(
       metric,
       phase,
       round,
       uid,
       snaps,
-      wcStage
+      wcStage,
+      personalOnly
     );
 
     res.status(200).json({

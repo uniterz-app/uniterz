@@ -645,7 +645,19 @@ export async function loadWcStageTop20RowsLive(
 /* =========================================================
  * Main
  * =======================================================*/
-export async function buildCumulativeRankingSnapshot() {
+export type BuildCumulativeRankingSnapshotScope = "all" | "wc";
+
+export type BuildCumulativeRankingSnapshotOptions = {
+  /** `wc` = World Cup のみ（NBA snapshotRanks / 一覧は触らない） */
+  scope?: BuildCumulativeRankingSnapshotScope;
+};
+
+export async function buildCumulativeRankingSnapshot(
+  options: BuildCumulativeRankingSnapshotOptions = {}
+) {
+  const scope = options.scope ?? "all";
+  const wcOnly = scope === "wc";
+
   const snap = await db().collection("cumulative_stats").get();
 
   const rankByUid = new Map<
@@ -669,6 +681,7 @@ export async function buildCumulativeRankingSnapshot() {
   const top20Jobs: Top20Job[] = [];
   const topUidSet = new Set<string>();
 
+  if (!wcOnly) {
   for (const phase of SNAPSHOT_BUILD_PHASES) {
     const baseRows: BaseRow[] = snap.docs
       .map((doc) => {
@@ -727,6 +740,7 @@ export async function buildCumulativeRankingSnapshot() {
       });
     }
   }
+  }
 
   type RoundTop20Job = {
     round: PlayoffRoundKey;
@@ -740,6 +754,7 @@ export async function buildCumulativeRankingSnapshot() {
     Partial<Record<PlayoffRoundKey, PhaseRankMap>>
   >();
 
+  if (!wcOnly) {
   function ensurePlayoffRound(uid: string) {
     if (!rankByUidPlayoffRound.has(uid)) {
       rankByUidPlayoffRound.set(uid, {});
@@ -803,6 +818,7 @@ export async function buildCumulativeRankingSnapshot() {
         totalCount: sortedFull.length,
       });
     }
+  }
   }
 
   type WcTop20Job = {
@@ -894,6 +910,7 @@ export async function buildCumulativeRankingSnapshot() {
     ),
   ]);
 
+  if (!wcOnly) {
   for (const { phase, metric, rows, totalCount } of top20Jobs) {
     const enriched: SnapshotRow[] = rows.map((row) => {
       const prevBlock = prevByUid.get(row.uid);
@@ -968,6 +985,7 @@ export async function buildCumulativeRankingSnapshot() {
         { merge: true }
       );
   }
+  }
 
   for (const { stage, metric, rows, totalCount } of wcTop20Jobs) {
     const enriched: SnapshotRow[] = rows.map((row) => {
@@ -1020,16 +1038,49 @@ export async function buildCumulativeRankingSnapshot() {
     }
   };
 
-  const historyUids = new Set<string>([...rankByUid.keys(), ...rankByUidWc.keys()]);
+  const historyUids = wcOnly
+    ? new Set<string>(rankByUidWc.keys())
+    : new Set<string>([...rankByUid.keys(), ...rankByUidWc.keys()]);
   const metricValuesByUid = new Map<string, HistoryMetricValuesBlock>();
-  for (const doc of snap.docs) {
-    metricValuesByUid.set(doc.id, buildMetricValuesBlock(doc.data()));
+  if (!wcOnly) {
+    for (const doc of snap.docs) {
+      metricValuesByUid.set(doc.id, buildMetricValuesBlock(doc.data()));
+    }
   }
 
   for (const uid of historyUids) {
+    const wc = rankByUidWc.get(uid) ?? {};
+    if (wcOnly) {
+      batch.set(
+        firestore.doc(`cumulative_stats/${uid}`),
+        {
+          "snapshotRanks.updatedAt": FieldValue.serverTimestamp(),
+          "snapshotRanks.wc": wc,
+        },
+        { merge: true }
+      );
+      batch.set(
+        firestore
+          .collection("cumulative_stats")
+          .doc(uid)
+          .collection(RANK_SNAPSHOT_HISTORY_SUBCOL)
+          .doc(dateKey),
+        {
+          dateKey,
+          wc,
+          writtenAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      ops += 2;
+      if (ops >= 500) {
+        await flush();
+      }
+      continue;
+    }
+
     const per = rankByUid.get(uid) ?? { play_in: {}, playoffs: {} };
     const playoffRounds = rankByUidPlayoffRound.get(uid) ?? {};
-    const wc = rankByUidWc.get(uid) ?? {};
     /**
      * merge のネストは play_in を消さないよう、更新するフィールドだけドットパスで書く。
      * （プレーインは SNAPSHOT_BUILD_PHASES 外のため per.play_in は空のまま）
@@ -1069,8 +1120,10 @@ export async function buildCumulativeRankingSnapshot() {
 
   return {
     ok: true,
-    metrics: METRICS.length,
-    ranksWritten: rankByUid.size,
+    scope,
+    metrics: wcOnly ? WC_METRICS.length : METRICS.length,
+    ranksWritten: wcOnly ? rankByUidWc.size : rankByUid.size,
+    wcRanksWritten: rankByUidWc.size,
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
     notifiedUids: [...historyUids],

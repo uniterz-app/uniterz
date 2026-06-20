@@ -164,7 +164,7 @@ export function RankingsPageTitleCyber({
       <span
         className={[
           nameBebas.className,
-          "rankings-title-scan relative inline-block overflow-hidden italic",
+          "inline-block italic",
           mainSize,
           "tracking-[0.24em] uppercase",
           className,
@@ -176,7 +176,6 @@ export function RankingsPageTitleCyber({
         }}
       >
         {title}
-        <span aria-hidden className="rankings-title-scan__beam pointer-events-none" />
       </span>
     );
   }
@@ -234,6 +233,6 @@ export const RANKINGS_TITLE_VARIANT_META: Record<
   "scan-pulse": {
     id: "F",
     labelJa: "Scan Pulse",
-    descJa: "Horizon Chrome ＋ 走査線アニメ（サイバーHUD）",
+    descJa: "Horizon Chrome ＋ 走査線（廃止・A と同見た目）",
   },
 };

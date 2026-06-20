@@ -20,6 +20,7 @@ import { useCumulativeRankingsBulk } from "@/lib/rankings/useCumulativeRankingsB
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
+import { resolveMyRankForCard } from "@/lib/rankings/rankingsPageShared";
 
 export type WebRankingRow = RankingRowWithCountry & {
   totalPosts?: number;
@@ -146,8 +147,16 @@ export function useWebRankings(
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
   const metricReady = bundle != null;
-  const myRank = bundle?.myRank ?? null;
-  const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
+  const rawRows = Array.isArray(bundle?.rows)
+    ? (bundle.rows as RankingApiRow[])
+    : [];
+  const { myRank, myRankDeltaPlaces } = resolveMyRankForCard({
+    myUid,
+    myRank: bundle?.myRank,
+    myRankDeltaPlaces: bundle?.myRankDeltaPlaces,
+    myRow: (bundle?.myRow ?? null) as RankingRow | null,
+    listRows: rawRows,
+  });
   const myRow = (bundle?.myRow ?? null) as RankingRow | null;
   const rankingListCount =
     typeof bundle?.count === "number" && Number.isFinite(bundle.count)

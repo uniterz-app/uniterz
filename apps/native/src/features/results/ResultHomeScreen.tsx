@@ -1017,14 +1017,19 @@ export default function ResultHomeScreen({
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const deleteSubmittingRef = useRef(false);
 
-  const { grouped, loading, postsCacheCapped, refreshPosts, loadMore, removePostById } =
-    useNativeResultPosts(uid, language);
-
-  const { showResultLeagueTabs, defaultLeagueTab } = useResultLeagueFlagsNative(uid ?? null);
-  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab>("wc");
+  const { showResultLeagueTabs, defaultLeagueTab, flagsReady } =
+    useResultLeagueFlagsNative(uid ?? null);
+  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab | null>(null);
   useEffect(() => {
+    if (!flagsReady || leagueTab !== null) return;
     setLeagueTab(defaultLeagueTab);
-  }, [defaultLeagueTab]);
+  }, [flagsReady, defaultLeagueTab, leagueTab]);
+
+  const { grouped, loading, postsCacheCapped, refreshPosts, loadMore, removePostById } =
+    useNativeResultPosts(uid, language, {
+      league: leagueTab,
+      enabled: leagueTab !== null,
+    });
 
   const [resultFilters, setResultFilters] = useState<ResultFilterState>({
     ...DEFAULT_RESULT_LIST_FILTERS,
@@ -1104,7 +1109,7 @@ export default function ResultHomeScreen({
               { id: "nba" as ResultListLeagueTab, label: "NBA" },
               { id: "wc" as ResultListLeagueTab, label: "WC" },
             ]}
-            activeId={leagueTab}
+            activeId={leagueTab ?? defaultLeagueTab}
             onChange={setLeagueTab}
           />
         ) : null
@@ -1114,7 +1119,7 @@ export default function ResultHomeScreen({
           language={language}
           filters={resultFilters}
           onChange={setResultFilters}
-          hideScorePrecision={leagueTab === "wc"}
+          hideScorePrecision={(leagueTab ?? defaultLeagueTab) === "wc"}
         />
       }
     />
@@ -1163,7 +1168,8 @@ export default function ResultHomeScreen({
       </View>
     ) : null;
 
-  const showInitialSpinner = loading && grouped.length === 0;
+  const showInitialSpinner =
+    leagueTab === null || (loading && grouped.length === 0);
 
   /** 下端はスクロール内容側のパディングのみ（親に付けるとナビ下が塗りつぶされリストが届かない） */
   const listContentWithBottomPad = useMemo(

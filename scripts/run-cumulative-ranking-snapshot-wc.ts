@@ -1,19 +1,15 @@
 /**
- * buildCumulativeRankingSnapshot を手動実行（WC / NBA 上位20 + snapshotRanks）。
- * 15:55 cron と同じ処理。修正後の cumulative_stats を反映する。
+ * World Cup ランキングだけ buildCumulativeRankingSnapshot を手動実行。
+ * NBA の snapshotRanks / 一覧 doc は触らない。
  *
  * 使い方（プロジェクトルート、service-account.json 必須）:
- *   npx tsx scripts/run-cumulative-ranking-snapshot.ts
- *   npx tsx scripts/run-cumulative-ranking-snapshot.ts --wc   # World Cup のみ
- *
- * WC のみ: scripts/run-cumulative-ranking-snapshot-wc.ts も同じ
+ *   npx tsx scripts/run-cumulative-ranking-snapshot-wc.ts
  */
 
 import fs from "fs";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-/** functions と同じ firebase-admin インスタンスを使う（二重 initialize 防止） */
 const admin = require("../functions/node_modules/firebase-admin") as typeof import("firebase-admin");
 
 if (!fs.existsSync("service-account.json")) {
@@ -36,7 +32,8 @@ const { buildCumulativeRankingSnapshot } = require(
     scope?: "all" | "wc";
   }) => Promise<{
     ok: boolean;
-    ranksWritten: number;
+    scope: string;
+    wcRanksWritten: number;
     historyDateKey: string;
   }>;
 };
@@ -52,23 +49,12 @@ const WC_METRICS = [
 ] as const;
 
 (async () => {
-  const wcOnly = process.argv.includes("--wc");
-  console.log(
-    wcOnly
-      ? "=== run buildCumulativeRankingSnapshot (WC only) ===\n"
-      : "=== run buildCumulativeRankingSnapshot ===\n"
-  );
-  const result = await buildCumulativeRankingSnapshot(
-    wcOnly ? { scope: "wc" } : undefined
-  );
+  console.log("=== run buildCumulativeRankingSnapshot (WC only) ===\n");
+  const result = await buildCumulativeRankingSnapshot({ scope: "wc" });
   console.log("result:", result);
 
   const db = admin.firestore();
-  if (wcOnly) {
-    console.log("\n--- WC snapshots ---");
-  } else {
-    console.log("\n--- WC snapshots (top-level) ---");
-  }
+  console.log("\n--- WC snapshots ---");
   for (const stage of WC_STAGES) {
     for (const metric of WC_METRICS) {
       const id = `wc_${stage}_${metric}`;
@@ -89,7 +75,7 @@ const WC_METRICS = [
       console.log(
         `${id}: totalCount=${d.totalCount} rows=${rows.length}` +
           (rows[0]
-            ? ` #1=${rows[0].displayName ?? rows[0].uid} (${metric === "winRate" ? rows[0].winRate : rows[0].totalPoints ?? rows[0].activeWinStreak})`
+            ? ` #1=${rows[0].displayName ?? rows[0].uid}`
             : "")
       );
     }

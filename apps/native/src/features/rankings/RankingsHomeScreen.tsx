@@ -17,6 +17,7 @@ import {
   buildMyRankMiniMetrics,
   isMyRankMiniMetricsReady,
 } from "../../../../../lib/rankings/buildMyRankMiniMetrics";
+import { resolveMyRankForCard } from "../../../../../lib/rankings/rankingsPageShared";
 import {
   visibleMetricsForLeague,
 } from "../../../../../lib/rankings/wcVisibleMetrics";
@@ -123,9 +124,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     return toMobileRows(metric, rawRows);
   }, [metric, rawRows]);
 
-  const myRank = bundle?.myRank ?? null;
-  const myRankDeltaPlaces = bundle?.myRankDeltaPlaces ?? null;
   const myRawRow = (bundle?.myRow ?? null) as RankingRow | null;
+  const { myRank, myRankDeltaPlaces } = useMemo(
+    () =>
+      resolveMyRankForCard({
+        myUid,
+        myRank: bundle?.myRank,
+        myRankDeltaPlaces: bundle?.myRankDeltaPlaces,
+        myRow: myRawRow,
+        listRows: rawRows,
+      }),
+    [
+      myUid,
+      bundle?.myRank,
+      bundle?.myRankDeltaPlaces,
+      myRawRow,
+      rawRows,
+    ]
+  );
   const myStatsRow =
     (byMetric?.totalPoints?.myRow as RankingRow | null | undefined) ?? myRawRow;
   const rankingListCount =

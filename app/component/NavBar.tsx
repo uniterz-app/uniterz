@@ -20,6 +20,7 @@ import {
 } from "@/lib/communities/leaderboardsGroupsIntroSeen";
 import { useNavTabNotificationBadges } from "@/lib/hooks/useNavTabNotificationBadges";
 import NavBarNotificationDot from "@/app/component/NavBarNotificationDot";
+import { prefetchCumulativeRankingsList } from "@/lib/rankings/useCumulativeRankingsBulk";
 
 type Item = {
   href: string;
@@ -617,6 +618,16 @@ export default function NavBar() {
                 }}
                 aria-label={item.label}
                 title={item.label}
+                onPointerEnter={
+                  item.key === "ranking"
+                    ? () => prefetchCumulativeRankingsList()
+                    : undefined
+                }
+                onTouchStart={
+                  item.key === "ranking"
+                    ? () => prefetchCumulativeRankingsList()
+                    : undefined
+                }
               >
                 <span
                   style={{

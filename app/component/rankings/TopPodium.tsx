@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
-import type { Variants } from "framer-motion";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Crown } from "lucide-react";
 import type { MobileMetric, RankingRowWithCountry } from "./_data/mockRows";
 import { metricNum } from "@/lib/rankings/metric";
@@ -28,6 +26,7 @@ import {
   CyberRankingScore,
 } from "@/app/component/rankings/CyberRankingListParts";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
+import { markRankingsCountUpIntroPlayed } from "@/lib/rankings/rankingsCountUpIntro";
 
 export default function TopPodium({
   rows,
@@ -38,6 +37,7 @@ export default function TopPodium({
   wcStage,
   participantCount,
   onTopCountDone,
+  countUpEnabled = true,
   language = "ja",
   compact = false,
   shellTone = "default",
@@ -50,35 +50,14 @@ export default function TopPodium({
   wcStage?: WcRankingStage;
   participantCount?: number | null;
   onTopCountDone?: () => void;
+  /** false = スコアを即表示（プロフィールから戻ったとき等） */
+  countUpEnabled?: boolean;
   language?: Language;
   /** コミュニティ等 — コンパクト行 */
   compact?: boolean;
   shellTone?: "default" | "subtle";
 }) {
-  const reduceMotion = useReducedMotion();
   const router = useRouter();
-  const cardVariants = useMemo<Variants>(
-    () => ({
-      hidden: {
-        opacity: 0,
-        y: reduceMotion ? 0 : 10,
-        filter: reduceMotion ? "blur(0px)" : "blur(8px)",
-      },
-      show: (step: number) => ({
-        opacity: 1,
-        y: 0,
-        filter: "blur(0px)",
-        transition: reduceMotion
-          ? { duration: 0 }
-          : {
-              delay: 0.12 + step * 0.11,
-              duration: 0.58,
-              ease: [0.16, 0.82, 0.32, 1],
-            },
-      }),
-    }),
-    [reduceMotion]
-  );
 
   const pathname = usePathname() ?? "";
   const base =
@@ -95,9 +74,41 @@ export default function TopPodium({
   const a2 = r2 ? metricNum(r2, metric) : null;
   const a3 = r3 ? metricNum(r3, metric) : null;
 
-  const v1n = useRankCountUp(a1.n, 780, a1.d, !!r1, onTopCountDone);
-  const v2n = useRankCountUp(a2?.n ?? 0, 520, a2?.d ?? 0, !!r2);
-  const v3n = useRankCountUp(a3?.n ?? 0, 520, a3?.d ?? 0, !!r3);
+  const v1n = useRankCountUp(a1.n, 780, a1.d, !!r1 && countUpEnabled, onTopCountDone);
+  const v2n = useRankCountUp(a2?.n ?? 0, 520, a2?.d ?? 0, !!r2 && countUpEnabled);
+  const v3n = useRankCountUp(a3?.n ?? 0, 520, a3?.d ?? 0, !!r3 && countUpEnabled);
+
+  useEffect(() => {
+    if (!countUpEnabled && r1) onTopCountDone?.();
+  }, [countUpEnabled, r1, onTopCountDone]);
+
+  const metricTag = cyberMetricTag(metric, language);
+  const isWebList = base === "/web" && !compact;
+  const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
+  const statsLeague = rankingLeague ?? "worldcup";
+  const statsContext = useMemo(
+    () => ({
+      rankingLeague: statsLeague,
+      wcStage:
+        statsLeague === "worldcup"
+          ? (wcStage ?? ("overall" as const))
+          : undefined,
+    }),
+    [statsLeague, wcStage]
+  );
+
+  const warmProfileRoute = useCallback(
+    (profileKey: string, row: RankingRowWithCountry, href: string, rank: number) => {
+      markRankingsCountUpIntroPlayed();
+      primeProfileCacheFromRankingRow(profileKey, row, statsContext, {
+        metric,
+        rank,
+        participantCount,
+      });
+      router.prefetch(href);
+    },
+    [metric, participantCount, router, statsContext]
+  );
 
   if (!r1) return null;
 
@@ -110,28 +121,6 @@ export default function TopPodium({
     row: RankingRowWithCountry;
     value: number;
   }>;
-
-  const metricTag = cyberMetricTag(metric, language);
-  const isWebList = base === "/web" && !compact;
-  const scoreLayout = isWebList ? ("web" as const) : ("stack" as const);
-  const statsLeague = rankingLeague ?? "worldcup";
-  const statsContext = {
-    rankingLeague: statsLeague,
-    wcStage:
-      statsLeague === "worldcup" ? (wcStage ?? ("overall" as const)) : undefined,
-  };
-
-  const warmProfileRoute = useCallback(
-    (profileKey: string, row: RankingRowWithCountry, href: string, rank: number) => {
-      primeProfileCacheFromRankingRow(profileKey, row, statsContext, {
-        metric,
-        rank,
-        participantCount,
-      });
-      router.prefetch(href);
-    },
-    [metric, participantCount, router, statsContext]
-  );
 
   return (
     <div className="pt-3 pb-0">
@@ -152,13 +141,7 @@ export default function TopPodium({
           );
 
           return (
-            <motion.div
-              key={row.uid}
-              variants={cardVariants}
-              initial={reduceMotion ? "show" : "hidden"}
-              animate="show"
-              custom={rank - 1}
-            >
+            <div key={row.uid}>
               <Link
                 href={profileHref}
                 className="relative block"
@@ -191,24 +174,7 @@ export default function TopPodium({
                   subtleShell={shellTone === "subtle"}
                   showCrownSlot={
                     rank === 1 ? (
-                      <motion.div
-                        className="pointer-events-none leading-none"
-                        initial={
-                          reduceMotion
-                            ? { opacity: 1, y: 0, scale: 1 }
-                            : { opacity: 0, y: 4, scale: 0.92 }
-                        }
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={
-                          reduceMotion
-                            ? { duration: 0 }
-                            : {
-                                delay: 0.42,
-                                duration: 0.4,
-                                ease: [0.22, 1, 0.36, 1],
-                              }
-                        }
-                      >
+                      <div className="pointer-events-none leading-none">
                         <Crown
                           className={
                             compact
@@ -220,7 +186,7 @@ export default function TopPodium({
                           strokeWidth={1.7}
                           aria-hidden
                         />
-                      </motion.div>
+                      </div>
                     ) : null
                   }
                   nameExtra={
@@ -249,7 +215,7 @@ export default function TopPodium({
                   }
                 />
               </Link>
-            </motion.div>
+            </div>
           );
         })}
       </div>

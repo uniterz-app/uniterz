@@ -2,6 +2,7 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { coerceTotalPointsRank } from "@/lib/profile/resolvePlayoffTotalPointsRank";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import { loadRankSnapshotHistoryDocsWalkBack } from "@/lib/rankings/server/loadRankSnapshotHistoryDocs";
+import { readStoredRankFromSnapshotRanks } from "@/lib/rankings/server/readSnapshotRanksFromCumulative";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 
 export type ProfileSummaryRanks = {
@@ -75,16 +76,13 @@ function readStoredRank(
   phase: RankingPhase,
   wcStage?: WcRankingStage
 ): number | null {
-  const snapshotRanks = cumulative?.snapshotRanks as SnapshotRanksDoc | undefined;
-  if (!snapshotRanks) return null;
-
-  if (wcStage) {
-    return coerceTotalPointsRank(snapshotRanks.wc?.[wcStage]?.[metric]);
-  }
-  if (phase === "play_in") {
-    return coerceTotalPointsRank(snapshotRanks.play_in?.[metric]);
-  }
-  return coerceTotalPointsRank(snapshotRanks.playoffs?.[metric]);
+  return readStoredRankFromSnapshotRanks(
+    cumulative,
+    metric,
+    phase,
+    "overall",
+    wcStage ?? null
+  );
 }
 
 function readHistoryMetricBlock(

@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
-import { restContainer, restItem } from "@/app/component/rankings/anim";
+import { restContainer } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
@@ -59,7 +59,6 @@ import {
   getMyMetricValue,
 } from "@/lib/rankings/rankingsPageShared";
 import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
-import { useProgressiveRenderCount } from "@/lib/hooks/useProgressiveRenderCount";
 
 export default function WebRankingsShell() {
   const searchParams = useSearchParams();
@@ -235,14 +234,7 @@ export default function WebRankingsShell() {
     wcStage,
   });
   const prefersReducedMotion = useReducedMotion();
-  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
-  const visibleRestCount = useProgressiveRenderCount(
-    restRows.length,
-    pageKey,
-    24,
-    24
-  );
-  const visibleRestRows = restRows.slice(0, visibleRestCount);
+  const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
 
   return (
     <div className="relative z-10 min-h-full w-full overflow-x-hidden">
@@ -307,6 +299,7 @@ export default function WebRankingsShell() {
               totalPosts={myRow?.totalPosts}
               loading={!listReady}
               statsScramble={listReady && personalPending}
+              animateRank={!skipCountUp}
               language={language}
               isPro={sessionUser.plan === "pro"}
               mobileWide
@@ -384,6 +377,7 @@ export default function WebRankingsShell() {
                   wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
                   participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
+                  countUpEnabled={!skipCountUp}
                   language={language}
                 />
 
@@ -396,25 +390,20 @@ export default function WebRankingsShell() {
                 style={{ opacity: topDone || prefersReducedMotion ? 1 : 0.35 }}
               >
                 {restRows.length > 0 &&
-                  visibleRestRows.map((r, i) => (
-                    <motion.div
+                  restRows.map((r, i) => (
+                    <RankingCard
                       key={`${metric}-${r.uid}`}
-                      variants={restItem}
-                      custom={i}
-                    >
-                      <RankingCard
-                        row={r}
-                        rank={i + 4}
-                        metric={metric}
-                        rankPhase={phase}
-                        playoffRound={effectiveRound}
-                        rankingLeague={rankingLeague}
-                        wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
-                        participantCount={rankingListCount || null}
-                        language={language}
-                        animateValue={i < 6}
-                      />
-                    </motion.div>
+                      row={r}
+                      rank={i + 4}
+                      metric={metric}
+                      rankPhase={phase}
+                      playoffRound={effectiveRound}
+                      rankingLeague={rankingLeague}
+                      wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
+                      participantCount={rankingListCount || null}
+                      language={language}
+                      animateValue={!skipCountUp && i < 6}
+                    />
                   ))}
               </motion.div>
                 </div>

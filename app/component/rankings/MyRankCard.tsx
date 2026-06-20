@@ -67,6 +67,8 @@ type Props = {
   barsReady?: boolean;
   cardResetKey?: string;
   layout?: "mobile" | "web";
+  /** false = 順位数字のカウントアップを省略 */
+  animateRank?: boolean;
   /** VOL/AVG 算出用（省略時は totalPosts のみ） */
   statsSource?: MyRankStatsSource | null;
 };
@@ -335,6 +337,7 @@ export default function MyRankCard({
   barsReady = true,
   cardResetKey,
   layout = "mobile",
+  animateRank = true,
   statsSource = null,
 }: Props) {
   const ui = LAYOUT[layout];
@@ -349,7 +352,7 @@ export default function MyRankCard({
   const tiltEnabled = reduceMotion !== true && layout !== "web";
   const tilt = useHoloTilt(tiltEnabled);
 
-  const countEnabled = ready && reduceMotion !== true;
+  const countEnabled = ready && reduceMotion !== true && animateRank;
   const rankCount = useOvershootCount(
     rank ?? 0,
     RANK_COUNT_DURATION_MS,

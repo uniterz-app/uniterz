@@ -25,6 +25,7 @@ import {
   CyberRankingScore,
 } from "@/app/component/rankings/CyberRankingListParts";
 import { cyberMetricTag } from "@/lib/rankings/cyberRankVisual";
+import { markRankingsCountUpIntroPlayed } from "@/lib/rankings/rankingsCountUpIntro";
 
 export type RankingCardSize = "default" | "compact";
 export type RankingCardShellTone = "default" | "subtle";
@@ -83,6 +84,7 @@ export default function RankingCard({
   });
 
   const warmProfileRoute = useCallback(() => {
+    markRankingsCountUpIntroPlayed();
     primeProfileCacheFromRankingRow(profileKey, r, statsContext, {
       metric,
       rank,

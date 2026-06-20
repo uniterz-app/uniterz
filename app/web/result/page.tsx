@@ -1,14 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ResultListWithOverlay from "@/app/component/result/ResultListWithOverlay";
 import { useResultPagePosts } from "@/lib/hooks/useResultPagePosts";
 import { LEAGUES } from "@/lib/leagues";
 import type { ResultListLeagueTab } from "@/lib/result/result-page-data";
 
 export default function ResultPage() {
-  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab>(LEAGUES.WC);
-  const leagueDefaultAppliedRef = useRef(false);
+  const [leagueTab, setLeagueTab] = useState<ResultListLeagueTab | null>(null);
 
   const {
     authReady,
@@ -24,16 +23,15 @@ export default function ResultPage() {
     flagsReady,
     showResultLeagueTabs,
     defaultLeagueTab,
-  } = useResultPagePosts(leagueTab, {
-    waitForLeagueFlags: false,
+  } = useResultPagePosts(leagueTab ?? LEAGUES.WC, {
+    waitForLeagueFlags: true,
+    enabled: leagueTab !== null,
   });
 
-  // フラグ確定後に 1 回だけ補正（NBA のみのユーザーだけ NBA へ）
   useEffect(() => {
-    if (!flagsReady || !uid || leagueDefaultAppliedRef.current) return;
-    leagueDefaultAppliedRef.current = true;
+    if (!flagsReady || !uid || leagueTab !== null) return;
     setLeagueTab(defaultLeagueTab);
-  }, [flagsReady, uid, defaultLeagueTab]);
+  }, [flagsReady, uid, defaultLeagueTab, leagueTab]);
 
   const handleLeagueTabChange = useCallback((tab: ResultListLeagueTab) => {
     setLeagueTab(tab);
@@ -49,14 +47,16 @@ export default function ResultPage() {
 
   if (!uid) return null;
 
+  const listLoading = leagueTab === null || (loading && grouped.length === 0);
+
   return (
     <div className="px-4 py-4 pb-bottom-nav">
       <ResultListWithOverlay
-        leagueTab={leagueTab}
+        leagueTab={leagueTab ?? defaultLeagueTab}
         onLeagueTabChange={handleLeagueTabChange}
         showResultLeagueTabs={showResultLeagueTabs}
         grouped={grouped}
-        loading={loading}
+        loading={listLoading}
         hasMore={hasMore}
         postsCacheCapped={postsCacheCapped}
         sentinelRef={sentinelRef}
