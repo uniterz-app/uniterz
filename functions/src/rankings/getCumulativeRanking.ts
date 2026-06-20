@@ -272,6 +272,32 @@ function normalizePlan(plan: unknown): "free" | "pro" {
   return plan === "pro" ? "pro" : "free";
 }
 
+function rowMetricValue(row: RankingRow, metric: Metric): number {
+  if (metric === "activeWinStreak") return row.activeWinStreak ?? 0;
+  if (metric === "winRate") return row.winRate ?? 0;
+  if (metric === "totalPoints") return row.totalPoints ?? 0;
+  if (metric === "totalExactHits")
+    return row.totalExactHits ?? row.totalPrecision ?? 0;
+  if (metric === "totalPrecision") return row.totalPrecision ?? 0;
+  if (metric === "totalGoalScorerHits") return row.totalGoalScorerHits ?? 0;
+  return row.totalUpset ?? 0;
+}
+
+/** Same ordering as buildCumulativeRankingSnapshot `cmpSortRows`. */
+function cmpRankingRows(a: RankingRow, b: RankingRow, metric: Metric): number {
+  const diff = rowMetricValue(b, metric) - rowMetricValue(a, metric);
+  if (diff !== 0) return diff;
+  if (metric === "winRate") {
+    const postsDiff = (b.totalPosts ?? 0) - (a.totalPosts ?? 0);
+    if (postsDiff !== 0) return postsDiff;
+  }
+  return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
+}
+
+function sortSnapshotRows(rows: RankingRow[], metric: Metric): RankingRow[] {
+  return [...rows].sort((a, b) => cmpRankingRows(a, b, metric));
+}
+
 function normalizeSnapshotRows(
   rows: RankingRow[],
   metric: Metric
@@ -286,7 +312,7 @@ function normalizeSnapshotRows(
       totalExactHits: r.totalExactHits ?? r.totalPrecision ?? 0,
     }));
   }
-  return out;
+  return sortSnapshotRows(out, metric);
 }
 
 function readStoredRankFromUser(

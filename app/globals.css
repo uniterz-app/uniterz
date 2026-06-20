@@ -2999,43 +2999,6 @@ body.splash-bg {
   animation: headerCyberLineSweep 9s ease-in-out infinite;
 }
 
-/* ヘッダーワードマーク：時折シアン寄りのハイライトが文字上を走るシマー（オーバーレイ層） */
-.header-wordmark-shimmer {
-  background-image: linear-gradient(
-    105deg,
-    transparent 0%,
-    transparent 40%,
-    rgba(255, 255, 255, 0.95) 49%,
-    rgba(186, 230, 253, 0.9) 53%,
-    transparent 62%,
-    transparent 100%
-  );
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: headerWordmarkShimmer 7s ease-in-out infinite;
-}
-
-@keyframes headerWordmarkShimmer {
-  0% {
-    background-position: 160% 0;
-  }
-  38% {
-    background-position: -60% 0;
-  }
-  100% {
-    background-position: -60% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .header-wordmark-shimmer {
-    animation: none;
-    opacity: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-header-cyber-sweep {
     animation: none;

@@ -579,6 +579,7 @@ export default function CommunityGroupDetailView({
                   language={language}
                   onTopCountDone={handleTopCountDone}
                   countUpEnabled={!skipCountUp}
+                  entranceEnabled={!prefersReducedMotion}
                   compact
                   shellTone="subtle"
                 />

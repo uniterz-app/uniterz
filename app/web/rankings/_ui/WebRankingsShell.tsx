@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 import type { MobileMetric } from "@/app/component/rankings/_data/mockRows";
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
-import { restContainer } from "@/app/component/rankings/anim";
+import { restContainer, restItem } from "@/app/component/rankings/anim";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import RankingsMetricRow from "@/app/component/rankings/RankingsMetricRow";
 import MyRankCard from "@/app/component/rankings/MyRankCard";
@@ -378,6 +378,7 @@ export default function WebRankingsShell() {
                   participantCount={rankingListCount || null}
                   onTopCountDone={handleTopCountDone}
                   countUpEnabled={!skipCountUp}
+                  entranceEnabled={!prefersReducedMotion}
                   language={language}
                 />
 
@@ -391,19 +392,24 @@ export default function WebRankingsShell() {
               >
                 {restRows.length > 0 &&
                   restRows.map((r, i) => (
-                    <RankingCard
+                    <motion.div
                       key={`${metric}-${r.uid}`}
-                      row={r}
-                      rank={i + 4}
-                      metric={metric}
-                      rankPhase={phase}
-                      playoffRound={effectiveRound}
-                      rankingLeague={rankingLeague}
-                      wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
-                      participantCount={rankingListCount || null}
-                      language={language}
-                      animateValue={!skipCountUp && i < 6}
-                    />
+                      variants={restItem}
+                      custom={i}
+                    >
+                      <RankingCard
+                        row={r}
+                        rank={i + 4}
+                        metric={metric}
+                        rankPhase={phase}
+                        playoffRound={effectiveRound}
+                        rankingLeague={rankingLeague}
+                        wcStage={rankingLeague === "worldcup" ? wcStage : undefined}
+                        participantCount={rankingListCount || null}
+                        language={language}
+                        animateValue={!skipCountUp && i < 6}
+                      />
+                    </motion.div>
                   ))}
               </motion.div>
                 </div>
