@@ -82,6 +82,8 @@ type Props = {
   embedded?: boolean;
   /** 他人プロフィール向け：ガラス blur 等の重い演出を抑える */
   visualEffectsLite?: boolean;
+  /** 枠走査光（一覧では false 推奨 — GPU 負荷） */
+  showFrameSweep?: boolean;
 };
 
 /** Router に繋がない環境（CSS3D の別ルート等）でも同じ UI を出す用 */
@@ -110,6 +112,7 @@ function ResultCardPresentationImpl({
   cardClockMs,
   embedded = false,
   visualEffectsLite = false,
+  showFrameSweep = false,
 }: ResultCardPresentationProps) {
   const clock = useResultCardClockMs(cardClockMs);
   const mobileScheduleDense = Boolean(isMobile && scheduleDense);
@@ -297,6 +300,7 @@ function ResultCardPresentationImpl({
       badge={badge}
       activeWinStreak={activeWinStreak}
       showSweep={
+        showFrameSweep &&
         !visualEffectsLite &&
         (badge === "streak" ||
           badge === "upset" ||

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { Firestore } from "firebase/firestore";
+import type { WcStandingGame } from "@/lib/wc/computeGroupStandings";
 import {
   readWcSeasonGamesCache,
   subscribeWcSeasonGames,
@@ -13,6 +14,14 @@ import {
 
 export const WC_DEFAULT_SEASON = "2025-26";
 
+/** useSyncExternalStore 用 — entry.games の参照だけを返す（新オブジェクトを毎回作らない） */
+function readWcSeasonGamesSnapshot(
+  season: string | null | undefined
+): WcStandingGame[] | null {
+  if (!season) return null;
+  return readWcSeasonGamesCache(season).games;
+}
+
 /** リザルトカード等：同一シーズンの WC 試合をキャッシュ共有してグループ順位を返す */
 export function useWcGroupStandingRanks(
   db: Firestore,
@@ -20,13 +29,14 @@ export function useWcGroupStandingRanks(
   awayTeamId: string | null | undefined,
   season: string | null | undefined = WC_DEFAULT_SEASON
 ): WcGroupStandingsForMatch {
-  const [, tick] = useState(0);
-
-  useEffect(() => {
-    return subscribeWcSeasonGames(db, season, () => tick((n) => n + 1));
-  }, [db, season]);
-
-  const { games } = readWcSeasonGamesCache(season);
+  const games = useSyncExternalStore(
+    (onStoreChange) => {
+      if (!season) return () => {};
+      return subscribeWcSeasonGames(db, season, onStoreChange);
+    },
+    () => readWcSeasonGamesSnapshot(season),
+    () => null
+  );
 
   return useMemo(
     () => resolveWcGroupStandingsForMatch(homeTeamId, awayTeamId, games),
