@@ -27,10 +27,13 @@ export function uniterzBrandShelfOffsetTop(insetsTop: number): number {
 type Props = {
   /** MainTab ルートで safe area を含める */
   includeSafeAreaTop?: boolean;
+  /** タブに応じたワードマーク（未指定時は UNITERZ） */
+  title?: string;
 };
 
 export default function UniterzBrandShelfNative({
   includeSafeAreaTop = false,
+  title = "UNITERZ",
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -42,7 +45,7 @@ export default function UniterzBrandShelfNative({
       ]}
       pointerEvents="none"
       accessibilityRole="header"
-      accessibilityLabel="UNITERZ"
+      accessibilityLabel={title}
     >
       {/* Web: linear-gradient(180deg, rgba(0,0,0,0.28) → transparent) */}
       <LinearGradient
@@ -63,7 +66,7 @@ export default function UniterzBrandShelfNative({
           accessibilityElementsHidden
           importantForAccessibility="no"
         >
-          UNITERZ
+          {title}
         </Text>
         <BrandCyanLineAnimated />
       </View>

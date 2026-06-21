@@ -391,7 +391,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                   />
                 </View>
               ) : null}
-              <View style={{ width: "100%", marginTop: "auto" }}>
+              <View style={styles.leagueDividerWrap}>
                 <Animated.View
                   style={[styles.leagueDivider, { backgroundColor: leagueColor }, ent.dividerStyle]}
                 />

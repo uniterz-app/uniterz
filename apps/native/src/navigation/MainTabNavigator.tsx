@@ -1,11 +1,16 @@
 import { StyleSheet, View } from "react-native";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import type { NavigationState, PartialState } from "@react-navigation/native";
 import AppTabBar from "./AppTabBar";
 import type { MainTabParamList } from "./types";
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
+import {
+  DEFAULT_HEADER_WORDMARK,
+  resolveHeaderWordmarkFromMainTab,
+} from "../../../../lib/ui/headerWordmark";
 import {
   GamesStackScreen,
   ResultStackScreen,
@@ -16,7 +21,23 @@ import {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
+function resolveTabWordmark(
+  state: NavigationState | PartialState<NavigationState> | undefined
+): string {
+  const routeName = state?.routes[state.index ?? 0]?.name;
+  return resolveHeaderWordmarkFromMainTab(routeName);
+}
+
 export default function MainTabNavigator() {
+  const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
+
+  const syncWordmarkFromTabState = useCallback(
+    (state: NavigationState | PartialState<NavigationState> | undefined) => {
+      setWordmark(resolveTabWordmark(state));
+    },
+    []
+  );
+
   useEffect(() => {
     hideNativeBootSplash();
   }, []);
@@ -25,10 +46,15 @@ export default function MainTabNavigator() {
     <>
       <NativePushNotificationsHost />
       <View style={styles.root}>
-        <UniterzBrandShelfNative includeSafeAreaTop />
+        <UniterzBrandShelfNative includeSafeAreaTop title={wordmark} />
         <View style={styles.tabHost}>
           <Tab.Navigator
             tabBar={(props) => <AppTabBar {...props} />}
+            screenListeners={{
+              state: (event) => {
+                syncWordmarkFromTabState(event.data.state);
+              },
+            }}
             screenOptions={{
               headerShown: false,
               tabBarShowLabel: false,
