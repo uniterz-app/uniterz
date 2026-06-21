@@ -54,6 +54,7 @@ export default function ResultCyberBadgeNative({
   maxLabelWidth,
 }: Props) {
   const theme = RESULT_CYBER_BADGE_THEMES[kind];
+  if (!theme) return null;
   const metrics = resultCyberBadgeMetrics(kind, compact, subtle);
   const [size, setSize] = useState({ w: 0, h: 0 });
 

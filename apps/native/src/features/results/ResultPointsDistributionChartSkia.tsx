@@ -34,13 +34,20 @@ import {
 } from "../../../../../lib/results/resultPointsDistributionChartModel";
 
 const COMPACT_MAX_DOTS = 220;
+const OVERLAY_MAX_DOTS = 120;
 
 type Props = {
   distribution: GamePointsDistributionV1;
   myScore: number | null;
+  /** オーバーレイ内はドット数を抑えて GPU 負荷を下げる */
+  compact?: boolean;
 };
 
-export default function ResultPointsDistributionChartSkia({ distribution, myScore }: Props) {
+export default function ResultPointsDistributionChartSkia({
+  distribution,
+  myScore,
+  compact = false,
+}: Props) {
   const [rowW, setRowW] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -51,9 +58,10 @@ export default function ResultPointsDistributionChartSkia({ distribution, myScor
   const sx = rowW > 0 ? rowW / CHART_W : 1;
   const canvasH = CHART_H * sx;
 
+  const maxDots = compact ? OVERLAY_MAX_DOTS : COMPACT_MAX_DOTS;
   const dots = useMemo(
-    () => buildDotsFromDistribution(distribution, myScore, COMPACT_MAX_DOTS),
-    [distribution, myScore]
+    () => buildDotsFromDistribution(distribution, myScore, maxDots),
+    [distribution, myScore, maxDots]
   );
   const peerDots = useMemo(() => dots.filter((d) => d.kind === "peer"), [dots]);
   const youDot = useMemo(() => dots.find((d) => d.kind === "you") ?? null, [dots]);
@@ -67,14 +75,21 @@ export default function ResultPointsDistributionChartSkia({ distribution, myScor
       ? scoreToY(clampChartScore(distribution.mean))
       : null;
 
+  const safeCanvasH =
+    Number.isFinite(canvasH) && canvasH > 0 ? canvasH : CHART_H;
+  const safeSx = Number.isFinite(sx) && sx > 0 ? sx : 1;
+
   if (rowW <= 0) {
     return <View style={styles.placeholder} onLayout={onLayout} />;
   }
 
   return (
     <View style={styles.wrap} onLayout={onLayout}>
-      <Canvas style={{ width: rowW, height: canvasH }} pointerEvents="none">
-        <Group transform={[{ scale: sx }]}>
+      <Canvas
+        style={{ width: rowW, height: safeCanvasH }}
+        pointerEvents="none"
+      >
+        <Group transform={[{ scale: safeSx }]}>
           <Line
             p1={vec(PAD_L, PLOT_BOTTOM)}
             p2={vec(PAD_L, PAD_T)}
@@ -127,14 +142,29 @@ export default function ResultPointsDistributionChartSkia({ distribution, myScor
             />
           ) : null}
 
-          {peerDots.map((d, i) => (
-            <Circle key={`p-${i}`} cx={d.x} cy={d.y} r={2.1} color={PEER_DOT_FILL} />
-          ))}
+          {peerDots.map((d, i) =>
+            Number.isFinite(d.x) && Number.isFinite(d.y) ? (
+              <Circle
+                key={`p-${i}`}
+                cx={d.x}
+                cy={d.y}
+                r={2.1}
+                color={PEER_DOT_FILL}
+              />
+            ) : null
+          )}
 
-          {youDot ? (
+          {youDot &&
+          Number.isFinite(youDot.x) &&
+          Number.isFinite(youDot.y) ? (
             <Group>
               <Circle cx={youDot.x} cy={youDot.y} r={7} color={YOU_HALO_FILL} />
-              <Circle cx={youDot.x} cy={youDot.y} r={4.2} color={YOU_CORE_FILL} />
+              <Circle
+                cx={youDot.x}
+                cy={youDot.y}
+                r={4.2}
+                color={YOU_CORE_FILL}
+              />
             </Group>
           ) : null}
         </Group>

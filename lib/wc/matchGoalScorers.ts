@@ -70,12 +70,38 @@ export type WcMatchGoalScorerGroupedLine = {
   sortMinute: number;
 };
 
+/** 表示列 — OG は得点が入る側（相手チーム列）に載せる */
+export function goalScorerDisplaySide(
+  scorerTeamSide: "home" | "away",
+  ownGoal?: boolean
+): "home" | "away" {
+  if (!ownGoal) return scorerTeamSide;
+  return scorerTeamSide === "home" ? "away" : "home";
+}
+
+/** ラベル末尾の 21' / 90+5' などをすべて数値分に変換 */
+export function parseMinutesFromLabel(label: string): number[] {
+  let s = label.trim();
+  if (s.endsWith(" (OG)")) s = s.slice(0, -5).trim();
+  if (s.endsWith(" OG")) s = s.slice(0, -3).trim();
+
+  const minutes: number[] = [];
+  const re = /\b(\d+)(?:\+(\d+))?'/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    const base = Number(m[1]);
+    const add = m[2] != null ? Number(m[2]) : 0;
+    minutes.push(add > 0 ? base + add : base);
+  }
+  return minutes;
+}
+
 function parseScorerNameFromLabel(label: string): string {
   let s = label.trim();
   if (s.endsWith(" (OG)")) s = s.slice(0, -5).trim();
   if (s.endsWith(" OG")) s = s.slice(0, -3).trim();
-  const m = s.match(/^(.+?)\s+\d+(?:\+\d+)?'$/);
-  return m ? m[1]!.trim() : s;
+  const withoutMinutes = s.replace(/(?:,?\s*\d+(?:\+\d+)?')+\s*$/, "").trim();
+  return withoutMinutes || s;
 }
 
 /** 投稿済み matchGoalScorers（短縮ラベル）からグループ行を組み立て */
@@ -92,26 +118,30 @@ export function groupPostMatchGoalScorersForDisplay(
 
   for (const row of rows) {
     const name = parseScorerNameFromLabel(row.label);
+    const fromLabel = parseMinutesFromLabel(row.label);
+    const rowMinutes =
+      fromLabel.length > 0
+        ? fromLabel
+        : row.minute != null && Number.isFinite(row.minute)
+          ? [row.minute]
+          : [];
     const key = `${row.side}\0${name}\0${row.ownGoal ? 1 : 0}`;
     const prev = map.get(key);
     if (prev) {
-      if (row.minute != null && Number.isFinite(row.minute)) {
-        prev.minutes.push(row.minute);
-      }
+      prev.minutes.push(...rowMinutes);
       continue;
     }
     map.set(key, {
       side: row.side,
       name,
-      minutes:
-        row.minute != null && Number.isFinite(row.minute) ? [row.minute] : [],
+      minutes: [...rowMinutes],
       ownGoal: Boolean(row.ownGoal),
     });
   }
 
   const lines: WcMatchGoalScorerGroupedLine[] = [];
   for (const g of map.values()) {
-    g.minutes.sort((a, b) => a - b);
+    g.minutes = [...new Set(g.minutes)].sort((a, b) => a - b);
     lines.push({
       side: g.side,
       text: formatWcMatchGoalScorerGroupedLine(g.name, g.minutes, g.ownGoal),
@@ -223,6 +253,17 @@ function sideForTeamId(
   return null;
 }
 
+/** finalizePost と同じ — 同一選手の複数ゴールを1行にまとめて保存 */
+export function buildPostMatchGoalScorersGrouped(
+  goalScorers: WcGameGoalScorer[],
+  homeTeamId: string | null | undefined,
+  awayTeamId: string | null | undefined
+): PostMatchGoalScorer[] {
+  return groupedLinesToPostMatchGoalScorers(
+    buildWcMatchGoalScorerGroupedLines(goalScorers, homeTeamId, awayTeamId)
+  );
+}
+
 export function buildPostMatchGoalScorers(
   goalScorers: WcGameGoalScorer[],
   homeTeamId: string | null | undefined,
@@ -291,7 +332,10 @@ export function resolveWcMatchGoalScorersForDisplay(opts: {
 }): PostMatchGoalScorer[] {
   return groupedLinesToPostMatchGoalScorers(
     resolveWcMatchGoalScorerGroupedLines(opts)
-  );
+  ).map((row) => ({
+    ...row,
+    side: goalScorerDisplaySide(row.side, row.ownGoal),
+  }));
 }
 
 export function readPostMatchGoalScorers(
