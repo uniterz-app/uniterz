@@ -89,9 +89,14 @@ import {
   resultPageSlotItem,
 } from "@/lib/result/resultCyberMotion";
 import MatchCard, { type MatchCardProps } from "@/app/component/games/MatchCard";
+import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
+import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
 import { toMatchCardProps } from "@/lib/games/transform";
 import { MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS } from "@/lib/games/mobileListCardLayout";
-import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
+import {
+  PREDICT_OVERLAY_BACKDROP,
+  PREDICT_OVERLAY_FORM_PANEL,
+} from "@/lib/ui/matchOverlayGlass";
 import {
   CYBER_FILTER_PANEL_CLASS,
   cyberFilterBarClasses,
@@ -344,27 +349,50 @@ function postMatchesFilters(post: PostWithMillis, f: ResultListFilters): boolean
   return true;
 }
 
-/** 全画面詳細オーバーレイ。transformOrigin をタップ座標にして「押した位置から」拡大する */
-function detailFullscreenPanelStyle(
-  anchor: ResultCardOpenAnchor | null
-): CSSProperties {
-  const origin =
-    anchor != null
-      ? `${anchor.clientX}px ${anchor.clientY}px`
-      : "50% 50%";
-
+async function buildMatchCardPropsForResultPost(
+  post: PredictionPostV2,
+  raw: Record<string, unknown>,
+  isMobile: boolean
+): Promise<MatchCardProps> {
+  const gameId = post.gameId;
+  const peers = await fetchPlayoffSeriesPeerGames(raw);
+  const gameBase = toMatchCardProps({ id: gameId, ...raw } as any, {
+    dense: isMobile,
+    peerGamesForSeriesInference: peers,
+  });
   return {
-    position: "fixed",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    maxWidth: "none",
-    maxHeight: "none",
-    margin: 0,
-    transformOrigin: origin,
-    pointerEvents: "auto",
-    zIndex: 10,
+    ...gameBase,
+    home: {
+      ...gameBase.home,
+      teamId:
+        resolveWcTeamId(
+          { teamId: gameBase.home.teamId, name: gameBase.home.name },
+          post.home?.teamId,
+          post.game?.home,
+          post.home?.name
+        ) ?? gameBase.home.teamId,
+    },
+    away: {
+      ...gameBase.away,
+      teamId:
+        resolveWcTeamId(
+          { teamId: gameBase.away.teamId, name: gameBase.away.name },
+          post.away?.teamId,
+          post.game?.away,
+          post.away?.name
+        ) ?? gameBase.away.teamId,
+    },
   };
+}
+
+function predictOverlayCloseBtnClass(isMobile: boolean) {
+  return [
+    "predict-overlay-close-btn absolute left-1.5 top-1.5 z-30 flex items-center justify-center",
+    "border border-cyan-400/35 bg-[rgba(4,10,18,0.82)] text-cyan-50/90 backdrop-blur-sm",
+    isMobile
+      ? "h-7 w-7"
+      : "h-8 w-8 transition hover:border-cyan-300/55 hover:bg-[rgba(6,14,24,0.9)]",
+  ].join(" ");
 }
 
 /** 一覧に出ている試合日キーに対応する表示ラベル */
@@ -393,9 +421,7 @@ export default function ResultListWithOverlay({
   viewerUid = null,
 }: Props) {
   const [openPostId, setOpenPostId] = useState<string | null>(null);
-  const [detailAnchor, setDetailAnchor] = useState<ResultCardOpenAnchor | null>(
-    null
-  );
+  const [detailGame, setDetailGame] = useState<MatchCardProps | null>(null);
   const [market, setMarket] = useState<MarketData | null>(null);
   const [pointsDistribution, setPointsDistribution] =
     useState<GamePointsDistributionV1 | null>(null);
@@ -430,18 +456,46 @@ export default function ResultListWithOverlay({
 
   const [predictOverlay, setPredictOverlay] =
     useState<ResultPredictOverlayState>(null);
+  const [predictEditTriggerNonce, setPredictEditTriggerNonce] = useState(0);
+  const [overlayResultPost, setOverlayResultPost] =
+    useState<PredictionPostV2 | null>(null);
+  const [overlayUserPredictionWinner, setOverlayUserPredictionWinner] =
+    useState<"home" | "away" | "draw" | null>(null);
   const [predictStandingsOpen, setPredictStandingsOpen] = useState(false);
   const predictOverlayOverflowPrevRef = useRef<string | null>(null);
 
   const closePredictOverlay = useCallback(() => {
     setPredictStandingsOpen(false);
+    setOverlayResultPost(null);
+    setOverlayUserPredictionWinner(null);
     setPredictOverlay(null);
   }, []);
 
   const requestPredictEditFromCard = useCallback((post: PredictionPostV2) => {
     setPredictStandingsOpen(false);
+    setOverlayResultPost(null);
+    setOverlayUserPredictionWinner(null);
     setPredictOverlay({ phase: "loading", post });
   }, []);
+
+  useEffect(() => {
+    if (!predictOverlay || predictOverlay.phase !== "ready") {
+      setOverlayResultPost(null);
+      setOverlayUserPredictionWinner(null);
+      return;
+    }
+    setOverlayUserPredictionWinner(
+      predictOverlay.post.prediction?.winner ?? null
+    );
+  }, [predictOverlay]);
+
+  const overlayResultPostFallback = useMemo((): PredictionPostV2 | null => {
+    if (!predictOverlay || predictOverlay.phase !== "ready") return null;
+    return mergeGameIntoResultPost(predictOverlay.post, predictOverlay.game);
+  }, [predictOverlay]);
+
+  const displayOverlayResultPost =
+    overlayResultPost ?? overlayResultPostFallback;
 
   useEffect(() => {
     if (!predictOverlay || predictOverlay.phase !== "loading") return;
@@ -456,13 +510,11 @@ export default function ResultListWithOverlay({
           return;
         }
         const raw = { id: post.gameId, ...snap.data() };
-        const peers = await fetchPlayoffSeriesPeerGames(
-          raw as Record<string, unknown>
+        const game = await buildMatchCardPropsForResultPost(
+          post,
+          raw as Record<string, unknown>,
+          isMobile
         );
-        const game = toMatchCardProps(raw as any, {
-          dense: isMobile,
-          peerGamesForSeriesInference: peers,
-        });
         if (!cancelled) setPredictOverlay({ phase: "ready", post, game });
       } catch {
         if (!cancelled) setPredictOverlay({ phase: "error", post });
@@ -738,7 +790,7 @@ export default function ResultListWithOverlay({
 
   const close = useCallback(() => {
     setOpenPostId(null);
-    setDetailAnchor(null);
+    setDetailGame(null);
     setMarket(null);
     setPointsDistribution(null);
     setPointsDistributionLoading(false);
@@ -816,10 +868,9 @@ export default function ResultListWithOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [deleteConfirmPost, deleteInProgress]);
 
-  const open = useCallback(
-    (post: PredictionPostV2 | PostWithMillis, anchor: ResultCardOpenAnchor) => {
+  const open = useCallback((post: PredictionPostV2 | PostWithMillis) => {
       setOpenPostId(post.id);
-      setDetailAnchor(anchor);
+      setDetailGame(null);
       setMarket(null);
       setPointsDistribution(null);
       setPointsDistributionLoading(false);
@@ -827,10 +878,10 @@ export default function ResultListWithOverlay({
     []
   );
 
-  const detailPanelStyle = useMemo(
-    () => detailFullscreenPanelStyle(detailAnchor),
-    [detailAnchor]
-  );
+  const displayDetailResultPost = useMemo((): PredictionPostV2 | null => {
+    if (!selectedPost || !detailGame) return null;
+    return mergeGameIntoResultPost(selectedPost, detailGame);
+  }, [selectedPost, detailGame]);
 
   useEffect(() => {
     if (!openPostId) return;
@@ -854,6 +905,7 @@ export default function ResultListWithOverlay({
     if (!openPostId) return;
     const post = selectedPost;
     if (!post?.gameId) {
+      setDetailGame(null);
       setPointsDistributionLoading(false);
       setPointsDistribution(null);
       return;
@@ -867,14 +919,21 @@ export default function ResultListWithOverlay({
         if (cancelled) return;
         if (!exists || !d) {
           if (!cancelled) {
+            setDetailGame(null);
             setMarket(null);
             setPointsDistribution(null);
           }
           return;
         }
+        const game = await buildMatchCardPropsForResultPost(
+          post,
+          d as Record<string, unknown>,
+          isMobile
+        );
         const marketRaw = d.market as Record<string, unknown> | undefined;
         const pdRaw = rawPointsDistributionFromGameDoc(d);
         if (!cancelled) {
+          setDetailGame(game);
           if (marketRaw) {
             setMarket({
               homeRate: Number(marketRaw.homeRate ?? 0),
@@ -888,6 +947,7 @@ export default function ResultListWithOverlay({
         }
       } catch {
         if (!cancelled) {
+          setDetailGame(null);
           setMarket(null);
           setPointsDistribution(null);
         }
@@ -899,7 +959,7 @@ export default function ResultListWithOverlay({
     return () => {
       cancelled = true;
     };
-  }, [openPostId, selectedPost]);
+  }, [openPostId, selectedPost, isMobile]);
 
   /** ルートの perspective 等が fixed の包含ブロックになるため、オーバーレイは body 直下に描画 */
   const [overlayPortalReady, setOverlayPortalReady] = useState(false);
@@ -1004,7 +1064,7 @@ export default function ResultListWithOverlay({
               onChange={(tab) => {
                 onLeagueTabChange(tab);
                 setOpenPostId(null);
-                setDetailAnchor(null);
+                setDetailGame(null);
                 setMatchDayPickerOpen(null);
                 setFilters((s) => ({
                   ...s,
@@ -1929,7 +1989,7 @@ export default function ResultListWithOverlay({
                 <motion.div
                   key="result-overlay"
                   className={[
-                    "fixed inset-0 pointer-events-auto",
+                    "fixed inset-0 overflow-hidden pointer-events-auto",
                     isMobile ? "z-100000" : "z-99999",
                   ].join(" ")}
                   initial={{ opacity: 0 }}
@@ -1938,91 +1998,110 @@ export default function ResultListWithOverlay({
                   transition={{ duration: 0.22, ease: easeOut }}
                 >
                   <motion.div
-                    className={[
-                      // 不透明度を下げつつ blur でガラス調（背面が透ける）
-                      "flex min-h-dvh w-full flex-col overflow-hidden rounded-none border-x-0 border-b-0 border-t border-white/22",
-                      "bg-black/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
-                      "pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]",
-                    ].join(" ")}
-                    style={detailPanelStyle}
-                    initial={
-                      prefersReducedMotion
-                        ? false
-                        : { opacity: 0, scale: 0.94 }
-                    }
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={
-                      prefersReducedMotion
-                        ? undefined
-                        : { opacity: 0, scale: 0.97 }
-                    }
-                    transition={{
-                      duration: 0.36,
-                      ease: easeOut,
+                    className={`absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`}
+                    onClick={close}
+                    aria-hidden
+                  />
+                  <div
+                    className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pb-bottom-nav pointer-events-auto"
+                    style={{
+                      WebkitOverflowScrolling: "touch",
+                      overscrollBehaviorY: "contain",
+                      overscrollBehaviorX: "none",
+                      touchAction: "pan-y",
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div
                       className={[
-                        "flex shrink-0 items-center justify-end border-b border-white/10 px-2 pt-2",
-                        isMobile ? "min-h-10 pb-1" : "min-h-11 pb-1.5",
+                        "mx-auto w-full overflow-x-hidden",
+                        isMobile
+                          ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6"
+                          : detailGame?.league === "wc"
+                            ? "max-w-7xl px-4 pb-24 pt-6 sm:px-8 md:px-10 lg:px-12"
+                            : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8 lg:px-10",
                       ].join(" ")}
                     >
-                      <motion.button
-                        type="button"
-                        aria-label={m.common.close}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white/90 backdrop-blur-md transition hover:bg-white/15"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          close();
-                        }}
-                        initial={prefersReducedMotion ? false : { opacity: 0, rotate: -90 }}
-                        animate={{ opacity: 1, rotate: 0 }}
-                        transition={{ delay: 0.06, duration: 0.35, ease: easeOut }}
-                        whileTap={prefersReducedMotion ? undefined : { scale: 0.92 }}
+                      <div
+                        className={[
+                          "relative w-full overflow-x-hidden",
+                          PREDICT_OVERLAY_FORM_PANEL,
+                        ].join(" ")}
                       >
-                        <X size={18} strokeWidth={2.4} />
-                      </motion.button>
+                        <button
+                          type="button"
+                          aria-label={m.common.close}
+                          className={predictOverlayCloseBtnClass(isMobile)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            close();
+                          }}
+                        >
+                          <X size={isMobile ? 12 : 14} strokeWidth={2.25} />
+                        </button>
+
+                        {detailGame && displayDetailResultPost ? (
+                          <MatchCard
+                            {...detailGame}
+                            language={language}
+                            resultPost={displayDetailResultPost}
+                            resultRatingBarsImmediate
+                            myPostId={selectedPost.id}
+                            userPredictionWinner={
+                              selectedPost.prediction?.winner ?? null
+                            }
+                            sharedLayoutId={undefined}
+                            sharedTransitionBaseKey={undefined}
+                            disableCardMotion
+                            hideActions
+                            inPredictOverlay
+                            overlayUnifiedForm
+                            showMarketBias
+                            marketBias={detailGame.marketBias}
+                            className={
+                              isMobile
+                                ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
+                                : undefined
+                            }
+                          />
+                        ) : (
+                          <div className="flex min-h-[28vh] items-center justify-center px-4 py-10">
+                            <CandleChartLoader label={m.results.loadingMatch} />
+                          </div>
+                        )}
+
+                        {isMobile ? (
+                          <MobileResultDetail
+                            post={selectedPost}
+                            market={market ?? undefined}
+                            pointsDistribution={pointsDistribution}
+                            pointsDistributionLoading={pointsDistributionLoading}
+                            language={language}
+                            inOverlay
+                            hideMatchHeader
+                            hideMarketCard
+                            viewerUid={viewerUid}
+                            gamesRoutePrefix={gamesRoutePrefix}
+                            cardClockMs={listNowTick}
+                          />
+                        ) : (
+                          <ResultDetail
+                            post={selectedPost}
+                            market={market ?? undefined}
+                            pointsDistribution={pointsDistribution}
+                            pointsDistributionLoading={pointsDistributionLoading}
+                            language={language}
+                            inOverlay
+                            hideMatchHeader
+                            hideMarketCard
+                            viewerUid={viewerUid}
+                            gamesRoutePrefix={gamesRoutePrefix}
+                            cardClockMs={listNowTick}
+                          />
+                        )}
+                      </div>
                     </div>
-                    <div
-                      className={[
-                        "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pt-1 sm:px-4",
-                        isMobile ? "pb-bottom-nav" : "pb-8",
-                      ].join(" ")}
-                      style={{
-                        WebkitOverflowScrolling: "touch",
-                        overscrollBehaviorY: "contain",
-                        overscrollBehaviorX: "none",
-                        touchAction: "pan-y",
-                      }}
-                    >
-                      {isMobile ? (
-                        <MobileResultDetail
-                          post={selectedPost}
-                          market={market ?? undefined}
-                          pointsDistribution={pointsDistribution}
-                          pointsDistributionLoading={pointsDistributionLoading}
-                          language={language}
-                          inOverlay
-                          viewerUid={viewerUid}
-                          gamesRoutePrefix={gamesRoutePrefix}
-                          cardClockMs={listNowTick}
-                        />
-                      ) : (
-                        <ResultDetail
-                          post={selectedPost}
-                          market={market ?? undefined}
-                          pointsDistribution={pointsDistribution}
-                          pointsDistributionLoading={pointsDistributionLoading}
-                          language={language}
-                          inOverlay
-                          viewerUid={viewerUid}
-                          gamesRoutePrefix={gamesRoutePrefix}
-                          cardClockMs={listNowTick}
-                        />
-                      )}
-                    </div>
-                  </motion.div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>,
@@ -2070,25 +2149,16 @@ export default function ResultListWithOverlay({
                         : "max-w-5xl px-4 pb-20 pt-5 sm:px-6 md:px-8",
                   ].join(" ")}
                 >
-                  <div className="relative w-full overflow-x-hidden">
+                  <div
+                    className={[
+                      "relative w-full overflow-x-hidden",
+                      predictOverlay.phase === "ready"
+                        ? PREDICT_OVERLAY_FORM_PANEL
+                        : "",
+                    ].join(" ")}
+                  >
                     {predictOverlay.phase === "loading" ? (
                       <div className="relative flex min-h-[40vh] flex-col items-center justify-center gap-3 px-4 pt-16 text-center">
-                        <button
-                          type="button"
-                          aria-label={m.common.close}
-                          className={[
-                            "absolute z-30 flex items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90",
-                            isMobile
-                              ? "right-2 top-2 h-8 w-8"
-                              : "right-2 top-2 h-10 w-10 transition hover:bg-black/75 sm:right-3 sm:top-3",
-                          ].join(" ")}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            closePredictOverlay();
-                          }}
-                        >
-                          <X size={isMobile ? 14 : 18} strokeWidth={isMobile ? 2.25 : 2.4} />
-                        </button>
                         <CandleChartLoader label={m.results.loadingMatch} />
                       </div>
                     ) : null}
@@ -2110,39 +2180,46 @@ export default function ResultListWithOverlay({
 
                     {predictOverlay.phase === "ready" ? (
                       <>
-                        <button
-                          type="button"
-                          aria-label={m.common.close}
-                          className={[
-                            "absolute z-30 flex items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90",
-                            isMobile
-                              ? "right-2 top-2 h-8 w-8"
-                              : "right-2 top-2 h-10 w-10 transition hover:bg-black/75 sm:right-3 sm:top-3",
-                          ].join(" ")}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            closePredictOverlay();
-                          }}
-                        >
-                          <X size={isMobile ? 14 : 18} strokeWidth={isMobile ? 2.25 : 2.4} />
-                        </button>
+                        {!predictStandingsOpen ? (
+                          <button
+                            type="button"
+                            aria-label={m.common.close}
+                            className={predictOverlayCloseBtnClass(isMobile)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              closePredictOverlay();
+                            }}
+                          >
+                            <X size={isMobile ? 12 : 14} strokeWidth={2.25} />
+                          </button>
+                        ) : null}
                         <MatchCard
                           {...predictOverlay.game}
                           language={language}
+                          resultPost={displayOverlayResultPost}
+                          resultRatingBarsImmediate
                           myPostId={predictOverlay.post.id}
+                          userPredictionWinner={
+                            overlayUserPredictionWinner ??
+                            predictOverlay.post.prediction?.winner ??
+                            null
+                          }
+                          onRequestPredictEdit={() =>
+                            setPredictEditTriggerNonce((n) => n + 1)
+                          }
                           sharedLayoutId={undefined}
                           sharedTransitionBaseKey={undefined}
                           disableCardMotion
                           hideActions
+                          inPredictOverlay
+                          overlayUnifiedForm
                           showMarketBias
-                          attachOverlayMarketBar
+                          marketBias={predictOverlay.game.marketBias}
                           className={
                             isMobile
                               ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
                               : undefined
                           }
-                          homeRecord={null}
-                          awayRecord={null}
                         />
                         <div className="overflow-x-hidden">
                           <PredictionFormV2
@@ -2151,7 +2228,16 @@ export default function ResultListWithOverlay({
                             user={predictFormUser}
                             embedded
                             inOverlay
+                            overlayUnifiedForm
                             overlayExistingPostId={predictOverlay.post.id}
+                            predictEditTriggerNonce={predictEditTriggerNonce}
+                            onExistingResultPostChange={setOverlayResultPost}
+                            onUserPredictionWinnerChange={
+                              setOverlayUserPredictionWinner
+                            }
+                            onPredictEditEnd={() =>
+                              setPredictEditTriggerNonce(0)
+                            }
                             onClosePredictOverlay={closePredictOverlay}
                             onStandingsOpenChange={(open) => {
                               setPredictStandingsOpen(open);

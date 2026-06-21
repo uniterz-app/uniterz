@@ -36,9 +36,10 @@ import WcGoalScorerResultRowNative from "../results/WcGoalScorerResultRowNative"
 import ResultOutcomeBadgesNative from "../results/ResultOutcomeBadgesNative";
 import ResultStatRatingBarNative from "../results/ResultStatRatingBarNative";
 import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
-import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
-import { db } from "../../lib/firebase";
-import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
+import {
+  formatTeamRecordLabelNative,
+  useTeamRecordLineNative,
+} from "./useTeamRecordLineNative";
 import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import WcGoalScorerPickerNative from "./wc/WcGoalScorerPickerNative";
 import WcMatchPreviewPanelNative from "./wc/WcMatchPreviewPanelNative";
@@ -230,7 +231,7 @@ function MatchPreviewGridOverlay() {
   );
 }
 
-function PredictMatchPreview({
+export function PredictMatchPreview({
   data,
   onClose,
   closeLabel,
@@ -245,6 +246,8 @@ function PredictMatchPreview({
   overlayCenterMode = false,
   onEditPrediction,
   showEditButton = false,
+  overlayUnifiedForm = false,
+  hideCloseButton = false,
 }: {
   data: PredictModalMatchPreview;
   onClose: () => void;
@@ -263,6 +266,8 @@ function PredictMatchPreview({
   overlayCenterMode?: boolean;
   onEditPrediction?: () => void;
   showEditButton?: boolean;
+  overlayUnifiedForm?: boolean;
+  hideCloseButton?: boolean;
 }) {
   const { centerBlock, seriesPair } = data;
   const homeC = data.homePalette.primary;
@@ -278,10 +283,23 @@ function PredictMatchPreview({
   const goalScorerInfo =
     mergedFinal?.wcGoalScorer ??
     (wcGoalScorer ? { ...wcGoalScorer, hit: null as boolean | null } : null);
-  const wcGroupRanks = useWcGroupStandingRanks(
-    db,
+  const homeRecordLine = useTeamRecordLineNative(
     isWcLeague ? homeTeamId : null,
-    isWcLeague ? awayTeamId : null
+    data.leagueRaw
+  );
+  const awayRecordLine = useTeamRecordLineNative(
+    isWcLeague ? awayTeamId : null,
+    data.leagueRaw
+  );
+  const homeWcRecordLabel = formatTeamRecordLabelNative(
+    homeTeamId,
+    data.leagueRaw,
+    homeRecordLine
+  );
+  const awayWcRecordLabel = formatTeamRecordLabelNative(
+    awayTeamId,
+    data.leagueRaw,
+    awayRecordLine
   );
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
@@ -322,11 +340,7 @@ function PredictMatchPreview({
               {data.homeCompact}
             </Text>
             {isWcLeague ? (
-              <WcGroupStandingRecordLineNative
-                standing={wcGroupRanks.homeStanding}
-                language={language}
-                textStyle={s.matchPreviewRecordBracket}
-              />
+              <Text style={s.matchPreviewRecordBracket}>{homeWcRecordLabel}</Text>
             ) : data.homeRecord ? (
               <Text style={s.matchPreviewRecord}>{data.homeRecord}</Text>
             ) : null}
@@ -463,11 +477,7 @@ function PredictMatchPreview({
               {data.awayCompact}
             </Text>
             {isWcLeague ? (
-              <WcGroupStandingRecordLineNative
-                standing={wcGroupRanks.awayStanding}
-                language={language}
-                textStyle={s.matchPreviewRecordBracket}
-              />
+              <Text style={s.matchPreviewRecordBracket}>{awayWcRecordLabel}</Text>
             ) : data.awayRecord ? (
               <Text style={s.matchPreviewRecord}>{data.awayRecord}</Text>
             ) : null}
@@ -556,9 +566,12 @@ function PredictMatchPreview({
         <PredictOverlayMatchCardShellNative
           resultBadge={mergedFinal?.badge ?? null}
           activeWinStreak={mergedFinal?.activeWinStreak ?? 0}
+          overlayUnifiedForm={overlayUnifiedForm}
         >
           {previewBody}
         </PredictOverlayMatchCardShellNative>
+      ) : overlayUnifiedForm ? (
+        previewBody
       ) : (
         <View style={s.matchPreviewShell}>
           <View pointerEvents="none" style={s.matchPreviewGridUnderlay}>
@@ -655,10 +668,12 @@ function PredictMatchPreview({
           accessibilityLabel={t.editScoresCta}
         />
       ) : null}
-      <PredictOverlayCloseButtonNative
-        onPress={onClose}
-        accessibilityLabel={closeLabel}
-      />
+      {!hideCloseButton ? (
+        <PredictOverlayCloseButtonNative
+          onPress={onClose}
+          accessibilityLabel={closeLabel}
+        />
+      ) : null}
     </View>
   );
 }
@@ -709,6 +724,8 @@ type PredictModalProps = {
   goalScorerPick?: WcGoalScorerPick | null;
   setGoalScorerPick?: (value: WcGoalScorerPick | null) => void;
   mergedFinalPreview?: PredictModalMergedFinalPreview | null;
+  /** 親の predict-overlay-cyber-form 一枚に内包（MatchCard + フォームを分割しない） */
+  overlayUnifiedForm?: boolean;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -754,6 +771,30 @@ function GlassPanel({
   );
 }
 
+/** 統合オーバーレイ用の一枚カードラッパー */
+function PredictModalContentShell({
+  unified,
+  onClose,
+  closeLabel,
+  children,
+}: {
+  unified: boolean;
+  onClose: () => void;
+  closeLabel: string;
+  children: React.ReactNode;
+}) {
+  if (!unified) return <>{children}</>;
+  return (
+    <PredictOverlayCyberFormPanelNative contentStyle={s.unifiedOverlayPanelContent}>
+      <PredictOverlayCloseButtonNative
+        onPress={onClose}
+        accessibilityLabel={closeLabel}
+      />
+      {children}
+    </PredictOverlayCyberFormPanelNative>
+  );
+}
+
 export default function PredictModal({
   visible,
   matchPreview,
@@ -783,6 +824,7 @@ export default function PredictModal({
   goalScorerPick = null,
   setGoalScorerPick,
   mergedFinalPreview = null,
+  overlayUnifiedForm = false,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
 
@@ -1001,6 +1043,11 @@ export default function PredictModal({
                 pointerEvents="auto"
               >
                 <View style={s.modalContent}>
+                  <PredictModalContentShell
+                    unified={overlayUnifiedForm}
+                    onClose={scheduleCloseAfterExitAnimation}
+                    closeLabel={t.close}
+                  >
                   {matchPreview ? (
                     <Animated.View entering={previewEnter} collapsable={false}>
                       <PredictMatchPreview
@@ -1026,6 +1073,8 @@ export default function PredictModal({
                           showMergedScheduledInPreview && !editingLockedAfterKickoff
                         }
                         onEditPrediction={() => setScoreFormExpanded(true)}
+                        overlayUnifiedForm={overlayUnifiedForm}
+                        hideCloseButton={overlayUnifiedForm}
                       />
                     </Animated.View>
                   ) : null}
@@ -1260,6 +1309,65 @@ export default function PredictModal({
                   {showScoreInputBlock ? (
                     <>
                       <Animated.View entering={blockIn(scoreStagger)}>
+                        {overlayUnifiedForm ? (
+                          <View style={s.predictScoreFormPanel}>
+                          {isWcLeague ? (
+                            <PredictionScoringRulesChipNative
+                              language={language}
+                              league="wc"
+                              accessibilityLabel={t.scoringRulesChip}
+                              closeLabel={t.close}
+                              rulesFootNote={t.rulesFootNote}
+                            />
+                          ) : null}
+                          <Text
+                            style={[
+                              s.predictSectionTitle,
+                              isWcLeague && s.predictSectionTitleWithChip,
+                            ]}
+                          >
+                            {t.scorePredictTitle}
+                          </Text>
+                          <View style={s.scoreGrid}>
+                            <View style={s.scoreCol}>
+                              <Text style={s.teamNameLabel} numberOfLines={1}>
+                                {predictHomeTeamLabel || "HOME"}
+                              </Text>
+                              <PredictOverlayScoreInputNative
+                                value={scoreHome}
+                                onChangeText={setScoreHome}
+                                placeholder={t.scoreFieldPlaceholder}
+                              />
+                            </View>
+                            <View style={s.scoreCol}>
+                              <Text style={s.teamNameLabel} numberOfLines={1}>
+                                {predictAwayTeamLabel || "AWAY"}
+                              </Text>
+                              <PredictOverlayScoreInputNative
+                                value={scoreAway}
+                                onChangeText={setScoreAway}
+                                placeholder={t.scoreFieldPlaceholder}
+                              />
+                            </View>
+                          </View>
+                          {isWcLeague && setGoalScorerPick ? (
+                            <WcGoalScorerPickerNative
+                              homeTeamId={rawTeamIdFromGameSide(predictData?.subjectGame.home)}
+                              awayTeamId={rawTeamIdFromGameSide(predictData?.subjectGame.away)}
+                              homeLabel={predictHomeTeamLabel || "HOME"}
+                              awayLabel={predictAwayTeamLabel || "AWAY"}
+                              predictedScore={predictedScoreForGoalScorer}
+                              value={goalScorerPick}
+                              onChange={setGoalScorerPick}
+                              language={language}
+                              t={t}
+                            />
+                          ) : null}
+                          {isSoccerPredict && !isWcLeague ? (
+                            <Text style={s.soccerHint}>{t.drawAvailable}</Text>
+                          ) : null}
+                          </View>
+                        ) : (
                         <PredictOverlayCyberFormPanelNative>
                           <View style={s.predictScoreFormPanel}>
                           {isWcLeague ? (
@@ -1319,6 +1427,7 @@ export default function PredictModal({
                           ) : null}
                           </View>
                         </PredictOverlayCyberFormPanelNative>
+                        )}
                       </Animated.View>
 
                       <Animated.View entering={blockIn(submitStagger)}>
@@ -1343,6 +1452,7 @@ export default function PredictModal({
                   ) : null}
                 </>
               ) : null}
+                  </PredictModalContentShell>
                 </View>
               </ScrollView>
             </KeyboardAvoidingView>
@@ -1388,6 +1498,13 @@ const s = StyleSheet.create({
     width: "100%",
     maxWidth: 520,
     alignSelf: "center",
+    gap: 12,
+  },
+  unifiedOverlayPanelContent: {
+    position: "relative",
+    paddingHorizontal: 0,
+    paddingTop: 4,
+    paddingBottom: 12,
     gap: 12,
   },
   predictCyberDeckFrame: {

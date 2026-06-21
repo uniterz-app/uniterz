@@ -5,6 +5,7 @@ import {
 } from "@/lib/wc/computeGroupStandings";
 import { getWcGroupForTeam, type WcGroupCode } from "@/lib/wc/groups";
 import type { Language } from "@/lib/i18n/language";
+import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
 
 export type WcGroupStandingEntry = {
   wins: number;
@@ -29,31 +30,45 @@ function toEntry(row: WcStandingRow, rank: number): WcGroupStandingEntry {
   };
 }
 
+function canonicalGroupTeamId(
+  teamId: string,
+  groupTeamIds: readonly string[]
+): string | null {
+  const normalized = normalizeWcTeamId(teamId);
+  if (!normalized) return null;
+  return (
+    groupTeamIds.find((id) => normalizeWcTeamId(id) === normalized) ?? null
+  );
+}
+
 function pickStandingEntry(
   teamId: string,
   groupTeamIds: readonly string[],
   rows: WcStandingRow[]
 ): WcGroupStandingEntry | null {
-  if (!teamId || !groupTeamIds.includes(teamId)) return null;
-  const index = rows.findIndex((r) => r.teamId === teamId);
+  const canonicalId = canonicalGroupTeamId(teamId, groupTeamIds);
+  if (!canonicalId) return null;
+  const index = rows.findIndex((r) => r.teamId === canonicalId);
   if (index < 0) return null;
   const row = rows[index]!;
-  if (row.played <= 0) return null;
+  if (row.played <= 0) {
+    return { wins: 0, draws: 0, losses: 0, rank: index + 1 };
+  }
   return toEntry(row, index + 1);
 }
 
-/** グループ内順位・勝敗分（試合未消化のチームは null） */
+/** グループ内順位・勝敗分（試合データ未取得時は 0-0-0 + 暫定順位） */
 export function resolveWcGroupStandingsForMatch(
   homeTeamId: string | null | undefined,
   awayTeamId: string | null | undefined,
   games: readonly WcStandingGame[] | null | undefined
 ): WcGroupStandingsForMatch {
-  const homeId = homeTeamId?.trim() ?? "";
-  const awayId = awayTeamId?.trim() ?? "";
+  const homeId = normalizeWcTeamId(homeTeamId) ?? homeTeamId?.trim() ?? "";
+  const awayId = normalizeWcTeamId(awayTeamId) ?? awayTeamId?.trim() ?? "";
   const group =
     (homeId ? getWcGroupForTeam(homeId) : null) ??
     (awayId ? getWcGroupForTeam(awayId) : null);
-  if (!group || !games) {
+  if (!group) {
     return {
       homeRank: null,
       awayRank: null,
@@ -62,9 +77,13 @@ export function resolveWcGroupStandingsForMatch(
     };
   }
 
-  const rows = computeGroupStandings(group.teamIds, games);
-  const homeStanding = pickStandingEntry(homeId, group.teamIds, rows);
-  const awayStanding = pickStandingEntry(awayId, group.teamIds, rows);
+  const rows = computeGroupStandings(group.teamIds, games ?? []);
+  const homeStanding = homeId
+    ? pickStandingEntry(homeId, group.teamIds, rows)
+    : null;
+  const awayStanding = awayId
+    ? pickStandingEntry(awayId, group.teamIds, rows)
+    : null;
 
   return {
     homeRank: homeStanding?.rank ?? null,
@@ -129,9 +148,11 @@ export function resolveWcGroupCodeLabel(
   homeTeamId: string | null | undefined,
   awayTeamId: string | null | undefined
 ): string | null {
+  const homeId = normalizeWcTeamId(homeTeamId) ?? homeTeamId?.trim() ?? "";
+  const awayId = normalizeWcTeamId(awayTeamId) ?? awayTeamId?.trim() ?? "";
   const group =
-    (homeTeamId?.trim() ? getWcGroupForTeam(homeTeamId.trim()) : null) ??
-    (awayTeamId?.trim() ? getWcGroupForTeam(awayTeamId.trim()) : null);
+    (homeId ? getWcGroupForTeam(homeId) : null) ??
+    (awayId ? getWcGroupForTeam(awayId) : null);
   if (!group) return null;
   return formatWcGroupCodeLabel(group.code);
 }
@@ -152,9 +173,11 @@ export function resolveWcGroupStageLine(
   awayTeamId: string | null | undefined,
   language: Language
 ): string | null {
+  const homeId = normalizeWcTeamId(homeTeamId) ?? homeTeamId?.trim() ?? "";
+  const awayId = normalizeWcTeamId(awayTeamId) ?? awayTeamId?.trim() ?? "";
   const group =
-    (homeTeamId?.trim() ? getWcGroupForTeam(homeTeamId.trim()) : null) ??
-    (awayTeamId?.trim() ? getWcGroupForTeam(awayTeamId.trim()) : null);
+    (homeId ? getWcGroupForTeam(homeId) : null) ??
+    (awayId ? getWcGroupForTeam(awayId) : null);
   if (!group) return null;
   return formatWcGroupStageLine(group.code, language);
 }

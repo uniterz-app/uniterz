@@ -54,6 +54,8 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   resultBadge?: ResultCardBadge | null;
   activeWinStreak?: number;
+  /** 親の predict-overlay-cyber-form 内包時は独自シェルを出さない */
+  overlayUnifiedForm?: boolean;
 };
 
 function makeSkiaPath(width: number, height: number, cut: number) {
@@ -67,6 +69,7 @@ export default function PredictOverlayMatchCardShellNative({
   style,
   resultBadge = null,
   activeWinStreak = 0,
+  overlayUnifiedForm = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const cut = PREDICT_OVERLAY_CYBER_CUT;
@@ -86,6 +89,26 @@ export default function PredictOverlayMatchCardShellNative({
   const shellBorderColor = predictOverlayShellBorderColor(resultBadge, activeWinStreak);
   const shellBorderWidth = predictOverlayShellBorderWidth(resultBadge);
   const sweepVariant = predictOverlayShellSweepVariant(resultBadge, activeWinStreak);
+
+  if (overlayUnifiedForm) {
+    return (
+      <View style={[styles.root, style]}>
+        {resultBadge && isResultHitFrameBadge(resultBadge) ? (
+          <ResultHitCyberFrameNative shellContext={OVERLAY_SHELL} />
+        ) : null}
+        {resultBadge && isResultPerfectFrameBadge(resultBadge) ? (
+          <ResultPerfectCyberFrameNative shellContext={OVERLAY_SHELL} />
+        ) : null}
+        {resultBadge && isResultStreakFrameBadge(resultBadge) ? (
+          <ResultStreakCyberFrameNative
+            activeWinStreak={activeWinStreak}
+            shellContext={OVERLAY_SHELL}
+          />
+        ) : null}
+        <View style={styles.content}>{children}</View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.root, style]} onLayout={onLayout}>

@@ -102,6 +102,20 @@ export function resultDetailPanelClass(opts?: {
     .join(" ");
 }
 
+/** 統合 predict-overlay-cyber-form 内の分布・パフォーマンス区画（独自ガラス面なし） */
+export function resultDetailOverlaySectionClass(opts?: {
+  padding?: string;
+  mobile?: boolean;
+}): string {
+  return [
+    "relative w-full overflow-visible text-white",
+    "border-t border-cyan-400/12",
+    opts?.padding ?? (opts?.mobile ? "px-3 py-3" : "px-4 py-3"),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /** 日付帯・チップ用の小型ガラス */
 export const RESULT_GLASS_CHIP =
   "rounded-md border border-white/12 bg-[linear-gradient(135deg,rgba(255,255,255,0.09)_0%,rgba(255,255,255,0.03)_100%)] backdrop-blur-md shadow-[0_4px_18px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.10)]";

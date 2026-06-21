@@ -29,7 +29,11 @@ import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
 import JerseyMarkAdaptive from "../games/JerseyMarkAdaptive";
 import CountryFlagNative from "../games/CountryFlagNative";
 import { resolvePostListLeague } from "../../../../../lib/leagues";
-import { MATCH_CARD_DISPLAY_FONT, MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
+import {
+  MATCH_CARD_DISPLAY_FONT,
+  MATCH_CARD_METRIC_FONT,
+  MATCH_CARD_SCORE_FONT,
+} from "../games/matchCardTypography";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
 import { canDismissResultListPostNow } from "./nativeResultModel";
@@ -92,9 +96,11 @@ import {
 } from "./useResultHomeEntrance";
 import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
-import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
+import {
+  formatTeamRecordLabelNative,
+  useTeamRecordLineNative,
+} from "../games/useTeamRecordLineNative";
 import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
-import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
@@ -431,10 +437,12 @@ function ResultPostCard({
   const gameId =
     typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
   const hasCornerTrash = canDismissResultListPostNow(post, nowMs);
+  const isPredictionFinalized = postStatus === "final";
   const hasCornerEdit = Boolean(
     viewerUid &&
       authorUid === viewerUid &&
       gameId &&
+      !isPredictionFinalized &&
       onRequestPredictEdit
   );
   const hasCornerActions =
@@ -496,7 +504,24 @@ function ResultPostCard({
 
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
-  const wcGroupRanks = useWcGroupStandingRanks(db, home?.teamId, away?.teamId);
+  const homeRecordLine = useTeamRecordLineNative(
+    isWcCard ? home?.teamId : null,
+    leagueKey
+  );
+  const awayRecordLine = useTeamRecordLineNative(
+    isWcCard ? away?.teamId : null,
+    leagueKey
+  );
+  const homeWcRecordLabel = formatTeamRecordLabelNative(
+    home?.teamId,
+    leagueKey,
+    homeRecordLine
+  );
+  const awayWcRecordLabel = formatTeamRecordLabelNative(
+    away?.teamId,
+    leagueKey,
+    awayRecordLine
+  );
   const wcGroupCodeLabel = useMemo(
     () =>
       isWcCard
@@ -780,8 +805,13 @@ function ResultPostCard({
           <View style={styles.cardContent}>
           <View style={styles.matchArea}>
             <View style={styles.matchGrid}>
-              <View style={[styles.sideCol, styles.sideColHome]}>
-                <Animated.View style={[entrance.homeJerseyMarkStyle, styles.flagStack]}>
+              <View style={[styles.sideCol, styles.sideColHome, isWcCard && styles.sideColWc]}>
+                <Animated.View
+                  style={[
+                    entrance.homeJerseyMarkStyle,
+                    isWcCard ? styles.wcTeamStack : styles.flagStack,
+                  ]}
+                >
                   {isWcCard ? (
                     <WcTeamFlagWithMetaNative teamId={home?.teamId}>
                       <CountryFlagNative teamId={home?.teamId} variant="result" />
@@ -803,10 +833,7 @@ function ResultPostCard({
                   </Text>
                 </Animated.View>
                 {isWcCard ? (
-                  <WcGroupStandingRecordLineNative
-                    standing={wcGroupRanks.homeStanding}
-                    language={language}
-                  />
+                  <Text style={styles.teamRecordText}>{homeWcRecordLabel}</Text>
                 ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
@@ -815,8 +842,13 @@ function ResultPostCard({
                   />
                 ) : null}
               </View>
-              <View style={[styles.sideCol, styles.sideColAway]}>
-                <Animated.View style={[entrance.awayJerseyMarkStyle, styles.flagStack]}>
+              <View style={[styles.sideCol, styles.sideColAway, isWcCard && styles.sideColWc]}>
+                <Animated.View
+                  style={[
+                    entrance.awayJerseyMarkStyle,
+                    isWcCard ? styles.wcTeamStack : styles.flagStack,
+                  ]}
+                >
                   {isWcCard ? (
                     <WcTeamFlagWithMetaNative teamId={away?.teamId}>
                       <CountryFlagNative teamId={away?.teamId} variant="result" />
@@ -838,10 +870,7 @@ function ResultPostCard({
                   </Text>
                 </Animated.View>
                 {isWcCard ? (
-                  <WcGroupStandingRecordLineNative
-                    standing={wcGroupRanks.awayStanding}
-                    language={language}
-                  />
+                  <Text style={styles.teamRecordText}>{awayWcRecordLabel}</Text>
                 ) : null}
                 {wcMatchGoalScorers.length > 0 ? (
                   <WcMatchGoalScorersColumnNative
@@ -1775,6 +1804,14 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingLeft: 26,
   },
+  sideColWc: {
+    paddingLeft: 0,
+    paddingRight: 0,
+  },
+  wcTeamStack: {
+    alignItems: "center",
+    width: 67,
+  },
   centerScoreOverlay: {
     position: "absolute",
     left: 0,
@@ -1796,8 +1833,19 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   teamNameWc: {
+    width: 67,
+    alignSelf: "center",
     fontSize: 15,
     letterSpacing: 1.04,
+  },
+  teamRecordText: {
+    fontSize: 11,
+    fontWeight: "700",
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    color: "rgba(255,255,255,0.85)",
+    fontVariant: ["tabular-nums"],
+    textAlign: "center",
+    includeFontPadding: false,
   },
   predictedScoreFallback: {
     fontSize: 30,

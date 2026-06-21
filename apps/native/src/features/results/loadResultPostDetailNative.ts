@@ -51,6 +51,7 @@ export type LoadResultPostDetailNativeResult =
       post: ResultDetailPost;
       market: ResultPostDetailMarket | null;
       pointsDistribution: GamePointsDistributionV1 | null;
+      game: Record<string, unknown> | null;
     };
 
 /** Web `loadResultPostDetailClient` と同じ手順 */
@@ -73,6 +74,7 @@ export async function loadResultPostDetailNative(
       post,
       market: null,
       pointsDistribution: null,
+      game: null,
     };
   }
 
@@ -84,6 +86,7 @@ export async function loadResultPostDetailNative(
       post,
       market: null,
       pointsDistribution: null,
+      game: null,
     };
   }
 
@@ -114,5 +117,6 @@ export async function loadResultPostDetailNative(
     pointsDistribution: parseGamePointsDistributionV1(
       rawPointsDistributionFromGameDoc(gameData)
     ),
+    game: { id: gid.trim(), ...gameData },
   };
 }

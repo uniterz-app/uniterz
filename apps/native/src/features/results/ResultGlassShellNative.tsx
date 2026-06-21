@@ -51,6 +51,8 @@ type Props = {
   strokeOpacityStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
   /** 枠線幅 px（hit / 連勝 / upset / perfect は 3） */
   strokeWidth?: number;
+  /** 方眼を描かない（統合オーバーレイ内セクション用） */
+  hideGrid?: boolean;
 };
 
 function makeSkiaPath(width: number, height: number) {
@@ -80,6 +82,7 @@ export default function ResultGlassShellNative({
   overflowVisible = false,
   strokeOpacityStyle,
   strokeWidth = 1,
+  hideGrid = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
@@ -125,7 +128,9 @@ export default function ResultGlassShellNative({
             pointerEvents="none"
           >
             <Group clip={skiaPath}>
-              <MatchListCyberGridSkia width={size.w} height={size.h} />
+              {!hideGrid ? (
+                <MatchListCyberGridSkia width={size.w} height={size.h} />
+              ) : null}
               <Rect x={0} y={0} width={size.w} height={size.h}>
                 <SkiaLinearGradient
                   start={vec(size.w * 0.15, 0)}

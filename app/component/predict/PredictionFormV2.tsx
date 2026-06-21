@@ -60,6 +60,7 @@ import { predictHudTabButtonClass } from "@/lib/predict/predictOverlayHud";
 import PredictionScoringRulesChip from "@/app/component/predict/PredictionScoringRulesChip";
 import { usePredictionPostDistribution } from "@/lib/hooks/usePredictionPostDistribution";
 import { loadResultPostDetailClient } from "@/lib/result/loadResultPostDetailClient";
+import { mergeGameIntoResultPost } from "@/lib/result/mergeGameIntoResultPost";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 
 /* ======================
@@ -118,6 +119,8 @@ type Props = {
   predictEditTriggerNonce?: number;
   /** 予想修正の送信完了後（親の nonce リセット用） */
   onPredictEditEnd?: () => void;
+  /** 親の predict-overlay-cyber-form 一枚に内包するとき（内側のフォーム面を出さない） */
+  overlayUnifiedForm?: boolean;
 };
 
 type Winner = "home" | "away" | "draw";
@@ -141,32 +144,6 @@ function isMatchStartedForPredict(game: MatchCardProps): boolean {
     }
   }
   return false;
-}
-
-function mergeGameIntoResultPost(
-  post: PredictionPostV2,
-  game: MatchCardProps
-): PredictionPostV2 {
-  const homeTeamId = game.home?.teamId ?? post.home?.teamId ?? "";
-  const awayTeamId = game.away?.teamId ?? post.away?.teamId ?? "";
-  return {
-    ...post,
-    status: game.status,
-    result:
-      game.status === "final" && game.score
-        ? { home: game.score.home, away: game.score.away }
-        : (post.result ?? null),
-    home: {
-      ...post.home,
-      name: game.home.name,
-      teamId: homeTeamId,
-    },
-    away: {
-      ...post.away,
-      name: game.away.name,
-      teamId: awayTeamId,
-    },
-  };
 }
 
 function computeRecordByGames(
@@ -228,6 +205,7 @@ export default function PredictionFormV2({
   onUserPredictionWinnerChange,
   predictEditTriggerNonce = 0,
   onPredictEditEnd,
+  overlayUnifiedForm = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -713,6 +691,7 @@ export default function PredictionFormV2({
   };
 
   const overlayEmbedded = embedded && inOverlay;
+  const overlayUnified = overlayEmbedded && overlayUnifiedForm;
 
   const scoreInputClass = [
     overlayEmbedded
@@ -730,15 +709,19 @@ export default function PredictionFormV2({
   const standaloneGlassFill =
     "border border-white/10 bg-[linear-gradient(172deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.025)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]";
 
-  const glassCard = overlayEmbedded
-    ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-4 py-3`
-    : `relative w-full overflow-hidden rounded-2xl ${standaloneGlassFill} px-4 py-3`;
+  const glassCard = overlayUnified
+    ? "relative w-full overflow-hidden px-3 py-2 md:px-4 md:py-2.5"
+    : overlayEmbedded
+      ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-4 py-3`
+      : `relative w-full overflow-hidden rounded-2xl ${standaloneGlassFill} px-4 py-3`;
 
-  const glassCardStatsPanel = overlayEmbedded
-    ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-3 py-2.5`
-    : isMobile
-      ? `relative w-full overflow-hidden rounded-xl ${standaloneGlassFill} px-3 py-2.5`
-      : glassCard;
+  const glassCardStatsPanel = overlayUnified
+    ? "relative w-full overflow-hidden px-3 py-2 md:px-4 md:py-2.5"
+    : overlayEmbedded
+      ? `relative w-full overflow-hidden ${PREDICT_OVERLAY_FORM_PANEL} px-3 py-2.5`
+      : isMobile
+        ? `relative w-full overflow-hidden rounded-xl ${standaloneGlassFill} px-3 py-2.5`
+        : glassCard;
 
   const toolButtonInactiveClass = overlayEmbedded
     ? predictHudTabButtonClass(false)
