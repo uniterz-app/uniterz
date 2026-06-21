@@ -98,7 +98,6 @@ export const WC_GENERATED_SQUADS: Record<string, WcTeamSquad["squad"]> = {
     { id: "bel-tielemans", name: "Youri Tielemans", pos: "MF", club: "Aston Villa", captain: true },
     { id: "bel-lukaku", name: "Romelu Lukaku", pos: "FW", club: "Napoli" },
     { id: "bel-trossard", name: "Leandro Trossard", pos: "FW", club: "Arsenal" },
-    { id: "bel-doku", name: "Jérémy Doku", pos: "FW", club: "Manchester City" },
     { id: "bel-lammens", name: "Senne Lammens", pos: "GK", club: "Manchester United" },
     { id: "bel-penders", name: "Mike Penders", pos: "GK", club: "Strasbourg" },
     { id: "bel-lukebakio", name: "Dodi Lukébakio", pos: "FW", club: "Benfica" },

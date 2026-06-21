@@ -210,13 +210,13 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Khedira", "Skhiri", "Mejbri", "Saad", "Ben Slimane",
     ],
   },
-  // Group G — Belgium 1–1 Egypt (Jun 15)
+  // Group G — Belgium vs Iran (Jun 21, MD2 — CBS predicted XI)
   {
     iso3: "bel",
     formation: "4-2-3-1",
     players: [
       "Courtois", "Meunier", "Ngoy", "Mechele", "Castagne",
-      "Onana", "Tielemans", "Trossard", "De Bruyne", "Doku", "De Ketelaere",
+      "Onana", "Tielemans", "Trossard", "De Bruyne", "Fernandez-Pardo", "De Ketelaere",
     ],
   },
   {

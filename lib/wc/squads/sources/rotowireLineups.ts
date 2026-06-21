@@ -7,7 +7,7 @@ export const ROTOWIRE_LINEUPS: RawSourceLineup[] = [
   { iso3: "arg", formation: "4-2-3-1", players: ["E. Martinez", "Molina", "Otamendi", "MArtinez", "Tagliafico", "Fernandez", "De Paul", "Messi", "Mac Allister", "Alvarez", "L. Martinez"] },
   { iso3: "aus", formation: "3-4-3", players: ["Ryan", "Circati", "Souttar", "Burgess", "Italiano", "Metcalfe", "Irvine", "Bos", "Boyle", "Toure", "Irankunda"] },
   { iso3: "aut", formation: "4-2-3-1", players: ["A. Schlager", "Laimer", "Friedl", "Danso", "Mwene", "X. Schlager", "Seiwald", "Schmid", "Gregoritsch", "Sabitzer", "Arnautovic"] },
-  { iso3: "bel", formation: "4-2-3-1", players: ["Courtois", "Meunier", "De Winter", "Theate", "De Cuyper", "Onana", "Tielemans", "Trossard", "De Bruyne", "Doku", "De Ketelaere"] },
+  { iso3: "bel", formation: "4-2-3-1", players: ["Courtois", "Meunier", "De Winter", "Theate", "De Cuyper", "Onana", "Tielemans", "Trossard", "De Bruyne", "Fernandez-Pardo", "De Ketelaere"] },
   { iso3: "bih", formation: "4-4-2", players: ["Vasilj", "Dedic", "Katic", "Muharemovic", "Kolasinac", "Bajraktarevic", "Tahirovic", "Sunjic", "Memic", "Dzeko", "Demirovic"] },
   { iso3: "bra", formation: "4-4-2", players: ["Alisson", "Wesley", "Marquinhos", "Gabriel", "Alex Sandro", "Raphinha", "Guimaraes", "Casemiro", "Martinelli", "Cunha", "Vinicius"] },
   { iso3: "can", formation: "4-4-2", players: ["St. Clair", "Johnston", "Bombito", "Cornelius", "Davies", "Buchanan", "Kone", "Eustaquio", "Ahmed", "Larin", "David"] },

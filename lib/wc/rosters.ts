@@ -311,9 +311,9 @@ const WC_KEY_PLAYERS: Record<string, WcKeyPlayer[]> = {
     { name: "Kevin De Bruyne", pos: "MF", club: "Napoli" },
     { name: "Thibaut Courtois", pos: "GK", club: "Real Madrid" },
     { name: "Romelu Lukaku", pos: "FW", club: "Napoli" },
-    { name: "Jérémy Doku", pos: "FW", club: "Manchester City" },
     { name: "Amadou Onana", pos: "MF", club: "Aston Villa" },
     { name: "Leandro Trossard", pos: "FW", club: "Arsenal" },
+    { name: "Matias Fernandez-Pardo", pos: "FW", club: "Lille" },
     { name: "Arthur Theate", pos: "DF", club: "Eintracht Frankfurt" },
   ],
   egy: [
