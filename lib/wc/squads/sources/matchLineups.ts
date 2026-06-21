@@ -244,15 +244,24 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Singh", "Bell", "Stamenić", "Just", "Wood", "McCowatt",
     ],
   },
-  // Group H — Spain 0–0 Cape Verde (Jun 15)
+  // Group H — Spain vs Saudi Arabia (Jun 21, MD2)
   {
     iso3: "esp",
     formation: "4-3-3",
     players: [
-      "Simón", "Llorente", "Cubarsí", "Laporte", "Cucurella",
-      "Rodri", "Pedri", "Ruiz", "Torres", "Oyarzabal", "Gavi",
+      "Simón", "Porro", "Cubarsí", "Laporte", "Cucurella",
+      "Rodri", "Pedri", "Olmo", "Baena", "Oyarzabal", "Yamal",
     ],
   },
+  {
+    iso3: "sau",
+    formation: "4-4-2",
+    players: [
+      "Al-Owais", "Lajami", "Al-Amri", "Al-Tambakti", "Abdulhamid",
+      "Al-Harbi", "Nasser Al-Dawsari", "Al-Juwayr", "Al-Khaibari", "Al-Buraikan", "Salem Al-Dawsari",
+    ],
+  },
+  // Group H — Cape Verde (Jun 15 vs Spain, MD1 — ury-cpv 待ち)
   {
     iso3: "cpv",
     formation: "4-3-3",
@@ -261,15 +270,7 @@ export const MATCH_LINEUPS: RawSourceLineup[] = [
       "Pina", "Laros Duarte", "Monteiro", "Mendes", "Livramento", "Jovane Cabral",
     ],
   },
-  // Group H — Saudi Arabia 1–1 Uruguay (Jun 15)
-  {
-    iso3: "sau",
-    formation: "4-4-2",
-    players: [
-      "Al-Owais", "Abdulhamid", "Al-Tambakti", "Al-Amri", "Al-Harbi",
-      "Abu Al-Shamat", "Kanno", "Al-Khaibari", "Al-Dawsari", "Al-Buraikan", "Al-Juwayr",
-    ],
-  },
+  // Group H — Uruguay (Jun 15 vs Saudi Arabia, MD1 — ury-cpv 待ち)
   {
     iso3: "ury",
     formation: "4-4-2",

@@ -7,8 +7,17 @@ import {
   isWcGoalScorerPickValidForPredictedScore,
   wcGoalScorerEligibleTeamIds,
 } from "@/lib/wc/goalScorer";
+import {
+  buildGoalScorerSquadSections,
+  resolveGoalScorerPlayerClub,
+  type GoalScorerSquadRow,
+  type GoalScorerSquadSections,
+} from "@/lib/wc/squadGoalScorerDisplay";
+import { readTournamentGoalCount } from "@/lib/wc/aggregateTournamentGoalCounts";
+import { useWcTournamentGoalCounts } from "@/lib/wc/useWcTournamentGoalCounts";
+import WcTournamentGoalBallStack from "@/app/component/predict/wc/WcTournamentGoalBallStack";
 import { getWcSquad } from "@/lib/wc/squads";
-import { findSquadPlayer, type WcSquadPlayer } from "@/lib/wc/squadTypes";
+import { findSquadPlayer } from "@/lib/wc/squadTypes";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 
@@ -27,19 +36,153 @@ type Props = {
 type TeamColumnProps = {
   teamId: string;
   label: string;
-  squad: WcSquadPlayer[];
+  sections: GoalScorerSquadSections;
   value: WcGoalScorerPick | null;
   onPick: (playerId: string, teamId: string) => void;
   isMobile: boolean;
+  goalCounts: ReadonlyMap<string, number> | null;
 };
+
+function PlayerRowButton({
+  row,
+  teamId,
+  selected,
+  isMobile,
+  tournamentGoals,
+  onPick,
+}: {
+  row: GoalScorerSquadRow;
+  teamId: string;
+  selected: boolean;
+  isMobile: boolean;
+  tournamentGoals: number;
+  onPick: () => void;
+}) {
+  const { player, isStarter } = row;
+  const { club, leagueIso2 } = resolveGoalScorerPlayerClub(player);
+
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      className={[
+        "w-full rounded-lg text-left transition",
+        isMobile ? "px-2 py-1.5" : "px-2.5 py-2",
+        selected
+          ? "bg-cyan-500/22 text-cyan-50 ring-1 ring-cyan-400/35"
+          : "hover:bg-white/6",
+      ].join(" ")}
+    >
+      <div className="flex min-w-0 items-baseline gap-1.5">
+        <span
+          className={[
+            "min-w-0 truncate font-medium",
+            isMobile ? "text-xs leading-tight" : "text-sm",
+            selected
+              ? "text-cyan-50"
+              : isStarter
+                ? "text-white/92"
+                : "text-white/52",
+          ].join(" ")}
+        >
+          {player.name}
+        </span>
+        <span
+          className={[
+            "shrink-0 uppercase tracking-wide",
+            isMobile ? "text-[9px]" : "text-[10px]",
+            selected ? "text-cyan-200/55" : "text-white/35",
+          ].join(" ")}
+        >
+          {player.pos}
+        </span>
+      </div>
+      {club ? (
+        <div
+          className={[
+            "mt-0.5 flex min-w-0 items-center gap-1",
+            selected ? "text-cyan-100/55" : "text-white/42",
+          ].join(" ")}
+        >
+          {leagueIso2 ? (
+            <CountryFlag
+              iso2={leagueIso2}
+              decorative
+              variant="inline"
+              className={
+                isMobile
+                  ? "aspect-[4/3] w-[0.85rem] shrink-0"
+                  : "aspect-[4/3] w-[0.95rem] shrink-0"
+              }
+            />
+          ) : null}
+          <span
+            className={[
+              "min-w-0 truncate",
+              isMobile ? "text-[10px]" : "text-[11px]",
+            ].join(" ")}
+          >
+            {club}
+          </span>
+          <WcTournamentGoalBallStack count={tournamentGoals} />
+        </div>
+      ) : tournamentGoals > 0 ? (
+        <div className="mt-0.5 flex min-w-0 items-center">
+          <WcTournamentGoalBallStack count={tournamentGoals} />
+        </div>
+      ) : null}
+    </button>
+  );
+}
+
+function SquadPlayerList({
+  rows,
+  teamId,
+  value,
+  isMobile,
+  goalCounts,
+  onPick,
+}: {
+  rows: GoalScorerSquadRow[];
+  teamId: string;
+  value: WcGoalScorerPick | null;
+  isMobile: boolean;
+  goalCounts: ReadonlyMap<string, number> | null;
+  onPick: (playerId: string, teamId: string) => void;
+}) {
+  return (
+    <>
+      {rows.map((row) => {
+        const selected =
+          value?.playerId === row.player.id && value.teamId === teamId;
+        return (
+          <PlayerRowButton
+            key={row.player.id}
+            row={row}
+            teamId={teamId}
+            selected={selected}
+            isMobile={isMobile}
+            tournamentGoals={readTournamentGoalCount(
+              goalCounts,
+              teamId,
+              row.player.id
+            )}
+            onPick={() => onPick(row.player.id, teamId)}
+          />
+        );
+      })}
+    </>
+  );
+}
 
 function TeamPlayerColumn({
   teamId,
   label,
-  squad,
+  sections,
   value,
   onPick,
   isMobile,
+  goalCounts,
 }: TeamColumnProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-black/25">
@@ -72,45 +215,36 @@ function TeamPlayerColumn({
           isMobile ? "max-h-44 p-1" : "max-h-48 p-1.5",
         ].join(" ")}
       >
-        {squad.length === 0 ? (
+        {sections.starters.length === 0 && sections.bench.length === 0 ? (
           <p className="px-2 py-3 text-center text-xs text-white/40">—</p>
         ) : (
           <div className="grid gap-0.5">
-            {squad.map((p) => {
-              const selected =
-                value?.playerId === p.id && value.teamId === teamId;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => onPick(p.id, teamId)}
-                  className={[
-                    "w-full rounded-lg text-left transition",
-                    isMobile ? "px-2 py-1.5" : "px-2.5 py-2 text-sm",
-                    selected
-                      ? "bg-cyan-500/22 text-cyan-50 ring-1 ring-cyan-400/35"
-                      : "text-white/85 hover:bg-white/6",
-                  ].join(" ")}
-                >
-                  <div
-                    className={[
-                      "truncate font-medium",
-                      isMobile ? "text-xs leading-tight" : "",
-                    ].join(" ")}
-                  >
-                    {p.name}
-                  </div>
-                  <div
-                    className={[
-                      "text-white/45",
-                      isMobile ? "text-[10px]" : "ml-2 inline text-xs",
-                    ].join(" ")}
-                  >
-                    {p.pos}
-                  </div>
-                </button>
-              );
-            })}
+            <SquadPlayerList
+              rows={sections.starters}
+              teamId={teamId}
+              value={value}
+              isMobile={isMobile}
+              goalCounts={goalCounts}
+              onPick={onPick}
+            />
+            {sections.hasLineupSplit && sections.bench.length > 0 ? (
+              <div
+                className={[
+                  "border-t border-white/12",
+                  isMobile ? "my-1" : "my-1.5",
+                ].join(" ")}
+                role="separator"
+                aria-hidden
+              />
+            ) : null}
+            <SquadPlayerList
+              rows={sections.bench}
+              teamId={teamId}
+              value={value}
+              isMobile={isMobile}
+              goalCounts={goalCounts}
+              onPick={onPick}
+            />
           </div>
         )}
       </div>
@@ -130,6 +264,7 @@ export default function WcGoalScorerPicker({
   isMobile = false,
 }: Props) {
   const m = t(language);
+  const { goalCounts } = useWcTournamentGoalCounts();
 
   const homeSquad = useMemo(
     () => (homeTeamId ? getWcSquad(homeTeamId) ?? [] : []),
@@ -156,20 +291,20 @@ export default function WcGoalScorerPicker({
           ? {
               teamId: homeTeamId,
               label: homeLabel,
-              squad: homeSquad,
+              sections: buildGoalScorerSquadSections(homeSquad, homeTeamId),
             }
           : null,
         awayTeamId && eligibleTeamIds.includes(awayTeamId)
           ? {
               teamId: awayTeamId,
               label: awayLabel,
-              squad: awaySquad,
+              sections: buildGoalScorerSquadSections(awaySquad, awayTeamId),
             }
           : null,
       ].filter(Boolean) as Array<{
         teamId: string;
         label: string;
-        squad: WcSquadPlayer[];
+        sections: GoalScorerSquadSections;
       }>,
     [
       homeTeamId,
@@ -276,22 +411,17 @@ export default function WcGoalScorerPicker({
       )}
 
       {teams.length > 0 ? (
-        <div
-          className={[
-            "grid",
-            teams.length > 1 ? "grid-cols-2" : "grid-cols-1",
-            isMobile ? "gap-2" : "gap-3",
-          ].join(" ")}
-        >
+        <div className={["grid grid-cols-1", isMobile ? "gap-2" : "gap-3"].join(" ")}>
           {teams.map((team) => (
             <TeamPlayerColumn
               key={team.teamId}
               teamId={team.teamId}
               label={team.label}
-              squad={team.squad}
+              sections={team.sections}
               value={value}
               onPick={(playerId, teamId) => onChange({ playerId, teamId })}
               isMobile={isMobile}
+              goalCounts={goalCounts}
             />
           ))}
         </div>

@@ -148,7 +148,7 @@ export const DIRECT_PLAYER_IDS: Record<string, Record<string, string>> = {
     Lukić: "bih-lukic",
   },
   eng: { Livramento: "eng-livramento" },
-  esp: { Olmo: "esp-olmo", Ruiz: "esp-ruiz", Porro: "esp-llorente" },
+  esp: { Olmo: "esp-olmo", Ruiz: "esp-ruiz", Porro: "esp-porro", Baena: "esp-baena", Yamal: "esp-yamal" },
   fra: { Konate: "fra-upamecano", Dembele: "fra-dembele", Doue: "fra-doue" },
   nld: {
     Ake: "nld-ake",
@@ -379,8 +379,9 @@ export const DIRECT_PLAYER_IDS: Record<string, Record<string, string>> = {
 export const MANUAL_ALIASES: Record<string, Record<string, string>> = {
   sau: {
     Mandash: "Saud Abdulhamid",
-    "N. Al-Dawsari": "Nasser Al-Dawsari",
-    "S. Al-Dawsari": "Salem Al-Dawsari",
+    Lajami: "Ali Lajami",
+    "Nasser Al-Dawsari": "Nasser Al-Dawsari",
+    "Salem Al-Dawsari": "Salem Al-Dawsari",
     "Al-Owais": "Mohammed Al-Owais",
     "Al-Tambakti": "Hassan Al-Tambakti",
     "Al-Amri": "Abdulelah Al-Amri",
