@@ -1,0 +1,10 @@
+{
+  "homeScore": 4,
+  "awayScore": 0,
+  "scorers": [
+    { "playerId": "esp-yamal", "teamId": "wc-esp", "minute": 10 },
+    { "playerId": "esp-oyarzabal", "teamId": "wc-esp", "minute": 21 },
+    { "playerId": "esp-oyarzabal", "teamId": "wc-esp", "minute": 24 },
+    { "playerId": "sau-al-tambakti", "teamId": "wc-sau", "minute": 49, "ownGoal": true }
+  ]
+}

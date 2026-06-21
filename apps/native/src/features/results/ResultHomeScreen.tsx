@@ -399,6 +399,7 @@ function ResultPostCard({
   viewerUid,
   listEnterIndex,
   entranceEnabled,
+  siblingOverlayOpen,
   onOpenDetail,
   onRequestDeleteConfirm,
   onRequestPredictEdit,
@@ -411,6 +412,8 @@ function ResultPostCard({
   listEnterIndex: number;
   /** 結果タブ初回表示のみ入場アニメを有効化 */
   entranceEnabled: boolean;
+  /** 詳細オーバーレイ表示中は一覧の Skia FX を止めて GPU 負荷を下げる */
+  siblingOverlayOpen?: boolean;
   onOpenDetail: (id: string) => void;
   /** Web 同様：カスタム削除確認モーダルを開く */
   onRequestDeleteConfirm: (post: PostWithMillis) => void;
@@ -420,6 +423,7 @@ function ResultPostCard({
   const isEn = language === "en";
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
   const reduceMotionList = useReducedMotion() ?? false;
+  const pauseListFx = Boolean(siblingOverlayOpen);
 
   const postStatus = typeof post.status === "string" ? post.status : "";
   const startAtMs =
@@ -643,7 +647,7 @@ function ResultPostCard({
 
   const entrance = useResultPostCardEntrance({
     rowIndex: listEnterIndex,
-    entranceEnabled,
+    entranceEnabled: entranceEnabled && !pauseListFx,
     reduceMotion: reduceMotionList,
     badge,
     hasFinalScore: hasFinal,
@@ -715,9 +719,7 @@ function ResultPostCard({
       >
         <View style={styles.cardBadgeOverlay} pointerEvents="none">
           <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
-            {leagueKey === "nba" || leagueKey === "wc" ? (
-              <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
-            ) : (
+            {pauseListFx || !(leagueKey === "nba" || leagueKey === "wc") ? (
               <View
                 style={[
                   styles.leaguePill,
@@ -726,6 +728,8 @@ function ResultPostCard({
               >
                 <Text style={styles.leaguePillText}>{pillText}</Text>
               </View>
+            ) : (
+              <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
             )}
           </Animated.View>
           <Animated.View
@@ -960,9 +964,9 @@ function ResultPostCard({
           </View>
           </View>
         </Animated.View>
-        {badge === "hit" ? <ResultHitCyberFrameNative /> : null}
-        {badge === "perfect" ? <ResultPerfectCyberFrameNative /> : null}
-        {badge === "streak" ? (
+        {!pauseListFx && badge === "hit" ? <ResultHitCyberFrameNative /> : null}
+        {!pauseListFx && badge === "perfect" ? <ResultPerfectCyberFrameNative /> : null}
+        {!pauseListFx && badge === "streak" ? (
           <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
         ) : null}
       </ResultGlassShellNative>
@@ -1270,6 +1274,7 @@ export default function ResultHomeScreen({
               viewerUid={uid}
               listEnterIndex={section.baseFlatIndex + index}
               entranceEnabled={entranceArmed}
+              siblingOverlayOpen={detailPostId != null}
               onOpenDetail={setDetailPostId}
               onRequestDeleteConfirm={setDeleteConfirmPost}
               onRequestPredictEdit={setPredictEditPost}

@@ -3,7 +3,7 @@ import {
   calcWcGoalScorerBonus,
   type WcGameGoalScorer,
 } from "@/lib/wc/goalScorer";
-import { buildPostMatchGoalScorers } from "@/lib/wc/matchGoalScorers";
+import { buildPostMatchGoalScorersGrouped } from "@/lib/wc/matchGoalScorers";
 
 const BATCH_LIMIT = 400;
 
@@ -18,7 +18,7 @@ export async function resettleWcGoalScorerBonusesForGame(
   homeTeamId: string | null | undefined,
   awayTeamId: string | null | undefined
 ): Promise<{ updated: number }> {
-  const matchGoalScorers = buildPostMatchGoalScorers(
+  const matchGoalScorers = buildPostMatchGoalScorersGrouped(
     goalScorers,
     homeTeamId,
     awayTeamId

@@ -1,16 +1,10 @@
-import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { MainTabParamList } from "../../navigation/types";
-import {
-  markLeaderboardsIntroSeenNative,
-  readLeaderboardsIntroSeenNative,
-} from "../../navigation/navLeaderboardsIntroSeenNative";
 import { useNativeMyRankingUser } from "../rankings/useNativeMyRankingUser";
-import LeaderboardsGroupsIntroModalNative from "./LeaderboardsGroupsIntroModalNative";
 import RankingsCommunityPanelNative from "./RankingsCommunityPanelNative";
 
 type Props = { bottomReserveY?: number };
@@ -21,16 +15,6 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
   const { fUser } = useFirebaseUser();
   const { user } = useNativeMyRankingUser(fUser?.uid);
   const language = user.language;
-  const [introOpen, setIntroOpen] = useState(false);
-
-  useEffect(() => {
-    void readLeaderboardsIntroSeenNative().then((seen) => {
-      if (!seen) {
-        void markLeaderboardsIntroSeenNative();
-        setIntroOpen(true);
-      }
-    });
-  }, []);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + 4 }]}>
@@ -49,12 +33,6 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
           }}
         />
       </ScrollView>
-
-      <LeaderboardsGroupsIntroModalNative
-        visible={introOpen}
-        language={language}
-        onClose={() => setIntroOpen(false)}
-      />
     </View>
   );
 }

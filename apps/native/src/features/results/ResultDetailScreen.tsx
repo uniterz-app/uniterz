@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   BackHandler,
+  InteractionManager,
   Platform,
   Pressable,
   SafeAreaView,
@@ -19,7 +20,7 @@ import {
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { useReducedMotion } from "react-native-reanimated";
+import { LayoutAnimationConfig, useReducedMotion } from "react-native-reanimated";
 import type { GamePointsDistributionV1 } from "../../../../../lib/results/gamePointsDistribution";
 import { SCORE_CHART_MAX } from "../../../../../lib/results/resultPointsDistributionChartModel";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
@@ -38,16 +39,15 @@ import {
   type ResultPostDetailMarket,
 } from "./loadResultPostDetailNative";
 import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge";
-import { RESULT_DETAIL_ENTRANCE, resultDetailSectionEnter } from "./resultDetailEntranceNative";
+import { RESULT_DETAIL_ENTRANCE } from "./resultDetailEntranceNative";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { formatResultPostCardDateLabel } from "./nativeResultModel";
-import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
-import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
-import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
-import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
-import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
-import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
+import {
+  useWcGoalScorerResultNative,
+  type WcGoalScorerPostLike,
+} from "./useWcGoalScorerResultNative";
+import SkiaBoundary from "../../ui/SkiaBoundary";
 import PredictOverlayCyberFormPanelNative from "../games/PredictOverlayCyberFormPanelNative";
 import PredictOverlayCloseButtonNative from "../games/PredictOverlayCloseButtonNative";
 import { PredictMatchPreview } from "../games/PredictModal";
@@ -87,13 +87,11 @@ function ResultDetailOverlayBackdrop() {
     );
   }
   if (Platform.OS === "android") {
+    /** experimentalBlurMethod は端末によってネイティブ落ちするためフォールバック */
     return (
-      <BlurView
+      <View
         pointerEvents="none"
-        intensity={20}
-        tint="dark"
-        experimentalBlurMethod="dimezisBlurView"
-        style={StyleSheet.absoluteFillObject}
+        style={[StyleSheet.absoluteFillObject, styles.overlayBlurFallback]}
       />
     );
   }
@@ -251,9 +249,28 @@ function ResultDetailMarketSection({
   const awayName = getMobileTeamName(leagueKey, away?.name ?? "", awayL1, awayL2);
   const homeFallback = "#0ea5e9";
   const awayFallback = "#f43f5e";
-  /** 一覧カード／試合ページの市場ドーナツと同じ：NBA はジャージ用オーバーライド色（Magic 等は primary テーブルが黒でも青で統一） */
   const homeC = resolveTeamJerseyPalette(post.league, home, homeFallback).primary;
   const awayC = resolveTeamJerseyPalette(post.league, away, awayFallback).primary;
+  const legendHomeName = leagueKey === "nba" ? homeName.toUpperCase() : homeName;
+  const legendAwayName = leagueKey === "nba" ? awayName.toUpperCase() : awayName;
+
+  const segments = useMemo((): DonutSegment[] => {
+    if (!market) return [];
+    const h = market.homeRate ?? 0;
+    const a = market.awayRate ?? 0;
+    const d = market.drawRate ?? 0;
+    if (isSoccer) {
+      return [
+        { label: legendHomeName, value: h, color: homeC },
+        { label: isEn ? "Draw" : "引き分け", value: d, color: "#9ca3af" },
+        { label: legendAwayName, value: a, color: awayC },
+      ];
+    }
+    return [
+      { label: legendHomeName, value: h, color: homeC },
+      { label: legendAwayName, value: a, color: awayC },
+    ];
+  }, [isSoccer, legendHomeName, legendAwayName, homeC, awayC, market, isEn]);
 
   if (!market) {
     return (
@@ -269,29 +286,8 @@ function ResultDetailMarketSection({
     );
   }
 
-  const h = market.homeRate ?? 0;
-  const a = market.awayRate ?? 0;
-  const d = market.drawRate ?? 0;
-  /** Firestore の market.total：0 のとき比率は未確定（0% 表示のガラストラックのみ） */
   const marketRatesConfirmed =
     typeof market.total === "number" && Number.isFinite(market.total) && market.total > 0;
-
-  const legendHomeName = leagueKey === "nba" ? homeName.toUpperCase() : homeName;
-  const legendAwayName = leagueKey === "nba" ? awayName.toUpperCase() : awayName;
-
-  const segments = useMemo((): DonutSegment[] => {
-    if (isSoccer) {
-      return [
-        { label: legendHomeName, value: h, color: homeC },
-        { label: isEn ? "Draw" : "引き分け", value: d, color: "#9ca3af" },
-        { label: legendAwayName, value: a, color: awayC },
-      ];
-    }
-    return [
-      { label: legendHomeName, value: h, color: homeC },
-      { label: legendAwayName, value: a, color: awayC },
-    ];
-  }, [isSoccer, legendHomeName, legendAwayName, homeC, awayC, h, a, d, isEn]);
 
   return (
     <ShellCard hideGrid>
@@ -427,7 +423,15 @@ function ResultDetailDistributionSection({
 
       <View style={[styles.distChartSection, !showChart && styles.distChartSectionEmpty]}>
         {showChart && distribution ? (
-          <ResultPointsDistributionChartSkia distribution={distribution} myScore={my} />
+          <SkiaBoundary
+            fallback={<View style={styles.distChartFallback} />}
+          >
+            <ResultPointsDistributionChartSkia
+              distribution={distribution}
+              myScore={my}
+              compact
+            />
+          </SkiaBoundary>
         ) : null}
       </View>
 
@@ -597,7 +601,8 @@ export default function ResultDetailScreen({
   const [game, setGame] = useState<Record<string, unknown> | null>(null);
   const [market, setMarket] = useState<ResultPostDetailMarket | null>(null);
   const [distribution, setDistribution] = useState<GamePointsDistributionV1 | null>(null);
-  const reduceMotion = useReducedMotion() ?? false;
+  /** 一覧 Skia と同時マウントを避け、重いチャートはインタラクション後に描画 */
+  const [heavyContentReady, setHeavyContentReady] = useState(false);
 
   const reset = useCallback(() => {
     setPost(null);
@@ -606,6 +611,7 @@ export default function ResultDetailScreen({
     setDistribution(null);
     setMissing(false);
     setLoading(false);
+    setHeavyContentReady(false);
   }, []);
 
   useEffect(() => {
@@ -648,6 +654,21 @@ export default function ResultDetailScreen({
     });
     return () => sub.remove();
   }, [visible, onClose]);
+
+  useEffect(() => {
+    if (!visible || loading || missing || !post) {
+      setHeavyContentReady(false);
+      return;
+    }
+    let alive = true;
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (alive) setHeavyContentReady(true);
+    });
+    return () => {
+      alive = false;
+      task.cancel();
+    };
+  }, [visible, loading, missing, post?.id]);
 
   const gamesT = useMemo(() => getGamesTexts(language), [language]);
   const matchPreview = useMemo(() => {
@@ -708,54 +729,45 @@ export default function ResultDetailScreen({
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
-            <PredictOverlayCyberFormPanelNative contentStyle={styles.unifiedOverlayPanel}>
-              <PredictOverlayCloseButtonNative
-                onPress={onClose}
-                accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
-              />
-              {matchPreview ? (
-                <Animated.View
-                  entering={resultDetailSectionEnter(
-                    RESULT_DETAIL_ENTRANCE.delayHeaderMs,
-                    reduceMotion
-                  )}
-                >
-                  <PredictMatchPreview
-                    data={matchPreview}
-                    onClose={onClose}
-                    closeLabel={isEn ? "Close" : "閉じる"}
-                    overlayMarketBar={overlayMarketBar}
-                    language={language}
-                    t={gamesT}
-                    mergedFinal={mergedFinalPreview}
-                    isWcLeague={isWcOverlay}
-                    overlayCenterMode
-                    overlayUnifiedForm
-                    hideCloseButton
-                  />
-                </Animated.View>
-              ) : null}
-              <Animated.View
-                entering={resultDetailSectionEnter(
-                  RESULT_DETAIL_ENTRANCE.delayDistributionMs,
-                  reduceMotion
-                )}
-              >
-                <ResultDetailDistributionSection
-                  distribution={distribution}
-                  post={post}
-                  language={language}
+            <LayoutAnimationConfig skipEntering>
+              <PredictOverlayCyberFormPanelNative contentStyle={styles.unifiedOverlayPanel}>
+                <PredictOverlayCloseButtonNative
+                  onPress={onClose}
+                  accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
                 />
-              </Animated.View>
-              <Animated.View
-                entering={resultDetailSectionEnter(
-                  RESULT_DETAIL_ENTRANCE.delayStatsMs,
-                  reduceMotion
-                )}
-              >
-                <ResultDetailStatsSection post={post} language={language} />
-              </Animated.View>
-            </PredictOverlayCyberFormPanelNative>
+                {matchPreview ? (
+                  <View>
+                    <PredictMatchPreview
+                      data={matchPreview}
+                      onClose={onClose}
+                      closeLabel={isEn ? "Close" : "閉じる"}
+                      overlayMarketBar={overlayMarketBar}
+                      language={language}
+                      t={gamesT}
+                      mergedFinal={mergedFinalPreview}
+                      isWcLeague={isWcOverlay}
+                      overlayCenterMode
+                      overlayUnifiedForm
+                      hideCloseButton
+                    />
+                  </View>
+                ) : null}
+                {heavyContentReady ? (
+                  <>
+                    <View>
+                      <ResultDetailDistributionSection
+                        distribution={distribution}
+                        post={post}
+                        language={language}
+                      />
+                    </View>
+                    <View>
+                      <ResultDetailStatsSection post={post} language={language} />
+                    </View>
+                  </>
+                ) : null}
+              </PredictOverlayCyberFormPanelNative>
+            </LayoutAnimationConfig>
             <View style={{ height: Platform.OS === "ios" ? 32 : 24 }} />
           </ScrollView>
         )}
@@ -1224,6 +1236,12 @@ const styles = StyleSheet.create({
   },
   /** Web：`min-h-[100px] items-center`（チャート非表示時） */
   distChartSectionEmpty: { minHeight: 100 },
+  distChartFallback: {
+    width: "100%",
+    minHeight: 120,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
   distAxisFoot: {
     marginTop: 8,
     textAlign: "center",
