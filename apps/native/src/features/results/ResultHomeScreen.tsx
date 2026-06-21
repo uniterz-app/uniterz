@@ -104,6 +104,11 @@ import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import { shareResultCardNative } from "./shareResultCardNative";
+import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import { buildResultShareUrl } from "../../../../../lib/share/shareAppUrls";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
@@ -453,7 +458,10 @@ function ResultPostCard({
   onRequestPredictEdit?: (post: PostWithMillis) => void;
 }) {
   const isEn = language === "en";
+  const resultCopy = i18nT(language).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const captureRef = useRef<View>(null);
   const reduceMotionList = useReducedMotion() ?? false;
 
   const postStatus = typeof post.status === "string" ? post.status : "";
@@ -480,34 +488,30 @@ function ResultPostCard({
   );
   const hasCornerActions =
     !isMatchStarted && (hasCornerTrash || hasCornerEdit);
+  const canShare =
+    Boolean(viewerUid && authorUid === viewerUid) && !sharing;
 
   useEffect(() => {
     if (isMatchStarted) setCornerFabOpen(false);
   }, [isMatchStarted]);
 
-  const penFlyProgress = useSharedValue(0);
-  const trashFlyProgress = useSharedValue(0);
+  const flyoutProgress = useSharedValue(0);
 
   useEffect(() => {
     const target = cornerFabOpen ? 1 : 0;
-    const cfg = {
+    flyoutProgress.value = withTiming(target, {
       duration: CORNER_FAB_TRANSITION_MS,
       easing: cornerFabTransitionEasing,
-    };
-    penFlyProgress.value = withTiming(hasCornerEdit ? target : 0, cfg);
-    trashFlyProgress.value = withTiming(hasCornerTrash ? target : 0, cfg);
-  }, [cornerFabOpen, hasCornerEdit, hasCornerTrash]);
+    });
+  }, [cornerFabOpen, flyoutProgress]);
 
-  /** Web `flyoutPenClass`：閉じ時 translate-x-2（+8px）、開くと 0 */
-  const cornerFlyoutPenMotion = useAnimatedStyle(() => ({
-    opacity: penFlyProgress.value,
-    transform: [{ translateX: 8 * (1 - penFlyProgress.value) }],
-  }));
-
-  /** Web `flyoutTrashClass`：閉じ時 -translate-y-2（-8px）、開くと 0 */
-  const cornerFlyoutTrashMotion = useAnimatedStyle(() => ({
-    opacity: trashFlyProgress.value,
-    transform: [{ translateY: -8 * (1 - trashFlyProgress.value) }],
+  /** バーガー下に縦並びで展開 */
+  const cornerFlyoutColumnMotion = useAnimatedStyle(() => ({
+    opacity: flyoutProgress.value,
+    transform: [
+      { translateY: -6 * (1 - flyoutProgress.value) },
+      { scale: 0.94 + flyoutProgress.value * 0.06 },
+    ],
   }));
 
   /** Web ResultCard の isLiveGame と同じ：開始〜確定まで LIVE */
@@ -571,6 +575,51 @@ function ResultPostCard({
   const rh = result?.home;
   const ra = result?.away;
   const hasFinal = typeof rh === "number" && typeof ra === "number";
+
+  const shareLinkUrl = useMemo(
+    () => buildResultShareUrl(post.id, getUniterzApiBaseUrl()),
+    [post.id]
+  );
+
+  const handleShareResult = useCallback(async () => {
+    if (!canShare) return;
+    setCornerFabOpen(false);
+    setSharing(true);
+    try {
+      const pointsV3 = toNumber(stats?.pointsV3, NaN);
+      const shareOutcome = await shareResultCardNative(captureRef, {
+        language,
+        homeName,
+        awayName,
+        predictedHome: hasPredictedScore ? ph : null,
+        predictedAway: hasPredictedScore ? pa : null,
+        finalHome: hasFinal ? rh : null,
+        finalAway: hasFinal ? ra : null,
+        totalPoints: hasFinal && Number.isFinite(pointsV3) ? pointsV3 : null,
+        postId: post.id,
+        appBaseUrl: getUniterzApiBaseUrl(),
+      });
+      if (shareOutcome === "failed") {
+        Alert.alert("", resultCopy.shareResultCardFailed);
+      }
+    } finally {
+      setSharing(false);
+    }
+  }, [
+    awayName,
+    canShare,
+    hasFinal,
+    hasPredictedScore,
+    homeName,
+    language,
+    pa,
+    ph,
+    post.id,
+    ra,
+    resultCopy.shareResultCardFailed,
+    rh,
+    stats?.pointsV3,
+  ]);
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWcCard || !hasFinal) return [];
@@ -683,8 +732,9 @@ function ResultPostCard({
                 ? styles.cardFrameMiss
                 : null;
 
+  const showCornerControl = canShare || hasCornerActions;
   const shellOverflowStyle =
-    cornerFabOpen && hasCornerActions ? styles.cardShellOverflowVisible : null;
+    cornerFabOpen && showCornerControl ? styles.cardShellOverflowVisible : null;
 
   const shellBorderColor =
     typeof (frameStyle as ViewStyle | null)?.borderColor === "string"
@@ -723,6 +773,8 @@ function ResultPostCard({
           onOpenDetail(post.id);
         }}
       >
+      <View style={styles.cardCaptureWrap}>
+      <View ref={captureRef} collapsable={false}>
       <ResultGlassShellNative
         borderColor={shellBorderColor}
         strokeWidth={shellStrokeWidth}
@@ -744,80 +796,24 @@ function ResultPostCard({
               </View>
             )}
           </Animated.View>
-          <Animated.View
-            style={[
-              styles.cardBadgeOutcome,
-              hasCornerActions && styles.cardBadgeOutcomeWithFab,
-              entrance.hitMissBadgeStyle,
-            ]}
-          >
-            <ResultOutcomeBadgesNative
-              badge={badge}
-              streakBadge={streakBadge}
-              activeWinStreak={activeWinStreak}
-              showLiveMark={showLiveMark}
-              hitBadgeSubtle
-            />
-          </Animated.View>
         </View>
+        <Animated.View
+          style={[
+            styles.cardBadgeOutcomeAbsolute,
+            showCornerControl ? styles.cardBadgeOutcomeWithMenu : null,
+            entrance.hitMissBadgeStyle,
+          ]}
+          pointerEvents="none"
+        >
+          <ResultOutcomeBadgesNative
+            badge={badge}
+            streakBadge={streakBadge}
+            activeWinStreak={activeWinStreak}
+            showLiveMark={showLiveMark}
+            hitBadgeSubtle
+          />
+        </Animated.View>
         <Animated.View style={[resultCardShellNative.body, entrance.cardBodyGateStyle]}>
-          {hasCornerActions ? (
-            <View style={styles.cornerFabCluster} pointerEvents="box-none">
-              {hasCornerEdit ? (
-                <Animated.View
-                  style={[styles.cornerFlyoutPenSlot, cornerFlyoutPenMotion]}
-                  pointerEvents={cornerFabOpen ? "auto" : "none"}
-                >
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.cornerFlyoutPen,
-                      pressed && styles.cornerFlyoutPressed,
-                    ]}
-                    onPress={requestPredictEdit}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
-                  >
-                    <MaterialCommunityIcons
-                      name="pencil"
-                      size={10}
-                      color="rgba(207,250,254,0.88)"
-                    />
-                  </Pressable>
-                </Animated.View>
-              ) : null}
-              {hasCornerTrash ? (
-                <Animated.View
-                  style={[styles.cornerFlyoutTrashSlot, cornerFlyoutTrashMotion]}
-                  pointerEvents={cornerFabOpen ? "auto" : "none"}
-                >
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.cornerFlyoutTrash,
-                      pressed && styles.cornerFlyoutPressed,
-                    ]}
-                    onPress={requestDeletePost}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
-                  >
-                    <MaterialCommunityIcons
-                      name="trash-can-outline"
-                      size={10}
-                      color="rgba(252,165,165,0.88)"
-                    />
-                  </Pressable>
-                </Animated.View>
-              ) : null}
-              <CyberMenuButton
-                size="xs"
-                onPress={() => setCornerFabOpen((v) => !v)}
-                accessibilityLabel={isEn ? "Open actions" : "操作メニュー"}
-                accessibilityState={{ expanded: cornerFabOpen }}
-              />
-            </View>
-          ) : null}
-
           <View style={styles.cardContent}>
           <View style={styles.matchArea}>
             <View style={styles.matchGrid}>
@@ -978,6 +974,86 @@ function ResultPostCard({
           <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
         ) : null}
       </ResultGlassShellNative>
+      {canShare || sharing ? (
+        <ShareLinkCaptureFooterNative url={shareLinkUrl} />
+      ) : null}
+      </View>
+
+      {showCornerControl ? (
+          <View style={styles.cornerFabCluster} pointerEvents="box-none">
+            <Animated.View
+              style={[styles.cornerFlyoutColumn, cornerFlyoutColumnMotion]}
+              pointerEvents={cornerFabOpen ? "auto" : "none"}
+            >
+              {canShare ? (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.cornerFlyoutBtn,
+                    styles.cornerFlyoutShare,
+                    pressed && styles.cornerFlyoutPressed,
+                  ]}
+                  onPress={() => void handleShareResult()}
+                  disabled={!canShare}
+                  hitSlop={4}
+                  accessibilityRole="button"
+                  accessibilityLabel={resultCopy.shareMyResult}
+                >
+                  <MaterialCommunityIcons
+                    name="share-variant"
+                    size={12}
+                    color="rgba(103,232,249,0.95)"
+                  />
+                </Pressable>
+              ) : null}
+              {hasCornerActions && hasCornerEdit ? (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.cornerFlyoutBtn,
+                    styles.cornerFlyoutPen,
+                    pressed && styles.cornerFlyoutPressed,
+                  ]}
+                  onPress={requestPredictEdit}
+                  hitSlop={4}
+                  accessibilityRole="button"
+                  accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
+                >
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={12}
+                    color="rgba(207,250,254,0.88)"
+                  />
+                </Pressable>
+              ) : null}
+              {hasCornerActions && hasCornerTrash ? (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.cornerFlyoutBtn,
+                    styles.cornerFlyoutTrash,
+                    pressed && styles.cornerFlyoutPressed,
+                  ]}
+                  onPress={requestDeletePost}
+                  hitSlop={4}
+                  accessibilityRole="button"
+                  accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
+                >
+                  <MaterialCommunityIcons
+                    name="trash-can-outline"
+                    size={12}
+                    color="rgba(252,165,165,0.88)"
+                  />
+                </Pressable>
+              ) : null}
+            </Animated.View>
+            <CyberMenuButton
+              size="xs"
+              open={cornerFabOpen}
+              onPress={() => setCornerFabOpen((v) => !v)}
+              accessibilityLabel={isEn ? "Open actions" : "操作メニュー"}
+              accessibilityState={{ expanded: cornerFabOpen }}
+            />
+          </View>
+        ) : null}
+      </View>
       </AnimatedResultCardPressable>
     </Animated.View>
   );
@@ -1645,93 +1721,83 @@ const styles = StyleSheet.create({
     paddingTop: 36,
     paddingBottom: 8,
   },
-  /** Web モバイル：左上リーグ / 右上 outcome を absolute 配置 */
+  /** Web モバイル：左上リーグ */
   cardBadgeOverlay: {
     position: "absolute",
     left: 0,
-    right: 0,
     top: 6,
     zIndex: 22,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
     paddingLeft: 8,
-    paddingRight: 8,
   },
   cardBadgeLeague: {
-    maxWidth: "44%",
+    maxWidth: 160,
   },
-  cardBadgeOutcome: {
-    flex: 1,
+  /** Web `absolute top-1.5 right-11` — HIT 等（メニューと分離） */
+  cardBadgeOutcomeAbsolute: {
+    position: "absolute",
+    top: 6,
+    right: 8,
+    zIndex: 22,
+    maxWidth: "68%",
     alignItems: "flex-end",
-    maxWidth: "72%",
-    paddingRight: 0,
   },
-  cardBadgeOutcomeWithFab: {
-    paddingRight: 44,
+  cardBadgeOutcomeWithMenu: {
+    right: 40,
   },
   /** メニュー展開でフライアウトがはみ出すときのクリップ解除（Web と同様） */
   cardShellOverflowVisible: {
     overflow: "visible",
   },
-  /** Web `ResultCard` の右上アクション簇（ハンバーガー＋フライアウト） */
+  cardCaptureWrap: {
+    position: "relative",
+  },
+  /** Web `right-0.5 top-0.5` より少し内側（左下寄せ） */
   cornerFabCluster: {
     position: "absolute",
-    top: 5,
-    right: 9,
+    top: 8,
+    right: 10,
     zIndex: 50,
     minWidth: 22,
     minHeight: 22,
-    alignItems: "flex-end",
+    alignItems: "center",
   },
-  /** Web `absolute top-full left-1/2 mt-2` に相当するスロット */
-  cornerFlyoutTrashSlot: {
+  cornerFlyoutColumn: {
     position: "absolute",
-    /** メニュー高さ 22 + Web `mt-2` 相当の間隔 */
-    top: 30,
+    top: 28,
     right: 0,
     zIndex: 55,
+    gap: 6,
+    alignItems: "center",
   },
-  cornerFlyoutTrash: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
+  cornerFlyoutBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.5)",
-    backgroundColor: "rgba(0,0,0,0.78)",
+    backgroundColor: "rgba(0,0,0,0.72)",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#f87171",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.14,
-    shadowRadius: 5,
-    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  /** Web `absolute right-full top-1/2 mr-2` に相当するスロット */
-  cornerFlyoutPenSlot: {
-    position: "absolute",
-    top: 0,
-    /** メニュー幅 22 + Web `mr-2` 相当の間隔 */
-    right: 30,
-    zIndex: 55,
+  cornerFlyoutShare: {
+    borderColor: "rgba(34,211,238,0.45)",
+    shadowColor: "#22d3ee",
+    shadowOpacity: 0.18,
   },
   cornerFlyoutPen: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.55)",
-    backgroundColor: "rgba(0,0,0,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.14,
-    shadowRadius: 5,
-    elevation: 6,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  cornerFlyoutTrash: {
+    borderColor: "rgba(239,68,68,0.45)",
+    shadowColor: "#f87171",
+    shadowOpacity: 0.16,
   },
   cornerFlyoutPressed: {
-    opacity: 0.85,
+    opacity: 0.82,
   },
   cardFrameUpset: {
     borderColor: "rgba(248,113,113,0.84)",

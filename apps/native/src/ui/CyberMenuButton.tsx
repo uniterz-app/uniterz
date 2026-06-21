@@ -26,6 +26,8 @@ type Props = {
   hitSlop?: number;
   style?: StyleProp<ViewStyle>;
   badge?: React.ReactNode;
+  /** メニュー展開中は × 表示 */
+  open?: boolean;
 };
 
 /** 角切り風シアン枠のハンバーガーボタン（Native 共通） */
@@ -37,6 +39,7 @@ export default function CyberMenuButton({
   hitSlop = 8,
   style,
   badge,
+  open = false,
 }: Props) {
   const dim = SIZE_PX[size];
 
@@ -62,9 +65,9 @@ export default function CyberMenuButton({
       />
       <View style={styles.iconWrap}>
         <MaterialCommunityIcons
-          name="menu"
+          name={open ? "close" : "menu"}
           size={ICON_PX[size]}
-          color="rgba(224,250,254,0.72)"
+          color={open ? "rgba(103,232,249,0.95)" : "rgba(224,250,254,0.72)"}
         />
       </View>
       {badge}

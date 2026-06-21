@@ -33,6 +33,7 @@ import type { MyRankMetricValueDeltas } from "../../../../../../lib/rankings/myR
 import type { RankingLeagueSource } from "../../../../../../lib/rankings/rankingLeagueSource";
 import { rankingFlagImageUri } from "../../rankings/rankingFlagUri";
 import { getUniterzApiBaseUrl } from "../../games/submitPredictionApi";
+import { buildProfileShareUrl } from "../../../../../../lib/share/shareAppUrls";
 import CyberMenuButton from "../../../ui/CyberMenuButton";
 import type { ResolvedBadgeNative } from "../useNativeProfileBadges";
 import {
@@ -513,8 +514,8 @@ export default function ProfileKinetikPanelNative({
 
   const handleShareProfile = useCallback(async () => {
     if (!shareTargetHandle) return;
-    const base = (getUniterzApiBaseUrl() || "https://uniterz.app").replace(/\/$/, "");
-    const url = `${base}/mobile/u/${encodeURIComponent(shareTargetHandle)}`;
+    const base = getUniterzApiBaseUrl();
+    const url = buildProfileShareUrl(shareTargetHandle, base);
     const title = identity.displayName;
     const text =
       language === "ja" ? `${title} のプロフィール` : `${title}'s profile`;

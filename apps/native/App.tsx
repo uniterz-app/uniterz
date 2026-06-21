@@ -15,6 +15,7 @@ import { FirebaseUserProvider } from "./src/auth/FirebaseUserProvider";
 import { NativeLanguageProvider } from "./src/i18n/NativeLanguageProvider";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { navigationRef } from "./src/navigation/navigationRef";
+import { useNativeShareDeepLinks } from "./src/navigation/useNativeShareDeepLinks";
 import AppShellNative from "./src/components/AppShellNative";
 import { NATIVE_PAGE_SURFACE_COLOR } from "./src/features/background/nativeBackgroundPalette";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
@@ -35,6 +36,8 @@ export default function App() {
   useEffect(() => {
     ensureNativeSplashHeld();
   }, []);
+
+  useNativeShareDeepLinks();
 
   if (!fontsLoaded) return null;
 
