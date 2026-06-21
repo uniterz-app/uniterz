@@ -148,6 +148,11 @@ export const DIRECT_PLAYER_IDS: Record<string, Record<string, string>> = {
     Lukić: "bih-lukic",
   },
   eng: { Livramento: "eng-livramento" },
+  bel: {
+    "Fernandez-Pardo": "bel-fernandez-pardo",
+    "Fernandez Pardo": "bel-fernandez-pardo",
+    "Fernandes Pardo": "bel-fernandez-pardo",
+  },
   esp: { Olmo: "esp-olmo", Ruiz: "esp-ruiz", Porro: "esp-porro", Baena: "esp-baena", Yamal: "esp-yamal" },
   fra: { Konate: "fra-upamecano", Dembele: "fra-dembele", Doue: "fra-doue" },
   nld: {
@@ -395,7 +400,7 @@ export const MANUAL_ALIASES: Record<string, Record<string, string>> = {
     "Al-Khaibari": "Abdullah Al-Khaibari",
   },
   aus: { Circati: "Alessandro Circati", "O'Neill": "Aiden O'Neill", Touré: "Mohamed Touré" },
-  bel: { "De Cuyper": "Maxim De Cuyper", "De Ketelaere": "Charles De Ketelaere", Meunier: "Thomas Meunier", "De Winter": "Zeno Debast", Castagne: "Timothy Castagne", Ngoy: "Nathan Ngoy", Mechele: "Brandon Mechele" },
+  bel: { "De Cuyper": "Maxim De Cuyper", "De Ketelaere": "Charles De Ketelaere", Meunier: "Thomas Meunier", "De Winter": "Zeno Debast", Castagne: "Timothy Castagne", Ngoy: "Nathan Ngoy", Mechele: "Brandon Mechele", "Fernandez-Pardo": "Matias Fernandez-Pardo", "Fernandez Pardo": "Matias Fernandez-Pardo" },
   bih: { Katic: "Stjepan Katic", Muharemovic: "Adi Muharemovic", Dedic: "Amar Dedić" },
   bra: { "Douglas Santos": "Douglas Santos", "Bruno Guimaraes": "Bruno Guimarães", Vinicius: "Vinícius Júnior", Guimaraes: "Bruno Guimarães" },
   can: { Sigur: "Niko Sigur", Koné: "Ismaël Koné", Laryea: "Richie Laryea", Crepeau: "Maxime Crépeau", Jones: "Alfie Jones" },

@@ -97,7 +97,6 @@ export const WC_SQUAD_NAME_INDEX: Record<string, WcSquadNameEntry[]> = {
     { id: "bel-tielemans", name: "Youri Tielemans" },
     { id: "bel-lukaku", name: "Romelu Lukaku" },
     { id: "bel-trossard", name: "Leandro Trossard" },
-    { id: "bel-doku", name: "Jérémy Doku" },
     { id: "bel-lammens", name: "Senne Lammens" },
     { id: "bel-penders", name: "Mike Penders" },
     { id: "bel-lukebakio", name: "Dodi Lukébakio" },

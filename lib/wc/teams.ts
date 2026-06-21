@@ -368,8 +368,8 @@ const WC_TEAM_PROFILES: Record<string, WcTeamProfile> = {
     nickname: { en: "Red Devils", ja: "レッド・デビルズ" },
     confederation: "UEFA",
     description: {
-      en: "The golden generation that finished third in 2018 has passed its peak and Belgium are in transition. The challenge is blending experienced figures such as Kevin De Bruyne, Romelu Lukaku and Thibaut Courtois with a new wave including Jérémy Doku, Amadou Onana and Charles De Ketelaere. They are no longer overwhelming title favorites, but individual quality and experience remain high. The target is a knockout berth, with the quarterfinals as upside.",
-      ja: "2018年大会で3位に入った黄金世代はピークを過ぎ、現在は移行期にある。Kevin De Bruyne、Romelu Lukaku、Thibaut Courtoisら経験ある選手に、Jeremy Doku、Amadou Onana、Charles De Ketelaereら新しい世代をどう組み合わせるかがテーマ。以前ほど圧倒的な優勝候補ではないが、個の力と経験値はまだ高い。目標は決勝トーナメント進出、上振れすればベスト8以上。",
+      en: "The golden generation that finished third in 2018 has passed its peak and Belgium are in transition. The challenge is blending experienced figures such as Kevin De Bruyne, Romelu Lukaku and Thibaut Courtois with a new wave including Matias Fernandez-Pardo, Amadou Onana and Charles De Ketelaere. They are no longer overwhelming title favorites, but individual quality and experience remain high. The target is a knockout berth, with the quarterfinals as upside.",
+      ja: "2018年大会で3位に入った黄金世代はピークを過ぎ、現在は移行期にある。Kevin De Bruyne、Romelu Lukaku、Thibaut Courtoisら経験ある選手に、Matias Fernandez-Pardo、Amadou Onana、Charles De Ketelaereら新しい世代をどう組み合わせるかがテーマ。以前ほど圧倒的な優勝候補ではないが、個の力と経験値はまだ高い。目標は決勝トーナメント進出、上振れすればベスト8以上。",
     },
     fifaRank: 9,
     wcAppearances: 14,

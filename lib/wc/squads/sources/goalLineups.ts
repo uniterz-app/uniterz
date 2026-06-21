@@ -15,7 +15,7 @@ export const GOAL_LINEUPS: RawSourceLineup[] = [
   { iso3: "arg", formation: "4-3-3", players: ["Martinez", "Molina", "Otamendi", "Romero", "Tagliafico", "Mac Allister", "Paredes", "Fernandez", "Messi", "Alvarez", "Almada"] },
   { iso3: "aus", formation: "5-4-1", players: ["Ryan", "Italiano", "Degenek", "Souttar", "Circati", "Bos", "Metcalfe", "Devlin", "O'Neill", "Irankunda", "Touré"] },
   { iso3: "aut", formation: "4-2-3-1", players: ["A. Schlager", "Laimer", "Lienhart", "Alaba", "Mwene", "X. Schlager", "Seiwald", "Wimmer", "Baumgartner", "Sabitzer", "Arnautovic"] },
-  { iso3: "bel", formation: "4-2-3-1", players: ["Courtois", "Castagne", "Debast", "Theate", "De Cuyper", "Tielemans", "Onana", "Doku", "De Bruyne", "Trossard", "De Ketelaere"] },
+  { iso3: "bel", formation: "4-2-3-1", players: ["Courtois", "Castagne", "Debast", "Theate", "De Cuyper", "Tielemans", "Onana", "Fernandez-Pardo", "De Bruyne", "Trossard", "De Ketelaere"] },
   { iso3: "bih", formation: "4-4-2", players: ["Vasilj", "Dedic", "Katic", "Muharemovic", "Kolasinac", "Bajraktarevic", "Sunjic", "Tahirovic", "Memic", "Demirovic", "Dzeko"] },
   { iso3: "bra", formation: "4-4-2", players: ["Alisson", "Wesley", "Marquinhos", "Gabriel", "Douglas Santos", "Luis Henrique", "Casemiro", "Bruno Guimaraes", "Raphinha", "Vinicius", "Cunha"] },
   { iso3: "can", formation: "4-4-2", players: ["Crepeau", "Sigur", "Bombito", "Jones", "Laryea", "Buchanan", "Koné", "Eustaquio", "Davies", "Oluwaseyi", "David"] },

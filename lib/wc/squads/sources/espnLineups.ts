@@ -13,7 +13,7 @@ export const ESPN_LINEUPS: RawSourceLineup[] = [
   {
     iso3: "bel",
     formation: "4-2-3-1",
-    players: ["Courtois", "Castagne", "Debast", "Theate", "De Cuyper", "Tielemans", "Onana", "Doku", "De Bruyne", "Trossard", "De Ketelaere"],
+    players: ["Courtois", "Castagne", "Debast", "Theate", "De Cuyper", "Tielemans", "Onana", "Fernandez-Pardo", "De Bruyne", "Trossard", "De Ketelaere"],
   },
   {
     iso3: "bra",

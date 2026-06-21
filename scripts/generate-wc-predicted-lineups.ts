@@ -22,6 +22,7 @@ import { GOAL_LINEUPS } from "../lib/wc/squads/sources/goalLineups";
 import { ESPN_LINEUPS } from "../lib/wc/squads/sources/espnLineups";
 import { FOUR_FOUR_TWO_LINEUPS } from "../lib/wc/squads/sources/fourFourTwoLineups";
 import { MATCH_LINEUPS } from "../lib/wc/squads/sources/matchLineups";
+import { CBS_LINEUPS } from "../lib/wc/squads/sources/cbsLineups";
 
 // rotowireLineups.ts はスクレイパーで生成（未実行時は空配列にフォールバック）
 let ROTOWIRE_LINEUPS: typeof GOAL_LINEUPS = [];
@@ -37,6 +38,7 @@ const SOURCE_WEIGHTS = {
   rotowire: 0.95,
   espn: 1.15,
   fourFourTwo: 0.9,
+  cbs: 1.05,
 } as const;
 
 const ALL_ISO3 = Object.keys(WC_GENERATED_SQUADS).sort();
@@ -76,6 +78,12 @@ function sourcesForTeam(iso3: string, squad: WcSquadPlayer[]): ResolvedSourceLin
   const fft = FOUR_FOUR_TWO_LINEUPS.find((l) => l.iso3 === iso3);
   if (fft) {
     const r = resolveRawLineup(iso3, squad, fft, "fourFourTwo", SOURCE_WEIGHTS.fourFourTwo);
+    if (r) resolved.push(r);
+  }
+
+  const cbs = CBS_LINEUPS.find((l) => l.iso3 === iso3);
+  if (cbs) {
+    const r = resolveRawLineup(iso3, squad, cbs, "cbs", SOURCE_WEIGHTS.cbs);
     if (r) resolved.push(r);
   }
 

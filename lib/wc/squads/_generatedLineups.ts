@@ -64,7 +64,7 @@ export const WC_PREDICTED_LINEUPS: Record<string, WcPredictedLineup> = {
       { playerId: "bel-tielemans", x: 62, y: 58 },
       { playerId: "bel-trossard", x: 16, y: 40 },
       { playerId: "bel-bruyne", x: 50, y: 42 },
-      { playerId: "bel-doku", x: 84, y: 40 },
+      { playerId: "bel-fernandez-pardo", x: 84, y: 40 },
       { playerId: "bel-ketelaere", x: 50, y: 30 },
     ],
   },
