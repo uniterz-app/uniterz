@@ -5,6 +5,7 @@ import {
   readDailyWcStageBuckets,
   WC_RANKING_STAGES,
 } from "./dailyWcStageBuckets";
+import { safeRankMetricNum } from "./safeRankMetricNum";
 
 function db() {
   return getFirestore();
@@ -50,16 +51,19 @@ function addRankingTotals(
   }
 ): Omit<RankingTotals, "winRate"> {
   const precisionInc = inc.precisionFromExactHits
-    ? inc.exactHitCount ?? 0
-    : inc.scorePrecisionSum ?? 0;
+    ? safeRankMetricNum(inc.exactHitCount)
+    : safeRankMetricNum(inc.scorePrecisionSum);
   return {
-    totalPosts: base.totalPosts + (inc.posts ?? 0),
-    totalWins: base.totalWins + (inc.wins ?? 0),
-    totalPoints: base.totalPoints + (inc.pointsSumV3 ?? 0),
-    totalUpset: base.totalUpset + (inc.upsetPointsSum ?? 0),
-    totalPrecision: base.totalPrecision + precisionInc,
+    totalPosts: safeRankMetricNum(base.totalPosts) + safeRankMetricNum(inc.posts),
+    totalWins: safeRankMetricNum(base.totalWins) + safeRankMetricNum(inc.wins),
+    totalPoints:
+      safeRankMetricNum(base.totalPoints) + safeRankMetricNum(inc.pointsSumV3),
+    totalUpset:
+      safeRankMetricNum(base.totalUpset) + safeRankMetricNum(inc.upsetPointsSum),
+    totalPrecision: safeRankMetricNum(base.totalPrecision) + precisionInc,
     totalGoalScorerHits:
-      base.totalGoalScorerHits + (inc.goalScorerHitCount ?? 0),
+      safeRankMetricNum(base.totalGoalScorerHits) +
+      safeRankMetricNum(inc.goalScorerHitCount),
   };
 }
 

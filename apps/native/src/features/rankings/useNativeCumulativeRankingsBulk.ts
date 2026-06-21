@@ -5,10 +5,15 @@ import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import type { RankingPhase } from "../../../../../lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "../../../../../lib/rankings/playoffRound";
 import type { WcRankingStage } from "../../../../../lib/rankings/wcRankingStage";
+import {
+  allRankingMetricsParam,
+  isMetricListBundleLoaded,
+  mergePersonalRankPrefetch,
+} from "../../../../../lib/rankings/rankingBulkMetrics";
 
 export type BulkMetricPayload = {
   ok: boolean;
-  rows: unknown[];
+  rows?: unknown[];
   count: number;
   myRank: number | null;
   myRow: Record<string, unknown> | null;
@@ -101,7 +106,8 @@ async function fetchBulkMetrics(
   uid: string | null,
   phase: RankingPhase,
   round: PlayoffRoundKey,
-  wcStage: WcRankingStage | null
+  wcStage: WcRankingStage | null,
+  opts?: { personalOnly?: boolean }
 ): Promise<Record<string, BulkMetricPayload> | null> {
   const base = getUniterzApiBaseUrl();
   if (!base) return null;
@@ -112,9 +118,10 @@ async function fetchBulkMetrics(
   params.set("round", round);
   if (wcStage) params.set("wcStage", wcStage);
   if (uid) params.set("uid", uid);
+  if (opts?.personalOnly) params.set("personalOnly", "1");
 
   const res = await fetch(`${base}/api/cumulative-ranking/bulk?${params.toString()}`, {
-    cache: "no-store",
+    cache: opts?.personalOnly ? "no-store" : "no-store",
   });
   const json = (await res.json()) as {
     ok?: boolean;
@@ -141,6 +148,25 @@ export function useNativeCumulativeRankingsBulk(
   const uidPrimarySeqRef = useRef(0);
   const metricReqSeqRef = useRef(0);
   const phaseRoundGenRef = useRef(0);
+
+  const schedulePersonalRankPrefetch = useCallback(
+    (uid: string) => {
+      const prefetchGen = phaseRoundGenRef.current;
+      void (async () => {
+        const ranks = await fetchBulkMetrics(
+          allRankingMetricsParam(wcStage),
+          uid,
+          phase,
+          round,
+          wcStage,
+          { personalOnly: true }
+        );
+        if (prefetchGen !== phaseRoundGenRef.current || !ranks) return;
+        setByMetric((prev) => mergePersonalRankPrefetch(prev, ranks));
+      })();
+    },
+    [phase, round, wcStage]
+  );
 
   useEffect(() => {
     phaseRoundGenRef.current += 1;
@@ -210,6 +236,7 @@ export function useNativeCumulativeRankingsBulk(
           if (partial) {
             setByMetric((prev) => mergeMetricBundles(prev, partial));
             setAppliedTotalPointsUid(uid);
+            schedulePersonalRankPrefetch(uid);
           } else {
             setAppliedTotalPointsUid(uid);
           }
@@ -224,14 +251,14 @@ export function useNativeCumulativeRankingsBulk(
       cancelled = true;
       unsub();
     };
-  }, [phase, round, wcStage]);
+  }, [phase, round, wcStage, schedulePersonalRankPrefetch]);
 
   const ensureMetric = useCallback(
     async (metric: string) => {
       if (metric === "totalPoints") return;
       if (!authReady) return;
       if (!byMetric?.totalPoints) return;
-      if (byMetric?.[metric]) return;
+      if (isMetricListBundleLoaded(byMetric?.[metric])) return;
 
       const uidForMetric = myUid;
       if (uidForMetric) {

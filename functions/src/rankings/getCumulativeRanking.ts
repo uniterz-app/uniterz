@@ -15,6 +15,7 @@ import {
 } from "./buildCumulativeRankingSnapshot";
 import type { WcRankingStage } from "./wcRankingStage";
 import { readStoredRankFromUser as readStoredRankFromCumulativeDoc } from "./readSnapshotRanksFromCumulative";
+import { safeRankMetricNum } from "./safeRankMetricNum";
 import { isWcRankingStage, minPostsForWcWinRate } from "./wcRankingStage";
 
 function db() {
@@ -273,14 +274,15 @@ function normalizePlan(plan: unknown): "free" | "pro" {
 }
 
 function rowMetricValue(row: RankingRow, metric: Metric): number {
-  if (metric === "activeWinStreak") return row.activeWinStreak ?? 0;
-  if (metric === "winRate") return row.winRate ?? 0;
-  if (metric === "totalPoints") return row.totalPoints ?? 0;
+  if (metric === "activeWinStreak") return safeRankMetricNum(row.activeWinStreak);
+  if (metric === "winRate") return safeRankMetricNum(row.winRate);
+  if (metric === "totalPoints") return safeRankMetricNum(row.totalPoints);
   if (metric === "totalExactHits")
-    return row.totalExactHits ?? row.totalPrecision ?? 0;
-  if (metric === "totalPrecision") return row.totalPrecision ?? 0;
-  if (metric === "totalGoalScorerHits") return row.totalGoalScorerHits ?? 0;
-  return row.totalUpset ?? 0;
+    return safeRankMetricNum(row.totalExactHits ?? row.totalPrecision);
+  if (metric === "totalPrecision") return safeRankMetricNum(row.totalPrecision);
+  if (metric === "totalGoalScorerHits")
+    return safeRankMetricNum(row.totalGoalScorerHits);
+  return safeRankMetricNum(row.totalUpset);
 }
 
 /** Same ordering as buildCumulativeRankingSnapshot `cmpSortRows`. */
@@ -291,7 +293,7 @@ function cmpRankingRows(a: RankingRow, b: RankingRow, metric: Metric): number {
     const postsDiff = (b.totalPosts ?? 0) - (a.totalPosts ?? 0);
     if (postsDiff !== 0) return postsDiff;
   }
-  return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
+  return safeRankMetricNum(b.totalPoints) - safeRankMetricNum(a.totalPoints);
 }
 
 function sortSnapshotRows(rows: RankingRow[], metric: Metric): RankingRow[] {
@@ -485,6 +487,7 @@ async function rankingPayloadForMetric(
       wcStage
     );
   }
+
   const snapshotDocId = wcStage
     ? `wc_${wcStage}_${metric}`
     : round === "overall"
@@ -507,7 +510,8 @@ async function rankingPayloadForMetric(
   let totalCount = readSnapshotTotalCount(snapData, rows.length);
 
   /** スナップショット未生成時のみ live フォールバック */
-  if (rows.length === 0 && wcStage) {
+  /** 連勝は 16:00 スナップショットのみ（live フォールバックなし） */
+  if (rows.length === 0 && wcStage && metric !== "activeWinStreak") {
     const live = await loadWcStageTop20RowsLive(wcStage, metric);
     rows = normalizeSnapshotRows(live.rows as RankingRow[], metric);
     totalCount = live.totalCount;
@@ -515,6 +519,7 @@ async function rankingPayloadForMetric(
 
   if (
     rows.length === 0 &&
+    metric !== "activeWinStreak" &&
     !wcStage &&
     phase === "playoffs" &&
     round !== "overall" &&

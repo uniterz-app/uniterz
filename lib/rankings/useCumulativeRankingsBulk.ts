@@ -14,16 +14,18 @@ import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { WcRankingStage } from "@/lib/rankings/wcRankingStage";
 import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDeltas";
+import {
+  allRankingMetricsParam,
+  isMetricListBundleLoaded,
+  mergePersonalRankPrefetch,
+  needsPersonalRankPrefetch,
+} from "@/lib/rankings/rankingBulkMetrics";
 
 type BulkFetchResult = {
   byMetric: Record<string, BulkMetricPayload>;
   myMetricValueDeltas: MyRankMetricValueDeltas | null;
 };
 
-const REFETCH_ALL_METRICS_NBA =
-  "totalPoints,totalPrecision,totalUpset,activeWinStreak,winRate";
-const REFETCH_ALL_METRICS_WC =
-  "totalPoints,totalExactHits,totalUpset,activeWinStreak,winRate,totalGoalScorerHits";
 export const INITIAL_RANKING_METRICS = "totalPoints";
 const DEFERRED_RANKING_METRICS_NBA = [
   "totalPrecision",
@@ -35,12 +37,13 @@ const DEFERRED_RANKING_METRICS_WC = [
 ] as const;
 
 function refetchAllMetrics(wcStage: WcRankingStage | null): string {
-  return wcStage ? REFETCH_ALL_METRICS_WC : REFETCH_ALL_METRICS_NBA;
+  return allRankingMetricsParam(wcStage);
 }
 
 export type BulkMetricPayload = {
   ok: boolean;
-  rows: unknown[];
+  /** 未設定 = 一覧未取得（personalOnly プリフェッチのみ） */
+  rows?: unknown[];
   count: number;
   myRank: number | null;
   myRow: Record<string, unknown> | null;
@@ -198,7 +201,8 @@ async function fetchBulkMetrics(
   uid: string | null,
   phase: RankingPhase,
   round: PlayoffRoundKey,
-  wcStage: WcRankingStage | null
+  wcStage: WcRankingStage | null,
+  opts?: { personalOnly?: boolean }
 ): Promise<BulkFetchResult | null> {
   const params = new URLSearchParams();
   params.set("metrics", metrics);
@@ -206,8 +210,9 @@ async function fetchBulkMetrics(
   params.set("round", round);
   if (wcStage) params.set("wcStage", wcStage);
   if (uid) params.set("uid", uid);
+  if (opts?.personalOnly) params.set("personalOnly", "1");
   const res = await fetch(`/api/cumulative-ranking/bulk?${params.toString()}`, {
-    cache: "default",
+    cache: opts?.personalOnly ? "no-store" : "default",
   });
   const json = await res.json();
   if (!json?.ok || !json?.byMetric) return null;
@@ -428,6 +433,44 @@ export function useCumulativeRankingsBulk(
       maybeClearSessionCountryAfterFetch(partial.byMetric, uid);
       setAppliedTotalPointsUid(uid);
       setLoading(false);
+
+      schedulePersonalRankPrefetch(uid);
+    };
+
+    const schedulePersonalRankPrefetch = (uid: string) => {
+      const prefetchGen = phaseRoundGenRef.current;
+      void (async () => {
+        const ranks = await fetchBulkMetrics(
+          refetchAllMetrics(wcStage),
+          uid,
+          phase,
+          round,
+          wcStage,
+          { personalOnly: true }
+        );
+        if (prefetchGen !== phaseRoundGenRef.current || !ranks) return;
+        setByMetric((prev) => {
+          const merged =
+            applySessionCountryOverride(
+              mergePersonalRankPrefetch(prev, ranks.byMetric),
+              uid
+            ) ?? mergePersonalRankPrefetch(prev, ranks.byMetric);
+          writeBulkCache(phase, round, wcStage, {
+            bundles: merged,
+            deltas: ranks.myMetricValueDeltas ?? myMetricValueDeltas,
+            appliedUid: uid,
+          });
+          return merged;
+        });
+      })();
+    };
+
+    const maybePrefetchOtherRanks = (
+      bundles: Record<string, BulkMetricPayload>,
+      uid: string
+    ) => {
+      if (!needsPersonalRankPrefetch(bundles, wcStage, uid)) return;
+      schedulePersonalRankPrefetch(uid);
     };
 
     const runListFetch = async (seq: number) => {
@@ -512,6 +555,7 @@ export function useCumulativeRankingsBulk(
         setMyMetricValueDeltas(applied.deltas);
         setAppliedTotalPointsUid(applied.appliedUid);
         setLoading(false);
+        maybePrefetchOtherRanks(applied.bundles, uid);
         return;
       }
 
@@ -551,6 +595,7 @@ export function useCumulativeRankingsBulk(
         setAppliedTotalPointsUid(applied.appliedUid);
         setLoading(false);
         lastPersonalUidRef.current = syncUid;
+        maybePrefetchOtherRanks(applied.bundles, syncUid);
       } else {
         hydratePersonalIfNeeded(syncUid);
       }
@@ -582,7 +627,7 @@ export function useCumulativeRankingsBulk(
     async (metric: string) => {
       if (!authReady) return;
       if (!byMetric?.totalPoints) return;
-      if (byMetric?.[metric]) return;
+      if (isMetricListBundleLoaded(byMetric?.[metric])) return;
 
       const uidForMetric = myUid;
       let fetchUid: string | null = null;

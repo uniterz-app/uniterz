@@ -2,6 +2,7 @@ import type {
   MobileMetric,
   RankingRowWithCountry,
 } from "@/app/component/rankings/_data/mockRows";
+import { safeRankMetricNum } from "@/lib/rankings/safeRankMetricNum";
 
 /** UI 指標値（降順ソート用）— CF `cmpSortRows` と揃える */
 export function rankingRowMetricValue(
@@ -10,19 +11,19 @@ export function rankingRowMetricValue(
 ): number {
   switch (metric) {
     case "totalScore":
-      return row.totalScore ?? 0;
+      return safeRankMetricNum(row.totalScore);
     case "winRate":
-      return row.winRate ?? 0;
+      return safeRankMetricNum(row.winRate);
     case "marginPrecision":
-      return row.marginPrecisionScore ?? 0;
+      return safeRankMetricNum(row.marginPrecisionScore);
     case "exactHits":
-      return row.exactHits ?? row.marginPrecisionScore ?? 0;
+      return safeRankMetricNum(row.exactHits ?? row.marginPrecisionScore);
     case "upsetScore":
-      return row.upsetScore ?? 0;
+      return safeRankMetricNum(row.upsetScore);
     case "goalScorerHits":
-      return row.goalScorerHits ?? 0;
+      return safeRankMetricNum(row.goalScorerHits);
     case "streak":
-      return row.streak ?? 0;
+      return safeRankMetricNum(row.streak);
     default:
       return 0;
   }
@@ -40,7 +41,7 @@ function cmpRankingRows(
     const postsDiff = (b.posts ?? 0) - (a.posts ?? 0);
     if (postsDiff !== 0) return postsDiff;
   }
-  return (b.totalScore ?? 0) - (a.totalScore ?? 0);
+  return safeRankMetricNum(b.totalScore) - safeRankMetricNum(a.totalScore);
 }
 
 /** スナップショット行を指標降順に並べ替え（API 順序のズレを吸収） */

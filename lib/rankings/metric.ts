@@ -71,7 +71,7 @@ export function getMetricSubText(
   }
 
   if (metric === "upsetScore") {
-    return `avg ${formatMetricDecimals(r.avgUpsetScore ?? 0, 1)}`;
+    return lang === "en" ? `Posts ${r.posts ?? 0}` : `投稿 ${r.posts ?? 0}`;
   }
 
   if (metric === "goalScorerHits") {

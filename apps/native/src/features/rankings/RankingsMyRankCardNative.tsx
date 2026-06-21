@@ -35,13 +35,11 @@ function RankMetaStripNative({
   const avgText = avgRow
     ? metric === "totalScore"
       ? `AVG ${formatMetricDecimals(avgRow.avgTotalScore ?? 0, 1)}`
-      : metric === "marginPrecision" || metric === "exactHits"
+      : metric === "marginPrecision"
         ? avgRow.avgMarginPrecision && avgRow.avgMarginPrecision > 0
           ? `AVG ${formatMetricDecimals(avgRow.avgMarginPrecision, 1)}`
           : null
-        : metric === "upsetScore"
-          ? `AVG ${formatMetricDecimals(avgRow.avgUpsetScore ?? 0, 1)}`
-          : null
+        : null
     : null;
 
   if (!topPercentLabel && posts === 0 && !avgText) return null;

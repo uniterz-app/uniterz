@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildCumulativeStats = buildCumulativeStats;
 const firestore_1 = require("firebase-admin/firestore");
 const dailyWcStageBuckets_1 = require("./dailyWcStageBuckets");
+const safeRankMetricNum_1 = require("./safeRankMetricNum");
 function db() {
     return (0, firestore_1.getFirestore)();
 }
@@ -21,17 +22,17 @@ function getTodayJST() {
     return toDateKeyJST(new Date());
 }
 function addRankingTotals(base, inc) {
-    var _a, _b, _c, _d, _e, _f, _g;
     const precisionInc = inc.precisionFromExactHits
-        ? (_a = inc.exactHitCount) !== null && _a !== void 0 ? _a : 0
-        : (_b = inc.scorePrecisionSum) !== null && _b !== void 0 ? _b : 0;
+        ? (0, safeRankMetricNum_1.safeRankMetricNum)(inc.exactHitCount)
+        : (0, safeRankMetricNum_1.safeRankMetricNum)(inc.scorePrecisionSum);
     return {
-        totalPosts: base.totalPosts + ((_c = inc.posts) !== null && _c !== void 0 ? _c : 0),
-        totalWins: base.totalWins + ((_d = inc.wins) !== null && _d !== void 0 ? _d : 0),
-        totalPoints: base.totalPoints + ((_e = inc.pointsSumV3) !== null && _e !== void 0 ? _e : 0),
-        totalUpset: base.totalUpset + ((_f = inc.upsetPointsSum) !== null && _f !== void 0 ? _f : 0),
-        totalPrecision: base.totalPrecision + precisionInc,
-        totalGoalScorerHits: base.totalGoalScorerHits + ((_g = inc.goalScorerHitCount) !== null && _g !== void 0 ? _g : 0),
+        totalPosts: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalPosts) + (0, safeRankMetricNum_1.safeRankMetricNum)(inc.posts),
+        totalWins: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalWins) + (0, safeRankMetricNum_1.safeRankMetricNum)(inc.wins),
+        totalPoints: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalPoints) + (0, safeRankMetricNum_1.safeRankMetricNum)(inc.pointsSumV3),
+        totalUpset: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalUpset) + (0, safeRankMetricNum_1.safeRankMetricNum)(inc.upsetPointsSum),
+        totalPrecision: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalPrecision) + precisionInc,
+        totalGoalScorerHits: (0, safeRankMetricNum_1.safeRankMetricNum)(base.totalGoalScorerHits) +
+            (0, safeRankMetricNum_1.safeRankMetricNum)(inc.goalScorerHitCount),
     };
 }
 /* =========================================================
