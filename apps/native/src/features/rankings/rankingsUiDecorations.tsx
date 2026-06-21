@@ -229,7 +229,7 @@ export function podiumScoreSubText(
     return n > 0 ? `${n}  ${t.posts}:${row.posts ?? 0}` : `${t.posts}:${row.posts ?? 0}`;
   }
   if (metric === "upsetScore") {
-    return "";
+    return `${t.posts}:${row.posts ?? 0}`;
   }
   if (metric === "winRate" || metric === "streak") {
     return `${t.posts} ${row.posts ?? 0}`;

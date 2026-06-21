@@ -4,10 +4,10 @@ import type { PlayoffRoundKey } from "./playoffRound";
 import type { WcRankingStage } from "./wcRankingStage";
 
 /** WC All（overall）勝率ランキングの最低投稿数 */
-export const WC_OVERALL_WIN_RATE_MIN_POSTS = 12;
+export const WC_OVERALL_WIN_RATE_MIN_POSTS = 20;
 
 /** WC グループステージ（qualifying）勝率ランキングの最低投稿数 */
-export const WC_GROUP_STAGE_WIN_RATE_MIN_POSTS = 10;
+export const WC_GROUP_STAGE_WIN_RATE_MIN_POSTS = 20;
 
 export function minPostsForWinRate(input: {
   rankingLeague?: RankingLeagueSource | null;

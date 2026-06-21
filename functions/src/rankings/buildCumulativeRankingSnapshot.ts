@@ -1,7 +1,12 @@
 // functions/src/rankings/buildCumulativeRankingSnapshot.ts
 
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { safeRankMetricNum } from "./safeRankMetricNum";
 import { minPostsForWcWinRate, type WcRankingStage } from "./wcRankingStage";
+import {
+  isActiveWinStreakRankingEligible,
+  loadAuthorUidsSettledToday,
+} from "./activeWinStreakRanking";
 
 /* =========================================================
  * Firestore
@@ -29,6 +34,41 @@ function minPostsForWinRate(
     return 20;
   }
   return MIN_POSTS_FOR_WIN_RATE_BASE;
+}
+
+function filterRowsForMetricEligibility(
+  baseRows: BaseRow[],
+  metric: Metric,
+  opts: {
+    wcStage?: WcRankingStage | null;
+    phase?: RankingPhase;
+    round?: "overall" | PlayoffRoundKey;
+    postedTodayUids?: Set<string>;
+  }
+): BaseRow[] {
+  if (metric === "winRate") {
+    if (opts.wcStage) {
+      return baseRows.filter(
+        (row) => (row.totalPosts ?? 0) >= minPostsForWcWinRate(opts.wcStage!)
+      );
+    }
+    return baseRows.filter(
+      (row) =>
+        (row.totalPosts ?? 0) >=
+        minPostsForWinRate(opts.phase ?? "playoffs", opts.round ?? "overall")
+    );
+  }
+  if (metric === "activeWinStreak" && opts.postedTodayUids) {
+    // JST 16:00 スナップショット: 当日確定投稿者かつ連勝>0 のみ
+    return baseRows.filter((row) =>
+      isActiveWinStreakRankingEligible(
+        row.uid,
+        row.activeWinStreak ?? 0,
+        opts.postedTodayUids!
+      )
+    );
+  }
+  return baseRows;
 }
 
 const METRICS: Metric[] = [
@@ -211,13 +251,14 @@ function wcExactHitsFromRow(row: BaseRow): number {
 }
 
 function getRowMetricValue(row: BaseRow, metric: Metric): number {
-  if (metric === "activeWinStreak") return row.activeWinStreak ?? 0;
-  if (metric === "winRate") return row.winRate ?? 0;
-  if (metric === "totalPoints") return row.totalPoints ?? 0;
-  if (metric === "totalExactHits") return wcExactHitsFromRow(row);
-  if (metric === "totalPrecision") return row.totalPrecision ?? 0;
-  if (metric === "totalGoalScorerHits") return row.totalGoalScorerHits ?? 0;
-  return row.totalUpset ?? 0;
+  if (metric === "activeWinStreak") return safeRankMetricNum(row.activeWinStreak);
+  if (metric === "winRate") return safeRankMetricNum(row.winRate);
+  if (metric === "totalPoints") return safeRankMetricNum(row.totalPoints);
+  if (metric === "totalExactHits") return safeRankMetricNum(wcExactHitsFromRow(row));
+  if (metric === "totalPrecision") return safeRankMetricNum(row.totalPrecision);
+  if (metric === "totalGoalScorerHits")
+    return safeRankMetricNum(row.totalGoalScorerHits);
+  return safeRankMetricNum(row.totalUpset);
 }
 
 /** Same ordering as snapshot sort (desc). Returns 0 when tied for rank. */
@@ -228,7 +269,7 @@ function cmpSortRows(a: BaseRow, b: BaseRow, metric: Metric): number {
     const postsDiff = (b.totalPosts ?? 0) - (a.totalPosts ?? 0);
     if (postsDiff !== 0) return postsDiff;
   }
-  return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
+  return safeRankMetricNum(b.totalPoints) - safeRankMetricNum(a.totalPoints);
 }
 
 /** Matches getCumulativeRanking: rank = 1 + #{ strictly better values }. */
@@ -537,11 +578,14 @@ export type LiveTop20Payload = {
   rows: SnapshotRow[];
   /** 指標・ラウンドの対象参加者数（Top20 ではない） */
   totalCount: number;
+  /** 全参加者の順位（Top20 外 uid の myRank 用） */
+  rankByUid: Map<string, number>;
 };
 
 export async function loadPlayoffRoundTop20RowsLive(
   round: PlayoffRoundKey,
-  metric: Metric
+  metric: Metric,
+  postedTodayUids?: Set<string>
 ): Promise<LiveTop20Payload> {
   const snap = await db().collection("cumulative_stats").get();
   const baseRows: BaseRow[] = snap.docs
@@ -563,24 +607,73 @@ export async function loadPlayoffRoundTop20RowsLive(
         totalPoints: rr?.totalPoints ?? 0,
         totalPrecision: rr?.totalPrecision ?? 0,
         totalUpset: rr?.totalUpset ?? 0,
-        totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
+        totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
         activeWinStreak: activeBasketballStreak(d),
       };
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
 
-  const eligibleRows =
-    metric === "winRate"
-      ? baseRows.filter(
-          (row) => (row.totalPosts ?? 0) >= minPostsForWinRate("playoffs", round)
-        )
-      : baseRows;
+  const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
+    phase: "playoffs",
+    round,
+    postedTodayUids: postedTodayUids,
+  });
   const sortedFull = [...eligibleRows].sort((a, b) =>
     cmpSortRows(a, b, metric)
   );
   const ranks = assignCompetitionRanks(sortedFull, metric);
   return {
     totalCount: sortedFull.length,
+    rankByUid: ranks,
+    rows: sortedFull.slice(0, 20).map((row) => ({
+      ...row,
+      rank: ranks.get(row.uid) ?? 0,
+      rankDeltaPlaces: null,
+    })),
+  };
+}
+
+export async function loadNbaPhaseTop20RowsLive(
+  phase: RankingPhase,
+  metric: Metric,
+  postedTodayUids?: Set<string>
+): Promise<LiveTop20Payload> {
+  const snap = await db().collection("cumulative_stats").get();
+  const baseRows: BaseRow[] = snap.docs
+    .map((doc) => {
+      const d = doc.data();
+      const r = rankingSlice(d, phase);
+      return {
+        uid: doc.id,
+        displayName: d.displayName ?? "user",
+        handle: d.handle ?? null,
+        photoURL: d.photoURL ?? null,
+        countryCode: d.countryCode ?? null,
+        plan: (d.plan === "pro" ? "pro" : "free") as BaseRow["plan"],
+        totalPosts: r.totalPosts,
+        totalWins: r.totalWins,
+        winRate: r.winRate,
+        totalPoints: r.totalPoints,
+        totalPrecision: r.totalPrecision,
+        totalUpset: r.totalUpset,
+        totalGoalScorerHits: 0,
+        activeWinStreak: activeBasketballStreak(d),
+      };
+    })
+    .filter((row) => (row.totalPosts ?? 0) > 0);
+
+  const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
+    phase,
+    round: "overall",
+    postedTodayUids: postedTodayUids,
+  });
+  const sortedFull = [...eligibleRows].sort((a, b) =>
+    cmpSortRows(a, b, metric)
+  );
+  const ranks = assignCompetitionRanks(sortedFull, metric);
+  return {
+    totalCount: sortedFull.length,
+    rankByUid: ranks,
     rows: sortedFull.slice(0, 20).map((row) => ({
       ...row,
       rank: ranks.get(row.uid) ?? 0,
@@ -594,7 +687,8 @@ export async function loadPlayoffRoundTop20RowsLive(
  */
 export async function loadWcStageTop20RowsLive(
   stage: WcRankingStage,
-  metric: Metric
+  metric: Metric,
+  postedTodayUids?: Set<string>
 ): Promise<LiveTop20Payload> {
   const snap = await db().collection("cumulative_stats").get();
   const baseRows: BaseRow[] = snap.docs
@@ -616,24 +710,23 @@ export async function loadWcStageTop20RowsLive(
         totalPoints: rr?.totalPoints ?? 0,
         totalPrecision: rr?.totalPrecision ?? 0,
         totalUpset: rr?.totalUpset ?? 0,
-        totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
+        totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
         activeWinStreak: activeFootballStreak(d),
       };
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
 
-  const eligibleRows =
-    metric === "winRate"
-      ? baseRows.filter(
-          (row) => (row.totalPosts ?? 0) >= minPostsForWcWinRate(stage)
-        )
-      : baseRows;
+  const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
+    wcStage: stage,
+    postedTodayUids: postedTodayUids,
+  });
   const sortedFull = [...eligibleRows].sort((a, b) =>
     cmpSortRows(a, b, metric)
   );
   const ranks = assignCompetitionRanks(sortedFull, metric);
   return {
     totalCount: sortedFull.length,
+    rankByUid: ranks,
     rows: sortedFull.slice(0, 20).map((row) => ({
       ...row,
       rank: ranks.get(row.uid) ?? 0,
@@ -659,6 +752,11 @@ export async function buildCumulativeRankingSnapshot(
   const wcOnly = scope === "wc";
 
   const snap = await db().collection("cumulative_stats").get();
+
+  const [wcSettledTodayUids, nbaSettledTodayUids] = await Promise.all([
+    loadAuthorUidsSettledToday("wc"),
+    loadAuthorUidsSettledToday("nba"),
+  ]);
 
   const rankByUid = new Map<
     string,
@@ -710,12 +808,12 @@ export async function buildCumulativeRankingSnapshot(
       .filter((row) => (row.totalPosts ?? 0) > 0);
 
     for (const metric of METRICS) {
-      const eligibleRows =
-        metric === "winRate"
-          ? baseRows.filter(
-              (row) => (row.totalPosts ?? 0) >= minPostsForWinRate(phase, "overall")
-            )
-          : baseRows;
+      const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
+        phase,
+        round: "overall",
+        postedTodayUids:
+          metric === "activeWinStreak" ? nbaSettledTodayUids : undefined,
+      });
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
       );
@@ -782,19 +880,19 @@ export async function buildCumulativeRankingSnapshot(
           totalPoints: rr?.totalPoints ?? 0,
           totalPrecision: rr?.totalPrecision ?? 0,
           totalUpset: rr?.totalUpset ?? 0,
-          totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
+          totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
           activeWinStreak: activeBasketballStreak(d),
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);
 
     for (const metric of METRICS) {
-      const eligibleRows =
-        metric === "winRate"
-          ? baseRows.filter(
-              (row) => (row.totalPosts ?? 0) >= minPostsForWinRate("playoffs", round)
-            )
-          : baseRows;
+      const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
+        phase: "playoffs",
+        round,
+        postedTodayUids:
+          metric === "activeWinStreak" ? nbaSettledTodayUids : undefined,
+      });
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
       );
@@ -857,19 +955,18 @@ export async function buildCumulativeRankingSnapshot(
           totalPoints: rr?.totalPoints ?? 0,
           totalPrecision: rr?.totalPrecision ?? 0,
           totalUpset: rr?.totalUpset ?? 0,
-          totalGoalScorerHits: rr?.totalGoalScorerHits ?? 0,
+          totalGoalScorerHits: safeRankMetricNum(rr?.totalGoalScorerHits),
           activeWinStreak: activeFootballStreak(d),
         };
       })
       .filter((row) => (row.totalPosts ?? 0) > 0);
 
     for (const metric of WC_METRICS) {
-      const eligibleRows =
-        metric === "winRate"
-          ? baseRows.filter(
-              (row) => (row.totalPosts ?? 0) >= minPostsForWcWinRate(stage)
-            )
-          : baseRows;
+      const eligibleRows = filterRowsForMetricEligibility(baseRows, metric, {
+        wcStage: stage,
+        postedTodayUids:
+          metric === "activeWinStreak" ? wcSettledTodayUids : undefined,
+      });
       const sortedFull = [...eligibleRows].sort((a, b) =>
         cmpSortRows(a, b, metric)
       );

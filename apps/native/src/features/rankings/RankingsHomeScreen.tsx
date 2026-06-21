@@ -17,7 +17,7 @@ import {
   buildMyRankMiniMetrics,
   isMyRankMiniMetricsReady,
 } from "../../../../../lib/rankings/buildMyRankMiniMetrics";
-import { resolveMyRankForCard, getMyMetricValue } from "../../../../../lib/rankings/rankingsPageShared";
+import { resolveMyRankForCard, getMyMetricValue, computeWinRateMinPosts } from "../../../../../lib/rankings/rankingsPageShared";
 import { sortRankingRowsByMetric } from "../../../../../lib/rankings/sortRankingRows";
 import {
   visibleMetricsForLeague,
@@ -154,7 +154,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     [metric, myRawRow]
   );
 
-  const winRateMinPosts = round === "overall" || round === "r1" ? 20 : 1;
+  const winRateMinPosts = computeWinRateMinPosts(
+    rankingsLeague === "wc" ? "worldcup" : "nba",
+    "playoffs",
+    round,
+    wcStageForHook
+  );
   const rankingHasNoEntries =
     listReady && (rows.length === 0 || rankingListCount === 0);
 

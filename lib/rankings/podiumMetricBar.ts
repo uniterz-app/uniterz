@@ -32,8 +32,8 @@ export function podiumMetricBarSpec(
       };
     case "upsetScore":
       return {
-        ratio: clamp01((row.avgUpsetScore ?? 0) / 10),
-        label: formatMetricDecimals(row.avgUpsetScore ?? 0, 1),
+        ratio: clamp01((row.upsetScore ?? 0) / 50),
+        label: formatMetricDecimals(row.upsetScore ?? 0, 1),
       };
     case "winRate":
       return {

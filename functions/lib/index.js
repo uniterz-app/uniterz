@@ -115,9 +115,10 @@ exports.buildCumulativeStatsCron = (0, scheduler_1.onSchedule)({
     await (0, buildCumulativeStats_1.buildCumulativeStats)();
 });
 /* ============================================================================
- * Cumulative Ranking Snapshot (15:55) — JST 当日に NBA / WC 試合がある日
+ * Cumulative Ranking Snapshot (16:00) — JST 当日に NBA / WC 試合がある日
+ * 連勝はこの時点の「今日確定投稿者 × 連勝>0」でスナップショット化
  * ==========================================================================*/
-exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "55 15 * * *", timeZone: "Asia/Tokyo" }, async () => {
+exports.buildCumulativeRankingSnapshotCron = (0, scheduler_1.onSchedule)({ schedule: "0 16 * * *", timeZone: "Asia/Tokyo" }, async () => {
     var _a, _b;
     if (!(await (0, hasRankingAggregationScheduledJstToday_1.hasRankingAggregationScheduledJstToday)())) {
         console.log("[buildCumulativeRankingSnapshotCron] skip: no NBA/WC games scheduled this JST date");

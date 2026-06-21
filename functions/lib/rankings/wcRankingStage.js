@@ -6,8 +6,8 @@ exports.minPostsForWcWinRate = minPostsForWcWinRate;
 exports.isWcRankingStage = isWcRankingStage;
 exports.WC_RANKING_STAGES = ["overall", "qualifying", "main"];
 /** Keep in sync with lib/rankings/winRateMinPosts.ts */
-exports.WC_OVERALL_WIN_RATE_MIN_POSTS = 12;
-exports.WC_GROUP_STAGE_WIN_RATE_MIN_POSTS = 10;
+exports.WC_OVERALL_WIN_RATE_MIN_POSTS = 20;
+exports.WC_GROUP_STAGE_WIN_RATE_MIN_POSTS = 20;
 function minPostsForWcWinRate(stage) {
     if (stage === "qualifying")
         return exports.WC_GROUP_STAGE_WIN_RATE_MIN_POSTS;

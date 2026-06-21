@@ -8,6 +8,7 @@ const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
 const buildCumulativeRankingSnapshot_1 = require("./buildCumulativeRankingSnapshot");
 const readSnapshotRanksFromCumulative_1 = require("./readSnapshotRanksFromCumulative");
+const safeRankMetricNum_1 = require("./safeRankMetricNum");
 const wcRankingStage_1 = require("./wcRankingStage");
 function db() {
     return (0, firestore_1.getFirestore)();
@@ -179,24 +180,24 @@ function normalizePlan(plan) {
     return plan === "pro" ? "pro" : "free";
 }
 function rowMetricValue(row, metric) {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a;
     if (metric === "activeWinStreak")
-        return (_a = row.activeWinStreak) !== null && _a !== void 0 ? _a : 0;
+        return (0, safeRankMetricNum_1.safeRankMetricNum)(row.activeWinStreak);
     if (metric === "winRate")
-        return (_b = row.winRate) !== null && _b !== void 0 ? _b : 0;
+        return (0, safeRankMetricNum_1.safeRankMetricNum)(row.winRate);
     if (metric === "totalPoints")
-        return (_c = row.totalPoints) !== null && _c !== void 0 ? _c : 0;
+        return (0, safeRankMetricNum_1.safeRankMetricNum)(row.totalPoints);
     if (metric === "totalExactHits")
-        return (_e = (_d = row.totalExactHits) !== null && _d !== void 0 ? _d : row.totalPrecision) !== null && _e !== void 0 ? _e : 0;
+        return (0, safeRankMetricNum_1.safeRankMetricNum)((_a = row.totalExactHits) !== null && _a !== void 0 ? _a : row.totalPrecision);
     if (metric === "totalPrecision")
-        return (_f = row.totalPrecision) !== null && _f !== void 0 ? _f : 0;
+        return (0, safeRankMetricNum_1.safeRankMetricNum)(row.totalPrecision);
     if (metric === "totalGoalScorerHits")
-        return (_g = row.totalGoalScorerHits) !== null && _g !== void 0 ? _g : 0;
-    return (_h = row.totalUpset) !== null && _h !== void 0 ? _h : 0;
+        return (0, safeRankMetricNum_1.safeRankMetricNum)(row.totalGoalScorerHits);
+    return (0, safeRankMetricNum_1.safeRankMetricNum)(row.totalUpset);
 }
 /** Same ordering as buildCumulativeRankingSnapshot `cmpSortRows`. */
 function cmpRankingRows(a, b, metric) {
-    var _a, _b, _c, _d;
+    var _a, _b;
     const diff = rowMetricValue(b, metric) - rowMetricValue(a, metric);
     if (diff !== 0)
         return diff;
@@ -205,7 +206,7 @@ function cmpRankingRows(a, b, metric) {
         if (postsDiff !== 0)
             return postsDiff;
     }
-    return ((_c = b.totalPoints) !== null && _c !== void 0 ? _c : 0) - ((_d = a.totalPoints) !== null && _d !== void 0 ? _d : 0);
+    return (0, safeRankMetricNum_1.safeRankMetricNum)(b.totalPoints) - (0, safeRankMetricNum_1.safeRankMetricNum)(a.totalPoints);
 }
 function sortSnapshotRows(rows, metric) {
     return [...rows].sort((a, b) => cmpRankingRows(a, b, metric));
@@ -329,12 +330,14 @@ async function rankingPayloadForMetric(metric, phase, round, uid, snaps, wcStage
     let rows = normalizeSnapshotRows(rawRows, metric);
     let totalCount = readSnapshotTotalCount(snapData, rows.length);
     /** スナップショット未生成時のみ live フォールバック */
-    if (rows.length === 0 && wcStage) {
+    /** 連勝は 16:00 スナップショットのみ（live フォールバックなし） */
+    if (rows.length === 0 && wcStage && metric !== "activeWinStreak") {
         const live = await (0, buildCumulativeRankingSnapshot_1.loadWcStageTop20RowsLive)(wcStage, metric);
         rows = normalizeSnapshotRows(live.rows, metric);
         totalCount = live.totalCount;
     }
     if (rows.length === 0 &&
+        metric !== "activeWinStreak" &&
         !wcStage &&
         phase === "playoffs" &&
         round !== "overall" &&

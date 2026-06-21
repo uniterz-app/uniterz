@@ -111,7 +111,7 @@ const getCachedBulk = unstable_cache(
     void dayKey;
     return fetchBulkFromFunctions(uid, metrics, phase, round, wcStage);
   },
-  ["cumulative-ranking-bulk-v8"],
+  ["cumulative-ranking-bulk-v11"],
   {
     revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
     tags: ["cumulative-ranking"],
@@ -122,6 +122,9 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const uid = searchParams.get("uid") ?? undefined;
+    const personalOnly =
+      searchParams.get("personalOnly") === "1" ||
+      searchParams.get("personalOnly") === "true";
     const rawWcStage = searchParams.get("wcStage");
     const wcStage: WcRankingStage | null = isWcRankingStage(rawWcStage)
       ? rawWcStage
@@ -137,6 +140,32 @@ export async function GET(req: Request) {
       : "overall";
     const metricsKey = metricsToKey(metricsList);
     const todayKey = dateKeyJST();
+
+    /** YOUR RANK 用 — Firestore snapshotRanks のみ（Functions / 一覧キャッシュ不要） */
+    if (personalOnly) {
+      if (!uid) {
+        return NextResponse.json(
+          { ok: false, error: "uid required for personalOnly" },
+          { status: 400 }
+        );
+      }
+      const personal = await loadPersonalBulkOverlayFromFirestore(
+        uid,
+        metricsList,
+        phase,
+        round,
+        wcStage
+      );
+      return NextResponse.json(
+        { ok: true, wcStage, byMetric: personal, myMetricValueDeltas: null },
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "private, max-age=0, must-revalidate",
+          },
+        }
+      );
+    }
 
     const baseUrl =
       process.env.CUMULATIVE_RANKING_FUNCTION_URL ??
