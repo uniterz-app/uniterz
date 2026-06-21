@@ -1,5 +1,5 @@
 import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import { db } from "../../lib/firebase";
@@ -72,7 +72,7 @@ type GameCardListRowProps = GameCardListProps & {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** 試合一覧行：Reanimated による depth reveal / bottom-up 入場 */
-function GameCardListRow(props: GameCardListRowProps) {
+const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProps) {
   const {
     game,
     rowIndex,
@@ -191,7 +191,9 @@ function GameCardListRow(props: GameCardListRowProps) {
           pointerEvents="box-none"
           style={[ent.shellOpacityStyle, { flex: 1, minHeight: 0, position: "relative" }]}
         >
-          <MatchCardEntryScanNative style={ent.scanLineStyle} />
+          {ent.showEntryScan ? (
+            <MatchCardEntryScanNative style={ent.scanLineStyle} />
+          ) : null}
           <MatchListCyberDecorNative />
           <View style={styles.cardPressableBody}>
           <View style={{ flex: 1, minHeight: 0 }}>
@@ -404,7 +406,7 @@ function GameCardListRow(props: GameCardListRowProps) {
       </MatchListCyberClipNative>
     </AnimatedPressable>
   );
-}
+});
 
 export default function GameCardList(props: GameCardListProps) {
   const { games, t, styles, enteringAnimationEnabled = true, entranceVariant = "full" } = props;

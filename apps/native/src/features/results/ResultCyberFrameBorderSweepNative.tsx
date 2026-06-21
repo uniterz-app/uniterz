@@ -5,7 +5,11 @@ import {
   Group,
   Paint,
   Path,
+  PathOp,
+  Rect,
   Skia,
+  SweepGradient,
+  vec,
   type SkPath,
 } from "@shopify/react-native-skia";
 import {
@@ -17,25 +21,20 @@ import {
   withTiming,
 } from "react-native-reanimated";
 import {
+  chamferedRectPathD,
+  insetChamferedRectPathD,
+} from "../games/matchListCyberClipPath";
+import {
   resultFrameBorderSweepTheme,
   type ResultFrameBorderSweepVariant,
 } from "../../../../../lib/result/resultFrameBorderSweep";
 import {
-  insetChamferedRectPathD,
-} from "../games/matchListCyberClipPath";
-import {
   RESULT_HIT_CYBER_CLIP_CUT,
   insetResultHitCyberClipPathD,
+  resultHitCyberClipPathD,
 } from "./resultHitCyberClipPath";
-import {
-  RESULT_CYBER_FRAME_SWEEP_PADDING,
-  RESULT_CYBER_FRAME_STROKE_WIDTH,
-} from "./resultCyberFrameNativeMetrics";
 
 export type ResultCyberFrameClipShape = "hit" | "chamfer";
-
-/** 枠周長に対する走査光の弧長（0–1）— Web conic の狭いピーク相当 */
-const SWEEP_ARC = 0.085;
 
 type Props = {
   width: number;
@@ -48,128 +47,42 @@ type Props = {
   borderStrokeWidth?: number;
 };
 
-type SweepArcProps = {
-  borderPath: SkPath;
-  ringWidth: number;
-  progress: ReturnType<typeof useSharedValue<number>>;
-  glowColor: string;
-  coreColor: string;
-  haloColor: string;
-};
-
-/** 静的枠 stroke の中心線 */
-function makeBorderCenterlinePath(
+function outlinePathD(
   width: number,
   height: number,
   cut: number,
   clipShape: ResultCyberFrameClipShape,
-  borderStrokeWidth: number
-): SkPath | null {
-  const inset = Math.max(borderStrokeWidth / 2, 0.5);
-  const d =
-    clipShape === "chamfer"
+  inset = 0
+): string {
+  if (clipShape === "chamfer") {
+    return inset > 0
       ? insetChamferedRectPathD(width, height, cut, inset)
-      : insetResultHitCyberClipPathD(width, height, inset, cut);
-  if (!d) return null;
-  return Skia.Path.MakeFromSVGString(d);
+      : chamferedRectPathD(width, height, cut);
+  }
+  return inset > 0
+    ? insetResultHitCyberClipPathD(width, height, inset, cut)
+    : resultHitCyberClipPathD(width, height, cut);
 }
 
-function glowTintForVariant(variant: ResultFrameBorderSweepVariant): string {
-  if (variant === "streakGold") return "rgba(251,191,36,0.55)";
-  if (variant === "streakPlatinum") return "rgba(34,211,238,0.48)";
-  if (variant === "streakSilver") return "rgba(226,232,240,0.42)";
-  if (variant === "upset") return "rgba(248,113,113,0.4)";
-  return "rgba(216,180,254,0.38)";
-}
-
-/** 閉路パス上を走るハイライト（Path trim — Skia × Reanimated で確実に動く） */
-function SweepArcAlongBorder({
-  borderPath,
-  ringWidth,
-  progress,
-  glowColor,
-  coreColor,
-  haloColor,
-}: SweepArcProps) {
-  const sweepStart = useDerivedValue(() => progress.value);
-  const sweepEnd = useDerivedValue(() => {
-    const end = progress.value + SWEEP_ARC;
-    return end > 1 ? 1 : end;
-  });
-  const wrapEnd = useDerivedValue(() => {
-    const end = progress.value + SWEEP_ARC;
-    return end > 1 ? end - 1 : 0;
-  });
-
-  const strokeBase = {
-    style: "stroke" as const,
-    strokeCap: "butt" as const,
-    strokeJoin: "miter" as const,
-  };
-
-  return (
-    <Group layer={<Paint blendMode="screen" />}>
-      {/* 外側 halo */}
-      <Path
-        path={borderPath}
-        {...strokeBase}
-        strokeWidth={ringWidth + 8}
-        start={sweepStart}
-        end={sweepEnd}
-        color={haloColor}
-        opacity={0.35}
-      />
-      <Path
-        path={borderPath}
-        {...strokeBase}
-        strokeWidth={ringWidth + 8}
-        start={0}
-        end={wrapEnd}
-        color={haloColor}
-        opacity={0.35}
-      />
-      {/* ティア色グロー */}
-      <Path
-        path={borderPath}
-        {...strokeBase}
-        strokeWidth={ringWidth + 3}
-        start={sweepStart}
-        end={sweepEnd}
-        color={glowColor}
-        opacity={0.55}
-      />
-      <Path
-        path={borderPath}
-        {...strokeBase}
-        strokeWidth={ringWidth + 3}
-        start={0}
-        end={wrapEnd}
-        color={glowColor}
-        opacity={0.55}
-      />
-      {/* コア白 */}
-      <Path
-        path={borderPath}
-        {...strokeBase}
-        strokeWidth={ringWidth}
-        start={sweepStart}
-        end={sweepEnd}
-        color={coreColor}
-      />
-      <Path
-        path={borderPath}
-        {...strokeBase}
-        strokeWidth={ringWidth}
-        start={0}
-        end={wrapEnd}
-        color={coreColor}
-      />
-    </Group>
-  );
+/** Web `.result-card-border-sweep` の ring マスク（外枠 − 内側） */
+function makeRingClipPath(
+  width: number,
+  height: number,
+  cut: number,
+  clipShape: ResultCyberFrameClipShape,
+  ringPadding: number
+): SkPath | null {
+  const outerD = outlinePathD(width, height, cut, clipShape, 0);
+  const innerD = outlinePathD(width, height, cut, clipShape, ringPadding);
+  if (!outerD || !innerD) return null;
+  const outer = Skia.Path.MakeFromSVGString(outerD);
+  const inner = Skia.Path.MakeFromSVGString(innerD);
+  if (!outer || !inner) return null;
+  return Skia.Path.MakeFromOp(outer, inner, PathOp.Difference);
 }
 
 /**
- * Web `.result-card-border-sweep` — 枠中心線に沿った走査光。
+ * Web `.result-card-border-sweep` + `__spin` — conic 回転 + リングマスク + screen。
  */
 export default function ResultCyberFrameBorderSweepNative({
   width,
@@ -179,22 +92,14 @@ export default function ResultCyberFrameBorderSweepNative({
   clipShape = "hit",
   layerZIndex = 11,
   ringWidth: ringWidthProp,
-  borderStrokeWidth = RESULT_CYBER_FRAME_STROKE_WIDTH,
 }: Props) {
   const theme = resultFrameBorderSweepTheme(variant);
-  const ringWidth = ringWidthProp ?? RESULT_CYBER_FRAME_SWEEP_PADDING;
+  const ringPadding = ringWidthProp ?? theme.paddingPx;
   const durationMs = variant === "default" ? 3800 : theme.durationMs;
 
-  const borderPath = useMemo(
-    () =>
-      makeBorderCenterlinePath(
-        width,
-        height,
-        cut,
-        clipShape,
-        borderStrokeWidth
-      ),
-    [width, height, cut, clipShape, borderStrokeWidth]
+  const ringPath = useMemo(
+    () => makeRingClipPath(width, height, cut, clipShape, ringPadding),
+    [width, height, cut, clipShape, ringPadding]
   );
 
   const progress = useSharedValue(0);
@@ -211,23 +116,35 @@ export default function ResultCyberFrameBorderSweepNative({
     };
   }, [durationMs, progress]);
 
-  const coreColor = "#ffffff";
-  const glowColor = glowTintForVariant(variant);
-  const haloColor = "rgba(255,255,255,0.45)";
+  const cx = width / 2;
+  const cy = height / 2;
+  const spinSpan = Math.max(width, height) * 2.8;
 
-  if (!borderPath || width <= 0 || height <= 0) return null;
+  const spinTransform = useDerivedValue(() => [
+    { rotate: progress.value * Math.PI * 2 },
+  ]);
+
+  if (!ringPath || width <= 0 || height <= 0) return null;
 
   return (
     <View pointerEvents="none" style={[styles.wrap, { zIndex: layerZIndex }]}>
       <Canvas style={{ width, height }} pointerEvents="none">
-        <SweepArcAlongBorder
-          borderPath={borderPath}
-          ringWidth={ringWidth}
-          progress={progress}
-          glowColor={glowColor}
-          coreColor={coreColor}
-          haloColor={haloColor}
-        />
+        <Group clip={ringPath} layer={<Paint blendMode="screen" />}>
+          <Group origin={vec(cx, cy)} transform={spinTransform}>
+            <Rect
+              x={cx - spinSpan / 2}
+              y={cy - spinSpan / 2}
+              width={spinSpan}
+              height={spinSpan}
+            >
+              <SweepGradient
+                c={vec(cx, cy)}
+                colors={theme.colors}
+                positions={theme.positions}
+              />
+            </Rect>
+          </Group>
+        </Group>
       </Canvas>
     </View>
   );

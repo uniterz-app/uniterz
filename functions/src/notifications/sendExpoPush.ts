@@ -106,6 +106,7 @@ export async function sendExpoPushToUids(input: {
       sound: "default",
       title: copy.title,
       body: copy.body,
+      ...(copy.subtitle ? { subtitle: copy.subtitle } : {}),
       data: data as Record<string, unknown>,
     });
   }

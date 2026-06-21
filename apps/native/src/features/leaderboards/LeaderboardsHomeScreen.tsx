@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { spacing } from "../../theme/tokens";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { MainTabParamList } from "../../navigation/types";
 import {
@@ -17,7 +18,7 @@ type Props = { bottomReserveY?: number };
 
 export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
-  const insets = useSafeAreaInsets();
+  const { topContentPadY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
   const { user } = useNativeMyRankingUser(fUser?.uid);
   const language = user.language;
@@ -33,7 +34,7 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
   }, []);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 4 }]}>
+    <View style={[styles.root, { paddingTop: topContentPadY }]}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomReserveY + 16 }]}
         showsVerticalScrollIndicator={false}

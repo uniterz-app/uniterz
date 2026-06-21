@@ -1,6 +1,5 @@
-/** Web プッシュ通知相当 — 権限・トークン登録・タップ遷移 */
+/** Native 専用 OS プッシュ — 権限・トークン登録・タップ遷移（Web 版は非対象） */
 import { useEffect, useRef } from "react";
-import { useNavigation } from "@react-navigation/native";
 import { parsePushNotificationData } from "@/lib/notifications/pushPayloadTypes";
 import {
   getCachedExpoPushToken,
@@ -19,7 +18,6 @@ function extractPushDataFromResponse(
 }
 
 export function useNativePushNotifications(enabled: boolean) {
-  const navigation = useNavigation<any>();
   const registeredRef = useRef(false);
 
   useEffect(() => {
@@ -59,7 +57,7 @@ export function useNativePushNotifications(enabled: boolean) {
         (response) => {
           const data = extractPushDataFromResponse(response);
           if (!data) return;
-          navigateFromPushNotificationData(navigation, data);
+          navigateFromPushNotificationData(data);
         }
       );
 
@@ -67,12 +65,12 @@ export function useNativePushNotifications(enabled: boolean) {
       if (cancelled || !last) return;
       const data = extractPushDataFromResponse(last);
       if (!data) return;
-      navigateFromPushNotificationData(navigation, data);
+      navigateFromPushNotificationData(data);
     })();
 
     return () => {
       cancelled = true;
       subResponse?.remove();
     };
-  }, [enabled, navigation]);
+  }, [enabled]);
 }

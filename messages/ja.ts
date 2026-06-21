@@ -324,7 +324,7 @@ const ja = {
     showingLatest: "動作を軽く保つため、最新 {n} 件まで表示しています。",
     loadingMatch: "試合データを読み込み中…",
     loadMatchError: "試合データを読み込めませんでした。",
-    dayTotalScore: "総合スコア",
+    dayTotalScore: "total",
     dayTotalScorePts: "pt",
     dayPending: "得点未確定",
     dayPendingDesc: "試合確定後に得点が表示されます",

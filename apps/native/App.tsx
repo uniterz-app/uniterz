@@ -1,4 +1,5 @@
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { useFonts } from "expo-font";
 import { Oxanium_700Bold, Oxanium_800ExtraBold } from "@expo-google-fonts/oxanium";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
@@ -13,8 +14,12 @@ import { colors } from "./src/theme/tokens";
 import { FirebaseUserProvider } from "./src/auth/FirebaseUserProvider";
 import { NativeLanguageProvider } from "./src/i18n/NativeLanguageProvider";
 import RootNavigator from "./src/navigation/RootNavigator";
+import { navigationRef } from "./src/navigation/navigationRef";
 import AppShellNative from "./src/components/AppShellNative";
 import { NATIVE_PAGE_SURFACE_COLOR } from "./src/features/background/nativeBackgroundPalette";
+import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
+
+ensureNativeSplashHeld();
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -26,6 +31,11 @@ export default function App() {
     Rajdhani_700Bold,
     NotoSansJP_700Bold,
   });
+
+  useEffect(() => {
+    ensureNativeSplashHeld();
+  }, []);
+
   if (!fontsLoaded) return null;
 
   return (
@@ -35,6 +45,7 @@ export default function App() {
           <NativeLanguageProvider>
           <AppShellNative>
             <NavigationContainer
+              ref={navigationRef}
               theme={{
                 dark: true,
                 colors: {

@@ -12,6 +12,7 @@ export default function PublicProfileScreenNative() {
 
   return (
     <ProfileHomeScreen
+      key={handle}
       bottomReserveY={bottomContentReserveY}
       routeHandle={handle}
       fromRankings={route.params?.fromRankings === true}

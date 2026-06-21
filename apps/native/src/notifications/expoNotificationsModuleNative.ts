@@ -26,11 +26,10 @@ export async function loadExpoNotificationsModule(): Promise<ExpoNotificationsMo
     const mod = await import("expo-notifications");
     mod.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
         shouldShowBanner: true,
         shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
       }),
     });
     cached = mod;

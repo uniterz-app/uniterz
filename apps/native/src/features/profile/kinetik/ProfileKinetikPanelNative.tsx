@@ -191,11 +191,13 @@ function KinetikMetricCardNative({
   );
 }
 
-function SlantTabScanNative() {
+function SlantTabScanNative({ filled = false }: { filled?: boolean }) {
+  const step = filled ? 2 : 3;
+  const count = filled ? 7 : 10;
   return (
     <View style={styles.slantTabScan} pointerEvents="none">
-      {Array.from({ length: 10 }).map((_, i) => (
-        <View key={i} style={[styles.slantTabScanLine, { top: i * 3 }]} />
+      {Array.from({ length: count }).map((_, i) => (
+        <View key={i} style={[styles.slantTabScanLine, { top: i * step }]} />
       ))}
     </View>
   );
@@ -236,26 +238,27 @@ function KinetikSlantTabNative({
           filled
             ? {
                 backgroundColor: accent,
-                borderWidth: 0,
+                borderWidth: 1,
+                borderColor: "rgba(0,0,0,0.32)",
                 shadowColor: glow,
                 shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 1,
-                shadowRadius: 8,
-                elevation: 4,
+                shadowOpacity: 0.88,
+                shadowRadius: 5,
+                elevation: 3,
               }
             : {
-                backgroundColor: "transparent",
+                backgroundColor: "rgba(0,0,0,0.18)",
                 borderWidth: 1,
                 borderColor: accent,
                 shadowColor: glow,
                 shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.75,
-                shadowRadius: 5,
+                shadowOpacity: 0.55,
+                shadowRadius: 4,
                 elevation: 2,
               },
         ]}
       >
-        {filled ? <SlantTabScanNative /> : null}
+        {filled ? <SlantTabScanNative filled /> : null}
         <Text
           style={[
             styles.slantTabText,
@@ -377,49 +380,48 @@ function KinetikFooterRef({
   return <View style={[styles.footerRef, style]}>{children}</View>;
 }
 
-function KinetikFooterNative({
-  countryCode,
-  memberSinceLabel,
-  systemId,
+function KinetikIdentityIdChipNative({
+  idLabel,
   shareCopied,
+  copiedLabel,
+  shareLabel,
   onShare,
-  language,
 }: {
-  countryCode?: string | null;
-  memberSinceLabel: string | null;
-  systemId: string;
+  idLabel: string;
   shareCopied: boolean;
+  copiedLabel: string;
+  shareLabel: string;
   onShare: () => void;
-  language: "ja" | "en";
 }) {
-  const flagUri = countryCode?.trim() ? rankingFlagImageUri(countryCode.trim()) : null;
-  const shareLabel = language === "ja" ? "プロフィールを共有" : "Share profile";
-  const copiedLabel = language === "ja" ? "コピー済" : "Copied";
+  if (!idLabel) return null;
+
+  return (
+    <Pressable
+      onPress={onShare}
+      accessibilityRole="button"
+      accessibilityLabel={shareLabel}
+      style={styles.identityIdPress}
+    >
+      <KinetikFooterRef style={styles.identityIdRef}>
+        <Text style={styles.footerRefText} numberOfLines={1}>
+          {shareCopied ? copiedLabel : `ID: ${idLabel}`}
+        </Text>
+      </KinetikFooterRef>
+    </Pressable>
+  );
+}
+
+function KinetikFooterNative({ memberSinceLabel }: { memberSinceLabel: string | null }) {
+  if (!memberSinceLabel) return null;
 
   return (
     <View style={styles.footer}>
       <View style={styles.footerRow}>
-        <View style={styles.footerLeft}>
-          {flagUri ? (
-            <KinetikFooterRef style={styles.footerFlagRef}>
-              <Image source={{ uri: flagUri }} style={styles.footerFlag} resizeMode="cover" />
-            </KinetikFooterRef>
-          ) : null}
-          {memberSinceLabel ? (
-            <KinetikFooterRef style={styles.footerRefGrow}>
-              <Text style={styles.footerRefText} numberOfLines={1}>
-                {memberSinceLabel}
-              </Text>
-            </KinetikFooterRef>
-          ) : null}
-        </View>
-        <Pressable onPress={onShare} accessibilityRole="button" accessibilityLabel={shareLabel}>
-          <KinetikFooterRef>
-            <Text style={styles.footerRefText}>
-              {shareCopied ? copiedLabel : `ID: ${systemId}`}
-            </Text>
-          </KinetikFooterRef>
-        </Pressable>
+        <KinetikFooterRef style={styles.footerRefGrow}>
+          <Text style={styles.footerRefText} numberOfLines={1}>
+            {memberSinceLabel}
+          </Text>
+        </KinetikFooterRef>
       </View>
     </View>
   );
@@ -502,6 +504,12 @@ export default function ProfileKinetikPanelNative({
   const panelBorder = kinetikPanelBorderColor(profileAccent);
   const memberSinceLabel = formatProfileMemberSince(memberSinceMs, language);
   const shareTargetHandle = shareHandle?.trim() || identity.handle?.trim() || "";
+  const profileFlagUri = countryCode?.trim()
+    ? rankingFlagImageUri(countryCode.trim())
+    : null;
+  const profileIdLabel = identity.systemId.trim();
+  const shareProfileLabel = isJa ? "プロフィールを共有" : "Share profile";
+  const shareCopiedLabel = isJa ? "コピー済" : "Copied";
 
   const handleShareProfile = useCallback(async () => {
     if (!shareTargetHandle) return;
@@ -585,12 +593,28 @@ export default function ProfileKinetikPanelNative({
             <Text style={styles.displayName} numberOfLines={1}>
               {identity.displayName}
             </Text>
+            {profileFlagUri ? (
+              <View style={styles.nameInlineFlagWrap} accessibilityLabel={countryCode ?? undefined}>
+                <Image
+                  source={{ uri: profileFlagUri }}
+                  style={styles.nameInlineFlag}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : null}
             {isPro ? (
               <View style={styles.proPill}>
                 <Text style={styles.proPillText}>PRO</Text>
               </View>
             ) : null}
           </View>
+          <KinetikIdentityIdChipNative
+            idLabel={profileIdLabel}
+            shareCopied={shareCopied}
+            copiedLabel={shareCopiedLabel}
+            shareLabel={shareProfileLabel}
+            onShare={handleShareProfile}
+          />
           {bio?.trim() ? (
             <Text style={styles.bio} numberOfLines={3}>
               {bio.trim()}
@@ -700,14 +724,7 @@ export default function ProfileKinetikPanelNative({
         </View>
       </View>
 
-      <KinetikFooterNative
-        countryCode={countryCode}
-        memberSinceLabel={memberSinceLabel}
-        systemId={identity.systemId}
-        shareCopied={shareCopied}
-        onShare={handleShareProfile}
-        language={language}
-      />
+      <KinetikFooterNative memberSinceLabel={memberSinceLabel} />
     </View>
   );
 }
@@ -739,9 +756,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(168, 255, 42, 0.12)",
   },
-  headerTabsRow: { flexDirection: "row", alignItems: "stretch", gap: 8, marginBottom: 4 },
+  headerTabsRow: { flexDirection: "row", alignItems: "stretch", gap: 8, marginBottom: 2 },
   headerTabsFlex: { flex: 1, minWidth: 0, overflow: "visible" },
-  headerTabs: { flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "stretch" },
+  headerTabs: { flexDirection: "row", flexWrap: "wrap", gap: 5, alignItems: "center" },
   slantTabOuter: {
     flexShrink: 0,
     overflow: "visible",
@@ -755,7 +772,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     transform: [{ skewX: "-14deg" }],
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
   },
   slantTabScan: {
     ...StyleSheet.absoluteFillObject,
@@ -772,10 +789,10 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 1,
     fontFamily: OXANIUM_BOLD,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
-    letterSpacing: 1.26,
-    lineHeight: 11,
+    letterSpacing: 1.1,
+    lineHeight: 10,
     includeFontPadding: false,
     transform: [{ skewX: "14deg" }],
   },
@@ -790,7 +807,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.72,
     textTransform: "none",
   },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 0 },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+    flexWrap: "wrap",
+  },
+  nameInlineFlagWrap: {
+    width: 18,
+    height: 12,
+    borderRadius: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.28)",
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  nameInlineFlag: {
+    width: "100%",
+    height: "100%",
+  },
+  identityIdPress: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    marginTop: 4,
+  },
+  identityIdRef: {
+    paddingTop: 4,
+    paddingRight: 10,
+    paddingBottom: 5,
+    paddingLeft: 8,
+    minHeight: 22,
+  },
   displayName: {
     flexShrink: 1,
     fontFamily: OXANIUM_EXTRA,
@@ -997,7 +1045,6 @@ const styles = StyleSheet.create({
     gap: 8,
     flex: 1,
     minWidth: 0,
-    marginLeft: 10,
   },
   footerFlagRef: {
     flexShrink: 0,

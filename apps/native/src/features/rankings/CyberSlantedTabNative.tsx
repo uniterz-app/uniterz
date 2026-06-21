@@ -1,5 +1,14 @@
+import { useEffect } from "react";
 import type { ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { Platform, Pressable, StyleSheet, View, type ViewStyle } from "react-native";
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import {
   hasJaScript,
   rankingFontSizePx,
@@ -7,6 +16,8 @@ import {
 import { METRIC_FONT } from "./rankingsUiTheme";
 
 export const CYBER_TAB_CYAN = "#00F5FF";
+const TAB_ACTIVE_TEXT = "#050508";
+const TAB_TRANSITION_MS = 200;
 
 /** Web `.cyber-slanted-tab__scan` — 2px 透明 + 1px 線の 3px 周期 */
 const SCAN_LINE_STEP = 3;
@@ -42,8 +53,39 @@ export function CyberSlantedTabNative({
   accessibilityRole,
   accessibilityState,
 }: TabProps) {
+  const reduceMotion = useReducedMotion() ?? false;
   const jaLabel = hasJaScript(label);
   const fontSize = rankingFontSizePx(compact ? 9 : 10, label);
+  const progress = useSharedValue(active ? 1 : 0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      progress.value = active ? 1 : 0;
+      return;
+    }
+    progress.value = withTiming(active ? 1 : 0, {
+      duration: TAB_TRANSITION_MS,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [active, reduceMotion, progress]);
+
+  const tabAnimStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      ["transparent", CYBER_TAB_CYAN]
+    ),
+    borderColor: CYBER_TAB_CYAN,
+    borderWidth: progress.value > 0.98 ? 0 : 1,
+  }));
+
+  const scanAnimStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+  }));
+
+  const textAnimStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(progress.value, [0, 1], [CYBER_TAB_CYAN, TAB_ACTIVE_TEXT]),
+  }));
 
   return (
     <Pressable
@@ -55,7 +97,7 @@ export function CyberSlantedTabNative({
         pressed ? styles.tabPressed : null,
       ]}
     >
-      <View
+      <Animated.View
         style={[
           styles.tabSkew,
           fill ? styles.tabSkewFill : null,
@@ -66,16 +108,19 @@ export function CyberSlantedTabNative({
             : fill
               ? styles.tabFillDefault
               : null,
-          active ? styles.tabActive : styles.tabInactive,
+          tabAnimStyle,
+          active ? styles.tabActiveShadow : null,
         ]}
       >
-        {active ? <TabScanOverlay /> : null}
-        <Text
+        <Animated.View pointerEvents="none" style={[styles.scanOverlay, scanAnimStyle]}>
+          <TabScanOverlay />
+        </Animated.View>
+        <Animated.Text
           numberOfLines={1}
           maxFontSizeMultiplier={1.1}
           style={[
             styles.tabText,
-            active ? styles.tabTextActive : null,
+            textAnimStyle,
             {
               fontSize,
               lineHeight: Math.round(fontSize * 1.1),
@@ -86,8 +131,8 @@ export function CyberSlantedTabNative({
           ]}
         >
           {label}
-        </Text>
-      </View>
+        </Animated.Text>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -197,9 +242,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CYBER_TAB_CYAN,
   },
-  tabActive: {
-    backgroundColor: CYBER_TAB_CYAN,
-    borderWidth: 0,
+  tabActiveShadow: {
     ...Platform.select({
       ios: {
         shadowColor: "rgba(0,245,255,0.45)",
@@ -228,13 +271,9 @@ const styles = StyleSheet.create({
   tabText: {
     position: "relative",
     zIndex: 1,
-    color: CYBER_TAB_CYAN,
     fontWeight: "700",
     fontFamily: METRIC_FONT,
     textAlign: "center",
-  },
-  tabTextActive: {
-    color: "#050508",
   },
   tabTextUpper: {
     textTransform: "uppercase",

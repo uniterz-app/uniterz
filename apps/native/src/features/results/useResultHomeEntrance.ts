@@ -24,7 +24,6 @@ const FILTER_FROM_Y = -8;
 const DAY_HEADER_FRAME_MS = 300;
 const DAY_HEADER_RIGHT_EXTRA_DELAY_MS = 100;
 const DAY_HEADER_DATE_SLIDE_X = 12;
-const DAY_HEADER_BORDER_PULSE_MS = 160;
 const DAY_HEADER_SETTLE_DELAY_MS = 380;
 
 // --- 結果カード（analytics / scan / lock-in。試合一覧の bottom-up とは別系統） ---
@@ -115,7 +114,7 @@ export function useResultFilterBarEntrance(entranceEnabled: boolean, reduceMotio
 }
 
 /**
- * 日付ヘッダー：scan panel、cyan 枠パルス、右クラスタ遅延、ロック時の軽い settle。
+ * 日付ヘッダー：ガラスパネル fade、日付スライド、右クラスタ遅延、ロック時の軽い settle。
  */
 export function useResultDayHeaderEntrance(
   entranceEnabled: boolean,
@@ -126,7 +125,6 @@ export function useResultDayHeaderEntrance(
   const baseDelay = sectionStaggerIndex * 40;
 
   const frameOpacity = useSharedValue(skip ? 1 : 0);
-  const borderPulse = useSharedValue(0);
   const dateSlide = useSharedValue(skip ? 1 : 0);
   const rightOpacity = useSharedValue(skip ? 1 : 0);
   const lockSettle = useSharedValue(skip ? 1 : 0);
@@ -134,7 +132,6 @@ export function useResultDayHeaderEntrance(
   useEffect(() => {
     if (skip) {
       frameOpacity.value = 1;
-      borderPulse.value = 0;
       dateSlide.value = 1;
       rightOpacity.value = 1;
       lockSettle.value = 1;
@@ -143,13 +140,6 @@ export function useResultDayHeaderEntrance(
     frameOpacity.value = withDelay(
       baseDelay,
       withTiming(1, { duration: DAY_HEADER_FRAME_MS, easing: easeOutCubic })
-    );
-    borderPulse.value = withDelay(
-      baseDelay,
-      withSequence(
-        withTiming(1, { duration: DAY_HEADER_BORDER_PULSE_MS * 0.5, easing: Easing.out(Easing.quad) }),
-        withTiming(0, { duration: DAY_HEADER_BORDER_PULSE_MS * 0.5, easing: Easing.in(Easing.quad) })
-      )
     );
     dateSlide.value = withDelay(
       baseDelay,
@@ -166,13 +156,9 @@ export function useResultDayHeaderEntrance(
   }, [skip, baseDelay]);
 
   const clipStyle = useAnimatedStyle(() => {
-    const baseBorder = "rgba(34,211,238,0.55)";
-    const peakBorder = "rgba(34,211,238,0.9)";
-    const borderColor = interpolateColor(borderPulse.value, [0, 1], [baseBorder, peakBorder]);
     const settleScale = interpolate(lockSettle.value, [0, 1], [0.988, 1]);
     return {
       opacity: frameOpacity.value,
-      borderColor,
       transform: [{ scale: settleScale }],
     };
   });

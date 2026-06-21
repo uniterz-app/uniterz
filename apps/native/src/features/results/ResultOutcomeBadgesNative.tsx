@@ -17,6 +17,8 @@ type Props = {
   compact?: boolean;
   /** Web `hitBadgeSubtle`（リザルト一覧向け） */
   hitBadgeSubtle?: boolean;
+  /** Predict オーバーレイ等 — 1 で 100% */
+  badgeScale?: number;
 };
 
 function streakFlameColor(tone: StreakBadge["tone"]) {
@@ -42,10 +44,12 @@ export default function ResultOutcomeBadgesNative({
   showLiveMark = false,
   compact = true,
   hitBadgeSubtle = false,
+  badgeScale = 1,
 }: Props) {
   if (!badge && !showLiveMark) return null;
 
   const streakKind = badge === "streak" ? streakBadgeKind(activeWinStreak) : null;
+  const flameSize = Math.round((compact ? 10 : 12) * badgeScale);
 
   return (
     <View
@@ -53,7 +57,9 @@ export default function ResultOutcomeBadgesNative({
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "flex-end",
-        gap: 4,
+        gap: 4 * badgeScale,
+        alignSelf: "flex-end",
+        transform: badgeScale !== 1 ? [{ scale: badgeScale }] : undefined,
       }}
     >
       {badge === "streak" && streakKind && streakBadge ? (
@@ -66,7 +72,7 @@ export default function ResultOutcomeBadgesNative({
           leading={
             <MaterialCommunityIcons
               name="fire"
-              size={compact ? 10 : 12}
+              size={flameSize}
               color={streakFlameColor(streakBadge.tone)}
             />
           }

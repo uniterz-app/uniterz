@@ -10,7 +10,14 @@ export type MainTabParamList = {
 };
 
 export type GamesStackParamList = {
-  GamesHome: undefined;
+  GamesHome:
+    | {
+        /** リザルト等から予想モーダルを開く試合 ID */
+        openPredictGameId?: string;
+        /** 予想済みのとき最初からスコア入力を表示 */
+        expandScoreForm?: boolean;
+      }
+    | undefined;
   GamePredict: { gameId: string };
   GamePredictions: { gameId: string };
   Standings: undefined;
@@ -67,14 +74,16 @@ export type ProfileStackParamList = {
   FeatureRequest: undefined;
   CommunityGuidelines: undefined;
   Landing: undefined;
+  /** __DEV__ 通知動作確認 */
+  NotificationDev: undefined;
 };
 
 export type AuthStackParamList = {
-  Login: undefined;
+  Landing: undefined;
+  Login: { initialMode?: "login" | "signup" } | undefined;
   Signup: undefined;
   ResetPassword: undefined;
   Onboarding: undefined;
-  Landing: undefined;
 };
 
 export type RootStackParamList = {

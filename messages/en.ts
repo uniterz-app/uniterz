@@ -328,7 +328,7 @@ const en: Messages = {
     showingLatest: "Showing latest {n} results to keep the page responsive.",
     loadingMatch: "Loading match…",
     loadMatchError: "Could not load this match.",
-    dayTotalScore: "Total score",
+    dayTotalScore: "total",
     dayTotalScorePts: "pts",
     dayPending: "Pending",
     dayPendingDesc: "Points not yet available until matches are finalized",

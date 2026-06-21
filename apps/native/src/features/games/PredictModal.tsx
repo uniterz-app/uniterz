@@ -57,7 +57,6 @@ import {
 } from "./matchCardShellGrid";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
-  predictBlockFadeUpEnter,
   predictModalBackdropEnter,
   predictModalBackdropExit,
   predictModalPreviewEnter,
@@ -644,6 +643,7 @@ function PredictMatchPreview({
             badge={mergedFinal.badge}
             streakBadge={mergedFinal.streakBadge}
             activeWinStreak={mergedFinal.activeWinStreak}
+            badgeScale={0.88}
           />
         </View>
       ) : null}
@@ -787,10 +787,9 @@ export default function PredictModal({
   const reduceMotion = useReducedMotion() ?? false;
 
   /**
-   * Web `PredictionFormV2` の pageContainer stagger に相当（delayChildren 30ms + 45ms×index）
+   * Web オーバーレイ（`PredictionFormV2` overlayEmbedded）: カード以外は入場 stagger なし。
+   * 単体ページ用の blockIn は別途 predictBlockFadeUpEnter を直接使う。
    */
-  const blockIn = (staggerIndex: number) =>
-    reduceMotion ? undefined : predictBlockFadeUpEnter(staggerIndex);
   const toolPanelIn = reduceMotion ? undefined : predictPanelRevealEnter();
 
   const backdropEnter = reduceMotion ? undefined : predictModalBackdropEnter();
@@ -925,11 +924,6 @@ export default function PredictModal({
     scoreAway !== "";
 
   const modalChromeVisible = visible || exitingUi;
-  const hasTool = Boolean(predictToolsTab);
-  /** プレビュー有無でタブ行の stagger インデックスをずらす（Web と同趣旨の縦スタッガー） */
-  const tabsStaggerIndex = matchPreview ? 1 : 0;
-  const scoreStagger = hasTool ? 2 : 1;
-  const submitStagger = hasTool ? 3 : 2;
 
   /** ×・背景タップ・Android 戻る：閉じるアニメ後に親へ通知（親が即 visible=false にしないため exitingUi でモーダルを維持） */
   function scheduleCloseAfterExitAnimation() {
@@ -1029,7 +1023,7 @@ export default function PredictModal({
                       />
                     </Animated.View>
                   ) : null}
-              <Animated.View entering={reduceMotion ? undefined : blockIn(tabsStaggerIndex)}>
+              <View>
                 <PredictOverlayChamferedFrameNative
                   cut={PREDICT_OVERLAY_CYBER_DECK_CUT}
                   gradientColors={["rgba(4,8,14,0.9)", "rgba(4,8,14,0.9)"]}
@@ -1090,7 +1084,7 @@ export default function PredictModal({
                   </>
                 )}
                 </PredictOverlayChamferedFrameNative>
-              </Animated.View>
+              </View>
 
               {predictToolsTab ? (
                 <Animated.View
@@ -1193,7 +1187,7 @@ export default function PredictModal({
               {!spectatorStartedNoPost ? (
                 <>
                   {showPredictionSummary && !showMergedPredictionInPreview ? (
-                    <Animated.View entering={blockIn(scoreStagger)}>
+                    <View>
                       <GlassPanel variant="formCompact">
                         <Text style={s.predictSummaryKicker}>{t.myPrediction}</Text>
                         <View
@@ -1254,13 +1248,12 @@ export default function PredictModal({
                           </Pressable>
                         ) : null}
                       </GlassPanel>
-                    </Animated.View>
+                    </View>
                   ) : null}
 
                   {showScoreInputBlock ? (
                     <>
-                      <Animated.View entering={blockIn(scoreStagger)}>
-                        <PredictOverlayCyberFormPanelNative>
+                      <PredictOverlayCyberFormPanelNative>
                           <View style={s.predictScoreFormPanel}>
                           {isWcLeague ? (
                             <PredictionScoringRulesChipNative
@@ -1319,26 +1312,23 @@ export default function PredictModal({
                           ) : null}
                           </View>
                         </PredictOverlayCyberFormPanelNative>
-                      </Animated.View>
 
-                      <Animated.View entering={blockIn(submitStagger)}>
-                        <PredictOverlaySubmitButtonNative
-                          enabled={canSubmit}
-                          onPress={onSubmit}
-                          label={
-                            predictSubmitting
-                              ? isEditingPrediction
-                                ? t.updating
-                                : t.posting
-                              : isEditingPrediction
-                                ? t.submitUpdate
-                                : t.submitPrediction
-                          }
-                          disabledLabel={
-                            isEditingPrediction ? t.submitUpdate : t.submitPrediction
-                          }
-                        />
-                      </Animated.View>
+                      <PredictOverlaySubmitButtonNative
+                        enabled={canSubmit}
+                        onPress={onSubmit}
+                        label={
+                          predictSubmitting
+                            ? isEditingPrediction
+                              ? t.updating
+                              : t.posting
+                            : isEditingPrediction
+                              ? t.submitUpdate
+                              : t.submitPrediction
+                        }
+                        disabledLabel={
+                          isEditingPrediction ? t.submitUpdate : t.submitPrediction
+                        }
+                      />
                     </>
                   ) : null}
                 </>
@@ -1853,7 +1843,7 @@ const s = StyleSheet.create({
   },
   matchPreviewOutcomeBadge: {
     position: "absolute",
-    right: 2,
+    right: 8,
     /** カード内 paddingTop と揃え、上端で見切れない */
     top: 8,
     zIndex: 20,
@@ -1861,7 +1851,7 @@ const s = StyleSheet.create({
   },
   /** 編集ボタン（28px + gap 6）分だけ左へ */
   matchPreviewOutcomeBadgeWithEdit: {
-    right: 34,
+    right: 40,
   },
   matchPreviewFinalBlock: {
     alignItems: "center",

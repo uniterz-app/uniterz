@@ -4,7 +4,6 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Image,
   Keyboard,
   Platform,
   Pressable,
@@ -25,7 +24,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { auth, db } from "../../lib/firebase";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import type { RouteProp, NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
+import type { AuthStackParamList } from "../../navigation/types";
 
 type AuthMode = "login" | "signup";
 
@@ -60,9 +63,13 @@ function mapAuthErrorMessage(
 
 export default function AuthEntryScreen() {
   const formWidth = Math.min(330, Dimensions.get("window").width - 26);
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const insets = useSafeAreaInsets();
+  const route = useRoute<RouteProp<AuthStackParamList, "Login">>();
+  const initialMode = route.params?.initialMode ?? "login";
 
   const { status, fUser } = useFirebaseUser();
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -71,6 +78,10 @@ export default function AuthEntryScreen() {
   const buttonScale = useRef(new Animated.Value(1)).current;
   const lineFlow = useRef(new Animated.Value(0)).current;
   const frameFlow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -242,15 +253,32 @@ export default function AuthEntryScreen() {
 
   if (status === "ready" && fUser) return null;
 
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate("Landing");
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <View style={styles.root}>
-      <Image
-        source={require("../../../assets/AuthFormScreen.png")}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      />
       <View style={styles.backgroundDim} pointerEvents="none" />
+      <Pressable
+        style={[styles.backBtn, { top: insets.top + 8, left: spacing.md }]}
+        onPress={handleBack}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Back to landing"
+      >
+        <MaterialCommunityIcons
+          name="chevron-left"
+          size={24}
+          color="rgba(0,245,255,0.78)"
+        />
+        <Text style={styles.backLabel}>BACK</Text>
+      </Pressable>
       <View style={styles.background}>
         <View
           style={[styles.card, { width: formWidth }]}
@@ -434,18 +462,26 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     overflow: "hidden",
-    backgroundColor: "#020617",
-  },
-  backgroundImage: {
-    position: "absolute",
-    top: -64,
-    bottom: -64,
-    left: -24,
-    right: -24,
+    backgroundColor: "transparent",
   },
   backgroundDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2,6,23,0.04)",
+    backgroundColor: "rgba(2,6,23,0.08)",
+  },
+  backBtn: {
+    position: "absolute",
+    zIndex: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingRight: 10,
+  },
+  backLabel: {
+    color: "rgba(0,245,255,0.78)",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1.6,
+    marginLeft: -2,
   },
   background: {
     flex: 1,
@@ -458,10 +494,10 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     alignSelf: "center",
-    backgroundColor: "rgba(11,18,32,0.06)",
+    backgroundColor: "rgba(8,14,24,0.72)",
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.42)",
+    borderColor: "rgba(34,211,238,0.28)",
     paddingHorizontal: 22,
     paddingTop: 16,
     paddingBottom: 16,

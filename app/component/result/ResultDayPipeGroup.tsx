@@ -273,10 +273,11 @@ export function ResultDayPipeGroup({
                   : dateLabel
             }
           >
-            <div className="flex min-w-0 shrink-0 flex-col items-start justify-center">
+            <div className="flex min-w-0 flex-1 flex-col items-start justify-center pl-0.5">
               <p
                 className={[
-                  "font-mono font-bold tabular-nums tracking-tight text-cyan-50",
+                  resultStatsMetricNumClass,
+                  "font-extrabold tabular-nums tracking-tight text-cyan-50",
                   "[text-shadow:0_0_20px_rgba(34,211,238,0.55),0_0_40px_rgba(34,211,238,0.2)]",
                   isMobile ? "text-base leading-snug" : "text-xl sm:text-2xl",
                 ].join(" ")}
@@ -285,96 +286,88 @@ export function ResultDayPipeGroup({
               </p>
             </div>
 
-            {dayPoints?.variant === "total" &&
-              typeof dayPoints.hitTotal === "number" &&
-              dayPoints.hitTotal > 0 && (
-                <div className="min-w-0 flex-1 px-1 text-center">
-                  <div
-                    className={[
-                      "inline-flex items-baseline gap-1 whitespace-nowrap",
-                      "leading-none tracking-tight tabular-nums font-black text-white/92",
-                      resultStatsMetricNumClass,
-                      isMobile
-                        ? "text-[clamp(0.95rem,3.7vw,1.15rem)]"
-                        : "text-base md:text-xl",
-                    ].join(" ")}
-                  >
-                    <span className={isMobile ? "text-[11px]" : "text-xs sm:text-sm"}>
-                      hit
-                    </span>
-                    <span>
-                      <AnimatedIntegerValue
-                        value={dayPoints.hitWins ?? 0}
-                        reducedMotion={reducedMotion}
-                        startDelayMs={metricsDelayMs}
-                      />
-                    </span>
-                    <span>/</span>
-                    <span>
-                      <AnimatedIntegerValue
-                        value={dayPoints.hitTotal}
-                        reducedMotion={reducedMotion}
-                        startDelayMs={metricsDelayMs}
-                      />
-                    </span>
-                  </div>
-                </div>
-              )}
-
             {dayPoints?.variant === "total" && (
-              <div
-                className={[
-                  "flex min-w-0 shrink-0 flex-col items-end justify-center text-right",
-                  !(
-                    typeof dayPoints.hitTotal === "number" &&
-                    dayPoints.hitTotal > 0
-                  )
-                    ? "ml-auto"
-                    : "",
-                  isMobile
-                    ? "min-w-0 pl-1"
-                    : "min-w-[8.5rem]",
-                ].join(" ")}
-              >
-                <div className="flex flex-wrap items-baseline justify-end gap-x-1.5">
-                  {dayPoints.prefix ? (
+              <>
+                <div className="flex min-w-0 flex-1 items-center justify-center px-1">
+                  {typeof dayPoints.hitTotal === "number" &&
+                    dayPoints.hitTotal > 0 && (
+                      <div
+                        className={[
+                          "inline-flex items-baseline gap-1 whitespace-nowrap",
+                          "leading-none tracking-tight text-white/92",
+                          isMobile
+                            ? "text-[clamp(0.95rem,3.7vw,1.15rem)]"
+                            : "text-base md:text-xl",
+                        ].join(" ")}
+                      >
+                        <span
+                          className={isMobile ? "text-[13px] font-semibold" : "text-xs sm:text-sm font-semibold"}
+                        >
+                          hit
+                        </span>
+                        <span className={[resultStatsMetricNumClass, "font-extrabold tabular-nums leading-none"].join(" ")}>
+                          <AnimatedIntegerValue
+                            value={dayPoints.hitWins ?? 0}
+                            reducedMotion={reducedMotion}
+                            startDelayMs={metricsDelayMs}
+                          />
+                        </span>
+                        <span className={[resultStatsMetricNumClass, "font-extrabold leading-none"].join(" ")}>/</span>
+                        <span className={[resultStatsMetricNumClass, "font-extrabold tabular-nums leading-none"].join(" ")}>
+                          <AnimatedIntegerValue
+                            value={dayPoints.hitTotal}
+                            reducedMotion={reducedMotion}
+                            startDelayMs={metricsDelayMs}
+                          />
+                        </span>
+                      </div>
+                    )}
+                </div>
+                <div
+                  className={[
+                    "flex min-w-0 flex-1 items-center justify-end",
+                    isMobile ? "pr-0.5" : "pr-1",
+                  ].join(" ")}
+                >
+                  <div className="flex flex-wrap items-baseline justify-end gap-x-1.5">
+                    {dayPoints.prefix ? (
+                      <span
+                        className={
+                          isMobile
+                            ? "truncate text-[13px] font-semibold leading-tight text-white"
+                            : "truncate text-[12px] font-semibold text-white sm:text-[13px]"
+                        }
+                      >
+                        {dayPoints.prefix}
+                      </span>
+                    ) : null}
+                    <span
+                      className={[
+                        "inline-block whitespace-nowrap leading-none tracking-tight tabular-nums font-extrabold text-white",
+                        resultStatsMetricNumClass,
+                        isMobile
+                          ? "text-[clamp(1.05rem,4.2vw,1.35rem)]"
+                          : "text-xl md:text-5xl",
+                      ].join(" ")}
+                    >
+                      <AnimatedDayPointsValue
+                        value={dayPoints.value}
+                        reducedMotion={reducedMotion}
+                        startDelayMs={metricsDelayMs}
+                      />
+                    </span>
                     <span
                       className={
                         isMobile
-                          ? "truncate text-[11px] font-semibold leading-tight text-white"
+                          ? "truncate text-[12px] font-semibold leading-tight text-white"
                           : "truncate text-[12px] font-semibold text-white sm:text-[13px]"
                       }
                     >
-                      {dayPoints.prefix}
+                      {dayPoints.unit}
                     </span>
-                  ) : null}
-                  {/* ResultCard 中央スコアと同じ数値タイポ（Oxanium + サイズ階層） */}
-                  <span
-                    className={[
-                      "inline-block whitespace-nowrap leading-none tracking-tight tabular-nums font-black text-white",
-                      isMobile
-                        ? "text-[clamp(1.05rem,4.2vw,1.35rem)]"
-                        : "text-xl md:text-5xl",
-                      resultStatsMetricNumClass,
-                    ].join(" ")}
-                  >
-                    <AnimatedDayPointsValue
-                      value={dayPoints.value}
-                      reducedMotion={reducedMotion}
-                      startDelayMs={metricsDelayMs}
-                    />
-                  </span>
-                  <span
-                    className={
-                      isMobile
-                        ? "truncate text-[11px] font-semibold leading-tight text-white"
-                        : "truncate text-[12px] font-semibold text-white sm:text-[13px]"
-                    }
-                  >
-                    {dayPoints.unit}
-                  </span>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             {dayPoints?.variant === "pending" && (

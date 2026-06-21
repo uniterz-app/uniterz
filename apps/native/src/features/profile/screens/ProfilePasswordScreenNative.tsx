@@ -10,9 +10,9 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
-import LegalPageLayoutNative from "../legal/LegalPageLayoutNative";
-import { auth } from "../../lib/firebase";
-import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
+import LegalPageLayoutNative from "../../legal/LegalPageLayoutNative";
+import { auth } from "../../../lib/firebase";
+import { useNativeUserLanguageFromAuth } from "../../../hooks/useNativeUserLanguage";
 
 export default function ProfilePasswordScreenNative() {
   const navigation = useNavigation();

@@ -57,3 +57,10 @@ export const GAMES_DAY_SWITCH_ROW_FROM_Y = -11;
 /** 4 枚目以降（page モード） */
 export const GAMES_PAGE_REST_CARD_DURATION_MS = 240;
 export const GAMES_PAGE_REST_CARD_FROM_Y = 12;
+
+/** Web `MatchCard` 入場対象（先頭3枚） */
+export const GAMES_PAGE_RICH_CARD_COUNT = 3;
+
+/** Web `MatchCard` 入場スキャン光 */
+export const GAMES_ENTRY_SCAN_DURATION_MS = 620;
+export const GAMES_ENTRY_SCAN_DELAY_AFTER_SHELL_MS = 50;

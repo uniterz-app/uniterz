@@ -11,7 +11,10 @@ import {
   type LayoutChangeEvent,
   type ViewStyle,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { MainTabParamList } from "../../navigation/types";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   Easing,
@@ -20,6 +23,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { db } from "../../lib/firebase";
@@ -49,14 +54,15 @@ import {
   DISPLAY_FONT,
   MOBILE_RESULT_CARD_GAP,
   MOBILE_RESULT_CARD_MAX_W,
+  MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
   MOBILE_RESULT_JERSEY_SIZE,
   MOBILE_RESULT_PAGE_PAD_X,
-  MOBILE_RESULT_PAGE_PAD_Y,
   MOBILE_RESULT_SECTION_GAP,
   MOBILE_RESULT_STAT_LABEL_W,
   MOBILE_RESULT_STAT_ROW_GAP,
   MOBILE_RESULT_STAT_VALUE_W,
   NUMERIC_FONT,
+  DAY_STRIP_METRIC_FONT,
   resultCardShellNative,
   resultDayStripPanelNative,
   resultFilterBarNative,
@@ -79,7 +85,6 @@ import ResultPerfectCyberFrameNative from "./ResultPerfectCyberFrameNative";
 import ResultStreakCyberFrameNative from "./ResultStreakCyberFrameNative";
 import ResultMatchScoreLineNative from "./ResultMatchScoreLineNative";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
-import ResultPredictEditModal from "./ResultPredictEditModal";
 import ResultGlassShellNative from "./ResultGlassShellNative";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
 import { useNativeResultPosts } from "./useNativeResultPosts";
@@ -98,6 +103,7 @@ import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandin
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
@@ -105,10 +111,10 @@ const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 const CORNER_FAB_TRANSITION_MS = 300;
 const cornerFabTransitionEasing = Easing.out(Easing.cubic);
 
-/** Web `ResultDayPipeGroup` の日付帯グリッド（11px・シアン） */
-const DAY_HEADER_GRID_STEP = 11;
-const DAY_HEADER_GRID_LINE = "rgba(34,211,238,0.5)";
-const DAY_HEADER_GRID_OPACITY = 0.12;
+/** Web モバイル日付帯グリッド — `opacity-[0.08]` + 14px */
+const DAY_HEADER_MOBILE_GRID_STEP = 14;
+const DAY_HEADER_MOBILE_GRID_LINE = "rgba(34,211,238,0.45)";
+const DAY_HEADER_MOBILE_GRID_OPACITY = 0.08;
 
 const dayHeaderGridStyles = StyleSheet.create({
   overlay: {
@@ -130,9 +136,9 @@ const dayHeaderGridStyles = StyleSheet.create({
 });
 
 function ResultDayHeaderGridOverlay({ mobileStrip = false }: { mobileStrip?: boolean }) {
-  const step = mobileStrip ? 14 : DAY_HEADER_GRID_STEP;
-  const lineColor = mobileStrip ? "rgba(34,211,238,0.45)" : DAY_HEADER_GRID_LINE;
-  const opacity = mobileStrip ? 1 : DAY_HEADER_GRID_OPACITY;
+  const step = DAY_HEADER_MOBILE_GRID_STEP;
+  const lineColor = DAY_HEADER_MOBILE_GRID_LINE;
+  const opacity = mobileStrip ? DAY_HEADER_MOBILE_GRID_OPACITY : 0.1;
   const [size, setSize] = useState({ w: 0, h: 0 });
   const verticalLefts = useMemo(() => {
     const out: number[] = [];
@@ -346,37 +352,72 @@ function ResultDayHeader({
     <View style={[styles.listRowOuter, styles.dayHeaderSpacing]}>
       <View style={resultDayStripPanelNative.outer}>
         <Animated.View style={[resultDayStripPanelNative.panel, clipStyle]}>
-          <View style={resultDayStripPanelNative.leftAccent} pointerEvents="none" />
+          {(Platform.OS === "ios" || Platform.OS === "android") && (
+            <BlurView
+              intensity={Platform.OS === "ios" ? 22 : 14}
+              tint="dark"
+              {...nativeBlurViewExtraProps()}
+              style={resultDayStripPanelNative.glassBlur}
+            />
+          )}
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              "rgba(255,255,255,0.08)",
+              "rgba(255,255,255,0.035)",
+              "rgba(255,255,255,0.015)",
+            ]}
+            locations={[0, 0.45, 1]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={resultDayStripPanelNative.glassSheen}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={["rgba(34,211,238,0.95)", "rgba(34,211,238,0.2)"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={resultDayStripPanelNative.leftAccent}
+          />
+          <View style={resultDayStripPanelNative.insetTopHighlight} pointerEvents="none" />
+          <View style={resultDayStripPanelNative.insetBottomShade} pointerEvents="none" />
+          <View style={resultDayStripPanelNative.cornerTl} pointerEvents="none" />
+          <View style={resultDayStripPanelNative.cornerBr} pointerEvents="none" />
           <ResultDayHeaderGridOverlay mobileStrip />
           <View style={resultDayStripPanelNative.row}>
-            <Animated.View style={dateClusterStyle}>
+            <Animated.View style={[resultDayStripPanelNative.dateCol, dateClusterStyle]}>
               <Text style={resultDayStripPanelNative.date}>{dateLabel}</Text>
             </Animated.View>
-            <Animated.View style={[styles.dayHeaderRightCluster, rightClusterStyle]}>
-              {dayPoints?.variant === "total" &&
-              typeof dayPoints.hitTotal === "number" &&
-              dayPoints.hitTotal > 0 ? (
-                <View style={styles.dayHitWrap}>
-                  <Text style={styles.dayHitLabel}>hit</Text>
-                  <Text style={styles.dayHitNums}>
-                    {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
-                  </Text>
-                </View>
-              ) : null}
-              {dayPoints?.variant === "total" ? (
-                <View style={styles.dayTotalWrap}>
-                  <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
-                  <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
-                  <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
-                </View>
-              ) : dayPoints?.variant === "pending" ? (
-                <View style={styles.pendingRow}>
+            {dayPoints?.variant === "total" ? (
+              <>
+                <Animated.View style={[resultDayStripPanelNative.hitCol, rightClusterStyle]}>
+                  {typeof dayPoints.hitTotal === "number" && dayPoints.hitTotal > 0 ? (
+                    <View style={styles.dayHitWrap}>
+                      <Text style={styles.dayHitLabel}>hit</Text>
+                      <Text style={styles.dayHitNums}>
+                        {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
+                      </Text>
+                    </View>
+                  ) : null}
+                </Animated.View>
+                <Animated.View style={[resultDayStripPanelNative.totalCol, rightClusterStyle]}>
+                  <View style={styles.dayTotalWrap}>
+                    <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
+                    <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
+                    <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
+                  </View>
+                </Animated.View>
+              </>
+            ) : dayPoints?.variant === "pending" ? (
+              <>
+                <View style={resultDayStripPanelNative.divider} />
+                <Animated.View style={[resultDayStripPanelNative.rightCol, rightClusterStyle]}>
                   <View style={styles.pendingPill}>
                     <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
                   </View>
-                </View>
-              ) : null}
-            </Animated.View>
+                </Animated.View>
+              </>
+            ) : null}
           </View>
         </Animated.View>
       </View>
@@ -958,8 +999,9 @@ export default function ResultHomeScreen({
   bottomReserveY?: number;
 }) {
   const { fUser } = useFirebaseUser();
-  const insets = useSafeAreaInsets();
-  const listTopPad = insets.top + MOBILE_RESULT_PAGE_PAD_Y;
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const { topContentPadY } = useBottomTabBarInsets();
+  const listTopPad = topContentPadY;
   const [language, setLanguage] = useState<"ja" | "en">("ja");
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
@@ -1011,8 +1053,6 @@ export default function ResultHomeScreen({
   }, []);
 
   const [detailPostId, setDetailPostId] = useState<string | null>(null);
-  /** Web `ResultListWithOverlay` と同様：一覧上で予想修正モーダルを開く */
-  const [predictEditPost, setPredictEditPost] = useState<PostWithMillis | null>(null);
   const [deleteConfirmPost, setDeleteConfirmPost] = useState<PostWithMillis | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const deleteSubmittingRef = useRef(false);
@@ -1085,6 +1125,21 @@ export default function ResultHomeScreen({
   const onFilterPress = useCallback(() => {
     setResultFilters((f) => ({ ...f, detailOpen: !f.detailOpen }));
   }, []);
+
+  /** Web `/games/[id]/predict` と同様：予想タブのスコア編集へ遷移 */
+  const openPredictEditFromResult = useCallback(
+    (post: PostWithMillis) => {
+      const gameId =
+        typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
+      if (!gameId) return;
+      tabNavigation.navigate("GamesTab", {
+        screen: "GamesHome",
+        params: { openPredictGameId: gameId, expandScoreForm: true },
+        initial: false,
+      });
+    },
+    [tabNavigation]
+  );
 
   const listHeader = (
     <ResultListHeaderBlock
@@ -1233,7 +1288,7 @@ export default function ResultHomeScreen({
               entranceEnabled={entranceArmed}
               onOpenDetail={setDetailPostId}
               onRequestDeleteConfirm={setDeleteConfirmPost}
-              onRequestPredictEdit={setPredictEditPost}
+              onRequestPredictEdit={openPredictEditFromResult}
             />
           )}
           SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
@@ -1254,13 +1309,6 @@ export default function ResultHomeScreen({
         if (!deleteInProgress) setDeleteConfirmPost(null);
       }}
       onConfirm={() => void confirmDismissPostFromList()}
-    />
-    <ResultPredictEditModal
-      visible={predictEditPost != null}
-      post={predictEditPost}
-      language={language}
-      onClose={() => setPredictEditPost(null)}
-      onUpdated={() => void refreshPosts()}
     />
     </View>
   );
@@ -1290,7 +1338,6 @@ const styles = StyleSheet.create({
     /** Web `/mobile/result` の px-[18px]（親 mainArea xs=8 を差し引く） */
     paddingHorizontal: Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs),
     flexGrow: 1,
-    gap: MOBILE_RESULT_SECTION_GAP,
   },
   headerBlock: {
     marginBottom: MOBILE_RESULT_SECTION_GAP,
@@ -1374,7 +1421,7 @@ const styles = StyleSheet.create({
     height: MOBILE_RESULT_SECTION_GAP,
   },
   dayHeaderSpacing: {
-    marginBottom: MOBILE_RESULT_CARD_GAP,
+    marginBottom: MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
   },
   dayHeaderClip: {
     position: "relative",
@@ -1429,50 +1476,52 @@ const styles = StyleSheet.create({
     textShadowRadius: 12,
   },
   dayHitWrap: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "baseline",
-    justifyContent: "center",
     gap: 4,
-    minWidth: 0,
+    flexShrink: 0,
   },
   dayHitLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "800",
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.82)",
+    letterSpacing: 0.3,
   },
   dayHitNums: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: "800",
-    color: "rgba(255,255,255,0.92)",
-    fontFamily: NUMERIC_FONT_FAMILY,
+    color: "rgba(255,255,255,0.95)",
+    fontFamily: DAY_STRIP_METRIC_FONT,
     fontVariant: ["tabular-nums"],
+    letterSpacing: 0.5,
+    lineHeight: 22,
   },
   dayTotalWrap: {
     flexShrink: 0,
     flexDirection: "row",
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
     alignItems: "baseline",
     justifyContent: "flex-end",
     gap: 4,
-    maxWidth: "46%",
   },
   dayTotalPrefix: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.88)",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.92)",
   },
   dayTotalValue: {
-    fontSize: 17,
+    fontSize: 22,
     fontWeight: "800",
-    color: "rgba(255,255,255,0.95)",
-    fontFamily: NUMERIC_FONT_FAMILY,
+    color: "rgba(255,255,255,0.98)",
+    fontFamily: DAY_STRIP_METRIC_FONT,
     fontVariant: ["tabular-nums"],
+    letterSpacing: 0.5,
+    lineHeight: 24,
   },
   dayTotalUnit: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.88)",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.92)",
   },
   /** Web `ResultDayPipeGroup` の pending 右寄せラッパ */
   pendingRow: {
@@ -1491,11 +1540,23 @@ const styles = StyleSheet.create({
   pendingPill: {
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(217,70,239,0.5)",
-    backgroundColor: "rgba(0,0,0,0.6)",
+    borderColor: "rgba(217,70,239,0.55)",
+    backgroundColor: "rgba(0,0,0,0.72)",
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(217,70,239,0.4)",
+        shadowOpacity: 1,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {},
+    }),
   },
   pendingPillText: {
     fontSize: 11,
@@ -1595,7 +1656,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     paddingLeft: 8,
-    paddingRight: 2,
+    paddingRight: 8,
   },
   cardBadgeLeague: {
     maxWidth: "44%",

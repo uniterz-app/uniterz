@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useReducedMotion } from "react-native-reanimated";
 import {
   type MobileMetric,
 } from "../../../../../app/component/rankings/_data/mockRows";
@@ -21,6 +21,12 @@ import {
   visibleMetricsForLeague,
 } from "../../../../../lib/rankings/wcVisibleMetrics";
 import {
+  buildRankingsPageKey,
+  computeRankingHasNoEntries,
+  computeRankingListContentReady,
+} from "../../../../../lib/rankings/rankingsPageShared";
+import { useRankingsTopDone } from "../../../../../lib/hooks/useRankingsTopDone";
+import {
   API_METRIC_BY_MOBILE,
   type RankingApiRow,
   toMobileRows,
@@ -32,7 +38,7 @@ import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey
 import type { MainTabParamList } from "../../navigation/types";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
-import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
 import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
@@ -47,9 +53,9 @@ import { RankingsPageTitleCyberNative } from "./RankingsPageTitleCyberNative";
 import {
   MyRankCardNative,
   PlayoffRoundTabsNative,
-  RankingListCardNative,
   RankingsCategoryTabsNative,
   RankingsMetricRowNative,
+  RankingsRestListNative,
   RankingsTopPodiumNative,
 } from "./RankingsUiParts";
 
@@ -64,8 +70,7 @@ function scheduleNoticeForUser(language: RankingsLanguage): string {
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
-  const insets = useSafeAreaInsets();
-  const scrollTopPad = insets.top + spacing.sm;
+  const { topContentPadY } = useBottomTabBarInsets();
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
@@ -146,8 +151,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   }, [metric, myRawRow]);
 
   const winRateMinPosts = round === "overall" || round === "r1" ? 20 : 1;
-  const rankingHasNoEntries =
-    listReady && (rows.length === 0 || rankingListCount === 0);
+  const metricReady = bundle != null;
+  const listContentReady = computeRankingListContentReady({
+    listReady,
+    metricReady,
+  });
+  const rankingHasNoEntries = computeRankingHasNoEntries({
+    listReady,
+    metricReady,
+    rowsLength: rows.length,
+    rankingLeague: rankingLeagueSource,
+    rankingListCount,
+  });
 
   const metricItems = visibleMetrics;
 
@@ -179,12 +194,25 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const top3 = rows.slice(0, 3);
   const restRows = rows.slice(3);
 
+  const effectiveRound: PlayoffRoundKey =
+    rankingsLeague === "wc" ? "overall" : round;
+  const pageKey = buildRankingsPageKey({
+    phase: "playoffs",
+    effectiveRound,
+    metric,
+    rankingLeague: rankingLeagueSource,
+    wcStage: rankingsLeague === "wc" ? wcStage : undefined,
+  });
+  const reduceMotion = useReducedMotion() ?? false;
+  const { topDone, handleTopCountDone } = useRankingsTopDone(pageKey);
+
   const openProfile = (row: RankingRowWithCountry) => {
     const key = profilePathKeyFromRow(row);
     if (!key) return;
     navigation.navigate("ProfileTab", {
       screen: "PublicProfile",
       params: { handle: key, fromRankings: true },
+      initial: false,
     });
   };
 
@@ -194,11 +222,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         style={styles.scrollLayer}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: scrollTopPad, paddingBottom: bottomReserveY + 16 },
+          { paddingTop: topContentPadY, paddingBottom: bottomReserveY + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <UniterzBrandShelfNative horizontalBleed={12} />
         <View style={styles.titleRow}>
           <CyberMenuButton
             size="sm"
@@ -261,6 +288,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 language={language}
                 mobileWide
                 leagueLabel={rankingsLeague === "wc" ? "WORLD CUP" : "NBA"}
+                cardResetKey={pageKey}
               />
             </>
           ) : null}
@@ -288,7 +316,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               </Text>
             ) : null}
 
-            {!listReady ? (
+            {!listContentReady ? (
               <View style={styles.loadingWrap}>
                 <CandleChartLoaderNative scale={0.85} label={t.loading} />
               </View>
@@ -297,24 +325,24 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 <Text style={styles.noData}>{t.noData}</Text>
               </View>
             ) : (
-              <View style={styles.listSection}>
+              <View key={pageKey} style={styles.listSection}>
                 <RankingsTopPodiumNative
                   rows={top3}
                   metric={metric}
                   language={language}
                   onPressProfile={openProfile}
+                  pageKey={pageKey}
+                  onTopCountDone={handleTopCountDone}
                 />
                 <View style={styles.restList}>
-                  {restRows.map((row, index) => (
-                    <RankingListCardNative
-                      key={`${metric}-${row.uid}`}
-                      row={row}
-                      rank={index + 4}
-                      metric={metric}
-                      language={language}
-                      onPress={() => openProfile(row)}
-                    />
-                  ))}
+                  <RankingsRestListNative
+                    rows={restRows}
+                    metric={metric}
+                    language={language}
+                    onPressProfile={openProfile}
+                    pageKey={pageKey}
+                    topDone={topDone || reduceMotion}
+                  />
                 </View>
               </View>
             )}

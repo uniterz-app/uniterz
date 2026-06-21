@@ -6,6 +6,8 @@ import {
   FadeOutDown,
 } from "react-native-reanimated";
 import {
+  GAMES_CYBER_EASE,
+  GAMES_CYBER_EASE_SNAP,
   GAMES_DAY_SWITCH_ROW_FROM_Y,
   GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS,
   GAMES_DAY_SWITCH_ROW_STAGGER_MS,
@@ -14,131 +16,149 @@ import {
 import { gamesDaySwitchEaseBezier } from "./gamesPageMotion";
 
 /**
- * モバイル Web `PredictionFormV2` の framer 設定に合わせる
- * - pageContainer: opacity 0→1, duration 0.16, easeOut, delayChildren 0.03, stagger 0.045
- * - fadeUp: y 12, duration 0.24, easeOut
+ * Web `lib/predict/predictPageMotion.ts` + `PredictionFormV2` overlay 相当
  */
-const easeOut = Easing.bezier(0, 0, 0.2, 1);
-/** Web `DayStrip` の DAY_STRIP_EASE（`cyberMotion` の `GAMES_CYBER_EASE`） */
-const gamesCyberEase = Easing.bezier(0.16, 0.82, 0.22, 1);
+const predictOverlayEaseOut = Easing.bezier(0, 0, 0.2, 1);
+const predictOverlayEaseIn = Easing.bezier(0.4, 0, 1, 1);
+const gamesCyberEase = Easing.bezier(
+  GAMES_CYBER_EASE[0],
+  GAMES_CYBER_EASE[1],
+  GAMES_CYBER_EASE[2],
+  GAMES_CYBER_EASE[3]
+);
+const gamesCyberEaseSnap = Easing.bezier(
+  GAMES_CYBER_EASE_SNAP[0],
+  GAMES_CYBER_EASE_SNAP[1],
+  GAMES_CYBER_EASE_SNAP[2],
+  GAMES_CYBER_EASE_SNAP[3]
+);
 
-/** Web `app/component/games/DayStrip.tsx` の container/item と同一（秒→ms） */
+/** Web `predictOverlayRoot` */
+const PREDICT_OVERLAY_ROOT = {
+  delayChildrenMs: 20,
+  staggerMs: 60,
+} as const;
+
+/** Web `predictOverlayBackdrop` / panel / card / contentOrch */
+const PREDICT_OVERLAY = {
+  backdropEnterMs: 200,
+  backdropExitMs: 160,
+  /** root stagger 後 + panel 内 delay 0.04 */
+  panelEnterDelayMs:
+    PREDICT_OVERLAY_ROOT.delayChildrenMs + PREDICT_OVERLAY_ROOT.staggerMs + 40,
+  panelEnterY: 20,
+  panelEnterDurationMs: 280,
+  panelExitY: 12,
+  panelExitDurationMs: 200,
+  /** Web `predictOverlayContentOrch.delayChildren` */
+  contentOrchDelayChildrenMs: 180,
+  cardEnterY: -12,
+  cardEnterDurationMs: 260,
+} as const;
+
+/** Web `DayStrip` */
 const DAY_STRIP_DELAY_CHILDREN_MS = 40;
 const DAY_STRIP_STAGGER_MS = 28;
 const DAY_STRIP_DURATION_MS = 280;
-/** Web `teamStatsCompare` の `ROW_STAGGER`（秒）→ ms */
+
 const STATS_COMPARE_ROW_STAGGER_MS = 90;
-/** Web `SymmetricalCompareRow` の transition duration（約 0.35s） */
 const STATS_COMPARE_ROW_DURATION_MS = 350;
-/** ツールパネル表示直後から行が始まるまでの余裕 */
 const STATS_COMPARE_ROW_BASE_DELAY_MS = 48;
 
-const PREDICT_MOTION = {
+/** 単体予想ページ用（Web `pageContainer` + `fadeUp`） */
+const PREDICT_PAGE = {
   fadeUpDurationMs: 240,
   delayChildrenMs: 30,
   staggerChildrenMs: 45,
   fadeUpTranslateY: 12,
-  /** 予想モーダル全体を下から持ち上げる量（measure 不使用） */
-  modalSheetEnterTranslateY: 96,
-  modalSheetEnterMs: 380,
-  modalBackdropEnterMs: 240,
-  /** 先頭試合カード入場のディレイ（FadeInDown） */
-  modalPreviewEnterDelayMs: 40,
 } as const;
 
-/** 縦積みブロック用（staggerIndex: 0 起算） */
+/** 縦積みブロック用（単体ページ / 非 overlay） */
 export function predictBlockFadeUpEnter(staggerIndex: number) {
-  return FadeInDown.duration(PREDICT_MOTION.fadeUpDurationMs)
+  return FadeInDown.duration(PREDICT_PAGE.fadeUpDurationMs)
     .delay(
-      PREDICT_MOTION.delayChildrenMs + staggerIndex * PREDICT_MOTION.staggerChildrenMs
+      PREDICT_PAGE.delayChildrenMs + staggerIndex * PREDICT_PAGE.staggerChildrenMs
     )
-    .easing(easeOut)
+    .easing(predictOverlayEaseOut)
     .withInitialValues({
-      transform: [{ translateY: PREDICT_MOTION.fadeUpTranslateY }],
+      transform: [{ translateY: PREDICT_PAGE.fadeUpTranslateY }],
     });
 }
 
-/**
- * タブで開くツールパネル（Web `PredictionFormV2` の `fadeUp` と同一 240ms）
- */
+/** タブで開くツールパネル */
 export function predictPanelRevealEnter() {
-  return FadeInDown.duration(PREDICT_MOTION.fadeUpDurationMs)
-    .easing(easeOut)
+  return FadeInDown.duration(PREDICT_PAGE.fadeUpDurationMs)
+    .easing(predictOverlayEaseOut)
     .withInitialValues({
-      transform: [{ translateY: PREDICT_MOTION.fadeUpTranslateY }],
+      transform: [{ translateY: PREDICT_PAGE.fadeUpTranslateY }],
     });
 }
 
-/** 予想モーダル背景（暗さ）。位置測定なし */
+/** Web `predictOverlayBackdrop` */
 export function predictModalBackdropEnter() {
-  return FadeIn.duration(PREDICT_MOTION.modalBackdropEnterMs).easing(easeOut);
+  return FadeIn.duration(PREDICT_OVERLAY.backdropEnterMs)
+    .delay(PREDICT_OVERLAY_ROOT.delayChildrenMs)
+    .easing(predictOverlayEaseOut);
 }
 
-/**
- * 予想モーダル本体（下からスライド＋フェード）。SlideIn 系は環境差があるため FadeInDown で近似。
- * measure 不使用。
- */
+/** Web `predictOverlayPanel` */
 export function predictModalSheetEnter() {
-  return FadeInDown.duration(PREDICT_MOTION.modalSheetEnterMs)
-    .easing(easeOut)
+  return FadeInDown.duration(PREDICT_OVERLAY.panelEnterDurationMs)
+    .delay(PREDICT_OVERLAY.panelEnterDelayMs)
+    .easing(gamesCyberEase)
     .withInitialValues({
-      transform: [{ translateY: PREDICT_MOTION.modalSheetEnterTranslateY }],
+      opacity: 0,
+      transform: [{ translateY: PREDICT_OVERLAY.panelEnterY }],
     });
 }
 
-/** モーダル先頭の試合カード: ツール行などと同系の FadeInDown のみ */
+/** Web `predictOverlayCard`（上から -12px → 0） */
 export function predictModalPreviewEnter() {
-  return FadeInDown.duration(PREDICT_MOTION.fadeUpDurationMs)
-    .delay(PREDICT_MOTION.modalPreviewEnterDelayMs)
-    .easing(easeOut)
+  return FadeInDown.duration(PREDICT_OVERLAY.cardEnterDurationMs)
+    .delay(PREDICT_OVERLAY.contentOrchDelayChildrenMs)
+    .easing(gamesCyberEase)
     .withInitialValues({
-      transform: [{ translateY: PREDICT_MOTION.fadeUpTranslateY }],
+      opacity: 0,
+      transform: [{ translateY: PREDICT_OVERLAY.cardEnterY }],
     });
 }
 
-/** 閉じる時のレイアウトアニメ完了待ち（ entering と同系の長さ + 余裕） */
 export const PREDICT_MODAL_EXIT_COMPLETION_MS =
-  Math.max(PREDICT_MOTION.modalBackdropEnterMs, PREDICT_MOTION.modalSheetEnterMs) + 72;
+  Math.max(PREDICT_OVERLAY.backdropExitMs, PREDICT_OVERLAY.panelExitDurationMs) +
+  80;
 
-/** 予想モーダル背景フェードアウト（開く時と対になる） */
+/** Web `predictOverlayBackdrop` exit */
 export function predictModalBackdropExit() {
-  return FadeOut.duration(PREDICT_MOTION.modalBackdropEnterMs).easing(easeOut);
+  return FadeOut.duration(PREDICT_OVERLAY.backdropExitMs).easing(predictOverlayEaseIn);
 }
 
-/** 予想モーダルシート：下へスライド＋フェードアウト */
+/** Web `predictOverlayPanel` exit */
 export function predictModalSheetExit() {
-  return FadeOutDown.duration(PREDICT_MOTION.modalSheetEnterMs).easing(easeOut);
+  return FadeOutDown.duration(PREDICT_OVERLAY.panelExitDurationMs)
+    .easing(gamesCyberEaseSnap)
+    .withInitialValues({
+      transform: [{ translateY: 0 }],
+    });
 }
 
-/**
- * 詳細スタッツの比較行（Web `SymmetricalCompareRow` の stagger / duration に合わせる）
- */
 export function predictStatsCompareRowEnter(rowIndex: number) {
   return FadeInDown.duration(STATS_COMPARE_ROW_DURATION_MS)
     .delay(STATS_COMPARE_ROW_BASE_DELAY_MS + rowIndex * STATS_COMPARE_ROW_STAGGER_MS)
-    .easing(easeOut)
+    .easing(predictOverlayEaseOut)
     .withInitialValues({
-      transform: [{ translateY: PREDICT_MOTION.fadeUpTranslateY }],
+      transform: [{ translateY: PREDICT_PAGE.fadeUpTranslateY }],
     });
 }
 
-/**
- * 市場タブ内のドーナツ・凡例など（Web `GamePredictionDistribution` パネル内の段階表示に近い）
- */
 export function predictMarketInnerEnter(blockIndex: number) {
-  return FadeInDown.duration(PREDICT_MOTION.fadeUpDurationMs)
+  return FadeInDown.duration(PREDICT_PAGE.fadeUpDurationMs)
     .delay(36 + blockIndex * 72)
-    .easing(easeOut)
+    .easing(predictOverlayEaseOut)
     .withInitialValues({
-      transform: [{ translateY: PREDICT_MOTION.fadeUpTranslateY }],
+      transform: [{ translateY: PREDICT_PAGE.fadeUpTranslateY }],
     });
 }
 
-/**
- * Web `DayStrip`（framer `motion.div` variants）と同等：
- * delayChildren 40ms + staggerChildren 28ms×index、280ms、`GAMES_CYBER_EASE`、
- * opacity / translateY / scale は FadeInDown + withInitialValues でまとめる。
- */
 export function gamesDayStripChipEnter(index: number) {
   const delayMs = DAY_STRIP_DELAY_CHILDREN_MS + index * DAY_STRIP_STAGGER_MS;
   return FadeInDown.duration(DAY_STRIP_DURATION_MS)
@@ -150,9 +170,6 @@ export function gamesDayStripChipEnter(index: number) {
     });
 }
 
-/**
- * 試合一覧の daySwitch 入場（Web `ScheduleList.scheduleItem` daySwitch 相当）
- */
 export function gamesScheduleCardDaySwitchEnter(index: number) {
   const delayMs = Math.min(
     index * GAMES_DAY_SWITCH_ROW_STAGGER_MS,

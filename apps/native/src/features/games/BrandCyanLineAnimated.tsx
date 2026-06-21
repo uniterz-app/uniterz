@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     width: "100%",
     height: 2,
-    /** ロゴ直下に寄せる（GamesHomeScreen の UNITERZ と隙間を詰める） */
+    /** ロゴ直下（Web Header gap-0.5 相当） */
     marginTop: 2,
     borderRadius: 0,
     ...Platform.select({

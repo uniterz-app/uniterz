@@ -56,7 +56,8 @@ type Props = {
     | "privacy"
     | "password"
     | "featureRequest"
-    | "electronicNotice") => void;
+    | "electronicNotice"
+    | "notificationDev") => void;
 };
 
 const PANEL_W = Math.min(300, Math.max(260, Math.round(Dimensions.get("window").width * 0.46)));
@@ -200,6 +201,7 @@ export default function ProfileSideMenuModal({
       | "password"
       | "featureRequest"
       | "electronicNotice"
+      | "notificationDev"
   ) {
     onClose();
     onOpenInApp(page);
@@ -407,6 +409,22 @@ export default function ProfileSideMenuModal({
                           onPress={() => web("/admin/plans")}
                         >
                           {labels.planApproval}
+                        </SideMenuItemButtonNative>
+                      </View>
+                    </>
+                  ) : null}
+
+                  {__DEV__ ? (
+                    <>
+                      <CyberSideMenuSectionTitleNative>DEV</CyberSideMenuSectionTitleNative>
+                      <View style={styles.itemGroup}>
+                        <SideMenuItemButtonNative
+                          icon="bell-ring-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("notificationDev")}
+                        >
+                          通知テスト
                         </SideMenuItemButtonNative>
                       </View>
                     </>

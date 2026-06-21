@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
@@ -77,6 +78,7 @@ export function MyRankCardNative({
   barsReady = true,
   leagueLabel,
   mobileWide = false,
+  cardResetKey,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -94,6 +96,8 @@ export function MyRankCardNative({
   statsSource?: MyRankStatsSource | null;
   barsReady?: boolean;
   leagueLabel?: string | null;
+  /** Web `cardResetKey` — 指標タブ切替でセグメントバーを再点灯 */
+  cardResetKey?: string;
   /** Web `mobileWide` — 親 padding 内でカード幅をリストと揃える */
   mobileWide?: boolean;
 }) {
@@ -144,6 +148,17 @@ export function MyRankCardNative({
     if (metric === "totalScore") return Math.round(value).toLocaleString("en-US");
     return formatMetricDecimals(value, 1);
   })();
+
+  const [segEnter, setSegEnter] = useState(false);
+  useEffect(() => {
+    if (loading || !barsReady) {
+      setSegEnter(false);
+      return;
+    }
+    setSegEnter(false);
+    const id = setTimeout(() => setSegEnter(true), 16);
+    return () => clearTimeout(id);
+  }, [loading, barsReady, cardResetKey]);
 
   return (
     <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
@@ -244,7 +259,8 @@ export function MyRankCardNative({
                 segments={12}
                 compact
                 accent={segAccent}
-                enter={barsReady && !statsPending}
+                enter={segEnter && !statsPending}
+                replayKey={cardResetKey ?? metric}
               />
             </View>
           </View>

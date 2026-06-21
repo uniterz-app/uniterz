@@ -81,6 +81,7 @@ async function sendExpoPushToUids(input) {
             to: rec.expoPushToken,
             sound: "default",
             title: copy.title,
+            subtitle: copy.subtitle,
             body: copy.body,
             data: data,
         });

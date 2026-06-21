@@ -6,6 +6,7 @@ import {
   type Firestore,
   type QuerySnapshot,
 } from "firebase/firestore";
+import { getResolvedGameScore, toStatusFromGameDoc } from "@/lib/games/transform";
 import type { WcStandingGame } from "@/lib/wc/computeGroupStandings";
 
 type CacheEntry = {
@@ -47,13 +48,15 @@ function parseWcStandingGames(snap: QuerySnapshot): WcStandingGame[] {
     const homeTeamId = typeof home.teamId === "string" ? home.teamId : "";
     const awayTeamId = typeof away.teamId === "string" ? away.teamId : "";
     if (!homeTeamId || !awayTeamId) return;
-    const homeScore =
-      typeof data.homeScore === "number" ? data.homeScore : null;
-    const awayScore =
-      typeof data.awayScore === "number" ? data.awayScore : null;
-    const status =
-      typeof data.status === "string" ? data.status : "scheduled";
-    list.push({ homeTeamId, awayTeamId, homeScore, awayScore, status });
+    const score = getResolvedGameScore(data);
+    const status = toStatusFromGameDoc(data);
+    list.push({
+      homeTeamId,
+      awayTeamId,
+      homeScore: score?.home ?? null,
+      awayScore: score?.away ?? null,
+      status,
+    });
   });
   return list;
 }

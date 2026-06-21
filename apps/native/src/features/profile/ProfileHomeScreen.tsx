@@ -30,7 +30,6 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut, updateProfile } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
@@ -44,7 +43,7 @@ import { useNativeStreakTracker } from "./useNativeStreakTracker";
 import { useNativeProfilePlan } from "./useNativeProfilePlan";
 import { useNativeAnnouncementsUnread } from "./useNativeAnnouncementsUnread";
 import { useNativeProfileBadges, type ResolvedBadgeNative } from "./useNativeProfileBadges";
-import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import ProfileKinetikHeroNative from "./kinetik/ProfileKinetikHeroNative";
 import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
 import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
@@ -172,12 +171,16 @@ export default function ProfileHomeScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
-  const insets = useSafeAreaInsets();
-  const scrollTopPad = insets.top + spacing.sm;
+  const { topContentPadY } = useBottomTabBarInsets();
   const showRankingsBack = fromRankings && isPublicProfileView;
   const returnToRankings = useCallback(() => {
-    navigation.setParams({ handle: undefined, fromRankings: undefined });
     tabNavigation.navigate("RankingsTab");
+    const current = navigation.getState().routes[navigation.getState().index]?.name;
+    if (current === "PublicProfile") {
+      if (navigation.canGoBack()) navigation.goBack();
+      return;
+    }
+    navigation.setParams({ handle: undefined, fromRankings: undefined });
   }, [navigation, tabNavigation]);
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
@@ -690,14 +693,14 @@ export default function ProfileHomeScreen({
     );
   }
 
-  if (isPublicProfileView && !profileByHandle.loading && profileByHandle.notFound) {
+  if (isPublicProfileView && profileByHandle.loading) {
     return (
       <View style={styles.screenRoot}>
         {showRankingsBack ? (
           <FloatingCloseButtonNative
             variant="back"
             left={spacing.sm}
-            top={insets.top + 4}
+            top={4}
             onPress={returnToRankings}
           />
         ) : null}
@@ -705,7 +708,33 @@ export default function ProfileHomeScreen({
           style={styles.scroll}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
+            { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
+          ]}
+        >
+          <View style={styles.inlineLoading}>
+            <BlocksPulseLoader pixelScale={0.9} />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  if (isPublicProfileView && !profileByHandle.loading && profileByHandle.notFound) {
+    return (
+      <View style={styles.screenRoot}>
+        {showRankingsBack ? (
+          <FloatingCloseButtonNative
+            variant="back"
+            left={spacing.sm}
+            top={4}
+            onPress={returnToRankings}
+          />
+        ) : null}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
           ]}
         >
           <Text style={styles.errorText}>
@@ -722,7 +751,7 @@ export default function ProfileHomeScreen({
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
+          { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
         ]}
       >
         <View style={styles.inlineLoading}>
@@ -738,7 +767,7 @@ export default function ProfileHomeScreen({
       <FloatingCloseButtonNative
         variant="back"
         left={spacing.sm}
-        top={insets.top + 4}
+        top={4}
         onPress={returnToRankings}
       />
     ) : null}
@@ -746,17 +775,23 @@ export default function ProfileHomeScreen({
       style={styles.scroll}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingTop: scrollTopPad, paddingBottom: spacing.lg + bottomReserveY },
+        { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
       ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <UniterzBrandShelfNative horizontalBleed={spacing.sm} />
-
       <ProfileKinetikHeroNative
-        displayName={displayName.trim() || fUser?.displayName?.trim() || "—"}
+        displayName={
+          displayName.trim() ||
+          (!isPublicProfileView ? fUser?.displayName?.trim() : "") ||
+          "—"
+        }
         handle={handle.trim()}
-        avatarUrl={avatarUrl.trim() || fUser?.photoURL?.trim() || ""}
+        avatarUrl={
+          avatarUrl.trim() ||
+          (!isPublicProfileView ? fUser?.photoURL?.trim() : "") ||
+          ""
+        }
         bio={bio}
         countryCode={countryCode}
         plan={currentIsProView ? "pro" : plan}
@@ -1096,6 +1131,7 @@ export default function ProfileHomeScreen({
         else if (page === "password") navigation.navigate("ProfilePassword");
         else if (page === "featureRequest") navigation.navigate("FeatureRequest");
         else if (page === "electronicNotice") navigation.navigate("ElectronicNotice");
+        else if (page === "notificationDev" && __DEV__) navigation.navigate("NotificationDev");
       }}
     />
     <ProfileBadgeDetailModal
