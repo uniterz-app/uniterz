@@ -67,7 +67,11 @@ function parseWcStandingGames(snap: QuerySnapshot): {
     const awayScore =
       typeof data.awayScore === "number" ? data.awayScore : null;
     const status =
-      typeof data.status === "string" ? data.status : "scheduled";
+      data.final === true || data.final === 1
+        ? "final"
+        : typeof data.status === "string"
+          ? data.status
+          : "scheduled";
     list.push({ homeTeamId, awayTeamId, homeScore, awayScore, status });
   });
   return {

@@ -95,6 +95,10 @@ export const gameCardListStyles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 0,
   },
+  teamBottomGroupWc: {
+    width: 72,
+    alignItems: "center",
+  },
   sideLabel: {
     color: "rgba(255,255,255,0.85)",
     fontSize: 12,
@@ -127,6 +131,10 @@ export const gameCardListStyles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: DISPLAY_FONT_FAMILY,
     maxWidth: "100%",
+  },
+  teamNameMainWc: {
+    width: 72,
+    maxWidth: 72,
   },
   teamRecordText: {
     color: "rgba(226,232,240,0.82)",

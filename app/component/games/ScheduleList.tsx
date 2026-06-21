@@ -42,6 +42,7 @@ import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
 import { nbaRegularSeasonWinsLosses } from "@/lib/nbaRegularSeasonRecord";
 import { footballWinsLossesDraws } from "@/lib/teamRecordDisplay";
+import { fetchWcTeamRecordMap } from "@/lib/wc/wcTeamRecordsCache";
 import {
   SCHEDULE_MY_POST_DELETED_EVENT,
   type ScheduleMyPostDeletedDetail,
@@ -460,7 +461,21 @@ export default function ScheduleList({
       let nextSessionCache: Record<string, TeamRecord> = { ...sessionCache };
 
       try {
-        if (missingTeamIds.length > 0) {
+        if (leagueAnimKey === "wc") {
+          const wcMap = await fetchWcTeamRecordMap(db);
+          if (!alive) return;
+          merged = { ...immediateMap };
+          nextSessionCache = { ...sessionCache };
+          for (const teamId of teamIds) {
+            const value = wcMap[teamId];
+            if (!value) continue;
+            memoryTeamRecordCache.set(teamRecordMemKey(teamId), value);
+            nextSessionCache[teamId] = value;
+            merged[teamId] = value;
+          }
+          writeTeamRecordCacheToSession(nextSessionCache);
+          if (alive) setTeamRecordMap(merged);
+        } else if (missingTeamIds.length > 0) {
           const chunks: string[][] = [];
           for (let i = 0; i < missingTeamIds.length; i += 10) {
             chunks.push(missingTeamIds.slice(i, i + 10));

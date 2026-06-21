@@ -113,6 +113,71 @@ const WC_COUNTRIES: Record<string, WcCountry> = {
   pan: { iso2: "pa", flag: "pa", name: "Panama", nameJa: "パナマ" },
 };
 
+const WC_NAME_ALIASES: Record<string, keyof typeof WC_COUNTRIES> = {
+  "united states": "usa",
+  "united states of america": "usa",
+  us: "usa",
+  america: "usa",
+  "south korea": "kor",
+  "korea republic": "kor",
+  korea: "kor",
+  "bosnia and herzegovina": "bih",
+  "bosnia & herzegovina": "bih",
+  "cote d'ivoire": "civ",
+  "côte d'ivoire": "civ",
+  "ivory coast": "civ",
+  curacao: "cuw",
+  curaçao: "cuw",
+  netherlands: "nld",
+  holland: "nld",
+  japan: "jpn",
+  germany: "deu",
+  brazil: "bra",
+  england: "eng",
+  scotland: "sct",
+  turkey: "tur",
+  "türkiye": "tur",
+  tunisia: "tun",
+  mexico: "mex",
+  canada: "can",
+  switzerland: "che",
+  australia: "aus",
+  paraguay: "pry",
+  morocco: "mar",
+  belgium: "bel",
+  egypt: "egy",
+  iran: "irn",
+  "new zealand": "nzl",
+  spain: "esp",
+  france: "fra",
+  argentina: "arg",
+  portugal: "prt",
+  croatia: "hrv",
+};
+
+function normCountryName(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/** 表示名・旧データから wc-{iso3} を引く */
+export function lookupWcTeamIdByCountryName(
+  name: string | null | undefined
+): string | null {
+  if (!name?.trim()) return null;
+  const raw = name.trim();
+  const normalized = normCountryName(raw);
+
+  for (const [iso3, country] of Object.entries(WC_COUNTRIES)) {
+    if (normCountryName(country.name) === normalized) return `wc-${iso3}`;
+    if (country.nameJa === raw) return `wc-${iso3}`;
+  }
+
+  const aliasIso = WC_NAME_ALIASES[normalized];
+  if (aliasIso) return `wc-${aliasIso}`;
+
+  return null;
+}
+
 /**
  * 登録済み WC 国の iso3 一覧（"jpn" / "bra" など）。
  */
@@ -126,8 +191,13 @@ export function teamIdToWcCountry(
   teamId: string | null | undefined
 ): WcCountry | null {
   if (!teamId) return null;
-  if (!teamId.startsWith("wc-")) return null;
-  const iso3 = teamId.slice(3).toLowerCase();
+  const normalized = teamId.startsWith("wc-")
+    ? `wc-${teamId.slice(3).toLowerCase()}`
+    : /^[a-z]{3}$/i.test(teamId)
+      ? `wc-${teamId.toLowerCase()}`
+      : null;
+  if (!normalized) return null;
+  const iso3 = normalized.slice(3);
   return WC_COUNTRIES[iso3] ?? null;
 }
 

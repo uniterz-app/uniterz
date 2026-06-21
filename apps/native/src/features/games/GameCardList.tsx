@@ -2,10 +2,7 @@ import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type 
 import { useMemo } from "react";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
-import { db } from "../../lib/firebase";
-import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
-import WcGroupStandingRecordLineNative from "../results/WcGroupStandingRecordLineNative";
 import CountryFlagNative from "./CountryFlagNative";
 import MatchTeamMarkNative from "./MatchTeamMarkNative";
 import type { GamesTexts } from "./gamesI18n";
@@ -116,11 +113,6 @@ function GameCardListRow(props: GameCardListRowProps) {
     (game.away as { teamId?: string } | undefined)?.teamId ??
     (game.awayTeamId as string | undefined) ??
     null;
-  const wcGroupRanks = useWcGroupStandingRanks(
-    db,
-    isWcCard ? homeTeamId : null,
-    isWcCard ? awayTeamId : null
-  );
   const centerBlock = getGameCardCenterBlock(game);
   const roundLabelRaw = game.roundLabel;
   const roundLabel = typeof roundLabelRaw === "string" ? roundLabelRaw.trim() : "";
@@ -230,21 +222,14 @@ function GameCardListRow(props: GameCardListRowProps) {
                       )}
                     </Animated.View>
                   </View>
-                  <View style={styles.teamBottomGroup}>
+                  <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
                     <Text
                       style={[styles.teamNameMain, isWcCard && styles.teamNameMainWc]}
                       numberOfLines={1}
                     >
                       {homeCompact}
                     </Text>
-                    {isWcCard ? (
-                      <WcGroupStandingRecordLineNative
-                        standing={wcGroupRanks.homeStanding}
-                        language={language}
-                      />
-                    ) : (
-                      <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0)"}</Text>
-                    )}
+                    <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0-0)"}</Text>
                   </View>
                 </View>
 
@@ -360,21 +345,14 @@ function GameCardListRow(props: GameCardListRowProps) {
                       )}
                     </Animated.View>
                   </View>
-                  <View style={styles.teamBottomGroup}>
+                  <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
                     <Text
                       style={[styles.teamNameMain, isWcCard && styles.teamNameMainWc]}
                       numberOfLines={1}
                     >
                       {awayCompact}
                     </Text>
-                    {isWcCard ? (
-                      <WcGroupStandingRecordLineNative
-                        standing={wcGroupRanks.awayStanding}
-                        language={language}
-                      />
-                    ) : (
-                      <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0)"}</Text>
-                    )}
+                    <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0-0)"}</Text>
                   </View>
                 </View>
               </View>

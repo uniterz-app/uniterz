@@ -98,6 +98,18 @@ export const toTeamSide =
           colorHex: pickTeamColor(league, v?.name),
         };
 
+function resolveTeamSide(
+  league: League,
+  sideRaw: unknown,
+  topLevelTeamId: unknown
+): TeamSide {
+  const base = toTeamSide(league)(sideRaw);
+  if (base.teamId) return base;
+  const fromTop = rawTeamIdFromSide({ teamId: topLevelTeamId });
+  if (fromTop) return { ...base, teamId: fromTop };
+  return base;
+}
+
 /** スコア正規化 */
 export const toScore = (s: any): { home: number; away: number } | null =>
   s
@@ -301,6 +313,8 @@ export type GameDoc = {
   final?: boolean;
   home?: any;
   away?: any;
+  homeTeamId?: unknown;
+  awayTeamId?: unknown;
   score?: any;
   homeScore?: number;
   awayScore?: number;
@@ -357,8 +371,8 @@ export function toMatchCardProps(
   const league = normalizeLeague(raw?.league);
   const startAtJst = normalizeStartAtJst(raw);
   const status = toStatusFromGameDoc(raw as Record<string, unknown>);
-  const home = toTeamSide(league)(raw?.home);
-  const away = toTeamSide(league)(raw?.away);
+  const home = resolveTeamSide(league, raw?.home, raw?.homeTeamId);
+  const away = resolveTeamSide(league, raw?.away, raw?.awayTeamId);
 
   // --------------------------------------------------------
   // スコア補完

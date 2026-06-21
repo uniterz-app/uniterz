@@ -25,6 +25,8 @@ type Props = {
   pointsDistributionLoading?: boolean;
   language?: Language;
   inOverlay?: boolean;
+  hideMatchHeader?: boolean;
+  hideMarketCard?: boolean;
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
   cardClockMs?: number;
@@ -37,6 +39,8 @@ export default function MobileResultDetail({
   pointsDistributionLoading = false,
   language = "ja",
   inOverlay = false,
+  hideMatchHeader = false,
+  hideMarketCard = false,
   viewerUid = null,
   gamesRoutePrefix = "/mobile",
   cardClockMs,
@@ -67,26 +71,38 @@ export default function MobileResultDetail({
     >
       <LazyMotion features={domAnimation}>
         <React.Fragment key={post.id}>
-          <m.div {...fadeUp(E.delayHeader)}>
-            <MobileResultMatchHeader
-              post={post}
-              language={language}
-              inOverlay={inOverlay}
-              viewerUid={viewerUid}
-              gamesRoutePrefix={gamesRoutePrefix}
-              cardClockMs={cardClockMs}
-            />
-          </m.div>
-
-          <div className="mt-4 space-y-4">
-            <m.div {...fadeUp(E.delayMarket)}>
-              <MobileResultMarketCard
+          {!hideMatchHeader ? (
+            <m.div {...fadeUp(E.delayHeader)}>
+              <MobileResultMatchHeader
                 post={post}
-                market={market}
+                language={language}
                 inOverlay={inOverlay}
-                donutDrawDelayMs={donutDelay}
+                viewerUid={viewerUid}
+                gamesRoutePrefix={gamesRoutePrefix}
+                cardClockMs={cardClockMs}
               />
             </m.div>
+          ) : null}
+
+          <div
+            className={
+              hideMatchHeader && inOverlay
+                ? "mt-0 space-y-0"
+                : hideMatchHeader
+                  ? "mt-0 space-y-4"
+                  : "mt-4 space-y-4"
+            }
+          >
+            {!hideMarketCard ? (
+              <m.div {...fadeUp(E.delayMarket)}>
+                <MobileResultMarketCard
+                  post={post}
+                  market={market}
+                  inOverlay={inOverlay}
+                  donutDrawDelayMs={donutDelay}
+                />
+              </m.div>
+            ) : null}
             <m.div {...fadeUp(E.delayDistribution)}>
               <ResultPointsDistributionCard
                 post={post}
@@ -100,7 +116,7 @@ export default function MobileResultDetail({
             <m.div {...fadeUp(E.delayStats)}>
               <MobileResultStatsCard
                 post={post}
-                minHeightClassName="min-h-[360px]"
+                minHeightClassName={inOverlay ? undefined : "min-h-[360px]"}
                 language={language}
                 inOverlay={inOverlay}
               />

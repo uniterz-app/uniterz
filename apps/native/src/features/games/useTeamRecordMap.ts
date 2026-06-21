@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { nbaRegularSeasonWinsLosses } from "../../../../../lib/nbaRegularSeasonRecord";
 import { footballWinsLossesDraws } from "../../../../../lib/teamRecordDisplay";
+import { fetchWcTeamRecordMap } from "../../../../../lib/wc/wcTeamRecordsCache";
 import { db } from "../../lib/firebase";
 import type { TeamRecordSnapshot } from "./teamRecordDisplay";
 import type { NativeGameRow, SupportedLeague } from "./useTodayGames";
@@ -38,6 +39,16 @@ export function useTeamRecordMap(
     (async () => {
       const merged: Record<string, TeamRecordSnapshot> = {};
       try {
+        if (_selectedLeague === "wc") {
+          const wcMap = await fetchWcTeamRecordMap(db);
+          for (const teamId of teamIds) {
+            const value = wcMap[teamId];
+            if (value) merged[teamId] = value;
+          }
+          if (alive) setMap(merged);
+          return;
+        }
+
         for (let i = 0; i < teamIds.length; i += 10) {
           const chunk = teamIds.slice(i, i + 10);
           const snap = await getDocs(

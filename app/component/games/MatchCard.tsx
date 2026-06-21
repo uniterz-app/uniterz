@@ -47,11 +47,9 @@ import {
   GAMES_CYBER_LEAD_IN_SEC,
   GAMES_LIST_CARDS_LEAD_IN_SEC,
 } from "./cyberMotion";
-import { db } from "@/lib/firebase";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
-import { useWcGroupStandingRanks } from "@/lib/wc/useWcGroupStandingRanks";
+import { resolveWcTeamId } from "@/lib/wc/resolveWcTeamId";
 import WcTeamFlagWithMeta from "@/app/component/result/WcTeamFlagWithMeta";
-import WcGroupStandingRecordLine from "@/app/component/result/WcGroupStandingRecordLine";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import type { Language } from "@/lib/i18n/language";
 import { TIMEZONE_ET, TIMEZONE_JST } from "@/lib/time/zonedTime";
@@ -170,6 +168,8 @@ showMarketBias?: boolean;
 inPredictOverlay?: boolean;
 /** 一覧と同じカード見た目のまま、下部に市場棒グラフだけ足す（予想オーバーレイ用） */
 attachOverlayMarketBar?: boolean;
+/** 親の predict-overlay-cyber-form 一枚に内包するとき（独自ガラス面を出さない） */
+overlayUnifiedForm?: boolean;
 myPostId?: string | null;
 homeRecord?: {
   wins: number;
@@ -346,6 +346,7 @@ function MatchCardView({
   showMarketBias = false,
   inPredictOverlay = false,
   attachOverlayMarketBar = false,
+  overlayUnifiedForm = false,
   myPostId = null,
   homeRecord = null,
   awayRecord = null,
@@ -372,10 +373,19 @@ function MatchCardView({
 
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
-  const wcGroupRanks = useWcGroupStandingRanks(
-    db,
-    league === "wc" ? home.teamId : null,
-    league === "wc" ? away.teamId : null
+  const wcHomeTeamId = resolveWcTeamId(
+    home,
+    resultPost?.home?.teamId,
+    resultPost?.game?.home,
+    resultPost?.home?.name,
+    home.name
+  );
+  const wcAwayTeamId = resolveWcTeamId(
+    away,
+    resultPost?.away?.teamId,
+    resultPost?.game?.away,
+    resultPost?.away?.name,
+    away.name
   );
 
   const [navigating, setNavigating] = useState(false);
@@ -572,8 +582,9 @@ const marketMajority = useMemo(() => {
     ? "jersey-icon w-16 h-16 md:w-20 md:h-20"
     : "jersey-icon w-[4.25rem] h-[4.25rem] md:w-24 md:h-24";
   /** WC 国旗用：横長 3:2 系 (ジャージより気持ち小さめ) */
+  const wcOverlayLayout = inPredictOverlay || attachOverlayMarketBar;
   const teamMarkSizeFlag =
-    inPredictOverlay && league === "wc"
+    wcOverlayLayout && league === "wc"
       ? isMobile
         ? "w-[5.5rem] h-[3.67rem] md:w-[6.75rem] md:h-[4.5rem] mb-1"
         : "w-[6.25rem] h-[4.17rem] md:w-[8rem] md:h-[5.33rem] mb-1"
@@ -582,6 +593,14 @@ const marketMajority = useMemo(() => {
           ? "w-[4.5rem] h-[3rem] md:w-[5.5rem] md:h-[3.7rem] mb-2"
           : "w-[4.5rem] h-[3rem] md:w-[5.5rem] md:h-[3.7rem] mb-2"
         : "w-[4.75rem] h-[3.2rem] md:w-[6.25rem] md:h-[4.2rem] mb-2";
+  const wcRecordWidthClass =
+    wcOverlayLayout && league === "wc"
+      ? isMobile
+        ? "w-[5.5rem] md:w-[6.75rem]"
+        : "w-[6.25rem] md:w-[8rem]"
+      : dense
+        ? "w-[4.5rem] md:w-[5.5rem]"
+        : "w-[4.75rem] md:w-[6.25rem]";
   const teamMarkSizeJersey = dense
     ? isMobile
       ? "jersey-icon w-[3.875rem] h-[3.875rem] md:w-20 md:h-20"
@@ -1261,7 +1280,7 @@ return (
         <ResultUpsetCyberFrame />
       ) : null}
 
-      {attachOverlayMarketBar || inPredictOverlay ? (
+      {attachOverlayMarketBar || (inPredictOverlay && !overlayUnifiedForm) ? (
         <>
           {attachOverlayMarketBar ? null : (
             <div
@@ -1281,7 +1300,7 @@ return (
           />
           <PredictOverlayCyberDecor />
         </>
-      ) : (
+      ) : overlayUnifiedForm && inPredictOverlay ? null : (
         <>
           <div
             className={[
@@ -1566,7 +1585,7 @@ return (
   >
   {league === "wc" ? (
     <WcTeamFlagWithMeta
-      teamId={home.teamId}
+      teamId={wcHomeTeamId}
       compact={mobileDense || isMobile}
       flagClassName={teamMarkSizeFlag}
     />
@@ -1590,6 +1609,7 @@ return (
   <div
     className={[
       "mc-name text-center leading-tight",
+      league === "wc" ? "max-w-full whitespace-nowrap" : "",
       mobileDense
         ? "-mt-0.5"
         : inPredictOverlay && league === "wc"
@@ -1647,18 +1667,11 @@ return (
 <div
   className={[
     "mc-record text-center text-[11px] leading-none md:text-[15px]",
+    league === "wc" ? wcRecordWidthClass : "",
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  {league === "wc" ? (
-    <WcGroupStandingRecordLine
-      standing={wcGroupRanks.homeStanding}
-      language={language}
-      compact={mobileDense || isMobile}
-    />
-  ) : (
-    <RecordWithRank r={homeRecord} league={league} />
-  )}
+  <RecordWithRank r={homeRecord} league={league} />
 </div>
   </div>
 
@@ -1818,7 +1831,7 @@ return (
   {/* アイコン：mobile大きく / webそのまま */}
   {league === "wc" ? (
     <WcTeamFlagWithMeta
-      teamId={away.teamId}
+      teamId={wcAwayTeamId}
       compact={mobileDense || isMobile}
       flagClassName={teamMarkSizeFlag}
     />
@@ -1842,6 +1855,7 @@ return (
   <div
     className={[
       "mc-name text-center leading-tight",
+      league === "wc" ? "max-w-full whitespace-nowrap" : "",
       mobileDense
         ? "-mt-0.5"
         : inPredictOverlay && league === "wc"
@@ -1898,18 +1912,11 @@ return (
 <div
   className={[
     "mc-record text-center text-[11px] leading-none md:text-[15px]",
+    league === "wc" ? wcRecordWidthClass : "",
     mobileDense ? "-mt-0.5 pb-1 md:pb-0.5" : "mt-0 pb-1 md:pb-1",
   ].join(" ")}
 >
-  {league === "wc" ? (
-    <WcGroupStandingRecordLine
-      standing={wcGroupRanks.awayStanding}
-      language={language}
-      compact={mobileDense || isMobile}
-    />
-  ) : (
-    <RecordWithRank r={awayRecord} league={league} />
-  )}
+  <RecordWithRank r={awayRecord} league={league} />
 </div>
   </div>
 

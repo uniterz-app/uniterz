@@ -4,6 +4,8 @@
 // FIFA ルール: 勝点（W=3, D=1, L=0） → 得失点差 → 総得点 の順でソート。
 // （細かい H2H タイブレーカーは将来 v2 で）
 
+import { normalizeWcTeamId } from "@/lib/wc/resolveWcTeamId";
+
 export type WcStandingGame = {
   homeTeamId: string;
   awayTeamId: string;
@@ -52,17 +54,22 @@ export function computeGroupStandings(
   teamIds: readonly string[],
   games: readonly WcStandingGame[],
 ): WcStandingRow[] {
-  const set = new Set(teamIds);
+  const canonicalTeamIds = teamIds.map(
+    (id) => normalizeWcTeamId(id) ?? id.trim()
+  );
+  const set = new Set(canonicalTeamIds);
   const rows = new Map<string, WcStandingRow>();
-  for (const id of teamIds) rows.set(id, EMPTY_ROW(id));
+  for (const id of canonicalTeamIds) rows.set(id, EMPTY_ROW(id));
 
   for (const g of games) {
     if (g.status !== "final") continue;
-    if (!set.has(g.homeTeamId) || !set.has(g.awayTeamId)) continue;
+    const homeTeamId = normalizeWcTeamId(g.homeTeamId) ?? g.homeTeamId;
+    const awayTeamId = normalizeWcTeamId(g.awayTeamId) ?? g.awayTeamId;
+    if (!set.has(homeTeamId) || !set.has(awayTeamId)) continue;
     if (g.homeScore == null || g.awayScore == null) continue;
 
-    const h = rows.get(g.homeTeamId)!;
-    const a = rows.get(g.awayTeamId)!;
+    const h = rows.get(homeTeamId)!;
+    const a = rows.get(awayTeamId)!;
 
     h.played += 1;
     a.played += 1;

@@ -26,6 +26,10 @@ type Props = {
   language?: Language;
   /** 一覧オーバーレイ内（試合の予想オーバーレイと同じガラス＋透過背景用） */
   inOverlay?: boolean;
+  /** 親オーバーレイで MatchCard を表示済みのとき */
+  hideMatchHeader?: boolean;
+  /** マーケットバイアスカードを出さない */
+  hideMarketCard?: boolean;
   /** 閲覧者 UID（自分の投稿時のみヘッダーに予想修正ボタン） */
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
@@ -39,6 +43,8 @@ export default function ResultDetail({
   pointsDistributionLoading = false,
   language = "ja",
   inOverlay = false,
+  hideMatchHeader = false,
+  hideMarketCard = false,
   viewerUid = null,
   gamesRoutePrefix = "/web",
   cardClockMs,
@@ -75,32 +81,46 @@ export default function ResultDetail({
     >
       <LazyMotion features={domAnimation}>
         <React.Fragment key={post.id}>
-          <m.div {...fadeUp(E.delayHeader)}>
-            <ResultMatchHeader
-              post={post}
-              language={language}
-              inOverlay={inOverlay}
-              viewerUid={viewerUid}
-              gamesRoutePrefix={gamesRoutePrefix}
-              cardClockMs={cardClockMs}
-            />
-          </m.div>
-
-          <div
-            className={[
-              "grid grid-cols-1",
-              isMobile ? "gap-4 mt-4" : "md:grid-cols-2 md:gap-8 mt-10 gap-4",
-            ].join(" ")}
-          >
-            <m.div {...fadeUp(E.delayMarket)}>
-              <ResultMarketCard
+          {!hideMatchHeader ? (
+            <m.div {...fadeUp(E.delayHeader)}>
+              <ResultMatchHeader
                 post={post}
-                market={market}
+                language={language}
                 inOverlay={inOverlay}
-                sideBySideLayout={!isMobile}
-                donutDrawDelayMs={donutDelay}
+                viewerUid={viewerUid}
+                gamesRoutePrefix={gamesRoutePrefix}
+                cardClockMs={cardClockMs}
               />
             </m.div>
+          ) : null}
+
+          <div
+            className={
+              hideMatchHeader && inOverlay
+                ? "mt-0 flex flex-col gap-0"
+                : [
+                    "grid grid-cols-1",
+                    hideMatchHeader
+                      ? isMobile
+                        ? "mt-0 gap-4"
+                        : "mt-0 gap-4 md:grid-cols-2 md:gap-8"
+                      : isMobile
+                        ? "mt-4 gap-4"
+                        : "mt-10 gap-4 md:grid-cols-2 md:gap-8",
+                  ].join(" ")
+            }
+          >
+            {!hideMarketCard ? (
+              <m.div {...fadeUp(E.delayMarket)}>
+                <ResultMarketCard
+                  post={post}
+                  market={market}
+                  inOverlay={inOverlay}
+                  sideBySideLayout={!isMobile}
+                  donutDrawDelayMs={donutDelay}
+                />
+              </m.div>
+            ) : null}
             <m.div {...fadeUp(E.delayDistribution)}>
               <ResultPointsDistributionCard
                 post={post}
@@ -117,7 +137,13 @@ export default function ResultDetail({
             >
               <ResultStatsCard
                 post={post}
-                minHeightClassName={isMobile ? "min-h-[360px]" : "min-h-[400px]"}
+                minHeightClassName={
+                  inOverlay
+                    ? undefined
+                    : isMobile
+                      ? "min-h-[360px]"
+                      : "min-h-[400px]"
+                }
                 language={language}
                 inOverlay={inOverlay}
               />

@@ -8,7 +8,7 @@ import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
-import { RESULT_HIT_CYBER_CLIP, resultDetailPanelClass } from "@/lib/result/resultGlass";
+import { RESULT_HIT_CYBER_CLIP, resultDetailOverlaySectionClass, resultDetailPanelClass } from "@/lib/result/resultGlass";
 import { ShellGridOverlay } from "@/app/component/ui/ShellGridOverlay";
 import type { GamePointsDistributionV1 } from "@/lib/results/gamePointsDistribution";
 import {
@@ -201,10 +201,15 @@ function ResultPointsDistributionCard({
     };
   }, [chartInView, reduceMotion, animMountKey, peerDots.length, compact]);
 
-  const shell = `${resultDetailPanelClass({
-    padding: compact ? "p-4" : "p-6",
-    mobile: compact,
-  })} text-white`;
+  const shell = inOverlay
+    ? resultDetailOverlaySectionClass({
+        padding: compact ? "px-3 py-3" : "px-4 py-3",
+        mobile: compact,
+      })
+    : `${resultDetailPanelClass({
+        padding: compact ? "p-4" : "p-6",
+        mobile: compact,
+      })} text-white`;
 
   const title = msgs.results.scoreDistTitle;
   const subtitle = !isMatchFinal
@@ -264,7 +269,9 @@ function ResultPointsDistributionCard({
 
   return (
     <div className={shell}>
-      <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
+      {!inOverlay ? (
+        <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
+      ) : null}
       <div className="relative z-1">
       <div className={compact ? "mb-3" : "mb-4"}>
         <div className="flex items-start gap-2">

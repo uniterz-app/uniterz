@@ -17,7 +17,15 @@ import {
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
 import PredictModal, {
   type PredictModalMatchPreview,
+  type PredictModalScheduleMeta,
 } from "../games/PredictModal";
+import { buildPredictModalMergedFinalPreview } from "../games/buildPredictModalMergedFinal";
+import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
+import {
+  isWcGoalScorerPickValidForPredictedScore,
+  normalizeWcGoalScorerPick,
+} from "../../../../../lib/wc/goalScorer";
+import { getWcSquadPlayer } from "../../../../../lib/wc/squads";
 import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import { getGamesTexts, type GamesLanguage } from "../games/gamesI18n";
 import type { GameCardCenterBlock } from "../games/gameCardCenterTypes";
@@ -69,8 +77,22 @@ function gameRowBootstrapFromPost(
   const row: Record<string, unknown> = {
     id: gameId,
     league,
-    home,
-    away,
+    home: {
+      ...(typeof home === "object" && home !== null ? home : { name: String(home ?? "") }),
+      teamId:
+        (typeof home === "object" && home !== null
+          ? (home as { teamId?: string }).teamId
+          : undefined) ??
+        (post.home as { teamId?: string } | undefined)?.teamId,
+    },
+    away: {
+      ...(typeof away === "object" && away !== null ? away : { name: String(away ?? "") }),
+      teamId:
+        (typeof away === "object" && away !== null
+          ? (away as { teamId?: string }).teamId
+          : undefined) ??
+        (post.away as { teamId?: string } | undefined)?.teamId,
+    },
     status: typeof post.status === "string" ? post.status : "scheduled",
   };
   if (post.result != null) row.result = post.result;
@@ -103,6 +125,7 @@ function toSupportedLeague(raw: unknown): SupportedLeague {
   if (v === "bj" || v.includes("b.league")) return "bj";
   if (v === "j1" || v === "j") return "j1";
   if (v === "pl" || v.includes("premier") || v.includes("epl")) return "pl";
+  if (v === "wc" || v.includes("world")) return "wc";
   return "nba";
 }
 
@@ -280,7 +303,9 @@ export default function ResultPredictEditModal({
   );
 
   const isSoccerPredict =
-    selectedLeague === "pl" || selectedLeague === "j1";
+    selectedLeague === "wc" ||
+    selectedLeague === "pl" ||
+    selectedLeague === "j1";
 
   useEffect(() => {
     if (!visible || phase !== "ready") return;
@@ -393,6 +418,120 @@ export default function ResultPredictEditModal({
       awaySide: g.away,
     };
   }, [game, language, peerGames]);
+
+  const predictOverlayMarketBar = useMemo(() => {
+    if (!game?.id) return null;
+    const gameId = String(game.id);
+    const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
+    const awayName = resolveGameTeamName(game.away, game.awayTeamName, "AWAY");
+    const pred = post?.prediction as { winner?: "home" | "away" | "draw" } | undefined;
+    const homePalette = resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a");
+    const awayPalette = resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff");
+    const marketBias = game.marketBias as { homePct?: number; awayPct?: number } | undefined;
+    return {
+      gameId,
+      league: selectedLeague,
+      status: resolveGameStatus(game),
+      score: resolveGameScore(game),
+      fallbackMarketBias:
+        marketBias?.homePct != null && marketBias?.awayPct != null
+          ? { homePct: marketBias.homePct, awayPct: marketBias.awayPct }
+          : null,
+      homeColor: homePalette.primary,
+      awayColor: awayPalette.primary,
+      homeLabel: toCompactTeamName(game.league, homeName),
+      awayLabel: toCompactTeamName(game.league, awayName),
+      compact: selectedLeague === "wc",
+      userPredictionWinner: winner ?? pred?.winner ?? null,
+    };
+  }, [game, post?.prediction, selectedLeague, winner]);
+
+  const predictScheduleMeta = useMemo((): PredictModalScheduleMeta | null => {
+    if (!game) return null;
+    if (resolveGameStatus(game) !== "scheduled") return null;
+    const startAt = resolveGameStartAt(game);
+    const kickoffValue = formatKickoffTime(startAt, language);
+    const gameId = String(game.id ?? "");
+    const broadcastLabels =
+      selectedLeague === "wc" ? resolveWcBroadcastLabels(gameId, game) : [];
+    if (!startAt && broadcastLabels.length === 0) return null;
+    return { kickoffValue, broadcastLabels };
+  }, [game, selectedLeague, language]);
+
+  const wcGoalScorerPreview = useMemo(() => {
+    if (!game || selectedLeague !== "wc" || !post) return null;
+    const homeSide = game.home as { teamId?: string } | undefined;
+    const awaySide = game.away as { teamId?: string } | undefined;
+    const homeTeamId = homeSide?.teamId;
+    const awayTeamId = awaySide?.teamId;
+    const homeRaw = scoreHome.trim();
+    const awayRaw = scoreAway.trim();
+    if (homeRaw === "" || awayRaw === "") return null;
+    const score = { home: Number(homeRaw), away: Number(awayRaw) };
+    if (
+      !Number.isInteger(score.home) ||
+      !Number.isInteger(score.away) ||
+      score.home < 0 ||
+      score.away < 0
+    ) {
+      return null;
+    }
+    const storedPick = (post.prediction as { goalScorer?: unknown } | undefined)
+      ?.goalScorer;
+    const pick = normalizeWcGoalScorerPick(storedPick);
+    if (
+      !pick ||
+      !isWcGoalScorerPickValidForPredictedScore(
+        pick,
+        score,
+        homeTeamId,
+        awayTeamId
+      )
+    ) {
+      return null;
+    }
+    const playerName =
+      getWcSquadPlayer(pick.teamId, pick.playerId)?.name ?? pick.playerId;
+    return { playerName, teamId: pick.teamId };
+  }, [game, post, selectedLeague, scoreHome, scoreAway]);
+
+  const predictMergedFinalPreview = useMemo(() => {
+    if (!game || !post) return null;
+    if (resolveGameStatus(game) !== "final") return null;
+    const finalScore = resolveGameScore(game);
+    if (!finalScore) return null;
+    const pred = post.prediction as
+      | {
+          score?: { home?: number; away?: number };
+          goalScorer?: unknown;
+        }
+      | undefined;
+    const predictedScore = pred?.score;
+    if (
+      predictedScore?.home == null ||
+      predictedScore?.away == null ||
+      !Number.isFinite(predictedScore.home) ||
+      !Number.isFinite(predictedScore.away)
+    ) {
+      return null;
+    }
+    const homeSide = game.home as { teamId?: string } | undefined;
+    const awaySide = game.away as { teamId?: string } | undefined;
+    return buildPredictModalMergedFinalPreview({
+      league: selectedLeague,
+      language,
+      finalScore,
+      predictedScore: {
+        home: predictedScore.home,
+        away: predictedScore.away,
+      },
+      stats: (post.stats as Record<string, unknown> | undefined) ?? null,
+      goalScorer: pred?.goalScorer,
+      homeTeamId: homeSide?.teamId,
+      awayTeamId: awaySide?.teamId,
+      finalOt: resolveFinalMetaOt(game),
+    });
+  }, [game, post, selectedLeague, language]);
 
   const predictModalHomeLabel = useMemo(() => {
     if (!game) return "";
@@ -580,9 +719,14 @@ export default function ResultPredictEditModal({
         onClose={handleClose}
         spectatorStartedNoPost={false}
         predictionEditLockedAfterKickoff={!predictionEditable}
-        expandScoreFormWhenEditing={predictionEditable}
+        expandScoreFormWhenEditing={false}
         predictData={predictModalData}
+        overlayMarketBar={predictOverlayMarketBar}
+        predictScheduleMeta={predictScheduleMeta}
+        wcGoalScorerPreview={wcGoalScorerPreview}
+        mergedFinalPreview={predictMergedFinalPreview}
         language={language}
+        overlayUnifiedForm
       />
     </>
   );

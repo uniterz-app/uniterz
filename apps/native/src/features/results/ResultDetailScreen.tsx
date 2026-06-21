@@ -45,11 +45,19 @@ import WcMatchGoalScorersColumnNative from "./WcMatchGoalScorersColumnNative";
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
-import { db } from "../../lib/firebase";
-import { useWcGroupStandingRanks } from "../../../../../lib/wc/useWcGroupStandingRanks";
 import WcTeamFlagWithMetaNative from "./WcTeamFlagWithMetaNative";
 import WcGroupStandingRecordLineNative from "./WcGroupStandingRecordLineNative";
 import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRank";
+import PredictOverlayCyberFormPanelNative from "../games/PredictOverlayCyberFormPanelNative";
+import PredictOverlayCloseButtonNative from "../games/PredictOverlayCloseButtonNative";
+import { PredictMatchPreview } from "../games/PredictModal";
+import { getGamesTexts } from "../games/gamesI18n";
+import {
+  buildResultOverlayMarketBar,
+  buildResultOverlayMatchPreview,
+  buildResultOverlayMergedFinal,
+  resolveResultOverlayLeague,
+} from "./buildResultOverlayPreviewNative";
 
 const hasNativeBlurView =
   Platform.OS !== "web" &&
@@ -183,11 +191,20 @@ function streakFlameColor(tone: StreakBadge["tone"]) {
 function ShellCard({
   children,
   frameStyle,
+  hideGrid = false,
+  overlayEmbedded = false,
 }: {
   children: ReactNode;
   /** HIT 時など一覧 `cardFrameHit` に合わせた外枠 */
   frameStyle?: StyleProp<ViewStyle>;
+  hideGrid?: boolean;
+  /** 統合 predict-overlay-cyber-form 内（独自ガラス面なし） */
+  overlayEmbedded?: boolean;
 }) {
+  if (overlayEmbedded) {
+    return <View style={styles.overlaySection}>{children}</View>;
+  }
+
   const borderColor =
     typeof (frameStyle as ViewStyle | undefined)?.borderColor === "string"
       ? ((frameStyle as ViewStyle).borderColor as string)
@@ -202,7 +219,11 @@ function ShellCard({
     : undefined;
 
   return (
-    <ResultGlassShellNative borderColor={borderColor} shellStyle={shadowStyle}>
+    <ResultGlassShellNative
+      borderColor={borderColor}
+      shellStyle={shadowStyle}
+      hideGrid={hideGrid}
+    >
       <View style={styles.shellInner}>{children}</View>
     </ResultGlassShellNative>
   );
@@ -273,7 +294,7 @@ function ResultDetailMarketSection({
   }, [isSoccer, legendHomeName, legendAwayName, homeC, awayC, h, a, d, isEn]);
 
   return (
-    <ShellCard>
+    <ShellCard hideGrid>
       <View style={styles.marketHeaderRow}>
         <MaterialCommunityIcons name="scale-balance" size={20} color="#fb923c" />
         <Text style={styles.marketBiasTitle}>Market Bias</Text>
@@ -378,7 +399,7 @@ function ResultDetailDistributionSection({
     showChart && dist?.mean != null && Number.isFinite(dist.mean) ? dist.mean.toFixed(2) : "--";
 
   return (
-    <ShellCard>
+    <ShellCard overlayEmbedded>
       <View style={styles.distHeaderRow}>
         <MaterialCommunityIcons name="chart-box-outline" size={20} color={DIST_HEADER_ICON} />
         <View style={styles.distTitleBlock}>
@@ -497,7 +518,7 @@ function ResultDetailStatsSection({ post, language }: { post: ResultDetailPost; 
   );
 
   return (
-    <ShellCard>
+    <ShellCard overlayEmbedded>
       <View style={styles.sectionTitleRow}>
         <MaterialCommunityIcons name="chart-line" size={16} color="#fb923c" />
         <Text style={styles.sectionTitle}>{isEn ? "Performance" : "パフォーマンス"}</Text>
@@ -573,15 +594,14 @@ export default function ResultDetailScreen({
   const [loading, setLoading] = useState(false);
   const [missing, setMissing] = useState(false);
   const [post, setPost] = useState<ResultDetailPost | null>(null);
+  const [game, setGame] = useState<Record<string, unknown> | null>(null);
   const [market, setMarket] = useState<ResultPostDetailMarket | null>(null);
   const [distribution, setDistribution] = useState<GamePointsDistributionV1 | null>(null);
   const reduceMotion = useReducedMotion() ?? false;
-  const homeTeamId = (post?.home as { teamId?: string } | undefined)?.teamId;
-  const awayTeamId = (post?.away as { teamId?: string } | undefined)?.teamId;
-  const wcGroupRanks = useWcGroupStandingRanks(db, homeTeamId, awayTeamId);
 
   const reset = useCallback(() => {
     setPost(null);
+    setGame(null);
     setMarket(null);
     setDistribution(null);
     setMissing(false);
@@ -606,6 +626,7 @@ export default function ResultDetailScreen({
           return;
         }
         setPost(r.post);
+        setGame(r.game);
         setMarket(r.market);
         setDistribution(r.pointsDistribution);
       } catch {
@@ -628,197 +649,22 @@ export default function ResultDetailScreen({
     return () => sub.remove();
   }, [visible, onClose]);
 
-  const headerBody = useMemo(() => {
-    if (!post) return null;
-    const leagueKey = leagueFromResultPost(post);
-    const isWcCard = leagueKey === "wc";
-    const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
-    const home = post.home as { name?: string; teamId?: string } | undefined;
-    const away = post.away as { name?: string; teamId?: string } | undefined;
-    const pred = post.prediction as
-      | { score?: { home?: number; away?: number }; winner?: string }
-      | undefined;
-    const result = post.result as { home?: number; away?: number } | null | undefined;
-    const stats = post.stats as Record<string, unknown> | undefined;
-    const homeFallback = "#0ea5e9";
-    const awayFallback = "#f43f5e";
-    const homeColor = resolveTeamPrimaryColor(post.league, home, homeFallback);
-    const awayColor = resolveTeamPrimaryColor(post.league, away, awayFallback);
-    const homeJersey = resolveTeamJerseyPalette(post.league, home, homeColor);
-    const awayJersey = resolveTeamJerseyPalette(post.league, away, awayColor);
-    const [homeL1, homeL2] = splitTeamNameByLeague(leagueKey, home?.name ?? "");
-    const [awayL1, awayL2] = splitTeamNameByLeague(leagueKey, away?.name ?? "");
-    const homeName = isWcCard
-      ? (home?.name ?? "").trim().toUpperCase()
-      : getMobileTeamName(leagueKey, home?.name ?? "", homeL1, homeL2);
-    const awayName = isWcCard
-      ? (away?.name ?? "").trim().toUpperCase()
-      : getMobileTeamName(leagueKey, away?.name ?? "", awayL1, awayL2);
-    const ph = pred?.score?.home;
-    const pa = pred?.score?.away;
-    const predictedScore =
-      typeof ph === "number" && typeof pa === "number" ? `${ph} - ${pa}` : "— - —";
-    const rh = result?.home;
-    const ra = result?.away;
-    const hasFinal = typeof rh === "number" && typeof ra === "number";
-    const wcGroupCodeLabel = isWcCard
-      ? resolveWcGroupCodeLabel(home?.teamId, away?.teamId)
-      : null;
-    const wcMatchGoalScorers =
-      isWcCard && hasFinal
-        ? resolveWcMatchGoalScorersForDisplay({
-            league: "wc",
-            isFinal: true,
-            matchGoalScorersRaw: (post as { matchGoalScorers?: unknown })
-              .matchGoalScorers,
-            homeTeamId: home?.teamId,
-            awayTeamId: away?.teamId,
-          })
-        : [];
-    const finalScore = hasFinal ? `${rh} - ${ra}` : null;
-    const cardDateLabel = formatResultPostCardDateLabel(post, isEn ? "en" : "ja");
-    const activeWinStreak =
-      toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
-      0;
-    const streakBadge = getStreakBadge(activeWinStreak, isEn);
-    const badge: ResultBadge = resolveResultOutcomeBadge({
-      stats,
-      prediction: pred,
-      result,
-      upsetHit: Boolean(stats?.upsetHit),
-      isWin:
-        stats?.isWin === true ? true : stats?.isWin === false ? false : undefined,
-      activeWinStreak,
-    });
+  const gamesT = useMemo(() => getGamesTexts(language), [language]);
+  const matchPreview = useMemo(() => {
+    if (!post || !game) return null;
+    return buildResultOverlayMatchPreview(post, game, language);
+  }, [post, game, language]);
+  const overlayMarketBar = useMemo(() => {
+    if (!post || !game) return null;
+    return buildResultOverlayMarketBar(post, game, language);
+  }, [post, game, language]);
+  const mergedFinalPreview = useMemo(() => {
+    if (!post || !game) return null;
+    return buildResultOverlayMergedFinal(post, game, language);
+  }, [post, game, language]);
+  const overlayLeague = resolveResultOverlayLeague(game);
+  const isWcOverlay = overlayLeague === "wc";
 
-    return (
-      <ShellCard
-        frameStyle={
-          badge === "streak" && activeWinStreak >= 7
-            ? styles.shellCardStreakGoldFrame
-            : badge === "streak" && activeWinStreak >= 5
-              ? styles.shellCardStreakPlatinumFrame
-              : badge === "streak"
-                ? styles.shellCardStreakSilverFrame
-                : badge === "upset"
-                  ? styles.shellCardUpsetRedFrame
-                  : badge === "perfect"
-                    ? styles.shellCardPerfectBlueFrame
-                    : badge === "hit"
-                      ? styles.shellCardHitGoldFrame
-                      : undefined
-        }
-      >
-        <View style={styles.matchTop}>
-          <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
-          <View style={styles.badgeRow}>
-            {badge === "streak" && streakBadge ? (
-              <View style={[styles.streakMiniBadge, streakToneStyle(streakBadge.tone)]}>
-                <MaterialCommunityIcons
-                  name="fire"
-                  size={12}
-                  color={streakFlameColor(streakBadge.tone)}
-                />
-                <Text style={styles.streakMiniBadgeText} numberOfLines={1}>
-                  {streakBadge.label}
-                </Text>
-              </View>
-            ) : null}
-            {badge === "hit" ? (
-              <View style={[styles.miniBadge, styles.badgeHit]}>
-                <Text style={styles.badgeHitText}>HIT</Text>
-              </View>
-            ) : null}
-            {badge === "perfect" ? (
-              <View style={[styles.miniBadge, styles.badgePerfect]}>
-                <Text style={styles.badgePerfectText}>PERFECT</Text>
-              </View>
-            ) : null}
-            {badge === "upset" ? (
-              <View style={[styles.miniBadge, styles.badgeUpset]}>
-                <Text style={styles.badgeUpsetText}>UPSET</Text>
-              </View>
-            ) : null}
-            {badge === "miss" ? (
-              <View style={[styles.miniBadge, styles.badgeMiss]}>
-                <Text style={styles.badgeMissText}>MISS</Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-        <View style={styles.matchGrid}>
-          <View style={styles.sideCol}>
-            {isWcCard ? (
-              <WcTeamFlagWithMetaNative teamId={home?.teamId}>
-                <CountryFlagNative teamId={home?.teamId} variant="result" />
-              </WcTeamFlagWithMetaNative>
-            ) : (
-              <JerseyMarkAdaptive
-                accent={homeJersey.primary}
-                accentEnd={homeJersey.secondary}
-                size={56}
-              />
-            )}
-            <Text style={styles.teamName} numberOfLines={2}>
-              {homeName}
-            </Text>
-            {isWcCard ? (
-              <WcGroupStandingRecordLineNative
-                standing={wcGroupRanks.homeStanding}
-                language={language}
-              />
-            ) : null}
-            {wcMatchGoalScorers.length > 0 ? (
-              <WcMatchGoalScorersColumnNative scorers={wcMatchGoalScorers} side="home" />
-            ) : null}
-          </View>
-          <View style={styles.centerCol}>
-            {wcGroupCodeLabel ? (
-              <Text style={styles.groupCodeLabel} numberOfLines={1}>
-                {wcGroupCodeLabel}
-              </Text>
-            ) : (
-              <Text style={styles.predLabel}>{cardDateLabel}</Text>
-            )}
-            {finalScore ? (
-              <>
-                <Text style={styles.finalScoreMain}>{finalScore}</Text>
-                <Text style={styles.finalLabel}>{isEn ? "Final" : "試合終了"}</Text>
-                <Text style={styles.predictedScoreOverlay}>{predictedScore}</Text>
-              </>
-            ) : (
-              <Text style={styles.predictedScore}>{predictedScore}</Text>
-            )}
-          </View>
-          <View style={styles.sideCol}>
-            {isWcCard ? (
-              <WcTeamFlagWithMetaNative teamId={away?.teamId}>
-                <CountryFlagNative teamId={away?.teamId} variant="result" />
-              </WcTeamFlagWithMetaNative>
-            ) : (
-              <JerseyMarkAdaptive
-                accent={awayJersey.primary}
-                accentEnd={awayJersey.secondary}
-                size={56}
-              />
-            )}
-            <Text style={styles.teamName} numberOfLines={2}>
-              {awayName}
-            </Text>
-            {isWcCard ? (
-              <WcGroupStandingRecordLineNative
-                standing={wcGroupRanks.awayStanding}
-                language={language}
-              />
-            ) : null}
-            {wcMatchGoalScorers.length > 0 ? (
-              <WcMatchGoalScorersColumnNative scorers={wcMatchGoalScorers} side="away" />
-            ) : null}
-          </View>
-        </View>
-      </ShellCard>
-    );
-  }, [post, isEn, wcGroupRanks, language]);
 
   if (!visible) return null;
 
@@ -843,22 +689,6 @@ export default function ResultDetailScreen({
         <View pointerEvents="none" style={styles.overlayScanLine} />
       </View>
       <SafeAreaView style={styles.overlaySafe} pointerEvents="box-none">
-        <View style={styles.topBar}>
-          <View style={styles.topHud}>
-            <View style={styles.topHudRule} />
-            <Text style={styles.topHudText}>RESULT DETAIL</Text>
-          </View>
-          <Pressable
-            onPress={onClose}
-            hitSlop={14}
-            style={({ pressed }) => [styles.closeIconBtn, pressed && { opacity: 0.72 }]}
-            accessibilityRole="button"
-            accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
-          >
-            <MaterialCommunityIcons name="close" size={26} color="rgba(248,250,252,0.92)" />
-          </Pressable>
-        </View>
-
         {loading ? (
           <View style={styles.centerFill}>
             <BlocksPulseLoader />
@@ -878,45 +708,54 @@ export default function ResultDetailScreen({
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
-            <Animated.View
-              entering={resultDetailSectionEnter(
-                RESULT_DETAIL_ENTRANCE.delayHeaderMs,
-                reduceMotion
-              )}
-            >
-              {headerBody}
-            </Animated.View>
-            <View style={styles.sectionGap} />
-            <Animated.View
-              entering={resultDetailSectionEnter(
-                RESULT_DETAIL_ENTRANCE.delayMarketMs,
-                reduceMotion
-              )}
-            >
-              <ResultDetailMarketSection post={post} market={market} language={language} />
-            </Animated.View>
-            <View style={styles.sectionGap} />
-            <Animated.View
-              entering={resultDetailSectionEnter(
-                RESULT_DETAIL_ENTRANCE.delayDistributionMs,
-                reduceMotion
-              )}
-            >
-              <ResultDetailDistributionSection
-                distribution={distribution}
-                post={post}
-                language={language}
+            <PredictOverlayCyberFormPanelNative contentStyle={styles.unifiedOverlayPanel}>
+              <PredictOverlayCloseButtonNative
+                onPress={onClose}
+                accessibilityLabel={isEn ? "Close detail" : "詳細を閉じる"}
               />
-            </Animated.View>
-            <View style={styles.sectionGap} />
-            <Animated.View
-              entering={resultDetailSectionEnter(
-                RESULT_DETAIL_ENTRANCE.delayStatsMs,
-                reduceMotion
-              )}
-            >
-              <ResultDetailStatsSection post={post} language={language} />
-            </Animated.View>
+              {matchPreview ? (
+                <Animated.View
+                  entering={resultDetailSectionEnter(
+                    RESULT_DETAIL_ENTRANCE.delayHeaderMs,
+                    reduceMotion
+                  )}
+                >
+                  <PredictMatchPreview
+                    data={matchPreview}
+                    onClose={onClose}
+                    closeLabel={isEn ? "Close" : "閉じる"}
+                    overlayMarketBar={overlayMarketBar}
+                    language={language}
+                    t={gamesT}
+                    mergedFinal={mergedFinalPreview}
+                    isWcLeague={isWcOverlay}
+                    overlayCenterMode
+                    overlayUnifiedForm
+                    hideCloseButton
+                  />
+                </Animated.View>
+              ) : null}
+              <Animated.View
+                entering={resultDetailSectionEnter(
+                  RESULT_DETAIL_ENTRANCE.delayDistributionMs,
+                  reduceMotion
+                )}
+              >
+                <ResultDetailDistributionSection
+                  distribution={distribution}
+                  post={post}
+                  language={language}
+                />
+              </Animated.View>
+              <Animated.View
+                entering={resultDetailSectionEnter(
+                  RESULT_DETAIL_ENTRANCE.delayStatsMs,
+                  reduceMotion
+                )}
+              >
+                <ResultDetailStatsSection post={post} language={language} />
+              </Animated.View>
+            </PredictOverlayCyberFormPanelNative>
             <View style={{ height: Platform.OS === "ios" ? 32 : 24 }} />
           </ScrollView>
         )}
@@ -999,6 +838,13 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 28,
   },
+  unifiedOverlayPanel: {
+    position: "relative",
+    paddingHorizontal: 0,
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 12,
+  },
   centerFill: {
     flex: 1,
     justifyContent: "center",
@@ -1058,6 +904,12 @@ const styles = StyleSheet.create({
     padding: 16,
     position: "relative",
     zIndex: 2,
+  },
+  overlaySection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,245,255,0.12)",
   },
   sectionGap: { height: 16 },
   sectionTitleRow: {

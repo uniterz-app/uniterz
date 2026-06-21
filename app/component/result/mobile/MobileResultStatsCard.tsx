@@ -15,6 +15,7 @@ import WcGoalScorerResultRow, {
 import { resultStatsMetricNumClass } from "@/lib/fonts";
 import {
   RESULT_HIT_CYBER_CLIP,
+  resultDetailOverlaySectionClass,
   resultDetailPanelClass,
 } from "@/lib/result/resultGlass";
 import { resultShowsScorePrecision } from "@/lib/result/wcResultUi";
@@ -144,15 +145,26 @@ function MobileResultStatsCard({
   const barAnimateMs = 480;
   const barStaggerMs = 80;
 
-  const shell = `${resultDetailPanelClass({ padding: "p-4", mobile: true })} text-white`;
+  const shell = inOverlay
+    ? resultDetailOverlaySectionClass({ padding: "px-3 py-3", mobile: true })
+    : `${resultDetailPanelClass({ padding: "p-4", mobile: true })} text-white`;
 
   const showUpsetBonus = upsetBonus > 1e-6;
   const showStreakBonus = streakBonus > 1e-6;
   const showGoalScorerBonus = goalScorerBonus > 1e-6;
 
   return (
-    <div className={[shell, minHeightClassName ?? "min-h-[280px]"].join(" ")}>
-      <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
+    <div
+      className={[
+        shell,
+        inOverlay ? "" : minHeightClassName ?? "min-h-[280px]",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {!inOverlay ? (
+        <ShellGridOverlay roundedClassName={RESULT_HIT_CYBER_CLIP} />
+      ) : null}
       <div className="relative z-1">
       <div className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-white">
         <LineChart className="h-5 w-5 shrink-0 text-orange-400" aria-hidden />
