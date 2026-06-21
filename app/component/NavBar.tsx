@@ -14,10 +14,6 @@ import { auth } from "@/lib/firebase";
 import { PiChartBarFill } from "react-icons/pi";
 import { getUserDocDataCached } from "@/lib/user/userDocCache";
 import { isProfileSetupRoute } from "@/lib/profileSetupRoute";
-import {
-  LEADERBOARDS_GROUPS_INTRO_SEEN_CHANGED_EVENT,
-  shouldShowLeaderboardsGroupsIntroBadge,
-} from "@/lib/communities/leaderboardsGroupsIntroSeen";
 import { useNavTabNotificationBadges } from "@/lib/hooks/useNavTabNotificationBadges";
 import NavBarNotificationDot from "@/app/component/NavBarNotificationDot";
 import { prefetchCumulativeRankingsList } from "@/lib/rankings/useCumulativeRankingsBulk";
@@ -285,36 +281,16 @@ export default function NavBar() {
   const [introPhase, setIntroPhase] = useState<"pending" | "run" | "idle">(
     "pending"
   );
-  const [introSeenRev, setIntroSeenRev] = useState(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    const bump = () => setIntroSeenRev((n) => n + 1);
-    window.addEventListener(
-      LEADERBOARDS_GROUPS_INTRO_SEEN_CHANGED_EVENT,
-      bump
-    );
-    return () => {
-      window.removeEventListener(
-        LEADERBOARDS_GROUPS_INTRO_SEEN_CHANGED_EVENT,
-        bump
-      );
-    };
-  }, []);
-
-  const showLeaderboardsIntroBadge =
-    mounted &&
-    shouldShowLeaderboardsGroupsIntroBadge(pathname, prefix);
   const { showRankingBadge, showResultBadge } = useNavTabNotificationBadges({
     enabled: mounted && !shouldHide,
     pathname,
     prefix,
   });
-  // introSeenRev: 既読イベントで localStorage を再読み込み
-  void introSeenRev;
 
   useEffect(() => {
     if (shouldHide) return;
@@ -654,14 +630,6 @@ export default function NavBar() {
                     color={active ? "#ffffff" : "rgba(226,232,240,0.42)"}
                     style={iconStyle}
                   />
-                  {item.key === "leaderboards" && showLeaderboardsIntroBadge ? (
-                    <span
-                      className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[10px] font-black leading-none text-amber-950 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                      aria-hidden
-                    >
-                      !
-                    </span>
-                  ) : null}
                   {item.key === "ranking" && showRankingBadge ? (
                     <NavBarNotificationDot />
                   ) : null}

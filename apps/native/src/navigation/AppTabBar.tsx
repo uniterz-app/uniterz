@@ -34,11 +34,10 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
   const pillSidePad = Math.max(0, (Dimensions.get("window").width * (1 - 0.94)) / 2);
 
   const activeRouteName = state.routes[state.index]?.name ?? "";
-  const { showRankingBadge, showResultBadge, showLeaderboardsBadge } =
+  const { showRankingBadge, showResultBadge } =
     useNativeNavTabNotificationBadges({
       rankingTabActive: activeRouteName === "RankingsTab",
       resultTabActive: activeRouteName === "ResultTab",
-      leaderboardsTabActive: activeRouteName === "LeaderboardsTab",
     });
 
   return (
@@ -128,9 +127,6 @@ export default function AppTabBar({ state, descriptors, navigation }: BottomTabB
                         <View style={styles.dot} />
                       ) : null}
                       {route.name === "ResultTab" && showResultBadge ? (
-                        <View style={styles.dot} />
-                      ) : null}
-                      {route.name === "LeaderboardsTab" && showLeaderboardsBadge ? (
                         <View style={styles.dot} />
                       ) : null}
                     </View>
