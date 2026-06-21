@@ -5,10 +5,19 @@ import {
   isWcGoalScorerPickValidForPredictedScore,
   wcGoalScorerEligibleTeamIds,
 } from "../../../../../../lib/wc/goalScorer";
+import {
+  buildGoalScorerSquadSections,
+  resolveGoalScorerPlayerClub,
+  type GoalScorerSquadRow,
+  type GoalScorerSquadSections,
+} from "../../../../../../lib/wc/squadGoalScorerDisplay";
+import { readTournamentGoalCount } from "../../../../../../lib/wc/aggregateTournamentGoalCounts";
 import { getWcSquad } from "../../../../../../lib/wc/squads";
-import { findSquadPlayer, type WcSquadPlayer } from "../../../../../../lib/wc/squadTypes";
+import { findSquadPlayer } from "../../../../../../lib/wc/squadTypes";
 import CountryFlagNative from "../CountryFlagNative";
 import type { GamesLanguage, GamesTexts } from "../gamesI18n";
+import WcTournamentGoalBallStackNative from "./WcTournamentGoalBallStackNative";
+import { useNativeWcTournamentGoalCounts } from "./useNativeWcTournamentGoalCounts";
 
 type Props = {
   homeTeamId?: string | null;
@@ -22,17 +31,122 @@ type Props = {
   t: GamesTexts;
 };
 
+function PlayerRowButton({
+  row,
+  teamId,
+  selected,
+  tournamentGoals,
+  onPick,
+}: {
+  row: GoalScorerSquadRow;
+  teamId: string;
+  selected: boolean;
+  tournamentGoals: number;
+  onPick: () => void;
+}) {
+  const { player, isStarter } = row;
+  const { club, leagueIso2 } = resolveGoalScorerPlayerClub(player);
+
+  return (
+    <Pressable
+      onPress={onPick}
+      style={[styles.playerBtn, selected && styles.playerBtnSelected]}
+    >
+      <View style={styles.playerNameRow}>
+        <Text
+          style={[
+            styles.playerName,
+            selected
+              ? styles.playerNameSelected
+              : isStarter
+                ? styles.playerNameStarter
+                : styles.playerNameBench,
+          ]}
+          numberOfLines={1}
+        >
+          {player.name}
+        </Text>
+        <Text
+          style={[styles.playerPos, selected && styles.playerPosSelected]}
+        >
+          {player.pos}
+        </Text>
+      </View>
+      {club ? (
+        <View style={styles.clubRow}>
+          {leagueIso2 ? (
+            <CountryFlagNative iso2={leagueIso2} variant="clubInline" />
+          ) : null}
+          <Text
+            style={[
+              styles.clubName,
+              selected && styles.clubNameSelected,
+            ]}
+            numberOfLines={1}
+          >
+            {club}
+          </Text>
+          <WcTournamentGoalBallStackNative count={tournamentGoals} />
+        </View>
+      ) : tournamentGoals > 0 ? (
+        <View style={styles.clubRow}>
+          <WcTournamentGoalBallStackNative count={tournamentGoals} />
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+function SquadPlayerList({
+  rows,
+  teamId,
+  value,
+  goalCounts,
+  onPick,
+}: {
+  rows: GoalScorerSquadRow[];
+  teamId: string;
+  value: WcGoalScorerPick | null;
+  goalCounts: ReadonlyMap<string, number> | null;
+  onPick: (playerId: string, teamId: string) => void;
+}) {
+  return (
+    <>
+      {rows.map((row) => {
+        const selected =
+          value?.playerId === row.player.id && value.teamId === teamId;
+        return (
+          <PlayerRowButton
+            key={row.player.id}
+            row={row}
+            teamId={teamId}
+            selected={selected}
+            tournamentGoals={readTournamentGoalCount(
+              goalCounts,
+              teamId,
+              row.player.id
+            )}
+            onPick={() => onPick(row.player.id, teamId)}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 function TeamPlayerColumn({
   teamId,
   label,
-  squad,
+  sections,
   value,
   onPick,
+  goalCounts,
 }: {
   teamId: string;
   label: string;
-  squad: WcSquadPlayer[];
+  sections: GoalScorerSquadSections;
   value: WcGoalScorerPick | null;
+  goalCounts: ReadonlyMap<string, number> | null;
   onPick: (playerId: string, teamId: string) => void;
 }) {
   return (
@@ -49,25 +163,28 @@ function TeamPlayerColumn({
         nestedScrollEnabled
         showsVerticalScrollIndicator={false}
       >
-        {squad.length === 0 ? (
+        {sections.starters.length === 0 && sections.bench.length === 0 ? (
           <Text style={styles.emptyPlayer}>—</Text>
         ) : (
-          squad.map((player) => {
-            const selected =
-              value?.playerId === player.id && value.teamId === teamId;
-            return (
-              <Pressable
-                key={player.id}
-                onPress={() => onPick(player.id, teamId)}
-                style={[styles.playerBtn, selected && styles.playerBtnSelected]}
-              >
-                <Text style={styles.playerName} numberOfLines={1}>
-                  {player.name}
-                </Text>
-                <Text style={styles.playerPos}>{player.pos}</Text>
-              </Pressable>
-            );
-          })
+          <>
+            <SquadPlayerList
+              rows={sections.starters}
+              teamId={teamId}
+              value={value}
+              goalCounts={goalCounts}
+              onPick={onPick}
+            />
+            {sections.hasLineupSplit && sections.bench.length > 0 ? (
+              <View style={styles.benchDivider} />
+            ) : null}
+            <SquadPlayerList
+              rows={sections.bench}
+              teamId={teamId}
+              value={value}
+              goalCounts={goalCounts}
+              onPick={onPick}
+            />
+          </>
         )}
       </ScrollView>
     </View>
@@ -85,6 +202,7 @@ export default function WcGoalScorerPickerNative({
   onChange,
   t,
 }: Props) {
+  const { goalCounts } = useNativeWcTournamentGoalCounts();
   const homeSquad = useMemo(
     () => (homeTeamId ? getWcSquad(homeTeamId) ?? [] : []),
     [homeTeamId]
@@ -103,15 +221,23 @@ export default function WcGoalScorerPickerNative({
     () =>
       [
         homeTeamId && eligibleTeamIds.includes(homeTeamId)
-          ? { teamId: homeTeamId, label: homeLabel, squad: homeSquad }
+          ? {
+              teamId: homeTeamId,
+              label: homeLabel,
+              sections: buildGoalScorerSquadSections(homeSquad, homeTeamId),
+            }
           : null,
         awayTeamId && eligibleTeamIds.includes(awayTeamId)
-          ? { teamId: awayTeamId, label: awayLabel, squad: awaySquad }
+          ? {
+              teamId: awayTeamId,
+              label: awayLabel,
+              sections: buildGoalScorerSquadSections(awaySquad, awayTeamId),
+            }
           : null,
       ].filter(Boolean) as Array<{
         teamId: string;
         label: string;
-        squad: WcSquadPlayer[];
+        sections: GoalScorerSquadSections;
       }>,
     [homeTeamId, awayTeamId, homeLabel, awayLabel, homeSquad, awaySquad, eligibleTeamIds]
   );
@@ -189,14 +315,15 @@ export default function WcGoalScorerPickerNative({
       )}
 
       {teams.length > 0 ? (
-        <View style={[styles.teamGrid, teams.length === 1 && styles.teamGridSingle]}>
+        <View style={styles.teamStack}>
           {teams.map((team) => (
             <TeamPlayerColumn
               key={team.teamId}
               teamId={team.teamId}
               label={team.label}
-              squad={team.squad}
+              sections={team.sections}
               value={value}
+              goalCounts={goalCounts}
               onPick={(playerId, teamId) => onChange({ playerId, teamId })}
             />
           ))}
@@ -265,16 +392,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textDecorationLine: "underline",
   },
-  teamGrid: {
-    flexDirection: "row",
+  teamStack: {
+    flexDirection: "column",
     gap: 8,
   },
-  teamGridSingle: {
-    flexDirection: "column",
-  },
   teamCol: {
-    flex: 1,
-    minWidth: 0,
+    width: "100%",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
     borderRadius: 12,
@@ -298,6 +421,11 @@ const styles = StyleSheet.create({
   },
   playerScroll: { maxHeight: 176 },
   playerScrollContent: { padding: 4, gap: 2 },
+  benchDivider: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.12)",
+    marginVertical: 4,
+  },
   emptyPlayer: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 11,
@@ -314,14 +442,48 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(34,211,238,0.35)",
   },
+  playerNameRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+    minWidth: 0,
+  },
   playerName: {
-    color: "rgba(255,255,255,0.9)",
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: "600",
   },
+  playerNameStarter: {
+    color: "rgba(255,255,255,0.92)",
+  },
+  playerNameBench: {
+    color: "rgba(255,255,255,0.52)",
+  },
+  playerNameSelected: {
+    color: "#ecfeff",
+  },
   playerPos: {
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  playerPosSelected: {
+    color: "rgba(165,243,252,0.55)",
+  },
+  clubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+    minWidth: 0,
+  },
+  clubName: {
+    flex: 1,
+    color: "rgba(255,255,255,0.42)",
     fontSize: 10,
-    marginTop: 1,
+  },
+  clubNameSelected: {
+    color: "rgba(165,243,252,0.55)",
   },
 });

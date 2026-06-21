@@ -7,9 +7,11 @@ import {
   type QuerySnapshot,
 } from "firebase/firestore";
 import type { WcStandingGame } from "@/lib/wc/computeGroupStandings";
+import { aggregateWcTournamentGoalCounts } from "@/lib/wc/aggregateTournamentGoalCounts";
 
 type CacheEntry = {
   games: WcStandingGame[] | null;
+  goalCounts: ReadonlyMap<string, number> | null;
   loading: boolean;
   error: string | null;
   listeners: Set<() => void>;
@@ -21,6 +23,7 @@ const cache = new Map<string, CacheEntry>();
 
 const EMPTY_WC_CACHE_READ = {
   games: null,
+  goalCounts: null,
   loading: false,
   error: null,
 } as const;
@@ -30,6 +33,7 @@ function getEntry(season: string): CacheEntry {
   if (!entry) {
     entry = {
       games: null,
+      goalCounts: null,
       loading: false,
       error: null,
       listeners: new Set(),
@@ -44,10 +48,15 @@ function notify(season: string) {
   getEntry(season).listeners.forEach((fn) => fn());
 }
 
-function parseWcStandingGames(snap: QuerySnapshot): WcStandingGame[] {
+function parseWcStandingGames(snap: QuerySnapshot): {
+  games: WcStandingGame[];
+  goalCounts: ReadonlyMap<string, number>;
+} {
   const list: WcStandingGame[] = [];
+  const rawDocs: Record<string, unknown>[] = [];
   snap.forEach((d) => {
     const data = d.data() as Record<string, unknown>;
+    rawDocs.push(data);
     const home = (data?.home ?? {}) as { teamId?: unknown };
     const away = (data?.away ?? {}) as { teamId?: unknown };
     const homeTeamId = typeof home.teamId === "string" ? home.teamId : "";
@@ -61,7 +70,10 @@ function parseWcStandingGames(snap: QuerySnapshot): WcStandingGame[] {
       typeof data.status === "string" ? data.status : "scheduled";
     list.push({ homeTeamId, awayTeamId, homeScore, awayScore, status });
   });
-  return list;
+  return {
+    games: list,
+    goalCounts: aggregateWcTournamentGoalCounts(rawDocs),
+  };
 }
 
 function stopFirestoreListener(season: string) {
@@ -102,13 +114,16 @@ function ensureLoad(db: Firestore, season: string) {
   entry.firestoreUnsub = onSnapshot(
     q,
     (snap) => {
-      entry.games = parseWcStandingGames(snap);
+      const parsed = parseWcStandingGames(snap);
+      entry.games = parsed.games;
+      entry.goalCounts = parsed.goalCounts;
       entry.loading = false;
       entry.error = null;
       notify(season);
     },
     (e) => {
       entry.games = [];
+      entry.goalCounts = new Map();
       entry.loading = false;
       entry.error =
         e instanceof Error ? e.message : "failed to fetch wc games";
@@ -146,6 +161,29 @@ export function readWcSeasonGamesCache(season: string | null | undefined): {
   const entry = getEntry(season);
   return {
     games: entry.games,
+    loading: entry.loading,
+    error: entry.error,
+  };
+}
+
+/** 得点者ピッカー用 — 大会累計ゴール数（games.goalScorers から集計） */
+export function readWcTournamentGoalCountsCache(
+  season: string | null | undefined
+): {
+  goalCounts: ReadonlyMap<string, number> | null;
+  loading: boolean;
+  error: string | null;
+} {
+  if (!season) {
+    return {
+      goalCounts: null,
+      loading: false,
+      error: null,
+    };
+  }
+  const entry = getEntry(season);
+  return {
+    goalCounts: entry.goalCounts,
     loading: entry.loading,
     error: entry.error,
   };
