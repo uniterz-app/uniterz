@@ -1,0 +1,10 @@
+{
+  "homeScore": 0,
+  "awayScore": 4,
+  "scorers": [
+    { "playerId": "jpn-kamada", "teamId": "wc-jpn", "minute": 4 },
+    { "playerId": "jpn-ueda", "teamId": "wc-jpn", "minute": 31 },
+    { "playerId": "jpn-ito", "teamId": "wc-jpn", "minute": 69 },
+    { "playerId": "jpn-ueda", "teamId": "wc-jpn", "minute": 83 }
+  ]
+}

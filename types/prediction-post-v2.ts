@@ -129,6 +129,7 @@ export type PredictionPostV2 = {
       winPoints: number;
       diffPoints: number;
       totalPoints: number;
+      goalDiffPoints?: number;
       upsetBonus: number;
       streakBonus?: number;
       goalScorerBonus?: number;

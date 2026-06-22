@@ -4,6 +4,7 @@ import {
   gameIsHeadToHeadBetween,
 } from "../../../../../lib/games/gameTeamFilter";
 import { gameMatchesMarginBounds } from "../../../../../lib/games/marginFilter";
+import { sortGamesByKickoffAsc } from "../../../../../lib/games/sortGamesByKickoff";
 import type { NativeGameRow } from "./useTodayGames";
 
 export type GamesFilterState = {
@@ -49,7 +50,7 @@ export function applyNativeGamesFilter(
     );
   }
 
-  return list;
+  return sortGamesByKickoffAsc(list);
 }
 
 export function gamesFilterIsActive(filter: GamesFilterState): boolean {

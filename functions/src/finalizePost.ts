@@ -113,6 +113,10 @@ export async function finalizePost({
         winPoints: baseScore.winPoints,
         diffPoints: baseScore.diffPoints,
         totalPoints: baseScore.totalPoints,
+        goalDiffPoints:
+          "goalDiffPoints" in baseScore
+            ? (baseScore as { goalDiffPoints: number }).goalDiffPoints
+            : 0,
         upsetBonus,
         streakBonus,
         goalScorerBonus,

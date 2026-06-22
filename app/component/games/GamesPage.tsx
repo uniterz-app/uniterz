@@ -84,6 +84,7 @@ import {
   gameMatchesMarginBounds,
   parseMarginBoundParam,
 } from "@/lib/games/marginFilter";
+import { sortGamesByKickoffAsc } from "@/lib/games/sortGamesByKickoff";
 import { toStatus } from "@/lib/games/transform";
 
 function isFinalGameRow(row: Record<string, unknown>): boolean {
@@ -531,13 +532,15 @@ export default function GamesPage({ dense = false }: { dense?: boolean }) {
 
   const games = useMemo(() => {
     if (!selectedDayKey) return [];
-    return monthRows.filter((row) => {
-      const dk = gameRowStartDateKeyInTimeZone(
-        row as { startAtJst?: unknown },
-        dayTimeZone
-      );
-      return dk === selectedDayKey;
-    });
+    return sortGamesByKickoffAsc(
+      monthRows.filter((row) => {
+        const dk = gameRowStartDateKeyInTimeZone(
+          row as { startAtJst?: unknown },
+          dayTimeZone
+        );
+        return dk === selectedDayKey;
+      })
+    );
   }, [monthRows, selectedDayKey, dayTimeZone]);
 
   const loading = loadingDays;
