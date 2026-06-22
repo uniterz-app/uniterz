@@ -35,9 +35,10 @@ const RULES: Record<GamesLanguage, RuleSection[]> = {
           title: "勝者が合っているとき（基本点・最大10点）",
           lines: [
             "勝者 … +4点",
-            "合計ゴール数 … +2点（0〜2 / 3〜4 / 5以上 の同じくくり）",
+            "HOME得点 … +2点（完全一致）",
+            "AWAY得点 … +2点（完全一致）",
             "得失点差 … +2点（差が予想と結果で同じ）",
-            "スコアの完全一致 … +2点",
+            "例）予想 1–1・結果 0–0 → 引き分け +4、得失点差 +2 → 基本点 6点",
           ],
         },
         {
@@ -104,9 +105,10 @@ const RULES: Record<GamesLanguage, RuleSection[]> = {
           title: "Correct winner (base, max 10)",
           lines: [
             "Winner … +4",
-            "Total goals … +2 when both pick and result fall in 0-2 / 3-4 / 5+ buckets",
+            "HOME goals … +2 (exact match)",
+            "AWAY goals … +2 (exact match)",
             "Goal difference … +2 when the difference matches",
-            "Exact score … +2",
+            "e.g. pick 1–1, result 0–0 → draw +4, goal diff +2 → base 6",
           ],
         },
         {

@@ -19,6 +19,7 @@ import {
 } from "../../../../../lib/time/zonedTime";
 import { getWcGamesPageQueryRange } from "../../../../../lib/wc/wcGamesPageScheduleWindow";
 import { mergePlayoffSeriesPeersForWindowGames } from "../../../../../lib/games/fetchPlayoffSeriesPeerGames";
+import { sortGamesByKickoffAsc } from "../../../../../lib/games/sortGamesByKickoff";
 
 export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
 
@@ -194,7 +195,8 @@ export function useTodayGames() {
   const monthKey = useMemo(() => dateKey.slice(0, 7), [dateKey]);
 
   const games = useMemo(
-    () => filterGamesForDay(windowRows, selectedDate),
+    () =>
+      sortGamesByKickoffAsc(filterGamesForDay(windowRows, selectedDate)),
     [windowRows, selectedDate]
   );
 

@@ -1,0 +1,10 @@
+{
+  "homeScore": 1,
+  "awayScore": 3,
+  "scorers": [
+    { "playerId": "nzl-surman", "teamId": "wc-nzl", "minute": 15 },
+    { "playerId": "egy-ziko", "teamId": "wc-egy", "minute": 58 },
+    { "playerId": "egy-salah", "teamId": "wc-egy", "minute": 67 },
+    { "playerId": "egy-hassan", "teamId": "wc-egy", "minute": 82 }
+  ]
+}

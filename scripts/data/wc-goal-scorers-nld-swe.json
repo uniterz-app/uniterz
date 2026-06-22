@@ -1,0 +1,12 @@
+{
+  "homeScore": 5,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "nld-brobbey", "teamId": "wc-nld", "minute": 5 },
+    { "playerId": "nld-brobbey", "teamId": "wc-nld", "minute": 17 },
+    { "playerId": "nld-gakpo", "teamId": "wc-nld", "minute": 47 },
+    { "playerId": "nld-gakpo", "teamId": "wc-nld", "minute": 54 },
+    { "playerId": "swe-elanga", "teamId": "wc-swe", "minute": 59 },
+    { "playerId": "nld-summerville", "teamId": "wc-nld", "minute": 89 }
+  ]
+}

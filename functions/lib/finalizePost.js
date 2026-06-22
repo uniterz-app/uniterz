@@ -68,6 +68,9 @@ async function finalizePost({ postDoc, game, market, hadUpsetGame, after, batch,
                 winPoints: baseScore.winPoints,
                 diffPoints: baseScore.diffPoints,
                 totalPoints: baseScore.totalPoints,
+                goalDiffPoints: "goalDiffPoints" in baseScore
+                    ? baseScore.goalDiffPoints
+                    : 0,
                 upsetBonus,
                 streakBonus,
                 goalScorerBonus,

@@ -1,0 +1,9 @@
+{
+  "homeScore": 2,
+  "awayScore": 1,
+  "scorers": [
+    { "playerId": "civ-kessie", "teamId": "wc-civ", "minute": 30 },
+    { "playerId": "deu-undav", "teamId": "wc-deu", "minute": 68 },
+    { "playerId": "deu-undav", "teamId": "wc-deu", "minute": 94 }
+  ]
+}

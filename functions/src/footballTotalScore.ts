@@ -25,12 +25,13 @@ export function footballWinnerCorrect(
 /**
  * サッカー総合得点（1試合あたり最大10）
  * 勝者ゲート: 外れなら 0
- * 的中時: 勝者4 + HOME得点3 + AWAY得点3（完全一致のみ・ボーナスなし）
- * 基本点: 0 / 4 / 7 / 10
+ * 的中時: 勝者4 + HOME得点2 + AWAY得点2 + 得失点差2（各完全一致のみ・ボーナスなし）
+ * 基本点: 0 / 4 / 6 / 8 / 10 など
  *
  * diffPoints / totalPoints は basketball 系 API との互換用:
- * - diffPoints = HOME得点一致分 (0–3)
- * - totalPoints = AWAY得点一致分 (0–3)
+ * - diffPoints = HOME得点一致分 (0–2)
+ * - totalPoints = AWAY得点一致分 (0–2)
+ * - goalDiffPoints = 得失点差一致分 (0–2)
  */
 export function calcPointsFootball(
   prediction: { winner: string; score: { home: number; away: number } },
@@ -42,8 +43,10 @@ export function calcPointsFootball(
   winPoints: number;
   diffPoints: number;
   totalPoints: number;
+  goalDiffPoints: number;
   homeMatch: boolean;
   awayMatch: boolean;
+  goalDiffMatch: boolean;
   exactMatch: boolean;
   diffError: number | null;
   totalError: number | null;
@@ -61,8 +64,10 @@ export function calcPointsFootball(
       winPoints: 0,
       diffPoints: 0,
       totalPoints: 0,
+      goalDiffPoints: 0,
       homeMatch: false,
       awayMatch: false,
+      goalDiffMatch: false,
       exactMatch: false,
       diffError: null,
       totalError: null,
@@ -77,18 +82,21 @@ export function calcPointsFootball(
 
   const homeMatch = predHome === lh;
   const awayMatch = predAway === la;
-  const homePoints = homeMatch ? 3 : 0;
-  const awayPoints = awayMatch ? 3 : 0;
+  const homePoints = homeMatch ? 2 : 0;
+  const awayPoints = awayMatch ? 2 : 0;
+
+  const predDiff = predHome - predAway;
+  const lineDiff = lh - la;
+  const goalDiffMatch = predDiff === lineDiff;
+  const goalDiffPoints = goalDiffMatch ? 2 : 0;
 
   const exactMatch = homeMatch && awayMatch;
 
   const diffPoints = homePoints;
   const totalPoints = awayPoints;
 
-  const basePoints = winPoints + homePoints + awayPoints;
+  const basePoints = winPoints + homePoints + awayPoints + goalDiffPoints;
 
-  const predDiff = predHome - predAway;
-  const lineDiff = lh - la;
   const diffError = Math.abs(predDiff - lineDiff);
   const totalError = Math.abs(predHome - lh) + Math.abs(predAway - la);
 
@@ -99,8 +107,10 @@ export function calcPointsFootball(
     winPoints,
     diffPoints,
     totalPoints,
+    goalDiffPoints,
     homeMatch,
     awayMatch,
+    goalDiffMatch,
     exactMatch,
     diffError,
     totalError,

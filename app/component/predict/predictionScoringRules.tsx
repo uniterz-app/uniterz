@@ -288,22 +288,31 @@ function FootballTotalRulesJa({ showWcGoalScorer = false }: { showWcGoalScorer?:
             <Em>勝者</Em> … <Num>+4点</Num>
           </li>
           <li>
-            <Em>HOME得点</Em> … <Num>+3点</Num>
+            <Em>HOME得点</Em> … <Num>+2点</Num>
             <p className="mt-1 text-white/60">
               ホームの得点が予想と結果で<Em>完全一致</Em>したら加点します。
             </p>
           </li>
           <li>
-            <Em>AWAY得点</Em> … <Num>+3点</Num>
+            <Em>AWAY得点</Em> … <Num>+2点</Num>
             <p className="mt-1 text-white/60">
               アウェイの得点が予想と結果で<Em>完全一致</Em>したら加点します。
             </p>
+          </li>
+          <li>
+            <Em>得失点差</Em> … <Num>+2点</Num>
+            <p className="mt-1 text-white/60">
+              ホームとアウェイの得点差が予想と結果で<Em>完全一致</Em>したら加点します。
+            </p>
             <p className="mt-1 text-white/55">
-              例）予想 <Num>2–0</Num>・結果 <Num>2–1</Num> → HOME <Num>+3</Num> → 基本点 <Num>7点</Num>
+              例）予想 <Num>1–1</Num>・結果 <Num>0–0</Num> → 引き分け <Num>+4</Num>、得失点差 <Num>+2</Num> → 基本点{" "}
+              <Num>6点</Num>
               <br />
-              例）予想 <Num>2–0</Num>・結果 <Num>2–0</Num> → <Num>4+3+3=10点</Num>
+              例）予想 <Num>2–0</Num>・結果 <Num>2–1</Num> → HOME <Num>+2</Num> → 基本点 <Num>6点</Num>
               <br />
-              例）予想 <Num>3–0</Num>・結果 <Num>2–1</Num> → 勝者のみ → 基本点 <Num>4点</Num>
+              例）予想 <Num>2–0</Num>・結果 <Num>2–0</Num> → <Num>4+2+2+2=10点</Num>
+              <br />
+              例）予想 <Num>3–2</Num>・結果 <Num>2–1</Num> → 勝者＋得失点差 → 基本点 <Num>6点</Num>
             </p>
           </li>
         </ol>
@@ -338,22 +347,31 @@ function FootballTotalRulesEn({ showWcGoalScorer = false }: { showWcGoalScorer?:
             <Em>Winner</Em> … <Num>+4</Num>
           </li>
           <li>
-            <Em>HOME goals</Em> … <Num>+3</Num>
+            <Em>HOME goals</Em> … <Num>+2</Num>
             <p className="mt-1 text-white/60">
-              +3 if the home team&apos;s goals <Em>exactly</Em> match your pick and the result.
+              +2 if the home team&apos;s goals <Em>exactly</Em> match your pick and the result.
             </p>
           </li>
           <li>
-            <Em>AWAY goals</Em> … <Num>+3</Num>
+            <Em>AWAY goals</Em> … <Num>+2</Num>
             <p className="mt-1 text-white/60">
-              +3 if the away team&apos;s goals <Em>exactly</Em> match your pick and the result.
+              +2 if the away team&apos;s goals <Em>exactly</Em> match your pick and the result.
+            </p>
+          </li>
+          <li>
+            <Em>Goal difference</Em> … <Num>+2</Num>
+            <p className="mt-1 text-white/60">
+              +2 if the goal difference <Em>exactly</Em> matches your pick and the result.
             </p>
             <p className="mt-1 text-white/55">
-              e.g. pick <Num>2–0</Num>, result <Num>2–1</Num> → HOME <Num>+3</Num> → base <Num>7</Num>
+              e.g. pick <Num>1–1</Num>, result <Num>0–0</Num> → draw <Num>+4</Num>, goal diff <Num>+2</Num> → base{" "}
+              <Num>6</Num>
               <br />
-              e.g. pick <Num>2–0</Num>, result <Num>2–0</Num> → <Num>4+3+3=10</Num>
+              e.g. pick <Num>2–0</Num>, result <Num>2–1</Num> → HOME <Num>+2</Num> → base <Num>6</Num>
               <br />
-              e.g. pick <Num>3–0</Num>, result <Num>2–1</Num> → winner only → base <Num>4</Num>
+              e.g. pick <Num>2–0</Num>, result <Num>2–0</Num> → <Num>4+2+2+2=10</Num>
+              <br />
+              e.g. pick <Num>3–2</Num>, result <Num>2–1</Num> → winner + goal diff → base <Num>6</Num>
             </p>
           </li>
         </ol>
@@ -563,6 +581,22 @@ function UpsetPointsRulesEn() {
         The same hit also adds <Num>+2</Num> upset bonus to total score.
       </RuleBlock>
     </ul>
+  );
+}
+
+/** サッカー総合得点ルールのみ（採点変更モーダル等） */
+export function FootballTotalScoreRulesOnly({
+  language,
+  showWcGoalScorer = false,
+}: {
+  language: Language;
+  showWcGoalScorer?: boolean;
+}) {
+  const isEn = language === "en";
+  return isEn ? (
+    <FootballTotalRulesEn showWcGoalScorer={showWcGoalScorer} />
+  ) : (
+    <FootballTotalRulesJa showWcGoalScorer={showWcGoalScorer} />
   );
 }
 

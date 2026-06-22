@@ -88,6 +88,11 @@ import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
+import FootballScoringChangeModalNative from "./FootballScoringChangeModalNative";
+import {
+  markFootballScoringChangeSeenNative,
+  readFootballScoringChangeSeenNative,
+} from "./footballScoringChangeSeenNative";
 import GameCardList from "./GameCardList";
 import {
   resolveNativeSeriesLabel,
@@ -476,6 +481,9 @@ export default function GamesHomeScreen({
     >
   >({});
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
+  const [footballScoringChangeVisible, setFootballScoringChangeVisible] =
+    useState(false);
+  const pendingPredictGameRef = useRef<Record<string, unknown> | null>(null);
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
   const [language, setLanguage] = useState<"ja" | "en">("ja");
@@ -1188,12 +1196,7 @@ export default function GamesHomeScreen({
     });
   }, [selectedGame, selectedLeague, language, myPredictionByGameId]);
 
-  async function openPredictModal(targetGame?: Record<string, unknown>) {
-    const sourceGame = targetGame ?? selectedGame;
-    if (!sourceGame) {
-      setPredictSpectatorStartedNoPost(false);
-      return;
-    }
+  function proceedOpenPredictModal(sourceGame: Record<string, unknown>) {
     const gameId = String(sourceGame.id ?? "");
     const existingPostId = myPostIdByGameId[gameId];
     const existingPrediction = myPredictionByGameId[gameId];
@@ -1254,6 +1257,45 @@ export default function GamesHomeScreen({
         setGoalScorerPick(pick);
       }
     })();
+  }
+
+  async function openPredictModal(targetGame?: Record<string, unknown>) {
+    const sourceGame = targetGame ?? selectedGame;
+    if (!sourceGame) {
+      setPredictSpectatorStartedNoPost(false);
+      return;
+    }
+    const gameId = String(sourceGame.id ?? "");
+    const existingPostId = myPostIdByGameId[gameId];
+    const started = isGameStarted(sourceGame);
+    const spectatorStartedNoPost = Boolean(started && !existingPostId);
+    const leagueRaw = String(sourceGame.league ?? selectedLeague ?? "");
+    const isFootball = isSoccerLeague(leagueRaw);
+
+    if (isFootball && !existingPostId && !spectatorStartedNoPost) {
+      try {
+        const seen = await readFootballScoringChangeSeenNative();
+        if (!seen) {
+          pendingPredictGameRef.current = sourceGame;
+          setFootballScoringChangeVisible(true);
+          return;
+        }
+      } catch {
+        // ストレージ不可時はそのまま予想画面へ
+      }
+    }
+
+    proceedOpenPredictModal(sourceGame);
+  }
+
+  async function handleFootballScoringChangeClose() {
+    await markFootballScoringChangeSeenNative();
+    setFootballScoringChangeVisible(false);
+    const pending = pendingPredictGameRef.current;
+    pendingPredictGameRef.current = null;
+    if (pending) {
+      proceedOpenPredictModal(pending);
+    }
   }
 
   async function handleNextGameModalYes(dontShowAgain: boolean) {
@@ -1651,6 +1693,12 @@ export default function GamesHomeScreen({
         goalScorerPick={goalScorerPick}
         setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
+      />
+      <FootballScoringChangeModalNative
+        visible={footballScoringChangeVisible}
+        language={language}
+        ctaLabel={t.rulesStart}
+        onClose={() => void handleFootballScoringChangeClose()}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal

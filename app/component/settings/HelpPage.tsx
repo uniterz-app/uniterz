@@ -90,15 +90,17 @@ function ScoringLogicAnswerJa() {
           </p>
           <p>
             <span className="font-semibold text-emerald-300">HOME得点一致</span>
-            <span className="font-semibold text-cyan-300"> +3点</span>、
+            <span className="font-semibold text-cyan-300"> +2点</span>、
             <span className="font-semibold text-emerald-300">AWAY得点一致</span>
-            <span className="font-semibold text-cyan-300"> +3点</span>
-            （完全一致のみ）。
+            <span className="font-semibold text-cyan-300"> +2点</span>、
+            <span className="font-semibold text-emerald-300">得失点差一致</span>
+            <span className="font-semibold text-cyan-300"> +2点</span>
+            （各完全一致のみ）。
           </p>
           <p>
             基本点は
-            <span className="font-semibold text-cyan-300">0 / 4 / 7 / 10点</span>
-            （勝者のみ4点、片方一致7点、完全一致10点）。
+            <span className="font-semibold text-cyan-300">0 / 4 / 6 / 8 / 10点</span>
+            など（勝者のみ4点、引き分け＋得失点差で6点、完全一致10点）。
           </p>
           <p className="pt-1 font-semibold text-white/90">NBA</p>
           <p>
@@ -203,15 +205,17 @@ function ScoringLogicAnswerEn() {
           </p>
           <p>
             <span className="font-semibold text-emerald-300">HOME goals match</span>
-            <span className="font-semibold text-cyan-300"> +3</span>,{" "}
+            <span className="font-semibold text-cyan-300"> +2</span>,{" "}
             <span className="font-semibold text-emerald-300">AWAY goals match</span>
-            <span className="font-semibold text-cyan-300"> +3</span>
-            (exact match only).
+            <span className="font-semibold text-cyan-300"> +2</span>,{" "}
+            <span className="font-semibold text-emerald-300">goal difference match</span>
+            <span className="font-semibold text-cyan-300"> +2</span>
+            (exact match for each).
           </p>
           <p>
             Base points:
-            <span className="font-semibold text-cyan-300"> 0 / 4 / 7 / 10</span>
-            (winner only 4, one side 7, exact score 10).
+            <span className="font-semibold text-cyan-300"> 0 / 4 / 6 / 8 / 10</span>
+            (winner only 4, draw + matching goal diff 6, exact score 10).
           </p>
           <p className="pt-1 font-semibold text-white/90">NBA</p>
           <p>
