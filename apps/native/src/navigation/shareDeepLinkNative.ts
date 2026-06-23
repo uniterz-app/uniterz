@@ -31,6 +31,15 @@ export function navigateFromShareDeepLink(target: ShareDeepLinkTarget) {
           params: { screen: "RankingsHome" },
         });
         return;
+      case "community":
+        navigationRef.navigate("Main", {
+          screen: "LeaderboardsTab",
+          params: {
+            screen: "CommunityDetail",
+            params: { groupId: target.groupId },
+          },
+        });
+        return;
     }
   });
 }

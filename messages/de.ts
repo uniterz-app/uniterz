@@ -593,6 +593,7 @@ const de: Messages = {
     scorePrediction: "Ergebnisprognose",
     scorePlaceholder: "Punkte",
     cancelEditing: "Bearbeitung abbrechen",
+    editScoresCta: "Korr.",
     yourPrediction: "Deine Vorhersage",
     enterValidScores: "Bitte gib gültige Ergebnisse ein",
     predictionUpdated: "Vorhersage aktualisiert",

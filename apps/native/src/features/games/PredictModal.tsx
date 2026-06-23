@@ -70,6 +70,7 @@ import {
 } from "./predictMotion";
 import PredictOverlayCloseButtonNative from "./PredictOverlayCloseButtonNative";
 import PredictOverlayActionFabNative from "./PredictOverlayActionFabNative";
+import WcTeamNameMobileNative from "./WcTeamNameMobileNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
 import { shareResultCardNative } from "../results/shareResultCardNative";
 import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
@@ -403,12 +404,16 @@ export function PredictMatchPreview({
                 />
               </WcTeamFlagWithMetaNative>
             </View>
-            <Text
-              style={[s.matchPreviewTeamName, isWcLeague && s.matchPreviewTeamNameWc]}
-              numberOfLines={2}
-            >
-              {data.homeCompact}
-            </Text>
+            {isWcLeague ? (
+              <WcTeamNameMobileNative
+                name={data.homeCompact}
+                style={[s.matchPreviewTeamName, s.matchPreviewTeamNameWc]}
+              />
+            ) : (
+              <Text style={s.matchPreviewTeamName} numberOfLines={1}>
+                {data.homeCompact}
+              </Text>
+            )}
             {isWcLeague ? (
               <Text style={s.matchPreviewRecordBracket}>{homeWcRecordLabel}</Text>
             ) : data.homeRecord ? (
@@ -540,12 +545,16 @@ export function PredictMatchPreview({
                 />
               </WcTeamFlagWithMetaNative>
             </View>
-            <Text
-              style={[s.matchPreviewTeamName, isWcLeague && s.matchPreviewTeamNameWc]}
-              numberOfLines={2}
-            >
-              {data.awayCompact}
-            </Text>
+            {isWcLeague ? (
+              <WcTeamNameMobileNative
+                name={data.awayCompact}
+                style={[s.matchPreviewTeamName, s.matchPreviewTeamNameWc]}
+              />
+            ) : (
+              <Text style={s.matchPreviewTeamName} numberOfLines={1}>
+                {data.awayCompact}
+              </Text>
+            )}
             {isWcLeague ? (
               <Text style={s.matchPreviewRecordBracket}>{awayWcRecordLabel}</Text>
             ) : data.awayRecord ? (
@@ -2209,7 +2218,7 @@ const s = StyleSheet.create({
     ...MATCH_CARD_BRACKET_TEXT,
     fontWeight: "800",
     fontSize: 13,
-    lineHeight: 14,
+    lineHeight: 16,
     letterSpacing: 1.04,
     paddingRight: 1.04,
     color: colors.textPrimary,
@@ -2222,9 +2231,10 @@ const s = StyleSheet.create({
   /** Web WC mobile overlay `text-[15px]` */
   matchPreviewTeamNameWc: {
     fontSize: 15,
-    lineHeight: 16,
+    lineHeight: 18,
     letterSpacing: MATCH_CARD_BRACKET_LETTER_SPACING_15,
     paddingRight: MATCH_CARD_BRACKET_LETTER_SPACING_15,
+    paddingTop: 2,
   },
   /** Web WC overlay — 国名・試合時間と同じ Bebas */
   matchPreviewRecordBracket: {

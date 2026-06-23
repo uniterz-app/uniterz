@@ -67,6 +67,16 @@ export function buildRankingsShareUrl(appBaseUrl?: string | null): string {
   return `${origin}/mobile/rankings`;
 }
 
+export function buildCommunityShareUrl(
+  groupId: string,
+  appBaseUrl?: string | null
+): string {
+  const id = groupId.trim();
+  const origin = resolveShareLinkOrigin(appBaseUrl);
+  if (!id) return `${origin}/mobile/leaderboards`;
+  return `${origin}/mobile/communities/${encodeURIComponent(id)}`;
+}
+
 /** PNG フッター用（https:// を省略） */
 export function formatShareLinkDisplay(url: string): string {
   return url.replace(/^https?:\/\//i, "");
@@ -75,7 +85,8 @@ export function formatShareLinkDisplay(url: string): string {
 export type ShareDeepLinkTarget =
   | { kind: "result"; postId: string }
   | { kind: "profile"; handle: string }
-  | { kind: "rankings" };
+  | { kind: "rankings" }
+  | { kind: "community"; groupId: string };
 
 /**
  * 共有 URL / Universal Link / カスタムスキームをアプリ内ルートに解釈。
@@ -101,10 +112,13 @@ export function parseShareDeepLink(rawUrl: string): ShareDeepLinkTarget | null {
       if (host === "rankings" || path === "/rankings") {
         return { kind: "rankings" };
       }
+      if (host === "communities" && segments[0]) {
+        return { kind: "community", groupId: decodeURIComponent(segments[0]) };
+      }
     }
 
     const mobileMatch = path.match(
-      /^\/mobile\/(result|u|rankings)(?:\/([^/]+))?\/?$/
+      /^\/mobile\/(result|u|rankings|communities)(?:\/([^/]+))?\/?$/
     );
     if (mobileMatch) {
       const [, section, idRaw] = mobileMatch;
@@ -117,6 +131,14 @@ export function parseShareDeepLink(rawUrl: string): ShareDeepLinkTarget | null {
       if (section === "rankings") {
         return { kind: "rankings" };
       }
+      if (section === "communities" && idRaw) {
+        return { kind: "community", groupId: decodeURIComponent(idRaw) };
+      }
+    }
+
+    const webCommunity = path.match(/^\/web\/communities\/([^/]+)\/?$/);
+    if (webCommunity?.[1]) {
+      return { kind: "community", groupId: decodeURIComponent(webCommunity[1]) };
     }
 
     const webResult = path.match(/^\/web\/result\/([^/]+)\/?$/);

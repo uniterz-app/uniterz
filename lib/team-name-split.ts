@@ -53,3 +53,41 @@ export function joinTeamNameLines(l1: string, l2: string): string {
   if (!second) return l1.trim();
   return `${l1} ${second}`.trim();
 }
+
+/** モバイル WC 一覧 — この文字数超のみ 2 行（短い国名は 1 行・nowrap） */
+const WC_MOBILE_LIST_WRAP_MIN_LEN = 13;
+
+export type WcMobileListNameLayout =
+  | { singleLine: true; text: string }
+  | { singleLine: false; line1: string; line2: string };
+
+/** モバイル WC 試合カード — 長い国名だけ 2 行に分割 */
+export function splitWcCountryNameForMobileList(
+  rawName: string
+): WcMobileListNameLayout {
+  const name = norm(rawName);
+  if (name.length <= WC_MOBILE_LIST_WRAP_MIN_LEN) {
+    return { singleLine: true, text: name };
+  }
+
+  const amp = name.match(/^(.+?\s&)\s+(.+)$/u);
+  if (amp) {
+    return {
+      singleLine: false,
+      line1: amp[1].trim(),
+      line2: amp[2].trim(),
+    };
+  }
+
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    const mid = Math.ceil(words.length / 2);
+    return {
+      singleLine: false,
+      line1: words.slice(0, mid).join(" "),
+      line2: words.slice(mid).join(" "),
+    };
+  }
+
+  return { singleLine: true, text: name };
+}

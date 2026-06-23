@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import type { Language } from "../../../../../lib/i18n/language";
 import { formatCommunityCompetitionLine } from "../../../../../lib/communities/competitionDisplay";
+import { buildCommunityInviteShareText } from "../../../../../lib/communities/inviteShare";
 import { periodLabel } from "../../../../../lib/communities/labels";
 import {
   communityMetricToMobile,
@@ -25,10 +26,10 @@ import {
   getCachedCommunityGroupDetail,
   invalidateCommunityGroupDetail,
   listPreviewToSummary,
-  type CommunityGroupListPreview,
 } from "./communityGroupDetailCacheNative";
-import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
+import { communityApiUrl, communityAuthHeader, type CommunityGroupListPreview } from "./communityApiNative";
 import { copyTextNative, shareTextNative } from "./copyTextNative";
+import { getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { communityPressableTapStyle } from "./communityCrtThemeNative";
 
 type Props = {
@@ -133,6 +134,10 @@ export default function CommunityGroupDetailViewNative({
   const top3 = rankingCardRows.slice(0, 3);
   const restRows = rankingCardRows.slice(3);
   const lang = language as RankingsLanguage;
+  const rankListEntranceKey = useMemo(
+    () => `${groupId}:${metric}:${rows.map((r) => `${r.uid}:${r.rank}`).join("|")}`,
+    [groupId, metric, rows]
+  );
 
   const competition = summary
     ? formatCommunityCompetitionLine(
@@ -155,10 +160,13 @@ export default function CommunityGroupDetailViewNative({
   const onShareInvite = useCallback(async () => {
     const code = summary?.inviteCode;
     if (!code) return;
-    const message =
-      language === "en"
-        ? `Join my Uniterz group "${summary?.name ?? ""}"! Invite code: ${code}`
-        : `Uniterzグループ「${summary?.name ?? ""}」に参加しよう！招待コード: ${code}`;
+    const base = buildCommunityInviteShareText({
+      inviteCode: code,
+      groupName: summary?.name ?? undefined,
+      language,
+    });
+    const origin = getShareAppOrigin();
+    const message = base.includes(origin) ? base : `${base}\n\n${origin}`;
     await shareTextNative(t.shareInvite, message);
   }, [summary?.inviteCode, summary?.name, language, t.shareInvite]);
 
@@ -258,6 +266,7 @@ export default function CommunityGroupDetailViewNative({
               metric={rankMetricForProfile}
               language={lang}
               onPressProfile={onOpenProfile ? openProfile : undefined}
+              entranceKey={rankListEntranceKey}
             />
             <View style={styles.list}>
               {restRows.map((row, i) => (

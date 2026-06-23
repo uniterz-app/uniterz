@@ -17,6 +17,8 @@ export const PREDICT_OVERLAY_SCORE_INPUT_CUT = 6;
 export const PREDICT_OVERLAY_SUBMIT_BTN_CUT = 8;
 /** Web `.predict-overlay-close-btn`（globals.css） */
 export const PREDICT_OVERLAY_CLOSE_BTN_CUT = 5;
+/** Web / mobile `NavBar` ドック（`NAV_DOCK_CLIP` = 14px） */
+export const NAV_BAR_CHAMFER_CUT = 14;
 
 /** octagon 外側の4隅三角（矩形はみ出しマスク用・TL/TR/BR/BL） */
 export function chamferedCornerRevealPathsD(

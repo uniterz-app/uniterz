@@ -596,6 +596,7 @@ const es: Messages = {
     scorePrediction: "Predicción de marcador",
     scorePlaceholder: "Puntos",
     cancelEditing: "Cancelar edición",
+    editScoresCta: "Editar",
     yourPrediction: "Tu predicción",
     enterValidScores: "Introduce marcadores válidos",
     predictionUpdated: "Predicción actualizada",

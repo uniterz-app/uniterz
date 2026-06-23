@@ -591,6 +591,7 @@ const pt: Messages = {
     scorePrediction: "Palpite de placar",
     scorePlaceholder: "Pontos",
     cancelEditing: "Cancelar edição",
+    editScoresCta: "Editar",
     yourPrediction: "Seu palpite",
     enterValidScores: "Insira placares válidos",
     predictionUpdated: "Palpite atualizado",

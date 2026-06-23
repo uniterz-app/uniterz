@@ -173,12 +173,12 @@ export default function ResultOutcomeBadges({
     return (
       <div
         className={[
-          "flex flex-col items-end gap-1",
+          "flex flex-row flex-wrap items-center justify-end gap-1",
           className,
         ].join(" ")}
       >
-        {streakNode}
         {outcomeNode}
+        {streakNode}
         {trailing}
       </div>
     );

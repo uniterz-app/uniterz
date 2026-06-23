@@ -2,10 +2,9 @@
  * 予想オーバーレイ左上 — Web mobile `CyberMenuButton` + 左フライアウト
  */
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { StyleSheet, View } from "react-native";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
-import CornerMenuFlyoutButtonNative from "../../ui/CornerMenuFlyoutButtonNative";
+import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 
 type Props = {
   showClose?: boolean;
@@ -57,48 +56,40 @@ export default function PredictOverlayActionFabNative({
         sideFlyout={
         <>
           {hasClose ? (
-            <CornerMenuFlyoutButtonNative
+            <CyberChamferButtonNative
+              size="xs"
+              embedded
+              variant="close"
               onPress={() => {
                 setOpen(false);
                 onClose?.();
               }}
               accessibilityLabel={closeLabel}
-            >
-              <Text style={styles.closeIcon} accessibilityElementsHidden importantForAccessibility="no">
-                ×
-              </Text>
-            </CornerMenuFlyoutButtonNative>
+            />
           ) : null}
           {hasShare ? (
-            <CornerMenuFlyoutButtonNative
+            <CyberChamferButtonNative
+              size="xs"
+              embedded
               variant="share"
               onPress={() => {
                 setOpen(false);
                 onShare?.();
               }}
               accessibilityLabel={shareLabel}
-            >
-              <MaterialCommunityIcons
-                name="share-variant"
-                size={12}
-                color="rgba(207,250,254,0.88)"
-              />
-            </CornerMenuFlyoutButtonNative>
+            />
           ) : null}
           {hasEdit ? (
-            <CornerMenuFlyoutButtonNative
+            <CyberChamferButtonNative
+              size="xs"
+              embedded
+              variant="edit"
               onPress={() => {
                 setOpen(false);
                 onEdit?.();
               }}
               accessibilityLabel={editLabel}
-            >
-              <MaterialCommunityIcons
-                name="pencil"
-                size={12}
-                color="rgba(207,250,254,0.88)"
-              />
-            </CornerMenuFlyoutButtonNative>
+            />
           ) : null}
         </>
       }
@@ -114,13 +105,5 @@ const styles = StyleSheet.create({
     left: 8,
     zIndex: 50,
     overflow: "visible",
-  },
-  closeIcon: {
-    color: "rgba(236,254,255,0.9)",
-    fontSize: 16,
-    lineHeight: 18,
-    fontWeight: "300",
-    includeFontPadding: false,
-    textAlign: "center",
   },
 });

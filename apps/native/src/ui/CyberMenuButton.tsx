@@ -15,7 +15,7 @@ type Props = {
   badge?: React.ReactNode;
 };
 
-/** 角切りシアン枠のハンバーガーボタン（予想オーバーレイと同型） */
+/** 角切りシアン枠のハンバーガーボタン（プロフィールと同型） */
 export default function CyberMenuButton({
   size = "sm",
   onPress,
@@ -30,7 +30,7 @@ export default function CyberMenuButton({
       <CyberChamferButtonNative
         size={size}
         embedded
-        icon="menu"
+        variant="menu"
         onPress={onPress}
         hitSlop={hitSlop}
         accessibilityLabel={accessibilityLabel}

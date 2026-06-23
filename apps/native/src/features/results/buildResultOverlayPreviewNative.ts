@@ -23,6 +23,26 @@ import {
 import type { NativeGameRow, SupportedLeague } from "../games/useTodayGames";
 import type { ResultDetailPost } from "./loadResultPostDetailNative";
 import type { GamesLanguage } from "../games/gamesI18n";
+import { resolveWcTeamId } from "../../../../../lib/wc/resolveWcTeamId";
+
+function resolveOverlayGameSide(
+  gameSide: unknown,
+  postSide: { teamId?: string; name?: string } | undefined,
+  postGameSide: unknown
+): Record<string, unknown> {
+  const base =
+    gameSide && typeof gameSide === "object"
+      ? { ...(gameSide as Record<string, unknown>) }
+      : {};
+  const resolvedId = resolveWcTeamId(
+    base as { teamId?: string; name?: string },
+    postSide?.teamId,
+    postGameSide as { teamId?: string; name?: string } | undefined,
+    postSide?.name
+  );
+  if (resolvedId) return { ...base, teamId: resolvedId };
+  return base;
+}
 
 function toSupportedLeague(raw: unknown): SupportedLeague {
   const v = String(raw ?? "").trim().toLowerCase();
@@ -111,6 +131,11 @@ export function buildResultOverlayMatchPreview(
   const peerGames = [row];
   const homeName = resolveGameTeamName(game.home, game.homeTeamName, "HOME");
   const awayName = resolveGameTeamName(game.away, game.awayTeamName, "AWAY");
+  const postHome = post.home as { teamId?: string; name?: string } | undefined;
+  const postAway = post.away as { teamId?: string; name?: string } | undefined;
+  const postGame = post.game as { home?: unknown; away?: unknown } | undefined;
+  const homeSide = resolveOverlayGameSide(game.home, postHome, postGame?.home);
+  const awaySide = resolveOverlayGameSide(game.away, postAway, postGame?.away);
   const roundLabelRaw = game.roundLabel;
   const roundLabel =
     typeof roundLabelRaw === "string" && roundLabelRaw.trim()
@@ -128,8 +153,8 @@ export function buildResultOverlayMatchPreview(
     homePalette: resolveTeamJerseyPalette(game.league, game.home, "#ff6b8a"),
     awayPalette: resolveTeamJerseyPalette(game.league, game.away, "#5aa4ff"),
     leagueRaw: game.league,
-    homeSide: game.home,
-    awaySide: game.away,
+    homeSide,
+    awaySide,
   };
 }
 
