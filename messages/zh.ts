@@ -72,6 +72,7 @@ const zh: Messages = {
     last7d: "近7天",
     last30d: "近30天",
     backToRankings: "返回排名",
+    backToGroupRankings: "返回群组排名",
     overview: "概览",
     stats: "数据",
     bracket: "对阵表",

@@ -74,6 +74,7 @@ const en: Messages = {
     last7d: "Last 7d",
     last30d: "Last 30d",
     backToRankings: "Back to rankings",
+    backToGroupRankings: "Back to group rankings",
     overview: "Overview",
     stats: "Stats",
     bracket: "Bracket",

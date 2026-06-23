@@ -60,11 +60,27 @@ const CACHE_TTL_MS = 60_000;
 const cache = new Map<string, CommunityGroupDetailCacheEntry>();
 const inflight = new Map<string, Promise<CommunityGroupDetailCacheEntry | null>>();
 
+let cachedAuthHeader: { value: string; until: number } | null = null;
+
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
   if (!u) return null;
-  return `Bearer ${await u.getIdToken()}`;
+  const now = Date.now();
+  if (cachedAuthHeader && now < cachedAuthHeader.until) {
+    return cachedAuthHeader.value;
+  }
+  const token = await u.getIdToken();
+  if (!token) return null;
+  const value = `Bearer ${token}`;
+  cachedAuthHeader = { value, until: now + 4 * 60_000 };
+  return value;
 }
+
+export type CommunityGroupDetailPartial = {
+  summary?: CommunityGroupSummary;
+  rows?: CommunityGroupLeaderboardRow[];
+  metric?: CommunityMetric;
+};
 
 export function listPreviewToSummary(
   groupId: string,
@@ -105,7 +121,8 @@ export function invalidateCommunityGroupDetail(groupId: string) {
 }
 
 export async function fetchCommunityGroupDetail(
-  groupId: string
+  groupId: string,
+  opts?: { onPartial?: (partial: CommunityGroupDetailPartial) => void }
 ): Promise<CommunityGroupDetailCacheEntry | null> {
   const fresh = getCachedCommunityGroupDetail(groupId);
   if (fresh) return fresh;
@@ -117,25 +134,51 @@ export async function fetchCommunityGroupDetail(
     const h = await authHeader();
     if (!h) return null;
 
+    const headers = { Authorization: h };
+    const emitPartial = (partial: CommunityGroupDetailPartial) => {
+      opts?.onPartial?.(partial);
+    };
+
     try {
-      const [sRes, lRes] = await Promise.all([
-        fetch(`/api/communities/${groupId}/summary`, {
-          headers: { Authorization: h },
-          cache: "no-store",
-        }),
-        fetch(`/api/communities/${groupId}/leaderboard`, {
-          headers: { Authorization: h },
-          cache: "no-store",
-        }),
+      const summaryPromise = fetch(`/api/communities/${groupId}/summary`, {
+        headers,
+        cache: "no-store",
+      })
+        .then((res) => res.json().catch(() => ({})))
+        .then((sJson) => {
+          if (sJson?.ok && sJson.group) {
+            emitPartial({ summary: sJson.group as CommunityGroupSummary });
+          }
+          return sJson;
+        });
+
+      const leaderboardPromise = fetch(
+        `/api/communities/${groupId}/leaderboard`,
+        { headers, cache: "no-store" }
+      )
+        .then((res) => res.json().catch(() => ({})))
+        .then((lJson) => {
+          if (lJson?.ok) {
+            emitPartial({
+              rows: lJson.rows ?? [],
+              metric: lJson.rankingMetric as CommunityMetric | undefined,
+            });
+          }
+          return lJson;
+        });
+
+      const [sJson, lJson] = await Promise.all([
+        summaryPromise,
+        leaderboardPromise,
       ]);
-      const sJson = await sRes.json().catch(() => ({}));
-      const lJson = await lRes.json().catch(() => ({}));
-      if (!sRes.ok || !sJson?.ok || !sJson.group) return null;
+      if (!sJson?.ok || !sJson.group) return null;
 
       const entry: CommunityGroupDetailCacheEntry = {
         summary: sJson.group as CommunityGroupSummary,
-        rows: lRes.ok && lJson?.ok ? (lJson.rows ?? []) : [],
-        metric: (sJson.group as CommunityGroupSummary).rankingMetric,
+        rows: lJson?.ok ? (lJson.rows ?? []) : [],
+        metric:
+          (lJson?.rankingMetric as CommunityMetric | undefined) ??
+          (sJson.group as CommunityGroupSummary).rankingMetric,
         fetchedAt: Date.now(),
       };
       cache.set(groupId, entry);

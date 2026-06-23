@@ -71,6 +71,7 @@ const ja = {
     last7d: "7日",
     last30d: "30日",
     backToRankings: "ランキングに戻る",
+    backToGroupRankings: "グループランキングに戻る",
     overview: "概要",
     stats: "詳細",
     bracket: "ブラケット",

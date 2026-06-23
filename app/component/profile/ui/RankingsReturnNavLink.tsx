@@ -8,6 +8,8 @@ import {
   PROFILE_FROM_PARAM,
   PROFILE_FROM_COMMUNITY_ID_PARAM,
   PROFILE_FROM_COMMUNITY_VALUE,
+  PROFILE_FROM_GROUP_ID_PARAM,
+  PROFILE_FROM_GROUP_VALUE,
   PROFILE_FROM_RANKINGS_VALUE,
   buildRankingsPathQuery,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -23,10 +25,14 @@ export default function RankingsReturnNavLink({ language }: Props) {
   const pathname = usePathname() ?? "";
   const sp = useSearchParams();
   const from = sp.get(PROFILE_FROM_PARAM);
-  if (
-    from !== PROFILE_FROM_RANKINGS_VALUE &&
-    from !== PROFILE_FROM_COMMUNITY_VALUE
-  ) {
+  const groupId =
+    sp.get(PROFILE_FROM_GROUP_ID_PARAM) ??
+    sp.get(PROFILE_FROM_COMMUNITY_ID_PARAM);
+  const isGroupReturn =
+    (from === PROFILE_FROM_GROUP_VALUE ||
+      from === PROFILE_FROM_COMMUNITY_VALUE) &&
+    !!groupId;
+  if (from !== PROFILE_FROM_RANKINGS_VALUE && !isGroupReturn) {
     return null;
   }
 
@@ -35,18 +41,13 @@ export default function RankingsReturnNavLink({ language }: Props) {
       ? "/mobile"
       : "/web";
   const tabQuery = buildRankingsPathQuery(sp);
-  const communityId = sp.get(PROFILE_FROM_COMMUNITY_ID_PARAM);
-  const href =
-    from === PROFILE_FROM_COMMUNITY_VALUE && communityId
-      ? `${prefix}/communities/${encodeURIComponent(communityId)}`
-      : `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
+  const href = isGroupReturn
+    ? `${prefix}/communities/${encodeURIComponent(groupId!)}`
+    : `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
   const m = t(language);
-  const label =
-    from === PROFILE_FROM_COMMUNITY_VALUE
-      ? language === "en"
-        ? "Back to community"
-        : "コミュニティに戻る"
-      : m.profile.backToRankings;
+  const label = isGroupReturn
+    ? m.profile.backToGroupRankings
+    : m.profile.backToRankings;
 
   return (
     <Link

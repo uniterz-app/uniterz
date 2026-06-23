@@ -14,6 +14,9 @@ export const PROFILE_FROM_PARAM = "from";
 export const PROFILE_FROM_RANKINGS_VALUE = "rankings";
 export const PROFILE_FROM_COMMUNITY_VALUE = "community";
 export const PROFILE_FROM_COMMUNITY_ID_PARAM = "communityId";
+/** グループ内ランキングからプロフィールへ（community の後継） */
+export const PROFILE_FROM_GROUP_VALUE = "group";
+export const PROFILE_FROM_GROUP_ID_PARAM = "groupId";
 
 /** 戻り時に同じタブを復元するためのクエリキー */
 export const RANKINGS_TAB_METRIC_PARAM = "rankMetric";
@@ -97,6 +100,8 @@ export type RankingsReturnTab = {
   rankingLeague?: RankingLeagueSource;
   /** WORLD CUP ステージ（overall / qualifying / main） */
   wcStage?: WcRankingStage;
+  /** グループ内ランキングから遷移（オーバーレイ等 pathname に group が無い場合） */
+  groupId?: string;
 };
 
 /**
@@ -111,13 +116,13 @@ export function profileHrefWithRankingsReturn(
   const path = `${base}/u/${handleOrUid}`;
   const p = pathname ?? "";
   const communityMatch = p.match(/\/(?:web|mobile)\/communities\/([^/?#]+)/);
-  const communityId = communityMatch?.[1]
-    ? decodeURIComponent(communityMatch[1])
-    : "";
-  if (communityId) {
+  const groupId =
+    tab.groupId?.trim() ||
+    (communityMatch?.[1] ? decodeURIComponent(communityMatch[1]) : "");
+  if (groupId) {
     const q = new URLSearchParams({
-      [PROFILE_FROM_PARAM]: PROFILE_FROM_COMMUNITY_VALUE,
-      [PROFILE_FROM_COMMUNITY_ID_PARAM]: communityId,
+      [PROFILE_FROM_PARAM]: PROFILE_FROM_GROUP_VALUE,
+      [PROFILE_FROM_GROUP_ID_PARAM]: groupId,
     });
     if (tab.rankingLeague && isRankingLeagueSource(tab.rankingLeague)) {
       q.set(RANKINGS_TAB_LEAGUE_PARAM, tab.rankingLeague);

@@ -74,6 +74,7 @@ const pt: Messages = {
     last7d: "7 dias",
     last30d: "30 dias",
     backToRankings: "Voltar ao ranking",
+    backToGroupRankings: "Voltar ao ranking do grupo",
     overview: "Visão geral",
     stats: "Estatísticas",
     bracket: "Bracket",

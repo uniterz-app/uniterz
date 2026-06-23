@@ -74,6 +74,7 @@ const ar: Messages = {
     last7d: "٧ أيام",
     last30d: "٣٠ يومًا",
     backToRankings: "العودة إلى التصنيفات",
+    backToGroupRankings: "العودة إلى تصنيف المجموعة",
     overview: "نظرة عامة",
     stats: "الإحصائيات",
     bracket: "قوس البطولة",

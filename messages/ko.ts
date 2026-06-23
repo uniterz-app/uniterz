@@ -72,6 +72,7 @@ const ko: Messages = {
     last7d: "최근 7일",
     last30d: "최근 30일",
     backToRankings: "랭킹으로 돌아가기",
+    backToGroupRankings: "그룹 랭킹으로 돌아가기",
     overview: "개요",
     stats: "통계",
     bracket: "대진표",
