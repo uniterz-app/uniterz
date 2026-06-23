@@ -432,13 +432,24 @@ const isMobile = prefix === "/mobile" || prefix.startsWith("/m/");
   );
   const {
     badge: resultBadge,
+    outcomeBadge: resultOutcomeBadge,
+    showStreakBadge: resultShowStreakBadge,
+    stackBadges: resultStackBadges,
     streakBadge: resultStreakBadge,
     activeWinStreak: resultActiveWinStreak,
   } = useMemo(
     () =>
       resultPost
         ? resolveResultCardBadge(resultPost, language)
-        : { badge: null, activeWinStreak: 0, streakBadge: null },
+        : {
+            badge: null,
+            frameBadge: null,
+            outcomeBadge: null,
+            showStreakBadge: false,
+            stackBadges: false,
+            activeWinStreak: 0,
+            streakBadge: null,
+          },
     [resultPost, language]
   );
   const mergedResultAccent = showMergedResult
@@ -1384,6 +1395,9 @@ return (
         <div className="pointer-events-none absolute right-2 -top-1 z-20 md:right-3 md:top-2">
           <ResultOutcomeBadges
             badge={resultBadge}
+            outcomeBadge={resultOutcomeBadge}
+            showStreakBadge={resultShowStreakBadge}
+            stackBadges={resultStackBadges}
             streakBadge={resultStreakBadge}
             activeWinStreak={resultActiveWinStreak}
             isMobile={isMobile}

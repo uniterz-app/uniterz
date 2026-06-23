@@ -726,6 +726,9 @@ export function PredictMatchPreview({
         >
           <ResultOutcomeBadgesNative
             badge={mergedFinal.badge}
+            outcomeBadge={mergedFinal.outcomeBadge}
+            showStreakBadge={mergedFinal.showStreakBadge}
+            stackBadges={mergedFinal.stackBadges}
             streakBadge={mergedFinal.streakBadge}
             activeWinStreak={mergedFinal.activeWinStreak}
             badgeScale={0.88}

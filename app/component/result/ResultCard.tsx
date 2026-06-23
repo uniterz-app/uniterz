@@ -221,10 +221,14 @@ function ResultCardPresentationImpl({
     }
   };
 
-  const { badge, activeWinStreak, streakBadge } = resolveResultCardBadge(
-    post,
-    language
-  );
+  const {
+    badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+    activeWinStreak,
+    streakBadge,
+  } = resolveResultCardBadge(post, language);
 
   const nameMt = mobileScheduleDense
     ? "mt-0.5"
@@ -504,6 +508,9 @@ function ResultCardPresentationImpl({
           >
             <ResultOutcomeBadges
               badge={badge}
+              outcomeBadge={outcomeBadge}
+              showStreakBadge={showStreakBadge}
+              stackBadges={stackBadges}
               streakBadge={streakBadge}
               activeWinStreak={activeWinStreak}
               isMobile={isMobile}
@@ -548,6 +555,9 @@ function ResultCardPresentationImpl({
           >
             <ResultOutcomeBadges
               badge={badge}
+              outcomeBadge={outcomeBadge}
+              showStreakBadge={showStreakBadge}
+              stackBadges={stackBadges}
               streakBadge={streakBadge}
               activeWinStreak={activeWinStreak}
               isMobile={isMobile}

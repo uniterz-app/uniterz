@@ -74,7 +74,7 @@ import {
   dayPointsHeaderForNative,
   type NativeDayPointsHeader,
 } from "./nativeResultDaySummary";
-import { resolveResultOutcomeBadge } from "../../../../../lib/result/resultBadge";
+import { resolveResultBadgeDisplay } from "../../../../../lib/result/resultBadge";
 import {
   deletePredictionPostApi,
   PredictionApiError,
@@ -648,7 +648,12 @@ function ResultPostCard({
     toInt((stats?.pointsV3Detail as { activeWinStreak?: number } | undefined)?.activeWinStreak) ??
     0;
   const streakBadge = getStreakBadge(activeWinStreak, isEn);
-  const badge: ResultBadge = resolveResultOutcomeBadge({
+  const {
+    frameBadge: badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+  } = resolveResultBadgeDisplay({
     stats,
     prediction: pred,
     result,
@@ -817,6 +822,9 @@ function ResultPostCard({
           >
             <ResultOutcomeBadgesNative
               badge={badge}
+              outcomeBadge={outcomeBadge}
+              showStreakBadge={showStreakBadge}
+              stackBadges={stackBadges}
               streakBadge={streakBadge}
               activeWinStreak={activeWinStreak}
               showLiveMark={showLiveMark}
@@ -831,6 +839,9 @@ function ResultPostCard({
         >
           <ResultOutcomeBadgesNative
             badge={badge}
+            outcomeBadge={outcomeBadge}
+            showStreakBadge={showStreakBadge}
+            stackBadges={stackBadges}
             streakBadge={streakBadge}
             activeWinStreak={activeWinStreak}
             showLiveMark={showLiveMark}

@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import type { ResultOutcomeOnlyBadge } from "../../../../../lib/result/resultBadge";
 import { resultStreakTier } from "../../../../../lib/result/resultGlass";
 import ResultCyberBadgeNative from "./ResultCyberBadgeNative";
 import type { ResultCyberBadgeKind } from "./resultCyberBadgeThemes";
@@ -10,6 +11,9 @@ type StreakBadge = { label: string; tone?: "silver" | "platinum" | "gold" };
 
 type Props = {
   badge: ResultBadge;
+  outcomeBadge?: ResultOutcomeOnlyBadge | null;
+  showStreakBadge?: boolean;
+  stackBadges?: boolean;
   streakBadge: StreakBadge | null;
   activeWinStreak: number;
   showLiveMark?: boolean;
@@ -36,9 +40,77 @@ function streakBadgeKind(activeWinStreak: unknown): ResultCyberBadgeKind | null 
   return null;
 }
 
+function resolveBadgeLayout(props: Props) {
+  const { badge, outcomeBadge, showStreakBadge, stackBadges } = props;
+
+  if (stackBadges !== undefined) {
+    return {
+      stackBadges,
+      showStreakBadge: showStreakBadge ?? false,
+      outcomeBadge: outcomeBadge ?? null,
+    };
+  }
+
+  if (badge === "streak") {
+    return {
+      stackBadges: false,
+      showStreakBadge: true,
+      outcomeBadge: null,
+    };
+  }
+
+  return {
+    stackBadges: false,
+    showStreakBadge: false,
+    outcomeBadge: (badge as ResultOutcomeOnlyBadge) ?? null,
+  };
+}
+
+function OutcomeBadge({
+  outcome,
+  compact,
+  hitBadgeSubtle,
+}: {
+  outcome: ResultOutcomeOnlyBadge;
+  compact: boolean;
+  hitBadgeSubtle: boolean;
+}) {
+  if (outcome === "hit") {
+    return (
+      <ResultCyberBadgeNative kind="hit" label="HIT" compact={compact} subtle={hitBadgeSubtle} />
+    );
+  }
+  if (outcome === "perfect") {
+    return (
+      <ResultCyberBadgeNative
+        kind="perfect"
+        label="PERFECT"
+        compact={compact}
+        subtle={hitBadgeSubtle}
+      />
+    );
+  }
+  if (outcome === "upset") {
+    return (
+      <ResultCyberBadgeNative
+        kind="upset"
+        label="UPSET"
+        compact={compact}
+        subtle={hitBadgeSubtle}
+      />
+    );
+  }
+  return (
+    <ResultCyberBadgeNative kind="miss" label="MISS" compact={compact} subtle={hitBadgeSubtle} />
+  );
+}
+
 /** Web `ResultOutcomeBadges` */
 export default function ResultOutcomeBadgesNative({
   badge,
+  outcomeBadge,
+  showStreakBadge,
+  stackBadges,
   streakBadge,
   activeWinStreak,
   showLiveMark = false,
@@ -46,10 +118,81 @@ export default function ResultOutcomeBadgesNative({
   hitBadgeSubtle = false,
   badgeScale = 1,
 }: Props) {
-  if (!badge && !showLiveMark) return null;
+  const layout = resolveBadgeLayout({
+    badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+    streakBadge,
+    activeWinStreak,
+    showLiveMark,
+    compact,
+    hitBadgeSubtle,
+    badgeScale,
+  });
 
-  const streakKind = badge === "streak" ? streakBadgeKind(activeWinStreak) : null;
+  const displayOutcome = layout.stackBadges
+    ? layout.outcomeBadge
+    : layout.showStreakBadge &&
+        layout.outcomeBadge !== "perfect" &&
+        layout.outcomeBadge !== "upset"
+      ? null
+      : layout.outcomeBadge;
+
+  const displayStreak =
+    layout.showStreakBadge &&
+    (layout.stackBadges ||
+      (layout.outcomeBadge !== "perfect" && layout.outcomeBadge !== "upset"));
+
+  if (!displayStreak && !displayOutcome && !showLiveMark) {
+    return null;
+  }
+
+  const streakKind = displayStreak ? streakBadgeKind(activeWinStreak) : null;
   const flameSize = Math.round((compact ? 10 : 12) * badgeScale);
+
+  const streakNode =
+    displayStreak && streakKind && streakBadge ? (
+      <ResultCyberBadgeNative
+        kind={streakKind}
+        label={streakBadge.label}
+        compact={compact}
+        subtle={hitBadgeSubtle}
+        maxLabelWidth={120}
+        leading={
+          <MaterialCommunityIcons
+            name="fire"
+            size={flameSize}
+            color={streakFlameColor(streakBadge.tone)}
+          />
+        }
+      />
+    ) : null;
+
+  const outcomeNode = displayOutcome ? (
+    <OutcomeBadge
+      outcome={displayOutcome}
+      compact={compact}
+      hitBadgeSubtle={hitBadgeSubtle}
+    />
+  ) : null;
+
+  const liveNode = showLiveMark ? (
+    <ResultCyberBadgeNative kind="live" label="LIVE" compact={compact} subtle={hitBadgeSubtle} />
+  ) : null;
+
+  const scaleStyle =
+    badgeScale !== 1 ? { transform: [{ scale: badgeScale }] } : undefined;
+
+  if (layout.stackBadges) {
+    return (
+      <View style={[styles.stackColumn, scaleStyle]}>
+        {streakNode}
+        {outcomeNode}
+        {liveNode}
+      </View>
+    );
+  }
 
   return (
     <View
@@ -59,65 +202,20 @@ export default function ResultOutcomeBadgesNative({
         justifyContent: "flex-end",
         gap: 4 * badgeScale,
         alignSelf: "flex-end",
-        transform: badgeScale !== 1 ? [{ scale: badgeScale }] : undefined,
+        ...scaleStyle,
       }}
     >
-      {badge === "streak" && streakKind && streakBadge ? (
-        <ResultCyberBadgeNative
-          kind={streakKind}
-          label={streakBadge.label}
-          compact={compact}
-          subtle={hitBadgeSubtle}
-          maxLabelWidth={120}
-          leading={
-            <MaterialCommunityIcons
-              name="fire"
-              size={flameSize}
-              color={streakFlameColor(streakBadge.tone)}
-            />
-          }
-        />
-      ) : null}
-      {badge === "hit" ? (
-        <ResultCyberBadgeNative
-          kind="hit"
-          label="HIT"
-          compact={compact}
-          subtle={hitBadgeSubtle}
-        />
-      ) : null}
-      {badge === "perfect" ? (
-        <ResultCyberBadgeNative
-          kind="perfect"
-          label="PERFECT"
-          compact={compact}
-          subtle={hitBadgeSubtle}
-        />
-      ) : null}
-      {badge === "upset" ? (
-        <ResultCyberBadgeNative
-          kind="upset"
-          label="UPSET"
-          compact={compact}
-          subtle={hitBadgeSubtle}
-        />
-      ) : null}
-      {badge === "miss" ? (
-        <ResultCyberBadgeNative
-          kind="miss"
-          label="MISS"
-          compact={compact}
-          subtle={hitBadgeSubtle}
-        />
-      ) : null}
-      {showLiveMark ? (
-        <ResultCyberBadgeNative
-          kind="live"
-          label="LIVE"
-          compact={compact}
-          subtle={hitBadgeSubtle}
-        />
-      ) : null}
+      {streakNode}
+      {outcomeNode}
+      {liveNode}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  stackColumn: {
+    alignItems: "flex-end",
+    gap: 4,
+    alignSelf: "flex-end",
+  },
+});

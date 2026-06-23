@@ -196,10 +196,14 @@ function ResultMatchHeader({
   const homeRecord = useTeamRecord(post.home?.teamId);
   const awayRecord = useTeamRecord(post.away?.teamId);
 
-  const { badge, activeWinStreak, streakBadge } = resolveResultCardBadge(
-    post,
-    language
-  );
+  const {
+    badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+    activeWinStreak,
+    streakBadge,
+  } = resolveResultCardBadge(post, language);
 
   const canPredictEdit = useMemo(() => {
     if (!viewerUid || !post.gameId) return false;
@@ -263,6 +267,9 @@ function ResultMatchHeader({
         >
           <ResultOutcomeBadges
             badge={badge}
+            outcomeBadge={outcomeBadge}
+            showStreakBadge={showStreakBadge}
+            stackBadges={stackBadges}
             streakBadge={streakBadge}
             activeWinStreak={activeWinStreak}
             isMobile={false}
