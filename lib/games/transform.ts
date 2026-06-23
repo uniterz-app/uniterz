@@ -459,6 +459,10 @@ export function toMatchCardProps(
   return {
     id,
     league,
+    season:
+      typeof raw?.season === "string" && raw.season.trim()
+        ? raw.season.trim()
+        : undefined,
     seasonPhase,
     venue: raw?.venue ?? "",
     roundLabel: roundLabelStr,

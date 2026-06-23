@@ -126,6 +126,8 @@ export type TeamSide = {
 export type MatchCardProps = {
   id: string;
   league: League;
+  /** シーズン（例: "2025-26"）。WC 順位表・過去試合などに使用 */
+  season?: string | null;
   /** regular | play_in | playoffs; omitted/null = regular. */
   seasonPhase?: "regular" | "play_in" | "playoffs" | null;
   venue?: string;
