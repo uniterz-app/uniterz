@@ -101,6 +101,7 @@ import {
   cyberFilterBarClasses,
 } from "@/lib/ui/cyberFilterBar";
 import { fetchPlayoffSeriesPeerGames } from "@/lib/games/fetchPlayoffSeriesPeerGames";
+import { useMatchCardTeamRecords } from "@/lib/games/useMatchCardTeamRecords";
 
 const PredictionFormV2 = dynamic(
   () => import("@/app/component/predict/PredictionFormV2"),
@@ -874,6 +875,36 @@ export default function ResultListWithOverlay({
     if (!selectedPost || !detailGame) return null;
     return mergeGameIntoResultPost(selectedPost, detailGame);
   }, [selectedPost, detailGame]);
+
+  const overlayMatchGame = useMemo((): MatchCardProps | null => {
+    if (detailGame) return detailGame;
+    if (predictOverlay?.phase === "ready") return predictOverlay.game;
+    return null;
+  }, [detailGame, predictOverlay]);
+
+  const overlayTeamIds = useMemo(() => {
+    if (!overlayMatchGame) return [] as string[];
+    return [overlayMatchGame.home?.teamId, overlayMatchGame.away?.teamId].filter(
+      (id): id is string => Boolean(id)
+    );
+  }, [overlayMatchGame]);
+
+  const overlayTeamRecordMap = useMatchCardTeamRecords(
+    overlayMatchGame?.league,
+    overlayTeamIds
+  );
+
+  const overlayMatchCardRecords = useMemo(() => {
+    if (!overlayMatchGame) {
+      return { homeRecord: null, awayRecord: null } as const;
+    }
+    const homeId = overlayMatchGame.home?.teamId;
+    const awayId = overlayMatchGame.away?.teamId;
+    return {
+      homeRecord: homeId ? overlayTeamRecordMap[homeId] ?? null : null,
+      awayRecord: awayId ? overlayTeamRecordMap[awayId] ?? null : null,
+    };
+  }, [overlayMatchGame, overlayTeamRecordMap]);
 
   useEffect(() => {
     if (!openPostId) return;
@@ -2023,6 +2054,7 @@ export default function ResultListWithOverlay({
                         {detailGame && displayDetailResultPost ? (
                           <MatchCard
                             {...detailGame}
+                            {...overlayMatchCardRecords}
                             language={language}
                             resultPost={displayDetailResultPost}
                             resultRatingBarsImmediate
@@ -2165,6 +2197,7 @@ export default function ResultListWithOverlay({
                       <>
                         <MatchCard
                           {...predictOverlay.game}
+                          {...overlayMatchCardRecords}
                           language={language}
                           resultPost={displayOverlayResultPost}
                           resultRatingBarsImmediate
