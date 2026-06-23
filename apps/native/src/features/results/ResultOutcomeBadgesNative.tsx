@@ -186,9 +186,9 @@ export default function ResultOutcomeBadgesNative({
 
   if (layout.stackBadges) {
     return (
-      <View style={[styles.stackColumn, scaleStyle]}>
-        {streakNode}
+      <View style={[styles.stackRow, scaleStyle]}>
         {outcomeNode}
+        {streakNode}
         {liveNode}
       </View>
     );
@@ -213,8 +213,11 @@ export default function ResultOutcomeBadgesNative({
 }
 
 const styles = StyleSheet.create({
-  stackColumn: {
-    alignItems: "flex-end",
+  stackRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "flex-end",
     gap: 4,
     alignSelf: "flex-end",
   },

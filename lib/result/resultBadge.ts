@@ -94,7 +94,7 @@ export type ResultBadgeDisplay = {
   frameBadge: ResultCardBadge;
   outcomeBadge: ResultOutcomeOnlyBadge;
   showStreakBadge: boolean;
-  /** 上: 連勝、下: PERFECT / UPSET を縦積み */
+  /** PERFECT / UPSET を連勝バッジの左に横並び */
   stackBadges: boolean;
 };
 
