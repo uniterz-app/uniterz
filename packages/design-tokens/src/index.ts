@@ -15,6 +15,10 @@ export const colors = {
   navBarFillStart: "rgba(18,24,36,0.52)",
   navBarFillEnd: "rgba(10,14,24,0.58)",
   navBarSheenStart: "rgba(79,247,244,0.03)",
+  navBarBorder: "rgba(251, 191, 36, 0.48)",
+  navBarBorderInner: "rgba(251, 191, 36, 0.28)",
+  navBarFrameOuter: "rgba(250, 204, 21, 0.78)",
+  navBarFrameAccent: "rgba(253, 224, 71, 0.55)",
   filterBarBg: "rgba(10,17,24,0.72)",
   filterBarBorder: "rgba(148,163,184,0.18)",
   glassCardBg: "rgba(15,23,42,0.55)",
@@ -47,7 +51,8 @@ export const typography = {
 export const radius = {
   card: 16,
   chip: 999,
-  tabBar: 22,
+  /** レガシー丸み — ナビは chamfer（14px） */
+  tabBar: 0,
   button: 12,
   modal: 20,
 } as const;

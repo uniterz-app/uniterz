@@ -8,7 +8,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   type MobileMetric,
 } from "../../../../../app/component/rankings/_data/mockRows";
@@ -34,14 +33,13 @@ import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey
 import type { MainTabParamList } from "../../navigation/types";
 import type { Language } from "../../../../../lib/i18n/language";
 import { getRankingsScheduleNoticeText } from "../../../../../lib/rankings/getRankingsScheduleNoticeText";
-import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import BracketLeaderboardSectionNative from "./BracketLeaderboardSectionNative";
 import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
 import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
 import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
 import { CandleChartLoaderNative } from "../../components/CandleChartLoaderNative";
-import { spacing } from "../../theme/tokens";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
@@ -67,8 +65,7 @@ function scheduleNoticeForUser(language: RankingsLanguage): string {
 
 export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
-  const insets = useSafeAreaInsets();
-  const scrollTopPad = insets.top + spacing.sm;
+  const { topContentPadY } = useBottomTabBarInsets();
   const [category, setCategory] = useState<"playoffs" | "bracket">("playoffs");
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
@@ -209,11 +206,10 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
         style={styles.scrollLayer}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: scrollTopPad, paddingBottom: bottomReserveY + 16 },
+          { paddingTop: topContentPadY, paddingBottom: bottomReserveY + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <UniterzBrandShelfNative horizontalBleed={12} />
         <View style={styles.titleRow}>
           <CyberMenuButton
             size="sm"

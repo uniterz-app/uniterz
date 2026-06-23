@@ -40,6 +40,9 @@ import {
   communityModalCardStyle,
   communityPressableTapStyle,
 } from "./communityCrtThemeNative";
+import CommunityTeamPickerNative from "./CommunityTeamPickerNative";
+import { useScheduleTeamsNative } from "../games/useScheduleTeamsNative";
+import type { SupportedLeague } from "../games/useTodayGames";
 
 type Props = {
   visible: boolean;
@@ -63,7 +66,13 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
   const [headerUri, setHeaderUri] = useState<string | null>(null);
   const [metric, setMetric] = useState<CommunityMetric>("totalPoints");
   const [league, setLeague] = useState<CommunityLeague>("all");
+  const [teamIds, setTeamIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  const scheduleLeague: SupportedLeague =
+    league === "all" ? "nba" : (league as SupportedLeague);
+  const { teams } = useScheduleTeamsNative(scheduleLeague);
+  const showTeamPicker = league !== "all";
 
   const t = useMemo(
     () =>
@@ -76,6 +85,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             header: "Header image",
             metric: "Compete on",
             league: "League",
+            teams: "Target teams",
             scoringNote:
               "Scores count from the day this group is created (JST). Past results are not included.",
             cancel: "Cancel",
@@ -94,6 +104,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             header: "ヘッダー画像",
             metric: "競う項目",
             league: "リーグ",
+            teams: "対象チーム",
             scoringNote:
               "グループ作成日（JST）以降の予想だけが集計されます。過去の成績は含みません。",
             cancel: "キャンセル",
@@ -114,6 +125,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
     setHeaderUri(null);
     setMetric("totalPoints");
     setLeague("all");
+    setTeamIds([]);
     onClose();
   }, [busy, onClose]);
 
@@ -160,7 +172,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
           rankingMetric: metric,
           periodType: "from_now",
           rankingLeague: league,
-          rankingTeamIds: [],
+          rankingTeamIds: teamIds,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -180,7 +192,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             rankingMetric: metric,
             periodType: "from_now",
             rankingLeague: league,
-            rankingTeamIds: [],
+            rankingTeamIds: teamIds,
             role: "owner",
           };
       onCreated(payload, String(json.inviteCode ?? "") || undefined);
@@ -188,7 +200,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
     } finally {
       setBusy(false);
     }
-  }, [name, description, headerUri, metric, league, fUser, busy, language, onCreated, closeReset]);
+  }, [name, description, headerUri, metric, league, teamIds, fUser, busy, language, onCreated, closeReset]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={closeReset}>
@@ -286,8 +298,23 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
               <OptionRow
                 options={COMMUNITY_LEAGUES.map((k) => ({ key: k, label: leagueLabel(k, language) }))}
                 value={league}
-                onChange={(v) => setLeague(v as CommunityLeague)}
+                onChange={(v) => {
+                  setLeague(v as CommunityLeague);
+                  setTeamIds([]);
+                }}
               />
+
+              {showTeamPicker ? (
+                <>
+                  <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.teams}</Text>
+                  <CommunityTeamPickerNative
+                    teams={teams}
+                    selectedIds={teamIds}
+                    onChange={setTeamIds}
+                    language={language}
+                  />
+                </>
+              ) : null}
 
               <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.metric}</Text>
               <OptionRow

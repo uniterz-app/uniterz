@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { Language } from "../../../../../lib/i18n/language";
+import { buildCommunityInviteShareText } from "../../../../../lib/communities/inviteShare";
+import { getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { CommunityModalBackdropNative } from "./CommunityCrtPartsNative";
 import { copyTextNative, shareTextNative } from "./copyTextNative";
 import { communityMono, communityPressableTapStyle } from "./communityCrtThemeNative";
@@ -54,10 +56,9 @@ export default function GroupCreatedSuccessModalNative({
   }
 
   async function onShare() {
-    const message =
-      language === "en"
-        ? `Join my Uniterz group${groupName ? ` "${groupName}"` : ""}! Invite code: ${inviteCode}`
-        : `Uniterzグループ${groupName ? `「${groupName}」` : ""}に参加しよう！招待コード: ${inviteCode}`;
+    const base = buildCommunityInviteShareText({ inviteCode, groupName, language });
+    const origin = getShareAppOrigin();
+    const message = base.includes(origin) ? base : `${base}\n\n${origin}`;
     await shareTextNative(t.share, message);
   }
 
