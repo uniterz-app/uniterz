@@ -522,6 +522,8 @@ function ResultPostCard({
     gameId: post.gameId,
   });
   const isWcCard = leagueKey === "wc";
+  const isBasketballCard = leagueKey === "nba" || leagueKey === "bj";
+  const listScoreDensity = isBasketballCard ? "listBasketball" : "list";
   const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
 
   const home = post.home as { name?: string; teamId?: string } | undefined;
@@ -926,10 +928,17 @@ function ResultPostCard({
                     home={ph}
                     away={pa}
                     variant="predicted"
-                    density="list"
+                    density={listScoreDensity}
                   />
                 ) : (
-                  <Text style={styles.predictedScoreFallback}>— – —</Text>
+                  <Text
+                    style={[
+                      styles.predictedScoreFallback,
+                      isBasketballCard && styles.predictedScoreFallbackBasketball,
+                    ]}
+                  >
+                    — – —
+                  </Text>
                 )}
               </Animated.View>
               {hasFinal ? (
@@ -938,7 +947,7 @@ function ResultPostCard({
                     home={rh}
                     away={ra}
                     variant="final"
-                    density="list"
+                    density={listScoreDensity}
                   />
                 </Animated.View>
               ) : null}
@@ -1941,6 +1950,11 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.85)",
     fontFamily: MATCH_CARD_SCORE_FONT,
     textAlign: "center",
+  },
+  predictedScoreFallbackBasketball: {
+    fontSize: 20,
+    lineHeight: 22,
+    letterSpacing: -0.5,
   },
   finalScoreWrap: {
     marginTop: 3,

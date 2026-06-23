@@ -870,7 +870,9 @@ function ResultCardPresentationImpl({
               "leading-none tracking-tight font-black text-white/85",
               isMobile
                 ? mobileScheduleDense
-                  ? "text-3xl md:text-4xl"
+                  ? normalizedLeague === "nba" || normalizedLeague === "bj"
+                    ? "text-xl md:text-2xl"
+                    : "text-3xl md:text-4xl"
                   : "text-[clamp(1.5rem,6.5vw,1.875rem)]"
                 : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
             ].join(" ")}

@@ -6,7 +6,7 @@ type Props = {
   away: number;
   variant?: "predicted" | "final";
   /** 一覧カードは Web `ResultCard` mobileScheduleDense の大きめスコア */
-  density?: "list" | "compact";
+  density?: "list" | "listBasketball" | "compact";
   style?: TextStyle;
 };
 
@@ -19,8 +19,15 @@ export default function ResultMatchScoreLineNative({
   style,
 }: Props) {
   const predictedStyle =
-    density === "list" ? styles.predictedList : styles.predictedCompact;
-  const finalStyle = density === "list" ? styles.finalList : styles.finalCompact;
+    density === "list"
+      ? styles.predictedList
+      : density === "listBasketball"
+        ? styles.predictedListBasketball
+        : styles.predictedCompact;
+  const finalStyle =
+    density === "list" || density === "listBasketball"
+      ? styles.finalList
+      : styles.finalCompact;
   const base = variant === "final" ? finalStyle : predictedStyle;
   const dashStyle = variant === "final" ? styles.dashFinal : styles.dashPredicted;
   return (
@@ -62,6 +69,17 @@ const styles = StyleSheet.create({
     fontFamily: MATCH_CARD_SCORE_FONT,
     fontVariant: ["tabular-nums"],
     letterSpacing: -0.6,
+  },
+  /** NBA/BJ など3桁スコア — Web mobile `text-xl` 相当 */
+  predictedListBasketball: {
+    flexShrink: 0,
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: "900",
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: MATCH_CARD_SCORE_FONT,
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.5,
   },
   finalCompact: {
     flexShrink: 0,
