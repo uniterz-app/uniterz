@@ -1,5 +1,5 @@
 import type { Options } from "html-to-image/lib/types";
-import { formatShareLinkDisplay, buildResultShareUrl } from "@/lib/share/shareAppUrls";
+import { formatShareLinkDisplay, buildResultShareUrl, getShareAppOrigin } from "@/lib/share/shareAppUrls";
 import {
   shouldIncludeInRankCardCapture,
   isMobileShareContext,
