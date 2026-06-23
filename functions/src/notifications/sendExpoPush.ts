@@ -7,6 +7,11 @@ import {
   type PushNotificationData,
   type PushNotificationType,
 } from "./pushNotificationCopy";
+import {
+  isPushTypeEnabledForPrefs,
+  parsePushNotificationPrefs,
+  type PushNotificationPrefs,
+} from "./pushNotificationPrefs";
 
 const expo = new Expo();
 
@@ -48,17 +53,23 @@ async function loadTokensForUids(uids: string[]): Promise<TokenRecord[]> {
   return out;
 }
 
-async function loadLanguages(uids: string[]): Promise<Map<string, "ja" | "en">> {
+async function loadUserPushContexts(
+  uids: string[]
+): Promise<Map<string, { language: "ja" | "en"; prefs: PushNotificationPrefs }>> {
   const firestore = getFirestore();
   const unique = [...new Set(uids.filter(Boolean))];
-  const map = new Map<string, "ja" | "en">();
+  const map = new Map<string, { language: "ja" | "en"; prefs: PushNotificationPrefs }>();
   const chunkSize = 30;
   for (let i = 0; i < unique.length; i += chunkSize) {
     const chunk = unique.slice(i, i + chunkSize);
     const refs = chunk.map((uid) => firestore.doc(`users/${uid}`));
     const snaps = await firestore.getAll(...refs);
     for (const snap of snaps) {
-      map.set(snap.id, normalizePushLanguage(snap.data()?.language));
+      const data = snap.data();
+      map.set(snap.id, {
+        language: normalizePushLanguage(data?.language),
+        prefs: parsePushNotificationPrefs(data?.notificationPrefs),
+      });
     }
   }
   return map;
@@ -85,9 +96,9 @@ export async function sendExpoPushToUids(input: {
   matchup?: GameMatchupCopyInput;
 }): Promise<{ sent: number; skipped: number }> {
   const uids = input.targets.map((t) => t.uid);
-  const [tokens, languages] = await Promise.all([
+  const [tokens, userContexts] = await Promise.all([
     loadTokensForUids(uids),
-    loadLanguages(uids),
+    loadUserPushContexts(uids),
   ]);
 
   if (tokens.length === 0) {
@@ -98,14 +109,18 @@ export async function sendExpoPushToUids(input: {
 
   const messages: ExpoPushMessage[] = [];
   for (const rec of tokens) {
-    const lang = languages.get(rec.uid) ?? "ja";
-    const copy = buildPushNotificationCopy(input.type, lang, input.matchup);
+    const ctx = userContexts.get(rec.uid);
+    if (!ctx || !isPushTypeEnabledForPrefs(ctx.prefs, input.type)) {
+      continue;
+    }
+    const copy = buildPushNotificationCopy(input.type, ctx.language, input.matchup);
     const data = dataByUid.get(rec.uid) ?? { type: input.type };
     messages.push({
       to: rec.expoPushToken,
       sound: "default",
       title: copy.title,
       body: copy.body,
+      ...(copy.subtitle ? { subtitle: copy.subtitle } : {}),
       data: data as Record<string, unknown>,
     });
   }

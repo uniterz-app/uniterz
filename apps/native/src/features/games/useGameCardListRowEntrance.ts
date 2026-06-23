@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import {
   cancelAnimation,
   Easing,
@@ -19,10 +19,13 @@ import {
   GAMES_DAY_SWITCH_ROW_STAGGER_CAP_MS,
   GAMES_DAY_SWITCH_ROW_STAGGER_MS,
   GAMES_DAY_SWITCH_ROW_TRANSLATE_MS,
+  GAMES_ENTRY_SCAN_DELAY_AFTER_SHELL_MS,
+  GAMES_ENTRY_SCAN_DURATION_MS,
   GAMES_LIST_CARDS_LEAD_IN_MS,
   GAMES_LIST_REST_CARDS_DELAY_MS,
   GAMES_PAGE_REST_CARD_DURATION_MS,
   GAMES_PAGE_REST_CARD_FROM_Y,
+  GAMES_PAGE_RICH_CARD_COUNT,
   PAGE_REST_CARD_STAGGER_MS,
 } from "./gamesCyberMotion";
 import {
@@ -36,6 +39,8 @@ const ENTRY_GROUP_SHELL = 0;
 const ENTRY_GROUP_HEADER = 1;
 const ENTRY_GROUP_TEAMS = 2;
 const ENTRY_GROUP_FOOTER = 3;
+
+const GAMES_ENTRY_SCAN_EASE = Easing.bezier(0.3, 0, 0.55, 1);
 
 export type GameCardEntranceVariant = "full" | "light";
 
@@ -83,6 +88,7 @@ function groupDelayMs(rowIndex: number, group: number) {
   return listStagger + GAMES_LIST_CARDS_LEAD_IN_MS + group * GAMES_CYBER_GROUP_GAP_MS;
 }
 
+/** Web `MatchCard` entryGroupProps: スライド + ロックオン明滅 */
 function runGroupEnter(
   opacity: { value: number },
   translateY: { value: number },
@@ -97,6 +103,31 @@ function runGroupEnter(
   translateY.value = withDelay(
     delayMs,
     withTiming(0, { duration: yDur, easing: gamesCyberEaseBezier })
+  );
+}
+
+/** Web `MatchCard` 入場スキャン光（上→下へ走査） */
+function runEntryScan(
+  scanTranslateY: { value: number },
+  scanOpacity: { value: number },
+  delayMs: number
+) {
+  scanTranslateY.value = -88;
+  scanOpacity.value = 0;
+  scanTranslateY.value = withDelay(
+    delayMs,
+    withTiming(300, {
+      duration: GAMES_ENTRY_SCAN_DURATION_MS,
+      easing: GAMES_ENTRY_SCAN_EASE,
+    })
+  );
+  scanOpacity.value = withDelay(
+    delayMs,
+    withSequence(
+      withTiming(1, { duration: 80, easing: Easing.linear }),
+      withTiming(1, { duration: 460, easing: Easing.linear }),
+      withTiming(0, { duration: 80, easing: Easing.linear })
+    )
   );
 }
 
@@ -145,7 +176,7 @@ function computeEntranceBaseline({
     };
   }
 
-  if (rowIndex >= 3) {
+  if (rowIndex >= GAMES_PAGE_RICH_CARD_COUNT) {
     return {
       ...visible,
       shellOpacity: 0,
@@ -153,8 +184,9 @@ function computeEntranceBaseline({
     };
   }
 
+  /** Web `scheduleItem` page 先頭3枚: 行ラッパー opacity 1、内部4グループ + スキャン */
   return {
-    shellOpacity: 0,
+    shellOpacity: 1,
     shellTranslateY: 0,
     gridOpacity: 0,
     borderReveal: 0,
@@ -182,7 +214,7 @@ function computeEntranceBaseline({
 
 /**
  * Web `MatchCard` entryGroupProps + `ScheduleList.scheduleItem` に合わせた試合カード入場。
- * - page: 先頭3枚は4グループのロックオン、4枚目以降は遅延フェード
+ * - page: 先頭3枚は4グループのロックオン + スキャン、4枚目以降は遅延フェード
  * - daySwitch: 上から順にフェード＋わずかな下降
  */
 export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams) {
@@ -195,8 +227,10 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
   } = params;
 
   const isDaySwitch = entranceVariant === "light";
-  const isPageRich = entranceVariant === "full" && rowIndex < 3;
-  const isPageRest = entranceVariant === "full" && rowIndex >= 3;
+  const isPageRich =
+    entranceVariant === "full" && rowIndex < GAMES_PAGE_RICH_CARD_COUNT;
+  const isPageRest =
+    entranceVariant === "full" && rowIndex >= GAMES_PAGE_RICH_CARD_COUNT;
   const skip = !enteringAnimationEnabled || reduceMotion;
 
   const baseline = computeEntranceBaseline(params);
@@ -231,11 +265,11 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
   const footerTranslateY = useSharedValue(baseline.footerTranslateY);
   const footerGlow = useSharedValue(baseline.footerGlow);
 
-  /** Web `MatchCard` 入場スキャン光（上→下） */
   const scanTranslateY = useSharedValue(baseline.scanTranslateY);
   const scanOpacity = useSharedValue(baseline.scanOpacity);
 
   const pressed = useSharedValue(0);
+  const prevFooterGlowRef = useRef(showPredictPrimaryGlow);
 
   useLayoutEffect(() => {
     const resetAll = () => {
@@ -310,7 +344,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
       scanTranslateY.value = 0;
       const delayMs =
         GAMES_LIST_REST_CARDS_DELAY_MS +
-        (rowIndex - 3) * PAGE_REST_CARD_STAGGER_MS;
+        (rowIndex - GAMES_PAGE_RICH_CARD_COUNT) * PAGE_REST_CARD_STAGGER_MS;
       shellOpacity.value = 0;
       shellTranslateY.value = GAMES_PAGE_REST_CARD_FROM_Y;
       shellOpacity.value = withDelay(
@@ -335,15 +369,8 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
 
     if (isPageRich) {
       const shellDelay = groupDelayMs(rowIndex, ENTRY_GROUP_SHELL);
-      shellOpacity.value = 0;
+      shellOpacity.value = 1;
       shellTranslateY.value = 0;
-      shellOpacity.value = withDelay(
-        shellDelay,
-        withTiming(1, {
-          duration: Math.round(GAMES_CYBER_ENTRY_DURATION_MS * 0.55),
-          easing: gamesCyberEaseBezier,
-        })
-      );
 
       runGroupEnter(
         headerOpacity,
@@ -468,23 +495,10 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
         );
       }
 
-      const scanDelay = shellDelay + 50;
-      scanTranslateY.value = -88;
-      scanOpacity.value = 0;
-      scanTranslateY.value = withDelay(
-        scanDelay,
-        withTiming(300, {
-          duration: 620,
-          easing: Easing.bezier(0.3, 0, 0.55, 1),
-        })
-      );
-      scanOpacity.value = withDelay(
-        scanDelay,
-        withSequence(
-          withTiming(1, { duration: 80, easing: Easing.linear }),
-          withTiming(1, { duration: 460, easing: Easing.linear }),
-          withTiming(0, { duration: 80, easing: Easing.linear })
-        )
+      runEntryScan(
+        scanTranslateY,
+        scanOpacity,
+        shellDelay + GAMES_ENTRY_SCAN_DELAY_AFTER_SHELL_MS
       );
 
       return () => {
@@ -516,14 +530,22 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
 
     resetAll();
     return undefined;
-  }, [
-    skip,
-    isDaySwitch,
-    isPageRich,
-    isPageRest,
-    rowIndex,
-    showPredictPrimaryGlow,
-  ]);
+  }, [skip, isDaySwitch, isPageRich, isPageRest, rowIndex]);
+
+  /** 予想済み判定の非同期解決時 — 入場全体は再生せずフッターグローのみ更新 */
+  useLayoutEffect(() => {
+    if (skip) {
+      footerGlow.value = showPredictPrimaryGlow ? 1 : 0;
+      prevFooterGlowRef.current = showPredictPrimaryGlow;
+      return;
+    }
+    if (prevFooterGlowRef.current === showPredictPrimaryGlow) return;
+    prevFooterGlowRef.current = showPredictPrimaryGlow;
+    footerGlow.value = withTiming(showPredictPrimaryGlow ? 1 : 0, {
+      duration: showPredictPrimaryGlow ? 200 : 120,
+      easing: gamesCyberEaseBezier,
+    });
+  }, [skip, showPredictPrimaryGlow, footerGlow]);
 
   const shellTransformStyle = useAnimatedStyle(() => {
     const pressS = interpolate(pressed.value, [0, 1], [1, 0.985]);
@@ -605,6 +627,7 @@ export function useGameCardListRowEntrance(params: GameCardListRowEntranceParams
 
   return {
     pressed,
+    showEntryScan: isPageRich && !skip,
     shellTransformStyle,
     shellOpacityStyle,
     borderStrokeStyle,

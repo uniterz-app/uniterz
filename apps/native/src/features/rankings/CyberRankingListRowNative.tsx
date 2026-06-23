@@ -1,4 +1,5 @@
 import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
@@ -26,6 +27,7 @@ import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
 import { RankFirstBorderEdgeScanNative } from "./RankFirstBorderEdgeScanNative";
 import { rankingFlagImageUri } from "./rankingFlagUri";
 import { METRIC_FONT, RANKING_SCORE_FONT, rankingNameFont, rankingTagFont } from "./rankingsUiTheme";
+import { useRankingsCrownEntrance } from "./useRankingsCrownEntrance";
 
 function cyberScoreColor(rank: number): string {
   if (rank === 1) return "#FFD65A";
@@ -122,6 +124,9 @@ export function CyberRankingListRowNative({
   isPro,
   rankDeltaPlaces,
   onPress,
+  animateCrown = false,
+  pageKey = "",
+  reduceMotion = false,
 }: {
   rank: number;
   displayName: string;
@@ -140,6 +145,10 @@ export function CyberRankingListRowNative({
   isPro?: boolean;
   rankDeltaPlaces?: number | null;
   onPress?: () => void;
+  /** Web TopPodium 1位 Crown 入場 */
+  animateCrown?: boolean;
+  pageKey?: string;
+  reduceMotion?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = palette.firstPlaceFrame;
@@ -149,6 +158,11 @@ export function CyberRankingListRowNative({
   const tagFontSize = rankingFontSizePx(8, metricTag);
   const dayDeltaText = formatListMetricDayDelta(metric, metricValueDelta);
   const dayDeltaFontSize = rankingFontSizePx(10, dayDeltaText ?? "+0");
+  const { crownStyle } = useRankingsCrownEntrance(
+    animateCrown && rank === 1,
+    pageKey,
+    reduceMotion
+  );
 
   const body = (
     <View style={styles.article}>
@@ -180,10 +194,10 @@ export function CyberRankingListRowNative({
 
         <View style={styles.avatarCol}>
           {rank === 1 ? (
-            <View style={styles.crownRow}>
+            <Animated.View style={[styles.crownRow, animateCrown ? crownStyle : null]}>
               <MaterialCommunityIcons name="crown" size={14} color="#F4C542" />
               <Text style={styles.plusLabel}>+++</Text>
-            </View>
+            </Animated.View>
           ) : null}
           <View
             style={[
@@ -245,7 +259,11 @@ export function CyberRankingListRowNative({
 
   if (onPress) {
     return (
-      <Pressable onPress={onPress} accessibilityRole="button">
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        style={({ pressed }) => [pressed ? styles.rowPressed : null]}
+      >
         {body}
       </Pressable>
     );
@@ -258,6 +276,9 @@ const styles = StyleSheet.create({
     position: "relative",
     minHeight: 72,
     overflow: "hidden",
+  },
+  rowPressed: {
+    opacity: 0.88,
   },
   accentBar: {
     position: "absolute",

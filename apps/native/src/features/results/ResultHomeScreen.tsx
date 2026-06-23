@@ -11,7 +11,10 @@ import {
   type LayoutChangeEvent,
   type ViewStyle,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { MainTabParamList } from "../../navigation/types";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   Easing,
@@ -20,6 +23,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { doc, getDoc } from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { db } from "../../lib/firebase";
@@ -47,20 +52,22 @@ import {
 } from "../../../../../lib/result/resultListFilterMatch";
 import UnderlineTabsNative from "../../ui/UnderlineTabsNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
+import CyberIconButtonNative from "../../ui/CyberIconButtonNative";
 import { useResultLeagueFlagsNative, type ResultListLeagueTab } from "./useResultLeagueFlagsNative";
 import ResultOutcomeBadgesNative from "./ResultOutcomeBadgesNative";
 import {
   DISPLAY_FONT,
   MOBILE_RESULT_CARD_GAP,
   MOBILE_RESULT_CARD_MAX_W,
+  MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
   MOBILE_RESULT_JERSEY_SIZE,
   MOBILE_RESULT_PAGE_PAD_X,
-  MOBILE_RESULT_PAGE_PAD_Y,
   MOBILE_RESULT_SECTION_GAP,
   MOBILE_RESULT_STAT_LABEL_W,
   MOBILE_RESULT_STAT_ROW_GAP,
   MOBILE_RESULT_STAT_VALUE_W,
   NUMERIC_FONT,
+  DAY_STRIP_METRIC_FONT,
   resultCardShellNative,
   resultDayStripPanelNative,
   resultFilterBarNative,
@@ -77,13 +84,11 @@ import {
 } from "../games/submitPredictionApi";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import ResultDetailScreen from "./ResultDetailScreen";
-import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
 import ResultPerfectCyberFrameNative from "./ResultPerfectCyberFrameNative";
 import ResultStreakCyberFrameNative from "./ResultStreakCyberFrameNative";
 import ResultMatchScoreLineNative from "./ResultMatchScoreLineNative";
 import ResultDeleteConfirmModal from "./ResultDeleteConfirmModal";
-import ResultPredictEditModal from "./ResultPredictEditModal";
 import ResultGlassShellNative from "./ResultGlassShellNative";
 import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics";
 import { useNativeResultPosts } from "./useNativeResultPosts";
@@ -104,6 +109,11 @@ import { resolveWcGroupCodeLabel } from "../../../../../lib/wc/wcGroupStandingRa
 import WcGoalScorerResultRowNative from "./WcGoalScorerResultRowNative";
 import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcGoalScorerResultNative";
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
+import { t as i18nT } from "../../../../../lib/i18n/t";
+import { shareResultCardNative } from "./shareResultCardNative";
+import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
@@ -111,10 +121,10 @@ const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 const CORNER_FAB_TRANSITION_MS = 300;
 const cornerFabTransitionEasing = Easing.out(Easing.cubic);
 
-/** Web `ResultDayPipeGroup` の日付帯グリッド（11px・シアン） */
-const DAY_HEADER_GRID_STEP = 11;
-const DAY_HEADER_GRID_LINE = "rgba(34,211,238,0.5)";
-const DAY_HEADER_GRID_OPACITY = 0.12;
+/** Web モバイル日付帯グリッド — `opacity-[0.08]` + 14px */
+const DAY_HEADER_MOBILE_GRID_STEP = 14;
+const DAY_HEADER_MOBILE_GRID_LINE = "rgba(34,211,238,0.45)";
+const DAY_HEADER_MOBILE_GRID_OPACITY = 0.08;
 
 const dayHeaderGridStyles = StyleSheet.create({
   overlay: {
@@ -136,9 +146,9 @@ const dayHeaderGridStyles = StyleSheet.create({
 });
 
 function ResultDayHeaderGridOverlay({ mobileStrip = false }: { mobileStrip?: boolean }) {
-  const step = mobileStrip ? 14 : DAY_HEADER_GRID_STEP;
-  const lineColor = mobileStrip ? "rgba(34,211,238,0.45)" : DAY_HEADER_GRID_LINE;
-  const opacity = mobileStrip ? 1 : DAY_HEADER_GRID_OPACITY;
+  const step = DAY_HEADER_MOBILE_GRID_STEP;
+  const lineColor = DAY_HEADER_MOBILE_GRID_LINE;
+  const opacity = mobileStrip ? DAY_HEADER_MOBILE_GRID_OPACITY : 0.1;
   const [size, setSize] = useState({ w: 0, h: 0 });
   const verticalLefts = useMemo(() => {
     const out: number[] = [];
@@ -352,37 +362,72 @@ function ResultDayHeader({
     <View style={[styles.listRowOuter, styles.dayHeaderSpacing]}>
       <View style={resultDayStripPanelNative.outer}>
         <Animated.View style={[resultDayStripPanelNative.panel, clipStyle]}>
-          <View style={resultDayStripPanelNative.leftAccent} pointerEvents="none" />
+          {(Platform.OS === "ios" || Platform.OS === "android") && (
+            <BlurView
+              intensity={Platform.OS === "ios" ? 22 : 14}
+              tint="dark"
+              {...nativeBlurViewExtraProps()}
+              style={resultDayStripPanelNative.glassBlur}
+            />
+          )}
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              "rgba(255,255,255,0.08)",
+              "rgba(255,255,255,0.035)",
+              "rgba(255,255,255,0.015)",
+            ]}
+            locations={[0, 0.45, 1]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={resultDayStripPanelNative.glassSheen}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={["rgba(34,211,238,0.95)", "rgba(34,211,238,0.2)"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={resultDayStripPanelNative.leftAccent}
+          />
+          <View style={resultDayStripPanelNative.insetTopHighlight} pointerEvents="none" />
+          <View style={resultDayStripPanelNative.insetBottomShade} pointerEvents="none" />
+          <View style={resultDayStripPanelNative.cornerTl} pointerEvents="none" />
+          <View style={resultDayStripPanelNative.cornerBr} pointerEvents="none" />
           <ResultDayHeaderGridOverlay mobileStrip />
           <View style={resultDayStripPanelNative.row}>
-            <Animated.View style={dateClusterStyle}>
+            <Animated.View style={[resultDayStripPanelNative.dateCol, dateClusterStyle]}>
               <Text style={resultDayStripPanelNative.date}>{dateLabel}</Text>
             </Animated.View>
-            <Animated.View style={[styles.dayHeaderRightCluster, rightClusterStyle]}>
-              {dayPoints?.variant === "total" &&
-              typeof dayPoints.hitTotal === "number" &&
-              dayPoints.hitTotal > 0 ? (
-                <View style={styles.dayHitWrap}>
-                  <Text style={styles.dayHitLabel}>hit</Text>
-                  <Text style={styles.dayHitNums}>
-                    {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
-                  </Text>
-                </View>
-              ) : null}
-              {dayPoints?.variant === "total" ? (
-                <View style={styles.dayTotalWrap}>
-                  <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
-                  <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
-                  <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
-                </View>
-              ) : dayPoints?.variant === "pending" ? (
-                <View style={styles.pendingRow}>
+            {dayPoints?.variant === "total" ? (
+              <>
+                <Animated.View style={[resultDayStripPanelNative.hitCol, rightClusterStyle]}>
+                  {typeof dayPoints.hitTotal === "number" && dayPoints.hitTotal > 0 ? (
+                    <View style={styles.dayHitWrap}>
+                      <Text style={styles.dayHitLabel}>hit</Text>
+                      <Text style={styles.dayHitNums}>
+                        {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
+                      </Text>
+                    </View>
+                  ) : null}
+                </Animated.View>
+                <Animated.View style={[resultDayStripPanelNative.totalCol, rightClusterStyle]}>
+                  <View style={styles.dayTotalWrap}>
+                    <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
+                    <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
+                    <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
+                  </View>
+                </Animated.View>
+              </>
+            ) : dayPoints?.variant === "pending" ? (
+              <>
+                <View style={resultDayStripPanelNative.divider} />
+                <Animated.View style={[resultDayStripPanelNative.rightCol, rightClusterStyle]}>
                   <View style={styles.pendingPill}>
                     <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
                   </View>
-                </View>
-              ) : null}
-            </Animated.View>
+                </Animated.View>
+              </>
+            ) : null}
           </View>
         </Animated.View>
       </View>
@@ -421,7 +466,10 @@ function ResultPostCard({
   onRequestPredictEdit?: (post: PostWithMillis) => void;
 }) {
   const isEn = language === "en";
+  const resultCopy = i18nT(language).results;
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const captureRef = useRef<View>(null);
   const reduceMotionList = useReducedMotion() ?? false;
   const pauseListFx = Boolean(siblingOverlayOpen);
 
@@ -451,34 +499,30 @@ function ResultPostCard({
   );
   const hasCornerActions =
     !isMatchStarted && (hasCornerTrash || hasCornerEdit);
+  const canShare =
+    Boolean(viewerUid && authorUid === viewerUid) && !sharing;
 
   useEffect(() => {
     if (isMatchStarted) setCornerFabOpen(false);
   }, [isMatchStarted]);
 
-  const penFlyProgress = useSharedValue(0);
-  const trashFlyProgress = useSharedValue(0);
+  const flyoutProgress = useSharedValue(0);
 
   useEffect(() => {
     const target = cornerFabOpen ? 1 : 0;
-    const cfg = {
+    flyoutProgress.value = withTiming(target, {
       duration: CORNER_FAB_TRANSITION_MS,
       easing: cornerFabTransitionEasing,
-    };
-    penFlyProgress.value = withTiming(hasCornerEdit ? target : 0, cfg);
-    trashFlyProgress.value = withTiming(hasCornerTrash ? target : 0, cfg);
-  }, [cornerFabOpen, hasCornerEdit, hasCornerTrash]);
+    });
+  }, [cornerFabOpen, flyoutProgress]);
 
-  /** Web `flyoutPenClass`：閉じ時 translate-x-2（+8px）、開くと 0 */
-  const cornerFlyoutPenMotion = useAnimatedStyle(() => ({
-    opacity: penFlyProgress.value,
-    transform: [{ translateX: 8 * (1 - penFlyProgress.value) }],
-  }));
-
-  /** Web `flyoutTrashClass`：閉じ時 -translate-y-2（-8px）、開くと 0 */
-  const cornerFlyoutTrashMotion = useAnimatedStyle(() => ({
-    opacity: trashFlyProgress.value,
-    transform: [{ translateY: -8 * (1 - trashFlyProgress.value) }],
+  /** バーガー下に縦並びで展開 */
+  const cornerFlyoutColumnMotion = useAnimatedStyle(() => ({
+    opacity: flyoutProgress.value,
+    transform: [
+      { translateY: -6 * (1 - flyoutProgress.value) },
+      { scale: 0.94 + flyoutProgress.value * 0.06 },
+    ],
   }));
 
   /** Web ResultCard の isLiveGame と同じ：開始〜確定まで LIVE */
@@ -559,6 +603,58 @@ function ResultPostCard({
   const rh = result?.home;
   const ra = result?.away;
   const hasFinal = typeof rh === "number" && typeof ra === "number";
+  /** 試合確定後のみ左上に共有（キックオフ前はバーガーに出さない） */
+  const showLeftShareBtn = canShare && hasFinal;
+
+  const shareLinkUrl = useMemo(
+    () => buildResultShareUrl(post.id),
+    [post.id]
+  );
+
+  const handleShareResult = useCallback(async () => {
+    if (!canShare || !hasFinal) return;
+    setCornerFabOpen(false);
+    setSharing(true);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+    try {
+      const pointsV3 = toNumber(stats?.pointsV3, NaN);
+      const shareOutcome = await shareResultCardNative(captureRef, {
+        language,
+        homeName,
+        awayName,
+        predictedHome: hasPredictedScore ? ph : null,
+        predictedAway: hasPredictedScore ? pa : null,
+        finalHome: hasFinal ? rh : null,
+        finalAway: hasFinal ? ra : null,
+        totalPoints: hasFinal && Number.isFinite(pointsV3) ? pointsV3 : null,
+        postId: post.id,
+        appBaseUrl: getShareAppOrigin(),
+      });
+      if (shareOutcome === "failed") {
+        Alert.alert("", resultCopy.shareResultCardFailed);
+      }
+    } finally {
+      setSharing(false);
+    }
+  }, [
+    awayName,
+    canShare,
+    hasFinal,
+    hasPredictedScore,
+    homeName,
+    language,
+    pa,
+    ph,
+    post.id,
+    ra,
+    resultCopy.shareResultCardFailed,
+    rh,
+    stats?.pointsV3,
+  ]);
 
   const wcMatchGoalScorers = useMemo(() => {
     if (!isWcCard || !hasFinal) return [];
@@ -671,8 +767,9 @@ function ResultPostCard({
                 ? styles.cardFrameMiss
                 : null;
 
+  const showCornerControl = !isMatchStarted && hasCornerActions;
   const shellOverflowStyle =
-    cornerFabOpen && hasCornerActions ? styles.cardShellOverflowVisible : null;
+    cornerFabOpen && showCornerControl ? styles.cardShellOverflowVisible : null;
 
   const shellBorderColor =
     typeof (frameStyle as ViewStyle | null)?.borderColor === "string"
@@ -711,12 +808,15 @@ function ResultPostCard({
           onOpenDetail(post.id);
         }}
       >
+      <View style={styles.cardCaptureWrap}>
+      <View ref={captureRef} collapsable={false}>
       <ResultGlassShellNative
         borderColor={shellBorderColor}
         strokeWidth={shellStrokeWidth}
         shellStyle={[styles.cardShell, shellShadowStyle]}
         overflowVisible={Boolean(shellOverflowStyle)}
       >
+        {(leagueKey !== "nba" && leagueKey !== "wc") ? (
         <View style={styles.cardBadgeOverlay} pointerEvents="none">
           <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
             {pauseListFx || !(leagueKey === "nba" || leagueKey === "wc") ? (
@@ -748,64 +848,24 @@ function ResultPostCard({
             />
           </Animated.View>
         </View>
+        ) : null}
+        <Animated.View
+          style={[
+            styles.cardBadgeOutcomeAbsolute,
+            showCornerControl ? styles.cardBadgeOutcomeWithMenu : null,
+            entrance.hitMissBadgeStyle,
+          ]}
+          pointerEvents="none"
+        >
+          <ResultOutcomeBadgesNative
+            badge={badge}
+            streakBadge={streakBadge}
+            activeWinStreak={activeWinStreak}
+            showLiveMark={showLiveMark}
+            hitBadgeSubtle
+          />
+        </Animated.View>
         <Animated.View style={[resultCardShellNative.body, entrance.cardBodyGateStyle]}>
-          {hasCornerActions ? (
-            <View style={styles.cornerFabCluster} pointerEvents="box-none">
-              {hasCornerEdit ? (
-                <Animated.View
-                  style={[styles.cornerFlyoutPenSlot, cornerFlyoutPenMotion]}
-                  pointerEvents={cornerFabOpen ? "auto" : "none"}
-                >
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.cornerFlyoutPen,
-                      pressed && styles.cornerFlyoutPressed,
-                    ]}
-                    onPress={requestPredictEdit}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
-                  >
-                    <MaterialCommunityIcons
-                      name="pencil"
-                      size={10}
-                      color="rgba(207,250,254,0.88)"
-                    />
-                  </Pressable>
-                </Animated.View>
-              ) : null}
-              {hasCornerTrash ? (
-                <Animated.View
-                  style={[styles.cornerFlyoutTrashSlot, cornerFlyoutTrashMotion]}
-                  pointerEvents={cornerFabOpen ? "auto" : "none"}
-                >
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.cornerFlyoutTrash,
-                      pressed && styles.cornerFlyoutPressed,
-                    ]}
-                    onPress={requestDeletePost}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
-                  >
-                    <MaterialCommunityIcons
-                      name="trash-can-outline"
-                      size={10}
-                      color="rgba(252,165,165,0.88)"
-                    />
-                  </Pressable>
-                </Animated.View>
-              ) : null}
-              <CyberMenuButton
-                size="xs"
-                onPress={() => setCornerFabOpen((v) => !v)}
-                accessibilityLabel={isEn ? "Open actions" : "操作メニュー"}
-                accessibilityState={{ expanded: cornerFabOpen }}
-              />
-            </View>
-          ) : null}
-
           <View style={styles.cardContent}>
           <View style={styles.matchArea}>
             <View style={styles.matchGrid}>
@@ -962,6 +1022,7 @@ function ResultPostCard({
               );
             })}
           </View>
+          <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </View>
         </Animated.View>
         {!pauseListFx && badge === "hit" ? <ResultHitCyberFrameNative /> : null}
@@ -970,6 +1031,75 @@ function ResultPostCard({
           <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
         ) : null}
       </ResultGlassShellNative>
+      </View>
+
+      {showLeftShareBtn ? (
+        <View style={styles.leftShareCluster} pointerEvents="box-none">
+          <CyberIconButtonNative
+            size="sm"
+            icon="share-variant"
+            onPress={() => void handleShareResult()}
+            disabled={!canShare || sharing}
+            accessibilityLabel={resultCopy.shareMyResult}
+          />
+        </View>
+      ) : null}
+
+      {showCornerControl ? (
+          <View style={styles.cornerFabCluster} pointerEvents="box-none">
+            <Animated.View
+              style={[styles.cornerFlyoutColumn, cornerFlyoutColumnMotion]}
+              pointerEvents={cornerFabOpen ? "auto" : "none"}
+            >
+              {hasCornerActions && hasCornerEdit ? (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.cornerFlyoutBtn,
+                    styles.cornerFlyoutPen,
+                    pressed && styles.cornerFlyoutPressed,
+                  ]}
+                  onPress={requestPredictEdit}
+                  hitSlop={4}
+                  accessibilityRole="button"
+                  accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
+                >
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={12}
+                    color="rgba(207,250,254,0.88)"
+                  />
+                </Pressable>
+              ) : null}
+              {hasCornerActions && hasCornerTrash ? (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.cornerFlyoutBtn,
+                    styles.cornerFlyoutTrash,
+                    pressed && styles.cornerFlyoutPressed,
+                  ]}
+                  onPress={requestDeletePost}
+                  hitSlop={4}
+                  accessibilityRole="button"
+                  accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
+                >
+                  <MaterialCommunityIcons
+                    name="trash-can-outline"
+                    size={12}
+                    color="rgba(252,165,165,0.88)"
+                  />
+                </Pressable>
+              ) : null}
+            </Animated.View>
+            <CyberMenuButton
+              size="xs"
+              open={cornerFabOpen}
+              onPress={() => setCornerFabOpen((v) => !v)}
+              accessibilityLabel={isEn ? "Open actions" : "操作メニュー"}
+              accessibilityState={{ expanded: cornerFabOpen }}
+            />
+          </View>
+        ) : null}
+      </View>
       </AnimatedResultCardPressable>
     </Animated.View>
   );
@@ -991,8 +1121,9 @@ export default function ResultHomeScreen({
   bottomReserveY?: number;
 }) {
   const { fUser } = useFirebaseUser();
-  const insets = useSafeAreaInsets();
-  const listTopPad = insets.top + MOBILE_RESULT_PAGE_PAD_Y;
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const { topContentPadY } = useBottomTabBarInsets();
+  const listTopPad = topContentPadY;
   const [language, setLanguage] = useState<"ja" | "en">("ja");
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
@@ -1044,8 +1175,6 @@ export default function ResultHomeScreen({
   }, []);
 
   const [detailPostId, setDetailPostId] = useState<string | null>(null);
-  /** Web `ResultListWithOverlay` と同様：一覧上で予想修正モーダルを開く */
-  const [predictEditPost, setPredictEditPost] = useState<PostWithMillis | null>(null);
   const [deleteConfirmPost, setDeleteConfirmPost] = useState<PostWithMillis | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const deleteSubmittingRef = useRef(false);
@@ -1123,6 +1252,47 @@ export default function ResultHomeScreen({
   const onFilterPress = useCallback(() => {
     setResultFilters((f) => ({ ...f, detailOpen: !f.detailOpen }));
   }, []);
+
+  /** Web `/games/[id]/predict?edit=1` と同様：予想タブのスコア編集へ遷移 */
+  const openPredictEditFromResult = useCallback(
+    (post: PostWithMillis) => {
+      const gameId =
+        typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
+      if (!gameId) return;
+      const pred = post.prediction as
+        | {
+            winner?: "home" | "away" | "draw";
+            score?: { home?: number; away?: number };
+            goalScorer?: unknown;
+          }
+        | undefined;
+      const scoreHome = pred?.score?.home;
+      const scoreAway = pred?.score?.away;
+      const winner = pred?.winner;
+      const openPredictSeed =
+        winner &&
+        typeof scoreHome === "number" &&
+        typeof scoreAway === "number"
+          ? {
+              winner,
+              scoreHome,
+              scoreAway,
+              goalScorer: pred?.goalScorer,
+            }
+          : undefined;
+      tabNavigation.navigate("GamesTab", {
+        screen: "GamesHome",
+        params: {
+          openPredictGameId: gameId,
+          expandScoreForm: true,
+          openPredictPostId: post.id,
+          openPredictSeed,
+        },
+        initial: false,
+      });
+    },
+    [tabNavigation]
+  );
 
   const listHeader = (
     <ResultListHeaderBlock
@@ -1277,7 +1447,7 @@ export default function ResultHomeScreen({
               siblingOverlayOpen={detailPostId != null}
               onOpenDetail={setDetailPostId}
               onRequestDeleteConfirm={setDeleteConfirmPost}
-              onRequestPredictEdit={setPredictEditPost}
+              onRequestPredictEdit={openPredictEditFromResult}
             />
           )}
           SectionSeparatorComponent={() => <View style={styles.sectionGap} />}
@@ -1298,13 +1468,6 @@ export default function ResultHomeScreen({
         if (!deleteInProgress) setDeleteConfirmPost(null);
       }}
       onConfirm={() => void confirmDismissPostFromList()}
-    />
-    <ResultPredictEditModal
-      visible={predictEditPost != null}
-      post={predictEditPost}
-      language={language}
-      onClose={() => setPredictEditPost(null)}
-      onUpdated={() => void refreshPosts()}
     />
     </View>
   );
@@ -1334,7 +1497,6 @@ const styles = StyleSheet.create({
     /** Web `/mobile/result` の px-[18px]（親 mainArea xs=8 を差し引く） */
     paddingHorizontal: Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs),
     flexGrow: 1,
-    gap: MOBILE_RESULT_SECTION_GAP,
   },
   headerBlock: {
     marginBottom: MOBILE_RESULT_SECTION_GAP,
@@ -1418,7 +1580,7 @@ const styles = StyleSheet.create({
     height: MOBILE_RESULT_SECTION_GAP,
   },
   dayHeaderSpacing: {
-    marginBottom: MOBILE_RESULT_CARD_GAP,
+    marginBottom: MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
   },
   dayHeaderClip: {
     position: "relative",
@@ -1473,50 +1635,52 @@ const styles = StyleSheet.create({
     textShadowRadius: 12,
   },
   dayHitWrap: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "baseline",
-    justifyContent: "center",
     gap: 4,
-    minWidth: 0,
+    flexShrink: 0,
   },
   dayHitLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "800",
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.82)",
+    letterSpacing: 0.3,
   },
   dayHitNums: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: "800",
-    color: "rgba(255,255,255,0.92)",
-    fontFamily: NUMERIC_FONT_FAMILY,
+    color: "rgba(255,255,255,0.95)",
+    fontFamily: DAY_STRIP_METRIC_FONT,
     fontVariant: ["tabular-nums"],
+    letterSpacing: 0.5,
+    lineHeight: 22,
   },
   dayTotalWrap: {
     flexShrink: 0,
     flexDirection: "row",
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
     alignItems: "baseline",
     justifyContent: "flex-end",
     gap: 4,
-    maxWidth: "46%",
   },
   dayTotalPrefix: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.88)",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.92)",
   },
   dayTotalValue: {
-    fontSize: 17,
+    fontSize: 22,
     fontWeight: "800",
-    color: "rgba(255,255,255,0.95)",
-    fontFamily: NUMERIC_FONT_FAMILY,
+    color: "rgba(255,255,255,0.98)",
+    fontFamily: DAY_STRIP_METRIC_FONT,
     fontVariant: ["tabular-nums"],
+    letterSpacing: 0.5,
+    lineHeight: 24,
   },
   dayTotalUnit: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.88)",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.92)",
   },
   /** Web `ResultDayPipeGroup` の pending 右寄せラッパ */
   pendingRow: {
@@ -1535,11 +1699,23 @@ const styles = StyleSheet.create({
   pendingPill: {
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "rgba(217,70,239,0.5)",
-    backgroundColor: "rgba(0,0,0,0.6)",
+    borderColor: "rgba(217,70,239,0.55)",
+    backgroundColor: "rgba(0,0,0,0.72)",
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(217,70,239,0.4)",
+        shadowOpacity: 1,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {},
+    }),
   },
   pendingPillText: {
     fontSize: 11,
@@ -1610,6 +1786,7 @@ const styles = StyleSheet.create({
   },
   resultCardPressable: {
     flexShrink: 0,
+    position: "relative",
   },
   cardPressed: {
     opacity: 0.96,
@@ -1628,93 +1805,86 @@ const styles = StyleSheet.create({
     paddingTop: 36,
     paddingBottom: 8,
   },
-  /** Web モバイル：左上リーグ / 右上 outcome を absolute 配置 */
+  /** Web モバイル：左上リーグ */
   cardBadgeOverlay: {
     position: "absolute",
     left: 0,
-    right: 0,
     top: 6,
     zIndex: 22,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
     paddingLeft: 8,
-    paddingRight: 2,
   },
   cardBadgeLeague: {
-    maxWidth: "44%",
+    maxWidth: 160,
   },
-  cardBadgeOutcome: {
-    flex: 1,
+  /** Web `absolute top-1.5 right-11` — HIT 等（メニューと分離） */
+  cardBadgeOutcomeAbsolute: {
+    position: "absolute",
+    top: 6,
+    right: 8,
+    zIndex: 22,
+    maxWidth: "68%",
     alignItems: "flex-end",
-    maxWidth: "72%",
-    paddingRight: 0,
   },
-  cardBadgeOutcomeWithFab: {
-    paddingRight: 44,
+  cardBadgeOutcomeWithMenu: {
+    right: 40,
   },
   /** メニュー展開でフライアウトがはみ出すときのクリップ解除（Web と同様） */
   cardShellOverflowVisible: {
     overflow: "visible",
   },
-  /** Web `ResultCard` の右上アクション簇（ハンバーガー＋フライアウト） */
+  cardCaptureWrap: {
+    position: "relative",
+  },
+  /** Web mobile `right-2.5 top-2` 相当 */
   cornerFabCluster: {
     position: "absolute",
-    top: 5,
-    right: 9,
+    top: 12,
+    right: 14,
     zIndex: 50,
     minWidth: 22,
     minHeight: 22,
-    alignItems: "flex-end",
+    alignItems: "center",
   },
-  /** Web `absolute top-full left-1/2 mt-2` に相当するスロット */
-  cornerFlyoutTrashSlot: {
+  /** 試合確定後：左上斜め（枠内・キャプチャ対象外） */
+  leftShareCluster: {
     position: "absolute",
-    /** メニュー高さ 22 + Web `mt-2` 相当の間隔 */
-    top: 30,
+    top: 3,
+    left: 4,
+    zIndex: 50,
+    transform: [{ translateX: -2 }, { translateY: -2 }],
+  },
+  cornerFlyoutColumn: {
+    position: "absolute",
+    top: 28,
     right: 0,
     zIndex: 55,
+    gap: 6,
+    alignItems: "center",
   },
-  cornerFlyoutTrash: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
+  cornerFlyoutBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.5)",
-    backgroundColor: "rgba(0,0,0,0.78)",
+    backgroundColor: "rgba(0,0,0,0.72)",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#f87171",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.14,
-    shadowRadius: 5,
-    elevation: 6,
-  },
-  /** Web `absolute right-full top-1/2 mr-2` に相当するスロット */
-  cornerFlyoutPenSlot: {
-    position: "absolute",
-    top: 0,
-    /** メニュー幅 22 + Web `mr-2` 相当の間隔 */
-    right: 30,
-    zIndex: 55,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
   },
   cornerFlyoutPen: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.55)",
-    backgroundColor: "rgba(0,0,0,0.78)",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.14,
-    shadowRadius: 5,
-    elevation: 6,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  cornerFlyoutTrash: {
+    borderColor: "rgba(239,68,68,0.45)",
+    shadowColor: "#f87171",
+    shadowOpacity: 0.16,
   },
   cornerFlyoutPressed: {
-    opacity: 0.85,
+    opacity: 0.82,
   },
   cardFrameUpset: {
     borderColor: "rgba(248,113,113,0.84)",

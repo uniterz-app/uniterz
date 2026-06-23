@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "native",
+    "name": "UNITERZ",
     "slug": "native",
+    "scheme": "uniterz",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,11 +11,15 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#041418"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rikutokamiya.uniterz.dev",
+      "associatedDomains": [
+        "applinks:uniterz.app",
+        "applinks:www.uniterz.app"
+      ],
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "プロフィール写真を選ぶために、写真ライブラリへのアクセスを使います。",
         "NSCameraUsageDescription": "プロフィール写真を撮影するためにカメラを使います。",
@@ -24,11 +29,30 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0a1418"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.xnative",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "uniterz.app",
+              "pathPrefix": "/mobile"
+            },
+            {
+              "scheme": "https",
+              "host": "www.uniterz.app",
+              "pathPrefix": "/mobile"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
       ]

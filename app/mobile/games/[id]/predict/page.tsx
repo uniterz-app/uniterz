@@ -3,7 +3,7 @@
 
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useLayoutEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useFirebaseUser } from "@/lib/useFirebaseUser";
 import { useUserLanguage } from "@/lib/hooks/useUserLanguage";
 import { t } from "@/lib/i18n/t";
@@ -34,6 +34,9 @@ type GameProps = ReturnType<typeof toMatchCardProps>;
 export default function Page() {
   // ---- Hooks（順序固定）----
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const predictEditTriggerNonce =
+    searchParams.get("edit") === "1" ? 1 : 0;
   const { fUser, status } = useFirebaseUser();
   const { language } = useUserLanguage(fUser?.uid ?? null);
   const m = t(language);
@@ -124,7 +127,12 @@ export default function Page() {
 
   return (
     <Suspense fallback={<PredictRouteShell />}>
-      <PredictionForm dense game={gameProps} user={user} />
+      <PredictionForm
+        dense
+        game={gameProps}
+        user={user}
+        predictEditTriggerNonce={predictEditTriggerNonce}
+      />
     </Suspense>
   );
 }

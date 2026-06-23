@@ -34,6 +34,7 @@ type Props = {
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
   cardClockMs?: number;
+  onRequestPredictEdit?: (post: PredictionPostV2) => void;
 };
 
 export default function ResultDetail({
@@ -48,6 +49,7 @@ export default function ResultDetail({
   viewerUid = null,
   gamesRoutePrefix = "/web",
   cardClockMs,
+  onRequestPredictEdit,
 }: Props) {
   const pathname = usePathname();
   const isMobile = pathname?.startsWith("/mobile");
@@ -90,6 +92,7 @@ export default function ResultDetail({
                 viewerUid={viewerUid}
                 gamesRoutePrefix={gamesRoutePrefix}
                 cardClockMs={cardClockMs}
+                onRequestPredictEdit={onRequestPredictEdit}
               />
             </m.div>
           ) : null}

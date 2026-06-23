@@ -186,6 +186,28 @@ export const rankingsUiStyles = StyleSheet.create({
     marginHorizontal: -4,
     width: "100%",
   },
+  myRankCaptureWrap: {
+    position: "relative",
+  },
+  myRankShareBtn: {
+    position: "absolute",
+    top: 10,
+    right: 86,
+    zIndex: 4,
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  myRankShareBtnInner: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(34,211,238,0.35)",
+    backgroundColor: "rgba(34,211,238,0.08)",
+  },
   myRankCard: {
     borderRadius: 0,
     borderWidth: 1,

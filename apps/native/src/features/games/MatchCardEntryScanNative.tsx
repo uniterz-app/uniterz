@@ -13,9 +13,9 @@ export default function MatchCardEntryScanNative({ style }: Props) {
       <LinearGradient
         colors={[
           "transparent",
-          "rgba(94,234,212,0.07)",
-          "rgba(186,230,253,0.18)",
-          "rgba(94,234,212,0.07)",
+          "rgba(94,234,212,0.05)",
+          "rgba(186,230,253,0.13)",
+          "rgba(94,234,212,0.05)",
           "transparent",
         ]}
         locations={[0, 0.3, 0.5, 0.7, 1]}

@@ -191,7 +191,16 @@ export const gameCardListStyles = StyleSheet.create({
   centerTextScore: {
     textAlign: "center",
   },
+  centerTextScoreRow: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 8,
+    maxWidth: "100%",
+  },
   centerTextScoreNum: {
+    flexShrink: 0,
     color: "#ffffff",
     fontSize: 20,
     fontWeight: "900",
@@ -205,6 +214,7 @@ export const gameCardListStyles = StyleSheet.create({
     textShadowRadius: 4,
   },
   centerScoreDash: {
+    flexShrink: 0,
     color: "rgba(255,255,255,0.5)",
     fontSize: 20,
     fontWeight: "900",
@@ -232,11 +242,16 @@ export const gameCardListStyles = StyleSheet.create({
   },
   liveMarkPill: liveMarkPillCyberBase,
   liveMarkText: liveMarkTextCyberBase,
+  /** 得点ブロックと league 仕切り棒の間 — Web mobile dense `mt-1.5 md:mt-2` */
+  leagueDividerWrap: {
+    width: "100%",
+    marginTop: "auto",
+    paddingTop: 8,
+  },
   leagueDivider: {
     height: 2,
     width: "100%",
     borderRadius: 999,
-    marginTop: "auto",
     shadowColor: "rgb(0, 245, 255)",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.45,

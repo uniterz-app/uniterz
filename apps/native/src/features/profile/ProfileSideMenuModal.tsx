@@ -55,8 +55,10 @@ type Props = {
     | "contact"
     | "privacy"
     | "password"
+    | "notifications"
     | "featureRequest"
-    | "electronicNotice") => void;
+    | "electronicNotice"
+    | "notificationDev") => void;
 };
 
 const PANEL_W = Math.min(300, Math.max(260, Math.round(Dimensions.get("window").width * 0.46)));
@@ -140,6 +142,7 @@ export default function ProfileSideMenuModal({
         contact: "お問い合わせ",
         privacy: "プライバシーポリシー",
         password: "パスワード変更",
+        notifications: "通知設定",
         featureRequest: "機能リクエスト",
         electronicNotice: "電子公告",
         logout: "ログアウト",
@@ -166,6 +169,7 @@ export default function ProfileSideMenuModal({
         contact: "Contact",
         privacy: "Privacy Policy",
         password: "Change Password",
+        notifications: "Notifications",
         featureRequest: "Feature Request",
         electronicNotice: "Electronic Notice",
         logout: "Log out",
@@ -198,8 +202,10 @@ export default function ProfileSideMenuModal({
       | "contact"
       | "privacy"
       | "password"
+      | "notifications"
       | "featureRequest"
       | "electronicNotice"
+      | "notificationDev"
   ) {
     onClose();
     onOpenInApp(page);
@@ -280,6 +286,13 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("announcements")}
                     >
                       {labels.announcements}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="bell-outline"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("notifications")}
+                    >
+                      {labels.notifications}
                     </SideMenuItemButtonNative>
                   </View>
 
@@ -407,6 +420,22 @@ export default function ProfileSideMenuModal({
                           onPress={() => web("/admin/plans")}
                         >
                           {labels.planApproval}
+                        </SideMenuItemButtonNative>
+                      </View>
+                    </>
+                  ) : null}
+
+                  {__DEV__ ? (
+                    <>
+                      <CyberSideMenuSectionTitleNative>DEV</CyberSideMenuSectionTitleNative>
+                      <View style={styles.itemGroup}>
+                        <SideMenuItemButtonNative
+                          icon="bell-ring-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("notificationDev")}
+                        >
+                          通知テスト
                         </SideMenuItemButtonNative>
                       </View>
                     </>

@@ -1,0 +1,10 @@
+{
+  "homeScore": 2,
+  "awayScore": 2,
+  "scorers": [
+    { "playerId": "ury-araujo-2", "teamId": "wc-ury", "minute": 44 },
+    { "playerId": "ury-canobbio", "teamId": "wc-ury", "minute": "45+6" },
+    { "playerId": "cpv-pina", "teamId": "wc-cpv", "minute": 21 },
+    { "playerId": "cpv-varela", "teamId": "wc-cpv", "minute": 61 }
+  ]
+}

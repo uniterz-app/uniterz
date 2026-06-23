@@ -1,7 +1,7 @@
 /**
  * Web `SideMenuDrawer` 相当 — 左スライドドロワー
  */
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Dimensions,
@@ -12,7 +12,9 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
+import { spacing } from "../theme/tokens";
 import { nativeBlurViewExtraProps } from "./nativeBlurProps";
 import CyberSideMenuPanelNative from "./CyberSideMenuPanelNative";
 
@@ -35,8 +37,16 @@ export default function SideMenuDrawerNative({
   children,
   panelWidth = DEFAULT_PANEL_W,
 }: Props) {
+  const insets = useSafeAreaInsets();
   const slide = useRef(new Animated.Value(-panelWidth - 24)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
+  const panelLayout = useMemo(() => {
+    /** Web `SideMenuDrawer` の py-4 相当 — safe area 直下のみ（ヘッダー全高は取らない） */
+    const top = insets.top + 16;
+    const bottom = Math.max(insets.bottom, spacing.md);
+    const maxHeight = Dimensions.get("window").height - top - bottom;
+    return { top, bottom, maxHeight };
+  }, [insets.top, insets.bottom]);
 
   useEffect(() => {
     if (open) {
@@ -87,9 +97,17 @@ export default function SideMenuDrawerNative({
           <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
         </Animated.View>
         <Animated.View
-          style={[styles.panelWrap, { width: panelWidth, transform: [{ translateX: slide }] }]}
+          style={[
+            styles.panelWrap,
+            {
+              width: panelWidth,
+              top: panelLayout.top,
+              bottom: panelLayout.bottom,
+              transform: [{ translateX: slide }],
+            },
+          ]}
         >
-          <CyberSideMenuPanelNative style={styles.panel}>
+          <CyberSideMenuPanelNative style={[styles.panel, { maxHeight: panelLayout.maxHeight }]}>
             <View style={styles.panelInner}>{children}</View>
           </CyberSideMenuPanelNative>
         </Animated.View>
@@ -110,15 +128,13 @@ const styles = StyleSheet.create({
   panelWrap: {
     position: "absolute",
     left: 0,
-    top: 0,
-    bottom: 0,
-    paddingVertical: 16,
+    paddingTop: 0,
+    paddingBottom: 0,
     paddingLeft: 0,
     paddingRight: 12,
   },
   panel: {
     flex: 1,
-    maxHeight: Dimensions.get("window").height * 0.92,
   },
   panelInner: {
     flex: 1,

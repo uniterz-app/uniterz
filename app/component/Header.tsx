@@ -1,11 +1,22 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { usePathname } from "next/navigation";
+import {
+  resolveHeaderWordmark,
+  type HeaderWordmark,
+} from "@/lib/ui/headerWordmark";
 
-const WORDMARK_LETTERS = "UNITERZ".split("");
+type Props = {
+  /** 未指定時は pathname から自動判定 */
+  title?: HeaderWordmark;
+};
 
-export default function Header() {
+export default function Header({ title }: Props) {
   const reduceMotion = useReducedMotion();
+  const pathname = usePathname();
+  const wordmark = title ?? resolveHeaderWordmark(pathname);
+  const wordmarkLetters = wordmark.split("");
 
   return (
     <header className="relative z-10 overflow-hidden px-6 py-2 md:px-10 md:py-4 text-white">
@@ -42,18 +53,19 @@ export default function Header() {
 
           {/* ワードマーク */}
           <div
+            key={wordmark}
             className="relative text-[22px] tracking-[0.35em] md:text-[28px]"
             style={{ fontFamily: "Bebas Neue" }}
-            aria-label="UNITERZ"
+            aria-label={wordmark}
           >
             <div
               className="text-orange-100/85"
               style={{ textShadow: "0 0 22px rgba(103,232,249,0.16)" }}
               aria-hidden
             >
-              {WORDMARK_LETTERS.map((ch, i) => (
+              {wordmarkLetters.map((ch, i) => (
                 <motion.span
-                  key={`${ch}-${i}`}
+                  key={`${wordmark}-${i}`}
                   className="inline-block"
                   initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -67,6 +79,15 @@ export default function Header() {
                 </motion.span>
               ))}
             </div>
+            {/* 時折ハイライトが走るシマー層 */}
+            {!reduceMotion && (
+              <div
+                className="header-wordmark-shimmer pointer-events-none absolute inset-0"
+                aria-hidden
+              >
+                {wordmark}
+              </div>
+            )}
           </div>
 
           {/* 右アクセント（ダイヤ + 線） */}

@@ -1,5 +1,5 @@
 import { Platform, Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from "react-native";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import Animated, { useReducedMotion, withTiming } from "react-native-reanimated";
 import { resolveWcBroadcastLabels } from "../../../../../lib/wc/wcBroadcastLabels";
 import WcTeamFlagWithMetaNative from "../results/WcTeamFlagWithMetaNative";
@@ -69,7 +69,7 @@ type GameCardListRowProps = GameCardListProps & {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /** 試合一覧行：Reanimated による depth reveal / bottom-up 入場 */
-function GameCardListRow(props: GameCardListRowProps) {
+const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProps) {
   const {
     game,
     rowIndex,
@@ -183,7 +183,9 @@ function GameCardListRow(props: GameCardListRowProps) {
           pointerEvents="box-none"
           style={[ent.shellOpacityStyle, { flex: 1, minHeight: 0, position: "relative" }]}
         >
-          <MatchCardEntryScanNative style={ent.scanLineStyle} />
+          {ent.showEntryScan ? (
+            <MatchCardEntryScanNative style={ent.scanLineStyle} />
+          ) : null}
           <MatchListCyberDecorNative />
           <View style={styles.cardPressableBody}>
           <View style={{ flex: 1, minHeight: 0 }}>
@@ -261,12 +263,11 @@ function GameCardListRow(props: GameCardListRowProps) {
                           ) : null}
                         </View>
                       ) : centerBlock.variant === "score" ? (
-                        <Text
+                        <View
                           style={[
-                            styles.centerTextScore,
-                            isWcCard && styles.centerTextScoreWc,
+                            styles.centerTextScoreRow,
+                            isWcCard && styles.centerTextScoreRowWc,
                           ]}
-                          numberOfLines={1}
                         >
                           <Text
                             style={[
@@ -292,7 +293,7 @@ function GameCardListRow(props: GameCardListRowProps) {
                           >
                             {centerBlock.away}
                           </Text>
-                        </Text>
+                        </View>
                       ) : (
                         <Text style={styles.centerText} numberOfLines={1} ellipsizeMode="clip">
                           {centerBlock.time}
@@ -367,7 +368,7 @@ function GameCardListRow(props: GameCardListRowProps) {
                   />
                 </View>
               ) : null}
-              <View style={{ width: "100%", marginTop: "auto" }}>
+              <View style={styles.leagueDividerWrap}>
                 <Animated.View
                   style={[styles.leagueDivider, { backgroundColor: leagueColor }, ent.dividerStyle]}
                 />
@@ -382,7 +383,7 @@ function GameCardListRow(props: GameCardListRowProps) {
       </MatchListCyberClipNative>
     </AnimatedPressable>
   );
-}
+});
 
 export default function GameCardList(props: GameCardListProps) {
   const { games, t, styles, enteringAnimationEnabled = true, entranceVariant = "full" } = props;

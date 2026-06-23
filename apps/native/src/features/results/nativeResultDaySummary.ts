@@ -83,7 +83,7 @@ export function dayPointsHeaderForNative(
       return {
         variant: "total",
         value: fmt,
-        prefix: "Total score",
+        prefix: "total",
         unit: "pts",
         ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
       };
@@ -91,7 +91,7 @@ export function dayPointsHeaderForNative(
     return {
       variant: "total",
       value: fmt,
-      prefix: "総合スコア",
+      prefix: "total",
       unit: "pt",
       ...(hitTotal > 0 ? { hitWins, hitTotal } : {}),
     };

@@ -7,7 +7,7 @@ export function useBottomTabBarInsets() {
   const tabBarBottomOffset = 10;
   const pillBottomFromScreenBottom = tabBarBottomOffset + insets.bottom;
   const bottomContentReserveY = pillBottomFromScreenBottom + 8 + 42 + 8 + 14;
-  /** ノッチ下の上余白（GamesHomeScreen と同じ: safe area + spacing.sm） */
-  const topContentPadY = insets.top + spacing.sm;
+  /** UNITERZ 共通ヘッダー配下 — safe area は MainTabNavigator 側で確保済み */
+  const topContentPadY = spacing.sm;
   return { bottomContentReserveY, topContentPadY, insets };
 }

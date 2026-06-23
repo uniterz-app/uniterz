@@ -25,6 +25,22 @@ export type SupportedLeague = "nba" | "bj" | "j1" | "pl" | "wc";
 
 const WC_GAMES_PAGE_WINDOW_LIMIT = 500;
 
+/** Web `useGameDays` の gameDaysRowsCache と同趣旨 */
+const GAMES_WINDOW_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type GamesWindowCacheEntry = {
+  rows: NativeGameRow[];
+  peerRows: NativeGameRow[];
+  monthKey: string;
+  savedAt: number;
+};
+
+const gamesWindowCache = new Map<string, GamesWindowCacheEntry>();
+
+function gamesWindowCacheKey(league: SupportedLeague, monthKey: string): string {
+  return league === "wc" ? `${league}|wc-page-window-v1` : `${league}|${monthKey}`;
+}
+
 export type NativeGameRow = {
   id: string;
   [key: string]: unknown;
@@ -104,7 +120,6 @@ function findInitialGameDay(params: {
       .filter((d) => toDateKeyInTimeZone(d, timeZone).startsWith(monthPrefix))
       .sort((a, b) => a.getTime() - b.getTime());
     if (inMonth.length) return inMonth[0] ?? null;
-    // 月送り直後は旧 window が残る — 今日以降の日付へ飛ばさない
     return null;
   }
 
@@ -150,10 +165,15 @@ export function sortedUniqueDateKeysFromRows(rows: NativeGameRow[]): string[] {
   return Array.from(keys).sort();
 }
 
-export function useTodayGames() {
+type UseTodayGamesOptions = {
+  /** false の間はフェッチしない（優先リーグ確定待ち） */
+  enabled?: boolean;
+};
+
+export function useTodayGames(options: UseTodayGamesOptions = {}) {
+  const enabled = options.enabled ?? true;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  /** 現在の窓に含まれる全試合（その日の一覧・シリーズ推定・日付チップはこれから派生） */
   const [windowRows, setWindowRows] = useState<NativeGameRow[]>([]);
   const [peerRowsForSeries, setPeerRowsForSeries] = useState<NativeGameRow[]>([]);
   const [selectedDate, setSelectedDateState] = useState<Date>(() => new Date());
@@ -164,7 +184,6 @@ export function useTodayGames() {
   const wcWindowLoadedRef = useRef(false);
   const prevLeagueRef = useRef(selectedLeague);
   const lastSuccessfulRefreshNonceRef = useRef<number | null>(null);
-  /** Web `selectedByLeague`：リーグごとに最後に選んだ試合日を保持 */
   const selectedByLeagueRef = useRef<Partial<Record<SupportedLeague, Date>>>({});
 
   const setSelectedDate = useCallback(
@@ -205,7 +224,7 @@ export function useTodayGames() {
     [windowRows]
   );
 
-  /** シリーズ推定用（暦月窓＋プレーオフ兄弟試合） */
+  const hasWindowData = windowRows.length > 0;
   const peerGamesForSeries = peerRowsForSeries;
 
   function moveDay(offset: number) {
@@ -221,6 +240,11 @@ export function useTodayGames() {
   }
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(true);
+      return;
+    }
+
     let alive = true;
 
     const leagueChanged = prevLeagueRef.current !== selectedLeague;
@@ -233,6 +257,11 @@ export function useTodayGames() {
       setWindowRows([]);
       setPeerRowsForSeries([]);
     }
+
+    const cacheKey = gamesWindowCacheKey(selectedLeague, monthKey);
+    const cached = gamesWindowCache.get(cacheKey);
+    const cacheFresh =
+      !!cached && Date.now() - cached.savedAt < GAMES_WINDOW_CACHE_TTL_MS;
 
     const b = windowBoundsRef.current;
     const insideWindow =
@@ -250,7 +279,20 @@ export function useTodayGames() {
       return;
     }
 
-    setLoading(true);
+    /** キャッシュがあれば即表示し、裏で再取得（Web `useGameDays` 相当） */
+    if (cacheFresh && cached) {
+      setWindowRows(cached.rows);
+      setPeerRowsForSeries(
+        cached.peerRows.length ? cached.peerRows : cached.rows
+      );
+      windowBoundsRef.current = { monthKey: cached.monthKey };
+      if (isWc) wcWindowLoadedRef.current = true;
+      lastSuccessfulRefreshNonceRef.current = refreshNonce;
+      setError(null);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     void (async () => {
@@ -276,15 +318,18 @@ export function useTodayGames() {
           ...(row.data() as Omit<NativeGameRow, "id">),
         }));
 
-        const peerRows = (await mergePlayoffSeriesPeersForWindowGames(
-          rows
-        )) as NativeGameRow[];
-
         windowBoundsRef.current = { monthKey };
         if (isWc) wcWindowLoadedRef.current = true;
         lastSuccessfulRefreshNonceRef.current = refreshNonce;
         setWindowRows(rows);
-        setPeerRowsForSeries(peerRows.length ? peerRows : rows);
+        setPeerRowsForSeries(rows);
+
+        gamesWindowCache.set(cacheKey, {
+          rows,
+          peerRows: rows,
+          monthKey,
+          savedAt: Date.now(),
+        });
 
         const preferred =
           leagueChanged
@@ -295,13 +340,28 @@ export function useTodayGames() {
           setSelectedDateState(landing);
           selectedByLeagueRef.current[selectedLeague] = landing;
         }
+
+        if (alive) setLoading(false);
+
+        /** 一覧表示後にプレーオフ peer を補完（初回 paint をブロックしない） */
+        void mergePlayoffSeriesPeersForWindowGames(rows).then((peerRows) => {
+          if (!alive) return;
+          const merged = (peerRows.length ? peerRows : rows) as NativeGameRow[];
+          setPeerRowsForSeries(merged);
+          const hit = gamesWindowCache.get(cacheKey);
+          if (hit) {
+            gamesWindowCache.set(cacheKey, { ...hit, peerRows: merged });
+          }
+        });
       } catch (e: unknown) {
         if (!alive) return;
-        setError(e instanceof Error ? e.message : "unknown error");
-        windowBoundsRef.current = null;
-        lastSuccessfulRefreshNonceRef.current = null;
-        setWindowRows([]);
-        setPeerRowsForSeries([]);
+        if (!cacheFresh) {
+          setError(e instanceof Error ? e.message : "unknown error");
+          windowBoundsRef.current = null;
+          lastSuccessfulRefreshNonceRef.current = null;
+          setWindowRows([]);
+          setPeerRowsForSeries([]);
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -310,16 +370,14 @@ export function useTodayGames() {
     return () => {
       alive = false;
     };
-  }, [monthKey, selectedDate, selectedLeague, refreshNonce]);
+  }, [enabled, monthKey, selectedDate, selectedLeague, refreshNonce]);
 
-  /** 月送りなどで試合のない暦日に寄ったとき、ストリップ上の試合日へ補正 */
   useEffect(() => {
     if (loading) return;
     const selectedMonthKey = dateKey.slice(0, 7);
     const windowHasSelectedMonth = dateKeysWithGames.some((key) =>
       key.startsWith(selectedMonthKey)
     );
-    // 旧月の window が残っている間は補正しない（6月→5月で即座に6月へ戻るのを防ぐ）
     if (dateKeysWithGames.length > 0 && !windowHasSelectedMonth) return;
     if (dateKeysWithGames.length === 0) return;
     if (dateKeysWithGames.includes(dateKey)) return;
@@ -338,6 +396,7 @@ export function useTodayGames() {
     games,
     peerGamesForSeries,
     dateKeysWithGames,
+    hasWindowData,
     selectedDate,
     setSelectedDate,
     selectedLeague,

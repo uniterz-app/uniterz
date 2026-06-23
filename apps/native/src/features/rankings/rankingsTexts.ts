@@ -44,5 +44,7 @@ export function rankingsTexts(language: RankingsLanguage) {
     stageTabsLabel: m.stageTabsLabel,
     roundTabsLabel: m.roundTabsLabel,
     metricTabsLabel: m.metricTabsLabel,
+    shareMyRank: m.shareMyRank,
+    shareRankCardFailed: m.shareRankCardFailed,
   };
 }

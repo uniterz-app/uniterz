@@ -1,10 +1,10 @@
 /**
- * 試合一覧（GamesHomeScreen）と同じ UNITERZ ブランド段：暖色ヘイズ + シアンアニメライン。
- * 親の横パディングに合わせて `horizontalBleed` でフル幅に食い込ませる。
+ * Web `app/component/Header.tsx` 相当 — UNITERZ ワードマーク + シアンライン。
+ * MainTab 共通（`MainTabNavigator`）で 1 枚だけ描画する。
  */
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { spacing } from "../theme/tokens";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BrandCyanLineAnimated from "./games/BrandCyanLineAnimated";
 
 const DISPLAY_FONT_FAMILY = Platform.select({
@@ -13,63 +13,96 @@ const DISPLAY_FONT_FAMILY = Platform.select({
   default: "BebasNeue_400Regular",
 });
 
+/** Web Header `text-[22px] tracking-[0.35em]` */
+export const WORDMARK_SIZE = 22;
+const WORDMARK_TRACKING = WORDMARK_SIZE * 0.35;
+
+/** ロゴ + ライン + 上下パディング（safe area 除く） */
+export const UNITERZ_BRAND_SHELF_BODY_H = 8 + WORDMARK_SIZE + 2 + 2 + 6;
+
+export function uniterzBrandShelfOffsetTop(insetsTop: number): number {
+  return insetsTop + UNITERZ_BRAND_SHELF_BODY_H;
+}
+
 type Props = {
-  /** 親の paddingHorizontal と相殺（Games: spacing.xs、Profile: spacing.sm など） */
-  horizontalBleed?: number;
+  /** MainTab ルートで safe area を含める */
+  includeSafeAreaTop?: boolean;
+  /** タブに応じたワードマーク（未指定時は UNITERZ） */
+  title?: string;
 };
 
 export default function UniterzBrandShelfNative({
-  horizontalBleed = spacing.xs,
+  includeSafeAreaTop = false,
+  title = "UNITERZ",
 }: Props) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={[styles.brandShelf, { marginHorizontal: -horizontalBleed }]}>
+    <View
+      style={[
+        styles.shell,
+        includeSafeAreaTop ? { paddingTop: insets.top + 8 } : styles.shellPadTop,
+      ]}
+      pointerEvents="none"
+      accessibilityRole="header"
+      accessibilityLabel={title}
+    >
+      {/* Web: linear-gradient(180deg, rgba(0,0,0,0.28) → transparent) */}
       <LinearGradient
         pointerEvents="none"
         colors={[
-          "rgba(5,7,10,0)",
-          "rgba(61,46,32,0.52)",
-          "rgba(45,36,26,0.4)",
-          "rgba(61,46,32,0.52)",
-          "rgba(5,7,10,0)",
+          "rgba(0,0,0,0.28)",
+          "rgba(0,0,0,0.10)",
+          "rgba(0,0,0,0)",
         ]}
-        locations={[0, 0.32, 0.5, 0.68, 1]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.brandWarmHaze}
+        locations={[0, 0.6, 1]}
+        style={StyleSheet.absoluteFillObject}
       />
-      <Text style={styles.brandText} maxFontSizeMultiplier={1.15}>
-        UNITERZ
-      </Text>
-      <BrandCyanLineAnimated />
+
+      <View style={styles.inner}>
+        <Text
+          style={styles.brandText}
+          maxFontSizeMultiplier={1.12}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        >
+          {title}
+        </Text>
+        <BrandCyanLineAnimated />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  brandShelf: {
+  shell: {
     alignSelf: "stretch",
-    alignItems: "center",
-    marginBottom: 8,
-    paddingTop: 12,
-    paddingBottom: 8,
-    borderRadius: 0,
     overflow: "hidden",
-    borderWidth: 0,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(6,9,14,0.72)",
+    backgroundColor: "transparent",
+    paddingBottom: 6,
+    zIndex: 20,
   },
-  brandWarmHaze: {
-    ...StyleSheet.absoluteFillObject,
+  shellPadTop: {
+    paddingTop: 8,
+  },
+  inner: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 24,
   },
   brandText: {
-    color: "rgba(203,220,245,0.92)",
-    fontSize: 20,
-    lineHeight: 22,
+    color: "rgba(255,237,213,0.85)",
+    fontSize: WORDMARK_SIZE,
+    lineHeight: WORDMARK_SIZE + 2,
     fontWeight: "400",
-    letterSpacing: 5.4,
+    letterSpacing: WORDMARK_TRACKING,
     fontFamily: DISPLAY_FONT_FAMILY,
     includeFontPadding: false,
-    marginBottom: 0,
+    textShadowColor: "rgba(103,232,249,0.16)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 22,
   },
 });
