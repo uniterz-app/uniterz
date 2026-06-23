@@ -330,7 +330,7 @@ export default function MobileResultMatchHeader({
           <MatchScoreLine
             home={predictedHome}
             away={predictedAway}
-            className="font-black text-[clamp(0.9rem,3.4vw,1.2rem)] leading-none tracking-tight text-white/85 md:text-5xl"
+            className="font-black text-3xl leading-none tracking-tight text-white/85 md:text-5xl"
           />
 
           {finalHome != null && finalAway != null ? (

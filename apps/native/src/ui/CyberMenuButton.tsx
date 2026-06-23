@@ -13,8 +13,6 @@ type Props = {
   hitSlop?: number;
   style?: StyleProp<ViewStyle>;
   badge?: React.ReactNode;
-  /** メニュー展開中は × 表示 */
-  open?: boolean;
 };
 
 /** 角切りシアン枠のハンバーガーボタン（予想オーバーレイと同型） */
@@ -26,7 +24,6 @@ export default function CyberMenuButton({
   hitSlop = 8,
   style,
   badge,
-  open = false,
 }: Props) {
   return (
     <View style={styles.shell}>
@@ -34,7 +31,6 @@ export default function CyberMenuButton({
         size={size}
         embedded
         icon="menu"
-        open={open}
         onPress={onPress}
         hitSlop={hitSlop}
         accessibilityLabel={accessibilityLabel}

@@ -24,18 +24,24 @@ import { CYBER_MENU_BTN_CUT, cyberMenuBtnPathD } from "./cyberMenuClipPath";
 export type CyberChamferButtonSize = "xs" | "sm" | "md" | "lg";
 
 const SIZE_PX: Record<CyberChamferButtonSize, number> = {
-  xs: 28,
+  xs: 24,
   sm: 28,
   md: 36,
   lg: 40,
 };
 
 const ICON_PX: Record<CyberChamferButtonSize, number> = {
-  xs: 13,
+  xs: 10,
   sm: 13,
   md: 15,
   lg: 16,
 };
+
+/** Web `.cyber-menu-btn` */
+const MENU_FILL = "rgba(4,10,18,0.84)";
+const MENU_STROKE = "rgba(0,245,255,0.34)";
+const DEFAULT_FILL = "rgba(4,10,18,0.82)";
+const DEFAULT_STROKE = "rgba(34,211,238,0.35)";
 
 type FloatingAlign = "left" | "right";
 
@@ -100,6 +106,9 @@ export default function CyberChamferButtonNative({
   }
 
   const hasSize = layout.w > 0 && layout.h > 0;
+  const isMenu = icon === "menu";
+  const fillColor = isMenu ? MENU_FILL : DEFAULT_FILL;
+  const strokeColor = isMenu ? MENU_STROKE : DEFAULT_STROKE;
 
   return (
     <Pressable
@@ -141,7 +150,7 @@ export default function CyberChamferButtonNative({
                   y={0}
                   width={layout.w}
                   height={layout.h}
-                  color="rgba(4,10,18,0.82)"
+                  color={fillColor}
                 />
               </Group>
             </Canvas>
@@ -160,7 +169,7 @@ export default function CyberChamferButtonNative({
                   path={skiaPath}
                   style="stroke"
                   strokeWidth={1}
-                  color="rgba(34,211,238,0.35)"
+                  color={strokeColor}
                 />
               </Canvas>
             </View>
@@ -174,21 +183,11 @@ export default function CyberChamferButtonNative({
               color="rgba(236,254,255,0.9)"
             />
           ) : icon === "menu" ? (
-            open ? (
-              <Text
-                style={styles.closeIcon}
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              >
-                ×
-              </Text>
-            ) : (
-              <MaterialCommunityIcons
-                name="menu"
-                size={iconPx}
-                color="rgba(236,254,255,0.9)"
-              />
-            )
+            <MaterialCommunityIcons
+              name="menu"
+              size={iconPx}
+              color="rgba(224,252,255,0.92)"
+            />
           ) : icon === "share" ? (
             <MaterialCommunityIcons
               name="share-variant"

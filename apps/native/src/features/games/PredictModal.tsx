@@ -65,6 +65,7 @@ import {
   predictModalPreviewEnter,
   predictModalSheetEnter,
   predictModalSheetExit,
+  predictBlockFadeUpEnter,
   predictPanelRevealEnter,
 } from "./predictMotion";
 import PredictOverlayCloseButtonNative from "./PredictOverlayCloseButtonNative";
@@ -596,6 +597,7 @@ export function PredictMatchPreview({
             <WcGoalScorerResultRowNative
               label={t.wcGoalScorerLabel}
               info={goalScorerInfo}
+              cyberValue
             />
           </View>
         ) : null}
@@ -720,10 +722,7 @@ export function PredictMatchPreview({
       {mergedFinal?.badge || mergedFinal?.streakBadge ? (
         <View
           pointerEvents="none"
-          style={[
-            s.matchPreviewOutcomeBadge,
-            showActionMenu && s.matchPreviewOutcomeBadgeWithEdit,
-          ]}
+          style={s.matchPreviewOutcomeBadge}
         >
           <ResultOutcomeBadgesNative
             badge={mergedFinal.badge}
@@ -733,22 +732,18 @@ export function PredictMatchPreview({
           />
         </View>
       ) : null}
-      {showActionMenu ? (
+      {(!hideCloseButton || showActionMenu) ? (
         <PredictOverlayActionFabNative
+          showClose={!hideCloseButton}
+          onClose={onClose}
+          closeLabel={closeLabel}
           showEdit={Boolean(showEditButton && onEditPrediction)}
           showShare={canShare}
           onEdit={onEditPrediction}
           onShare={() => void handleShareResult()}
-          sharing={sharing}
           menuLabel={resultCopy.openActions}
           editLabel={t.editScoresCta}
           shareLabel={resultCopy.shareMyResult}
-        />
-      ) : null}
-      {!hideCloseButton ? (
-        <PredictOverlayCloseButtonNative
-          onPress={onClose}
-          accessibilityLabel={closeLabel}
         />
       ) : null}
     </View>
@@ -910,9 +905,13 @@ export default function PredictModal({
 
   /**
    * Web オーバーレイ（`PredictionFormV2` overlayEmbedded）: カード以外は入場 stagger なし。
-   * 単体ページ用の blockIn は別途 predictBlockFadeUpEnter を直接使う。
    */
   const toolPanelIn = reduceMotion ? undefined : predictPanelRevealEnter();
+  /** オーバーレイ内包時は stagger なし（Web `overlayEmbedded` 相当） */
+  const scoreBlockEnter =
+    reduceMotion || overlayUnifiedForm
+      ? undefined
+      : predictBlockFadeUpEnter(1);
 
   const backdropEnter = reduceMotion ? undefined : predictModalBackdropEnter();
   const backdropExit = reduceMotion ? undefined : predictModalBackdropExit();
@@ -1412,7 +1411,7 @@ export default function PredictModal({
 
                   {showScoreInputBlock ? (
                     <>
-                      <Animated.View entering={blockIn(scoreStagger)}>
+                      <Animated.View entering={scoreBlockEnter}>
                         {overlayUnifiedForm ? (
                           <View style={s.predictScoreFormPanel}>
                           {isWcLeague ? (
@@ -2077,10 +2076,6 @@ const s = StyleSheet.create({
     top: 8,
     zIndex: 20,
     flexShrink: 0,
-  },
-  /** 編集ボタン（28px + gap 6）分だけ左へ */
-  matchPreviewOutcomeBadgeWithEdit: {
-    right: 40,
   },
   matchPreviewFinalBlock: {
     alignItems: "center",

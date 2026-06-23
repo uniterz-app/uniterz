@@ -13,6 +13,8 @@ export const MOBILE_RESULT_DAY_STRIP_MAX_W = 380;
 
 /** Web `ResultCard` scheduleDense（モバイル一覧） */
 export const MOBILE_RESULT_JERSEY_SIZE = 62;
+/** モバイル一覧：国旗列と中央スコアの間（px） */
+export const MOBILE_RESULT_MATCH_SIDE_SCORE_PAD = 36;
 export const MOBILE_RESULT_CARD_PAD_TOP = 28;
 export const MOBILE_RESULT_CARD_PAD_X = 8;
 export const MOBILE_RESULT_CARD_PAD_BOTTOM = 6;

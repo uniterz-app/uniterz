@@ -248,7 +248,9 @@ function ResultCardPresentationImpl({
     const base = "flex min-w-0 flex-col items-center";
     if (isWc) {
       if (isMobile) {
-        return mobileScheduleDense ? `${base} pt-0` : `${base} pt-2.5`;
+        return mobileScheduleDense
+          ? `${base} pt-0 pr-6 sm:pr-8`
+          : `${base} pt-2.5 pr-7 sm:pr-9`;
       }
       return `${base} pt-2.5 sm:pt-3.5`;
     }
@@ -263,7 +265,9 @@ function ResultCardPresentationImpl({
     const base = "flex min-w-0 flex-col items-center";
     if (isWc) {
       if (isMobile) {
-        return mobileScheduleDense ? `${base} pt-0` : `${base} pt-2.5`;
+        return mobileScheduleDense
+          ? `${base} pt-0 pl-6 sm:pl-8`
+          : `${base} pt-2.5 pl-7 sm:pl-9`;
       }
       return `${base} pt-2.5 sm:pt-3.5`;
     }
@@ -836,7 +840,7 @@ function ResultCardPresentationImpl({
 
         <div
           className={[
-            "pointer-events-none absolute left-1/2 z-10 flex w-max max-w-[calc(100%-5.25rem)] -translate-x-1/2 flex-col items-center text-center",
+            "pointer-events-none absolute left-1/2 z-10 flex w-max max-w-[calc(100%-7.25rem)] -translate-x-1/2 flex-col items-center text-center",
             mobileScheduleDense
               ? "top-4"
               : isMobile
@@ -866,8 +870,8 @@ function ResultCardPresentationImpl({
               "leading-none tracking-tight font-black text-white/85",
               isMobile
                 ? mobileScheduleDense
-                  ? "text-base md:text-4xl"
-                  : "text-[clamp(0.9rem,3.4vw,1.2rem)]"
+                  ? "text-3xl md:text-4xl"
+                  : "text-[clamp(1.5rem,6.5vw,1.875rem)]"
                 : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
             ].join(" ")}
           />

@@ -17,6 +17,11 @@ import {
   chamferedRectPathD,
   insetChamferedRectPathD,
 } from "./matchListCyberClipPath";
+import type { ResultCyberFrameClipShape } from "../results/ResultCyberFrameBorderSweepNative";
+import {
+  insetResultHitCyberClipPathD,
+  resultHitCyberClipPathD,
+} from "../results/resultHitCyberClipPath";
 
 const TOP_BEAM_INSET_X = 20;
 
@@ -24,6 +29,8 @@ type Props = {
   width: number;
   height: number;
   cut: number;
+  /** chamfer=8角 / hit=右上・左下のみ */
+  clipShape?: ResultCyberFrameClipShape;
   borderColor?: string;
   borderWidth?: number;
   /** border のみ / トップビームのみ / 両方 */
@@ -31,34 +38,52 @@ type Props = {
   layerZIndex?: number;
 };
 
+function shellOutlinePathD(
+  width: number,
+  height: number,
+  cut: number,
+  clipShape: ResultCyberFrameClipShape,
+  inset = 0
+): string {
+  if (clipShape === "hit") {
+    return inset > 0
+      ? insetResultHitCyberClipPathD(width, height, inset, cut)
+      : resultHitCyberClipPathD(width, height, cut);
+  }
+  return inset > 0
+    ? insetChamferedRectPathD(width, height, cut, inset)
+    : chamferedRectPathD(width, height, cut);
+}
+
 export default function PredictOverlayCyberShellBorderNative({
   width,
   height,
   cut,
+  clipShape = "chamfer",
   borderColor = "rgba(0,245,255,0.2)",
   borderWidth = 1,
   mode = "all",
   layerZIndex = 10,
 }: Props) {
-  const octagonPath = useMemo(() => {
+  const clipPath = useMemo(() => {
     if (width <= 0 || height <= 0) return null;
-    const d = chamferedRectPathD(width, height, cut);
+    const d = shellOutlinePathD(width, height, cut, clipShape);
     if (!d) return null;
     return Skia.Path.MakeFromSVGString(d);
-  }, [width, height, cut]);
+  }, [width, height, cut, clipShape]);
 
   const borderPath = useMemo(() => {
     if (width <= 0 || height <= 0) return null;
     const inset = borderWidth / 2;
-    const d = insetChamferedRectPathD(width, height, cut, inset);
+    const d = shellOutlinePathD(width, height, cut, clipShape, inset);
     if (!d) return null;
     return Skia.Path.MakeFromSVGString(d);
-  }, [width, height, cut, borderWidth]);
+  }, [width, height, cut, clipShape, borderWidth]);
 
   const showBorder = mode === "border" || mode === "all";
   const showBeam = mode === "beam" || mode === "all";
 
-  if (!octagonPath) return null;
+  if (!clipPath) return null;
 
   const beamLeft = TOP_BEAM_INSET_X;
   const beamWidth = Math.max(0, width - TOP_BEAM_INSET_X * 2);
@@ -78,7 +103,7 @@ export default function PredictOverlayCyberShellBorderNative({
         ) : null}
 
         {showBeam && beamWidth > 0 ? (
-          <Group clip={octagonPath}>
+          <Group clip={clipPath}>
             <Rect x={beamLeft} y={0} width={beamWidth} height={1}>
               <SkiaLinearGradient
                 start={vec(beamLeft, 0.5)}

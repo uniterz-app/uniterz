@@ -462,7 +462,6 @@ export default function ResultListWithOverlay({
   const [overlayUserPredictionWinner, setOverlayUserPredictionWinner] =
     useState<"home" | "away" | "draw" | null>(null);
   const [predictStandingsOpen, setPredictStandingsOpen] = useState(false);
-  const [predictEditTriggerNonce, setPredictEditTriggerNonce] = useState(0);
   const predictOverlayOverflowPrevRef = useRef<string | null>(null);
 
   const closePredictOverlay = useCallback(() => {
