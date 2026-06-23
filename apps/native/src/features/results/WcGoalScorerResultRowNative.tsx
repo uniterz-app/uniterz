@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import CountryFlagNative from "../games/CountryFlagNative";
+import PredictOverlayChamferedFrameNative from "../games/PredictOverlayChamferedFrameNative";
+import { PREDICT_OVERLAY_GOAL_BOX_CUT } from "../games/matchListCyberClipPath";
 import {
   MOBILE_RESULT_STAT_LABEL_W,
   MOBILE_RESULT_STAT_ROW_GAP,
@@ -11,21 +13,46 @@ import type { WcGoalScorerResultInfo } from "./useWcGoalScorerResultNative";
 type Props = {
   label: string;
   info: WcGoalScorerResultInfo;
+  /** 予想オーバーレイ：選手名を角切り HUD 箱で表示 */
+  cyberValue?: boolean;
 };
 
 /** Web `WcGoalScorerResultRow` compact 相当 */
-export default function WcGoalScorerResultRowNative({ label, info }: Props) {
+export default function WcGoalScorerResultRowNative({
+  label,
+  info,
+  cyberValue = false,
+}: Props) {
+  const valueInner = (
+    <>
+      <View style={styles.flagWrap}>
+        <CountryFlagNative teamId={info.teamId} variant="inline" />
+      </View>
+      <Text style={styles.playerName} numberOfLines={1}>
+        {info.playerName}
+      </Text>
+    </>
+  );
+
   return (
     <View style={styles.row}>
       <Text style={styles.label} numberOfLines={1}>
         {label}
       </Text>
-      <View style={styles.valueSlot}>
-        <CountryFlagNative teamId={info.teamId} variant="clubInline" />
-        <Text style={styles.playerName} numberOfLines={1}>
-          {info.playerName}
-        </Text>
-      </View>
+      {cyberValue ? (
+        <PredictOverlayChamferedFrameNative
+          cut={PREDICT_OVERLAY_GOAL_BOX_CUT}
+          gradientColors={["rgba(0,245,255,0.04)", "rgba(0,245,255,0.04)"]}
+          borderColor="rgba(0,245,255,0.18)"
+          style={styles.cyberValueFrame}
+          contentStyle={styles.cyberValueInner}
+          cornerMaskColor="rgba(10,14,22,1)"
+        >
+          <View style={styles.valueSlot}>{valueInner}</View>
+        </PredictOverlayChamferedFrameNative>
+      ) : (
+        <View style={styles.valueSlot}>{valueInner}</View>
+      )}
       <View style={styles.iconSlot}>
         {info.hit === true ? (
           <MaterialCommunityIcons
@@ -67,7 +94,18 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 10,
+  },
+  cyberValueFrame: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cyberValueInner: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  flagWrap: {
+    marginRight: 2,
   },
   playerName: {
     flex: 1,

@@ -1,7 +1,10 @@
 /** Web `match-list-cyber-card` の角切り（モバイル dense = 10px） */
 export const MATCH_LIST_CYBER_CUT_DENSE = 10;
 export const MATCH_LIST_CYBER_CUT_STAT_BOX = 7;
-export const MATCH_LIST_CYBER_CUT_MARKET_BAR = 5;
+/** Web `.predict-overlay-market-frame`（globals.css 8px） */
+export const MATCH_LIST_CYBER_CUT_MARKET_BAR = 8;
+/** Web `.predict-overlay-goal-box`（globals.css 5px） */
+export const PREDICT_OVERLAY_GOAL_BOX_CUT = 5;
 /** Web `.predict-overlay-cyber-card`（globals.css） */
 export const PREDICT_OVERLAY_CYBER_CUT = 12;
 /** Web `.predict-overlay-cyber-deck`（globals.css） */

@@ -64,8 +64,21 @@ export type ResolveResultOutcomeInput = PerfectScoreCheckInput & {
   activeWinStreak?: unknown;
 };
 
-/** リザルト outcome バッジの優先順: PERFECT → UPSET → 連勝 → HIT → MISS */
-export function resolveResultOutcomeBadge(
+export type ResultOutcomeOnlyBadge = Exclude<ResultCardBadge, "streak">;
+
+/** HIT / PERFECT / UPSET / MISS のみ（連勝は含めない） */
+export function resolveResultOutcomeOnlyBadge(
+  input: ResolveResultOutcomeInput
+): ResultOutcomeOnlyBadge {
+  if (isPerfectScoreHit(input)) return "perfect";
+  if (input.upsetHit) return "upset";
+  if (input.isWin === true || input.stats?.isWin === true) return "hit";
+  if (input.isWin === false || input.stats?.isWin === false) return "miss";
+  return null;
+}
+
+/** カード枠・FX 用（従来どおり連勝が outcome より優先） */
+export function resolveResultFrameBadge(
   input: ResolveResultOutcomeInput
 ): ResultCardBadge {
   if (isPerfectScoreHit(input)) return "perfect";
@@ -76,7 +89,42 @@ export function resolveResultOutcomeBadge(
   return null;
 }
 
-export type ResolvedResultBadge = {
+export type ResultBadgeDisplay = {
+  /** カード枠・FX 用 */
+  frameBadge: ResultCardBadge;
+  outcomeBadge: ResultOutcomeOnlyBadge;
+  showStreakBadge: boolean;
+  /** 上: 連勝、下: PERFECT / UPSET を縦積み */
+  stackBadges: boolean;
+};
+
+/** バッジ表示レイアウト（枠色は frameBadge を使う） */
+export function resolveResultBadgeDisplay(
+  input: ResolveResultOutcomeInput
+): ResultBadgeDisplay {
+  const outcomeBadge = resolveResultOutcomeOnlyBadge(input);
+  const showStreakBadge = normalizeWinStreak(input.activeWinStreak) >= 3;
+  const stackBadges =
+    showStreakBadge &&
+    (outcomeBadge === "perfect" || outcomeBadge === "upset");
+
+  return {
+    frameBadge: resolveResultFrameBadge(input),
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+  };
+}
+
+/** @deprecated 互換用 — frameBadge と同義 */
+export function resolveResultOutcomeBadge(
+  input: ResolveResultOutcomeInput
+): ResultCardBadge {
+  return resolveResultFrameBadge(input);
+}
+
+export type ResolvedResultBadge = ResultBadgeDisplay & {
+  /** frameBadge の別名（既存呼び出し向け） */
   badge: ResultCardBadge;
   activeWinStreak: number;
   streakBadge: WinStreakBadgeStyle | null;
@@ -94,7 +142,7 @@ export function resolveResultCardBadge(
     subtle: true,
   });
 
-  const badge = resolveResultOutcomeBadge({
+  const display = resolveResultBadgeDisplay({
     stats: post.stats,
     prediction: post.prediction,
     result: post.result,
@@ -103,5 +151,10 @@ export function resolveResultCardBadge(
     activeWinStreak,
   });
 
-  return { badge, activeWinStreak, streakBadge };
+  return {
+    ...display,
+    badge: display.frameBadge,
+    activeWinStreak,
+    streakBadge,
+  };
 }

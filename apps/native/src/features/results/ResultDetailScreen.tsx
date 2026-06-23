@@ -943,6 +943,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "transparent",
   },
+  matchTopNoLeague: {
+    justifyContent: "flex-end",
+  },
   leagueLabelSlot: {
     marginTop: 4,
     marginLeft: 4,

@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
@@ -20,6 +21,15 @@ import { MyRankCardFrameNative, resolveMyRankFrameTone } from "./MyRankCardFrame
 import { RankDeltaBadgeNative } from "./RankingsRankDeltaBadge";
 import { rankingsUiStyles as styles } from "./rankingsUiStyles";
 import { rankingNameFont } from "./rankingsUiTheme";
+import { shareMyRankCardNative } from "./shareRankCardNative";
+import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import { buildRankingsShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
+
+export type MyRankCardShareState = {
+  canShare: boolean;
+  sharing: boolean;
+  share: () => void;
+};
 
 function RankMetaStripNative({
   topPercentLabel,
@@ -75,6 +85,8 @@ export function MyRankCardNative({
   barsReady = true,
   leagueLabel,
   mobileWide = false,
+  cardResetKey,
+  onShareStateChange,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -92,8 +104,11 @@ export function MyRankCardNative({
   statsSource?: MyRankStatsSource | null;
   barsReady?: boolean;
   leagueLabel?: string | null;
+  /** Web `cardResetKey` — 指標タブ切替でセグメントバーを再点灯 */
+  cardResetKey?: string;
   /** Web `mobileWide` — 親 padding 内でカード幅をリストと揃える */
   mobileWide?: boolean;
+  onShareStateChange?: (state: MyRankCardShareState) => void;
 }) {
   const t = rankingsTexts(language);
   const frameTone = resolveMyRankFrameTone(rankDeltaPlaces);
@@ -143,9 +158,55 @@ export function MyRankCardNative({
     return formatMetricDecimals(value, 1);
   })();
 
+  const [segEnter, setSegEnter] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const captureRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (loading || !barsReady) {
+      setSegEnter(false);
+      return;
+    }
+    setSegEnter(false);
+    const id = setTimeout(() => setSegEnter(true), 16);
+    return () => clearTimeout(id);
+  }, [loading, barsReady, cardResetKey]);
+
+  const canShare = !loading && !statsPending && rank != null && !sharing;
+  const shareLinkUrl = buildRankingsShareUrl();
+
+  const handleShare = useCallback(async () => {
+    if (!canShare) return;
+    setSharing(true);
+    try {
+      const result = await shareMyRankCardNative(captureRef, {
+        language: language === "en" ? "en" : "ja",
+        rank,
+        leagueLabel,
+        totalEntries,
+        appBaseUrl: getShareAppOrigin(),
+      });
+      if (result === "failed") {
+        Alert.alert("", t.shareRankCardFailed);
+      }
+    } finally {
+      setSharing(false);
+    }
+  }, [canShare, language, leagueLabel, rank, t.shareRankCardFailed, totalEntries]);
+
+  useEffect(() => {
+    onShareStateChange?.({
+      canShare,
+      sharing,
+      share: () => void handleShare(),
+    });
+  }, [canShare, sharing, handleShare, onShareStateChange]);
+
   return (
     <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
-      <MyRankCardFrameNative tone={frameTone}>
+      <View style={styles.myRankCaptureWrap}>
+        <View ref={captureRef} collapsable={false}>
+          <MyRankCardFrameNative tone={frameTone}>
         <LinearGradient
           pointerEvents="none"
           colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.02)", "transparent"]}
@@ -242,7 +303,8 @@ export function MyRankCardNative({
                 segments={12}
                 compact
                 accent={segAccent}
-                enter={barsReady && !statsPending}
+                enter={segEnter && !statsPending}
+                replayKey={cardResetKey ?? metric}
               />
             </View>
           </View>
@@ -256,7 +318,10 @@ export function MyRankCardNative({
             {` // ${serialDateKey}`}
           </Text>
         </View>
-      </MyRankCardFrameNative>
+        <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
+          </MyRankCardFrameNative>
+        </View>
+      </View>
     </View>
   );
 }

@@ -55,7 +55,7 @@ export type KinetikSlantTabTheme = {
 
 export const KINETIK_SLANT_TAB_RANK: Record<KinetikRankBadgeTier, KinetikSlantTabTheme> = {
   legend: { accent: "#fcd34d", glow: "rgba(252, 211, 77, 0.45)", fillText: "#1a1200" },
-  elite: { accent: "#c084fc", glow: "rgba(192, 132, 252, 0.42)", fillText: "#120818" },
+  elite: { accent: "#b57cff", glow: "rgba(181, 124, 255, 0.34)", fillText: "#0d0612" },
   pro: { accent: "#00f5ff", glow: "rgba(0, 245, 255, 0.42)", fillText: "#050508" },
   analyst: { accent: "#a8ff2a", glow: "rgba(168, 255, 42, 0.38)", fillText: "#0a1004" },
   rising: { accent: "#fb923c", glow: "rgba(251, 146, 60, 0.42)", fillText: "#140a02" },
@@ -71,4 +71,4 @@ export const KINETIK_SLANT_TAB_STREAK: Record<
   4: { accent: "#f87171", glow: "rgba(248, 113, 113, 0.38)" },
 };
 
-export const KINETIK_SLANT_TAB_ROW_H = 26;
+export const KINETIK_SLANT_TAB_ROW_H = 22;

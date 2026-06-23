@@ -6,6 +6,7 @@ exports.uniqueAuthorTargetsFromPosts = uniqueAuthorTargetsFromPosts;
 const expo_server_sdk_1 = require("expo-server-sdk");
 const firestore_1 = require("firebase-admin/firestore");
 const pushNotificationCopy_1 = require("./pushNotificationCopy");
+const pushNotificationPrefs_1 = require("./pushNotificationPrefs");
 const expo = new expo_server_sdk_1.Expo();
 async function loadTokensForUids(uids) {
     var _a;
@@ -30,8 +31,7 @@ async function loadTokensForUids(uids) {
     }
     return out;
 }
-async function loadLanguages(uids) {
-    var _a;
+async function loadUserPushContexts(uids) {
     const firestore = (0, firestore_1.getFirestore)();
     const unique = [...new Set(uids.filter(Boolean))];
     const map = new Map();
@@ -41,7 +41,11 @@ async function loadLanguages(uids) {
         const refs = chunk.map((uid) => firestore.doc(`users/${uid}`));
         const snaps = await firestore.getAll(...refs);
         for (const snap of snaps) {
-            map.set(snap.id, (0, pushNotificationCopy_1.normalizePushLanguage)((_a = snap.data()) === null || _a === void 0 ? void 0 : _a.language));
+            const data = snap.data();
+            map.set(snap.id, {
+                language: (0, pushNotificationCopy_1.normalizePushLanguage)(data === null || data === void 0 ? void 0 : data.language),
+                prefs: (0, pushNotificationPrefs_1.parsePushNotificationPrefs)(data === null || data === void 0 ? void 0 : data.notificationPrefs),
+            });
         }
     }
     return map;
@@ -62,11 +66,11 @@ async function deleteInvalidTokens(records) {
         await batch.commit();
 }
 async function sendExpoPushToUids(input) {
-    var _a, _b, _c;
+    var _a, _b;
     const uids = input.targets.map((t) => t.uid);
-    const [tokens, languages] = await Promise.all([
+    const [tokens, userContexts] = await Promise.all([
         loadTokensForUids(uids),
-        loadLanguages(uids),
+        loadUserPushContexts(uids),
     ]);
     if (tokens.length === 0) {
         return { sent: 0, skipped: input.targets.length };
@@ -74,16 +78,13 @@ async function sendExpoPushToUids(input) {
     const dataByUid = new Map(input.targets.map((t) => [t.uid, t.data]));
     const messages = [];
     for (const rec of tokens) {
-        const lang = (_a = languages.get(rec.uid)) !== null && _a !== void 0 ? _a : "ja";
-        const copy = (0, pushNotificationCopy_1.buildPushNotificationCopy)(input.type, lang, input.matchup);
-        const data = (_b = dataByUid.get(rec.uid)) !== null && _b !== void 0 ? _b : { type: input.type };
-        messages.push({
-            to: rec.expoPushToken,
-            sound: "default",
-            title: copy.title,
-            body: copy.body,
-            data: data,
-        });
+        const ctx = userContexts.get(rec.uid);
+        if (!ctx || !(0, pushNotificationPrefs_1.isPushTypeEnabledForPrefs)(ctx.prefs, input.type)) {
+            continue;
+        }
+        const copy = (0, pushNotificationCopy_1.buildPushNotificationCopy)(input.type, ctx.language, input.matchup);
+        const data = (_a = dataByUid.get(rec.uid)) !== null && _a !== void 0 ? _a : { type: input.type };
+        messages.push(Object.assign(Object.assign({ to: rec.expoPushToken, sound: "default", title: copy.title, body: copy.body }, (copy.subtitle ? { subtitle: copy.subtitle } : {})), { data: data }));
     }
     const chunks = expo.chunkPushNotifications(messages);
     const invalid = [];
@@ -100,7 +101,7 @@ async function sendExpoPushToUids(input) {
                 sent++;
                 continue;
             }
-            const detail = (_c = ticket.details) === null || _c === void 0 ? void 0 : _c.error;
+            const detail = (_b = ticket.details) === null || _b === void 0 ? void 0 : _b.error;
             if (detail === "DeviceNotRegistered") {
                 invalid.push(rec);
             }

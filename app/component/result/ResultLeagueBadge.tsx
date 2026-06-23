@@ -2,7 +2,6 @@
 
 import { memo } from "react";
 import { normalizeLeague } from "@/lib/leagues";
-import { ResultLeagueLabelNbaWeb } from "@/app/component/result/ResultLeagueLabelNbaWeb";
 
 const leaguePillBg: Record<string, string> = {
   nba: "#1D428A",
@@ -27,6 +26,12 @@ type Props = {
   compact?: boolean;
 };
 
+/** Native と同様：NBA / WC はタブで区別するためカード左上には出さない */
+export function shouldShowResultLeagueBadge(league: string): boolean {
+  const normalized = normalizeLeague(league);
+  return normalized !== "nba" && normalized !== "wc";
+}
+
 function ResultLeagueBadgeImpl({
   league,
   teamNameFont,
@@ -34,19 +39,8 @@ function ResultLeagueBadgeImpl({
 }: Props) {
   const normalized = normalizeLeague(league);
 
-  if (normalized === "nba" || normalized === "wc") {
-    return (
-      <span
-        className={[
-          "pointer-events-auto inline-flex shrink-0 items-center",
-          compact ? "mt-1" : "mt-1 pt-1 sm:mt-1.5 sm:pt-1.5",
-        ].join(" ")}
-      >
-        <ResultLeagueLabelNbaWeb
-          text={normalized === "wc" ? "WC" : "NBA"}
-        />
-      </span>
-    );
+  if (!shouldShowResultLeagueBadge(normalized)) {
+    return null;
   }
 
   const pillBg = leaguePillBg[normalized] ?? "#334155";

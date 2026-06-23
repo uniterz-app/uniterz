@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -14,6 +14,7 @@ import { auth, db } from "../../lib/firebase";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { colors, spacing } from "../../theme/tokens";
 import type { PreferredLeague } from "../../../../../lib/user/preferredLeague";
+import { hideNativeBootSplash } from "../../bootstrap/nativeBootSplash";
 
 const API_BASE = process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -23,6 +24,10 @@ export default function OnboardingScreenNative() {
   const [language, setLanguage] = useState<"ja" | "en">("ja");
   const [preferredLeague, setPreferredLeague] = useState<PreferredLeague | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    hideNativeBootSplash();
+  }, []);
 
   const canSubmit = displayName.trim().length > 0 && preferredLeague !== null;
 

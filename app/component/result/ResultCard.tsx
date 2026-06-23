@@ -38,7 +38,7 @@ import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "@/lib/result/resultLiveGame";
 import { useResultCardClockMs } from "@/lib/hooks/useResultCardClockMs";
 import ResultLiveMark from "@/app/component/result/ResultLiveMark";
-import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
+import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 import WcGoalScorerResultRow, {
   useWcGoalScorerResult,
 } from "@/app/component/result/WcGoalScorerResultRow";
@@ -221,10 +221,14 @@ function ResultCardPresentationImpl({
     }
   };
 
-  const { badge, activeWinStreak, streakBadge } = resolveResultCardBadge(
-    post,
-    language
-  );
+  const {
+    badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+    activeWinStreak,
+    streakBadge,
+  } = resolveResultCardBadge(post, language);
 
   const nameMt = mobileScheduleDense
     ? "mt-0.5"
@@ -248,7 +252,9 @@ function ResultCardPresentationImpl({
     const base = "flex min-w-0 flex-col items-center";
     if (isWc) {
       if (isMobile) {
-        return mobileScheduleDense ? `${base} pt-0` : `${base} pt-2.5`;
+        return mobileScheduleDense
+          ? `${base} pt-0 pr-6 sm:pr-8`
+          : `${base} pt-2.5 pr-7 sm:pr-9`;
       }
       return `${base} pt-2.5 sm:pt-3.5`;
     }
@@ -263,7 +269,9 @@ function ResultCardPresentationImpl({
     const base = "flex min-w-0 flex-col items-center";
     if (isWc) {
       if (isMobile) {
-        return mobileScheduleDense ? `${base} pt-0` : `${base} pt-2.5`;
+        return mobileScheduleDense
+          ? `${base} pt-0 pl-6 sm:pl-8`
+          : `${base} pt-2.5 pl-7 sm:pl-9`;
       }
       return `${base} pt-2.5 sm:pt-3.5`;
     }
@@ -303,7 +311,7 @@ function ResultCardPresentationImpl({
     const finalized =
       post.status === "final" || post.game?.status === "final";
     if (finalized) return null;
-    return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
+    return `${gamesRoutePrefix}/games/${post.gameId}/predict?edit=1`;
   }, [isOwnerPredict, gamesRoutePrefix, post.gameId, post.status, post.game?.status]);
 
   const hasCornerTrash = Boolean(showPreKickoffDismiss && onPreKickoffDismiss);
@@ -318,6 +326,8 @@ function ResultCardPresentationImpl({
 
   const hasCornerActions =
     !isMatchStarted && (hasCornerEdit || hasCornerTrash);
+
+  const showCornerControl = !isMatchStarted && hasCornerActions;
 
   /** モバイルはホバーが使えないため、ハンバーガーでメニュー開閉 */
   const [cornerFabOpen, setCornerFabOpen] = useState(false);
@@ -375,13 +385,14 @@ function ResultCardPresentationImpl({
         cornerFabOpen ? "!overflow-visible" : ""
       }
     >
-      {hasCornerActions ? (
+      {showCornerControl ? (
         <div
           ref={cornerFabRef}
+          data-capture-skip
           className={[
             /* ホバーでペンへ移る途中でも閉じにくいようホットエリアを広げる（見た目位置は維持） */
             "pointer-events-auto absolute",
-            isMobile ? "-m-3 p-3 right-0.5 top-0.5 z-[50]" : "-m-5 p-5 right-2 top-2 z-40 sm:right-2.5 sm:top-2.5",
+            isMobile ? "-m-3 p-3 right-2.5 top-2 z-[50]" : "-m-5 p-5 right-2 top-2 z-40 sm:right-2.5 sm:top-2.5",
           ].join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
@@ -492,11 +503,14 @@ function ResultCardPresentationImpl({
           <div
             className={[
               "pointer-events-none absolute top-1.5 z-20 flex max-w-[min(100%,11rem)] flex-col items-end gap-1.5",
-              hasCornerActions ? "right-11" : "right-2",
+              showCornerControl ? "right-11" : "right-2",
             ].join(" ")}
           >
             <ResultOutcomeBadges
               badge={badge}
+              outcomeBadge={outcomeBadge}
+              showStreakBadge={showStreakBadge}
+              stackBadges={stackBadges}
               streakBadge={streakBadge}
               activeWinStreak={activeWinStreak}
               isMobile={isMobile}
@@ -504,6 +518,7 @@ function ResultCardPresentationImpl({
               trailing={liveMarkNode}
             />
           </div>
+          {shouldShowResultLeagueBadge(normalizedLeague) ? (
           <div
             className={[
               "pointer-events-none absolute left-2 z-20",
@@ -516,11 +531,15 @@ function ResultCardPresentationImpl({
               compact
             />
           </div>
+          ) : null}
         </>
       ) : (
         <div
           className={[
-            "pointer-events-none absolute inset-x-0 z-20 flex items-start justify-between gap-1 px-1 sm:px-1.5",
+            "pointer-events-none absolute inset-x-0 z-20 flex items-start gap-1 px-1 sm:px-1.5",
+            shouldShowResultLeagueBadge(normalizedLeague)
+              ? "justify-between"
+              : "justify-end",
             listDateLabel ? "top-6 pt-0.5 sm:top-7 sm:pt-1" : "top-0 pt-1 sm:pt-1.5",
           ].join(" ")}
         >
@@ -531,11 +550,14 @@ function ResultCardPresentationImpl({
           <div
             className={[
               "flex min-w-0 flex-1 flex-col items-end gap-1.5",
-              hasCornerActions ? "pr-12 sm:pr-14" : "",
+              showCornerControl ? "pr-12 sm:pr-14" : "",
             ].join(" ")}
           >
             <ResultOutcomeBadges
               badge={badge}
+              outcomeBadge={outcomeBadge}
+              showStreakBadge={showStreakBadge}
+              stackBadges={stackBadges}
               streakBadge={streakBadge}
               activeWinStreak={activeWinStreak}
               isMobile={isMobile}
@@ -828,7 +850,7 @@ function ResultCardPresentationImpl({
 
         <div
           className={[
-            "pointer-events-none absolute left-1/2 z-10 flex w-max max-w-[calc(100%-5.25rem)] -translate-x-1/2 flex-col items-center text-center",
+            "pointer-events-none absolute left-1/2 z-10 flex w-max max-w-[calc(100%-7.25rem)] -translate-x-1/2 flex-col items-center text-center",
             mobileScheduleDense
               ? "top-4"
               : isMobile
@@ -858,8 +880,10 @@ function ResultCardPresentationImpl({
               "leading-none tracking-tight font-black text-white/85",
               isMobile
                 ? mobileScheduleDense
-                  ? "text-base md:text-4xl"
-                  : "text-[clamp(0.9rem,3.4vw,1.2rem)]"
+                  ? normalizedLeague === "nba" || normalizedLeague === "bj"
+                    ? "text-xl md:text-2xl"
+                    : "text-3xl md:text-4xl"
+                  : "text-[clamp(1.5rem,6.5vw,1.875rem)]"
                 : "text-2xl md:text-[3.05rem] lg:text-[3.2rem]",
             ].join(" ")}
           />
@@ -917,7 +941,7 @@ function ResultCardPresentationImpl({
           />
         )}
       </div>
-    </div>
+      </div>
     </ResultGlassShell>
   );
 }
@@ -938,11 +962,11 @@ export default function ResultCard(props: Props) {
     props.platform !== undefined
       ? props.platform === "mobile"
       : pathname?.startsWith("/mobile") || pathname?.startsWith("/m/");
-  const { platform: _p, ...rest } = props;
-  void _p;
+  const { platform, ...rest } = props;
   return (
     <ResultCardPresentation
       {...rest}
+      platform={platform}
       isMobile={isMobile}
       onNavigate={onNavigate}
     />

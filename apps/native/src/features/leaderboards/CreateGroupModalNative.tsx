@@ -3,6 +3,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,8 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { Language } from "../../../../../lib/i18n/language";
@@ -29,9 +32,14 @@ import {
 import { storage } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { RankingsShellGridOverlay } from "../rankings/rankingsUiDecorations";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import type { CreatedCommunityGroup } from "./communityApiNative";
 import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
-import { communityFieldLabelStyle, communityFieldStyle, communityPressableTapStyle } from "./communityCrtThemeNative";
+import {
+  communityFieldLabelStyle,
+  communityModalCardStyle,
+  communityPressableTapStyle,
+} from "./communityCrtThemeNative";
 
 type Props = {
   visible: boolean;
@@ -39,6 +47,14 @@ type Props = {
   onClose: () => void;
   onCreated: (group?: CreatedCommunityGroup | null, inviteCode?: string) => void;
 };
+
+const GLASS_FIELD = {
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.14)",
+  backgroundColor: "rgba(255,255,255,0.06)",
+  paddingHorizontal: 10,
+  paddingVertical: 8,
+} as const;
 
 export default function CreateGroupModalNative({ visible, language, onClose, onCreated }: Props) {
   const { fUser } = useFirebaseUser();
@@ -175,19 +191,74 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
   }, [name, description, headerUri, metric, league, fUser, busy, language, onCreated, closeReset]);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={closeReset}>
-      <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={closeReset} disabled={busy} />
-        <View style={styles.sheet}>
-          <RankingsShellGridOverlay borderRadius={0} />
-          <View style={styles.sheetInner}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={closeReset}>
+      <View style={styles.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeReset} disabled={busy}>
+          {(Platform.OS === "ios" || Platform.OS === "android") && (
+            <BlurView
+              intensity={Platform.OS === "ios" ? 18 : 10}
+              tint="dark"
+              {...nativeBlurViewExtraProps()}
+              style={StyleSheet.absoluteFillObject}
+            />
+          )}
+          <View style={styles.backdropDim} />
+        </Pressable>
+
+        <View style={styles.card}>
+          {(Platform.OS === "ios" || Platform.OS === "android") && (
+            <BlurView
+              intensity={Platform.OS === "ios" ? 28 : 16}
+              tint="dark"
+              {...nativeBlurViewExtraProps()}
+              style={StyleSheet.absoluteFillObject}
+            />
+          )}
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              "rgba(255,255,255,0.14)",
+              "rgba(255,255,255,0.05)",
+              "rgba(5,12,24,0.55)",
+              "rgba(5,8,20,0.72)",
+            ]}
+            locations={[0, 0.18, 0.55, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={["rgba(34,211,238,0.08)", "transparent"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cornerSheen}
+          />
+          <View pointerEvents="none" style={styles.insetHighlight} />
+          <RankingsShellGridOverlay borderRadius={16} />
+
+          <View style={styles.cardInner}>
             <View style={styles.header}>
-              <Text style={styles.title}>{t.title}</Text>
-              <Text style={styles.planLimits}>{t.planLimits}</Text>
+              <View style={styles.titleRow}>
+                <View style={styles.titleAccent} />
+                <View style={styles.titleBlock}>
+                  <Text style={styles.title}>{t.title}</Text>
+                  <Text style={styles.planLimits}>{t.planLimits}</Text>
+                </View>
+              </View>
             </View>
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               <Text style={communityFieldLabelStyle}>{t.name}</Text>
-              <TextInput value={name} onChangeText={setName} maxLength={60} style={[communityFieldStyle, styles.input]} />
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                maxLength={60}
+                style={[GLASS_FIELD, styles.input]}
+              />
 
               <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.description}</Text>
               <TextInput
@@ -196,12 +267,15 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
                 maxLength={280}
                 multiline
                 placeholder={t.descriptionPh}
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                style={[communityFieldStyle, styles.textarea]}
+                placeholderTextColor="rgba(255,255,255,0.28)"
+                style={[GLASS_FIELD, styles.textarea]}
               />
 
               <Text style={[communityFieldLabelStyle, styles.gapTop]}>{t.header}</Text>
-              <Pressable onPress={() => void pickImage()} style={({ pressed }) => [styles.pickBtn, pressed && communityPressableTapStyle(true)]}>
+              <Pressable
+                onPress={() => void pickImage()}
+                style={({ pressed }) => [styles.pickBtn, pressed && communityPressableTapStyle(true)]}
+              >
                 <Text style={styles.pickBtnText}>{t.pickImage}</Text>
               </Pressable>
               {headerUri ? <Image source={{ uri: headerUri }} style={styles.preview} /> : null}
@@ -223,8 +297,13 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
               />
               {metric === "activeWinStreak" ? <Text style={styles.note}>{t.streakNote}</Text> : null}
             </ScrollView>
+
             <View style={styles.footer}>
-              <Pressable disabled={busy} onPress={closeReset} style={({ pressed }) => [styles.cancelBtn, pressed && communityPressableTapStyle(true)]}>
+              <Pressable
+                disabled={busy}
+                onPress={closeReset}
+                style={({ pressed }) => [styles.cancelBtn, pressed && communityPressableTapStyle(true)]}
+              >
                 <Text style={styles.cancelText}>{t.cancel}</Text>
               </Pressable>
               <Pressable
@@ -236,6 +315,13 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
                   pressed && !(busy || name.trim().length < 1) && communityPressableTapStyle(true),
                 ]}
               >
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={["rgba(34,211,238,0.22)", "rgba(34,211,238,0.1)"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
                 <Text style={styles.submitText}>{busy ? t.creating : t.submit}</Text>
               </Pressable>
             </View>
@@ -269,6 +355,13 @@ function OptionRow({
               pressed && communityPressableTapStyle(true),
             ]}
           >
+            {active ? (
+              <LinearGradient
+                pointerEvents="none"
+                colors={["rgba(34,211,238,0.18)", "rgba(34,211,238,0.06)"]}
+                style={StyleSheet.absoluteFillObject}
+              />
+            ) : null}
             <Text style={[styles.optionText, active && styles.optionTextActive]}>{opt.label}</Text>
           </Pressable>
         );
@@ -278,55 +371,93 @@ function OptionRow({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    backgroundColor: "rgba(0,0,0,0.55)",
   },
-  sheet: {
+  backdropDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.38)",
+  },
+  card: {
+    ...communityModalCardStyle,
+    width: "100%",
+    maxWidth: 400,
     maxHeight: "88%",
-    borderTopWidth: 1,
-    borderColor: "rgba(34,211,238,0.2)",
-    backgroundColor: "rgba(5,8,20,0.96)",
-    overflow: "hidden",
+    flexDirection: "column",
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(8,14,28,0.42)",
   },
-  sheetInner: {
+  cornerSheen: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.85,
+  },
+  insetHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 12,
+    right: 12,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    borderRadius: 1,
+  },
+  cardInner: {
     position: "relative",
-    zIndex: 1,
+    zIndex: 2,
+    flexShrink: 1,
     maxHeight: "100%",
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 18,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
+  },
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleAccent: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: "rgba(34,211,238,0.75)",
   },
   title: {
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.4,
-    color: "rgba(236,254,255,0.95)",
+    color: "rgba(236,254,255,0.96)",
   },
   planLimits: {
     marginTop: 8,
     fontSize: 10,
     lineHeight: 16,
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(255,255,255,0.42)",
   },
   scroll: {
-    maxHeight: 420,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   input: {
-    color: "rgba(165,243,252,0.9)",
+    color: "rgba(236,254,255,0.92)",
     fontSize: 14,
   },
   textarea: {
-    color: "rgba(165,243,252,0.9)",
+    color: "rgba(236,254,255,0.92)",
     fontSize: 14,
     minHeight: 72,
     textAlignVertical: "top",
@@ -336,21 +467,23 @@ const styles = StyleSheet.create({
   },
   pickBtn: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.06)",
     paddingVertical: 10,
     alignItems: "center",
+    overflow: "hidden",
   },
   pickBtnText: {
     fontSize: 12,
-    color: "rgba(165,243,252,0.8)",
+    color: "rgba(186,230,253,0.88)",
   },
   preview: {
     marginTop: 8,
     width: 120,
     height: 120,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
   note: {
     fontSize: 10,
@@ -365,19 +498,20 @@ const styles = StyleSheet.create({
   optionChip: {
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
     paddingHorizontal: 8,
     paddingVertical: 6,
+    overflow: "hidden",
   },
   optionChipActive: {
-    borderColor: "rgba(34,211,238,0.45)",
-    backgroundColor: "rgba(34,211,238,0.12)",
+    borderColor: "rgba(34,211,238,0.42)",
   },
   optionText: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.65)",
+    color: "rgba(255,255,255,0.62)",
   },
   optionTextActive: {
-    color: "rgba(165,243,252,0.95)",
+    color: "rgba(186,230,253,0.96)",
     fontWeight: "600",
   },
   footer: {
@@ -387,23 +521,27 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(0,0,0,0.12)",
   },
   cancelBtn: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.06)",
     paddingHorizontal: 16,
     paddingVertical: 10,
+    overflow: "hidden",
   },
   cancelText: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.65)",
+    color: "rgba(255,255,255,0.72)",
   },
   submitBtn: {
     borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.28)",
-    backgroundColor: "rgba(34,211,238,0.14)",
+    borderColor: "rgba(34,211,238,0.34)",
+    backgroundColor: "rgba(34,211,238,0.1)",
     paddingHorizontal: 16,
     paddingVertical: 10,
+    overflow: "hidden",
   },
   submitDisabled: {
     opacity: 0.5,
@@ -411,6 +549,6 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "rgba(236,254,255,0.95)",
+    color: "rgba(236,254,255,0.96)",
   },
 });

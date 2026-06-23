@@ -173,7 +173,7 @@ export default function ResultPredictEditModal({
   const [game, setGame] = useState<Record<string, unknown> | null>(null);
 
   const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats" | "preview" | "standings"
+    null | "h2h" | "market" | "stats" | "preview" | "results" | "standings"
   >(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
   const [scoreHome, setScoreHome] = useState("");
@@ -727,6 +727,7 @@ export default function ResultPredictEditModal({
         mergedFinalPreview={predictMergedFinalPreview}
         language={language}
         overlayUnifiedForm
+        myPostId={post?.id ?? null}
       />
     </>
   );

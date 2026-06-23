@@ -74,14 +74,18 @@ export default function WcStandingPanelNative({
         ) : (
           <View style={styles.tableShell}>
             <View style={styles.tableHeader}>
-              <Text style={[styles.th, styles.thRank]}>#</Text>
-              <Text style={[styles.th, styles.thTeam]}>{t.teamLabel}</Text>
-              <Text style={[styles.th, styles.thPlayed]}>P</Text>
-              <Text style={styles.thNum}>W</Text>
-              <Text style={styles.thNum}>D</Text>
-              <Text style={styles.thNum}>L</Text>
-              <Text style={styles.thNum}>GD</Text>
-              <Text style={[styles.thNum, styles.thPts]}>{t.wcPoints}</Text>
+              <Text style={styles.thRank}>#</Text>
+              <View style={styles.thTeamCell}>
+                <Text style={styles.thTeam}>{t.teamLabel}</Text>
+              </View>
+              <View style={styles.statsGroup}>
+                <Text style={[styles.thStat, styles.thStatPlayed]}>P</Text>
+                <Text style={styles.thStat}>W</Text>
+                <Text style={styles.thStat}>D</Text>
+                <Text style={styles.thStat}>L</Text>
+                <Text style={styles.thStat}>GD</Text>
+                <Text style={[styles.thStat, styles.thPts]}>{t.wcPoints}</Text>
+              </View>
             </View>
             {rows.map((row, idx) => {
               const highlighted = highlightSet.has(row.teamId);
@@ -93,8 +97,8 @@ export default function WcStandingPanelNative({
                   key={row.teamId}
                   style={[styles.tableRow, highlighted && styles.tableRowHighlight]}
                 >
-                  <Text style={[styles.td, styles.tdRank]}>{idx + 1}</Text>
-                  <View style={[styles.td, styles.tdTeam]}>
+                  <Text style={styles.tdRank}>{idx + 1}</Text>
+                  <View style={styles.tdTeam}>
                     <CountryFlagNative teamId={row.teamId} variant="inline" />
                     <Text
                       style={[
@@ -106,23 +110,25 @@ export default function WcStandingPanelNative({
                       {name}
                     </Text>
                   </View>
-                  <Text style={styles.tdPlayed}>{row.played}</Text>
-                  <Text style={styles.tdNum}>{row.wins}</Text>
-                  <Text style={styles.tdNum}>{row.draws}</Text>
-                  <Text style={styles.tdNum}>{row.losses}</Text>
-                  <Text
-                    style={[
-                      styles.tdNum,
-                      row.goalDiff > 0
-                        ? styles.tdGdPositive
-                        : row.goalDiff < 0
-                          ? styles.tdGdNegative
-                          : styles.tdGdNeutral,
-                    ]}
-                  >
-                    {formatGoalDiff(row.goalDiff)}
-                  </Text>
-                  <Text style={[styles.tdNum, styles.tdPts]}>{row.points}</Text>
+                  <View style={styles.statsGroup}>
+                    <Text style={[styles.tdStat, styles.tdStatPlayed]}>{row.played}</Text>
+                    <Text style={styles.tdStat}>{row.wins}</Text>
+                    <Text style={styles.tdStat}>{row.draws}</Text>
+                    <Text style={styles.tdStat}>{row.losses}</Text>
+                    <Text
+                      style={[
+                        styles.tdStat,
+                        row.goalDiff > 0
+                          ? styles.tdGdPositive
+                          : row.goalDiff < 0
+                            ? styles.tdGdNegative
+                            : styles.tdGdNeutral,
+                      ]}
+                    >
+                      {formatGoalDiff(row.goalDiff)}
+                    </Text>
+                    <Text style={[styles.tdStat, styles.tdPts]}>{row.points}</Text>
+                  </View>
                 </View>
               );
             })}
@@ -240,19 +246,48 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.1)",
     backgroundColor: "rgba(255,255,255,0.02)",
     paddingVertical: 6,
-    paddingHorizontal: 6,
+    paddingLeft: 6,
+    paddingRight: 4,
   },
-  th: {
+  thRank: {
+    width: 28,
     color: "rgba(255,255,255,0.5)",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
+    textAlign: "left",
   },
-  thRank: { width: 28, textAlign: "left" },
-  thTeam: { flex: 1, minWidth: 0, textAlign: "left" },
-  thNum: { width: 24, textAlign: "center" },
-  thPlayed: { width: 28, textAlign: "center" },
+  thTeamCell: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 4,
+  },
+  thTeam: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    textAlign: "left",
+  },
+  statsGroup: {
+    flexDirection: "row",
+    flexShrink: 0,
+    alignItems: "center",
+  },
+  thStat: {
+    width: 24,
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    textAlign: "right",
+  },
+  thStatPlayed: {
+    width: 28,
+  },
   thPts: {
     width: 34,
     color: "rgba(255,255,255,0.9)",
@@ -264,12 +299,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.05)",
     paddingVertical: 6,
-    paddingHorizontal: 6,
+    paddingLeft: 6,
+    paddingRight: 4,
   },
   tableRowHighlight: {
     backgroundColor: "rgba(34,211,238,0.08)",
   },
-  td: { minWidth: 0 },
   tdRank: {
     width: 28,
     color: "rgba(255,255,255,0.55)",
@@ -279,6 +314,7 @@ const styles = StyleSheet.create({
   },
   tdTeam: {
     flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -294,19 +330,15 @@ const styles = StyleSheet.create({
   teamNameHighlight: {
     color: "#fff",
   },
-  tdNum: {
+  tdStat: {
     width: 24,
     color: "rgba(255,255,255,0.85)",
     fontSize: 12,
-    textAlign: "center",
+    textAlign: "right",
     fontVariant: ["tabular-nums"],
   },
-  tdPlayed: {
+  tdStatPlayed: {
     width: 28,
-    color: "rgba(255,255,255,0.85)",
-    fontSize: 12,
-    textAlign: "center",
-    fontVariant: ["tabular-nums"],
   },
   tdGdPositive: {
     color: "rgba(110,231,183,0.85)",

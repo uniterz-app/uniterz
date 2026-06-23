@@ -33,7 +33,7 @@ import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
+import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 
 type Props = {
   post: PredictionPostV2;
@@ -42,6 +42,8 @@ type Props = {
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
   cardClockMs?: number;
+  /** 指定時はページ遷移せずコールバック（一覧オーバーレイと同じ予想修正） */
+  onRequestPredictEdit?: (post: PredictionPostV2) => void;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -118,6 +120,7 @@ export default function MobileResultMatchHeader({
   viewerUid = null,
   gamesRoutePrefix = "/mobile",
   cardClockMs,
+  onRequestPredictEdit,
 }: Props) {
   const clock = useResultCardClockMs(cardClockMs);
   const teamNameFont = bracketMarketTeamTypography(true);
@@ -179,22 +182,41 @@ export default function MobileResultMatchHeader({
   const homeRecord = useTeamRecord(post.home?.teamId);
   const awayRecord = useTeamRecord(post.away?.teamId);
 
-  const { badge, activeWinStreak, streakBadge } = resolveResultCardBadge(
-    post,
-    language
-  );
+  const {
+    badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+    activeWinStreak,
+    streakBadge,
+  } = resolveResultCardBadge(post, language);
 
-  const predictEditHref = useMemo(() => {
-    if (!viewerUid || !post.gameId) return null;
-    if (post.authorUid !== viewerUid) return null;
+  const canPredictEdit = useMemo(() => {
+    if (!viewerUid || !post.gameId) return false;
+    if (post.authorUid !== viewerUid) return false;
     /** 試合確定後は修正へ導線を出さない */
     const finalized =
       post.status === "final" || post.game?.status === "final";
-    if (finalized) return null;
+    if (finalized) return false;
     /** キックオフ以降（LIVE 含む）は一覧 ResultCard と同様に修正を出さない */
-    if (isResultPostMatchStarted(post, clock)) return null;
-    return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
-  }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, post.startAtMillis, gamesRoutePrefix, clock]);
+    if (isResultPostMatchStarted(post, clock)) return false;
+    return Boolean(onRequestPredictEdit || gamesRoutePrefix);
+  }, [
+    viewerUid,
+    post.authorUid,
+    post.gameId,
+    post.status,
+    post.game?.status,
+    post.startAtMillis,
+    gamesRoutePrefix,
+    clock,
+    onRequestPredictEdit,
+  ]);
+
+  const predictEditHref = useMemo(() => {
+    if (!canPredictEdit || onRequestPredictEdit || !gamesRoutePrefix) return null;
+    return `${gamesRoutePrefix}/games/${post.gameId}/predict?edit=1`;
+  }, [canPredictEdit, onRequestPredictEdit, gamesRoutePrefix, post.gameId]);
 
   const isLiveGame = isResultPostLiveGame(post, clock);
   const liveMarkNode = isLiveGame ? (
@@ -213,7 +235,14 @@ export default function MobileResultMatchHeader({
       extraPanelClassName="text-white"
       className="relative"
     >
-      <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-0.5">
+      <div
+        className={[
+          "absolute inset-x-0 top-0 z-20 flex items-start gap-2 px-2 pt-0.5",
+          shouldShowResultLeagueBadge(normalizedLeague)
+            ? "justify-between"
+            : "justify-end",
+        ].join(" ")}
+      >
         <ResultLeagueBadge
           league={normalizedLeague}
           teamNameFont={teamNameFont}
@@ -221,11 +250,14 @@ export default function MobileResultMatchHeader({
         <div
           className={[
             "mt-1.5 flex min-w-0 flex-1 flex-col items-end gap-1",
-            predictEditHref ? "pr-10" : "",
+            predictEditHref || canPredictEdit ? "pr-10" : "",
           ].join(" ")}
         >
           <ResultOutcomeBadges
             badge={badge}
+            outcomeBadge={outcomeBadge}
+            showStreakBadge={showStreakBadge}
+            stackBadges={stackBadges}
             streakBadge={streakBadge}
             activeWinStreak={activeWinStreak}
             isMobile
@@ -234,15 +266,26 @@ export default function MobileResultMatchHeader({
           />
         </div>
       </div>
-      {predictEditHref ? (
+      {canPredictEdit ? (
         <div className="pointer-events-auto absolute right-2 top-2 z-30">
-          <Link
-            href={predictEditHref}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100"
-            aria-label={m.results.editPredictionAriaLabel}
-          >
-            <Pencil className="h-3 w-3" aria-hidden />
-          </Link>
+          {onRequestPredictEdit ? (
+            <button
+              type="button"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100"
+              aria-label={m.results.editPredictionAriaLabel}
+              onClick={() => onRequestPredictEdit(post)}
+            >
+              <Pencil className="h-3 w-3" aria-hidden />
+            </button>
+          ) : predictEditHref ? (
+            <Link
+              href={predictEditHref}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100"
+              aria-label={m.results.editPredictionAriaLabel}
+            >
+              <Pencil className="h-3 w-3" aria-hidden />
+            </Link>
+          ) : null}
         </div>
       ) : null}
 
@@ -294,7 +337,7 @@ export default function MobileResultMatchHeader({
           <MatchScoreLine
             home={predictedHome}
             away={predictedAway}
-            className="font-black text-[clamp(0.9rem,3.4vw,1.2rem)] leading-none tracking-tight text-white/85 md:text-5xl"
+            className="font-black text-3xl leading-none tracking-tight text-white/85 md:text-5xl"
           />
 
           {finalHome != null && finalAway != null ? (

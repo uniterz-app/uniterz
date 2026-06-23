@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Copy, Share2 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { jp } from "@/lib/fonts";
@@ -23,7 +23,6 @@ import {
 import RankingCard from "@/app/component/rankings/RankingCard";
 import TopPodium from "@/app/component/rankings/TopPodium";
 import { restContainer, restItem } from "@/app/component/rankings/anim";
-import { useRankingsTopDone } from "@/lib/hooks/useRankingsTopDone";
 import {
   RankingsCyberPanel,
   RankingsCyberSectionLabel,
@@ -38,6 +37,7 @@ import {
   type CommunityGroupListPreview,
   type CommunityGroupSummary,
 } from "@/app/component/communities/communityGroupDetailCache";
+import { warmGroupLeaderboardProfiles } from "@/lib/communities/warmGroupLeaderboardProfiles";
 import EndGroupConfirmModal from "@/app/component/communities/EndGroupConfirmModal";
 import InviteShareModal from "@/app/component/communities/InviteShareModal";
 
@@ -88,6 +88,7 @@ export default function CommunityGroupDetailView({
   className = "",
 }: CommunityGroupDetailViewProps) {
   const router = useRouter();
+  const pathname = usePathname() ?? "";
   const initialCached = getCachedCommunityGroupDetail(groupId);
   const [summary, setSummary] = useState<CommunityGroupSummary | null>(
     () =>
@@ -142,7 +143,19 @@ export default function CommunityGroupDetailView({
       setLoadingRows(true);
     }
 
-    const entry = await fetchCommunityGroupDetail(groupId);
+    const entry = await fetchCommunityGroupDetail(groupId, {
+      onPartial: (partial) => {
+        if (partial.summary) {
+          setSummary(partial.summary);
+          setLoadingDetail(false);
+        }
+        if (partial.rows) {
+          setRows(partial.rows);
+          setLoadingRows(false);
+        }
+        if (partial.metric) setMetric(partial.metric);
+      },
+    });
     if (!entry) {
       if (!cached && !listPreview) {
         toast.error(
@@ -346,7 +359,27 @@ export default function CommunityGroupDetailView({
     [groupId, metric, rows]
   );
 
-  const { skipCountUp, topDone, handleTopCountDone } = useRankingsTopDone(rankListAnimKey);
+  useEffect(() => {
+    if (!rows.length || loadingRows) return;
+    warmGroupLeaderboardProfiles(
+      router,
+      pathname,
+      variant,
+      groupId,
+      rows,
+      metric,
+      summary?.rankingLeague
+    );
+  }, [
+    groupId,
+    loadingRows,
+    metric,
+    pathname,
+    rows,
+    router,
+    summary?.rankingLeague,
+    variant,
+  ]);
 
   return (
     <>
@@ -577,17 +610,16 @@ export default function CommunityGroupDetailView({
                   rankingLeague={profileStatsLeague.rankingLeague}
                   wcStage={profileStatsLeague.wcStage}
                   language={language}
-                  onTopCountDone={handleTopCountDone}
-                  countUpEnabled={!skipCountUp}
-                  entranceEnabled={!prefersReducedMotion}
+                  countUpEnabled={false}
+                  entranceEnabled={false}
                   compact
                   shellTone="subtle"
+                  groupReturnGroupId={groupId}
                 />
                 <motion.div
                   variants={restContainer}
                   initial={prefersReducedMotion ? "show" : "hidden"}
-                  animate={topDone || prefersReducedMotion ? "show" : "hidden"}
-                  style={{ opacity: topDone || prefersReducedMotion ? 1 : 0.35 }}
+                  animate="show"
                 >
                   {restRows.map((r, i) => (
                     <motion.div
@@ -604,6 +636,8 @@ export default function CommunityGroupDetailView({
                         language={language}
                         size="compact"
                         shellTone="subtle"
+                        animateValue={false}
+                        groupReturnGroupId={groupId}
                       />
                     </motion.div>
                   ))}

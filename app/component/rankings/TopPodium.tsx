@@ -44,6 +44,7 @@ export default function TopPodium({
   language = "ja",
   compact = false,
   shellTone = "default",
+  groupReturnGroupId,
 }: {
   rows: RankingRowWithCountry[];
   metric: MobileMetric;
@@ -61,6 +62,8 @@ export default function TopPodium({
   /** コミュニティ等 — コンパクト行 */
   compact?: boolean;
   shellTone?: "default" | "subtle";
+  /** グループ内ランキングからプロフィールへ（オーバーレイ等） */
+  groupReturnGroupId?: string;
 }) {
   const reduceMotion = useReducedMotion() === true;
   const motionOn = entranceEnabled && !reduceMotion;
@@ -160,6 +163,7 @@ export default function TopPodium({
               playoffRound,
               rankingLeague,
               wcStage,
+              groupId: groupReturnGroupId,
             }
           );
 

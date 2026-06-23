@@ -4,7 +4,7 @@ import { db } from "../../../lib/firebase";
 import {
   readWcTournamentGoalCountsCache,
   subscribeWcSeasonGames,
-} from "../../../../../lib/wc/wcSeasonGamesCache";
+} from "@/lib/wc/wcSeasonGamesCache";
 
 export function useNativeWcTournamentGoalCounts(
   season: string | null | undefined = GAME_SCHEDULE_SEASON

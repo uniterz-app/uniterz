@@ -101,6 +101,7 @@ type Props = {
   loading: boolean;
   joinBusy: boolean;
   onOpenGroup: (g: CommunityListGroup) => void;
+  onPrefetchGroup?: (g: CommunityListGroup) => void;
   onCreate: () => void;
   onPreviewJoin: (code: string) => Promise<void>;
   onPasteJoin: () => Promise<string | null>;
@@ -228,12 +229,14 @@ function GroupFilledSlotMobile({
   sizing,
   labels,
   onOpen,
+  onPrefetchGroup,
 }: {
   g: CommunityListGroup;
   language: Language;
   sizing: SlotSizing;
   labels: Props["labels"];
   onOpen: () => void;
+  onPrefetchGroup?: () => void;
 }) {
   const isOwner = g.role === "owner";
   return (
@@ -241,6 +244,8 @@ function GroupFilledSlotMobile({
       type="button"
       aria-label={`${g.name} — ${labels.openRanking}`}
       onClick={onOpen}
+      onPointerEnter={onPrefetchGroup}
+      onFocus={onPrefetchGroup}
       className="group/slot relative flex w-full overflow-hidden text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
       style={{ background: "rgba(255,255,255,0.02)" }}
     >
@@ -293,12 +298,14 @@ function GroupFilledSlotWeb({
   sizing,
   labels,
   onOpen,
+  onPrefetchGroup,
 }: {
   g: CommunityListGroup;
   language: Language;
   sizing: SlotSizing;
   labels: Props["labels"];
   onOpen: () => void;
+  onPrefetchGroup?: () => void;
 }) {
   const isOwner = g.role === "owner";
   return (
@@ -306,6 +313,8 @@ function GroupFilledSlotWeb({
       type="button"
       aria-label={`${g.name} — ${labels.openRanking}`}
       onClick={onOpen}
+      onPointerEnter={onPrefetchGroup}
+      onFocus={onPrefetchGroup}
       className="group/slot relative w-full text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
       style={{
         clipPath: NOTCH_CLIP,
@@ -357,6 +366,7 @@ function GroupFilledSlot({
   sizing,
   labels,
   onOpen,
+  onPrefetchGroup,
   isWeb,
 }: {
   g: CommunityListGroup;
@@ -364,6 +374,7 @@ function GroupFilledSlot({
   sizing: SlotSizing;
   labels: Props["labels"];
   onOpen: () => void;
+  onPrefetchGroup?: () => void;
   isWeb: boolean;
 }) {
   if (isWeb) {
@@ -374,6 +385,7 @@ function GroupFilledSlot({
         sizing={sizing}
         labels={labels}
         onOpen={onOpen}
+        onPrefetchGroup={onPrefetchGroup}
       />
     );
   }
@@ -384,6 +396,7 @@ function GroupFilledSlot({
       sizing={sizing}
       labels={labels}
       onOpen={onOpen}
+      onPrefetchGroup={onPrefetchGroup}
     />
   );
 }
@@ -625,6 +638,7 @@ export default function CommunitySlotBoard({
   loading,
   joinBusy,
   onOpenGroup,
+  onPrefetchGroup,
   onCreate,
   onPreviewJoin,
   onPasteJoin,
@@ -709,6 +723,11 @@ export default function CommunitySlotBoard({
                       sizing={sizing}
                       labels={labels}
                       onOpen={() => onOpenGroup(slot.group)}
+                      onPrefetchGroup={
+                        onPrefetchGroup
+                          ? () => onPrefetchGroup(slot.group)
+                          : undefined
+                      }
                       isWeb={isWeb}
                     />
                   ) : (
@@ -763,6 +782,11 @@ export default function CommunitySlotBoard({
                       sizing={sizing}
                       labels={labels}
                       onOpen={() => onOpenGroup(slot.group)}
+                      onPrefetchGroup={
+                        onPrefetchGroup
+                          ? () => onPrefetchGroup(slot.group)
+                          : undefined
+                      }
                       isWeb={isWeb}
                     />
                   ) : (

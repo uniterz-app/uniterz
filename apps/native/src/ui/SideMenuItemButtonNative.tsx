@@ -45,82 +45,74 @@ export default function SideMenuItemButtonNative({
   const accent = isDanger ? "#fb7185" : CYBER_TAB_CYAN;
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.root,
-        dense ? styles.dense : styles.normal,
-        isDanger ? styles.danger : styles.default,
-        active && !isDanger && styles.active,
-        active && isDanger && styles.activeDanger,
-        pressed && !active && !isDanger && styles.pressed,
-        pressed && !active && isDanger && styles.pressedDanger,
-      ]}
-    >
-      {!isDanger ? (
-        <>
+    <Pressable onPress={onPress}>
+      {({ pressed }) => (
+        <View
+          style={[
+            styles.root,
+            dense ? styles.dense : styles.normal,
+            isDanger ? styles.danger : styles.default,
+            active && !isDanger && styles.active,
+            active && isDanger && styles.activeDanger,
+            pressed && !active && !isDanger && styles.pressed,
+            pressed && !active && isDanger && styles.pressedDanger,
+          ]}
+        >
+          {!isDanger ? (
+            <>
+              <View
+                style={[styles.rail, (active || pressed) && styles.railVisible]}
+                pointerEvents="none"
+              />
+              <View
+                style={[styles.corner, styles.cornerTL, active && styles.cornerVisible]}
+                pointerEvents="none"
+              />
+              <View
+                style={[styles.corner, styles.cornerBR, active && styles.cornerVisible]}
+                pointerEvents="none"
+              />
+              {active ? <View style={styles.scan} pointerEvents="none" /> : null}
+            </>
+          ) : null}
+
           <View
             style={[
-              styles.rail,
-              (active || pressed) && styles.railVisible,
+              styles.iconBox,
+              dense && styles.iconBoxDense,
+              active && !isDanger && styles.iconBoxActive,
+              active && isDanger && styles.iconBoxActiveDanger,
             ]}
-            pointerEvents="none"
-          />
-          <View
+          >
+            <MaterialCommunityIcons
+              name={icon}
+              size={sz}
+              color={
+                isDanger
+                  ? CYBER_SIDE_MENU_ITEM.dangerIcon
+                  : active
+                    ? CYBER_TAB_CYAN
+                    : CYBER_SIDE_MENU_ITEM.iconDefault
+              }
+            />
+          </View>
+
+          <Text
             style={[
-              styles.corner,
-              styles.cornerTL,
-              active && styles.cornerVisible,
+              styles.label,
+              dense && styles.labelDense,
+              isDanger && styles.labelDanger,
+              active && !isDanger && { textShadowColor: `${accent}33`, textShadowRadius: 18 },
+              labelStyle,
             ]}
-            pointerEvents="none"
-          />
-          <View
-            style={[
-              styles.corner,
-              styles.cornerBR,
-              active && styles.cornerVisible,
-            ]}
-            pointerEvents="none"
-          />
-          {active ? <View style={styles.scan} pointerEvents="none" /> : null}
-        </>
-      ) : null}
+            numberOfLines={2}
+          >
+            {children}
+          </Text>
 
-      <View
-        style={[
-          styles.iconBox,
-          dense && styles.iconBoxDense,
-          active && !isDanger && styles.iconBoxActive,
-          active && isDanger && styles.iconBoxActiveDanger,
-        ]}
-      >
-        <MaterialCommunityIcons
-          name={icon}
-          size={sz}
-          color={
-            isDanger
-              ? CYBER_SIDE_MENU_ITEM.dangerIcon
-              : active
-                ? CYBER_TAB_CYAN
-                : CYBER_SIDE_MENU_ITEM.iconDefault
-          }
-        />
-      </View>
-
-      <Text
-        style={[
-          styles.label,
-          dense && styles.labelDense,
-          isDanger && styles.labelDanger,
-          active && !isDanger && { textShadowColor: `${accent}33`, textShadowRadius: 18 },
-          labelStyle,
-        ]}
-        numberOfLines={2}
-      >
-        {children}
-      </Text>
-
-      {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+          {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+        </View>
+      )}
     </Pressable>
   );
 }

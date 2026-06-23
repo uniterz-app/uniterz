@@ -468,13 +468,16 @@ export default function ResultListWithOverlay({
     setPredictStandingsOpen(false);
     setOverlayResultPost(null);
     setOverlayUserPredictionWinner(null);
+    setPredictEditTriggerNonce(0);
     setPredictOverlay(null);
   }, []);
 
   const requestPredictEditFromCard = useCallback((post: PredictionPostV2) => {
+    setOpenPostId(null);
     setPredictStandingsOpen(false);
     setOverlayResultPost(null);
     setOverlayUserPredictionWinner(null);
+    setPredictEditTriggerNonce((n) => n + 1);
     setPredictOverlay({ phase: "loading", post });
   }, []);
 
@@ -2083,6 +2086,7 @@ export default function ResultListWithOverlay({
                             viewerUid={viewerUid}
                             gamesRoutePrefix={gamesRoutePrefix}
                             cardClockMs={listNowTick}
+                            onRequestPredictEdit={requestPredictEditFromCard}
                           />
                         ) : (
                           <ResultDetail
@@ -2097,6 +2101,7 @@ export default function ResultListWithOverlay({
                             viewerUid={viewerUid}
                             gamesRoutePrefix={gamesRoutePrefix}
                             cardClockMs={listNowTick}
+                            onRequestPredictEdit={requestPredictEditFromCard}
                           />
                         )}
                       </div>

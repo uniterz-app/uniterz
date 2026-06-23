@@ -7,6 +7,7 @@ import {
   isActiveWinStreakRankingEligible,
   loadAuthorUidsSettledToday,
 } from "./activeWinStreakRanking";
+import { loadUidsWhoPredictedOnDateJst } from "../notifications/loadUidsWhoPredictedOnDateJst";
 
 /* =========================================================
  * Firestore
@@ -1215,6 +1216,8 @@ export async function buildCumulativeRankingSnapshot(
   }
   await flush();
 
+  const todayPredictorUids = await loadUidsWhoPredictedOnDateJst(dateKey);
+
   return {
     ok: true,
     scope,
@@ -1223,6 +1226,6 @@ export async function buildCumulativeRankingSnapshot(
     wcRanksWritten: rankByUidWc.size,
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
-    notifiedUids: [...historyUids],
+    notifiedUids: todayPredictorUids,
   };
 }

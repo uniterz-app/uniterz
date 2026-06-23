@@ -1,8 +1,7 @@
-/** 認証画面共通シェル（Web `AuthBackdrop` + `AuthFormBranding` 相当） */
+/** 認証画面共通シェル — AppShell のワイヤーフレーム地形を背面に透過表示 */
 import { ReactNode } from "react";
 import {
   Dimensions,
-  Image,
   Keyboard,
   Platform,
   StyleSheet,
@@ -24,11 +23,6 @@ export default function AuthFormShellNative({ title, children, footer }: Props) 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.root}>
-        <Image
-          source={require("../../../assets/AuthFormScreen.png")}
-          style={styles.bgImage}
-          resizeMode="cover"
-        />
         <View style={styles.dim} pointerEvents="none" />
         <View style={[styles.card, { width: formWidth }]}>
           <Text style={styles.brandWordmark}>UNITERZ</Text>
@@ -45,18 +39,20 @@ export default function AuthFormShellNative({ title, children, footer }: Props) 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.bgPrimary,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xs,
   },
-  bgImage: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
-  dim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(2,6,23,0.12)" },
+  dim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(2,6,23,0.08)",
+  },
   card: {
-    backgroundColor: "rgba(11,18,32,0.14)",
+    backgroundColor: "rgba(8,14,24,0.72)",
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.42)",
+    borderColor: "rgba(34,211,238,0.28)",
     paddingHorizontal: 22,
     paddingTop: 18,
     paddingBottom: 18,

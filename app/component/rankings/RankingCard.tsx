@@ -44,6 +44,7 @@ export default function RankingCard({
   size = "default",
   shellTone = "default",
   animateValue = true,
+  groupReturnGroupId,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -59,6 +60,8 @@ export default function RankingCard({
   size?: RankingCardSize;
   shellTone?: RankingCardShellTone;
   animateValue?: boolean;
+  /** グループ内ランキングからプロフィールへ（オーバーレイ等） */
+  groupReturnGroupId?: string;
 }) {
   const compact = size === "compact";
   const subtleShell = shellTone === "subtle";
@@ -81,6 +84,7 @@ export default function RankingCard({
     playoffRound,
     rankingLeague: statsLeague,
     wcStage: statsContext.wcStage,
+    groupId: groupReturnGroupId,
   });
 
   const warmProfileRoute = useCallback(() => {

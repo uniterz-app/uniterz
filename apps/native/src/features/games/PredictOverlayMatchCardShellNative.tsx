@@ -24,6 +24,7 @@ import {
 import PredictOverlayChamferCornerFillNative from "./PredictOverlayChamferCornerFillNative";
 import PredictOverlayCyberShellBorderNative from "./PredictOverlayCyberShellBorderNative";
 import {
+  hasPredictOverlayResultCyberFrame,
   predictOverlayShellBorderColor,
   predictOverlayShellBorderWidth,
   predictOverlayShellSweepVariant,
@@ -38,8 +39,14 @@ import {
 import ResultHitCyberFrameNative from "../results/ResultHitCyberFrameNative";
 import ResultPerfectCyberFrameNative from "../results/ResultPerfectCyberFrameNative";
 import ResultStreakCyberFrameNative from "../results/ResultStreakCyberFrameNative";
-import ResultCyberFrameBorderSweepNative from "../results/ResultCyberFrameBorderSweepNative";
+import ResultCyberFrameBorderSweepNative, {
+  type ResultCyberFrameClipShape,
+} from "../results/ResultCyberFrameBorderSweepNative";
 import { PREDICT_OVERLAY_SWEEP_RING_WIDTH } from "../results/resultCyberFrameNativeMetrics";
+import {
+  RESULT_HIT_CYBER_CLIP_CUT,
+  resultHitCyberClipPathD,
+} from "../results/resultHitCyberClipPath";
 
 /** globals.css `.predict-overlay-cyber-card` background（168deg 近似） */
 const SHELL_GRADIENT = {
@@ -58,8 +65,16 @@ type Props = {
   overlayUnifiedForm?: boolean;
 };
 
-function makeSkiaPath(width: number, height: number, cut: number) {
-  const d = chamferedRectPathD(width, height, cut);
+function makeSkiaPath(
+  width: number,
+  height: number,
+  cut: number,
+  clipShape: ResultCyberFrameClipShape
+) {
+  const d =
+    clipShape === "hit"
+      ? resultHitCyberClipPathD(width, height, cut)
+      : chamferedRectPathD(width, height, cut);
   if (!d) return null;
   return Skia.Path.MakeFromSVGString(d);
 }
@@ -72,11 +87,18 @@ export default function PredictOverlayMatchCardShellNative({
   overlayUnifiedForm = false,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const cut = PREDICT_OVERLAY_CYBER_CUT;
+  const hasResultFrame = hasPredictOverlayResultCyberFrame(resultBadge);
+  /** Web: 結果バッジ時は `.result-hit-cyber-clip`、通常は `.predict-overlay-cyber-card` */
+  const shellClipShape: ResultCyberFrameClipShape = hasResultFrame ? "hit" : "chamfer";
+  const cut =
+    shellClipShape === "hit" ? RESULT_HIT_CYBER_CLIP_CUT : PREDICT_OVERLAY_CYBER_CUT;
 
   const skiaPath = useMemo(
-    () => (size.w > 0 && size.h > 0 ? makeSkiaPath(size.w, size.h, cut) : null),
-    [size.w, size.h, cut]
+    () =>
+      size.w > 0 && size.h > 0
+        ? makeSkiaPath(size.w, size.h, cut, shellClipShape)
+        : null,
+    [size.w, size.h, cut, shellClipShape]
   );
 
   function onLayout(e: LayoutChangeEvent) {
@@ -168,6 +190,7 @@ export default function PredictOverlayMatchCardShellNative({
             width={size.w}
             height={size.h}
             cut={cut}
+            clipShape={shellClipShape}
           />
         ) : null}
 
@@ -176,6 +199,7 @@ export default function PredictOverlayMatchCardShellNative({
             width={size.w}
             height={size.h}
             cut={cut}
+            clipShape={shellClipShape}
             borderColor={shellBorderColor}
             borderWidth={shellBorderWidth}
             mode="border"
@@ -188,7 +212,7 @@ export default function PredictOverlayMatchCardShellNative({
             width={size.w}
             height={size.h}
             cut={cut}
-            clipShape="chamfer"
+            clipShape={shellClipShape}
             variant={sweepVariant}
             layerZIndex={27}
             ringWidth={PREDICT_OVERLAY_SWEEP_RING_WIDTH}
@@ -201,6 +225,7 @@ export default function PredictOverlayMatchCardShellNative({
             width={size.w}
             height={size.h}
             cut={cut}
+            clipShape={shellClipShape}
             mode="beam"
             layerZIndex={28}
           />

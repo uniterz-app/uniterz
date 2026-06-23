@@ -1,4 +1,7 @@
-import { resolveResultCardBadge } from "../../../../../lib/result/resultBadge";
+import {
+  resolveResultCardBadge,
+  type ResultOutcomeOnlyBadge,
+} from "../../../../../lib/result/resultBadge";
 import type { ResultCardBadge } from "../../../../../lib/result/resultGlass";
 import type { WinStreakBadgeStyle } from "../../../../../lib/ui/winStreakBadge";
 import type { GamesLanguage } from "./gamesI18n";
@@ -23,6 +26,9 @@ export type PredictModalMergedFinalPreview = {
   predictedScore: { home: number; away: number };
   finalLabel: string;
   badge: ResultCardBadge;
+  outcomeBadge: ResultOutcomeOnlyBadge;
+  showStreakBadge: boolean;
+  stackBadges: boolean;
   streakBadge: WinStreakBadgeStyle | null;
   activeWinStreak: number;
   wcGoalScorer: WcGoalScorerResultInfo | null;
@@ -97,7 +103,14 @@ export function buildPredictModalMergedFinalPreview(
     stats,
   };
 
-  const { badge, streakBadge, activeWinStreak } = resolveResultCardBadge(
+  const {
+    badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
+    streakBadge,
+    activeWinStreak,
+  } = resolveResultCardBadge(
     postLike as Parameters<typeof resolveResultCardBadge>[0],
     language
   );
@@ -159,6 +172,9 @@ export function buildPredictModalMergedFinalPreview(
     predictedScore,
     finalLabel,
     badge,
+    outcomeBadge,
+    showStreakBadge,
+    stackBadges,
     streakBadge,
     activeWinStreak,
     wcGoalScorer,

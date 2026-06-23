@@ -12,6 +12,7 @@ const firestore_1 = require("firebase-admin/firestore");
 const safeRankMetricNum_1 = require("./safeRankMetricNum");
 const wcRankingStage_1 = require("./wcRankingStage");
 const activeWinStreakRanking_1 = require("./activeWinStreakRanking");
+const loadUidsWhoPredictedOnDateJst_1 = require("../notifications/loadUidsWhoPredictedOnDateJst");
 /* =========================================================
  * Firestore
  * =======================================================*/
@@ -903,6 +904,7 @@ async function buildCumulativeRankingSnapshot(options = {}) {
         }
     }
     await flush();
+    const todayPredictorUids = await (0, loadUidsWhoPredictedOnDateJst_1.loadUidsWhoPredictedOnDateJst)(dateKey);
     return {
         ok: true,
         scope,
@@ -911,7 +913,7 @@ async function buildCumulativeRankingSnapshot(options = {}) {
         wcRanksWritten: rankByUidWc.size,
         historyDateKey: dateKey,
         rankDeltaBasisDateKey: yesterdayKey,
-        notifiedUids: [...historyUids],
+        notifiedUids: todayPredictorUids,
     };
 }
 //# sourceMappingURL=buildCumulativeRankingSnapshot.js.map

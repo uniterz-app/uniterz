@@ -1,48 +1,33 @@
 import type { PushNotificationType } from "./pushPayloadTypes";
+import {
+  formatPushMatchupLabel,
+  resolvePushTeamId,
+  type PushLanguage,
+  type PushMatchupInput,
+} from "./pushMatchupLabel";
 
-export type PushLanguage = "ja" | "en";
+export type { PushLanguage };
 
-export type GameMatchupCopyInput = {
-  homeLabel: string;
-  awayLabel: string;
-  homeScore?: number;
-  awayScore?: number;
-};
-
-function matchupLabel(input: GameMatchupCopyInput): string {
-  const home = input.homeLabel.trim() || "?";
-  const away = input.awayLabel.trim() || "?";
-  if (
-    typeof input.homeScore === "number" &&
-    typeof input.awayScore === "number"
-  ) {
-    return `${home} ${input.homeScore}-${input.awayScore} ${away}`;
-  }
-  return `${home} vs ${away}`;
-}
+export type GameMatchupCopyInput = PushMatchupInput;
 
 export function buildPushNotificationCopy(
   type: PushNotificationType,
   language: PushLanguage,
   input?: GameMatchupCopyInput
-): { title: string; body: string } {
-  const matchup = input ? matchupLabel(input) : "";
+): { title: string; body: string; subtitle?: string } {
+  const matchup = input ? formatPushMatchupLabel(input, language) : "";
 
   if (language === "en") {
     switch (type) {
       case "game_start":
         return {
-          title: "Kickoff soon",
-          body: matchup
-            ? `Your predicted match starts soon: ${matchup}`
-            : "Your predicted match starts soon.",
+          title: "Your predicted match starts soon.",
+          body: matchup || "Check the match in the app.",
         };
       case "game_final":
         return {
-          title: "Final score",
-          body: matchup
-            ? `Result confirmed: ${matchup}`
-            : "Your predicted match result is confirmed.",
+          title: "Result confirmed.",
+          body: matchup || "See your result in the app.",
         };
       case "ranking_updated":
         return {
@@ -55,17 +40,13 @@ export function buildPushNotificationCopy(
   switch (type) {
     case "game_start":
       return {
-        title: "まもなくキックオフ",
-        body: matchup
-          ? `あなたの予想試合がまもなく開始します: ${matchup}`
-          : "あなたの予想試合がまもなく開始します。",
+        title: "あなたの予想試合がまもなく開始します。",
+        body: matchup || "アプリで試合を確認してください。",
       };
     case "game_final":
       return {
-        title: "試合結果確定",
-        body: matchup
-          ? `結果が確定しました: ${matchup}`
-          : "予想した試合の結果が確定しました。",
+        title: "結果が確定しました。",
+        body: matchup || "アプリで結果を確認してください。",
       };
     case "ranking_updated":
       return {
@@ -77,4 +58,29 @@ export function buildPushNotificationCopy(
 
 export function normalizePushLanguage(raw: unknown): PushLanguage {
   return raw === "en" ? "en" : "ja";
+}
+
+export function resolveTeamLabel(side: unknown): string {
+  if (typeof side === "string") return side.trim();
+  if (side && typeof side === "object") {
+    const name = (side as { name?: unknown }).name;
+    if (typeof name === "string" && name.trim()) return name.trim();
+    const teamId = (side as { teamId?: unknown }).teamId;
+    if (typeof teamId === "string" && teamId.trim()) return teamId.trim();
+  }
+  return "?";
+}
+
+export function resolveGameMatchupCopy(
+  gameData: Record<string, unknown> | undefined,
+  scores?: { home: number; away: number }
+): GameMatchupCopyInput {
+  return {
+    homeLabel: resolveTeamLabel(gameData?.home),
+    awayLabel: resolveTeamLabel(gameData?.away),
+    homeTeamId: resolvePushTeamId(gameData?.home),
+    awayTeamId: resolvePushTeamId(gameData?.away),
+    homeScore: scores?.home,
+    awayScore: scores?.away,
+  };
 }

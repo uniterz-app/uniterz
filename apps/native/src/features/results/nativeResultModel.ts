@@ -179,13 +179,14 @@ export function groupPostsByResultDay(
   const days = Array.from(dayMap.values()).sort((a, b) => b.dateMs - a.dateMs);
 
   days.forEach((day) => {
-    const byResultInputOrder = (a: PostWithMillis, b: PostWithMillis): number => {
-      const ae = a.settledAtMillis ?? a.createdAtMillis ?? a.startAtMillis ?? 0;
-      const be = b.settledAtMillis ?? b.createdAtMillis ?? b.startAtMillis ?? 0;
+    /** 同一日付内: キックオフが遅い試合を上、早い試合を下 */
+    const byKickoffOrder = (a: PostWithMillis, b: PostWithMillis): number => {
+      const ae = a.startAtMillis ?? a.createdAtMillis ?? 0;
+      const be = b.startAtMillis ?? b.createdAtMillis ?? 0;
       return be - ae;
     };
-    day.pending.sort(byResultInputOrder);
-    day.final.sort(byResultInputOrder);
+    day.pending.sort(byKickoffOrder);
+    day.final.sort(byKickoffOrder);
   });
 
   return days;

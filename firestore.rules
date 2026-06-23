@@ -34,6 +34,14 @@ service cloud.firestore {
             || s.matches('(?i).*\\bbettor\\b.*'));
     }
 
+    function isValidNotificationPrefs(p) {
+      return p is map
+        && (!('gameStart' in p) || p.gameStart is bool)
+        && (!('gameFinal' in p) || p.gameFinal is bool)
+        && (!('rankingUpdated' in p) || p.rankingUpdated is bool)
+        && p.keys().hasOnly(['gameStart', 'gameFinal', 'rankingUpdated']);
+    }
+
     // ========================================================================
     // users
     // 参照: AuthProvider, SignupForm, OnboardingForm, Profile 設定, useProfile(handle),
@@ -82,7 +90,9 @@ service cloud.firestore {
             || request.resource.data.photoURL is string)
         && (!('language' in request.resource.data)
             || request.resource.data.language == 'ja'
-            || request.resource.data.language == 'en');
+            || request.resource.data.language == 'en')
+        && (!('notificationPrefs' in request.resource.data)
+            || isValidNotificationPrefs(request.resource.data.notificationPrefs));
 
       allow delete: if request.auth != null && request.auth.uid == userId;
 

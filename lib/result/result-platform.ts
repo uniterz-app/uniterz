@@ -18,3 +18,15 @@ export function getResultTableProfile(
     compact3dFullscreen: platform === "mobile",
   };
 }
+
+/** モバイル Web（`/mobile`）— 共有は Native アプリのみ */
+export function isMobileWebResultPlatform(
+  platform?: ResultPlatform,
+  pathname?: string | null
+): boolean {
+  if (platform === "mobile") return true;
+  if (platform === "web") return false;
+  return Boolean(
+    pathname?.startsWith("/mobile") || pathname?.startsWith("/m/")
+  );
+}

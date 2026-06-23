@@ -19,6 +19,7 @@ import {
   vec,
 } from "@shopify/react-native-skia";
 import { chamferedRectPathD } from "./matchListCyberClipPath";
+import PredictOverlayChamferCornerFillNative from "./PredictOverlayChamferCornerFillNative";
 
 type Props = {
   cut: number;
@@ -32,6 +33,9 @@ type Props = {
   flex?: number;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
+  /** 角の矩形はみ出しをマスク（Web clip-path 相当） */
+  maskCorners?: boolean;
+  cornerMaskColor?: string;
   children: ReactNode;
 };
 
@@ -53,6 +57,8 @@ export default function PredictOverlayChamferedFrameNative({
   flex,
   style,
   contentStyle,
+  maskCorners = true,
+  cornerMaskColor = "rgba(10,14,22,1)",
   children,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -121,6 +127,16 @@ export default function PredictOverlayChamferedFrameNative({
         </>
       ) : null}
       <View style={[styles.content, contentStyle]}>{children}</View>
+      {hasSize && maskCorners ? (
+        <View pointerEvents="none" style={styles.cornerMaskLayer}>
+          <PredictOverlayChamferCornerFillNative
+            width={size.w}
+            height={size.h}
+            cut={cut}
+            fillColor={cornerMaskColor}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -134,5 +150,11 @@ const styles = StyleSheet.create({
   content: {
     position: "relative",
     zIndex: 1,
+  },
+  cornerMaskLayer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    zIndex: 4,
   },
 });

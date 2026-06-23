@@ -1,3 +1,5 @@
+import { useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import GamesHomeScreen from "../features/games/GamesHomeScreen";
 import ResultHomeScreen from "../features/results/ResultHomeScreen";
@@ -24,6 +26,7 @@ import CommunityDetailScreenNative from "../features/leaderboards/CommunityDetai
 import MobileCommunityGuidelinesScreen from "../features/profile/mobileScreens/MobileCommunityGuidelinesScreen";
 import ProfileSettingsScreenNative from "../features/profile/screens/ProfileSettingsScreenNative";
 import ProfilePasswordScreenNative from "../features/profile/screens/ProfilePasswordScreenNative";
+import NotificationSettingsScreenNative from "../features/profile/screens/NotificationSettingsScreenNative";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../hooks/useNativeUserLanguage";
 import AnnouncementDetailScreenNative from "../features/profile/screens/AnnouncementDetailScreenNative";
@@ -39,14 +42,14 @@ import ElectronicNoticeScreenNative from "../features/legal/ElectronicNoticeScre
 import ContactScreenNative from "../features/legal/ContactScreenNative";
 import FeatureRequestScreenNative from "../features/legal/FeatureRequestScreenNative";
 import LandingScreenNative from "../features/legal/LandingScreenNative";
+import NotificationDevScreenNative from "../notifications/NotificationDevScreenNative";
+import PublicProfileScreenNative from "../features/profile/screens/PublicProfileScreenNative";
 import {
   BadgesScreenWrapper,
   AnnouncementsScreenWrapper,
   PlanStatusScreenWrapper,
   ProSubscribeScreenWrapper,
 } from "../features/profile/screens/ProfileStackWrappers";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import type { RouteProp } from "@react-navigation/native";
 import NativeStackBackdrop from "../components/NativeStackBackdrop";
 
 const GamesStack = createNativeStackNavigator<GamesStackParamList>();
@@ -69,14 +72,22 @@ function GuidelinesScreenWrapper() {
   return <MobileCommunityGuidelinesScreen language={language} />;
 }
 
-function GamesStackScreen() {
+function GamesHomeRoute() {
+  const route = useRoute<RouteProp<GamesStackParamList, "GamesHome">>();
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  return (
+    <GamesHomeScreen
+      bottomReserveY={bottomContentReserveY}
+      routeParams={route.params}
+    />
+  );
+}
+
+function GamesStackScreen() {
   return (
     <NativeStackBackdrop>
       <GamesStack.Navigator screenOptions={screenOptions}>
-        <GamesStack.Screen name="GamesHome">
-          {() => <GamesHomeScreen bottomReserveY={bottomContentReserveY} />}
-        </GamesStack.Screen>
+        <GamesStack.Screen name="GamesHome" component={GamesHomeRoute} />
         <GamesStack.Screen name="GamePredict" component={GamePredictScreenNative} />
         <GamesStack.Screen name="GamePredictions" component={GamePredictionsScreenNative} />
         <GamesStack.Screen name="Standings" component={StandingsScreenNative} />
@@ -148,7 +159,9 @@ function ProfileStackScreen() {
     <NativeStackBackdrop>
       <ProfileStack.Navigator screenOptions={screenOptions}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileHomeRoute} />
+      <ProfileStack.Screen name="PublicProfile" component={PublicProfileScreenNative} />
       <ProfileStack.Screen name="ProfileSettings" component={ProfileSettingsScreenNative} />
+      <ProfileStack.Screen name="NotificationSettings" component={NotificationSettingsScreenNative} />
       <ProfileStack.Screen name="ProfilePassword" component={ProfilePasswordScreenNative} />
       <ProfileStack.Screen name="Badges" component={BadgesScreenWrapper} />
       <ProfileStack.Screen name="Announcements" component={AnnouncementsScreenWrapper} />
@@ -168,6 +181,9 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="FeatureRequest" component={FeatureRequestScreenNative} />
       <ProfileStack.Screen name="CommunityGuidelines" component={GuidelinesScreenWrapper} />
       <ProfileStack.Screen name="Landing" component={LandingScreenNative} />
+      {__DEV__ ? (
+        <ProfileStack.Screen name="NotificationDev" component={NotificationDevScreenNative} />
+      ) : null}
       </ProfileStack.Navigator>
     </NativeStackBackdrop>
   );

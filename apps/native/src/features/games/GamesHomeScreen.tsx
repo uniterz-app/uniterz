@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { GamesStackParamList } from "../../navigation/types";
 import { GestureDetector } from "react-native-gesture-handler";
 import {
   Alert,
@@ -14,7 +15,7 @@ import {
 } from "react-native";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import Animated, { useReducedMotion } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import {
   collection,
   doc,
@@ -130,7 +131,6 @@ import {
   liveMarkPillCyberBase,
   liveMarkTextCyberBase,
 } from "../../ui/liveMarkCyberStyles";
-import type { GamesStackParamList } from "../../navigation/types";
 import { useScheduleTeamsNative } from "./useScheduleTeamsNative";
 import { useGamesPageSwipe } from "./useGamesPageSwipe";
 import GamesDateNavigatorNative from "./GamesDateNavigatorNative";
@@ -138,7 +138,6 @@ import { RankingsPageTitleCyberNative } from "../rankings/RankingsPageTitleCyber
 import {
   gamesLeagueTitleEntering,
   gamesScheduleShellDaySwitchEntering,
-  gamesScheduleShellPageEntering,
   gamesTopBarBracketEntering,
   gamesTopBarFilterEntering,
   gamesTopBarMenuEntering,
@@ -424,12 +423,14 @@ function isSameLocalDay(a: Date, b: Date): boolean {
 
 export default function GamesHomeScreen({
   bottomReserveY = 0,
+  routeParams,
 }: {
   /** フローティング下部ナビと被らないよう確保する余白（App.tsx から注入） */
   bottomReserveY?: number;
+  routeParams?: GamesStackParamList["GamesHome"];
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
-  const insets = useSafeAreaInsets();
+  const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
   const [filterOpen, setFilterOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -448,6 +449,9 @@ export default function GamesHomeScreen({
     null
   );
   const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
+  /** リザルトからの深リンク: 予想済みでも最初からスコア入力を出す */
+  const [expandScoreFormWhenEditing, setExpandScoreFormWhenEditing] = useState(false);
+  const predictDeepLinkProcessingRef = useRef<string | null>(null);
   /** 試合終了・未投稿で開くモバイル Web オーバーレイ相当（スコア入力なし） */
   /** Web `PredictionFormV2` overlay：開始済みかつ自分の投稿なし → スコア入力・送信ブロックを出さない */
   const [predictSpectatorStartedNoPost, setPredictSpectatorStartedNoPost] =
@@ -459,7 +463,7 @@ export default function GamesHomeScreen({
   > | null>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
   const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats" | "preview" | "standings"
+    null | "h2h" | "market" | "stats" | "preview" | "results" | "standings"
   >(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
@@ -495,6 +499,7 @@ export default function GamesHomeScreen({
     games,
     peerGamesForSeries,
     dateKeysWithGames,
+    hasWindowData,
     selectedDate,
     setSelectedDate,
     selectedLeague,
@@ -502,6 +507,8 @@ export default function GamesHomeScreen({
     goPrevDay,
     goNextDay,
   } = useTodayGames();
+  /** データ未取得時のみスケルトン（キャッシュ表示中は裏更新でもスケルトンに戻さない） */
+  const showInitialSkeleton = loading && !hasWindowData;
   const reduceMotion = useReducedMotion() ?? false;
   const { teams: scheduleTeams, nameById: teamNameById } =
     useScheduleTeamsNative(selectedLeague);
@@ -657,8 +664,8 @@ export default function GamesHomeScreen({
     [bottomReserveY]
   );
   const screenShellStyle = useMemo(
-    () => [styles.card, { paddingTop: insets.top + spacing.sm, flex: 1, zIndex: 1 }],
-    [insets.top]
+    () => [styles.card, { paddingTop: topContentPadY, flex: 1, zIndex: 1 }],
+    [topContentPadY]
   );
   /** 表示中の暦月に属する試合日だけストリップに出す */
   const dayStripDates = useMemo(() => {
@@ -976,21 +983,22 @@ export default function GamesHomeScreen({
       league: selectedLeague,
       selectedDayKey,
       filterKey: gamesFilterKey,
-      isLoading: loading,
+      isLoading: showInitialSkeleton,
     });
   const cardListEntranceVariant = listShellIntro === "page" ? "full" : "light";
   const webGamesMotion = !reduceMotion;
-  const gamesMotionKey = `${selectedLeague}|${gamesFilterKey}`;
+  /** ヘッダー・日付ストリップはリーグ切替時のみ再入場（Web は filter 変更で topBar を再アニメしない） */
+  const headerMotionKey = selectedLeague;
 
   /** フェッチでスケルトン→本表示になった直後だけチップ入場を付け、その後は日付窓がずれても再アニメしない */
   useEffect(() => {
-    if (loading) {
+    if (showInitialSkeleton) {
       setDayStripEntranceEnabled(true);
       return;
     }
     const t = setTimeout(() => setDayStripEntranceEnabled(false), 900);
     return () => clearTimeout(t);
-  }, [loading]);
+  }, [showInitialSkeleton]);
 
   useEffect(() => {
     mainScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -1196,10 +1204,62 @@ export default function GamesHomeScreen({
     });
   }, [selectedGame, selectedLeague, language, myPredictionByGameId]);
 
-  function proceedOpenPredictModal(sourceGame: Record<string, unknown>) {
+  type PredictModalEditBootstrap = {
+    postId: string;
+    seed?: {
+      winner: "home" | "away" | "draw";
+      scoreHome: number;
+      scoreAway: number;
+      goalScorer?: unknown;
+    };
+  };
+
+  function proceedOpenPredictModal(
+    sourceGame: Record<string, unknown>,
+    editBootstrap?: PredictModalEditBootstrap
+  ) {
     const gameId = String(sourceGame.id ?? "");
-    const existingPostId = myPostIdByGameId[gameId];
-    const existingPrediction = myPredictionByGameId[gameId];
+    if (editBootstrap?.postId) {
+      setMyPostIdByGameId((prev) =>
+        prev[gameId] === editBootstrap.postId
+          ? prev
+          : { ...prev, [gameId]: editBootstrap.postId }
+      );
+      setPredictedGameIds((prev) => {
+        if (prev.has(gameId)) return prev;
+        const next = new Set(prev);
+        next.add(gameId);
+        return next;
+      });
+      if (editBootstrap.seed) {
+        setMyPredictionByGameId((prev) => ({
+          ...prev,
+          [gameId]: {
+            winner: editBootstrap.seed!.winner,
+            score: {
+              home: editBootstrap.seed!.scoreHome,
+              away: editBootstrap.seed!.scoreAway,
+            },
+            comment: prev[gameId]?.comment ?? "",
+            updatedAt: prev[gameId]?.updatedAt,
+            goalScorer: editBootstrap.seed!.goalScorer ?? prev[gameId]?.goalScorer,
+            postStats: prev[gameId]?.postStats ?? null,
+          },
+        }));
+      }
+    }
+    const existingPostId = editBootstrap?.postId ?? myPostIdByGameId[gameId];
+    const existingPrediction = editBootstrap?.seed
+      ? {
+          winner: editBootstrap.seed.winner,
+          score: {
+            home: editBootstrap.seed.scoreHome,
+            away: editBootstrap.seed.scoreAway,
+          },
+          comment: "",
+          goalScorer: editBootstrap.seed.goalScorer,
+        }
+      : myPredictionByGameId[gameId];
     const started = isGameStarted(sourceGame);
     /** Web 一覧カードの `onOpenPredict`：開始後・未投稿でもオーバーレイを開く（フォームだけ非表示） */
     const spectatorStartedNoPost = Boolean(started && !existingPostId);
@@ -1231,6 +1291,15 @@ export default function GamesHomeScreen({
     if (spectatorStartedNoPost) return;
 
     if (!fUser?.uid) return;
+
+    if (editBootstrap?.seed) {
+      setWinner(editBootstrap.seed.winner);
+      setScoreHome(String(editBootstrap.seed.scoreHome));
+      setScoreAway(String(editBootstrap.seed.scoreAway));
+      setGoalScorerPick(normalizeWcGoalScorerPick(editBootstrap.seed.goalScorer));
+      return;
+    }
+
     void (async () => {
       const key = draftStorageKey(fUser.uid, gameId);
       const raw = await AsyncStorage.getItem(key);
@@ -1259,20 +1328,23 @@ export default function GamesHomeScreen({
     })();
   }
 
-  async function openPredictModal(targetGame?: Record<string, unknown>) {
+  async function openPredictModal(
+    targetGame?: Record<string, unknown>,
+    editBootstrap?: PredictModalEditBootstrap
+  ) {
     const sourceGame = targetGame ?? selectedGame;
     if (!sourceGame) {
       setPredictSpectatorStartedNoPost(false);
       return;
     }
     const gameId = String(sourceGame.id ?? "");
-    const existingPostId = myPostIdByGameId[gameId];
+    const existingPostId = editBootstrap?.postId ?? myPostIdByGameId[gameId];
     const started = isGameStarted(sourceGame);
     const spectatorStartedNoPost = Boolean(started && !existingPostId);
     const leagueRaw = String(sourceGame.league ?? selectedLeague ?? "");
     const isFootball = isSoccerLeague(leagueRaw);
 
-    if (isFootball && !existingPostId && !spectatorStartedNoPost) {
+    if (isFootball && !existingPostId && !spectatorStartedNoPost && !editBootstrap) {
       try {
         const seen = await readFootballScoringChangeSeenNative();
         if (!seen) {
@@ -1285,7 +1357,7 @@ export default function GamesHomeScreen({
       }
     }
 
-    proceedOpenPredictModal(sourceGame);
+    proceedOpenPredictModal(sourceGame, editBootstrap);
   }
 
   async function handleFootballScoringChangeClose() {
@@ -1297,6 +1369,60 @@ export default function GamesHomeScreen({
       proceedOpenPredictModal(pending);
     }
   }
+
+  /** リザルト一覧などから `openPredictGameId` で予想モーダルを開く */
+  useEffect(() => {
+    const gameId = routeParams?.openPredictGameId?.trim();
+    if (!gameId || authStatus !== "ready") return;
+    if (predictDeepLinkProcessingRef.current === gameId) return;
+
+    predictDeepLinkProcessingRef.current = gameId;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const snap = await getDoc(doc(db, "games", gameId));
+        if (cancelled) return;
+        const postId = routeParams?.openPredictPostId?.trim();
+        const seed = routeParams?.openPredictSeed;
+        const expandScoreForm = routeParams?.expandScoreForm;
+        navigation.setParams({
+          openPredictGameId: undefined,
+          expandScoreForm: undefined,
+          openPredictPostId: undefined,
+          openPredictSeed: undefined,
+        });
+        if (!snap.exists()) return;
+        const raw = { id: gameId, ...snap.data() } as Record<string, unknown>;
+        if (expandScoreForm) {
+          setExpandScoreFormWhenEditing(true);
+        }
+        const editBootstrap =
+          postId != null && postId.length > 0
+            ? {
+                postId,
+                seed:
+                  seed &&
+                  typeof seed.scoreHome === "number" &&
+                  typeof seed.scoreAway === "number"
+                    ? seed
+                    : undefined,
+              }
+            : undefined;
+        await openPredictModal(raw, editBootstrap);
+      } finally {
+        if (predictDeepLinkProcessingRef.current === gameId) {
+          predictDeepLinkProcessingRef.current = null;
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // openPredictModal は state 更新主体のため deps に含めない
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- routeParams の深リンクのみ
+  }, [routeParams?.openPredictGameId, routeParams?.expandScoreForm, authStatus, navigation]);
 
   async function handleNextGameModalYes(dontShowAgain: boolean) {
     if (dontShowAgain) await writePredictNextGameModalSkip();
@@ -1479,7 +1605,7 @@ export default function GamesHomeScreen({
         <View style={styles.gamesHeaderTitleRow}>
           <View style={styles.gamesHeaderSideLeft}>
             <Animated.View
-              key={`menu-${gamesMotionKey}`}
+              key={`menu-${headerMotionKey}`}
               entering={webGamesMotion ? gamesTopBarMenuEntering : undefined}
             >
               <CyberMenuButton
@@ -1498,7 +1624,7 @@ export default function GamesHomeScreen({
           </View>
           <View style={styles.gamesHeaderTitleCenter} pointerEvents="none">
             <Animated.View
-              key={`league-title-${gamesMotionKey}`}
+              key={`league-title-${headerMotionKey}`}
               entering={webGamesMotion ? gamesLeagueTitleEntering : undefined}
             >
               <RankingsPageTitleCyberNative title={leagueHeaderLabel} />
@@ -1506,7 +1632,7 @@ export default function GamesHomeScreen({
           </View>
           <View style={styles.gamesHeaderSideRight}>
             <Animated.View
-              key={`filter-${gamesMotionKey}`}
+              key={`filter-${headerMotionKey}`}
               entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
             >
               <GamesHeaderFilterButtonNative
@@ -1517,7 +1643,7 @@ export default function GamesHomeScreen({
             </Animated.View>
             {selectedLeague === "nba" ? (
               <Animated.View
-                key={`bracket-${gamesMotionKey}`}
+                key={`bracket-${headerMotionKey}`}
                 entering={webGamesMotion ? gamesTopBarBracketEntering : undefined}
               >
                 <Pressable
@@ -1530,7 +1656,7 @@ export default function GamesHomeScreen({
             ) : null}
           </View>
         </View>
-      {loading ? (
+      {showInitialSkeleton ? (
         <View style={styles.dayStripSkeletonBlock}>
           <View style={styles.monthHeaderRow}>
             <SkeletonScanNative style={styles.dayStripSkeletonArrow} />
@@ -1560,14 +1686,14 @@ export default function GamesHomeScreen({
           monthNavBusy={adjacentMonthHasGames.loading}
           entranceEnabled={dayStripEntranceEnabled}
           reduceMotion={reduceMotion}
-          motionKey={gamesMotionKey}
+          motionKey={headerMotionKey}
         />
       )}
       </View>
 
       <GestureDetector gesture={pageSwipeGesture}>
       <View>
-      {loading ? (
+      {showInitialSkeleton ? (
         <View style={styles.skeletonList}>
           {SKELETON_ROWS.map((row) => (
             <SkeletonScanNative key={row} style={styles.skeletonCard}>
@@ -1589,15 +1715,15 @@ export default function GamesHomeScreen({
         </Text>
       ) : null}
 
-      {!loading && !error ? (
+      {!showInitialSkeleton && !error ? (
         <Animated.View
           key={`sched-${scheduleBlockKey}`}
           entering={
-            webGamesMotion
-              ? richScheduleMotion
-                ? gamesScheduleShellPageEntering()
-                : gamesScheduleShellDaySwitchEntering()
-              : undefined
+            webGamesMotion && richScheduleMotion
+              ? undefined
+              : webGamesMotion
+                ? gamesScheduleShellDaySwitchEntering()
+                : undefined
           }
         >
           <GameCardList
@@ -1678,6 +1804,7 @@ export default function GamesHomeScreen({
         onSubmit={() => void handleSubmitPrediction()}
         onClose={() => {
           setIsPredictModalOpen(false);
+          setExpandScoreFormWhenEditing(false);
           setPredictSpectatorStartedNoPost(false);
           setSelectedGame(null);
         }}
@@ -1685,6 +1812,7 @@ export default function GamesHomeScreen({
         predictionEditLockedAfterKickoff={
           selectedGame != null && isGameStarted(selectedGame)
         }
+        expandScoreFormWhenEditing={expandScoreFormWhenEditing}
         predictData={predictModalData}
         overlayMarketBar={predictOverlayMarketBar}
         language={language}
@@ -1693,6 +1821,7 @@ export default function GamesHomeScreen({
         goalScorerPick={goalScorerPick}
         setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
+        myPostId={selectedGameId ? myPostIdByGameId[selectedGameId] ?? null : null}
       />
       <FootballScoringChangeModalNative
         visible={footballScoringChangeVisible}
@@ -2607,6 +2736,18 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   /** スコア行：MatchCard モバイル dense `text-lg` 相当 */
+  centerTextScoreRow: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 8,
+    maxWidth: "100%",
+  },
+  centerTextScoreRowWc: {
+    marginTop: 2,
+    gap: 10,
+  },
   centerTextScore: {
     textAlign: "center",
   },
@@ -2614,6 +2755,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   centerTextScoreNum: {
+    flexShrink: 0,
     color: "#ffffff",
     fontSize: 18,
     fontWeight: "900",
@@ -2631,6 +2773,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   centerScoreDash: {
+    flexShrink: 0,
     color: "rgba(255,255,255,0.7)",
     fontSize: 18,
     fontWeight: "900",
@@ -2685,12 +2828,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     includeFontPadding: false,
   },
+  /** 得点ブロックと league 仕切り棒の間 — Web mobile dense `mt-1.5 md:mt-2` */
+  leagueDividerWrap: {
+    width: "100%",
+    marginTop: "auto",
+    paddingTop: 8,
+  },
   /** MatchCard 仕切り：league 色＋入場アニメ相当の薄いシアン光彩 */
   leagueDivider: {
     height: 2,
     width: "100%",
     borderRadius: 999,
-    marginTop: "auto",
     shadowColor: "rgb(0, 245, 255)",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.45,

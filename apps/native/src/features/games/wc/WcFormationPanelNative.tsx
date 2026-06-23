@@ -1,7 +1,22 @@
-import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, Line, Rect } from "react-native-svg";
+import { useMemo, useState, type ReactNode } from "react";
+import {
+  LayoutChangeEvent,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Svg, {
+  Circle,
+  Defs,
+  G,
+  Line,
+  LinearGradient as SvgLinearGradient,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
 import {
   getWcPredictedLineup,
   getWcResolvedLineup,
@@ -15,6 +30,7 @@ type Props = {
   t: GamesTexts;
 };
 
+/** Web `WcFormationPanel` CYBER と同一 */
 const CYBER = {
   line: "rgba(92, 248, 255, 0.95)",
   lineGlow: "rgba(48, 220, 255, 0.72)",
@@ -23,7 +39,12 @@ const CYBER = {
   base: "#010c18",
   stripeDark: "#021424",
   stripeLight: "#0c2d4f",
+  circuit: "rgba(56, 200, 255, 0.22)",
+  circuitNode: "rgba(100, 240, 255, 0.45)",
 } as const;
+
+const PITCH_W = 100;
+const PITCH_H = 62.5;
 
 type LabelLayout = {
   above: boolean;
@@ -31,6 +52,8 @@ type LabelLayout = {
   offsetX: number;
   offsetY: number;
 };
+
+type PitchSize = { width: number; height: number };
 
 const POS_MARKER: Record<
   WcSquadPlayer["pos"],
@@ -122,6 +145,7 @@ function buildLabelLayouts(
   return layouts;
 }
 
+/** Web と同一の横ピッチ座標変換 */
 function toHorizontalCoords(
   x: number,
   y: number,
@@ -143,72 +167,291 @@ function formatPlayerLabel(full: string): string {
   return `${first.charAt(0).toUpperCase()}.${last}`;
 }
 
-function PitchSurfaceNative() {
+function GlowStroke({
+  stroke,
+  strokeWidth,
+  glowWidth,
+  ...rest
+}: {
+  stroke: string;
+  strokeWidth: number;
+  glowWidth?: number;
+} & React.ComponentProps<typeof Line>) {
+  const glow = glowWidth ?? strokeWidth * 2.8;
   return (
-    <>
-      <View style={styles.pitchBase} />
-      <View style={styles.pitchStripesWrap} pointerEvents="none">
-        {Array.from({ length: 8 }, (_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.pitchStripe,
-              {
-                left: `${i * 12.5}%`,
-                backgroundColor: i % 2 === 0 ? CYBER.stripeDark : CYBER.stripeLight,
-              },
-            ]}
-          />
-        ))}
-      </View>
-      <LinearGradient
-        pointerEvents="none"
-        colors={[
-          "rgba(48,220,255,0.05)",
-          "rgba(48,220,255,0)",
-          "rgba(48,220,255,0)",
-          "rgba(1,10,22,0.5)",
-        ]}
-        locations={[0, 0.35, 0.65, 1]}
-        style={StyleSheet.absoluteFillObject}
+    <G>
+      <Line
+        {...rest}
+        stroke={CYBER.lineGlow}
+        strokeWidth={glow}
+        opacity={0.35}
       />
-      <LinearGradient
-        pointerEvents="none"
-        colors={["rgba(48,220,255,0.14)", "rgba(48,220,255,0)"]}
-        start={{ x: 0.5, y: 0.5 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.pitchRadialGlow}
-      />
-    </>
+      <Line {...rest} stroke={stroke} strokeWidth={strokeWidth} />
+    </G>
   );
 }
-function PitchMarkingsSvg() {
-  const stroke = CYBER.line;
+
+function GlowRect({
+  stroke,
+  strokeWidth,
+  glowWidth,
+  ...rest
+}: {
+  stroke: string;
+  strokeWidth: number;
+  glowWidth?: number;
+} & React.ComponentProps<typeof Rect>) {
+  const glow = glowWidth ?? strokeWidth * 2.8;
+  return (
+    <G>
+      <Rect {...rest} stroke={CYBER.lineGlow} strokeWidth={glow} opacity={0.35} />
+      <Rect {...rest} stroke={stroke} strokeWidth={strokeWidth} />
+    </G>
+  );
+}
+
+function GlowCircle({
+  stroke,
+  strokeWidth,
+  glowWidth,
+  fill,
+  ...rest
+}: {
+  stroke?: string;
+  strokeWidth?: number;
+  glowWidth?: number;
+  fill?: string;
+} & React.ComponentProps<typeof Circle>) {
+  const sw = strokeWidth ?? 0.3;
+  const glow = glowWidth ?? sw * 2.8;
+  return (
+    <G>
+      {stroke ? (
+        <>
+          <Circle
+            {...rest}
+            stroke={CYBER.lineGlow}
+            strokeWidth={glow}
+            fill="none"
+            opacity={0.35}
+          />
+          <Circle {...rest} stroke={stroke} strokeWidth={sw} fill={fill ?? "none"} />
+        </>
+      ) : (
+        <Circle {...rest} fill={fill} />
+      )}
+    </G>
+  );
+}
+
+/** Web モバイル `PitchSurface` + `PitchMarkings` を 1 枚 SVG に統合 */
+function PitchCanvasSvg({
+  width,
+  height,
+  surfaceId,
+}: {
+  width: number;
+  height: number;
+  surfaceId: string;
+}) {
+  const centerGlowId = `${surfaceId}-centerGlow`;
+  const vignetteId = `${surfaceId}-vignette`;
+
+  const inset = 4;
+  const fieldW = PITCH_W - inset * 2;
+  const fieldH = PITCH_H - inset * 2;
+  const midY = inset + fieldH / 2;
+  const centerR = fieldW * 0.22 * 0.5;
+  const paW = fieldW * 0.15;
+  const paH = fieldH * 0.44;
+  const gaW = fieldW * 0.06;
+  const gaH = fieldH * 0.24;
+
+  const stripeNodes: ReactNode[] = [];
+  for (let x = 0; x < PITCH_W; x += 25) {
+    stripeNodes.push(
+      <Rect key={`sd-${x}`} x={x} y={0} width={12.5} height={PITCH_H} fill={CYBER.stripeDark} />,
+      <Rect key={`sl-${x}`} x={x + 12.5} y={0} width={12.5} height={PITCH_H} fill={CYBER.stripeLight} />
+    );
+  }
+
+  const fineStep = 1.5625;
+  const mainStep = 3.125;
+  const gridNodes: ReactNode[] = [];
+  for (let x = fineStep; x < PITCH_W; x += fineStep) {
+    gridNodes.push(
+      <Line key={`fx-${x}`} x1={x} y1={0} x2={x} y2={PITCH_H} stroke={CYBER.gridFine} strokeWidth={0.08} />
+    );
+  }
+  for (let y = fineStep; y < PITCH_H; y += fineStep) {
+    gridNodes.push(
+      <Line key={`fy-${y}`} x1={0} y1={y} x2={PITCH_W} y2={y} stroke={CYBER.gridFine} strokeWidth={0.08} />
+    );
+  }
+  for (let x = mainStep; x < PITCH_W; x += mainStep) {
+    gridNodes.push(
+      <Line key={`mx-${x}`} x1={x} y1={0} x2={x} y2={PITCH_H} stroke={CYBER.grid} strokeWidth={0.12} />
+    );
+  }
+  for (let y = mainStep; y < PITCH_H; y += mainStep) {
+    gridNodes.push(
+      <Line key={`my-${y}`} x1={0} y1={y} x2={PITCH_W} y2={y} stroke={CYBER.grid} strokeWidth={0.12} />
+    );
+  }
+
+  const circuitNodes: Array<[number, number]> = [
+    [8, 12], [42, 28], [68, 18], [96, 34], [128, 22], [14, 78], [58, 74], [88, 58],
+    [22, 42], [52, 52], [108, 56], [46, 50], [114, 68], [62, 24], [84, 88], [100, 72],
+  ];
+
   return (
     <Svg
-      width="100%"
-      height="100%"
-      viewBox="0 0 100 62.5"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${PITCH_W} ${PITCH_H}`}
       preserveAspectRatio="none"
-      style={StyleSheet.absoluteFill}
+      style={styles.pitchCanvas}
+      pointerEvents="none"
     >
-      <Rect
-        x="4"
-        y="2.5"
-        width="92"
-        height="57.5"
-        stroke={stroke}
-        strokeWidth="0.35"
+      <Defs>
+        <RadialGradient id={centerGlowId} cx="50%" cy="50%" rx="39%" ry="29%">
+          <Stop offset="0%" stopColor="rgb(48,220,255)" stopOpacity={0.14} />
+          <Stop offset="62%" stopColor="rgb(48,220,255)" stopOpacity={0} />
+        </RadialGradient>
+        <SvgLinearGradient id={vignetteId} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor="rgb(48,220,255)" stopOpacity={0.05} />
+          <Stop offset="35%" stopColor="rgb(48,220,255)" stopOpacity={0} />
+          <Stop offset="65%" stopColor="rgb(48,220,255)" stopOpacity={0} />
+          <Stop offset="100%" stopColor="rgb(1,10,22)" stopOpacity={0.5} />
+        </SvgLinearGradient>
+      </Defs>
+
+      <Rect x={0} y={0} width={PITCH_W} height={PITCH_H} fill={CYBER.base} />
+      {stripeNodes}
+
+      <G stroke={CYBER.circuit} strokeWidth={0.18} fill="none" opacity={0.85} transform="scale(0.625)">
+        <Path d="M 8 12 H 42 V 28 H 68 V 18 H 96 V 34 H 128 V 22 H 152" />
+        <Path d="M 14 78 H 38 V 62 H 58 V 74 H 88 V 58 H 118 V 70 H 148" />
+        <Path d="M 22 42 H 52 V 52 H 78 V 44 H 108 V 56 H 138" />
+        <Path d="M 6 50 H 26 V 38 H 46 V 50 H 66" />
+        <Path d="M 94 82 H 114 V 68 H 134 V 84 H 154" />
+        <Path d="M 48 8 V 24 H 62 V 8 H 82 V 20" />
+        <Path d="M 100 88 V 72 H 84 V 88 H 64 V 76" />
+      </G>
+      <G fill={CYBER.circuitNode} opacity={0.7} transform="scale(0.625)">
+        {circuitNodes.map(([cx, cy], i) => (
+          <Circle key={i} cx={cx} cy={cy} r={0.55} />
+        ))}
+      </G>
+
+      {gridNodes}
+
+      <Rect x={0} y={0} width={PITCH_W} height={PITCH_H} fill={`url(#${centerGlowId})`} />
+      <Rect x={0} y={0} width={PITCH_W} height={PITCH_H} fill={`url(#${vignetteId})`} />
+
+      <GlowRect
+        x={inset}
+        y={inset}
+        width={fieldW}
+        height={fieldH}
+        stroke={CYBER.line}
+        strokeWidth={0.35}
         fill="none"
-        rx="0.5"
+        rx={0.5}
       />
-      <Line x1="50" y1="2.5" x2="50" y2="60" stroke={stroke} strokeWidth="0.3" />
-      <Circle cx="50" cy="31.25" r="6.875" stroke={stroke} strokeWidth="0.3" fill="none" />
-      <Circle cx="50" cy="31.25" r="0.45" fill={stroke} />
-      <Rect x="4" y="13.75" width="9.375" height="35" stroke={stroke} strokeWidth="0.3" fill="none" />
-      <Rect x="4" y="20" width="3.75" height="22.5" stroke={stroke} strokeWidth="0.3" fill="none" />
-      <Rect x="86.625" y="13.75" width="9.375" height="35" stroke={stroke} strokeWidth="0.3" fill="none" />
-      <Rect x="92.25" y="20" width="3.75" height="22.5" stroke={stroke} strokeWidth="0.3" fill="none" />
+      <GlowStroke
+        x1={50}
+        y1={inset}
+        x2={50}
+        y2={inset + fieldH}
+        stroke={CYBER.line}
+        strokeWidth={0.3}
+      />
+      <GlowCircle
+        cx={50}
+        cy={midY}
+        r={centerR}
+        stroke={CYBER.line}
+        strokeWidth={0.3}
+      />
+      <Circle cx={50} cy={midY} r={0.45} fill={CYBER.line} />
+      <Circle
+        cx={50}
+        cy={midY}
+        r={1.2}
+        fill={CYBER.line}
+        opacity={0.35}
+      />
+
+      <GlowRect x={inset} y={midY - paH / 2} width={paW} height={paH} stroke={CYBER.line} strokeWidth={0.3} fill="none" />
+      <GlowRect x={inset} y={midY - gaH / 2} width={gaW} height={gaH} stroke={CYBER.line} strokeWidth={0.3} fill="none" />
+      <Circle cx={inset + fieldW * 0.08} cy={midY} r={0.55} fill={CYBER.lineGlow} opacity={0.45} />
+      <Circle cx={inset + fieldW * 0.08} cy={midY} r={0.35} fill={CYBER.line} />
+
+      <GlowRect
+        x={inset + fieldW - paW}
+        y={midY - paH / 2}
+        width={paW}
+        height={paH}
+        stroke={CYBER.line}
+        strokeWidth={0.3}
+        fill="none"
+      />
+      <GlowRect
+        x={inset + fieldW - gaW}
+        y={midY - gaH / 2}
+        width={gaW}
+        height={gaH}
+        stroke={CYBER.line}
+        strokeWidth={0.3}
+        fill="none"
+      />
+      <Circle cx={inset + fieldW * 0.92} cy={midY} r={0.55} fill={CYBER.lineGlow} opacity={0.45} />
+      <Circle cx={inset + fieldW * 0.92} cy={midY} r={0.35} fill={CYBER.line} />
+
+      <Path
+        d={`M ${inset} ${inset + 1.875} Q ${inset} ${inset} ${inset + 1.25} ${inset}`}
+        stroke={CYBER.line}
+        strokeWidth={0.25}
+        fill="none"
+      />
+      <Path
+        d={`M ${inset + fieldW - 1.25} ${inset} Q ${inset + fieldW} ${inset} ${inset + fieldW} ${inset + 1.875}`}
+        stroke={CYBER.line}
+        strokeWidth={0.25}
+        fill="none"
+      />
+      <Path
+        d={`M ${inset} ${inset + fieldH - 1.875} Q ${inset} ${inset + fieldH} ${inset + 1.25} ${inset + fieldH}`}
+        stroke={CYBER.line}
+        strokeWidth={0.25}
+        fill="none"
+      />
+      <Path
+        d={`M ${inset + fieldW - 1.25} ${inset + fieldH} Q ${inset + fieldW} ${inset + fieldH} ${inset + fieldW} ${inset + fieldH - 1.875}`}
+        stroke={CYBER.line}
+        strokeWidth={0.25}
+        fill="none"
+      />
+
+      <Rect
+        x={inset - 0.35}
+        y={midY - gaH / 2 + gaH * 0.08}
+        width={0.75}
+        height={gaH * 0.84}
+        stroke={CYBER.line}
+        strokeWidth={0.25}
+        fill="rgba(34,211,238,0.12)"
+      />
+      <Rect
+        x={inset + fieldW - 0.4}
+        y={midY - gaH / 2 + gaH * 0.08}
+        width={0.75}
+        height={gaH * 0.84}
+        stroke={CYBER.line}
+        strokeWidth={0.25}
+        fill="rgba(34,211,238,0.12)"
+      />
     </Svg>
   );
 }
@@ -225,7 +468,7 @@ function PlayerMarkerNative({
   const colors = POS_MARKER[player.pos];
   const dotSize = 12;
 
-  const labelAlign =
+  const alignItems =
     labelLayout.align === "start"
       ? "flex-start"
       : labelLayout.align === "end"
@@ -240,28 +483,25 @@ function PlayerMarkerNative({
 
   return (
     <View
-      style={[
-        styles.marker,
-        { left: `${left}%`, top: `${top}%` },
-      ]}
+      style={[styles.markerRoot, { left: `${left}%`, top: `${top}%` }]}
       accessibilityLabel={player.name}
     >
       <View
         style={[
           styles.markerColumn,
           labelLayout.above ? styles.markerColumnAbove : styles.markerColumnBelow,
-          { alignItems: labelAlign },
+          { alignItems },
         ]}
       >
-        <View style={[styles.dotWrap, { width: dotSize, height: dotSize }]}>
+        <View style={{ width: dotSize, height: dotSize }}>
           <View
             style={[
               styles.dotGlow,
               {
-                backgroundColor: colors.glow,
                 width: dotSize,
                 height: dotSize,
                 borderRadius: dotSize / 2,
+                backgroundColor: colors.glow,
               },
             ]}
           />
@@ -269,11 +509,12 @@ function PlayerMarkerNative({
             style={[
               styles.dot,
               {
-                backgroundColor: colors.fill,
-                borderColor: colors.ring,
                 width: dotSize,
                 height: dotSize,
                 borderRadius: dotSize / 2,
+                backgroundColor: colors.fill,
+                borderColor: colors.ring,
+                shadowColor: colors.glow,
               },
             ]}
           />
@@ -298,8 +539,11 @@ function PlayerMarkerNative({
   );
 }
 
-/** Web `WcFormationPanel` 相当（モバイル） */
+/** Web `WcFormationPanel` 相当（モバイル `isMobile`） */
 export default function WcFormationPanelNative({ teamId, t }: Props) {
+  const [pitchSize, setPitchSize] = useState<PitchSize>({ width: 0, height: 0 });
+  const surfaceId = `wc-pitch-${teamId}`;
+
   const lineup = useMemo(() => {
     if (!hasWcSquadData(teamId)) return null;
     return getWcResolvedLineup(teamId);
@@ -318,6 +562,14 @@ export default function WcFormationPanelNative({ teamId, t }: Props) {
     );
   }, [lineup]);
 
+  const handlePitchLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    if (width <= 0 || height <= 0) return;
+    setPitchSize((prev) =>
+      prev.width === width && prev.height === height ? prev : { width, height }
+    );
+  };
+
   if (!lineup?.length || !predicted || !labelLayouts) return null;
 
   return (
@@ -328,9 +580,16 @@ export default function WcFormationPanelNative({ teamId, t }: Props) {
       </View>
 
       <View style={styles.pitchFrame}>
-        <View style={styles.pitch}>
-          <PitchSurfaceNative />
-          <PitchMarkingsSvg />
+        <View style={styles.pitch} onLayout={handlePitchLayout}>
+          {pitchSize.width > 0 && pitchSize.height > 0 ? (
+            <PitchCanvasSvg
+              width={pitchSize.width}
+              height={pitchSize.height}
+              surfaceId={surfaceId}
+            />
+          ) : (
+            <View style={styles.pitchFallback} />
+          )}
           {lineup.map((player) => (
             <PlayerMarkerNative
               key={player.id}
@@ -347,70 +606,70 @@ export default function WcFormationPanelNative({ teamId, t }: Props) {
 const styles = StyleSheet.create({
   root: {
     marginTop: 12,
-    gap: 10,
   },
   header: {
     alignItems: "center",
-    gap: 4,
+    marginBottom: 12,
   },
   headerKicker: {
     color: "rgba(255,255,255,0.55)",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.6,
+    letterSpacing: 1.92,
     textTransform: "uppercase",
   },
   headerFormation: {
+    marginTop: 4,
     color: "rgba(103,232,249,0.85)",
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 1,
+    letterSpacing: 0.7,
     fontVariant: ["tabular-nums"],
   },
   pitchFrame: {
     borderWidth: 1,
     borderColor: "rgba(34,211,238,0.35)",
-    borderRadius: 8,
+    borderRadius: 6,
     overflow: "hidden",
-    shadowColor: "rgba(48,220,255,0.18)",
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 0 },
+    backgroundColor: CYBER.base,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(48,220,255,0.18)",
+        shadowOpacity: 1,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      android: {
+        elevation: 6,
+      },
+      default: {},
+    }),
   },
   pitch: {
     width: "100%",
     aspectRatio: 16 / 10,
     backgroundColor: CYBER.base,
     overflow: "hidden",
+    position: "relative",
   },
-  pitchBase: {
+  pitchFallback: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: CYBER.base,
   },
-  pitchStripesWrap: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: "row",
-  },
-  pitchStripe: {
+  pitchCanvas: {
     position: "absolute",
+    left: 0,
     top: 0,
-    bottom: 0,
-    width: "12.5%",
   },
-  pitchRadialGlow: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.85,
-  },
-  marker: {
+  markerRoot: {
     position: "absolute",
     zIndex: 10,
-    transform: [{ translateX: -20 }, { translateY: -20 }],
-    width: 40,
-    alignItems: "center",
+    transform: [{ translateX: "-50%" }, { translateY: "-50%" }],
   },
   markerColumn: {
     gap: 2,
     maxWidth: 68,
+    flexShrink: 0,
   },
   markerColumnAbove: {
     flexDirection: "column-reverse",
@@ -418,30 +677,45 @@ const styles = StyleSheet.create({
   markerColumnBelow: {
     flexDirection: "column",
   },
-  dotWrap: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   dotGlow: {
     position: "absolute",
-    opacity: 0.4,
+    left: 0,
+    top: 0,
+    opacity: 0.65,
+    transform: [{ scale: 1.35 }],
   },
   dot: {
+    position: "absolute",
+    left: 0,
+    top: 0,
     borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 0 },
+      },
+      android: {
+        elevation: 3,
+      },
+      default: {},
+    }),
   },
   markerLabel: {
     maxWidth: 68,
+    flexShrink: 0,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
     borderColor: "rgba(34,211,238,0.3)",
-    borderRadius: 4,
+    borderRadius: 2,
     backgroundColor: "rgba(3,11,24,0.92)",
     color: "rgba(207,250,254,0.9)",
     fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 0.6,
+    fontWeight: "500",
+    letterSpacing: 0.8,
+    lineHeight: 12,
     textTransform: "uppercase",
+    includeFontPadding: false,
   },
 });

@@ -6,11 +6,16 @@ import {
   type Firestore,
   type QuerySnapshot,
 } from "firebase/firestore";
-import type { WcStandingGame } from "@/lib/wc/computeGroupStandings";
+import {
+  getResolvedGameScore,
+  normalizeStartAtJst,
+  toStatusFromGameDoc,
+} from "@/lib/games/transform";
 import { aggregateWcTournamentGoalCounts } from "@/lib/wc/aggregateTournamentGoalCounts";
+import type { WcSeasonGameRecord } from "@/lib/wc/wcSeasonGameRecord";
 
 type CacheEntry = {
-  games: WcStandingGame[] | null;
+  games: WcSeasonGameRecord[] | null;
   goalCounts: ReadonlyMap<string, number> | null;
   loading: boolean;
   error: string | null;
@@ -49,10 +54,10 @@ function notify(season: string) {
 }
 
 function parseWcStandingGames(snap: QuerySnapshot): {
-  games: WcStandingGame[];
+  games: WcSeasonGameRecord[];
   goalCounts: ReadonlyMap<string, number>;
 } {
-  const list: WcStandingGame[] = [];
+  const list: WcSeasonGameRecord[] = [];
   const rawDocs: Record<string, unknown>[] = [];
   snap.forEach((d) => {
     const data = d.data() as Record<string, unknown>;
@@ -62,17 +67,21 @@ function parseWcStandingGames(snap: QuerySnapshot): {
     const homeTeamId = typeof home.teamId === "string" ? home.teamId : "";
     const awayTeamId = typeof away.teamId === "string" ? away.teamId : "";
     if (!homeTeamId || !awayTeamId) return;
-    const homeScore =
-      typeof data.homeScore === "number" ? data.homeScore : null;
-    const awayScore =
-      typeof data.awayScore === "number" ? data.awayScore : null;
-    const status =
-      data.final === true || data.final === 1
-        ? "final"
-        : typeof data.status === "string"
-          ? data.status
-          : "scheduled";
-    list.push({ homeTeamId, awayTeamId, homeScore, awayScore, status });
+    const score = getResolvedGameScore(data);
+    const status = toStatusFromGameDoc(data);
+    const startAt = normalizeStartAtJst(data);
+    const roundLabel =
+      typeof data.roundLabel === "string" ? data.roundLabel.trim() : "";
+    list.push({
+      id: d.id,
+      homeTeamId,
+      awayTeamId,
+      homeScore: score?.home ?? null,
+      awayScore: score?.away ?? null,
+      status,
+      startAtMs: startAt?.getTime() ?? null,
+      roundLabel: roundLabel || null,
+    });
   });
   return {
     games: list,
@@ -155,7 +164,7 @@ export function subscribeWcSeasonGames(
 }
 
 export function readWcSeasonGamesCache(season: string | null | undefined): {
-  games: WcStandingGame[] | null;
+  games: WcSeasonGameRecord[] | null;
   loading: boolean;
   error: string | null;
 } {

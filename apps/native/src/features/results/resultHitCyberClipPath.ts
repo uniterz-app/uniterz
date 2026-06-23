@@ -1,3 +1,5 @@
+import { chamferedCornerRevealPathsD } from "../games/matchListCyberClipPath";
+
 /** Web `.result-hit-cyber-clip`（右上・左下のみ 12px 角切り） */
 export const RESULT_HIT_CYBER_CLIP_CUT = 12;
 
@@ -23,6 +25,17 @@ export function resultHitCyberClipPathD(
     `L 0 ${h - c}`,
     "Z",
   ].join(" ");
+}
+
+/** hit-clip の角三角マスク（右上・左下のみ） */
+export function resultHitCyberCornerRevealPathsD(
+  width: number,
+  height: number,
+  cut: number,
+  overlap = 1
+): readonly [string, string] {
+  const [, tr, , bl] = chamferedCornerRevealPathsD(width, height, cut, overlap);
+  return [tr, bl];
 }
 
 /** 四隅 L 字アクセント（clip 内に描画 — Web の border-l/t 角飾り相当） */

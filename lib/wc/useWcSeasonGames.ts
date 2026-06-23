@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import type { WcStandingGame } from "@/lib/wc/computeGroupStandings";
+import type { WcSeasonGameRecord } from "@/lib/wc/wcSeasonGameRecord";
 import {
   readWcSeasonGamesCache,
   subscribeWcSeasonGames,
@@ -16,7 +16,7 @@ import {
  *  必要なものをクライアント側で絞る方が実装も Firestore index も最小）
  */
 export function useWcSeasonGames(season: string | null | undefined): {
-  games: WcStandingGame[] | null;
+  games: WcSeasonGameRecord[] | null;
   loading: boolean;
   error: string | null;
 } {

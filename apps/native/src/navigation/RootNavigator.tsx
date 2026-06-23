@@ -6,10 +6,10 @@ import { db } from "../lib/firebase";
 import NativeStackBackdrop from "../components/NativeStackBackdrop";
 import type { AuthStackParamList, RootStackParamList } from "./types";
 import MainTabNavigator from "./MainTabNavigator";
-import LoginScreenNative from "../features/auth/LoginScreenNative";
 import SignupScreenNative from "../features/auth/SignupScreenNative";
 import ResetPasswordScreenNative from "../features/auth/ResetPasswordScreenNative";
 import OnboardingScreenNative from "../features/auth/OnboardingScreenNative";
+import AuthEntryScreen from "../features/auth/AuthEntryScreen";
 import LandingScreenNative from "../features/legal/LandingScreenNative";
 import { prefetchRankingsLogoGlb } from "../features/rankings/rankingsLogoGlbCache";
 
@@ -27,9 +27,12 @@ const transparentStack = {
 function AuthNavigator() {
   return (
     <NativeStackBackdrop>
-      <AuthStack.Navigator screenOptions={{ ...transparentStack, animation: "fade" }}>
+      <AuthStack.Navigator
+        initialRouteName="Landing"
+        screenOptions={{ ...transparentStack, animation: "fade" }}
+      >
         <AuthStack.Screen name="Landing" component={LandingScreenNative} />
-        <AuthStack.Screen name="Login" component={LoginScreenNative} />
+        <AuthStack.Screen name="Login" component={AuthEntryScreen} />
         <AuthStack.Screen name="Signup" component={SignupScreenNative} />
         <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreenNative} />
         <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
@@ -66,6 +69,7 @@ export default function RootNavigator() {
   }, [isAuthed]);
 
   if (status === "loading" || (isAuthed && needsOnboarding === null)) {
+    /** 認証・プロフィール判定中はネイティブスプラッシュのまま（Landing の一瞬フラッシュを防ぐ） */
     return null;
   }
 

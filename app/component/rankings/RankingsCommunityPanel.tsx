@@ -181,7 +181,7 @@ export default function RankingsCommunityPanel({
     if (!groups.length) return;
     prefetchCommunityGroupDetails(
       groups.map((g) => g.id),
-      6
+      groups.length
     );
   }, [groups]);
 
@@ -424,6 +424,7 @@ export default function RankingsCommunityPanel({
           loading={loadingList}
           joinBusy={joinBusy}
           onOpenGroup={openGroupOverlay}
+          onPrefetchGroup={(g) => prefetchCommunityGroupDetail(g.id)}
           onCreate={() => setCreateOpen(true)}
           onPreviewJoin={onPreviewJoin}
           onPasteJoin={onPasteJoin}
