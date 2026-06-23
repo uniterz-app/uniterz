@@ -14,7 +14,7 @@ export default function MatchScoreLine({ home, away, className = "" }: Props) {
   return (
     <div
       className={[
-        "flex max-w-full flex-nowrap items-baseline justify-center gap-1 whitespace-nowrap sm:gap-1.5",
+        "flex max-w-full flex-nowrap items-baseline justify-center gap-1.5 whitespace-nowrap sm:gap-2",
         matchScoreClass,
         className,
       ].join(" ")}

@@ -48,6 +48,7 @@ import {
 } from "../../../../../lib/result/resultListFilterMatch";
 import UnderlineTabsNative from "../../ui/UnderlineTabsNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
+import CyberIconButtonNative from "../../ui/CyberIconButtonNative";
 import { useResultLeagueFlagsNative, type ResultListLeagueTab } from "./useResultLeagueFlagsNative";
 import ResultOutcomeBadgesNative from "./ResultOutcomeBadgesNative";
 import {
@@ -79,7 +80,6 @@ import {
 } from "../games/submitPredictionApi";
 import ResultStatRatingBarNative from "./ResultStatRatingBarNative";
 import ResultDetailScreen from "./ResultDetailScreen";
-import ResultLeagueLabelSkia from "./ResultLeagueLabelSkia";
 import ResultHitCyberFrameNative from "./ResultHitCyberFrameNative";
 import ResultPerfectCyberFrameNative from "./ResultPerfectCyberFrameNative";
 import ResultStreakCyberFrameNative from "./ResultStreakCyberFrameNative";
@@ -105,10 +105,9 @@ import { useWcGoalScorerResultNative, type WcGoalScorerPostLike } from "./useWcG
 import { resolveWcMatchGoalScorersForDisplay } from "../../../../../lib/wc/matchGoalScorers";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { t as i18nT } from "../../../../../lib/i18n/t";
-import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { shareResultCardNative } from "./shareResultCardNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
-import { buildResultShareUrl } from "../../../../../lib/share/shareAppUrls";
+import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 
 const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
@@ -575,16 +574,23 @@ function ResultPostCard({
   const rh = result?.home;
   const ra = result?.away;
   const hasFinal = typeof rh === "number" && typeof ra === "number";
+  /** 試合確定後のみ左上に共有（キックオフ前はバーガーに出さない） */
+  const showLeftShareBtn = canShare && hasFinal;
 
   const shareLinkUrl = useMemo(
-    () => buildResultShareUrl(post.id, getUniterzApiBaseUrl()),
+    () => buildResultShareUrl(post.id),
     [post.id]
   );
 
   const handleShareResult = useCallback(async () => {
-    if (!canShare) return;
+    if (!canShare || !hasFinal) return;
     setCornerFabOpen(false);
     setSharing(true);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
     try {
       const pointsV3 = toNumber(stats?.pointsV3, NaN);
       const shareOutcome = await shareResultCardNative(captureRef, {
@@ -597,7 +603,7 @@ function ResultPostCard({
         finalAway: hasFinal ? ra : null,
         totalPoints: hasFinal && Number.isFinite(pointsV3) ? pointsV3 : null,
         postId: post.id,
-        appBaseUrl: getUniterzApiBaseUrl(),
+        appBaseUrl: getShareAppOrigin(),
       });
       if (shareOutcome === "failed") {
         Alert.alert("", resultCopy.shareResultCardFailed);
@@ -732,7 +738,7 @@ function ResultPostCard({
                 ? styles.cardFrameMiss
                 : null;
 
-  const showCornerControl = canShare || hasCornerActions;
+  const showCornerControl = !isMatchStarted && hasCornerActions;
   const shellOverflowStyle =
     cornerFabOpen && showCornerControl ? styles.cardShellOverflowVisible : null;
 
@@ -781,22 +787,20 @@ function ResultPostCard({
         shellStyle={[styles.cardShell, shellShadowStyle]}
         overflowVisible={Boolean(shellOverflowStyle)}
       >
+        {(leagueKey !== "nba" && leagueKey !== "wc") ? (
         <View style={styles.cardBadgeOverlay} pointerEvents="none">
           <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
-            {leagueKey === "nba" || leagueKey === "wc" ? (
-              <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
-            ) : (
-              <View
-                style={[
-                  styles.leaguePill,
-                  { backgroundColor: LEAGUE_PILL_BG[leagueKey] ?? "#334155" },
-                ]}
-              >
-                <Text style={styles.leaguePillText}>{pillText}</Text>
-              </View>
-            )}
+            <View
+              style={[
+                styles.leaguePill,
+                { backgroundColor: LEAGUE_PILL_BG[leagueKey] ?? "#334155" },
+              ]}
+            >
+              <Text style={styles.leaguePillText}>{pillText}</Text>
+            </View>
           </Animated.View>
         </View>
+        ) : null}
         <Animated.View
           style={[
             styles.cardBadgeOutcomeAbsolute,
@@ -966,6 +970,7 @@ function ResultPostCard({
               );
             })}
           </View>
+          <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </View>
         </Animated.View>
         {badge === "hit" ? <ResultHitCyberFrameNative /> : null}
@@ -974,10 +979,19 @@ function ResultPostCard({
           <ResultStreakCyberFrameNative activeWinStreak={activeWinStreak} />
         ) : null}
       </ResultGlassShellNative>
-      {canShare || sharing ? (
-        <ShareLinkCaptureFooterNative url={shareLinkUrl} />
-      ) : null}
       </View>
+
+      {showLeftShareBtn ? (
+        <View style={styles.leftShareCluster} pointerEvents="box-none">
+          <CyberIconButtonNative
+            size="sm"
+            icon="share-variant"
+            onPress={() => void handleShareResult()}
+            disabled={!canShare || sharing}
+            accessibilityLabel={resultCopy.shareMyResult}
+          />
+        </View>
+      ) : null}
 
       {showCornerControl ? (
           <View style={styles.cornerFabCluster} pointerEvents="box-none">
@@ -985,26 +999,6 @@ function ResultPostCard({
               style={[styles.cornerFlyoutColumn, cornerFlyoutColumnMotion]}
               pointerEvents={cornerFabOpen ? "auto" : "none"}
             >
-              {canShare ? (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.cornerFlyoutBtn,
-                    styles.cornerFlyoutShare,
-                    pressed && styles.cornerFlyoutPressed,
-                  ]}
-                  onPress={() => void handleShareResult()}
-                  disabled={!canShare}
-                  hitSlop={4}
-                  accessibilityRole="button"
-                  accessibilityLabel={resultCopy.shareMyResult}
-                >
-                  <MaterialCommunityIcons
-                    name="share-variant"
-                    size={12}
-                    color="rgba(103,232,249,0.95)"
-                  />
-                </Pressable>
-              ) : null}
               {hasCornerActions && hasCornerEdit ? (
                 <Pressable
                   style={({ pressed }) => [
@@ -1202,15 +1196,41 @@ export default function ResultHomeScreen({
     setResultFilters((f) => ({ ...f, detailOpen: !f.detailOpen }));
   }, []);
 
-  /** Web `/games/[id]/predict` と同様：予想タブのスコア編集へ遷移 */
+  /** Web `/games/[id]/predict?edit=1` と同様：予想タブのスコア編集へ遷移 */
   const openPredictEditFromResult = useCallback(
     (post: PostWithMillis) => {
       const gameId =
         typeof post.gameId === "string" && post.gameId.length > 0 ? post.gameId : null;
       if (!gameId) return;
+      const pred = post.prediction as
+        | {
+            winner?: "home" | "away" | "draw";
+            score?: { home?: number; away?: number };
+            goalScorer?: unknown;
+          }
+        | undefined;
+      const scoreHome = pred?.score?.home;
+      const scoreAway = pred?.score?.away;
+      const winner = pred?.winner;
+      const openPredictSeed =
+        winner &&
+        typeof scoreHome === "number" &&
+        typeof scoreAway === "number"
+          ? {
+              winner,
+              scoreHome,
+              scoreAway,
+              goalScorer: pred?.goalScorer,
+            }
+          : undefined;
       tabNavigation.navigate("GamesTab", {
         screen: "GamesHome",
-        params: { openPredictGameId: gameId, expandScoreForm: true },
+        params: {
+          openPredictGameId: gameId,
+          expandScoreForm: true,
+          openPredictPostId: post.id,
+          openPredictSeed,
+        },
         initial: false,
       });
     },
@@ -1703,6 +1723,7 @@ const styles = StyleSheet.create({
   },
   resultCardPressable: {
     flexShrink: 0,
+    position: "relative",
   },
   cardPressed: {
     opacity: 0.96,
@@ -1751,15 +1772,23 @@ const styles = StyleSheet.create({
   cardCaptureWrap: {
     position: "relative",
   },
-  /** Web `right-0.5 top-0.5` より少し内側（左下寄せ） */
+  /** Web mobile `right-2.5 top-2` 相当 */
   cornerFabCluster: {
     position: "absolute",
-    top: 8,
-    right: 10,
+    top: 12,
+    right: 14,
     zIndex: 50,
     minWidth: 22,
     minHeight: 22,
     alignItems: "center",
+  },
+  /** 試合確定後：左上斜め（枠内・キャプチャ対象外） */
+  leftShareCluster: {
+    position: "absolute",
+    top: 3,
+    left: 4,
+    zIndex: 50,
+    transform: [{ translateX: -2 }, { translateY: -2 }],
   },
   cornerFlyoutColumn: {
     position: "absolute",
@@ -1782,11 +1811,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 8,
-  },
-  cornerFlyoutShare: {
-    borderColor: "rgba(34,211,238,0.45)",
-    shadowColor: "#22d3ee",
-    shadowOpacity: 0.18,
   },
   cornerFlyoutPen: {
     borderColor: "rgba(255,255,255,0.22)",

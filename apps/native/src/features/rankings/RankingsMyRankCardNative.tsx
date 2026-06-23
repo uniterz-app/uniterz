@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { MyRankMiniMetric } from "../../../../../app/component/rankings/MyRankCard";
 import type { MobileMetric } from "../../../../../app/component/rankings/_data/mockRows";
 import { formatMetricDecimals } from "../../../../../lib/format/metricDecimals";
@@ -24,8 +23,13 @@ import { rankingsUiStyles as styles } from "./rankingsUiStyles";
 import { rankingNameFont } from "./rankingsUiTheme";
 import { shareMyRankCardNative } from "./shareRankCardNative";
 import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
-import { buildRankingsShareUrl } from "../../../../../lib/share/shareAppUrls";
-import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
+import { buildRankingsShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
+
+export type MyRankCardShareState = {
+  canShare: boolean;
+  sharing: boolean;
+  share: () => void;
+};
 
 function RankMetaStripNative({
   topPercentLabel,
@@ -84,6 +88,7 @@ export function MyRankCardNative({
   leagueLabel,
   mobileWide = false,
   cardResetKey,
+  onShareStateChange,
 }: {
   rank: number | null;
   metric: MobileMetric;
@@ -105,6 +110,7 @@ export function MyRankCardNative({
   cardResetKey?: string;
   /** Web `mobileWide` — 親 padding 内でカード幅をリストと揃える */
   mobileWide?: boolean;
+  onShareStateChange?: (state: MyRankCardShareState) => void;
 }) {
   const t = rankingsTexts(language);
   const frameTone = resolveMyRankFrameTone(rankDeltaPlaces);
@@ -169,7 +175,7 @@ export function MyRankCardNative({
   }, [loading, barsReady, cardResetKey]);
 
   const canShare = !loading && !statsPending && rank != null && !sharing;
-  const shareLinkUrl = buildRankingsShareUrl(getUniterzApiBaseUrl());
+  const shareLinkUrl = buildRankingsShareUrl();
 
   const handleShare = useCallback(async () => {
     if (!canShare) return;
@@ -180,7 +186,7 @@ export function MyRankCardNative({
         rank,
         leagueLabel,
         totalEntries,
-        appBaseUrl: getUniterzApiBaseUrl(),
+        appBaseUrl: getShareAppOrigin(),
       });
       if (result === "failed") {
         Alert.alert("", t.shareRankCardFailed);
@@ -189,6 +195,14 @@ export function MyRankCardNative({
       setSharing(false);
     }
   }, [canShare, language, leagueLabel, rank, t.shareRankCardFailed, totalEntries]);
+
+  useEffect(() => {
+    onShareStateChange?.({
+      canShare,
+      sharing,
+      share: () => void handleShare(),
+    });
+  }, [canShare, sharing, handleShare, onShareStateChange]);
 
   return (
     <View style={[styles.myRankOuter, mobileWide ? styles.myRankOuterWide : null]}>
@@ -306,30 +320,9 @@ export function MyRankCardNative({
             {` // ${serialDateKey}`}
           </Text>
         </View>
+        <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
           </MyRankCardFrameNative>
-          <ShareLinkCaptureFooterNative url={shareLinkUrl} />
         </View>
-
-        {canShare || sharing ? (
-          <Pressable
-            onPress={() => void handleShare()}
-            disabled={!canShare}
-            accessibilityRole="button"
-            accessibilityLabel={t.shareMyRank}
-            style={({ pressed }) => [
-              styles.myRankShareBtn,
-              (!canShare || pressed) && { opacity: 0.55 },
-            ]}
-          >
-            <View style={styles.myRankShareBtnInner}>
-              <MaterialCommunityIcons
-                name="share-variant"
-                size={14}
-                color="rgba(103,232,249,0.95)"
-              />
-            </View>
-          </Pressable>
-        ) : null}
       </View>
     </View>
   );

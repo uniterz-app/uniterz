@@ -278,12 +278,11 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                           ) : null}
                         </View>
                       ) : centerBlock.variant === "score" ? (
-                        <Text
+                        <View
                           style={[
-                            styles.centerTextScore,
-                            isWcCard && styles.centerTextScoreWc,
+                            styles.centerTextScoreRow,
+                            isWcCard && styles.centerTextScoreRowWc,
                           ]}
-                          numberOfLines={1}
                         >
                           <Text
                             style={[
@@ -309,7 +308,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                           >
                             {centerBlock.away}
                           </Text>
-                        </Text>
+                        </View>
                       ) : (
                         <Text style={styles.centerText} numberOfLines={1} ellipsizeMode="clip">
                           {centerBlock.time}

@@ -6,11 +6,15 @@ import {
   type Firestore,
   type QuerySnapshot,
 } from "firebase/firestore";
-import { getResolvedGameScore, toStatusFromGameDoc } from "@/lib/games/transform";
-import type { WcStandingGame } from "@/lib/wc/computeGroupStandings";
+import {
+  getResolvedGameScore,
+  normalizeStartAtJst,
+  toStatusFromGameDoc,
+} from "@/lib/games/transform";
+import type { WcSeasonGameRecord } from "@/lib/wc/wcSeasonGameRecord";
 
 type CacheEntry = {
-  games: WcStandingGame[] | null;
+  games: WcSeasonGameRecord[] | null;
   loading: boolean;
   error: string | null;
   listeners: Set<() => void>;
@@ -39,8 +43,8 @@ function notify(season: string) {
   getEntry(season).listeners.forEach((fn) => fn());
 }
 
-function parseWcStandingGames(snap: QuerySnapshot): WcStandingGame[] {
-  const list: WcStandingGame[] = [];
+function parseWcStandingGames(snap: QuerySnapshot): WcSeasonGameRecord[] {
+  const list: WcSeasonGameRecord[] = [];
   snap.forEach((d) => {
     const data = d.data() as Record<string, unknown>;
     const home = (data?.home ?? {}) as { teamId?: unknown };
@@ -50,12 +54,18 @@ function parseWcStandingGames(snap: QuerySnapshot): WcStandingGame[] {
     if (!homeTeamId || !awayTeamId) return;
     const score = getResolvedGameScore(data);
     const status = toStatusFromGameDoc(data);
+    const startAt = normalizeStartAtJst(data);
+    const roundLabel =
+      typeof data.roundLabel === "string" ? data.roundLabel.trim() : "";
     list.push({
+      id: d.id,
       homeTeamId,
       awayTeamId,
       homeScore: score?.home ?? null,
       awayScore: score?.away ?? null,
       status,
+      startAtMs: startAt?.getTime() ?? null,
+      roundLabel: roundLabel || null,
     });
   });
   return list;
@@ -133,7 +143,7 @@ export function subscribeWcSeasonGames(
 }
 
 export function readWcSeasonGamesCache(season: string | null | undefined): {
-  games: WcStandingGame[] | null;
+  games: WcSeasonGameRecord[] | null;
   loading: boolean;
   error: string | null;
 } {

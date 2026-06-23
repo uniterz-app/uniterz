@@ -431,15 +431,19 @@ export default function ResultListWithOverlay({
   const [predictOverlay, setPredictOverlay] =
     useState<ResultPredictOverlayState>(null);
   const [predictStandingsOpen, setPredictStandingsOpen] = useState(false);
+  const [predictEditTriggerNonce, setPredictEditTriggerNonce] = useState(0);
   const predictOverlayOverflowPrevRef = useRef<string | null>(null);
 
   const closePredictOverlay = useCallback(() => {
     setPredictStandingsOpen(false);
+    setPredictEditTriggerNonce(0);
     setPredictOverlay(null);
   }, []);
 
   const requestPredictEditFromCard = useCallback((post: PredictionPostV2) => {
+    setOpenPostId(null);
     setPredictStandingsOpen(false);
+    setPredictEditTriggerNonce((n) => n + 1);
     setPredictOverlay({ phase: "loading", post });
   }, []);
 
@@ -2007,6 +2011,7 @@ export default function ResultListWithOverlay({
                           viewerUid={viewerUid}
                           gamesRoutePrefix={gamesRoutePrefix}
                           cardClockMs={listNowTick}
+                          onRequestPredictEdit={requestPredictEditFromCard}
                         />
                       ) : (
                         <ResultDetail
@@ -2019,6 +2024,7 @@ export default function ResultListWithOverlay({
                           viewerUid={viewerUid}
                           gamesRoutePrefix={gamesRoutePrefix}
                           cardClockMs={listNowTick}
+                          onRequestPredictEdit={requestPredictEditFromCard}
                         />
                       )}
                     </div>
@@ -2152,6 +2158,8 @@ export default function ResultListWithOverlay({
                             embedded
                             inOverlay
                             overlayExistingPostId={predictOverlay.post.id}
+                            predictEditTriggerNonce={predictEditTriggerNonce}
+                            onPredictEditEnd={() => setPredictEditTriggerNonce(0)}
                             onClosePredictOverlay={closePredictOverlay}
                             onStandingsOpenChange={(open) => {
                               setPredictStandingsOpen(open);

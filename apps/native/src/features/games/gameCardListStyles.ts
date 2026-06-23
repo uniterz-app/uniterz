@@ -183,7 +183,16 @@ export const gameCardListStyles = StyleSheet.create({
   centerTextScore: {
     textAlign: "center",
   },
+  centerTextScoreRow: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 8,
+    maxWidth: "100%",
+  },
   centerTextScoreNum: {
+    flexShrink: 0,
     color: "#ffffff",
     fontSize: 20,
     fontWeight: "900",
@@ -197,6 +206,7 @@ export const gameCardListStyles = StyleSheet.create({
     textShadowRadius: 4,
   },
   centerScoreDash: {
+    flexShrink: 0,
     color: "rgba(255,255,255,0.5)",
     fontSize: 20,
     fontWeight: "900",

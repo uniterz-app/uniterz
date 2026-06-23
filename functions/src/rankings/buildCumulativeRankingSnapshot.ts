@@ -2,6 +2,7 @@
 
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { minPostsForWcWinRate, type WcRankingStage } from "./wcRankingStage";
+import { loadUidsWhoPredictedOnDateJst } from "../notifications/loadUidsWhoPredictedOnDateJst";
 
 /* =========================================================
  * Firestore
@@ -1067,12 +1068,14 @@ export async function buildCumulativeRankingSnapshot() {
   }
   await flush();
 
+  const todayPredictorUids = await loadUidsWhoPredictedOnDateJst(dateKey);
+
   return {
     ok: true,
     metrics: METRICS.length,
     ranksWritten: rankByUid.size,
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
-    notifiedUids: [...historyUids],
+    notifiedUids: todayPredictorUids,
   };
 }

@@ -709,8 +709,15 @@ export default function ResultDetailScreen({
                       : undefined
         }
       >
-        <View style={styles.matchTop}>
-          <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
+        <View
+          style={[
+            styles.matchTop,
+            leagueKey === "nba" || leagueKey === "wc" ? styles.matchTopNoLeague : null,
+          ]}
+        >
+          {leagueKey !== "nba" && leagueKey !== "wc" ? (
+            <ResultLeagueLabelSkia text={pillText} style={styles.leagueLabelSlot} />
+          ) : null}
           <View style={styles.badgeRow}>
             {badge === "streak" && streakBadge ? (
               <View style={[styles.streakMiniBadge, streakToneStyle(streakBadge.tone)]}>
@@ -1078,6 +1085,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 12,
     backgroundColor: "transparent",
+  },
+  matchTopNoLeague: {
+    justifyContent: "flex-end",
   },
   leagueLabelSlot: {
     marginTop: 4,

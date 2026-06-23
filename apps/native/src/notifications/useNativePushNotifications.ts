@@ -4,6 +4,7 @@ import { parsePushNotificationData } from "@/lib/notifications/pushPayloadTypes"
 import {
   getCachedExpoPushToken,
   registerNativePushTokenFlow,
+  registerNativePushTokenIfGranted,
   unregisterPushTokenFromApiNative,
 } from "./registerPushTokenNative";
 import { navigateFromPushNotificationData } from "./notificationNavigationNative";
@@ -26,7 +27,7 @@ export function useNativePushNotifications(enabled: boolean) {
     let cancelled = false;
     (async () => {
       try {
-        await registerNativePushTokenFlow();
+        await registerNativePushTokenIfGranted();
         if (!cancelled) registeredRef.current = true;
       } catch (err) {
         console.warn("[push] register failed", err);

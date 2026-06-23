@@ -28,6 +28,7 @@ import { resolveNbaH2HPack } from "@/lib/data/nba/h2h/resolveNbaH2HPack";
 import GamePredictionDistribution from "@/app/component/predict/GamePredictionDistribution";
 import NbaStandingsPanel from "@/app/component/standings/NbaStandingsPanel";
 import WcTeamProfilePanel from "@/app/component/predict/wc/WcTeamProfilePanel";
+import WcPastResultsPanel from "@/app/component/predict/wc/WcPastResultsPanel";
 import WcStandingPanel from "@/app/component/predict/wc/WcStandingPanel";
 import WcMatchPreviewPanel from "@/app/component/predict/wc/WcMatchPreviewPanel";
 import { hasWcMatchPreview } from "@/lib/wc/matchPreviews";
@@ -255,7 +256,7 @@ export default function PredictionFormV2({
   );
   const [submitting, setSubmitting] = useState(false);
   const [toolsTab, setToolsTab] = useState<
-    null | "stats" | "market" | "standings" | "h2h" | "preview"
+    null | "stats" | "market" | "standings" | "h2h" | "preview" | "results"
   >(null);
   const [marketChartKey, setMarketChartKey] = useState(0);
   /** Games オーバーレイ: 投稿後モーダル用の次試合 */
@@ -663,8 +664,8 @@ export default function PredictionFormV2({
   const lastPredictEditNonceRef = useRef(0);
   useEffect(() => {
     if (predictEditTriggerNonce === lastPredictEditNonceRef.current) return;
-    lastPredictEditNonceRef.current = predictEditTriggerNonce;
     if (!predictEditTriggerNonce || !existingResultPost) return;
+    lastPredictEditNonceRef.current = predictEditTriggerNonce;
     openPredictEditFromResultCard(existingResultPost);
   }, [
     predictEditTriggerNonce,
@@ -753,8 +754,14 @@ export default function PredictionFormV2({
     : "flex h-11 w-full items-center justify-center rounded-2xl border text-sm font-semibold transition-all duration-200";
 
   const toolGridCols = (() => {
-    if (isWc && showWcMatchPreview) {
-      return hideMarketTab ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4";
+    if (isWc) {
+      let count = 2;
+      if (showWcMatchPreview) count += 1;
+      count += 1;
+      if (!hideMarketTab) count += 1;
+      if (count >= 5) return "grid-cols-2 sm:grid-cols-5";
+      if (count === 4) return hideMarketTab ? "grid-cols-4" : "grid-cols-2 sm:grid-cols-4";
+      if (count === 3) return hideMarketTab ? "grid-cols-3" : "grid-cols-3";
     }
     return hideMarketTab ? "grid-cols-2" : "grid-cols-3";
   })();
@@ -1209,6 +1216,29 @@ export default function PredictionFormV2({
             </button>
           ) : null}
 
+          {isWc ? (
+            <button
+              type="button"
+              onClick={() =>
+                setToolsTab((t) => (t === "results" ? null : "results"))
+              }
+              className={
+                overlayEmbedded
+                  ? overlayToolButtonClass(toolsTab === "results")
+                  : [
+                      toolButtonBase,
+                      toolsTab === "results"
+                        ? "border-cyan-300/35 bg-cyan-300/12 text-white"
+                        : toolButtonInactiveClass,
+                    ].join(" ")
+              }
+            >
+              <span className={isMobile ? "truncate" : ""}>
+                {m.predict.pastResults}
+              </span>
+            </button>
+          ) : null}
+
           <button
             type="button"
             onClick={() => {
@@ -1437,6 +1467,38 @@ export default function PredictionFormV2({
               >
                 <WcMatchPreviewPanel
                   gameId={gameId}
+                  language={language}
+                  isMobile={isMobile}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {toolsTab === "results" && isWc && (
+          <motion.div {...fadeUpMotionProps} className={glassCardStatsPanel}>
+            <div className="relative z-1">
+              <div
+                className={
+                  isMobile
+                    ? "mb-2 text-xs font-semibold text-white/90"
+                    : "mb-3 text-base font-semibold text-white/90"
+                }
+              >
+                {m.predict.pastResults}
+              </div>
+              <div
+                className={
+                  isMobile
+                    ? "border-t border-white/10 pt-2"
+                    : "border-t border-white/10 pt-4"
+                }
+              >
+                <WcPastResultsPanel
+                  homeTeamId={game.home.teamId ?? ""}
+                  awayTeamId={game.away.teamId ?? ""}
+                  currentGameId={gameId}
+                  season={game.season}
                   language={language}
                   isMobile={isMobile}
                 />

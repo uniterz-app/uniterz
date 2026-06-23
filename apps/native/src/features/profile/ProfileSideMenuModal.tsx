@@ -55,6 +55,7 @@ type Props = {
     | "contact"
     | "privacy"
     | "password"
+    | "notifications"
     | "featureRequest"
     | "electronicNotice"
     | "notificationDev") => void;
@@ -141,6 +142,7 @@ export default function ProfileSideMenuModal({
         contact: "お問い合わせ",
         privacy: "プライバシーポリシー",
         password: "パスワード変更",
+        notifications: "通知設定",
         featureRequest: "機能リクエスト",
         electronicNotice: "電子公告",
         logout: "ログアウト",
@@ -167,6 +169,7 @@ export default function ProfileSideMenuModal({
         contact: "Contact",
         privacy: "Privacy Policy",
         password: "Change Password",
+        notifications: "Notifications",
         featureRequest: "Feature Request",
         electronicNotice: "Electronic Notice",
         logout: "Log out",
@@ -199,6 +202,7 @@ export default function ProfileSideMenuModal({
       | "contact"
       | "privacy"
       | "password"
+      | "notifications"
       | "featureRequest"
       | "electronicNotice"
       | "notificationDev"
@@ -282,6 +286,13 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("announcements")}
                     >
                       {labels.announcements}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
+                      icon="bell-outline"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("notifications")}
+                    >
+                      {labels.notifications}
                     </SideMenuItemButtonNative>
                   </View>
 

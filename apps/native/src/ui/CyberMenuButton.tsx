@@ -1,22 +1,9 @@
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import CyberChamferButtonNative, {
+  type CyberChamferButtonSize,
+} from "./CyberChamferButtonNative";
 
-export type CyberMenuButtonSize = "xs" | "sm" | "md" | "lg";
-
-const SIZE_PX: Record<CyberMenuButtonSize, number> = {
-  xs: 22,
-  sm: 32,
-  md: 36,
-  lg: 40,
-};
-
-const ICON_PX: Record<CyberMenuButtonSize, number> = {
-  xs: 10,
-  sm: 14,
-  md: 15,
-  lg: 16,
-};
+export type CyberMenuButtonSize = CyberChamferButtonSize;
 
 type Props = {
   size?: CyberMenuButtonSize;
@@ -30,7 +17,7 @@ type Props = {
   open?: boolean;
 };
 
-/** 角切り風シアン枠のハンバーガーボタン（Native 共通） */
+/** 角切りシアン枠のハンバーガーボタン（予想オーバーレイと同型） */
 export default function CyberMenuButton({
   size = "sm",
   onPress,
@@ -41,59 +28,26 @@ export default function CyberMenuButton({
   badge,
   open = false,
 }: Props) {
-  const dim = SIZE_PX[size];
-
   return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={hitSlop}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={accessibilityState}
-      style={({ pressed }) => [
-        styles.btn,
-        { width: dim, height: dim, borderRadius: size === "xs" ? 4 : 5 },
-        pressed && styles.btnPressed,
-        style,
-      ]}
-    >
-      <LinearGradient
-        pointerEvents="none"
-        colors={["rgba(39,39,42,0.96)", "rgba(0,0,0,0.92)"]}
-        locations={[0, 1]}
-        style={[StyleSheet.absoluteFillObject, { borderRadius: size === "xs" ? 4 : 5 }]}
+    <View style={styles.shell}>
+      <CyberChamferButtonNative
+        size={size}
+        embedded
+        icon="menu"
+        open={open}
+        onPress={onPress}
+        hitSlop={hitSlop}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={accessibilityState}
+        style={style}
       />
-      <View style={styles.iconWrap}>
-        <MaterialCommunityIcons
-          name={open ? "close" : "menu"}
-          size={ICON_PX[size]}
-          color={open ? "rgba(103,232,249,0.95)" : "rgba(224,250,254,0.72)"}
-        />
-      </View>
       {badge}
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: {
+  shell: {
     position: "relative",
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  btnPressed: {
-    opacity: 0.9,
-  },
-  iconWrap: {
-    zIndex: 1,
-    transform: [{ scaleX: 0.82 }],
   },
 });

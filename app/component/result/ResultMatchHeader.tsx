@@ -34,7 +34,7 @@ import ResultLiveMark from "@/app/component/result/ResultLiveMark";
 import { bracketMarketTeamTypography, wcBracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
 import MatchScoreLine from "@/app/component/games/MatchScoreLine";
 import { resultStatsMetricNumClass } from "@/lib/fonts";
-import { ResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
+import { ResultLeagueBadge, shouldShowResultLeagueBadge } from "@/app/component/result/ResultLeagueBadge";
 
 type Props = {
   post: PredictionPostV2;
@@ -43,6 +43,8 @@ type Props = {
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
   cardClockMs?: number;
+  /** 指定時はページ遷移せずコールバック（一覧オーバーレイと同じ予想修正） */
+  onRequestPredictEdit?: (post: PredictionPostV2) => void;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -123,6 +125,7 @@ function ResultMatchHeader({
   viewerUid = null,
   gamesRoutePrefix = "/web",
   cardClockMs,
+  onRequestPredictEdit,
 }: Props) {
   const clock = useResultCardClockMs(cardClockMs);
   const pathname = usePathname();
@@ -198,16 +201,31 @@ function ResultMatchHeader({
     language
   );
 
-  const predictEditHref = useMemo(() => {
-    if (!viewerUid || !post.gameId) return null;
-    if (post.authorUid !== viewerUid) return null;
+  const canPredictEdit = useMemo(() => {
+    if (!viewerUid || !post.gameId) return false;
+    if (post.authorUid !== viewerUid) return false;
     /** 試合確定後は修正へ導線を出さない */
     const finalized =
       post.status === "final" || post.game?.status === "final";
-    if (finalized) return null;
-    if (isResultPostMatchStarted(post, clock)) return null;
-    return `${gamesRoutePrefix}/games/${post.gameId}/predict`;
-  }, [viewerUid, post.authorUid, post.gameId, post.status, post.game?.status, post.startAtMillis, gamesRoutePrefix, clock]);
+    if (finalized) return false;
+    if (isResultPostMatchStarted(post, clock)) return false;
+    return Boolean(onRequestPredictEdit || gamesRoutePrefix);
+  }, [
+    viewerUid,
+    post.authorUid,
+    post.gameId,
+    post.status,
+    post.game?.status,
+    post.startAtMillis,
+    gamesRoutePrefix,
+    clock,
+    onRequestPredictEdit,
+  ]);
+
+  const predictEditHref = useMemo(() => {
+    if (!canPredictEdit || onRequestPredictEdit || !gamesRoutePrefix) return null;
+    return `${gamesRoutePrefix}/games/${post.gameId}/predict?edit=1`;
+  }, [canPredictEdit, onRequestPredictEdit, gamesRoutePrefix, post.gameId]);
 
   const isLiveGame = isResultPostLiveGame(post, clock);
   const liveMarkNode = isLiveGame ? (
@@ -225,7 +243,14 @@ function ResultMatchHeader({
       extraPanelClassName="text-white"
       className="relative"
     >
-      <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-2 pt-2 sm:px-3 sm:pt-2.5">
+      <div
+        className={[
+          "absolute inset-x-0 top-0 z-20 flex items-start gap-2 px-2 pt-2 sm:px-3 sm:pt-2.5",
+          shouldShowResultLeagueBadge(normalizedLeague)
+            ? "justify-between"
+            : "justify-end",
+        ].join(" ")}
+      >
         <ResultLeagueBadge
           league={normalizedLeague}
           teamNameFont={teamNameFont}
@@ -233,7 +258,7 @@ function ResultMatchHeader({
         <div
           className={[
             "flex min-w-0 flex-1 flex-col items-end gap-1 sm:gap-1.5",
-            predictEditHref ? "pr-11 sm:pr-12" : "",
+            predictEditHref || canPredictEdit ? "pr-11 sm:pr-12" : "",
           ].join(" ")}
         >
           <ResultOutcomeBadges
@@ -246,15 +271,26 @@ function ResultMatchHeader({
           />
         </div>
       </div>
-      {predictEditHref ? (
+      {canPredictEdit ? (
         <div className="pointer-events-auto absolute right-2 top-2 z-30 sm:right-3 sm:top-2.5">
-          <Link
-            href={predictEditHref}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100 sm:h-9 sm:w-9"
-            aria-label={m.results.editPredictionAriaLabel}
-          >
-            <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
-          </Link>
+          {onRequestPredictEdit ? (
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100 sm:h-9 sm:w-9"
+              aria-label={m.results.editPredictionAriaLabel}
+              onClick={() => onRequestPredictEdit(post)}
+            >
+              <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+            </button>
+          ) : predictEditHref ? (
+            <Link
+              href={predictEditHref}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100 sm:h-9 sm:w-9"
+              aria-label={m.results.editPredictionAriaLabel}
+            >
+              <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

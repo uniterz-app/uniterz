@@ -11,14 +11,12 @@ function buildPushNotificationCopy(type, language, input) {
         switch (type) {
             case "game_start":
                 return {
-                    title: "Kickoff soon",
-                    subtitle: "Your predicted match starts soon.",
+                    title: "Your predicted match starts soon.",
                     body: matchup || "Check the match in the app.",
                 };
             case "game_final":
                 return {
-                    title: "Final score",
-                    subtitle: "Result confirmed.",
+                    title: "Result confirmed.",
                     body: matchup || "See your result in the app.",
                 };
             case "ranking_updated":
@@ -31,14 +29,12 @@ function buildPushNotificationCopy(type, language, input) {
     switch (type) {
         case "game_start":
             return {
-                title: "まもなくキックオフ",
-                subtitle: "あなたの予想試合がまもなく開始します。",
+                title: "あなたの予想試合がまもなく開始します。",
                 body: matchup || "アプリで試合を確認してください。",
             };
         case "game_final":
             return {
-                title: "試合結果確定",
-                subtitle: "結果が確定しました。",
+                title: "結果が確定しました。",
                 body: matchup || "アプリで結果を確認してください。",
             };
         case "ranking_updated":

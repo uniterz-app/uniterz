@@ -16,6 +16,15 @@ export type GamesStackParamList = {
         openPredictGameId?: string;
         /** 予想済みのとき最初からスコア入力を表示 */
         expandScoreForm?: boolean;
+        /** リザルト一覧から渡す投稿 ID（Games 側の myPost 未ロードでも編集モードに入る） */
+        openPredictPostId?: string;
+        /** リザルト投稿の予想スナップショット（スコア初期値用） */
+        openPredictSeed?: {
+          winner: "home" | "away" | "draw";
+          scoreHome: number;
+          scoreAway: number;
+          goalScorer?: unknown;
+        };
       }
     | undefined;
   GamePredict: { gameId: string };
@@ -52,6 +61,7 @@ export type ProfileStackParamList = {
       }
     | undefined;
   ProfileSettings: undefined;
+  NotificationSettings: undefined;
   ProfilePassword: undefined;
   PublicProfile: { handle: string; fromRankings?: boolean };
   Badges: undefined;

@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   type LayoutChangeEvent,
   KeyboardAvoidingView,
   Modal,
@@ -45,6 +46,7 @@ import WcMatchPreviewPanelNative from "./wc/WcMatchPreviewPanelNative";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
 import PredictOverlayMatchCardShellNative from "./PredictOverlayMatchCardShellNative";
 import WcStandingPanelNative from "./wc/WcStandingPanelNative";
+import WcPastResultsPanelNative from "./wc/WcPastResultsPanelNative";
 import WcTeamProfilePanelNative from "./wc/WcTeamProfilePanelNative";
 import type { WcGoalScorerPick } from "../../../../../lib/wc/goalScorer";
 import { hasWcMatchPreview } from "../../../../../lib/wc/matchPreviews";
@@ -65,7 +67,11 @@ import {
   predictPanelRevealEnter,
 } from "./predictMotion";
 import PredictOverlayCloseButtonNative from "./PredictOverlayCloseButtonNative";
-import PredictOverlayCornerButtonNative from "./PredictOverlayCornerButtonNative";
+import PredictOverlayActionFabNative from "./PredictOverlayActionFabNative";
+import ShareLinkCaptureFooterNative from "../share/ShareLinkCaptureFooterNative";
+import { shareResultCardNative } from "../results/shareResultCardNative";
+import { buildResultShareUrl, getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
+import { t as i18nT } from "../../../../../lib/i18n/t";
 import PredictOverlayChamferedFrameNative from "./PredictOverlayChamferedFrameNative";
 import PredictOverlayCyberDeckTabNative from "./PredictOverlayCyberDeckTabNative";
 import PredictOverlayCyberFormPanelNative from "./PredictOverlayCyberFormPanelNative";
@@ -244,6 +250,7 @@ function PredictMatchPreview({
   overlayCenterMode = false,
   onEditPrediction,
   showEditButton = false,
+  myPostId = null,
 }: {
   data: PredictModalMatchPreview;
   onClose: () => void;
@@ -262,7 +269,11 @@ function PredictMatchPreview({
   overlayCenterMode?: boolean;
   onEditPrediction?: () => void;
   showEditButton?: boolean;
+  myPostId?: string | null;
 }) {
+  const captureRef = useRef<View>(null);
+  const [sharing, setSharing] = useState(false);
+  const resultCopy = i18nT(language).results;
   const { centerBlock, seriesPair } = data;
   const homeC = data.homePalette.primary;
   const awayC = data.awayPalette.primary;
@@ -283,6 +294,65 @@ function PredictMatchPreview({
     isWcLeague ? awayTeamId : null
   );
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
+  const canShare = Boolean(myPostId && (mergedFinal || mergedPrediction));
+  const showActionMenu = Boolean(
+    (showEditButton && onEditPrediction) || canShare
+  );
+  const shareLinkUrl = useMemo(
+    () => (myPostId ? buildResultShareUrl(myPostId) : ""),
+    [myPostId]
+  );
+  const totalPoints = useMemo(() => {
+    const row = mergedFinal?.statRows.find((r) => r.key === "pointsV3");
+    return row?.value ?? null;
+  }, [mergedFinal?.statRows]);
+
+  const handleShareResult = useCallback(async () => {
+    if (!canShare || !myPostId || sharing) return;
+    const predictedHome =
+      mergedFinal?.predictedScore.home ?? mergedPrediction?.home ?? null;
+    const predictedAway =
+      mergedFinal?.predictedScore.away ?? mergedPrediction?.away ?? null;
+    if (predictedHome == null || predictedAway == null) return;
+
+    setSharing(true);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+    try {
+      const shareOutcome = await shareResultCardNative(captureRef, {
+        language,
+        homeName: data.homeCompact,
+        awayName: data.awayCompact,
+        predictedHome,
+        predictedAway,
+        finalHome: mergedFinal?.finalScore.home ?? null,
+        finalAway: mergedFinal?.finalScore.away ?? null,
+        totalPoints,
+        postId: myPostId,
+        appBaseUrl: getShareAppOrigin(),
+      });
+      if (shareOutcome === "failed") {
+        Alert.alert("", resultCopy.shareResultCardFailed);
+      }
+    } finally {
+      setSharing(false);
+    }
+  }, [
+    canShare,
+    data.awayCompact,
+    data.homeCompact,
+    language,
+    mergedFinal,
+    mergedPrediction?.away,
+    mergedPrediction?.home,
+    myPostId,
+    resultCopy.shareResultCardFailed,
+    sharing,
+    totalPoints,
+  ]);
 
   const previewBody = (
       <View pointerEvents="box-none" style={s.matchPreviewPaddedContent}>
@@ -546,11 +616,13 @@ function PredictMatchPreview({
             ))}
           </View>
         ) : null}
+        <ShareLinkCaptureFooterNative url={shareLinkUrl} visible={sharing} />
       </View>
   );
 
   return (
     <View style={s.matchPreviewWrap}>
+      <View ref={captureRef} collapsable={false}>
       {isWcLeague ? (
         <PredictOverlayMatchCardShellNative
           resultBadge={mergedFinal?.badge ?? null}
@@ -631,12 +703,13 @@ function PredictMatchPreview({
           {previewBody}
         </View>
       )}
+      </View>
       {mergedFinal?.badge || mergedFinal?.streakBadge ? (
         <View
           pointerEvents="none"
           style={[
             s.matchPreviewOutcomeBadge,
-            showEditButton && s.matchPreviewOutcomeBadgeWithEdit,
+            showActionMenu && s.matchPreviewOutcomeBadgeWithEdit,
           ]}
         >
           <ResultOutcomeBadgesNative
@@ -647,12 +720,16 @@ function PredictMatchPreview({
           />
         </View>
       ) : null}
-      {showEditButton && onEditPrediction ? (
-        <PredictOverlayCornerButtonNative
-          align="right"
-          icon="edit"
-          onPress={onEditPrediction}
-          accessibilityLabel={t.editScoresCta}
+      {showActionMenu ? (
+        <PredictOverlayActionFabNative
+          showEdit={Boolean(showEditButton && onEditPrediction)}
+          showShare={canShare}
+          onEdit={onEditPrediction}
+          onShare={() => void handleShareResult()}
+          sharing={sharing}
+          menuLabel={resultCopy.openActions}
+          editLabel={t.editScoresCta}
+          shareLabel={resultCopy.shareMyResult}
         />
       ) : null}
       <PredictOverlayCloseButtonNative
@@ -670,8 +747,8 @@ type PredictModalProps = {
   t: GamesTexts;
   predictHomeTeamLabel: string;
   predictAwayTeamLabel: string;
-  predictToolsTab: null | "h2h" | "market" | "stats" | "preview" | "standings";
-  setPredictToolsTab: (value: null | "h2h" | "market" | "stats" | "preview" | "standings") => void;
+  predictToolsTab: null | "h2h" | "market" | "stats" | "preview" | "results" | "standings";
+  setPredictToolsTab: (value: null | "h2h" | "market" | "stats" | "preview" | "results" | "standings") => void;
   winner: "home" | "away" | "draw" | null;
   isSoccerPredict: boolean;
   scoreAway: string;
@@ -709,6 +786,8 @@ type PredictModalProps = {
   goalScorerPick?: WcGoalScorerPick | null;
   setGoalScorerPick?: (value: WcGoalScorerPick | null) => void;
   mergedFinalPreview?: PredictModalMergedFinalPreview | null;
+  /** 自分の投稿 ID（共有キャプチャ用） */
+  myPostId?: string | null;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -783,6 +862,7 @@ export default function PredictModal({
   goalScorerPick = null,
   setGoalScorerPick,
   mergedFinalPreview = null,
+  myPostId = null,
 }: PredictModalProps) {
   const reduceMotion = useReducedMotion() ?? false;
 
@@ -803,7 +883,7 @@ export default function PredictModal({
 
   /** 直接対決／市場／詳細スタッツ：タップでパネルを開閉 */
   function handleToolTabPress(
-    tab: "h2h" | "market" | "stats" | "preview" | "standings"
+    tab: "h2h" | "market" | "stats" | "preview" | "results" | "standings"
   ) {
     if (predictToolsTab === tab) setPredictToolsTab(null);
     else setPredictToolsTab(tab);
@@ -1020,6 +1100,7 @@ export default function PredictModal({
                           showMergedScheduledInPreview && !editingLockedAfterKickoff
                         }
                         onEditPrediction={() => setScoreFormExpanded(true)}
+                        myPostId={myPostId}
                       />
                     </Animated.View>
                   ) : null}
@@ -1050,6 +1131,12 @@ export default function PredictModal({
                         edge="middle"
                       />
                     ) : null}
+                    <PredictOverlayCyberDeckTabNative
+                      label={t.pastResults}
+                      active={predictToolsTab === "results"}
+                      onPress={() => handleToolTabPress("results")}
+                      edge="middle"
+                    />
                     <PredictOverlayCyberDeckTabNative
                       label={t.groupStandings}
                       active={predictToolsTab === "standings"}
@@ -1129,6 +1216,27 @@ export default function PredictModal({
                         )}
                         </View>
                       </>
+                    ) : predictToolsTab === "results" && showWcOverlayTabs ? (
+                      <>
+                        <Text style={s.predictToolsPanelKicker}>{t.pastResults}</Text>
+                        <View style={s.predictToolsPanelBody}>
+                        {predictData ? (
+                          <WcPastResultsPanelNative
+                            homeTeamId={
+                              rawTeamIdFromGameSide(predictData.subjectGame.home) ?? ""
+                            }
+                            awayTeamId={
+                              rawTeamIdFromGameSide(predictData.subjectGame.away) ?? ""
+                            }
+                            currentGameId={predictData.gameId}
+                            language={language}
+                            t={t}
+                          />
+                        ) : (
+                          <Text style={s.predictToolsPanelSub}>{t.predictTabDataSoon}</Text>
+                        )}
+                        </View>
+                      </>
                     ) : predictToolsTab === "standings" && showWcOverlayTabs ? (
                       <>
                         <Text style={s.predictToolsPanelKicker}>{t.groupStandings}</Text>
@@ -1160,7 +1268,9 @@ export default function PredictModal({
                         {predictData && matchPreview ? (
                           <PredictToolTabContent
                             tab={
-                              predictToolsTab === "preview" || predictToolsTab === "standings"
+                              predictToolsTab === "preview" ||
+                              predictToolsTab === "results" ||
+                              predictToolsTab === "standings"
                                 ? "stats"
                                 : predictToolsTab
                             }

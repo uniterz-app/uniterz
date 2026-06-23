@@ -28,6 +28,8 @@ type Props = {
   viewerUid?: string | null;
   gamesRoutePrefix?: "/web" | "/mobile";
   cardClockMs?: number;
+  /** 一覧と同様：予想オーバーレイでスコア修正を開く */
+  onRequestPredictEdit?: (post: PredictionPostV2) => void;
 };
 
 export default function MobileResultDetail({
@@ -40,6 +42,7 @@ export default function MobileResultDetail({
   viewerUid = null,
   gamesRoutePrefix = "/mobile",
   cardClockMs,
+  onRequestPredictEdit,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const E = RESULT_DETAIL_ENTRANCE;
@@ -75,6 +78,7 @@ export default function MobileResultDetail({
               viewerUid={viewerUid}
               gamesRoutePrefix={gamesRoutePrefix}
               cardClockMs={cardClockMs}
+              onRequestPredictEdit={onRequestPredictEdit}
             />
           </m.div>
 

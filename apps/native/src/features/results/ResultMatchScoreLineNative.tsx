@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     flexWrap: "nowrap",
     alignItems: "baseline",
     justifyContent: "center",
-    gap: 4,
+    gap: 6,
     maxWidth: "100%",
   },
   /** Web 一覧 mobileScheduleDense: `text-base`（コンパクト） */

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
@@ -44,12 +44,14 @@ import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
 import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
 import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
+import CyberIconButtonNative from "../../ui/CyberIconButtonNative";
 import { CandleChartLoaderNative } from "../../components/CandleChartLoaderNative";
 import { spacing } from "../../theme/tokens";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
 import { useNativeMyRankingUser } from "./useNativeMyRankingUser";
 import { rankingsTexts, type RankingsLanguage } from "./rankingsTexts";
 import { RankingsPageTitleCyberNative } from "./RankingsPageTitleCyberNative";
+import type { MyRankCardShareState } from "./RankingsMyRankCardNative";
 import {
   MyRankCardNative,
   PlayoffRoundTabsNative,
@@ -90,6 +92,20 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const { user } = useNativeMyRankingUser(myUid);
   const language = user.language;
   const t = rankingsTexts(language);
+  const shareFnRef = useRef<() => void>(() => {});
+  const [myRankShare, setMyRankShare] = useState({ canShare: false, sharing: false });
+
+  const handleMyRankShareStateChange = useCallback((state: MyRankCardShareState) => {
+    shareFnRef.current = state.share;
+    setMyRankShare({ canShare: state.canShare, sharing: state.sharing });
+  }, []);
+
+  useEffect(() => {
+    if (category !== "playoffs") {
+      shareFnRef.current = () => {};
+      setMyRankShare({ canShare: false, sharing: false });
+    }
+  }, [category]);
 
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
@@ -238,7 +254,20 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               {scheduleNoticeForUser(language)}
             </Text>
           </View>
-          <View style={styles.titleSpacer} />
+          <View style={styles.titleSide}>
+            <CyberIconButtonNative
+              size="sm"
+              icon="share-variant"
+              onPress={() => void shareFnRef.current()}
+              disabled={!myRankShare.canShare || myRankShare.sharing}
+              accessibilityLabel={t.shareMyRank}
+              style={
+                myRankShare.canShare || myRankShare.sharing
+                  ? undefined
+                  : styles.titleSideHidden
+              }
+            />
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -289,6 +318,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 mobileWide
                 leagueLabel={rankingsLeague === "wc" ? "WORLD CUP" : "NBA"}
                 cardResetKey={pageKey}
+                onShareStateChange={handleMyRankShareStateChange}
               />
             </>
           ) : null}
@@ -394,9 +424,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 2,
   },
-  titleSpacer: {
-    width: 40,
-    height: 40,
+  titleSide: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleSideHidden: {
+    opacity: 0,
   },
   scheduleNoticeInline: {
     textAlign: "center",

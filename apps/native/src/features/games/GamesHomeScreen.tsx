@@ -458,7 +458,7 @@ export default function GamesHomeScreen({
   > | null>(null);
   const [winner, setWinner] = useState<"home" | "away" | "draw" | null>(null);
   const [predictToolsTab, setPredictToolsTab] = useState<
-    null | "h2h" | "market" | "stats" | "preview" | "standings"
+    null | "h2h" | "market" | "stats" | "preview" | "results" | "standings"
   >(null);
   const [scoreHome, setScoreHome] = useState("");
   const [scoreAway, setScoreAway] = useState("");
@@ -1196,15 +1196,67 @@ export default function GamesHomeScreen({
     });
   }, [selectedGame, selectedLeague, language, myPredictionByGameId]);
 
-  async function openPredictModal(targetGame?: Record<string, unknown>) {
+  type PredictModalEditBootstrap = {
+    postId: string;
+    seed?: {
+      winner: "home" | "away" | "draw";
+      scoreHome: number;
+      scoreAway: number;
+      goalScorer?: unknown;
+    };
+  };
+
+  async function openPredictModal(
+    targetGame?: Record<string, unknown>,
+    editBootstrap?: PredictModalEditBootstrap
+  ) {
     const sourceGame = targetGame ?? selectedGame;
     if (!sourceGame) {
       setPredictSpectatorStartedNoPost(false);
       return;
     }
     const gameId = String(sourceGame.id ?? "");
-    const existingPostId = myPostIdByGameId[gameId];
-    const existingPrediction = myPredictionByGameId[gameId];
+    if (editBootstrap?.postId) {
+      setMyPostIdByGameId((prev) =>
+        prev[gameId] === editBootstrap.postId
+          ? prev
+          : { ...prev, [gameId]: editBootstrap.postId }
+      );
+      setPredictedGameIds((prev) => {
+        if (prev.has(gameId)) return prev;
+        const next = new Set(prev);
+        next.add(gameId);
+        return next;
+      });
+      if (editBootstrap.seed) {
+        setMyPredictionByGameId((prev) => ({
+          ...prev,
+          [gameId]: {
+            winner: editBootstrap.seed!.winner,
+            score: {
+              home: editBootstrap.seed!.scoreHome,
+              away: editBootstrap.seed!.scoreAway,
+            },
+            comment: prev[gameId]?.comment ?? "",
+            updatedAt: prev[gameId]?.updatedAt,
+            goalScorer: editBootstrap.seed!.goalScorer ?? prev[gameId]?.goalScorer,
+            postStats: prev[gameId]?.postStats ?? null,
+          },
+        }));
+      }
+    }
+    const existingPostId = editBootstrap?.postId ?? myPostIdByGameId[gameId];
+    const existingPrediction = editBootstrap?.seed
+      ? {
+          winner: editBootstrap.seed.winner,
+          score: {
+            home: editBootstrap.seed.scoreHome,
+            away: editBootstrap.seed.scoreAway,
+          },
+          comment: "",
+          goalScorer: editBootstrap.seed.goalScorer,
+        }
+      : myPredictionByGameId[gameId];
     const started = isGameStarted(sourceGame);
     /** Web 一覧カードの `onOpenPredict`：開始後・未投稿でもオーバーレイを開く（フォームだけ非表示） */
     const spectatorStartedNoPost = Boolean(started && !existingPostId);
@@ -1236,6 +1288,15 @@ export default function GamesHomeScreen({
     if (spectatorStartedNoPost) return;
 
     if (!fUser?.uid) return;
+
+    if (editBootstrap?.seed) {
+      setWinner(editBootstrap.seed.winner);
+      setScoreHome(String(editBootstrap.seed.scoreHome));
+      setScoreAway(String(editBootstrap.seed.scoreAway));
+      setGoalScorerPick(normalizeWcGoalScorerPick(editBootstrap.seed.goalScorer));
+      return;
+    }
+
     void (async () => {
       const key = draftStorageKey(fUser.uid, gameId);
       const raw = await AsyncStorage.getItem(key);
@@ -1277,16 +1338,33 @@ export default function GamesHomeScreen({
       try {
         const snap = await getDoc(doc(db, "games", gameId));
         if (cancelled) return;
+        const postId = routeParams?.openPredictPostId?.trim();
+        const seed = routeParams?.openPredictSeed;
+        const expandScoreForm = routeParams?.expandScoreForm;
         navigation.setParams({
           openPredictGameId: undefined,
           expandScoreForm: undefined,
+          openPredictPostId: undefined,
+          openPredictSeed: undefined,
         });
         if (!snap.exists()) return;
         const raw = { id: gameId, ...snap.data() } as Record<string, unknown>;
-        if (routeParams?.expandScoreForm) {
+        if (expandScoreForm) {
           setExpandScoreFormWhenEditing(true);
         }
-        await openPredictModal(raw);
+        const editBootstrap =
+          postId != null && postId.length > 0
+            ? {
+                postId,
+                seed:
+                  seed &&
+                  typeof seed.scoreHome === "number" &&
+                  typeof seed.scoreAway === "number"
+                    ? seed
+                    : undefined,
+              }
+            : undefined;
+        await openPredictModal(raw, editBootstrap);
       } finally {
         if (predictDeepLinkProcessingRef.current === gameId) {
           predictDeepLinkProcessingRef.current = null;
@@ -1698,6 +1776,7 @@ export default function GamesHomeScreen({
         goalScorerPick={goalScorerPick}
         setGoalScorerPick={setGoalScorerPick}
         mergedFinalPreview={predictMergedFinalPreview}
+        myPostId={selectedGameId ? myPostIdByGameId[selectedGameId] ?? null : null}
       />
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal
@@ -2606,6 +2685,18 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   /** スコア行：MatchCard モバイル dense `text-lg` 相当 */
+  centerTextScoreRow: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 8,
+    maxWidth: "100%",
+  },
+  centerTextScoreRowWc: {
+    marginTop: 2,
+    gap: 10,
+  },
   centerTextScore: {
     textAlign: "center",
   },
@@ -2613,6 +2704,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   centerTextScoreNum: {
+    flexShrink: 0,
     color: "#ffffff",
     fontSize: 18,
     fontWeight: "900",
@@ -2630,6 +2722,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   centerScoreDash: {
+    flexShrink: 0,
     color: "rgba(255,255,255,0.7)",
     fontSize: 18,
     fontWeight: "900",

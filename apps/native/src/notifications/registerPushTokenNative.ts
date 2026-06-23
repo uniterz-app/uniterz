@@ -23,6 +23,35 @@ export async function requestPushPermissionsNative(): Promise<boolean> {
   return requested.status === "granted";
 }
 
+export async function getExpoPushTokenIfGrantedNative(): Promise<string | null> {
+  const Notifications = await loadExpoNotificationsModule();
+  if (!Notifications || !Device.isDevice) return null;
+
+  const existing = await Notifications.getPermissionsAsync();
+  if (existing.status !== "granted") return null;
+
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
+
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId ??
+    Constants.expoConfig?.slug;
+
+  const tokenResult = await Notifications.getExpoPushTokenAsync(
+    projectId ? { projectId: String(projectId) } : undefined
+  );
+  const token = tokenResult.data?.trim();
+  if (!token) return null;
+
+  cachedExpoPushToken = token;
+  return token;
+}
+
 export async function resolveExpoPushTokenNative(): Promise<string | null> {
   const Notifications = await loadExpoNotificationsModule();
   if (!Notifications || !Device.isDevice) return null;
@@ -99,6 +128,13 @@ export async function unregisterPushTokenFromApiNative(
     },
     body: JSON.stringify({ expoPushToken }),
   }).catch(() => undefined);
+}
+
+export async function registerNativePushTokenIfGranted(): Promise<string | null> {
+  const token = await getExpoPushTokenIfGrantedNative();
+  if (!token) return null;
+  await registerPushTokenWithApiNative(token);
+  return token;
 }
 
 export async function registerNativePushTokenFlow(): Promise<string | null> {
