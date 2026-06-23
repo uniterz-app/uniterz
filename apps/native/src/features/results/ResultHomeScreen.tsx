@@ -48,7 +48,7 @@ import {
 } from "../../../../../lib/result/resultListFilterMatch";
 import UnderlineTabsNative from "../../ui/UnderlineTabsNative";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
-import CornerMenuFlyoutButtonNative from "../../ui/CornerMenuFlyoutButtonNative";
+import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import { useResultLeagueFlagsNative, type ResultListLeagueTab } from "./useResultLeagueFlagsNative";
 import ResultOutcomeBadgesNative from "./ResultOutcomeBadgesNative";
 import {
@@ -1033,7 +1033,9 @@ function ResultPostCard({
             sideFlyout={
               <>
                 {showShareInMenu ? (
-                  <CornerMenuFlyoutButtonNative
+                  <CyberChamferButtonNative
+                    size="xs"
+                    embedded
                     variant="share"
                     onPress={() => {
                       setCornerFabOpen(false);
@@ -1041,41 +1043,28 @@ function ResultPostCard({
                     }}
                     disabled={!canShare || sharing}
                     accessibilityLabel={resultCopy.shareMyResult}
-                  >
-                    <MaterialCommunityIcons
-                      name="share-variant"
-                      size={12}
-                      color="rgba(207,250,254,0.88)"
-                    />
-                  </CornerMenuFlyoutButtonNative>
+                  />
                 ) : null}
                 {hasCornerActions && hasCornerEdit ? (
-                  <CornerMenuFlyoutButtonNative
+                  <CyberChamferButtonNative
+                    size="xs"
+                    embedded
+                    variant="edit"
                     onPress={requestPredictEdit}
                     accessibilityLabel={isEn ? "Edit prediction" : "予想を修正"}
-                  >
-                    <MaterialCommunityIcons
-                      name="pencil"
-                      size={12}
-                      color="rgba(207,250,254,0.88)"
-                    />
-                  </CornerMenuFlyoutButtonNative>
+                  />
                 ) : null}
               </>
             }
             bottomFlyout={
               hasCornerActions && hasCornerTrash ? (
-                <CornerMenuFlyoutButtonNative
-                  variant="trash"
+                <CyberChamferButtonNative
+                  size="xs"
+                  embedded
+                  variant="delete"
                   onPress={requestDeletePost}
                   accessibilityLabel={isEn ? "Remove from list" : "一覧から除外"}
-                >
-                  <MaterialCommunityIcons
-                    name="trash-can-outline"
-                    size={12}
-                    color="rgba(252,165,165,0.88)"
-                  />
-                </CornerMenuFlyoutButtonNative>
+                />
               ) : null
             }
           />

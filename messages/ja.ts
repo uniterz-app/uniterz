@@ -603,6 +603,7 @@ const ja = {
     wcGoalScorerSlotLabel: "得点",
     scorePlaceholder: "得点",
     cancelEditing: "修正をやめる",
+    editScoresCta: "修正",
     yourPrediction: "あなたの予想",
     enterValidScores: "スコアを正しく入力してください",
     predictionUpdated: "予想を更新しました",

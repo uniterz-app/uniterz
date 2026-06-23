@@ -5,11 +5,17 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import MaskedView from "@react-native-masked-view/masked-view";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Path as SvgPath } from "react-native-svg";
+import {
+  Canvas,
+  Group,
+  LinearGradient as SkiaLinearGradient,
+  Rect,
+  Skia,
+  vec,
+} from "@shopify/react-native-skia";
 import { chamferedRectPathD, NAV_BAR_CHAMFER_CUT } from "../features/games/matchListCyberClipPath";
+import PredictOverlayChamferCornerFillNative from "../features/games/PredictOverlayChamferCornerFillNative";
 import { colors } from "../theme/tokens";
 import { nativeBlurViewExtraProps } from "../ui/nativeBlurProps";
 
@@ -19,21 +25,28 @@ const NAV_BAR_MOBILE_SHEEN = [
   "rgba(255,255,255,0.01)",
   "rgba(255,255,255,0)",
 ] as const;
+const NAV_BAR_CORNER_MASK = "rgba(10,14,24,1)";
 const NAV_BLUR_INTENSITY = Platform.OS === "ios" ? 38 : 32;
 
 type Props = {
   children: ReactNode;
 };
 
+function makeSkiaPath(width: number, height: number, cut: number) {
+  const d = chamferedRectPathD(width, height, cut);
+  if (!d) return null;
+  return Skia.Path.MakeFromSVGString(d);
+}
+
 /** Web mobile `NavBar` の `NAV_DOCK_CLIP`（14px 八角）相当 */
 export default function NavBarChamferShellNative({ children }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
 
-  const pathD = useMemo(
+  const skiaPath = useMemo(
     () =>
       size.w > 0 && size.h > 0
-        ? chamferedRectPathD(size.w, size.h, NAV_BAR_CHAMFER_CUT)
-        : "",
+        ? makeSkiaPath(size.w, size.h, NAV_BAR_CHAMFER_CUT)
+        : null,
     [size.w, size.h]
   );
 
@@ -47,14 +60,10 @@ export default function NavBarChamferShellNative({ children }: Props) {
 
   return (
     <View style={styles.root} onLayout={onLayout}>
-      {hasSize && pathD ? (
-        <MaskedView
-          style={[styles.mask, { width: size.w, height: size.h }]}
-          maskElement={
-            <Svg width={size.w} height={size.h}>
-              <SvgPath d={pathD} fill="#fff" />
-            </Svg>
-          }
+      {hasSize && skiaPath ? (
+        <View
+          pointerEvents="none"
+          style={[styles.shell, { width: size.w, height: size.h }]}
         >
           {(Platform.OS === "ios" || Platform.OS === "android") && (
             <BlurView
@@ -64,17 +73,47 @@ export default function NavBarChamferShellNative({ children }: Props) {
               {...nativeBlurViewExtraProps()}
             />
           )}
-          <LinearGradient colors={[...NAV_BAR_MOBILE_FILL]} style={StyleSheet.absoluteFillObject} />
-          <LinearGradient
-            colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0)"]}
-            style={styles.topInset}
+          <Canvas
+            style={{ position: "absolute", left: 0, top: 0, width: size.w, height: size.h }}
+            pointerEvents="none"
+          >
+            <Group clip={skiaPath}>
+              <Rect x={0} y={0} width={size.w} height={size.h}>
+                <SkiaLinearGradient
+                  start={vec(size.w * 0.5, 0)}
+                  end={vec(size.w * 0.5, size.h)}
+                  colors={[...NAV_BAR_MOBILE_FILL]}
+                />
+              </Rect>
+              <Rect
+                x={NAV_BAR_CHAMFER_CUT}
+                y={0}
+                width={Math.max(0, size.w - NAV_BAR_CHAMFER_CUT * 2)}
+                height={1}
+              >
+                <SkiaLinearGradient
+                  start={vec(NAV_BAR_CHAMFER_CUT, 0)}
+                  end={vec(size.w - NAV_BAR_CHAMFER_CUT, 0)}
+                  colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0)"]}
+                />
+              </Rect>
+              <Rect x={0} y={0} width={size.w} height={size.h}>
+                <SkiaLinearGradient
+                  start={vec(size.w * 0.5, 0)}
+                  end={vec(size.w * 0.5, size.h)}
+                  colors={[...NAV_BAR_MOBILE_SHEEN]}
+                  positions={[0, 0.35, 0.55]}
+                />
+              </Rect>
+            </Group>
+          </Canvas>
+          <PredictOverlayChamferCornerFillNative
+            width={size.w}
+            height={size.h}
+            cut={NAV_BAR_CHAMFER_CUT}
+            fillColor={NAV_BAR_CORNER_MASK}
           />
-          <LinearGradient
-            colors={[...NAV_BAR_MOBILE_SHEEN]}
-            locations={[0, 0.35, 0.55]}
-            style={StyleSheet.absoluteFillObject}
-          />
-        </MaskedView>
+        </View>
       ) : null}
 
       <View style={styles.content}>{children}</View>
@@ -92,17 +131,11 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 10,
   },
-  mask: {
+  shell: {
     position: "absolute",
     left: 0,
     top: 0,
-  },
-  topInset: {
-    position: "absolute",
-    left: NAV_BAR_CHAMFER_CUT,
-    right: NAV_BAR_CHAMFER_CUT,
-    top: 0,
-    height: 1,
+    overflow: "hidden",
   },
   content: {
     position: "relative",

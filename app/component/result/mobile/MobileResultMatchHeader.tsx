@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
+import { predictOverlayCornerButtonClasses } from "@/lib/ui/cyberMenuButton";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -271,7 +272,7 @@ export default function MobileResultMatchHeader({
           {onRequestPredictEdit ? (
             <button
               type="button"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100"
+              className={predictOverlayCornerButtonClasses(true, "edit")}
               aria-label={m.results.editPredictionAriaLabel}
               onClick={() => onRequestPredictEdit(post)}
             >
@@ -280,7 +281,7 @@ export default function MobileResultMatchHeader({
           ) : predictEditHref ? (
             <Link
               href={predictEditHref}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100"
+              className={predictOverlayCornerButtonClasses(true, "edit")}
               aria-label={m.results.editPredictionAriaLabel}
             >
               <Pencil className="h-3 w-3" aria-hidden />

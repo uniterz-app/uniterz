@@ -25,7 +25,6 @@ import {
   CalendarRange,
   Check,
   ChevronDown,
-  X,
 } from "lucide-react";
 import CandleChartLoader from "@/app/component/common/CandleChartLoader";
 import { auth, db } from "@/lib/firebase";
@@ -383,16 +382,6 @@ async function buildMatchCardPropsForResultPost(
         ) ?? gameBase.away.teamId,
     },
   };
-}
-
-function predictOverlayCloseBtnClass(isMobile: boolean) {
-  return [
-    "predict-overlay-close-btn absolute left-1.5 top-1.5 z-30 flex items-center justify-center",
-    "border border-cyan-400/35 bg-[rgba(4,10,18,0.82)] text-cyan-50/90 backdrop-blur-sm",
-    isMobile
-      ? "h-7 w-7"
-      : "h-8 w-8 transition hover:border-cyan-300/55 hover:bg-[rgba(6,14,24,0.9)]",
-  ].join(" ");
 }
 
 /** 一覧に出ている試合日キーに対応する表示ラベル */
@@ -2031,18 +2020,6 @@ export default function ResultListWithOverlay({
                           PREDICT_OVERLAY_FORM_PANEL,
                         ].join(" ")}
                       >
-                        <button
-                          type="button"
-                          aria-label={m.common.close}
-                          className={predictOverlayCloseBtnClass(isMobile)}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            close();
-                          }}
-                        >
-                          <X size={isMobile ? 12 : 14} strokeWidth={2.25} />
-                        </button>
-
                         {detailGame && displayDetailResultPost ? (
                           <MatchCard
                             {...detailGame}
@@ -2053,6 +2030,7 @@ export default function ResultListWithOverlay({
                             userPredictionWinner={
                               selectedPost.prediction?.winner ?? null
                             }
+                            onClosePredictOverlay={close}
                             sharedLayoutId={undefined}
                             sharedTransitionBaseKey={undefined}
                             disableCardMotion
@@ -2185,19 +2163,6 @@ export default function ResultListWithOverlay({
 
                     {predictOverlay.phase === "ready" ? (
                       <>
-                        {!predictStandingsOpen ? (
-                          <button
-                            type="button"
-                            aria-label={m.common.close}
-                            className={predictOverlayCloseBtnClass(isMobile)}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              closePredictOverlay();
-                            }}
-                          >
-                            <X size={isMobile ? 12 : 14} strokeWidth={2.25} />
-                          </button>
-                        ) : null}
                         <MatchCard
                           {...predictOverlay.game}
                           language={language}
@@ -2211,6 +2176,11 @@ export default function ResultListWithOverlay({
                           }
                           onRequestPredictEdit={() =>
                             setPredictEditTriggerNonce((n) => n + 1)
+                          }
+                          onClosePredictOverlay={
+                            predictStandingsOpen
+                              ? undefined
+                              : closePredictOverlay
                           }
                           sharedLayoutId={undefined}
                           sharedTransitionBaseKey={undefined}

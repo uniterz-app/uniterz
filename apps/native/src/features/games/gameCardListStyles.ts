@@ -98,6 +98,7 @@ export const gameCardListStyles = StyleSheet.create({
   teamBottomGroupWc: {
     width: 72,
     alignItems: "center",
+    marginTop: 3,
   },
   sideLabel: {
     color: "rgba(255,255,255,0.85)",
@@ -124,7 +125,7 @@ export const gameCardListStyles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     letterSpacing: 0.5,
-    lineHeight: 14,
+    lineHeight: 18,
     marginTop: 0,
     marginBottom: 0,
     includeFontPadding: false,
@@ -135,6 +136,8 @@ export const gameCardListStyles = StyleSheet.create({
   teamNameMainWc: {
     width: 72,
     maxWidth: 72,
+    paddingTop: 2,
+    lineHeight: 17,
   },
   teamRecordText: {
     color: "rgba(226,232,240,0.82)",

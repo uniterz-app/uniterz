@@ -583,6 +583,7 @@ const ko: Messages = {
     scorePrediction: "스코어 예측",
     scorePlaceholder: "득점",
     cancelEditing: "수정 취소",
+    editScoresCta: "수정",
     yourPrediction: "내 예측",
     enterValidScores: "올바른 점수를 입력해주세요",
     predictionUpdated: "예측이 업데이트되었습니다",

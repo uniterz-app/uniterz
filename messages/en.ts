@@ -607,6 +607,7 @@ const en: Messages = {
     wcGoalScorerSlotLabel: "Goal",
     scorePlaceholder: "Score",
     cancelEditing: "Cancel editing",
+    editScoresCta: "Edit",
     yourPrediction: "Your prediction",
     enterValidScores: "Please enter valid scores.",
     predictionUpdated: "Prediction updated.",

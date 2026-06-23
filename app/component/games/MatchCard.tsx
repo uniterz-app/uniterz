@@ -6,13 +6,17 @@ import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import {
   joinTeamNameLines,
+  splitWcCountryNameForMobileList,
   splitTeamNameByLeague,
 } from "@/lib/team-name-split";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Pencil } from "lucide-react";
-import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Pencil, X } from "lucide-react";
+import {
+  predictOverlayCornerAnchorClass,
+  predictOverlayCornerButtonClasses,
+} from "@/lib/ui/cyberMenuButton";
 import type { PredictionPostV2 } from "@/types/prediction-post-v2";
 import { resolveResultCardBadge } from "@/lib/result/resultBadge";
 import {
@@ -79,7 +83,10 @@ import { MATCH_LIST_CYBER_CTA_CLASS } from "@/lib/ui/matchListCardCyber";
 import {
   PREDICT_OVERLAY_CYBER_GRID_CLASS,
 } from "@/lib/ui/predictOverlayCyber";
-import { bracketMarketTeamTypography } from "@/lib/games/teamDisplayTypography";
+import {
+  bracketMarketTeamTypography,
+  wcBracketMarketTeamTypography,
+} from "@/lib/games/teamDisplayTypography";
 import {
   MOBILE_LIST_CARD_OUTER_CLASS,
   MOBILE_LIST_CARD_PANEL_DENSE,
@@ -203,6 +210,8 @@ homeRecord?: {
   userPredictionWinner?: "home" | "away" | "draw" | null;
   /** 統合カード右上：キックオフ前の予想修正（オーバーレイ等） */
   onRequestPredictEdit?: (post: PredictionPostV2) => void;
+  /** 統合カード左上：予想オーバーレイを閉じる */
+  onClosePredictOverlay?: () => void;
   /** 親で言語を渡すと users/{uid} の購読をカード毎に増やさない */
   language?: Language;
   /** WC：試合の実得点者（一覧カード表示用） */
@@ -229,6 +238,82 @@ const fmtKickoff = (d: Date | null, timeZone: string) =>
         hour12: false,
       })
     : "--:--";
+
+/** モバイル WC 一覧 — 国旗幅に揃え、短い国名は 1 行 */
+function wcListNameShellClass(
+  league: League,
+  isMobile: boolean,
+  mobileDense: boolean
+): string {
+  if (league !== "wc") return "";
+  if (isMobile && mobileDense) {
+    return "w-[4.5rem] min-w-0 max-w-[4.5rem] md:w-[5.5rem] md:max-w-[5.5rem]";
+  }
+  return "max-w-full whitespace-nowrap";
+}
+
+function wcListNameTextClass(
+  league: League,
+  isMobile: boolean,
+  mobileDense: boolean
+): string {
+  if (league === "wc" && isMobile && mobileDense) {
+    return "text-[14px] font-bold leading-[1.12] md:text-[15px]";
+  }
+  if (isMobile) return "text-[15px] font-bold md:text-[18px]";
+  return "text-base font-bold leading-tight md:text-xl lg:text-2xl";
+}
+
+function wcListNameFontStyle(
+  league: League,
+  isMobile: boolean,
+  mobileDense: boolean,
+  wcTeamNameFont: React.CSSProperties,
+  teamNameFont: React.CSSProperties
+): React.CSSProperties {
+  if (league === "wc" && isMobile && mobileDense) {
+    return wcBracketMarketTeamTypography(true);
+  }
+  if (league === "wc") return wcTeamNameFont;
+  return teamNameFont;
+}
+
+function renderWcMobileDenseTeamName(
+  fullName: string,
+  textClass: string,
+  fontStyle: React.CSSProperties
+) {
+  const split = splitWcCountryNameForMobileList(fullName);
+  if (!split.singleLine) {
+    return (
+      <>
+        <div className={textClass} style={fontStyle}>
+          {split.line1}
+        </div>
+        <div className={textClass} style={fontStyle}>
+          {split.line2}
+        </div>
+      </>
+    );
+  }
+  return (
+    <div className={`${textClass} whitespace-nowrap`} style={fontStyle}>
+      {split.text}
+    </div>
+  );
+}
+
+/** モバイル dense 一覧のキックオフ — Web 試合カード（非 dense）と同じ Oxanium + サイズ */
+function listKickoffCenterClass(
+  isMobile: boolean,
+  mobileDense: boolean,
+  scoreText: string
+): string {
+  if (isMobile && mobileDense) {
+    return ["text-xl leading-none md:text-5xl", resultStatsMetricNumClass].join(" ");
+  }
+  return [scoreText, "leading-none", resultStatsMetricNumClass].join(" ");
+}
 
 const fmtKickoffDateTime = (
   d: Date | null,
@@ -365,6 +450,7 @@ function MatchCardView({
   resultRatingBarsImmediate = false,
   userPredictionWinner = null,
   onRequestPredictEdit,
+  onClosePredictOverlay,
   language,
 }: MatchCardProps & { language: Language }) {
   const router = useRouter();
@@ -743,27 +829,6 @@ const showMergedPredictEdit = Boolean(
     status === "scheduled" &&
     !isGameStarted
 );
-const [mergedEditFabOpen, setMergedEditFabOpen] = useState(false);
-const mergedEditFabRef = useRef<HTMLDivElement>(null);
-
-useEffect(() => {
-  if (!showMergedPredictEdit) setMergedEditFabOpen(false);
-}, [showMergedPredictEdit]);
-
-useEffect(() => {
-  if (!mergedEditFabOpen) return;
-  const onDocPointer = (e: PointerEvent) => {
-    const el = mergedEditFabRef.current;
-    if (el && !el.contains(e.target as Node)) setMergedEditFabOpen(false);
-  };
-  document.addEventListener("pointerdown", onDocPointer, true);
-  return () => document.removeEventListener("pointerdown", onDocPointer, true);
-}, [mergedEditFabOpen]);
-
-/** タップで開閉。カード hover でもペンを出す（FAB 内の group だとカード全体に届かないため group/card） */
-const mergedEditFlyoutPenClass = mergedEditFabOpen
-  ? "pointer-events-auto visible -translate-y-1/2 translate-x-0 opacity-100"
-  : "pointer-events-none invisible -translate-y-1/2 translate-x-2 opacity-0 group-hover/card:pointer-events-auto group-hover/card:visible group-hover/card:translate-x-0 group-hover/card:opacity-100";
 
 const overlayPredictScoreClass = isMobile
   ? mobileDense
@@ -917,11 +982,7 @@ let center: React.ReactNode = overlayCenterMode ? (
       language={language}
     />
   ) : (
-    <div
-      className={[scoreText, "leading-none", resultStatsMetricNumClass].join(
-        " "
-      )}
-    >
+    <div className={listKickoffCenterClass(isMobile, mobileDense, scoreText)}>
       {fmtKickoff(startAtJst, displayTimeZone)}
     </div>
   );
@@ -1144,8 +1205,7 @@ setNavigating(true);
 
   // backdrop-blur は transform 祖先の外に置く（リザルトカードと同様に背面バーティクルを透過）
   const shellClassName = [
-    "group/card relative text-white",
-    mergedEditFabOpen ? "overflow-visible" : "overflow-hidden",
+    "group/card relative overflow-hidden text-white",
     inPredictOverlay && isMobile
       ? MOBILE_PREDICT_OVERLAY_CARD_OUTER_CLASS
       : mobileDense
@@ -1406,57 +1466,62 @@ return (
           />
         </div>
       ) : null}
-      {showMergedPredictEdit && resultPost ? (
+      {onClosePredictOverlay ? (
         <div
-          ref={mergedEditFabRef}
           className={[
             "pointer-events-auto absolute z-[50]",
-            isMobile
-              ? "-m-3 p-3 right-2 -top-1"
-              : "-m-5 p-5 right-2.5 top-1 sm:right-3 sm:top-1.5",
+            predictOverlayCornerAnchorClass(isMobile, "left"),
           ].join(" ")}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative flex items-center justify-center">
-            <button
-              type="button"
-              className={[
-                "absolute right-full top-1/2 mr-1.5 flex -translate-y-1/2 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
-                isMobile ? "size-7" : "size-8",
-                isMobile ? "z-[55]" : "z-30",
-                "hover:border-white/40 hover:bg-white/10 hover:text-white",
-                mergedEditFlyoutPenClass,
-              ].join(" ")}
-              aria-label={m.results.editPredictionAriaLabel}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setMergedEditFabOpen(false);
-                onRequestPredictEdit?.(resultPost);
-              }}
-            >
-              <Pencil
-                className={isMobile ? "h-3 w-3" : "h-[14px] w-[14px]"}
-                strokeWidth={2.2}
-                aria-hidden
-              />
-            </button>
-            <CyberMenuButton
-              size="xs"
-              className={[
-                "relative transition-all duration-300 ease-out",
-                isMobile ? "z-[52]" : "z-20",
-              ].join(" ")}
-              aria-expanded={mergedEditFabOpen}
-              aria-haspopup="true"
-              aria-label={m.results.openActions}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setMergedEditFabOpen((v) => !v);
-              }}
+          <button
+            type="button"
+            className={[
+              predictOverlayCornerButtonClasses(isMobile, "close"),
+              "relative z-[52]",
+            ].join(" ")}
+            aria-label={m.common.close}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClosePredictOverlay();
+            }}
+          >
+            <X
+              className={isMobile ? "h-2.5 w-2.5" : "h-[14px] w-[14px]"}
+              strokeWidth={2.25}
+              aria-hidden
             />
-          </div>
+          </button>
+        </div>
+      ) : null}
+      {showMergedPredictEdit && resultPost ? (
+        <div
+          className={[
+            "pointer-events-auto absolute z-[50]",
+            predictOverlayCornerAnchorClass(isMobile, "right"),
+          ].join(" ")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className={[
+              predictOverlayCornerButtonClasses(isMobile, "edit"),
+              "relative z-[52]",
+            ].join(" ")}
+            aria-label={m.results.editPredictionAriaLabel}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRequestPredictEdit?.(resultPost);
+            }}
+          >
+            <Pencil
+              className={isMobile ? "h-2.5 w-2.5" : "h-[14px] w-[14px]"}
+              strokeWidth={2.2}
+              aria-hidden
+            />
+          </button>
         </div>
       ) : null}
       {/* 入場時に一度だけ上→下へ走るスキャン光（カードを走査して実体化させる演出） */}
@@ -1542,7 +1607,7 @@ return (
       </motion.div>
 
       <div
-        className={`grid grid-cols-3 ${
+        className={`grid min-w-0 grid-cols-3 ${
           mobileDense
             ? "items-center gap-0 px-2 py-0"
             : inPredictOverlay
@@ -1565,7 +1630,7 @@ return (
         {/* HOME */}
         <motion.div
           className={[
-            "mc-home flex flex-col items-center",
+            "mc-home flex min-w-0 flex-col items-center",
             mobileDense
               ? "mt-0"
               : inPredictOverlay
@@ -1625,7 +1690,7 @@ return (
   <div
     className={[
       "mc-name text-center leading-tight",
-      league === "wc" ? "max-w-full whitespace-nowrap" : "",
+      wcListNameShellClass(league, isMobile, mobileDense),
       mobileDense
         ? "-mt-0.5"
         : inPredictOverlay && league === "wc"
@@ -1659,11 +1724,29 @@ return (
             {homeL2}
           </div>
         </>
+      ) : league === "wc" && mobileDense ? (
+        renderWcMobileDenseTeamName(
+          joinTeamNameLines(homeL1, homeL2),
+          wcListNameTextClass(league, isMobile, mobileDense),
+          wcListNameFontStyle(
+            league,
+            isMobile,
+            mobileDense,
+            wcTeamNameFont,
+            teamNameFont
+          )
+        )
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[15px] font-bold md:text-[18px]"
-          style={league === "wc" ? wcTeamNameFont : teamNameFont}
+          className={wcListNameTextClass(league, isMobile, mobileDense)}
+          style={wcListNameFontStyle(
+            league,
+            isMobile,
+            mobileDense,
+            wcTeamNameFont,
+            teamNameFont
+          )}
         >
           {joinTeamNameLines(homeL1, homeL2)}
         </div>
@@ -1671,8 +1754,14 @@ return (
     </>
   ) : (
     <div
-      className="text-base font-bold leading-tight md:text-xl lg:text-2xl"
-      style={league === "wc" ? wcTeamNameFont : teamNameFont}
+      className={wcListNameTextClass(league, isMobile, mobileDense)}
+      style={wcListNameFontStyle(
+        league,
+        isMobile,
+        mobileDense,
+        wcTeamNameFont,
+        teamNameFont
+      )}
     >
       {joinTeamNameLines(homeL1, homeL2)}
     </div>
@@ -1811,7 +1900,7 @@ return (
         {/* AWAY */}
         <motion.div
           className={[
-            "mc-away flex flex-col items-center",
+            "mc-away flex min-w-0 flex-col items-center",
             mobileDense
               ? "mt-0"
               : inPredictOverlay
@@ -1871,7 +1960,7 @@ return (
   <div
     className={[
       "mc-name text-center leading-tight",
-      league === "wc" ? "max-w-full whitespace-nowrap" : "",
+      wcListNameShellClass(league, isMobile, mobileDense),
       mobileDense
         ? "-mt-0.5"
         : inPredictOverlay && league === "wc"
@@ -1905,11 +1994,29 @@ return (
             {awayL2}
           </div>
         </>
+      ) : league === "wc" && mobileDense ? (
+        renderWcMobileDenseTeamName(
+          joinTeamNameLines(awayL1, awayL2),
+          wcListNameTextClass(league, isMobile, mobileDense),
+          wcListNameFontStyle(
+            league,
+            isMobile,
+            mobileDense,
+            wcTeamNameFont,
+            teamNameFont
+          )
+        )
       ) : (
         // ★ その他リーグ（mobile）
         <div
-          className="text-[15px] font-bold md:text-[18px]"
-          style={league === "wc" ? wcTeamNameFont : teamNameFont}
+          className={wcListNameTextClass(league, isMobile, mobileDense)}
+          style={wcListNameFontStyle(
+            league,
+            isMobile,
+            mobileDense,
+            wcTeamNameFont,
+            teamNameFont
+          )}
         >
           {joinTeamNameLines(awayL1, awayL2)}
         </div>
@@ -1917,8 +2024,14 @@ return (
     </>
   ) : (
     <div
-      className="text-base font-bold leading-tight md:text-xl lg:text-2xl"
-      style={league === "wc" ? wcTeamNameFont : teamNameFont}
+      className={wcListNameTextClass(league, isMobile, mobileDense)}
+      style={wcListNameFontStyle(
+        league,
+        isMobile,
+        mobileDense,
+        wcTeamNameFont,
+        teamNameFont
+      )}
     >
       {joinTeamNameLines(awayL1, awayL2)}
     </div>

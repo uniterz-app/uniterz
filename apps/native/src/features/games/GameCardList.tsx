@@ -15,6 +15,7 @@ import MatchListCyberDecorNative from "./MatchListCyberDecorNative";
 import MatchCardListCtaNative, {
   type MatchCardListCtaVariant,
 } from "./MatchCardListCtaNative";
+import WcTeamNameMobileNative from "./WcTeamNameMobileNative";
 import MatchCardEntryScanNative from "./MatchCardEntryScanNative";
 import {
   useGameCardListRowEntrance,
@@ -225,12 +226,16 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     </Animated.View>
                   </View>
                   <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
-                    <Text
-                      style={[styles.teamNameMain, isWcCard && styles.teamNameMainWc]}
-                      numberOfLines={1}
-                    >
-                      {homeCompact}
-                    </Text>
+                    {isWcCard ? (
+                      <WcTeamNameMobileNative
+                        name={homeCompact}
+                        style={[styles.teamNameMain, styles.teamNameMainWc]}
+                      />
+                    ) : (
+                      <Text style={styles.teamNameMain} numberOfLines={1}>
+                        {homeCompact}
+                      </Text>
+                    )}
                     <Text style={styles.teamRecordText}>{homeRecordLabel ?? "(0-0-0)"}</Text>
                   </View>
                 </View>
@@ -347,12 +352,16 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
                     </Animated.View>
                   </View>
                   <View style={[styles.teamBottomGroup, isWcCard && styles.teamBottomGroupWc]}>
-                    <Text
-                      style={[styles.teamNameMain, isWcCard && styles.teamNameMainWc]}
-                      numberOfLines={1}
-                    >
-                      {awayCompact}
-                    </Text>
+                    {isWcCard ? (
+                      <WcTeamNameMobileNative
+                        name={awayCompact}
+                        style={[styles.teamNameMain, styles.teamNameMainWc]}
+                      />
+                    ) : (
+                      <Text style={styles.teamNameMain} numberOfLines={1}>
+                        {awayCompact}
+                      </Text>
+                    )}
                     <Text style={styles.teamRecordText}>{awayRecordLabel ?? "(0-0-0)"}</Text>
                   </View>
                 </View>

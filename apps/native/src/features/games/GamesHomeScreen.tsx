@@ -2422,7 +2422,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 0,
   },
-  /** Web モバイル `MatchCard` の HOME/AWAY に合わせる */
+  teamBottomGroupWc: {
+    width: 72,
+    alignItems: "center",
+    marginTop: 3,
+  },
   sideLabel: {
     color: "rgba(255,255,255,0.85)",
     fontSize: 12,
@@ -2457,7 +2461,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     letterSpacing: 0.5,
-    lineHeight: 14,
+    lineHeight: 18,
     marginTop: 0,
     marginBottom: 0,
     includeFontPadding: false,
@@ -2466,6 +2470,10 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
   },
   teamNameMainWc: {
+    width: 72,
+    maxWidth: 72,
+    paddingTop: 2,
+    lineHeight: 17,
     paddingRight: 0.5,
   },
   /** モバイル MatchCard: mc-record、Oxanium（チーム名に合わせて一段小さく） */

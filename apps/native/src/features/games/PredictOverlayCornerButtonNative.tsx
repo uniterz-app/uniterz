@@ -12,7 +12,7 @@ type Props = {
   align?: Align;
   /** false のとき親レイアウト内に埋め込み（FAB クラスター等） */
   embedded?: boolean;
-  icon?: "close" | "edit" | "menu" | "share";
+  icon?: "close" | "edit" | "delete" | "menu" | "share";
   /** menu 時：展開中は × 表示 */
   open?: boolean;
   accessibilityState?: { expanded?: boolean };

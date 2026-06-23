@@ -37,9 +37,11 @@ export default function CyberIconButtonNative({
   const mappedIcon =
     icon === "pencil"
       ? "edit"
-      : icon === "share-variant"
-        ? "share"
-        : undefined;
+      : icon === "trash-can-outline" || icon === "delete"
+        ? "delete"
+        : icon === "share-variant"
+          ? "share"
+          : undefined;
 
   if (mappedIcon) {
     return (

@@ -595,6 +595,7 @@ const fr: Messages = {
     scorePrediction: "Pronostic de score",
     scorePlaceholder: "Score",
     cancelEditing: "Annuler la modification",
+    editScoresCta: "Modif.",
     yourPrediction: "Votre pronostic",
     enterValidScores: "Veuillez entrer des scores valides",
     predictionUpdated: "Pronostic mis à jour",

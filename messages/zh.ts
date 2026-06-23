@@ -583,6 +583,7 @@ const zh: Messages = {
     scorePrediction: "比分预测",
     scorePlaceholder: "得分",
     cancelEditing: "取消修改",
+    editScoresCta: "修改",
     yourPrediction: "你的预测",
     enterValidScores: "请输入正确的比分",
     predictionUpdated: "预测已更新",

@@ -247,7 +247,7 @@ export default function MobileRankingsPage() {
       <div className="max-w-full space-y-3 overflow-x-clip px-3 pt-2">
           <div className="flex items-start gap-2">
             <CyberMenuButton
-              size="sm"
+              size="md"
               onClick={() => setRankingsDrawerOpen(true)}
               aria-label={m.games.openMenu}
             />

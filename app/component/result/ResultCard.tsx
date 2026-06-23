@@ -12,6 +12,7 @@ import React, {
 import { useRouter, usePathname } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import CyberMenuButton from "@/app/component/ui/CyberMenuButton";
+import { resultCardFlyoutButtonClasses } from "@/lib/ui/cyberMenuButton";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import Jersey from "@/app/component/games/icons/Jersey";
 import Soccer from "@/app/component/games/icons/Soccer";
@@ -407,10 +408,9 @@ function ResultCardPresentationImpl({
               <button
                 type="button"
                 className={[
-                  "absolute right-full top-1/2 mr-1.5 flex -translate-y-1/2 items-center justify-center rounded-md border border-white/20 bg-black/60 text-white/85 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-300 ease-out",
-                  isMobile ? "size-7" : "size-8",
+                  "absolute right-full top-1/2 mr-1.5 flex -translate-y-1/2 items-center justify-center transition-all duration-300 ease-out",
+                  resultCardFlyoutButtonClasses(isMobile, "edit"),
                   isMobile ? "z-[55]" : "z-30",
-                  "hover:border-white/40 hover:bg-white/10 hover:text-white",
                   isMobile ? "touch-manipulation" : "",
                   flyoutPenClass,
                 ].join(" ")}
@@ -438,10 +438,9 @@ function ResultCardPresentationImpl({
               <button
                 type="button"
                 className={[
-                  "absolute top-full left-1/2 mt-1.5 flex items-center justify-center rounded-sm border border-red-500/50 bg-black/75 text-red-300 shadow-[0_0_14px_rgba(248,113,113,0.2),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-md transition-all duration-300 ease-out",
-                  isMobile ? "size-7" : "size-8",
+                  "absolute top-full left-1/2 mt-1.5 flex items-center justify-center transition-all duration-300 ease-out",
+                  resultCardFlyoutButtonClasses(isMobile, "delete"),
                   isMobile ? "z-[55]" : "z-30",
-                  "hover:border-red-400/85 hover:bg-red-950/45 hover:text-red-100 hover:shadow-[0_0_22px_rgba(239,68,68,0.32)]",
                   isMobile ? "touch-manipulation" : "",
                   flyoutTrashClass,
                 ].join(" ")}

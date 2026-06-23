@@ -594,6 +594,7 @@ const ar: Messages = {
     scorePrediction: "توقع النتيجة",
     scorePlaceholder: "النقاط",
     cancelEditing: "إلغاء التعديل",
+    editScoresCta: "تعديل",
     yourPrediction: "توقعك",
     enterValidScores: "يرجى إدخال نتائج صحيحة",
     predictionUpdated: "تم تحديث التوقع",

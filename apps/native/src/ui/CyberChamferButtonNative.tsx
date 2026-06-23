@@ -1,5 +1,5 @@
 /**
- * Web `.predict-overlay-close-btn` / `.cyber-menu-btn` 相当 — 角切りシアン枠ボタン
+ * Web `.predict-overlay-close-btn` / `.cyber-menu-btn` 相当 — 角切り枠ボタン
  */
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -20,6 +20,10 @@ import {
   Skia,
 } from "@shopify/react-native-skia";
 import { CYBER_MENU_BTN_CUT, cyberMenuBtnPathD } from "./cyberMenuClipPath";
+import {
+  CYBER_CHAMFER_THEMES,
+  type CyberChamferAction,
+} from "./cyberChamferButtonTheme";
 
 export type CyberChamferButtonSize = "xs" | "sm" | "md" | "lg";
 
@@ -37,12 +41,6 @@ const ICON_PX: Record<CyberChamferButtonSize, number> = {
   lg: 16,
 };
 
-/** Web `.cyber-menu-btn` */
-const MENU_FILL = "rgba(4,10,18,0.84)";
-const MENU_STROKE = "rgba(0,245,255,0.34)";
-const DEFAULT_FILL = "rgba(4,10,18,0.82)";
-const DEFAULT_STROKE = "rgba(34,211,238,0.35)";
-
 type FloatingAlign = "left" | "right";
 
 type Props = {
@@ -51,7 +49,9 @@ type Props = {
   dim?: number;
   embedded?: boolean;
   floatingAlign?: FloatingAlign;
-  icon?: "close" | "edit" | "menu" | "share";
+  variant?: CyberChamferAction;
+  /** @deprecated variant を使用 */
+  icon?: "close" | "edit" | "delete" | "menu" | "share";
   /** menu 時：展開中は × */
   open?: boolean;
   onPress?: () => void;
@@ -69,12 +69,25 @@ function makeSkiaPath(width: number, height: number) {
   return Skia.Path.MakeFromSVGString(d);
 }
 
-/** 予想オーバーレイ × / バーガーと同じ角切り枠（Native 共通） */
+function resolveVariant(
+  variant: CyberChamferAction | undefined,
+  icon: Props["icon"]
+): CyberChamferAction {
+  if (variant) return variant;
+  if (icon === "close") return "close";
+  if (icon === "edit") return "edit";
+  if (icon === "delete") return "delete";
+  if (icon === "share") return "share";
+  return "menu";
+}
+
+/** 予想オーバーレイ × / ペン / 共有 / バーガー（Native 共通） */
 export default function CyberChamferButtonNative({
   size = "sm",
   dim,
   embedded = true,
   floatingAlign = "left",
+  variant,
   icon = "menu",
   open = false,
   onPress,
@@ -87,6 +100,8 @@ export default function CyberChamferButtonNative({
 }: Props) {
   const buttonDim = dim ?? SIZE_PX[size];
   const iconPx = ICON_PX[size];
+  const action = resolveVariant(variant, icon);
+  const theme = CYBER_CHAMFER_THEMES[action];
   const [layout, setLayout] = useState({ w: 0, h: 0 });
 
   const skiaPath = useMemo(
@@ -106,9 +121,6 @@ export default function CyberChamferButtonNative({
   }
 
   const hasSize = layout.w > 0 && layout.h > 0;
-  const isMenu = icon === "menu";
-  const fillColor = isMenu ? MENU_FILL : DEFAULT_FILL;
-  const strokeColor = isMenu ? MENU_STROKE : DEFAULT_STROKE;
 
   return (
     <Pressable
@@ -150,7 +162,7 @@ export default function CyberChamferButtonNative({
                   y={0}
                   width={layout.w}
                   height={layout.h}
-                  color={fillColor}
+                  color={theme.fill}
                 />
               </Group>
             </Canvas>
@@ -169,33 +181,43 @@ export default function CyberChamferButtonNative({
                   path={skiaPath}
                   style="stroke"
                   strokeWidth={1}
-                  color={strokeColor}
+                  color={theme.stroke}
                 />
               </Canvas>
             </View>
           </>
         ) : null}
         {children ??
-          (icon === "edit" ? (
+          (action === "edit" ? (
             <MaterialCommunityIcons
               name="pencil"
               size={iconPx}
-              color="rgba(236,254,255,0.9)"
+              color={theme.icon}
             />
-          ) : icon === "menu" ? (
+          ) : action === "delete" ? (
+            <MaterialCommunityIcons
+              name="trash-can-outline"
+              size={iconPx}
+              color={theme.icon}
+            />
+          ) : action === "menu" ? (
             <MaterialCommunityIcons
               name="menu"
               size={iconPx}
-              color="rgba(224,252,255,0.92)"
+              color={theme.icon}
             />
-          ) : icon === "share" ? (
+          ) : action === "share" ? (
             <MaterialCommunityIcons
               name="share-variant"
               size={iconPx}
-              color="rgba(236,254,255,0.9)"
+              color={theme.icon}
             />
           ) : (
-            <Text style={styles.closeIcon} accessibilityElementsHidden importantForAccessibility="no">
+            <Text
+              style={[styles.closeIcon, { color: theme.icon }]}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+            >
               ×
             </Text>
           ))}
@@ -230,7 +252,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   closeIcon: {
-    color: "rgba(236,254,255,0.9)",
     fontSize: 16,
     lineHeight: 18,
     fontWeight: "300",

@@ -5,6 +5,7 @@ import React, { memo, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Pencil } from "lucide-react";
+import { predictOverlayCornerButtonClasses } from "@/lib/ui/cyberMenuButton";
 import HalftoneJerseyMark from "@/app/component/games/HalftoneJerseyMark";
 import CountryFlag from "@/app/component/games/CountryFlag";
 import Jersey from "@/app/component/games/icons/Jersey";
@@ -283,7 +284,7 @@ function ResultMatchHeader({
           {onRequestPredictEdit ? (
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100 sm:h-9 sm:w-9"
+              className={predictOverlayCornerButtonClasses(false, "edit")}
               aria-label={m.results.editPredictionAriaLabel}
               onClick={() => onRequestPredictEdit(post)}
             >
@@ -292,7 +293,7 @@ function ResultMatchHeader({
           ) : predictEditHref ? (
             <Link
               href={predictEditHref}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-black/60 text-white/90 shadow-md backdrop-blur-sm transition hover:border-cyan-400/50 hover:bg-cyan-950/30 hover:text-cyan-100 sm:h-9 sm:w-9"
+              className={predictOverlayCornerButtonClasses(false, "edit")}
               aria-label={m.results.editPredictionAriaLabel}
             >
               <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
