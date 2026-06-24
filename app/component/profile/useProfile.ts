@@ -132,6 +132,10 @@ export function primeProfileCacheFromRankingRow(
     metric: MobileMetric;
     rank: number;
     participantCount?: number | null;
+  },
+  options?: {
+    /** グループランキング行は期間集計のため、成績サマリー先読みを省略する */
+    skipStatsPrime?: boolean;
   }
 ) {
   const uid = typeof row.uid === "string" ? row.uid.trim() : "";
@@ -156,7 +160,7 @@ export function primeProfileCacheFromRankingRow(
     },
   });
 
-  if (uid && statsContext) {
+  if (uid && statsContext && !options?.skipStatsPrime) {
     primeProfileStatsFromRankingRow(
       uid,
       row,

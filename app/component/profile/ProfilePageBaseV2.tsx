@@ -15,6 +15,8 @@ import type { MyRankMetricValueDeltas } from "@/lib/rankings/myRankMetricValueDe
 import type { ProfileDailyTrendRow } from "@/lib/profile/profileDailyTrendRow";
 import { useProfileScopedStreak } from "@/lib/profile/useProfileScopedStreak";
 import {
+  PROFILE_FROM_GROUP_VALUE,
+  PROFILE_FROM_PARAM,
   RANKINGS_TAB_LEAGUE_PARAM,
   RANKINGS_TAB_WC_STAGE_PARAM,
 } from "@/lib/navigation/rankingsProfileFrom";
@@ -63,10 +65,13 @@ export default function ProfilePageBaseV2({ handle, variant = "web" }: Props) {
     };
   }, [sp]);
 
+  const fromGroupRanking = sp.get(PROFILE_FROM_PARAM) === PROFILE_FROM_GROUP_VALUE;
+
   const { stats, summary, summaryRanks, metricValueDeltas, statsLoading, dailyTrend } =
     useUserStatsV2(targetUid, {
       ...profileStatsContext,
       prefetchOtherLeague: false,
+      skipPrimedStatsCache: fromGroupRanking,
       /** uid 未解決でも handle でサマリーを先行取得し、解決待ちの直列を短縮 */
       routeKey: handle,
     });

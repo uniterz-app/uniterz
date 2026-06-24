@@ -16,6 +16,7 @@ import { RankDeltaBadge } from "@/app/component/rankings/RankDeltaBadge";
 import { profileHrefWithRankingsReturn } from "@/lib/navigation/rankingsProfileFrom";
 import { profilePathKeyFromRow } from "@/lib/profile/profilePathKey";
 import { primeProfileCacheFromRankingRow } from "@/app/component/profile/useProfile";
+import { prefetchProfileStatsFromRoute } from "@/app/component/profile/useUserStatsV2";
 import type { RankingPhase } from "@/lib/rankings/rankingPhase";
 import type { PlayoffRoundKey } from "@/lib/rankings/playoffRound";
 import type { RankingLeagueSource } from "@/lib/rankings/rankingLeagueSource";
@@ -89,13 +90,32 @@ export default function RankingCard({
 
   const warmProfileRoute = useCallback(() => {
     markRankingsCountUpIntroPlayed();
-    primeProfileCacheFromRankingRow(profileKey, r, statsContext, {
-      metric,
-      rank,
-      participantCount,
-    });
+    primeProfileCacheFromRankingRow(
+      profileKey,
+      r,
+      statsContext,
+      {
+        metric,
+        rank,
+        participantCount,
+      },
+      { skipStatsPrime: !!groupReturnGroupId }
+    );
+    if (groupReturnGroupId) {
+      prefetchProfileStatsFromRoute(profileKey, statsContext);
+    }
     router.prefetch(profileHref);
-  }, [profileHref, profileKey, participantCount, r, router, statsContext, metric, rank]);
+  }, [
+    groupReturnGroupId,
+    profileHref,
+    profileKey,
+    participantCount,
+    r,
+    router,
+    statsContext,
+    metric,
+    rank,
+  ]);
 
   const { n: target, d: decimals } = metricNum(r, metric);
   const counted = useRankCountUp(

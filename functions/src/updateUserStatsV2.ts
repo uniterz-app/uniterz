@@ -1,5 +1,9 @@
 // functions/src/updateUserStatsV2.ts
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import {
+  applyCumulativeIncrementInTransaction,
+  type PostCumulativeContribution,
+} from "./rankings/cumulativeFromDaily";
 
 /* =========================================================
  * 型
@@ -99,7 +103,39 @@ function normalizeSeasonRound(
 }
 
 const db = () => getFirestore();
-const LEAGUES = ["bj", "j1", "nba", "pl", "wc"] as const;
+
+function buildPostCumulativeContribution(
+  opts: Pick<
+    ApplyOptsV2,
+    | "countsForRanking"
+    | "seasonPhase"
+    | "seasonRound"
+    | "league"
+    | "isWin"
+    | "points"
+    | "upsetPoints"
+    | "scorePrecision"
+    | "exactHit"
+    | "goalScorerHit"
+    | "wcStage"
+  >
+): PostCumulativeContribution {
+  const leagueKey = normalizeLeague(opts.league);
+  return {
+    forRanking: shouldCountForRanking(opts.countsForRanking),
+    phaseKey: normalizeSeasonPhase(opts.seasonPhase),
+    roundKey: normalizeSeasonRound(opts.seasonRound),
+    leagueKey,
+    isWc: leagueKey === "wc",
+    wcStage: opts.wcStage ?? null,
+    isWin: opts.isWin,
+    points: opts.points,
+    upsetPoints: opts.upsetPoints,
+    scorePrecision: opts.scorePrecision,
+    exactHit: opts.exactHit ?? false,
+    goalScorerHit: opts.goalScorerHit ?? false,
+  };
+}
 
 /* =========================================================
  * Utils
@@ -226,12 +262,17 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
 
   const dailyRef = db().doc(`user_stats_v2_daily/${uid}_${dateKey}`);
   const markerRef = dailyRef.collection("applied_posts").doc(postId);
+  const cumulativeRef = db().doc(`cumulative_stats/${uid}`);
+  const userRef = db().doc(`users/${uid}`);
 
   const userStatsRef = db().doc(`user_stats_v2/${uid}`);
 
   await db().runTransaction(async (tx) => {
     const marker = await tx.get(markerRef);
     if (marker.exists) return;
+
+    const userSnap = await tx.get(userRef);
+    const user = userSnap.exists ? userSnap.data()! : {};
 
     const inc: any = {
       posts: FieldValue.increment(1),
@@ -319,6 +360,26 @@ export async function applyPostToUserStatsV2(opts: ApplyOptsV2) {
       upsetOpportunityCount: hadUpsetGame ? 1 : 0,
       countedForRanking: forRanking,
     });
+
+    applyCumulativeIncrementInTransaction(
+      tx,
+      cumulativeRef,
+      user,
+      uid,
+      buildPostCumulativeContribution({
+        countsForRanking,
+        seasonPhase,
+        seasonRound,
+        league,
+        isWin,
+        points,
+        upsetPoints,
+        scorePrecision,
+        exactHit,
+        goalScorerHit,
+        wcStage,
+      })
+    );
   });
 }
 

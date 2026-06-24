@@ -1,6 +1,59 @@
 // functions/src/onPostDeletedV2.ts
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import {
+  applyCumulativeIncrementInTransaction,
+  type PostCumulativeContribution,
+} from "./rankings/cumulativeFromDaily";
+
+function normalizeSeasonPhase(
+  v: unknown
+): "play_in" | "playoffs" | null {
+  if (v === "play_in" || v === "playoffs") return v;
+  return null;
+}
+
+function normalizeSeasonRound(
+  v: unknown
+): "r1" | "r2" | "cf" | "finals" | null {
+  if (v === "r1" || v === "r2" || v === "cf" || v === "finals") return v;
+  return null;
+}
+
+function normalizeLeague(raw?: string | null): string | null {
+  if (!raw) return null;
+  const v = String(raw).trim().toLowerCase();
+  if (v === "wc" || v === "fifa") return "wc";
+  if (v === "nba") return "nba";
+  return v || null;
+}
+
+function buildDeleteContribution(
+  before: Record<string, unknown>,
+  stats: Record<string, unknown>
+): PostCumulativeContribution {
+  const leagueKey = normalizeLeague(
+    typeof before.league === "string" ? before.league : null
+  );
+  const isWc = leagueKey === "wc";
+  const wcStageRaw = before.wcStage;
+  const wcStage =
+    wcStageRaw === "qualifying" || wcStageRaw === "main" ? wcStageRaw : null;
+  return {
+    forRanking: stats.countedForRanking !== false,
+    phaseKey: normalizeSeasonPhase(before.seasonPhase),
+    roundKey: normalizeSeasonRound(before.seasonRound),
+    leagueKey,
+    isWc,
+    wcStage,
+    isWin: stats.isWin === true,
+    points: Number(stats.pointsV3 ?? 0),
+    upsetPoints: Number(stats.upsetPoints ?? 0),
+    scorePrecision: Number(stats.scorePrecision ?? 0),
+    exactHit: stats.exactMatch === true,
+    goalScorerHit: Number(stats.goalScorerBonus ?? 0) > 0,
+  };
+}
 
 function teamIdFromSide(side: unknown): string | null {
   if (!side || typeof side !== "object") return null;
@@ -60,11 +113,16 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(snap.id);
+    const cumulativeRef = db.doc(`cumulative_stats/${uid}`);
+    const userRef = db.doc(`users/${uid}`);
 
     if (!stats) {
       await db.runTransaction(async (tx) => {
         const dailySnap = await tx.get(dailyRef);
         if (!dailySnap.exists) return;
+
+        const markerSnap = await tx.get(markerRef);
+        if (!markerSnap.exists) return;
 
         const dec = {
           posts: FieldValue.increment(-1),
@@ -77,6 +135,32 @@ export const onPostDeletedV2 = onDocumentDeleted(
         if (leagueKey) {
           tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
         }
+
+        const userSnap = await tx.get(userRef);
+        const user = userSnap.exists ? userSnap.data()! : {};
+        applyCumulativeIncrementInTransaction(
+          tx,
+          cumulativeRef,
+          user,
+          uid,
+          {
+            forRanking: true,
+            phaseKey: null,
+            roundKey: null,
+            leagueKey: normalizeLeague(
+              typeof before.league === "string" ? before.league : null
+            ),
+            isWc: false,
+            wcStage: null,
+            isWin: false,
+            points: 0,
+            upsetPoints: 0,
+            scorePrecision: 0,
+            exactHit: false,
+            goalScorerHit: false,
+          },
+          -1
+        );
 
         tx.delete(markerRef);
       });
@@ -103,6 +187,8 @@ export const onPostDeletedV2 = onDocumentDeleted(
       if (!dailySnap.exists) return;
 
       const markerSnap = await tx.get(markerRef);
+      if (!markerSnap.exists) return;
+
       const marker = markerSnap.data() as
         | {
             homeTeamId?: string | null;
@@ -151,6 +237,17 @@ export const onPostDeletedV2 = onDocumentDeleted(
           tx.set(dailyRef, teamDecrementFields(teamId, dec), { merge: true });
         }
       }
+
+      const userSnap = await tx.get(userRef);
+      const user = userSnap.exists ? userSnap.data()! : {};
+      applyCumulativeIncrementInTransaction(
+        tx,
+        cumulativeRef,
+        user,
+        uid,
+        buildDeleteContribution(before, stats),
+        -1
+      );
 
       tx.delete(markerRef);
     });
