@@ -109,6 +109,8 @@ const styles = StyleSheet.create({
   hero: {
     position: "relative",
     marginBottom: 16,
+    width: "100%",
+    overflow: "hidden",
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
@@ -121,6 +123,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   imageLayer: {
+    width: "100%",
     height: COMMUNITY_GROUP_HERO_IMAGE_HEIGHT,
     position: "relative",
     overflow: "hidden",
@@ -139,6 +142,6 @@ const styles = StyleSheet.create({
     position: "relative",
     zIndex: 10,
     marginTop: -COMMUNITY_GROUP_HERO_PANEL_OVERLAP,
-    paddingHorizontal: 2,
+    paddingHorizontal: 0,
   },
 });

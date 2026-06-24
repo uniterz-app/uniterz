@@ -22,10 +22,11 @@ type Props = {
   decorative?: boolean;
   /**
    * inline: キープレイヤー横などの小旗（4:3 矩形・角丸最小・影なし）
+   * profileInline: プロフィール名横（ランキング行と同系・枠線なし・18×12）
    * hologram: 予想ページ台座内（枠線なし・ドロップシャドウで浮遊感）
    * default: 試合カード等の通常サイズ
    */
-  variant?: "default" | "inline" | "hologram";
+  variant?: "default" | "inline" | "profileInline" | "hologram";
 };
 
 /** 予想アリーナ内の国旗用ドロップシャドウ */
@@ -68,7 +69,7 @@ export default function CountryFlag({
         : teamIdToCountryName(teamId, "en") ?? "Country flag");
 
   const outerStyle: CSSProperties =
-    variant === "inline" || variant === "hologram"
+    variant === "inline" || variant === "hologram" || variant === "profileInline"
       ? {}
       : {
           boxShadow:
@@ -77,7 +78,7 @@ export default function CountryFlag({
 
   const shapeClass = rounded
     ? "rounded-full"
-    : variant === "inline"
+    : variant === "inline" || variant === "profileInline"
       ? "rounded-[1px]"
       : variant === "hologram"
         ? "rounded-[2px]"
@@ -101,6 +102,32 @@ export default function CountryFlag({
     variant === "inline"
       ? { objectFit: "fill", objectPosition: "center" }
       : { objectFit: "cover", objectPosition: "center" };
+
+  if (variant === "profileInline") {
+    return (
+      <span
+        className={clsx(
+          "inline-block h-3 w-[18px] shrink-0 overflow-hidden align-middle opacity-90",
+          shapeClass,
+          className,
+        )}
+        aria-hidden={decorative ? true : undefined}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/flags/4x3/${iso2}.svg`}
+          alt={decorative ? "" : countryName}
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          width={18}
+          height={12}
+          className="block h-full w-full select-none"
+          style={imgFitStyle}
+        />
+      </span>
+    );
+  }
 
   if (variant === "hologram") {
     return (
