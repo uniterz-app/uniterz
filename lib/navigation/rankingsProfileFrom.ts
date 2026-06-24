@@ -18,6 +18,9 @@ export const PROFILE_FROM_COMMUNITY_ID_PARAM = "communityId";
 export const PROFILE_FROM_GROUP_VALUE = "group";
 export const PROFILE_FROM_GROUP_ID_PARAM = "groupId";
 
+/** Leaderboards でグループオーバーレイを開き直すクエリ */
+export const LEADERBOARDS_OPEN_GROUP_PARAM = "openGroup";
+
 /** 戻り時に同じタブを復元するためのクエリキー */
 export const RANKINGS_TAB_METRIC_PARAM = "rankMetric";
 export const RANKINGS_TAB_PHASE_PARAM = "rankPhase";
@@ -164,4 +167,15 @@ export function buildRankingsPathQuery(sp: URLSearchParams): string {
   if (isRankingLeagueSource(league)) q.set(RANKINGS_TAB_LEAGUE_PARAM, league);
   if (isWcRankingStage(wcStage)) q.set(RANKINGS_TAB_WC_STAGE_PARAM, wcStage);
   return q.toString();
+}
+
+/** プロフィールからグループ内ランキング（オーバーレイ）へ戻る URL */
+export function leaderboardsGroupReturnHref(
+  prefix: "/mobile" | "/web",
+  groupId: string
+): string {
+  const q = new URLSearchParams({
+    [LEADERBOARDS_OPEN_GROUP_PARAM]: groupId,
+  });
+  return `${prefix}/leaderboards?${q.toString()}`;
 }

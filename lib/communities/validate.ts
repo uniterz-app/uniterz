@@ -24,3 +24,5 @@ export function sanitizeHeaderImageUrl(raw: unknown): string | null {
     return null;
   }
 }
+
+export { sanitizeHeaderImagePositionY } from "./headerImagePosition";

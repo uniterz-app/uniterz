@@ -16,6 +16,8 @@ export default function PublicProfileScreenNative() {
       bottomReserveY={bottomContentReserveY}
       routeHandle={handle}
       fromRankings={route.params?.fromRankings === true}
+      fromLeaderboards={route.params?.fromLeaderboards === true}
+      leaderboardsGroupId={route.params?.leaderboardsGroupId}
     />
   );
 }

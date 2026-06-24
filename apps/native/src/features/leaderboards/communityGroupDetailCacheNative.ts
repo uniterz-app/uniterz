@@ -3,6 +3,7 @@ import type {
   CommunityGroupListPreview,
   CommunityGroupSummary,
 } from "./communityApiNative";
+import { prefetchCommunityHeaderImageNative } from "./prefetchCommunityHeaderImageNative";
 import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
 
 export type CommunityGroupDetailCacheEntry = {
@@ -27,6 +28,7 @@ export function listPreviewToSummary(
     ownerUid: "",
     memberCount: preview.memberCount,
     headerImageUrl: preview.headerImageUrl,
+    headerImagePositionY: preview.headerImagePositionY ?? 50,
     rankingMetric: preview.rankingMetric,
     periodType: "from_now",
     rankingLeague: preview.rankingLeague,
@@ -85,6 +87,7 @@ export async function fetchCommunityGroupDetail(
         metric: (sJson.group as CommunityGroupSummary).rankingMetric,
         fetchedAt: Date.now(),
       };
+      prefetchCommunityHeaderImageNative(entry.summary.headerImageUrl);
       cache.set(groupId, entry);
       return entry;
     } finally {

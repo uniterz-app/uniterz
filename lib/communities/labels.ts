@@ -54,6 +54,28 @@ export function periodLabel(p: CommunityPeriodType, lang: Language): string {
   return p === "from_now" ? "グループ開始以降" : p;
 }
 
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** 集計期間の表示値（グループ作成日 = rankingStartDateKey） */
+export function communityRankingPeriodValue(
+  rankingStartDateKey: string | null | undefined,
+  lang: Language
+): string {
+  if (!rankingStartDateKey || !DATE_KEY_RE.test(rankingStartDateKey)) {
+    return lang === "en" ? "—" : "—";
+  }
+  const [y, m, d] = rankingStartDateKey.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  if (Number.isNaN(date.getTime())) {
+    return lang === "en" ? "—" : "—";
+  }
+  return date.toLocaleDateString(lang === "en" ? "en-US" : "ja-JP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /** チームIDから表示名（WC は国旗名、それ以外は nameById または ID 末尾） */
 export function rankingTeamLabel(
   teamId: string,

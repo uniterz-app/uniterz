@@ -51,7 +51,7 @@ import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSideMenuModal from "./ProfileSideMenuModal";
 import ProfileBadgeDetailModal from "./ProfileBadgeDetailModal";
 import type { MainTabParamList, ProfileStackParamList } from "../../navigation/types";
-import FloatingCloseButtonNative from "../../ui/FloatingCloseButtonNative";
+import ProfileExternalReturnNavNative from "./ProfileExternalReturnNavNative";
 import ProfileBracketTabNative from "./ProfileBracketTabNative";
 import ProfileStatsTabNative from "./ProfileStatsTabNative";
 import { useNativeProfileByHandle } from "./useNativeProfileByHandle";
@@ -146,6 +146,8 @@ export default function ProfileHomeScreen({
   onSaved,
   routeHandle,
   fromRankings = false,
+  fromLeaderboards = false,
+  leaderboardsGroupId,
   openSettingsOnMount = false,
 }: {
   bottomReserveY?: number;
@@ -154,6 +156,9 @@ export default function ProfileHomeScreen({
   routeHandle?: string;
   /** ランキングから遷移してきた他人プロフィール */
   fromRankings?: boolean;
+  /** グループ（Leaderboards タブ）から遷移してきた他人プロフィール */
+  fromLeaderboards?: boolean;
+  leaderboardsGroupId?: string;
   openSettingsOnMount?: boolean;
 }) {
   const { fUser, status } = useFirebaseUser();
@@ -172,16 +177,46 @@ export default function ProfileHomeScreen({
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
   const { topContentPadY } = useBottomTabBarInsets();
-  const showRankingsBack = fromRankings && isPublicProfileView;
-  const returnToRankings = useCallback(() => {
-    tabNavigation.navigate("RankingsTab");
+  const showExternalBack =
+    isPublicProfileView && (fromRankings || fromLeaderboards);
+  const externalBackVariant = fromLeaderboards ? "leaderboards" : "rankings";
+
+  const dismissPublicProfileRoute = useCallback(() => {
     const current = navigation.getState().routes[navigation.getState().index]?.name;
     if (current === "PublicProfile") {
       if (navigation.canGoBack()) navigation.goBack();
       return;
     }
-    navigation.setParams({ handle: undefined, fromRankings: undefined });
-  }, [navigation, tabNavigation]);
+    navigation.setParams({
+      handle: undefined,
+      fromRankings: undefined,
+      fromLeaderboards: undefined,
+      leaderboardsGroupId: undefined,
+    });
+  }, [navigation]);
+
+  const returnToPreviousScreen = useCallback(() => {
+    if (fromLeaderboards) {
+      const groupId = leaderboardsGroupId?.trim();
+      if (groupId) {
+        tabNavigation.navigate("LeaderboardsTab", {
+          screen: "LeaderboardsHome",
+          params: { reopenGroupId: groupId },
+        });
+      } else {
+        tabNavigation.navigate("LeaderboardsTab");
+      }
+    } else {
+      tabNavigation.navigate("RankingsTab");
+    }
+    dismissPublicProfileRoute();
+  }, [
+    dismissPublicProfileRoute,
+    fromLeaderboards,
+    leaderboardsGroupId,
+    tabNavigation,
+  ]);
+
   const [badgeModalOpen, setBadgeModalOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<ResolvedBadgeNative | null>(null);
 
@@ -205,6 +240,15 @@ export default function ProfileHomeScreen({
   } | null>(null);
 
   const isJa = language === "ja";
+
+  const renderExternalBackNav = () =>
+    showExternalBack ? (
+      <ProfileExternalReturnNavNative
+        language={language}
+        variant={externalBackVariant}
+        onPress={returnToPreviousScreen}
+      />
+    ) : null;
 
   const reduceMotion = useReducedMotion();
   const neonSpinAngle = useSharedValue(0);
@@ -696,14 +740,6 @@ export default function ProfileHomeScreen({
   if (isPublicProfileView && profileByHandle.loading) {
     return (
       <View style={styles.screenRoot}>
-        {showRankingsBack ? (
-          <FloatingCloseButtonNative
-            variant="back"
-            left={spacing.sm}
-            top={4}
-            onPress={returnToRankings}
-          />
-        ) : null}
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={[
@@ -711,6 +747,7 @@ export default function ProfileHomeScreen({
             { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
           ]}
         >
+          {renderExternalBackNav()}
           <View style={styles.inlineLoading}>
             <BlocksPulseLoader pixelScale={0.9} />
           </View>
@@ -722,14 +759,6 @@ export default function ProfileHomeScreen({
   if (isPublicProfileView && !profileByHandle.loading && profileByHandle.notFound) {
     return (
       <View style={styles.screenRoot}>
-        {showRankingsBack ? (
-          <FloatingCloseButtonNative
-            variant="back"
-            left={spacing.sm}
-            top={4}
-            onPress={returnToRankings}
-          />
-        ) : null}
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={[
@@ -737,6 +766,7 @@ export default function ProfileHomeScreen({
             { paddingTop: topContentPadY, paddingBottom: spacing.lg + bottomReserveY },
           ]}
         >
+          {renderExternalBackNav()}
           <Text style={styles.errorText}>
             {isJa ? "ユーザーが見つかりません" : "User not found"}
           </Text>
@@ -763,14 +793,6 @@ export default function ProfileHomeScreen({
 
   return (
     <View style={styles.screenRoot}>
-    {showRankingsBack ? (
-      <FloatingCloseButtonNative
-        variant="back"
-        left={spacing.sm}
-        top={4}
-        onPress={returnToRankings}
-      />
-    ) : null}
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[
@@ -780,6 +802,7 @@ export default function ProfileHomeScreen({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
+      {renderExternalBackNav()}
       <ProfileKinetikHeroNative
         displayName={
           displayName.trim() ||

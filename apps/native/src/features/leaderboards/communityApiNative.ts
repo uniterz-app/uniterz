@@ -14,6 +14,7 @@ export type CommunityListGroup = {
   description: string | null;
   memberCount: number;
   headerImageUrl: string | null;
+  headerImagePositionY?: number;
   rankingMetric: CommunityMetric;
   periodType: CommunityPeriodType;
   rankingLeague: CommunityLeague;
@@ -51,6 +52,7 @@ export type CommunityGroupSummary = {
   ownerUid: string;
   memberCount: number;
   headerImageUrl: string | null;
+  headerImagePositionY: number;
   rankingMetric: CommunityMetric;
   periodType: string;
   rankingLeague: CommunityLeague;
@@ -58,6 +60,7 @@ export type CommunityGroupSummary = {
   archived: boolean;
   isOwner: boolean;
   inviteCode: string | null;
+  rankingStartDateKey?: string | null;
 };
 
 export type CommunityGroupLeaderboardRow = {
@@ -82,6 +85,7 @@ export type CommunityGroupListPreview = {
   name: string;
   description: string | null;
   headerImageUrl: string | null;
+  headerImagePositionY?: number;
   memberCount: number;
   rankingMetric: CommunityMetric;
   rankingLeague: CommunityLeague;

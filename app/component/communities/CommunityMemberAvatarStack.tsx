@@ -60,7 +60,8 @@ export default function CommunityMemberAvatarStack({
   if (isSquare) {
     return (
       <div
-        className="inline-flex items-center rounded-sm border border-cyan-400/20 bg-[#0a1018]/80 px-1.5 py-1"
+        className="inline-flex items-center rounded-sm border border-cyan-400/25 bg-[#0a1018]/80 px-1.5 py-1"
+        style={{ boxShadow: "0 0 10px rgba(34,211,238,0.15)" }}
         aria-hidden
       >
         {avatars}

@@ -46,6 +46,7 @@ export default function RankingCard({
   shellTone = "default",
   animateValue = true,
   groupReturnGroupId,
+  showFirstPlaceFrame = false,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -61,6 +62,8 @@ export default function RankingCard({
   size?: RankingCardSize;
   shellTone?: RankingCardShellTone;
   animateValue?: boolean;
+  /** グループ詳細ランキング等 — subtle でも 1 位枠を光らせる */
+  showFirstPlaceFrame?: boolean;
   /** グループ内ランキングからプロフィールへ（オーバーレイ等） */
   groupReturnGroupId?: string;
 }) {
@@ -158,6 +161,7 @@ export default function RankingCard({
         compact={compact}
         scoreLayout={scoreLayout}
         subtleShell={subtleShell}
+        showFirstPlaceFrame={showFirstPlaceFrame}
         nameExtra={
           <>
             <RankDeltaBadge delta={r.rankDeltaPlaces} language={language} />

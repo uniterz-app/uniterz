@@ -189,7 +189,7 @@ const GameCardListRow = memo(function GameCardListRow(props: GameCardListRowProp
           ) : null}
           <MatchListCyberDecorNative />
           <View style={styles.cardPressableBody}>
-          <View style={{ flex: 1, minHeight: 0 }}>
+          <View style={styles.cardMainContent}>
             <View style={styles.cardFineInteriorContent}>
               <Animated.View style={ent.headerGroupStyle}>
                 <View style={styles.cardTopRow}>

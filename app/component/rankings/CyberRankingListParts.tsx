@@ -235,6 +235,7 @@ export function CyberRankingListRow({
   avgRow,
   scoreLayout = "stack",
   subtleShell = false,
+  showFirstPlaceFrame = false,
 }: {
   rank: number;
   displayName: string;
@@ -255,9 +256,12 @@ export function CyberRankingListRow({
   };
   scoreLayout?: CyberRankingScoreLayout;
   subtleShell?: boolean;
+  /** subtle シェルでも 1 位の EDGE SCAN 枠を表示（グループ詳細ランキング等） */
+  showFirstPlaceFrame?: boolean;
 }) {
   const palette = cyberRankPalette(rank);
-  const firstFrame = palette.firstPlaceFrame && !subtleShell;
+  const firstFrame =
+    palette.firstPlaceFrame && (!subtleShell || showFirstPlaceFrame);
   const nameJa = hasJaScript(displayName);
   const isWebScore = scoreLayout === "web" && !compact;
   const nameFontSize = rankingFontSizePx(
@@ -352,10 +356,10 @@ export function CyberRankingListRow({
         <div
           className={[
             "flex shrink-0 flex-col items-center",
-            rank === 1 && !subtleShell ? (compact ? "gap-0.5" : "gap-1") : "",
+            rank === 1 && firstFrame ? (compact ? "gap-0.5" : "gap-1") : "",
           ].join(" ")}
         >
-          {rank === 1 && !subtleShell ? (
+          {rank === 1 && firstFrame ? (
             <div
               className={[
                 "flex items-end justify-center",

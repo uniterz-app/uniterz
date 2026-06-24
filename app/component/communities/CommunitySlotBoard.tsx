@@ -8,6 +8,13 @@ import type { Language } from "@/lib/i18n/language";
 import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
 import type { CommunityLeague, CommunityMetric, CommunityPeriodType } from "@/lib/communities/types";
 import type { GroupMemberPreview } from "@/lib/communities/memberPreviews";
+import {
+  COMMUNITY_GROUP_SLOT_CARD_BG,
+  COMMUNITY_GROUP_SLOT_CARD_SCRIM_MEMBER,
+  COMMUNITY_GROUP_SLOT_CARD_SCRIM_OWNER,
+  COMMUNITY_GROUP_SLOT_CARD_SCRIM_TOP,
+} from "@/lib/communities/communityGroupSlotCard";
+import { headerImageObjectPosition } from "@/lib/communities/headerImagePosition";
 import CommunityMemberAvatarStack from "@/app/component/communities/CommunityMemberAvatarStack";
 import {
   CommunityCrtSectionLabel,
@@ -17,6 +24,7 @@ import {
 import { preserveScrollOnInputFocus } from "@/lib/dom/preserveScrollOnInputFocus";
 
 const CYAN = "#22d3ee";
+const AMBER = "#fbbf24";
 const NOTCH_CLIP =
   "polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)";
 
@@ -26,6 +34,7 @@ export type CommunityListGroup = {
   description: string | null;
   memberCount: number;
   headerImageUrl: string | null;
+  headerImagePositionY?: number;
   rankingMetric: CommunityMetric;
   periodType: CommunityPeriodType;
   rankingLeague: CommunityLeague;
@@ -67,7 +76,7 @@ function slotSizing(isWeb: boolean): SlotSizing {
       roleBadge: "py-1 text-[11px] tracking-[0.14em]",
       name: "text-sm sm:text-[15px]",
       meta: "text-xs sm:text-sm",
-      avatarStack: "size-8",
+      avatarStack: "size-10",
       emptyMinH: "min-h-[148px]",
       emptyLabel: "text-sm tracking-[0.14em]",
       emptyIcon: "h-6 w-6",
@@ -83,7 +92,7 @@ function slotSizing(isWeb: boolean): SlotSizing {
     roleBadge: "py-px text-[9px] tracking-[0.1em] sm:text-[10px]",
     name: "text-[15px] leading-snug",
     meta: "text-[11px] leading-snug",
-    avatarStack: "size-5",
+    avatarStack: "size-7",
     emptyMinH: "min-h-[72px]",
     emptyLabel: "text-[11px] tracking-[0.12em]",
     emptyIcon: "h-4 w-4",
@@ -121,33 +130,53 @@ type Props = {
   };
 };
 
-function GroupThumbnail({
+function slotAccent(isOwner: boolean) {
+  return isOwner
+    ? {
+        color: AMBER,
+        bar: "rgba(251,191,36,0.85)",
+        glow: "0 0 8px rgba(251,191,36,0.8), 0 0 16px rgba(251,191,36,0.35)",
+      }
+    : {
+        color: CYAN,
+        bar: CYAN,
+        glow: `0 0 8px rgba(34,211,238,0.8), 0 0 16px rgba(34,211,238,0.35)`,
+      };
+}
+
+function SlotCardImageBackground({
   headerImageUrl,
-  sizeClass,
-  iconClass,
+  headerImagePositionY = 50,
+  isOwner,
 }: {
   headerImageUrl: string | null;
-  sizeClass: string;
-  iconClass: string;
+  headerImagePositionY?: number;
+  isOwner: boolean;
 }) {
+  if (!headerImageUrl) return null;
   return (
-    <div
-      className={[
-        "flex shrink-0 items-center justify-center overflow-hidden border",
-        sizeClass,
-      ].join(" ")}
-      style={{ borderColor: "rgba(34,211,238,0.25)", background: "#0a1018" }}
-    >
-      {headerImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={headerImageUrl}
-          alt=""
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <span className={["text-cyan-300/25", iconClass].join(" ")}>▣</span>
-      )}
+    <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={headerImageUrl}
+        alt=""
+        className="h-full w-full object-cover"
+        style={{ objectPosition: headerImageObjectPosition(headerImagePositionY) }}
+        loading="lazy"
+        decoding="async"
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: isOwner
+            ? COMMUNITY_GROUP_SLOT_CARD_SCRIM_OWNER
+            : COMMUNITY_GROUP_SLOT_CARD_SCRIM_MEMBER,
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{ background: COMMUNITY_GROUP_SLOT_CARD_SCRIM_TOP }}
+      />
     </div>
   );
 }
@@ -155,28 +184,35 @@ function GroupThumbnail({
 function RoleBadge({
   isOwner,
   label,
-  className,
 }: {
   isOwner: boolean;
   label: string;
-  className: string;
 }) {
   return (
     <span
-      className={["shrink-0 border px-1.5 font-medium tracking-widest", className].join(
-        " "
-      )}
+      className={[
+        "shrink-0 border px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.2em]",
+        communityCrtMono.className,
+      ].join(" ")}
       style={
         isOwner
           ? {
-              borderColor: "rgba(251,191,36,0.45)",
-              color: "rgba(251,191,36,0.9)",
-              background: "rgba(251,191,36,0.08)",
+              borderColor: "rgba(251,191,36,0.65)",
+              color: "#fde68a",
+              background: "rgba(4,8,18,0.82)",
+              boxShadow:
+                "0 2px 12px rgba(0,0,0,0.55), 0 0 14px rgba(251,191,36,0.35)",
+              backdropFilter: "blur(6px)",
+              textShadow: "0 1px 3px rgba(0,0,0,0.85)",
             }
           : {
-              borderColor: "rgba(34,211,238,0.3)",
-              color: "rgba(186,230,253,0.75)",
-              background: "rgba(34,211,238,0.06)",
+              borderColor: "rgba(34,211,238,0.45)",
+              color: "#e0f2fe",
+              background: "rgba(4,8,18,0.82)",
+              boxShadow:
+                "0 2px 12px rgba(0,0,0,0.55), 0 0 14px rgba(34,211,238,0.28)",
+              backdropFilter: "blur(6px)",
+              textShadow: "0 1px 3px rgba(0,0,0,0.85)",
             }
       }
     >
@@ -185,28 +221,52 @@ function RoleBadge({
   );
 }
 
-function GroupMetaRow({
-  memberCount,
-  memberPreviews,
-  membersLabel,
+function GroupSlotTextBlock({
+  g,
+  language,
+  labels,
+  isOwner,
   stackSize,
+  className = "",
 }: {
-  memberCount: number;
-  memberPreviews: GroupMemberPreview[];
-  membersLabel: string;
+  g: CommunityListGroup;
+  language: Language;
+  labels: Props["labels"];
+  isOwner: boolean;
   stackSize: string;
+  className?: string;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2">
-      <span className="text-[11px] font-medium tabular-nums text-cyan-200/75 sm:text-xs">
-        {membersLabel.replace("{n}", String(memberCount))}
-      </span>
-      {(memberPreviews?.length ?? 0) > 0 ? (
-        <CommunityMemberAvatarStack
-          previews={memberPreviews}
-          sizeClassName={stackSize}
-          variant="square"
+    <div className={className}>
+      <div className="mb-1.5 flex justify-end">
+        <RoleBadge
+          isOwner={isOwner}
+          label={isOwner ? labels.owner : labels.member}
         />
+      </div>
+      <p
+        className="truncate text-[19px] font-extrabold leading-tight tracking-[0.03em] text-white sm:text-xl"
+        style={{ textShadow: `0 1px 12px rgba(0,0,0,0.55), 0 0 20px ${isOwner ? AMBER : CYAN}18` }}
+      >
+        {g.name}
+      </p>
+      <p
+        className={[
+          "mt-1.5 line-clamp-2 font-mono text-[11px] font-bold uppercase leading-relaxed tracking-[0.12em] text-cyan-100/85",
+          communityCrtMono.className,
+        ].join(" ")}
+        style={{ textShadow: "0 1px 8px rgba(0,0,0,0.45)" }}
+      >
+        {competitionLine(g, language)}
+      </p>
+      {(g.memberPreviews?.length ?? 0) > 0 ? (
+        <div className="mt-2.5">
+          <CommunityMemberAvatarStack
+            previews={g.memberPreviews ?? []}
+            sizeClassName={stackSize}
+            variant="square"
+          />
+        </div>
       ) : null}
     </div>
   );
@@ -239,54 +299,44 @@ function GroupFilledSlotMobile({
   onPrefetchGroup?: () => void;
 }) {
   const isOwner = g.role === "owner";
+  const accent = slotAccent(isOwner);
+  const hasBgImage = Boolean(g.headerImageUrl);
   return (
     <button
       type="button"
       aria-label={`${g.name} — ${labels.openRanking}`}
       onClick={onOpen}
+      onTouchStart={onPrefetchGroup}
+      onPointerDown={onPrefetchGroup}
       onPointerEnter={onPrefetchGroup}
       onFocus={onPrefetchGroup}
-      className="group/slot relative flex w-full overflow-hidden text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
-      style={{ background: "rgba(255,255,255,0.02)" }}
+      className="group/slot relative flex w-full overflow-hidden border border-cyan-400/16 text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
+      style={{
+        background: hasBgImage ? COMMUNITY_GROUP_SLOT_CARD_BG : "rgba(2,8,18,0.72)",
+      }}
     >
+      <SlotCardImageBackground
+        headerImageUrl={g.headerImageUrl}
+        headerImagePositionY={g.headerImagePositionY}
+        isOwner={isOwner}
+      />
       <span
-        className="w-[3px] shrink-0"
+        className="relative z-10 w-[3px] shrink-0"
         style={{
-          background: CYAN,
-          boxShadow: `0 0 14px ${CYAN}55`,
+          background: accent.bar,
+          boxShadow: accent.glow,
         }}
         aria-hidden
       />
-      <div className="flex min-w-0 flex-1 items-stretch gap-3 px-3 py-3">
-        <div className="flex shrink-0 flex-col items-center gap-1.5">
-          <RoleBadge
-            isOwner={isOwner}
-            label={isOwner ? labels.owner : labels.member}
-            className={sizing.roleBadge}
-          />
-          <GroupThumbnail
-            headerImageUrl={g.headerImageUrl}
-            sizeClass={sizing.thumb}
-            iconClass={sizing.thumbIcon}
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p
-            className={["truncate font-semibold text-cyan-50/95", sizing.name].join(" ")}
-            style={{ textShadow: `0 0 14px ${CYAN}22` }}
-          >
-            {g.name}
-          </p>
-          <p className={["mt-1 line-clamp-2 text-white/40", sizing.meta].join(" ")}>
-            {competitionLine(g, language)}
-          </p>
-          <GroupMetaRow
-            memberCount={g.memberCount}
-            memberPreviews={g.memberPreviews ?? []}
-            membersLabel={labels.nMembers}
-            stackSize={sizing.avatarStack}
-          />
-        </div>
+      <div className="relative z-10 flex min-w-0 flex-1 items-stretch">
+        <GroupSlotTextBlock
+          g={g}
+          language={language}
+          labels={labels}
+          isOwner={isOwner}
+          stackSize={sizing.avatarStack}
+          className="min-w-0 flex-1 px-3.5 py-3"
+        />
       </div>
     </button>
   );
@@ -308,53 +358,52 @@ function GroupFilledSlotWeb({
   onPrefetchGroup?: () => void;
 }) {
   const isOwner = g.role === "owner";
+  const accent = slotAccent(isOwner);
+  const hasBgImage = Boolean(g.headerImageUrl);
   return (
     <button
       type="button"
       aria-label={`${g.name} — ${labels.openRanking}`}
       onClick={onOpen}
+      onTouchStart={onPrefetchGroup}
+      onPointerDown={onPrefetchGroup}
       onPointerEnter={onPrefetchGroup}
       onFocus={onPrefetchGroup}
-      className="group/slot relative w-full text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
+      className="group/slot relative w-full overflow-hidden text-left transition-[filter,transform] duration-150 hover:brightness-110 active:scale-[0.995]"
       style={{
         clipPath: NOTCH_CLIP,
-        background:
-          "linear-gradient(145deg, rgba(34,211,238,0.04) 0%, rgba(255,255,255,0.02) 40%, rgba(0,0,0,0.2) 100%)",
-        border: "1px solid rgba(34,211,238,0.12)",
+        background: hasBgImage
+          ? COMMUNITY_GROUP_SLOT_CARD_BG
+          : "linear-gradient(145deg, rgba(34,211,238,0.06) 0%, rgba(2,8,18,0.78) 42%, rgba(0,0,0,0.28) 100%)",
+        border: isOwner
+          ? "1px solid rgba(251,191,36,0.22)"
+          : "1px solid rgba(34,211,238,0.16)",
+        boxShadow: isOwner
+          ? "0 0 18px rgba(251,191,36,0.12), inset 0 0 0 1px rgba(251,191,36,0.08)"
+          : "0 0 18px rgba(34,211,238,0.1), inset 0 0 0 1px rgba(34,211,238,0.06)",
       }}
     >
-      <div className="px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-4 sm:pt-3.5">
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <RoleBadge
-            isOwner={isOwner}
-            label={isOwner ? labels.owner : labels.member}
-            className={sizing.roleBadge}
-          />
-        </div>
-        <div className="flex gap-3 sm:gap-3.5">
-          <GroupThumbnail
-            headerImageUrl={g.headerImageUrl}
-            sizeClass={sizing.thumb}
-            iconClass={sizing.thumbIcon}
-          />
-          <div className="min-w-0 flex-1">
-            <p
-              className={["truncate font-semibold text-cyan-50/95", sizing.name].join(" ")}
-              style={{ textShadow: `0 0 16px ${CYAN}28` }}
-            >
-              {g.name}
-            </p>
-            <p className={["mt-1.5 text-cyan-200/50", sizing.meta].join(" ")}>
-              {competitionLine(g, language)}
-            </p>
-            <GroupMetaRow
-              memberCount={g.memberCount}
-              memberPreviews={g.memberPreviews ?? []}
-              membersLabel={labels.nMembers}
-              stackSize={sizing.avatarStack}
-            />
-          </div>
-        </div>
+      <SlotCardImageBackground
+        headerImageUrl={g.headerImageUrl}
+        headerImagePositionY={g.headerImagePositionY}
+        isOwner={isOwner}
+      />
+      <span
+        className="absolute bottom-0 left-0 top-0 z-10 w-[3px]"
+        style={{
+          background: accent.bar,
+          boxShadow: accent.glow,
+        }}
+        aria-hidden
+      />
+      <div className="relative z-10 px-3.5 pb-3.5 pt-3 sm:px-5 sm:pb-4 sm:pt-3.5">
+        <GroupSlotTextBlock
+          g={g}
+          language={language}
+          labels={labels}
+          isOwner={isOwner}
+          stackSize={sizing.avatarStack}
+        />
       </div>
     </button>
   );

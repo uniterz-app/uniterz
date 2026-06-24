@@ -1,7 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
 import CommunityGroupDetailViewNative from "./CommunityGroupDetailViewNative";
@@ -10,6 +9,9 @@ import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
 import { invalidateCommunityGroupDetail } from "./communityGroupDetailCacheNative";
 import { CommunityModalBackdropNative } from "./CommunityCrtPartsNative";
 import { communityPressableTapStyle } from "./communityCrtThemeNative";
+import CommunityGroupDetailCardNative, {
+  communityGroupOverlayTopInset,
+} from "./CommunityGroupDetailCardNative";
 
 type Props = {
   visible: boolean;
@@ -18,7 +20,7 @@ type Props = {
   language: Language;
   onClose: () => void;
   onRefreshList?: () => void;
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, groupId: string) => void;
   getIdToken: () => Promise<string>;
 };
 
@@ -33,10 +35,12 @@ export default function CommunityGroupOverlayNative({
   getIdToken,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const topInset = useMemo(() => communityGroupOverlayTopInset(insets.top), [insets.top]);
   const m = t(language);
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const [endConfirmName, setEndConfirmName] = useState("");
   const [endingGroup, setEndingGroup] = useState(false);
+  const [headerImageEditing, setHeaderImageEditing] = useState(false);
 
   const confirmEndGroup = useCallback(async () => {
     if (!groupId) return;
@@ -68,42 +72,48 @@ export default function CommunityGroupOverlayNative({
   return (
     <>
       <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-        <View style={[styles.overlay, { paddingTop: insets.top }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={m.common.close} />
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 96 }]}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.cardWrap}>
-              <Pressable
-                onPress={onClose}
-                style={({ pressed }) => [styles.closeBtn, pressed && communityPressableTapStyle(true)]}
-                accessibilityLabel={m.common.close}
-              >
-                <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.9)" />
-              </Pressable>
-              <CommunityGroupDetailViewNative
-                groupId={groupId}
-                language={language}
-                listPreview={listPreview}
-                getIdToken={getIdToken}
-                onExitAction={() => {
-                  onRefreshList?.();
-                  onClose();
-                }}
-                onRequestEndGroup={(name) => {
-                  setEndConfirmName(name);
-                  setEndConfirmOpen(true);
-                }}
-                onOpenProfile={(handle) => {
-                  onClose();
-                  onOpenProfile?.(handle);
-                }}
-              />
-            </View>
-          </ScrollView>
-        </View>
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <View style={styles.overlay}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={m.common.close} />
+            <ScrollView
+              style={styles.scroll}
+              scrollEnabled={!headerImageEditing}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingTop: topInset + 4, paddingBottom: insets.bottom + 96 },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              <CommunityGroupDetailCardNative language={language} onBack={onClose}>
+                <CommunityGroupDetailViewNative
+                  groupId={groupId}
+                  language={language}
+                  listPreview={listPreview}
+                  scrollEnabled={false}
+                  inDetailCard
+                  getIdToken={getIdToken}
+                  onSummaryLoaded={(summary) => {
+                    setEndConfirmName(summary.name);
+                  }}
+                  onExitAction={() => {
+                    onRefreshList?.();
+                    onClose();
+                  }}
+                  onRequestEndGroup={(name) => {
+                    setEndConfirmName(name);
+                    setEndConfirmOpen(true);
+                  }}
+                  onImageUpdated={onRefreshList}
+                  onHeaderImageEditingChange={setHeaderImageEditing}
+                  onOpenProfile={(handle) => {
+                    onClose();
+                    onOpenProfile?.(handle, groupId);
+                  }}
+                />
+              </CommunityGroupDetailCardNative>
+            </ScrollView>
+          </View>
+        </SafeAreaProvider>
       </Modal>
 
       <EndGroupConfirmModalNative
@@ -160,31 +170,13 @@ function EndGroupConfirmModalNative({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(0,0,0,0.78)",
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  cardWrap: {
-    position: "relative",
-  },
-  closeBtn: {
-    position: "absolute",
-    right: 12,
-    top: 12,
-    zIndex: 30,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
 

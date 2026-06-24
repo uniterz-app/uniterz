@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
@@ -24,17 +24,53 @@ import {
   prefetchCommunityGroupDetail,
   prefetchCommunityGroupDetails,
 } from "./communityGroupDetailCacheNative";
+import {
+  prefetchCommunityHeaderImageNative,
+  prefetchCommunityHeaderImagesNative,
+} from "./prefetchCommunityHeaderImageNative";
+import {
+  peekLeaderboardsGroupReturnPreview,
+  stashLeaderboardsGroupReturn,
+} from "../../../../../lib/navigation/leaderboardsGroupReturn";
 
 type Props = {
   language: Language;
   bottomReserveY?: number;
-  onOpenProfile?: (handle: string) => void;
+  onOpenProfile?: (handle: string, groupId?: string) => void;
+  /** プロフィールから戻ったときに開き直すグループ */
+  reopenGroupId?: string | null;
+  onReopenGroupConsumed?: () => void;
 };
+
+function listGroupToPreview(g: CommunityListGroup): CommunityGroupListPreview {
+  return {
+    name: g.name,
+    description: g.description,
+    headerImageUrl: g.headerImageUrl,
+    headerImagePositionY: g.headerImagePositionY,
+    memberCount: g.memberCount,
+    rankingMetric: g.rankingMetric,
+    rankingLeague: g.rankingLeague,
+    rankingTeamIds: g.rankingTeamIds,
+    isOwner: g.role === "owner",
+  };
+}
+
+function readOverlayFromReopenGroupId(
+  reopenGroupId: string | null | undefined
+): { id: string; preview: CommunityGroupListPreview } | null {
+  const id = reopenGroupId?.trim();
+  if (!id) return null;
+  const preview = peekLeaderboardsGroupReturnPreview(id);
+  return preview ? { id, preview } : null;
+}
 
 export default function RankingsCommunityPanelNative({
   language,
   bottomReserveY = 0,
   onOpenProfile,
+  reopenGroupId = null,
+  onReopenGroupConsumed,
 }: Props) {
   const { fUser } = useFirebaseUser();
   const m = t(language);
@@ -52,7 +88,10 @@ export default function RankingsCommunityPanelNative({
   const [overlayGroup, setOverlayGroup] = useState<{
     id: string;
     preview: CommunityGroupListPreview;
-  } | null>(null);
+  } | null>(() => readOverlayFromReopenGroupId(reopenGroupId));
+
+  const hideSlotList =
+    overlayGroup != null || Boolean(reopenGroupId?.trim());
 
   const getIdToken = useCallback(() => {
     if (!fUser) return Promise.reject(new Error("no user"));
@@ -145,6 +184,7 @@ export default function RankingsCommunityPanelNative({
       getIdToken,
       6
     );
+    prefetchCommunityHeaderImagesNative(groups.map((g) => g.headerImageUrl));
   }, [groups, fUser, getIdToken]);
 
   const mapJoinError = useCallback(
@@ -178,23 +218,49 @@ export default function RankingsCommunityPanelNative({
 
   const openGroupOverlay = useCallback(
     (g: CommunityListGroup) => {
+      const preview = listGroupToPreview(g);
+      stashLeaderboardsGroupReturn(g.id, preview);
       prefetchCommunityGroupDetail(g.id, getIdToken);
+      prefetchCommunityHeaderImageNative(g.headerImageUrl);
       setOverlayGroup({
         id: g.id,
-        preview: {
-          name: g.name,
-          description: g.description,
-          headerImageUrl: g.headerImageUrl,
-          memberCount: g.memberCount,
-          rankingMetric: g.rankingMetric,
-          rankingLeague: g.rankingLeague,
-          rankingTeamIds: g.rankingTeamIds,
-          isOwner: g.role === "owner",
-        },
+        preview,
       });
     },
     [getIdToken]
   );
+
+  useLayoutEffect(() => {
+    const id = reopenGroupId?.trim();
+    if (!id) return;
+    if (overlayGroup?.id === id) {
+      onReopenGroupConsumed?.();
+      return;
+    }
+
+    const stashed = peekLeaderboardsGroupReturnPreview(id);
+    if (stashed) {
+      prefetchCommunityGroupDetail(id, getIdToken);
+      prefetchCommunityHeaderImageNative(stashed.headerImageUrl);
+      setOverlayGroup({ id, preview: stashed });
+      onReopenGroupConsumed?.();
+      return;
+    }
+
+    if (loadingList) return;
+    const match = groups.find((g) => g.id === id);
+    if (!match) return;
+    openGroupOverlay(match);
+    onReopenGroupConsumed?.();
+  }, [
+    getIdToken,
+    groups,
+    loadingList,
+    onReopenGroupConsumed,
+    openGroupOverlay,
+    overlayGroup?.id,
+    reopenGroupId,
+  ]);
 
   const onGroupCreated = useCallback(
     (created: CreatedCommunityGroup | null | undefined, inviteCode?: string) => {
@@ -335,7 +401,7 @@ export default function RankingsCommunityPanelNative({
             {language === "en" ? "Sign in to view your community slots." : "ログインするとスロットが表示されます。"}
           </Text>
         </View>
-      ) : (
+      ) : hideSlotList ? null : (
         <CommunitySlotBoardNative
           language={language}
           groups={groups}

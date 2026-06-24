@@ -46,7 +46,7 @@ export type RankingsStackParamList = {
 };
 
 export type LeaderboardsStackParamList = {
-  LeaderboardsHome: undefined;
+  LeaderboardsHome: { reopenGroupId?: string } | undefined;
   CommunityDetail: { groupId: string };
 };
 
@@ -56,6 +56,10 @@ export type ProfileStackParamList = {
         handle?: string;
         /** ランキング一覧から他人プロフィールを開いたとき */
         fromRankings?: boolean;
+        /** グループ（Leaderboards タブ）から他人プロフィールを開いたとき */
+        fromLeaderboards?: boolean;
+        /** 戻る先のグループ ID（オーバーレイ / 詳細画面） */
+        leaderboardsGroupId?: string;
         /** プロフィール編集モーダルを開く */
         openSettings?: boolean;
       }
@@ -63,7 +67,12 @@ export type ProfileStackParamList = {
   ProfileSettings: undefined;
   NotificationSettings: undefined;
   ProfilePassword: undefined;
-  PublicProfile: { handle: string; fromRankings?: boolean };
+  PublicProfile: {
+    handle: string;
+    fromRankings?: boolean;
+    fromLeaderboards?: boolean;
+    leaderboardsGroupId?: string;
+  };
   Badges: undefined;
   Announcements: undefined;
   AnnouncementDetail: { id: string };

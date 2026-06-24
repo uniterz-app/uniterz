@@ -42,8 +42,8 @@ const styles = {
   } satisfies ViewStyle,
   /** Pot ラベル有無で国旗の縦位置がズレないよう高さを確保 */
   potSlot: {
-    minHeight: 15,
-    marginBottom: 2,
+    minHeight: 13,
+    marginBottom: 1,
     justifyContent: "flex-end",
     alignItems: "center",
   } satisfies ViewStyle,
