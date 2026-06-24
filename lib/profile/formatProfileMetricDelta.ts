@@ -20,6 +20,7 @@ export function formatProfileMetricDayDelta(
   opts?: { integer?: boolean }
 ): string | null {
   if (delta == null || !Number.isFinite(delta) || delta === 0) return null;
+  if (opts?.integer && delta < 0) return null;
   const metricKey = DELTA_KEY_MAP[key];
   const label = formatMetricDayDeltaLabel(metricKey, delta, {
     integer: opts?.integer && key === "scorePrecision",
@@ -33,8 +34,10 @@ export function formatProfileMetricDayDelta(
 }
 
 export function profileMetricDeltaTone(
-  delta: number | null | undefined
+  delta: number | null | undefined,
+  opts?: { positiveOnly?: boolean }
 ): "up" | "down" | null {
   if (delta == null || !Number.isFinite(delta) || delta === 0) return null;
+  if (opts?.positiveOnly && delta < 0) return null;
   return delta > 0 ? "up" : "down";
 }

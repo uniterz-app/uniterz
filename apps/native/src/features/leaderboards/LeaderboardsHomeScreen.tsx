@@ -1,17 +1,22 @@
 import { ScrollView, StyleSheet, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RouteProp } from "@react-navigation/native";
 import { spacing } from "../../theme/tokens";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import type { MainTabParamList } from "../../navigation/types";
+import type { LeaderboardsStackParamList, MainTabParamList } from "../../navigation/types";
 import { useNativeMyRankingUser } from "../rankings/useNativeMyRankingUser";
 import RankingsCommunityPanelNative from "./RankingsCommunityPanelNative";
 
 type Props = { bottomReserveY?: number };
 
 export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const stackNavigation = useNavigation<NativeStackNavigationProp<LeaderboardsStackParamList>>();
+  const route = useRoute<RouteProp<LeaderboardsStackParamList, "LeaderboardsHome">>();
+  const reopenGroupId = route.params?.reopenGroupId ?? null;
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
   const { user } = useNativeMyRankingUser(fUser?.uid);
@@ -26,10 +31,18 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
         <RankingsCommunityPanelNative
           language={language}
           bottomReserveY={0}
-          onOpenProfile={(handle) => {
-            navigation.navigate("ProfileTab", {
+          reopenGroupId={reopenGroupId}
+          onReopenGroupConsumed={() => {
+            stackNavigation.setParams({ reopenGroupId: undefined });
+          }}
+          onOpenProfile={(handle, groupId) => {
+            tabNavigation.navigate("ProfileTab", {
               screen: "ProfileHome",
-              params: { handle, fromRankings: true },
+              params: {
+                handle,
+                fromLeaderboards: true,
+                ...(groupId ? { leaderboardsGroupId: groupId } : {}),
+              },
             });
           }}
         />

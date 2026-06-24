@@ -14,6 +14,7 @@ import {
   fetchGroupMemberPreviews,
   type GroupMemberPreview,
 } from "./memberPreviews";
+import { sanitizeHeaderImagePositionY } from "./headerImagePosition";
 
 export type ListedCommunityGroup = {
   id: string;
@@ -21,6 +22,7 @@ export type ListedCommunityGroup = {
   description: string | null;
   memberCount: number;
   headerImageUrl: string | null;
+  headerImagePositionY: number;
   rankingMetric: ReturnType<typeof parseCommunityMetric>;
   periodType: ReturnType<typeof parseCommunityPeriod>;
   rankingLeague: ReturnType<typeof parseCommunityLeague>;
@@ -123,6 +125,7 @@ export async function listUserGroups(
         (gd.headerImageUrl as string) ??
         (mirrorData?.headerImageUrl as string) ??
         null,
+      headerImagePositionY: sanitizeHeaderImagePositionY(gd.headerImagePositionY),
       rankingMetric: parseCommunityMetric(
         gd.rankingMetric ?? mirrorData?.rankingMetric
       ),

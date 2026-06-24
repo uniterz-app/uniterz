@@ -88,12 +88,14 @@ export function toMobileRows(
           ? row.rankDeltaPlaces
           : undefined,
 
-      metricValueDelta:
-        typeof row.metricValueDelta === "number" &&
-        Number.isFinite(row.metricValueDelta) &&
-        row.metricValueDelta !== 0
-          ? row.metricValueDelta
-          : undefined,
+      metricValueDelta: (() => {
+        const d = row.metricValueDelta;
+        if (typeof d !== "number" || !Number.isFinite(d) || d === 0) {
+          return undefined;
+        }
+        if (metric === "exactHits" && d < 0) return undefined;
+        return d;
+      })(),
     };
   });
 }

@@ -202,9 +202,9 @@ export default function MatchCardListCtaNative({
 const styles = StyleSheet.create({
   root: {
     width: "100%",
-    minHeight: 32,
+    minHeight: 30,
     position: "relative",
-    marginBottom: 2,
+    marginBottom: 1,
   },
   frame: {
     minHeight: 32,

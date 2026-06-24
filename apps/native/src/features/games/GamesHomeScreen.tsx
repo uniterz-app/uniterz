@@ -2326,11 +2326,14 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     gap: 2,
   },
+  cardMainContent: {
+    flexShrink: 0,
+  },
   cardFineInteriorContent: {
     paddingHorizontal: 8,
-    paddingTop: 4,
-    paddingBottom: 2,
-    gap: 2,
+    paddingTop: 2,
+    paddingBottom: 0,
+    gap: 1,
   },
   cardLayerBase: {
     ...StyleSheet.absoluteFillObject,
@@ -2381,8 +2384,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 12,
-    marginBottom: 0,
+    marginTop: 5,
+    marginBottom: 1,
     gap: spacing.xs,
   },
   /** Web mobile dense `mt-3 text-xl` */
@@ -2401,7 +2404,7 @@ const styles = StyleSheet.create({
   matchupGrid: {
     flexDirection: "row",
     alignItems: "stretch",
-    gap: 5,
+    gap: 4,
     marginTop: 0,
     marginBottom: 0,
   },
@@ -2409,23 +2412,23 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
-    minHeight: 94,
+    minHeight: 84,
   },
   teamTopGroup: {
     alignItems: "center",
-    gap: 3,
-    marginTop: 3,
+    gap: 2,
+    marginTop: 2,
   },
   teamBottomGroup: {
     alignItems: "center",
     gap: 0,
-    marginTop: 2,
+    marginTop: 1,
     marginBottom: 0,
   },
   teamBottomGroupWc: {
     width: 72,
     alignItems: "center",
-    marginTop: 3,
+    marginTop: 2,
   },
   sideLabel: {
     color: "rgba(255,255,255,0.85)",
@@ -2450,7 +2453,7 @@ const styles = StyleSheet.create({
   teamMarkFlag: {
     width: 72,
     height: 48,
-    marginBottom: 8,
+    marginBottom: 4,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2472,17 +2475,17 @@ const styles = StyleSheet.create({
   teamNameMainWc: {
     width: 72,
     maxWidth: 72,
-    paddingTop: 2,
-    lineHeight: 17,
+    paddingTop: 1,
+    lineHeight: 16,
     paddingRight: 0.5,
   },
   /** モバイル MatchCard: mc-record、Oxanium（チーム名に合わせて一段小さく） */
   teamRecordText: {
     color: "rgba(226,232,240,0.7)",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
-    lineHeight: 12,
-    marginTop: 2,
+    lineHeight: 11,
+    marginTop: 0,
     letterSpacing: 0.2,
     includeFontPadding: false,
     fontFamily: MATCH_CARD_METRIC_FONT,
@@ -2497,10 +2500,10 @@ const styles = StyleSheet.create({
   },
   centerScoreWrap: {
     width: "96%",
-    minHeight: 44,
+    minHeight: 36,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: 1,
     paddingTop: 0,
   },
   seriesText: {
@@ -2817,14 +2820,14 @@ const styles = StyleSheet.create({
   liveMarkWrap: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 44,
-    gap: 4,
+    minHeight: 36,
+    gap: 3,
   },
   liveScoreStack: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
-    minHeight: 44,
+    gap: 1,
+    minHeight: 36,
   },
   liveMarkPill: liveMarkPillCyberBase,
   liveMarkText: liveMarkTextCyberBase,
@@ -2836,11 +2839,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     includeFontPadding: false,
   },
-  /** 得点ブロックと league 仕切り棒の間 — Web mobile dense `mt-1.5 md:mt-2` */
+  /** 得点ブロックと league 仕切り棒の間 — Web mobile dense `mt-1.5` */
   leagueDividerWrap: {
     width: "100%",
-    marginTop: "auto",
-    paddingTop: 8,
+    marginTop: 6,
+    paddingTop: 0,
   },
   /** MatchCard 仕切り：league 色＋入場アニメ相当の薄いシアン光彩 */
   leagueDivider: {
@@ -2858,10 +2861,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "baseline",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
     paddingHorizontal: 12,
-    marginTop: 6,
-    paddingVertical: 4,
+    marginTop: 4,
+    paddingVertical: 2,
   },
   wcBroadcastLabel: {
     flexShrink: 0,
@@ -2883,7 +2886,8 @@ const styles = StyleSheet.create({
   cardFooterShell: {
     width: "100%",
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingTop: 0,
+    paddingBottom: 2,
   },
   /** MatchCard: h-8 ≈ 32, rounded-md = 6, 枠は style ではなくグラデ（Web に合わせ枠なし） */
   cardAction: {

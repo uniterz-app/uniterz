@@ -13,7 +13,7 @@ import { copyTextToClipboard } from "@/lib/clipboard/copyText";
 import { shareCommunityInvite } from "@/lib/communities/inviteShare";
 import type { CommunityMetric } from "@/lib/communities/types";
 import { formatCommunityCompetitionLine } from "@/lib/communities/competitionDisplay";
-import { periodLabel } from "@/lib/communities/labels";
+import { communityRankingPeriodValue } from "@/lib/communities/labels";
 import type { Language } from "@/lib/i18n/language";
 import {
   communityMetricToMobile,
@@ -40,6 +40,8 @@ import {
 import { warmGroupLeaderboardProfiles } from "@/lib/communities/warmGroupLeaderboardProfiles";
 import EndGroupConfirmModal from "@/app/component/communities/EndGroupConfirmModal";
 import InviteShareModal from "@/app/component/communities/InviteShareModal";
+import CommunityGroupHeaderHero from "@/app/component/communities/CommunityGroupHeaderHero";
+import CommunityGroupZoneLabel from "@/app/component/communities/CommunityGroupZoneLabel";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -64,14 +66,22 @@ export type CommunityGroupDetailViewProps = {
   onClose?: () => void;
   /** アーカイブ・退会成功時に router の代わりに実行（オーバーレイ用） */
   onExitAction?: () => void;
-  /** ScheduleList 予想オーバーレイ内表示 */
+  /** `CommunityGroupDetailCard` 内表示 */
+  inDetailCard?: boolean;
+  /** @deprecated `inDetailCard` を使用 */
   inOverlay?: boolean;
-  /** オーバーレイ上部に戻るバーがあるときは true（サムネと被らない） */
-  inOverlayBackBar?: boolean;
+  /** @deprecated `inDetailCard` を使用 */
+  cardEmbedded?: boolean;
   /** 一覧からの即時表示用（API 待ちの間） */
   listPreview?: CommunityGroupListPreview | null;
   /** グループ終了確認モーダルを開く（オーバーレイ側で表示） */
   onRequestEndGroup?: (groupName: string) => void;
+  /** ヘッダー画像更新後（一覧リフレッシュ用） */
+  onImageUpdated?: () => void;
+  onHeaderImageEditingChange?: (editing: boolean) => void;
+  /** Web — 「一覧へ」をヒーロー画像上に載せる */
+  heroBackOverImage?: boolean;
+  onBack?: () => void;
   className?: string;
 };
 
@@ -84,12 +94,18 @@ export default function CommunityGroupDetailView({
   showCloseButton,
   onClose,
   onExitAction,
+  inDetailCard: inDetailCardProp = false,
   inOverlay = false,
-  inOverlayBackBar = false,
+  cardEmbedded = false,
   listPreview = null,
   onRequestEndGroup,
+  onImageUpdated,
+  onHeaderImageEditingChange,
+  heroBackOverImage = false,
+  onBack,
   className = "",
 }: CommunityGroupDetailViewProps) {
+  const inDetailCard = inDetailCardProp || inOverlay || cardEmbedded;
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const initialCached = getCachedCommunityGroupDetail(groupId);
@@ -118,6 +134,9 @@ export default function CommunityGroupDetailView({
 
   const rankingsHref = variant === "web" ? "/web/rankings" : "/mobile/rankings";
   const isWeb = variant === "web";
+  const isMobile = variant === "mobile";
+  /** モバイル Web / 詳細カード内 — アプリ版と同じ密集レイアウト */
+  const useDenseLayout = isMobile || inDetailCard;
 
   const applyEntry = useCallback(
     (entry: NonNullable<ReturnType<typeof getCachedCommunityGroupDetail>>) => {
@@ -187,7 +206,7 @@ export default function CommunityGroupDetailView({
         rank: "Rank",
         player: "Player",
         score: "Score",
-        ranking: "Ranking",
+        ranking: "RANKING",
             ended: "This group has ended.",
             inviteLabel: "Invite code",
             copyInvite: "Copy",
@@ -205,7 +224,7 @@ export default function CommunityGroupDetailView({
       rank: "順位",
       player: "ユーザー",
       score: "スコア",
-      ranking: "ランキング",
+      ranking: "RANKING",
       ended: "このグループは終了しています。",
       inviteLabel: "招待コード",
       copyInvite: "コピー",
@@ -341,9 +360,29 @@ export default function CommunityGroupDetailView({
     finishExit();
   }, [groupId, language, finishExit]);
 
-  const showBanner =
-    headerBanner === "wide_when_image" &&
-    summary?.headerImageUrl;
+  const handleHeaderImageUpdated = useCallback(
+    (patch: { headerImageUrl?: string | null; headerImagePositionY?: number }) => {
+      setSummary((prev) => (prev ? { ...prev, ...patch } : prev));
+      invalidateCommunityGroupDetail(groupId);
+      onImageUpdated?.();
+    },
+    [groupId, onImageUpdated]
+  );
+
+  const headerHeroSection =
+    summary && useDenseLayout ? (
+      <CommunityGroupHeaderHero
+        groupId={groupId}
+        language={language}
+        summary={summary}
+        capTop={inDetailCard}
+        onImageUpdated={handleHeaderImageUpdated}
+        onImageEditingChange={onHeaderImageEditingChange}
+        overlayBackHeader={heroBackOverImage && isWeb && inDetailCard}
+        onBack={onBack}
+      />
+    ) : null;
+
   const rankMetricForProfile = communityMetricToMobile(metric);
   const profileStatsLeague = communityLeagueForProfile(summary?.rankingLeague);
 
@@ -384,38 +423,225 @@ export default function CommunityGroupDetailView({
     variant,
   ]);
 
-  return (
+  const rankingSection = (
     <>
-      {!onRequestEndGroup ? (
-        <EndGroupConfirmModal
-          open={localEndConfirmOpen}
-          groupName={localEndConfirmName || summary?.name}
-          language={language}
-          busy={endingGroup}
-          onCancel={() => {
-            if (!endingGroup) setLocalEndConfirmOpen(false);
-          }}
-          onConfirm={() => void confirmEndGroup()}
-        />
-      ) : null}
-      <InviteShareModal
-        open={inviteShareOpen}
-        inviteCode={summary?.inviteCode ?? ""}
-        groupName={summary?.name}
-        language={language}
-        onClose={() => setInviteShareOpen(false)}
-      />
-      <div
-      className={[
-        `relative flex flex-col ${jp.className}`,
-        inOverlay ? (inOverlayBackBar ? "" : "pt-12") : "min-h-0 flex-1",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {inOverlay ? <ShellGridOverlay /> : null}
-      {(showBackLink || showCloseButton) && (
+      {useDenseLayout ? (
+        <div className="mb-2 px-3.5">
+          <CommunityGroupZoneLabel>{t.ranking}</CommunityGroupZoneLabel>
+        </div>
+      ) : (
+        <RankingsCyberSectionLabel subtle>{t.ranking}</RankingsCyberSectionLabel>
+      )}
+      {loadingRows ? (
+        <RankingsCyberPanel subtle compact className={useDenseLayout ? "mb-2" : undefined}>
+          <div className="space-y-2">
+            <div className="h-3 w-2/5 skeleton-scan rounded-none bg-cyan-400/10" />
+            <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
+            <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
+            <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
+          </div>
+        </RankingsCyberPanel>
+      ) : rows.length === 0 ? (
+        <p className="py-8 text-center text-sm text-white/45">
+          {commMsg(language, {
+            en: "No entries yet.",
+            ja: "まだエントリーがありません。",
+          })}
+        </p>
+      ) : useDenseLayout ? (
+        <div key={rankListAnimKey} className="-mt-1 mb-4 cyber-rank-list-panel">
+          <motion.div
+            variants={restContainer}
+            initial={prefersReducedMotion ? "show" : "hidden"}
+            animate="show"
+          >
+            {rankingCardRows.map((r, i) => (
+              <motion.div key={r.uid} variants={restItem} custom={i}>
+                <RankingCard
+                  row={r}
+                  rank={i + 1}
+                  metric={rankMetricForProfile}
+                  rankingLeague={profileStatsLeague.rankingLeague}
+                  wcStage={profileStatsLeague.wcStage}
+                  language={language}
+                  size="compact"
+                  shellTone="subtle"
+                  showFirstPlaceFrame
+                  animateValue={false}
+                  groupReturnGroupId={groupId}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      ) : (
+        <div key={rankListAnimKey} className="cyber-rank-list-panel">
+          <TopPodium
+            rows={top3}
+            metric={rankMetricForProfile}
+            rankingLeague={profileStatsLeague.rankingLeague}
+            wcStage={profileStatsLeague.wcStage}
+            language={language}
+            countUpEnabled={false}
+            entranceEnabled={false}
+            compact
+            shellTone="subtle"
+            groupReturnGroupId={groupId}
+          />
+          <motion.div
+            variants={restContainer}
+            initial={prefersReducedMotion ? "show" : "hidden"}
+            animate="show"
+          >
+            {restRows.map((r, i) => (
+              <motion.div key={r.uid} variants={restItem} custom={i}>
+                <RankingCard
+                  row={r}
+                  rank={i + 4}
+                  metric={rankMetricForProfile}
+                  rankingLeague={profileStatsLeague.rankingLeague}
+                  wcStage={profileStatsLeague.wcStage}
+                  language={language}
+                  size="compact"
+                  shellTone="subtle"
+                  showFirstPlaceFrame
+                  animateValue={false}
+                  groupReturnGroupId={groupId}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      )}
+    </>
+  );
+
+  const inviteOwnerPanel =
+    summary?.isOwner && !summary.archived ? (
+      <RankingsCyberPanel subtle compact className={useDenseLayout ? "mt-1" : "mb-4"}>
+        <RankingsCyberSectionLabel subtle className={useDenseLayout ? "mb-2.5 pb-1.5" : undefined}>
+          {t.inviteLabel}
+        </RankingsCyberSectionLabel>
+        {summary.inviteCode ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p
+              className={[
+                "min-w-0 flex-1 font-mono font-semibold tracking-[0.14em] text-cyan-50/90 tabular-nums",
+                isWeb ? "text-lg" : "text-base",
+              ].join(" ")}
+            >
+              {summary.inviteCode}
+            </p>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void onCopyInvite()}
+                className={[
+                  "flex items-center gap-1 rounded-none border border-cyan-400/18 bg-cyan-500/6 px-2.5 py-1.5 font-medium text-cyan-100/80",
+                  isWeb ? "text-sm" : "text-xs",
+                ].join(" ")}
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden />
+                {t.copyInvite}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onShareInvite()}
+                className={[
+                  "flex items-center gap-1 rounded-none border border-cyan-400/22 bg-cyan-500/8 px-2.5 py-1.5 font-medium text-cyan-50/90",
+                  isWeb ? "text-sm" : "text-xs",
+                ].join(" ")}
+              >
+                <Share2 className="h-3.5 w-3.5" aria-hidden />
+                {t.shareInvite}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p
+            className={[
+              "leading-relaxed text-white/45",
+              isWeb ? "text-sm" : "text-xs",
+            ].join(" ")}
+          >
+            {t.inviteUnavailable}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => requestEndGroup(summary.name)}
+          className={[
+            "mt-3 w-full rounded-none border border-red-400/35 bg-red-950/30 py-2 text-red-200",
+            isWeb ? "text-base" : "text-sm",
+          ].join(" ")}
+        >
+          {t.endGroup}
+        </button>
+      </RankingsCyberPanel>
+    ) : null;
+
+  const leaveMemberBtn =
+    summary && !summary.isOwner && !summary.archived ? (
+      <button
+        type="button"
+        onClick={() => void onLeave()}
+        className={[
+          "w-full rounded-none border border-cyan-400/16 bg-cyan-500/5 py-2.5 font-mono text-sm uppercase tracking-[0.1em] text-cyan-100/70",
+          useDenseLayout ? "mt-1" : "mb-4",
+          isWeb ? "text-base" : "text-sm",
+        ].join(" ")}
+      >
+        {t.leave}
+      </button>
+    ) : null;
+
+  const webHeaderPanel =
+    summary && !useDenseLayout ? (
+      <RankingsCyberPanel subtle className="mb-4">
+        <h1
+          className={[
+            "font-bold leading-tight text-cyan-50/95",
+            isWeb ? "text-2xl" : "text-lg sm:text-xl",
+          ].join(" ")}
+        >
+          {summary.name}
+        </h1>
+        {summary.description ? (
+          <p
+            className={[
+              "mt-2 whitespace-pre-wrap leading-relaxed text-white/65",
+              isWeb ? "text-base" : "text-sm",
+            ].join(" ")}
+          >
+            {summary.description}
+          </p>
+        ) : null}
+        <p
+          className={[
+            "mt-3 font-mono uppercase tracking-[0.1em] text-white/45",
+            isWeb ? "text-xs" : "text-[11px] sm:text-xs",
+          ].join(" ")}
+        >
+          {t.members}: {summary.memberCount} ·{" "}
+          {formatCommunityCompetitionLine(
+            {
+              rankingLeague: summary.rankingLeague ?? "all",
+              rankingMetric: metric,
+              rankingTeamIds: summary.rankingTeamIds,
+            },
+            language
+          )}{" "}
+          · {communityRankingPeriodValue(summary.rankingStartDateKey, language)}
+        </p>
+        {summary.archived ? (
+          <p className="mt-2 text-sm text-amber-200/90">{t.ended}</p>
+        ) : null}
+      </RankingsCyberPanel>
+    ) : null;
+
+  const panelBody = (
+    <>
+      {!useDenseLayout && (showBackLink || showCloseButton) && (
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-cyan-400/20 px-3 py-2.5">
           <div className="min-w-0">
             {showBackLink ? (
@@ -441,26 +667,16 @@ export default function CommunityGroupDetailView({
         </div>
       )}
 
-      {showBanner && summary?.headerImageUrl && (
-        <div className="relative h-36 w-full shrink-0 overflow-hidden sm:h-44">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={summary.headerImageUrl}
-            alt=""
-            className="h-full w-full object-cover object-center"
-          />
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/55 via-black/10 to-transparent" />
-        </div>
-      )}
-
       <div
         className={[
-          "relative z-10 px-3 pb-4 pt-3",
-          inOverlay ? "" : "min-h-0 flex-1 overflow-y-auto",
+          "relative z-10 pb-4",
+          inDetailCard ? "px-0 pt-0" : "min-h-0 flex-1 overflow-y-auto px-3 pt-3",
         ]
           .filter(Boolean)
           .join(" ")}
       >
+        {headerHeroSection}
+
         {loadingDetail && (
           <CandleChartLoader
             label={commMsg(language, {
@@ -472,185 +688,60 @@ export default function CommunityGroupDetailView({
 
         {!loadingDetail && summary && (
           <>
-            <RankingsCyberPanel subtle className="mb-4">
-              <h1
-                className={[
-                  "font-bold leading-tight text-cyan-50/95",
-                  isWeb ? "text-2xl" : "text-lg sm:text-xl",
-                ].join(" ")}
-              >
-                {summary.name}
-              </h1>
-              {summary.description ? (
-                <p
-                  className={[
-                    "mt-2 whitespace-pre-wrap leading-relaxed text-white/65",
-                    isWeb ? "text-base" : "text-sm",
-                  ].join(" ")}
-                >
-                  {summary.description}
-                </p>
-              ) : null}
-              <p
-                className={[
-                  "mt-3 font-mono uppercase tracking-[0.1em] text-white/45",
-                  isWeb ? "text-xs" : "text-[11px] sm:text-xs",
-                ].join(" ")}
-              >
-                {t.members}: {summary.memberCount} ·{" "}
-                {formatCommunityCompetitionLine(
-                  {
-                    rankingLeague: summary.rankingLeague ?? "all",
-                    rankingMetric: metric,
-                    rankingTeamIds: summary.rankingTeamIds,
-                  },
-                  language
-                )}{" "}
-                · {periodLabel("from_now", language)}
-              </p>
+            {!useDenseLayout ? webHeaderPanel : null}
 
-              {summary.archived && (
-                <p className="mt-2 text-sm text-amber-200/90">{t.ended}</p>
-              )}
-            </RankingsCyberPanel>
-
-            {summary.isOwner && !summary.archived && (
-              <RankingsCyberPanel subtle compact className="mb-4">
-                <RankingsCyberSectionLabel subtle>{t.inviteLabel}</RankingsCyberSectionLabel>
-                {summary.inviteCode ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p
-                      className={[
-                        "min-w-0 flex-1 font-mono font-semibold tracking-[0.14em] text-cyan-50/90 tabular-nums",
-                        isWeb ? "text-lg" : "text-base",
-                      ].join(" ")}
-                    >
-                      {summary.inviteCode}
-                    </p>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => void onCopyInvite()}
-                        className={[
-                          "flex items-center gap-1 rounded-none border border-cyan-400/18 bg-cyan-500/6 px-2.5 py-1.5 font-medium text-cyan-100/80",
-                          isWeb ? "text-sm" : "text-xs",
-                        ].join(" ")}
-                      >
-                        <Copy className="h-3.5 w-3.5" aria-hidden />
-                        {t.copyInvite}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void onShareInvite()}
-                        className={[
-                          "flex items-center gap-1 rounded-none border border-cyan-400/22 bg-cyan-500/8 px-2.5 py-1.5 font-medium text-cyan-50/90",
-                          isWeb ? "text-sm" : "text-xs",
-                        ].join(" ")}
-                      >
-                        <Share2 className="h-3.5 w-3.5" aria-hidden />
-                        {t.shareInvite}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p
-                    className={[
-                      "leading-relaxed text-white/45",
-                      isWeb ? "text-sm" : "text-xs",
-                    ].join(" ")}
-                  >
-                    {t.inviteUnavailable}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => requestEndGroup(summary.name)}
-                  className={[
-                    "mt-3 w-full rounded-none border border-red-400/35 bg-red-950/30 py-2 text-red-200",
-                    isWeb ? "text-base" : "text-sm",
-                  ].join(" ")}
-                >
-                  {t.endGroup}
-                </button>
-              </RankingsCyberPanel>
-            )}
-
-            {!summary.isOwner && !summary.archived && (
-              <button
-                type="button"
-                onClick={() => void onLeave()}
-                className={[
-                  "mb-4 w-full rounded-none border border-cyan-400/16 bg-cyan-500/5 py-2 font-mono text-sm uppercase tracking-[0.1em] text-cyan-100/70",
-                  isWeb ? "text-base" : "text-sm",
-                ].join(" ")}
-              >
-                {t.leave}
-              </button>
-            )}
-
-            <RankingsCyberSectionLabel subtle>{t.ranking}</RankingsCyberSectionLabel>
-            {loadingRows ? (
-              <RankingsCyberPanel subtle compact>
-                <div className="space-y-2">
-                  <div className="h-3 w-2/5 skeleton-scan rounded-none bg-cyan-400/10" />
-                  <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
-                  <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
-                  <div className="h-11 skeleton-scan rounded-none bg-cyan-400/8" />
-                </div>
-              </RankingsCyberPanel>
-            ) : rows.length === 0 ? (
-              <p className="py-8 text-center text-sm text-white/45">
-                {commMsg(language, {
-                  en: "No entries yet.",
-                  ja: "まだエントリーがありません。",
-                })}
-              </p>
+            {useDenseLayout ? (
+              <>
+                {rankingSection}
+                {inviteOwnerPanel}
+                {leaveMemberBtn}
+              </>
             ) : (
-              <div key={rankListAnimKey} className="cyber-rank-list-panel">
-                <TopPodium
-                  rows={top3}
-                  metric={rankMetricForProfile}
-                  rankingLeague={profileStatsLeague.rankingLeague}
-                  wcStage={profileStatsLeague.wcStage}
-                  language={language}
-                  countUpEnabled={false}
-                  entranceEnabled={false}
-                  compact
-                  shellTone="subtle"
-                  groupReturnGroupId={groupId}
-                />
-                <motion.div
-                  variants={restContainer}
-                  initial={prefersReducedMotion ? "show" : "hidden"}
-                  animate="show"
-                >
-                  {restRows.map((r, i) => (
-                    <motion.div
-                      key={r.uid}
-                      variants={restItem}
-                      custom={i}
-                    >
-                      <RankingCard
-                        row={r}
-                        rank={i + 4}
-                        metric={rankMetricForProfile}
-                        rankingLeague={profileStatsLeague.rankingLeague}
-                        wcStage={profileStatsLeague.wcStage}
-                        language={language}
-                        size="compact"
-                        shellTone="subtle"
-                        animateValue={false}
-                        groupReturnGroupId={groupId}
-                      />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </div>
+              <>
+                {inviteOwnerPanel}
+                {leaveMemberBtn}
+                {rankingSection}
+              </>
             )}
           </>
         )}
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {!onRequestEndGroup ? (
+        <EndGroupConfirmModal
+          open={localEndConfirmOpen}
+          groupName={localEndConfirmName || summary?.name}
+          language={language}
+          busy={endingGroup}
+          onCancel={() => {
+            if (!endingGroup) setLocalEndConfirmOpen(false);
+          }}
+          onConfirm={() => void confirmEndGroup()}
+        />
+      ) : null}
+      <InviteShareModal
+        open={inviteShareOpen}
+        inviteCode={summary?.inviteCode ?? ""}
+        groupName={summary?.name}
+        language={language}
+        onClose={() => setInviteShareOpen(false)}
+      />
+      <div
+        className={[
+          `relative flex flex-col ${jp.className}`,
+          inDetailCard ? "min-h-0" : "min-h-0 flex-1",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {inDetailCard ? <ShellGridOverlay /> : null}
+        {panelBody}
+      </div>
     </>
   );
 }

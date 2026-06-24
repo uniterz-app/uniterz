@@ -1,6 +1,7 @@
 "use client";
 
 import { auth } from "@/lib/firebase";
+import { prefetchCommunityHeaderImage } from "@/lib/communities/prefetchCommunityHeaderImage";
 import type { CommunityLeague, CommunityMetric } from "@/lib/communities/types";
 
 export type CommunityGroupSummary = {
@@ -10,6 +11,7 @@ export type CommunityGroupSummary = {
   ownerUid: string;
   memberCount: number;
   headerImageUrl: string | null;
+  headerImagePositionY: number;
   rankingMetric: CommunityMetric;
   periodType: string;
   rankingLeague: CommunityLeague;
@@ -17,6 +19,7 @@ export type CommunityGroupSummary = {
   archived: boolean;
   isOwner: boolean;
   inviteCode: string | null;
+  rankingStartDateKey?: string | null;
 };
 
 export type CommunityGroupLeaderboardRow = {
@@ -49,6 +52,7 @@ export type CommunityGroupListPreview = {
   name: string;
   description: string | null;
   headerImageUrl: string | null;
+  headerImagePositionY?: number;
   memberCount: number;
   rankingMetric: CommunityMetric;
   rankingLeague: CommunityLeague;
@@ -93,6 +97,7 @@ export function listPreviewToSummary(
     ownerUid: "",
     memberCount: preview.memberCount,
     headerImageUrl: preview.headerImageUrl,
+    headerImagePositionY: preview.headerImagePositionY ?? 50,
     rankingMetric: preview.rankingMetric,
     periodType: "from_now",
     rankingLeague: preview.rankingLeague,
@@ -147,7 +152,9 @@ export async function fetchCommunityGroupDetail(
         .then((res) => res.json().catch(() => ({})))
         .then((sJson) => {
           if (sJson?.ok && sJson.group) {
-            emitPartial({ summary: sJson.group as CommunityGroupSummary });
+            const summary = sJson.group as CommunityGroupSummary;
+            prefetchCommunityHeaderImage(summary.headerImageUrl);
+            emitPartial({ summary });
           }
           return sJson;
         });
@@ -181,6 +188,7 @@ export async function fetchCommunityGroupDetail(
           (sJson.group as CommunityGroupSummary).rankingMetric,
         fetchedAt: Date.now(),
       };
+      prefetchCommunityHeaderImage(entry.summary.headerImageUrl);
       cache.set(groupId, entry);
       return entry;
     } finally {

@@ -8,6 +8,8 @@ import {
   parseCommunityPeriod,
 } from "@/lib/communities/types";
 import { readRankingTeamIds } from "@/lib/communities/rankingTeams";
+import { sanitizeHeaderImagePositionY } from "@/lib/communities/headerImagePosition";
+import { resolveRankingStartDateKey } from "@/lib/communities/rankingStartDate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +35,7 @@ export async function GET(req: Request, ctx: Ctx) {
         ownerUid: String(d.ownerUid ?? ""),
         memberCount: Number(d.memberCount ?? 0),
         headerImageUrl: (d.headerImageUrl as string) ?? null,
+        headerImagePositionY: sanitizeHeaderImagePositionY(d.headerImagePositionY),
         rankingMetric: parseCommunityMetric(d.rankingMetric),
         periodType: parseCommunityPeriod(d.periodType),
         rankingLeague: parseCommunityLeague(d.rankingLeague),
@@ -45,6 +48,7 @@ export async function GET(req: Request, ctx: Ctx) {
           d.inviteCode.trim()
             ? d.inviteCode.trim()
             : null,
+        rankingStartDateKey: resolveRankingStartDateKey(d),
       },
     });
   } catch (e: unknown) {

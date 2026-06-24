@@ -4,7 +4,6 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MobilePageShell from "../profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { LeaderboardsStackParamList, MainTabParamList } from "../../navigation/types";
@@ -17,6 +16,7 @@ import { CommunityModalBackdropNative } from "./CommunityCrtPartsNative";
 import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
 import { invalidateCommunityGroupDetail } from "./communityGroupDetailCacheNative";
 import { communityPressableTapStyle } from "./communityCrtThemeNative";
+import CommunityGroupDetailCardNative from "./CommunityGroupDetailCardNative";
 
 /** Web `CommunityDetailClient`（mobile）相当 */
 export default function CommunityDetailScreenNative() {
@@ -31,6 +31,7 @@ export default function CommunityDetailScreenNative() {
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const [endConfirmName, setEndConfirmName] = useState("");
   const [endingGroup, setEndingGroup] = useState(false);
+  const [headerImageEditing, setHeaderImageEditing] = useState(false);
 
   const getIdToken = useCallback(() => {
     if (!fUser) return Promise.reject(new Error("no user"));
@@ -82,34 +83,44 @@ export default function CommunityDetailScreenNative() {
         onClose={() => navigation.goBack()}
       >
         <ScrollView
+          scrollEnabled={!headerImageEditing}
           contentContainerStyle={[styles.content, { paddingBottom: bottomContentReserveY + spacing.md }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.cardWrap}>
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={({ pressed }) => [styles.closeBtn, pressed && communityPressableTapStyle(true)]}
-              accessibilityLabel={language === "en" ? "Close" : "閉じる"}
-            >
-              <MaterialCommunityIcons name="close" size={18} color="rgba(255,255,255,0.9)" />
-            </Pressable>
+          <CommunityGroupDetailCardNative
+            language={language}
+            onBack={() => navigation.goBack()}
+          >
             <CommunityGroupDetailViewNative
               groupId={groupId}
               language={language}
+              scrollEnabled={false}
+              inDetailCard
               getIdToken={getIdToken}
+              onSummaryLoaded={(summary) => {
+                setEndConfirmName(summary.name);
+              }}
               onExitAction={() => navigation.goBack()}
               onRequestEndGroup={(name) => {
                 setEndConfirmName(name);
                 setEndConfirmOpen(true);
               }}
+              onImageUpdated={() => {
+                invalidateCommunityGroupDetail(groupId);
+              }}
+              onHeaderImageEditingChange={setHeaderImageEditing}
               onOpenProfile={(handle) => {
                 tabNavigation.navigate("ProfileTab", {
                   screen: "ProfileHome",
-                  params: { handle, fromRankings: true },
+                  params: {
+                    handle,
+                    fromLeaderboards: true,
+                    leaderboardsGroupId: groupId,
+                  },
                 });
               }}
             />
-          </View>
+          </CommunityGroupDetailCardNative>
         </ScrollView>
       </MobilePageShell>
 
@@ -178,23 +189,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 12,
     paddingTop: 8,
-  },
-  cardWrap: {
-    position: "relative",
-  },
-  closeBtn: {
-    position: "absolute",
-    right: 12,
-    top: 12,
-    zIndex: 30,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   signIn: {
     marginTop: 24,

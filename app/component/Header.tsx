@@ -15,6 +15,8 @@ type Props = {
 export default function Header({ title }: Props) {
   const reduceMotion = useReducedMotion();
   const pathname = usePathname();
+  const isMobileWeb = (pathname ?? "").startsWith("/mobile");
+  const animate = !reduceMotion && !isMobileWeb;
   const wordmark = title ?? resolveHeaderWordmark(pathname);
   const wordmarkLetters = wordmark.split("");
 
@@ -37,14 +39,14 @@ export default function Header({ title }: Props) {
           {/* 左アクセント（線 + ダイヤ） */}
           <motion.div
             className="hidden h-px max-w-[110px] flex-1 origin-right bg-gradient-to-l from-cyan-200/45 to-transparent sm:block"
-            initial={reduceMotion ? false : { scaleX: 0, opacity: 0 }}
+            initial={animate ? { scaleX: 0, opacity: 0 } : false}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
             aria-hidden
           />
           <motion.div
             className="hidden h-1.5 w-1.5 rotate-45 border border-cyan-200/55 sm:block"
-            initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
+            initial={animate ? { opacity: 0, scale: 0 } : false}
             animate={{ opacity: 0.7, scale: 1 }}
             transition={{ delay: 0.55, duration: 0.4, ease: "easeOut" }}
             style={{ boxShadow: "0 0 6px rgba(103,232,249,0.45)" }}
@@ -63,37 +65,41 @@ export default function Header({ title }: Props) {
               style={{ textShadow: "0 0 22px rgba(103,232,249,0.16)" }}
               aria-hidden
             >
-              {wordmarkLetters.map((ch, i) => (
-                <motion.span
-                  key={`${wordmark}-${i}`}
-                  className="inline-block"
-                  initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    delay: 0.08 + i * 0.055,
-                    duration: 0.5,
-                    ease: [0.22, 0.61, 0.36, 1],
-                  }}
-                >
-                  {ch}
-                </motion.span>
-              ))}
+              {animate ? (
+                wordmarkLetters.map((ch, i) => (
+                  <motion.span
+                    key={`${wordmark}-${i}`}
+                    className="inline-block"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: 0.08 + i * 0.055,
+                      duration: 0.5,
+                      ease: [0.22, 0.61, 0.36, 1],
+                    }}
+                  >
+                    {ch}
+                  </motion.span>
+                ))
+              ) : (
+                <span>{wordmark}</span>
+              )}
             </div>
             {/* 時折ハイライトが走るシマー層 */}
-            {!reduceMotion && (
+            {animate ? (
               <div
                 className="header-wordmark-shimmer pointer-events-none absolute inset-0"
                 aria-hidden
               >
                 {wordmark}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* 右アクセント（ダイヤ + 線） */}
           <motion.div
             className="hidden h-1.5 w-1.5 rotate-45 border border-cyan-200/55 sm:block"
-            initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
+            initial={animate ? { opacity: 0, scale: 0 } : false}
             animate={{ opacity: 0.7, scale: 1 }}
             transition={{ delay: 0.55, duration: 0.4, ease: "easeOut" }}
             style={{ boxShadow: "0 0 6px rgba(103,232,249,0.45)" }}
@@ -101,7 +107,7 @@ export default function Header({ title }: Props) {
           />
           <motion.div
             className="hidden h-px max-w-[110px] flex-1 origin-left bg-gradient-to-r from-cyan-200/45 to-transparent sm:block"
-            initial={reduceMotion ? false : { scaleX: 0, opacity: 0 }}
+            initial={animate ? { scaleX: 0, opacity: 0 } : false}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.7, ease: "easeOut" }}
             aria-hidden
@@ -112,12 +118,12 @@ export default function Header({ title }: Props) {
         <div className="relative w-full">
           <motion.div
             className="relative z-1 h-[2px] w-full overflow-hidden rounded-full"
-            initial={reduceMotion ? false : { scaleX: 0.1, opacity: 0 }}
+            initial={animate ? { scaleX: 0.1, opacity: 0 } : false}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ delay: 0.25, duration: 0.8, ease: [0.22, 0.61, 0.36, 1] }}
           >
             <div className="absolute inset-0 bg-linear-to-r from-transparent via-cyan-300 to-transparent opacity-95" />
-            {!reduceMotion ? (
+            {animate ? (
               <div
                 className="animate-header-cyber-sweep pointer-events-none absolute inset-y-0 left-0 w-[42%] max-w-[220px] opacity-90 will-change-transform"
                 style={{

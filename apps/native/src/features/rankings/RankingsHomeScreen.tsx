@@ -38,6 +38,7 @@ import SideMenuDrawerNative from "../../ui/SideMenuDrawerNative";
 import WcRankingStageTabsNative from "./WcRankingStageTabsNative";
 import RankingsDrawerMenuNative from "./RankingsDrawerMenuNative";
 import CyberMenuButton from "../../ui/CyberMenuButton";
+import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
 import { CandleChartLoaderNative } from "../../components/CandleChartLoaderNative";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useNativeCumulativeRankingsBulk } from "./useNativeCumulativeRankingsBulk";
@@ -52,6 +53,7 @@ import {
   RankingsMetricRowNative,
   RankingsTopPodiumNative,
 } from "./RankingsUiParts";
+import type { MyRankCardShareState } from "./RankingsMyRankCardNative";
 import RankingsListEntranceRowNative from "./RankingsListEntranceRowNative";
 
 type Props = {
@@ -70,6 +72,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const [round, setRound] = useState<PlayoffRoundKey>("overall");
   const [metric, setMetric] = useState<MobileMetric>("totalScore");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [rankShare, setRankShare] = useState<MyRankCardShareState | null>(null);
   const [rankingsLeague, setRankingsLeague] = useState<"nba" | "wc">("wc");
   const [wcStage, setWcStage] = useState<WcRankingStage>("overall");
 
@@ -85,6 +88,12 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
   const { user } = useNativeMyRankingUser(myUid);
   const language = user.language;
   const t = rankingsTexts(language);
+
+  useEffect(() => {
+    if (category !== "playoffs") {
+      setRankShare(null);
+    }
+  }, [category]);
 
   const apiKey = API_METRIC_BY_MOBILE[metric];
   const bundle = byMetric?.[apiKey];
@@ -222,7 +231,15 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               {scheduleNoticeForUser(language)}
             </Text>
           </View>
-          <View style={styles.titleSpacer} />
+          <CyberChamferButtonNative
+            size="sm"
+            embedded
+            variant="share"
+            onPress={() => rankShare?.share()}
+            disabled={!rankShare?.canShare || rankShare?.sharing}
+            accessibilityLabel={t.shareMyRank}
+            style={styles.titleSideBtn}
+          />
         </View>
 
         <View style={styles.section}>
@@ -272,6 +289,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
                 language={language}
                 mobileWide
                 leagueLabel={rankingsLeague === "wc" ? "WORLD CUP" : "NBA"}
+                onShareStateChange={setRankShare}
               />
             </>
           ) : null}
@@ -384,9 +402,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 2,
   },
-  titleSpacer: {
-    width: 40,
-    height: 40,
+  titleSideBtn: {
+    flexShrink: 0,
   },
   scheduleNoticeInline: {
     textAlign: "center",

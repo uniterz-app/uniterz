@@ -26,6 +26,7 @@ import {
   sanitizeGroupDescription,
   sanitizeHeaderImageUrl,
 } from "@/lib/communities/validate";
+import { DEFAULT_HEADER_IMAGE_POSITION_Y } from "@/lib/communities/headerImagePosition";
 import { getTodayKeyInTimeZone, TIMEZONE_JST } from "@/lib/time/zonedTime";
 
 export const runtime = "nodejs";
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
         inviteCode: invitePlain,
         memberCount: 1,
         headerImageUrl: headerImageUrl ?? null,
+        headerImagePositionY: DEFAULT_HEADER_IMAGE_POSITION_Y,
         rankingMetric,
         periodType,
         rankingLeague,
@@ -126,6 +128,7 @@ export async function POST(req: Request) {
         role: "owner",
         memberCount: 1,
         headerImageUrl: headerImageUrl ?? null,
+        headerImagePositionY: DEFAULT_HEADER_IMAGE_POSITION_Y,
         rankingMetric,
         periodType,
         rankingLeague,

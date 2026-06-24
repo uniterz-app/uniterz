@@ -149,6 +149,8 @@ function ProfileHomeRoute() {
       bottomReserveY={bottomContentReserveY}
       routeHandle={route.params?.handle}
       fromRankings={route.params?.fromRankings === true}
+      fromLeaderboards={route.params?.fromLeaderboards === true}
+      leaderboardsGroupId={route.params?.leaderboardsGroupId}
       openSettingsOnMount={route.params?.openSettings === true}
     />
   );

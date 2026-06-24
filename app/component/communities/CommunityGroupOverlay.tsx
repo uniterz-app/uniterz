@@ -1,12 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
-import { ArrowLeft, X } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
 import { toast } from "@/app/component/ui/toast";
+import {
+  predictOverlayBackdrop,
+  predictOverlayPanel,
+  predictOverlayRoot,
+} from "@/lib/predict/predictPageMotion";
+import { PREDICT_OVERLAY_BACKDROP } from "@/lib/ui/matchOverlayGlass";
+import CommunityGroupDetailCard from "./CommunityGroupDetailCard";
 import CommunityGroupDetailView from "./CommunityGroupDetailView";
 import EndGroupConfirmModal from "./EndGroupConfirmModal";
 import {
@@ -42,9 +49,19 @@ export default function CommunityGroupOverlay({
 }: Props) {
   const m = t(language);
   const isMobile = variant === "mobile";
+  const reduceMotion = useReducedMotion();
+  const overlayMotionEnabled = isMobile && !reduceMotion;
+  const overlayPresenceProps = overlayMotionEnabled
+    ? {
+        initial: "hidden" as const,
+        animate: "show" as const,
+        exit: "exit" as const,
+      }
+    : { initial: false as const };
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const [endConfirmName, setEndConfirmName] = useState("");
   const [endingGroup, setEndingGroup] = useState(false);
+  const [headerImageEditing, setHeaderImageEditing] = useState(false);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -63,6 +80,7 @@ export default function CommunityGroupOverlay({
     setEndConfirmOpen(false);
     setEndConfirmName("");
     setEndingGroup(false);
+    setHeaderImageEditing(false);
   }, [open]);
 
   useEffect(() => {
@@ -111,117 +129,119 @@ export default function CommunityGroupOverlay({
     }
   }, [groupId, language, onRefreshList, onClose]);
 
-  if (!open || !groupId || typeof document === "undefined") return null;
+  if (typeof document === "undefined") return null;
+
+  const backdropClass = isMobile
+    ? `absolute inset-0 z-0 ${PREDICT_OVERLAY_BACKDROP}`
+    : "absolute inset-0 z-0 bg-black/35 backdrop-blur-md";
+
+  const scrollPanelClass = [
+    "relative z-10 h-dvh overflow-x-hidden pointer-events-auto pb-bottom-nav",
+    headerImageEditing ? "overflow-hidden" : "overflow-y-auto",
+  ].join(" ");
+
+  const scrollPanelStyle = {
+    WebkitOverflowScrolling: "touch" as const,
+    overscrollBehaviorY: "contain" as const,
+    overscrollBehaviorX: "none" as const,
+    touchAction: "pan-y" as const,
+  };
+
+  const contentInner = (
+    <div
+      className={[
+        "mx-auto w-full overflow-x-hidden",
+        isMobile
+          ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6"
+          : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8",
+      ].join(" ")}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <CommunityGroupDetailCard
+        language={language}
+        variant="overlay"
+        backHeaderOverHero={!isMobile}
+        className={
+          isMobile
+            ? ""
+            : [
+                "border border-white/10",
+                "bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_42%,rgba(255,255,255,0.012)_100%),linear-gradient(180deg,rgba(5,8,20,0.88)_0%,rgba(5,8,20,0.88)_100%)]",
+                "backdrop-blur-xl",
+                "shadow-[0_14px_36px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.12)]",
+              ].join(" ")
+        }
+        onBack={() => {
+          if (!endConfirmOpen) onClose();
+        }}
+      >
+        <CommunityGroupDetailView
+          inDetailCard
+          heroBackOverImage={!isMobile}
+          onBack={() => {
+            if (!endConfirmOpen) onClose();
+          }}
+          groupId={groupId!}
+          listPreview={listPreview}
+          language={language}
+          variant={variant}
+          headerBanner="wide_when_image"
+          showCloseButton={false}
+          showBackLink={false}
+          onClose={onClose}
+          onExitAction={() => {
+            onRefreshList?.();
+            onClose();
+          }}
+          onRequestEndGroup={(name) => {
+            setEndConfirmName(name);
+            setEndConfirmOpen(true);
+          }}
+          onImageUpdated={onRefreshList}
+          onHeaderImageEditingChange={setHeaderImageEditing}
+        />
+      </CommunityGroupDetailCard>
+    </div>
+  );
 
   return createPortal(
     <>
-      <div
-        key="community-group-overlay"
-        className="fixed inset-0 z-100000 overflow-hidden"
-        role="dialog"
-        aria-modal={!endConfirmOpen}
-      >
-        <button
-          type="button"
-          aria-label={m.common.close}
-          className="absolute inset-0 z-0 bg-black/35 backdrop-blur-md"
-          onClick={() => {
-            if (!endConfirmOpen) onClose();
-          }}
-        />
-
-        <div
-          className="relative z-10 h-dvh overflow-y-auto overflow-x-hidden pointer-events-auto pb-bottom-nav"
-          style={{
-            WebkitOverflowScrolling: "touch",
-            overscrollBehaviorY: "contain",
-            overscrollBehaviorX: "none",
-            touchAction: "pan-y",
-          }}
-        >
-          <div
-            className={[
-              "mx-auto w-full overflow-x-hidden",
-              isMobile
-                ? "max-w-2xl px-3 pb-32 pt-4 sm:px-4 sm:pb-36 sm:pt-6"
-                : "max-w-5xl px-4 pb-24 pt-6 sm:px-6 md:px-8",
-            ].join(" ")}
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {open && groupId ? (
+          <motion.div
+            key="community-group-overlay"
+            className="fixed inset-0 z-100000 overflow-hidden"
+            role="dialog"
+            aria-modal={!endConfirmOpen}
+            variants={overlayMotionEnabled ? predictOverlayRoot : undefined}
+            {...overlayPresenceProps}
           >
-            <div className="relative w-full overflow-x-hidden">
-              <button
-                type="button"
-                aria-label={m.common.close}
-                className={[
-                  "absolute right-3 top-3 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/90 backdrop-blur-md",
-                  isMobile ? "" : "transition hover:bg-black/55",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!endConfirmOpen) onClose();
-                }}
-              >
-                <X size={18} strokeWidth={2.4} />
-              </button>
+            <motion.button
+              type="button"
+              aria-label={m.common.close}
+              className={backdropClass}
+              variants={overlayMotionEnabled ? predictOverlayBackdrop : undefined}
+              onClick={() => {
+                if (!endConfirmOpen) onClose();
+              }}
+            />
 
-              <div
-                className={[
-                  "overflow-hidden rounded-2xl",
-                  "border border-white/10",
-                  "bg-[linear-gradient(180deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_42%,rgba(255,255,255,0.012)_100%),linear-gradient(180deg,rgba(5,8,20,0.88)_0%,rgba(5,8,20,0.88)_100%)]",
-                  "backdrop-blur-xl",
-                  "shadow-[0_14px_36px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.12)]",
-                ].join(" ")}
+            {overlayMotionEnabled ? (
+              <motion.div
+                className={scrollPanelClass}
+                style={scrollPanelStyle}
+                variants={predictOverlayPanel}
               >
-                <div className="flex shrink-0 items-center border-b border-cyan-400/20 px-3 py-2.5 pr-14">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!endConfirmOpen) onClose();
-                    }}
-                    className={[
-                      "inline-flex min-w-0 items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-300/90 underline-offset-2",
-                      isMobile ? "" : "transition hover:text-cyan-100 hover:underline",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    <ArrowLeft
-                      className="h-3.5 w-3.5 shrink-0"
-                      strokeWidth={2.4}
-                      aria-hidden
-                    />
-                    <span className="truncate">{m.rankings.backToSlotList}</span>
-                  </button>
-                </div>
-                <CommunityGroupDetailView
-                  inOverlay
-                  inOverlayBackBar
-                  groupId={groupId}
-                  listPreview={listPreview}
-                  language={language}
-                  variant={variant}
-                  headerBanner="wide_when_image"
-                  showCloseButton={false}
-                  showBackLink={false}
-                  onClose={onClose}
-                  onExitAction={() => {
-                    onRefreshList?.();
-                    onClose();
-                  }}
-                  onRequestEndGroup={(name) => {
-                    setEndConfirmName(name);
-                    setEndConfirmOpen(true);
-                  }}
-                />
+                {contentInner}
+              </motion.div>
+            ) : (
+              <div className={scrollPanelClass} style={scrollPanelStyle}>
+                {contentInner}
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            )}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <EndGroupConfirmModal
         open={endConfirmOpen}

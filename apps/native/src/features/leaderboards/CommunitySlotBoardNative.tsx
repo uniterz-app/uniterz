@@ -9,16 +9,31 @@ import {
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import type { Language } from "../../../../../lib/i18n/language";
 import { formatCommunityCompetitionLine } from "../../../../../lib/communities/competitionDisplay";
-import CommunityMemberAvatarStackNative from "./CommunityMemberAvatarStackNative";
+import {
+  COMMUNITY_GROUP_SLOT_CARD_BG,
+  COMMUNITY_GROUP_SLOT_CARD_NATIVE_SCRIM,
+  COMMUNITY_GROUP_SLOT_CARD_NATIVE_SCRIM_TOP,
+} from "../../../../../lib/communities/communityGroupSlotCard";
+import {
+  DEFAULT_HEADER_IMAGE_POSITION_Y,
+  HEADER_IMAGE_NATIVE_SLOT_ADJUST_SCALE,
+  headerImageNativeImageHeight,
+  headerImageNativeMarginTop,
+  sanitizeHeaderImagePositionY,
+} from "../../../../../lib/communities/headerImagePosition";
 import { CommunityCrtSectionLabelNative } from "./CommunityCrtPartsNative";
+import CommunityMemberAvatarStackNative from "./CommunityMemberAvatarStackNative";
 import type { CommunityListGroup, CommunityListLimits } from "./communityApiNative";
+import { prefetchCommunityHeaderImageNative } from "./prefetchCommunityHeaderImageNative";
 import {
   CRT_CYAN,
   communityCrtStyles,
   communityEmptyJoinSlotStyle,
   communityEmptySlotStyle,
+  communityMono,
   communityPressableFilledStyle,
   communityPressableTapStyle,
 } from "./communityCrtThemeNative";
@@ -49,20 +64,68 @@ type Props = {
   };
 };
 
-function GroupThumbnailNative({
+function SlotCardImageBackgroundNative({
   headerImageUrl,
-  size,
+  headerImagePositionY = DEFAULT_HEADER_IMAGE_POSITION_Y,
+  isOwner,
 }: {
   headerImageUrl: string | null;
-  size: number;
+  headerImagePositionY?: number;
+  isOwner: boolean;
 }) {
+  const [containerHeight, setContainerHeight] = useState(0);
+  const scrim = isOwner
+    ? COMMUNITY_GROUP_SLOT_CARD_NATIVE_SCRIM.owner
+    : COMMUNITY_GROUP_SLOT_CARD_NATIVE_SCRIM.member;
+  const positionY = sanitizeHeaderImagePositionY(headerImagePositionY);
+  const needsAdjust = positionY !== DEFAULT_HEADER_IMAGE_POSITION_Y;
+  const scale = HEADER_IMAGE_NATIVE_SLOT_ADJUST_SCALE;
+  const imageHeight =
+    containerHeight > 0 ? headerImageNativeImageHeight(containerHeight, needsAdjust ? scale : 1) : 0;
+  const imageTop =
+    containerHeight > 0 && needsAdjust
+      ? headerImageNativeMarginTop(containerHeight, positionY, scale)
+      : 0;
+
+  if (!headerImageUrl) return null;
+
   return (
-    <View style={[styles.thumb, { width: size, height: size }]}>
-      {headerImageUrl ? (
-        <Image source={{ uri: headerImageUrl }} style={styles.thumbImage} />
-      ) : (
-        <Text style={styles.thumbPlaceholder}>▣</Text>
-      )}
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+    >
+      {containerHeight > 0 ? (
+        <Image
+          source={{ uri: headerImageUrl }}
+          style={
+            needsAdjust
+              ? {
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  width: "100%",
+                  height: imageHeight,
+                  top: imageTop,
+                }
+              : StyleSheet.absoluteFillObject
+          }
+          resizeMode="cover"
+          fadeDuration={0}
+        />
+      ) : null}
+      <LinearGradient
+        colors={[...scrim.colors]}
+        locations={[...scrim.locations]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={[...COMMUNITY_GROUP_SLOT_CARD_NATIVE_SCRIM_TOP.colors]}
+        locations={[...COMMUNITY_GROUP_SLOT_CARD_NATIVE_SCRIM_TOP.locations]}
+        style={StyleSheet.absoluteFill}
+      />
     </View>
   );
 }
@@ -70,7 +133,12 @@ function GroupThumbnailNative({
 function RoleBadgeNative({ isOwner, label }: { isOwner: boolean; label: string }) {
   return (
     <View style={isOwner ? communityCrtStyles.roleBadgeOwner : communityCrtStyles.roleBadgeMember}>
-      <Text style={isOwner ? communityCrtStyles.roleBadgeTextOwner : communityCrtStyles.roleBadgeTextMember}>
+      <Text
+        style={[
+          isOwner ? communityCrtStyles.roleBadgeTextOwner : communityCrtStyles.roleBadgeTextMember,
+          styles.roleBadgeText,
+        ]}
+      >
         {label}
       </Text>
     </View>
@@ -89,6 +157,7 @@ function GroupFilledSlotNative({
   onOpen: () => void;
 }) {
   const isOwner = g.role === "owner";
+  const hasBgImage = Boolean(g.headerImageUrl);
   const competition = formatCommunityCompetitionLine(
     {
       rankingLeague: g.rankingLeague ?? "all",
@@ -102,29 +171,41 @@ function GroupFilledSlotNative({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${g.name} — ${labels.openRanking}`}
+      onPressIn={() => prefetchCommunityHeaderImageNative(g.headerImageUrl)}
       onPress={onOpen}
-      style={({ pressed }) => [styles.filledSlot, communityPressableFilledStyle(pressed)]}
+      style={({ pressed }) => [
+        styles.filledSlot,
+        hasBgImage && styles.filledSlotWithImage,
+        isOwner ? styles.filledSlotOwner : styles.filledSlotMember,
+        communityPressableFilledStyle(pressed),
+      ]}
     >
-      <View style={styles.filledAccent} />
+      <SlotCardImageBackgroundNative
+        headerImageUrl={g.headerImageUrl}
+        headerImagePositionY={g.headerImagePositionY}
+        isOwner={isOwner}
+      />
+      <View
+        style={[
+          styles.filledAccent,
+          isOwner ? styles.filledAccentOwner : styles.filledAccentMember,
+        ]}
+      />
       <View style={styles.filledInner}>
-        <View style={styles.filledLeftCol}>
+        <View style={styles.slotTopRow}>
           <RoleBadgeNative isOwner={isOwner} label={isOwner ? labels.owner : labels.member} />
-          <GroupThumbnailNative headerImageUrl={g.headerImageUrl} size={52} />
         </View>
-        <View style={styles.filledBody}>
-          <Text style={styles.groupName} numberOfLines={1}>
-            {g.name}
-          </Text>
-          <Text style={styles.groupMeta} numberOfLines={2}>
-            {competition}
-          </Text>
+        <Text style={styles.groupName} numberOfLines={1}>
+          {g.name}
+        </Text>
+        <Text style={styles.groupMeta} numberOfLines={2}>
+          {competition}
+        </Text>
+        {(g.memberPreviews?.length ?? 0) > 0 ? (
           <View style={styles.metaRow}>
-            <Text style={styles.memberCount}>
-              {labels.nMembers.replace("{n}", String(g.memberCount))}
-            </Text>
-            <CommunityMemberAvatarStackNative previews={g.memberPreviews ?? []} size={20} />
+            <CommunityMemberAvatarStackNative previews={g.memberPreviews ?? []} size={28} />
           </View>
-        </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -385,7 +466,17 @@ const styles = StyleSheet.create({
   },
   filledSlot: {
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.02)",
+    backgroundColor: "rgba(2,8,18,0.72)",
+    borderWidth: 1,
+  },
+  filledSlotWithImage: {
+    backgroundColor: COMMUNITY_GROUP_SLOT_CARD_BG,
+  },
+  filledSlotOwner: {
+    borderColor: "rgba(251,191,36,0.22)",
+  },
+  filledSlotMember: {
+    borderColor: "rgba(34,211,238,0.16)",
   },
   filledAccent: {
     position: "absolute",
@@ -393,65 +484,68 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 3,
+    zIndex: 3,
+  },
+  filledAccentOwner: {
+    backgroundColor: "rgba(251,191,36,0.85)",
+    shadowColor: "#fbbf24",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+  },
+  filledAccentMember: {
     backgroundColor: CRT_CYAN,
     shadowColor: CRT_CYAN,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 7,
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
   },
   filledInner: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  filledLeftCol: {
-    alignItems: "center",
-    gap: 6,
-  },
-  filledBody: {
+    position: "relative",
+    zIndex: 2,
     flex: 1,
-    minWidth: 0,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  slotTopRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 2,
+  },
+  roleBadgeText: {
+    fontFamily: communityMono,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
   groupName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "rgba(236,254,255,0.95)",
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    color: "rgba(255,255,255,0.96)",
+    textShadowColor: "rgba(0,0,0,0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
   groupMeta: {
-    marginTop: 4,
+    marginTop: 2,
+    fontFamily: communityMono,
     fontSize: 11,
+    fontWeight: "700",
     lineHeight: 16,
-    color: "rgba(255,255,255,0.4)",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "rgba(224,242,254,0.85)",
+    textShadowColor: "rgba(0,0,0,0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   metaRow: {
     marginTop: 8,
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
-    gap: 8,
-  },
-  memberCount: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "rgba(165,243,252,0.75)",
-    fontVariant: ["tabular-nums"],
-  },
-  thumb: {
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.25)",
-    backgroundColor: "#0a1018",
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  thumbImage: {
-    width: "100%",
-    height: "100%",
-  },
-  thumbPlaceholder: {
-    fontSize: 16,
-    color: "rgba(34,211,238,0.25)",
   },
   emptySlot: {
     minHeight: 72,

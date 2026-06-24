@@ -699,7 +699,8 @@ export default function ProfileEditKinetikPanel({
         }
         dayDeltaTitle={dayDeltaTitle}
         dayDeltaTone={profileMetricDeltaTone(
-          metricValueDeltas?.totalPrecision ?? null
+          metricValueDeltas?.totalPrecision ?? null,
+          { positiveOnly: isWcProfile }
         )}
         reduceUiMotion={reduceUiMotion}
       />
@@ -890,7 +891,7 @@ export default function ProfileEditKinetikPanel({
           </aside>
 
           <div className="profile-edit-kinetik-layout-web__main flex min-w-0 flex-col px-6 py-7 md:px-7 md:py-8">
-            <div className="overflow-hidden border border-white/10 bg-transparent">
+            <div className="overflow-visible border border-white/10 bg-transparent">
               {metricsScopeHeader}
               {metricsContent}
             </div>
@@ -958,7 +959,7 @@ export default function ProfileEditKinetikPanel({
       </div>
 
       {/* 主要メトリクス */}
-      <div className="mt-3 overflow-hidden border border-white/10 bg-transparent">
+      <div className="mt-3 overflow-visible border border-white/10 bg-transparent">
         {metricsScopeHeader}
         {metricsContent}
       </div>

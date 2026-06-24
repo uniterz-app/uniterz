@@ -12,6 +12,7 @@ import {
   PROFILE_FROM_GROUP_VALUE,
   PROFILE_FROM_RANKINGS_VALUE,
   buildRankingsPathQuery,
+  leaderboardsGroupReturnHref,
 } from "@/lib/navigation/rankingsProfileFrom";
 import type { Language } from "@/lib/i18n/language";
 import { t } from "@/lib/i18n/t";
@@ -42,7 +43,7 @@ export default function RankingsReturnNavLink({ language }: Props) {
       : "/web";
   const tabQuery = buildRankingsPathQuery(sp);
   const href = isGroupReturn
-    ? `${prefix}/communities/${encodeURIComponent(groupId!)}`
+    ? leaderboardsGroupReturnHref(prefix, groupId!)
     : `${prefix}/rankings${tabQuery ? `?${tabQuery}` : ""}`;
   const m = t(language);
   const label = isGroupReturn

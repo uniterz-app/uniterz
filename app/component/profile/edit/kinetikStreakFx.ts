@@ -45,6 +45,22 @@ export function formatKinetikWinStreakLabel(
   return language === "en" ? `${n} WIN STREAK` : `${n}連勝`;
 }
 
+/** 連勝タグタップ時に表示する説明文 */
+export function getKinetikWinStreakExplanation(
+  streak: number,
+  language: "ja" | "en" = "ja"
+): string {
+  const n = Math.max(0, Math.floor(streak));
+  const tier = getKinetikStreakTier(n);
+  const colorLabel = getKinetikStreakColorLabel(tier, language);
+
+  if (language === "ja") {
+    return `${n}連勝\n確定した予想が連続で的中しています。4連勝以上で表示され、連勝が伸びるほどアバター枠の色が変化します（現在: ${colorLabel}）。`;
+  }
+
+  return `${n} win streak\nYour confirmed picks have won ${n} games in a row. Shown at 4+ wins; avatar border color shifts as the streak grows (now: ${colorLabel}).`;
+}
+
 export const KINETIK_STREAK_VARIANTS: {
   id: KinetikStreakVariant;
   titleJa: string;

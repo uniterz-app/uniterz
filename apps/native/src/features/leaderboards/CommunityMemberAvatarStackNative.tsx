@@ -11,8 +11,9 @@ export default function CommunityMemberAvatarStackNative({ previews, size = 20 }
   if (shown.length === 0) return null;
 
   return (
-    <View style={styles.row}>
-      {shown.map((p, i) => (
+    <View style={styles.container}>
+      <View style={styles.row}>
+        {shown.map((p, i) => (
         <View
           key={p.uid || String(i)}
           style={[
@@ -32,11 +33,26 @@ export default function CommunityMemberAvatarStackNative({ previews, size = 20 }
           )}
         </View>
       ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(34,211,238,0.25)",
+    borderRadius: 4,
+    backgroundColor: "rgba(10,16,24,0.8)",
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    shadowColor: "#22d3ee",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",

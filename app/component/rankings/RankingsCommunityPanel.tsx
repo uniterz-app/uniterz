@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { jp } from "@/lib/fonts";
 import { toast } from "@/app/component/ui/toast";
@@ -28,6 +29,15 @@ import {
   prefetchCommunityGroupDetails,
   type CommunityGroupListPreview,
 } from "@/app/component/communities/communityGroupDetailCache";
+import {
+  prefetchCommunityHeaderImage,
+  prefetchCommunityHeaderImages,
+} from "@/lib/communities/prefetchCommunityHeaderImage";
+import { LEADERBOARDS_OPEN_GROUP_PARAM } from "@/lib/navigation/rankingsProfileFrom";
+import {
+  peekLeaderboardsGroupReturnPreview,
+  stashLeaderboardsGroupReturn,
+} from "@/lib/navigation/leaderboardsGroupReturn";
 
 async function authHeader(): Promise<string | null> {
   const u = auth.currentUser;
@@ -43,6 +53,33 @@ const DEFAULT_LIMITS: CommunityListLimits = {
   ownedCount: 0,
   membershipCount: 0,
 };
+
+function listGroupToPreview(g: CommunityListGroup): CommunityGroupListPreview {
+  return {
+    name: g.name,
+    description: g.description,
+    headerImageUrl: g.headerImageUrl,
+    headerImagePositionY: g.headerImagePositionY,
+    memberCount: g.memberCount,
+    rankingMetric: g.rankingMetric,
+    rankingLeague: g.rankingLeague,
+    rankingTeamIds: g.rankingTeamIds,
+    isOwner: g.role === "owner",
+  };
+}
+
+function readOverlayFromReturnUrl(): {
+  id: string;
+  preview: CommunityGroupListPreview;
+} | null {
+  if (typeof window === "undefined") return null;
+  const groupId = new URLSearchParams(window.location.search)
+    .get(LEADERBOARDS_OPEN_GROUP_PARAM)
+    ?.trim();
+  if (!groupId) return null;
+  const preview = peekLeaderboardsGroupReturnPreview(groupId);
+  return preview ? { id: groupId, preview } : null;
+}
 
 export type CreatedCommunityGroup = CommunityListGroup;
 
@@ -77,9 +114,14 @@ export default function RankingsCommunityPanel({
   const [overlayGroup, setOverlayGroup] = useState<{
     id: string;
     preview: CommunityGroupListPreview;
-  } | null>(null);
+  } | null>(() => readOverlayFromReturnUrl());
 
   const isWeb = variant === "web";
+  const router = useRouter();
+  const pathname = usePathname() ?? "";
+  const searchParams = useSearchParams();
+  const reopenGroupId = searchParams.get(LEADERBOARDS_OPEN_GROUP_PARAM)?.trim() || null;
+  const hideSlotList = overlayGroup != null || reopenGroupId != null;
   const m = t(language);
 
   const slotLabels = useMemo(
@@ -183,24 +225,57 @@ export default function RankingsCommunityPanel({
       groups.map((g) => g.id),
       groups.length
     );
+    prefetchCommunityHeaderImages(groups.map((g) => g.headerImageUrl));
   }, [groups]);
 
   const openGroupOverlay = useCallback((g: CommunityListGroup) => {
+    const preview = listGroupToPreview(g);
+    stashLeaderboardsGroupReturn(g.id, preview);
     prefetchCommunityGroupDetail(g.id);
+    prefetchCommunityHeaderImage(g.headerImageUrl);
     setOverlayGroup({
       id: g.id,
-      preview: {
-        name: g.name,
-        description: g.description,
-        headerImageUrl: g.headerImageUrl,
-        memberCount: g.memberCount,
-        rankingMetric: g.rankingMetric,
-        rankingLeague: g.rankingLeague,
-        rankingTeamIds: g.rankingTeamIds,
-        isOwner: g.role === "owner",
-      },
+      preview,
     });
   }, []);
+
+  const clearOpenGroupQuery = useCallback(() => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete(LEADERBOARDS_OPEN_GROUP_PARAM);
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  useLayoutEffect(() => {
+    const openGroupId = searchParams.get(LEADERBOARDS_OPEN_GROUP_PARAM)?.trim();
+    if (!openGroupId) return;
+    if (overlayGroup?.id === openGroupId) {
+      clearOpenGroupQuery();
+      return;
+    }
+
+    const stashed = peekLeaderboardsGroupReturnPreview(openGroupId);
+    if (stashed) {
+      prefetchCommunityGroupDetail(openGroupId);
+      prefetchCommunityHeaderImage(stashed.headerImageUrl);
+      setOverlayGroup({ id: openGroupId, preview: stashed });
+      clearOpenGroupQuery();
+      return;
+    }
+
+    if (loadingList) return;
+    const match = groups.find((g) => g.id === openGroupId);
+    if (!match) return;
+    openGroupOverlay(match);
+    clearOpenGroupQuery();
+  }, [
+    clearOpenGroupQuery,
+    groups,
+    loadingList,
+    openGroupOverlay,
+    overlayGroup?.id,
+    searchParams,
+  ]);
 
   const onGroupCreated = useCallback(
     (
@@ -415,7 +490,7 @@ export default function RankingsCommunityPanel({
               : "ログインするとスロットが表示されます。"}
           </p>
         </div>
-      ) : (
+      ) : hideSlotList ? null : (
         <CommunitySlotBoard
           language={language}
           variant={variant}
@@ -424,7 +499,10 @@ export default function RankingsCommunityPanel({
           loading={loadingList}
           joinBusy={joinBusy}
           onOpenGroup={openGroupOverlay}
-          onPrefetchGroup={(g) => prefetchCommunityGroupDetail(g.id)}
+          onPrefetchGroup={(g) => {
+            prefetchCommunityGroupDetail(g.id);
+            prefetchCommunityHeaderImage(g.headerImageUrl);
+          }}
           onCreate={() => setCreateOpen(true)}
           onPreviewJoin={onPreviewJoin}
           onPasteJoin={onPasteJoin}
